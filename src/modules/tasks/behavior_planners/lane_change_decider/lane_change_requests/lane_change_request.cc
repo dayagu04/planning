@@ -12,6 +12,7 @@
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "task_interface/lane_change_utils.h"
+#include "utils/kd_path.h"
 #include "utils/lateral_utils.h"
 
 namespace planning {
@@ -22,6 +23,8 @@ constexpr double kDefaultBoundaryLen = 5000.;
 // https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
 constexpr double kLaneChangeSolidLineTTC = 1.75;  // todo(ldh): 从配置中读取
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
+constexpr double kStandardLaneWidth = 3.8;
+constexpr double kEps = 1e-6;
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
@@ -372,14 +375,17 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     dash_length = std::max(0.0, dash_length);
   }
 
-  double lc_response_dist = ego_v * kLaneChangeSolidLineTTC;  // hack
+  const double lc_response_dist =
+      ego_v * CalculateDynamicTTCtime(origin_lane_id, lc_request);  // hack
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
   std::cout << "dash_length:" << dash_length
             << ",lc_response_dist:" << lc_response_dist << std::endl;
+
   if (dash_length > default_lc_boundary_length ||
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
     return true;
   }
+  
   const auto &cur_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
@@ -629,5 +635,55 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   } else {
     return true;
   }
+}
+
+double LaneChangeRequest::CalculateDynamicTTCtime(
+    const int origin_lane_id, const RequestType &lc_request) const {
+  double ttc_time = kLaneChangeSolidLineTTC;
+
+  const auto origin_reference_path =
+      session_->environmental_model()
+          .get_reference_path_manager()
+          ->get_reference_path_by_lane(origin_lane_id, false);
+  const auto origin_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+
+  if (nullptr == origin_lane || origin_reference_path == nullptr) {
+    return ttc_time;
+  }
+
+  const auto origin_frenet_coor = origin_reference_path->get_frenet_coord();
+
+  if (origin_frenet_coor == nullptr) {
+    return ttc_time;
+  }
+
+  const double origin_lane_half_width = origin_lane->width_by_s(
+      origin_reference_path->get_frenet_ego_state().s()) * 0.5;
+  
+  // 车辆参数
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double kEgoWidth = vehicle_param.width;
+
+  //六分之一的自车宽度
+  const double l_err = 0.16666666666667 * kEgoWidth; 
+  const double ego_l = origin_reference_path->get_frenet_ego_state().l();
+
+  double lat_offset = 0.0;
+  if (lc_request == LEFT_CHANGE) {
+    lat_offset = origin_lane_half_width - ego_l - l_err;
+  } else if (lc_request == RIGHT_CHANGE) {
+    lat_offset = origin_lane_half_width + ego_l - l_err;
+  }
+  const double base_lat_offset = kStandardLaneWidth * 0.5 - l_err;
+  
+  if (base_lat_offset < kEps) {
+    return 0.0;
+  }
+
+  ttc_time =  kLaneChangeSolidLineTTC * lat_offset / base_lat_offset;
+
+  return ttc_time;
 }
 }  // namespace planning
