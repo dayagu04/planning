@@ -230,11 +230,18 @@ void LaneChangeStateMachineManager::RunStateMachine() {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangeCancel) {
         bool is_cancel_to_lane_keeping = CheckIfCancelToLaneKeeping();
+
+        bool is_cancel_to_complete = CheckIfCancelToComplete();
+
         if (is_cancel_to_lane_keeping) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
           ResetStateMachine();
           pre_lane_change_finish_time_ = IflyTime::Now_ms();
+        } else if (is_cancel_to_complete) {
+          transition_info_.lane_change_status =
+              StateMachineLaneChangeStatus::kLaneChangeComplete;
+          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
         }
       }
       break;
@@ -315,83 +322,18 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
 
 bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
     const RequestType &lane_change_direction,
-    const RequestSource &lane_change_type) {
-  const auto &ego_lane = session_->environmental_model()
-                             .get_virtual_lane_manager()
-                             ->get_current_lane();
-  if (ego_lane == nullptr) {
-    return false;
-  }
-  const auto &current_reference_path =
-      session_->environmental_model()
-          .get_reference_path_manager()
-          ->get_reference_path_by_current_lane();
-  if (current_reference_path == nullptr) {
-    return false;
+    const RequestSource &lane_change_type) const{
+  const double ego_press_line_ratio = lc_request_.CalculatePressLineRatio(
+      lc_lane_mgr_->origin_lane_virtual_id(),
+      lane_change_direction);
+
+  JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
+
+  //当前box的一半宽超过车道边界线，认为变道进入complete状态
+  if (ego_press_line_ratio > 0.5) {
+    return true;
   }
 
-  const double target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
-  const auto reference_path_manager =
-      session_->environmental_model().get_reference_path_manager();
-  const auto virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
-  const auto target_reference_path =
-      reference_path_manager->get_reference_path_by_lane(
-          target_lane_virtual_id);
-  const double ego_l_target = target_reference_path->get_frenet_ego_state().l();
-  const auto target_lane =
-      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
-  if (target_lane != nullptr) {
-    double l_front_left =
-        target_reference_path->get_frenet_ego_state().corners().l_front_left;
-    double l_front_right =
-        target_reference_path->get_frenet_ego_state().corners().l_front_right;
-    const double width_by_target = target_lane->width();
-
-    //在变道过程中，判断自车后轴中心和前面两个角点都过车道线，在低速时会导致不合理返回
-    //将前面两个角点的约束放松一点，两个边角的l减小0.2m
-    const double buffer = 0.3;
-    if (lane_change_direction == LEFT_CHANGE) {
-      l_front_right = l_front_right + buffer;
-    } else if (lane_change_direction == RIGHT_CHANGE) {
-      l_front_left = l_front_left - buffer;
-    }
-
-    if (std::abs(ego_l_target) < std::abs(width_by_target) / 2 &&
-        std::abs(l_front_left) < std::abs(width_by_target) / 2 &&
-        std::abs(l_front_right) < std::abs(width_by_target) / 2) {
-      return true;
-    }
-  }
-
-  // const auto &reference_path_ego_state =
-  //     current_reference_path->get_frenet_ego_state();
-  // const double ego_s = reference_path_ego_state.s();
-  // const double ego_l = reference_path_ego_state.l();
-  // double width = ego_lane->width(ego_s);
-  // double lane_change_complete_l_threshold =
-  //     std::min(std::max(0.5, width / 4.0), 1.0);
-
-  // // check if ego lane jump to right direction
-  // bool jump_to_target_lane = false;
-  // if (ego_l * pre_ego_l_ < 0) {
-  //   if (lane_change_direction == LEFT_CHANGE) {
-  //     if (ego_l < 0 && pre_ego_l_ > 0) {
-  //       jump_to_target_lane = true;
-  //     }
-  //   } else if (lane_change_direction == RIGHT_CHANGE) {
-  //     if (ego_l > 0 && pre_ego_l_ < 0) {
-  //       jump_to_target_lane = true;
-  //     }
-  //   }
-  // }
-  // if (jump_to_target_lane &&
-  //     (std::fabs(ego_l) > lane_change_complete_l_threshold ||
-  //      std::fabs(pre_ego_l_) > lane_change_complete_l_threshold)) {
-  //   pre_ego_l_ = ego_l;
-  //   return true;
-  // }
-  // pre_ego_l_ = ego_l;
   return false;
 }
 
@@ -503,8 +445,8 @@ bool LaneChangeStateMachineManager::CheckIfCompleteToLaneKeeping() {
 
   bool is_high_priority_complete_mlc = IsHighPriorityCompleteMLC();
 
-  // 防止自车因为横向不居中等情况，导致一直卡在complete状态。所以在complete状态下超过8s后，结束当前状态
-  bool is_time_out = complete_state_frame_nums_ > 80;
+  // 防止自车因为横向不居中等情况，导致一直卡在complete状态。所以在complete状态下超过3s后，结束当前状态
+  bool is_time_out = complete_state_frame_nums_ > 30;
 
   if (target_lane_front_node_) {
     lane_change_stage_info_.lc_gap_info.front_node_id =
@@ -3334,5 +3276,9 @@ bool LaneChangeStateMachineManager::IsHighPriorityCompleteMLC() const {
           triggle_dis;
 
   return is_high_priority_complete_mlc;
+}
+
+bool LaneChangeStateMachineManager::CheckIfCancelToComplete() const {
+  return CheckIfLaneChangeComplete(transition_info_.lane_change_direction, transition_info_.lane_change_type);
 }
 }  // namespace planning

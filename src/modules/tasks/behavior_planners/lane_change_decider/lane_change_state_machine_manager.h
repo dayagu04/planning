@@ -110,7 +110,7 @@ class LaneChangeStateMachineManager {
   bool CheckIfProposeToCancel(const RequestType& lane_change_direction,
                               const RequestSource& lane_change_type);
   bool CheckIfLaneChangeComplete(const RequestType& lane_change_direction,
-                                 const RequestSource& lane_change_type);
+                                 const RequestSource& lane_change_type) const;
   bool CheckIfExecutionToCancel(const RequestType& lane_change_direction,
                                 const RequestSource& lane_change_type);
   bool CheckIfExecutionToHold(const RequestType& lane_change_direction,
@@ -122,6 +122,7 @@ class LaneChangeStateMachineManager {
   bool CheckIfCompleteToLaneKeeping();
   bool CheckIfInPerfectLaneKeeping() const;
   bool CheckIfCancelToLaneKeeping() const;
+  bool CheckIfCancelToComplete() const;
   bool CheckIfCompleteToCancel();
   bool CheckIfCancelTimeOut();
 

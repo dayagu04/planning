@@ -33,12 +33,25 @@ void LaneChangeLaneManager::assign_lc_lanes(int lane_virtual_id) {
 
 void LaneChangeLaneManager::reset_lc_lanes(
     const StateMachineLaneChangeStatus state_machine_lc_state) {
-  if (state_machine_lc_state == kLaneChangeExecution ||
-      state_machine_lc_state == kLaneChangeCancel) {
+  if (state_machine_lc_state == kLaneChangeExecution) {
     const auto& origin_lane =
         virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
     if (origin_lane) {
       target_lane_virtual_id_ = origin_lane_virtual_id_;
+      fix_lane_virtual_id_ = origin_lane_virtual_id_;
+    } else {
+      std::cout
+          << "origin lane disappear ,set cur_lane as origin/target/fix_lane"
+          << std::endl;
+      target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    }
+  } else if (state_machine_lc_state == kLaneChangeCancel) {
+    const auto& origin_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
+    if (origin_lane) {
+      // target_lane_virtual_id_ = origin_lane_virtual_id_;
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
       std::cout
@@ -54,6 +67,16 @@ void LaneChangeLaneManager::reset_lc_lanes(
     if (origin_lane) {
       fix_lane_virtual_id_ = origin_lane_virtual_id_;
     } else {
+      fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+    }
+  } else if (state_machine_lc_state == kLaneChangeComplete) {
+    const auto& target_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_);
+    if (target_lane) {
+      fix_lane_virtual_id_ = target_lane_virtual_id_;
+    } else {
+      target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+      origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
       fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     }
   } else {
