@@ -3624,7 +3624,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
-
+  const double planning_init_point_l =
+      ego_frenet_state_.planning_init_point().frenet_state.r;
   BoundInfo bound_info;
   Bound bound{-l_offset_limit, l_offset_limit};
   double limit_nudge_max_l = 20;
@@ -3648,9 +3649,11 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
         if (desire_final_nudge_l_map_[id] != 0) {
           limit_nudge_min_l = desire_final_nudge_l_map_[id] - limit_nudge_change_rate;
         }
+        limit_nudge_max_l = std::fmax(limit_nudge_max_l, desire_final_nudge_l_map_[id]);
       } else {
         limit_nudge_max_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
       }
+      limit_nudge_max_l = std::fmax(limit_nudge_max_l, planning_init_point_l);
       limit_nudge_min_l = std::fmin(limit_nudge_max_l, limit_nudge_min_l);
       bound.lower = clip(bound.lower, limit_nudge_max_l, limit_nudge_min_l);
     }
@@ -3678,9 +3681,11 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
         if (desire_final_nudge_l_map_[id] != 0) {
           limit_nudge_max_l = desire_final_nudge_l_map_[id] + limit_nudge_change_rate;
         }
+        limit_nudge_min_l = std::fmin(limit_nudge_min_l, desire_final_nudge_l_map_[id]);
       } else {
-        limit_nudge_min_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
+        limit_nudge_min_l = std::fmax(-limit_nudge_change_rate, -config_.max_nudge_buffer2side_car);
       }
+      limit_nudge_min_l = std::fmin(limit_nudge_min_l, planning_init_point_l);
       limit_nudge_max_l = std::fmax(limit_nudge_max_l, limit_nudge_min_l);
       bound.upper = clip(bound.upper, limit_nudge_max_l, limit_nudge_min_l);
     }
