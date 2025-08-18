@@ -30,6 +30,7 @@ struct LateralObstacleHistoryInfo {
   double front_expand_len = 0.0;
   double rear_expand_len = 0.0;
   bool maintain_avoid = false;
+  bool is_behind_ego = false;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
@@ -39,6 +40,7 @@ struct LateralObstacleDeciderOutput {
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
+  std::vector<int> obstacles_id_behind_ego;
   SearchResult search_result = SearchResult::NO_SEARCH;
   bool in_intersection = false;
   bool left_borrow = true;

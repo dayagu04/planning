@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 
 #include "vec2d.h"
 
@@ -42,6 +43,8 @@ class AABox2d {
    * @param points Vector of points to be included inside the box.
    */
   explicit AABox2d(const std::vector<Vec2d> &points);
+
+  explicit AABox2d(const std::array<planning_math::Vec2d, 8> &points, const int &valid_count);
 
   /**
    * @brief Getter of center_
@@ -154,6 +157,9 @@ class AABox2d {
    */
   double DistanceTo(const AABox2d &box) const;
 
+  double LongitDistanceTo(const AABox2d &box) const;
+
+  double LateralDistanceTo(const AABox2d &box) const;
   /**/
   double DistanceSquareTo(const Vec2d &point) const;
   /**

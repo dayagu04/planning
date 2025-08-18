@@ -416,7 +416,10 @@ bool LateralMotionPlanner::AssembleInput() {
   } else {
     planning_weight_ptr_->SetIsSearchSuccess(false);
   }
-
+  // use spatio result
+  bool is_use_spatio_planner_result =
+      general_lateral_decider_output.is_use_spatio_planner_result;
+  planning_weight_ptr_->SetIsUseSpatioPlannerResult(is_use_spatio_planner_result);
   // split
   bool split_scene = IsLocatedInSplitArea();
 
@@ -434,8 +437,8 @@ bool LateralMotionPlanner::AssembleInput() {
       intersection_state ==
       planning::common::IntersectionState::OFF_INTERSECTION;
   // planning_weight_ptr_->SetIsInIntersection(is_in_intersection);
-  if ((is_approach_intersection || is_in_intersection) &&
-      is_ref_consistent) {
+  if (is_use_spatio_planner_result ||
+      (is_approach_intersection || is_in_intersection)) {
     planning_weight_ptr_->SetIsInIntersection(true);
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
@@ -483,17 +486,21 @@ bool LateralMotionPlanner::AssembleInput() {
   } else if (split_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::SPLIT,
                                                  planning_input_);
-  } else if ((ramp_scene) && (config_.ramp_valid)) {
+  } else if ((ramp_scene) && (config_.ramp_valid) &&
+             (!is_use_spatio_planner_result)) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
                                                  planning_input_);
   } else if (session_->environmental_model()
-                 .get_lateral_obstacle()
-                 ->is_static_avoid_scene()) {
+                     .get_lateral_obstacle()
+                     ->is_static_avoid_scene() &&
+            !is_use_spatio_planner_result) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::STATIC_AVOID, planning_input_);
-  } else if (lateral_offset_decider_output.is_valid ||
-             (avoid_back_status &&
-              ((ref_vel > config_.avoid_high_vel) || is_in_intersection))) {
+  } else if (!is_use_spatio_planner_result &&
+             (lateral_offset_decider_output.is_valid ||
+              (avoid_back_status &&
+               ((ref_vel > config_.avoid_high_vel) ||
+                 is_in_intersection)))) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::AVOID,
                                                  planning_input_);
   } else {
@@ -530,6 +537,10 @@ bool LateralMotionPlanner::AssembleInput() {
   // set continuity protection
   if (!motion_planner_output.lat_init_flag) {
     planning_input_.set_q_continuity(0.0);
+  }
+  // spatio
+  if (is_use_spatio_planner_result) {
+    planning_input_.set_complete_follow(complete_follow);
   }
   // [hack](bsniu):
   if (session_->environmental_model().function_info().function_mode() ==
@@ -650,57 +661,57 @@ bool LateralMotionPlanner::Update() {
       x_vec[concerned_index + 2] - planning_input_.ref_x_vec(concerned_index + 1),
       y_vec[concerned_index + 2] - planning_input_.ref_y_vec(concerned_index + 1));
   const double end_points_size = concerned_index + 1;
-  if ((!(session_->environmental_model().function_info().function_mode() ==
-         common::DrivingFunctionInfo_DrivingFunctionMode::
-             DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&
-      (!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
-      (!session_->planning_context()
-            .general_lateral_decider_output()
-            .lane_change_scene)) {
-    const double end_points_size = concerned_index + 1;
-    std::vector<double> end_x_vec(end_points_size + 1);
-    std::vector<double> end_y_vec(end_points_size + 1);
-    std::vector<double> end_s_vec(end_points_size + 1);
-    for (size_t i = 0; i < end_points_size + 1; ++i) {
-      if (i > concerned_index) {
-        end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
-        end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
-        end_s_vec[i] = end_s_vec[i - 1] +
-                       std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
-                                           end_y_vec[i] - end_y_vec[i - 1]),
-                                1e-3);
-      } else {
-        end_x_vec[i] = planning_output.x_vec(i);
-        end_y_vec[i] = planning_output.y_vec(i);
-        end_s_vec[i] = s_vec[i + 1];
-      }
-    }
-    pnc::mathlib::spline end_x_s_spline;
-    pnc::mathlib::spline end_y_s_spline;
-    end_x_s_spline.set_points(end_s_vec, end_x_vec);
-    end_y_s_spline.set_points(end_s_vec, end_y_vec);
-    double end_ds =
-        (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
-        (N - end_points_size);
-    end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
-    double end_s = end_s_vec[end_points_size - 1];
-    for (size_t i = end_points_size; i < N; ++i) {
-      end_s += end_ds;
-      x_vec[i + 1] = end_x_s_spline(end_s);
-      y_vec[i + 1] = end_y_s_spline(end_s);
-      double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
-                                     end_x_s_spline.deriv(1, end_s));
-      double theta_err = theta_vec[i] - next_theta;
-      const double pi2 = 2.0 * M_PI;
-      if (theta_err > M_PI) {
-        next_theta += pi2;
-      } else if (theta_err < -M_PI) {
-        next_theta -= pi2;
-      }
-      theta_vec[i + 1] = next_theta;
-      s_vec[i + 1] = end_s;
-    }
-  }
+  // if ((!(session_->environmental_model().function_info().function_mode() ==
+  //        common::DrivingFunctionInfo_DrivingFunctionMode::
+  //            DrivingFunctionInfo_DrivingFunctionMode_RADS)) &&
+  //     (!planning_input_.complete_follow()) && (concerned_dis_to_ref <= 0.1) &&
+  //     (!session_->planning_context()
+  //           .general_lateral_decider_output()
+  //           .lane_change_scene)) {
+  //   const double end_points_size = concerned_index + 1;
+  //   std::vector<double> end_x_vec(end_points_size + 1);
+  //   std::vector<double> end_y_vec(end_points_size + 1);
+  //   std::vector<double> end_s_vec(end_points_size + 1);
+  //   for (size_t i = 0; i < end_points_size + 1; ++i) {
+  //     if (i > concerned_index) {
+  //       end_x_vec[i] = planning_input_.ref_x_vec(N - 1);
+  //       end_y_vec[i] = planning_input_.ref_y_vec(N - 1);
+  //       end_s_vec[i] = end_s_vec[i - 1] +
+  //                      std::max(std::hypot(end_x_vec[i] - end_x_vec[i - 1],
+  //                                          end_y_vec[i] - end_y_vec[i - 1]),
+  //                               1e-3);
+  //     } else {
+  //       end_x_vec[i] = planning_output.x_vec(i);
+  //       end_y_vec[i] = planning_output.y_vec(i);
+  //       end_s_vec[i] = s_vec[i + 1];
+  //     }
+  //   }
+  //   pnc::mathlib::spline end_x_s_spline;
+  //   pnc::mathlib::spline end_y_s_spline;
+  //   end_x_s_spline.set_points(end_s_vec, end_x_vec);
+  //   end_y_s_spline.set_points(end_s_vec, end_y_vec);
+  //   double end_ds =
+  //       (end_s_vec[end_points_size] - end_s_vec[end_points_size - 1]) /
+  //       (N - end_points_size);
+  //   end_ds = std::min(end_ds, planning_input_.ref_vel() * 0.2);
+  //   double end_s = end_s_vec[end_points_size - 1];
+  //   for (size_t i = end_points_size; i < N; ++i) {
+  //     end_s += end_ds;
+  //     x_vec[i + 1] = end_x_s_spline(end_s);
+  //     y_vec[i + 1] = end_y_s_spline(end_s);
+  //     double next_theta = std::atan2(end_y_s_spline.deriv(1, end_s),
+  //                                    end_x_s_spline.deriv(1, end_s));
+  //     double theta_err = theta_vec[i] - next_theta;
+  //     const double pi2 = 2.0 * M_PI;
+  //     if (theta_err > M_PI) {
+  //       next_theta += pi2;
+  //     } else if (theta_err < -M_PI) {
+  //       next_theta -= pi2;
+  //     }
+  //     theta_vec[i + 1] = next_theta;
+  //     s_vec[i + 1] = end_s;
+  //   }
+  // }
 
   // construct lateral kd path
   motion_planner_output.lateral_path_coord =

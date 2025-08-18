@@ -12,6 +12,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
+  spatio_temporal_planner_ = 
+      std::make_unique<SpatioTemporalPlanner>(config_builder, session);
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
   sample_poly_speed_adjust_decider_ =
@@ -133,6 +135,13 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = gap_selector_decider_->Execute();
   if (!ok) {
     AddErrorInfo(gap_selector_decider_->Name());
+    return false;
+  }
+
+  // 时空联合规划：暂时针对车道内保持
+  ok = spatio_temporal_planner_->Execute();
+  if (!ok) {
+    AddErrorInfo(spatio_temporal_planner_->Name());
     return false;
   }
 

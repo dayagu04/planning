@@ -44,6 +44,28 @@ AABox2d::AABox2d(const std::vector<Vec2d> &points) {
   half_width_ = width_ / 2.0;
 }
 
+AABox2d::AABox2d(const std::array<planning_math::Vec2d, 8> &points, const int &valid_count) {
+  assert(!points.empty());
+  assert(valid_count <= points.size());
+  double min_x = points[0].x();
+  double max_x = points[0].x();
+  double min_y = points[0].y();
+  double max_y = points[0].y();
+  for (int i = 0; i < valid_count; ++i) {
+    const auto& point = points[i];
+    min_x = std::min(min_x, point.x());
+    max_x = std::max(max_x, point.x());
+    min_y = std::min(min_y, point.y());
+    max_y = std::max(max_y, point.y());
+  }
+
+  center_ = {(min_x + max_x) / 2.0, (min_y + max_y) / 2.0};
+  length_ = max_x - min_x;
+  width_ = max_y - min_y;
+  half_length_ = length_ / 2.0;
+  half_width_ = width_ / 2.0;
+}
+
 void AABox2d::GetAllCorners(std::vector<Vec2d> *const corners) const {
   assert(corners != nullptr);
   corners->clear();
@@ -92,6 +114,20 @@ double AABox2d::DistanceTo(const AABox2d &box) const {
     return dx;
   }
   return hypot(dx, dy);
+}
+
+double AABox2d::LongitDistanceTo(const AABox2d &box) const {
+  const double dx =
+      std::abs(box.center_x() - center_.x()) - box.half_length() - half_length_;
+
+  return std::max(0.0, dx);
+}
+
+double AABox2d::LateralDistanceTo(const AABox2d &box) const {
+  const double dy =
+      std::abs(box.center_y() - center_.y()) - box.half_width() - half_width_;
+
+  return std::max(0.0, dy);
 }
 
 double AABox2d::DistanceSquareTo(const Vec2d &point) const {

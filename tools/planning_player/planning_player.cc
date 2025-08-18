@@ -667,6 +667,7 @@ void PlanningPlayer::PlayOneFrame(
     bool is_close_loop) {
   std::cout << "************************************** frame " << frame_num
             << " **************************************" << std::endl;
+  ILOG_INFO << "  frame_num: " << frame_num;
   auto fusion_object_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::FusionObjectsInfo>(
           TOPIC_FUSION_OBJECTS, input_time_list.fusion_object());

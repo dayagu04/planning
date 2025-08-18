@@ -446,6 +446,26 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     if len(lat_motion_plan_output.solver_info.iter_info) > 0:
       print("min cost = ", lat_motion_plan_output.solver_info.iter_info[max(lat_motion_plan_output.solver_info.iter_count - 1, 0)].cost)
 
+    spatio_traj_x, spatio_traj_y = [], []
+    try:
+      spatio_temporal_union_plan = plan_debug_msg.spatio_temporal_union_plan
+      spatio_trajectory_points = spatio_temporal_union_plan.trajectory_points
+      if g_is_display_enu:
+        for trajectory_point in spatio_trajectory_points:
+          spatio_traj_x.append(trajectory_point.x)
+          spatio_traj_y.append(trajectory_point.y)
+      else:
+        for trajectory_point in spatio_trajectory_points:
+          spatio_traj_x_local, spatio_traj_y_local = coord_tf.global_to_local([trajectory_point.x], [trajectory_point.y])
+          spatio_traj_x.append(spatio_traj_x_local[0])
+          spatio_traj_y.append(spatio_traj_y_local[0])
+    except:
+      print("no spatio result!")
+    lat_plan_data['data_spatio_temporal_trajs'].data.update({
+      'traj_x': spatio_traj_x,
+      'traj_y': spatio_traj_y,
+    })
+
   if bag_loader.plan_msg['enable'] == True:
     trajectory = plan_msg.trajectory
     # if trajectory.trajectory_type == 0 and planning_succ: # 实时轨迹
@@ -873,6 +893,9 @@ def load_lat_plan_figure(fig1, local_view_data):
                                           'xn_vec':[],
                                           'yn_vec':[]})
 
+  data_spatio_temporal_trajs = ColumnDataSource(data = {'traj_x':[],
+                                                        'traj_y':[],})
+
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
   data_lane_2 = ColumnDataSource(data = {'line_2_y':[], 'line_2_x':[]})
@@ -913,12 +936,14 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_center_line_2':data_center_line_2, \
                    'data_center_line_3':data_center_line_3, \
                    'data_center_line_4':data_center_line_4, \
-                   'data_arastar': data_arastar,
+                   'data_arastar': data_arastar,\
+                   'data_spatio_temporal_trajs': data_spatio_temporal_trajs,
   }
 
 
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
+  fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'spatio ref', visible=True)
   fig1.line('soft_upper_bound_y0_vec', 'soft_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = "darkorange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft upper bound')
   fig1.line('soft_lower_bound_y0_vec', 'soft_lower_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = "darkorange", line_dash = 'solid', line_alpha = 0.7, legend_label = 'soft lower bound')
   fig1.line('hard_upper_bound_y0_vec', 'hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, line_width = 4, line_color = 'maroon', line_dash = 'solid', line_alpha = 0.35, legend_label = 'hard upper bound')

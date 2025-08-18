@@ -44,7 +44,7 @@ constexpr double kBoundaryCrossEgoBehindThr = 5.0;
 constexpr double kBoundaryCrossEgoFrontThr = 10.0;
 constexpr double kCrossLaneCostDefault = 0.2;
 constexpr double kInitPosCostStandardThr = 3.6;
-constexpr double kInitPosCostWeight = 2.0;
+constexpr double kInitPosCostWeight = 2.5;
 constexpr double kCumuLateralDistanceCostWeight = 1.5;
 constexpr double kCrossLaneCostWeight = 1.0;
 constexpr double kLaneChangeExecutionWeightRatio = 0.5;
@@ -115,6 +115,18 @@ void EgoLaneTrackManger::TrackEgoLane(
       session_->environmental_model().get_virtual_lane_manager();
   const int zero_relative_id_nums = order_ids_of_same_zero_relative_id.size();
   const bool enable_use_ground_mark = config_.enable_use_ground_mark_process_split;
+  const auto intersection_state = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      distance_to_stopline <= 10.0 || distance_to_crosswalk <= 12.0;
 
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
@@ -208,7 +220,7 @@ void EgoLaneTrackManger::TrackEgoLane(
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status
-            && ego_in_split_region_) {
+            && ego_in_split_region_ && !current_intersection_state) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                         order_ids_of_same_zero_relative_id);
@@ -583,6 +595,11 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
+  bool enable_using_st_plan =
+      DebugInfoManager::GetInstance()
+          .GetDebugInfoPb()
+          ->spatio_temporal_union_plan()
+          .enable_using_st_plan();
   int origin_lane_virtual_id =
       lane_change_decider_output.origin_lane_virtual_id;
   int origin_lane_order_id = -1;
@@ -638,7 +655,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   double k_init_pos_cost_weight =
       is_lane_change ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
                      : kInitPosCostWeight;
-  double lateral_distance_cost_weight = kCumuLateralDistanceCostWeight;
+  double lateral_distance_cost_weight =
+      !enable_using_st_plan ? kCumuLateralDistanceCostWeight
+                            : 0.01;
   double k_lane_change_order_id_diff_wegiht =
       (is_lc_change && origin_lane_order_id != -1) ? kLaneChangeOrderidDiffWeight : 0.0;
   int k_lane_change_order_id_diff = 0;

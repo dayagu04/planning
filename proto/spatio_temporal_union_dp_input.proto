@@ -1,0 +1,112 @@
+syntax = "proto2";
+package planning.common;
+import "basic_types.proto";
+
+message EgoInitInfo {
+  optional double s = 1;
+  optional double l = 2;
+  optional double v_cruise = 3;
+  optional double v0 = 4;
+  optional double a = 5;
+  optional double steer_angle = 6;
+  optional double heading_angle = 7;
+}
+
+message AgentInfo {
+  optional double time = 1;
+  repeated Point2d agent_corner = 2;
+  optional bool enable_use = 3;
+}
+
+message AgentSTInfo {
+  optional int32 agent_id = 1;
+  optional int32 agent_type = 2;
+  repeated AgentInfo time_and_corners = 3;
+  repeated Point2d max_box_corners = 4;
+}
+
+message DpSearchParams {
+  optional double total_length_t = 1;
+  optional double unit_t = 2;
+  optional double dense_unit_s = 3;
+  optional double sparse_unit_s = 4;
+  optional double unit_l = 5;
+  optional double dense_dimension_s = 6;
+  optional double max_acceleration = 7;
+  optional double max_deceleration = 8;
+  optional double dimension_l = 9;
+  optional bool enable_use_parallel_calculate_cost = 10;
+}
+
+message LateralPathWeightParams {
+  optional double path_l_cost_param_l0 = 1;
+  optional double path_l_cost_param_b = 2;
+  optional double path_l_cost_param_k = 3;
+  optional double path_l_cost = 4;
+  optional double path_dl_cost = 5;
+  optional double path_ddl_cost = 6;
+  optional double path_end_l_cost = 7;
+}
+
+message DynamicObstacleWeightParams {
+  optional double obstacle_ignore_distance = 1;
+  optional double obstacle_collision_cost = 2;
+  optional double obstacle_longit_collision_distance = 3;
+  optional double obstacle_longit_risk_distance = 4;
+  optional double dynamic_obstacle_weight = 5;
+  optional double default_obstacle_cost_weight = 6;
+  optional double obstacle_lateral_risk_distance = 7;
+  optional double obstacle_collision_cost_without_lateral_overlap = 8;
+  optional double obstacle_lateral_collision_distance = 9;
+}
+
+message LongitudinalWeightParams {
+  optional double spatial_potential_penalty = 1;
+  optional double keep_clear_low_speed_penalty = 2;
+  optional double default_speed_cost = 3;
+  optional double exceed_speed_penalty = 4;
+  optional double low_speed_penalty = 5;
+  optional double reference_speed_penalty = 6;
+  optional double accel_penalty = 7;
+  optional double decel_penalty = 8;
+  optional double positive_jerk_coeff = 9;
+  optional double negative_jerk_coeff = 10;
+}
+
+message SpeedLimitParams {
+  optional double preview_x = 1;
+  optional double t_curv = 2;
+  optional double dis_curv = 3;
+  optional double pre_accelerate_distance_for_merge = 4;
+  optional double straight_ramp_v_limit = 5;
+  optional double v_limit_ramp = 6;
+  optional double v_limit_near_ramp_zone = 7;
+  optional double dis_near_ramp_zone = 8;
+  optional double brake_dis_near_ramp_zone = 9;
+  optional double acc_to_ramp = 10;
+  optional double v_intersection_min_limit = 11;
+  optional double dis_to_ramp = 12;
+  optional double dis_to_merge = 13;
+  optional double is_on_ramp = 14;
+  optional double is_continuous_ramp = 15;
+}
+
+message StitchingCostParams {
+  optional double path_l_stitching_cost_param = 1;
+  optional double stitching_cost_time_decay_factor = 2;
+}
+
+message SpationTemporalUnionDpInput {
+  optional EgoInitInfo init_state = 1;
+
+  repeated Point2d ref_points_vec = 2;
+
+  repeated AgentSTInfo agent_time_corners = 3;
+
+  optional DpSearchParams dp_search_paramms = 4;
+  optional LateralPathWeightParams lat_path_weight_params = 5;
+  optional DynamicObstacleWeightParams dp_dynamic_agent_weight_params = 6;
+  optional LongitudinalWeightParams long_weight_params = 7;
+  optional SpeedLimitParams speed_limit_params = 8;
+  optional StitchingCostParams stitching_cost_params = 9;
+}

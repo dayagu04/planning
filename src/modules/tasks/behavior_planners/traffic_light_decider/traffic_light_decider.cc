@@ -22,6 +22,7 @@ bool TrafficLightDecider::Execute() {
 
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
+  is_small_front_intersection_ = false;
 
   planning::common::IntersectionState intersection_state =
       environmental_model.get_virtual_lane_manager()->GetIntersectionState();
@@ -191,6 +192,7 @@ bool TrafficLightDecider::Execute() {
   auto &tfl_decider = session_->mutable_planning_context()
                           ->mutable_traffic_light_decider_output();
   tfl_decider.can_pass = can_pass_;
+  tfl_decider.is_small_front_intersection = is_small_front_intersection_;
   return true;
 }
 
@@ -285,6 +287,7 @@ bool TrafficLightDecider::IsSmallFrontIntersection() {
   bool is_virtual_type =
       environmental_model.get_virtual_lane_manager()->IsPosXOnVirtualLaneType(
           judge_virtual_dis);
+  is_small_front_intersection_ = !is_virtual_type;
   return !is_virtual_type;
 }
 

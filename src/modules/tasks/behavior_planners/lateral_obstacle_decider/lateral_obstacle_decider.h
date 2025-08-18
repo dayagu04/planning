@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <vector>
 
 #include "frenet_obstacle.h"
 #include "obstacle.h"
@@ -60,6 +61,7 @@ class LateralObstacleDecider : public Task {
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;
+  std::vector<int> &obstacles_id_behind_ego_;
   SearchResult &search_result_;
   // ego info
   double ego_rear_axis_to_front_edge_;

@@ -226,7 +226,7 @@ bool EnvironmentalModelManager::Run() {
                            planning::context::PlannerType::SCC_PLANNER_V3 ||
                        GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::HPP_PLANNER;
-  printf("planner_type:%d\n", GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
+  // printf("planner_type:%d\n", GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid = (msf_valid || localization_valid) &&
                         fusion_localization_valid && planner_valid;
 

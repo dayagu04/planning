@@ -247,7 +247,7 @@ bool EgoStateManager::update(
     planning_loop_dt =
         (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
   }
-  printf("planning_loop_dt:%f\n", planning_loop_dt);
+  // printf("planning_loop_dt:%f\n", planning_loop_dt);
   JSON_DEBUG_VALUE("planning_loop_dt", planning_loop_dt);
 #ifdef X86
   planning_loop_dt = SimulationContext::Instance()->planning_loop_dt();
