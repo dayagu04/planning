@@ -84,6 +84,9 @@ class TsrCore {
 
   // 新版更新限速信息
   void UpdateTsrSpeedLimitNew(void);
+  
+  // 只使用地图限速的更新函数
+  void UpdateTsrSpeedLimitOnlyByMap(void);
 
   // 实时辅助标识牌, 不一定输出
   iflyauto::SuppSignType realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
