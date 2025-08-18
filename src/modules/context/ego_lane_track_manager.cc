@@ -75,6 +75,7 @@ constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 65.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
+constexpr double kDefaultSurpressSplitSelectorDistance = 10.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 
@@ -266,7 +267,7 @@ void EgoLaneTrackManger::TrackEgoLane(
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status
-            && ego_in_split_region_ && !current_intersection_state) {
+            && ego_in_split_region_) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                         order_ids_of_same_zero_relative_id);
@@ -1392,7 +1393,9 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         // lane_merge_split_point.y = lane_merge_split_point.merge_split_point_data[0].point.y;
 
         if (ego_distance_to_lane_merge_split_point > kDefaultConsiderSplitSelectorDistance ||
-            !lane_merge_split_point.merge_split_point_data[0].is_split) {
+            !lane_merge_split_point.merge_split_point_data[0].is_split ||
+            (lane_merge_split_point.merge_split_point_data[0].is_split &&
+            ego_distance_to_lane_merge_split_point < kDefaultSurpressSplitSelectorDistance)) {
           return;
         }
         virtual_lane_split_local_point.x =
