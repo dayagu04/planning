@@ -685,6 +685,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.planning_context()
           .planning_hmi_info()
           .ad_info.reference_line_msg;
+  planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
 
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()
