@@ -105,7 +105,8 @@ void EgoLaneTrackManger::TrackEgoLane(
                                             .lane_borrow_decider_output()
                                             .is_in_lane_borrow_status;
   const auto& lane_change_status = lane_change_decider_output.curr_state;
-  const bool lane_keep_status = lane_change_status == kLaneKeeping;
+  const bool lane_keep_status =
+      (lane_change_status == kLaneKeeping || lane_change_status == kLaneChangePropose);
 
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   const double dis_to_split_threshold = 1000.0;
