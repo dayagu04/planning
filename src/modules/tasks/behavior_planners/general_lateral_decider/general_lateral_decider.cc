@@ -1443,6 +1443,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
+  const int obstacle_id = obstacle->id();
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -1535,8 +1536,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   // Step 5) calculate soft_bound, hard_bound
   Polygon2d obstacle_sl_polygon;
   bool ok = false;
-  ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
-                                      obstacle_sl_polygon);
+  ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
+
   if (!ok) {
     // TBD add log
     return;
@@ -1663,6 +1664,7 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(
   if (plan_history_traj_.empty()) {
     return false;
   }
+  const int obstacle_id = obstacle->id();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double ego_s = reference_path_ptr_->get_frenet_ego_state().s();
@@ -1682,8 +1684,8 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    ok = obstacle->get_polygon_at_time(0, reference_path_ptr_,
-                                        obstacle_sl_polygon);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
+
     if (!ok) {
       // TBD add log
       return false;
@@ -1928,6 +1930,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
     ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
+  const int obstacle_id = obstacle->id();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->planning_context()
@@ -2064,8 +2067,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
-  has_trusted_predicted_polygon = obstacle->get_polygon_at_time(config_.trust_prediction_t_threshold, reference_path_ptr_,
-                                              trusted_predicted_sl_polygon);
+  has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
+  int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
@@ -2091,8 +2094,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     double pred_ts = 0;
     bool ok = false;
     Polygon2d obstacle_sl_polygon_t;
-    ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
-                                                obstacle_sl_polygon_t);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon_t);
+
     if (!ok) {
       // TBD add log
       return;
@@ -3420,6 +3423,7 @@ bool GeneralLateralDecider::IsSameSideObstacleDuringLaneChange(
 
 bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     const std::shared_ptr<FrenetObstacle> obstacle) {
+  const int obstacle_id = obstacle->id();
   if (IsSameSideObstacleDuringLaneChange(obstacle)) {
     return true;
   }
@@ -3456,8 +3460,8 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     }
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    ok = obstacle->get_polygon_at_time(t, reference_path_ptr_,
-                                        obstacle_sl_polygon);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon);
+
     if (!ok) {
       continue;
     }

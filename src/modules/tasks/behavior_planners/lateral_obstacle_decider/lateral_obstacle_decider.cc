@@ -837,10 +837,13 @@ void LateralObstacleDecider::LateralObstacleDecision(
           std::fabs(ego_v_l) >= v_l_thr) {
         const double ego_l_start = reference_path_ptr->get_frenet_ego_state().polygon().min_y();
         const double ego_l_end = reference_path_ptr->get_frenet_ego_state().polygon().max_y();
-        const double obstacle_l_start =
-            frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
-        const double obstacle_l_end =
-            frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
+        // const double obstacle_l_start =
+        //     frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
+        // const double obstacle_l_end =
+        //     frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
+
+        const double obstacle_l_start = frenet_obstacle.frenet_obstacle_boundary().l_start;
+        const double obstacle_l_end = frenet_obstacle.frenet_obstacle_boundary().l_end;
         double start_l = std::max(ego_l_start, obstacle_l_start);
         double end_l = std::min(ego_l_end, obstacle_l_end);
         constexpr double kLatOverlapBuffer = 0.5;
@@ -879,8 +882,9 @@ void LateralObstacleDecider::LateralObstacleDecision(
 bool LateralObstacleDecider::CalculateCutInAndCross(
     FrenetObstacle &frenet_obstacle,
     std::shared_ptr<ReferencePath> reference_path, double lane_width) {
+  const int obstacle_id = frenet_obstacle.id();
   LateralObstacleHistoryInfo &history =
-      lateral_obstacle_history_info_[frenet_obstacle.id()];
+      lateral_obstacle_history_info_[obstacle_id];
   const auto &obstacle = *frenet_obstacle.obstacle();
   if (!frenet_obstacle.obstacle()->is_static() &&
       !(frenet_obstacle.d_s_rel() <= 0 && in_intersection_) &&
@@ -919,14 +923,12 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     std::array<uint8_t, 6> timestamps{0, 1, 2, 3, 4, 5};
     double min_l = std::numeric_limits<double>::max();
     double max_l = std::numeric_limits<double>::lowest();
+    bool ok = false;
     for (auto &i : timestamps) {
-      auto enu_polygon = frenet_obstacle.obstacle()->get_polygon_at_point(
-          frenet_obstacle.obstacle()->get_point_at_time(i));
-      for (auto &pt : enu_polygon.points()) {
-        Point2D frenet_point, carte_point;
-        carte_point.x = pt.x();
-        carte_point.y = pt.y();
-        if (frenet_coord->XYToSL(carte_point, frenet_point)) {
+      Polygon2d obstacle_sl_polygon;
+      ok = reference_path->get_polygon_at_time(obstacle_id, int(i * 10), obstacle_sl_polygon);
+      if (ok) {
+        for (auto &pt : obstacle_sl_polygon.points()) {
           if (obstacle.is_reverse()) {
             // 匀速递推
             double ego_front_s = ego_head_s_ + i * ego_v_s_;
@@ -935,12 +937,12 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
             // if (index < plan_history_traj_.size()) {
             //   ego_front_s = plan_history_traj_[index].s + ego_rear_axis_to_front_edge_;
             // }
-            if (frenet_point.x <= ego_front_s) {
+            if (pt.x() <= ego_front_s) {
               break;
             }
           }
-          min_l = std::min(min_l, frenet_point.y);
-          max_l = std::max(max_l, frenet_point.y);
+          min_l = std::min(min_l, pt.y());
+          max_l = std::max(max_l, pt.y());
         }
       }
     }
@@ -1427,14 +1429,14 @@ bool LateralObstacleDecider::CheckSideObstacle(
   const auto ego_s_end = ego_frenet_state.boundary().s_start;
   const auto obstacle_boundary_s_start = frenet_obstacle.frenet_obstacle_boundary().s_start;
   const auto obstacle_boundary_s_end = frenet_obstacle.frenet_obstacle_boundary().s_end;
+  const int obstacle_id = frenet_obstacle.id();
   if ((obstacle_boundary_s_end - ego_s_start > 0 &&
       obstacle_boundary_s_end - ego_s_start <= KOverlapSThrt)) {
     // 障碍物在自车前方先不考虑
     // (ego_s_end - obstacle_boundary_s_start > 0 &&
     // ego_s_end - obstacle_boundary_s_start <= KOverlapSThrt)
     Polygon2d obstacle_sl_polygon;
-    const auto ok = frenet_obstacle.get_polygon_at_time(0, reference_path_ptr,
-                                                obstacle_sl_polygon);
+    const auto ok = reference_path_ptr->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
     const auto ego_sl_polygon = ego_frenet_state.polygon();
     if (ok && ego_sl_polygon.is_convex()) {
       Polygon2d care_overlap_polygon;

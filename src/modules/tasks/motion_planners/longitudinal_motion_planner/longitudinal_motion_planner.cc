@@ -333,10 +333,10 @@ void LongitudinalMotionPlanner::Update() {
   motion_planner_output.omega_t_spline.set_points(t_vec, assembled_omega);
   motion_planner_output.lat_enable_flag = true;
 
-  JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
-  JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
-  JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
-  JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
-  JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
+  // JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
+  // JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
+  // JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
+  // JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
+  // JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 }
 }  // namespace planning

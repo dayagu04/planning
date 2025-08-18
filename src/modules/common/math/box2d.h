@@ -158,7 +158,7 @@ class Box2d {
    * @brief Getter of the corners of the box
    * @param corners The vector where the corners are listed
    */
-  std::vector<Vec2d> GetAllCorners() const;
+  const std::vector<Vec2d> &GetAllCorners() const;
 
   void SetAllCorners(const std::vector<Vec2d> &corners);
 

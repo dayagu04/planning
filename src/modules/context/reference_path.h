@@ -11,6 +11,7 @@
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
 
+// class ObstacleManager;
 namespace planning {
 
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
@@ -104,6 +105,10 @@ class ReferencePath {
   bool transform_trajectory_points(TrajectoryPoints &trajectory_points) const;
   bool transform_trajectory_point(TrajectoryPoint &trajectory_point) const;
 
+  bool get_polygon_at_time(const int id,
+    const int relative_time,
+    planning_math::Polygon2d &obstacle_polygon); // relative_time 为时间相对时间 * 10
+
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(
@@ -152,6 +157,7 @@ class ReferencePath {
   FrenetEgoState frenet_ego_state_;
 
   // obstacles
+  // std::shared_ptr<ObstacleManager> obstacle_manager_;
   std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles_;
 
   std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
@@ -163,6 +169,8 @@ class ReferencePath {
   std::vector<const Obstacle *> free_space_ground_lines_;
   std::vector<const Obstacle *> road_edges_;
 
+  // 第一个int为障碍物id;  第二个int为预测时间（t*10， Polygon2d为障碍物轮廓)
+  std::unordered_map<int, std::unordered_map<int, planning_math::Polygon2d>> obstacles_frenet_infos_;
   // session
   planning::framework::Session *session_;
 

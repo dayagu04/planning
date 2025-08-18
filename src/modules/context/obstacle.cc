@@ -188,31 +188,31 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
     }
     // polygon_points.erase(polygon_points.begin());
   }
-  auto extracted_polygon_points = polygon_points;
-  extract_point_at_specified_resolution(extracted_polygon_points);
-  if (extracted_polygon_points.size() < 3) {
-    extracted_polygon_points = polygon_points;
-  }
+  // auto extracted_polygon_points = polygon_points;
+  // extract_point_at_specified_resolution(extracted_polygon_points);
+  // if (extracted_polygon_points.size() < 3) {
+  //   extracted_polygon_points = polygon_points;
+  // }
 
-  if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
-                                                   &perception_polygon_)) {
-    LOG_DEBUG("polygon_debug invalid cart polygon");
-  }
-  std::vector<planning_math::Vec2d> ego_polygon_points;
-  LOG_DEBUG("obstacle[%d] polygon size : %lu %lu, ego x %f y %f\n", id_,
-            prediction_object.bottom_polygon_points.size(),
-            polygon_points.size(), x_center_, y_center_);
-  for (const auto &point : perception_polygon_.points()) {
-    ego_polygon_points.emplace_back(
-        planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
-    // LOG_DEBUG("ego point x %f y %f", ego_polygon_points.back().x(),
-    // ego_polygon_points.back().y());
-  }
+  // if (!planning_math::Polygon2d::ComputeConvexHull(extracted_polygon_points,
+  //                                                  &perception_polygon_)) {
+  //   LOG_DEBUG("polygon_debug invalid cart polygon");
+  // }
+  // std::vector<planning_math::Vec2d> ego_polygon_points;
+  // LOG_DEBUG("obstacle[%d] polygon size : %lu %lu, ego x %f y %f\n", id_,
+  //           prediction_object.bottom_polygon_points.size(),
+  //           polygon_points.size(), x_center_, y_center_);
+  // for (const auto &point : perception_polygon_.points()) {
+  //   ego_polygon_points.emplace_back(
+  //       planning_math::Vec2d(point.x() - x_center_, point.y() - y_center_));
+  //   // LOG_DEBUG("ego point x %f y %f", ego_polygon_points.back().x(),
+  //   // ego_polygon_points.back().y());
+  // }
   // LOG_DEBUG("obstacle[%d] last polygon size : %d", polygon_points.size());
-  if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
-                                                   &obstacle_ego_polygon_)) {
-    LOG_DEBUG("polygon_debug invalid ego polygon\n");
-  }
+  // if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
+  //                                                  &obstacle_ego_polygon_)) {
+  //   LOG_DEBUG("polygon_debug invalid ego polygon\n");
+  // }
   is_virtual_ = id_ < 0;
 
   if (prediction_object.trajectory_array.empty()) return;
@@ -262,9 +262,9 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
 
   // reset perception info matched with current timestamp
   auto init_point = get_point_at_time(0.0);
-  perception_polygon_ = get_polygon_at_point(init_point);
+  // perception_polygon_ = get_polygon_at_point(init_point);
   perception_bounding_box_ = get_bounding_box(init_point);
-  // speed_direction_ = init_point.velocity_direction;
+  perception_polygon_ = planning_math::Polygon2d(perception_bounding_box_);
 }
 
 Obstacle::Obstacle(const Obstacle *obstacle) {

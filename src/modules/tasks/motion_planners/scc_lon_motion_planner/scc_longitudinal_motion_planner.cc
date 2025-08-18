@@ -420,10 +420,10 @@ void SccLongitudinalMotionPlanner::Update() {
   motion_planner_output.delta_t_spline.set_points(t_vec, assembled_delta);
   motion_planner_output.omega_t_spline.set_points(t_vec, assembled_omega);
 
-  JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
-  JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
-  JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
-  JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
-  JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
+  // JSON_DEBUG_VECTOR("assembled_x", assembled_x, 4)
+  // JSON_DEBUG_VECTOR("assembled_y", assembled_y, 4)
+  // JSON_DEBUG_VECTOR("assembled_theta", assembled_theta, 4)
+  // JSON_DEBUG_VECTOR("assembled_delta", assembled_delta, 4)
+  // JSON_DEBUG_VECTOR("assembled_omega", assembled_omega, 4)
 }
 }  // namespace planning

@@ -24,7 +24,7 @@ FrenetObstacle::FrenetObstacle(
   compute_frenet_obstacle(reference_path);
   if (is_location_valid_) {
     compute_frenet_obstacle_boundary(reference_path);
-    compute_frenet_polygon_sequence(reference_path);
+    // compute_frenet_polygon_sequence(reference_path);
   } else {
     b_frenet_polygon_sequence_invalid_ = true;
   }
@@ -553,6 +553,8 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   }
 }
 
+
+
 bool FrenetObstacle::get_polygon_at_time(
     const double relative_time,
     const std::shared_ptr<ReferencePath> &reference_path,
@@ -591,7 +593,7 @@ bool FrenetObstacle::get_polygon_at_time_tmp(
   double prediction_frenet_s = frenet_velocity_s_ * relative_time;
   auto enu_polygon =
       obstacle_ptr_->get_polygon_at_point(obstacle_ptr_->get_point_at_time(0));
-
+  
   auto &frenet_coord = reference_path->get_frenet_coord();
   std::vector<planning_math::Vec2d> frenet_points;
   for (auto &pt : enu_polygon.points()) {

@@ -110,6 +110,8 @@ class Obstacle {
     return perception_polygon_;
   }
 
+  planning_math::Box2d get_bounding_box(const PncTrajectoryPoint &point) const;
+
   PncTrajectoryPoint get_point_at_time(const double relative_time) const;
 
   planning_math::Polygon2d get_polygon_at_point(
@@ -117,8 +119,6 @@ class Obstacle {
  private:
   void extract_point_at_specified_resolution(
       std::vector<planning_math::Vec2d> &points) const;
-
-  planning_math::Box2d get_bounding_box(const PncTrajectoryPoint &point) const;
 
  private:
   int id_{};

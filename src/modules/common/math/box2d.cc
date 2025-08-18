@@ -145,7 +145,7 @@ void Box2d::GetAllCorners(std::vector<Vec2d> *const corners) const {
   *corners = corners_;
 }
 
-std::vector<Vec2d> Box2d::GetAllCorners() const { return corners_; }
+const std::vector<Vec2d> &Box2d::GetAllCorners() const { return corners_; }
 
 std::vector<LineSegment2d> Box2d::GetAllEdges() const {
   std::vector<LineSegment2d> ret;

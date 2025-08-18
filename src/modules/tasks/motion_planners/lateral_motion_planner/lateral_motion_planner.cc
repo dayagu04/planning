@@ -490,12 +490,6 @@ bool LateralMotionPlanner::AssembleInput() {
              (!is_use_spatio_planner_result)) {
     planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::RAMP,
                                                  planning_input_);
-  } else if (session_->environmental_model()
-                     .get_lateral_obstacle()
-                     ->is_static_avoid_scene() &&
-            !is_use_spatio_planner_result) {
-    planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::STATIC_AVOID, planning_input_);
   } else if (!is_use_spatio_planner_result &&
              (lateral_offset_decider_output.is_valid ||
               (avoid_back_status &&
