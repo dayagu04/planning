@@ -1,8 +1,10 @@
 #pragma once
 #include "Eigen/Core"
+#include "apa_context.h"
+#include "geometry_math.h"
+#include "ifly_time.h"
 #include "local_view.h"
 #include "pose2d.h"
-#include "geometry_math.h"
 
 namespace planning {
 namespace apa_planner {
@@ -67,6 +69,19 @@ class ApaMeasureDataManager final {
   const pnc::geometry_lib::PathSegGear GetGear() const { return gear_; }
 
  private:
+  void StartFolding() {
+    mirror_state_ = MirrorState::FOLDING;
+    mirror_state_transition_time_ = IflyTime::Now_ms();
+    mirror_state_in_transition_ = true;
+  }
+
+  void StartExpanding() {
+    mirror_state_ = MirrorState::EXPANDING;
+    mirror_state_transition_time_ = IflyTime::Now_ms();
+    mirror_state_in_transition_ = true;
+  }
+
+ private:
   // drive gear, vel is positive
   // reverse gear, vel is negative
   double vel_ = 0.0;
@@ -88,11 +103,16 @@ class ApaMeasureDataManager final {
 
   bool brake_flag_ = false;
 
+  // true only when the rearview mirror is fully folded, otherwise it is false
   bool fold_mirror_flag_ = false;
 
   double acceleration_ = 0.0;
 
   pnc::geometry_lib::PathSegGear gear_;
+
+  MirrorState mirror_state_ = MirrorState::NONE;
+  double mirror_state_transition_time_ = 0.0;
+  bool mirror_state_in_transition_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -290,13 +290,15 @@ void ParkingScenario::SetPlanningPath() {
   iflyauto::RearViewMirrorCommand* mirror_command =
       &planning_output_.rear_view_mirror_signal_command;
   mirror_command->available = true;
-  if (frame_.need_fold_mirror) {
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
     mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_FOLD;
-  } else if (frame_.need_unfold_mirror) {
+  } else if (frame_.mirror_command == MirrorCommand::EXPAND) {
     mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_UNFOLD;
   } else {
     mirror_command->rear_view_mirror_value = iflyauto::REAR_VIEW_MIRROR_NONE;
   }
+
+  ILOG_INFO << "plan mirror = " << static_cast<int>(frame_.mirror_command);
 
   auto publish_traj = &(planning_output_.trajectory);
   publish_traj->available = true;
@@ -305,20 +307,41 @@ void ParkingScenario::SetPlanningPath() {
       apa_param.GetParam().speed_config.default_cruise_speed;
 
   if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
-    size_t N = current_path_point_global_vec_.size();
-    if (N > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
-      ILOG_INFO << "sample ds is possible err";
-      N = PLANNING_TRAJ_POINTS_MAX_NUM - 1;
-    }
-    publish_traj->trajectory_points_size = N;
+    double total_s = current_path_point_global_vec_.back().s;
+    double delta_point_s = total_s / PLANNING_TRAJ_POINTS_MAX_NUM;
+    double path_s = 0.0;
+    int path_point_id = 0;
 
-    for (size_t i = 0; i < N; ++i) {
-      const auto& global_point = current_path_point_global_vec_[i];
-      publish_traj->trajectory_points[i].x = global_point.pos.x();
-      publish_traj->trajectory_points[i].y = global_point.pos.y();
-      publish_traj->trajectory_points[i].heading_yaw = global_point.heading;
-      publish_traj->trajectory_points[i].v = 0.5;
+    ILOG_INFO << " plan path size " << current_path_point_global_vec_.size()
+              << ",s = " << total_s;
+
+    for (const auto& pt : current_path_point_global_vec_) {
+      if (pt.s < path_s) {
+        continue;
+      }
+
+      publish_traj->trajectory_points[path_point_id].x = pt.pos.x();
+      publish_traj->trajectory_points[path_point_id].y = pt.pos.y();
+      publish_traj->trajectory_points[path_point_id].heading_yaw = pt.heading;
+      publish_traj->trajectory_points[path_point_id].curvature = pt.kappa;
+      publish_traj->trajectory_points[path_point_id].t = 0;
+      publish_traj->trajectory_points[path_point_id].distance = pt.s;
+      publish_traj->trajectory_points[path_point_id].v = 0;
+      publish_traj->trajectory_points[path_point_id].a = 0;
+      publish_traj->trajectory_points[path_point_id].jerk = 0;
+
+      path_s = pt.s + delta_point_s;
+      path_point_id++;
+
+      if (path_point_id >= PLANNING_TRAJ_POINTS_MAX_NUM) {
+        break;
+      }
     }
+
+    publish_traj->trajectory_points_size =
+        std::min(path_point_id, PLANNING_TRAJ_POINTS_MAX_NUM);
+
+    publish_traj->target_reference.polynomial[0] = 0.0;
 
     // send obs remain dist to control
     publish_traj->trajectory_points[0].distance =
@@ -942,13 +965,18 @@ void ParkingScenario::RecordDebugObstacle(
 const bool ParkingScenario::CheckPathDangerous() { return false; }
 
 const ParkingScenario::CarSlotRelationship
-ParkingScenario::CalCarSlotRelationship(const geometry_lib::PathPoint& cur_pose) {
+ParkingScenario::CalCarSlotRelationship(
+    const geometry_lib::PathPoint& cur_pose) {
   return CarSlotRelationship::TOUCHING;
 }
 
 const bool ParkingScenario::CheckDynamicGearSwitch() {
   auto& param = apa_param.GetParam().gear_switch_config;
   if (!param.enable_dynamic_gear_switch) {
+    return false;
+  }
+
+  if (frame_.mirror_command != MirrorCommand::NONE) {
     return false;
   }
 

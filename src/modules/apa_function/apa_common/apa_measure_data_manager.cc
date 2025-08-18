@@ -97,13 +97,45 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
 
   acceleration_ = localization_info.acceleration.acceleration_body.ax;
 
+  const SmartFoldMirrorParams& smart_fold_mirror_params =
+      apa_param.GetParam().smart_fold_mirror_params;
   // fold_mirror_flag_代表规划是否认为后视镜已经折叠
-  if (apa_param.GetParam().smart_fold_mirror_params.force_fold_mirror) {
+  if (smart_fold_mirror_params.force_fold_mirror) {
     fold_mirror_flag_ = true;
   } else {
-    // get signal from vehicle service
-    fold_mirror_flag_ = (vehicle_service_output_info.rearview_mirror_sts ==
-                         iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold);
+    if (mirror_state_in_transition_) {
+      const double transition_time =
+          IflyTime::Now_ms() - mirror_state_transition_time_;
+      if (transition_time > smart_fold_mirror_params.consume_time * 1000) {
+        mirror_state_in_transition_ = false;
+        if (mirror_state_ == MirrorState::FOLDING) {
+          mirror_state_ = MirrorState::FOLDED;
+        } else if (mirror_state_ == MirrorState::EXPANDING) {
+          mirror_state_ = MirrorState::EXPANDED;
+        }
+      }
+    } else {
+      // get signal from vehicle service
+      if (vehicle_service_output_info.rearview_mirror_sts ==
+              iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold &&
+          mirror_state_ == MirrorState::EXPANDED) {
+        StartFolding();
+      } else if (vehicle_service_output_info.rearview_mirror_sts ==
+                     iflyauto::RearviewMirrorSts::Rearview_Mirror_Unfold &&
+                 mirror_state_ == MirrorState::FOLDED) {
+        StartExpanding();
+      } else if (mirror_state_ == MirrorState::NONE) {
+        if (vehicle_service_output_info.rearview_mirror_sts ==
+            iflyauto::RearviewMirrorSts::Rearview_Mirror_Fold) {
+          StartFolding();
+        } else if (vehicle_service_output_info.rearview_mirror_sts ==
+                   iflyauto::RearviewMirrorSts::Rearview_Mirror_Unfold) {
+          StartExpanding();
+        }
+      }
+    }
+
+    fold_mirror_flag_ = (mirror_state_ == MirrorState::FOLDED);
   }
 
   switch (vehicle_service_output_info.shift_lever_state) {
@@ -139,6 +171,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
             << car_static_timer_by_vel_normal_ << " s";
   ILOG_INFO << "static_flag = " << static_flag_
             << "  fold_mirror_flag = " << fold_mirror_flag_
+            << "  mirror_state = " << static_cast<int>(mirror_state_)
             << "  brake_flag = " << brake_flag_;
 
   JSON_DEBUG_VALUE("local_move_dist", local_move_dist)
@@ -152,6 +185,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
                    car_static_timer_by_vel_normal_)
   JSON_DEBUG_VALUE("static_flag", static_flag_)
   JSON_DEBUG_VALUE("fold_mirror_flag", fold_mirror_flag_)
+  JSON_DEBUG_VALUE("mirror_state", static_cast<int>(mirror_state_))
   JSON_DEBUG_VALUE(
       "force_fold_mirror",
       apa_param.GetParam().smart_fold_mirror_params.force_fold_mirror)
