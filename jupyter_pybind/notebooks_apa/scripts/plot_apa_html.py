@@ -74,6 +74,8 @@ def plotOnce(bag_path, html_file):
             vehicle_type = CHERY_E0X
         elif sys.argv[2] == CHERY_M32T:
             vehicle_type = CHERY_M32T
+        elif sys.argv[2] == BESTUNE_E541:
+            vehicle_type = BESTUNE_E541
         else:
             vehicle_type = JAC_S811
     else:

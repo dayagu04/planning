@@ -136,6 +136,8 @@ void SyncParkingParameters(const bool is_simulation) {
     car_type_int = 2;
   } else if (car_type_string == "cherry_m32t") {
     car_type_int = 3;
+  } else if (car_type_string == "bestune_e541") {
+    car_type_int = 4;
   } else {
     car_type_int = 0;
   }
