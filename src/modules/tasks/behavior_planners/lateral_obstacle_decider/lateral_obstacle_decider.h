@@ -77,8 +77,6 @@ class LateralObstacleDecider : public Task {
   bool &left_borrow_;
   bool &right_borrow_;
   std::unordered_map<uint32_t, double> &obstacle_intrusion_distance_thr_;
-  TrajectoryPoints &plan_history_traj_;
-  bool &is_plan_history_traj_valid_;
 };
 
 }  // namespace planning

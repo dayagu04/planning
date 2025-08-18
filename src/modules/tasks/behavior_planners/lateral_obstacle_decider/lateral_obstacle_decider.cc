@@ -46,13 +46,7 @@ LateralObstacleDecider::LateralObstacleDecider(
                   .lat_obstacle_decision),
       obstacle_intrusion_distance_thr_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
-                  .obstacle_intrusion_distance_thr),
-      plan_history_traj_(session_->mutable_planning_context()
-                  ->mutable_lateral_obstacle_decider_output()
-                  .plan_history_traj),
-      is_plan_history_traj_valid_(session_->mutable_planning_context()
-                  ->mutable_lateral_obstacle_decider_output()
-                  .is_plan_history_traj_valid) {
+                  .obstacle_intrusion_distance_thr) {
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
@@ -70,9 +64,15 @@ bool LateralObstacleDecider::Execute() {
     LOG_DEBUG("PreCheck failed\n");
     return false;
   }
+  auto &plan_history_traj = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .plan_history_traj;
+  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_plan_history_traj_valid;
   obstacle_intrusion_distance_thr_.clear();
-  plan_history_traj_.clear();
-  is_plan_history_traj_valid_ = false;
+  plan_history_traj.clear();
+  is_plan_history_traj_valid = false;
 
   // UpdateLaneBorrowDirection();
 
@@ -965,6 +965,12 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
 
 void LateralObstacleDecider::ConstructPlanHistoryTraj(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+  auto &plan_history_traj = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .plan_history_traj;
+  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->mutable_lateral_obstacle_decider_output()
+                          .is_plan_history_traj_valid;
   const auto &frenet_coord =
       reference_path_ptr->get_frenet_coord();
   auto &last_traj_points = session_->mutable_planning_context()
@@ -984,7 +990,7 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
     }
   }
   if (plan_history_traj_tmp.empty()) {
-    is_plan_history_traj_valid_ = false;
+    is_plan_history_traj_valid = false;
     return;
   }
   auto ego_s = reference_path_ptr->get_frenet_ego_state().planning_init_point().frenet_state.s;
@@ -996,7 +1002,7 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
           general_lateral_decider_utils::GetTrajectoryPointAtTime(
               plan_history_traj_tmp, t);
       pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
-      plan_history_traj_.emplace_back(std::move(pt));
+      plan_history_traj.emplace_back(std::move(pt));
     }
   } else if (ego_s >= plan_history_traj_tmp.back().s) {
     // assert(false);
@@ -1018,24 +1024,24 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
       TrajectoryPoint pt =
           general_lateral_decider_utils::GetTrajectoryPointAtTime(
               plan_history_traj_tmp, t);
-      plan_history_traj_.emplace_back(std::move(pt));
+      plan_history_traj.emplace_back(std::move(pt));
     }
-    for (auto &traj : plan_history_traj_) {
+    for (auto &traj : plan_history_traj) {
       traj.t -= base_t;
     }
-    if (plan_history_traj_.size() == 0) {
+    if (plan_history_traj.size() == 0) {
     } else {
-      for (int point_num = plan_history_traj_.size();
+      for (int point_num = plan_history_traj.size();
            point_num < config_.num_step + 1; point_num++) {
-        TrajectoryPoint pt = plan_history_traj_.back();
+        TrajectoryPoint pt = plan_history_traj.back();
         // For now, only s and t are modified
         pt.s += pt.v * config_.delta_t;
         pt.t += config_.delta_t;
-        plan_history_traj_.emplace_back(std::move(pt));
+        plan_history_traj.emplace_back(std::move(pt));
       }
     }
   }
-  is_plan_history_traj_valid_ = true;
+  is_plan_history_traj_valid = true;
 }
 
 void LateralObstacleDecider::UpdateIntersection() {
