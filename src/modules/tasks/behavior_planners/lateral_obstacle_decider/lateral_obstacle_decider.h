@@ -49,6 +49,8 @@ class LateralObstacleDecider : public Task {
         const std::shared_ptr<ReferencePath> &reference_path_ptr,
         FrenetObstacle &frenet_obstacle);
   void CheckObstaclesIsReverse();
+  void ConstructPlanHistoryTraj(
+      const std::shared_ptr<ReferencePath> &reference_path_ptr);
 
  private:
   planning::framework::Session *session_;

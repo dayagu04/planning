@@ -805,79 +805,88 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
-  const auto &frenet_coord =
-      reference_path_ptr_->get_frenet_coord();
-  auto &last_traj_points = session_->mutable_planning_context()
-                               ->mutable_last_planning_result()
-                               .raw_traj_points;
-
-  TrajectoryPoints plan_history_traj_tmp;
-  for (size_t i = 0; i < last_traj_points.size(); ++i) {
-    // frenet info
-    Point2D frenet_pt{0.0, 0.0};
-    Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      last_traj_points[i].s = frenet_pt.x;
-      last_traj_points[i].l = frenet_pt.y;
-      plan_history_traj_tmp.emplace_back(last_traj_points[i]);
-    } else {
-      LOG_DEBUG("plan_history_traj frenet error");
-    }
-  }
-  if (plan_history_traj_tmp.empty()) {
+  const auto is_plan_history_traj_valid = session_->planning_context()
+                                              .lateral_obstacle_decider_output()
+                                              .is_plan_history_traj_valid;
+  plan_history_traj_ = session_->planning_context()
+                           .lateral_obstacle_decider_output()
+                           .plan_history_traj;
+  if (!is_plan_history_traj_valid) {
     return false;
   }
-  auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
-  // auto ego_s = ego_frenet_state_.s();
-  if (ego_s <= plan_history_traj_tmp.front().s) {
-    for (double t = 0; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
-      TrajectoryPoint pt =
-          general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
-      pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
-      plan_history_traj_.emplace_back(std::move(pt));
-    }
-  } else if (ego_s >= plan_history_traj_tmp.back().s) {
-    // assert(false);
-  } else {
-    int index = 1;
-    while (index < plan_history_traj_tmp.size()) {
-      if (plan_history_traj_tmp[index].s >= ego_s) {
-        break;
-      }
-      index++;
-    }
-    const auto &traj_1 = plan_history_traj_tmp[index - 1];
-    const auto &traj_2 = plan_history_traj_tmp[index];
+  // const auto &frenet_coord =
+  //     reference_path_ptr_->get_frenet_coord();
+  // auto &last_traj_points = session_->mutable_planning_context()
+  //                              ->mutable_last_planning_result()
+  //                              .raw_traj_points;
 
-    const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
-    const double weight1 = 1.0 - weight0;
-    const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
-    for (double t = base_t; t <= plan_history_traj_tmp.back().t;
-         t += config_.delta_t) {
-      TrajectoryPoint pt =
-          general_lateral_decider_utils::GetTrajectoryPointAtTime(
-              plan_history_traj_tmp, t);
-      plan_history_traj_.emplace_back(std::move(pt));
-    }
+  // TrajectoryPoints plan_history_traj_tmp;
+  // for (size_t i = 0; i < last_traj_points.size(); ++i) {
+  //   // frenet info
+  //   Point2D frenet_pt{0.0, 0.0};
+  //   Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
+  //   if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+  //     last_traj_points[i].s = frenet_pt.x;
+  //     last_traj_points[i].l = frenet_pt.y;
+  //     plan_history_traj_tmp.emplace_back(last_traj_points[i]);
+  //   } else {
+  //     LOG_DEBUG("plan_history_traj frenet error");
+  //   }
+  // }
+  // if (plan_history_traj_tmp.empty()) {
+  //   return false;
+  // }
+  // auto ego_s = ego_frenet_state_.planning_init_point().frenet_state.s;
+  // // auto ego_s = ego_frenet_state_.s();
+  // if (ego_s <= plan_history_traj_tmp.front().s) {
+  //   for (double t = 0; t <= plan_history_traj_tmp.back().t;
+  //        t += config_.delta_t) {
+  //     TrajectoryPoint pt =
+  //         general_lateral_decider_utils::GetTrajectoryPointAtTime(
+  //             plan_history_traj_tmp, t);
+  //     pt.s = pt.s - (ego_s - plan_history_traj_tmp.front().s);
+  //     plan_history_traj_.emplace_back(std::move(pt));
+  //   }
+  // } else if (ego_s >= plan_history_traj_tmp.back().s) {
+  //   // assert(false);
+  // } else {
+  //   int index = 1;
+  //   while (index < plan_history_traj_tmp.size()) {
+  //     if (plan_history_traj_tmp[index].s >= ego_s) {
+  //       break;
+  //     }
+  //     index++;
+  //   }
+  //   const auto &traj_1 = plan_history_traj_tmp[index - 1];
+  //   const auto &traj_2 = plan_history_traj_tmp[index];
 
-    for (auto &traj : plan_history_traj_) {
-      traj.t -= base_t;
-    }
+  //   const double weight0 = (ego_s - traj_1.s) / (traj_2.s - traj_1.s);
+  //   const double weight1 = 1.0 - weight0;
+  //   const double base_t = weight1 * traj_1.t + weight0 * traj_2.t;
+  //   for (double t = base_t; t <= plan_history_traj_tmp.back().t;
+  //        t += config_.delta_t) {
+  //     TrajectoryPoint pt =
+  //         general_lateral_decider_utils::GetTrajectoryPointAtTime(
+  //             plan_history_traj_tmp, t);
+  //     plan_history_traj_.emplace_back(std::move(pt));
+  //   }
 
-    if (plan_history_traj_.size() == 0) {
-    } else {
-      for (int point_num = plan_history_traj_.size();
-           point_num < config_.num_step + 1; point_num++) {
-        TrajectoryPoint pt = plan_history_traj_.back();
-        // For now, only s and t are modified
-        pt.s += pt.v * config_.delta_t;
-        pt.t += config_.delta_t;
-        plan_history_traj_.emplace_back(std::move(pt));
-      }
-    }
-  }
+  //   for (auto &traj : plan_history_traj_) {
+  //     traj.t -= base_t;
+  //   }
+
+  //   if (plan_history_traj_.size() == 0) {
+  //   } else {
+  //     for (int point_num = plan_history_traj_.size();
+  //          point_num < config_.num_step + 1; point_num++) {
+  //       TrajectoryPoint pt = plan_history_traj_.back();
+  //       // For now, only s and t are modified
+  //       pt.s += pt.v * config_.delta_t;
+  //       pt.t += config_.delta_t;
+  //       plan_history_traj_.emplace_back(std::move(pt));
+  //     }
+  //   }
+  // }
 
   for (int i = 0; i < plan_history_traj_.size(); i++) {
     double plan_history_traj_point_s = plan_history_traj_[i].s;
@@ -919,6 +928,7 @@ void GeneralLateralDecider::GenerateRoadAndLaneBoundary() {
   UpdateDistanceToRoadBorder();
   GenerateRoadHardSoftBoundary();
   GenerateLaneSoftBoundary();
+  PostProcessRoadSoftBoundary();
 }
 
 void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
@@ -1003,6 +1013,99 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
 }
+
+void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
+  if (ref_traj_points_.size() <= 1) {
+    return;
+  }
+  // 路沿与静态障碍物膨胀距离一致
+  const double rear_lon_buf_dis = general_lateral_decider_utils::CalDesireLonDistance(
+      ego_frenet_state_.velocity_s(), 0,
+      false, config_);
+  const int bound_size = soft_bounds_.size();
+  const double delta_s = (ref_traj_points_.back().s - ref_traj_points_.front().s) / (ref_traj_points_.size() - 1);
+  if (delta_s <= 1e-6) {
+    return;
+  }
+  const int num_rear_extended_points = static_cast<int>(std::ceil(rear_lon_buf_dis / delta_s));
+  // 先只延申靠近自车的一侧soft bound
+  // 处理lower_bound
+  ExtendRoadSoftBound(num_rear_extended_points, 0, true, bound_size);
+  // 处理upper_bound
+  ExtendRoadSoftBound(num_rear_extended_points, 0, false, bound_size);
+}
+
+void GeneralLateralDecider::ExtendRoadSoftBound(
+    int num_rear_extended_points,
+    int num_front_extended_points, // 暂未使用，可后续扩展
+    bool is_lower, int bound_size) {
+  if (num_rear_extended_points <= 0) {
+    return;
+  }
+  std::deque<int> index_dq;  // 存索引，保持对应值单调
+  if (is_lower) {
+    for (int i = 0; i < bound_size; ++i) {
+      // 弹出窗口外的元素
+      while (!index_dq.empty() && index_dq.front() <= i - num_rear_extended_points) {
+          index_dq.pop_front();
+      }
+      // 保证队列单调递减，弹出所有小于等于当前值的元素
+      while (!index_dq.empty() && soft_bounds_[index_dq.back()][0].lower <= soft_bounds_[i][0].lower) {
+          index_dq.pop_back();
+      }
+      index_dq.push_back(i);
+      if (i >= num_rear_extended_points - 1) {
+        soft_bounds_[i - num_rear_extended_points + 1][0].lower = soft_bounds_[index_dq.front()][0].lower;
+      }
+      if (i == bound_size - 1 ) {
+        int start_index = std::max(i - num_rear_extended_points + 1, 0);
+        for (int j = start_index; j < bound_size; ++j) {
+          soft_bounds_[j][0].lower = soft_bounds_[index_dq.front()][0].lower;
+        }
+      }
+      // int max_lower_idx = i;
+      // double max_lower_val = soft_bounds_[i][0].lower;
+      // for (int j = i + 1 ; j < i + num_rear_extended_points && j < bound_size; ++j) {
+      //   if (soft_bounds_[j][0].lower > max_lower_val) {
+      //     max_lower_val = soft_bounds_[j][0].lower;
+      //     max_lower_idx = j;
+      //   }
+      // }
+      // soft_bounds_[i][0].lower = max_lower_val;
+    }
+  } else {
+    for (int i = 0; i < bound_size; ++i) {
+      // 弹出窗口外的元素
+      while (!index_dq.empty() && index_dq.front() <= i - num_rear_extended_points) {
+          index_dq.pop_front();
+      }
+      // 保持队列单调递增，弹出所有大于等于当前值的元素
+      while (!index_dq.empty() && soft_bounds_[index_dq.back()][0].upper >= soft_bounds_[i][0].upper) {
+          index_dq.pop_back();
+      }
+      index_dq.push_back(i);
+      if (i >= num_rear_extended_points - 1) {
+        soft_bounds_[i - num_rear_extended_points + 1][0].upper = soft_bounds_[index_dq.front()][0].upper;
+      }
+      if (i == bound_size - 1 ) {
+        int start_index = std::max(i - num_rear_extended_points + 1, 0);
+        for (int j = start_index; j < bound_size; ++j) {
+          soft_bounds_[j][0].upper = soft_bounds_[index_dq.front()][0].upper;
+        }
+      }
+      // int min_upper_idx  = i;
+      // double min_upper_val = soft_bounds_[i][0].upper;
+      // for (int j = i + 1; j < i + num_rear_extended_points && j < bound_size; ++j) {
+      //   if (soft_bounds_[j][0].upper < min_upper_val) {
+      //     min_upper_val = soft_bounds_[j][0].upper;
+      //     min_upper_idx = j;
+      //   }
+      // }
+      // soft_bounds_[i][0].upper = min_upper_val;
+    }
+  }
+}
+
 
 void GeneralLateralDecider::GenerateLaneSoftBoundary() {
   const auto &vehicle_param =
@@ -1345,12 +1448,12 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   }
 
   BoundType bound_type = BoundType::AGENT;
-  // // judge maintain_avoid_direction
-  // if (lat_obs_position_iter != lat_obstacle_position.end() &&
-  //     lat_obs_position_iter->second.maintain_avoid) {
-  //   is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
-  //   bound_type = BoundType::ADJACENT_AGENT;
-  // }
+  // judge maintain_avoid_direction
+  if (lat_obs_position_iter != lat_obstacle_position.end() &&
+      lat_obs_position_iter->second.maintain_avoid) {
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    bound_type = BoundType::ADJACENT_AGENT;
+  }
 
   // lane borrow
   const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
@@ -1362,6 +1465,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       // 向右借道
       is_nudge_left = true;
     }
+    bound_type = BoundType::AGENT;
   }
   bool is_cross_obj{false};
   bool has_lat_decision{false};
@@ -1746,7 +1850,9 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateDynamicObstacleDecision(obstacle, obstacle_decision);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, true);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, false);
+
     ExtractDynamicObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
     if (obstacle_potential_decision.extend_decisions.extended) {
@@ -1758,7 +1864,7 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
 
 void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     const std::shared_ptr<FrenetObstacle> obstacle,
-    ObstacleDecision &obstacle_decision) {
+    ObstacleDecision &obstacle_decision, bool is_update_hard_bound) {
   using namespace planning_math;
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -1793,11 +1899,14 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_nudge_left = lat_obstacle_decision.at(obstacle->id()) ==
                        LatObstacleDecisionType::RIGHT;
   bool is_same_side_obstacle_during_lane_change = IsSameSideObstacleDuringLaneChange(obstacle);
-  double front_lon_buf_dis =
-      general_lateral_decider_utils::CalDesireLonDistance(
-          ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
-          is_same_side_obstacle_during_lane_change, config_);
+  double front_lon_buf_dis = 1.0;
   double rear_lon_buf_dis = 1.0;
+  if (!is_update_hard_bound) {
+    front_lon_buf_dis =
+        general_lateral_decider_utils::CalDesireLonDistance(
+            ego_frenet_state_.velocity_s(), obstacle->frenet_velocity_s(),
+            is_same_side_obstacle_during_lane_change, config_);
+  }
   if ((is_in_lane_borrow_status) && (is_blocked_obstacle_)) {
     front_lon_buf_dis += config_.lane_borrow_extra_front_lon_buffer;
     rear_lon_buf_dis += config_.lane_borrow_extra_rear_lon_buffer;
@@ -1959,6 +2068,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         limit_overlap_min_y, limit_overlap_max_y,
         pred_ts, extra_lane_type_decrease_buffer,
         is_same_side_obstacle_during_lane_change,
+        is_update_hard_bound,
         overlap_min_y, overlap_max_y);
 
     // todo: high speed vehicle
@@ -2006,7 +2116,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       }
       AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                overlap_max_y, lat_buf_dis, lat_decision,
-                               lon_decision, obstacle_decision);
+                               lon_decision, obstacle_decision,
+                               is_update_hard_bound);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -2039,7 +2150,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
         }
         AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                  overlap_max_y, lat_buf_dis, lat_decision,
-                                 lon_decision, obstacle_decision);
+                                 lon_decision, obstacle_decision, is_update_hard_bound);
       }
     }
   }
@@ -2075,6 +2186,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     double limit_overlap_min_y, double limit_overlap_max_y,
     double pred_ts, double extra_lane_type_decrease_buffer,
     bool is_same_side_obstacle_during_lane_change,
+    bool is_update_hard_bound,
     double &updated_overlap_min_y, double &updated_overlap_max_y) {
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
@@ -2097,7 +2209,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   double lat_buf_dis =
       general_lateral_decider_utils::CalDesireLateralDistance(
           ego_cart_state_manager_->ego_v(), pred_ts, 0, obstacle,
-          is_nudge_left, in_intersection, is_same_side_obstacle_during_lane_change, config_);
+          is_nudge_left, in_intersection, is_same_side_obstacle_during_lane_change,
+          is_update_hard_bound, config_);
   if (!is_in_lane_borrow_status) {
     lat_buf_dis = std::fmax(lat_buf_dis - extra_lane_width_decrease_buffer_ -
                                 extra_lane_type_decrease_buffer,
@@ -2561,13 +2674,21 @@ void GeneralLateralDecider::PostProcessBound(
     // hack: only road border and agent in hard bounds
     if ((upper_bounds[upper_index].weight < 0.0) &&
         ((upper_type != BoundType::ROAD_BORDER) &&
-         (upper_type != BoundType::AGENT))) {
+         (upper_type != BoundType::AGENT) &&
+         (upper_type != BoundType::DYNAMIC_AGENT) &&
+         (upper_type != BoundType::LOW_PRIORITY_AGENT) &&
+         (upper_type != BoundType::REAR_AGENT) &&
+         (upper_type != BoundType::ADJACENT_AGENT))) {
       upper_index += 1;
       continue;
     }
     if ((lower_bounds[lower_index].weight < 0.0) &&
         ((lower_type != BoundType::ROAD_BORDER) &&
-         (lower_type != BoundType::AGENT))) {
+         (lower_type != BoundType::AGENT) &&
+         (lower_type != BoundType::DYNAMIC_AGENT) &&
+         (lower_type != BoundType::LOW_PRIORITY_AGENT) &&
+         (lower_type != BoundType::REAR_AGENT) &&
+         (lower_type != BoundType::ADJACENT_AGENT))) {
       lower_index += 1;
       continue;
     }

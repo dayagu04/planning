@@ -834,6 +834,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double hybrid_ara_s_range = 20;
   double l_buffer_for_lat_decision = 2;
   double column_l_buffer_for_decision = 2;
+  double delta_t = 0.2;
+  double num_step = 25;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -1200,8 +1202,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, extra_road_buffer_in_big_curvature,
                      "general_lateral_decider",
                      "extra_road_buffer_in_big_curvature");
+    ReadItem<double>(json, hard_buffer2dynamic_agent,
+                     "general_lateral_decider",
+                     "hard_buffer2dynamic_agent");
     /* read config from json */
   }
+  double hard_buffer2dynamic_agent = 0.15;
   double desired_vel = 11.11;                    // KPH_40;
   double l_care_width = 15.;                     // TBD: more beautiful
   double care_obj_lat_distance_threshold = 30.;  // TBD: more beautiful
@@ -1302,7 +1308,6 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "hard_buffer2static_agent"},
         hard_buffer2static_agent);
-
     soft_buffer2lane = read_json_keys<double>(
         json,
         std::vector<std::string>{"general_lateral_decider", "soft_buffer2lane"},

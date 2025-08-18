@@ -21,7 +21,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionObjects(
       const iflyauto::FusionObjectsInfo& fusion_objects_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_objects_msg_mutex_);
     fusion_objects_info_msg_ = fusion_objects_info_msg;
     fusion_objects_info_msg_recv_time_ = IflyTime::Now_ms();
     is_fusion_objects_info_msg_updated_.store(true);
@@ -30,7 +30,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void Feed_IflytekFusionOccupancyObjects(
       const iflyauto::FusionOccupancyObjectsInfo&
           fusion_occupancy_objects_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_occupancy_objects_msg_mutex_);
     fusion_occupancy_objects_info_msg_ = fusion_occupancy_objects_info_msg;
     fusion_occupancy_objects_info_msg_recv_time_ = IflyTime::Now_ms();
     is_fusion_occupancy_objects_info_msg_updated_.store(true);
@@ -38,7 +38,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionRoadFusion(
       const iflyauto::RoadInfo& road_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(road_info_msg_mutex_);
     road_info_msg_ = road_info_msg;
     road_info_msg_recv_time_ = IflyTime::Now_ms();
     is_road_info_msg_updated_.store(true);
@@ -46,7 +46,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionGroundLine(
       const iflyauto::FusionGroundLineInfo& ground_line_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(ground_line_msg_mutex_);
     ground_line_perception_msg_ = ground_line_msg;
     ground_line_perception_msg_recv_time_ = IflyTime::Now_ms();
     is_ground_line_perception_msg_updated_.store(true);
@@ -54,7 +54,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionSpeedBump(
       const iflyauto::FusionDecelerInfo& fusion_speed_bump_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);
     fusion_speed_bump_msg_ = fusion_speed_bump_msg;
     fusion_speed_bump_msg_recv_time_ = IflyTime::Now_ms();
     is_fusion_speed_bump_msg_updated_.store(true);
@@ -62,7 +62,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization& localization_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(localization_msg_mutex_);
     localization_msg_ = localization_msg;
     localization_msg_recv_time_ = IflyTime::Now_ms();
     is_localization_msg_updated_.store(true);
@@ -71,7 +71,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void FeedLocalizationEstimateOutput(
       const iflyauto::interface_2_4_6::LocalizationEstimate&
           localization_estimate_msg) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(localization_estimate_msg_mutex_);
     localization_estimate_msg_ = localization_estimate_msg;
     localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
     is_localization_estimate_msg_updated_.store(true);
@@ -79,7 +79,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekPredictionPredictionResult(
       const iflyauto::PredictionResult& prediction_result_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
     prediction_result_msg_ = prediction_result_msg;
     prediction_result_msg_recv_time_ = IflyTime::Now_ms();
     is_prediction_result_msg_updated_.store(true);
@@ -88,7 +88,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void Feed_IflytekVehicleService(
       const iflyauto::VehicleServiceOutputInfo& vehicle_service_output_info_msg)
       override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(vehicle_service_output_msg_mutex_);
     vehicle_service_output_info_msg_ = vehicle_service_output_info_msg;
     vehicle_service_output_info_msg_recv_time_ = IflyTime::Now_ms();
     is_vehicle_service_output_info_msg_updated_.store(true);
@@ -96,14 +96,14 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekControlControlCommand(
       const iflyauto::ControlOutput& control_output_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(control_output_msg_mutex_);
     control_output_msg_ = control_output_msg;
     control_output_msg_recv_time_ = IflyTime::Now_ms();
     is_control_output_msg_updated_.store(true);
   }
 
   // void FeedHmiInner(const iflyauto::HmiInner& hmi_inner_info_msg) {
-  //   std::lock_guard<std::mutex> lock(msg_mutex_);
+  //   std::lock_guard<std::mutex> lock(hmi_inner_info_msg_mutex_);
   //   hmi_inner_info_msg_ = hmi_inner_info_msg;
   //   hmi_inner_info_msg_recv_time_ = IflyTime::Now_ms();
   //   is_hmi_inner_info_msg_updated_.store(true);
@@ -111,7 +111,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void FeedHmiMcuInner(
       const iflyauto::interface_2_4_5::HmiMcuInner& hmi_mcu_inner_info_msg) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
     hmi_mcu_inner_info_msg_ = hmi_mcu_inner_info_msg;
     hmi_mcu_inner_info_msg_recv_time_ = IflyTime::Now_ms();
     is_hmi_mcu_inner_info_msg_updated_.store(true);
@@ -119,7 +119,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionParkingSlot(
       const iflyauto::ParkingFusionInfo& parking_fusion_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(parking_fusion_msg_mutex_);
     parking_fusion_info_msg_ = parking_fusion_info_msg;
     parking_fusion_info_msg_recv_time_ = IflyTime::Now_ms();
     is_parking_fusion_info_msg_updated_.store(true);
@@ -127,7 +127,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   // void FeedParkingMap(const IFLYParkingMap::ParkingInfo&
   // parking_map_info_msg) {
-  //   std::lock_guard<std::mutex> lock(msg_mutex_);
+  //   std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);
   //   parking_map_info_msg_ = parking_map_info_msg;
   //   parking_map_info_msg_recv_time_ = IflyTime::Now_ms();
   //   is_parking_map_info_msg_updated_.store(true);
@@ -135,7 +135,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFsmSocState(
       const iflyauto::FuncStateMachine& func_state_machine_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(func_state_machine_msg_mutex_);
     func_state_machine_msg_ = func_state_machine_msg;
     func_state_machine_msg_recv_time_ = IflyTime::Now_ms();
     is_func_state_machine_msg_updated_.store(true);
@@ -143,7 +143,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekUssUsswaveInfo(
       const iflyauto::UssPdcIccSendDataType& uss_wave_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(uss_wave_info_msg_mutex_);
     uss_wave_info_msg_ = uss_wave_info_msg;
     uss_wave_info_msg_recv_time_ = IflyTime::Now_ms();
     is_uss_wave_info_msg_updated_.store(true);
@@ -151,14 +151,14 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekFusionUssPerceptionInfo(
       const iflyauto::UssPerceptInfo& uss_percept_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(uss_percept_msg_mutex_);
     uss_percept_info_msg_ = uss_percept_info_msg;
     uss_percept_info_msg_recv_time_ = IflyTime::Now_ms();
     is_uss_percept_info_msg_updated_.store(true);
   }
 
   void Feed_IflytekEhrStaticMap(const Map::StaticMap& map_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(map_msg_mutex_);
     map_info_msg_.CopyFrom(map_msg);
     map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_map_info_msg_updated_.store(true);
@@ -167,7 +167,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekEhrSdmapInfo(
       const SdMapSwtx::SdMap& sd_map_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(sd_map_infomsg_mutex_);
     sd_map_info_msg_.CopyFrom(sd_map_info_msg);
     std::cout << "feed sd_map_info_msg_ end" << std::endl;
     sd_map_info_msg_recv_time_ = IflyTime::Now_ms();
@@ -176,7 +176,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekCameraPerceptionTrafficSignRecognition(
       const iflyauto::CameraPerceptionTsrInfo& perception_tsr_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(perception_tsr_msg_mutex_);
     perception_tsr_msg_ = perception_tsr_msg;
     perception_tsr_msg_recv_time_ = IflyTime::Now_ms();
     is_perception_tsr_msg_updated_.store(true);
@@ -212,6 +212,26 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void UpdateApaResetFlag();
 
  private:
+  std::mutex fusion_objects_msg_mutex_;
+  std::mutex fusion_occupancy_objects_msg_mutex_;
+  std::mutex road_info_msg_mutex_;
+  std::mutex ground_line_msg_mutex_;
+  std::mutex fusion_speed_bump_msg_mutex_;
+  std::mutex localization_msg_mutex_;
+  std::mutex localization_estimate_msg_mutex_;
+  std::mutex prediction_result_msg_mutex_;
+  std::mutex vehicle_service_output_msg_mutex_;
+  std::mutex control_output_msg_mutex_;
+  std::mutex hmi_mcu_inner_msg_mutex_;
+  std::mutex parking_fusion_msg_mutex_;
+  std::mutex func_state_machine_msg_mutex_;
+  std::mutex uss_wave_info_msg_mutex_;
+  std::mutex uss_percept_msg_mutex_;
+  std::mutex map_msg_mutex_;
+  std::mutex sd_map_infomsg_mutex_;
+  std::mutex perception_tsr_msg_mutex_;
+  std::mutex hmi_inner_info_msg_mutex_;
+  std::mutex parking_map_info_msg_mutex_;
   std::mutex msg_mutex_;
 
   iflyauto::PredictionResult prediction_result_msg_;
