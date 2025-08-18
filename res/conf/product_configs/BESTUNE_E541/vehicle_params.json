@@ -1,0 +1,22 @@
+{
+  "car_type": "e541",
+  "front_edge_to_rear_axle": 3.79,
+  "rear_edge_to_rear_axle": 1.097,
+  "rear_axle_to_center": 1.353,
+  "length": 4.887,
+  "width": 1.916,
+  "max_width": 2.078,
+  "height": 1.484,
+  "min_turn_radius": 5.6,
+  "max_acceleration":3.0,
+  "max_deceleration":5.0,
+  "max_jerk":8.0,
+  "min_jerk":-5.0,
+  "max_steer_angle": 8.54,
+  "max_steer_angle_rate": 7.853,
+  "min_steer_angle_rate":0.0,
+  "steer_ratio": 13.6,
+  "wheel_base": 2.8835,
+  "max_front_wheel_angle": 0.628,
+  "front_overhanging": 0.9065
+}
