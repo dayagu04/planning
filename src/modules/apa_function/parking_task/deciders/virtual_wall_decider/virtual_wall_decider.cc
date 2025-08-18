@@ -88,6 +88,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
       passage_height = head_out_passage_height;
+      virtual_wall_y_offset = 0.7;
     } else if (parking_type == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
                parking_type == ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
                parking_type == ParkingVehDirection::TAIL_OUT_TO_MIDDLE) {

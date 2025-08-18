@@ -160,6 +160,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
 
+  const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
