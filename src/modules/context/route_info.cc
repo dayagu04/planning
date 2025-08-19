@@ -2228,7 +2228,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
        mlc_decider_route_info_.ego_status_on_route == ON_MAIN)) {
     return;
   }
-  
+
   int minVal_seq = feasible_lane_sequence[0];
   int maxVal_seq = feasible_lane_sequence[0];
   for (int num : feasible_lane_sequence) {
@@ -2241,8 +2241,32 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
 
   for (auto& relative_id_lane : relative_id_lanes) {
+    if (relative_id_lane->get_relative_id() != 0) {
+      continue;
+    }
+
     const auto& lane_nums = relative_id_lane->get_lane_nums();
     // TODO(fengwang31):需要考虑这个车道数的准确性
+    // 现在基于感知车道数不准的情况下：当感知车道数与地图车道数对不上时，就往一个方向变道。
+
+    // 1、计算在当前位置的地图提供的可行驶车道数、应急车道数
+    iflymapdata::sdpro::FeaturePoint last_fp;
+    int emergency_lane_num = 0;
+    int total_lane_num = 0;
+    const double s = route_info_output_.current_segment_passed_distance;
+    if (CalculateLastFPInCurrentLink(&last_fp, current_link_, s)) {
+
+      total_lane_num = last_fp.lane_ids().size();
+      emergency_lane_num = 0;
+
+      for (const auto& lane_id : last_fp.lane_ids()) {
+        if (IsEmergencyLane(lane_id, sdpro_map_)) {
+          emergency_lane_num++;
+        }
+      }
+    }
+
+    // 2、计算当前位置感知提供的车道数，当前感知提供的车道数是默认包含了右边的应急车道的
     int left_lane_num = 0;
     int right_lane_num = 0;
     for (const auto& lane_num : lane_nums) {
@@ -2253,10 +2277,20 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
     }
 
-    if (relative_id_lane->get_relative_id() == 0) {
-      JSON_DEBUG_VALUE("left_lane_num", left_lane_num);
-      JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
-      JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
+    // 3、判断感知车道数和地图车道数是否吻合
+    const int perception_lane_num =
+        left_lane_num + right_lane_num + 1 - emergency_lane_num;
+    const int map_lane_num = total_lane_num - emergency_lane_num;
+
+    JSON_DEBUG_VALUE("left_lane_num", left_lane_num);
+    JSON_DEBUG_VALUE("right_lane_num", right_lane_num);
+    JSON_DEBUG_VALUE("emergency_lane_num", emergency_lane_num);
+    JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
+    JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
+
+    if (perception_lane_num != map_lane_num) {
+      relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
+      continue;
     }
 
     int ego_seq = left_lane_num + 1;
@@ -3801,5 +3835,25 @@ bool RouteInfo::CalculateLastFPInCurrentLink(
     }
   }
   return false;
+}
+
+std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() const{
+  std::vector<int> task_num;
+
+  bool is_process_split = false;
+  bool is_process_split_split = false;
+  bool is_process_other_merge_split = false;
+  if (mlc_decider_route_info_.is_process_split) {
+    if (mlc_decider_route_info_.first_static_split_region_info
+            .split_direction == SPLIT_LEFT) {
+      // 暂时由于不知道右侧有几个车道，因此在当前车道上执行一次变道动作
+      task_num.emplace_back(-1);
+
+    } else if (mlc_decider_route_info_.first_static_split_region_info
+                   .split_direction == SPLIT_RIGHT) {
+      task_num.emplace_back(1);
+    }
+  }
+  return task_num;
 }
 }  // namespace planning

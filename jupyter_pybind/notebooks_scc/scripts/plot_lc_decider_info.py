@@ -112,7 +112,7 @@ def update_lc_data (noa_info, plan_debug_json):
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
              'current_segment_passed_distance', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold', "ego_press_line_ratio",'ego_status_on_route','left_lane_num', 'minVal_seq', 'maxVal_seq']
+             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold', "ego_press_line_ratio",'ego_status_on_route','left_lane_num', 'minVal_seq', 'maxVal_seq', 'right_lane_num', 'emergency_lane_num']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))

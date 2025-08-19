@@ -676,7 +676,7 @@ class LoadRosbag:
                           "cur_lane_mark", "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id", "cur_lane_mark_plan",
                           "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id", "is_truck_overtake", "is_truck_yield",
-                          "truck_decider_state", "truck_running_frames", "truck_cooldown_frames", "truck_lateral_distance"]
+                          "truck_decider_state", "truck_running_frames", "truck_cooldown_frames", "truck_lateral_distance",'right_lane_num','emergency_lane_num']
 
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",

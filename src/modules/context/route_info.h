@@ -200,6 +200,8 @@ class RouteInfo {
       iflymapdata::sdpro::FeaturePoint* find_fp,
       const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s);
 
+  std::vector<int> CalculateMLCTaskNoLaneNum() const;
+
   std::vector<int> CommonElements(const std::vector<int>& A,
                                   const std::vector<int>& B) {
     std::vector<int> commonElements;
@@ -214,7 +216,7 @@ class RouteInfo {
 
   bool IsEmergencyLane(const uint64 lane_id,
                        const ad_common::sdpromap::SDProMap& sdpro_map) const;
-                       
+
   double CalculateAngle(const Point2D& o, const Point2D& p) {
     double dx = p.x - o.x;
     double dy = p.y - o.y;
