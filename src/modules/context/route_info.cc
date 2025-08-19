@@ -696,6 +696,7 @@ void RouteInfo::CaculateSplitInfo(
   route_info_output_.first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
   const auto& split_info =
       sdpro_map.GetSplitInfoList(link.id(), nearest_s, max_search_length);
+  route_info_output_.split_dir_dis_info_list.clear();
   if (!split_info.empty()) {
     bool is_find_first_split_info = false;
     int traverse_num = 0;
@@ -725,6 +726,14 @@ void RouteInfo::CaculateSplitInfo(
                 static_cast<SplitDirection>(split_seg_info.split_direction);
             route_info_output_.split_region_info_list.emplace_back(
                 first_split_region_lane_tupo_info);
+            route_info_output_.first_split_dir_dis_info =
+                std::make_pair(static_cast<SplitRelativeDirection>(
+                                  route_info_output_.first_split_direction),
+                              route_info_output_.distance_to_first_road_split);
+            route_info_output_.split_dir_dis_info_list.emplace_back(
+                std::make_pair(static_cast<SplitRelativeDirection>(
+                                  route_info_output_.first_split_direction),
+                              route_info_output_.distance_to_first_road_split));
           }
 
           is_find_first_split_info = true;
@@ -750,6 +759,10 @@ void RouteInfo::CaculateSplitInfo(
                 static_cast<SplitDirection>(split_seg_info.split_direction);
             route_info_output_.split_region_info_list.emplace_back(
                 second_split_region_lane_tupo_info);
+            route_info_output_.split_dir_dis_info_list.emplace_back(
+                std::make_pair(static_cast<SplitRelativeDirection>(
+                                  route_info_output_.second_split_direction),
+                              route_info_output_.distance_to_second_road_split));
           }
         }
         if (traverse_num >= 2) {

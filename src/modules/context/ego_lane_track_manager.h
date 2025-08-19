@@ -81,7 +81,15 @@ class EgoLaneTrackManger {
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
       const std::vector<int> &order_ids);
 
+  bool CheckIfInRampSelectSplitForSdpro(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
   bool CheckIfInRoadSelectRamp(
+      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+      const std::vector<int> &order_ids);
+
+  bool CheckIfInRoadSelectRampForSdpro(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
       const std::vector<int> &order_ids);
 
