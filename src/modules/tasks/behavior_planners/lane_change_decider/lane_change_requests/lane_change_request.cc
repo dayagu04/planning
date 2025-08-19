@@ -122,7 +122,7 @@ double LaneChangeRequest::CalculatePressLineRatio(
       press_line_ratio = 0.0;
     } else if (ego_frenent_boundary.l_start < -half_lane_width) {
       press_line_ratio =
-          (-ego_frenent_boundary.l_start + half_lane_width) / frenent_ego_width;
+          (-ego_frenent_boundary.l_start - half_lane_width) / frenent_ego_width;
     } else {
       press_line_ratio = 0.0;
     }
