@@ -1189,10 +1189,6 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
       }
     }
   }
-  // limit large diff
-  if (last_remotely_index_ > weight_.remotely_index + 2) {
-    weight_.remotely_index = std::max(last_remotely_index_ - 2, weight_.proximal_index);
-  }
   // consider avoid
   double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
   if (lateral_dist > 0.6) {
