@@ -78,7 +78,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   candidate_info_.emplace_back(candidate);
 
   // update ego dist
-  tf.SetBasePose(request->start_);
+  tf.SetBasePose(request->start_pose);
   edt->DistanceCheckForPoint(&dist, &tf, gear);
   ego_dist_to_obs_ = dist;
 
@@ -457,9 +457,9 @@ const int TargetPoseRegulator::GenerateOffsetPreference() const {
 
   // 车辆在[0-170],
   // [-170~0],说明车辆需要打方向盘调整入库，此时需要故意将目标点增加一个偏移量
-  if (std::fabs(request_->start_.theta) < ifly_deg2rad(170.0)) {
+  if (std::fabs(request_->start_pose.theta) < ifly_deg2rad(170.0)) {
     // right
-    if (request_->start_.theta > 0.0) {
+    if (request_->start_pose.theta > 0.0) {
       return 1;
     } else {
       return -1;

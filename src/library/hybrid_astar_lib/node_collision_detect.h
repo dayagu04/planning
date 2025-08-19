@@ -68,6 +68,8 @@ class NodeCollisionDetect {
   // debug
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
+  const bool IsContainByRecommendBox(const Pose2f& global_pose);
+
  private:
   FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
                                                 const bool is_circle_path);
@@ -106,7 +108,12 @@ class NodeCollisionDetect {
   HierarchyBufferCircleFootPrint hierachy_circle_model_;
 
   // 用于区分库内库外
+  // todo: add template for double/float
   cdl::AABB2f slot_box_;
+  cdl::AABB2f recommend_route_box_;
+  // If pose is in compact_route_box_, do not check it again.
+  cdl::AABB2f compact_route_box_;
+  std::array<Position2f, 4> veh_box_;
 
   const ParkObstacleList* obstacles_;
   // if search node in aabb, no need to check collision;
@@ -114,7 +121,7 @@ class NodeCollisionDetect {
 
   EulerDistanceTransform* edt_;
 
-  const MapBound *XYbounds_;
+  const MapBound *grid_map_bound_;
   const AstarRequest* request_;
 };
 }  // namespace planning

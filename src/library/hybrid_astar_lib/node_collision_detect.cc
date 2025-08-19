@@ -18,13 +18,13 @@ NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
     : obstacles_(obstacles),
       edt_(edt),
       clear_zone_(clear_zone),
-      XYbounds_(XYbounds),
+      grid_map_bound_(XYbounds),
       request_(request) {}
 
 const bool NodeCollisionDetect::IsPointBeyondBound(const float x,
                                                    const float y) const {
-  if (x > XYbounds_->x_max || x < XYbounds_->x_min || y > XYbounds_->y_max ||
-      y < XYbounds_->y_min) {
+  if (x > grid_map_bound_->x_max || x < grid_map_bound_->x_min || y > grid_map_bound_->y_max ||
+      y < grid_map_bound_->y_min) {
     return true;
   }
   return false;
@@ -725,8 +725,8 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
                            dir == ParkingVehDirection::TAIL_IN);
 
   // The parking out function does not require this condition
-  bool theta_close = std::fabs(IflyUnifyTheta(
-                         pose.theta - request_->goal_.theta, M_PIf32)) < 1.05f;
+  bool theta_close = std::fabs(IflyUnifyTheta(pose.theta - request_->goal.theta,
+                                              M_PIf32)) < 1.05f;
 
   if (inside_slot) {
     if ((need_theta_check && theta_close) || !need_theta_check) {
@@ -771,13 +771,12 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
       &veh_box_gear_drive_,
       vehicle_param.rear_edge_to_rear_axle +
           config.safe_buffer.lon_min_safe_buffer,
-      vehicle_param.wheel_base + vehicle_param.front_overhanging + lon_buffer,
-      safe_half_width);
+      vehicle_param.front_edge_to_rear_axle + lon_buffer, safe_half_width);
 
   // gear r
   GetRightUpCoordinatePolygonByParam(
       &veh_box_gear_reverse_, vehicle_param.rear_edge_to_rear_axle + lon_buffer,
-      vehicle_param.wheel_base + vehicle_param.front_overhanging +
+      vehicle_param.front_edge_to_rear_axle +
           config.safe_buffer.lon_min_safe_buffer,
       safe_half_width);
 
@@ -785,8 +784,7 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   GetRightUpCoordinatePolygonByParam(&veh_box_gear_none_,
                                      vehicle_param.rear_edge_to_rear_axle +
                                          config.safe_buffer.lon_min_safe_buffer,
-                                     vehicle_param.wheel_base +
-                                         vehicle_param.front_overhanging +
+                                     vehicle_param.front_edge_to_rear_axle +
                                          config.safe_buffer.lon_min_safe_buffer,
                                      safe_half_width);
 
@@ -823,7 +821,42 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   ILOG_INFO << "outside buffer = " << lat_buffer_outside
             << ", inside buffer = " << lat_buffer_inside;
 
+  GetUpLeftCoordinatePolygonByParam(
+      veh_box_, vehicle_param.rear_edge_to_rear_axle,
+      vehicle_param.front_edge_to_rear_axle, safe_half_width);
+  recommend_route_box_ = TransformMapBound(request_->recommend_route_bound);
+  compact_route_box_ = recommend_route_box_;
+  compact_route_box_.ShrinkX(vehicle_param.front_edge_to_rear_axle);
+  compact_route_box_.ShrinkY(vehicle_param.front_edge_to_rear_axle);
+
   return;
+}
+
+const bool NodeCollisionDetect::IsContainByRecommendBox(
+    const Pose2f& global_pose) {
+  if (compact_route_box_.contain(global_pose)) {
+    return true;
+  }
+
+  if (!recommend_route_box_.contain(global_pose)) {
+    return false;
+  }
+
+  // check it again
+  Transform2f tf;
+  tf.SetBasePose(global_pose);
+  std::array<Position2f, 4> global;
+  for (int i = 0; i < 4; i++) {
+    tf.ULFLocalPointToGlobal(&global[i], veh_box_[i]);
+  }
+
+  cdl::AABB2f aabb;
+  GetBoundingBoxByPolygon(&aabb, global);
+  if (recommend_route_box_.contain(aabb)) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace planning

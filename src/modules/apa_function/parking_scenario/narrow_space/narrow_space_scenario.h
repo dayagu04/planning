@@ -158,6 +158,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
 
+  void UpdateRecommentRouteBox();
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
@@ -187,6 +189,8 @@ class NarrowSpaceScenario : public ParkingScenario {
   // If fail in history planning, consider blind zone, delete obstacles in blind
   // zone.
   int path_planning_fail_num_;
+
+  MapBound recommend_route_bound_;
 };
 
 }  // namespace apa_planner

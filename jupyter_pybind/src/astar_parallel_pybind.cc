@@ -705,17 +705,17 @@ std::vector<Eigen::Vector3d> Update(
     request.path_generate_method =
         planning::AstarPathGenerateType::ASTAR_SEARCHING;
 
-    request.start_ = Pose2f(start[0], start[1], start[2]);
-    request.start_.theta =
-        ad_common::math::NormalizeAngle(request.start_.theta);
+    request.start_pose = Pose2f(start[0], start[1], start[2]);
+    request.start_pose.theta =
+        ad_common::math::NormalizeAngle(request.start_pose.theta);
 
-    request.goal_ = Pose2f(end[0], end[1], end[2]);
-    request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
+    request.goal = Pose2f(end[0], end[1], end[2]);
+    request.goal.theta = ad_common::math::NormalizeAngle(request.goal.theta);
 
     request.real_goal = Pose2f(ego_slot_info.target_pose.pos[0],
                                ego_slot_info.target_pose.pos[1],
                                ego_slot_info.target_pose.heading);
-    request.base_pose_ = Pose2D(0, 0, 0);
+    request.base_pose = Pose2D(0, 0, 0);
 
     request.space_type = ParkSpaceType::PARALLEL;
     request.direction_request = ParkingVehDirection::TAIL_IN;
@@ -724,6 +724,7 @@ std::vector<Eigen::Vector3d> Update(
     request.slot_length = ego_slot_info.slot.GetLength();
     request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = swap_start_goal;
+    request.recommend_route_bound = MapBound(-10.0, 20.0, -20.0, 20.0);
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
 
@@ -740,7 +741,7 @@ std::vector<Eigen::Vector3d> Update(
     RSPathInterface rs_interface;
     RSPath rs_path;
     RSPathRequestType rs_request = RSPathRequestType::NONE;
-    rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &request.start_,
+    rs_interface.GeneSCSPath(&rs_path, &is_connected_to_goal, &request.start_pose,
                              &request.real_goal, parking_param.min_turn_radius,
                              rs_request);
 

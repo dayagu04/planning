@@ -81,10 +81,10 @@ void HybridAStarInterface::UpdateInput(const ParkObstacleList& obs_list,
   request_ = request;
 
   // start state
-  ego_state_ = request.start_;
+  ego_state_ = request.start_pose;
 
   // end state
-  goal_state_ = request.goal_;
+  goal_state_ = request.goal;
 
   obs_ = obs_list;
 
@@ -132,8 +132,9 @@ void HybridAStarInterface::UpdateOutput() {
 
   PathClear();
   search_state_ = AstarSearchState::SEARCHING;
+  DebugMapBoundString(request_.recommend_route_bound);
 
-  UpdateSearchBoundary();
+  UpdateGridMapBound();
 
   UpdateEDT();
   // update clear zone. This zone not contain any obstacle.
@@ -233,11 +234,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   DebugAstarRequestString(request_);
 
   // range
-  UpdateSearchBoundary();
-
-  ILOG_INFO << "map bound, xmin " << map_bounds_.x_min << " , ymin "
-            << map_bounds_.y_min << " ,xmax " << map_bounds_.x_max << " , ymax "
-            << map_bounds_.y_max;
+  UpdateGridMapBound();
+  DebugMapBoundString(map_bounds_);
 
   // start state
   ego_state_.x = start[0];
@@ -703,8 +701,8 @@ void HybridAStarInterface::GetPolynomialPathForDebug(std::vector<float>& x,
   return;
 }
 
-void HybridAStarInterface::UpdateSearchBoundary() {
-  // range
+void HybridAStarInterface::UpdateGridMapBound() {
+  // update grid map range, ego pose need to be in range map_bounds.
   if (request_.space_type == ParkSpaceType::VERTICAL ||
       request_.space_type == ParkSpaceType::SLANTING) {
     map_bounds_.x_min = -2;
@@ -926,7 +924,7 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     lon_min_sampling_length = 0.4;
   }
 
-  target_regulator_goal_ = request_.goal_;
+  target_regulator_goal_ = request_.goal;
 
   float lat_buffer_outside;
   float advised_lat_buffer_inside;

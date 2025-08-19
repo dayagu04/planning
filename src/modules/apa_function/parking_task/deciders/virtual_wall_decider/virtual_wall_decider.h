@@ -68,6 +68,10 @@ class VirtualWallDecider : public ParkingTask {
     return;
   }
 
+  const MapBound GetMaxMapBound() const;
+
+  const MapBound GetVehBound() const;
+
  private:
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
                                const double slot_width, const double slot_length,
@@ -116,6 +120,7 @@ class VirtualWallDecider : public ParkingTask {
 
   // 感知范围6x6meter，所以passage范围尽量设置小一些，否则path经常穿墙、穿车而过.
   VirtualWallBoundary passage_bound_;
+  VirtualWallBoundary slot_boundary_;
 
   // vehicle boundary
   VirtualWallBoundary veh_boundary_;

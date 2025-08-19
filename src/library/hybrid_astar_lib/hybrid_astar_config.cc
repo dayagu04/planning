@@ -38,6 +38,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   expect_gear_penalty = 7.0;
   expect_dist_penalty = 7.0;
+  recommend_box_penalty = 7.0;
 
   enable_euler_cost_for_vertical_park = true;
   enable_dp_cost_for_vertical_park = true;

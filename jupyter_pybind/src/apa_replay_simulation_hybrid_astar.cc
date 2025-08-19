@@ -531,8 +531,6 @@ const bool PlanOnce(
   local_view.fusion_objects_info = fusion_objs;
   local_view.fusion_occupancy_objects_info = fus_occ_obj_info;
   local_view.control_output = control_output_info;
-  local_view.function_state_machine_info.parking_req.apa_parking_direction =
-      iflyauto::FRONT_END_PARKING_DIRECTION;
 
   double copy_data_time = IflyTime::Now_us();
   ILOG_INFO << " copy data time ms " << (copy_data_time - start_time) / 1000.0;

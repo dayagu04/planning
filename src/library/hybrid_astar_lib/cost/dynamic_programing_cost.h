@@ -107,7 +107,7 @@ class GridSearch {
   float xy_grid_resolution_half_ = 0.0;
   float safe_width_ = 0.0;
 
-  MapBound XYbounds_;
+  MapBound grid_map_bound_;
 
   int32_t max_grid_x_ = 0.0;
   int32_t max_grid_y_ = 0.0;

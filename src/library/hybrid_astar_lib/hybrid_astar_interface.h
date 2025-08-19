@@ -107,7 +107,7 @@ class HybridAStarInterface {
 
   void PathClear();
 
-  void UpdateSearchBoundary();
+  void UpdateGridMapBound();
 
   void UpdateEDTBasePose(Pose2f& ogm_base_pose);
 

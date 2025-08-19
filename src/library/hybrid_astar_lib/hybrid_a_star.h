@@ -256,6 +256,8 @@ class HybridAStar {
 
   void SetSamplingTarget(const Pose2f& pose);
 
+  void UpdateMaxGridIndex();
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;
@@ -279,16 +281,9 @@ class HybridAStar {
   float xy_grid_resolution_ = 0.0;
   float phi_grid_resolution_ = 0.0;
 
-  // search bound
-  // todo: map bound is large, unify map bound and search bound.
-  // search bound is small. (0-40 meter)
-  // PER_DIMENSION_MAX_NODE, data bound(bit:0-9) is more large.
-  size_t max_x_search_size_;
-  size_t max_y_search_size_;
-  size_t max_theta_search_size_;
-
   // xmin, xmax, ymin, ymax
-  MapBound XYbounds_;
+  MapBound grid_map_bound_;
+  NodeGridIndex max_grid_map_index_;
 
   // astar start, end
   Node3d* start_node_;

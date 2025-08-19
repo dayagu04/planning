@@ -255,4 +255,12 @@ void FootPrintLocalToGlobal(const Transform2d &tf,
                             const PolygonFootPrint *local_foot_print,
                             PolygonFootPrint *global_foot_print);
 
+void GetUpLeftCoordinatePolygonByParam(std::array<Position2f, 4> &box,
+                                       const float back_overhanging,
+                                       const float front_edge_to_rear_axis,
+                                       const float half_width);
+
+void GetBoundingBoxByPolygon(cdl::AABB2f *box,
+                             const std::array<Position2f, 4> &polygon);
+
 }  // namespace planning
