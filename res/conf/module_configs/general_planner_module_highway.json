@@ -198,7 +198,7 @@
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
   "processed_trajectory_filter_alpha": 0.4,
-  "processed_trajectory_acc_thr": -0.5,
+  "processed_trajectory_acc_thr": 0.5,
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
@@ -588,7 +588,7 @@
     "q_acc_startmode": 1.0,
     "q_jerk_startmode": 1.0,
     "q_djerk_startmode": 20.0,
-    "q_soft_pos_bound_startmode": 0.0,
+    "q_soft_pos_bound_startmode": 5.0,
     "q_hard_pos_bound_startmode": 1000.0,
     "q_sv_bound_startmode": 0.0,
     "q_vel_bound_startmode": 100.0,
@@ -599,7 +599,7 @@
     "q_ref_vel_stopmode": 35.0,
     "q_acc_stopmode": 10.0,
     "q_jerk_stopmode": 30.0,
-    "q_soft_pos_bound_stopmode": 0.0,
+    "q_soft_pos_bound_stopmode": 5.0,
     "q_hard_pos_bound_stopmode": 1000.0,
     "q_sv_bound_stopmode": 0.0,
     "q_vel_bound_stopmode": 400.0,
@@ -612,7 +612,7 @@
     "q_acc": 10.0,
     "q_jerk": 100.0,
     "q_djerk": 50.0,
-    "q_soft_pos_bound": 0.0,
+    "q_soft_pos_bound": 5.0,
     "q_hard_pos_bound": 1000.0,
     "q_sv_bound": 0.0,
     "q_vel_bound": 100.0,
@@ -963,6 +963,16 @@
       "front_lower_weight" : 0.5,
       "back_upper_weight" : 1.5,
       "max_s_weight" : 2.0
+    },
+    "follow_target": {
+      "acc_cipv": -1.0,
+      "lower_speed_min_follow_distance_gap" : 4.0,
+      "high_speed_min_follow_distance_gap" : 5.0,
+      "low_speed_threshold_kmph" : 18.0,
+      "high_speed_threshold_kmph" : 30.0,
+      "large_vehicle_min_follow_distance_gap" : 6.0,
+      "cone_min_follow_distance_gap" : 5.0,
+      "traffic_light_min_follow_distance_gap" : 2.0
     }
 },
 

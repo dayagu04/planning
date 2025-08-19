@@ -30,6 +30,7 @@ Agent::Agent(const Agent& agent)
   y_ = agent.y();
   theta_ = agent.theta();
   speed_ = agent.speed();
+  speed_fusion_ = agent.speed_fusion();
   accel_ = agent.accel();
   accel_fusion_ = agent.accel_fusion();
   length_ = agent.length();
@@ -62,7 +63,8 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   // theta定义
   // theta_ = prediction_object.relative_theta;
   theta_ = prediction_object.theta;
-  speed_ = prediction_object.speed;
+  speed_ = prediction_object.speed_fusion;
+  speed_fusion_ = prediction_object.speed_fusion;
   accel_ = prediction_object.acc;
   accel_fusion_ = prediction_object.acc_fusion;
   length_ = prediction_object.length;
@@ -94,7 +96,7 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
     auto& traj_point = prediction_trajectory[i];
     trajectory::TrajectoryPoint tp;
     tp.set_vel(traj_point.speed);
-    tp.set_acc(0.0);
+    tp.set_acc(accel_fusion_);
     tp.set_x(traj_point.x);
     tp.set_y(traj_point.y);
     // TODO：绝对时间 or 相对时间?
@@ -140,6 +142,11 @@ void Agent::set_theta(const double theta) { theta_ = theta; }
 
 const double Agent::speed() const { return speed_; }
 void Agent::set_speed(const double speed) { speed_ = speed; }
+
+const double Agent::speed_fusion() const { return speed_fusion_; }
+void Agent::set_speed_fusion(const double speed_fusion) {
+  speed_fusion_ = speed_fusion;
+}
 
 const double Agent::accel() const { return accel_; }
 void Agent::set_accel(const double accel) { accel_ = accel; }

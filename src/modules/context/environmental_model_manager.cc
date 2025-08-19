@@ -778,21 +778,28 @@ void EnvironmentalModelManager::truncate_prediction_info(
   // HACK: store fusion object info
   // <key: Perception id, value: fusion obj acc>
   std::unordered_map<int32_t, double> fusion_objects_acc_map;
+  // <key: Perception id, value: fusion obj vel>
+  std::unordered_map<int32_t, double> fusion_objects_vel_map;
   for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
     const auto &fusion_obj = fusion_objects_result.fusion_object[i];
     double obj_yaw = fusion_obj.common_info.heading_angle;
+    double ego_yaw = ego_state->heading_angle();
     // double ego_yaw = ego_state->heading_angle();
     if ((int)obj_yaw == 255) {
       obj_yaw = ego_state->heading_angle();
     }
-    Eigen::Vector2f obj_heading_vec(cos(obj_yaw), sin(obj_yaw));
+    Eigen::Vector2f obj_heading_vec(cos(ego_yaw), sin(ego_yaw));
     Eigen::Vector2f fusion_obj_acc_vec(fusion_obj.common_info.acceleration.x,
                                        fusion_obj.common_info.acceleration.y);
     double fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
+    double fusion_vel = std::hypot(fusion_obj.common_info.velocity.x,
+                                   fusion_obj.common_info.velocity.y);
     int32_t obj_fusion_source = fusion_obj.additional_info.fusion_source;
     if (obj_fusion_source & OBSTACLE_SOURCE_CAMERA) {
       fusion_objects_acc_map.insert(
           {fusion_obj.additional_info.sensor_source_id[0], fusion_acc});
+      fusion_objects_vel_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_vel});
     }
   }
 
@@ -860,6 +867,16 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.speed =
         std::hypot(prediction_object.fusion_obstacle.common_info.velocity.x,
                    prediction_object.fusion_obstacle.common_info.velocity.y);
+
+    auto iter = fusion_objects_vel_map.find(cur_predicion_obj.id);
+    if (iter != fusion_objects_vel_map.end()) {
+      cur_predicion_obj.speed_fusion = iter->second;
+    } else {
+      cur_predicion_obj.speed_fusion =
+          std::hypot(prediction_object.fusion_obstacle.common_info.velocity.x,
+                     prediction_object.fusion_obstacle.common_info.velocity.y);
+    }
+
     cur_predicion_obj.yaw =
         prediction_object.fusion_obstacle.common_info.heading_angle;
     if ((int)cur_predicion_obj.yaw == 255) {
@@ -893,9 +910,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
       cur_predicion_obj.relative_theta = 0;
     }
 
-    auto iter = fusion_objects_acc_map.find(cur_predicion_obj.id);
-    if (iter != fusion_objects_acc_map.end()) {
-      cur_predicion_obj.acc_fusion = iter->second;
+    auto iter1 = fusion_objects_acc_map.find(cur_predicion_obj.id);
+    if (iter1 != fusion_objects_acc_map.end()) {
+      cur_predicion_obj.acc_fusion = iter1->second;
     } else {
       cur_predicion_obj.acc_fusion = std::hypot(
           prediction_object.fusion_obstacle.common_info.acceleration.x,

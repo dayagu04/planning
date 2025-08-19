@@ -16,6 +16,14 @@ void ClosestInPathVehicleDeciderOutput::set_v_frenet(const double v_frenet) {
   v_frenet_ = v_frenet;
 }
 
+double ClosestInPathVehicleDeciderOutput::v_fusion_frenet() const {
+  return v_fusion_frenet_;
+}
+void ClosestInPathVehicleDeciderOutput::set_v_fusion_frenet(
+    const double v_fusion_frenet) {
+  v_fusion_frenet_ = v_fusion_frenet;
+}
+
 double ClosestInPathVehicleDeciderOutput::acceleration() const {
   return acceleration_;
 }

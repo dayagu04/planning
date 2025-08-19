@@ -4177,6 +4177,30 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
       ReadItem<double>(json, weight_maker_config.max_s_weight, "speed_planning",
                        "weight_maker", "max_s_weight");
     }
+
+    // follow target
+    {
+      ReadItem<double>(json, acc_cipv, "speed_planning", "follow_target",
+                       "acc_cipv");
+      ReadItem<double>(json, lower_speed_min_follow_distance_gap,
+                       "speed_planning", "follow_target",
+                       "lower_speed_min_follow_distance_gap");
+      ReadItem<double>(json, high_speed_min_follow_distance_gap,
+                       "speed_planning", "follow_target",
+                       "high_speed_min_follow_distance_gap");
+      ReadItem<double>(json, low_speed_threshold_kmph, "speed_planning",
+                       "follow_target", "low_speed_threshold_kmph");
+      ReadItem<double>(json, high_speed_threshold_kmph, "speed_planning",
+                       "follow_target", "high_speed_threshold_kmph");
+      ReadItem<double>(json, large_vehicle_min_follow_distance_gap,
+                       "speed_planning", "follow_target",
+                       "large_vehicle_min_follow_distance_gap");
+      ReadItem<double>(json, cone_min_follow_distance_gap, "speed_planning",
+                       "follow_target", "cone_min_follow_distance_gap");
+      ReadItem<double>(json, traffic_light_min_follow_distance_gap,
+                       "speed_planning", "follow_target",
+                       "traffic_light_min_follow_distance_gap");
+    }
   }
 
   double planning_time = 5.0;
@@ -4199,13 +4223,14 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   bool enable_speed_adjust = true;
 
   // follow target
-  double lower_speed_min_follow_distance_gap = 3.0;
-  double high_speed_min_follow_distance_gap = 4.5;
-  double low_speed_threshold_kmph = 18;
-  double high_speed_threshold_kmph = 30;
-  double large_vehicle_min_follow_distance_gap = 4.5;
-  double cone_min_follow_distance_gap = 4.5;
+  double lower_speed_min_follow_distance_gap = 4.0;
+  double high_speed_min_follow_distance_gap = 5.0;
+  double low_speed_threshold_kmph = 18.0;
+  double high_speed_threshold_kmph = 30.0;
+  double large_vehicle_min_follow_distance_gap = 6.0;
+  double cone_min_follow_distance_gap = 5.0;
   double traffic_light_min_follow_distance_gap = 2.0;
+  double acc_cipv = -1.0;
 
   // neighbor target
   double neighbor_target_min_jerk = -1.5;

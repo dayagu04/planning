@@ -76,6 +76,7 @@ struct PredictionObject {
   float length;
   float width;
   float speed;
+  float speed_fusion;
   float yaw;    // for obj
   float theta;  // for velocity
   float acc;

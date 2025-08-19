@@ -609,7 +609,7 @@ class LoadRosbag:
 
     # load planning debug msg
     try:
-      json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', 'ban_acceleration', "efficiency_score", \
+      json_value_list = ['VisionLonBehavior_a_target_high', 'VisionLonBehavior_a_target_low', \
                          "replan_status", "ego_pos_x", "ego_pos_y", "ego_pos_yaw", 'predicted_ego_x', 'predicted_ego_y', \
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
@@ -657,12 +657,12 @@ class LoadRosbag:
                          'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region', 'road_curvature_radius',
                          'is_left_merge_direction', 'is_right_merge_direction', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty','v3_start_stop_status','cipv_relative_s',
                          "agents_headway_id", "agents_headway_value", "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target",'cipv_relative_s_ego_stop',"distance_to_go_condition",
-                         "cipv_vel_frenet",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
+                         "cipv_vel_frenet","cipv_vel_fusion",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
                          "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
                           "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length","gear_command", 'THW', "can_left_borrow","can_right_borrow","maintain_avoid", "lateral_emergency_level", 'goal_point_x', 'goal_point_y', 'pp_init_x', 'pp_init_y',
                           "lon_decision_to_invade_ego_motion_sim_path","invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_sim_path","left_road_extra_buffer","right_road_extra_buffer", "target_lane_congestion_level",'lat_offset_propose','lat_offset_lc_hold',
-                          'invade_neighbor_decision_ego_motion_sim_path', 'invade_neighbor_decision', 'ego_delta']
+                          'invade_neighbor_decision_ego_motion_sim_path', 'invade_neighbor_decision', 'ego_delta', "soft_safety_distance", "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel"]
 
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
