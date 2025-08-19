@@ -213,6 +213,7 @@ class LaneChangeStateMachineManager {
   bool IsCancelToHold();
   double CalculateLCHoldStateLatOffset() const;
   bool IsHighPriorityCompleteMLC() const;
+  bool IsFilterStaticAgentLC(const planning_data::DynamicAgentNode& agent_node) const;
 
  private:
   ScenarioStateMachineConfig config_;

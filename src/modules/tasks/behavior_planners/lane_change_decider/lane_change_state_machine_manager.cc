@@ -642,8 +642,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_front_node_) {
-    if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE ||
-        target_lane_front_node_->is_static_type()) {
+    if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
       const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
       if (!IsLCFeasibleForTrafficConeInTargetLane(target_lane_front_node_,
                                                   target_lane_virtual_id)) {
@@ -674,8 +673,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (ego_lane_front_node_) {
-    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE ||
-        ego_lane_front_node_->is_static_type()) {
+    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
       if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
         lc_invalid_track_.set_value(
             ego_lane_front_node_->node_agent_id(),
@@ -2732,7 +2730,12 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForPredictionTrajs(
 bool LaneChangeStateMachineManager::IsFilterAgent(
     const planning_data::DynamicAgentNode *agent_node,
     const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-    TrajectoryPoints *agent_prediction_trajs, const bool is_ego_lane_agent, const bool is_front_agent) {
+    TrajectoryPoints *agent_prediction_trajs, const bool is_ego_lane_agent,
+    const bool is_front_agent) {
+  if (IsFilterStaticAgentLC(*agent_node)) {
+    return true;
+  }
+
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -3280,5 +3283,67 @@ bool LaneChangeStateMachineManager::IsHighPriorityCompleteMLC() const {
 
 bool LaneChangeStateMachineManager::CheckIfCancelToComplete() const {
   return CheckIfLaneChangeComplete(transition_info_.lane_change_direction, transition_info_.lane_change_type);
+}
+
+bool LaneChangeStateMachineManager::IsFilterStaticAgentLC(
+    const planning_data::DynamicAgentNode &agent_node) const {
+  if (!agent_node.is_static_type()) {
+    return false;
+  }
+
+  const int target_lane_vir_id = lc_lane_mgr_->target_lane_virtual_id();
+  const auto &reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  const auto &targrt_ref_path =
+      reference_path_manager->get_reference_path_by_lane(target_lane_vir_id);
+
+  if (!targrt_ref_path) {
+    return false;
+  }
+
+  const auto &target_coor = targrt_ref_path->get_frenet_coord();
+
+  if (target_coor == nullptr) {
+    return false;
+  }
+
+  const auto &target_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_vir_id);
+
+  if (target_lane == nullptr) {
+    return false;
+  }
+
+  planning::Point2D cart_point{agent_node.node_x(), agent_node.node_y()};
+  planning::Point2D frenet_point;
+  if (!target_coor->XYToSL(cart_point, frenet_point)) {
+    return false;
+  }
+
+  // 车辆参数
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double kEgoWidth = vehicle_param.width;
+
+  const double buffer = 0.5;  // m
+
+  const double need_lat_space = kEgoWidth + buffer;
+
+  const double target_lane_width = target_lane->width_by_s(frenet_point.x);
+
+  //静态车辆侵入后，横向上的剩余空间能满足自车通行，那么可以把该静态障碍物过滤掉
+  if (transition_info_.lane_change_direction == LEFT_CHANGE) {
+    if (frenet_point.y > need_lat_space) {
+      return true;
+    }
+  } else if (transition_info_.lane_change_direction == RIGHT_CHANGE) {
+    if (frenet_point.y < -need_lat_space) {
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace planning
