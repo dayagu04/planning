@@ -51,7 +51,6 @@ void NarrowSpaceScenario::Reset() {
 
   current_path_last_heading_ = 0.0;
   dynamic_flag_head_out_ = false;
-  count_frame_from_last_dynamic_ = 100;
 
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
@@ -297,10 +296,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     dynamic_flag_head_out_ =
         (frame_.replan_reason == ReplanReason::DYNAMIC) ? true : false;
   }
-  count_frame_from_last_dynamic_ =
-      (frame_.replan_reason == ReplanReason::DYNAMIC)
-          ? 0
-          : count_frame_from_last_dynamic_ + 1;
 
   // check replan
   if (is_replan || update_thread_path) {
@@ -737,7 +732,7 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
       const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
-      if (heading_deg > kHeadHeadingStartDeg && i > 0) {
+      if (heading_deg > kHeadHeadingStartDeg && i > 5) {
         float heading_diff = path_pt.phi - first_seg_path[i - 1].phi;
         heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
       }
@@ -752,7 +747,7 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
     } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsTailOutStatus()) {
       const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
-      if (heading_deg < kHeadHeadingStartDeg && i > 0) {
+      if (heading_deg < kHeadHeadingStartDeg && i > 5) {
         float heading_diff = path_pt.phi - first_seg_path[i - 1].phi;
         heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
       }
@@ -1923,17 +1918,13 @@ const bool NarrowSpaceScenario::CheckDynamicHeadOut() {
   bool historical_condition = true;
   if (dynamic_flag_head_out_ && heading_flag) {
     // 如果上一次当前动态规划的heading 接近 目标heading，则无需再次重规划。
-    historical_condition =
-        frame_.remain_dist_path > perception_blind_spot_distance ? true : false;
+    historical_condition = false;
   }
 
-  bool count_frame_condition =
-      count_frame_from_last_dynamic_ > 10 ? true : false;
-
   if (historical_condition) {
-    bool dynamic_replan_flag =
-        car_motion_flag && car_pos_flag && occupied_ratio_flag &&
-        path_dist_flag && current_path_length_flag && count_frame_condition;
+    bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
+                               occupied_ratio_flag && path_dist_flag &&
+                               current_path_length_flag;
 
     return dynamic_replan_flag;
   } else {
