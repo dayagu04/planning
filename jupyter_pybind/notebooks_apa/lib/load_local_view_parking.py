@@ -259,7 +259,7 @@ class LoadCyberbag:
     try:
       planning_hmi_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/hmi"):
-        planning_hmi_msg_dict[msg.header.timestamp / 1e6] = msg
+        planning_hmi_msg_dict[msg.msg_header.stamp / 1e6] = msg
 
       print('planning_hmi_msg_dict size:',len(planning_hmi_msg_dict))
       planning_hmi_msg_dict = {key: val for key, val in sorted(planning_hmi_msg_dict.items(), key = lambda ele: ele[0])}

@@ -173,6 +173,7 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
     plan_hmi_msg = bag_loader.plan_hmi_msg['data'][index_map['plan_hmi_msg_idx']]
     print("prepare state = ", plan_hmi_msg.apa_info.prepare_plan_state)
     print("park dir = ", plan_hmi_msg.apa_info.planning_park_dir)
+    print("stop reason = ", plan_hmi_msg.apa_info.parking_pause_reason)
 
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
