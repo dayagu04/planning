@@ -37,7 +37,8 @@ constexpr double kPathCostComputeSampleTime = 0.2;
 constexpr double kDynamicObstacleCostSampleTime = 0.2;
 constexpr double kPlanningUpperSpeedLimit = 12.5;
 constexpr double kHighVel = 100 / 3.6;
-constexpr double kVirtualAgentBuffer = 3.6;
+constexpr double kVirtualAgentBuffer = 2.0;
+constexpr double kStaticAgentBuffer = 5.0;
 constexpr double kJerkMin = -2.0;
 constexpr double kJerkMax = 2.0;
 constexpr double kPPrecision = 0.1;
@@ -120,16 +121,16 @@ bool GriddedPathTimeGraph::Search(
   if (lead_agent != nullptr) {
     longit_risk_distance_between_obstacle =
         (ego_state_manager->ego_v() - lead_agent->speed()) * kDefaultTtc;
-    // if (lead_agent->is_static()) {
-    //   for (const auto& agent : agent_trajs) {
-    //     if (agent.agent_id == lead_agent->agent_id() &&
-    //         (agent.max_agent_box.min_y() < kDefaultStaticObstacleLateralDis &&
-    //           agent.max_agent_box.max_y() > - kDefaultStaticObstacleLateralDis)) {
-    //       target_s = std::min(target_s, agent.max_agent_box.min_x());
-    //       break;
-    //     }
-    //   }
-    // }
+    if (lead_agent->is_static()) {
+      for (const auto& agent : agent_trajs) {
+        if (agent.agent_id == lead_agent->agent_id() &&
+            (agent.max_agent_box.min_y() < kDefaultStaticObstacleLateralDis &&
+              agent.max_agent_box.max_y() > - kDefaultStaticObstacleLateralDis)) {
+          target_s = std::min(target_s, agent.max_agent_box.min_x() - kStaticAgentBuffer);
+          break;
+        }
+      }
+    }
   }
   longit_risk_distance_between_obstacle =
       std::max(longit_risk_distance_between_obstacle, dp_poly_path_config_.obstacle_longit_risk_distance);
@@ -142,7 +143,6 @@ bool GriddedPathTimeGraph::Search(
       }
     }
   }
-  target_s += kVirtualAgentBuffer;
 
   auto spatio_temporal_union_plan_input = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
