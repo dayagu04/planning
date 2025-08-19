@@ -584,6 +584,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     lc_valid_cnt_ += 1;
     ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
+      lc_valid_cnt_ = 0;
       lane_change_stage_info_.lc_valid = true;
     } else {
       lane_change_stage_info_.gap_insertable = false;
@@ -704,6 +705,8 @@ void LaneChangeStateMachineManager::CheckLaneChangeBackValid(
     if (lc_back_cnt_ <= lc_back_thre) {
       lane_change_stage_info_.lc_should_back = false;
       lane_change_stage_info_.lc_back_reason = "but back cnt below threshold";
+    } else {
+      lc_back_cnt_ = 0;
     }
   } else {
     lc_back_cnt_ = 0;
