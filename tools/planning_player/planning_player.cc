@@ -489,6 +489,10 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }
+
+    if (instant_error_) {
+      exit(1);
+    }
   }
 
   if (scene_type_ == "apa") {
