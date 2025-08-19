@@ -23,7 +23,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20250804/20250804-16-29-21/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-08-04-16-29-21_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250812/20250812-15-14-33/park_in_data_collection_CHERY_M32T_74563_ALL_FILTER_2025-08-12-15-14-33_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -205,6 +205,7 @@ class LocalViewSlider:
     self.state_machine = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="state_machine", min=0, max=100, value=0, step=1)
     self.path_plan_method = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="path_plan_method", min=0, max=10, value=1, step=1)
     self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=2, value=0, step=1)
+    self.dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="dir", min=0, max=12, value=0, step=1)
 
     ipywidgets.interact(slider_callback,
                         bag_time = self.time_slider,
@@ -225,13 +226,15 @@ class LocalViewSlider:
                         use_state_machine=self.use_state_machine,
                         state_machine=self.state_machine,
                         path_plan_method=self.path_plan_method,
-                        swap_start_goal=self.swap_start_goal)
+                        swap_start_goal=self.swap_start_goal,
+                        dir=self.dir,
+                        )
 
 ### sliders callback
 def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, force_plan, refresh_thread,is_path_optimization,
                     is_cilqr_enable, is_reset, is_complete_path, sample_ds,
                     lon_pos_dif, lat_pos_dif, heading_dif,plot_child_node,use_state_machine,state_machine,
-                    path_plan_method,swap_start_goal):
+                    path_plan_method,swap_start_goal,dir):
 
   time0 = time.time()
 
@@ -519,7 +522,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
         target_managed_limiter_x_vec,
         target_managed_limiter_y_vec,
         path_plan_method,
-        swap_start_goal)
+        swap_start_goal,
+        dir)
 
     print('end')
   else:

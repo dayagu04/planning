@@ -15,8 +15,8 @@ enum class AstarFailType {
   TIME_OUT,
   SUCCESS,
   ALLOCATE_NODE_FAIL,
-  SEARCH_TOO_MUCH_NODE,
   DP_COST_FAIL,
+  NODE_POOL_IS_NULL,
 };
 
 enum class AstarSearchState {

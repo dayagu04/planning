@@ -149,4 +149,42 @@ const bool IsTrajValid(const iflyauto::Trajectory& traj) {
   return true;
 }
 
+const ParkingVehDirection GetParkDir(const int dir) {
+  ParkingVehDirection res;
+  switch (dir) {
+    case 0:
+      res = ParkingVehDirection::NONE;
+      break;
+    case 1:
+      res = ParkingVehDirection::TAIL_IN;
+      break;
+    case 2:
+      res = ParkingVehDirection::TAIL_OUT_TO_LEFT;
+      break;
+    case 3:
+      res = ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+      break;
+    case 4:
+      res = ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+      break;
+    case 5:
+      res = ParkingVehDirection::HEAD_IN;
+      break;
+    case 6:
+      res = ParkingVehDirection::HEAD_OUT_TO_LEFT;
+      break;
+    case 7:
+      res = ParkingVehDirection::HEAD_OUT_TO_RIGHT;
+      break;
+    case 8:
+      res = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+      break;
+    default:
+      res = ParkingVehDirection::NONE;
+      break;
+  }
+
+  return res;
+}
+
 }  // namespace  planning
