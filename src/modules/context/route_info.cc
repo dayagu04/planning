@@ -1592,10 +1592,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   auto& split_region_info_list = route_info_output_.split_region_info_list;
   auto& merge_region_info_list = route_info_output_.merge_region_info_list;
 
-  if (split_region_info_list.empty() && merge_region_info_list.empty()) {
-    mlc_decider_route_info_.reset();
-    return;
-  }
+  // if (split_region_info_list.empty() && merge_region_info_list.empty()) {
+  //   mlc_decider_route_info_.reset();
+  //   return;
+  // }
 
   const bool is_near_split =
       !split_region_info_list.empty() &&
