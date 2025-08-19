@@ -630,6 +630,10 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
               std::make_pair(static_cast<SplitRelativeDirection>(
                                  route_info_output_.first_split_direction),
                              route_info_output_.distance_to_first_road_split);
+          route_info_output_.split_dir_dis_info_list.emplace_back(
+              std::make_pair(static_cast<SplitRelativeDirection>(
+                                 route_info_output_.first_split_direction),
+                             route_info_output_.distance_to_first_road_split));
         } else if (is_find_first_split_info) {
           route_info_output_.distance_to_second_road_split =
               split_info[i].second;
@@ -637,6 +641,10 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
           split_seg_info = MakesureSplitDirection(*split_segment, sd_map);
           route_info_output_.second_split_direction =
               split_seg_info.split_direction;
+          route_info_output_.split_dir_dis_info_list.emplace_back(
+              std::make_pair(static_cast<SplitRelativeDirection>(
+                                 route_info_output_.second_split_direction),
+                             route_info_output_.distance_to_second_road_split));
           traverse_num++;
         }
         if (traverse_num >= 2) {

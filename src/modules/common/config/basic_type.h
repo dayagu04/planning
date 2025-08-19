@@ -276,6 +276,7 @@ struct RouteInfoOutput {
     last_split_seg_dir = RAMP_NONE;
     is_continuous_ramp = false;
     first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
+    split_dir_dis_info_list.clear();
     current_segment_passed_distance = 0.0;
     is_nearing_ramp = false;
     cur_seg_forward_lane_num = 0;
