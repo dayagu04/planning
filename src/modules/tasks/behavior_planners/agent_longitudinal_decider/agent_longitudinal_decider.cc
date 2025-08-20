@@ -442,7 +442,7 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     return;
   }
   mutable_agent->set_is_rule_base_cutin(current_rule_base_cutin);
-  mutable_agent->set_is_reverse_cutin(is_reverse_agent);
+  // mutable_agent->set_is_reverse_cutin(is_reverse_agent);
 
   mutable_agent->set_d_path(
       std::fmax(std::fabs(small_lateral_distance) - ego_half_width, 0.0));

@@ -241,7 +241,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   st_search_value_list = ["soft_safety_distance", "safety_target_vel", "safety_dynamic_vel", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet", "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion", "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
-                          "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s"]
+                          "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s","cross_vru_agent_ids",
+                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego"]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
@@ -426,6 +427,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_target_s_overtake'].data.update({
     't_overtake_target': t_overtake_target_vec,
     's_overtake_target': s_overtake_target_vec})
+  
   ## caution target
   t_caution_target_vec = []
   s_caution_target_vec = []
@@ -458,6 +460,16 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_target_s_safety'].data.update({
     't_safety_target': t_safety_target_vec,
     's_safety_target': s_safety_target_vec})
+  ## cross vru target
+  t_cross_vru_target_vec = []
+  s_cross_vru_target_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.cross_vru_target.cross_vru_target_s_ref):
+    t_cross_vru_target_vec.append(item.t)
+  for item in (plan_debug_info.lon_target_s_ref.cross_vru_target.cross_vru_target_s_ref):
+    s_cross_vru_target_vec.append(item.s)
+  lon_plan_data['data_target_s_cross_vru'].data.update({
+    't_cross_vru_target': t_cross_vru_target_vec,
+    's_cross_vru_target': s_cross_vru_target_vec})
 
   lon_plan_data['data_target'].data.update({
     't_final_target': t_final_target_vec,
@@ -466,6 +478,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     's_follow_target': s_follow_target_vec,
     't_cruise_target': t_cruise_target_vec,
     's_cruise_target': s_cruise_target_vec
+    
   })
 
   # behavior planning
@@ -1296,6 +1309,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
   data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
   data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[]})
+  data_target_s_cross_vru = ColumnDataSource(data = {'t_cross_vru_target':[], 's_cross_vru_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
   for it in obs_st_ids:
@@ -1346,6 +1360,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                    'data_target_s_caution': data_target_s_caution, \
                    'data_target_s_max_decel': data_target_s_max_decel, \
                    'data_target_s_safety': data_target_s_safety, \
+                   'data_target_s_cross_vru': data_target_s_cross_vru, \
                    'data_st_search_text' : data_st_search_text, \
   }
 
@@ -1503,6 +1518,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
   fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
   fig3.line('t_safety_target', 's_safety_target', source = data_target_s_safety, line_width = 3.0, line_color = 'orange', line_dash = 'solid', legend_label = 's_safety_target')
+  fig3.line('t_cross_vru_target', 's_cross_vru_target', source = data_target_s_cross_vru, line_width = 3.0, line_color = 'darkviolet', line_dash = 'solid', legend_label = 's_cross_vru_target')
 
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'

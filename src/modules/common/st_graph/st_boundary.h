@@ -54,6 +54,7 @@ class STBoundary : public planning_math::Polygon2d {
     NEIGHBOR_YIELD,
     NEIGHBOR_OVERTAKE,
     CAUTION_YIELD,
+    RELIEVE_JERK,
   };
 
   DecisionType decision_type() const;

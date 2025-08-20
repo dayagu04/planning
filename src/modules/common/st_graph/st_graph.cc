@@ -65,6 +65,12 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
       st_graph_input_, st_graph_input->lane_change_status(),
       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
+
+
+  StGraphUtils::DetermineRelieveJerkDecision(
+      st_graph_input_, agent_id_st_boundaries_map_,
+      boundary_id_st_boundaries_map_, relieve_jerk_agent_ids_);
+
   // StGraphUtils::SetCrossingAgentCautionYieldDecision(
   //     st_graph_input_, agent_id_st_boundaries_map_,
   //     boundary_id_st_boundaries_map_);
@@ -403,9 +409,13 @@ void STGraph::MakeDynamicAgentStBoundary(
   const auto& trajectories = agent.trajectories_used_by_st_graph();
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
-  const bool is_need_truncate_traj =
+  bool is_need_truncate_traj =
       is_not_in_intersection && agent.is_reverse() &&
       (is_within_ego_lane || is_within_ego_neighbor_lane);
+  if (is_need_truncate_traj) {
+    mutable_agent->set_is_reverse_relieve_agent(true);
+  }
+  is_need_truncate_traj = false;
 
   std::vector<int64_t> st_boundaries;
   st_boundaries.reserve(trajectories.size());
@@ -650,7 +660,9 @@ void STGraph::MakeStPointsTable() {
        it != boundary_id_st_boundaries_map_.end(); ++it) {
     auto st_boundary = it->second.get();
     if (st_boundary->decision_type() ==
-        STBoundary::DecisionType::CAUTION_YIELD) {
+            STBoundary::DecisionType::CAUTION_YIELD ||
+        st_boundary->decision_type() ==
+            STBoundary::DecisionType::RELIEVE_JERK) {
       continue;
     }
     const auto& lower_points = st_boundary->lower_points();
@@ -944,7 +956,9 @@ bool STGraph::CalculateStPassCorridor() {
         continue;
       }
       if (st_boundary->decision_type() ==
-          STBoundary::DecisionType::CAUTION_YIELD) {
+              STBoundary::DecisionType::CAUTION_YIELD ||
+          st_boundary->decision_type() ==
+              STBoundary::DecisionType::RELIEVE_JERK) {
         continue;
       }
       const auto& decision_type = st_boundary->decision_type();
@@ -1045,6 +1059,10 @@ STGraph::agent_id_st_boundaries_map() const {
 
 const std::vector<int32_t>& STGraph::caution_yield_agent_ids() const {
   return caution_yield_agent_ids_;
+}
+
+const std::vector<int32_t>& STGraph::relieve_jerk_agent_ids() const {
+  return relieve_jerk_agent_ids_;
 }
 
 const std::vector<std::pair<STPoint, STPoint>>& STGraph::st_pass_corridor()
@@ -1333,6 +1351,7 @@ void STGraph::Reset() {
   st_pass_corridor_.clear();
   neighbor_corridor_.clear();
   caution_yield_agent_ids_.clear();
+  relieve_jerk_agent_ids_.clear();
   ignore_agent_ids_.clear();
   static_close_pass_candicate_agent_ids_.clear();
   dynamic_close_pass_candicate_agent_ids_.clear();

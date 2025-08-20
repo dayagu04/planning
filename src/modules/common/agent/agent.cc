@@ -47,6 +47,7 @@ Agent::Agent(const Agent& agent)
   is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
   is_dangerous_ = agent.is_dangerous();
   dangerous_confidence_ = agent.dangerous_confidence();
+  is_vru_crossing_virtual_obs_ = agent.is_vru_crossing_virtual_obs();
   time_range_ = agent.time_range();
 
   // 当前默认trajectories_中只存一条轨迹
@@ -317,10 +318,10 @@ void Agent::set_is_reverse_in_large_curv(const bool is_reverse_in_large_curv) {
   is_reverse_in_large_curv_ = is_reverse_in_large_curv;
 }
 
-const bool Agent::is_reverse_cutin() const { return is_reverse_cutin_; }
+const bool Agent::is_reverse_relieve_agent() const { return is_reverse_relieve_agent_; }
 
-void Agent::set_is_reverse_cutin(const bool is_reverse) {
-  is_reverse_cutin_ = is_reverse;
+void Agent::set_is_reverse_relieve_agent(const bool is_reverse) {
+  is_reverse_relieve_agent_ = is_reverse;
 }
 
 const bool Agent::has_low_spd_unstable_trajectory() const {
@@ -379,6 +380,11 @@ void Agent::set_is_lane_borrow_virtual_obs(
   is_lane_borrow_virtual_obs_ = is_lane_borrow_virtual_obs;
 }
 
+const bool Agent::is_vru_crossing_virtual_obs() const { return is_vru_crossing_virtual_obs_; }
+
+void Agent::set_is_vru_crossing_virtual_obs(bool is_vru_crossing_virtual_obs) {
+  is_vru_crossing_virtual_obs_ = is_vru_crossing_virtual_obs;
+}
 const double Agent::d_rel() const { return d_rel_; }
 
 void Agent::set_d_rel(double d_rel) { d_rel_ = d_rel; };

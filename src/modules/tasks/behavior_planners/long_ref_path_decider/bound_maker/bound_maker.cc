@@ -25,6 +25,9 @@ constexpr double kPerSecondPlanLenth = 50.0;
 constexpr double kJerkLowerComfortableBound = -1.2;
 constexpr double kBrakeDelayTimeBuffer = 0.5;
 
+constexpr double kAccVruLowerBound = -4.0;
+constexpr double kJerkVruLowerBound = -1.5;
+
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session* session)
@@ -182,6 +185,14 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     if (start_stop_decider_output.ego_start_stop_info().state() !=
         common::StartStopInfo::START) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
+    }
+  }
+
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.vru_agent_infos.size() > 0) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccVruLowerBound);
     }
   }
 }
@@ -368,6 +379,13 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   if (is_need_comfortable_decel && !is_cipv_has_sharp_decel) {
     jerk_lower_bound_ =
         std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
+  }
+
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.vru_agent_infos.size() > 0) {
+    jerk_lower_bound_ =
+        std::vector<double>(plan_points_num_, kJerkVruLowerBound);
   }
 }
 
