@@ -8,6 +8,7 @@
 #include <boost/any.hpp>
 #include <cstdint>
 #include <memory>
+#include <cstdlib>
 
 #include "planning_adapter.h"
 #include "struct.h"
