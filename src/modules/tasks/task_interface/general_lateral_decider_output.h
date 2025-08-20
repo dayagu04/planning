@@ -6,6 +6,7 @@
 #include "config/basic_type.h"
 #include "define/geometry.h"
 #include "lateral_motion_planner.pb.h"
+#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 #include "task_basic_types.h"
 
 namespace planning {
@@ -34,6 +35,7 @@ struct GeneralLateralDeciderOutput {
   bool bound_avoid = false;
   bool is_use_spatio_planner_result = false;
   double recommended_bound_avoid_jerk = 0.4;
+  RiskLevel risk_level = RiskLevel::NO_RISK;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
@@ -42,6 +44,7 @@ struct GeneralLateralDeciderOutput {
     bound_avoid = false;
     is_use_spatio_planner_result = false;
     recommended_bound_avoid_jerk = 0.4;
+    risk_level = RiskLevel::NO_RISK;
     init_state.Clear();
     enu_ref_path.clear();
     last_enu_ref_path.clear();

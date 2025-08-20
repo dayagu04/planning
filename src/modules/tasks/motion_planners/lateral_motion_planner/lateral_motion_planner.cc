@@ -504,6 +504,10 @@ bool LateralMotionPlanner::AssembleInput() {
     enter_split_time_ = 0.0;
     is_divide_lane_into_two_ = false;
   }
+  //
+  planning_weight_ptr_->SetIsBoundAvoid(general_lateral_decider_output.bound_avoid);
+  planning_weight_ptr_->SetExpectedAvoidJerk(general_lateral_decider_output.recommended_bound_avoid_jerk);
+  planning_weight_ptr_->SetRiskLevel(general_lateral_decider_output.risk_level);
   // avoid
   bool avoid_back_status = false;
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =

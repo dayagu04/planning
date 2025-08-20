@@ -3038,6 +3038,7 @@ void GeneralLateralDecider::GenerateRecommendJerk(
       general_lateral_decider_output.recommended_bound_avoid_jerk = config_.high_risk_jerk_bound;
       is_high_dangerous = true;
     }
+    general_lateral_decider_output.risk_level = risk_level;
   }
 }
 
