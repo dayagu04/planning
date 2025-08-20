@@ -270,53 +270,6 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
 
   frame_.is_replan_first = true;
-  frame_.Reset();
-  t_lane_.Reset();
-  obs_pt_local_vec_.clear();
-  return success_ret;
-}
-
-void ParallelParkOutScenario::ScenarioTry() {
-  //ApaParkOutDirection::RIGHT_FRONT
-  EgoInfoUnderSlot& ego_info_under_slot =
-      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-  ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
-  multi_parkout_direction.clear();
-  multi_parkout_path_vec.clear();
-  ApaParkOutDirection directions[] = {ApaParkOutDirection::LEFT_FRONT,
-                                      ApaParkOutDirection::RIGHT_FRONT};
-  for (auto direction : directions) {
-    apa_world_ptr_->GetStateMachineManagerPtr()->SetParkOutDirection(
-      direction);
-    parkout_direction_ = direction;
-    if(ParkOutDirectionTry()) {
-      multi_parkout_direction[direction] = true;
-      ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::RELEASE;
-    } else {
-      multi_parkout_direction[direction] = false;
-    }
-    ILOG_INFO << "direction = " << static_cast<int>(direction) <<
-      " multi_parkout_direction = " << multi_parkout_direction[direction];
-  }
-  ApaDirectionGenerator generator;
-  generator.ClearRecommendationDirectionFlag(apa_hmi_);
-  if (multi_parkout_direction[ApaParkOutDirection::RIGHT_FRONT]) {
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
-    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::RIGHT_FRONT];
-  }
-  if (multi_parkout_direction[ApaParkOutDirection::LEFT_FRONT]) {
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
-    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
-  }
-  TansformPreparePlanningTraj();
-  ILOG_INFO << "recommendation direction = " << apa_hmi_.planning_park_dir;
-  parkout_direction_ = ApaParkOutDirection::INVALID;
 }
 
 const double ParallelParkOutScenario::CalRealTimeBrakeDist() {
