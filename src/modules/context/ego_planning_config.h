@@ -2109,6 +2109,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_x, "lat_motion_ilqr", "q_ref_x");
     ReadItem<double>(json, q_ref_y, "lat_motion_ilqr", "q_ref_y");
     ReadItem<double>(json, q_ref_theta, "lat_motion_ilqr", "q_ref_theta");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_q_continuity"},
+        map_q_continuity, map_q_continuity);
     ReadItem<double>(json, q_continuity, "lat_motion_ilqr", "q_continuity");
     ReadItem<double>(json, q_continuity_low_speed, "lat_motion_ilqr",
                      "q_continuity_low_speed");
@@ -2116,6 +2119,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "q_continuity_search");
     ReadItem<double>(json, q_continuity_lane_change, "lat_motion_ilqr",
                      "q_continuity_lane_change");
+    read_json_vec<double>(
+        json, std::vector<std::string>{"lat_motion_ilqr", "map_q_acc"},
+        map_q_acc, map_q_acc);
     ReadItem<double>(json, q_acc, "lat_motion_ilqr", "q_acc");
     ReadItem<double>(json, q_acc_spatio, "lat_motion_ilqr", "q_acc_spatio");
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
@@ -2272,8 +2278,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "lc_end_ratio_for_first_qrefxy_low_vel");
     ReadItem<double>(json, lc_end_ratio_for_first_qreftheta, "lat_motion_ilqr",
                      "lc_end_ratio_for_first_qreftheta");
-    ReadItem<double>(json, lc_end_ratio_for_second_qreftheta, "lat_motion_ilqr",
-                     "lc_end_ratio_for_second_qreftheta");
+    ReadItem<double>(json, end_ratio_for_second_qreftheta, "lat_motion_ilqr",
+                     "end_ratio_for_second_qreftheta");
     ReadItem<double>(json, enter_ramp_on_road_time, "lat_motion_ilqr",
                      "enter_ramp_on_road_time");
     ReadItem<double>(json, q_ref_xy_split, "lat_motion_ilqr", "q_ref_xy_split");
@@ -2343,10 +2349,12 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_x = 20.0;
   double q_ref_y = 20.0;
   double q_ref_theta = 15.0;
+  std::vector<double> map_q_continuity{2.0, 2.0, 2.0, 2.0, 2.0};
   double q_continuity = 0.;
   double q_continuity_low_speed = 0.5;
   double q_continuity_search = 0.5;
   double q_continuity_lane_change = 0.;
+  std::vector<double> map_q_acc{0.0, 100.0, 200.0, 300.0};
   double q_acc = 0.5;
   double q_acc_spatio = 0.5;
   double q_jerk = 0.6;
@@ -2442,7 +2450,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double lc_end_ratio_for_second_qrefxy = 1.0;
   double lc_end_ratio_for_first_qrefxy_low_vel = 1.0;
   double lc_end_ratio_for_first_qreftheta = 1.0;
-  double lc_end_ratio_for_second_qreftheta = 1.0;
+  double end_ratio_for_second_qreftheta = 1.0;
   double big_theta_thr = 1.0;
   std::vector<double> q_jerk_for_big_theta{20.0, 5.0};
   double path_backward_appended_length = 2.5;

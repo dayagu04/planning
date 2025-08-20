@@ -422,7 +422,7 @@
     "lc_end_ratio_for_second_qrefxy": 1.0,
     "lc_end_ratio_for_first_qrefxy_low_vel": 3.0,
     "lc_end_ratio_for_first_qreftheta": 2.0,
-    "lc_end_ratio_for_second_qreftheta": 1.0,
+    "end_ratio_for_second_qreftheta": 1.0,
     "big_theta_thr": 0.2,
     "q_jerk_for_big_theta": [20.0, 5.0],
     "path_backward_appended_length": 2.5
