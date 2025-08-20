@@ -137,11 +137,27 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       break;
   }
 
+  switch (fun_state_machine_info.parking_req.apa_user_preference
+              .horizontal_preference_slot) {
+    case iflyauto::HORIZONTAL_PREFERENCE_SLOT_LEFT:
+      slot_lat_pos_preference_ = ApaSlotLatPosPreference::LEFT;
+      break;
+    case iflyauto::HORIZONTAL_PREFERENCE_SLOT_RIGHT:
+      slot_lat_pos_preference_ = ApaSlotLatPosPreference::RIGHT;
+      break;
+    default:
+      slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
+      break;
+  }
+
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
+  PrintApaSlotLatPosPreference(slot_lat_pos_preference_);
 
   JSON_DEBUG_VALUE("apa_state_machine", static_cast<int>(state_machine_))
   JSON_DEBUG_VALUE("apa_out_direction", static_cast<int>(out_direction_))
+  JSON_DEBUG_VALUE("apa_slot_lat_pos_preference",
+                   static_cast<int>(slot_lat_pos_preference_))
 
   return;
 }
@@ -299,6 +315,28 @@ void ApaStateMachineManager::PrintApaParkOutDirection(
     const ApaParkOutDirection out_direction) {
   ILOG_INFO << "out_direction = "
             << GetApaParkOutDirectionString(out_direction);
+}
+
+std::string ApaStateMachineManager::GetApaSlotLatPosPreferenceString(
+    const ApaSlotLatPosPreference slot_lat_pos_preference) {
+  std::string slot_lat_pos = "MID";
+  switch (slot_lat_pos_preference) {
+    case ApaSlotLatPosPreference::LEFT:
+      slot_lat_pos = "LEFT";
+      break;
+    case ApaSlotLatPosPreference::RIGHT:
+      slot_lat_pos = "RIGHT";
+      break;
+    default:
+      break;
+  }
+  return slot_lat_pos;
+}
+
+void ApaStateMachineManager::PrintApaSlotLatPosPreference(
+    const ApaSlotLatPosPreference slot_lat_pos_preference) {
+  ILOG_INFO << "slot_lat_pos_preference = "
+            << GetApaSlotLatPosPreferenceString(slot_lat_pos_preference);
 }
 
 }  // namespace apa_planner

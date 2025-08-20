@@ -20,6 +20,27 @@ enum class ParkPathGenerationType {
   PARK_PATH_GENERATION_MAX_NUM,
 };
 
+enum class ParkPathPlanType : uint8_t {
+  GEOMETRY = 0,
+  HYBRID_ASTAR = 1,
+  HYBRID_ASTAR_THREAD = 2,
+  PARK_PATH_PLAN_MAX_NUM,
+};
+
+enum class AnalyticExpansionType : uint8_t {
+  REEDS_SHEEP = 0,
+  LINK_POSE_LINE,
+  ALL
+};
+
+const std::string GetParkPathPlanType(const ParkPathPlanType type);
+void PrintParkPathPlanType(const ParkPathPlanType type,
+                           const bool enable_log = true);
+const std::string GetAnalyticExpansionTypeString(
+    const AnalyticExpansionType type);
+void PrintAnalyticExpansionType(const AnalyticExpansionType type,
+                                const bool enable_log = true);
+
 struct AstarParkingConfig {
   bool perpendicular_slot_auto_switch_to_astar;
   bool parallel_slot_auto_switch_to_astar;
@@ -174,6 +195,73 @@ struct PreparePlanConfig {
   bool enable_stable_prepare_route;
   double start_point_error = 0.15;
   double terminal_point_error = 0.15;
+};
+
+struct ParkingLatLonPathBuffer {
+  float lon_buffer;
+
+  float body_lat_buffer;
+  float mirror_lat_buffer;
+  float extra_lat_buffer;
+
+  float out_slot_body_lat_buffer;
+  float out_slot_mirror_lat_buffer;
+  float out_slot_extra_turn_lat_buffer;
+
+  float entrance_slot_body_lat_buffer;
+  float entrance_slot_mirror_lat_buffer;
+  float entrance_slot_extra_turn_lat_buffer;
+
+  float in_slot_body_lat_buffer;
+  float in_slot_mirror_lat_buffer;
+  float in_slot_extra_turn_lat_buffer;
+};
+
+struct ParkingLatLonSpeedBuffer {
+  float lon_buffer;
+
+  float stop_body_lat_buffer;
+  float stop_mirror_lat_buffer;
+  float stop_min_lon_dist;
+
+  float special_stop_body_lat_buffer;
+  float special_stop_mirror_lat_buffer;
+  float special_stop_min_lon_dist;
+
+  float low_speed_body_lat_buffer;
+  float low_speed_mirror_lat_buffer;
+  float low_speed_min_lon_dist;
+
+  float mid_speed_body_lat_buffer;
+  float mid_speed_mirror_lat_buffer;
+  float mid_speed_min_lon_dist;
+
+  float high_speed_body_lat_buffer;
+  float high_speed_mirror_lat_buffer;
+  float high_speed_min_lon_dist;
+
+  float extreme_case_lon_buffer;
+
+  float extra_reverse_gear_lon_buffer;
+};
+
+struct ParkingLatLonSlotReleaseBuffer {
+  float lon_buffer;
+
+  float maximum_lat_buffer;
+  float accumulate_lat_buffer;
+  float hold_lat_buffer;
+  float subtract_lat_buffer;
+};
+
+struct ParkingLatLonTargetPoseBuffer {
+  float lon_buffer;
+
+  float max_lat_buffer;
+  float min_lat_buffer;
+  float step;
+
+  float special_max_lat_buffer;
 };
 
 // todo
@@ -577,6 +665,20 @@ struct ApaParameters {
 
   DynamicGearSwitchConfig gear_switch_config;
   PreparePlanConfig prepare_plan_config;
+
+  ParkPathPlanType park_path_plan_type = ParkPathPlanType::GEOMETRY;
+  AnalyticExpansionType analytic_expansion_type =
+      AnalyticExpansionType::LINK_POSE_LINE;
+  bool enable_narrow_space_vertical_tail_in = true;
+  int max_plan_gear_shift_number_searching = 20;
+  int max_plan_gear_shift_number_parking = 25;
+  int max_real_gear_shift_number_parking = 30;
+  float traj_kappa_change_penalty = 0.83;
+
+  ParkingLatLonPathBuffer lat_lon_path_buffer;
+  ParkingLatLonSpeedBuffer lat_lon_speed_buffer;
+  ParkingLatLonSlotReleaseBuffer lat_lon_slot_release_buffer;
+  ParkingLatLonTargetPoseBuffer lat_lon_target_pose_buffer;
 };
 
 class ApaParametersSetting {
