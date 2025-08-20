@@ -105,6 +105,20 @@ enum class TaskExcuteState {
   SUCCESS = 4,
 };
 
+enum class MirrorState : uint8_t {
+  NONE,
+  FOLDED,
+  FOLDING,
+  EXPANDED,
+  EXPANDING,
+};
+
+enum class MirrorCommand : uint8_t {
+  NONE,
+  FOLD,
+  EXPAND,
+};
+
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);
 
 const std::string GetApaScenarioStatusString(

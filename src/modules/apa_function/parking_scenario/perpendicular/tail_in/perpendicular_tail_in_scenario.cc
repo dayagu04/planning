@@ -143,9 +143,10 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  if (frame_.need_fold_mirror &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      frame_.stuck_time >
+          apa_param.GetParam().smart_fold_mirror_params.max_stuck_wait_time) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = FOLD_MIRROR_FAILED;
     return;
@@ -1416,9 +1417,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
     const double total_length = s + extend_length;
     while (s < total_length - 1e-3) {
-      if (x_vec.size() > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
-        break;
-      }
+      // if (x_vec.size() > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
+      //   break;
+      // }
       s += temp_ds;
       x_vec.emplace_back(frame_.x_s_spline(s));
       y_vec.emplace_back(frame_.y_s_spline(s));
@@ -1581,7 +1582,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   const SmartFoldMirrorParams& smart_fold_mirror_params =
       param.smart_fold_mirror_params;
   if (smart_fold_mirror_params.has_smart_fold_mirror &&
-      !frame_.need_fold_mirror &&
+      frame_.mirror_command == MirrorCommand::NONE &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
       frame_.is_last_path) {
     const geometry_lib::PathPoint& termial_err =
@@ -1607,31 +1608,60 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
         std::fabs(termial_err.pos.y()) < smart_fold_mirror_params.y_offset &&
         std::fabs(termial_err.heading) * kRad2Deg <
             smart_fold_mirror_params.heading_offset) {
-      const float lon_buffer =
-          std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) *
-          smart_fold_mirror_params.reaction_time;
+      const double vel = std::max(
+          float(
+              std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel())),
+          smart_fold_mirror_params.min_vel);
+
+      const double lon_dist = vel * (smart_fold_mirror_params.consume_time +
+                                     smart_fold_mirror_params.reaction_time);
 
       bool try_fold_mirror = true;
       if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
-        const float fold_mirror_reduce_width =
+        // During the folding process of the mirror, absolute safety
+        // must be ensured, otherwise there is no need to fold it
+        const double folding_mirror_consume_dist =
+            vel * smart_fold_mirror_params.consume_time;
+        if (try_fold_mirror &&
+            CalRemainDistFromObs(folding_mirror_consume_dist,
+                                 smart_fold_mirror_params.min_lat_buffer,
+                                 smart_fold_mirror_params.min_lat_buffer, 1.0,
+                                 0.368, 0.368, true) < 0.0) {
+          ILOG_INFO << "folding mirror not safe, should not fold mirror";
+          try_fold_mirror = false;
+        }
+
+        const double fold_mirror_reduce_width =
             0.5 * (param.max_car_width - param.fold_mirror_max_car_width);
-        const float lat_buffer =
+        const double lat_buffer =
             -1.0 * (fold_mirror_reduce_width -
                     smart_fold_mirror_params.min_lat_buffer);
-        if (CalRemainDistFromObs(lon_buffer, lat_buffer, lat_buffer, 1.0, 0.368,
+        // After folding the mirror, it is necessary to ensure absolute safety,
+        // otherwise there is no need to fold it
+        if (try_fold_mirror &&
+            CalRemainDistFromObs(lon_dist, lat_buffer, lat_buffer, 1.0, 0.368,
                                  0.368, true) < 0.0) {
-          ILOG_INFO << "Even folding the rearview mirror is not safe, so do "
-                       "not fold the rearview mirror";
+          ILOG_INFO << "Even fold the mirror the mirror is not safe, so not "
+                       "fold the mirror";
+          try_fold_mirror = false;
+        }
+
+        if (try_fold_mirror &&
+            CalRemainDistFromObs(lon_buffer, param.stop_lat_inflation + 1e-2,
+                                 lat_buffer, 1.0, 0.368,
+                                 0.368) < frame_.remain_dist_path - 0.2) {
+          ILOG_INFO << "Even fold the mirror the complete car is not safe, so "
+                       "not fold the mirror";
           try_fold_mirror = false;
         }
       }
 
       if (try_fold_mirror &&
-          CalRemainDistFromObs(lon_buffer, smart_fold_mirror_params.lat_buffer,
+          CalRemainDistFromObs(lon_dist, smart_fold_mirror_params.lat_buffer,
                                smart_fold_mirror_params.lat_buffer, 1.0, 0.368,
                                0.368, true) < 0.0) {
         ILOG_INFO << "need send fold mirror msg";
-        frame_.need_fold_mirror = true;
+        frame_.mirror_command = MirrorCommand::FOLD;
       }
     }
   }
@@ -2453,7 +2483,7 @@ PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
 const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   const ApaParameters& param = apa_param.GetParam();
 
-  if (frame_.need_fold_mirror) {
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
     return false;
   }
 
@@ -2476,9 +2506,13 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
   const bool occupied_ratio_case = (ego_info_under_slot.slot_occupied_ratio <
                                     param.pose_slot_occupied_ratio_3);
 
+  const bool remain_dist_case =
+      frame_.remain_dist_path >
+      param.gear_switch_config.dist_thresh_for_gear_switch_point;
+
   const bool dynamic_update_flag = gear_case && car_motion_case &&
                                    slot_confidence_case && car_pos_case &&
-                                   occupied_ratio_case;
+                                   occupied_ratio_case && remain_dist_case;
 
   if (dynamic_update_flag) {
     frame_.dynamic_plan_time += param.plan_time;
@@ -2503,7 +2537,7 @@ const bool PerpendicularTailInScenario::CheckPathDangerous() {
     return false;
   }
 
-  if (frame_.need_fold_mirror) {
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
     return false;
   }
 

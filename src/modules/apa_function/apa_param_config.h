@@ -137,9 +137,14 @@ struct SmartFoldMirrorParams {
   bool force_fold_mirror = false;
   bool locked_obs_slot_with_fold_mirror = false;
 
+  float consume_time = 0.0;
   float reaction_time = 0.0;
   float lat_buffer = 0.0;
   float min_lat_buffer = 0.0;
+
+  float max_stuck_wait_time = 3.0;
+
+  float min_vel = 0.3f;
 
   float x_down_offset = 0.0;
   float x_up_offset = 0.0;

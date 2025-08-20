@@ -246,14 +246,10 @@ class ParkingScenario {
       slot_jump_lon_err = 0.0;
       slot_jump_heading_err = 0.0;
 
-      need_fold_mirror = false;
-
-      need_unfold_mirror = false;
+      mirror_command = MirrorCommand::NONE;
     }
 
-    bool need_fold_mirror = false;
-
-    bool need_unfold_mirror = false;
+    MirrorCommand mirror_command = MirrorCommand::NONE;
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
 
