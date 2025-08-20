@@ -438,7 +438,74 @@
   "fold_mirror_heading_offset": 2.68,
   "fold_mirror_max_stuck_wait_time": 3.0,
 
-  "comment_21": "dynamic gear switch params",
+  "comment_21": "path plan",
+  "park_path_plan_type": 0,
+  "analytic_expansion_type": 1,
+  "enable_narrow_space_vertical_tail_in": true,
+  "max_plan_gear_shift_number_searching": 20,
+  "max_plan_gear_shift_number_parking": 25,
+  "max_real_gear_shift_number_parking": 30,
+  "traj_kappa_change_penalty": 0.8,
+
+  "comment_22": "lat lon path buffer",
+  "path_lon_buffer": 0.3,
+  "body_lat_buffer": 0.08,
+  "mirror_lat_buffer": 0.08,
+  "extra_lat_buffer": 0.0,
+
+  "out_slot_body_lat_buffer": 0.20,
+  "out_slot_mirror_lat_buffer": 0.15,
+  "out_slot_extra_turn_lat_buffer": 0.06,
+
+  "entrance_slot_body_lat_buffer": 0.16,
+  "entrance_slot_mirror_lat_buffer": 0.12,
+  "entrance_slot_extra_turn_lat_buffer": 0.04,
+
+  "in_slot_body_lat_buffer": 0.13,
+  "in_slot_mirror_lat_buffer": 0.10,
+  "in_slot_extra_turn_lat_buffer": 0.03,
+
+  "comment_23": "lat lon speed buffer",
+  "speed_lon_buffer": 0.286,
+
+  "stop_body_lat_buffer": 0.11,
+  "stop_mirror_lat_buffer": 0.08,
+  "stop_min_lon_dist": -0.1,
+
+  "special_stop_body_lat_buffer": 0.14,
+  "special_stop_mirror_lat_buffer": 0.10,
+  "special_stop_min_lon_dist": -0.1,
+
+  "low_speed_body_lat_buffer": 0.15,
+  "low_speed_mirror_lat_buffer": 0.11,
+  "low_speed_min_lon_dist": 0.41,
+
+  "mid_speed_body_lat_buffer": 0.20,
+  "mid_speed_mirror_lat_buffer": 0.16,
+  "mid_speed_min_lon_dist": 0.66,
+
+  "high_speed_body_lat_buffer": 0.25,
+  "high_speed_mirror_lat_buffer": 0.21,
+  "high_speed_min_lon_dist": 0.91,
+
+  "extreme_case_lon_buffer": 0.2,
+  "extra_reverse_gear_lon_buffer": 0.04,
+
+  "comment_24": "lat lon slot release buffer",
+  "slot_release_lon_buffer": 0.3,
+  "slot_release_maximum_lat_buffer": 0.23,
+  "slot_release_accumulate_lat_buffer": 0.17,
+  "slot_release_hold_lat_buffer": 0.14,
+  "slot_release_subtract_lat_buffer": 0.13,
+
+  "comment_25": "lat lon target pose buffer",
+  "target_pose_lon_buffer": 0.3,
+  "target_pose_max_lat_buffer": 0.17,
+  "target_pose_min_lat_buffer": 0.12,
+  "target_pose_step": 0.01,
+  "target_pose_special_max_lat_buffer": 0.14,
+
+  "comment_26": "dynamic gear switch params",
   "enable_dynamic_gear_switch": false,
   "dist_thresh_for_current_path": 1.0,
   "dist_thresh_for_next_path": 2.0,
@@ -450,6 +517,6 @@
   "cur_path_lat_buffer" : 0.5,
   "cur_path_lon_buffer" : 0.5,
 
-  "comment_22": "prepare path plan params",
+  "comment_27": "prepare path plan params",
   "enable_stable_prepare_route": true
 }

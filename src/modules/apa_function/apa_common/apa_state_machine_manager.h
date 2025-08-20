@@ -7,6 +7,12 @@
 namespace planning {
 namespace apa_planner {
 
+enum class ApaSlotLatPosPreference : uint8_t {
+  MID,
+  LEFT,
+  RIGHT,
+};
+
 enum class ApaStateMachine : uint8_t {
   SEARCH_IN_NO_SELECTED,
   SEARCH_IN_SELECTED_CAR_REAR,
@@ -48,6 +54,10 @@ class ApaStateMachineManager final {
     return out_direction_;
   }
 
+  const ApaSlotLatPosPreference GetSlotLatPosPreference() const {
+    return slot_lat_pos_preference_;
+  }
+
   void SetParkOutDirection(const ApaParkOutDirection& park_out_direction) {
     out_direction_ = park_out_direction;
   }
@@ -79,10 +89,19 @@ class ApaStateMachineManager final {
 
   static void PrintApaParkOutDirection(const ApaParkOutDirection out_direction);
 
+  static std::string GetApaSlotLatPosPreferenceString(
+      const ApaSlotLatPosPreference slot_lat_pos_preference);
+
+  static void PrintApaSlotLatPosPreference(
+      const ApaSlotLatPosPreference slot_lat_pos_preference);
+
  private:
   ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
 
   ApaParkOutDirection out_direction_ = ApaParkOutDirection::INVALID;
+
+  ApaSlotLatPosPreference slot_lat_pos_preference_ =
+      ApaSlotLatPosPreference::MID;
 };
 
 }  // namespace apa_planner

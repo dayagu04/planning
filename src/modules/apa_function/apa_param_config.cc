@@ -1105,7 +1105,197 @@ void SyncParkingParameters(const bool is_simulation) {
   PreparePlanConfig& prepare_plan_config = param.prepare_plan_config;
   JSON_READ_VALUE(prepare_plan_config.enable_stable_prepare_route, bool,
                   "enable_stable_prepare_route");
+
+  int park_path_plan_type = 0;
+  JSON_READ_VALUE(park_path_plan_type, int, "park_path_plan_type");
+  switch (park_path_plan_type) {
+    case 0:
+      param.park_path_plan_type = ParkPathPlanType::GEOMETRY;
+      break;
+    case 1:
+      param.park_path_plan_type = ParkPathPlanType::HYBRID_ASTAR;
+      break;
+    case 2:
+      param.park_path_plan_type = ParkPathPlanType::HYBRID_ASTAR_THREAD;
+      break;
+    default:
+      param.park_path_plan_type = ParkPathPlanType::GEOMETRY;
+      break;
+  }
+  if (apa_param.GetParam().park_path_plan_type ==
+      ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    param.enable_narrow_space_vertical_tail_in = false;
+  } else {
+    param.enable_narrow_space_vertical_tail_in = true;
+  }
+  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type, true);
+
+  if (apa_param.GetParam().park_path_plan_type ==
+          ParkPathPlanType::HYBRID_ASTAR ||
+      apa_param.GetParam().park_path_plan_type ==
+          ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    param.virtual_obs_left_y_pos += 1.0;
+    param.virtual_obs_left_x_pos += 1.4;
+    param.virtual_obs_right_y_pos += 1.0;
+    param.virtual_obs_right_x_pos += 1.4;
+    // param.channel_length -= 4.0;
+    param.channel_width += 2.0;
+  }
+
+  int analytic_expansion_type = 1;
+  JSON_READ_VALUE(analytic_expansion_type, int, "analytic_expansion_type");
+  switch (analytic_expansion_type) {
+    case 0:
+      param.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
+      break;
+    case 1:
+      param.analytic_expansion_type = AnalyticExpansionType::LINK_POSE_LINE;
+      break;
+    case 2:
+      param.analytic_expansion_type = AnalyticExpansionType::ALL;
+      break;
+    default:
+      param.analytic_expansion_type = AnalyticExpansionType::LINK_POSE_LINE;
+      break;
+  }
+
+  JSON_READ_VALUE(param.max_plan_gear_shift_number_searching, int,
+                  "max_plan_gear_shift_number_searching");
+  JSON_READ_VALUE(param.max_plan_gear_shift_number_parking, int,
+                  "max_plan_gear_shift_number_parking");
+  JSON_READ_VALUE(param.max_real_gear_shift_number_parking, int,
+                  "max_real_gear_shift_number_parking");
+
+  JSON_READ_VALUE(param.traj_kappa_change_penalty, float,
+                  "traj_kappa_change_penalty");
+
+  // lat lon path buffer params
+  JSON_READ_VALUE(param.lat_lon_path_buffer.lon_buffer, float,
+                  "path_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.body_lat_buffer, float,
+                  "body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.mirror_lat_buffer, float,
+                  "mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.extra_lat_buffer, float,
+                  "extra_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_body_lat_buffer, float,
+                  "out_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_mirror_lat_buffer, float,
+                  "out_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.out_slot_extra_turn_lat_buffer,
+                  float, "out_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_body_lat_buffer,
+                  float, "entrance_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_mirror_lat_buffer,
+                  float, "entrance_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.entrance_slot_extra_turn_lat_buffer,
+                  float, "entrance_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_body_lat_buffer, float,
+                  "in_slot_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_mirror_lat_buffer, float,
+                  "in_slot_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_extra_turn_lat_buffer,
+                  float, "in_slot_extra_turn_lat_buffer");
+
+  // lat lon speed buffer params
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.lon_buffer, float,
+                  "speed_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_body_lat_buffer, float,
+                  "stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_mirror_lat_buffer, float,
+                  "stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_min_lon_dist, float,
+                  "stop_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_body_lat_buffer,
+                  float, "special_stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_mirror_lat_buffer,
+                  float, "special_stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_min_lon_dist, float,
+                  "special_stop_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_body_lat_buffer, float,
+                  "low_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_mirror_lat_buffer, float,
+                  "low_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_min_lon_dist, float,
+                  "low_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_body_lat_buffer, float,
+                  "mid_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_mirror_lat_buffer, float,
+                  "mid_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_min_lon_dist, float,
+                  "mid_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_body_lat_buffer, float,
+                  "high_speed_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_mirror_lat_buffer,
+                  float, "high_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_min_lon_dist, float,
+                  "high_speed_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.extreme_case_lon_buffer, float,
+                  "extreme_case_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.extra_reverse_gear_lon_buffer,
+                  float, "extra_reverse_gear_lon_buffer");
+
+  // lat lon slot release buffer params
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.lon_buffer, float,
+                  "slot_release_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_buffer, float,
+                  "slot_release_maximum_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.accumulate_lat_buffer,
+                  float, "slot_release_accumulate_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_buffer, float,
+                  "slot_release_hold_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_buffer, float,
+                  "slot_release_subtract_lat_buffer");
+
+  // lat lon slot target pose params
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.lon_buffer, float,
+                  "target_pose_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_buffer, float,
+                  "target_pose_max_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_buffer, float,
+                  "target_pose_min_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.step, float,
+                  "target_pose_step");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.special_max_lat_buffer,
+                  float, "target_pose_special_max_lat_buffer");
   return;
+}
+
+const std::string GetParkPathPlanType(const ParkPathPlanType type) {
+  switch (type) {
+    case ParkPathPlanType::GEOMETRY:
+      return "GEOMETRY";
+    case ParkPathPlanType::HYBRID_ASTAR:
+      return "HYBRID_ASTAR";
+    case ParkPathPlanType::HYBRID_ASTAR_THREAD:
+      return "HYBRID_ASTAR_THREAD";
+    default:
+      return "ERR";
+  }
+}
+void PrintParkPathPlanType(const ParkPathPlanType type, const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "park_path_plan_type = "
+                           << GetParkPathPlanType(type);
+}
+
+const std::string GetAnalyticExpansionTypeString(
+    const AnalyticExpansionType type) {
+  switch (type) {
+    case AnalyticExpansionType::REEDS_SHEEP:
+      return "REEDS_SHEEP";
+    case AnalyticExpansionType::LINK_POSE_LINE:
+      return "LINK_POSE_LINE";
+    case AnalyticExpansionType::ALL:
+      return "ALL";
+    default:
+      return "ERR";
+  }
+}
+
+void PrintAnalyticExpansionType(const AnalyticExpansionType type,
+                                const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "analytic_expansion_type = "
+                           << GetAnalyticExpansionTypeString(type);
 }
 
 }  // namespace apa_planner
