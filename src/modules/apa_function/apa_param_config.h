@@ -378,7 +378,7 @@ struct ApaParameters {
 
   // check fail params
   double stuck_failed_time = 9.0;
-  double pause_failed_time = 12.68;
+  double stuck_failed_by_dynamic_obs_time = 12.68;
   double max_replan_failed_time = 3.0;
 
   // check static params

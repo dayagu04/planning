@@ -201,7 +201,7 @@ class ParkingScenario {
       is_fix_slot = false;
       stuck_time = 0.0;
       stuck_obs_time = 0.0;
-      pause_time = 0.0;
+      stuck_dynamic_obs_time = 0.0;
       dynamic_plan_time = 0.0;
       replan_fail_time = 0.0;
       remain_dist_path = 15.01;
@@ -279,7 +279,8 @@ class ParkingScenario {
     double stuck_time = 0.0;
     // stuck by static obs
     double stuck_obs_time = 0.0;
-    double pause_time = 0.0;
+    // stuck by dynamic obs
+    double stuck_dynamic_obs_time = 0.0;
     double dynamic_plan_time = 0.0;
     // If replan fail time is long, set PARKING_FAILED.
     double replan_fail_time = 0.0;
@@ -461,8 +462,7 @@ class ParkingScenario {
 
   virtual const bool CheckDynamicUpdate();
 
-  virtual const bool CheckStuckFailed(
-      const double stuck_failed_time = apa_param.GetParam().stuck_failed_time);
+  virtual const bool CheckStuckFailed();
 
   virtual const bool CheckPathDangerous();
 

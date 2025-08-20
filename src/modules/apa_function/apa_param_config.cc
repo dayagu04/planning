@@ -277,7 +277,8 @@ void SyncParkingParameters(const bool is_simulation) {
   // check fail params
   JSON_READ_VALUE(param.stuck_failed_time, double, "stuck_failed_time");
 
-  JSON_READ_VALUE(param.pause_failed_time, double, "pause_failed_time");
+  JSON_READ_VALUE(param.stuck_failed_by_dynamic_obs_time, double,
+                  "stuck_failed_by_dynamic_obs_time");
   JSON_READ_VALUE(param.max_replan_failed_time, double,
                   "max_replan_failed_time");
 

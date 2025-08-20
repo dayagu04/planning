@@ -231,15 +231,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
-  if (CheckPaused()) {
-    SetParkingStatus(PARKING_PAUSED);
-    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
-    }
-    return;
-  }
-
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
@@ -265,7 +256,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   }
 
   // check failed
-  if (CheckStuckFailed(12.0)) {
+  if (CheckStuckFailed()) {
     SetParkingStatus(PARKING_FAILED);
     frame_.plan_fail_reason = STUCK_FAILED_TIME;
     return;

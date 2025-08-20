@@ -114,7 +114,7 @@
 
   "comment_6": "check fail params",
   "stuck_failed_time": 10.0,
-  "pause_failed_time": 33.0,
+  "stuck_failed_by_dynamic_obs_time": 46.8,
   "max_replan_failed_time": 3.0,
 
   "comment_7": "check static params",
