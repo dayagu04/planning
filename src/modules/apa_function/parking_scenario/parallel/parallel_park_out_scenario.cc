@@ -9,6 +9,7 @@
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "math_lib.h"
+#include "park_hmi_state.h"
 
 namespace planning {
 namespace apa_planner {
@@ -155,6 +156,161 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // print planning status
   ILOG_INFO << "parking status = "
             << static_cast<int>(GetPlannerStates().planning_status);
+}
+
+bool ParallelParkOutScenario::ParkOutDirectionTry() {
+  ILOG_INFO << "----------parallel out Scenario Try----------";
+  frame_.Reset();
+  t_lane_.Reset();
+  obs_pt_local_vec_.clear();
+  // init simulation
+  InitSimulation();
+
+  // check planning status
+  if (CheckPlanSkip()) {
+    return false;
+  }
+
+  UpdateStuckTime();
+
+  if (CheckPaused()) {
+    return false;
+  }
+
+  // calculate remain dist according to plan path
+  frame_.remain_dist_path = CalRemainDistFromPath();
+
+  double lat_buffer = 0.0;
+  double safe_uss_remain_dist = 0.0;
+  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
+  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
+  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
+
+  double dynaminc_lat_buffer = 0.0;
+  double dynamic_lon_buffer = 0.0;
+  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
+
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+  // calculate remain dist uss according to uss
+  frame_.remain_dist_obs = CalRemainDistFromObs(
+      safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
+      dynaminc_lat_buffer, dynaminc_lat_buffer);
+  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
+
+  // update ego slot info
+  if (!UpdateEgoSlotInfo()) {
+    ILOG_INFO << "update ego slot info failed!";
+    return false;
+  }
+  ILOG_INFO << "update ego slot info success!";
+
+  // generate t-lane
+  if (!GenTlane()) {
+    ILOG_INFO << "GenTlane failed!";
+    return false;
+  }
+
+  // check finish
+  if (CheckFinished()) {
+    ILOG_INFO << "check apa finished!";
+    return false;
+  }
+
+  // check failed
+  if (CheckStuckFailed()) {
+    ILOG_INFO << "check stuck failed!";
+    return false;
+  }
+
+  const double max_replan_path_dist = 0.15;
+  const double stuck_replan_wait_time = 1.5;
+
+  CheckReplanParams replan_params(
+      max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
+      stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
+      0.168, apa_param.GetParam().stuck_replan_time);
+
+  // check replan
+  if (!CheckReplan(replan_params)) {
+    ILOG_INFO << "replan is not required!";
+    return false;
+  }
+
+  // update obstacles
+  GenTBoundaryObstacles();
+
+  // path plan
+  const auto pathplan_result = PathPlanOnce();
+  frame_.pathplan_result = pathplan_result;
+  bool success_ret = false;
+
+  if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
+    if (PostProcessPath()) {
+      ILOG_INFO << "replan from PARKING_GEARCHANGE!";
+      success_ret = true;
+    } else {
+      ILOG_INFO << "replan failed from PLAN_HOLD!";
+    }
+  } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+    if (PostProcessPath()) {
+      ILOG_INFO << "replan from PARKING_PLANNING!";
+      success_ret = true;
+    } else {
+      ILOG_INFO << "replan failed from PARKING_PLANNING!";
+    }
+  } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    ILOG_INFO << "geometry path try fail";
+  }
+  ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
+
+  frame_.is_replan_first = true;
+  frame_.Reset();
+  t_lane_.Reset();
+  obs_pt_local_vec_.clear();
+  return success_ret;
+}
+
+void ParallelParkOutScenario::ScenarioTry() {
+  //ApaParkOutDirection::RIGHT_FRONT
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  ego_info_under_slot.slot.release_info_
+        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+  multi_parkout_direction.clear();
+  multi_parkout_path_vec.clear();
+  ApaParkOutDirection directions[] = {ApaParkOutDirection::LEFT_FRONT,
+                                      ApaParkOutDirection::RIGHT_FRONT};
+  for (auto direction : directions) {
+    apa_world_ptr_->GetStateMachineManagerPtr()->SetParkOutDirection(
+      direction);
+    parkout_direction_ = direction;
+    if(ParkOutDirectionTry()) {
+      multi_parkout_direction[direction] = true;
+      ego_info_under_slot.slot.release_info_
+        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+        SlotReleaseState::RELEASE;
+    } else {
+      multi_parkout_direction[direction] = false;
+    }
+    ILOG_INFO << "direction = " << static_cast<int>(direction) <<
+      " multi_parkout_direction = " << multi_parkout_direction[direction];
+  }
+  ApaDirectionGenerator generator;
+  generator.ClearRecommendationDirectionFlag(apa_hmi_);
+  if (multi_parkout_direction[ApaParkOutDirection::RIGHT_FRONT]) {
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
+    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::RIGHT_FRONT];
+  }
+  if (multi_parkout_direction[ApaParkOutDirection::LEFT_FRONT]) {
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
+    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
+  }
+  TansformPreparePlanningTraj();
+  ILOG_INFO << "recommendation direction = " << apa_hmi_.planning_park_dir;
+  parkout_direction_ = ApaParkOutDirection::INVALID;
 }
 
 const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
@@ -449,6 +605,11 @@ const bool ParallelParkOutScenario::GenTlane() {
         // in_ego_cnt++;
         continue;
       }
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.0, slot_length) &&
+        mathlib::IsInBound(obs_pt_local.y(), 0.0, (0.5 * slot_width + 0.5) * side_sgn)) {
+        ILOG_WARN << "out is obs, obs_pt_local = " << obs_pt_local.transpose();
+        return false;
+      }
 
       if (mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
           obs_pt_local.y() * side_sgn < -0.25 * slot_width * side_sgn &&
@@ -723,6 +884,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
+  double dist_to_cat = slot_side_sgn > 0 ? std::min(B.y(), E.y()) : std::max(B.y(), E.y());
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
     const bool channel_y_condition =
@@ -1012,6 +1174,19 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
     global_point.kappa = path_point.kappa;
 
     current_path_point_global_vec_.emplace_back(global_point);
+  }
+  if (parkout_direction_ != ApaParkOutDirection::INVALID) {
+    std::vector<pnc::geometry_lib::PathPoint> cur_dir_path_point_global_vec;
+    for (const auto& path_point : path_planner_output.all_gear_path_point_vec) {
+      global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.lat_buffer = path_point.lat_buffer;
+      global_point.s = path_point.s;
+      global_point.kappa = path_point.kappa;
+      global_point.gear = path_point.gear;
+      cur_dir_path_point_global_vec.emplace_back(global_point);
+    }
+    multi_parkout_path_vec[parkout_direction_] = cur_dir_path_point_global_vec;
   }
 
   return plan_result;
