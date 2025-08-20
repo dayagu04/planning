@@ -13,8 +13,7 @@ MapRequest::MapRequest(
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
 void MapRequest::Update(int lc_status, double lc_map_tfinish) {
-  LOG_DEBUG("MapRequest::update");
-  std::cout << "MAP!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! " << std::endl;
+  ILOG_INFO << "MapRequest::update";
   //检查是否有拨杆信息
   const int ego_blinker = session_->mutable_environmental_model()
                               ->get_ego_state_manager()
@@ -36,9 +35,9 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
              request_type_ != NO_CHANGE) {
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
-    LOG_DEBUG("[MapRequest::update] cancel map request as allow cancel");
+    ILOG_DEBUG << "[MapRequest::update] cancel map request as allow cancel";
   }
-  LOG_DEBUG("MapRequest::update: finished");
+  ILOG_DEBUG << "MapRequest::update: finished";
 }
 
 bool MapRequest::CheckMLCEnable(const int lc_status) {
@@ -175,14 +174,14 @@ void MapRequest::GenerateMLCRequest() {
     if (request_type_ != LEFT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
-      LOG_DEBUG("[MapRequest::update] Ask for map changing lane to left\n");
+      ILOG_DEBUG << "[MapRequest::update] Ask for map changing lane to left";
     }
   } else {
     const auto& target_lane = virtual_lane_mgr_->get_right_lane();
     if (request_type_ != RIGHT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
-      LOG_DEBUG("[MapRequest::update] Ask for map changing lane to right\n");
+      ILOG_DEBUG << "[MapRequest::update] Ask for map changing lane to right";
     }
   }
 }

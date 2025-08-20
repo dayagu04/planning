@@ -233,10 +233,10 @@ StGraphSearcher::StGraphSearcher(const EgoPlanningConfigBuilder* config_builder,
 }
 
 bool StGraphSearcher::Execute() {
-  LOG_DEBUG("=======StGraphSearcher======= \n");
+  ILOG_INFO << "=======StGraphSearcher=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -332,7 +332,7 @@ bool StGraphSearcher::SearchStPath(
       GenerateStartNode(planning_init_point, st_search_input_info);
 
   if (!start_node.is_valid()) {
-    LOG_ERROR("st search, start node is not valid");
+    ILOG_ERROR << "st search, start node is not valid";
     return false;
   }
   nodes.insert(std::make_pair(start_node.id(), start_node));
@@ -359,7 +359,7 @@ bool StGraphSearcher::SearchStPath(
     const double max_search_time_ms = search_config_.max_search_time * 1e3;
     // max search time < 0.1s
     if (time_used > max_search_time_ms) {
-      LOG_DEBUG("time out, time used: %.4f", time_used);
+      ILOG_DEBUG << "time out, time used:" << time_used;
       break;
     }
 
@@ -428,17 +428,17 @@ bool StGraphSearcher::SearchStPath(
   JSON_DEBUG_VALUE("open_set_empty", open_set.IsEmpty())
   // const double end_time = IflyTime::Now_ms();
   if (!is_goal_reached) {
-    LOG_DEBUG("st search fail, goal not reached \n");
+    ILOG_DEBUG << "st search fail, goal not reached";
     bool is_visualize_all_vertexes = config_.is_visualize_st_search_process;
     if (is_visualize_all_vertexes) {
       // VisualizeStSearchVertexes(nodes);
     }
     if (best_node.h_cost() == std::numeric_limits<double>::max()) {
-      LOG_DEBUG("st search fail, goal not reached \n");
+      ILOG_DEBUG << "st search fail, goal not reached";
       return false;
     } else {
       current_node = best_node;
-      LOG_DEBUG("st search fail, but use best node to reconstruct path\n");
+      ILOG_DEBUG << "st search fail, but use best node to reconstruct path";
     }
   }
 
@@ -459,7 +459,7 @@ bool StGraphSearcher::SearchStPath(
 
   AddAStarSearchCostDebugInfo(searched_path);
   if (searched_path->size() < 2) {
-    LOG_DEBUG("st_search path size < 2");
+    ILOG_DEBUG << "st_search path size < 2";
     return false;
   }
 

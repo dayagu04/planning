@@ -36,7 +36,7 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
     const bool &last_enable_using_st_plan) {
 
   if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan)) {
-    LOG_DEBUG("failed to search graph with dynamic programming");
+    ILOG_DEBUG << "failed to search graph with dynamic programming";
     return false;
   }
   return true;
@@ -64,7 +64,7 @@ bool PathTimeHeuristicOptimizer::Process(
   st_dp_is_sucess_ = true;
 
   if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan)) {
-    LOG_DEBUG("PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!! ");
+    ILOG_DEBUG << "PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!!";
     st_dp_is_sucess_ = false;
     // FallbackFunction(traj_points);
   }
@@ -87,7 +87,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_ERROR("PathTimeHeuristicOptimizer::FallbackFunction: Cart Point -> Frenet Point Failed!!!");
+    ILOG_ERROR << "PathTimeHeuristicOptimizer::FallbackFunction: Cart Point -> Frenet Point Failed!!!";
   } else {
     ego_s = ego_frenet_point.x;
     ego_l = ego_frenet_point.y;
@@ -134,7 +134,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
@@ -160,7 +160,7 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
-          LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+          ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;

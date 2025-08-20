@@ -137,8 +137,7 @@ void OvertakeRequest::Update(int lc_status) {
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
-    LOG_DEBUG("OvertakeRequest::Update: for left_lane: update %d\n",
-              llane->get_virtual_id());
+    ILOG_DEBUG << "OvertakeRequest::Update: for left_lane: update:" << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
   }
@@ -146,8 +145,7 @@ void OvertakeRequest::Update(int lc_status) {
   if (rlane != nullptr) {
     right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         rlane->get_virtual_id(), false);
-    LOG_DEBUG("OvertakeRequest::Update: for right_lane: update %d\n",
-              rlane->get_virtual_id());
+    ILOG_DEBUG << "OvertakeRequest::Update: for right_lane: update " << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
   }
@@ -168,7 +166,7 @@ void OvertakeRequest::Update(int lc_status) {
     } else {
       if (current_timestamp - left_invalid_timestamp_ <
           kSuppressionRebounceTime) {
-        LOG_DEBUG("Left LC invalid for rebounce time!");
+        ILOG_DEBUG << "Left LC invalid for rebounce time!";
         enable_l_ = false;
       }
     }
@@ -183,7 +181,7 @@ void OvertakeRequest::Update(int lc_status) {
     } else {
       if (current_timestamp - right_invalid_timestamp_ <
           kSuppressionRebounceTime) {
-        LOG_DEBUG("Left LC invalid for rebounce time!");
+        ILOG_DEBUG << "Left LC invalid for rebounce time!";
         enable_r_ = false;
       }
     }
@@ -195,8 +193,7 @@ void OvertakeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
   JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
   setLaneChangeRequestByFrontSlowVehcile(lc_status);
-  LOG_DEBUG("request_type_: [%d] turn_signal_: [%d]\n", request_type_,
-            turn_signal_);
+  ILOG_DEBUG << "request_type_:" << request_type_ << "turn_signal:" << turn_signal_;
 }
 
 void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
@@ -259,7 +256,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // 无效的track_id暂时赋值为-1
   if ((agent != nullptr && agent->agent_id() == -1) || agent == nullptr ||
       cipv_info.relative_s() > kDefaultLeadOneConsiderRange) {
-    LOG_DEBUG("not exist stable leading vehicle");
+    ILOG_DEBUG << "not exist stable leading vehicle";
     overtake_count_ = 0;
     Finish();
     return;
@@ -268,7 +265,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       virtual_lane_mgr_->get_lane_with_virtual_id(base_lane_virtual_id);
 
   if (base_lane == nullptr) {
-    LOG_DEBUG("base lane not exist");
+    ILOG_DEBUG << "base lane not exist";
     Finish();
     overtake_count_ = 0;
     return;
@@ -284,7 +281,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG("fail to get ego position on base lane");
+    ILOG_DEBUG << "fail to get ego position on base lane";
     Finish();
     overtake_count_ = 0;
     return;
@@ -322,7 +319,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     overtake_count_ = 0;
   }
 
-  LOG_DEBUG("overtake_count_: %d", overtake_count_);
+  ILOG_DEBUG << "overtake_count :" << overtake_count_;
   JSON_DEBUG_VALUE("overtake_count_", overtake_count_);
 
   if (overtake_count_ < left_count_thres) {
@@ -422,9 +419,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[OvertakeRequest::update] Ask for overtake changing lane to left "
-            "\n");
+        ILOG_DEBUG << "[OvertakeRequest::update] Ask for overtake changing lane to left";
       }
     }
     if (!IsDashEnoughForRepeatSegments(
@@ -437,14 +432,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
-      LOG_DEBUG(
-          "[OvertakeRequest::update] %s:%d finish request, dash not enough \n",
-          __FUNCTION__, __LINE__);
+      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__
+                 << " finish request, dash not enough";
     } else {
       overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
-      LOG_DEBUG("overtake_vehicle_id_: [%d] overtake_vehicle_speed_: [%f] \n",
-                overtake_vehicle_id_, overtake_vehicle_speed_);
+      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
     if (request_type_ != RIGHT_CHANGE) {
@@ -458,9 +451,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[OvertakeRequest::update] Ask for overtake changing lane to right "
-            "\n");
+        ILOG_DEBUG << "[OvertakeRequest::update] Ask for overtake changing lane to right";
       }
     }
     if (!IsDashEnoughForRepeatSegments(
@@ -473,24 +464,18 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
-      LOG_DEBUG(
-          "[OvertakeRequest::update] %s:%d finish request, dash not enough \n",
-          __FUNCTION__, __LINE__);
+      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
     } else {
       overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
-      LOG_DEBUG("overtake_vehicle_id_: [%d] overtake_vehicle_speed_: [%f] \n",
-                overtake_vehicle_id_, overtake_vehicle_speed_);
+      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
   } else if (request_type_ != NO_CHANGE &&
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
-    LOG_DEBUG(
-        "[OvertakeRequest::update] %s:%d finish request, "
-        "!trigger_left_overtake and !trigger_right_overtake\n",
-        __FUNCTION__, __LINE__);
+    ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, !trigger_left_overtake and !trigger_right_overtake";
   }
 }
 
@@ -684,10 +669,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
       const auto& target_lane_merge_info =
           target_lane->get_lane_merge_split_point().merge_split_point_data[0];
       if (!target_lane_merge_info.is_split) {
-        LOG_DEBUG(
-            "Not trigger overtake since target route has merge lane, is left "
-            "lane: %d",
-            is_left);
+        ILOG_DEBUG << "Not trigger overtake since target route has merge lane, is left lane:" << is_left;
         return false;
       }
     }
@@ -760,11 +742,10 @@ void OvertakeRequest::updateLaneChangeSafety(
 bool OvertakeRequest::checkLeftLaneChangeValid(
     const std::shared_ptr<ReferencePath>& ref_line, const bool is_left) {
   if (!checkLeftLaneChangeValidByObjects(ref_line)) {
-    LOG_DEBUG("left invalid since objects");
+    ILOG_DEBUG << "left invalid since objects";
     return false;
   }
   // if (!checkLaneChangeValidBySuprsSignal(is_left)) {
-  //   LOG_DEBUG("left invalid since suppression");
   //   return false;
   // }
   return true;
@@ -773,11 +754,10 @@ bool OvertakeRequest::checkLeftLaneChangeValid(
 bool OvertakeRequest::checkRightLaneChangeValid(
     const std::shared_ptr<ReferencePath>& ref_line, const bool is_left) {
   if (!checkRightLaneChangeValidByObjects(ref_line)) {
-    LOG_DEBUG("right invalid since objects");
+    ILOG_DEBUG << "right invalid since objects";
     return false;
   }
   // if (!checkLaneChangeValidBySuprsSignal(is_left)) {
-  //   LOG_DEBUG("right invalid since suppression");
   //   return false;
   // }
   return true;
@@ -795,7 +775,7 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
                          planning_init_point_.lat_init_state.y()};
   if (!target_lane_coord_ptr->XYToSL(ego_cart_point,
                                      ego_frenet_point_in_left_lane)) {
-    LOG_DEBUG("Enmergency error! Ego Pose Cart2SL in left lane failed!");
+    ILOG_DEBUG << "Enmergency error! Ego Pose Cart2SL in left lane failed!";
   }
   const double potensial_max_l =
       -ego_frenet_point_in_left_lane.y + kPotensialObjectLatRange;
@@ -923,7 +903,7 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
                          planning_init_point_.lat_init_state.y()};
   if (!target_lane_coord_ptr->XYToSL(ego_cart_point,
                                      ego_frenet_point_in_right_lane)) {
-    LOG_DEBUG("Enmergency error! Ego Pose Cart2SL in right lane failed!");
+    ILOG_DEBUG << "Enmergency error! Ego Pose Cart2SL in right lane failed!";
   }
   const double potensial_min_l =
       -ego_frenet_point_in_right_lane.y - kPotensialObjectLatRange;
@@ -1094,7 +1074,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
   if (!target_lane_coord_ptr->XYToSL(ego_cart_point,
                                      ego_frenet_point_in_target_lane)) {
-    LOG_DEBUG("ego on ref lane failed!");
+    ILOG_DEBUG << "ego on ref lane failed!";
     return false;
   }
 
@@ -1174,7 +1154,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
                                        obs_target_frenet_point)) {
-      LOG_DEBUG("front obs on ref lane failed!");
+      ILOG_DEBUG << "front obs on ref lane failed!";
       return false;
     }
     double front_safety_threshold_at_present = 0.0;
@@ -1190,8 +1170,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
         lon_safety_ratio, &front_safety_threshold_at_present);
     if (!front_safety_at_present) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      LOG_DEBUG(
-          "checkLaneChangeSafety(): Not safety for front vehicle at present!");
+      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at present!";
       return false;
     }
     const double front_safety_at_future = checkFrontSafetyAtFuture(
@@ -1201,8 +1180,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
         lon_safety_ratio, kConsiderTimestampInCheckLaneChangeSafety);
     if (!front_safety_at_future) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      LOG_DEBUG(
-          "checkLaneChangeSafety(): Not safety for front vehicle at future!");
+      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
       return false;
     }
     *front_required_space = front_safety_threshold_at_present;
@@ -1225,7 +1203,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
                                        obs_target_frenet_point)) {
-      LOG_DEBUG("rear obs on ref lane failed!");
+      ILOG_DEBUG << "rear obs on ref lane failed!";
       return false;
     }
     double rear_safety_threshold_at_present = 0.0;
@@ -1243,8 +1221,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
         &rear_safety_threshold_at_present);
     if (!rear_safety_at_present) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      LOG_DEBUG(
-          "checkLaneChangeSafety(): Not safety for rear vehicle at present!");
+      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for rear vehicle at present!";
       return false;
     }
     const double rear_safety_at_future = checkRearSafetyAtFuture(
@@ -1255,8 +1232,7 @@ bool OvertakeRequest::checkLaneChangeSafety(
         kConsiderTimestampInCheckLaneChangeSafety * lon_safety_ratio);
     if (!rear_safety_at_future) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      LOG_DEBUG(
-          "checkLaneChangeSafety(): Not safety for front vehicle at future!");
+      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
       return false;
     }
     *rear_required_space = rear_safety_threshold_at_present;
@@ -1323,7 +1299,7 @@ void OvertakeRequest::selectTargetObstacleIds(
     Point2D new_frenet_point;
     double new_lane_theta = 0.0;
     if (!ref_line->XYToSL(obs_cart_point, new_frenet_point)) {
-      LOG_DEBUG("obs on ref lane failed!");
+      ILOG_DEBUG << "obs on ref lane failed!";
       return false;
     }
     new_lane_theta = ref_line->GetPathCurveHeading(new_frenet_point.x);
@@ -1404,12 +1380,11 @@ bool OvertakeRequest::checkFrontSafetyAtPresent(
   if (front_required_space) {
     *front_required_space = safety_threshold;
   }
-  LOG_DEBUG(
-      "ego v: %f, front v: %f "
-      "base dis buff: %f "
-      "safety_threshold: %f "
-      "long_diff: %f \n",
-      ego_v, veh_v, base_distance_buffer, safety_threshold, long_diff);
+  ILOG_DEBUG << "ego v:" << ego_v
+             << "front v:" << veh_v
+             << "base dis buff:" << base_distance_buffer
+             << "safety_threshold:" << safety_threshold
+             << "long_diff:" << long_diff;
   if (long_diff < safety_threshold) {
     return false;
   }
@@ -1533,8 +1508,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         if (front_leading_vehicle_iter != tracks_map_.end()) {
           front_leading_vehivle_long_distance =
               front_leading_vehicle_iter->second.d_rel;
-          LOG_DEBUG("ego vehicle front_leading_vehicle id: %d \n",
-                    front_leading_vehicle_iter->second.track_id);
+          ILOG_DEBUG << "ego vehicle front_leading_vehicle id:" << front_leading_vehicle_iter->second.track_id;
         }
       }
     }
@@ -1569,13 +1543,11 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
                -kCancelOverTakeLnChgLeadVehLatDstThold &&
            !false)))) {
       // HACK：待前轮是否跨线接口ready来替代上述false
-      LOG_DEBUG(
-          "Cancel OverTakeLaneChange Dir: %d, LaneChangeProgress: %d "
-          "OverTake Vehicle LatSpd: %f "
-          "Ego Lat Distance: %f "
-          "Front Leading Vehicle Distance: %f \n",
-          request_type_, lc_state, leading_vehicle_lateral_speed,
-          lateral_distance, front_leading_vehivle_long_distance);
+      ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
+             << "LaneChangeProgress:" << lc_state
+             << "OverTake Vehicle LatSpd:" << leading_vehicle_lateral_speed
+             << "Ego Lat Distance:" << lateral_distance
+             << "Front Leading Vehicle Distance:" << front_leading_vehivle_long_distance;
       return true;
     }
     std::vector<TrackedObject> ego_left_front_vehicle_array;
@@ -1608,8 +1580,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
             left_front_leading_vehicle_iter->second.v;
         ego_left_front_leading_vehivle_long_distance =
             left_front_leading_vehicle_iter->second.d_rel;
-        LOG_DEBUG("ego_left_front_leading_vehivle_long_distance: %f ",
-                  ego_left_front_leading_vehivle_long_distance);
+        ILOG_DEBUG << "ego_left_front_leading_vehivle_long_distance:" << ego_left_front_leading_vehivle_long_distance;
       }
     }
     if (request_type_ == LEFT_CHANGE) {
@@ -1640,14 +1611,12 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
     if (request_type_ == LEFT_CHANGE &&
         target_lane_exist_slow_front_veh_frame_num_ >= 2 && !false) {
       // HACK：false待前轮压线接口ready后替代
-      LOG_DEBUG(
-          "Cancel OverTakeLaneChange Dir: %d, LaneChangeProgress: %d "
-          "OverTake Vehicle LonSpd: %f, Left Lane Target Speed: %f "
-          "Ego Lat Distance: %f, left lane exist slow front veh frame num: %d "
-          "\n",
-          request_type_, lc_state, overtake_lane_change_vehicle_speed,
-          ego_left_front_leading_vehicle_min_speed, lateral_distance,
-          target_lane_exist_slow_front_veh_frame_num_);
+      ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
+             << "LaneChangeProgress:" << lc_state
+             << "OverTake Vehicle LonSpd:" << overtake_lane_change_vehicle_speed
+             << "Left Lane Target Speed:" << ego_left_front_leading_vehicle_min_speed
+             << "Ego Lat Distance:" << lateral_distance
+             << "left lane exist slow front veh frame num:" << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
 
@@ -1669,8 +1638,7 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
             right_front_leading_vehicle_iter->second.v;
         ego_right_front_leading_vehivle_long_distance =
             right_front_leading_vehicle_iter->second.d_rel;
-        LOG_DEBUG("right front leading vehicle long distance: %f ",
-                  ego_right_front_leading_vehivle_long_distance);
+        ILOG_DEBUG << "right front leading vehicle long distance:" << ego_right_front_leading_vehivle_long_distance;
       }
     }
     if (request_type_ == RIGHT_CHANGE) {
@@ -1700,14 +1668,12 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
     }
     if (request_type_ == RIGHT_CHANGE && !false &&
         (target_lane_exist_slow_front_veh_frame_num_ >= 2)) {
-      LOG_DEBUG(
-          "Cancel OverTakeLaneChange Dir: %d, LaneChangeProgress: %d "
-          "OverTake Vehicle LonSpd: %f, Left Lane Target Speed: %f "
-          "Ego Lat Distance: %f, right lane exist slow front veh frame num: %d "
-          "\n",
-          request_type_, lc_state, overtake_lane_change_vehicle_speed,
-          ego_left_front_leading_vehicle_min_speed, lateral_distance,
-          target_lane_exist_slow_front_veh_frame_num_);
+      ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
+             << "LaneChangeProgress:" << lc_state
+             << "OverTake Vehicle LonSpd:" << overtake_lane_change_vehicle_speed
+             << "Left Lane Target Speed:" << ego_left_front_leading_vehicle_min_speed
+             << "Ego Lat Distance:" << lateral_distance
+             << "left lane exist slow front veh frame num:" << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
   }

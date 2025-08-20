@@ -258,7 +258,7 @@ void EdtManager::update() {
   double time_start = IflyTime::Now_ms();
   is_edt_valid_ = UpdateEDT(grid_bound);
   double time_end = IflyTime::Now_ms();
-  LOG_DEBUG("EulerDistanceTransform cost:%f\n", time_end - time_start);
+  ILOG_INFO << "EulerDistanceTransform cost:", time_end - time_start;
   JSON_DEBUG_VALUE("UpdateEulerDistanceTransformCost", time_end - time_start);
 }
 }  // namespace planning

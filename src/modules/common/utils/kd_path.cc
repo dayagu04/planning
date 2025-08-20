@@ -5,8 +5,6 @@
 #include <iostream>
 #include <limits>
 #include <vector>
-
-#include "log.h"
 #include "utils/path_point.h"
 
 namespace planning {
@@ -220,14 +218,14 @@ bool KDPath::SLToXY(const double s, const double l, double* const x,
 
 bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
   if (path_points_.empty()) {
-    LOG_DEBUG("path_points_ is empty");
+    ILOG_DEBUG << "path_points_ is empty";
     return false;
   }
 
   const auto* nearest_object =
       kd_tree_->GetNearestObject({cart_point.x, cart_point.y});
   if (nearest_object == nullptr) {
-    LOG_DEBUG("nearest_object is nullptr \n");
+    ILOG_DEBUG << "nearest_object is nullptr";
     return false;
   }
 
@@ -237,7 +235,7 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
           &frenet_point.y);
 
   if (frenet_point.x < 0 || frenet_point.x > length_) {
-    LOG_DEBUG("s is not within the valid range \n");
+    ILOG_DEBUG << "s is not within the valid range";
     return false;
   }
 
@@ -247,14 +245,14 @@ bool KDPath::XYToSL(const Point2D& cart_point, Point2D& frenet_point) {
 KDPathStatus KDPath::XYPointToSLPoint(const Point2D& cart_point,
                                       Point2D& frenet_point) {
   if (path_points_.empty()) {
-    LOG_DEBUG("path_points_ is empty \n");
+    ILOG_DEBUG << "path_points_ is empty";
     return ERROR;
   }
 
   const auto* nearest_object =
       kd_tree_->GetNearestObject({cart_point.x, cart_point.y});
   if (nearest_object == nullptr) {
-    LOG_DEBUG("nearest_object is nullptr \n");
+    ILOG_DEBUG << "nearest_object is nullptr";
     return ERROR;
   }
 
@@ -272,12 +270,12 @@ KDPathStatus KDPath::XYPointToSLPoint(const Point2D& cart_point,
 }
 bool KDPath::SLToXY(const Point2D& frenet_point, Point2D& cart_point) {
   if (path_points_.empty()) {
-    LOG_DEBUG("path_points_ is empty");
+    ILOG_DEBUG << "path_points_ is empty";
     return false;
   }
 
   if (frenet_point.x < 0 || frenet_point.x > length_) {
-    LOG_DEBUG("s is not within the valid range");
+    ILOG_DEBUG << "s is not within the valid range";
     return false;
   }
 
@@ -302,11 +300,9 @@ bool KDPath::GetKappaByS(const double s, double* const kappa) const {
 double KDPath::GetPathCurveHeading(double s) const {
   // assert(s <= length_ && s >= 0);
   if (s >= length_) {
-    LOG_DEBUG(
-        "s is not within the valid range, theta is taken from the last point");
+    ILOG_DEBUG << "s is not within the valid range, theta is taken from the last point";
   } else if (s < 0) {
-    LOG_DEBUG(
-        "s is not within the valid range, theta is taken from the first point");
+    ILOG_DEBUG << "s is not within the valid range, theta is taken from the first point";
   }
   return GetPathPointByS(s).theta();
 }

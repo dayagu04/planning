@@ -5,7 +5,6 @@
 #include "obstacle_manager.h"
 #include "ego_state_manager.h"
 #include "ifly_time.h"
-#include "log.h"
 #include "math/math_utils.h"
 #include "session.h"
 #include "utils/kd_path.h"
@@ -48,7 +47,7 @@ void ReferencePath::update_obstacles() {
 void ReferencePath::update_refpath_points(
     const ReferencePathPoints &raw_ref_path_points) {
   if (raw_ref_path_points.size() <= 2) {
-    LOG_ERROR("update_refpath_points: points size < 2");
+    ILOG_ERROR << "update_refpath_points: points size < 2";
     return;
   }
 
@@ -57,7 +56,7 @@ void ReferencePath::update_refpath_points(
   coord_path_points.reserve(raw_ref_path_points.size());
   for (const auto &point : raw_ref_path_points) {
     if (std::isnan(point.path_point.x()) || std::isnan(point.path_point.y())) {
-      LOG_ERROR("update_refpath_points: skip NaN point");
+      ILOG_ERROR << "update_refpath_points: skip NaN point";
       continue;
     }
     auto pt =
@@ -74,7 +73,7 @@ void ReferencePath::update_refpath_points(
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
   if (coord_path_points.size() < 2) {
-    LOG_ERROR("update_refpath_points: coord points size < 2");
+    ILOG_ERROR << "update_refpath_points: coord points size < 2";
     return;
   }
   frenet_coord_ =
@@ -85,7 +84,7 @@ void ReferencePath::update_refpath_points(
   refined_ref_path_points_.reserve(raw_ref_path_points.size());
   for (auto pt : raw_ref_path_points) {
     if (std::isnan(pt.path_point.x()) || std::isnan(pt.path_point.y())) {
-      LOG_ERROR("raw_ref_path_points: skip NaN point");
+      ILOG_ERROR << "raw_ref_path_points: skip NaN point";
       continue;
     }
     Point2D frenet_point;
@@ -109,7 +108,7 @@ void ReferencePath::update_refpath_points_in_hpp(
     const double ego_projection_length_in_reference_path,
     const ReferencePathPoints &raw_ref_path_points) {
   if (raw_ref_path_points.size() <= 2) {
-    LOG_ERROR("update_refpath_points: points size < 2");
+    ILOG_ERROR << "update_refpath_points: points size < 2";
     return;
   }
 
@@ -139,7 +138,7 @@ void ReferencePath::update_refpath_points_in_hpp(
   for (size_t i = 0; i < raw_ref_path_points.size(); ++i) {
     if (std::isnan(raw_ref_path_points[i].path_point.x()) ||
         std::isnan(raw_ref_path_points[i].path_point.y())) {
-      LOG_ERROR("update_refpath_points: skip NaN point");
+      ILOG_ERROR << "update_refpath_points: skip NaN point";
       continue;
     }
     auto pt = planning_math::PathPoint(raw_ref_path_points[i].path_point.x(),
@@ -167,7 +166,7 @@ void ReferencePath::update_refpath_points_in_hpp(
           start_index = i;
           drop_length = std::max(drop_length, ref_length);
         }
-        LOG_DEBUG("ref path direction check error since input data is bad! \n");
+        ILOG_WARN << "ref path direction check error since input data is bad!";
       }
     }
     if (ref_length >= drop_length) {
@@ -183,8 +182,8 @@ void ReferencePath::update_refpath_points_in_hpp(
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
   if (coord_path_points.size() < 2) {
-    LOG_DEBUG("drop_length = %f, init_length = %f\n", drop_length, init_length);
-    LOG_ERROR("update_refpath_points_in_hpp: coord points size < 2");
+    ILOG_DEBUG << "drop_length = " << drop_length << ", init_length = " << init_length;
+    ILOG_ERROR << "update_refpath_points_in_hpp: coord points size < 2";
     return;
   }
   frenet_coord_ = std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
@@ -195,7 +194,7 @@ void ReferencePath::update_refpath_points_in_hpp(
   for (size_t i = start_index; i < end_index; ++i) {
     auto pt = raw_ref_path_points[i];
     if (std::isnan(pt.path_point.x()) || std::isnan(pt.path_point.y())) {
-      LOG_ERROR("raw_ref_path_points: skip NaN point");
+      ILOG_ERROR << "raw_ref_path_points: skip NaN point";
       continue;
     }
     Point2D frenet_point;
@@ -457,11 +456,7 @@ bool ReferencePath::get_polygon_at_time(const int id,
     carte_point.x = pt.x();
     carte_point.y = pt.y();
     if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-      LOG_DEBUG(
-          "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], "
-          "max_x: [%f], min_y: [%f], max_y: [%f] \n",
-          obstacle_ptr_->id(), enu_polygon.min_x(), enu_polygon.max_x(),
-          enu_polygon.min_y(), enu_polygon.max_y());
+      ILOG_ERROR << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!!!!";
       continue;
     }
     frenet_points.push_back(

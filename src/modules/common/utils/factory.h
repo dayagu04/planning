@@ -74,8 +74,8 @@ class Factory {
       return std::unique_ptr<AbstractProduct>(
           (id_iter->second)(std::forward<Args>(args)...));
     } else {
-      std::cout << "Factory do not contain Object of type : " << id
-                << std::endl;
+      // std::cout << "Factory do not contain Object of type : " << id
+      //           << std::endl;
     }
     return nullptr;
   }
@@ -91,8 +91,8 @@ class Factory {
                                                 Args &&... args) {
     auto result = CreateObjectOrNull(id, std::forward<Args>(args)...);
     if (result == nullptr) {
-      std::cout << "Factory could not create Object of type : " << id
-                << std::endl;
+      // std::cout << "Factory could not create Object of type : " << id
+      //           << std::endl;
     }
     return result;
   }

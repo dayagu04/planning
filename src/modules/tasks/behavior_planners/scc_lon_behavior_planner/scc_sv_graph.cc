@@ -14,7 +14,8 @@ SvGraphGenerator::SvGraphGenerator(const SccLonBehaviorPlannerConfig &plan_cfg)
 void SvGraphGenerator::Update(
     std::shared_ptr<common::RealTimeLonBehaviorInput> lon_behav_input) {
   lon_behav_input_ = std::move(lon_behav_input);
-  LOG_DEBUG("=======Entering SvGraphGenerator::Update======= \n");
+  ILOG_INFO << "=======Entering SvGraphGenerator::Update=======";
+
   double v_ego = lon_behav_input_->ego_info().ego_v();
   double v_cruise = lon_behav_input_->ego_info().ego_cruise();
   double steer_angle_ego = lon_behav_input_->ego_info().ego_steer_angle();
@@ -47,7 +48,7 @@ void SvGraphGenerator::CalculateCurvSvs(const double v_ego,
                                         const double angle_steers,
                                         const std::vector<double> &d_poly,
                                         SVBoundary &sv_boundary) {
-  LOG_DEBUG("----entering CalculateCurvSvs--- \n");
+  ILOG_INFO << "----entering CalculateCurvSvs---";
   double angle_steers_deg = angle_steers * DEG_PER_RAD;
   double base_dis = config_.dis_curv;  // 从自车位置开始，计算5s
   sv_boundary.boundary_type = SVBoundaryType::CURVATURE;

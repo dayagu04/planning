@@ -27,8 +27,7 @@
 #include "ifly_parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
-#include "log.h"
-// #include "log_glog.h"
+#include "log_glog.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
@@ -83,11 +82,9 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
 
-  LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v,
-            ego_yaw_rate, ego_steer_angle);
-
-  LOG_DEBUG("ego_v =  %f, ego_yaw_rate = %f, ego_steer_angle = %f\n", ego_v,
-            ego_yaw_rate, ego_steer_angle);
+  ILOG_DEBUG << "ego_v = " << ego_v
+             << "ego_yaw_rate = " << ego_yaw_rate
+             << "ego_steer_angle = " << ego_steer_angle;
 
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -116,7 +113,7 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
 
   double curv = curv_low_spd_factor * curv_low_spd +
                 (1.0 - curv_low_spd_factor) * curv_high_spd;
-  LOG_DEBUG("curv =  %f\n", curv);
+  ILOG_DEBUG << "curv = " << curv;
   curv = std::min(std::max(curv, -0.1), 0.1);
 
   std::vector<double> virtual_poly(4, 0.0);
@@ -355,7 +352,7 @@ void VirtualLaneManager::ExtendReferenceLineForRads(
 void VirtualLaneManager::construct_reference_line_msg(
     const std::vector<double>& current_lane_virtual_poly,
     iflyauto::ReferenceLineMsg& current_lane_virtual) {
-  LOG_DEBUG("construct_reference_line_msg\n");
+  ILOG_DEBUG << "construct_reference_line_msg";
   // set default value
   current_lane_virtual.order_id = 0;
   current_lane_virtual.relative_id = 0;
@@ -395,7 +392,7 @@ void VirtualLaneManager::construct_reference_line_msg(
   const double c1 = current_lane_virtual_ref->poly_coefficient_car[1];
   const double c2 = current_lane_virtual_ref->poly_coefficient_car[2];
   const double c3 = current_lane_virtual_ref->poly_coefficient_car[3];
-  LOG_DEBUG("c2 = %f\n", c2);
+  ILOG_DEBUG << "c2 = " << c2;
 
   // set lane_reference_line ref points
   double x = -50.0;
@@ -482,10 +479,8 @@ void VirtualLaneManager::construct_reference_line_msg(
   current_lane_virtual_ref->virtual_lane_refline_points_size =
       FUSION_ROAD_REFLINE_POINT_MAX_NUM;
 
-  LOG_DEBUG(
-      "current_lane_virtual_ref->virtual_lane_refline_points_size =  %d\n",
-      current_lane_virtual_ref->virtual_lane_refline_points_size);
-  LOG_DEBUG("s_end =  %f\n", s);
+  ILOG_DEBUG << "current_lane_virtual_ref->virtual_lane_refline_points_size = " << current_lane_virtual_ref->virtual_lane_refline_points_size;
+  ILOG_DEBUG << "s_end = " << s;
 
   // set left_lane_boundary
   double left_lane_boundary_c0 = c0 + 3.75 * 0.5;
@@ -654,7 +649,7 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
 // for rads only
 bool VirtualLaneManager::update(
     const iflyauto::FuncStateMachine& func_state_machine_msg) {
-  LOG_DEBUG("update VirtualLaneManager for rads\n");
+  ILOG_INFO << "update VirtualLaneManager for rads";
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
@@ -687,7 +682,7 @@ bool VirtualLaneManager::update(
           .s)
   iflyauto::RoadInfo* roads_ptr = &roads_virtual;
   if (!roads_virtual.local_point_valid) {
-    LOG_DEBUG("no rads refline points \n");
+    ILOG_INFO << "no rads refline points";
     return false;
   }
   /*********** belowing follows pipline already exists **********/
@@ -750,18 +745,17 @@ bool VirtualLaneManager::update(
                                          virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
-    LOG_DEBUG("select_ego_lane_without_plan: %d \n",
-              select_ego_lane_without_plan);
+    ILOG_DEBUG << "select_ego_lane_without_plan: " << select_ego_lane_without_plan;
     JSON_DEBUG_VALUE("select_ego_lane_without_plan",
                      select_ego_lane_without_plan);
 
     const bool select_ego_lane_with_plan =
         ego_lane_track_manager_.is_select_ego_lane_with_plan();
-    LOG_DEBUG("select_ego_lane_with_plan: %d \n", select_ego_lane_with_plan);
+    ILOG_DEBUG << "select_ego_lane_with_plan:" << select_ego_lane_with_plan;
     JSON_DEBUG_VALUE("select_ego_lane_with_plan", select_ego_lane_with_plan);
   }
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
+  ILOG_DEBUG << "track_ego_lane cost:" << time_end - time_start;
 
   ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
@@ -771,7 +765,7 @@ bool VirtualLaneManager::update(
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
-    LOG_DEBUG("!!!current_lane is empty!!!");
+    ILOG_ERROR << "!!!current_lane is empty!!!";
     ego_lane_track_manager_.Reset();
     return false;
   }
@@ -782,36 +776,33 @@ bool VirtualLaneManager::update(
 
   // 对下游输出是否处于主路下匝道、匝道选分叉场景
   set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
-  LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
+  ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
-  LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
+  ILOG_DEBUG << "is_exist_split_on_ramp:" << is_exist_split_on_ramp_;
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
   set_is_exist_split_on_expressway(
       ego_lane_track_manager_.is_exist_split_on_expressway());
-  LOG_DEBUG("is_exist_split_on_expressway_: %d \n",
-            is_exist_split_on_expressway_);
+  ILOG_DEBUG << "is_exist_split_on_expressway:" << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
   set_is_exist_intersection_split(
       ego_lane_track_manager_.is_exist_intersection_split());
-  LOG_DEBUG("is_exist_intersection_split: %d \n", is_exist_intersection_split_);
+  ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
-  LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
-            is_in_ramp_select_split_situation);
+  ILOG_DEBUG << "is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation;
   JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
                    is_in_ramp_select_split_situation);
 
   const bool is_on_road_select_ramp_situation =
       ego_lane_track_manager_.is_on_road_select_ramp_situation();
-  LOG_DEBUG("is_on_road_select_ramp_situation: %d \n",
-            is_on_road_select_ramp_situation);
+  ILOG_DEBUG << "is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
 
@@ -842,22 +833,20 @@ bool VirtualLaneManager::update(
   // 11.更新路口状态
   UpdateIntersectionState();
 
-  LOG_DEBUG("input lane:");
+  ILOG_DEBUG << "input lane:";
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->set_currrent_lane_vitual_id(
       current_lane_virtual_id_);
-  LOG_DEBUG("current lane virtual id:%d\n", current_lane_virtual_id_);
+  ILOG_DEBUG << "current lane virtual id:" << current_lane_virtual_id_;
   for (const auto& lane : relative_id_lanes_) {
-    LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
-              lane->get_virtual_id());
+    ILOG_DEBUG << "relative id:" << lane->get_relative_id() << ", virtual id:" << lane->get_virtual_id();
   }
   last_fsm_state_ = session_->environmental_model()
                         .get_local_view()
                         .function_state_machine_info.current_state;
-  LOG_DEBUG("\n");
   JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
   JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
   JSON_DEBUG_VALUE("current_lane_relative_id",
@@ -867,7 +856,7 @@ bool VirtualLaneManager::update(
 }
 
 bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
-  LOG_DEBUG("update VirtualLaneManager\n");
+  ILOG_INFO << "update VirtualLaneManager";
   current_lane_ = nullptr;
   left_lane_ = nullptr;
   right_lane_ = nullptr;
@@ -883,7 +872,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   // 1.检查lane的有效性
   if (!CheckLaneValid(roads)) {
-    LOG_DEBUG("reference line invalid!\n");
+    ILOG_WARN << "reference line invalid!";
     // return false;
   }
   // if (!CheckLaneValid(roads)) {
@@ -914,7 +903,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   //   } else if (session_->environmental_model()
   //                  .function_info()
   //                  .function_mode() == common::DrivingFunctionInfo::HPP) {
-  //     LOG_DEBUG("[hpp mode]: lane invalid!");
   //     // return false;
   //   }else {
   //     return false;
@@ -986,18 +974,17 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
                                          virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
-    LOG_DEBUG("select_ego_lane_without_plan: %d \n",
-              select_ego_lane_without_plan);
+    ILOG_DEBUG << "select_ego_lane_without_plan:" << select_ego_lane_without_plan;
     JSON_DEBUG_VALUE("select_ego_lane_without_plan",
                      select_ego_lane_without_plan);
 
     const bool select_ego_lane_with_plan =
         ego_lane_track_manager_.is_select_ego_lane_with_plan();
-    LOG_DEBUG("select_ego_lane_with_plan: %d \n", select_ego_lane_with_plan);
+    ILOG_DEBUG << "select_ego_lane_with_plan:" << select_ego_lane_with_plan;
     JSON_DEBUG_VALUE("select_ego_lane_with_plan", select_ego_lane_with_plan);
   }
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("track_ego_lane cost:%f\n", time_end - time_start);
+  ILOG_DEBUG << "track_ego_lane cost:" << time_end - time_start;
 
   ego_lane_track_manager_.SetLastZeroRelativeIdNums(
       origin_relative_id_zero_nums_);
@@ -1007,7 +994,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 7.根据relative_id，判断current_lane_、left_lane_、right_lane_
   UpdateAllVirtualLaneInfo();
   if (current_lane_ == nullptr) {
-    LOG_DEBUG("!!!current_lane is empty!!!");
+    ILOG_ERROR << "!!!current_lane is empty!!!";
     ego_lane_track_manager_.Reset();
     return false;
   }
@@ -1018,36 +1005,33 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   // 对下游输出是否处于主路下匝道、匝道选分叉场景
   set_is_exist_ramp_on_road(ego_lane_track_manager_.is_exist_ramp_on_road());
-  LOG_DEBUG("is_exist_ramp_on_road: %d \n", is_exist_ramp_on_road_);
+  ILOG_DEBUG << "is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
   JSON_DEBUG_VALUE("is_exist_ramp_on_road", is_exist_ramp_on_road_);
 
   set_is_exist_split_on_ramp(ego_lane_track_manager_.is_exist_split_on_ramp());
-  LOG_DEBUG("is_exist_split_on_ramp: %d \n", is_exist_split_on_ramp_);
+  ILOG_DEBUG << "is_exist_split_on_ramp:" << is_exist_split_on_ramp_;
   JSON_DEBUG_VALUE("is_exist_split_on_ramp", is_exist_split_on_ramp_);
 
   set_is_exist_split_on_expressway(
       ego_lane_track_manager_.is_exist_split_on_expressway());
-  LOG_DEBUG("is_exist_split_on_expressway_: %d \n",
-            is_exist_split_on_expressway_);
+  ILOG_DEBUG << "is_exist_split_on_expressway:" << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
   set_is_exist_intersection_split(
       ego_lane_track_manager_.is_exist_intersection_split());
-  LOG_DEBUG("is_exist_intersection_split: %d \n", is_exist_intersection_split_);
+  ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
-  LOG_DEBUG("is_in_ramp_select_split_situation: %d \n",
-            is_in_ramp_select_split_situation);
+  ILOG_DEBUG << "is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation;
   JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
                    is_in_ramp_select_split_situation);
 
   const bool is_on_road_select_ramp_situation =
       ego_lane_track_manager_.is_on_road_select_ramp_situation();
-  LOG_DEBUG("is_on_road_select_ramp_situation: %d \n",
-            is_on_road_select_ramp_situation);
+  ILOG_DEBUG << "is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
 
@@ -1082,22 +1066,20 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 11.更新路口状态
   UpdateIntersectionState();
 
-  LOG_DEBUG("input lane:");
+  ILOG_DEBUG << "input lane";
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->set_currrent_lane_vitual_id(
       current_lane_virtual_id_);
-  LOG_DEBUG("current lane virtual id:%d\n", current_lane_virtual_id_);
+  ILOG_DEBUG << "current lane virtual id:" << current_lane_virtual_id_;
   for (const auto& lane : relative_id_lanes_) {
-    LOG_DEBUG(" relative id:%d, virtual id: %d,", lane->get_relative_id(),
-              lane->get_virtual_id());
+    ILOG_DEBUG << "relative id:" << lane->get_relative_id() << ", virtual id:" << lane->get_virtual_id();
   }
   last_fsm_state_ = session_->environmental_model()
                         .get_local_view()
                         .function_state_machine_info.current_state;
-  LOG_DEBUG("\n");
   JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
   JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
   JSON_DEBUG_VALUE("current_lane_relative_id",
@@ -1110,10 +1092,10 @@ const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
     int virtual_id) const {
   if (virtual_id_mapped_lane_.find(virtual_id) !=
       virtual_id_mapped_lane_.end()) {
-    LOG_DEBUG("get lane virtual %d id\n", virtual_id);
+    ILOG_DEBUG << "get lane virtual " << virtual_id << " id";
     return virtual_id_mapped_lane_.at(virtual_id);
   } else {
-    LOG_DEBUG("lane virtual %d id is null\n", virtual_id);
+    ILOG_DEBUG << "lane virtual " << virtual_id << "id is null";
     return nullptr;
   }
 }
@@ -1239,7 +1221,7 @@ double VirtualLaneManager::get_distance_to_dash_line(
       }
     }
   }
-  LOG_DEBUG("get_distance_to_dash_line :%f\n", distance_to_dash_line);
+  ILOG_DEBUG << "get_distance_to_dash_line :", distance_to_dash_line;
   return distance_to_dash_line;
 }
 
@@ -1757,7 +1739,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
           ref_line.lane_reference_line.virtual_lane_refline_points_size;
       // TBD: 需要关注,C结构体应该是一上来就分配好大小了,这里可能常为1
       if (num_of_reflane_point < 2) {
-        LOG_ERROR("reflane point num less than 2 \n");
+        ILOG_ERROR << "reflane point num less than 2";
         continue;  // 如果参考点个数小于2个，则跳过此参考线
       }
       for (int j = 1; j < num_of_reflane_point; j++) {
@@ -1766,7 +1748,7 @@ bool VirtualLaneManager::CheckLaneValid(const iflyauto::RoadInfo& roads) {
         current_lane_exist |= (current_point.y < current_lane_y_thrs);
         double y_interval = std::fabs(current_point.y - prev_point.y);
         if (y_interval > max_y_interval) {
-          LOG_ERROR("lane_valid is error \n");
+          ILOG_ERROR << "lane_valid is error";
           // y_interval_valid = false;
           y_interval_invalid_idx_vec.emplace_back(i);
           break;
@@ -1809,8 +1791,7 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
-    LOG_DEBUG("lane relative_id:%d, order_id:%d\n", lane.relative_id,
-              lane.order_id);
+    ILOG_DEBUG << "lane relative_id:" << lane.relative_id << ", order_id:" << lane.order_id;
     // if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
     //   break;
     relative_id_lanes.emplace_back(virtual_lane_tmp);
@@ -1830,7 +1811,7 @@ void VirtualLaneManager::UpdateAllVirtualLaneInfo() {
   for (const auto& relative_id_lane : relative_id_lanes_) {
     if (relative_id_lane->get_relative_id() == 0) {
       current_lane_ = relative_id_lane;
-      LOG_DEBUG("create current_lane_\n");
+      ILOG_DEBUG << "create current_lane";
     } else if (relative_id_lane->get_relative_id() == -1) {
       left_lane_ = relative_id_lane;
     } else if (relative_id_lane->get_relative_id() == 1) {
@@ -1860,7 +1841,7 @@ std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
   boundary_points.reserve(center_line_points.size());
   for (const auto& point : center_line_points) {
     if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("update_center_line_points: skip NaN point");
+      ILOG_ERROR << "update_center_line_points: skip NaN point";
       continue;
     }
     auto pt = planning_math::PathPoint(point.x(), point.y());

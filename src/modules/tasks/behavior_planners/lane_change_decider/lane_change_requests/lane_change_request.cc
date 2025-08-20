@@ -33,14 +33,10 @@ LaneChangeRequest::LaneChangeRequest(
 
 void LaneChangeRequest::GenerateRequest(RequestType direction) {
   if (direction != LEFT_CHANGE && direction != RIGHT_CHANGE) {
-    LOG_DEBUG("[LaneChangeRequest::GenerateRequest] Illgeal direction[%d] \n",
-              direction);
+    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] Illgeal direction[" << direction << "]";
   }
   if (request_type_ == direction) {
-    LOG_DEBUG(
-        "[LaneChangeRequest::GenerateRequest] duplicated request, "
-        "direction[%d] \n",
-        direction);
+    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] duplicated request, direction :" << direction;
     return;
   }
   request_type_ = direction;
@@ -50,7 +46,7 @@ void LaneChangeRequest::GenerateRequest(RequestType direction) {
 
 void LaneChangeRequest::Finish() {
   if (request_type_ == NO_CHANGE) {
-    LOG_DEBUG("[LaneChangeRequest::Finish] No request to finish \n");
+    ILOG_DEBUG << "[LaneChangeRequest::Finish] No request to finish";
     turn_signal_ = NO_CHANGE;
     return;
   }
@@ -137,8 +133,8 @@ bool LaneChangeRequest::IsDashedLineEnough(
     RequestType direction, const double ego_vel,
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     const StateMachineLaneChangeStatus &lc_status) {
-  LOG_DEBUG("dashed_enough: direction: %d \n", static_cast<int>(direction));
-  LOG_DEBUG("dashed_enough: vel: %.2f \n", ego_vel);
+  ILOG_DEBUG << "dashed_enough: direction:" << direction;
+  ILOG_DEBUG << "dashed_enough: vel: " << ego_vel;
 
   double dash_length = 80;
 
@@ -146,8 +142,8 @@ bool LaneChangeRequest::IsDashedLineEnough(
       RIGHT_CHANGE, origin_lane_virtual_id_);
   double left_dash_line_len = virtual_lane_mgr->get_distance_to_dash_line(
       LEFT_CHANGE, origin_lane_virtual_id_);
-  LOG_DEBUG("dashed_enough: right_dash_line_len: %.2f \n", right_dash_line_len);
-  LOG_DEBUG("dashed_enough: left_dash_line_len: %.2f \n", left_dash_line_len);
+  ILOG_DEBUG << "dashed_enough: right_dash_line_len:" << right_dash_line_len;
+  ILOG_DEBUG << "dashed_enough: left_dash_line_len:" << left_dash_line_len;
   std::cout << "origin_lane_virtual_id_: " << origin_lane_virtual_id_
             << "origin_lane_order_id_: " << origin_lane_virtual_id_
             << std::endl;
@@ -205,7 +201,7 @@ bool LaneChangeRequest::IsDashedLineEnough(
   if (!must_change_lane &&
       cal_lat_offset(ego_vel, dash_length, max_front_wheel_angle, wheel_base) <
           3.6) {
-    LOG_ERROR("!dashed_enough \n");
+    ILOG_ERROR << "!dashed_enough";
     return false;
   }
 
@@ -505,9 +501,7 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG(
-        "IsRoadBorderSurpressLaneChange::fail to get ego position on base "
-        "lane");
+    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on base lane";
     return true;
   }
   if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x,
@@ -572,11 +566,11 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
 
   if (!reference_path_ptr) {
-    LOG_ERROR("IsRoadBorderSurpressDuringLaneChange: invalid reference path");
+    ILOG_ERROR << "IsRoadBorderSurpressDuringLaneChange: invalid reference path";
     return true;
   }
   if (!target_lane) {
-    LOG_ERROR("IsRoadBorderSurpressDuringLaneChange: invalid target lane");
+    ILOG_ERROR << "IsRoadBorderSurpressDuringLaneChange: invalid target lane";
     return true;
   }
 
@@ -593,9 +587,7 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG(
-        "IsRoadBorderSurpressLaneChange::fail to get ego position on base "
-        "lane");
+    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on base lane";
     return true;
   }
   if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x,

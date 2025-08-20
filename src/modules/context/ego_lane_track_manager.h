@@ -9,7 +9,6 @@
 #include "generated_refline.pb.h"
 #include "intersection.h"
 #include "local_view.h"
-#include "log.h"
 #include "session.h"
 #include "virtual_lane.h"
 

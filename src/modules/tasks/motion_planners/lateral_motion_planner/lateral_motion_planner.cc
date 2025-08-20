@@ -84,10 +84,10 @@ void LateralMotionPlanner::Init() {
 }
 
 bool LateralMotionPlanner::Execute() {
-  LOG_DEBUG("=======LateralMotionPlanner======= \n");
+  ILOG_DEBUG << "=======LateralMotionPlanner=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -95,13 +95,13 @@ bool LateralMotionPlanner::Execute() {
 
   // assemble input
   if (!AssembleInput()) {
-    LOG_DEBUG("LateralMotionPlanner AssembleInput failed\n");
+    ILOG_DEBUG << "LateralMotionPlanner AssembleInput failed";
     SaveDebugInfo();
     return false;
   }
   // update
   if (!Update()) {
-    LOG_DEBUG("LateralMotionPlanner Solve failed\n");
+    ILOG_DEBUG << "LateralMotionPlanner Solve failed";
     SaveDebugInfo();
     return false;
   }
@@ -767,10 +767,9 @@ bool LateralMotionPlanner::Update() {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {
-      LOG_DEBUG(
-          "XYToSL = FAILED !!!!!!!! index: %ld,  point.s : "
-          "%f, point.l: %f ",
-          i, traj_points[i].s, traj_points[i].l);
+      ILOG_DEBUG << "XYToSL = FAILED !!!!!!!! index:" << i
+                 << ",  point.s : " << traj_points[i].s
+                 << ", point.l: " << traj_points[i].l;
     }
   }
   return true;
@@ -783,7 +782,7 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
   lat_path_points.reserve(x_vec.size());
   for (int i = 1; i <= 26; ++i) {
     if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
-      LOG_ERROR("skip NaN point");
+      ILOG_ERROR << "skip NaN point";
       continue;
     }
     planning_math::PathPoint path_point{x_vec[i], y_vec[i]};

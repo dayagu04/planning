@@ -80,18 +80,17 @@ bool GeneralLateralDecider::InitInfo() {
 }
 
 bool GeneralLateralDecider::Execute() {
-  LOG_DEBUG("=======GeneralLateralDecider======= \n");
+  ILOG_INFO << "=======GeneralLateralDecider=======";
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& coarse_planning_info =
       lane_change_decider_output.coarse_planning_info;
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
-    LOG_DEBUG("PreCheck failed\n");
     return false;
   }
 
@@ -847,7 +846,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
                                                          refpath_pt)) {
       // add logs
-      LOG_ERROR("Get reference point by lon failed!");
+      ILOG_ERROR << "Get reference point by lon failed!";
     }
     double road_radius1 =
         1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
@@ -892,7 +891,6 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   //     last_traj_points[i].l = frenet_pt.y;
   //     plan_history_traj_tmp.emplace_back(last_traj_points[i]);
   //   } else {
-  //     LOG_DEBUG("plan_history_traj frenet error");
   //   }
   // }
   // if (plan_history_traj_tmp.empty()) {
@@ -1387,14 +1385,14 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   if (!lateral_offset_decider_output.enable_bound) {
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
-    LOG_DEBUG("Enable_bound is invalid!");
+    ILOG_DEBUG << "Enable_bound is invalid!";
     return;
   }
 
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
-    LOG_ERROR("Ref traj points or ref path points is null!");
+    ILOG_ERROR << "Ref traj points or ref path points is null!";
     return;
   }
   const auto &obs_vec = reference_path_ptr_->get_obstacles();

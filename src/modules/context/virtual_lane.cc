@@ -5,7 +5,6 @@
 
 #include "config/basic_type.h"
 #include "environmental_model.h"
-#include "log.h"
 #include "math/linear_interpolation.h"
 #include "planning_context.h"
 #include "virtual_lane.h"
@@ -271,11 +270,11 @@ double VirtualLane::max_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMaxLaneWidth;
       default:
-        LOG_ERROR("Error Lane Type");
+        ILOG_ERROR << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    LOG_ERROR("Error Lane Type");
+    ILOG_ERROR << "Error Lane Type";
     return kMinLaneWidth;
   }
 }
@@ -326,11 +325,11 @@ double VirtualLane::min_width() const {
       case iflyauto::LANETYPE_NON_MOTOR:;
         return kMinLaneWidth;
       default:
-        LOG_ERROR("Error Lane Type");
+        ILOG_ERROR << "Error Lane Type";
         return kMinLaneWidth;
     }
   } else {
-    LOG_ERROR("Error Lane Type");
+    ILOG_ERROR << "Error Lane Type";
     return kMinLaneWidth;
   }
 }

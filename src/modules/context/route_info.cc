@@ -89,7 +89,7 @@ void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
 }
 
 void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
-  LOG_DEBUG("session_->is_hpp_scene(): %d", session_->is_hpp_scene());
+  ILOG_DEBUG << "session_->is_hpp_scene():", session_->is_hpp_scene();
   if (!GetCurrentNearestLane()) {
     std::cout << "GetCurrentNearestLane failed!!!" << std::endl;
     return;
@@ -534,8 +534,7 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       temp_nearest_s, nearest_l);
   route_info_output_.current_segment_passed_distance = temp_nearest_s;
-  LOG_DEBUG("current_segment_passed_distance:%f\n",
-            route_info_output_.current_segment_passed_distance);
+  ILOG_DEBUG << "current_segment_passed_distance:" << route_info_output_.current_segment_passed_distance;
   if (!current_segment) {
     return segment;
   }

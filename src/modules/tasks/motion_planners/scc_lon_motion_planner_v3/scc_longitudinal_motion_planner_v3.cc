@@ -50,10 +50,10 @@ void SccLongitudinalMotionPlannerV3::Init() {
 }
 
 bool SccLongitudinalMotionPlannerV3::Execute() {
-  LOG_DEBUG("=======SccLongitudinalMotionPlannerV3======= \n");
+  ILOG_DEBUG << "=======SccLongitudinalMotionPlannerV3=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -62,12 +62,12 @@ bool SccLongitudinalMotionPlannerV3::Execute() {
   AssembleInput();
   auto input_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("SccLonMotionInputCostTime", input_time - start_time);
-  LOG_DEBUG("AssembleInput time:%f\n", input_time - start_time);
+  ILOG_DEBUG << "AssembleInput time:" << input_time - start_time;
 
   Update();
   auto calculate_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("SccLonMotionCalCostTime", calculate_time - start_time);
-  LOG_DEBUG("update time:%f\n", calculate_time - start_time);
+  ILOG_DEBUG << "update time:" << calculate_time - start_time;
 
   // record input and output
   DebugInfoManager::GetInstance()

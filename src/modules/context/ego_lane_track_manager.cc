@@ -20,8 +20,7 @@
 #include "ifly_localization_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
-#include "log.h"
-// #include "log_glog.h"
+#include "log_glog.h"
 #include "math/box2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
@@ -168,9 +167,7 @@ void EgoLaneTrackManger::TrackEgoLane(
           bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
-          LOG_DEBUG(
-              "EgoLaneTrackManger::is_on_road_select_ramp_situation: %d \n",
-              is_on_road_select_ramp_situation_);
+          ILOG_DEBUG << "EgoLaneTrackManger::is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation_;
 
           if (is_on_road_select_ramp_situation_ &&
               distance_to_first_road_split_ < dis_to_split_threshold &&
@@ -178,8 +175,7 @@ void EgoLaneTrackManger::TrackEgoLane(
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_ramp_on_road: %d \n",
-                      is_exist_ramp_on_road_);
+            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_ramp_on_road:" << is_exist_ramp_on_road_;
 
             if (is_exist_ramp_on_road_) {
               return;
@@ -189,15 +185,13 @@ void EgoLaneTrackManger::TrackEgoLane(
           bool is_in_ramp_select_split = CheckIfInRampSelectSplit(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_in_ramp_select_split_situation_ = is_in_ramp_select_split;
-          LOG_DEBUG(
-              "EgoLaneTrackManger::is_in_ramp_select_split_situation: %d \n",
-              is_in_ramp_select_split_situation_);
+          ILOG_DEBUG << "EgoLaneTrackManger::is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation_;
+
           if (is_in_ramp_select_split_situation_ && lane_keep_status) {
             //选择匝道上的分叉
             PreprocessRampSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_ramp: %d \n",
-                      is_exist_split_on_ramp_);
+            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_ramp:" << is_exist_split_on_ramp_;
 
             if (is_exist_split_on_ramp_) {
               return;
@@ -209,9 +203,7 @@ void EgoLaneTrackManger::TrackEgoLane(
             PreprocessOrdinarySplit(relative_id_lanes,
                                     order_ids_of_same_zero_relative_id,
                                     virtual_id_mapped_lane);
-            LOG_DEBUG(
-                "EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
-                is_exist_split_on_expressway_);
+            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_expressway_:" << is_exist_split_on_expressway_;
             if (is_exist_split_on_expressway_) {
               return;
             }
@@ -224,8 +216,7 @@ void EgoLaneTrackManger::TrackEgoLane(
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                         order_ids_of_same_zero_relative_id);
-            LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
-                      is_exist_split_on_intersection_);
+            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:" << is_exist_split_on_intersection_;
 
             if (is_exist_split_on_intersection_) {
               return;
@@ -234,8 +225,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
           ProcessIntersectionSplit(relative_id_lanes,
                           order_ids_of_same_zero_relative_id);
-          LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_intersection: %d \n",
-                    is_exist_split_on_intersection_);
+          ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:" << is_exist_split_on_intersection_;
 
           if (is_exist_split_on_intersection_) {
             return;
@@ -252,8 +242,7 @@ void EgoLaneTrackManger::TrackEgoLane(
     }
   }
 
-  LOG_DEBUG("EgoLaneTrackManger::virtual_lane_relative_id_switch_flag: %d \n",
-            virtual_lane_relative_id_switch_flag_);
+  ILOG_DEBUG << "EgoLaneTrackManger::virtual_lane_relative_id_switch_flag:" << virtual_lane_relative_id_switch_flag_;
   JSON_DEBUG_VALUE("virtual_lane_relative_id_switch_flag",
                    virtual_lane_relative_id_switch_flag_);
   return;
@@ -304,8 +293,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
         continue;
       }
     }
-    LOG_DEBUG("target_lane_maping_diff_total: %f \n",
-              target_lane_maping_diff_total);
+    ILOG_DEBUG << "target_lane_maping_diff_total:" << target_lane_maping_diff_total;
 
     if (target_lane_maping_diff_total <
         lane_point_match_lateral_dis_threshold) {
@@ -343,8 +331,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
         continue;
       }
     }
-    LOG_DEBUG("origin_lane_maping_diff_total: %f \n",
-              origin_lane_maping_diff_total);
+    ILOG_DEBUG << "origin_lane_maping_diff_total:" << origin_lane_maping_diff_total;
 
     if (origin_lane_maping_diff_total <
         lane_point_match_lateral_dis_threshold) {
@@ -573,13 +560,9 @@ void EgoLaneTrackManger::MakesureManualLaneChangeByLaneOffset(
   double average_l = sum_l / lane_pt_count;
   if (average_l > kManualLaneChangeDisThd) {
     current_lane_virtual_id_ -= 1;
-    LOG_DEBUG("Manual lane change to [%s]! Updated current_lane_virtual_id_ to %d",
-      average_l > 0 ? "RIGHT" : "LEFT", current_lane_virtual_id_);
     is_manual_lane_change = true;
   } else if(average_l < -kManualLaneChangeDisThd){
     current_lane_virtual_id_ += 1;
-    LOG_DEBUG("Manual lane change to [%s]! Updated current_lane_virtual_id_ to %d",
-      average_l > 0 ? "RIGHT" : "LEFT", current_lane_virtual_id_);
     is_manual_lane_change = true;
   } else{
     is_manual_lane_change = false;
@@ -741,7 +724,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
             iflyauto::ReferencePoint point = lane_points[i];
             if (std::isnan(point.local_point.x) ||
                 std::isnan(point.local_point.y)) {
-              LOG_ERROR("update_lane_points: skip NaN point");
+              ILOG_ERROR << "update_lane_points: skip NaN point";
               continue;
             }
             double lateral_offset = 0.0;
@@ -769,7 +752,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
             iflyauto::ReferencePoint point = lane_points[i];
             if (std::isnan(point.local_point.x) ||
                 std::isnan(point.local_point.y)) {
-              LOG_ERROR("update_lane_points: skip NaN point");
+              ILOG_ERROR << "update_lane_points: skip NaN point";
               continue;
             }
             double lateral_offset = 0.0;
@@ -922,7 +905,7 @@ std::shared_ptr<planning_math::KDPath> EgoLaneTrackManger::MakeBoundaryPath(
   boundary_points.reserve(center_line_points.size());
   for (const auto& point : center_line_points) {
     if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("update_center_line_points: skip NaN point");
+      ILOG_ERROR << "update_center_line_points: skip NaN point";
       continue;
     }
     auto pt = planning_math::PathPoint(point.x(), point.y());
@@ -1011,7 +994,7 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
   bool find_last_frame_track_ego_lane = true;
 
   if (last_zero_relative_id_nums_ > 1) {
-    LOG_DEBUG("PreprocessRoadSplit::last_zero_relative_id_nums_ > 1");
+    ILOG_DEBUG << "PreprocessRoadSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
                                         relative_id_lanes, order_ids,
@@ -1080,7 +1063,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   bool find_last_frame_track_ego_lane = true;
 
   if (last_zero_relative_id_nums_ > 1) {
-    LOG_DEBUG("PreprocessRampSplit::last_zero_relative_id_nums_ > 1");
+    ILOG_DEBUG << "PreprocessRampSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
                                         relative_id_lanes, order_ids,
@@ -1220,7 +1203,7 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
   }
 
   if (last_zero_relative_id_nums_ > 1) {
-    LOG_DEBUG("PreprocessOrdinarySplit::last_zero_relative_id_nums_ > 1");
+    ILOG_DEBUG << "PreprocessOrdinarySplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
                                         relative_id_lanes, order_ids,
@@ -1376,7 +1359,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
 
   if (last_zero_relative_id_nums_ > 1 && lcc_split_select_is_finish_ &&
       ego_distance_to_lane_merge_split_point < kDefaultConsiderSplitSelectorDistance) {
-    LOG_DEBUG("ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1");
+    ILOG_DEBUG << "ProcessIntersectionSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
                                         relative_id_lanes, order_ids,
@@ -1467,7 +1450,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         Point2D other_split_lane_perception_split_point_frenet;
         Point2D split_lane_perception_split_point_frenet;
         if (!other_split_lane_frenet_coord->XYToSL(virtual_lane_split_point, other_split_lane_perception_split_point_frenet)) {
-          LOG_DEBUG("virtual_lane_split_point in other_split_lane failed!");
+          ILOG_DEBUG << "virtual_lane_split_point in other_split_lane failed!";
         }
         double perception_split_point_lateral_distance = std::fabs(other_split_lane_perception_split_point_frenet.y);
         Point2D virtual_split_point;
@@ -1660,7 +1643,7 @@ void EgoLaneTrackManger::ProcessSplitWithGroundMark(
   bool find_last_frame_track_ego_lane = true;
   int zero_relative_id_order_id_index = last_zero_relative_id_order_id_index_;
   if (order_ids.size() < 2) {
-    LOG_DEBUG("ProcessSplitWithGroundMark::order_ids.size() < 2");
+    ILOG_DEBUG << "ProcessSplitWithGroundMark::order_ids.size() < 2";
     is_exist_split_on_intersection_ = false;
     return;
   }
@@ -1705,7 +1688,7 @@ void EgoLaneTrackManger::ProcessSplitWithGroundMark(
 
   if (relative_id_lanes.size() == order_ids.size() ||
       last_ego_lane_exist_straight) {
-    LOG_DEBUG("relative_id_lanes.size() == order_ids.size()");
+    ILOG_DEBUG << "relative_id_lanes.size() == order_ids.size()";
     is_exist_split_on_intersection_ = false;
     return;
   }
@@ -1835,7 +1818,7 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
         for (const auto& point : lane_points) {
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
-            LOG_ERROR("update_lane_points: skip NaN point");
+            ILOG_ERROR << "update_lane_points: skip NaN point";
             continue;
           }
           auto pt = planning_math::PathPoint(point.local_point.x,
@@ -1870,7 +1853,7 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
       } else {
         for (const auto& point : lane_points) {
           if (std::isnan(point.car_point.x) || std::isnan(point.car_point.y)) {
-            LOG_ERROR("update_lane_points: skip NaN point");
+            ILOG_ERROR << "update_lane_points: skip NaN point";
             continue;
           }
           auto pt =
@@ -1956,7 +1939,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
-            LOG_ERROR("update_lane_points: skip NaN point");
+            ILOG_ERROR << "update_lane_points: skip NaN point";
             continue;
           }
           double lateral_offset = 0.0;
@@ -1985,7 +1968,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
           iflyauto::ReferencePoint point = lane_points[i];
           if (std::isnan(point.local_point.x) ||
               std::isnan(point.local_point.y)) {
-            LOG_ERROR("update_lane_points: skip NaN point");
+            ILOG_ERROR << "update_lane_points: skip NaN point";
             continue;
           }
           double lateral_offset = 0.0;
@@ -2117,13 +2100,13 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
-    LOG_DEBUG("CheckIfInRampSelectSplit::sd_map is invalid!!!");
+    ILOG_DEBUG << "CheckIfInRampSelectSplit::sd_map is invalid!!!";
     return false;
   }
-  LOG_DEBUG("CheckIfInRampSelectSplit::sd_map is valid");
+  ILOG_DEBUG << "CheckIfInRampSelectSplit::sd_map is valid";
 
   if (order_ids.size() < 2) {
-    LOG_DEBUG("CheckIfInRampSelectSplit::order_ids.size() < 2");
+    ILOG_DEBUG << "CheckIfInRampSelectSplit::order_ids.size() < 2";
     return false;
   }
 
@@ -2194,13 +2177,13 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
   if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
-    LOG_DEBUG("CheckIfInRoadSelectRamp::sd_map is invalid!!!");
+    ILOG_DEBUG << "CheckIfInRoadSelectRamp::sd_map is invalid!!!";
     return false;
   }
-  LOG_DEBUG("CheckIfInRoadSelectRamp::sd_map is valid");
+  ILOG_DEBUG << "CheckIfInRoadSelectRamp::sd_map is valid";
 
   if (order_ids.size() < 2) {
-    LOG_DEBUG("CheckIfInRoadSelectRamp::order_ids.size() < 2");
+    ILOG_DEBUG << "CheckIfInRoadSelectRamp::order_ids.size() < 2";
     return false;
   }
 
@@ -2350,7 +2333,7 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
         iflyauto::ReferencePoint point = lane_points[i];
         if (std::isnan(point.local_point.x) ||
             std::isnan(point.local_point.y)) {
-          LOG_ERROR("update_lane_points: skip NaN point");
+          ILOG_ERROR << "update_lane_points: skip NaN point";
           continue;
         }
         double lateral_offset = 0.0;
@@ -2670,7 +2653,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     double far_pt_sum_l = 0.0;
     for (const auto point : relative_left_lane_points) {
       if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
-        LOG_ERROR("update_lane_points: skip NaN point");
+        ILOG_ERROR << "update_lane_points: skip NaN point";
         continue;
       }
       double pt_s = 0.0;

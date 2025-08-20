@@ -111,7 +111,7 @@ bool GriddedPathTimeGraph::Search(
   }
   const double ego_cart_heading = ego_state_manager->heading_angle();
   if (!current_lane_coord_->XYToSL(ego_cart_pose, ego_frenet_pose_)) {
-    LOG_DEBUG("GriddedPathTimeGraph::Search() find ego pose in current lane failed!");
+    ILOG_DEBUG << "GriddedPathTimeGraph::Search() find ego pose in current lane failed!";
   }
 
   total_length_s_ =

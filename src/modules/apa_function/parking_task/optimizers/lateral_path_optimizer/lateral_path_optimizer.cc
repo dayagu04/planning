@@ -10,7 +10,6 @@
 #include "debug_info_log.h"
 #include "geometry_math.h"
 #include "lateral_path_optimizer.pb.h"
-#include "log.h"
 #include "math_lib.h"
 #include "planning_plan_c.h"
 #include "src/lateral_path_optimizer_cost.h"

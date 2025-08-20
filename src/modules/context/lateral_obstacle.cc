@@ -78,18 +78,16 @@ bool LateralObstacle::update_sensors(
     fvf_dead_ = true;
     svf_dead_ = true;
 
-    LOG_ERROR("[LateralObstacle::update_sensors] Fusion lagging too large");
+    ILOG_ERROR << "[LateralObstacle::update_sensors] Fusion lagging too large";
 
     double abs_time = IflyTime::Now_ms();
     if (abs_time - warning_timer_[2] > 5.0) {
-      LOG_ERROR(
-          "[LateralObstacle::update_sensors] frontview fusion unavailable");
+      ILOG_ERROR << "[LateralObstacle::update_sensors] frontview fusion unavailable";
       warning_timer_[2] = abs_time;
     }
 
     if (abs_time - warning_timer_[1] > 5.0) {
-      LOG_ERROR(
-          "[LateralObstacle::update_sensors] sideview fusion unavailable");
+      ILOG_ERROR << "[LateralObstacle::update_sensors] sideview fusion unavailable";
       warning_timer_[1] = abs_time;
     }
   }

@@ -69,8 +69,7 @@ void AgentManager::Update(const double start_timestamp_s) {
     // Ignore the agent which is within the FOV and is fail to fusion with the
     // camera，or too small, or unknown
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
-      LOG_DEBUG("[AgentManager Update] ignore unknown obstacle : [%d] \n",
-                prediction_object.id);
+      ILOG_DEBUG << "[AgentManager Update] ignore unknown obstacle :[" << prediction_object.id << "]";
       continue;
     }
     bool is_in_fov =
@@ -84,8 +83,7 @@ void AgentManager::Update(const double start_timestamp_s) {
         prediction_object.length == 0 || prediction_object.width == 0;
 
     if (is_ignore_by_fov || is_ignore_by_size) {
-      LOG_DEBUG("[obstacle_prediction_update] ignore obstacle! : [%d] \n",
-                prediction_object.id);
+      ILOG_DEBUG << "[obstacle_prediction_update] ignore obstacle :[" << prediction_object.id << "]";
       continue;
     }
 

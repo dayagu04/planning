@@ -48,7 +48,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
 
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
-    LOG_DEBUG("EmergenceAvoidRequest::Update: ego not in lane keeping!");
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: ego not in lane keeping!";
     return;
   }
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
@@ -87,9 +87,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
       session_->environmental_model().get_route_info()->get_route_info_output();
 
   UpdateEmergencyAvoidanceSituation(lc_status);
-  LOG_DEBUG(
-      "EmergenceAvoidRequest::Update: is_emergency_avoidance_situation_ %d",
-      is_emergency_avoidance_situation_);
+  ILOG_DEBUG << "EmergenceAvoidRequest::Update: is_emergency_avoidance_situation " << is_emergency_avoidance_situation_;
   JSON_DEBUG_VALUE("is_emergency_avoidance_situation_",
                    is_emergency_avoidance_situation_);
 
@@ -97,7 +95,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
     if (request_type_ != NO_CHANGE) {
       Finish();
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      LOG_DEBUG("[EmergenceAvoidRequest::update] finish request\n");
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] finish request";
     }
     return;
   }
@@ -105,8 +103,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
-    LOG_DEBUG("EmergenceAvoidRequest::Update: for left_lane: update %d\n",
-              llane->get_virtual_id());
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: for left_lane: update " << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
   }
@@ -114,8 +111,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   if (rlane != nullptr) {
     right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         rlane->get_virtual_id(), false);
-    LOG_DEBUG("EmergenceAvoidRequest::Update: for right_lane: update %d\n",
-              rlane->get_virtual_id());
+    ILOG_DEBUG << "EmergenceAvoidRequest::Update: for right_lane: update " << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
   }
@@ -167,10 +163,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[EmergenceAvoidRequest::update] Ask for emergency avoidence "
-            "changing lane to left "
-            "\n");
+        ILOG_DEBUG << "[EmergenceAvoidRequest::update] Ask for emergency avoidence changing lane to left";
       }
       if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneChangeCancel &&
@@ -178,10 +171,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[EmergenceAvoidRequest::update] %s:%d finish request, dash not "
-            "enough \n",
-            __FUNCTION__, __LINE__);
+        ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
       }
     } else {
       // 获取右车道线型
@@ -191,10 +181,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
         target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[EmergenceAvoidRequest::update] Ask for emergency avoidence "
-            "changing lane to right "
-            "\n");
+        ILOG_DEBUG << "[EmergenceAvoidRequest::update] Ask for emergency avoidence changing lane to right";
       }
       if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneChangeCancel &&
@@ -202,10 +189,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
             lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        LOG_DEBUG(
-            "[EmergenceAvoidRequest::update] %s:%d finish request, dash not "
-            "enough \n",
-            __FUNCTION__, __LINE__);
+        ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
       }
     }
   } else if (request_type_ != NO_CHANGE &&
@@ -213,10 +197,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
               lane_change_lane_mgr_->is_ego_on(olane))) {
     Finish();
     set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-    LOG_DEBUG(
-        "[EmergenceAvoidRequest::update] %s:%d finish request, "
-        "!trigger_left_overtake and !trigger_right_overtake\n",
-        __FUNCTION__, __LINE__);
+    ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " !trigger_left_overtake and !trigger_right_overtake";
   } else {
     return;
   }
@@ -232,7 +213,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(base_lane_virtual_id);
   if (base_lane == nullptr) {
-    LOG_DEBUG("EmergenceAvoidRequest::base lane not exist");
+    ILOG_DEBUG << "EmergenceAvoidRequest::base lane not exist";
     Reset();
     return;
   }
@@ -241,7 +222,6 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
 
   // if (ego_state->ego_v() < default_velocity_trigger_emergence_avoid_request)
   // {
-  //   LOG_DEBUG("EmergenceAvoidRequest::ego_v < 50km/h");
   //   return;
   // }
 
@@ -255,7 +235,7 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG("EmergenceAvoidRequest::fail to get ego position on base lane");
+    ILOG_DEBUG << "EmergenceAvoidRequest::fail to get ego position on base lane";
     Reset();
     return;
   }
@@ -328,10 +308,8 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
     if (current_timestamp - emergency_situation_timetstamp_ >
         kEmergencySituationDuration) {
       is_emergency_avoidance_situation_ = true;
-      LOG_DEBUG(
-          "leading_vehicle_speed: %f, long_gap: %f "
-          "Front Leading track_id: %d \n",
-          leading_vehicle_speed, long_gap, leading_vehicle_id_);
+      ILOG_DEBUG << "leading_vehicle_speed: " << leading_vehicle_speed
+                 << ", long_gap: " << long_gap << " Front Leading track_id:" << leading_vehicle_id_;
       JSON_DEBUG_VALUE("leading_vehicle_id_", leading_vehicle_id_);
     }
   } else {

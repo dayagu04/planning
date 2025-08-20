@@ -64,7 +64,7 @@ class IndexedList {
   T *Add(const I id, const T &object) {
     auto obs = Find(id);
     if (obs) {
-      std::cout << "object " << id << " is already in container" << std::endl;
+      ILOG_DEBUG << "object " << id << " is already in container";
       *obs = object;
       return obs;
     } else {

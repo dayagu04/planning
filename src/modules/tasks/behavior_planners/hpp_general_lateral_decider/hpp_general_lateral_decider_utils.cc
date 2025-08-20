@@ -278,7 +278,7 @@ bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
                        std::vector<planning_math::Vec2d> &frenet_pts) {
   const double kDistanceToRefThreshold = 1.0;
   if (pts.size() == 0) {
-    LOG_DEBUG("vec2ds_to_frenet2ds empty input");
+    ILOG_INFO << "vec2ds_to_frenet2ds empty input";
     return false;
   }
   Point2D carte_point, frenet_point;
@@ -308,11 +308,7 @@ bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
     }
   }
   if (!is_same_lat_direction) {
-    LOG_DEBUG("stupid ground line obstacle!!!");
-    for (size_t i = 0; i < frenet_pts.size(); i++) {
-      LOG_DEBUG("Point number [%zu], x is %f, y is %f", i, frenet_pts.at(i).x(),
-                frenet_pts.at(i).y());
-    }
+    ILOG_INFO << "stupid ground line obstacle!!!";
   }
   return is_same_lat_direction;
 }

@@ -92,7 +92,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
                                  .GetDebugInfoPb()
                                  ->mutable_lane_borrow_decider_info();
   if (current_lane_ptr_ == nullptr || current_reference_path_ptr_ == nullptr) {
-    LOG_ERROR("No current_lane_ptr_ or current_reference_path_ptr!");
+    ILOG_ERROR << "No current_lane_ptr_ or current_reference_path_ptr!";
     return false;
   };
 
@@ -132,7 +132,7 @@ bool LaneBorrowDecider::ProcessEnvInfos() {
 
   if (lane_change_state_ != kLaneKeeping) {
     lane_borrow_decider_output_.lane_borrow_failed_reason = LANE_CHANGE_STATE;
-    LOG_DEBUG("It has lane change state!");
+    ILOG_INFO << "It has lane change state!";
     return false;
   }
   const bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
@@ -191,7 +191,7 @@ bool LaneBorrowDecider::LaneBorrowPreCheck() {
          dis_to_traffic_lights_ > 0.0) ||
         (intersection_state_ ==
          planning::common::IntersectionState::APPROACH_INTERSECTION)) {
-      LOG_DEBUG("Ego car is near junction");
+      ILOG_DEBUG << "Ego car is near junction";
       lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
       return false;
     }
@@ -613,7 +613,7 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
                    (first_obs_end - ego_sl_state_.s())) < 20.0) ||
         (intersection_state_ ==
          planning::common::IntersectionState::APPROACH_INTERSECTION)) {
-      LOG_DEBUG("Ego car is near junction");
+      ILOG_DEBUG << "Ego car is near junction";
       lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
       return false;
     }

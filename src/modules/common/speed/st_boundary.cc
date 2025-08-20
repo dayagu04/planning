@@ -163,7 +163,7 @@ STBoundary STBoundary::ShrinkByDs(const double ds, const double begin_t) const {
 
 STBoundary STBoundary::ExpandByT(const double t) const {
   if (lower_points_.empty()) {
-    LOG_DEBUG("The current st_boundary has NO points.");
+    ILOG_DEBUG << "The current st_boundary has NO points";
     return STBoundary();
   }
 
@@ -234,7 +234,7 @@ bool STBoundary::GetIndexRange(const std::vector<STPoint>& points,
   assert(left);
   assert(right);
   if (t < points.front().t() || t > points.back().t()) {
-    LOG_DEBUG("t is out of range. t = %lf", t);
+    ILOG_DEBUG << "t is out of range. t =" << t;
     return false;
   }
   auto comp = [](const STPoint& p, const double t) { return p.t() < t; };

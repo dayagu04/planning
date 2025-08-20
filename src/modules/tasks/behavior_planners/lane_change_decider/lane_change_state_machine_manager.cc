@@ -640,7 +640,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   // can lc if more than continue 4 frame gap_insertable
   if (lane_change_stage_info_.gap_insertable) {
     lc_valid_cnt_ += 1;
-    LOG_DEBUG("decide_lc_valid_info lc_valid_cnt : %d \n", lc_valid_cnt_);
+    ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
       lane_change_stage_info_.lc_valid = true;
     } else {
@@ -648,8 +648,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
       lane_change_stage_info_.lc_invalid_reason = "valid cnt below threshold";
     }
   } else {
-    LOG_DEBUG("arbitrator lc invalid reason %s ",
-              lane_change_stage_info_.lc_invalid_reason.c_str());
+    ILOG_DEBUG << "arbitrator lc invalid reason " << lane_change_stage_info_.lc_invalid_reason.c_str();
     lc_valid_cnt_ = 0;
   }
 }
@@ -995,7 +994,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
     s_ref = frenet_init_pt.x;
   } else {
     coarse_planning_info.reference_path.reset();
-    LOG_DEBUG("kd_path coordinate conversion init_pos failed");
+    ILOG_DEBUG << "kd_path coordinate conversion init_pos failed";
   }
 
   const auto &frenet_length = frenet_coord->Length();

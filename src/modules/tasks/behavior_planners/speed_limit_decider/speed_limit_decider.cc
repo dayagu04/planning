@@ -147,7 +147,7 @@ SpeedLimitDecider::SpeedLimitDecider(
   name_ = "SpeedLimitDecider";
 }
 bool SpeedLimitDecider::Execute() {
-  LOG_DEBUG("=======SpeedLimitDecider======= \n");
+  ILOG_INFO << "=======SpeedLimitDecider=======";
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto plan_init_point = ego_state_mgr->planning_init_point();
@@ -222,7 +222,7 @@ bool SpeedLimitDecider::IsSSharpBend(
 }
 
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
-  LOG_DEBUG("----CalculateCurveSpeedLimit--- \n");
+  ILOG_DEBUG << "----CalculateCurveSpeedLimit---";
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double steer_ratio = vehicle_param.steer_ratio;
@@ -333,10 +333,12 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-  LOG_DEBUG("road_radius is : [%f], acc_lat_max: [%f]\n", road_radius,
-            acc_lat_max);
-  LOG_DEBUG("angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
-            angle_steers, angle_steers_deg, v_limit_road);
+  ILOG_DEBUG << "road_radius is :" << road_radius
+             << ", acc_lat_max:" << acc_lat_max;
+
+  ILOG_DEBUG << "angle_steers :" << angle_steers
+             << ", angle_steers_deg:" << angle_steers_deg
+             << ", v_limit_road:" << v_limit_road;
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
@@ -353,7 +355,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 }
 
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
-  LOG_DEBUG("----CalculateMapSpeedLimit for ramp--- \n");
+  ILOG_DEBUG << "----CalculateMapSpeedLimit for ramp---";
   const auto &environmental_model = session_->environmental_model();
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
@@ -410,7 +412,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
     }
-    LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+    ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
     JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
@@ -438,8 +440,8 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     v_target_ = v_target_ramp;
     v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
   }
-  LOG_DEBUG("dis_to_ramp : [%f] \n", dis_to_ramp);
-  LOG_DEBUG("v_target_ramp : [%f] \n", v_target_ramp);
+  ILOG_DEBUG << "dis_to_ramp :" << dis_to_ramp;
+  ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
   JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
   JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
   JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
@@ -452,7 +454,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
 void SpeedLimitDecider::CalculateStaticAgentLimit() {}
 
 void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
-  LOG_DEBUG("----calc_speed_limit_from_tfl_dis--- \n");
+  ILOG_DEBUG << "----calc_speed_limit_from_tfl_dis---";
   double v_limit_tfl_dis = 40.0;
   const auto &environmental_model = session_->environmental_model();
   const auto tfl_manager =
@@ -479,7 +481,7 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
 }
 
 void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
-  LOG_DEBUG("----calc_speed_limit_for_intersection--- \n");
+  ILOG_DEBUG << "----calc_speed_limit_for_intersection---";
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();

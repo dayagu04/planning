@@ -70,8 +70,7 @@ void ObstacleManager::update() {
        i < session_->environmental_model().get_prediction_info().size(); i++) {
     auto prediction_object = prediction_objects[i];
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
-      LOG_DEBUG("[ObstacleManager Update] ignore unknown obstacle : [%d] \n",
-                prediction_object.id);
+      ILOG_DEBUG << "[ObstacleManager Update] ignore unknown obstacle : [" << prediction_object.id << "]";
       continue;
     }
     bool is_in_fov =
@@ -85,8 +84,7 @@ void ObstacleManager::update() {
         prediction_object.length == 0 || prediction_object.width == 0;
 
     if (is_ignore_by_fov || is_ignore_by_size) {
-      LOG_DEBUG("[ObstacleManager Update] ignore obstacle! : [%d] \n",
-                prediction_object.id);
+      ILOG_DEBUG << "[ObstacleManager Update] ignore obstacle! : [" << prediction_object.id << "]";
       continue;
     }
 
@@ -177,8 +175,7 @@ void ObstacleManager::update() {
     double time_start = IflyTime::Now_ms();
     UpdateGroundLineObstacle();
     double time_end = IflyTime::Now_ms();
-    LOG_DEBUG("UpdateGroundLineObstacle cost:%f\n",
-              time_end - time_start);
+    ILOG_DEBUG << "UpdateGroundLineObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("UpdateGroundLineObstacleCost", time_end - time_start);
 
     // parking space
@@ -188,8 +185,7 @@ void ObstacleManager::update() {
     } else {  // ehr parking space
     }
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("UpdateParkingSpaceObstacle cost:%f\n",
-              time_end - time_start);
+    ILOG_DEBUG << "UpdateParkingSpaceObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE("UpdateParkingSpaceObstacleCost", time_end - time_start);
 
     // occupancy objects
@@ -198,7 +194,7 @@ void ObstacleManager::update() {
       UpdateOccObstacle();
     }
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("UpdateOccObstacle cost:%f\n", time_end - time_start);
+    ILOG_DEBUG << "UpdateOccObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE(" UpdateOccObstacleCost", time_end - time_start);
 
     // ehr column box
@@ -207,7 +203,7 @@ void ObstacleManager::update() {
       UpdateMapStaticObstacle();
     }
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("UpdateMapStaticObstacle cost:%f\n", time_end - time_start);
+    ILOG_DEBUG << "UpdateMapStaticObstacle cost:" << time_end - time_start;
     JSON_DEBUG_VALUE(" UpdateMapStaticObstacleCost", time_end - time_start);
 
     // update uss
@@ -681,8 +677,7 @@ void ObstacleManager::UpdateMapStaticObstacle() {
     for (const Map::PolygonObject &polygon_object : polygon_obstacles) {
       ehr_column_id += 1;
       if (polygon_object.shape_size() != 4U) {
-        LOG_DEBUG("invalid polygon_object.shape_size = %d",
-                  polygon_object.shape_size());
+        ILOG_ERROR << "invalid polygon_object.shape_size = ", polygon_object.shape_size();
         continue;
       }
       bool in_range = true;
@@ -841,7 +836,7 @@ void ObstacleManager::add_frenet_obstacle(
         frenet_point.y < (config_.frenet_obstacle_range_l_min + ego_l)) {
       auto iter = gs_care_obstacles_.Dict().find(obstacle_ptr->id());
       if (iter != gs_care_obstacles_.Dict().end()) {
-        LOG_DEBUG("This unnormal obj need to consider in gs");
+        ILOG_DEBUG << "This unnormal obj need to consider in gs";
       } else {
         continue;
       }

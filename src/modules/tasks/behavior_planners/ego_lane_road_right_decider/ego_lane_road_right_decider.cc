@@ -502,7 +502,7 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
   } else {
     cur_lane_is_continue_ = true;
   }
-  
+
   return;
 }
 
@@ -685,7 +685,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     double far_pt_sum_l = 0.0;
     for (const auto point : current_lane_points) {
       if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
-        LOG_ERROR("update_lane_points: skip NaN point");
+        ILOG_ERROR << "update_lane_points: skip NaN point";
         continue;
       }
       double pt_s = 0.0;
@@ -713,7 +713,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
-    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) && 
+    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
@@ -735,7 +735,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     double far_pt_sum_l = 0.0;
     for (const auto point : current_lane_points) {
       if (std::isnan(point.local_point.x) || std::isnan(point.local_point.y)) {
-        LOG_ERROR("update_lane_points: skip NaN point");
+        ILOG_ERROR << "update_lane_points: skip NaN point";
         continue;
       }
       double pt_s = 0.0;
@@ -763,7 +763,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     near_average_l = std::fabs(near_pt_sum_l / near_pt_count);
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
-    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) && 
+    if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;

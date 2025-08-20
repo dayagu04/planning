@@ -24,11 +24,11 @@ LongRefPathDecider::LongRefPathDecider(
 }
 
 bool LongRefPathDecider::Execute() {
-  LOG_DEBUG("=======LongRefPathDecider======= \n");
+  ILOG_INFO << "=======LongRefPathDecider=======";
   const auto start_timestamp = IflyTime::Now_ms();
 
   if (!PreCheck()) {
-    LOG_ERROR("PreCheck failed\n");
+    ILOG_ERROR << "PreCheck failed";
     return false;
   }
   // 0. reset
@@ -46,8 +46,7 @@ bool LongRefPathDecider::Execute() {
   SaveToDebugInfo();
 
   const auto end_timestamp = IflyTime::Now_ms();
-  LOG_DEBUG("LongRefPathDecider time cost: [%f]ms \n",
-            end_timestamp - start_timestamp);
+  ILOG_DEBUG << "LongRefPathDecider time cost:" << end_timestamp - start_timestamp;
 
   return true;
 }
@@ -148,10 +147,9 @@ void LongRefPathDecider::UpdateLonRefPath() {
           lon_behavior_output_.s_refs[i].first =
               lane_change_info.st_search_vec[i];
         }
-        LOG_DEBUG("use search path in lc wait! \n");
+        ILOG_DEBUG << "use search path in lc wait!";
       } else {
-        LOG_WARNING("search path num is error: [%zu]\n",
-                  lane_change_info.st_search_vec.size());
+        ILOG_WARN << "search path num is error: " << lane_change_info.st_search_vec.size();
       }
     }
   }

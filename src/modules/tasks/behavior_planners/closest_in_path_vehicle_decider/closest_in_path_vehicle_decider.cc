@@ -148,7 +148,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
     double s = 0.0;
     double l = 0.0;
     if (!planned_kd_path->XYToSL(point.x(), point.y(), &s, &l)) {
-      LOG_DEBUG("----planned_kd_path err--- \n");
+      ILOG_ERROR << "----planned_kd_path err---";
       return;
     }
     min_s = std::fmin(min_s, s);
@@ -165,7 +165,7 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   double center_l = 0.0;
   const auto &center = agent->box().center();
   if (!planned_kd_path->XYToSL(center.x(), center.y(), &center_s, &center_l)) {
-    LOG_DEBUG("----planned_kd_path err--- \n");
+    ILOG_ERROR << "----planned_kd_path err---";
     return;
   }
   auto matched_point = planned_kd_path->GetPathPointByS(center_s);
@@ -201,12 +201,12 @@ bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
   const auto agent_manager =
       session_->environmental_model().get_dynamic_world()->agent_manager();
   if (nullptr == dynamic_world || nullptr == agent_manager) {
-    LOG_DEBUG("dynamic_world or agent_manager is nullptr");
+    ILOG_DEBUG << "dynamic_world or agent_manager is nullptr";
     return true;
   }
   const auto *st_graph_helper = session_->planning_context().st_graph_helper();
   if (nullptr == st_graph_helper) {
-    LOG_DEBUG("st_graph_helper is nullptr");
+    ILOG_DEBUG << "st_graph_helper is nullptr";
     return false;
   }
   const auto &all_agents = agent_manager->GetAllCurrentAgents();

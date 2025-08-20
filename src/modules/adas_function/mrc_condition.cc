@@ -95,7 +95,7 @@ void MrcCondition::process() {
       execute_type_output_ = MrcExecuteType::BLIND_BRAKE;
       break;
     default:
-      LOG_DEBUG("%s", "[MrcCondition] INVALID MRC EXECUTION \n");
+      ILOG_DEBUG << "[MrcCondition] INVALID MRC EXECUTION";
       break;
   }
   if (mrc_execute_type_ > MrcExecuteType::PULL_OVER) {

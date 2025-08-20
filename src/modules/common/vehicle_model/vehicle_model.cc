@@ -9,6 +9,7 @@
 // #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
 #include "mjson/mjson.hpp"
+#include "log_glog.h"
 
 namespace planning {
 namespace common {
@@ -119,7 +120,7 @@ bool VehicleModel::LoadVehicleModelConfig(const std::string& config_file_dir) {
                        std::istreambuf_iterator<char>());
   mjson::Reader reader(json_str);
   auto model_type = reader.get<mjson::Json>("model_type").string_value();
-  std::cout << "vehicle_model :" << model_type << std::endl;
+  ILOG_INFO << "vehicle_model :" << model_type;
   if (model_type == "REAR_CENTERED_KINEMATIC_BICYCLE_MODEL") {
     vehicle_model_config_.model_type =
         VehicleModelConfig::REAR_CENTERED_KINEMATIC_BICYCLE_MODEL;

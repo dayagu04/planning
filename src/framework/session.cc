@@ -32,7 +32,7 @@ bool Session::Init() {
   auto module_config_file_dir = engine_config.module_cfg_dir;
   if (!common::ConfigurationContext::Instance()->load_params_from_json(
           engine_config.vehicle_cfg_dir)) {
-    LOG_ERROR("ConfigurationContext load_params_from_json : %s \n", "ERROR");
+    ILOG_ERROR << "ConfigurationContext load_params_from_json :" << "ERROR";
     return false;
   }
 
@@ -45,7 +45,7 @@ bool Session::Init() {
   return true;
 }
 
-void Session::Update() { LOG_DEBUG("Session::update\n"); }
+void Session::Update() { ILOG_DEBUG << "Session::update"; }
 
 }  // namespace framework
 }  // namespace planning

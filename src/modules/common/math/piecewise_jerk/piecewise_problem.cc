@@ -1,7 +1,7 @@
 #include "piecewise_problem.h"
 
 #include "assert.h"
-#include "log.h"
+#include "log_glog.h"
 // #include "core/common/trace.h"
 
 namespace planning {
@@ -269,7 +269,7 @@ bool PiecewiseProblem::optimize(const int max_iter, int &status) {
 
   if (status != OSQP_SOLVED && status != OSQP_SOLVED_INACCURATE &&
       status != OSQP_MAX_ITER_REACHED) {
-    LOG_ERROR("Piecewise Problem Solver status : %d \n", status);
+    ILOG_ERROR << "Piecewise Problem Solver status:" << status;
     delete[] result;
     return false;
   }
@@ -281,10 +281,11 @@ bool PiecewiseProblem::optimize(const int max_iter, int &status) {
       auto epsilon = 0.1;
 
       if (var < bound.lower - epsilon or var > bound.upper + epsilon) {
-        LOG_DEBUG(
-            "solver constraint failure on x: %d, order: %d, lower: %f, upper: "
-            "%f, value: %f \n",
-            bound.idx, bound.order, bound.lower, bound.upper, var);
+        ILOG_DEBUG << "solver constraint failure on x: " << bound.idx
+                   << ", order: " << bound.order
+                   << ", lower: " << bound.lower
+                   << ", upper: " << bound.upper
+                   << ", value: " << var;
         success = false;
       }
     }
@@ -304,7 +305,7 @@ bool PiecewiseProblem::optimize(const int max_iter, int &status) {
       dddx_.at(i) = (ddx_[i + 1] - ddx_[i]) / (s_[i + 1] - s_[i]);
     }
   } else {
-    LOG_ERROR("PiecewiseProblem::optimize failed \n");
+    ILOG_ERROR << "PiecewiseProblem::optimize failed";
   }
   delete[] result;
 

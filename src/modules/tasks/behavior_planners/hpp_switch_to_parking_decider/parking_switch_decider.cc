@@ -30,7 +30,7 @@ bool ParkingSwitchDecider::Execute() {
       env.get_route_info()->get_route_info_output().distance_to_target_slot;
   double distance_to_target_slot =
       parking_slot_manager->GetDistanceToTargetSlot();
-  LOG_DEBUG("distance_to_target_slot: %f\n", distance_to_target_slot);
+  ILOG_DEBUG << "distance_to_target_slot:" << distance_to_target_slot;
   JSON_DEBUG_VALUE("distance_to_target_slot", distance_to_target_slot);
   parking_switch_info_.dist_to_memory_slot = distance_to_target_slot;
 

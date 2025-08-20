@@ -363,7 +363,7 @@ void HppGeneralLateralDecider::UnitTest() {
       break;
     }
     PostProcessBound(init_l, bounds_input, bound_output, bound_info);
-    printf("case %d: %f %f\n",i, bound_output.first, bound_output.second);
+    ILOG_DEBUG << "case " << i << bound_output.first << bound_output.second;
   }
 }
 
@@ -766,7 +766,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     if (!reference_path_ptr_->get_reference_point_by_lon(point_s,
                                                          refpath_pt)) {
       // add logs
-      LOG_ERROR("ConstructReferencePathPoints: Get reference point by lon failed!");
+      ILOG_ERROR << "ConstructReferencePathPoints: Get reference point by lon failed!";
     }
     ref_path_points_.emplace_back(refpath_pt);
   }
@@ -938,7 +938,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       }
     }
   } else {
-    LOG_ERROR("no ref_traj_points!");
+    ILOG_ERROR << "no ref_traj_points!";
     return false;
   }
   // extend s
@@ -1439,7 +1439,7 @@ void HppGeneralLateralDecider::GetLateralTTCToRoad(
 void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
   if (ref_traj_points_.empty() || ref_path_points_.empty()) {
     // add logs
-    LOG_ERROR("Ref traj points or ref path points is null!");
+    ILOG_ERROR << "Ref traj points or ref path points is null!";
     return;
   }
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
@@ -1457,7 +1457,7 @@ void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
 
   if (plan_history_traj_.empty()) {
     // add logs
-    LOG_ERROR("Plan history traj is null!");
+    ILOG_ERROR << "lan history traj is null!";
     return;
   }
   GenerateDynamicObstaclesBoundary(dynamic_obstacles,

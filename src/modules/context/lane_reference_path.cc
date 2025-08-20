@@ -20,12 +20,11 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id)
     : ReferencePath() {
   lane_virtual_id_ = target_lane_virtual_id;
   // update();
-  LOG_DEBUG("construct lane_reference_path: target_lane_virtual_id: %d\n",
-            target_lane_virtual_id);
+  ILOG_DEBUG << "construct lane_reference_path: target_lane_virtual_id:" << target_lane_virtual_id;
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {
-  LOG_DEBUG("update LaneReferencePath\n");
+  ILOG_DEBUG << "update LaneReferencePath";
   session_ = session;
   // Step 1) import reference_path pointer to virtual_lane
   auto virtual_lane = session->mutable_environmental_model()
@@ -47,7 +46,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   } else {
     ok = get_ref_points(raw_reference_path_points);
   }
-  
+
   // Step 3) update
   if (ok) {
     auto current_time = IflyTime::Now_ms();
@@ -62,7 +61,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
       return;
     }
     auto end_time = IflyTime::Now_ms();
-    LOG_DEBUG("update_refpath_points time:%f\n", end_time - current_time);
+    ILOG_INFO << "update_refpath_points time:" << end_time - current_time;
     frenet_ego_state_.update(
         frenet_coord_,
         *session_->mutable_environmental_model()->get_ego_state_manager());
@@ -73,7 +72,7 @@ void LaneReferencePath::update(planning::framework::Session *session) {
         session->environmental_model().get_ego_state_manager()->ego_v(),
         session->environmental_model().get_ego_state_manager()->ego_v_cruise());
   } else {
-    LOG_DEBUG("LaneReferencePath::update failed");
+    ILOG_ERROR << "LaneReferencePath::update failed";
   }
 }
 

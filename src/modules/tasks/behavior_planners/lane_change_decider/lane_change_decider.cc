@@ -65,7 +65,7 @@ bool LaneChangeDecider::Execute() {
   }
 
   if (active) {
-    LOG_DEBUG("[scenario_state_machine] active\n");
+    ILOG_INFO << "[scenario_state_machine] active";
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
       if (!session_->is_hpp_scene()) {
@@ -102,7 +102,7 @@ bool LaneChangeDecider::Execute() {
       return false;
     }
   } else {
-    LOG_DEBUG("[scenario_state_machine] not active\n");
+    ILOG_INFO << "[scenario_state_machine] not active";
     if (scenario_ == SCENARIO_CRUISE) {
       lc_sm_mgr_->Update();
     } else {
@@ -124,7 +124,7 @@ bool LaneChangeDecider::CheckEgoPosition() const {
                                          .coarse_planning_info;
 
   if (coarse_planning_info.reference_path == nullptr) {
-    LOG_DEBUG("reference_path is null");
+    ILOG_WARN << "reference_path is null";
     return false;
   }
 
@@ -143,7 +143,7 @@ bool LaneChangeDecider::CheckEgoPosition() const {
       auto ego_l = frenet_ego_state.l();
       if (ego_l < -refpath_pt.distance_to_right_road_border or
           ego_l > refpath_pt.distance_to_left_road_border) {
-        LOG_DEBUG("init_state error");
+        ILOG_DEBUG << "init_state error";
         return false;
       }
     }

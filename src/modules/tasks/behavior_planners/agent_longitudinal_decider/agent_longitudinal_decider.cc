@@ -126,10 +126,10 @@ bool AgentLongitudinalDecider::Reset() {
 }
 
 bool AgentLongitudinalDecider::Execute() {
-  LOG_DEBUG("=======AgentLongitudinalDecider======= \n");
+  ILOG_INFO << "=======AgentLongitudinalDecider=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -194,7 +194,7 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   auto* mutable_agent_manager = dynamic_world_->mutable_agent_manager();
 
   if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
-    LOG_ERROR("agent_manager is empty");
+    ILOG_ERROR << "agent_manager is empty";
     return;
   }
 
@@ -1315,7 +1315,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
   auto mutable_agent_manager =
       session_->mutable_environmental_model()->mutable_agent_manager();
   if (agent_manager == nullptr || mutable_agent_manager == nullptr) {
-    LOG_ERROR("[FilterReverseAgents] agent manager is empty");
+    ILOG_ERROR << "[FilterReverseAgents] agent manager is empty";
     return;
   }
 

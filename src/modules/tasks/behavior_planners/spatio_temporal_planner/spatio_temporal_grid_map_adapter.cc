@@ -108,7 +108,7 @@ void SLTGridMapAdapter::RunOnce() {
   Point2D ego_frenet_point;
   if (!current_lane_coord_->XYToSL(ego_cart_point,
                                     ego_frenet_point)) {
-    LOG_DEBUG("SLTGridMapAdapter::RunOnce() ego on reference path failed!");
+    ILOG_DEBUG << "SLTGridMapAdapter::RunOnce() ego on reference path failed!";
   }
 
   if (reference_path_ != nullptr) {
@@ -160,7 +160,7 @@ void SLTGridMapAdapter::RunOnce() {
     Point2D lead_frenet_point(ego_front_consider_obstacle_distance_, 0.0);
     if (!current_lane_coord_->XYToSL(lead_point,
                                   lead_frenet_point)) {
-      LOG_DEBUG("lead_agent on reference path failed!");
+      ILOG_DEBUG << "lead_agent on reference path failed!";
     }
     if (lead_agent->is_static()) {
       ego_front_consider_obstacle_distance_ =
@@ -180,7 +180,7 @@ void SLTGridMapAdapter::RunOnce() {
       Point2D agent_frenet_point;
       if (!current_lane_coord_->XYToSL(agent_point,
                                         agent_frenet_point)) {
-        LOG_DEBUG("agent on reference path failed!");
+        ILOG_DEBUG << "agent on reference path failed!";
         continue;
       }
       // if (agent_frenet_point.x > lead_frenet_point.x &&
@@ -219,7 +219,6 @@ void SLTGridMapAdapter::RunOnce() {
   StateTransformForInputData();
 
   // auto t_stf = IflyTime::Now_ms();;
-  // LOG_DEBUG("StateTransformForInputData:%f\n", t_stf - t_prepare);
 
   // time_origin_ = initial_state_.time_stamp;
   // p_ssc_map_->ResetSscMap(
@@ -230,7 +229,7 @@ void SLTGridMapAdapter::RunOnce() {
   // }
 
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("SLTGridMapAdapter::RunOnce() cost:%f\n", time_end - time_start);
+  ILOG_DEBUG << "SLTGridMapAdapter::RunOnce() cost:" << time_end - time_start;
   return;
 }
 
@@ -464,8 +463,7 @@ void SLTGridMapAdapter::StateTransformForInputData() {
       Point2D frenet_point;
       if (!current_lane_coord_->XYToSL(agent_point,
                                        frenet_point)) {
-        // LOG_DEBUG(
-        //     "StateTransformForInputData::virtual agent in current lane failed!");
+
       }
       virtual_agent_st_info.agent_id = agent->agent_id();
       virtual_agent_st_info.frenet_slt_info.set_s(frenet_point.x);
@@ -551,8 +549,6 @@ void SLTGridMapAdapter::AgentVerticesTransform(
     agent_point.y = global_point_vec[i].y();
     if (!current_lane_coord_->XYToSL(agent_point,
                                      frenet_point)) {
-      // LOG_DEBUG(
-      //     "AgentVerticesTransform::Agent Pose in current lane failed!");
       frenet_point.x = 200.0;
       frenet_point.y = 10.0;
     }
@@ -578,8 +574,6 @@ void SLTGridMapAdapter::EgoVerticesTransform(
     ego_point.y = global_point_vec[i].y();
     if (!current_lane_coord_->XYToSL(ego_point,
                                      frenet_point)) {
-      // LOG_DEBUG(
-      //     "EgoVerticesTransform::Ego Pose in current lane failed!");
       frenet_point.x = 200.0;
       frenet_point.y = 10.0;
     }

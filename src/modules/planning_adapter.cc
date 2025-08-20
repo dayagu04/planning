@@ -29,7 +29,7 @@ static uint64_t get_latency(double now, uint64_t input_time) {
 }
 
 bool PlanningAdapter::Init() {
-  std::cout << "The planning component init!!!" << std::endl;
+  ILOG_INFO << "The planning component init!!!" << std::endl;
   std::string engine_config_path =
       params_["res_path"] +
       "/res/conf/engine_configs/planning_engine_config_ap.json";
@@ -65,10 +65,10 @@ bool PlanningAdapter::Init() {
     log_level = iflyauto::ERROR;
   }
 
-  std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
+  ILOG_DEBUG << "log_level!!!" << engine_config.log_conf.log_level;
   iflyauto::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                          log_level);
-  LOG_DEBUG("The planning component init!!! \n");
+  ILOG_DEBUG << "The planning component init!!!";
 
   local_view_ptr_ = std::make_shared<LocalView>();
   planning_scheduler_ = std::make_unique<PlanningScheduler>(
@@ -93,7 +93,7 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 }
 
 bool PlanningAdapter::Proc() {
-  LOG_DEBUG("PlanningScheduler::RunOnce \n");
+  ILOG_INFO << "PlanningScheduler::RunOnce";
   double start_time = IflyTime::Now_us();
 
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -367,8 +367,7 @@ bool PlanningAdapter::Proc() {
   auto planning_debuginfo_container =
       std::make_shared<iflyauto::StructContainer>();
 
-  std::cout << "==============The planning enters RunOnce============="
-            << std::endl;
+  ILOG_INFO << "==============The planning enters RunOnce=============";
 
   const bool run_success =
       planning_scheduler_->RunOnce(&planning_output, &planning_hmi_info);
@@ -402,7 +401,7 @@ bool PlanningAdapter::Proc() {
       // use last succ planning output when planning not succ
       // if never succeed, output will bi empty
       //   planning_output = last_planning_output_;
-      LOG_DEBUG("planning failed, use last planning output\n");
+      ILOG_WARN << "planning failed, use last planning output";
     }
     // update msg_header & msg_meta
     auto &msg_header = planning_output.msg_header;
@@ -432,7 +431,7 @@ bool PlanningAdapter::Proc() {
   }
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
-  LOG_DEBUG("The cost time of proc() is: [%f] ms\n", planning_cost_time);
+  ILOG_DEBUG << "The cost time of proc() is:  " << planning_cost_time << " ms";
   return true;
 }
 

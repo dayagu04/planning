@@ -9,7 +9,6 @@
 #include "debug_info_log.h"
 #include "dynamic_world/dynamic_agent_node.h"
 #include "environmental_model.h"
-#include "log.h"
 // #include "trajectory/path_point.h"
 #include "trajectory/trajectory_point.h"
 #include "utils/path_point.h"
@@ -119,13 +118,14 @@ bool DynamicWorld::ConstructDynamicWorld() {
       dynamic_agent_node_table_[node_id] = std::move(agent_node);
     }
     auto time_end = IflyTime::Now_ms();
-    LOG_DEBUG("agent node construct cost:%f\n", time_end - time_start);
+    ILOG_DEBUG << "agent node construct cost:" << time_end - time_start;
   }
   // ========= build node connections
   auto time_start = IflyTime::Now_ms();
   bool is_success = BuildConnections(&lane_manager, ego_state);
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("agent connection cost:%f\n", time_end - time_start);
+  ILOG_DEBUG << "agent connection cost:" << time_end - time_start;
+
   StoreNodeInfoInJsonDebug();
   return is_success;
 }
@@ -378,11 +378,10 @@ void DynamicWorld::BuildConnectionForNeighborLane(
       }
 
       neighbor_rear_id = GetNodeRearNotConeNode(closest_agent_node);
-      LOG_DEBUG(
-          "closest_agent_node id = %ld, node s: %.2f, is cone type %d, "
-          "neighbor_front_id %ld",
-          closest_agent_node->node_id(), closest_agent_node->node_s(),
-          closest_agent_node->is_cone_type(), neighbor_front_id);
+      ILOG_DEBUG << "closest_agent_node id = " << closest_agent_node->node_id()
+                 << "node s: " << closest_agent_node->node_s()
+                 << "is cone type " << closest_agent_node->is_cone_type()
+                 << "neighbor_front_id " << neighbor_front_id;
     } else {
       neighbor_front_id = closest_agent_node->front_node_id();
       if (!closest_agent_node->is_cone_type()) {
@@ -392,10 +391,9 @@ void DynamicWorld::BuildConnectionForNeighborLane(
       }
     }
   }
-  LOG_DEBUG(
-      "dynamic world neighbor_node_id = %ld, neighbor_front_id = %ld, "
-      "neighbor_rear_id = %ld",
-      neighbor_node_id, neighbor_front_id, neighbor_rear_id);
+  ILOG_DEBUG << "dynamic world neighbor_node_id = " << neighbor_node_id
+             << " neighbor_front_id = " << neighbor_front_id
+             << " neighbor_rear_id " << neighbor_rear_id;
 
   if (is_left) {
     ego_left_node_id_ = neighbor_node_id;

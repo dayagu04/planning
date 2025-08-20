@@ -190,7 +190,7 @@ bool TaskPipelineRADS::Run() {
   planning_context->set_st_graph_helper(st_graph_helper_);
   double time_end = IflyTime::Now_ms();
   if (!ok) {
-    LOG_ERROR("st graph init error");
+    ILOG_ERROR << "st graph init error";
     return false;
   }
   JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);

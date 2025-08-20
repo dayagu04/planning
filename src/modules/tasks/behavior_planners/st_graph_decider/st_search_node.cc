@@ -1,8 +1,7 @@
 #include "st_search_node.h"
 
 #include <bitset>
-
-#include "log.h"
+#include "log_glog.h"
 
 namespace planning {
 
@@ -19,7 +18,7 @@ StSearchNode::StSearchNode(double s, double t, double vel, double s_step,
   vel_ = vel;
 
   id_ = ComputeId(s_, t_, vel_, s_step, t_step, vel_step, only_s_t_hash);
-  LOG_DEBUG("StSearchNode constructor is called \n");
+  ILOG_DEBUG << "StSearchNode constructor is called";
 }
 
 StSearchNode::StSearchNode(const StSearchNode& st_search_node)
@@ -52,7 +51,7 @@ StSearchNode::StSearchNode(const StSearchNode& st_search_node)
                    st_search_node.lower_bound().velocity(),
                    st_search_node.lower_bound().acceleration(),
                    st_search_node.lower_bound().extreme_l()) {
-  LOG_DEBUG("StSearchNode copy constructor is called \n");
+  ILOG_DEBUG << "StSearchNode copy constructor is called";
 }
 
 StSearchNode::StSearchNode(StSearchNode&& st_search_node)
@@ -86,7 +85,7 @@ StSearchNode::StSearchNode(StSearchNode&& st_search_node)
                    st_search_node.lower_bound().velocity(),
                    st_search_node.lower_bound().acceleration(),
                    st_search_node.lower_bound().extreme_l()) {
-  LOG_DEBUG("StSearchNode move constructor is called \n");
+  ILOG_DEBUG << "StSearchNode move constructor is called";
 }
 
 StSearchNode& StSearchNode::operator=(const StSearchNode& st_search_node) {
@@ -122,7 +121,7 @@ StSearchNode& StSearchNode::operator=(const StSearchNode& st_search_node) {
   lower_bound_.set_velocity(st_search_node.lower_bound().velocity());
   lower_bound_.set_acceleration(st_search_node.lower_bound().acceleration());
   lower_bound_.set_extreme_l(st_search_node.lower_bound().extreme_l());
-  LOG_DEBUG("StSearchNode copy assignment is called \n");
+  ILOG_DEBUG << "StSearchNode copy assignment is called";
   return *this;
 }
 

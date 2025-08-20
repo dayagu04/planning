@@ -68,9 +68,7 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   bool is_overtake_valid =
       st_graph_helper->GetFirstNeighborLowerBound(&first_neighbor_lower_bound);
   if (is_yield_valid == false && is_overtake_valid == false) {
-    LOG_DEBUG(
-        "GenerateNeighborTargetCurve(): both yield and overtake are invalid "
-        "\n");
+    ILOG_DEBUG << "GenerateNeighborTargetCurve(): both yield and overtake are invalid";
     return;
   }
 
@@ -81,9 +79,7 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
       first_neighbor_lower_bound.s() +
       first_neighbor_lower_bound.velocity() * first_neighbor_lower_bound.t();
   if (yield_s < overtake_s) {
-    LOG_DEBUG(
-        "GenerateNeighborTargetCurve(): yield_s < overtake_s, invalid "
-        "\n");
+    ILOG_DEBUG << "GenerateNeighborTargetCurve(): yield_s < overtake_s, invalid";
     return;
   }
 

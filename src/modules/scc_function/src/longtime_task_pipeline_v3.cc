@@ -3,7 +3,6 @@
 
 #include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "ego_planning_config.h"
-#include "log.h"
 #include "speed/st_graph_input.h"
 
 namespace planning {
@@ -12,7 +11,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
-  spatio_temporal_planner_ = 
+  spatio_temporal_planner_ =
       std::make_unique<SpatioTemporalPlanner>(config_builder, session);
   lane_change_decider_ =
       std::make_unique<LaneChangeDecider>(config_builder, session);
@@ -204,7 +203,7 @@ bool LongTimeTaskPipelineV3::Run() {
   planning_context->set_st_graph_helper(st_graph_helper_);
   double time_end = IflyTime::Now_ms();
   if (!ok) {
-    LOG_ERROR("st graph init error");
+    ILOG_ERROR << "st graph init error";
     return false;
   }
   JSON_DEBUG_VALUE("construct_st_graph_cost", time_end - time_start);

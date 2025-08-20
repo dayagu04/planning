@@ -575,7 +575,7 @@ bool DPRoadGraph::SampleLanes(
     // avaliable lane boundary
     if (current_lane_ptr_ == nullptr && left_lane_ptr_ == nullptr &&
         right_lane_ptr_ == nullptr) {
-      LOG_ERROR("No avaliable lanes");
+      ILOG_ERROR << "No avaliable lanes";
       return false;
     }
     double aheads = s_step - ego_s_;
@@ -754,7 +754,7 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
   dp_path_points.reserve(x_vec.size());
   for (int i = 0; i <= x_vec.size() - 1; ++i) {
     if (std::isnan(x_vec[i]) || std::isnan(y_vec[i])) {
-      LOG_ERROR("skip NaN point");
+      ILOG_ERROR << "skip NaN point";
       continue;
     }
     planning_math::PathPoint path_point{x_vec[i], y_vec[i]};

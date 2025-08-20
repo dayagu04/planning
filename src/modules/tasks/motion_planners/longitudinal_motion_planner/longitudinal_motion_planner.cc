@@ -47,10 +47,10 @@ void LongitudinalMotionPlanner::Init() {
 }
 
 bool LongitudinalMotionPlanner::Execute() {
-  LOG_DEBUG("=======LongitudinalMotionPlanner======= \n");
+  ILOG_DEBUG << "=======LongitudinalMotionPlanner=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -313,10 +313,9 @@ void LongitudinalMotionPlanner::Update() {
       traj_points[i].s = frenet_pt.x;
       traj_points[i].l = frenet_pt.y;
     } else {
-      LOG_DEBUG(
-          "XYToSL = FAILED !!!!!!!! index: %ld,  point.s : "
-          "%f, point.l: %f ",
-          i, traj_points[i].s, traj_points[i].l);
+      ILOG_DEBUG << "XYToSL = FAILED !!!!!!!! index:" << i
+                 << ",  point.s : " << traj_points[i].s
+                 << ", point.l: " << traj_points[i].l;
     }
     // reassembling lateral path by long traj
     assembled_x[i] = traj_points[i].x;

@@ -33,7 +33,7 @@ BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
 }
 
 common::Status BoundMaker::Run(const TargetMaker& target_maker) {
-  LOG_DEBUG("=======LongRefPathDecider: BoundMaker======= \n");
+  ILOG_INFO << "=======LongRefPathDecider: BoundMaker=======";
   max_decel_target_pb_.Clear();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();

@@ -1450,7 +1450,7 @@ void AvoidObstacleMaintainer5V::SaveDebugInfo() {
   JSON_DEBUG_VALUE("select_avoid_car_ids_2", avd_obstacles_[1].track_id);
 
   for (int i = 0; i < 2; i++) {
-    LOG_DEBUG("avd_obstacle id :%d ", avd_obstacles_[i].track_id);
+    ILOG_DEBUG << "avd_obstacle id:" << avd_obstacles_[i].track_id;
     std::string prefix = "VOLat_avd_obstacles_" + std::to_string(i);
     JSON_DEBUG_VALUE(prefix + "_id", avd_obstacles_[i].track_id);
     JSON_DEBUG_VALUE(prefix + "_allow_max_opposite_offset",

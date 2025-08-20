@@ -21,7 +21,6 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "ifly_time.h"
-#include "log.h"
 #include "log_glog.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
@@ -58,12 +57,11 @@ void PlanningScheduler::Init(
 
   VehicleConfigurationContext::Instance()->set_vehicle_param(
       engine_config_ptr->vehicle_cfg_dir);
-  std::cout
+  ILOG_DEBUG
       << "load vehicle param success! car type: "
       << VehicleConfigurationContext::Instance()->get_vehicle_param().car_type
       << ", the car wheel base is: "
-      << VehicleConfigurationContext::Instance()->get_vehicle_param().wheel_base
-      << std::endl;
+      << VehicleConfigurationContext::Instance()->get_vehicle_param().wheel_base;
 
   // TODO：配置文件改成和场景/功能有关，不能使用默认场景
   planning::common::SceneType scene_type = session_.get_scene_type();
@@ -147,7 +145,7 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 bool PlanningScheduler::RunOnce(
     iflyauto::PlanningOutput *const planning_output,
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  LOG_DEBUG("PlanningScheduler::RunOnce \n");
+  ILOG_INFO << "PlanningScheduler::RunOnce";
   auto &planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   const double start_timestamp = IflyTime::Now_ms();
@@ -181,7 +179,7 @@ bool PlanningScheduler::RunOnce(
   bool adas_function_sucess = false;
   adas_function_sucess = adas_function_->Plan();
   if (!adas_function_sucess) {
-    LOG_DEBUG("adas runonce failed !!!! \n");
+    ILOG_ERROR << "adas runonce failed !!!!";
     // return false;  //
     // TODO:这里有问题。会导致不运行FillPlanningTrajectory和FillPlanningHmiInfo。任何情况下都需要给输出赋值。
   }
@@ -202,7 +200,7 @@ bool PlanningScheduler::RunOnce(
   }
 
   int64_t frame_duration = IflyTime::Now_ms() - start_timestamp;
-  LOG_DEBUG("The time cost of RunOnce is: %d\n", (int)frame_duration);
+  ILOG_INFO << "The time cost of RunOnce is: " << frame_duration;
 
   return planning_success;
 }
@@ -364,14 +362,12 @@ void PlanningScheduler::FillPlanningTrajectory(
           limited_polynomial_3, -lat_offset_bound, lat_offset_bound);
     }
 
-    std::cout << "smooth dpoly enable_none_smooth: "
+    ILOG_DEBUG << "smooth dpoly enable_none_smooth: "
               << config_.enable_none_smooth
               << "   config_.none_consider_slope_thr:   "
               << config_.none_consider_slope_thr << std::endl;
-    LOG_DEBUG("limited_polynomial_3: [%f]: \n", limited_polynomial_3);
-    LOG_DEBUG("lateral_output.d_poly C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
-              lateral_output.d_poly[0], lateral_output.d_poly[1],
-              lateral_output.d_poly[2], lateral_output.d_poly[3]);
+
+    ILOG_DEBUG << "limited_polynomial_3: " << limited_polynomial_3;
     std::vector<double> polynomial_limited(4);
 
     const auto &current_lane = session_.environmental_model()
@@ -388,9 +384,11 @@ void PlanningScheduler::FillPlanningTrajectory(
       polynomial_limited[2] = d_polynomial[2];
       polynomial_limited[3] = limited_polynomial_3;
     }
-    LOG_DEBUG("limited_polynomial C0: [%f] C1: [%f] C2: [%f] C3: [%f] \n",
-              polynomial_limited[0], polynomial_limited[1],
-              polynomial_limited[2], polynomial_limited[3]);
+    ILOG_DEBUG << "limited_polynomial C0:" << polynomial_limited[0]
+               << " C1:" << polynomial_limited[1]
+               << " C2:" << polynomial_limited[2]
+               << " C3:" << polynomial_limited[3];
+
     for (size_t i = 0; i < polynomial_limited.size(); i++) {
       target_ref->polynomial[i] = polynomial_limited[i];
     }
@@ -910,7 +908,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
   double intercept_presee_cart_point = 0.0;
   double presee_dist = 25;
   double reference_intercept_bound = max_lat_offset;
-  LOG_DEBUG("start compute bound of reference intercept!! \n");
+  ILOG_DEBUG << "";
 
   if (origin_reference != nullptr && target_reference != nullptr) {
     Point2D frenet_of_cart_point_in_target;
@@ -939,8 +937,8 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
       }
     }
   }
-  std::cout << "intercept_presee_cart_point: " << intercept_presee_cart_point
-            << "intercept_cart_point: " << intercept_cart_point << std::endl;
+  ILOG_DEBUG << "intercept_presee_cart_point: " << intercept_presee_cart_point
+             << "intercept_cart_point: " << intercept_cart_point;
 
   if (std::fabs(intercept_presee_cart_point) >
       std::fabs(intercept_cart_point)) {
@@ -949,7 +947,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
         std::fabs(intercept_presee_cart_point - intercept_cart_point);
     reference_intercept_bound = planning_math::Clamp(
         reference_intercept_bound, min_lat_offset, max_lat_offset);
-    LOG_DEBUG("lat_offset_bound: [%f]: \n", reference_intercept_bound);
+    ILOG_DEBUG << "lat_offset_bound: " << reference_intercept_bound;
   }
 
   return reference_intercept_bound;
@@ -1035,9 +1033,9 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   session_.mutable_planning_context()->mutable_last_planning_success() =
       planning_success;
   if (!planning_success) {
-    LOG_DEBUG("Planning failed !!!! \n");
+    ILOG_ERROR << "Planning failed!!! ";
     if (!UpdateFailedPlanningResult()) {
-      LOG_DEBUG("RunOnce failed !!!! \n");
+      ILOG_ERROR << "RunOnce failed !!!";
       FillPlanningRequest(iflyauto::REQUEST_LEVEL_MIDDLE, planning_output);
       return false;
     }
@@ -1046,7 +1044,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     UpdateSuccessfulPlanningResult();
   }
 
-  std::cout << "The RunOnce is successed !!!!:" << std::endl;
+  ILOG_INFO << "The RunOnce is successed !!!!:";
   // 存在问题
   // session_.mutable_planning_context()->mutable_last_planning_success() =
   // planning_success;
@@ -1054,7 +1052,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
   const auto end_timestamp = IflyTime::Now_ms();
   const double time_consumption = end_timestamp - start_timestamp;
-  LOG_DEBUG("general planning: planning time cost %f\n", time_consumption);
+  ILOG_INFO << "general planning: planning time cost: " << time_consumption;
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);

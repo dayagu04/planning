@@ -7,7 +7,6 @@
 
 #include "ego_state_manager.h"
 #include "environmental_model.h"
-#include "log.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
 

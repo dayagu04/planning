@@ -1,9 +1,6 @@
 #include <cassert>
 #include <unordered_map>
 #include <vector>
-
-#include "log.h"
-
 namespace planning {
 
 template <typename KEY, typename VALUE>
@@ -30,7 +27,7 @@ class MinHeap {
     if (IsEmpty()) {
       // throw Status(StatusCode::COMMON_ERROR, "heap is empty, cann't get
       // top");
-      LOG_ERROR("heap is empty, cann't get top");
+      ILOG_ERROR << "heap is empty, cann't get top";
     }
     return array_[0];
   }
@@ -39,7 +36,7 @@ class MinHeap {
     assert(!IsEmpty());
     if (IsEmpty()) {
       // throw Status(StatusCode::COMMON_ERROR, "heap is empty, cann't pop");
-      LOG_ERROR("heap is empty, cann't get top");
+      ILOG_ERROR << "heap is empty, cann't get top";
     }
     Swap(0, size_ - 1);
     index_map_.erase(array_[size_ - 1].first);
