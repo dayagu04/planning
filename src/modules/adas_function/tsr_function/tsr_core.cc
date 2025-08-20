@@ -761,16 +761,16 @@ void TsrCore::UpdateTsrWarning(void) {
     // do nothing
   }
 
-  // 按照功能状态更新tsr_warning_image_和tsr_warning_voice_
-  if (function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY) {
-    tsr_warning_voice_ = false;
-  } else if (function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
-             function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
-    tsr_warning_voice_ = false;
-    tsr_warning_image_ = false;
-  } else {
-    // do nothing
-  }
+  // // 按照功能状态更新tsr_warning_image_和tsr_warning_voice_
+  // if (function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY) {
+  //   tsr_warning_voice_ = false;
+  // } else if (function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
+  //            function_state_machine_info_ptr->switch_sts.tsr_main_switch == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
+  //   tsr_warning_voice_ = false;
+  //   tsr_warning_image_ = false;
+  // } else {
+  //   // do nothing
+  // }
 
   // HNOA激活，取消所有报警
   if (function_state_machine_info_ptr->switch_sts.noa_main_switch == true) {
@@ -828,17 +828,12 @@ void TsrCore::SetTsrOutputInfo() {
     GetContext.mutable_output_info()->tsr_output_info_.supp_sign_type = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
   }
   if (tsr_state_ == iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE) {
-    // 只有当地图限速信息有效时才输出限速信息
     if (end_of_speed_sign_display_flag_) {
       GetContext.mutable_output_info()->tsr_output_info_.isli_display_type_ = true; // 显示解除限速
       GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = end_of_speed_sign_value_;
-    } else if (tsr_speed_limit_ > 10) {
-      // 限速值大于10km/h时, 输出限速信息
+    } else {
       GetContext.mutable_output_info()->tsr_output_info_.isli_display_type_ = false; // 显示限速
       GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = tsr_speed_limit_;
-    } else {
-      // 地图限速无效时不输出限速信息
-      GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
     }
     GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ =
         tsr_warning_image_;
