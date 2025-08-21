@@ -53,7 +53,8 @@ void RouteInfo::Update() {
     // } else {
     //   std::cout << "UpdateSdMap failed!!!" << std::endl;
     // }
-    if (UpdateSdProMap(local_view) && UpdateSdMap(local_view)) {
+    if (UpdateSdProMap(local_view)) {
+      UpdateSdMap(local_view);
       UpdateRouteInfoForNOA(sdpro_map_);
     } else {
       std::cout << "UpdateSdMap failed!!!" << std::endl;
@@ -182,7 +183,8 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
     const auto previous_seg =
         sd_map.GetPreviousRoadSegment(ramp_info.first->id());
     if (previous_seg) {
-      SplitSegInfo split_seg_info = MakesureSplitDirection(*previous_seg, sd_map);
+      SplitSegInfo split_seg_info =
+          MakesureSplitDirection(*previous_seg, sd_map);
       route_info_output_.ramp_direction = split_seg_info.split_direction;
     } else {
       std::cout << "previous_seg is nullprt!!!!!" << std::endl;
@@ -1124,6 +1126,9 @@ RampDirection RouteInfo::MakesureMergeDirection(
 
 const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
     const ad_common::sdmap::SDMap& sd_map, double* nearest_s) {
+  if (!sdmap_valid_) {
+    return nullptr;
+  }
   const SdMapSwtx::Segment* segment = nullptr;
   if (!nearest_s) {
     return segment;
