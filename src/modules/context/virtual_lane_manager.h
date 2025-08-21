@@ -195,6 +195,15 @@ class VirtualLaneManager {
     return lane_mark_at_ego_front_edge_pos_current_;
   }
 
+  bool ego_currrent_pos_lane_has_straight_attributes() const {
+    return ego_currrent_pos_lane_has_straight_attributes_;
+  }
+
+  void set_ego_currrent_pos_lane_has_straight_attributes(
+      bool is_going_straight) {
+    ego_currrent_pos_lane_has_straight_attributes_ = is_going_straight;
+  }
+
   // bool is_local_valid() const { return is_local_valid_; }
 
   int origin_relative_id_zero_nums() const {
@@ -288,6 +297,8 @@ class VirtualLaneManager {
   // ego position lane mark
   iflyauto::LaneDrivableDirection lane_mark_at_ego_front_edge_pos_current_ =
       iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_UNKNOWN;
+
+  bool ego_currrent_pos_lane_has_straight_attributes_ = true;
 
   // rads relevance
   iflyauto::FunctionalState last_fsm_state_ =

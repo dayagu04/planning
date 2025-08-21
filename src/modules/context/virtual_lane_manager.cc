@@ -817,7 +817,8 @@ bool VirtualLaneManager::update(
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      if (route_info_output_.map_vendor == iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+      if (route_info_output_.map_vendor ==
+          iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
         route_info->UpdateMLCInfoDecider(relative_id_lanes_);
         for (const auto& relative_id_lane : relative_id_lanes_) {
           relative_id_lane->update_lane_tasks(
@@ -1054,7 +1055,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      if (route_info_output_.map_vendor == iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+      if (route_info_output_.map_vendor ==
+          iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
         route_info->UpdateMLCInfoDecider(relative_id_lanes_);
         for (const auto& relative_id_lane : relative_id_lanes_) {
           relative_id_lane->update_lane_tasks(
@@ -1930,6 +1932,7 @@ void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_rear_axle_to_front_edge =
       ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle;
+  ego_currrent_pos_lane_has_straight_attributes_ = true;
 
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -2013,6 +2016,28 @@ void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
       cur_lane_mark_count = 0;
     }
   }
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+      turning_directions_set = {
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT,
+          iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_UTURN,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT_UTURN,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURNLEFT_RIGHT};
+
+  ego_currrent_pos_lane_has_straight_attributes_ =
+      turning_directions_set.find(lane_mark_at_ego_front_edge_pos_current_) ==
+      turning_directions_set.end();
 
   JSON_DEBUG_VALUE("cur_lane_mark_plan",
                    static_cast<int>(lane_mark_at_ego_front_edge_pos_current_))
