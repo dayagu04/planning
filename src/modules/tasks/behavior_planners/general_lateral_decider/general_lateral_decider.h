@@ -20,6 +20,7 @@
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
 #include "utils/hysteresis_decision.h"
+#include "task_basic_types.h"
 
 namespace planning {
 
@@ -226,6 +227,11 @@ class GeneralLateralDecider : public Task {
 
   std::vector<WeightedBounds> soft_bounds_;
   std::vector<WeightedBounds> hard_bounds_;
+
+  std::vector<std::pair<double, double>> frenet_soft_bounds_;
+  std::vector<std::pair<double, double>> frenet_hard_bounds_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
   FrenetEgoState ego_frenet_state_;
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;

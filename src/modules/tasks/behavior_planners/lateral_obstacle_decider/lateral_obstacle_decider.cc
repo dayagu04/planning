@@ -180,6 +180,8 @@ bool LateralObstacleDecider::Execute() {
     // determine is_avd_car
     std::vector<double> avd_car_id;
     std::vector<double> maintain_avoid;
+    avd_car_id.reserve(10);
+    maintain_avoid.reserve(10);
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =

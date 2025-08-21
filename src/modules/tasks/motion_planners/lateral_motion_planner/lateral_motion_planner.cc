@@ -81,6 +81,19 @@ void LateralMotionPlanner::Init() {
   enter_lccnoa_time_ = 0.0;
   is_divide_lane_into_two_ = false;
   curv_factor_ = 0.33;
+
+  x_vec_.resize(N + 1, 0.0);
+  y_vec_.resize(N + 1, 0.0);
+  theta_vec_.resize(N + 1, 0.0);
+  delta_vec_.resize(N + 1, 0.0);
+  omega_vec_.resize(N + 1, 0.0);
+  curv_vec_.resize(N + 1, 0.0);
+  d_curv_vec_.resize(N + 1, 0.0);
+  s_vec_.resize(N + 1, 0.0);
+  t_vec_.resize(N + 1, 0.0);
+
+  expected_steer_vec_.resize(N, 0.0);
+  ref_theta_vec_.resize(N, 0.0);
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -114,6 +127,18 @@ bool LateralMotionPlanner::Execute() {
 
 bool LateralMotionPlanner::AssembleInput() {
   // set init state
+  std::fill(ref_theta_vec_.begin(), ref_theta_vec_.end(), 0.0);
+  std::fill(x_vec_.begin(), x_vec_.end(), 0.0);
+  std::fill(y_vec_.begin(), y_vec_.end(), 0.0);
+  std::fill(theta_vec_.begin(), theta_vec_.end(), 0.0);
+  std::fill(delta_vec_.begin(), delta_vec_.end(), 0.0);
+  std::fill(omega_vec_.begin(), omega_vec_.end(), 0.0);
+  std::fill(curv_vec_.begin(), curv_vec_.end(), 0.0);
+  std::fill(d_curv_vec_.begin(), d_curv_vec_.end(), 0.0);
+  std::fill(s_vec_.begin(), s_vec_.end(), 0.0);
+  std::fill(t_vec_.begin(), t_vec_.end(), 0.0);
+  std::fill(expected_steer_vec_.begin(), expected_steer_vec_.end(), 0.0);
+
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &reference_path_ptr =
@@ -159,7 +184,6 @@ bool LateralMotionPlanner::AssembleInput() {
   const double ref_vel =
       std::max(general_lateral_decider_output.v_cruise, config_.min_v_cruise);
 
-  std::vector<double> ref_theta_vec(enu_ref_theta.size());
   if (session_->environmental_model().function_info().function_mode() ==
       common::DrivingFunctionInfo_DrivingFunctionMode::
           DrivingFunctionInfo_DrivingFunctionMode_RADS) {
@@ -175,7 +199,7 @@ bool LateralMotionPlanner::AssembleInput() {
       } else if (enu_ref_theta_i < -M_PI) {
         enu_ref_theta_i += 2.0 * M_PI;
       }
-      ref_theta_vec[i] = enu_ref_theta_i;
+      ref_theta_vec_[i] = enu_ref_theta_i;
     }
   } else {
     planning_input_.set_ref_vel(ref_vel);
@@ -184,7 +208,7 @@ bool LateralMotionPlanner::AssembleInput() {
     for (size_t i = 0; i < enu_ref_path.size(); ++i) {
       planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
-      ref_theta_vec[i] = enu_ref_theta[i];
+      ref_theta_vec_[i] = enu_ref_theta[i];
     }
   }
 
@@ -192,7 +216,7 @@ bool LateralMotionPlanner::AssembleInput() {
   // 179deg]
   double angle_compensate = 0.0;
   const auto d_theta =
-      ref_theta_vec.front() - planning_init_point.lat_init_state.theta();
+      ref_theta_vec_.front() - planning_init_point.lat_init_state.theta();
   if (d_theta > 1.5 * pi_const) {
     angle_compensate = -2.0 * pi_const;
   } else if (d_theta < -1.5 * pi_const) {
@@ -203,25 +227,25 @@ bool LateralMotionPlanner::AssembleInput() {
 
   // angle fix of ref_theta
   double angle_offset = 0.0;
-  for (size_t i = 0; i < ref_theta_vec.size(); ++i) {
+  for (size_t i = 0; i < ref_theta_vec_.size(); ++i) {
     if (i == 0) {
       planning_input_.mutable_ref_theta_vec()->Set(
-          i, ref_theta_vec[i] + angle_compensate);
+          i, ref_theta_vec_[i] + angle_compensate);
     } else {
-      const auto delta_theta = ref_theta_vec[i] - ref_theta_vec[i - 1];
+      const auto delta_theta = ref_theta_vec_[i] - ref_theta_vec_[i - 1];
       if (delta_theta > 1.5 * pi_const) {
         angle_offset -= 2.0 * pi_const;
       } else if (delta_theta < -1.5 * pi_const) {
         angle_offset += 2.0 * pi_const;
       }
       planning_input_.mutable_ref_theta_vec()->Set(
-          i, ref_theta_vec[i] + angle_offset + angle_compensate);
+          i, ref_theta_vec_[i] + angle_offset + angle_compensate);
     }
   }
 
   // set init theta by ref_theta: not solid
   // planning_input_.mutable_init_state()->set_theta(
-  //     planning_input_.ref_theta_vec(0));
+  //     planning_input_.ref_theta_vec_(0));
 
   // set last trajectory: temporarily same as reference: TODO
   double final_t = 5.0;  // hack now
@@ -374,15 +398,16 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
   const auto &coarse_planning_info =
-      lane_change_decider_output.coarse_planning_info;
-  std::vector<double> expected_steer_vec;
-  expected_steer_vec.resize(26, 0.0);
+      session_->planning_context()
+              .lane_change_decider_output()
+              .coarse_planning_info;
+
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
       planning_init_point.frenet_state.s, ref_vel,
       vehicle_param.wheel_base, steer_ratio,
       curv_factor_, coarse_planning_info,
-      reference_path_ptr, expected_steer_vec);
-  JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec, 2)
+      reference_path_ptr, expected_steer_vec_);
+  JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec_, 2)
   const auto &soft_bounds_frenet_point = general_lateral_decider_output.soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point = general_lateral_decider_output.hard_bounds_frenet_point;
   planning_weight_ptr_->CalculateLatAvoidDistance(soft_bounds_frenet_point);
@@ -580,42 +605,32 @@ bool LateralMotionPlanner::Update() {
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->horizon +
       1;
 
-  std::vector<double> x_vec(N + 1);
-  std::vector<double> y_vec(N + 1);
-  std::vector<double> theta_vec(N + 1);
-  std::vector<double> delta_vec(N + 1);
-  std::vector<double> omega_vec(N + 1);
-  std::vector<double> curv_vec(N + 1);
-  std::vector<double> d_curv_vec(N + 1);
-  std::vector<double> s_vec(N + 1);
-  std::vector<double> t_vec(N + 1);
-
   double s = 0.0;
   double t = 0.0;
   for (size_t i = 0; i < N; ++i) {
-    x_vec[i + 1] = planning_output.x_vec(i);
-    y_vec[i + 1] = planning_output.y_vec(i);
-    theta_vec[i + 1] =
+    x_vec_[i + 1] = planning_output.x_vec(i);
+    y_vec_[i + 1] = planning_output.y_vec(i);
+    theta_vec_[i + 1] =
         planning_output.theta_vec(i);  // note that theta cannot be limited with
                                        // [-pi, pi] to avoid incorrect spline
-    delta_vec[i + 1] = planning_output.delta_vec(i);
-    curv_vec[i + 1] =
+    delta_vec_[i + 1] = planning_output.delta_vec(i);
+    curv_vec_[i + 1] =
         curv_factor_ * planning_output.delta_vec(i);
 
-    omega_vec[i + 1] = planning_output.omega_vec(i);
-    d_curv_vec[i + 1] = curv_factor_ * omega_vec[i + 1];
+    omega_vec_[i + 1] = planning_output.omega_vec(i);
+    d_curv_vec_[i + 1] = curv_factor_ * omega_vec_[i + 1];
 
     if (i == 0) {
       s = 0.0;
       t = 0.0;
     } else {
       const double ds =
-          std::hypot(x_vec[i + 1] - x_vec[i], y_vec[i + 1] - y_vec[i]);
+          std::hypot(x_vec_[i + 1] - x_vec_[i], y_vec_[i + 1] - y_vec_[i]);
       s += std::max(ds, 1e-3);
       t += 0.2;
     }
-    s_vec[i + 1] = s;
-    t_vec[i + 1] = t;
+    s_vec_[i + 1] = s;
+    t_vec_[i + 1] = t;
     if (std::fabs(planning_output.theta_vec(i) -
                   planning_input_.ref_theta_vec(i)) *
             57.3 >
@@ -635,19 +650,19 @@ bool LateralMotionPlanner::Update() {
   // append the planning traj anti-direction for decoupling lat & lon replan
   const static double appended_length = config_.path_backward_appended_length;
   motion_planner_output.path_backward_appended_length = appended_length;
-  Eigen::Vector2d unit_vector(x_vec[1] - x_vec[2], y_vec[1] - y_vec[2]);
+  Eigen::Vector2d unit_vector(x_vec_[1] - x_vec_[2], y_vec_[1] - y_vec_[2]);
   unit_vector.normalize();
 
-  s_vec[0] = -appended_length;
-  x_vec[0] = x_vec[1] + unit_vector.x() * appended_length;
-  y_vec[0] = y_vec[1] + unit_vector.y() * appended_length;
-  theta_vec[0] = theta_vec[1];
-  delta_vec[0] = delta_vec[1];
-  omega_vec[0] = omega_vec[1];
-  theta_vec[0] = theta_vec[1];
-  curv_vec[0] = curv_vec[1];
-  d_curv_vec[0] = d_curv_vec[1];
-  t_vec[0] = -0.2;
+  s_vec_[0] = -appended_length;
+  x_vec_[0] = x_vec_[1] + unit_vector.x() * appended_length;
+  y_vec_[0] = y_vec_[1] + unit_vector.y() * appended_length;
+  theta_vec_[0] = theta_vec_[1];
+  delta_vec_[0] = delta_vec_[1];
+  omega_vec_[0] = omega_vec_[1];
+  theta_vec_[0] = theta_vec_[1];
+  curv_vec_[0] = curv_vec_[1];
+  d_curv_vec_[0] = d_curv_vec_[1];
+  t_vec_[0] = -0.2;
 
   // const double concerned_index = 20;  // planning_input_.motion_plan_concerned_index();
   // double concerned_dis_to_ref = std::hypot(
@@ -708,22 +723,22 @@ bool LateralMotionPlanner::Update() {
 
   // construct lateral kd path
   motion_planner_output.lateral_path_coord =
-      ConstructLateralKDPath(x_vec, y_vec);
+      ConstructLateralKDPath(x_vec_, y_vec_);
 
   // set state spline
-  motion_planner_output.x_s_spline.set_points(s_vec, x_vec);
-  motion_planner_output.y_s_spline.set_points(s_vec, y_vec);
-  motion_planner_output.theta_s_spline.set_points(s_vec, theta_vec);
-  motion_planner_output.delta_s_spline.set_points(s_vec, delta_vec);
-  motion_planner_output.omega_s_spline.set_points(s_vec, omega_vec);
-  motion_planner_output.curv_s_spline.set_points(s_vec, curv_vec);
-  motion_planner_output.d_curv_s_spline.set_points(s_vec, d_curv_vec);
-  motion_planner_output.lateral_x_t_spline.set_points(t_vec, x_vec);
-  motion_planner_output.lateral_y_t_spline.set_points(t_vec, y_vec);
-  motion_planner_output.lateral_theta_t_spline.set_points(t_vec, theta_vec);
-  motion_planner_output.lateral_s_t_spline.set_points(t_vec, s_vec);
-  motion_planner_output.lateral_t_s_spline.set_points(s_vec, t_vec);
-  motion_planner_output.s_lat_vec = s_vec;
+  motion_planner_output.x_s_spline.set_points(s_vec_, x_vec_);
+  motion_planner_output.y_s_spline.set_points(s_vec_, y_vec_);
+  motion_planner_output.theta_s_spline.set_points(s_vec_, theta_vec_);
+  motion_planner_output.delta_s_spline.set_points(s_vec_, delta_vec_);
+  motion_planner_output.omega_s_spline.set_points(s_vec_, omega_vec_);
+  motion_planner_output.curv_s_spline.set_points(s_vec_, curv_vec_);
+  motion_planner_output.d_curv_s_spline.set_points(s_vec_, d_curv_vec_);
+  motion_planner_output.lateral_x_t_spline.set_points(t_vec_, x_vec_);
+  motion_planner_output.lateral_y_t_spline.set_points(t_vec_, y_vec_);
+  motion_planner_output.lateral_theta_t_spline.set_points(t_vec_, theta_vec_);
+  motion_planner_output.lateral_s_t_spline.set_points(t_vec_, s_vec_);
+  motion_planner_output.lateral_t_s_spline.set_points(s_vec_, t_vec_);
+  motion_planner_output.s_lat_vec = s_vec_;
   motion_planner_output.lat_init_flag = true;
 
   ilqr_solver::ControlVec u_vec;
@@ -733,7 +748,7 @@ bool LateralMotionPlanner::Update() {
   for (size_t i = 0; i < N; ++i) {
     ilqr_solver::Control u;
     u.resize(1);
-    u[0] = omega_vec[i];
+    u[0] = omega_vec_[i];
     u_vec[i] = u;
   }
   motion_planner_output.u_vec = u_vec;
@@ -749,10 +764,10 @@ bool LateralMotionPlanner::Update() {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   for (size_t i = 0; i < N; i++) {
-    traj_points[i].x = x_vec[i + 1];
-    traj_points[i].y = y_vec[i + 1];
-    traj_points[i].heading_angle = theta_vec[i + 1];
-    traj_points[i].curvature = curv_factor_ * delta_vec[i + 1];
+    traj_points[i].x = x_vec_[i + 1];
+    traj_points[i].y = y_vec_[i + 1];
+    traj_points[i].heading_angle = theta_vec_[i + 1];
+    traj_points[i].curvature = curv_factor_ * delta_vec_[i + 1];
 
     traj_points[i].v = general_lateral_decider_output.v_cruise;
     traj_points[i].t = planning_output.time_vec(i);

@@ -31,6 +31,14 @@ class ResultTrajectoryGenerator : public Task {
   }
 
  private:
+  std::vector<double> t_vec_;
+  std::vector<double> s_vec_;
+  std::vector<double> l_vec_;
+  std::vector<double> curvature_vec_;
+  std::vector<double> dkappa_vec_;
+  std::vector<double> ddkappa_vec_;
+  std::vector<double> lat_acc_vec_;
+  std::vector<double> lat_jerk_vec_;
   ResultTrajectoryGeneratorConfig config_;
 };
 

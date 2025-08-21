@@ -69,7 +69,7 @@ void ReferencePath::update_refpath_points(
         continue;
       }
     }
-    coord_path_points.emplace_back(pt);
+    coord_path_points.emplace_back(std::move(pt));
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
   if (coord_path_points.size() < 2) {
