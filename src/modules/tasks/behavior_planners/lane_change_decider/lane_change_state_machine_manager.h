@@ -257,6 +257,7 @@ class LaneChangeStateMachineManager {
   void AddRearAgentMerging();
   void CheckMergingRearAgent(LaneChangeStageInfo* const lc_state_info);
   bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
+  bool IsSuppressLCShortDis() const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;

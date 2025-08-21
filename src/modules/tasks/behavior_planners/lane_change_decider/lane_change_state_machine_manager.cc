@@ -78,24 +78,26 @@ void LaneChangeStateMachineManager::RunStateMachine() {
   }
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
-      if (transition_info_.lane_change_status ==
-          StateMachineLaneChangeStatus::kLaneKeeping) {
-        // clear_lc_stage_info();
-        RequestType lane_change_direction = NO_CHANGE;
-        RequestSource lane_change_type = NO_REQUEST;
-        bool is_lanekeeping_to_propose =
-            CheckIfProposeLaneChange(&lane_change_direction, &lane_change_type);
-        if (is_lanekeeping_to_propose) {
-          transition_info_.lane_change_status =
-              StateMachineLaneChangeStatus::kLaneChangePropose;
-          transition_info_.lane_change_direction = lane_change_direction;
-          transition_info_.lane_change_type = lane_change_type;
-          lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
-        } else {
-          // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
-          // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
-          lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
-        }
+      // 与前车距离过近，则抑制变道
+      if (IsSuppressLCShortDis()) {
+        break;
+      }
+      // clear_lc_stage_info();
+      RequestType lane_change_direction = NO_CHANGE;
+      RequestSource lane_change_type = NO_REQUEST;
+      bool is_lanekeeping_to_propose =
+          CheckIfProposeLaneChange(&lane_change_direction, &lane_change_type);
+
+      if (is_lanekeeping_to_propose) {
+        transition_info_.lane_change_status =
+            StateMachineLaneChangeStatus::kLaneChangePropose;
+        transition_info_.lane_change_direction = lane_change_direction;
+        transition_info_.lane_change_type = lane_change_type;
+        lc_lane_mgr_->assign_lc_lanes(lc_req_mgr_->target_lane_virtual_id());
+      } else {
+        // 在没有变道，过路口时，当前车道的virtual_id可能会发生跳变的现象
+        // 在这重新维护lc_lane的值，可以保证fix lane不会跳变
+        lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
       }
       break;
     }
@@ -4994,4 +4996,70 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
   return true;
 }
 
+bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
+  const double ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+
+  if (ego_v > 1.0) {
+    return false;
+  }
+
+  // 获取自车道前方障碍物车辆
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const int64_t ego_front_node_id = dynamic_world->ego_front_node_id();
+
+  const auto &ego_front_node = dynamic_world->GetNode(ego_front_node_id);
+
+  if (ego_front_node == nullptr) {
+    return false;
+  }
+
+  bool is_suppress =
+      ego_front_node->is_static_type() &&
+      ego_front_node->node_back_edge_to_ego_front_edge_distance() < 10.0;
+
+  if (!is_suppress) {
+    return false;
+  }
+
+  const auto &cur_ref_path = session_->environmental_model()
+                                 .get_reference_path_manager()
+                                 ->get_reference_path_by_current_lane();
+
+  if (cur_ref_path == nullptr) {
+    return true;
+  }
+
+  const auto& ego_boundary = cur_ref_path->get_ego_frenet_boundary();
+
+  const auto& cur_coord = cur_ref_path->get_frenet_coord();
+
+  if (cur_coord == nullptr) {
+    return true;
+  }
+
+  Point2D cart_point{ego_front_node->node_x(), ego_front_node->node_y()};
+  Point2D frenet_point;
+
+  if (!cur_coord->XYToSL(cart_point, frenet_point)) {
+    return true;
+  }
+
+  const double agent_half_width = ego_front_node->node_width() * 0.5;
+
+  const double buffer = 0.5;
+
+  if (lc_req_mgr_->request() == LEFT_CHANGE) {
+    if (ego_boundary.l_start < frenet_point.y + agent_half_width - buffer) {
+      return true;
+    }
+  } else if (lc_req_mgr_->request() == RIGHT_CHANGE) {
+    if (ego_boundary.l_end > frenet_point.y - agent_half_width + buffer) {
+      return true;
+    }
+  }
+
+  return false;
+}
 }  // namespace planning
