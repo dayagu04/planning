@@ -103,26 +103,25 @@ bool SpatioTemporalUnionDp::Update(
   }
 
   if (!InitCostTable(spatio_temporal_union_plan_input, half_lateral_sample_nums, target_s)) {
-    LOG_DEBUG("Initialize cost table failed.");
+    ILOG_DEBUG << "Initialize cost table failed";
     return false;
   }
 
   if (!InitSpeedLimitLookUp(spatio_temporal_union_plan_input)) {
-    LOG_DEBUG("Initialize speed limit lookup table failed.");
+    ILOG_DEBUG << "Initialize speed limit lookup table failed";
     return false;
   }
 
   auto time_start = IflyTime::Now_ms();
   if (!CalculateTotalCost(agent_trajs, target_s, spatio_temporal_union_plan_input)) {
-    LOG_DEBUG("Calculate total cost failed.");
+    ILOG_DEBUG << "Calculate total cost failed";
     return false;
   }
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("SpatioTemporalUnionDp::Update() CalculateTotalCost cost:%f\n", time_end - time_start);
-
+  ILOG_DEBUG << "SpatioTemporalUnionDp::Update() CalculateTotalCost cost:" << time_end - time_start;
 
   if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input)) {
-    LOG_DEBUG("Retrieve best speed profile failed.");
+    ILOG_DEBUG << "Retrieve best speed profile failed";
     FallbackFunction(spatio_temporal_union_plan_input, traj_points, last_enable_using_st_plan);
     return false;
   }
@@ -154,13 +153,13 @@ bool SpatioTemporalUnionDp::InitCostTable(
   sparse_unit_s_ = dp_search_paramms.sparse_unit_s();
   unit_l_ = dp_search_paramms.unit_l();
   if (unit_t_ < kDoubleEpsilon) {
-    LOG_DEBUG("unit_t is smaller than the kDoubleEpsilon.");
+    ILOG_DEBUG << "unit_t is smaller than the kDoubleEpsilon";
     return false;
   }
 
   // Sanity check on s dimension setting
   if (dense_dimension_s_ < 1) {
-    LOG_DEBUG("dense_dimension_s is at least 1.");
+    ILOG_DEBUG << "dense_dimension_s is at least 1.";
     return false;
   }
 
@@ -187,7 +186,7 @@ bool SpatioTemporalUnionDp::InitCostTable(
 
   // Sanity Check
   if (dimension_t_ < 1 || dimension_s_ < 1) {
-    LOG_DEBUG("Dp st cost table size incorrect.");
+    ILOG_DEBUG << "Dp st cost table size incorrect";
     return false;
   }
 
@@ -287,7 +286,7 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   #pragma omp parallel
   {
     #pragma omp single
-    LOG_DEBUG("[OpenMP] Using %d threads", omp_get_num_threads());
+    ILOG_DEBUG << "[OpenMP] Using %d threads:" << omp_get_num_threads();
   }
   #endif
 
@@ -299,8 +298,6 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   double total_parallel_time = 0.0;
   double total_serial_time = 0.0;
   for (int c = 0; c < cost_table_.size(); ++c) {
-    // LOG_DEBUG(
-    //     "CalculateTotalCost c: %d \n, next_lowest_row: %d \n, next_highest_row : %d \n", c, next_lowest_row, next_highest_row);
     int highest_row = 0;
     int lowest_row = cost_table_.back().size() - 1;
     int highest_l = 0;
@@ -320,14 +317,18 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
             // 打印线程分配信息（控制频率）
             if (r % 10 == 0 && k == lowest_l) {
               #pragma omp critical
-              LOG_DEBUG("[OpenMP] c=%d r=%d k=%d -> Thread %d",
-                      c, r, k, omp_get_thread_num());
+              ILOG_DEBUG << "[OpenMP] c=" << c
+                         << " r=" << r
+                         << " k=" << k
+                         << " -> Thread " << omp_get_thread_num();
             }
             #endif
 
             // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
             SLTGraphMessage msg(c, r, k);
-            // LOG_DEBUG("cost_cr c: %d, r: %d, k: %d \n", c, (int)r, (int)k);
+            ILOG_DEBUG << "cost_cr c=" << c
+                       << " r=" << r
+                       << " k=" << k;
             CalculateCostAt(
                 &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
           }
@@ -338,19 +339,22 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
 
             // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
             SLTGraphMessage msg(c, r, k);
-            // LOG_DEBUG("cost_cr c: %d, r: %d, k: %d \n", c, (int)r, (int)k);
+            ILOG_DEBUG << "cost_cr c=" << c
+                       << " r=" << r
+                       << " k=" << k;
+
             auto t1 = IflyTime::Now_us();
             CalculateCostAt(
                 &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
             auto t2 = IflyTime::Now_us();
-            // LOG_DEBUG("one time CalculateCostAt: %.8f\n", t2 - t1);
+            ILOG_DEBUG << "one time CalculateCostAt:" << t2 - t1;
           }
         }
       }
     }
     auto time_end = IflyTime::Now_us();
     total_parallel_time += (time_end - time_start);
-    // LOG_DEBUG("CalculateTotalCost: time dimension cost:%.8f\n", time_end - time_start);
+    ILOG_DEBUG << "CalculateTotalCost: time dimension cost:" << time_end - time_start;
 
     // 保留串行版本用于对比
     #ifdef SERIAL_MODE
@@ -361,7 +365,9 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
 
           // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
           SLTGraphMessage msg(c, r, k);
-          // LOG_DEBUG("cost_cr c: %d, r: %d, k: %d \n", c, (int)r, (int)k);
+          ILOG_DEBUG << "cost_cr c=" << c
+                       << " r=" << r
+                       << " k=" << k;
           CalculateCostAt(
               &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
         }
@@ -406,8 +412,6 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   next_lowest_l = 0;
   // 重新串行计算
   for (int c = 0; c < cost_table_.size(); ++c) {
-    // LOG_DEBUG(
-    //     "CalculateTotalCost c: %d \n, next_lowest_row: %d \n, next_highest_row : %d \n", c, next_lowest_row, next_highest_row);
     int highest_row = 0;
     int lowest_row = cost_table_.back().size() - 1;
 
@@ -421,7 +425,9 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
 
           // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
           SLTGraphMessage msg(c, r, k);
-          // LOG_DEBUG("cost_cr c: %d, r: %d, k: %d \n", c, (int)r, (int)k);
+          ILOG_DEBUG << "cost_cr c=" << c
+                       << " r=" << r
+                       << " k=" << k;
           CalculateCostAt(
               &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
         }
@@ -457,20 +463,21 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
       for (size_t k = 0; k < cost_table_[c][r].size(); ++k) {
         if (std::abs(parallel_result[c][r][k].total_cost() -
                     cost_table_[c][r][k].total_cost()) > 1e-6) {
-          LOG_ERROR("Validation failed at c=%d r=%zu k=%zu", c, r, k);
+          ILOG_ERROR << "Validation failed at c=" << c
+          " r=" << r
+          " k=" << k;
           is_consistent = false;
         }
       }
     }
   }
-  LOG_DEBUG("Result consistency: %s \n", is_consistent ? "PASS" : "FAIL");
+  ILOG_DEBUG << "Result consistency: " << is_consistent ? "PASS" : "FAIL";
   #endif
 
   #if defined(OPENMP_DEBUG) && defined(SERIAL_MODE)
-  LOG_DEBUG("[Performance] Parallel: %.3f ms, Serial: %.3f ms, Speedup: %.2fx",
-           total_parallel_time/1000.0,
-           total_serial_time/1000.0,
-           total_serial_time/total_parallel_time);
+  ILOG_DEBUG << "[Performance] Parallel:" << total_parallel_time/1000.0 << " ms"
+             << ", Serial: " << total_serial_time/1000.0 << " ms"
+             << ", Speedup:  " << total_serial_time/total_parallel_time << "x";
   #endif
 
   return true;
@@ -654,14 +661,14 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       return;
     }
     auto overlap = IflyTime::Now_us();
-    // LOG_DEBUG("c1 CheckOverlapOnDpSltGraph: %.8f\n", overlap - c1);
+    // ILOG_DEBUG << "c1 CheckOverlapOnDpSltGraph:" << overlap - c1;
 
     // 计算相邻两节点之间路径的cost
     double path_cost_c1 =
         CalculatePathCost(cost_init, cost_cr, lateral_cubic_curve_c1, acc, spatio_temporal_union_plan_input);
     cost_cr.SetPathCost(path_cost_c1);
     auto pathcost = IflyTime::Now_us();
-    // LOG_DEBUG("c1 CalculatePathCost: %.8f\n", pathcost - overlap);
+    // ILOG_DEBUG << "c1 CalculatePathCost:" << pathcost - overlap;
 
     // 计算自车与动态障碍物之间的cost
     double dis = kDefaultMaxDisBetweenObs;
@@ -670,7 +677,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         CalculateDynamicObstacleCost(
             cost_init, cost_cr, lateral_cubic_curve_c1, acc, agent_trajs, spatio_temporal_union_plan_input, &dis, &agent_id);
     auto dynamicobstaclecost = IflyTime::Now_us();
-    // LOG_DEBUG("c1 CalculateDynamicObstacleCost: %.8f\n", dynamicobstaclecost - pathcost);
+    // ILOG_DEBUG << "c1 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
     double long_cost_c1 = CalculateEdgeCostForSecondCol(r, k, speed_limit, cruise_speed, ego_init_state);
 
     cost_cr.SetTotalCost(
@@ -678,7 +685,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         cost_init.total_cost() +
         long_cost_c1);
     // auto edgecost = IflyTime::Now_us();
-    // LOG_DEBUG("c1 CalculateEdgeCostForSecondCol: %.8f\n", edgecost - dynamicobstaclecost);
+    // ILOG_DEBUG << "c1 CalculateEdgeCostForSecondCol: " << edgecost - dynamicobstaclecost;
 
     cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost_c1);
     cost_cr.SetMinObsDistance(dis);
@@ -688,8 +695,10 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     cost_cr.SetPrePoint(cost_init);
     cost_cr.SetOptimalSpeed(std::max(v0 + acc * unit_t_, 0.0));
     cost_cr.SetAcc(acc);
-    // LOG_DEBUG("path_cost_c1: %f, dynamic_obstacle_cost_c1: %f, long_cost_c1: %f \n, total_cost: %f \n",
-    //     path_cost_c1, dynamic_obstacle_cost_c1, long_cost_c1, cost_cr.total_cost());
+    // ILOG_DEBUG << "path_cost_c1:" << path_cost_c1
+    //            << ", dynamic_obstacle_cost_c1:" << dynamic_obstacle_cost_c1
+    //            << ", long_cost_c1:" << long_cost_c1
+    //            << ", total_cost:" << cost_cr.total_cost();
     return;
   }
 
@@ -773,7 +782,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         double path_cost_c2 =
             CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, spatio_temporal_union_plan_input);
         auto pathcost = IflyTime::Now_us();
-        // LOG_DEBUG("c2 CalculatePathCost: %f\n", pathcost - overlap_2);
+        // ILOG_DEBUG << "c2 CalculatePathCost:" << pathcost - overlap_2;
 
         // 计算自车与动态障碍物之间的cost
         double distance_c2 = kDefaultMaxDisBetweenObs;
@@ -781,22 +790,28 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         double dynamic_obstacle_cost_c2 =
             CalculateDynamicObstacleCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c2, &agent_id_c2);
         auto dynamicobstaclecost = IflyTime::Now_us();
-        // LOG_DEBUG("c2 CalculateDynamicObstacleCost: %.8f\n", dynamicobstaclecost - pathcost);
+        // ILOG_DEBUG << "c2 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
         curr_speed_limit =
             std::fmin(curr_speed_limit, speed_limit_by_index_[r_pre]);
         curr_speed_limit = std::max(curr_speed_limit, 1e-2);
         double long_cost_c2 = CalculateEdgeCostForThirdCol(
                                 r, k, r_pre, later_j, curr_speed_limit, cruise_speed, ego_init_state);
         auto edgecost = IflyTime::Now_us();
-        // LOG_DEBUG("c2 CalculateEdgeCostForThirdCol: %.8f\n", edgecost - dynamicobstaclecost);
+        // ILOG_DEBUG << "c2 CalculateEdgeCostForThirdCol:" << edgecost - dynamicobstaclecost;
 
         const double cost = path_cost_c2 +
                             dynamic_obstacle_cost_c2 +
                             pre_col[r_pre][later_j].total_cost() + long_cost_c2;
 
-        // LOG_DEBUG("pre_cost: c: %d, r : %d, k: %d \n, total_cost: %f \n", c-1, r_pre, later_j, pre_col[r_pre][later_j].total_cost());
-        // LOG_DEBUG("path_cost_c2: %f, dynamic_obstacle_cost_c2: %f, long_cost_c2: %f \n, total_cost: %f \n",
-        //     path_cost_c2, dynamic_obstacle_cost_c2, long_cost_c2, cost);
+        // ILOG_DEBUG << "pre_cost: c: " << c-1
+        //            << ", r:" << r_pre
+        //            << ", k:" << later_j
+        //            << ", total_cost:" << pre_col[r_pre][later_j].total_cost();
+
+        // ILOG_DEBUG << "path_cost_c2: " << path_cost_c2
+        //            << ", dynamic_obstacle_cost_c2:" << dynamic_obstacle_cost_c2
+        //            << ", long_cost_c2:" << long_cost_c2
+        //            << ", total_cost:" << cost;
         if (cost < cost_cr.total_cost()) {
           cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost_c2);
           cost_cr.SetMinObsDistance(distance_c2);
@@ -810,7 +825,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
               std::max(pre_col[r_pre][later_j].GetOptimalSpeed() +
                                   curr_a * unit_t_, 0.0));
           cost_cr.SetAcc(curr_a);
-          // LOG_DEBUG("c is %d \n", c);
+          // ILOG_DEBUG << "c is" << c;
         }
       }
     }
@@ -878,7 +893,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       double path_cost_c =
           CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve, curr_a, spatio_temporal_union_plan_input);
       auto pathcost = IflyTime::Now_us();
-      // LOG_DEBUG("c3 CalculatePathCost: %.8f\n", pathcost - overlap);
+      // ILOG_DEBUG << "c3 CalculatePathCost:" << pathcost - overlap;
 
       // 计算自车与动态障碍物之间的cost
       double distance_c3 = kDefaultMaxDisBetweenObs;
@@ -889,7 +904,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
             CalculateDynamicObstacleCost(
                 pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
         auto dynamicobstaclecost = IflyTime::Now_us();
-        // LOG_DEBUG("c3 CalculateDynamicObstacleCost: %.8f\n", dynamicobstaclecost - pathcost);
+        // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
       }
 
       uint32_t r_prepre = pre_col[r_pre][later_j].pre_point()->index_s();
@@ -914,10 +929,16 @@ void SpatioTemporalUnionDp::CalculateCostAt(
                     pre_col[r_pre][later_j].total_cost() + long_cost;
 
       // auto edgecost = IflyTime::Now_us();
-      // LOG_DEBUG("c3 CalculateEdgeCost: %.8f\n", edgecost - dynamicobstaclecost);
-      // LOG_DEBUG("pre_cost: c: %d, r : %d, k: %d \n, total_cost: %f \n", c-1, r_pre, later_j, pre_col[r_pre][later_j].total_cost());
-      // LOG_DEBUG("path_cost_c: %f, dynamic_obstacle_cost: %f, long_cost: %f \n, total_cost: %f \n",
-      //     path_cost_c, dynamic_obstacle_cost, long_cost, cost);
+      // ILOG_DEBUG << "c3 CalculateEdgeCost:" << edgecost - dynamicobstaclecost;
+      // ILOG_DEBUG << "pre_cost: c:" << c-1
+      //          << ", r:" << r_pre
+      //          << ", k:" << later_j
+      //          << ", total_cost:" << pre_col[r_pre][later_j].total_cost();
+
+      // ILOG_DEBUG << "path_cost_c:" << c-1
+      //            << ", dynamic_obstacle_cost:" << path_cost_c
+      //            << ", long_cost:" << dynamic_obstacle_cost
+      //            << ", total_cost:" << pcost;
 
       if (cost < cost_cr.total_cost()) {
         cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost);
@@ -932,7 +953,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
             std::max(pre_col[r_pre][later_j].GetOptimalSpeed() +
                                 curr_a * unit_t_, 0.0));
         cost_cr.SetAcc(curr_a);
-        // LOG_DEBUG("c is %d \n", c);
+        // ILOG_DEBUG << "c is" << c;
       }
     }
   }
@@ -971,7 +992,7 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   // }
 
   if (best_end_point == nullptr) {
-    LOG_DEBUG("Fail to find the best feasible trajectory: best_end_point = nullptr!");
+    ILOG_DEBUG << "Fail to find the best feasible trajectory: best_end_point = nullptr!";
     return false;
   }
 
@@ -984,12 +1005,10 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::vector<double> l_vec;
 
   while (cur_point != nullptr) {
-    LOG_DEBUG(
-        "[RetrieveSpeedProfile] s: %f, l: %f, t: %f, v: %f \n",
-        cur_point->point().s(),
-        cur_point->point().l(),
-        cur_point->point().t(),
-        cur_point->GetOptimalSpeed());
+    ILOG_DEBUG << "[RetrieveSpeedProfile] s:" << cur_point->point().s()
+               << ", l:" << cur_point->point().l()
+               << ", t:" << cur_point->point().t()
+               << ", v:" << cur_point->GetOptimalSpeed();
 #ifdef X86
     ILOG_INFO << "\n s = " << cur_point->point().s()
               << "  l = " << cur_point->point().l()
@@ -1038,7 +1057,7 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   const double total_s = speed_profile.back().s - speed_profile.front().s;
   if (speed_profile.front().t > kEpsilon ||
       init_delta_s > kEpsilon) {
-    LOG_DEBUG("Fail to retrieve speed profile : init_delta_s > kEpsilon !");
+    ILOG_DEBUG << "Fail to retrieve speed profile : init_delta_s > kEpsilon !";
     return false;
   }
 
@@ -1194,13 +1213,13 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   Point2D current_point;
   Point2D current_frenet_point;
   if (!current_lane_coord_.SLToXY(current, current_point)) {
-    // LOG_DEBUG("CalculateStitchingCost find sl to current lane failed!");
+    // ILOG_DEBUG << "CalculateStitchingCost find sl to current lane failed!";
     return stitching_cost;
   }
 
   if (last_planning_result_coord_) {
     if (!last_planning_result_coord_->XYToSL(current_point, current_frenet_point)) {
-      // LOG_DEBUG("CalculateStitchingCost find xy to last_planning_result_coord failed!");
+      // ILOG_DEBUG << "CalculateStitchingCost find xy to last_planning_result_coord failed!";
       return stitching_cost;
     }
 
@@ -1219,7 +1238,6 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
 
   //     // if (last_planning_result_coord_) {
   //     //   if (!last_planning_result_coord_->XYToSL(current_point, current_last_planning_point)) {
-  //     //     // LOG_DEBUG("CalculateStitchingCost find xy to last planning result failed!");
   //     //     return stitching_cost;
   //     //   }
   //     // } else {
@@ -1452,7 +1470,7 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
     count += kDefaultIndexInterval;
   }
   auto t_end = IflyTime::Now_us();
-  // LOG_DEBUG("CalculateDynamicObstacleCost: %.8f\n", t_end - t_begin);
+  // ILOG_DEBUG << "CalculateDynamicObstacleCost:" << t_end - t_begin;
 
   obstacle_cost *=
       (time_gap * spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().dynamic_obstacle_weight());
@@ -2000,7 +2018,7 @@ void SpatioTemporalUnionDp::FallbackFunction(
 
         Point2D cart_point;
         if (!current_lane_coord_.SLToXY(cur_frenet_point, cart_point)) {
-          LOG_ERROR("FallbackFunction()::ERROR! Frenet Point -> Cart Point Failed!!!");
+          ILOG_ERROR << "FallbackFunction()::ERROR! Frenet Point -> Cart Point Failed!!!";
         }
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;

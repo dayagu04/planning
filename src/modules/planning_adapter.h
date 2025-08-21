@@ -162,14 +162,12 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     map_info_msg_.CopyFrom(map_msg);
     map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_map_info_msg_updated_.store(true);
-    std::cout << "feed static map_info_msg_ end" << std::endl;
   }
 
   void Feed_IflytekEhrSdmapInfo(
       const SdMapSwtx::SdMap& sd_map_info_msg) override {
     std::lock_guard<std::mutex> lock(sd_map_infomsg_mutex_);
     sd_map_info_msg_.CopyFrom(sd_map_info_msg);
-    std::cout << "feed sd_map_info_msg_ end" << std::endl;
     sd_map_info_msg_recv_time_ = IflyTime::Now_ms();
     is_sd_map_info_msg_updated_.store(true);
   }

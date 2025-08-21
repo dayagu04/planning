@@ -65,7 +65,7 @@ LateralObstacleDecider::LateralObstacleDecider(
 bool LateralObstacleDecider::Execute() {
   if (!PreCheck()) {
     output_.clear();
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
   auto &plan_history_traj = session_->mutable_planning_context()
@@ -306,7 +306,7 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
     FrenetObstacle &frenet_obstacle, double lane_width, bool rightest_lane,
     double farthest_distance, bool can_left_borrow, bool can_right_borrow) {
-  LOG_DEBUG("----is_potential_avoiding_car-----\n");
+  ILOG_DEBUG << "----is_potential_avoiding_car-----";
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
@@ -1000,7 +1000,7 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
       last_traj_points[i].l = frenet_pt.y;
       plan_history_traj_tmp.emplace_back(last_traj_points[i]);
     } else {
-      LOG_DEBUG("plan_history_traj frenet error");
+      ILOG_DEBUG << "plan_history_traj frenet error";
     }
   }
   if (plan_history_traj_tmp.empty()) {

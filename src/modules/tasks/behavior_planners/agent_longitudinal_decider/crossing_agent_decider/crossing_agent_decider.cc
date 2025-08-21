@@ -42,12 +42,12 @@ bool CrossingAgentDecider::Reset() {
 }
 
 bool CrossingAgentDecider::Execute() {
-  LOG_DEBUG("=======CrossingAgentDecider======= \n");
+  ILOG_INFO << "=======CrossingAgentDecider=======";
   virtual_agents_vru_ptr_.clear();
   virtual_agents_vehicle_ptr_.clear();
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -228,7 +228,7 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
     }
   }
 
-  if (!is_vru_entering_danger_zone || (is_vru_entering_danger_zone && 
+  if (!is_vru_entering_danger_zone || (is_vru_entering_danger_zone &&
       v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_current_s + kEgoPassVRUSafeLength &&
       v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength)) {
     return false;

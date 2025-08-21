@@ -18,11 +18,11 @@ EgoMotionPreplanner::EgoMotionPreplanner(
 
 bool EgoMotionPreplanner::Execute() {
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed \n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
   if (EgoMotionPreProcess() != ErrorType::kSuccess) {
-    LOG_ERROR("EgoMotionPreProcess failed!!! \n");
+    ILOG_ERROR << "EgoMotionPreProcess failed!!!";
     return false;
   }
 
@@ -94,7 +94,7 @@ ErrorType EgoMotionPreplanner::EgoMotionPreProcess() {
   // const double start_time_ref_sim = IflyTime::Now_ms();
   if (lat_lon_vehicle_motion_simulator_.Simulate(
           config_.trajectory_time_length) != ErrorType::kSuccess) {
-    LOG_ERROR("LatLonVehicleMotionSimulator::Simulate failed \n");
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate failed";
     return ErrorType::kWrongStatus;
   };
   // const double end_time_ref_sim = IflyTime::Now_ms();
@@ -108,7 +108,7 @@ ErrorType EgoMotionPreplanner::EgoMotionPreProcess() {
                     ref_simulation_result->ld_actual_length_vec, 3)
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("sim_ref_time_cost", end_time - start_time);
-  LOG_DEBUG("sim_ref_time_cost:%f\n", end_time - start_time);
+  ILOG_DEBUG << "sim_ref_time_cost:" << end_time - start_time;
   return ErrorType::kSuccess;
 }
 

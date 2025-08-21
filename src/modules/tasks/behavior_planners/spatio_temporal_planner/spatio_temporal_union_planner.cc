@@ -64,9 +64,9 @@ SpatioTemporalPlanner::SpatioTemporalPlanner(
 };
 
 bool SpatioTemporalPlanner::Execute() {
-  LOG_DEBUG("=======SpatioTemporalPlanner======= \n");
+  ILOG_INFO << "=======SpatioTemporalPlanner=======";
   if (!PreCheck()) {
-    LOG_DEBUG("SpatioTemporalPlanner::PreCheck failed\n");
+    ILOG_DEBUG << "SpatioTemporalPlanner::PreCheck failed";
     return false;
   }
 
@@ -88,25 +88,23 @@ bool SpatioTemporalPlanner::Execute() {
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
   if (!ego_in_intersection_state_) {
-    LOG_DEBUG("SpatioTemporalPlanner::ego not in intersection! \n");
+    ILOG_DEBUG << "SpatioTemporalPlanner::ego not in intersection!";
     last_enable_using_st_plan_ = false;
     return true;
   }
 
   // if (intersection_state != planning::common::IN_INTERSECTION) {
-  //   LOG_DEBUG("SpatioTemporalPlanner::ego not in intersection! \n");
   //   return true;
   // }
 
   if (lc_state != kLaneKeeping) {
-    LOG_DEBUG("SpatioTemporalPlanner::ego not in kLaneKeeping! \n");
+    ILOG_DEBUG << "SpatioTemporalPlanner::ego not in kLaneKeeping!";
     last_enable_using_st_plan_ = false;
     return true;
   }
 
   if (!config_.enable_use_spatio_temporal_planning) {
-    LOG_DEBUG(
-        "SpatioTemporalPlanner::can not use spatio temporal union planning! \n");
+    ILOG_DEBUG << "SpatioTemporalPlanner::can not use spatio temporal union planning!";
     last_enable_using_st_plan_ = false;
     return true;
   }
@@ -174,7 +172,7 @@ void SpatioTemporalPlanner::LogDebugInfo(
       ego_state_mgr->ego_pose().x, ego_state_mgr->ego_pose().y);
   Point2D ego_frenet_point;
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_ERROR("SpatioTemporalPlanner::LogDebugInfo: Cart Point -> Frenet Point Failed!!!");
+    ILOG_ERROR << "SpatioTemporalPlanner::LogDebugInfo: Cart Point -> Frenet Point Failed!!";
   }
 
   auto origin_refline_points =

@@ -20,7 +20,7 @@ StopDestinationDecider::StopDestinationDecider(
 
 bool StopDestinationDecider::Execute() {
   if (!PreCheck()) {
-    LOG_ERROR("PreCheck failed\n");
+    ILOG_ERROR << "PreCheck failed";
     return false;
   }
   const auto function_mode =

@@ -30,10 +30,10 @@ ResultTrajectoryGenerator::ResultTrajectoryGenerator(
 void ResultTrajectoryGenerator::Init() {}
 
 bool ResultTrajectoryGenerator::Execute() {
-  LOG_DEBUG("=======ResultTrajectoryGenerator======= \n");
+  ILOG_DEBUG << "=======ResultTrajectoryGenerator=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -97,15 +97,17 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
       Point2D frenet_pt{traj_points[i].s, traj_points[i].l};
       Point2D cart_pt;
       if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
-        LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
+        ILOG_ERROR << "ResultTrajectoryGenerator::execute, transform failed";
         return false;
       }
 
       traj_points[i].x = cart_pt.x;
       traj_points[i].y = cart_pt.y;
 
-      LOG_DEBUG("result traj_point s=%f, l=%f, x=%f, y=%f \n", traj_points[i].s,
-                traj_points[i].l, traj_points[i].x, traj_points[i].y);
+      ILOG_DEBUG << "result traj_point s=" << traj_points[i].s
+                 << ", l=" << traj_points[i].l
+                 << ", x=" << traj_points[i].x
+                 << ", y=" << traj_points[i].y;
     }
     t_vec[i] = traj_points[i].t;
     s_vec[i] = traj_points[i].s;
@@ -204,7 +206,6 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   //   Point2D frenet_pt{traj_pt.s, traj_pt.l};
   //   Point2D cart_pt;
   //   if (!frenet_coord->SLToXY(frenet_pt, cart_pt)) {
-  //     LOG_ERROR("ResultTrajectoryGenerator::execute, transform failed \n");
   //     return false;
   //   }
 

@@ -19,7 +19,7 @@ void FrenetEgoState::update(
     s_ = frenet_point.x;
     l_ = frenet_point.y;
   } else {
-    LOG_DEBUG("kd_path coordinate conversion failed");
+    ILOG_DEBUG << "kd_path coordinate conversion failed";
   }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -33,7 +33,7 @@ void FrenetEgoState::update(
   } else {
     head_s_ = s_ + front_edge_to_rear_axle;
     head_l_ = l_;
-    LOG_DEBUG("kd_path coordinate conversion failed");
+    ILOG_DEBUG << "kd_path coordinate conversion failed";
   }
   heading_angle_ = planning_math::NormalizeAngle(
       ego_state.heading_angle() - frenet_coord->GetPathCurveHeading(s_));
@@ -103,16 +103,21 @@ void FrenetEgoState::update(
   cstate.curvature = planning_init_point_.curvature;
   auto ok = frenet_coord->CartStateToFrenetState(
       cstate, planning_init_point_.frenet_state);
-  LOG_DEBUG(
-      "planning_init_point: rel_t: %f, x: %f, y: %f, yaw: %f, v: %f, a: %f, s: %f, l: %f, dr/ds: %f, dds/drdr: %f | \
-           ego_pose: x: %f, y: %F, s: %f, l: %f\n",
-      planning_init_point_.relative_time, cstate.x, cstate.y, cstate.yaw,
-      planning_init_point_.v, planning_init_point_.a,
-      planning_init_point_.frenet_state.s, planning_init_point_.frenet_state.r,
-      planning_init_point_.frenet_state.dr_ds,
-      planning_init_point_.frenet_state.ddr_dsds, ego_state.ego_carte().x,
-      ego_state.ego_carte().y, s_, l_);
-  LOG_DEBUG("planning_init_point_valid: %d\n", ok);
+  ILOG_DEBUG << "planning_init_point: rel_t:" << planning_init_point_.relative_time
+            << "x:" << cstate.x
+            << "y:" << cstate.y
+            << "yaw:" << cstate.yaw
+            << "v:" << planning_init_point_.v
+            << "a:" << planning_init_point_.a
+            << "s:" << planning_init_point_.frenet_state.s
+            << "r:" << planning_init_point_.frenet_state.r
+            << "dr_ds:" << planning_init_point_.frenet_state.dr_ds
+            << "ddr_dsds:" << planning_init_point_.frenet_state.ddr_dsds
+            << "ego_pose: x:" << ego_state.ego_carte().x
+            << "ego_pose: y:" << ego_state.ego_carte().y
+            << "s:" << s_
+            << "l:" << l_;
+  ILOG_DEBUG << "planning_init_point_valid:" << ok;
   planning_init_point_valid_ = ok;
 
   planning_math::Vec2d center(

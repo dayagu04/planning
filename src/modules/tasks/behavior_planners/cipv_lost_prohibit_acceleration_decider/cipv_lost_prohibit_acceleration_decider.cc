@@ -52,7 +52,7 @@ void CipvLostProhibitAccelerationDecider::Reset() {
 }
 
 bool CipvLostProhibitAccelerationDecider::Execute() {
-  LOG_DEBUG("=======CipvLostProhibitAccelerationDecider======= \n");
+  ILOG_INFO << "=======CipvLostProhibitAccelerationDecider=======";
   const auto &environmental_model = session_->environmental_model();
   const auto &ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto &v_ego = ego_state_mgr->ego_v();

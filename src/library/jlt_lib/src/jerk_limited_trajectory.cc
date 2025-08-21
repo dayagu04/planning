@@ -69,7 +69,7 @@ bool JerkLimitedTrajectory::Update(const PointState &init_point_state,
        state_limit_.a_min < 0.0 && state_limit_.a_max > 0.0 &&
        state_limit_.j_min < 0.0 && state_limit_.j_max > 0.0);
   if (!is_input_limit_valid) {
-    LOG_ERROR("invalid jlt input\n");
+    ILOG_ERROR << "invalid jlt input";
     return false;
   }
   PointState relative_init_state = init_point_state_;

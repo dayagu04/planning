@@ -15,7 +15,6 @@
 #include "history_obstacle_manager.h"
 #include "ifly_time.h"
 #include "local_view.h"
-#include "log.h"
 #include "parking_slot_manager.h"
 // #include "prediction_c.h"
 #include "prediction_c.h"
@@ -72,7 +71,7 @@ class EnvironmentalModel {
   bool Update();  // update infos each frame
 
   void UpdateVehicleDbwStatus(bool flag) {
-    LOG_DEBUG("feed_vehicle_dbw_status : %d \n", flag);
+    ILOG_INFO << "feed_vehicle_dbw_status :" << flag;
     vehicle_dbw_status_ = flag;
   }
 

@@ -40,7 +40,6 @@ static void init_planning() {
   std::cout << "log_level!!!" << engine_config.log_conf.log_level << std::endl;
   bst::Log::getInstance().setConfig("Planning_Log", log_file.c_str(),
                                     log_level);
-  LOG_DEBUG("The planning component init!!! \n");
 }
 
 TEST(PlanningScheduler, RunOnce) {

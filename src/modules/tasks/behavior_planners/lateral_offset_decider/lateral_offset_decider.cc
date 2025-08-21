@@ -19,7 +19,7 @@ LateralOffsetDecider::LateralOffsetDecider(
 
 bool LateralOffsetDecider::Execute() {
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 

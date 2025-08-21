@@ -3,7 +3,6 @@
 #include "config/basic_type.h"
 #include "environmental_model.h"
 #include "lane_reference_path.h"
-#include "log.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
 
@@ -25,7 +24,7 @@ std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
     double time_start = IflyTime::Now_ms();
     reference_path->update(session_);
     double time_end = IflyTime::Now_ms();
-    LOG_DEBUG("reference_path->update:%f\n", time_end - time_start);
+    ILOG_DEBUG << "reference_path->update:" << time_end - time_start;
     if (reference_path->valid()) {
       reference_paths_[key] = reference_path;
     }
@@ -56,36 +55,33 @@ bool ReferencePathManager::update() {
   assert(current_lane != nullptr);
   auto lane_virtual_id = current_lane->get_virtual_id();
   if (!get_reference_path_by_lane(lane_virtual_id, true)) {
-    LOG_DEBUG("--------- for current_lane: update %d\n", lane_virtual_id);
+    ILOG_INFO << "--------- for current_lane: update" << lane_virtual_id;
     return false;
   }
   double time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ReferencePathManager update cost 1.1: %f\n",
-            time_end - time_start);
+  ILOG_DEBUG << "ReferencePathManager update cost 1.1:" << time_end - time_start;
   // if fix_lane is empty, set current_lane to fix_lane
   if (fix_lane == nullptr) {
-    LOG_NOTICE("fix lane is empty\n");
+    ILOG_WARN << "fix lane is empty";
     virtual_lane_manager->update_last_fix_lane_id(lane_virtual_id);
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ReferencePathManager update cost 1.2: %f\n",
-            time_end - time_start);
-  LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
+  ILOG_DEBUG << "ReferencePathManager update cost 1.2:" << time_end - time_start;
+  ILOG_DEBUG << "--------- for lane_virtual_id: update" << lane_virtual_id;
   if (left_lane != nullptr) {
     lane_virtual_id = left_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
-    LOG_DEBUG("--------- for left_lane: update %d\n", lane_virtual_id);
+    ILOG_DEBUG << "--------- for left_lane: update" << lane_virtual_id;
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ReferencePathManager update cost 1.3: %f\n",
-            time_end - time_start);
+  ILOG_DEBUG << "ReferencePathManager update cost 1.3:" << time_end - time_start;
   if (right_lane != nullptr) {
     lane_virtual_id = right_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
-    LOG_DEBUG("--------- for right_lane: update %d\n", lane_virtual_id);
+    ILOG_DEBUG << "--------- for right_lane: update" << lane_virtual_id;
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ReferencePathManager update cost 1: %f\n", time_end - time_start);
+  ILOG_DEBUG << "ReferencePathManager update cost 1.4:" << time_end - time_start;
   time_start = IflyTime::Now_ms();
   // step2 check reference_paths_'s history, and update data
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {
@@ -101,16 +97,16 @@ bool ReferencePathManager::update() {
         continue;
       }
       it->second->update(session_);
-      LOG_DEBUG("--------- for lane_virtual_id: update %d\n", lane_virtual_id);
+      ILOG_DEBUG << "--------- for lane_virtual_id: update " << lane_virtual_id;
       ++it;
     } else {
-      LOG_DEBUG("--------- for lane_virtual_id: delete %d\n", lane_virtual_id);
+      ILOG_DEBUG << "--------- for lane_virtual_id: delete " << lane_virtual_id;
       it = reference_paths_.erase(it);
     }
   }
 
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ReferencePathManager update cost 2: %f\n", time_end - time_start);
+  ILOG_DEBUG << "ReferencePathManager update cost 2:" << time_end - time_start;
 
   return true;
 }

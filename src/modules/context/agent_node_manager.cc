@@ -13,7 +13,6 @@
 #include "config/basic_type.h"
 #include "define/geometry.h"
 #include "environmental_model.h"
-#include "log.h"
 #include "obstacle.h"
 #include "reference_path.h"
 #include "utils/frenet_coordinate_system.h"
@@ -242,7 +241,7 @@ bool AgentNodeManager::InferObjTrajByLane(
     }
     cart_spline_line_info.set_points(section_x_values, section_y_values);
   } else {
-    std::cout << "MonotonicStatus bug, id is" << obj.id() << std::endl;
+    ILOG_ERROR << "MonotonicStatus bug, id is" << obj.id();
     return false;
   }
 
@@ -420,7 +419,7 @@ bool AgentNodeManager::InferConstSpeedObstacleTraj(
     const std::vector<double> &s_vec, const int obj_in_which_lane,
     ObstaclePredicatedInfo &obj_predicted_points) {
   if (x_values.size() < 3) {
-    std::cout << "lane x vec num is little, id is" << obj.id() << std::endl;
+    ILOG_ERROR << "lane x vec num is little, id is" << obj.id();
     return false;  // NOTE: core dump时 注意检查
   }
   // spline
@@ -437,7 +436,6 @@ bool AgentNodeManager::InferConstSpeedObstacleTraj(
   Point2D obj_frenet_position{
       300, obj_in_which_lane == 0 ? 0. : (target_state_ == 1 ? 3. : -3.)};
   if (!frenet_coord_->XYToSL(obj_cart_position, obj_frenet_position)) {
-    // LOG_ERROR("Agent Node, cart 2 frenet failed first position");
   }
 
   for (auto i = 0; i < prediction_traj_points_size_;
@@ -801,11 +799,9 @@ bool AgentNodeManager::InferAllObjNormalInfoByKDPath() {
 // pybind debug
 bool AgentNodeManager::Update() {
   // if (!HandleAllObjPredInfo()) {
-  //   LOG_ERROR("Gap Selector assign obj pred faild!");
   // }
 
   // if (!HandleAllObjNormalInfo()) {
-  //   LOG_ERROR("Gap Selector obj normal info faild!");
   // }
 
   InferAllObjNormalInfoByKDPath();
@@ -831,7 +827,7 @@ void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
               refine_update_pos)) {
         refine_update_pos.x = node_iter->second.cur_s;
         refine_update_pos.y = node_iter->second.cur_l;
-        LOG_ERROR("Refine obj state cart -> frenet false");
+        ILOG_ERROR << "Refine obj state cart -> frenet false";
       }
       obj_infos.cur_s = refine_update_pos.x;
       obj_infos.cur_l = refine_update_pos.y;

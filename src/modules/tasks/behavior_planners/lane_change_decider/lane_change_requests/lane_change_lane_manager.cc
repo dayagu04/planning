@@ -10,7 +10,7 @@ LaneChangeLaneManager::LaneChangeLaneManager(
   session_ = session;
   virtual_lane_mgr_ = virtual_lane_mgr;
   if (virtual_lane_mgr == nullptr) {
-    LOG_ERROR("[LaneChangeLaneManager::constructor] empty pointer");
+    ILOG_ERROR << "[LaneChangeLaneManager::constructor] empty pointer";
   } else {
     fix_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     origin_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();

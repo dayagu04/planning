@@ -20,7 +20,7 @@ StartStopDecider::StartStopDecider(
 
 bool StartStopDecider::Execute() {
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
   Reset();

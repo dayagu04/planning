@@ -27,7 +27,6 @@
 #include "ifly_localization_c.h"
 #include "ifly_time.h"
 #include "lateral_obstacle.h"
-#include "log.h"
 #include "math/linear_interpolation.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
@@ -48,7 +47,7 @@ namespace planning {
 namespace planner {
 
 EnvironmentalModelManager::EnvironmentalModelManager() {
-  LOG_DEBUG("EnvironmentalModelManager created\n");
+  ILOG_DEBUG << "EnvironmentalModelManager created";
 }
 
 void EnvironmentalModelManager::Init(planning::framework::Session *session) {
@@ -61,7 +60,7 @@ EgoPlanningConfigBuilder *EnvironmentalModelManager::load_config_builder(
   auto config_file_dir =
       session_->environmental_model().get_module_config_file_dir();
   auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
-  LOG_DEBUG("%s\n", ego_planning_config_json_file.c_str());
+  ILOG_DEBUG << "ego_planning_config_json_file:" << ego_planning_config_json_file.c_str();
 
   Json ego_planning_config_json;
   std::ifstream fin(ego_planning_config_json_file);
@@ -194,13 +193,13 @@ void EnvironmentalModelManager::SetConfig(
 }
 
 bool EnvironmentalModelManager::Run() {
-  LOG_DEBUG("EnvironmentalModelManager run\n");
+  ILOG_DEBUG << "EnvironmentalModelManager run";
 
   auto current_time = IflyTime::Now_ms();
   auto current_time_s = IflyTime::Now_s();
 
   if (!session_->environmental_model().GetVehicleDbwStatus()) {
-    LOG_DEBUG("DBW_Disable, but EnvironmentalModelManager continue\n");
+    ILOG_DEBUG << "DBW_Disable, but EnvironmentalModelManager continue";
   }
 
   const auto &local_view = session_->environmental_model().get_local_view();
@@ -231,7 +230,7 @@ bool EnvironmentalModelManager::Run() {
                         fusion_localization_valid && planner_valid;
 
   if (session_->is_hpp_scene() && !location_valid) {
-    LOG_ERROR("hpp location invalid\n");
+    ILOG_ERROR << "hpp location invalid";
     return false;
   }
   // location_valid = true; //hack
@@ -305,18 +304,17 @@ bool EnvironmentalModelManager::Run() {
   // Step 2) update ego_state
   auto time_start = IflyTime::Now_ms();
   if (!ego_state_update(current_time, local_view)) {
-    LOG_ERROR("ego_state_update false\n");
+    ILOG_ERROR << "ego_state_update false";
     return false;
   }
   auto time_end = IflyTime::Now_ms();
-  LOG_DEBUG("ego_state_update cost:%f\n", time_end - time_start);
-  JSON_DEBUG_VALUE("ego_state_update_cost", time_end - time_start)
+  ILOG_INFO  << "ego_state_update cost:" << time_end - time_start;
 
   // Step 3) update route info
   time_start = IflyTime::Now_ms();
   route_info_ptr_->Update();
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("update route_info cost:%f\n", time_end - time_start);
+  ILOG_INFO << "update route_info cost:" << time_end - time_start;
   JSON_DEBUG_VALUE("update route_info cost", time_end - time_start)
 
   // Step 4) update virtual_lane
@@ -324,13 +322,13 @@ bool EnvironmentalModelManager::Run() {
   last_feed_time_[FEED_MAP_INFO] = local_view.static_map_info_recv_time;
   if (rads_mode && !virtual_lane_manager_ptr_->update(
                        local_view.function_state_machine_info)) {
-    LOG_DEBUG("virtual_lane_manager update failed for rads\n");
+    ILOG_ERROR << "virtual_lane_manager update failed for rads";
     return false;
   }
 
   if (!rads_mode) {
     if (!virtual_lane_manager_ptr_->update(local_view.road_info)) {
-      LOG_DEBUG("virtual_lane_manager update failed\n");
+      ILOG_ERROR << "virtual_lane_manager update failed";
       return false;
     } else {
       // 后面需要判断是否为地图
@@ -338,13 +336,13 @@ bool EnvironmentalModelManager::Run() {
     }
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("virtual_lane_manager update cost:%f\n", time_end - time_start);
+  ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
 
   // update traffic lights info
   if (!traffic_light_decision_manager_ptr_->Update(
           local_view.perception_tsr_info)) {
-    LOG_ERROR("traffic_light_decision_manager update failed\n");
+    ILOG_ERROR << "traffic_light_decision_manager update failed";
     return false;
   }
 
@@ -354,7 +352,7 @@ bool EnvironmentalModelManager::Run() {
     return false;
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("obstacle_prediction update cost:%f\n", time_end - time_start);
+  ILOG_INFO << "obstacle_prediction update cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
 
   if (session_->is_hpp_scene()) {
@@ -365,37 +363,37 @@ bool EnvironmentalModelManager::Run() {
       parking_slot_manager_ptr_->Update(local_view.static_map_info);
     }
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("parking_slot_manager update cost:%f\n", time_end - time_start);
+    ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
   }
 
   time_start = IflyTime::Now_ms();
   obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("obstacle_manager cost:%f\n", time_end - time_start);
+  ILOG_INFO << "obstacle_manager cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
   time_start = IflyTime::Now_ms();
   agent_manager_ptr_->Update(current_time_s);
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("agent manager cost:%f\n", time_end - time_start);
+  ILOG_INFO << "agent manager cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
 
   // Step 6) update reference path
   time_start = IflyTime::Now_ms();
   if (!reference_path_manager_ptr_->update()) {
-    LOG_ERROR("reference_path_manager update fail\n");
+    ILOG_ERROR << "reference_path_manager update fail";
     return false;
   }
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("reference_path_manager update cost:%f\n", time_end - time_start);
+  ILOG_INFO << "reference_path_manager update cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
 
   if (!session_->is_hpp_scene()) {
     time_start = IflyTime::Now_ms();
     lateral_obstacle_ptr_->update();
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("lateral_obstacle update cost:%f\n", time_end - time_start);
+    ILOG_INFO << "lateral_obstacle update cost:" << time_end - time_start;;
     JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
 
     lane_tracks_mgr_ptr_->update_lane_tracks();
@@ -403,16 +401,12 @@ bool EnvironmentalModelManager::Run() {
     time_start = IflyTime::Now_ms();
     agent_node_mgr_ptr_->init();
     time_end = IflyTime::Now_ms();
-    LOG_DEBUG("agent_node_manager init cost:%f\n", time_end - time_start);
+    ILOG_INFO << "agent_node_manager init cost:" << time_end - time_start;;
     JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
     // std::cout<< "agent_node_mgr time is : " << time_end - time_start
     // <<std::endl;
   } else {
-    time_start = IflyTime::Now_ms();
     history_obstacle_ptr_->Update();
-    time_end = IflyTime::Now_ms();
-    LOG_DEBUG("history_obstacle update cost:%f\n", time_end - time_start);
-    JSON_DEBUG_VALUE("history_obstacle_cost", time_end - time_start)
   }
 
   // DynamicWorld验证
@@ -420,22 +414,22 @@ bool EnvironmentalModelManager::Run() {
   dynamic_world_->ConstructDynamicWorld();
   time_end = IflyTime::Now_ms();
   // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
-  LOG_DEBUG("dynamic world update cost:%f\n", time_end - time_start);
+  ILOG_INFO << "dynamic world update cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
 
   time_start = IflyTime::Now_ms();
   edt_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
-  LOG_DEBUG("edt_manager cost:%f\n", time_end - time_start);
+  ILOG_INFO << "edt_manager cost:" << time_end - time_start;;
   JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
 
   auto end_time = IflyTime::Now_ms();
-  LOG_DEBUG("EnvironmentalModelManager::Run cost time:%f\n",
-            end_time - current_time);
+  ILOG_INFO << "EnvironmentalModelManager::Run cost time" << time_end - time_start;;
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
   // std::string status_msg;
   // if (!InputReady(current_time, status_msg)) {
-  //   LOG_ERROR("InputReady is failed !!!! \n");
+//   //   ILOG_ERROR << "";
+// LOG_ERROR(("InputReady is failed !!!! \n");
   //   // return false;
   // }
 
@@ -833,13 +827,11 @@ void EnvironmentalModelManager::truncate_prediction_info(
                  init_relative_time,
              0.0, -1.0);
     if (std::abs(prediction_relative_time) > 0.3) {
-      LOG_DEBUG(
-          "[prediction delay time] obstacle[%d] absolute start time %lu "
-          "relative time %f start time %f "
-          "init_relative_time %f \n",
-          cur_predicion_obj.id, prediction_result.msg_header.stamp,
-          prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3,
-          prediction_relative_time, init_relative_time);
+      ILOG_DEBUG << "[prediction delay time] obstacle[" << cur_predicion_obj.id
+                 << "] absolute start time " << prediction_result.msg_header.stamp
+                 << " relative time " << prediction_result.msg_header.stamp / 1.e+6 - current_time / 1.e+3
+                 << " start time " << prediction_relative_time
+                 << " init_relative_time " << init_relative_time;
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
     JSON_DEBUG_VALUE("prediction_relative_time", prediction_relative_time);
@@ -1037,8 +1029,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
         trajectory_point.relative_ego_speed =
             std::hypot(cur_predicion_obj.relative_speed_x,
                        cur_predicion_obj.relative_speed_y);
-        LOG_WARNING("The cur_predicion_obj  [%d] 's trajectory is empty! \n",
-                    cur_predicion_obj.id);
+        ILOG_WARN << "The cur_predicion_obj " << cur_predicion_obj.id << "s trajectory is empty!";
       }
       traj_index++;
       trajectory_points.emplace_back(trajectory_point);
@@ -1469,10 +1460,10 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
     if (last_feed_time_[i] > 0.0) {
-      LOG_DEBUG("(%s)topic latency: %s, %fms%s", __FUNCTION__, feed_type_str,
-                current_time - last_feed_time_[i], "\n");
+      ILOG_DEBUG << "(" << __FUNCTION__ << ")" << " topic latency: " << feed_type_str << ", "
+                << current_time - last_feed_time_[i] << "ms";
       if (current_time - last_feed_time_[i] > 200) {
-        LOG_ERROR("(%s)input_delay: %d, %s\n", __FUNCTION__, i, feed_type_str);
+        ILOG_DEBUG << "(" << __FUNCTION__ << ")" << "input_delay:" << i << ", " << feed_type_str;
         error_msg += std::string(feed_type_str) + "; ";
         setFaultcode(39001);
         res = false;
@@ -1495,16 +1486,15 @@ bool EnvironmentalModelManager::InputReady(double current_time,
               current_time - last_feed_time_[i] >=
                   kpredictionCheckTimeDiff * 0.8)
             continue;
-          LOG_ERROR("(%s)input_rate_error: %d, %s \n", __FUNCTION__, i,
-                    feed_type_str);
+          ILOG_ERROR << "(" << __FUNCTION__ <<  ")input_rate_error: " << i << ", " << feed_type_str;
           error_msg += std::string(feed_type_str) + "; ";
           setFaultcode(39000);
           res = false;
         }
       }
     } else {
-      // LOG_ERROR("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str, "\n");
-      LOG_ERROR("lost frame: '%s'\n", feed_type_str);
+// ILOG_ERROR(("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str, "\n");
+      ILOG_ERROR << "lost frame: " << feed_type_str;
       error_msg += std::string(feed_type_str) + "; ";
       setFaultcode(39002);
       res = false;

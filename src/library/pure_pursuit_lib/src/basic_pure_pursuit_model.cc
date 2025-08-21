@@ -6,7 +6,6 @@
 
 #include "config/basic_type.h"
 #include "debug_info_log.h"
-#include "log.h"
 #include "math_lib.h"
 namespace {
 constexpr size_t scope_goal_points_num = 20;
@@ -17,8 +16,7 @@ namespace control {
 ErrorType BasicPurePursuitModel::ProcessReferencePath(
     const std::shared_ptr<ReferencePath>& reference_path) {
   if (reference_path == nullptr) {
-    LOG_ERROR(
-        "BasicPurePursuitModel::ProcessReferencePath: reference path is null");
+    ILOG_ERROR << "BasicPurePursuitModel::ProcessReferencePath: reference path is null";
     return ErrorType::kIllegalInput;
   }
   const auto& ref_points = reference_path->get_points();
@@ -42,7 +40,7 @@ ErrorType BasicPurePursuitModel::ProcessReferencePath(
 
 ErrorType BasicPurePursuitModel::CalculateAlpha() {
   if (!is_input_set_) {
-    LOG_ERROR("pure pursuit model input not set!!! \n");
+    ILOG_ERROR << "pure pursuit model input not set!!!";
     return ErrorType::kWrongStatus;
   }
   Eigen::Vector2d ego_init_pos(mdoel_state_.x, mdoel_state_.y);
@@ -116,11 +114,11 @@ ErrorType BasicPurePursuitModel::CalculateAlpha() {
 
 ErrorType BasicPurePursuitModel::CalculateDesiredDelta() {
   if (!is_model_param_set_) {
-    LOG_ERROR("pure pursuit model param not set!!! \n");
+    ILOG_ERROR << "pure pursuit model param not set!!!";
     return ErrorType::kWrongStatus;
   }
   if (!is_current_state_set_) {
-    LOG_ERROR("pure pursuit model state not set!!! \n");
+    ILOG_ERROR << "pure pursuit model state not set!!!";
     return ErrorType::kWrongStatus;
   }
   CalculateAlpha();

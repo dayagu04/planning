@@ -35,7 +35,7 @@ WeightMaker::WeightMaker(const SpeedPlannerConfig& speed_planning_config,
 }
 
 common::Status WeightMaker::Run(const TargetMaker& target_maker) {
-  LOG_DEBUG("=======LongRefPathDecider: WeightMaker======= \n");
+  ILOG_INFO << "=======LongRefPathDecider: WeightMaker=======";
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& init_point = ego_state_manager->planning_init_point();

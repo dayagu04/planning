@@ -13,7 +13,7 @@ namespace planning_math {
 double slerp(const double a0, const double t0, const double a1, const double t1,
              const double t) {
   if (std::abs(t1 - t0) <= kMathEpsilon) {
-    LOG_DEBUG("input time difference is too small");
+    ILOG_DEBUG << "input time difference is too small";
     return NormalizeAngle(a0);
   }
   const double a0_n = NormalizeAngle(a0);

@@ -37,8 +37,7 @@ void Preprocess::SyncParameters(void) {
   // get 车辆参数
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->car_type, std::string,
                        "car_type");
-  std::cout << "car_type = " << GetContext.mutable_param()->car_type
-            << std::endl;
+  ILOG_DEBUG << "car_type = " << GetContext.mutable_param()->car_type;
   mjson::Json json_vehicle_common_params =
       adas_config.get<mjson::Json>("jac_s811");
   std::string json_car_type = adas_config.get<std::string>("car_type");
@@ -67,8 +66,8 @@ void Preprocess::SyncParameters(void) {
   VEHICLE_COMMON_JSON_READ_VALUE(
       GetContext.mutable_param()->origin_2_rear_bumper, double,
       "origin_2_rear_bumper");
-  std::cout << "GetContext.mutable_param()->wheel_base = "
-            << GetContext.mutable_param()->wheel_base << std::endl;
+  ILOG_DEBUG << "GetContext.mutable_param()->wheel_base = "
+             << GetContext.mutable_param()->wheel_base;
   // get LKAS_Function 参数
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lon_distance_buffer0, double,
                        "lon_distance_buffer0");
@@ -149,7 +148,7 @@ void Preprocess::SyncParameters(void) {
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_tlc_vector,
                        std::vector<double>, "ldp_tlc_vector");
   // SetEgoAroundAreaRange();
-  std::cout << "SyncParameters() is run over!!" << std::endl;
+  ILOG_DEBUG << "SyncParameters() is run over!!";
 }
 
 void Preprocess::UpdateStateInfo(void) {
@@ -1324,8 +1323,8 @@ void Preprocess::ObjInLaneJudge() {
   auto &objs_vector = GetContext.mutable_objs_info()->all_objs_vector;
   objs_vector.clear();
   objs_vector.resize(fusion_objs_num);
-  std::cout << "fusion_objs_num == " << fusion_objs_num << std::endl;
-  std::cout << "objs_vector.size() == " << objs_vector.size() << std::endl;
+  ILOG_DEBUG << "fusion_objs_num == " << fusion_objs_num;
+  ILOG_DEBUG << "objs_vector.size() == " << objs_vector.size();
   // context::FusionObjExtractInfo obj_info{};
   for (int i = 0; i < fusion_objs_num; i++) {
     auto &obj_info = objs_vector[i];
@@ -1853,7 +1852,7 @@ void Preprocess::RunOnce(void) {
   UpdateObjsInfo();
 
   count_++;
-  std::cout << "Preprocess::RunOnce count=" << count_ << std::endl;
+  ILOG_DEBUG << "Preprocess::RunOnce count=" << count_;
 }
 
 }  // namespace preprocess

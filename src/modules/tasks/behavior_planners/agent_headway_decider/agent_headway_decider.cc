@@ -35,7 +35,7 @@ AgentHeadwayDecider::AgentHeadwayDecider(
 void AgentHeadwayDecider::Reset() { agents_headway_map_.clear(); }
 
 bool AgentHeadwayDecider::Execute() {
-  LOG_DEBUG("=======AgentHeadwayDecider======= \n");
+  ILOG_INFO  << "=======AgentHeadwayDecider=======";
   auto res = UpdateAgentsHeadwayInfos();
 
   auto& mutable_output = session_->mutable_planning_context()
@@ -66,20 +66,20 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   if (st_graph_helper == nullptr) {
-    LOG_DEBUG("[AgentHeadwayDecider] st_graph is nullptr");
+    ILOG_DEBUG << "[AgentHeadwayDecider] st_graph is nullptr";
     return false;
   }
   if (dynamic_world == nullptr) {
-    LOG_DEBUG("[AgentHeadwayDecider] dynamic_world is nullptr");
+    ILOG_DEBUG << "[AgentHeadwayDecider] dynamic_world is nullptr";
     return false;
   }
   const auto* agent_manager = dynamic_world->agent_manager();
   if (agent_manager == nullptr) {
-    LOG_DEBUG("[AgentHeadwayDecider] agent_manager is nullptr");
+    ILOG_DEBUG << "[AgentHeadwayDecider] agent_manager is nullptr";
     return false;
   }
   if (ego_state_manager == nullptr) {
-    LOG_DEBUG("[AgentHeadwayDecider] ego_state_manager is nullptr");
+    ILOG_DEBUG << "[AgentHeadwayDecider] ego_state_manager is nullptr";
     return false;
   }
 

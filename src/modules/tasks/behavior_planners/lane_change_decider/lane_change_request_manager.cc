@@ -55,7 +55,7 @@ void LaneChangeRequestManager::FinishRequest() {
 }
 
 bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
-  LOG_DEBUG("LaneChangeRequestManager.Update() \n");
+  ILOG_INFO << "LaneChangeRequestManager.Update()";
   // MDEBUG_JSON_BEGIN_DICT(LaneChangeRequestManager)
   // TBD： 后续考虑json形式进行数据存储
   const auto& route_info_output =
@@ -117,7 +117,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       const auto& refline = curr_reference_path->get_frenet_coord();
       Point2D boundary_merge_frenet_point;
       if (!refline->XYToSL(boundary_merge_point, boundary_merge_frenet_point)) {
-        LOG_DEBUG("LaneChangeRequestManager::fail to get ego position on current lane");
+        ILOG_DEBUG << "LaneChangeRequestManager::fail to get ego position on current lane";
       }
       ego_distance_to_boundary_merge =
           boundary_merge_frenet_point.x - curr_reference_path->get_frenet_ego_state().s();
@@ -125,7 +125,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
 
   int state = lane_change_decider_output.curr_state;
-  
+
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
     int_request_cancel_reason_ = int_request_.request_cancel_reason();
@@ -173,7 +173,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       // lcc功能抑制超车变道
       if (function_info.function_mode() != common::DrivingFunctionInfo::NOA) {
         overtake_request_.Reset();
-        LOG_DEBUG("cann't generate overtake lane change in non-NOA functions");
+        ILOG_INFO << "cann't generate overtake lane change in non-NOA functions";
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
@@ -181,16 +181,14 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
           route_info_output.dis_to_ramp <=
               minimum_distance_nearby_ramp_to_surpress_overtake_lane_change) {
         overtake_request_.Reset();
-        LOG_DEBUG(
-            "cann't generate overtake lane change on ramp or near ramp or near "
-            "merge");
+        ILOG_INFO << "cann't generate overtake lane change on ramp or near ramp or near merge";
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
       if (route_info_output.distance_to_route_end <
           odd_route_distance_threshold) {
         overtake_request_.Reset();
-        LOG_DEBUG("cann't generate overtake lane change nearby odd boundary");
+        ILOG_INFO << "cann't generate overtake lane change nearby odd boundary";
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
@@ -199,9 +197,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       if (ego_state->ego_v() < trigger_overtake_min_ego_speed_threshold ||
           ego_state->ego_v_cruise() <
               minimum_ego_cruise_speed_for_active_lane_change) {
-        LOG_DEBUG(
-            "cann't generate overtake lane change since ego speed is less than "
-            "min speed threshold");
+        ILOG_INFO << "cann't generate overtake lane change since ego speed is less than min speed threshold";
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
@@ -210,7 +206,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
       // trigger overtake lane change when lane keep status.
       if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
-        LOG_DEBUG("cann't generate overtake lane change when not lane keep!");
+        ILOG_INFO << "cann't generate overtake lane change when not lane keep!";
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
@@ -220,15 +216,13 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     }
   }
 
-  LOG_DEBUG(
-      "[LaneChangeRequestManager::update] int_request: %d, map_request: %d, "
-      "overtake_request: %d, emergence_avoid_request: %d, "
-      "cone_change_request: %d, "
-      "int_cancel_reason: %d, turn_signal: %d \n",
-      int_request_.request_type(), map_request_.request_type(),
-      overtake_request_.request_type(), emergence_avoid_request_.request_type(),
-      cone_change_request_.request_type(), int_request_cancel_reason_,
-      gen_turn_signal_);
+  ILOG_INFO << "[LaneChangeRequestManager::update] int_request:" << int_request_.request_type()
+              << "map_request:" << map_request_.request_type()
+              << "overtake_request:" << overtake_request_.request_type()
+              << "emergence_avoid_request:" << emergence_avoid_request_.request_type()
+              << "cone_change_request:" << cone_change_request_.request_type()
+              << "int_cancel_reason:" << int_request_cancel_reason_
+              << "turn_signal:" << gen_turn_signal_;
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
       gen_turn_signal_ != NO_CHANGE &&
@@ -242,9 +236,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
           DisplayStateConfig::DefaultCancelFreezeCnt);
     }
     map_request_.Finish();
-    LOG_DEBUG(
-        "[LaneChangeRequestManager::update] manual cancel finish dd or map "
-        "request! \n");
+    ILOG_DEBUG << "[LaneChangeRequestManager::update] manual cancel finish dd or map request!";
   }
   std::cout << "\n int request type is: " << int_request_.request_type()
             << std::endl;
@@ -327,8 +319,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_source_ = MERGE_REQUEST;
     target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();
   } else {
-    LOG_DEBUG("overtake_request_.request_type(): %d",
-              overtake_request_.request_type());
+    ILOG_DEBUG << "overtake_request_.request_type():" << overtake_request_.request_type();
     request_ = overtake_request_.request_type();
     request_source_ = (request_ != NO_CHANGE) ? OVERTAKE_REQUEST : NO_REQUEST;
     target_lane_virtual_id_ =
@@ -343,46 +334,38 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   if (request_source_ == OVERTAKE_REQUEST && request_ != NO_CHANGE &&
       overtake_request_.isCancelOverTakingLaneChange(state)) {
     overtake_request_.Finish();
-    LOG_DEBUG("Front Vehicle Cutout->isCancelOverTakingLaneChange");
+    ILOG_DEBUG << "Front Vehicle Cutout->isCancelOverTakingLaneChange";
   }
 
   if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
     int target_lane_order_id =
         virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
             ->get_order_id();
-    LOG_DEBUG(
-        "[LCRequestManager::update] final :target_lane_order_id %d, "
-        "target_lane_virtual_id: %d \n",
-        target_lane_order_id, target_lane_virtual_id_);
+    ILOG_DEBUG << "[LCRequestManager::update] final :target_lane_order_id: " << target_lane_order_id
+                << " target_lane_virtual_id:" << target_lane_virtual_id_;
   } else {
     target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-    LOG_DEBUG(
-        "[LCRequestManager::update] Target lane lost !!! final "
-        "target_lane_virtual_id: %d \n",
-        target_lane_virtual_id_);
+    ILOG_DEBUG << "[LCRequestManager::update] Target lane lost !!! final target_lane_virtual_id:" << target_lane_virtual_id_;
   }
 
   GenerateHMIInfo();
 
-  LOG_DEBUG(
-      "[LCRequestManager::update] ===cur_state: %d=== gen_turn_signal_: %d \n",
-      lc_status, gen_turn_signal_);
+  ILOG_DEBUG << "[LCRequestManager::update] ===cur_state: " << lc_status
+                << " === gen_turn_signal_:" << gen_turn_signal_;
   // JSON_DEBUG_VALUE("cur_state", lc_status)
   return true;
 }
 
 void LaneChangeRequestManager::GenerateHMIInfo() {
   if (request_ == NO_CHANGE) {
-    LOG_DEBUG("[LCRequestManager::update] request: None \n");
+    ILOG_DEBUG << "[LCRequestManager::update] request: None";
     // MDEBUG_JSON_ADD_ITEM(request_shape, "========", LaneChangeRequestManager)
   } else if (request_ == LEFT_CHANGE) {
-    LOG_DEBUG(
-        "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<< \n");
-    LOG_DEBUG("[LCRequestManager::update] source: %d \n", request_source_);
+    ILOG_DEBUG << "[LCRequestManager::update] request: Left Change <<<<<<<<<<<<<<<<<";
+    ILOG_DEBUG << "[LCRequestManager::update] source:" << request_source_;
   } else {
-    LOG_DEBUG(
-        "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>> \n");
-    LOG_DEBUG("[LCRequestManager::update] source: %d \n", request_source_);
+    ILOG_DEBUG << "[LCRequestManager::update] request: Right Change >>>>>>>>>>>>>>>>";
+    ILOG_DEBUG << "[LCRequestManager::update] source:" << request_source_;
   }
 
   // auto ad_info = &(session_->mutable_planning_context()

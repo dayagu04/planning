@@ -48,12 +48,11 @@ void LonMotionSimulatorIntelligentDriverModel::Step_Forward(const double dt) {
 
 ErrorType LonMotionSimulatorIntelligentDriverModel::Simulate(const double t) {
   if (!already_set_state_) {
-    LOG_ERROR("idm simulates failed, init state not set");
+    ILOG_ERROR << "idm simulates failed, init state not set";
     return ErrorType::kWrongStatus;
   }
   if (t < dt_resolution_) {
-    LOG_ERROR("idm simulates failed, t %f is less than kStepForwarddt %f \n", t,
-              dt_resolution_);
+    ILOG_ERROR << "dm simulates failed, t " << t << "is less than kStepForwarddt" << dt_resolution_;
     return ErrorType::kIllegalInput;
   }
   const size_t step_nums = std::round(t / dt_resolution_);
@@ -98,11 +97,10 @@ ErrorType LonMotionSimulatorIntelligentDriverModel::Simulate(
   set_model_state(init_state);
   const auto status = Simulate(t);
   if (status == ErrorType::kIllegalInput) {
-    LOG_ERROR("idm simulates failed, t %f is less than kStepForwarddt %f \n", t,
-              dt_resolution_);
+    ILOG_ERROR << "idm simulates failed, t " << t << "is less than kStepForwarddt" << dt_resolution_;
     return ErrorType::kIllegalInput;
   } else if (status == ErrorType::kWrongStatus) {
-    LOG_ERROR("idm simulates failed, init state not set");
+    ILOG_ERROR << "idm simulates failed, init state not set";
     return ErrorType::kWrongStatus;
   }
   return ErrorType::kSuccess;

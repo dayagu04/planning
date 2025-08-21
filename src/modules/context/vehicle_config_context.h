@@ -8,7 +8,7 @@
 #include <unordered_map>
 
 #include "config/vehicle_param.h"
-#include "log.h"
+#include "log_glog.h"
 #include "macro.h"
 #include "utils.h"
 
@@ -36,10 +36,9 @@ class VehicleConfigurationContext {
   void load_vehicle_param() {
     std::string vehicle_param_path = get_vehicle_param_dir() + "/vehicle.yaml";
 
-    LOG_DEBUG("load_vehicle_param: vehicle_param_path: %s",
-              vehicle_param_path.c_str());
+    ILOG_DEBUG << "load_vehicle_param: vehicle_param_path:" << vehicle_param_path.c_str();
     if (access(vehicle_param_path.c_str(), F_OK) == -1) {
-      LOG_DEBUG("ConfigContext: vehicle.yaml not exist!");
+      ILOG_ERROR << "ConfigContext: vehicle.yaml not exist!";
       return;
     }
   }

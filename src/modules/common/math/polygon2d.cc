@@ -9,6 +9,7 @@
 
 #include "common.h"
 #include "math/math_utils.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace planning_math {
@@ -206,7 +207,7 @@ void Polygon2d::BuildFromPoints() {
   area_ /= 2.0;
   // assert(area_ >= 0.0);
   if (std::isnan(area_)) {
-    LOG_ERROR("polygon area_ is nan !");
+    ILOG_ERROR << "polygon area_ is nan";
   }
 
   // Construct line_segments.
@@ -345,12 +346,12 @@ bool Polygon2d::ComputeOverlap(const Polygon2d &other_polygon,
   // debug info to be discarded
   for (auto point : other_polygon.points()) {
     if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("polygon overlap func: other point is nan");
+      ILOG_ERROR << "polygon overlap func: other point is nan";
     }
   }
   for (auto point : points_) {
     if (std::isnan(point.x()) || std::isnan(point.y())) {
-      LOG_ERROR("polygon overlap func: ego point is nan");
+      ILOG_ERROR << "polygon overlap func: ego point is nan";
     }
   }
   std::vector<Vec2d> points = other_polygon.points();

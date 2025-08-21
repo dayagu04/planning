@@ -410,7 +410,7 @@ void ActRequest::Reset(int direction) {
     neg_cnt_r_ = 0;
     right_faster_ = false;
   } else {
-    LOG_ERROR("[ActRequest::reset] Illegal direction \n");
+    ILOG_ERROR << "[ActRequest::reset] Illegal direction";
   }
   act_request_source_ = "none";
 }

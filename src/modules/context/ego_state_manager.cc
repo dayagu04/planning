@@ -13,7 +13,6 @@
 #include "environmental_model.h"
 #include "func_state_machine_c.h"
 #include "ifly_time.h"
-#include "log.h"
 #include "math_lib.h"
 #include "planning_context.h"
 #include "refline.h"
@@ -278,7 +277,7 @@ bool EgoStateManager::update(
   planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param.length,
                                vehicle_param.width);
   polygon_ = planning_math::Polygon2d(ego_box);
-  LOG_DEBUG("ego center's x: [%f], y: [%f] \n", center.x(), center.y());
+  ILOG_DEBUG << "ego center's x: [" << center.x() << "], y: [" << center.y() << "]";
 
   update_transform();
 

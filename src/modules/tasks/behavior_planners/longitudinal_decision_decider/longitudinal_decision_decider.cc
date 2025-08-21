@@ -84,10 +84,10 @@ void LongitudinalDecisionDecider::Reset() {
 }
 
 bool LongitudinalDecisionDecider::Execute() {
-  LOG_DEBUG("=======LongitudinalDecisionDecider======= \n");
+  ILOG_DEBUG << "=======LongitudinalDecisionDecider=======";
   const auto start_timestamp = IflyTime::Now_ms();
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -101,7 +101,7 @@ bool LongitudinalDecisionDecider::Execute() {
     UpdateInvadeNeighborResultsForEgoMotionSimPath();
     UpdateInvadeNeighborResults();
   } else {
-    LOG_DEBUG("mute invade neighbor decision\n");
+    ILOG_DEBUG << "mute invade neighbor decision";
   }
 
   UpdateLaneChangeNeighborResults();
@@ -115,8 +115,7 @@ bool LongitudinalDecisionDecider::Execute() {
 
   MakeDebugMessage();
   const auto end_timestamp = IflyTime::Now_ms();
-  LOG_DEBUG("LongitudinalDecisionDecider time cost: [%f]ms \n",
-            end_timestamp - start_timestamp);
+  ILOG_DEBUG << "LongitudinalDecisionDecider time cost:" << end_timestamp - start_timestamp;
 
   return true;
 }
@@ -246,11 +245,11 @@ double LongitudinalDecisionDecider::CalculateAgentsAverageSpeedAroundEgo()
   const auto &agent_manager = dynamic_world->agent_manager();
 
   if (dynamic_world == nullptr || virtual_lane_manager == nullptr) {
-    LOG_ERROR("dynamic_world || virtual_lane_manager is nullptr");
+    ILOG_ERROR << "dynamic_world || virtual_lane_manager is nullptr";
     return 0.0;
   }
   if (agent_manager == nullptr) {
-    LOG_ERROR("agent_manager is nullptr");
+    ILOG_ERROR << "agent_manager is nullptr";
     return 0.0;
   }
 
@@ -388,17 +387,14 @@ LongitudinalDecisionDecider::GenerateMaxDecelerationCurve(
 
 void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   has_lon_decision_to_invade_agents_ = false;
-  LOG_DEBUG(
-      "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
+  ILOG_DEBUG << "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===";
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   if (lane_change_decider_output.curr_state !=
       StateMachineLaneChangeStatus::kLaneKeeping) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "Not in lane keeping, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: Not in lane keeping, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -408,9 +404,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   }
 
   if (lane_borrow_output.is_in_lane_borrow_status) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "In lane borrow status, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:In lane borrow status, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -441,9 +435,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   const auto &planned_path =
       planning_context.motion_planner_output().lateral_path_coord;
   if (!ego_cur_lane) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no current lane, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: no current lane, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -452,9 +444,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
     return;
   }
   if (!agent_manager) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no agent manager, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: no agent manager, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -467,9 +457,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
   if (lat_obstacle_decision.empty()) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "lateral obstacle decision empty, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:lateral obstacle decision empty, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -481,9 +469,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   planning::common::IntersectionState intersection_state =
       virtual_lane_manager->GetIntersectionState();
   if (intersection_state == planning::common::IN_INTERSECTION) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "in intersection, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:in intersection, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -492,9 +478,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
     return;
   }
   if (dynamic_world == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no dynamic world, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no dynamic world, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -504,9 +488,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   }
   const auto *agent_manger = dynamic_world->agent_manager();
   if (agent_manger == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no agent manager, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no agent manager, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -517,9 +499,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 
   auto *st_graph_helper = planning_context.st_graph_helper();
   if (st_graph_helper == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no st graph helper, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no st graph helper, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -529,9 +509,7 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
   }
 
   if (planned_path == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no planned path, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no planned path, return";
     JSON_DEBUG_VALUE("lon_decision_to_invade",
                      has_lon_decision_to_invade_agents_)
     int default_value = -1;
@@ -604,17 +582,14 @@ void LongitudinalDecisionDecider::UpdateInvadeNeighborResults() {
 void LongitudinalDecisionDecider::
     UpdateInvadeNeighborResultsForEgoMotionSimPath() {
   has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_ = false;
-  LOG_DEBUG(
-      "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===\n");
+  ILOG_DEBUG << "=== LongitudinalDecisionDecider::UpdateInvadeNeighborResults ===";
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   if (lane_change_decider_output.curr_state !=
       StateMachineLaneChangeStatus::kLaneKeeping) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "Not in lane keeping, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:Not in lane keeping, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -627,9 +602,7 @@ void LongitudinalDecisionDecider::
   }
 
   if (lane_borrow_output.is_in_lane_borrow_status) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "In lane borrow status, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:In lane borrow status, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -665,9 +638,7 @@ void LongitudinalDecisionDecider::
           .ego_motion_simulation_result()
           ->lat_lon_vehicle_motion_path_ptr;
   if (!ego_cur_lane) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no current lane, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no current lane, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -679,9 +650,7 @@ void LongitudinalDecisionDecider::
     return;
   }
   if (!agent_manager) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no agent manager, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no agent manager, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -697,9 +666,7 @@ void LongitudinalDecisionDecider::
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
   if (lat_obstacle_decision.empty()) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "lateral obstacle decision empty, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:lateral obstacle decision empty, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -714,9 +681,6 @@ void LongitudinalDecisionDecider::
   planning::common::IntersectionState intersection_state =
       virtual_lane_manager->GetIntersectionState();
   // if (intersection_state == planning::common::IN_INTERSECTION) {
-  //   LOG_DEBUG(
-  //       "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-  //       "in intersection, return\n");
   //   JSON_DEBUG_VALUE(
   //       "lon_decision_to_invade_ego_motion_sim_path",
   //       has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -726,9 +690,7 @@ void LongitudinalDecisionDecider::
   //   return;
   // }
   if (dynamic_world == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no dynamic world, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no dynamic world, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -741,9 +703,7 @@ void LongitudinalDecisionDecider::
   }
   const auto *agent_manger = dynamic_world->agent_manager();
   if (agent_manger == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no agent manager, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no agent manager, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -757,9 +717,7 @@ void LongitudinalDecisionDecider::
 
   auto *st_graph_helper = planning_context.st_graph_helper();
   if (st_graph_helper == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no st graph helper, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no st graph helper, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -772,9 +730,7 @@ void LongitudinalDecisionDecider::
   }
 
   if (ego_motion_sim_path == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateInvadeNeighborResults: "
-        "no ego motion sim path, return\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateInvadeNeighborResults:no ego motion sim path, return";
     JSON_DEBUG_VALUE(
         "lon_decision_to_invade_ego_motion_sim_path",
         has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_)
@@ -1152,10 +1108,7 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
       const auto agent = agent_manager->GetAgent(neighbor_agent_id);
       if (!CalculateAgentSLBoundary(planned_path, *agent, &agent_min_s,
                                     &agent_max_s, &agent_min_l, &agent_max_l)) {
-        LOG_DEBUG(
-            "agent (ID: %d) corners projects to ego motion sim path failed , "
-            "skip\n",
-            neighbor_agent_id);
+        ILOG_DEBUG << "agent (ID:" << neighbor_agent_id << ") corners projects to ego motion sim path failed ,skip";
         continue;
       }
       invade_agents_s_id_map[agent_min_s] = neighbor_agent_id;
@@ -1166,17 +1119,17 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
     if (/*lat_decision_type != LatObstacleDecisionType::IGNORE ||*/
         agent_id_st_boundaries_map.find(id) !=
         agent_id_st_boundaries_map.end()) {  // already in st graph(like cipv)
-      LOG_DEBUG("agent (ID: %d) is already in st graph, skip\n", id);
+      ILOG_DEBUG << "agent (ID:" << id << ")is already in st graph, skip";
       continue;
     }
     if (lane_borrow_blocked_obs_id_set.find(id) !=
         lane_borrow_blocked_obs_id_set.end()) {  // ignore lane borrow agents
-      LOG_DEBUG("agent (ID: %d) is lane borrow target, skip\n", id);
+      ILOG_DEBUG << "agent (ID:" << id << ")is lane borrow target, skip";
       continue;
     }
     const auto agent = agent_manager->GetAgent(id);
     if (agent && agent->is_static()) {
-      LOG_DEBUG("agent (ID: %d) is static, skip\n", id);
+      ILOG_DEBUG << "agent (ID:" << id << ")is static, skip";
       continue;
     }
 
@@ -1189,14 +1142,11 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
            agent_max_l = -50.0;
     if (!CalculateAgentSLBoundary(planned_path, *agent, &agent_min_s,
                                   &agent_max_s, &agent_min_l, &agent_max_l)) {
-      LOG_DEBUG(
-          "agent (ID: %d) corners projects to planned_path failed , skip\n",
-          id);
+      ILOG_DEBUG << "agent (ID:" << id << ") corners projects to planned_path failed, skip";
       continue;
     }
     // if (!planned_path->XYToSL(invade_agent_xy,
     //                           invade_agent_sl)) {  // far from ego in lon s
-    //   LOG_DEBUG("agent (ID: %d) is far from ego in lon s, skip\n", id);
     //   continue;
     // }
 
@@ -1212,13 +1162,13 @@ void LongitudinalDecisionDecider::DetermineClosestInvadeNeighborGapInfo(
         0.5 * ego_vehi_param.width;
     if (invade_agent_lat_distance_to_path >
         lat_distance_thrd) {  // far from ego in lat l
-      LOG_DEBUG("agent (ID: %d) is far from ego in lat l(%fm), skip\n", id,
-                invade_agent_lat_distance_to_path);
+      ILOG_DEBUG << "agent (ID:" << id << ") is far from ego in lat l"
+                 << invade_agent_lat_distance_to_path << "m, skip";
       continue;
     }
     if (agent->agent_decision().agent_decision_type() ==
         agent::AgentDecisionType::IGNORE) {
-      LOG_DEBUG("agent (ID: %d) is ignored in agent decision, skip\n", id);
+      ILOG_DEBUG << "agent (ID:" << id << ") is ignored in agent decision, skip";
       continue;
     }
     // invade_agents_s_id_map[invade_agent_s] = id;
@@ -1289,9 +1239,7 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id & 0xFFFF)
 
   if (gap_front_agent_id == -1 && gap_rear_agent_id == -1) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No gap "
-        "agents\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No gap agents";
     int default_value = -1;
     JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
     JSON_DEBUG_VALUE("ignore_gap_rear_agent", default_value)
@@ -1303,9 +1251,7 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto target_lane_ptr =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_id);
   if (target_lane_ptr == nullptr) {
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No "
-        "target lane\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: No target lane";
     int default_value = -1;
     JSON_DEBUG_VALUE("gap_lon_decision_update", default_value)
     JSON_DEBUG_VALUE("ignore_gap_rear_agent", default_value)
@@ -1340,9 +1286,7 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   if (!neighbor_agents_decision_table.empty()) {
     mutable_st_graph->UpdateNeighborAgentResults(
         neighbor_agents_decision_table);
-    LOG_DEBUG(
-        "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: Update "
-        "neighbor agents decision table\n");
+    ILOG_DEBUG << "LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults: Update neighbor agents decision table";
   }
   JSON_DEBUG_VALUE("gap_lon_decision_update",
                    !neighbor_agents_decision_table.empty())

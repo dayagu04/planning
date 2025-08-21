@@ -6,7 +6,6 @@
 
 #include "Eigen/LU"
 #include "ifly_time.h"
-#include "log.h"
 
 /*
 ADD MORE VALIDITY CHECK TO MAKE IT AS ROBUST AS POSSIBLE
@@ -334,7 +333,7 @@ TRANSFORM_STATUS FrenetCoordinateSystem::CartState2FrenetState(
   TRANSFORM_STATUS stat =
       CartCoord2FrenetCoord(cart_coord, frenet_coord, cart_state.yaw);
   if (stat == TRANSFORM_FAILED) {
-    std::cout << "!!!TRANSFORM_FAILED" << std::endl;
+    // std::cout << "!!!TRANSFORM_FAILED" << std::endl;
     return TRANSFORM_FAILED;
   }
 

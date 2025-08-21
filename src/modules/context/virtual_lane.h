@@ -10,7 +10,6 @@
 #include "config/basic_type.h"
 #include "fusion_road_c.h"
 #include "lane_reference_path.h"
-#include "log.h"
 #include "map_info_manager.h"
 #include "reference_path_manager.h"
 #include "refline.h"
@@ -89,7 +88,7 @@ class VirtualLane {
       std::shared_ptr<LaneReferencePath> reference_path) {
     // assert(reference_path != nullptr);
     if (reference_path == nullptr) {
-      LOG_ERROR("reference_path is null! \n");
+      ILOG_ERROR << "reference_path is null!";
     }
     reference_path_ = reference_path;
   };

@@ -2687,7 +2687,7 @@ void StGraphGenerator::CalculateNarrowLimitSpeed(
   const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
   for (int i = 1; i <= config_.lon_num_step; ++i) {
     if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
-      LOG_ERROR("skip NaN point");
+      ILOG_ERROR << "skip NaN poin";
       continue;
     }
     planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};
@@ -3839,7 +3839,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
     for (int i = 0; i <= config_.lon_num_step; ++i) {
       if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
-        LOG_ERROR("skip NaN point");
+        ILOG_ERROR << "skip NaN point";
         continue;
       }
       planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};
@@ -4026,7 +4026,7 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     const int64_t agent_node_id, const bool is_merging_to_left) {
   LOG_DEBUG("----> CalculateMergeInfoWithAgent <--- \n");
   if (dynamic_world->GetNode(agent_node_id) == nullptr) {
-    LOG_ERROR("agent_node_id: %ld is invalid!!! \n", agent_node_id & 0xFFFF);
+    ILOG_ERROR << "agent_node_id:" << int(agent_node_id & 0xFFFF) << " is invalid!!!";
     JSON_DEBUG_VALUE("is_overlap", std::numeric_limits<double>::max())
     return;
   }
@@ -4052,7 +4052,8 @@ void StGraphGenerator::CalculateMergeInfoWithAgent(
     const auto &spline_y_vec = lon_behav_input_->lat_output().spline_y_vec();
     for (int i = 0; i <= config_.lon_num_step; ++i) {
       if (std::isnan(spline_x_vec[i]) || std::isnan(spline_y_vec[i])) {
-        LOG_ERROR("skip NaN point");
+        ILOG_ERROR << "skip NaN point";
+
         continue;
       }
       planning_math::PathPoint path_point{spline_x_vec[i], spline_y_vec[i]};

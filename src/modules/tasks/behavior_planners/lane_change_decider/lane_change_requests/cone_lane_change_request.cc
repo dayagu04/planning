@@ -55,7 +55,7 @@ void ConeRequest::Update(int lc_status) {
 
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
-    LOG_DEBUG("ConeRequest::Update: ego not in lane keeping!");
+    ILOG_DEBUG << "ConeRequest::Update: ego not in lane keeping!";
     return;
   }
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
@@ -86,8 +86,8 @@ void ConeRequest::Update(int lc_status) {
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id);
 
   UpdateConeSituation(lc_status);
-  LOG_DEBUG("ConeRequest::Update: is_cone_lane_change_situation %d",
-            is_cone_lane_change_situation_);
+  ILOG_DEBUG << "ConeRequest::Update: is_cone_lane_change_situation " <<
+            is_cone_lane_change_situation_;
   JSON_DEBUG_VALUE("is_cone_lane_change_situation_",
                    is_cone_lane_change_situation_);
 
@@ -98,10 +98,7 @@ void ConeRequest::Update(int lc_status) {
       Finish();
       Reset();
       set_target_lane_virtual_id(current_lane_virtual_id);
-      LOG_DEBUG(
-          "[ConeRequest::update] %s:%d finish request, "
-          "!trigger_left_clc and !trigger_right_clc\n",
-          __FUNCTION__, __LINE__);
+      ILOG_DEBUG << "[ConeRequest::update] " << __FUNCTION__ << " " << __LINE__ <<" finish request, !trigger_left_clc and !trigger_right_clc";
     }
     return;
   }
@@ -110,8 +107,7 @@ void ConeRequest::Update(int lc_status) {
                    (int)cone_lane_change_direction_);
 
   setLaneChangeRequestByCone();
-  LOG_DEBUG("request_type_: [%d] turn_signal_: [%d]\n", request_type_,
-            turn_signal_);
+  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: [ " << turn_signal_ << "]";
 }
 
 void ConeRequest::UpdateConeSituation(int lc_status) {
@@ -125,7 +121,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   if (base_lane == nullptr) {
-    LOG_DEBUG("base lane not exist");
+    ILOG_DEBUG << "base lane not exist";
     is_cone_lane_change_situation_ = false;
     return;
   }
@@ -140,7 +136,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG("fail to get ego position on base lane");
+    ILOG_DEBUG << "fail to get ego position on base lane";
     is_cone_lane_change_situation_ = false;
     return;
   }
@@ -208,7 +204,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
 
   if (cone_points_.empty()) {
     // if no cones found, counter--
-    LOG_DEBUG("no cone found!!!\n");
+    ILOG_DEBUG << "no cone found!!!";
     cone_alc_trigger_counter_ =
         std::max(cone_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
     is_cone_lane_change_situation_ = false;
@@ -258,18 +254,16 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       pass_threshold_right = vehicle_param.width + kLatPassThre;
     }
 
-    LOG_DEBUG(
-        "min_left_l is: %f, min_right_l is: %f "
-        "pass_threshold_left is: %f, pass_threshold_right is: %f "
-        "\n",
-        min_left_l, min_right_l, pass_threshold_left, pass_threshold_right);
+    ILOG_DEBUG << "min_left_l is:" << min_left_l
+               << ", min_right_l is: is:" << min_right_l
+               << ", pass_threshold_left is:" << pass_threshold_left
+               << ", pass_threshold_right is:" << pass_threshold_right;
 
     // judge if to trigger cone lc
     if (min_left_l < pass_threshold_left &&
         min_right_l < pass_threshold_right) {
       cone_alc_trigger_counter_++;
-      LOG_DEBUG("trigger_counter is %d, cluster is %d \n",
-                cone_alc_trigger_counter_, cluster);
+      ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_ << ", cluster is " << cluster;
       if (cone_alc_trigger_counter_ >= kConeAlcCountThre) {
         is_cone_lane_change_situation_ = true;
         return;
@@ -282,7 +276,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   if (!did_break) {
     cone_alc_trigger_counter_ =
         std::max(cone_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
-    LOG_DEBUG("trigger_counter is %d \n", cone_alc_trigger_counter_);
+    ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_;
     if (cone_alc_trigger_counter_ < kConeAlcCountThre) {
       is_cone_lane_change_situation_ = false;
     }
@@ -314,8 +308,7 @@ void ConeRequest::setLaneChangeRequestByCone() {
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
-    LOG_DEBUG("ConeRequest::Update: for left_lane: update %d\n",
-              llane->get_virtual_id());
+    ILOG_DEBUG << "ConeRequest::Update: for left_lane: update " << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
   }
@@ -323,8 +316,7 @@ void ConeRequest::setLaneChangeRequestByCone() {
   if (rlane != nullptr) {
     right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         rlane->get_virtual_id(), false);
-    LOG_DEBUG("ConeRequest::Update: for right_lane: update %d\n",
-              rlane->get_virtual_id());
+    ILOG_DEBUG << "ConeRequest::Update: for right_lane: update " << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
   }
@@ -340,18 +332,14 @@ void ConeRequest::setLaneChangeRequestByCone() {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      LOG_DEBUG(
-          "[ConeRequest::update] Ask for cone changing lane to left "
-          "\n");
+      ILOG_DEBUG << "[ConeRequest::update] Ask for cone changing lane to left";
     }
   } else if (cone_lane_change_direction_ == RIGHT_CHANGE) {
     if (request_type_ != RIGHT_CHANGE && is_right_lane_change_safe) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      LOG_DEBUG(
-          "[ConeRequest::update] Ask for cone changing lane to left "
-          "\n");
+      ILOG_DEBUG << "[ConeRequest::update] Ask for cone changing lane to left";
     }
   } else if (cone_lane_change_direction_ == NO_CHANGE &&
              request_type_ != NO_CHANGE &&
@@ -359,10 +347,8 @@ void ConeRequest::setLaneChangeRequestByCone() {
               lane_change_lane_mgr_->is_ego_on(olane))) {
     Finish();
     set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-    LOG_DEBUG(
-        "[ConeRequest::update] %s:%d finish request, "
-        "cone_lane_change_direction == NO_CHANGE\n",
-        __FUNCTION__, __LINE__);
+    ILOG_DEBUG << "[ConeRequest::update] " << __FUNCTION__
+              << ":" << __LINE__ << "finish request, cone_lane_change_direction == NO_CHANGE";
   } else if (cone_lane_change_direction_ == NO_CHANGE) {
     // do nothing
     return;
@@ -572,7 +558,7 @@ void ConeRequest::ConeDir() {
                                                     origin_lane_virtual_id_,
                                                     rlane->get_virtual_id())) {
             right_change_available = true;
-            LOG_DEBUG("right_change_available: %d \n", right_change_available);
+            ILOG_DEBUG << "right_change_available:" << right_change_available;
           }
         }
       }
@@ -602,7 +588,7 @@ void ConeRequest::ConeDir() {
                 origin_lane_virtual_id_,
                 llane->get_virtual_id())) {
             left_change_available = true;
-            LOG_DEBUG("left_change_available: %d \n", left_change_available);
+            ILOG_DEBUG << "left_change_available: " << left_change_available;
           }
         }
       }
@@ -610,15 +596,15 @@ void ConeRequest::ConeDir() {
   }
 
   if (left_change_available && right_change_available) {
-    LOG_DEBUG("cone alc right!!!\n");
+    ILOG_DEBUG << "cone alc right!!!";
     cone_lane_change_direction_ = RIGHT_CHANGE;
     return;
   } else if (left_change_available) {
-    LOG_DEBUG("cone alc left!!!\n");
+    ILOG_DEBUG << "cone alc left!!!";
     cone_lane_change_direction_ = LEFT_CHANGE;
     return;
   } else if (right_change_available) {
-    LOG_DEBUG("cone alc right!!!\n");
+    ILOG_DEBUG << "cone alc right!!!";
     cone_lane_change_direction_ = RIGHT_CHANGE;
     return;
   } else {
@@ -637,10 +623,8 @@ bool ConeRequest::ConesDirection(RequestType& direction) {
     }
     double rank_correlation = ConeSpearmanRankCorrelation(points);
     double cones_slope = ConeComputeSlope(points);
-    LOG_DEBUG(
-        "[ConesDirection] rank_correlation is %f, [ConesDirection] cones_slope "
-        "is %f \n",
-        rank_correlation, cones_slope);
+    ILOG_DEBUG << "[ConesDirection] rank_correlation is " << rank_correlation
+               << ", [ConesDirection] cones_slope is " << cones_slope;
 
     // rank_correlation接近1，表示数据之间有很强的正相关
     // 结合线性回归求得的斜率，判断导流方向
@@ -665,7 +649,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   ;
   if (ego_lane == nullptr) {
-    LOG_DEBUG("seach fail: ego lane is nullptr \n");
+    ILOG_DEBUG << "seach fail: ego lane is nullptr";
     return false;
   }
 
@@ -678,7 +662,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_DEBUG("[CheckEgoLaneAvailable] fail to get ego position on base lane");
+    ILOG_DEBUG << "[CheckEgoLaneAvailable] fail to get ego position on base lane";
     return false;
   }
 
@@ -691,7 +675,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
       double ego_distance_to_cone = p.s - ego_frenet_point.x;
       if (ego_distance_to_cone < ego_vel * kLongClusterTimeGap / 2 && p.l > 0 &&
           p.l < left_width) {
-        LOG_DEBUG("left front cone is dangerous for lane change\n");
+        ILOG_DEBUG << "left front cone is dangerous for lane change";
         return false;
       }
     }
@@ -701,7 +685,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
       double ego_distance_to_cone = p.s - ego_frenet_point.x;
       if (ego_distance_to_cone < ego_vel * kLongClusterTimeGap / 2 && p.l < 0 &&
           p.l > -right_width) {
-        LOG_DEBUG("right front cone is dangerous for lane change\n");
+        ILOG_DEBUG << "right front cone is dangerous for lane change";
         return false;
       }
     }
@@ -712,7 +696,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
 bool ConeRequest::CheckTargetLaneAvailable(
     bool is_left, const std::shared_ptr<VirtualLane> seach_lane) {
   if (seach_lane == nullptr) {
-    LOG_DEBUG("seach fail: seach lane is nullptr \n");
+    ILOG_DEBUG << "seach fail: seach lane is nullptr";
     return false;
   }
   std::vector<std::pair<double, double>> lane_s_width;
@@ -736,7 +720,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   std::vector<ConePoint> serach_cone_points = cone_points_;
   for (auto& p : serach_cone_points) {
     if (!target_lane_frenet_coord->XYToSL(p.x, p.y, &p.s, &p.l)) {
-      LOG_DEBUG("[CheckTargetLaneAvailable]: XYToSL fail \n");
+      ILOG_DEBUG << "[CheckTargetLaneAvailable]: XYToSL fail";
       return false;
     } else {
       GetTargetLaneWidthByCone(lane_s_width, seach_lane, p.s, p.l, true,
@@ -750,7 +734,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   // std::cout << "max_l: " << max_l << " pass_thre: " << pass_thre <<
   // std::endl; judge if to trigger cone lc
   if (max_l <= pass_thre) {
-    LOG_DEBUG(" target lane is blocked\n");
+    ILOG_DEBUG << " target lane is blocked";
   }
 
   return max_l > pass_thre;

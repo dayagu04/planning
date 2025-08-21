@@ -74,13 +74,6 @@ YieldFrontVehicleSafeFunction::GenerateMaxDecelerationCurve(
   state_limit.a_min = acc_lower_bound;
   state_limit.j_max = kJerkUpperBound;
   state_limit.j_min = jerk_lower_bound;
-  // LOG_DEBUG(
-  //         "state_limit.a_max: %.2f, state_limit.a_min: %.2f,
-  //         state_limit.j_max: %.2f, " "state_limit.j_min: %.2f,
-  //         state_limit.v_end: %.2f", state_limit.a_max, state_limit.a_min,
-  //         state_limit.j_max, state_limit.j_min, state_limit.v_end);
-  // LOG_DEBUG("init_state.v: %.2f, init_state.a: %.2f", init_state.v,
-  // init_state.a);
 
   return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
 }
@@ -118,7 +111,7 @@ bool YieldFrontVehicleSafeFunction::IsYieldSafe(
       const double yield_front_vehicle_collision_s_buffer =
           config_.yield_front_vehicle_collision_s_buffer;
       if (curve_s > s_lower - yield_front_vehicle_collision_s_buffer) {
-        LOG_DEBUG("yield not safe with max decrease curve!");
+        ILOG_DEBUG << "yield not safe with max decrease curve!";
         return false;
       }
     }

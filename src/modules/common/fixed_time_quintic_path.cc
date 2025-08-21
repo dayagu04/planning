@@ -25,34 +25,33 @@ bool QuinticPathPlanner::Plan(const double lat_avoid_offset,
                               TrajectoryPoints& traj_points) {
   // 检查剩余时间是否过短
   if (remain_lc_duration < 1.0) {
-    LOG_WARNING("Remaining lane change duration is too short: %f",
-                remain_lc_duration);
+    ILOG_WARN << "Remaining lane change duration is too short:" << remain_lc_duration;
     return false;
   }
 
   // 初始化规划状态
   if (!InitializeState(remain_lc_duration, traj_points)) {
-    LOG_ERROR("Failed to initialize planning state");
+    ILOG_ERROR << "Failed to initialize planning state";
     return false;
   }
 
   // 计算终点状态
   double lane_change_end_s = frenet_init_point_.x + ego_v_ * remain_lc_duration;
   if (!CalculateEndState(lat_avoid_offset, lane_change_end_s)) {
-    LOG_ERROR("Failed to calculate end state");
+    ILOG_ERROR << "Failed to calculate end state";
     return false;
   }
 
   // 构建五次多项式轨迹
   if (!ConstructQuinticPath(remain_lc_duration)) {
-    LOG_ERROR("Failed to construct quintic path");
+    ILOG_ERROR << "Failed to construct quintic path";
     return false;
   }
 
   // 采样轨迹点
   if (!SampleTrajectoryPoints(remain_lc_duration, lat_avoid_offset,
                               traj_points)) {
-    LOG_ERROR("Failed to sample trajectory points");
+    ILOG_ERROR << "Failed to sample trajectory points";
     return false;
   }
 
@@ -76,7 +75,7 @@ bool QuinticPathPlanner::InitializeState(const double remain_lc_duration,
 
   // 转换为Frenet坐标
   if (!coord_->XYToSL(cart_init_point_, frenet_init_point_)) {
-    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
     return false;
   }
 
@@ -97,7 +96,7 @@ bool QuinticPathPlanner::CalculateEndState(const double lat_avoid_offset,
 
   // 转换为笛卡尔坐标
   if (!coord_->SLToXY(frenet_end_point_, cart_end_point_)) {
-    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
     return false;
   }
 
@@ -168,7 +167,7 @@ bool QuinticPathPlanner::SampleTrajectoryPoints(const double remain_lc_duration,
       // 转换为Frenet坐标
       Point2D cart_point(point.x, point.y);
       if (!coord_->XYToSL(cart_point, frenet_point)) {
-        LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+        ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
         return false;
       }
 
@@ -205,7 +204,7 @@ bool QuinticPathPlanner::SampleTrajectoryPoints(const double remain_lc_duration,
       // 转换回笛卡尔坐标
       Point2D cart_point;
       if (!coord_->SLToXY(frenet_point, cart_point)) {
-        LOG_ERROR("ERROR! Cart Point -> Frenet Point Failed!!!");
+        ILOG_ERROR << "ERROR! Cart Point -> Frenet Point Failed!!!";
         return false;
       }
 

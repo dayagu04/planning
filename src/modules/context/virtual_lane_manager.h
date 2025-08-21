@@ -14,7 +14,6 @@
 #include "generated_refline.pb.h"
 #include "intersection.h"
 #include "local_view.h"
-#include "log.h"
 #include "route_info.h"
 #include "sdmap/sdmap.h"
 #include "session.h"
@@ -59,7 +58,7 @@ class VirtualLaneManager {
 
   const std::shared_ptr<VirtualLane> get_current_lane() const {
     if (current_lane_ == nullptr) {
-      LOG_DEBUG("current_lane_ is nullptr\n");
+      ILOG_DEBUG << "current_lane_ is nullptr";
     }
     return current_lane_;
   }
@@ -87,7 +86,6 @@ class VirtualLaneManager {
     // assert(current_lane_ != nullptr);
     if (current_lane_ == nullptr) {
       return current_lane_virtual_id_;
-      LOG_DEBUG("current_lane_ is nullptr\n");
     }
     current_lane_virtual_id_ = current_lane_->get_virtual_id();
     return current_lane_->get_virtual_id();
@@ -95,10 +93,10 @@ class VirtualLaneManager {
   std::shared_ptr<VirtualLane> mutable_lane_with_virtual_id(int virtual_id) {
     if (virtual_id_mapped_lane_.find(virtual_id) !=
         virtual_id_mapped_lane_.end()) {
-      LOG_DEBUG("get mutable lane virtual %d id\n", virtual_id);
+      ILOG_DEBUG << "get mutable lane virtual id " << virtual_id;
       return virtual_id_mapped_lane_[virtual_id];
     } else {
-      LOG_DEBUG("mutable lane virtual %d id is null\n", virtual_id);
+      ILOG_DEBUG << "mutable lane virtual " << virtual_id << "id is null";
       return nullptr;
     }
   }

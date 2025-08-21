@@ -79,7 +79,7 @@ void SscMap::FillDynamicPart(
 void SscMap::FillMapWithFsVehicleTraj(
     const std::vector<std::vector<SLTPoint>> &traj_point) {
   if (traj_point.size() == 0) {
-    LOG_DEBUG("FillMapWithFsVehicleTraj::Trajectory is empty.");
+    ILOG_DEBUG << "FillMapWithFsVehicleTraj::Trajectory is empty";
     return;
   }
   for (size_t i = 0; i < traj_point.size(); ++i) {

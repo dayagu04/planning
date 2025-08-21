@@ -121,7 +121,6 @@ bool VisionOnlyLaneChangeDecider::process() {
         std::make_pair(gap_list_.at(0).front_id, gap_list_.at(0).rear_id);
     target_gap_cost_ = gap_list_.at(0).cost;
   }
-  LOG_DEBUG("Target gap: [%d], [%d]\n", target_gap_.first, target_gap_.second);
 
   session_->mutable_planning_context()
       ->mutable_lane_status()

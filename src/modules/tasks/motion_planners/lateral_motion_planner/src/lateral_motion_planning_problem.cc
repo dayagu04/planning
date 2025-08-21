@@ -198,10 +198,6 @@ uint8_t LateralMotionPlanningProblem::Update(
             cost_config_vec.at(i - 1)[W_SOFT_CORRIDOR] * 0.3;
         cost_config_vec.at(i)[W_HARD_CORRIDOR] =
             cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.3;
-        // LOG_DEBUG(
-        //   "motion_plan_concerned_start_index: %zu, remote_qxy: %f,
-        //   remote_qjerk: %f", motion_plan_concerned_start_index, remote_xy,
-        //   cost_config_vec.at(i)[W_JERK]);
       }
     }
 

@@ -27,7 +27,7 @@ void GapSelectorInterface::Store(
            ->XYToSL(Point2D{ego_state_mgr->ego_pose().x,
                             ego_state_mgr->ego_pose().y},
                     ego_frenet_point)) {
-    LOG_ERROR("Enmergency error! Ego Pose Cart2SL failed!");
+    ILOG_ERROR << "Enmergency error! Ego Pose Cart2SL failed!";
   }
 
   // -------------------------- lane id

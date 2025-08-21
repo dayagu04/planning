@@ -22,7 +22,7 @@ TargetMaker::TargetMaker(const SpeedPlannerConfig& speed_planning_config,
 }
 
 common::Status TargetMaker::Run() {
-  LOG_DEBUG("=======LongRefPathDecider: TargetMaker======= \n");
+  ILOG_INFO << "=======LongRefPathDecider: TargetMaker=======";
   // 1. cruise target @建伟
   CruiseTarget cruise_target(speed_planning_config_, session_);
 

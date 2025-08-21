@@ -96,10 +96,10 @@ GapSelectorDecider::GapSelectorDecider(
 };
 
 bool GapSelectorDecider::Execute() {
-  LOG_DEBUG("=======GapSelectorDecider======= \n");
+  ILOG_INFO << "=======GapSelectorDecider=======";
 
   if (!PreCheck()) {
-    LOG_DEBUG("PreCheck failed\n");
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
@@ -530,7 +530,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
           .lane_change_decider_output()
           .coarse_planning_info.reference_path->get_frenet_coord();
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
-    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
   }
   // if reamining duration less than 1s, then aggresively lane change
   if (remain_lc_duration < 1.0) {
@@ -564,7 +564,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
   Point2D frenet_end_point{lane_change_end_s, lat_avoid_offset};
   Point2D cart_end_point;
   if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
-    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
   }
 
   const auto lane_change_end_heading_angle =
@@ -609,7 +609,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
 
       Point2D cart_point(point.x, point.y);
       if (!coord->XYToSL(cart_point, frenet_point)) {
-        LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+        ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
       }
       point.s = frenet_point.x;
       point.l = frenet_point.y;
@@ -640,7 +640,7 @@ void GapSelectorDecider::FixedTimeQuinticPathPlan(
       frenet_point.y = point.l;
       Point2D cart_point;
       if (!coord->SLToXY(frenet_point, cart_point)) {
-        LOG_ERROR("ERROR! Cart Point -> Frenet Point Failed!!!");
+        ILOG_ERROR << "ERROR! Cart Point -> Frenet Point Failed!!!";
       }
       point.x = cart_point.x;
       point.y = cart_point.y;
@@ -673,7 +673,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
   const auto &coord = coarse_planning_info.reference_path->get_frenet_coord();
 
   if (!coord->XYToSL(cart_init_point, frenet_init_point)) {
-    LOG_ERROR("ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! Frenet Point -> Cart Point Failed!!!";
   }
   // frenet_init_point_ = frenet_init_point;
 
@@ -703,8 +703,7 @@ GapSelectorStatus GapSelectorDecider::Update(
       env_preprocessor_status == LC_FINISHED ||
       env_preprocessor_status == LC_PASS_TIME_EXCEED_THRESHOLD) {
     gap_selector_decider_output = {false, target_state_, false, false};
-    LOG_DEBUG("Gap Selector finished after env preprocessor, the status is: %d",
-              (int)env_preprocessor_status);
+    ILOG_DEBUG << "Gap Selector finished after env preprocessor, the status is:" << env_preprocessor_status;
     return env_preprocessor_status;
   }
   GapSelectorStatus status = GapSelectorStatus::DEFAULT;
@@ -796,14 +795,14 @@ GapSelectorStatus GapSelectorDecider::EnvHandle(
   CheckLaneCrossed();
 
   if (!SetBaseFrenetCoordAndUpdateAgentNode()) {
-    LOG_ERROR("Enmergency error! Agent Node updated false!");
+    ILOG_ERROR << "Enmergency error! Agent Node updated false!";
   }
 
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    LOG_ERROR("Enmergency error! Ego Pose Cart2SL failed!");
+    ILOG_ERROR << "Enmergency error! Ego Pose Cart2SL failed!";
   }  // upstream default reference path
   planning_init_point_.frenet_state.s = ego_frenet_point.x;
   planning_init_point_.frenet_state.r = ego_frenet_point.y;
@@ -821,17 +820,14 @@ GapSelectorStatus GapSelectorDecider::EnvHandle(
       base_frenet_coord_ == nullptr) {
     ResetAllInfo();
     gap_selector_decider_output = {false, target_state_, false, false};
-    LOG_DEBUG("\n Gap selector skip is %d, base_frenet_coord is ok: %d",
-              gap_selector_state_machine_info_.gs_skip,
-              base_frenet_coord_ == nullptr);
+    ILOG_DEBUG << "Gap selector skip is " << gap_selector_state_machine_info_.gs_skip << ", base_frenet_coord is ok:" << int(base_frenet_coord_ == nullptr);
     gs_status = gap_selector_state_machine_info_.gs_skip
                     ? GS_SKIP
                     : BASE_FRENET_COORD_NULLPTR;
   } else if (CheckLCFinish() || gap_selector_state_machine_info_.lc_cancel) {
     ResetAllInfo();
     gap_selector_decider_output = {true, target_state_, false, false};
-    LOG_DEBUG("\n Gap selector lc cancel %d",
-              gap_selector_state_machine_info_.lc_cancel);
+    ILOG_DEBUG << "Gap selector lc cancel " << gap_selector_state_machine_info_.lc_cancel;
     gs_status =
         gap_selector_state_machine_info_.lc_cancel ? LC_CANCEL : LC_FINISHED;
   } else if (gap_selector_state_machine_info_.lc_pass_time > kMaxTotalLCTime &&
@@ -839,7 +835,7 @@ GapSelectorStatus GapSelectorDecider::EnvHandle(
     GenerateLBTrajectory(*traj_points_ptr_);
     path_spline_.path_spline_status = GapSelectorPathSpline::LB_VALID;
     gap_selector_decider_output = {false, target_state_, true, false};
-    LOG_DEBUG("Lc time is exceed max , LB Launch !");
+    ILOG_DEBUG << "Lc time is exceed max , LB Launch !";
     gs_status = LC_PASS_TIME_EXCEED_THRESHOLD;
   }
   return gs_status;
@@ -942,7 +938,7 @@ bool GapSelectorDecider::SetBaseFrenetCoordAndUpdateAgentNode() {
     if (base_frenet_coord_ == nullptr) {
       gap_selector_state_machine_info_.path_requintic = true;
       base_frenet_coord_ = current_lane_coord_ptr_;
-      LOG_ERROR("The original lane coord get nullptr after lane cross!");
+      ILOG_ERROR << "The original lane coord get nullptr after lane cross!";
     }
   } else {
     base_frenet_coord_ = current_lane_coord_ptr_;
@@ -1020,7 +1016,7 @@ void GapSelectorDecider::ConstructGaps() {
       &agent_target_lane_map = agent_node_mgr_->agent_node_target_lane_map();
 
   if (ids_sorted_target_lane.empty()) {
-    LOG_DEBUG("GapSelectorTask, No gap exists!");
+    ILOG_DEBUG << "GapSelectorTask, No gap exists!";
     return;
   }
 
@@ -1233,12 +1229,12 @@ bool GapSelectorDecider::MakeInteractiveDecision(
   Point2D crossed_line_frenet_point;
   if (!base_frenet_coord_->XYToSL(crossed_line_point,
                                   crossed_line_frenet_point)) {
-    LOG_ERROR("Crossed line transform frenet failed!");
+    ILOG_ERROR << "Crossed line transform frenet failed!";
     return false;
   }
 
   if (!path_spline.crossed_line_point_info.valid) {
-    LOG_ERROR("crossed_line_point_info is not valid");
+    ILOG_ERROR << "crossed_line_point_info is not valid";
     return false;
   }
 
@@ -1310,11 +1306,11 @@ bool GapSelectorDecider::MakeInteractiveDecision(
   Point2D crossed_line_frenet_point;
   if (!base_frenet_coord_->XYToSL(crossed_line_point,
                                   crossed_line_frenet_point)) {
-    LOG_ERROR("Crossed line transform frenet failed!");
+    ILOG_ERROR << "Crossed line transform frenet failed!";
     return false;
   }
   if (!path_spline.crossed_line_point_info.valid) {
-    LOG_ERROR("crossed_line_point_info is not valid");
+    ILOG_ERROR << "crossed_line_point_info is not valid";
     return false;
   }
   if (front_obj_pred_info.cur_s > crossed_line_frenet_point.x) {
@@ -1659,8 +1655,7 @@ void GapSelectorDecider::ConstructTimeOptimal(
                  path_spline_start_cart_point.y - ego_cart_point_[1]);
   if (base_frenet_coord_->XYToSL(path_spline_start_cart_point,
                                  path_spline_start_frenet_point)) {
-    LOG_ERROR(
-        "GS:Cart 2 frenet success, spline start cart point -> frenet point!");
+    ILOG_ERROR << "GS:Cart 2 frenet success, spline start cart point -> frenet point!";
     compensated_dis =
         ego_planning_init_s_[0] - path_spline_start_frenet_point.x;
   }
@@ -1811,7 +1806,7 @@ int GapSelectorDecider::SafetyCheck(const GapSelectorPathSpline &path_spline) {
   front_careful_car_st_boundary_.clear();
   if (nearby_gap_.front_agent_id < 0 && nearby_gap_.rear_agent_id < 0 &&
       front_careful_car_id_origin_lane_ < 0) {
-    LOG_ERROR("ST Boundaries break check!");
+    ILOG_ERROR << "ST Boundaries break check!";
     return collision_idx;
   }
 
@@ -2091,7 +2086,7 @@ pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
   Point2D end_frenet_point(expected_s, expected_l);
   Point2D end_cart_point;
   if (!base_frenet_coord_->SLToXY(end_frenet_point, end_cart_point)) {
-    LOG_ERROR("Quintic Path Frenet->Car Error");
+    ILOG_ERROR << "uintic Path Frenet->Car Error";
   }
   // realign reference velocity
   double s_length = std::hypot(end_cart_point.y - y, end_cart_point.x - x);
@@ -2144,7 +2139,7 @@ pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
   Point2D frenet_end_point{lane_change_end_s, 0.};
   Point2D cart_end_point;
   if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
-    LOG_ERROR("ERROR! TargetLaneCoordPtr Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "ERROR! TargetLaneCoordPtr Frenet Point -> Cart Point Failed!!!";
   }
   const auto lane_change_end_heading_angle =  // use target lane info!
       coord->GetPathCurveHeading(lane_change_end_s);
@@ -2201,7 +2196,7 @@ void GapSelectorDecider::StitchQuinticPath(
                          expected_l};
   Point2D path_end_pos{0., 0.};
   if (!base_frenet_coord_->SLToXY(path_end_point, path_end_pos)) {
-    LOG_ERROR("GS ERROR! Frenet Point -> Cart Point Failed!!!");
+    ILOG_ERROR << "GS ERROR! Frenet Point -> Cart Point Failed!!!";
   }
   x_path_points.emplace_back(path_end_pos.x);
   y_path_points.emplace_back(path_end_pos.y);
@@ -2241,7 +2236,7 @@ void GapSelectorDecider::DecoupleQuinticPathSpline(
   Point2D quintic_end_point{x_path_points.back(), y_path_points.back()};
   Point2D quintic_end_frenet_in_target_lane;
   if (!coord->XYToSL(quintic_end_point, quintic_end_frenet_in_target_lane)) {
-    LOG_ERROR("Target lane calc end path end frenet point failed!");
+    ILOG_ERROR << "Target lane calc end path end frenet point failed!";
   }
 
   int compensated_point_num =
@@ -2252,7 +2247,7 @@ void GapSelectorDecider::DecoupleQuinticPathSpline(
         quintic_end_frenet_in_target_lane.x + (i + 1) * sample_s, 0.};
     Point2D compensate_cart_point;
     if (!coord->SLToXY(compensate_point, compensate_cart_point)) {
-      LOG_ERROR("Target lane calc compensate_point path point failed!");
+      ILOG_ERROR << "Target lane calc compensate_point path point failed!";
     }
     x_path_points.emplace_back(compensate_cart_point.x);
     y_path_points.emplace_back(compensate_cart_point.y);
@@ -2333,7 +2328,7 @@ void GapSelectorDecider::GenerateLHTrajectory(
         ego_l_cur_lane_};
     Point2D tmp_cart_point;
     if (base_frenet_coord_->SLToXY(tmp_frenet_point, tmp_cart_point)) {
-      LOG_ERROR("Restore Traj Result failed!");
+      ILOG_ERROR << "Restore Traj Result failed!";
       traj_point.s = tmp_frenet_point.x;
       traj_point.l = tmp_frenet_point.y;
       traj_point.x = tmp_cart_point.x;
@@ -2398,7 +2393,7 @@ void GapSelectorDecider::GenerateLHTrajectory(
   // //           << std::endl;
   // if (!base_frenet_coord_->XYToSL(path_spline_start_cart_point,
   //                                 path_spline_start_frenet_point)) {
-  //   LOG_ERROR(
+  //   ILOG_ERROR << "";
   //       "GS:Cart 2 frenet failed, spline start cart point -> frenet point!");
   // }
   // // std::cout << "\nstart_frenet_point s: " <<
@@ -2436,8 +2431,6 @@ void GapSelectorDecider::GenerateLHTrajectory(
   //   Point2D cart_point{traj_point.x, traj_point.y};
   //   Point2D frenet_point{-100, 0.};
   //   if (!base_frenet_coord_->XYToSL(cart_point, frenet_point)) {
-  //     LOG_ERROR("GS:Cart 2 frenet failed, LH,Generate loninfo time
-  //     optimal!");
   //   }
   //   traj_point.s = i > 0 ? frenet_point.x : ego_planning_init_s_[0];
   //   traj_point.l = i > 0 ? frenet_point.y : ego_l_;  // keep the l
@@ -2475,7 +2468,7 @@ void GapSelectorDecider::GenerateLHTrajectory(
     Point2D tmp_cart_point;
 
     if (cur_ref_path_coor->SLToXY(tmp_frenet_point, tmp_cart_point)) {
-      LOG_ERROR("Restore Traj Result!");
+      ILOG_ERROR << "Restore Traj Result!";
       traj_point.s = tmp_frenet_point.x;
       traj_point.l = tmp_frenet_point.y;
       traj_point.x = tmp_cart_point.x;
@@ -2498,7 +2491,7 @@ void GapSelectorDecider::GenerateLinearRefTrajectory(
         ego_l_cur_lane_ + lat_movd_coef * i * delta_t};
     Point2D tmp_cart_point;
     if (base_frenet_coord_->SLToXY(tmp_frenet_point, tmp_cart_point)) {
-      LOG_ERROR("Restore Traj Result failed!");
+      ILOG_ERROR << "Restore Traj Result failed!";
       traj_point.s = tmp_frenet_point.x;
       traj_point.l = tmp_frenet_point.y;
       traj_point.x = tmp_cart_point.x;
@@ -2521,7 +2514,7 @@ void GapSelectorDecider::RestoreTrajResult(TrajectoryPoints &traj_points) {
       Point2D tmp_cart_point{traj_points[i].x, traj_points[i].y};
       Point2D tmp_frenet_point;
       if (origin_lane_coord_ptr_->XYToSL(tmp_cart_point, tmp_frenet_point)) {
-        LOG_ERROR("Restore Traj Result failed!");
+        ILOG_ERROR << "Restore Traj Result failed!";
         traj_points[i].s = tmp_frenet_point.x;
         traj_points[i].l = tmp_frenet_point.y;
       }
@@ -2532,10 +2525,10 @@ void GapSelectorDecider::RestoreTrajResult(TrajectoryPoints &traj_points) {
 
 bool GapSelectorDecider::CheckLCFinish() {
   if (gap_selector_state_machine_info_.lane_cross) {
-    LOG_DEBUG("lc finished! lane crossed!");
+    ILOG_DEBUG << "lc finished! lane crossed!";
     return std::fabs(ego_l_cur_lane_) < 0.5 ? true : false;
   } else {
-    LOG_DEBUG("lc finished! lane crossed!");
+    ILOG_DEBUG << "lc finished! lane crossed!";
     return false;
   }
 }

@@ -7,7 +7,7 @@
 #include <vector>
 
 #include "general_planning_context.h"
-#include "log.h"
+#include "log_glog.h"
 #include "nlohmann_json.hpp"
 #include "task_basic_types.h"
 
@@ -28,8 +28,7 @@ class EgoPlanningConfigBuilder {
                   "cast only works on derived Config");
     T target;
     target.init(json_);
-    std::cout << "created" << typeid(T).name() << std::endl;
-    // LOG_DEBUG("created %s with %s", typeid(T).name(), name());
+    ILOG_DEBUG << "created" << typeid(T).name();
     return target;
   }
 

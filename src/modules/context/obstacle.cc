@@ -3,7 +3,6 @@
 #include <cstddef>
 
 #include "common.h"
-#include "log.h"
 #include "math/linear_interpolation.h"
 
 namespace planning {
@@ -176,15 +175,15 @@ Obstacle::Obstacle(int id, const PredictionObject &prediction_object,
   if (prediction_object.bottom_polygon_points.size() < 3) {
     perception_bounding_box_.GetAllCorners(&polygon_points);
   } else {
-    LOG_DEBUG("raw size %lu", prediction_object.bottom_polygon_points.size());
+    ILOG_DEBUG << "raw size " << prediction_object.bottom_polygon_points.size();
     for (size_t i = 0; i < prediction_object.bottom_polygon_points.size() - 1;
          ++i) {
       auto &point = prediction_object.bottom_polygon_points[i];
       polygon_points.emplace_back(planning_math::Vec2d(point.x, point.y));
-      LOG_DEBUG("point x %f y %f", polygon_points[i].x(),
-                polygon_points[i].y());
-      LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - x_center_,
-                polygon_points[i].y() - y_center_);
+      // LOG_DEBUG("point x %f y %f", polygon_points[i].x(),
+      //           polygon_points[i].y());
+      // LOG_DEBUG("rel point x %f y %f", polygon_points[i].x() - x_center_,
+      //           polygon_points[i].y() - y_center_);
     }
     // polygon_points.erase(polygon_points.begin());
   }
@@ -446,7 +445,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points)
   }
   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
                                                    &obstacle_ego_polygon_)) {
-    LOG_DEBUG("polygon_debug invalid ego polygon\n");
+    ILOG_ERROR << "polygon_debug invalid ego polygon";
   }
 }
 
@@ -501,7 +500,7 @@ Obstacle::Obstacle(int id, const std::vector<planning_math::Vec2d> &points,
   }
   if (!planning_math::Polygon2d::ComputeConvexHull(ego_polygon_points,
                                                    &obstacle_ego_polygon_)) {
-    LOG_DEBUG("polygon_debug invalid ego polygon\n");
+    ILOG_DEBUG << "polygon_debug invalid ego polygon";
   }
 }
 
@@ -599,15 +598,10 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
 
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    LOG_DEBUG("polygon_debug : get position %f %f failed\n",
-              point.path_point.x(), point.path_point.y());
-    for (auto p : polygon_points) {
-      LOG_DEBUG("polygon_debug invald point x %f y %f",
-                p.x() - point.path_point.x(), p.y() - point.path_point.y());
-    }
+    ILOG_ERROR << "polygon_debug : get position" << point.path_point.x() << ", " << point.path_point.y() << " failed";
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {
-      LOG_DEBUG("polygon_debug : invalid box polygon\n");
+      ILOG_ERROR << "polygon_debug : invalid box polygon";
     }
   }
   return polygon;

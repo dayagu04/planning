@@ -69,7 +69,7 @@ bool AdasFunction::Plan() {
   // 获取外部session数据
   GetContext.set_session_mutable(session_);
   if (GetContext.mutable_session() == nullptr) {
-    LOG_DEBUG("adas_function get session failed!!!\n");
+    ILOG_ERROR << "adas_function get session failed!!!";
     return false;
   }
 
@@ -77,8 +77,7 @@ bool AdasFunction::Plan() {
   double start_time_preprocess = IflyTime::Now_ms();
   preprocess_ptr_->RunOnce();
   double end_time_preprocess = IflyTime::Now_ms();
-  LOG_DEBUG("adas_preprocess_cost_time is [%f]ms:\n",
-            (end_time_preprocess - start_time_preprocess));
+  ILOG_DEBUG << "adas_preprocess_cost_time is [" << end_time_preprocess - start_time_preprocess << "]ms";
   JSON_DEBUG_VALUE("adas_preprocess_cost_time",
                    (end_time_preprocess - start_time_preprocess));
 
@@ -97,8 +96,7 @@ bool AdasFunction::Plan() {
   }
   SetLkaTrajectory();
   double end_time_lkas = IflyTime::Now_ms();
-  LOG_DEBUG("lkas_function cost is [%f]ms:\n",
-            (end_time_lkas - start_time_lkas));
+  ILOG_DEBUG << "lkas_function cost is [" << end_time_lkas - start_time_lkas << "]ms";
   JSON_DEBUG_VALUE("lkas_function_cost_time_ms",
                    (end_time_lkas - start_time_lkas));
 
@@ -108,9 +106,6 @@ bool AdasFunction::Plan() {
   //                             ->intelligent_headlight_control_function();
   // ihc_function_ptr->RunOnce();
   // double end_time_ihc = IflyTime::Now_ms();
-  // LOG_DEBUG("ihc_function cost is [%f]ms:\n", (end_time_ihc -
-  // start_time_ihc)); JSON_DEBUG_VALUE("ihc_function_cost_time_ms",
-  //                  (end_time_ihc - start_time_ihc));
 
   // tsr_function test
   // double start_time_tsr = IflyTime::Now_ms();
@@ -118,9 +113,6 @@ bool AdasFunction::Plan() {
   //     session_->mutable_planning_context()->traffic_sign_recognition_function();
   // tsr_function_ptr->RunOnce();
   // double end_time_tsr = IflyTime::Now_ms();
-  // LOG_DEBUG("tsr_function cost is [%f]ms:\n", (end_time_tsr -
-  // start_time_tsr)); JSON_DEBUG_VALUE("tsr_function_cost_time_ms",
-  //                  (end_time_tsr - start_time_tsr));
 
   Log();
   // 存储数据用于下一次循环
@@ -272,8 +264,8 @@ void AdasFunction::SetLkaTrajectory() {
     path_point->jerk = 0.0;
     ++(lkas_trajectory->trajectory_points_size);
   }
-  std::cout << "lks_trajectory_.trajectory_points_size = "
-            << (int)lkas_trajectory->trajectory_points_size << std::endl;
+  ILOG_DEBUG << "lks_trajectory_.trajectory_points_size = "
+             << (int)lkas_trajectory->trajectory_points_size;
 }
 void AdasFunction::TestLkasForHmi(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
