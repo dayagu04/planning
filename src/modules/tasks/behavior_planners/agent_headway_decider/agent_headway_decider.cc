@@ -477,6 +477,9 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
   auto time_headway_level = session_->environmental_model()
                                 .get_ego_state_manager()
                                 ->time_headway_level();
+  const auto has_time_headway_scale_up_request =
+      ego_state_manager->has_time_headway_scale_up_request();
+
   if (time_headway_level < 1) {
     time_headway_level = 1;
   } else if (time_headway_level > 5) {
@@ -517,8 +520,13 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
 
   matched_desired_headway = planning::interp(
       planning_init_vel, config_.ego_vel_table, time_headway_table);
+  matched_desired_headway =
+      has_time_headway_scale_up_request
+          ? matched_desired_headway * config_.thw_scale_up_factor
+          : matched_desired_headway;
   JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
   JSON_DEBUG_VALUE("THW", matched_desired_headway);
+  JSON_DEBUG_VALUE("thw_scale_up_request", has_time_headway_scale_up_request)
   return;
 }
 
