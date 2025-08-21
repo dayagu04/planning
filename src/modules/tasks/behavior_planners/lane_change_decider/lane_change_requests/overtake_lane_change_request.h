@@ -44,8 +44,12 @@ class OvertakeRequest : public LaneChangeRequest {
   bool isCouldOvertakeByRoute(
       const std::shared_ptr<ReferencePath>& base_ref_line,
       const std::shared_ptr<VirtualLane>& target_lane,
-      const double lane_traffic_speed, const double leading_vehicle_speed,
+      const double lane_traffic_speed, const agent::Agent* agent,
       const int left_lane_num, const int right_lane_num, const bool is_left);
+      
+  bool isCouldOvertakeMaintainByRoute(
+    const double lane_traffic_speed, const agent::Agent* agent,
+    const bool is_left);
 
   void updateLaneChangeSafety(
       const std::shared_ptr<ReferencePath>& left_ref_line,
