@@ -20,6 +20,18 @@ void SpeedLimitDeciderOutput::SetSpeedLimit(
   speed_limit_type_final_.second = limited_speed;
 }
 
+bool SpeedLimitDeciderOutput::GetSpeedLimitByType(
+    const SpeedLimitType& speed_limit_type,
+    double* const limited_speed) const {
+  const auto& speed_limit_info = speed_limit_map_.find(speed_limit_type);
+  if (speed_limit_info != speed_limit_map_.end()) {
+    (*limited_speed) = speed_limit_info->second;
+    return true;
+  } else {
+    return false;
+  }
+}
+
 void SpeedLimitDeciderOutput::SetSpeedLimitIntoMap(
     const double limited_speed, const SpeedLimitType& speed_limit_type) {
   if (speed_limit_map_.find(speed_limit_type) == speed_limit_map_.end()) {

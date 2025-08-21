@@ -55,6 +55,7 @@ void LateralMotionPlanningWeight::Init() {
   is_search_success_ = false;
   is_s_bend_ = false;
   is_use_spatio_planner_result_ = false;
+  is_sharp_turn_ = false;
   soft_bound_qratio_vec_.resize(26, 1.0);
   hard_bound_qratio_vec_.resize(26, 1.0);
   curvature_radius_vec_.resize(6, 10000.0);
@@ -280,6 +281,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   expected_min_acc_ = 10.0;
   target_road_radius_ = 10000.0;
   is_s_bend_ = false;
+  is_sharp_turn_ = false;
   bool is_k_s_spline_valid = false;
   if (!k_s_spline.get_x().empty() &&
       !k_s_spline.get_y().empty()) {
@@ -393,6 +395,13 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   double max_near_radius =
       std::max(std::fabs(curvature_radius_vec_[1]),
                std::fabs(curvature_radius_vec_[0]));
+  if (max_near_radius >= 400.0 &&
+      ((max_near_radius - mid_radius > 150 &&
+        mid_radius < 200.0) ||
+       (max_near_radius - far_radius > 200 &&
+        far_radius < 200.0))) {
+    is_sharp_turn_ = true;
+  }
   if (max_road_radius < 150.0 ||   // in large bend
       max_near_radius >= 400.0) {  // ego not-in large bend
     target_road_radius_ = max_near_radius;
@@ -723,6 +732,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     std::vector<double> xp_road_radius{250.0, 400.0, 600.0, 750.0};
     jerk_bound = // 1.0 0.8 0.6 0.5
       planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
+    if (is_sharp_turn_) {
+      jerk_bound += 0.5;
+    }
   }
   // emergency
   bool is_soft_bound_spline_valid = false;
@@ -1243,6 +1255,8 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     } else {
       weight_.complete_follow = true;
     }
+  } else if (is_sharp_turn_) {
+    weight_.complete_follow = true;
   }
 
   // set complete hold flag, concerned index

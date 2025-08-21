@@ -42,6 +42,9 @@ class SpeedLimitDeciderOutput {
   bool GetSpeedLimit(double* const limited_speed,
                      SpeedLimitType* const speed_limit_type) const;
 
+  bool GetSpeedLimitByType(const SpeedLimitType& speed_limit_type,
+                           double* const limited_speed) const;
+
   const std::vector<SpeedLimitType>& GetAllSpeedLimitTypes() const;
 
   std::string ChangeSpeedLimitType(const SpeedLimitType type);
