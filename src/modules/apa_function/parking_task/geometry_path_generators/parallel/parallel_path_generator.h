@@ -199,6 +199,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       tra_search_out_res.clear();
       point_vec.clear();
       line_pt_vec.clear();
+      debug_line_vec.clear();
+      debug_inslot_path_vec.clear();
     }
   };
 
@@ -364,8 +366,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool GenTiltedPreparingLine(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
 
-const bool GenTiltedPreparingLine2ShortChannel(
-    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec);
+  const bool GenTiltedPreparingLine2ShortChannel(
+      std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
 
   const bool CheckEgoInSlot() const;
   const bool CalMinSafeCircle();
