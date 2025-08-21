@@ -85,6 +85,7 @@ static const double kMaxYPenalty = 2.0;
 
 void ParallelPathGenerator::Reset() {
   output_.Reset();
+  debug_info_.Reset();
   calc_params_.Reset();
   output_.steer_vec.reserve(kMaxParallelParkInSegmentNums);
   output_.gear_cmd_vec.reserve(kMaxParallelParkInSegmentNums);
@@ -94,9 +95,7 @@ void ParallelPathGenerator::Reset() {
 void ParallelPathGenerator::Preprocess() {
   pnc::geometry_lib::PrintPose("start pose",
                                input_.ego_info_under_slot.cur_pose);
-  output_.Reset();
-  debug_info_.Reset();
-  calc_params_.Reset();
+  Reset();
 
   input_.ego_info_under_slot.cur_pose.heading =
       pnc::geometry_lib::NormalizeAngle(
@@ -1544,7 +1543,7 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
       tp = tangent_points[0];
       Eigen::Vector2d x_tmp(-1.0, 0.0);
       Eigen::Vector2d y_tmp(0.0, 1.0);
-      ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
+      // ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
       for (size_t i = 0; i < max_num; i++) {
         auto start_pos =
             tp + x_tmp * input_.tlane.slot_side_sgn * i * step + y_tmp * 2;
