@@ -383,7 +383,7 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
     const auto& result = SortRaysByDirection(rays);
 
     for (int i = 0; i < result.size(); i++) {
-      if (rays[i].name == 'A') {
+      if (result[i] == 'A') {
         if (i == 0) {
           split_seg_info.split_direction = RAMP_ON_RIGHT;
         } else if (i == 1) {
