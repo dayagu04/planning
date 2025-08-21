@@ -61,23 +61,27 @@ class ParkingScenario {
     double replan_dist_path = apa_param.GetParam().max_replan_remain_dist;
     double wait_time_path = 0.068;
     double replan_dist_obs = apa_param.GetParam().max_replan_remain_dist;
-    double wait_time_obs = apa_param.GetParam().uss_stuck_replan_wait_time;
+    double wait_time_obs = apa_param.GetParam().obs_stuck_replan_wait_time;
     double replan_dist_slot_jump = apa_param.GetParam().max_replan_remain_dist;
     double wait_time_slot_jump = 0.168;
     double stuck_replan_time = apa_param.GetParam().stuck_replan_time;
+    double min_drive_dist = apa_param.GetParam().min_drive_dist;
 
     CheckReplanParams() = default;
-    CheckReplanParams(double replan_dist_path, double wait_time_path,
-                      double replan_dist_obs, double wait_time_obs,
-                      double replan_dist_slot_jump, double wait_time_slot_jump,
-                      double stuck_replan_time)
-        : replan_dist_path(replan_dist_path),
-          wait_time_path(wait_time_path),
-          replan_dist_obs(replan_dist_obs),
-          wait_time_obs(wait_time_obs),
-          replan_dist_slot_jump(replan_dist_slot_jump),
-          wait_time_slot_jump(wait_time_slot_jump),
-          stuck_replan_time(stuck_replan_time) {}
+    CheckReplanParams(
+        double _replan_dist_path, double _wait_time_path,
+        double _replan_dist_obs, double _wait_time_obs,
+        double _replan_dist_slot_jump, double _wait_time_slot_jump,
+        double _stuck_replan_time,
+        double _min_drive_dist = apa_param.GetParam().min_drive_dist)
+        : replan_dist_path(_replan_dist_path),
+          wait_time_path(_wait_time_path),
+          replan_dist_obs(_replan_dist_obs),
+          wait_time_obs(_wait_time_obs),
+          replan_dist_slot_jump(_replan_dist_slot_jump),
+          wait_time_slot_jump(_wait_time_slot_jump),
+          stuck_replan_time(_stuck_replan_time),
+          min_drive_dist(_min_drive_dist) {}
     ~CheckReplanParams() = default;
   };
 
@@ -450,13 +454,16 @@ class ParkingScenario {
   virtual const bool CheckReplan(const CheckReplanParams &check_params);
 
   virtual const bool CheckSegCompleted(const double replan_dist,
-                                       const double wait_time);
+                                       const double wait_time,
+                                       const double min_drive_dist);
 
   virtual const bool CheckObsStucked(const double replan_dist,
-                                     const double wait_time);
+                                     const double wait_time,
+                                     const double min_drive_dist);
 
   virtual const bool CheckSlotJumpStucked(const double replan_dist,
-                                          const double wait_time);
+                                          const double wait_time,
+                                          const double min_drive_dist);
 
   virtual const bool CheckStuckTimeEnough(const double stuck_replan_time);
 

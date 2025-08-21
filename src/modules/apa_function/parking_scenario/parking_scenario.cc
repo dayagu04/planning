@@ -850,21 +850,23 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
   }
 
   if (CheckSegCompleted(check_params.replan_dist_path,
-                        check_params.wait_time_path)) {
+                        check_params.wait_time_path,
+                        check_params.min_drive_dist)) {
     ILOG_INFO << "replan by current segment completed!";
     frame_.replan_reason = ReplanReason::SEG_COMPLETED_PATH;
     return true;
   }
 
-  if (CheckObsStucked(check_params.replan_dist_obs,
-                      check_params.wait_time_obs)) {
+  if (CheckObsStucked(check_params.replan_dist_obs, check_params.wait_time_obs,
+                      check_params.min_drive_dist)) {
     ILOG_INFO << "replan by obs stucked!";
     frame_.replan_reason = ReplanReason::SEG_COMPLETED_OBS;
     return true;
   }
 
   if (CheckSlotJumpStucked(check_params.replan_dist_slot_jump,
-                           check_params.wait_time_slot_jump)) {
+                           check_params.wait_time_slot_jump,
+                           check_params.min_drive_dist)) {
     ILOG_INFO << "replan by slot jump stucked!";
     frame_.replan_reason = ReplanReason::SEG_COMPLETED_SLOT_JUMP;
     return true;
@@ -902,12 +904,13 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
 }
 
 const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
-                                              const double wait_time) {
+                                              const double wait_time,
+                                              const double min_drive_dist) {
   if (frame_.remain_dist_path < replan_dist &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-      frame_.current_path_length > 1e-2) {
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to target, need wait a certain time!";
-    if (frame_.stuck_obs_time > wait_time || frame_.stuck_by_dynamic_obs) {
+    if (frame_.stuck_time > wait_time &&
+        frame_.current_path_length - frame_.remain_dist_path > min_drive_dist) {
       ILOG_INFO << "wait a certain time, start plan";
       return true;
     }
@@ -917,11 +920,13 @@ const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
 }
 
 const bool ParkingScenario::CheckObsStucked(const double replan_dist,
-                                            const double wait_time) {
+                                            const double wait_time,
+                                            const double min_drive_dist) {
   if (frame_.remain_dist_obs < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle!, need wait a certain time!";
-    if (frame_.stuck_obs_time > wait_time) {
+    if (frame_.stuck_obs_time > wait_time &&
+        frame_.current_path_length - frame_.remain_dist_path > min_drive_dist) {
       ILOG_INFO << "wait a certain time, start plan";
       return true;
     }
@@ -931,11 +936,13 @@ const bool ParkingScenario::CheckObsStucked(const double replan_dist,
 }
 
 const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
-                                                 const double wait_time) {
+                                                 const double wait_time,
+                                                 const double min_drive_dist) {
   if (frame_.remain_dist_slot_jump < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to slot jumped!, need wait a certain time!";
-    if (frame_.stuck_obs_time > wait_time) {
+    if (frame_.stuck_time > wait_time &&
+        frame_.current_path_length - frame_.remain_dist_path > min_drive_dist) {
       ILOG_INFO << "wait a certain time, start plan";
       return true;
     }
@@ -946,10 +953,7 @@ const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
 
 const bool ParkingScenario::CheckStuckTimeEnough(
     const double stuck_replan_time) {
-  if (frame_.stuck_obs_time > stuck_replan_time) {
-    return true;
-  }
-  return false;
+  return frame_.stuck_time > stuck_replan_time;
 }
 
 const bool ParkingScenario::CheckDynamicUpdate() { return false; }

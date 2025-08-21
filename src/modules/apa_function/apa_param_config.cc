@@ -362,9 +362,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.safe_uss_remain_dist_out_slot, double,
                   "safe_uss_remain_dist_out_slot");
 
-  JSON_READ_VALUE(param.uss_stuck_replan_wait_time, double,
-                  "uss_stuck_replan_wait_time");
-
   JSON_READ_VALUE(param.uss_scan_angle_deg, double, "uss_scan_angle_deg");
 
   JSON_READ_VALUE(param.uss_apa_scan_angle_deg, double,
@@ -416,6 +413,11 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.max_replan_remain_dist, double,
                   "max_replan_remain_dist");
+
+  JSON_READ_VALUE(param.min_drive_dist, double, "min_drive_dist");
+
+  JSON_READ_VALUE(param.obs_stuck_replan_wait_time, double,
+                  "obs_stuck_replan_wait_time");
 
   JSON_READ_VALUE(param.max_replan_count, int, "max_replan_count");
 
