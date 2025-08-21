@@ -651,6 +651,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.status_update_reason =
       ad_info.status_update_reason;
   planning_hmi_info->ad_info.obstacle_info[0] = ad_info.obstacle_info[0];
+  planning_hmi_info->ad_info.obstacle_info_size = ad_info.obstacle_info_size;
   planning_hmi_info->ad_info.lane_change_reason = ad_info.lane_change_reason;
   planning_hmi_info->ad_info.is_curva = ad_info.is_curva;
 

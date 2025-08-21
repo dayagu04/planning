@@ -480,6 +480,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     iflyauto::ObstacleInfo obstacle;
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
+    ad_info.obstacle_info_size = 1;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
