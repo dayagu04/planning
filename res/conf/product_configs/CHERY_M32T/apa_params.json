@@ -113,8 +113,8 @@
   "check_finish_max_remain_obs_dist": 0.2,
 
   "comment_6": "check fail params",
-  "stuck_failed_time": 10.0,
-  "pause_failed_time": 33.0,
+  "stuck_failed_time": 11.0,
+  "stuck_failed_by_dynamic_obs_time": 46.8,
   "max_replan_failed_time": 3.0,
 
   "comment_7": "check static params",
@@ -148,7 +148,6 @@
   "safe_remain_dist_in_1r_parallel_slot": 0.15,
   "safe_uss_remain_dist_in_parallel_slot": 0.2,
   "safe_uss_remain_dist_out_slot": 0.35,
-  "uss_stuck_replan_wait_time": 1.0,
   "uss_scan_angle_deg": 60.0,
   "uss_apa_scan_angle_deg": 75.0,
   "uss_upa_scan_angle_deg": 75.0,
@@ -170,8 +169,10 @@
   "uss_directly_behind_index": [8, 9],
 
   "comment_9": "check replan params",
-  "stuck_replan_time": 5.0,
+  "stuck_replan_time": 6.0,
   "max_replan_remain_dist": 0.2,
+  "min_drive_dist": 0.08,
+  "obs_stuck_replan_wait_time": 1.0,
   "max_replan_count": 26,
 
   "comment_10": "construct t_lane params",

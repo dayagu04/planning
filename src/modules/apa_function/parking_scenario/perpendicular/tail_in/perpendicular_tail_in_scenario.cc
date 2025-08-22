@@ -88,15 +88,6 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
-  if (CheckPaused()) {
-    SetParkingStatus(PARKING_PAUSED);
-    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
-    }
-    return;
-  }
-
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     SetParkingStatus(PARKING_FAILED);
@@ -622,7 +613,10 @@ const bool PerpendicularTailInScenario::GenTlane() {
       << "  slot occupied ratio = " << ego_info_under_slot.slot_occupied_ratio
       << "  pt_inside = " << ego_info_under_slot.pt_inside.transpose()
       << "  stuck time(s) = " << frame_.stuck_time
-      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time << "  slot side = "
+      << "  stuck_obs_time(s) = " << frame_.stuck_obs_time
+      << "  stuck_dynamic_obs_time(s) = " << frame_.stuck_dynamic_obs_time
+      << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs << "  "
+      << "  slot side = "
       << geometry_lib::GetSlotSideString(ego_info_under_slot.slot_side);
 
   return true;
@@ -1672,12 +1666,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   ILOG_INFO << "real time brake safe_remain_dist = " << safe_remain_dist
             << "  lon_buffer = " << lon_buffer
             << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
-            << "  stuck_by_dynamic_obs = " << frame_.stuck_by_dynamic_obs
             << "  increase_lat_err_flag = " << increase_lat_err_flag;
-
-  if (frame_.stuck_by_dynamic_obs) {
-    frame_.stuck_obs_time = 0.0;
-  }
 
   return safe_remain_dist;
 }
@@ -2740,6 +2729,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("remain_dist_slot_jump", frame_.remain_dist_slot_jump)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("stuck_obs_time", frame_.stuck_obs_time)
+  JSON_DEBUG_VALUE("stuck_dynamic_obs_time", frame_.stuck_dynamic_obs_time)
   JSON_DEBUG_VALUE("stuck_by_dynamic_obs", frame_.stuck_by_dynamic_obs)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)

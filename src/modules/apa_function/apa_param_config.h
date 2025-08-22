@@ -378,7 +378,7 @@ struct ApaParameters {
 
   // check fail params
   double stuck_failed_time = 9.0;
-  double pause_failed_time = 12.68;
+  double stuck_failed_by_dynamic_obs_time = 12.68;
   double max_replan_failed_time = 3.0;
 
   // check static params
@@ -412,7 +412,7 @@ struct ApaParameters {
   double safe_remain_dist_in_1r_parallel_slot = 0.3;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
   double safe_uss_remain_dist_out_slot = 0.55;
-  double uss_stuck_replan_wait_time = 2.0;
+  double obs_stuck_replan_wait_time = 2.0;
   double uss_scan_angle_deg = 60;
   double uss_apa_scan_angle_deg = 80;
   double uss_upa_scan_angle_deg = 120;
@@ -440,6 +440,7 @@ struct ApaParameters {
   // check replan params
   double stuck_replan_time = 4.0;
   double max_replan_remain_dist = 0.2;
+  double min_drive_dist = 0.08;
   int max_replan_count = 12;
   int headin_max_replan_count = 20;
 

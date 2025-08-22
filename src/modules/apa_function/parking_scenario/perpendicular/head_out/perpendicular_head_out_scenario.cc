@@ -35,15 +35,6 @@ void PerpendicularHeadOutScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
-  if (CheckPaused()) {
-    SetParkingStatus(PARKING_PAUSED);
-    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
-    }
-    return;
-  }
-
   // const double safe_uss_remain_dist =
   //     (frame_.ego_slot_info.slot_occupied_ratio < 0.05)
   //         ? apa_param.GetParam().safe_uss_remain_dist_out_slot

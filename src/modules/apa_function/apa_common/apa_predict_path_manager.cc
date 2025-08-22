@@ -107,6 +107,10 @@ void ApaPredictPathManager::Update(
   const auto& control_trajectory =
       local_view->control_output.control_trajectory;
 
+  const bool splice_plan_traj =
+      (planning_output->gear_command.gear_command_value ==
+       local_view->control_output.gear_command_value);
+
   if (control_trajectory.control_result_points_size < 1) {
     use_steer_angle_flag = true;
   }
@@ -152,7 +156,7 @@ void ApaPredictPathManager::Update(
       // 最后一个点的s小于predict_distance，需要补全到predict_distance
       pnc::geometry_lib::PathPoint car_predict_pt;
       const double step = 0.1;
-      if (control_err_big_) {
+      if (control_err_big_ || !splice_plan_traj) {
         // 直线延长
         do {
           size_t n = predict_pt_vec_.size();

@@ -84,15 +84,6 @@ void PerpendicularHeadInScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
-  if (CheckPaused()) {
-    SetParkingStatus(PARKING_PAUSED);
-    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
-    }
-    return;
-  }
-
   const double safe_uss_remain_dist =
       (apa_world_ptr_->GetSlotManagerPtr()
            ->GetEgoInfoUnderSlot()

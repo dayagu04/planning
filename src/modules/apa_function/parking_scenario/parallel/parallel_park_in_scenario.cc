@@ -79,15 +79,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
-  if (CheckPaused()) {
-    SetParkingStatus(PARKING_PAUSED);
-    if (frame_.pause_time > apa_param.GetParam().pause_failed_time) {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PAUSE_FAILED_TIME;
-    }
-    return;
-  }
-
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
@@ -142,11 +133,11 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   const double max_replan_path_dist = 0.15;
-  const double stuck_replan_wait_time = 1.0;
+  const double obs_stuck_replan_wait_time = 1.0;
 
   CheckReplanParams replan_params(
       max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
-      stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
+      obs_stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
       0.168, apa_param.GetParam().stuck_replan_time);
   // check replan
   if (!CheckReplan(replan_params)) {
