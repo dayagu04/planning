@@ -225,8 +225,8 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
   virtual_tlane_.A = virtual_tlane_.B + pt_01_unit_vec * area_length;
   virtual_tlane_.H = virtual_tlane_.A + pt_23mid_01_mid_unit_vec * area_width;
 
-  const double origin_slot_length = (slot.origin_corner_coord_local_.pt_0 -
-                                     slot.origin_corner_coord_local_.pt_2)
+  const double origin_slot_length = (slot.origin_corner_coord_local_.pt_01_mid -
+                                     slot.origin_corner_coord_local_.pt_23_mid)
                                         .norm();
 
   virtual_tlane_.C =
