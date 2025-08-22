@@ -598,6 +598,11 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   if (!ObstacleDecision()) {
     return false;
   }
+
+   if (!EnoughSafetyDistance()) {
+    return false;
+  }
+
   double first_obs_end =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary().s_end;
   if (lane_borrow_status_ == kNoLaneBorrow && (!is_facility_) &&
@@ -1351,6 +1356,24 @@ BorrowDirection LaneBorrowDecider::GetPredBypassDirection(
   }
 }
 // v2
+bool LaneBorrowDecider::EnoughSafetyDistance(){
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  if(static_blocked_obj_id_vec_.empty()){
+    lane_borrow_decider_output_.lane_borrow_failed_reason = NO_PASSABLE_OBSTACLE;
+    return false;
+  }
+  const auto& agent = agent_mgr->GetAgent(static_blocked_obj_id_vec_[0]);
+  bool is_agent_static = agent->is_static() || agent->speed() < 0.3;
+  bool is_close = obs_start_s_ - ego_frenet_boundary_.s_end < 4.5;
+  bool is_ego_pull_over = ego_speed_ < 0.3;
+  // 车速 静止 距离
+  if(is_agent_static && is_close && is_ego_pull_over && lane_borrow_status_ == kNoLaneBorrow){
+    lane_borrow_decider_output_.lane_borrow_failed_reason = STATIC_AREA_TOO_CLOSE;
+    return false;
+  }else{
+    return true;
+  }
+}
 bool LaneBorrowDecider::CheckLaneBorrowDircetion() {
   //拿静态区域的第一个obs_id 判断在path的左边还是右边
   // const auto& id = static_blocked_obj_id_vec_[0];

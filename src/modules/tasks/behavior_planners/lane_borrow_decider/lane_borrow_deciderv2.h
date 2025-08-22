@@ -68,6 +68,7 @@ class LaneBorrowDecider : public Task {
   BorrowDirection GetPredBypassDirection(
       const FrenetObstacleBoundary& frenet_obstacle_sl, const int obs_id);
   bool CheckLaneBorrowDircetion();
+  bool EnoughSafetyDistance();
   bool CrossingPositionJudgment();
   Point2D CartesianRotation(const Point2D& Cartesian_point,
                             double heading_angle, double ego_x, double ego_y);
