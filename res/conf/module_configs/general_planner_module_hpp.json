@@ -21,7 +21,7 @@
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
   "enable_use_speed_limit_to_suppress_interactive_lane_change": true,
-  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 1500,
+  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 500,
   "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 500,
   "minimum_ego_cruise_speed_for_active_lane_change": 19.45,
   "enable_fusion_occupancy_objects": true,

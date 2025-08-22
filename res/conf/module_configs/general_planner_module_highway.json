@@ -27,7 +27,7 @@
   "overtake_soft_lane_change_speed_threshold": 5.56,
 
   "enable_use_speed_limit_to_suppress_interactive_lane_change": true,
-  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 2000,
+  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 500,
   "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 500,
   "minimum_ego_cruise_speed_for_active_lane_change": 19.45,
   "enable_fusion_occupancy_objects": true,

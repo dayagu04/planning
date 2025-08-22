@@ -2468,6 +2468,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
         }
       }
     }
+    return true;
   }
 
   return false;
