@@ -57,6 +57,8 @@ static double kTBoundarySampleDist = 0.38;
 static double kChannelSampleDist = 0.46;
 static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
+static double kFrontShortChannelMin = 0.5;
+static double kFrontShortChannelMax = 7.5;
 
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
@@ -1003,8 +1005,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
   }
 
+  ILOG_INFO << "1 channel_y =" << t_lane_.channel_y;
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
+    const bool channel_x_condition =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                t_lane_.slot_length + kFrontShortChannelMin,
+                                E.x() + kFrontShortChannelMax) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), E.y(),
+                                kMinChannelYMagIdentification * slot_side_sgn);
+
     const bool channel_y_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), channel_point_1.x(),
                                 channel_point_2.x()) &&
@@ -1012,9 +1022,14 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
                                 kMinChannelYMagIdentification * slot_side_sgn,
                                 channel_point_1.y());
 
-    if (channel_y_condition) {
+    if (channel_y_condition || channel_x_condition) {
       filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
-
+    }
+    if (channel_x_condition) {
+      t_lane_.is_short_channel = true;
+      continue;
+    }
+    if (channel_y_condition) {
       if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
                                   t_lane_.slot_length + 5.0)) {
         if (slot_side_sgn > 0.0) {
@@ -1027,6 +1042,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       }
     }
   }
+  ILOG_INFO << "is_short_channel =" << t_lane_.is_short_channel;
+  ILOG_INFO << "2 channel_y =" << t_lane_.channel_y;
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       filtered_channel_obs_vec, CollisionDetector::CHANNEL_OBS);
 

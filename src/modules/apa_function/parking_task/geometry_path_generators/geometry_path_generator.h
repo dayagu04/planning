@@ -45,6 +45,7 @@ struct Tlane {
 
   double channel_y = 6.5;
   double channel_x_limit = 16.6;
+  bool is_short_channel = false;
 
   void Reset() {
     corner_outside_slot.setZero();
@@ -67,6 +68,7 @@ struct Tlane {
     slot_side_sgn = 1.0;
     limiter.Reset();
     is_inside_rigid = false;
+    is_short_channel = false;
   }
 };
 
