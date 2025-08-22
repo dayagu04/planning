@@ -456,8 +456,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
       lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (int_request_cancel_reason == SOLID_LC &&
-      lane_change_decider_output.lc_request_source == INT_REQUEST) {
+  if (int_request_cancel_reason == SOLID_LC) {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
     // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
