@@ -5,6 +5,7 @@
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
+#include "map_data.pb.h"
 #include "planning_context.h"
 
 namespace planning {
@@ -177,11 +178,26 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
     lc_map_decision = is_ego_on_leftmost ? 2 : 1;
   }
 
-  double lc_end_dis =
-      !route_info_output.split_region_info_list.empty() ?
-      route_info_output.split_region_info_list[0].distance_to_split_point -
-      std::abs(route_info_output.split_region_info_list[0]
-                   .start_fp_point.fp_distance_to_split_point) : NL_NMAX;
+  double lc_end_dis = NL_NMAX;
+  if (route_info_output.map_vendor ==
+      iflymapdata::sdpro::MapVendorType::MAP_VENDOR_BAIDU_LD) {
+    if (route_info_output.is_on_ramp ||
+        route_info_output.lc_nums_for_split != 0) {
+      lc_end_dis =
+          route_info_output.distance_to_first_road_split - kTmpRampLength;
+    } else {
+      lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
+    }
+  } else if (route_info_output.map_vendor ==
+             iflymapdata::sdpro::MapVendorType::MAP_VENDOR_TENCENT_SD_PRO) {
+    lc_end_dis =
+        !route_info_output.split_region_info_list.empty()
+            ? route_info_output.split_region_info_list[0]
+                      .distance_to_split_point -
+                  std::abs(route_info_output.split_region_info_list[0]
+                               .start_fp_point.fp_distance_to_split_point)
+            : NL_NMAX;
+  }
 
   double v_limit =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();

@@ -128,7 +128,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
   route_info_output_.map_vendor = sdpro_map_info.data_source();
 
   // 计算ramp信息
-  //  CaculateRampInfo(sdpro_map, current_link, nearest_s, max_search_length);
+  CaculateRampInfo(sdpro_map, current_link, nearest_s, max_search_length);
 
   // 计算merge信息
   CaculateMergeInfo(sdpro_map, current_link, nearest_s, max_search_length);
@@ -194,38 +194,27 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
   }
 }
 
-// void RouteInfo::CaculateRampInfo(const ad_common::sdpromap::SDProMap&
-// sdpro_map,
-//                                  const iflymapdata::sdpro::LinkInfo_Link&
-//                                  link, const double nearest_s, const double
-//                                  max_search_length) {
-//   // 计算ramp信息
-//   const auto& ramp_info =
-//       sdpro_map.GetRampInfo(link.id(), nearest_s, max_search_length);
-//   if (ramp_info.second > 0) {
-//     route_info_output_.dis_to_ramp = ramp_info.second;
-//     auto previous_seg =
-//         sdpro_map.GetPreviousLinkOnRoute(ramp_info.first->id());
+void RouteInfo::CaculateRampInfo(const ad_common::sdpromap::SDProMap& sdpro_map,
+                                 const iflymapdata::sdpro::LinkInfo_Link& link,
+                                 const double nearest_s,
+                                 const double max_search_length) {
+  // 计算ramp信息
+  const auto& ramp_info =
+      sdpro_map.GetRampInfo(link.id(), nearest_s, max_search_length);
+  if (ramp_info.second > 0) {
+    route_info_output_.dis_to_ramp = ramp_info.second;
+    auto previous_seg =
+        sdpro_map.GetPreviousLinkOnRoute(ramp_info.first->id());
 
-//     if (!previous_seg) {
-//       return;
-//     }
+    if (!previous_seg) {
+      return;
+    }
 
-//     SplitSegInfo split_seg_info;
-//     split_seg_info = MakesureSplitDirection(*previous_seg, sdpro_map);
-//     route_info_output_.ramp_direction = split_seg_info.split_direction;
-
-//     const auto split_region_lane_tupo_info =
-//     CalculateSplitRegionLaneTupoInfo(
-//         *previous_seg, sdpro_map);
-
-//     route_info_output_.ramp_region_info = split_region_lane_tupo_info;
-
-//     route_info_output_.ramp_region_info.distance_to_split_point =
-//     ramp_info.second; route_info_output_.ramp_region_info.split_direction =
-//         static_cast<SplitDirection>(split_seg_info.split_direction);
-//   }
-// }
+    SplitSegInfo split_seg_info;
+    split_seg_info = MakesureSplitDirection(*previous_seg, sdpro_map);
+    route_info_output_.ramp_direction = split_seg_info.split_direction;
+  }
+}
 
 SplitSegInfo RouteInfo::MakesureSplitDirection(
     const ::SdMapSwtx::Segment& split_segment,
