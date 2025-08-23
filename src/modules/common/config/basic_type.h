@@ -117,6 +117,16 @@ enum MergeType {
   BOTH_MERGE = 4
 };
 
+struct MergePointInfo {
+  double dis_to_merge_fp = NL_NMAX;
+  MergeType merge_type = MergeType::NO_MERGE;
+
+  void reset () {
+    dis_to_merge_fp = NL_NMAX;
+    merge_type = MergeType::NO_MERGE;
+  }
+};
+
 struct NOASplitRegionInfo {
   bool is_valid = false;
   bool is_ramp_split = false;//split场景专用
@@ -242,7 +252,8 @@ struct RouteInfoOutput {
   iflymapdata::sdpro::MapVendorType map_vendor =
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
   MLCDeciderRouteInfo mlc_decider_route_info;
-  double dis_to_merge_fp = NL_NMAX;
+  // double dis_to_merge_fp = NL_NMAX;
+  MergePointInfo merge_point_info;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -301,7 +312,8 @@ struct RouteInfoOutput {
     merge_region_info_list.clear();
     map_vendor = iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
     mlc_decider_route_info.reset();
-    dis_to_merge_fp = NL_NMAX;
+    // dis_to_merge_fp = NL_NMAX;
+    merge_point_info.reset();
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

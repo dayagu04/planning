@@ -2167,9 +2167,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     std::vector<int> merge_lane;
     if (CalculateMergeLaneInfo(merge_lane) && !merge_lane.empty()) {
-      bool dis_condition_satisfy = route_info_output_.dis_to_merge_fp <
+      bool dis_condition_satisfy =
+          route_info_output_.merge_point_info.dis_to_merge_fp <
           mlc_decider_route_info_.static_merge_region_info
-              .distance_to_split_point;
+                  .distance_to_split_point -
+              kEpsilon;
 
       if (dis_condition_satisfy) {
         for (int element : merge_lane) {
@@ -3649,12 +3651,14 @@ bool RouteInfo::CalculateMergeLaneInfo(
   uint64 fp_link_id;
   double ego_s_in_cur_link;
   double dis_to_merge_fp = 0.0;
+  MergeType merge_type;
 
-  if (!CalculateMergeFP(&find_fp, &fp_link_id, &dis_to_merge_fp)) {
-      return false;
+  if (!CalculateMergeFP(&merge_type, &find_fp, &fp_link_id, &dis_to_merge_fp)) {
+    return false;
   }
 
-  route_info_output_.dis_to_merge_fp = dis_to_merge_fp;
+  route_info_output_.merge_point_info.dis_to_merge_fp = dis_to_merge_fp;
+  route_info_output_.merge_point_info.merge_type = merge_type;
 
   // if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
   //     return false;
@@ -3691,9 +3695,11 @@ bool RouteInfo::CalculateMergeLaneInfo(
   return false;
 }
 
-bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
+bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
+                                 iflymapdata::sdpro::FeaturePoint* find_fp,
                                  uint64* fp_link_id, double* dis_to_merge_fp) {
-  if (find_fp == nullptr || fp_link_id == nullptr || dis_to_merge_fp == nullptr) {
+  if (merge_type == nullptr || find_fp == nullptr || fp_link_id == nullptr ||
+      dis_to_merge_fp == nullptr) {
     return false;
   }
 
@@ -3717,11 +3723,24 @@ bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
           if (itera_dis < kEpsilon) {
             continue;
           }
-          iflymapdata::sdpro::LaneChangeType merge_type;
-          if (IsMergeFP(&merge_type, fp)) {
+          iflymapdata::sdpro::LaneChangeType temp_merge_type;
+          if (IsMergeFP(&temp_merge_type, fp)) {
             *find_fp = fp;
             *fp_link_id = current_link->id();
             *dis_to_merge_fp = itera_dis;
+
+            if (temp_merge_type ==
+                iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
+              *merge_type = LEFT_MERGE;
+            } else if (temp_merge_type == iflymapdata::sdpro::LaneChangeType::
+                                              RightTurnMergingLane) {
+              *merge_type = RIGHT_MERGE;
+            } else if (temp_merge_type == iflymapdata::sdpro::LaneChangeType::
+                                              BothDirectionMergingLane) {
+              *merge_type = BOTH_MERGE;
+            } else {
+              *merge_type = NO_MERGE;
+            }
             return true;
           }
         }
