@@ -3658,6 +3658,10 @@ bool RouteInfo::CalculateMergeLaneInfo(
 
 bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
                                  uint64* fp_link_id, double* dis_to_merge_fp) {
+  if (find_fp == nullptr || fp_link_id == nullptr || dis_to_merge_fp == nullptr) {
+    return false;
+  }
+
   double s = 0.0;
   double l = 0.0;
   auto current_link =  CalculateCurrentLink(&s, &l);
@@ -3689,7 +3693,11 @@ bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
       }
     }
     itera_dis = itera_dis + current_link->length() * 0.01;
+    
     current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
+    if (!current_link) {
+      return false;
+    }
   }
   return false;
 }
