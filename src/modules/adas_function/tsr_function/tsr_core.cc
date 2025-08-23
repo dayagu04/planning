@@ -773,7 +773,8 @@ void TsrCore::UpdateTsrWarning(void) {
   // }
 
   // HNOA激活，取消所有报警
-  if (function_state_machine_info_ptr->switch_sts.noa_main_switch == true) {
+  if (function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE || 
+      function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
     tsr_warning_voice_ = false;
     tsr_warning_image_ = false;
   } else {
