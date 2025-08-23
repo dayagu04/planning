@@ -416,9 +416,12 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       if (single_sign.supp_sign_type == iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
         // 使用自车表显速度判断感知限速牌真实性
         bool speed_limit_valid = false;
-        if (ego_speed_kph < 40.0) {
-          // 自车车速＜40kph，任意限速标志都可以接受
+        if (ego_speed_kph < 30.0) {
+          // 自车车速＜30kph，任意限速标志都可以接受
           speed_limit_valid = true;
+        } else if (ego_speed_kph >= 30.0 && ego_speed_kph < 40.0) {
+          // 30kph≤自车车速＜40kph，限速标志的限速值>10kph才可以接受
+          speed_limit_valid = (single_sign.speed_limit > 10);
         } else if (ego_speed_kph >= 40.0 && ego_speed_kph <= 80.0) {
           // 40kph≤自车车速≤80kph，限速标志的限速值>10kph才可以接受
           speed_limit_valid = (single_sign.speed_limit > 10);
