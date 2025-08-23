@@ -2222,14 +2222,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
-
-  mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
-
   if (feasible_lane_sequence.empty() ||
       (!is_exist_merge_fp &&
        mlc_decider_route_info_.ego_status_on_route == ON_MAIN)) {
     return;
   }
+
+  mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
   int minVal_seq = feasible_lane_sequence[0];
   int maxVal_seq = feasible_lane_sequence[0];
