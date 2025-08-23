@@ -289,13 +289,11 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
     const double virtual_wall_x_offset, const double virtual_wall_y_offset,
     const double passage_half_length, const double passage_height) {
   // slot virtual wall
-  VirtualWallBoundary slot_boundary;
-
-  slot_boundary.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
-  slot_boundary.x_upper = slot_length - virtual_wall_x_offset;
-  slot_boundary.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
+  slot_boundary_.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
+  slot_boundary_.x_upper = slot_length - virtual_wall_x_offset;
+  slot_boundary_.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
   double lower_bound_x = -1.0;
-  slot_boundary.x_lower = lower_bound_x;
+  slot_boundary_.x_lower = lower_bound_x;
 
   // passage virtual wall
   // lower
@@ -316,7 +314,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   passage_bound_.Combine(tmp_passage_boundary);
 
   // sampling point
-  SamplingInVerticalBoundary(slot_boundary, passage_bound_, points);
+  SamplingInVerticalBoundary(slot_boundary_, passage_bound_, points);
 
   return;
 }
@@ -326,11 +324,10 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
     const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // slot virtual wall
-  VirtualWallBoundary slot_boundary;
-  slot_boundary.y_lower = -slot_width / 2.0 - 1.0;
-  slot_boundary.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
-  slot_boundary.y_upper = slot_width / 2.0;
-  slot_boundary.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.y_lower = -slot_width / 2.0 - 1.0;
+  slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.y_upper = slot_width / 2.0;
+  slot_boundary_.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
 
   // passage virtual wall
   // lower
@@ -343,9 +340,9 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
       (config.parallel_passage_length / 2 + slot_length / 2);
 
   // passage left/right bound
-  tmp_passage_boundary.y_lower = slot_boundary.y_upper;
+  tmp_passage_boundary.y_lower = slot_boundary_.y_upper;
   tmp_passage_boundary.y_upper =
-      slot_boundary.y_upper + config.parallel_passage_width;
+      slot_boundary_.y_upper + config.parallel_passage_width;
   tmp_passage_boundary.Combine(veh_boundary_);
 
   // boundary只能增长，不能缩减.
@@ -353,7 +350,7 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
   passage_bound_.Combine(tmp_passage_boundary);
 
   // sampling point
-  SamplingInParallelBoundary(slot_boundary, passage_bound_, points);
+  SamplingInParallelBoundary(slot_boundary_, passage_bound_, points);
 
   return;
 }
@@ -362,11 +359,10 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
     const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
   // slot virtual wall
-  VirtualWallBoundary slot_boundary;
-  slot_boundary.y_lower = -slot_width / 2.0;
-  slot_boundary.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
-  slot_boundary.y_upper = slot_width / 2.0 + 1.0;
-  slot_boundary.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.y_lower = -slot_width / 2.0;
+  slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
+  slot_boundary_.y_upper = slot_width / 2.0 + 1.0;
+  slot_boundary_.x_lower = -PARALLEL_SLOT_EXTRA_LEN;
 
   // passage virtual wall
   // lower
@@ -380,8 +376,8 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
 
   // passage left/right bound
   tmp_passage_boundary.y_lower =
-      slot_boundary.y_lower - config.parallel_passage_width;
-  tmp_passage_boundary.y_upper = slot_boundary.y_lower;
+      slot_boundary_.y_lower - config.parallel_passage_width;
+  tmp_passage_boundary.y_upper = slot_boundary_.y_lower;
   tmp_passage_boundary.Combine(veh_boundary_);
 
   // boundary只能增长，不能缩减.
@@ -389,7 +385,7 @@ void VirtualWallDecider::LeftSideParallelVirtualWall(
   passage_bound_.Combine(tmp_passage_boundary);
 
   // sampling point
-  SamplingInParallelBoundary(slot_boundary, passage_bound_, points);
+  SamplingInParallelBoundary(slot_boundary_, passage_bound_, points);
 
   return;
 }
@@ -420,6 +416,30 @@ void VirtualWallDecider::GetVehicleBound() {
   veh_boundary_.y_lower = veh_right_y - veh_buffer;
 
   return;
+}
+
+const MapBound VirtualWallDecider::GetMaxMapBound() const {
+  VirtualWallBoundary tmp = passage_bound_;
+  tmp.Combine(slot_boundary_);
+  tmp.Combine(veh_boundary_);
+
+  MapBound bound;
+  bound.x_max = tmp.x_upper;
+  bound.x_min = tmp.x_lower;
+  bound.y_max = tmp.y_upper;
+  bound.y_min = tmp.y_lower;
+
+  return bound;
+}
+
+const MapBound VirtualWallDecider::GetVehBound() const {
+  MapBound bound;
+  bound.x_max = veh_boundary_.x_upper;
+  bound.x_min = veh_boundary_.x_lower;
+  bound.y_max = veh_boundary_.y_upper;
+  bound.y_min = veh_boundary_.y_lower;
+
+  return bound;
 }
 }  // namespace apa_planner
 }  // namespace planning

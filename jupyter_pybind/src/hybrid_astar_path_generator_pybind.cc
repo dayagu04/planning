@@ -842,17 +842,17 @@ std::vector<Eigen::Vector3d> Update(
         break;
     }
 
-    request.start_ = Pose2f(start[0], start[1], start[2]);
-    request.start_.theta =
-        ad_common::math::NormalizeAngle(request.start_.theta);
+    request.start_pose = Pose2f(start[0], start[1], start[2]);
+    request.start_pose.theta =
+        ad_common::math::NormalizeAngle(request.start_pose.theta);
 
-    request.goal_ = Pose2f(end[0], end[1], end[2]);
-    request.goal_.theta = ad_common::math::NormalizeAngle(request.goal_.theta);
+    request.goal = Pose2f(end[0], end[1], end[2]);
+    request.goal.theta = ad_common::math::NormalizeAngle(request.goal.theta);
 
     request.real_goal = Pose2f(ego_slot_info.target_pose.pos[0],
                                ego_slot_info.target_pose.pos[1],
                                ego_slot_info.target_pose.heading);
-    request.base_pose_ = Pose2D(0, 0, 0);
+    request.base_pose = Pose2D(0, 0, 0);
 
     // enum class AstarPathGear {
     //   NONE = 0,
@@ -878,7 +878,7 @@ std::vector<Eigen::Vector3d> Update(
     }
 
     ILOG_INFO <<"planning goal";
-    request.goal_.DebugString();
+    request.goal.DebugString();
 
     ILOG_INFO <<"real goal";
     request.real_goal.DebugString();
@@ -891,6 +891,7 @@ std::vector<Eigen::Vector3d> Update(
     request.rs_request = RSPathRequestType::NONE;
     request.history_gear = AstarPathGear::NONE;
     request.swap_start_goal = swap_start_goal;
+    request.recommend_route_bound = MapBound(-10.0, 20.0, -20.0, 20.0);
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
 

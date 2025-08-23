@@ -75,6 +75,7 @@ struct PlannerOpenSpaceConfig {
 
   float expect_gear_penalty;
   float expect_dist_penalty;
+  float recommend_box_penalty;
 
   // check rs path segment min distance
   float rs_path_seg_advised_dist = 0.35;

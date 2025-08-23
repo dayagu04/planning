@@ -203,7 +203,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
     }
   }
 
-  result->base_pose = request_->base_pose_;
+  result->base_pose = request_->base_pose;
   path_points_size = std::min(path_points_size, path.x.size());
   if (path_points_size < 2) {
     return false;
@@ -229,7 +229,7 @@ bool SpiralSampling::SamplingByCubicSpiralForVerticalSlot(
         break;
       }
     }
-    result->base_pose = request_->base_pose_;
+    result->base_pose = request_->base_pose;
 
     if (result->accumulated_s.size() > 0 &&
         result->accumulated_s.back() < lon_min_sampling_length - 0.1) {

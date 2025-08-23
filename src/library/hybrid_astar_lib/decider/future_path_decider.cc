@@ -61,12 +61,12 @@ void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
 
   edt->UpdateSafeBuffer(0.01, 0.01, 0.4);
 
-  CalcDriveDistByLineModel(request.start_, edt, ref_line);
+  CalcDriveDistByLineModel(request.start_pose, edt, ref_line);
 
   // If ego need zigzag path to adjust pose, use line model to estimate path
   // length.
   if (!IsNeedZigZagPathToAdjustPose(request)) {
-    CalcDriveDistByCircleModel(request.start_, edt);
+    CalcDriveDistByCircleModel(request.start_pose, edt);
   }
 
   UpdateFuturePathRequest(&request.first_action_request);

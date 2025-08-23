@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "pose2d.h"
+#include "aabb2d.h"
 
 namespace planning {
 
@@ -170,6 +171,13 @@ struct ParkFirstActionRequest {
   }
 };
 
+struct RSPoint : public Pose2f {
+  // left turn is positive
+  float kappa;
+
+  AstarPathGear dir;
+};
+
 struct MapBound {
   float x_min;
   float x_max;
@@ -180,6 +188,37 @@ struct MapBound {
   MapBound(const float x_min_, const float x_max_, const float y_min_,
            const float y_max_)
       : x_min(x_min_), x_max(x_max_), y_min(y_min_), y_max(y_max_) {}
+
+  bool Contain(const Pose2f& p) const {
+    if (x_min > p.x || y_min > p.y) {
+      return false;
+    }
+
+    if (x_max < p.x || y_max < p.y) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void Combine(const MapBound& a) {
+    x_min = std::min(x_min, a.x_min);
+    y_min = std::min(y_min, a.y_min);
+    x_max = std::max(x_max, a.x_max);
+    y_max = std::max(y_max, a.y_max);
+  }
+
+  bool Contain(const RSPoint& p) const {
+    if (x_min > p.x || y_min > p.y) {
+      return false;
+    }
+
+    if (x_max < p.x || y_max < p.y) {
+      return false;
+    }
+
+    return true;
+  }
 };
 
 struct AStarPathPoint {
@@ -346,5 +385,16 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
                                     const Pose2f& real_end);
 
 bool IsSearchNode(const AstarPathType type);
+
+const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
+                               const double back_overhanging,
+                               const double front_edge_to_rear_axis,
+                               const double half_width);
+
+const MapBound TransformMapBound(const cdl::AABB& box);
+
+void DebugMapBoundString(const MapBound& box);
+
+const cdl::AABB2f TransformMapBound(const MapBound& box);
 
 }  // namespace planning

@@ -199,6 +199,28 @@ class CDL_EXPORT AABB2f {
   AABB2f(const Eigen::Vector2f &a, const Eigen::Vector2f &b);
 
   bool contain(const planning::Pose2f &p) const;
+
+  bool contain(const AABB2f &other) const {
+    if ((min_.array() > other.min_.array()).any()) return false;
+    if ((max_.array() < other.max_.array()).any()) return false;
+    return true;
+  }
+
+  void ShrinkX(const float x) {
+    min_[0] += x;
+    max_[0] -= x;
+
+    max_[0] = std::max(min_[0], max_[0]);
+    return;
+  }
+
+  void ShrinkY(const float y) {
+    min_[1] += y;
+    max_[1] -= y;
+
+    max_[1] = std::max(min_[1], max_[1]);
+    return;
+  }
 };
 
 }  // namespace cdl

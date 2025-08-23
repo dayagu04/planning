@@ -5,6 +5,7 @@
 #include "log_glog.h"
 #include "src/modules/apa_function/apa_param_config.h"
 #include "transform2d.h"
+#include <array>
 
 namespace planning {
 
@@ -874,6 +875,53 @@ void FootPrintLocalToGlobal(const Transform2d &tf,
 
   ULFLocalPolygonToGlobal(&global_foot_print->mirror_right,
                           &local_foot_print->mirror_right, tf);
+  return;
+}
+
+void GetUpLeftCoordinatePolygonByParam(std::array<Position2f, 4> &box,
+                                       const float back_overhanging,
+                                       const float front_edge_to_rear_axis,
+                                       const float half_width) {
+  box[0].x = front_edge_to_rear_axis;
+  box[0].y = -half_width;
+
+  box[1].x = front_edge_to_rear_axis;
+  box[1].y = half_width;
+
+  box[2].x = -back_overhanging;
+  box[2].y = half_width;
+
+  box[3].x = -back_overhanging;
+  box[3].y = -half_width;
+
+  return;
+}
+
+void GetBoundingBoxByPolygon(cdl::AABB2f *box,
+                             const std::array<Position2f, 4> &polygon) {
+  float min_x;
+  float min_y;
+  float max_x;
+  float max_y;
+
+  min_x = polygon[0].x;
+  max_x = polygon[0].x;
+  min_y = polygon[0].y;
+  max_y = polygon[0].y;
+  for (int i = 1; i < 4; i++) {
+    min_x = std::min(min_x, polygon[i].x);
+    min_y = std::min(min_y, polygon[i].y);
+
+    max_x = std::max(max_x, polygon[i].x);
+    max_y = std::max(max_y, polygon[i].y);
+  }
+
+  box->min_[0] = min_x;
+  box->min_[1] = min_y;
+
+  box->max_[0] = max_x;
+  box->max_[1] = max_y;
+
   return;
 }
 

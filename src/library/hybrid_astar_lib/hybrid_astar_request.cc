@@ -23,10 +23,10 @@ void DebugAstarRequestString(const AstarRequest &request) {
             << ", dir = " << static_cast<int>(request.direction_request);
 
   // ILOG_INFO << "start pose";
-  // request.start_.DebugString();
+  // request.start_pose.DebugString();
 
   // ILOG_INFO << "goal pose";
-  // request.goal_.DebugString();
+  // request.goal.DebugString();
 
   return;
 }
@@ -71,9 +71,9 @@ const bool IsNeedZigZagPathToAdjustPose(const AstarRequest &request) {
     }
   }
 
-  float theta_error = request.start_.theta - request.real_goal.theta;
+  float theta_error = request.start_pose.theta - request.real_goal.theta;
   theta_error = ad_common::math::NormalizeAngle(theta_error);
-  if (std::fabs(request.start_.y) < 2.0 &&
+  if (std::fabs(request.start_pose.y) < 2.0 &&
       std::fabs(theta_error) < ifly_deg2rad(10.0)) {
     return true;
   }

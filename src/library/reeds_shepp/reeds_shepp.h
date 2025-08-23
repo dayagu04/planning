@@ -27,13 +27,6 @@ enum RSPathSteer {
   RS_STEER_MAX
 };
 
-struct RSPoint : public Pose2f {
-  // left turn is positive
-  float kappa;
-
-  AstarPathGear dir;
-};
-
 #define MAX_RS_PATH_NUM (5)
 
 struct RSPathParam {

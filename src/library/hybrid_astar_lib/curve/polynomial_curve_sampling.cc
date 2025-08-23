@@ -92,7 +92,7 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
   node_path.points[0].y = path.back().y;
   node_path.points[0].theta = IflyUnifyTheta(path.back().phi, M_PIf32);
 
-  polynomial_node->Set(node_path, *XYbounds_, *config_, node_path.path_dist);
+  polynomial_node->Set(node_path, *grid_map_bound_, *config_, node_path.path_dist);
   polynomial_node->SetPathType(AstarPathType::QUNTIC_POLYNOMIAL);
   polynomial_node->SetGearType(path.back().gear);
   polynomial_node->SetPre(current_node);
@@ -235,7 +235,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
     }
   }
 
-  result->base_pose = request_->base_pose_;
+  result->base_pose = request_->base_pose;
 
   if (plan_num > max_sampling_num - 1 || plan_num == max_sampling_num - 1) {
     ILOG_INFO << "cubic plan fail";
@@ -258,7 +258,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForVerticalSlot(
       result->kappa.emplace_back(path.kappa[i]);
       result->accumulated_s.emplace_back(path.accumulated_s[i]);
     }
-    result->base_pose = request_->base_pose_;
+    result->base_pose = request_->base_pose;
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
   }
@@ -406,7 +406,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
   }
 
   // end
-  result->base_pose = request_->base_pose_;
+  result->base_pose = request_->base_pose;
 
   path_points_size = best_path_cost.point_size;
   if (path_points_size > 7) {
@@ -419,7 +419,7 @@ bool PolynomialCurveSampling::SamplingByCubicPolyForParallelSlot(
       result->kappa.emplace_back(best_cubic_path[i].kappa);
       result->accumulated_s.emplace_back(best_cubic_path[i].accumulated_s);
     }
-    result->base_pose = request_->base_pose_;
+    result->base_pose = request_->base_pose;
 
     ILOG_INFO << "path valid, point size= " << result->x.size();
   }

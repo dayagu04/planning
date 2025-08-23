@@ -37,7 +37,7 @@ class CurveSampling {
   EulerDistanceTransform* edt_;
 
   // xmin, xmax, ymin, ymax
-  const MapBound *XYbounds_;
+  const MapBound *grid_map_bound_;
 
   const ParkReferenceLine* ref_line_;
 

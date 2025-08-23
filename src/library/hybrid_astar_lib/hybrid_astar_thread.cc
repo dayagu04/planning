@@ -141,7 +141,7 @@ const int HybridAStarThreadSolver::PublishResponse(AstarResponse* response) {
 
 //   *result = response_.result;
 //   first_seg_path = response_.first_seg_path;
-//   *base_pose = response_.request.base_pose_;
+//   *base_pose = response_.request.base_pose;
 
 //   return 0;
 // }
@@ -183,7 +183,7 @@ const void HybridAStarThreadSolver::GetFullLengthPathInThread(
 
   *result = thread_response_data_.result;
 
-  *base_pose = thread_response_data_.request.base_pose_;
+  *base_pose = thread_response_data_.request.base_pose;
 
   ILOG_INFO << "result size " << result->x.size() << " dist "
             << result->accumulated_s.back();

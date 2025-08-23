@@ -59,17 +59,17 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
       clear_zone_(clear_zone),
       dp_heuristic_generator_(dp_map) {
   collision_detect_ = std::make_shared<NodeCollisionDetect>(
-      obstacles_, edt_, clear_zone_, &XYbounds_, &request_);
+      obstacles_, edt_, clear_zone_, &grid_map_bound_, &request_);
 
   polynomial_sampling_ = std::make_shared<PolynomialCurveSampling>(
-      &XYbounds_, obstacles_, &request_, edt_, clear_zone_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   rs_sampling_ = std::make_shared<RSSampling>(
-      &XYbounds_, obstacles_, &request_, edt_, clear_zone_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
   spiral_sampling_ = std::make_shared<SpiralSampling>(
-      &XYbounds_, obstacles_, &request_, edt_, clear_zone_, ref_line_, &config_,
-      vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &config_, vehicle_param_.min_turn_radius, collision_detect_);
 }
 
 bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
@@ -218,7 +218,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   path.points[0].y = rs_end_point.y;
   path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
 
-  rs_node_to_goal->Set(path, XYbounds_, config_, path.path_dist);
+  rs_node_to_goal->Set(path, grid_map_bound_, config_, path.path_dist);
   if (!NodeInSearchBound(rs_node_to_goal->GetIndex())) {
     // ILOG_INFO << "node positiong is not expectation";
     rs_node_to_goal->ClearPath();
@@ -598,7 +598,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
 
-  new_node->Set(path, XYbounds_, config_, path.path_dist);
+  new_node->Set(path, grid_map_bound_, config_, path.path_dist);
 
   // check search bound
   if (!NodeInSearchBound(new_node->GetIndex())) {
@@ -849,6 +849,11 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   piecewise_cost += safe_punish;
 #endif
 
+  // box cost
+  if (!collision_detect_->IsContainByRecommendBox(next_node->GetPose())) {
+    piecewise_cost += config_.recommend_box_penalty;
+  }
+
   return piecewise_cost;
 }
 
@@ -863,6 +868,7 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
 
   float gear_cost = 0.0;
   float steer_change_cost = 0.0;
+  float box_cost = 0.0;
   for (int i = 0; i < rs_path_.size - 1; i++) {
     // gear cost
     if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
@@ -882,7 +888,16 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
             config_.traj_steer_change_penalty * max_steer_angle_ * 2;
       }
     }
+
+    // box cost
+    if (rs_path_.paths[i].size > 0 &&
+        !collision_detect_->IsContainByRecommendBox(
+            rs_path_.paths[i].points[0])) {
+      box_cost += config_.recommend_box_penalty;
+    }
   }
+
+  piecewise_cost += box_cost;
 
   // gear cost
   bool gear_switch = current_node->IsPathGearChange(rs_path_.paths[0].gear);
@@ -953,6 +968,11 @@ void HybridAStar::GetSingleShotNodeGCost(Node3d* current_node,
         1.0 * std::fabs(next_node->GetSteer() - current_node->GetSteer());
   }
 
+  // box cost
+  if (!collision_detect_->IsContainByRecommendBox(next_node->GetPose())) {
+    piecewise_cost += config_.recommend_box_penalty;
+  }
+
   next_node->SetGCost(current_node->GetGCost() + piecewise_cost);
 
   return;
@@ -1002,7 +1022,7 @@ const bool HybridAStar::BackwardPassByNode(
   Node3d* child_node = best_node;
   best_node->SetNext(nullptr);
 
-  result->base_pose = request_.base_pose_;
+  result->base_pose = request_.base_pose;
   result->gear_change_num = 0;
 
   // debug all nodes
@@ -1159,20 +1179,9 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   ILOG_INFO << "one shot searching begin";
 
   // load XYbounds
-  XYbounds_ = XYbounds;
-
+  grid_map_bound_ = XYbounds;
   // check bound
-  NodeGridIndex grid_index;
-  Node3d::CoordinateToGridIndex(XYbounds_.x_max, XYbounds_.y_max, M_PI,
-                                &grid_index, XYbounds_, config_);
-
-  if (!NodeInSearchBound(grid_index)) {
-    ILOG_ERROR << "search bound size too big, please change range "
-               << grid_index.x << " " << grid_index.y << " " << grid_index.phi;
-
-    result->fail_type = AstarFailType::OUT_OF_BOUND;
-    return;
-  }
+  UpdateMaxGridIndex();
 
   // start
   start_node_ = node_pool_.AllocateNode();
@@ -1185,7 +1194,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     return;
   }
 
-  start_node_->Set(NodePath(start), XYbounds_, config_, 0.0);
+  start_node_->Set(NodePath(start), grid_map_bound_, config_, 0.0);
   if (!start_node_->IsNodeValid()) {
     ILOG_ERROR << "start_node invalid";
 
@@ -1229,7 +1238,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return;
   }
-  astar_end_node_->Set(NodePath(target), XYbounds_, config_, 0.0);
+  astar_end_node_->Set(NodePath(target), grid_map_bound_, config_, 0.0);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
@@ -1257,7 +1266,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   // node shrink related
   node_shrink_decider_.Process(start, target, request_.direction_request,
-                               request_.real_goal, XYbounds_);
+                               request_.real_goal, grid_map_bound_);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
       start, target, vehicle_param_.width, request_.space_type,
@@ -1601,24 +1610,14 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   ILOG_INFO << "hybrid astar begin";
 
   // load XYbounds
-  XYbounds_ = XYbounds;
-  // ILOG_INFO << "map bound, xmin " << XYbounds_.x_min << " , ymin "
-  //           << XYbounds_.y_min << " ,xmax " << XYbounds_.x_max << " , ymax "
-  //           << XYbounds_.y_max;
+  grid_map_bound_ = XYbounds;
+  // ILOG_INFO << "map bound, xmin " << grid_map_bound_.x_min << " , ymin "
+  //           << grid_map_bound_.y_min << " ,xmax " << grid_map_bound_.x_max <<
+  //           " , ymax "
+  //           << grid_map_bound_.y_max;
 
   // check bound
-  NodeGridIndex grid_index;
-
-  Node3d::CoordinateToGridIndex(XYbounds_.x_max, XYbounds_.y_max, M_PI,
-                                &grid_index, XYbounds_, config_);
-
-  if (!NodeInSearchBound(grid_index)) {
-    ILOG_ERROR << "search bound size too big, please change range "
-               << grid_index.x << " " << grid_index.y << " " << grid_index.phi;
-
-    result->fail_type = AstarFailType::OUT_OF_BOUND;
-    return false;
-  }
+  UpdateMaxGridIndex();
 
   // start
   start_node_ = node_pool_.AllocateNode();
@@ -1631,7 +1630,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     return false;
   }
 
-  start_node_->Set(NodePath(start), XYbounds_, config_, 0.0);
+  start_node_->Set(NodePath(start), grid_map_bound_, config_, 0.0);
   if (!start_node_->IsNodeValid()) {
     ILOG_ERROR << "start_node invalid";
 
@@ -1677,7 +1676,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     return false;
   }
 
-  astar_end_node_->Set(NodePath(end), XYbounds_, config_, 0.0);
+  astar_end_node_->Set(NodePath(end), grid_map_bound_, config_, 0.0);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
@@ -1701,7 +1700,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   // node shrink related
   node_shrink_decider_.Process(start, end, request_.direction_request,
-                               request_.real_goal, XYbounds_);
+                               request_.real_goal, grid_map_bound_);
 
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
@@ -2082,10 +2081,6 @@ void HybridAStar::Init() {
   phi_grid_resolution_ = config_.phi_grid_resolution;
 
   car_half_width_ = vehicle_param_.width / 2 + config_.heuristic_safe_dist;
-
-  max_x_search_size_ = 128;
-  max_y_search_size_ = 220;
-  max_theta_search_size_ = 128;
   kinetics_model_step_ = 0.05;
 
   NodePoolInit();
@@ -2195,9 +2190,9 @@ bool HybridAStar::NodeInSearchBound(Node3d* node) {
 }
 
 bool HybridAStar::NodeInSearchBound(const NodeGridIndex& id) {
-  if (id.x < 0 || id.x >= max_x_search_size_ || id.y < 0 ||
-      id.y >= max_y_search_size_ || id.phi < 0 ||
-      id.phi >= max_theta_search_size_) {
+  if (id.x < 0 || id.x >= max_grid_map_index_.x || id.y < 0 ||
+      id.y >= max_grid_map_index_.y || id.phi < 0 ||
+      id.phi >= max_grid_map_index_.phi) {
     return false;
   }
 
@@ -2385,7 +2380,7 @@ void HybridAStar::SetRequest(const AstarRequest& request) {
     }
   }
 
-  SetSamplingTarget(request.goal_);
+  SetSamplingTarget(request.goal);
 
   return;
 }
@@ -2574,6 +2569,19 @@ void HybridAStar::SetSamplingTarget(const Pose2f& pose) {
   polynomial_sampling_->SetSearchGoal(pose);
   spiral_sampling_->SetSearchGoal(pose);
   rs_sampling_->SetSearchGoal(pose);
+
+  return;
+}
+
+void HybridAStar::UpdateMaxGridIndex() {
+  max_grid_map_index_.x =
+      std::ceil((grid_map_bound_.x_max - grid_map_bound_.x_min) *
+                config_.xy_grid_resolution_inv);
+  max_grid_map_index_.y =
+      std::ceil((grid_map_bound_.y_max - grid_map_bound_.y_min) *
+                config_.xy_grid_resolution_inv);
+  max_grid_map_index_.phi =
+      std::ceil((M_PIf32 * 2.0f) * config_.phi_grid_resolution_inv);
 
   return;
 }

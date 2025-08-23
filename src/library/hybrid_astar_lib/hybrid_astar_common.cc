@@ -202,4 +202,56 @@ bool IsSearchNode(const AstarPathType type) {
   return false;
 }
 
+const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
+                               const double back_overhanging,
+                               const double front_edge_to_rear_axis,
+                               const double half_width) {
+  Polygon2D global_polygon;
+  Pose2D global_pose;
+  cdl::AABB path_point_aabb;
+  cdl::AABB box = cdl::AABB();
+  Polygon2D veh_local_polygon;
+  GetUpLeftCoordinatePolygonByParam(&veh_local_polygon, back_overhanging,
+                                    front_edge_to_rear_axis, half_width);
+
+  for (size_t i = 0; i < result.x.size(); ++i) {
+    global_pose.x = result.x[i];
+    global_pose.y = result.y[i];
+    global_pose.theta = result.phi[i];
+    ULFLocalPolygonToGlobal(&global_polygon, &veh_local_polygon, global_pose);
+
+    GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
+
+    box.combine(path_point_aabb);
+  }
+
+  return box;
+}
+
+const MapBound TransformMapBound(const cdl::AABB& box) {
+  MapBound bound;
+  bound.x_max = box.max_[0];
+  bound.y_max = box.max_[1];
+  bound.x_min = box.min_[0];
+  bound.y_min = box.min_[1];
+
+  return bound;
+}
+
+void DebugMapBoundString(const MapBound& box) {
+  ILOG_INFO << "map bound, xmin " << box.x_min << " , ymin " << box.y_min
+            << " ,xmax " << box.x_max << " , ymax " << box.y_max;
+  return;
+}
+
+const cdl::AABB2f TransformMapBound(const MapBound& box) {
+  cdl::AABB2f  bound;
+  bound.min_[0] = box.x_min;
+  bound.min_[1] = box.y_min;
+  bound.max_[0] = box.x_max;
+  bound.max_[1] = box.y_max;
+
+  return bound;
+}
+
 }  // namespace planning

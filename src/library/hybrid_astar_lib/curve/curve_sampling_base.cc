@@ -11,7 +11,7 @@ CurveSampling::CurveSampling(
     : obstacles_(obstacles),
       edt_(edt),
       ref_line_(ref_line),
-      XYbounds_(XYbounds),
+      grid_map_bound_(XYbounds),
       request_(request),
       clear_zone_(clear_zone),
       config_(config),

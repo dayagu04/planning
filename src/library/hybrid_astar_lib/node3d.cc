@@ -88,9 +88,9 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
 #endif
 }
 
-int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
-                const PlannerOpenSpaceConfig& open_space_conf,
-                const float node_path_dist) {
+void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
+                 const PlannerOpenSpaceConfig& open_space_conf,
+                 const float node_path_dist) {
   path_ = path;
   path_.path_dist = node_path_dist;
 
@@ -101,8 +101,8 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
                              open_space_conf.xy_grid_resolution_inv);
 
   float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
-  grid_index_.phi =
-      std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
+  grid_index_.phi = std::round((theta - (-M_PIf32)) *
+                               open_space_conf.phi_grid_resolution_inv);
 
   visited_type_ = AstarNodeVisitedType::NOT_VISITED;
 
@@ -129,7 +129,7 @@ int Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   ILOG_INFO << "new index " << index_;
 #endif
 
-  return 0;
+  return;
 }
 
 void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {

@@ -560,15 +560,15 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.timestamp_ms = astar_start_time;
   cur_request.slot_id = ego_info.id;
 
-  cur_request.start_ = Pose2f(start.x, start.y, start.theta);
-  cur_request.base_pose_ = slot_base_pose;
+  cur_request.start_pose = Pose2f(start.x, start.y, start.theta);
+  cur_request.base_pose = slot_base_pose;
   cur_request.real_goal = Pose2f(real_end.x, real_end.y, real_end.theta);
 
   cur_request.slot_width = ego_info.slot.GetWidth();
   cur_request.slot_length = ego_info.slot.GetLength();
   cur_request.history_gear = current_gear_;
   frame_.current_gear = GetGear(current_gear_);
-  cur_request.goal_ = Pose2f(end.x, end.y, end.theta);
+  cur_request.goal = Pose2f(end.x, end.y, end.theta);
   FillPlanningReason(cur_request);
 
   // generate request
@@ -576,6 +576,16 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
 
   // gear need be different with history in next replanning
   FillGearRequest(is_scenario_try, cur_request);
+
+  if (is_scenario_try ||
+      cur_request.plan_reason == PlanningReason::FIRST_PLAN ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+    cur_request.recommend_route_bound = virtual_wall_decider_.GetMaxMapBound();
+  } else {
+    cur_request.recommend_route_bound = recommend_route_bound_;
+    cur_request.recommend_route_bound.Combine(
+        virtual_wall_decider_.GetVehBound());
+  }
 
   // publish result
   if (is_scenario_try) {
@@ -2267,7 +2277,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
       lateral_offset_ = response_.result.y.back();
 
       Transform2d response_tf;
-      response_tf.SetBasePose(response_.request.base_pose_);
+      response_tf.SetBasePose(response_.request.base_pose);
       PublishHybridAstarDebugInfo(response_.result, &response_tf);
       PathOptimizationByCILQR(response_.first_seg_path, &response_tf);
 
@@ -2279,6 +2289,8 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
           response_.request.plan_reason != PlanningReason::SLOT_REFRESHED) {
         replan_number_inside_slot_++;
       }
+
+      UpdateRecommentRouteBox();
 
       ILOG_INFO << "total_plan_count = "
                 << static_cast<int>(frame_.total_plan_count)
@@ -2355,7 +2367,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
 
   // publish astar path in cruise state.
   Transform2d response_tf;
-  response_tf.SetBasePose(response_.request.base_pose_);
+  response_tf.SetBasePose(response_.request.base_pose);
   PublishHybridAstarDebugInfo(response_.result, &response_tf);
 
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
@@ -2419,6 +2431,21 @@ const pnc::geometry_lib::PathSegGear NarrowSpaceScenario::GetGear(
     const AstarPathGear gear) {
   return (gear == AstarPathGear::DRIVE) ? pnc::geometry_lib::SEG_GEAR_DRIVE
                                         : pnc::geometry_lib::SEG_GEAR_REVERSE;
+}
+
+void NarrowSpaceScenario::UpdateRecommentRouteBox() {
+  if (response_.request.plan_reason == PlanningReason::FIRST_PLAN) {
+    cdl::AABB box = GetAABoxByPath(
+        response_.result, apa_param.GetParam().rear_overhanging + 0.4,
+        apa_param.GetParam().front_overhanging +
+            apa_param.GetParam().wheel_base + 0.4,
+        apa_param.GetParam().max_car_width / 2 + 0.4);
+
+    box.ExtendX(2.0);
+    box.ExtendY(2.0);
+    recommend_route_bound_ = TransformMapBound(box);
+  }
+  return;
 }
 
 }  // namespace apa_planner

@@ -97,9 +97,9 @@ class Node3d {
   Node3d(const NodePath& path, const MapBound& XYbounds,
          const PlannerOpenSpaceConfig& open_space_conf);
 
-  int Set(const NodePath& path, const MapBound& XYbounds,
-          const PlannerOpenSpaceConfig& open_space_conf,
-          const float node_path_dist);
+  void Set(const NodePath& path, const MapBound& XYbounds,
+           const PlannerOpenSpaceConfig& open_space_conf,
+           const float node_path_dist);
 
   void SetGlobalID(const size_t id);
 
