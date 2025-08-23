@@ -598,6 +598,11 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
   if (!ObstacleDecision()) {
     return false;
   }
+
+  if (!EnoughSafetyDistance()) {
+    return false;
+  }
+
   double first_obs_end =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary().s_end;
   if (lane_borrow_status_ == kNoLaneBorrow && (!is_facility_) &&
@@ -1029,38 +1034,39 @@ void LaneBorrowDecider::CheckKeyObstaclesIntention(const agent::Agent* agent,
   }
 }
 // v2
-void LaneBorrowDecider::CheckBlockingObstaclesIntention(int32 obs_id, bool& will_keep_borrow) {
+void LaneBorrowDecider::CheckBlockingObstaclesIntention(
+    int32 obs_id, bool& will_keep_borrow) {
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
   const auto& agent = agent_mgr->GetAgent(obs_id);
 
   // 预测障碍物在 0s / 1.5s / 3.0s 时刻的位置
-  const auto box_at_0s   = agent->box();
+  const auto box_at_0s = agent->box();
   const auto box_at_1_5s = PredictBoxPosition(agent, 1.5);
-  const auto box_at_3s   = PredictBoxPosition(agent, 3.0);
+  const auto box_at_3s = PredictBoxPosition(agent, 3.0);
 
-  auto sl_at_0s   = GetSLboundaryFromAgent(box_at_0s);
+  auto sl_at_0s = GetSLboundaryFromAgent(box_at_0s);
   auto sl_at_1_5s = GetSLboundaryFromAgent(box_at_1_5s);
-  auto sl_at_3s   = GetSLboundaryFromAgent(box_at_3s);
+  auto sl_at_3s = GetSLboundaryFromAgent(box_at_3s);
 
   // 各时刻的借道方向
-  BorrowDirection direction_at_0s   = GetPredBypassDirection(sl_at_0s, obs_id);
-  BorrowDirection direction_at_1_5s = GetPredBypassDirection(sl_at_1_5s, obs_id);
-  BorrowDirection direction_at_3s   = GetPredBypassDirection(sl_at_3s, obs_id);
+  BorrowDirection direction_at_0s = GetPredBypassDirection(sl_at_0s, obs_id);
+  BorrowDirection direction_at_1_5s =
+      GetPredBypassDirection(sl_at_1_5s, obs_id);
+  BorrowDirection direction_at_3s = GetPredBypassDirection(sl_at_3s, obs_id);
 
   bool will_cut_in;
   bool will_cut_out;
 
   // 判断是否会切入
   if (direction_at_1_5s == direction_at_0s &&
-      direction_at_3s   == direction_at_0s &&
-      direction_at_0s   != NO_BORROW) {
+      direction_at_3s == direction_at_0s && direction_at_0s != NO_BORROW) {
     will_cut_in = false;
   } else {
     will_cut_in = true;
   }
 
   // 判断是否会切出
-  double left_boundary  = current_lane_ptr_->width() * 0.5;
+  double left_boundary = current_lane_ptr_->width() * 0.5;
   double right_boundary = -current_lane_ptr_->width() * 0.5;
   if (sl_at_3s.l_end < right_boundary || sl_at_3s.l_start > left_boundary) {
     will_cut_out = true;
@@ -1351,6 +1357,27 @@ BorrowDirection LaneBorrowDecider::GetPredBypassDirection(
   }
 }
 // v2
+bool LaneBorrowDecider::EnoughSafetyDistance() {
+  const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  if (static_blocked_obj_id_vec_.empty()) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        NO_PASSABLE_OBSTACLE;
+    return false;
+  }
+  const auto& agent = agent_mgr->GetAgent(static_blocked_obj_id_vec_[0]);
+  bool is_agent_static = agent->is_static() || agent->speed() < 0.3;
+  bool is_close = obs_start_s_ - ego_frenet_boundary_.s_end < 4.5;
+  bool is_ego_pull_over = ego_speed_ < 0.3;
+  // 车速 静止 距离
+  if (is_agent_static && is_close && is_ego_pull_over &&
+      lane_borrow_status_ == kNoLaneBorrow) {
+    lane_borrow_decider_output_.lane_borrow_failed_reason =
+        STATIC_AREA_TOO_CLOSE;
+    return false;
+  } else {
+    return true;
+  }
+}
 bool LaneBorrowDecider::CheckLaneBorrowDircetion() {
   //拿静态区域的第一个obs_id 判断在path的左边还是右边
   // const auto& id = static_blocked_obj_id_vec_[0];

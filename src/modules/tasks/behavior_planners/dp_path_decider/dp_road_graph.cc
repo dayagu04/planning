@@ -809,7 +809,7 @@ bool DPRoadGraph::AddLaneBorrowVirtualObstacle(double obs_inner_l,
   double distance_to_blocking = obs_start_s - ego_s_;
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double mini_gap = 4.0;
+  double mini_gap = 5.0;
   double virtual_length = 1.0;  // 1+6 = 7
   double center_virtual_s = obs_start_s - mini_gap + virtual_length * 0.5;
   if (center_virtual_s - ego_s_ <
