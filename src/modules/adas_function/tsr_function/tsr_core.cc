@@ -796,6 +796,8 @@ void TsrCore::CalculatePathLengthAccumulated() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   if (tsr_speed_limit_change_flag_ == true || tsr_speed_limit_valid_ == false) {
     accumulated_path_length_ = 0.0;
+    // 重置限速变化标志，避免标志一直为true
+    tsr_speed_limit_change_flag_ = false;
   } else {
     accumulated_path_length_ =
         accumulated_path_length_ +
