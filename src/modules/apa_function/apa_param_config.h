@@ -262,6 +262,9 @@ struct ParkingLatLonTargetPoseBuffer {
   float step;
 
   float special_max_lat_buffer;
+
+  float preference_lat_offset;
+  float preference_lon_buffer;
 };
 
 // todo

@@ -504,6 +504,8 @@
   "target_pose_min_lat_buffer": 0.12,
   "target_pose_step": 0.01,
   "target_pose_special_max_lat_buffer": 0.14,
+  "target_pose_preference_lat_offset": 0.01,
+  "target_pose_preference_lon_buffer": -0.2,
 
   "comment_26": "dynamic gear switch params",
   "enable_dynamic_gear_switch": true,

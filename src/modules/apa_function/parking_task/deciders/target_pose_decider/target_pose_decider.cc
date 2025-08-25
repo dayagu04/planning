@@ -20,6 +20,7 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   lon_buffer_ = request.lon_buffer;
   consider_obs_ = request.consider_obs;
   base_on_slot_ = request.base_on_slot;
+  slot_lat_pos_preference_ = request.slot_lat_pos_preference;
 
   if (request.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
@@ -77,10 +78,23 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   //                              param.limiter_length - param.wheel_base -
   //                              param.front_overhanging);
 
+  double redundant_y = (slot_.slot_width_ - param.car_width) * 0.5;
+  double offset_y = 0.0;
+  if (redundant_y >
+      param.lat_lon_target_pose_buffer.preference_lat_offset + 1e-2f) {
+    if (slot_lat_pos_preference_ == ApaSlotLatPosPreference::LEFT) {
+      offset_y =
+          redundant_y - param.lat_lon_target_pose_buffer.preference_lat_offset;
+    } else if (slot_lat_pos_preference_ == ApaSlotLatPosPreference::RIGHT) {
+      offset_y =
+          param.lat_lon_target_pose_buffer.preference_lat_offset - redundant_y;
+    }
+  }
+
   geometry_lib::PathPoint tar_pose_local;
   geometry_lib::PathPoint tar_pose_global;
   // 人为设定偏左偏右 该值一般为0 后续可以根据HMI输入进行改变
-  tar_pose_local.pos << virtual_tar_x, param.terminal_target_y;
+  tar_pose_local.pos << virtual_tar_x, offset_y;
   // 人为设定航向 该值一般为0
   tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
 
@@ -106,6 +120,45 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
   }
 
+  const GJKColDetRequest gjl_col_det_request(
+      base_on_slot_, false, CarBodyType::EXPAND_MIRROR_TO_FRONT);
+
+  // 检查终点位置是否碰撞
+  const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
+      col_det_interface_ptr_->GetGJKColDetPtr();
+
+  ILOG_INFO << "target pose offset_y = " << offset_y;
+  if (std::fabs(offset_y) > 0.0) {
+    std::vector<geometry_lib::PathPoint> tmp_pose_vec;
+    geometry_lib::PathPoint tmp_pose;
+    std::vector<double> lon_path_vec{
+        -param.lat_lon_target_pose_buffer.preference_lon_buffer, 1.0, 2.0};
+    for (const double dist : lon_path_vec) {
+      if (base_on_slot_) {
+        tmp_pose = tar_pose_local;
+      } else {
+        tmp_pose = tar_pose_global;
+      }
+      tmp_pose.pos = tmp_pose.pos + dist * lon_move_dir;
+      tmp_pose_vec.emplace_back(tmp_pose);
+    }
+
+    if (gjl_det_ptr
+            ->Update(tmp_pose_vec,
+                     param.lat_lon_target_pose_buffer.max_lat_buffer, 0.0,
+                     gjl_col_det_request)
+            .col_flag) {
+      offset_y = 0.0;
+      tar_pose_local.pos << virtual_tar_x, offset_y;
+      tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
+      tar_pose_global =
+          geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
+
+      ILOG_INFO << "target pose offset_y is invalid, recover to 0.0 = "
+                << offset_y;
+    }
+  }
+
   // calc max_lat_move_dist and max_lon_move_dist
   double max_lat_move_dist{0.};
   max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
@@ -128,10 +181,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   double lat_move_step{0.01};
   double lon_move_step{0.025};
 
-  // 检查终点位置是否碰撞
-  const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
-      col_det_interface_ptr_->GetGJKColDetPtr();
-
   // 生成纵向移动距离数组
   std::vector<double> lon_dist_vec;
   for (double lon_move_dist = 0.0;
@@ -150,9 +199,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   bool exist_target_pose = false;
-
-  GJKColDetRequest gjl_col_det_request(base_on_slot_, false,
-                                       CarBodyType::EXPAND_MIRROR_TO_FRONT);
 
   geometry_lib::PathPoint tmp_pose;
   for (const double lat_buffer : lat_buffer_vec_) {
