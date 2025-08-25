@@ -115,7 +115,7 @@ void IntRequest::Update(int lc_status) {
         target_direction, current_lane_virtual_id, static_cast<StateMachineLaneChangeStatus>(lc_status));
     if (!is_dash_enough) {
       request_cancel_reason_ = SOLID_LC;
-      ilc_virtual_req_ = RIGHT_CHANGE;
+      ilc_virtual_req_ = LEFT_CHANGE;
       counter_right_ = 0;
       return;
     }
