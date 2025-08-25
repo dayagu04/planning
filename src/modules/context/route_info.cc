@@ -2288,7 +2288,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
     JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
 
-    if (perception_lane_num != map_lane_num) {
+    bool is_nearing_ramp_scenary =
+        mlc_decider_route_info_.first_static_split_region_info.is_ramp_split;
+    if (perception_lane_num != map_lane_num &&
+        is_nearing_ramp_scenary) {
       relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
       continue;
     }
