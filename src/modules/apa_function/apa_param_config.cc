@@ -1261,6 +1261,10 @@ void SyncParkingParameters(const bool is_simulation) {
                   "target_pose_step");
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.special_max_lat_buffer,
                   float, "target_pose_special_max_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lat_offset, float,
+                  "target_pose_preference_lat_offset");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lon_buffer, float,
+                  "target_pose_preference_lon_buffer");
   return;
 }
 

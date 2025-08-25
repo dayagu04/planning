@@ -14,18 +14,22 @@ struct TargetPoseDeciderRequest {
   ParkingScenarioType scenario_type;
   bool consider_obs = true;
   bool base_on_slot = false;
+  ApaSlotLatPosPreference slot_lat_pos_preference =
+      ApaSlotLatPosPreference::MID;
 
   TargetPoseDeciderRequest() {}
-  TargetPoseDeciderRequest(const std::vector<double>& _lat_buffer_vec,
-                           const double _lon_buffer,
-                           const ParkingScenarioType _scenario_type,
-                           const bool _consider_obs = true,
-                           const bool _base_on_slot = false)
+  TargetPoseDeciderRequest(
+      const std::vector<double>& _lat_buffer_vec, const double _lon_buffer,
+      const ParkingScenarioType _scenario_type, const bool _consider_obs = true,
+      const bool _base_on_slot = false,
+      const ApaSlotLatPosPreference _slot_lat_pos_preference =
+          ApaSlotLatPosPreference::MID)
       : lat_buffer_vec(_lat_buffer_vec),
         lon_buffer(_lon_buffer),
         scenario_type(_scenario_type),
         consider_obs(_consider_obs),
-        base_on_slot(_base_on_slot) {}
+        base_on_slot(_base_on_slot),
+        slot_lat_pos_preference(_slot_lat_pos_preference) {}
   ~TargetPoseDeciderRequest() {}
 };
 
@@ -83,6 +87,7 @@ class TargetPoseDecider final : public ParkingTask {
       col_det_interface_ptr_;
   ApaSlot slot_;
   std::vector<double> lat_buffer_vec_;
+  ApaSlotLatPosPreference slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
   double lon_buffer_ = 0.0;
   bool consider_obs_ = false;
   bool base_on_slot_ = false;
