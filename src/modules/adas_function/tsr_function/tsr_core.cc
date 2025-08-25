@@ -885,10 +885,24 @@ void TsrCore::RunOnce(void) {
   // 更新实时辅助标识牌信息
   UpdateTsrSuppInfo();
 
-  // 更新tsr_speed_limit_ - 只使用地图限速
-  // UpdateTsrSpeedLimitOnlyByMap();
-  UpdateTsrSpeedLimit();
-  // UpdateTsrSpeedLimitNew();
+  // 更新tsr_speed_limit_
+  // 获取功能状态信息来判断是否为NOA激活模式
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                     ->mutable_environmental_model()
+                                     ->get_local_view()
+                                     .function_state_machine_info;
+  
+  // NOA激活模式下，只使用地图限速信息，避免感知干扰
+  if (function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE || 
+      function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
+    UpdateTsrSpeedLimitOnlyByMap();
+  } else {
+    // 非NOA模式下，使用感知+地图的综合限速信息
+    UpdateTsrSpeedLimit();
+    // UpdateTsrSpeedLimitNew();
+  }
+
 
   // 计算accumulated_path_length_
   CalculatePathLengthAccumulated();
