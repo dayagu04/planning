@@ -121,16 +121,16 @@ void ParkingScenario::UpdateStuckTime() {
                       (plan_status == ParkingStatus::PARKING_PLANNING &&
                        pathplan_result == PathPlannerResult::PLAN_FAILED))) {
     if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
-      if (frame_.stuck_by_dynamic_obs) {
+      if (frame_.stuck_by_dynamic_obs || frame_.stuck_dynamic_obs_time > 1e-3) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;
       }
     } else {
-      if (frame_.stuck_obs_time > 1e-3f) {
-        frame_.stuck_obs_time += param.plan_time;
-      } else if (frame_.stuck_dynamic_obs_time > 1e-3f) {
+      if (frame_.stuck_dynamic_obs_time > 1e-3) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
+      } else if (frame_.stuck_obs_time > 1e-3) {
+        frame_.stuck_obs_time += param.plan_time;
       } else {
         // do nothing
       }
@@ -962,7 +962,8 @@ const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
 
 const bool ParkingScenario::CheckStuckTimeEnough(
     const double stuck_replan_time) {
-  return frame_.stuck_path_time > stuck_replan_time;
+  return frame_.stuck_path_time > stuck_replan_time &&
+         frame_.stuck_dynamic_obs_time < 1e-3f;
 }
 
 const bool ParkingScenario::CheckDynamicUpdate() { return false; }
