@@ -23,7 +23,7 @@ void ParkSpeedLimitConfig::Init() {
 
   // obs distance related
   // v = speed_limit_by_obs_+ a0 * dist
-  obs_dist_upper = 0.5;
+  obs_dist_upper = 0.8;
   obs_dist_lower = 0.2;
 
   speed_limit_lower_by_obs = speed_config.speed_limit_by_obs_dist.lower;
