@@ -336,8 +336,7 @@ GapSelectorStatus GapSelectorDecider::Update() {
       ego_cart_pose, ego_frenet_pose);
 
   const double ego_v = ego_state_mgr->ego_v();
-  std::vector<double> xp_ego_v{10.0, 15.0, 20.0, 25.0};
-  double lat_ref_offset = interp(ego_v, xp_ego_v, config_.lat_ref_offset);
+  double lat_ref_offset = 0.15;
   if (coarse_planning_info.target_state == kLaneChangeCancel) {
     lat_ref_offset -= 0.05;
     lat_ref_offset = std::max(lat_ref_offset, 0.0);

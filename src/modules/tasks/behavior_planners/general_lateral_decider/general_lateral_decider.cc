@@ -543,55 +543,14 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     is_use_spatio_planner_result = true;
   }
   bool limit_ref_vel_on_ramp_valid = false;
+  bool is_LK = coarse_planning_info.target_state == kLaneKeeping;
   bool is_LC_PROPOSE = coarse_planning_info.target_state == kLaneChangePropose;
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
        (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
-  // calculate frenet init head point
-  double init_l = planning_init_point.frenet_state.r;
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double front_edge_to_rear_axle =
-      vehicle_param.front_edge_to_rear_axle;
-  double init_heading =
-      planning_init_point.heading_angle;
-  double init_head_x =
-      planning_init_point.x + front_edge_to_rear_axle * std::cos(init_heading);
-  double init_head_y =
-      planning_init_point.y + front_edge_to_rear_axle * std::sin(init_heading);
-  double init_head_l = init_l;
-  Point2D frenet_head_pt;
-  if (frenet_coord->XYToSL(Point2D(init_head_x, init_head_y), frenet_head_pt)) {
-    init_head_l = frenet_head_pt.y;
-  }
-  // calculate distance and ref buffer
-  const double lateral_offset = session_->mutable_planning_context()
-                                    ->lateral_offset_decider_output()
-                                    .lateral_offset;
-  const double v_ego =
-      session_->mutable_environmental_model()->get_ego_state_manager()->ego_v();
-  std::vector<double> xp_v_ego{10.0, 15.0, 20.0, 25.0};
-  double dynamic_ref_buffer =
-      interp(v_ego, xp_v_ego, config_.dynamic_lc_ref_buffer);
-  if (is_LC_BACK) {
-    dynamic_ref_buffer =
-        interp(v_ego, xp_v_ego, config_.dynamic_lc_finished_ref_buffer);
-  }
-  double init_dist_to_ref =
-      std::fabs(init_l - lateral_offset) - dynamic_ref_buffer;
-  double dist_to_second_stage = init_dist_to_ref - config_.lc_second_dist_thr;
-  if (is_LC_BACK) {
-    dist_to_second_stage = init_dist_to_ref - config_.lc_finished_second_dist_thr;
-  }
-  if (dist_to_second_stage < -1e-6) {
-    dynamic_ref_buffer =
-        std::max(0.0, dist_to_second_stage + dynamic_ref_buffer);
-  }
-  if (init_l < -1e-6) {
-    dynamic_ref_buffer = -dynamic_ref_buffer;
-  }
+  // calculate lc hold ref buffer
   double lc_hold_offset = 0;
   if (gap_selector_decider_output.is_quitic_spline_change_to_center_line &&
       coarse_planning_info.trajectory_points.size() > 0) {
@@ -599,181 +558,191 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
   // construct ref
   traj_points = coarse_planning_info.trajectory_points;
-  if (config_.lateral_ref_traj_type ||
-      ((is_LC_HOLD ||
-        ((dist_to_second_stage >= 1e-6 ||
-          std::fabs(init_head_l) > std::fabs(init_l)) &&
-         (is_LC_CHANGE || is_LC_BACK))) &&
-       gap_selector_decider_output.gap_selector_trustworthy &&
-       !gap_selector_decider_output.is_quitic_spline_change_to_center_line)) {
-    traj_points = coarse_planning_info.trajectory_points;
-  } else {
-    // generate traj_points based on kMaxAcc or kMinAcc
-    constexpr double kEps = 1e-4;
-    double start_s = traj_points.front().s;
-    double end_s = traj_points.back().s;
-    double total_s = end_s - start_s;
-    double kMaxAcc = 0.8;
-    const double kMinAcc = -5.5;
-    double cruise_v = std::max(config_.min_v_cruise,
+  // generate traj_points based on kMaxAcc or kMinAcc
+  constexpr double kEps = 1e-4;
+  double start_s = traj_points.front().s;
+  double end_s = traj_points.back().s;
+  double total_s = end_s - start_s;
+  double kMaxAcc = 0.8;
+  const double kMinAcc = -5.5;
+  double cruise_v = std::max(config_.min_v_cruise,
                               session_->planning_context().v_ref_cruise());
-    double ego_v = planning_init_point.v;
-    const auto &virtual_lane_manager =
-        session_->environmental_model().get_virtual_lane_manager();
-    if (virtual_lane_manager
-            ->get_is_exist_ramp_on_road() ||
-        virtual_lane_manager
-            ->get_is_exist_split_on_ramp() ||
-        virtual_lane_manager
-            ->get_is_exist_intersection_split()) {
-      ego_v = std::max(ego_v, config_.min_v_cruise);
-      kMaxAcc = 0.2;
-    } else if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
-      limit_ref_vel_on_ramp_valid = true;
-      ego_v = std::max(ego_v, config_.min_v_cruise);
-      kMaxAcc = 0.2;
-    }
-    // if (cruise_v < 4.167) {  // low speed cruise
-    //   kMaxAcc = 0.4;
-    // }
-    if (lane_borrow_decider_output.is_in_lane_borrow_status) {
-      kMaxAcc = 0.4;
-    }
-    if (is_LC_CHANGE || is_LC_BACK || is_LC_HOLD) {
-      ego_v = std::max(ego_v, config_.lc_min_v_cruise);
-      kMaxAcc = 1e-6;
-    }
-    if (is_use_spatio_planner_result) {
-      kMaxAcc = 0.4;
-    }
-    double s = 0.0;
-    double span_t = config_.delta_t * config_.num_step;
-    if (ego_v < cruise_v) {
-      double t = (cruise_v - ego_v) / kMaxAcc;
-      if (t > span_t) {
-        s = ego_v * span_t + 0.5 * kMaxAcc * span_t * span_t;
-      } else {
-        s = ego_v * t + 0.5 * kMaxAcc * t * t;
-        s += (span_t - t) * cruise_v;
-      }
+  double ego_v =
+      std::max(planning_init_point.v, config_.min_v_cruise);
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager
+          ->get_is_exist_ramp_on_road() ||
+      virtual_lane_manager
+          ->get_is_exist_split_on_ramp() ||
+      virtual_lane_manager
+          ->get_is_exist_intersection_split()) {
+    kMaxAcc = 0.2;
+  } else if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
+    limit_ref_vel_on_ramp_valid = true;
+    kMaxAcc = 0.2;
+  }
+  if (lane_borrow_decider_output.is_in_lane_borrow_status) {
+    kMaxAcc = 0.4;
+  }
+  if (is_LC_CHANGE) {
+    ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    kMaxAcc = config_.lc_ref_acc;
+  }
+  if (is_LC_BACK || is_LC_HOLD) {
+    ego_v = std::max(ego_v, config_.lc_min_v_cruise);
+    kMaxAcc = 1e-6;
+  }
+  if (is_use_spatio_planner_result) {
+    kMaxAcc = 0.4;
+  }
+  double s = 0.0;
+  double span_t = config_.delta_t * config_.num_step;
+  if (ego_v < cruise_v) {
+    double t = (cruise_v - ego_v) / kMaxAcc;
+    if (t > span_t) {
+      s = ego_v * span_t + 0.5 * kMaxAcc * span_t * span_t;
     } else {
-      double t = (cruise_v - ego_v) / kMinAcc;
-      if (t > span_t) {
-        s = ego_v * span_t + 0.5 * kMinAcc * span_t * span_t;
-      } else {
-        s = ego_v * t + 0.5 * kMinAcc * t * t;
-        s += (span_t - t) * cruise_v;
-      }
+      s = ego_v * t + 0.5 * kMaxAcc * t * t;
+      s += (span_t - t) * cruise_v;
     }
-    if (last_ref_length_ >= 10.0 &&
-        session_->environmental_model().GetVehicleDbwStatus()) {
-      s = std::min(s, last_ref_length_ + 0.5);
+  } else {
+    double t = (cruise_v - ego_v) / kMinAcc;
+    if (t > span_t) {
+      s = ego_v * span_t + 0.5 * kMinAcc * span_t * span_t;
+    } else {
+      s = ego_v * t + 0.5 * kMinAcc * t * t;
+      s += (span_t - t) * cruise_v;
     }
-    auto cart_ref_info = coarse_planning_info.cart_ref_info;
-    double s_ref = planning_init_point.frenet_state.s;
-    if (lane_borrow_decider_output.is_in_lane_borrow_status &&
-        (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD)) {
-      cart_ref_info = lane_borrow_decider_output.dp_path_ref;
-      Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+  }
+  if (last_ref_length_ >= 10.0 &&
+      session_->environmental_model().GetVehicleDbwStatus()) {
+    s = std::min(s, last_ref_length_ + 0.5);
+  }
+  auto cart_ref_info = coarse_planning_info.cart_ref_info;
+  double s_ref = planning_init_point.frenet_state.s;
+  if (lane_borrow_decider_output.is_in_lane_borrow_status &&
+      (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD)) {
+    cart_ref_info = lane_borrow_decider_output.dp_path_ref;
+    Eigen::Vector2d cart_init_point(planning_init_point.lat_init_state.x(),
+                                    planning_init_point.lat_init_state.y());
+    pnc::spline::Projection projection_spline;
+    projection_spline.CalProjectionPoint(
+        cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
+        cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+        cart_init_point);
+    s_ref = projection_spline.GetOutput().s_proj;
+  }
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  std::vector<double> s_vec(traj_points.size());
+  if (is_use_spatio_planner_result &&
+      (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD) &&
+      !lane_borrow_decider_output.is_in_lane_borrow_status &&
+      total_s > 1.0) {
+    std::vector<double> x_vec(traj_points.size());
+    std::vector<double> y_vec(traj_points.size());
+    // std::vector<double> theta_vec(traj_points.size());
+    // std::vector<double> l_vec(traj_points.size());
+    for (size_t i = 0; i < traj_points.size(); ++i) {
+      x_vec[i] = traj_points[i].x;
+      y_vec[i] = traj_points[i].y;
+      // theta_vec[i] = traj_points[i].heading_angle;
+      s_vec[i] = traj_points[i].s;
+      // l_vec[i] = traj_points[i].l;
+    }
+    x_s_spline.set_points(s_vec, x_vec);
+    y_s_spline.set_points(s_vec, y_vec);
+    Eigen::Vector2d spatio_init_point(planning_init_point.lat_init_state.x(),
                                       planning_init_point.lat_init_state.y());
-      pnc::spline::Projection projection_spline;
-      projection_spline.CalProjectionPoint(
-          cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-          cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
-          cart_init_point);
-      s_ref = projection_spline.GetOutput().s_proj;
+    pnc::spline::Projection spatio_projection_spline;
+    spatio_projection_spline.CalProjectionPoint(
+        x_s_spline, y_s_spline,
+        s_vec.front(), s_vec.back(),
+        spatio_init_point);
+    s_ref = spatio_projection_spline.GetOutput().s_proj;
+  } else {
+    s_vec = cart_ref_info.s_vec;
+    x_s_spline = cart_ref_info.x_s_spline;
+    y_s_spline = cart_ref_info.y_s_spline;
+  }
+  const double max_ref_length =
+      std::max(std::min(cart_ref_info.s_vec.back(),
+                frenet_coord->Length()) - s_ref - 0.01, 0.0);
+  double avg_cruise_v =
+      std::max(std::min(s, max_ref_length) / span_t, 0.0);
+  double delta_s = avg_cruise_v * config_.delta_t;
+  traj_points.clear();
+  TrajectoryPoint point;
+  for (size_t i = 0; i < config_.num_step + 1; ++i) {
+    // cart info
+    if (s_ref < s_vec.back() + kEps) {
+      point.x = x_s_spline(s_ref);
+      point.y = y_s_spline(s_ref);
+      point.heading_angle =
+          std::atan2(y_s_spline.deriv(1, s_ref),
+                     x_s_spline.deriv(1, s_ref));
     }
-    pnc::mathlib::spline x_s_spline;
-    pnc::mathlib::spline y_s_spline;
-    std::vector<double> s_vec(traj_points.size());
-    if (is_use_spatio_planner_result &&
-        (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD) &&
-        !lane_borrow_decider_output.is_in_lane_borrow_status &&
-        total_s > 1.0) {
-      std::vector<double> x_vec(traj_points.size());
-      std::vector<double> y_vec(traj_points.size());
-      // std::vector<double> theta_vec(traj_points.size());
-      // std::vector<double> l_vec(traj_points.size());
-      for (size_t i = 0; i < traj_points.size(); ++i) {
-        x_vec[i] = traj_points[i].x;
-        y_vec[i] = traj_points[i].y;
-        // theta_vec[i] = traj_points[i].heading_angle;
-        s_vec[i] = traj_points[i].s;
-        // l_vec[i] = traj_points[i].l;
-      }
-      x_s_spline.set_points(s_vec, x_vec);
-      y_s_spline.set_points(s_vec, y_vec);
-      Eigen::Vector2d spatio_init_point(planning_init_point.lat_init_state.x(),
-                                        planning_init_point.lat_init_state.y());
-      pnc::spline::Projection spatio_projection_spline;
-      spatio_projection_spline.CalProjectionPoint(
-          x_s_spline, y_s_spline,
-          s_vec.front(), s_vec.back(),
-          spatio_init_point);
-      s_ref = spatio_projection_spline.GetOutput().s_proj;
-    } else {
-      s_vec = cart_ref_info.s_vec;
-      x_s_spline = cart_ref_info.x_s_spline;
-      y_s_spline = cart_ref_info.y_s_spline;
-    }
-    const double max_ref_length = std::max(
-        std::min(s_vec.back(), frenet_coord->Length()) - s_ref - 0.01,
-        0.0);
-    double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
-    double delta_s = avg_cruise_v * config_.delta_t;
-    traj_points.clear();
-    TrajectoryPoint point;
-    // constexpr double kEps = 1e-4;
-    for (size_t i = 0; i < config_.num_step + 1; ++i) {
-      // cart info
-      if (s_ref < s_vec.back() + kEps) {
-        point.x = x_s_spline(s_ref);
-        point.y = y_s_spline(s_ref);
-        point.heading_angle =
-            std::atan2(y_s_spline.deriv(1, s_ref),
-                       x_s_spline.deriv(1, s_ref));
-      }
 
-      // frenet info
-      Point2D frenet_pt{0.0, 0.0};
-      Point2D cart_pt(point.x, point.y);
-      frenet_coord->XYToSL(cart_pt, frenet_pt);
-      point.s = frenet_pt.x;
-      point.l = frenet_pt.y;
-      point.t = static_cast<double>(i) * config_.delta_t;
+    // frenet info
+    Point2D frenet_pt{0.0, 0.0};
+    Point2D cart_pt(point.x, point.y);
+    frenet_coord->XYToSL(cart_pt, frenet_pt);
+    point.s = frenet_pt.x;
+    point.l = frenet_pt.y;
+    point.t = static_cast<double>(i) * config_.delta_t;
 
-      s_ref += delta_s;
-      traj_points.emplace_back(point);
-    }
+    s_ref += delta_s;
+    traj_points.emplace_back(point);
   }
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
               ->mutable_general_lateral_decider_output();
+  // calculate lc ref buffer
+  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()->lateral_offset_decider_output();
+  bool lat_offset_is_valid =
+      lateral_offset_decider_output.is_valid;
+  double ref_lat_offset = 0.0;
+  if (lat_offset_is_valid) {
+    ref_lat_offset = lateral_offset_decider_output.lateral_offset;
+  }
+  double lc_target_l = 0.0;
+  if (is_LC_CHANGE) {
+    lc_target_l = config_.lc_ref_offset;
+    int lc_request_direction = lane_change_decider_output.lc_request;
+    if (lc_request_direction == LEFT_CHANGE) {
+      lc_target_l *= -1.0;
+    }
+  } else {
+    if (std::fabs(ego_frenet_state_.heading_angle() * 57.3) >= 0.5 ||
+        (std::fabs(planning_init_point.frenet_state.r) - std::fabs(last_lc_ref_offset_)) >= 0.15) {
+      lc_target_l = last_lc_ref_offset_;
+    }
+  }
+  last_lc_ref_offset_ = lc_target_l;
+  ref_lat_offset += lc_target_l;
+
   general_lateral_decider_output.is_use_spatio_planner_result =
       is_use_spatio_planner_result;
   general_lateral_decider_output.ramp_scene =
       limit_ref_vel_on_ramp_valid;
-  if ((is_LC_CHANGE || is_LC_BACK || is_LC_HOLD) &&
-      ((config_.not_use_gap_flag) ||
-       gap_selector_decider_output.gap_selector_trustworthy)) {
+
+  if (is_LC_CHANGE || is_LC_BACK || is_LC_HOLD) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
-    if (is_LC_HOLD) {
-      HandleAvoidScene(traj_points, lc_hold_offset);
-    } else {
-      if (dist_to_second_stage < -1e-6 ||
-          !gap_selector_decider_output.gap_selector_trustworthy) {
-        HandleAvoidScene(traj_points, dynamic_ref_buffer);
-      }
+    if (is_LC_CHANGE) {
+      HandleRefPathOffset(traj_points, ref_lat_offset);
+    } else if (is_LC_HOLD) {
+      HandleRefPathOffset(traj_points, lc_hold_offset);
     }
   } else {
-    general_lateral_decider_output.lane_change_scene = false;
     // fusion is unsteady, lane keep weight need decay in end of ref
+    general_lateral_decider_output.lane_change_scene = false;
     if (is_use_spatio_planner_result) {
       if (limit_ref_vel_on_ramp_valid) {
         general_lateral_decider_output.complete_follow = false;
-        // HandleAvoidScene(traj_points, 0.0);
       } else {
         general_lateral_decider_output.complete_follow = true;
       }
@@ -781,39 +750,23 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       general_lateral_decider_output.complete_follow = false;
       if (!lane_borrow_decider_output.is_in_lane_borrow_status) {
         if (is_LC_PROPOSE) {
-          HandleAvoidScene(traj_points,
+          HandleRefPathOffset(traj_points,
               lane_change_decider_output.lateral_close_boundary_offset);
         } else {
-          HandleAvoidScene(traj_points, 0.0);
+          HandleRefPathOffset(traj_points, ref_lat_offset);
         }
       }
     }
   }
 }
 
-void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
+void GeneralLateralDecider::HandleRefPathOffset(TrajectoryPoints &traj_points,
                                              double dynamic_ref_buffer) {
   const auto &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
-  const LateralOffsetDeciderOutput &lateral_offset_decider_output =
-      session_->mutable_planning_context()->lateral_offset_decider_output();
-  double lateral_offset = 0;
-  if (lateral_offset_decider_output.is_valid) {
-    lateral_offset +=
-        lateral_offset_decider_output.lateral_offset;
-  }
   if (std::fabs(dynamic_ref_buffer) > 1e-6) {
-    if (gap_selector_decider_output.is_quitic_spline_change_to_center_line) {
-      lateral_offset = dynamic_ref_buffer;
-    } else {
-      lateral_offset += dynamic_ref_buffer;
-    }
-  }
-  if (std::fabs(lateral_offset) > 1e-6) {
     Point2D first_offset_xy_point;
-    if (frenet_coord->SLToXY(Point2D(traj_points[0].s, lateral_offset),
+    if (frenet_coord->SLToXY(Point2D(traj_points[0].s, dynamic_ref_buffer),
                              first_offset_xy_point)) {
       double frist_point_x = traj_points[0].x;
       double frist_point_y = traj_points[0].y;
@@ -824,7 +777,7 @@ void GeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
       for (auto &traj_point : traj_points) {
         traj_point.x += diff_x;
         traj_point.y += diff_y;
-        traj_point.l += lateral_offset;
+        traj_point.l += dynamic_ref_buffer;
       }
     } else {
       std::cout << "HandleAvoidScene frenet error!" << std::endl;

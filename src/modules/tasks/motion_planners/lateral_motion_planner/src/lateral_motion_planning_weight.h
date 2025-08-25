@@ -10,7 +10,7 @@
 namespace pnc {
 namespace lateral_planning {
 
-enum LateralMotionSceneEnum {
+enum class LateralMotionScene {
   LANE_KEEP = 0,
   AVOID,
   LANE_CHANGE,
@@ -20,11 +20,17 @@ enum LateralMotionSceneEnum {
   LANE_BORROW
 };
 
-enum EmergencyLevelEnum {
+enum class EmergencyLevel {
   NONE = 0,
-  P0,
+  P2,
   P1,
-  P2
+  P0
+};
+
+enum class LaneChangeStyle {
+  STANDARD_LANE_CHANGE = 0,
+  QUICKLY_LANE_CHANGE,
+  EMERGENCY_LANE_CHANGE
 };
 
 struct PathWeight {  // temp
@@ -142,7 +148,7 @@ class LateralMotionPlanningWeight {
       planning::common::LateralPlanningInput &planning_input);
 
   void SetLateralMotionWeight(
-      const LateralMotionSceneEnum scene,
+      const LateralMotionScene scene,
       planning::common::LateralPlanningInput &planning_input);
 
   void SetInitDisToRef(const double init_dis_to_ref) {
@@ -192,6 +198,10 @@ class LateralMotionPlanningWeight {
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       planning::common::LateralPlanningInput &planning_input);
 
+  void SetLaneChangeStyle(const LaneChangeStyle lc_style) {
+    lc_style_ = lc_style;
+  }
+
   double GetInitDisToRef() const { return init_dis_to_ref_; }
 
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
@@ -208,7 +218,7 @@ class LateralMotionPlanningWeight {
 
   const PathWeight& GetPathWeights() const { return weight_; }
 
-  const EmergencyLevelEnum& GetEmergencyLevel() const { return emergency_level_; }
+  const EmergencyLevel& GetEmergencyLevel() const { return emergency_level_; }
 
  private:
   void SetAccJerkBoundAndWeight(
@@ -240,9 +250,10 @@ class LateralMotionPlanningWeight {
 
  private:
   planning::LateralMotionPlannerConfig config_;
-  LateralMotionSceneEnum lateral_motion_scene_;
+  LateralMotionScene lateral_motion_scene_;
   PathWeight weight_;
-  EmergencyLevelEnum emergency_level_;
+  EmergencyLevel emergency_level_;
+  LaneChangeStyle lc_style_;
   double lat_offset_;
   double avoid_dist_;
   double init_dis_to_ref_;
@@ -267,6 +278,7 @@ class LateralMotionPlanningWeight {
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
   double last_max_omega_;
+  double last_lc_end_ratio_for_qrefxy_buffer_;
   size_t last_remotely_index_;
   bool is_lane_change_hold_;
   bool is_lane_change_back_;

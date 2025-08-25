@@ -13,15 +13,6 @@
 
 using namespace ilqr_solver;
 
-// static const double kMaxWheelAngle =
-//     360.0 / 13.0 / 57.3;  // 360 deg steering angle for scc
-// static const double kMaxWheelAngleRate =
-//     240.0 / 13.0 / 57.3;  // 240 deg/s steering angle rate for scc
-// [hack](bsniu): rads
-static const double kMaxWheelAngle =
-    540.0 / 13.0 / 57.3;  // 540 deg steering angle for rads
-static const double kMaxWheelAngleRate =
-    360.0 / 13.0 / 57.3;  // 360 deg/s steering angle rate for rads
 namespace pnc {
 namespace lateral_planning {
 void LateralMotionPlanningProblem::Init() {
@@ -155,12 +146,6 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
 
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
-    cost_config_vec.at(i)[W_CONTINUITY_X] =
-        planning_input.q_ref_x() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_Y] =
-        planning_input.q_ref_y() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_THETA] =
-        planning_input.q_ref_theta() * planning_input.q_continuity();
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
@@ -170,8 +155,6 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     cost_config_vec.at(i)[W_SOFT_CORRIDOR] = path_weights.q_pos_soft_bound[i];
     cost_config_vec.at(i)[W_HARD_CORRIDOR] = path_weights.q_pos_hard_bound[i];
-    // cost_config_vec.at(i)[W_SOFT_CORRIDOR] = planning_input.q_soft_corridor();
-    // cost_config_vec.at(i)[W_HARD_CORRIDOR] = planning_input.q_hard_corridor();
 
     if (!planning_input.complete_follow()) {
       if (i < path_weights.proximal_index) {
@@ -200,6 +183,13 @@ uint8_t LateralMotionPlanningProblem::Update(
             cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.3;
       }
     }
+
+    cost_config_vec.at(i)[W_CONTINUITY_X] =
+        cost_config_vec.at(i)[W_REF_X] * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_Y] =
+        cost_config_vec.at(i)[W_REF_Y] * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_THETA] =
+        cost_config_vec.at(i)[W_REF_THETA] * planning_input.q_continuity();
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
@@ -390,12 +380,6 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
 
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
-    cost_config_vec.at(i)[W_CONTINUITY_X] =
-        planning_input.q_ref_x() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_Y] =
-        planning_input.q_ref_y() * planning_input.q_continuity();
-    cost_config_vec.at(i)[W_CONTINUITY_THETA] =
-        planning_input.q_ref_theta() * planning_input.q_continuity();
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
@@ -434,6 +418,13 @@ uint8_t LateralMotionPlanningProblem::Update(
         cost_config_vec.at(i)[W_ACC] = end_acc;
       }
     }
+
+    cost_config_vec.at(i)[W_CONTINUITY_X] =
+        cost_config_vec.at(i)[W_REF_X] * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_Y] =
+        cost_config_vec.at(i)[W_REF_Y] * planning_input.q_continuity();
+    cost_config_vec.at(i)[W_CONTINUITY_THETA] =
+        cost_config_vec.at(i)[W_REF_THETA] * planning_input.q_continuity();
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
