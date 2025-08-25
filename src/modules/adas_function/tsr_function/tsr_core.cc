@@ -536,9 +536,6 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
   // 只透传地图限速信息
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   
-  // 记录上一次限速值，用于判断是否发生变化
-  uint32 tsr_speed_limit_last = tsr_speed_limit_;
-  
   // sd_map信息，获取限速
   if (GetContext.get_session()->environmental_model()
                                 .get_route_info()
@@ -581,11 +578,6 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
     LOG_WARNING("sd_pro_map is invalid!!!");
-  }
-
-  // 检查限速值是否发生变化
-  if (tsr_speed_limit_last != tsr_speed_limit_) {
-    tsr_speed_limit_change_flag_ = true;
   }
   
   return;
@@ -794,6 +786,23 @@ void TsrCore::UpdateTsrWarning(void) {
 
 void TsrCore::CalculatePathLengthAccumulated() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  
+  // 获取功能状态信息
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                     ->mutable_environmental_model()
+                                     ->get_local_view()
+                                     .function_state_machine_info;
+  
+  // NOA激活模式下，只使用地图限速，不需要计算累积距离
+  if (function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_ACTIVATE || 
+      function_state_machine_info_ptr->current_state == iflyauto::FunctionalState::FunctionalState_NOA_OVERRIDE) {
+    // NOA模式下保持距离为0，避免影响其他逻辑
+    accumulated_path_length_ = 0.0;
+    tsr_speed_limit_change_flag_ = false;  // 重置标志
+    return;
+  }
+  
+  // 非NOA模式下，正常计算累积距离用于感知限速的距离衰减
   if (tsr_speed_limit_change_flag_ == true || tsr_speed_limit_valid_ == false) {
     accumulated_path_length_ = 0.0;
     // 重置限速变化标志，避免标志一直为true
