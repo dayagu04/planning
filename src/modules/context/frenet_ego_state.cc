@@ -80,7 +80,7 @@ void FrenetEgoState::update(
 
   // Step 3) update boundary
   auto max_double = std::numeric_limits<double>::max();
-  auto min_double = std::numeric_limits<double>::min();
+  auto min_double = std::numeric_limits<double>::lowest();
   boundary_ = FrenetBoundary{max_double, min_double, max_double, min_double};
   for (auto &pt : frenet_corners) {
     boundary_.s_start = std::min(boundary_.s_start, pt.x());

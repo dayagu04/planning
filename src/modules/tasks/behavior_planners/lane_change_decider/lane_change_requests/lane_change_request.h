@@ -54,6 +54,7 @@ class LaneChangeRequest {
 
   double CalculatePressLineRatio(const int origin_lane_id,
                                  const RequestType& lc_request) const;
+  double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
 
  protected:
   TrackInfo lc_invalid_track_;
