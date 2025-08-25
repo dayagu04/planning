@@ -33,7 +33,6 @@ struct IHCSysInput {
 // IHC算法状态结构体定义
 struct IHCSysState {
   uint16 ihc_enable_code;
-  uint16 ihc_disable_code;
   uint16 ihc_fault_code;
   iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
@@ -64,7 +63,8 @@ class IhcCore {
 
   // 感知环境亮度硬滤波
   bool IHCRequestLightingFilter(bool ihc_request_lighting, uint8_t window_size, float ratio_threshold, uint8_t max_trasition);
-  
+  // 动态障碍物消息处理
+  bool IHCRequestDynamicObstacle(void);
   // IHC 灯光处理部分，如感知到车辆在前方等，需要近光灯
   bool IHCRequest(void);
 
