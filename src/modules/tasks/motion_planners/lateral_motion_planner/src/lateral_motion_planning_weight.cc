@@ -1052,11 +1052,11 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
                                 config_.q_ref_theta_lane_change};
   double q_ref_theta =
       planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta);
-  std::vector<double> fp_qtheta_raito{0.2, 0.3, 0.8, 1.2, 1.5, 2.0, 3.0};
+  std::vector<double> fp_qtheta_raito{0.05, 0.1, 0.5, 1.0, 2.25, 4.0, 9.0};
   double q_ref_theta_ratio =
       planning::interp(ref_vel_, xp_v, fp_qtheta_raito);
   q_ref_theta =
-      q_ref_theta * q_ref_theta_ratio * q_ref_theta_ratio;
+      q_ref_theta * q_ref_theta_ratio;
   planning_input.set_q_ref_theta(q_ref_theta);
 }
 
@@ -1196,7 +1196,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     weight_.remotely_index = std::max(min_remotely_index, weight_.remotely_index);
   }
   // consider intersection and S bend
-  if ((lateral_motion_scene_ == LateralMotionScene::RAMP &&
+  if ((target_road_radius_ < 750.0 &&
        is_in_intersection_) ||
       is_s_bend_) {
     weight_.remotely_index = 20;

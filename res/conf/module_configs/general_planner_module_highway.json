@@ -505,7 +505,7 @@
     "jerk_bound": 0.2,
     "jerk_bound_spatio": 0.8,
     "map_jerk_bound": [0.4, 0.4, 0.35, 0.3],
-    "map_jerk_bound_lc": [0.4, 0.4, 0.35, 0.3],
+    "map_jerk_bound_lc": [0.45, 0.45, 0.4, 0.35],
     "jerk_bound_inactivated_limit": 0.6,
     "jerk_bound_avoid": 0.4,
     "jerk_bound_lane_borrow": 0.55,
