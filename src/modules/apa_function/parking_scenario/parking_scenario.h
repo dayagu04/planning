@@ -443,8 +443,8 @@ class ParkingScenario {
       const double static_mirror_lat_buffer =
           apa_param.GetParam().stop_lat_inflation,
       const double dynamic_lon_buffer = 1.168,
-      const double dynamic_body_lat_buffer = 0.368,
-      const double dynamic_mirror_lat_buffer = 0.368,
+      const double dynamic_body_lat_buffer = 1.168,
+      const double dynamic_mirror_lat_buffer = 1.168,
       const bool only_check_mirror = false);
 
   virtual const double CalRemainDistFromPlanPathDangerous(

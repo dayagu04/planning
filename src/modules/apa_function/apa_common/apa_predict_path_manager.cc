@@ -100,7 +100,7 @@ void ApaPredictPathManager::Update(
   ILOG_INFO << "lat_err: " << lat_err_ << ", phi_err: " << phi_err_
             << ", control_err_big_: " << control_err_big_;
 
-  const double predict_distance = std::min(3.0, path_length - proj_s + 1.86);
+  const double predict_distance = std::min(4.0, path_length - proj_s + 1.86);
 
   bool use_steer_angle_flag = false;
 

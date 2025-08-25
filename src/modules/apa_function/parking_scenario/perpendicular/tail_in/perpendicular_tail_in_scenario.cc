@@ -1622,7 +1622,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             CalRemainDistFromObs(folding_mirror_consume_dist,
                                  smart_fold_mirror_params.min_lat_buffer,
                                  smart_fold_mirror_params.min_lat_buffer, 1.0,
-                                 0.368, 0.368, true) < 0.0) {
+                                 1.168, 1.168, true) < 0.0) {
           ILOG_INFO << "folding mirror not safe, should not fold mirror";
           try_fold_mirror = false;
         }
@@ -1635,8 +1635,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
         // After folding the mirror, it is necessary to ensure absolute safety,
         // otherwise there is no need to fold it
         if (try_fold_mirror &&
-            CalRemainDistFromObs(lon_dist, lat_buffer, lat_buffer, 1.0, 0.368,
-                                 0.368, true) < 0.0) {
+            CalRemainDistFromObs(lon_dist, lat_buffer, lat_buffer, 1.0, 1.168,
+                                 1.168, true) < 0.0) {
           ILOG_INFO << "Even fold the mirror the mirror is not safe, so not "
                        "fold the mirror";
           try_fold_mirror = false;
@@ -1644,8 +1644,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
         if (try_fold_mirror &&
             CalRemainDistFromObs(lon_buffer, param.stop_lat_inflation + 1e-2,
-                                 lat_buffer, 1.0, 0.368,
-                                 0.368) < frame_.remain_dist_path - 0.2) {
+                                 lat_buffer, 1.0, 1.168,
+                                 1.168) < frame_.remain_dist_path - 0.2) {
           ILOG_INFO << "Even fold the mirror the complete car is not safe, so "
                        "not fold the mirror";
           try_fold_mirror = false;
@@ -1654,8 +1654,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
       if (try_fold_mirror &&
           CalRemainDistFromObs(lon_dist, smart_fold_mirror_params.lat_buffer,
-                               smart_fold_mirror_params.lat_buffer, 1.0, 0.368,
-                               0.368, true) < 0.0) {
+                               smart_fold_mirror_params.lat_buffer, 1.0, 1.168,
+                               1.168, true) < 0.0) {
         ILOG_INFO << "need send fold mirror msg";
         frame_.mirror_command = MirrorCommand::FOLD;
       }
