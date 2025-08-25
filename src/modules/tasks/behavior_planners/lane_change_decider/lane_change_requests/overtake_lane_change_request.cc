@@ -190,8 +190,8 @@ void OvertakeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("enable_r_", enable_r_);
 
   // updateLaneChangeSafety(left_reference_path_, right_reference_path_);
-  JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
-  JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
+  // JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
+  // JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
   setLaneChangeRequestByFrontSlowVehcile(lc_status);
   ILOG_DEBUG << "request_type_:" << request_type_ << "turn_signal:" << turn_signal_;
 }
@@ -430,7 +430,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       right_lane_is_on_navigation_route = false;
     }
   }
-  
+
 #ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
