@@ -434,7 +434,7 @@
   "fold_mirror_x_down_offset": 0.0,
   "fold_mirror_x_up_offset": 4.68,
   "fold_mirror_x_redunant": 0.8,
-  "fold_mirror_y_offset": 0.06,
+  "fold_mirror_y_offset": 0.12,
   "fold_mirror_heading_offset": 2.68,
   "fold_mirror_max_stuck_wait_time": 3.0,
 
