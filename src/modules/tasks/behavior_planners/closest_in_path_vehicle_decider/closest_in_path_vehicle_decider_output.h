@@ -38,6 +38,9 @@ class ClosestInPathVehicleDeciderOutput {
   void set_dangerous_level(const double dangerous_level);
   bool is_virtual() const;
   void set_is_virtual(const bool is_virtual);
+  
+  bool is_large() const { return is_large_; }
+  void set_is_large(const bool is_large) { is_large_ = is_large; }
 
  private:
   // TODO:Enrich the cipv info, or create a cipv_class later.
@@ -50,6 +53,7 @@ class ClosestInPathVehicleDeciderOutput {
   double ttc_ = 100.0;
   int32_t dangerous_level_ = -1;
   bool is_virtual_ = false;
+  bool is_large_ = false;
 };
 
 }  // namespace planning

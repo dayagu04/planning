@@ -83,6 +83,8 @@ FollowTarget::FollowTarget(const SpeedPlannerConfig config,
 
 void FollowTarget::GenerateUpperBoundInfo() {
   const auto* st_graph = session_->planning_context().st_graph_helper();
+  const auto& cipv_decider_output =
+      session_->planning_context().cipv_decider_output();
   if (st_graph == nullptr) {
     return;
   }
@@ -98,7 +100,7 @@ void FollowTarget::GenerateUpperBoundInfo() {
             session_->environmental_model().get_agent_manager()->GetAgent(
                 cipv_info_.agent_id);
         if (agent != nullptr) {
-          cipv_info_.is_large_vehicle = agent->length() > kLargeAgentLengthM;
+          cipv_info_.is_large_vehicle = cipv_decider_output.is_large();
           cipv_info_.type = agent->type();
           cipv_info_.is_tfl_virtual_obs = agent->is_tfl_virtual_obs();
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
@@ -268,8 +270,8 @@ void FollowTarget::GenerateFollowTarget() {
 
     double s_value = target_value.s_target_val();
     // if (enable_stable_jlt) {
-    //   target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0, t));
-    //   target_value.set_target_type(upper_bound_infos_[i].target_type);
+    //   target_value.set_s_target_val(stable_follow_trajectory->Evaluate(0,
+    //   t)); target_value.set_target_type(upper_bound_infos_[i].target_type);
     //   JSON_DEBUG_VALUE("has_stable_follow_target", 1.0)
     // }
 

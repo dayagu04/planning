@@ -20,7 +20,8 @@ class ClosestInPathVehicleDecider : public Task {
 
   void Reset(int32_t* const cipv_id, double* const relative_s,
              double* const v_frenet, double* const cipv_ttc,
-             int32_t* const dangerous_level, bool* const is_virtual);
+             int32_t* const dangerous_level, bool* const is_virtual,
+             bool* const is_large);
 
  private:
   bool MakeDecison();
@@ -29,7 +30,8 @@ class ClosestInPathVehicleDecider : public Task {
   void MakeCipvInfo(const int32_t cipv_id, double* const relative_s,
                     double* const v_frenet, double* const v_fusion_frenet,
                     double* acc, double* acc_fusion, double* const cipv_ttc,
-                    int32_t* const dangerous_level, bool* const is_virtual);
+                    int32_t* const dangerous_level, bool* const is_virtual,
+                    bool* const is_large);
   void DetermineCIPVInfoForHMI() const;
 
  private:

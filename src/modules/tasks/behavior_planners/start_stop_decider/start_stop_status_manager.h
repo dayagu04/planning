@@ -56,6 +56,10 @@ class StartStopStatusManager {
 
   const int32_t cipv_id() const { return cipv_id_; }
 
+  bool& mutable_cipv_is_large() { return cipv_is_large_; }
+
+  const bool cipv_is_large() const { return cipv_is_large_; }
+
   double& mutable_planning_init_state_velocity() {
     return planning_init_state_vel;
   }
@@ -88,6 +92,7 @@ class StartStopStatusManager {
   double cipv_vel_frenet_ = 0.0;
   double cipv_relative_s_ = 0.0;
   int32_t cipv_id_ = -1;
+  bool cipv_is_large_ = false;
   bool is_ego_reverse_ = false;
   double cipv_relative_s_start_threshold_ = 3.5;
 };
