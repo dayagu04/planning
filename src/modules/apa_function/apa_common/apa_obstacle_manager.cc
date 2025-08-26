@@ -154,7 +154,48 @@ void ApaObstacleManager::Update(
       obs_id_generate_++;
     }
   }
+  if (param.use_object_detect_specificationer){
+    const uint8 fusion_obs_size =
+        std::min(local_view->fusion_objects_info.fusion_object_size,
+                 static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
+    for (uint8 i = 0; i < fusion_obs_size; ++i) {
+      const iflyauto::Obstacle& obs =
+          local_view->fusion_objects_info.fusion_object[i].common_info;
+      if (!IsConsideredODTypeSpecifier(obs.type)) {
+        continue;
+      }
+      Pose2D center_pose(obs.center_position.x, obs.center_position.y,
+                         obs.heading_angle);
+      std::vector<Eigen::Vector2d> local_box;
+      GenerateBoundingBox(obs.shape.length, obs.shape.width,
+                          Eigen::Vector2d(0.0f, 0.0f), local_box);
 
+      std::vector<Eigen::Vector2d> global_box;
+      LocalPolygonToGlobal(local_box, center_pose, global_box);
+      ApaObstacle apa_obs;
+      apa_obs.Reset();
+      Polygon2D polygon;
+      GeneratePolygonByPoints(global_box, &polygon);
+      apa_obs.SetPolygonGlobal(polygon);
+      cdl::AABB box = cdl::AABB();
+      GetBoundingBoxByPolygon(&box, &polygon);
+
+      apa_obs.SetPtClout2dGlobal(global_box);
+      apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
+      apa_obs.SetObsScemanticType(ApaObsScemanticType::SPECIFICATIONER);
+      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
+      apa_obs.SetBoxGlobal(box);
+      apa_obs.SetPolygonGlobal(polygon);
+      apa_obs.SetId(obs_id_generate_);
+      if (!param.enable_multi_height_col_det) {
+        apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      }
+      apa_obs.ClearDecision();
+      obstacles_[obs_id_generate_] = apa_obs;
+      obs_id_generate_++;
+
+    }
+  }
   if (param.use_object_detect) {
     GenerateObsByOD(local_view, apa_param.GetParam().od_config);
   }

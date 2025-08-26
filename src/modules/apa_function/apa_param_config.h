@@ -504,6 +504,7 @@ struct ApaParameters {
   bool use_ground_line = true;
   bool use_ground_line_wall_column = true;
   bool use_object_detect = true;
+  bool use_object_detect_specificationer = true;
   bool enable_side_pass_limiter = true;
   double tlane_safe_dx = 0.1;
   double min_dynamic_plan_proj_dt = 0.2;

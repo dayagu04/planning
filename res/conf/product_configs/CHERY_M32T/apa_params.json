@@ -230,6 +230,7 @@
   "use_ground_line": true,
   "use_ground_line_wall_column": false,
   "use_object_detect": false,
+  "use_object_detect_specificationer":true,
   "enable_side_pass_limiter": true,
   "tlane_safe_dx": 0.1068,
   "min_dynamic_plan_proj_dt": 0.2,
