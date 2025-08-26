@@ -585,5 +585,14 @@ void ApaObstacleManager::GenerateObsByOD(
   return;
 }
 
+const bool ApaObstacleManager::IsConsideredODTypeSpecifier(
+    const iflyauto::ObjectType type) {
+  if (type == iflyauto::ObjectType::OBJECT_TYPE_SPECIFICATIONER) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning
