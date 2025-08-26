@@ -270,6 +270,8 @@ class GeneralLateralDecider : public Task {
   bool is_potential_dangerous_obstacle_ = false;
   HysteresisDecision has_enough_speed_emergency_avoid_hysteresis_;
   bool enable_emergency_avoid_ = false;
+  HysteresisDecision has_enough_speed_bound_recurrence_hysteresis_;
+  bool is_use_recurrence_ = false;
 };
 
 }  // namespace planning

@@ -1685,6 +1685,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, dynamic_vru_nudge_lateral_buffer,
                      "general_lateral_decider",
                      "dynamic_vru_nudge_lateral_buffer");
+    ReadItem<double>(json, bound_recurrence_v_limit_max,
+                     "general_lateral_decider",
+                     "bound_recurrence_v_limit_max");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1790,6 +1793,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double extra_truck_nudge_buffer = 0.0;
   bool is_cross_solid_lane = false;
   double dynamic_vru_nudge_lateral_buffer = 0.8;
+  double bound_recurrence_v_limit_max = 60;
+
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

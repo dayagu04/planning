@@ -41,6 +41,8 @@ GeneralLateralDecider::GeneralLateralDecider(
   hard_bounds_info_.resize(config_.num_step + 1);
   has_enough_speed_emergency_avoid_hysteresis_.SetThreValue(config_.emergency_avoid_v_limit_max + 5,
                                                config_.emergency_avoid_v_limit_max - 5);
+  has_enough_speed_bound_recurrence_hysteresis_.SetThreValue(config_.bound_recurrence_v_limit_max + 5,
+                                               config_.bound_recurrence_v_limit_max - 5);
 }
 
 bool GeneralLateralDecider::InitInfo() {
@@ -90,6 +92,8 @@ bool GeneralLateralDecider::InitInfo() {
   is_potential_dangerous_obstacle_ = false; // 默认关闭
   has_enough_speed_emergency_avoid_hysteresis_.SetIsValidByValue(ego_cart_state_manager_->ego_v() * 3.6);
   enable_emergency_avoid_ = !has_enough_speed_emergency_avoid_hysteresis_.IsValid();
+  has_enough_speed_bound_recurrence_hysteresis_.SetIsValidByValue(ego_cart_state_manager_->ego_v() * 3.6);
+  is_use_recurrence_ = has_enough_speed_bound_recurrence_hysteresis_.IsValid();
   return true;
 }
 
@@ -1730,7 +1734,7 @@ bool GeneralLateralDecider::IsCutoutSideObstacle(
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, false, 0, obstacle_sl_polygon);
 
     if (!ok) {
       // TBD add log
@@ -2177,22 +2181,22 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     // }
     is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-        0, trusted_predicted_sl_polygon);
+        is_use_recurrence_, 0, trusted_predicted_sl_polygon);
     bound_type = BoundType::REVERSE_AGENT;
     is_care_reverse_ignore_obj = true;
   } else if (is_avoid_lon_overtake_obj && !is_blocked_obstacle_) {
     // 纵向overtake的障碍物按当前位置避让, s用预测，l按照当前位置
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-        0, trusted_predicted_sl_polygon);
+        is_use_recurrence_, 0, trusted_predicted_sl_polygon);
     is_care_lon_overtake_obj = true;
   } else if (in_intersection) {
     // 调整路口预测使用时间
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-      int(config_.trust_prediction_t_threshold_in_intersection * 10), trusted_predicted_sl_polygon);
+        is_use_recurrence_, int(config_.trust_prediction_t_threshold_in_intersection * 10), trusted_predicted_sl_polygon);
     is_care_intersection_scene = true;
   } else {
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-        int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
+        is_use_recurrence_, int(config_.trust_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
   }
   // 对向车ignore减少buffer
   double intrusion_distance = 0;
@@ -2229,7 +2233,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     double pred_ts = 0;
     bool ok = false;
     Polygon2d obstacle_sl_polygon_t;
-    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon_t);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, is_use_recurrence_, int(t * 10), obstacle_sl_polygon_t);
 
     if (!ok) {
       // TBD add log
@@ -2453,7 +2457,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   Polygon2d trusted_predicted_sl_polygon;
   bool has_trusted_predicted_polygon = false;
   has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(obstacle_id,
-      int(config_.trust_emergency_avoid_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
+      false, int(config_.trust_emergency_avoid_prediction_t_threshold * 10), trusted_predicted_sl_polygon);
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -2477,7 +2481,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
     double pred_ts = 0;
     bool ok = false;
     Polygon2d obstacle_sl_polygon_t;
-    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon_t);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, false, int(t * 10), obstacle_sl_polygon_t);
 
     if (!ok) {
       // TBD add log
@@ -4038,7 +4042,7 @@ bool GeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
     }
     Polygon2d obstacle_sl_polygon;
     bool ok = false;
-    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, int(t * 10), obstacle_sl_polygon);
+    ok = reference_path_ptr_->get_polygon_at_time(obstacle_id, false, int(t * 10), obstacle_sl_polygon);
 
     if (!ok) {
       continue;
@@ -4316,7 +4320,7 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
       }
       Polygon2d obstacle_sl_polygon;
       bool ok = false;
-      ok = reference_path_ptr_->get_polygon_at_time(obj->id(), int(t * 10), obstacle_sl_polygon);
+      ok = reference_path_ptr_->get_polygon_at_time(obj->id(), false, int(t * 10), obstacle_sl_polygon);
 
       if (!ok) {
         continue;

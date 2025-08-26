@@ -1161,7 +1161,7 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     bool ok = false;
     for (auto &i : timestamps) {
       Polygon2d obstacle_sl_polygon;
-      ok = reference_path->get_polygon_at_time(obstacle_id, int(i * 10), obstacle_sl_polygon);
+      ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10), obstacle_sl_polygon);
       if (ok) {
         for (auto &pt : obstacle_sl_polygon.points()) {
           if (obstacle.is_reverse()) {
@@ -1708,7 +1708,7 @@ bool LateralObstacleDecider::CheckSideObstacle(
     // (ego_s_end - obstacle_boundary_s_start > 0 &&
     // ego_s_end - obstacle_boundary_s_start <= KOverlapSThrt)
     Polygon2d obstacle_sl_polygon;
-    const auto ok = reference_path_ptr->get_polygon_at_time(obstacle_id, 0, obstacle_sl_polygon);
+    const auto ok = reference_path_ptr->get_polygon_at_time(obstacle_id, false, 0, obstacle_sl_polygon);
     const auto ego_sl_polygon = ego_frenet_state.polygon();
     if (ok && ego_sl_polygon.is_convex()) {
       Polygon2d care_overlap_polygon;
