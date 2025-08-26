@@ -383,6 +383,15 @@ bool PlanningAdapter::Proc() {
         *DebugInfoManager::GetInstance().GetDebugJson();
     planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
 
+#if defined(PLANNING_GIT_COMMIT_HASH)
+    planning_debug_data->mutable_version_commit()->set_planning_commit(
+        PLANNING_GIT_COMMIT_HASH);
+    planning_debug_data->mutable_version_commit()->set_interface_commit(
+        INTERFACE_GIT_COMMIT_HASH);
+    planning_debug_data->mutable_version_commit()->set_adcommon_commit(
+        ADCOMMON_GIT_COMMIT_HASH);
+#endif
+
     auto frame_info = planning_debug_data->mutable_frame_info();
     frame_info->set_frame_num(frame_num_);
     const auto frame_duration = (output_time_us - start_time) * 1e-3;

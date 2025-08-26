@@ -310,6 +310,12 @@ class LoadCyberbag:
         planning_debug_output.ParseFromString(msg.debug_info)
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
       plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      try:
+        if plan_debug_msg_dict:
+          version_commit = plan_debug_msg_dict[next(iter(plan_debug_msg_dict))].version_commit
+          print("planning_commit = ", version_commit.planning_commit, "  interface_commit = ", version_commit.interface_commit, "  ad_common_commit = ", version_commit.adcommon_commit)
+      except:
+        print('planning debug not have version commit')
       for t, msg in plan_debug_msg_dict.items():
         if t > 1e-3:
           self.plan_debug_msg['t'].append(t)
