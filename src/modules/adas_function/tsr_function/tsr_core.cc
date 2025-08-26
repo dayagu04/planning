@@ -359,7 +359,6 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     if (!current_link) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
-      ILOG_INFO <<"current_link is invalid!!!";
     } else {
       current_map_speed_limit_ = current_link->speed_limit();
       current_map_speed_limit_valid_ = true;
@@ -367,7 +366,6 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   } else {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
-    ILOG_INFO <<"sd_pro_map is invalid!!!";
   }
 
   // 判断限速标识牌是否需要抑制显示
@@ -565,7 +563,6 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
       tsr_speed_limit_valid_ = false;
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
-      LOG_WARNING("current_link is invalid!!!");
     } else {
       tsr_speed_limit_ = current_link->speed_limit();
       tsr_speed_limit_valid_ = true;
@@ -577,7 +574,6 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
     tsr_speed_limit_valid_ = false;
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
-    LOG_WARNING("sd_pro_map is invalid!!!");
   }
   
   return;
@@ -927,45 +923,29 @@ void TsrCore::RunOnce(void) {
 
   // log
   JSON_DEBUG_VALUE("tsr_main_switch_", (int)tsr_main_switch_);
-  ILOG_INFO << "tsr_main_switch_:" << (int)tsr_main_switch_;
   JSON_DEBUG_VALUE("tsr_enable_code_", tsr_enable_code_);
   JSON_DEBUG_VALUE("tsr_disable_code_", tsr_disable_code_);
   JSON_DEBUG_VALUE("tsr_fault_code_", tsr_fault_code_);
   JSON_DEBUG_VALUE("tsr_state_", (int)tsr_state_);
-  ILOG_INFO << "tsr_state_:" << (int)tsr_state_;
   JSON_DEBUG_VALUE("tsr_speed_limit_", tsr_speed_limit_);
-  ILOG_INFO << "tsr_speed_limit_:" << tsr_speed_limit_;
   JSON_DEBUG_VALUE("end_of_speed_sign_display_flag_", end_of_speed_sign_display_flag_);
-  ILOG_INFO << "end_of_speed_sign_display_flag_:" << end_of_speed_sign_display_flag_;
   JSON_DEBUG_VALUE("current_map_speed_limit_", current_map_speed_limit_);
-  ILOG_INFO << "current_map_speed_limit_:" << current_map_speed_limit_;
   JSON_DEBUG_VALUE("current_map_speed_limit_valid_", current_map_speed_limit_valid_);
-  ILOG_INFO << "current_map_speed_limit_valid_:" << current_map_speed_limit_valid_;
   JSON_DEBUG_VALUE("speed_limit_suppression_flag_", speed_limit_suppression_flag_);
-  ILOG_INFO << "speed_limit_suppression_flag_:" << speed_limit_suppression_flag_;
-
   JSON_DEBUG_VALUE("tsr_speed_limit_valid_", tsr_speed_limit_valid_);
-  ILOG_INFO << "tsr_speed_limit_valid_:" << tsr_speed_limit_valid_;
   JSON_DEBUG_VALUE("tsr_warning_image_", tsr_warning_image_);
-  ILOG_INFO << "tsr_warning_image_:" << tsr_warning_image_;
   JSON_DEBUG_VALUE("tsr_warning_voice_", tsr_warning_voice_);
   JSON_DEBUG_VALUE("tsr_overspeed_status_", overspeed_status_);
-  ILOG_INFO << "tsr_overspeed_status_:" << overspeed_status_;
   JSON_DEBUG_VALUE("tsr_overspeed_duration_time_", overspeed_duration_time_);
   JSON_DEBUG_VALUE("tsr_speed_limit_change_flag_",
                    tsr_speed_limit_change_flag_);
-  ILOG_INFO << "tsr_speed_limit_change_flag_:" << tsr_speed_limit_change_flag_;
   JSON_DEBUG_VALUE("tsr_speed_limit_exist_in_view_flag_",
                    speed_limit_exist_in_view_flag_);
-  ILOG_INFO << "tsr_speed_limit_exist_in_view_flag_:" << speed_limit_exist_in_view_flag_;
   JSON_DEBUG_VALUE("tsr_speed_limit_exist_in_view_",
                    speed_limit_exist_in_view_);
-  ILOG_INFO << "tsr_speed_limit_exist_in_view_:" << speed_limit_exist_in_view_;
   JSON_DEBUG_VALUE("tsr_accumulated_path_length_", accumulated_path_length_);
-  ILOG_INFO << "tsr_accumulated_path_length_:" << accumulated_path_length_;
   JSON_DEBUG_VALUE("tsr_output_supp_sign_info_", (int)output_supp_sign_info_);
   JSON_DEBUG_VALUE("supp_sign_in_suppression_flag_", supp_sign_in_suppression_flag_);
-  ILOG_INFO << "supp_sign_in_suppression_flag_:" << supp_sign_in_suppression_flag_;
 
   // reset info
   ResetRealTimeTsrInfo();
