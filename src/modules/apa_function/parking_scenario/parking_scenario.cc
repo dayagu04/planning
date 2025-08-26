@@ -98,42 +98,35 @@ void ParkingScenario::UpdateStuckTime() {
   const bool brake_flag = measure_data_ptr->GetBrakeFlag();
   const uint8_t plan_status = frame_.plan_stm.planning_status;
   const uint8_t pathplan_result = frame_.pathplan_result;
+  const bool path_update_success =
+      plan_status == ParkingStatus::PARKING_PLANNING &&
+      pathplan_result == PathPlannerResult::PLAN_UPDATE;
 
   // update stuck time
-  if (static_flag && (plan_status == ParkingStatus::PARKING_RUNNING ||
-                      plan_status == ParkingStatus::PARKING_PLANNING)) {
+  if (static_flag) {
     frame_.stuck_time += param.plan_time;
   } else {
     frame_.stuck_time = 0.0;
   }
 
   // update stuck by path time
-  if (static_flag && (plan_status == ParkingStatus::PARKING_RUNNING ||
-                      (plan_status == ParkingStatus::PARKING_PLANNING &&
-                       pathplan_result == PathPlannerResult::PLAN_FAILED))) {
+  if (static_flag && !path_update_success) {
     frame_.stuck_path_time += param.plan_time;
   } else {
     frame_.stuck_path_time = 0.0;
   }
 
-  // update stuck by obs time
-  if (static_flag && (plan_status == ParkingStatus::PARKING_RUNNING ||
-                      (plan_status == ParkingStatus::PARKING_PLANNING &&
-                       pathplan_result == PathPlannerResult::PLAN_FAILED))) {
+  if (static_flag && !path_update_success) {
     if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
+      // obs here
       if (frame_.stuck_by_dynamic_obs || frame_.stuck_dynamic_obs_time > 1e-3) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;
       }
     } else {
-      if (frame_.stuck_dynamic_obs_time > 1e-3) {
-        frame_.stuck_dynamic_obs_time += param.plan_time;
-      } else if (frame_.stuck_obs_time > 1e-3) {
-        frame_.stuck_obs_time += param.plan_time;
-      } else {
-        // do nothing
-      }
+      // obs disappear or far away
+      // do nothing, keep the old value
     }
   } else {
     frame_.stuck_obs_time = 0.0;
@@ -411,10 +404,9 @@ void ParkingScenario::SetPlanningPath() {
 
 const bool ParkingScenario::CheckStuckFailed() {
   const ApaParameters& param = apa_param.GetParam();
-  if (frame_.stuck_dynamic_obs_time > 1e-3f) {
-    return frame_.stuck_time > param.stuck_failed_time &&
-           frame_.stuck_dynamic_obs_time >
-               param.stuck_failed_by_dynamic_obs_time;
+  if (frame_.stuck_dynamic_obs_time > 1e-3) {
+    return std::max(frame_.stuck_time, frame_.stuck_dynamic_obs_time) >
+           param.stuck_failed_by_dynamic_obs_time;
   } else {
     return frame_.stuck_time > param.stuck_failed_time;
   }
@@ -931,6 +923,10 @@ const bool ParkingScenario::CheckSegCompleted(const double replan_dist,
 const bool ParkingScenario::CheckObsStucked(const double replan_dist,
                                             const double wait_time,
                                             const double min_drive_dist) {
+  if (frame_.stuck_by_dynamic_obs) {
+    return false;
+  }
+
   if (frame_.remain_dist_obs < replan_dist &&
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     ILOG_INFO << "close to obstacle!, need wait a certain time!";
@@ -962,8 +958,17 @@ const bool ParkingScenario::CheckSlotJumpStucked(const double replan_dist,
 
 const bool ParkingScenario::CheckStuckTimeEnough(
     const double stuck_replan_time) {
-  return frame_.stuck_path_time > stuck_replan_time &&
-         frame_.stuck_dynamic_obs_time < 1e-3f;
+  if (frame_.stuck_by_dynamic_obs) {
+    return false;
+  }
+
+  if (frame_.stuck_dynamic_obs_time < 1e-3) {
+    return frame_.stuck_path_time > stuck_replan_time;
+  } else {
+    return frame_.stuck_path_time > stuck_replan_time &&
+           (frame_.stuck_time - frame_.stuck_dynamic_obs_time >
+            stuck_replan_time);
+  }
 }
 
 const bool ParkingScenario::CheckDynamicUpdate() { return false; }
