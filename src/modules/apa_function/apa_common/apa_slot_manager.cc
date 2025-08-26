@@ -38,9 +38,15 @@ void ApaSlotManager::Update(
 
   const iflyauto::FuncStateMachine& fun_state_machine_info =
       local_view->function_state_machine_info;
-  if (fun_state_machine_info.current_state == iflyauto::FunctionalState_PARK_IN_SEARCHING && fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate &&
-    fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected
-    != iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED) {
+  free_slot_activate =
+      fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate;
+  is_free_slot_selected = fun_state_machine_info.parking_req.apa_free_slot_info
+                              .is_free_slot_selected;
+  if (fun_state_machine_info.current_state ==
+          iflyauto::FunctionalState_PARK_IN_SEARCHING &&
+      free_slot_activate &&
+      is_free_slot_selected != iflyauto::FreeSlotSelectedStatus::
+                                   FREE_SLOT_SELECTED_STATUS_FINISHED) {
     ego_info_under_slot_.slot.release_info_.Clear();
   }
 
@@ -146,6 +152,13 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = select_slot_id;
         ego_info_under_slot_.slot_type = slots_map_[select_slot_id].slot_type_;
+      } else if (free_slot_activate && is_free_slot_selected ==
+        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED &&
+        !slots_map_.empty()){
+        ego_info_under_slot_.history_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
+        ego_info_under_slot_.id = slots_map_[1].id_;
+        ego_info_under_slot_.slot_type = slots_map_[1].slot_type_;
       } else {
         ego_info_under_slot_.Reset();
       }
@@ -222,7 +235,7 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       continue;
     }
     const ApaSlot& slot = slots_map_[pair.second];
-    if (slot.id_ != ego_info_under_slot_.id) {
+    if (slot.id_ != ego_info_under_slot_.id && !free_slot_activate) {
       if (slot.release_info_.release_state[RULE_BASED_RELEASE] ==
           SlotReleaseState::RELEASE) {
         release_slot_id_vec_.emplace_back(slot.id_);

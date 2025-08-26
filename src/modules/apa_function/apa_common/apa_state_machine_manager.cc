@@ -39,17 +39,26 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
     case iflyauto::FunctionalState_HPP_CRUISE_ROUTING:
     case iflyauto::FunctionalState_HPP_CRUISE_SEARCHING:
-      if (parking_fusion_info.select_slot_id == 0) {
-        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
-      } else if (fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected
-        == iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED) {
-        if (!parking_fusion_info.parking_fusion_slot_lists[parking_fusion_info.select_slot_id].is_turn_corner) {
+      if (fun_state_machine_info.parking_req.apa_free_slot_info
+              .is_free_slot_selected ==
+          iflyauto::FreeSlotSelectedStatus::
+              FREE_SLOT_SELECTED_STATUS_FINISHED) {
+        if (!parking_fusion_info
+                 .parking_fusion_slot_lists[parking_fusion_info.select_slot_id]
+                 .is_turn_corner) {
           state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
         } else {
           state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
         }
-      } else if (fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected
-        == iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT) {
+        break;
+      }
+      if (fun_state_machine_info.parking_req.apa_free_slot_info
+              .free_slot_activate) {
+        break;
+      }
+      if (parking_fusion_info.select_slot_id == 0) {
+        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
+      } else {
         if (fun_state_machine_info.parking_req.apa_parking_direction ==
             iflyauto::BACK_END_PARKING_DIRECTION) {
           state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
@@ -87,21 +96,28 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_HPP_PARKING_IN:
       if (fun_state_machine_info.parking_req.apa_work_mode ==
           iflyauto::APA_WORK_MODE_PARKING_IN) {
-        if (fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected ==
-        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED) {
-          if (!parking_fusion_info.parking_fusion_slot_lists[parking_fusion_info.select_slot_id].is_turn_corner) {
+        if (fun_state_machine_info.parking_req.apa_free_slot_info
+                .is_free_slot_selected ==
+            iflyauto::FreeSlotSelectedStatus::
+                FREE_SLOT_SELECTED_STATUS_FINISHED) {
+          if (!parking_fusion_info
+                   .parking_fusion_slot_lists[parking_fusion_info
+                                                  .select_slot_id]
+                   .is_turn_corner) {
             state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
-          }
-          else {
+          } else {
             state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
           }
-        } else if (fun_state_machine_info.parking_req.apa_free_slot_info.is_free_slot_selected ==
-        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT) {
+          break;
+        } else if (fun_state_machine_info.parking_req.apa_free_slot_info
+                       .free_slot_activate) {
+          break;
+        } else {
           if (fun_state_machine_info.parking_req.apa_parking_direction ==
               iflyauto::BACK_END_PARKING_DIRECTION) {
             state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
           } else if (fun_state_machine_info.parking_req.apa_parking_direction ==
-                    iflyauto::FRONT_END_PARKING_DIRECTION) {
+                     iflyauto::FRONT_END_PARKING_DIRECTION) {
             state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
           }
         }
