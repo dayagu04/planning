@@ -50,3 +50,6 @@ if(PP_ENABLE OR PYBIND_TOOL_ENABLE OR THIRDPARTY_ENABLE OR INTERFACE_ENABLE OR A
 endif()
 include(${ci_dir}/version.cmake)
 GenVersionHeaderHere(${ci_dir})
+
+include(get_releative_module_version.cmake)
+GetRelativeModuleVersion()
