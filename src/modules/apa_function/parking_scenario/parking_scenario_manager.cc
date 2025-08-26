@@ -67,9 +67,6 @@ bool ParkingScenarioManager::Init(
 
 void ParkingScenarioManager::UpdateScenarioType() {
   ILOG_INFO << "UpdateScenarioType";
-  scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
-  scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
-
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
     Reset();
   }
@@ -147,6 +144,8 @@ void ParkingScenarioManager::UpdateScenarioType() {
   } else if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() &&
              ego_info_under_slot.id != 0) {
     scenario_status_ = ParkingScenarioStatus::STATUS_TRY;
+  } else if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
+    scenario_status_ = ParkingScenarioStatus::STATUS_SUSPEND;
   }
 
   current_scenario_ = GetScenarioByType(scenario_type_);
@@ -160,6 +159,8 @@ void ParkingScenarioManager::Process() {
     ScenarioRunning();
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_TRY) {
     ScenarioTry();
+  } else if (scenario_status_ == ParkingScenarioStatus::STATUS_SUSPEND) {
+    ScenarioSuspend();
   }
 
   return;
@@ -399,6 +400,41 @@ const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
   }
 
   return false;
+}
+
+void ParkingScenarioManager::PubStopReason() {
+  apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
+  apa_hmi_data_.is_parking_pause = false;
+
+  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    return;
+  }
+  if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
+    return;
+  }
+
+  if (current_scenario_ == nullptr) {
+    return;
+  }
+
+  if (current_scenario_->IsStopByDynamicObs()) {
+    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
+    apa_hmi_data_.is_parking_pause = true;
+  } else if (current_scenario_->IsStopByStaticMovableObs()) {
+    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
+    apa_hmi_data_.is_parking_pause = true;
+  }
+
+  return;
+}
+
+void ParkingScenarioManager::ScenarioSuspend() {
+  if (current_scenario_ == nullptr) {
+    return;
+  }
+  current_scenario_->ScenarioSuspend();
+
+  return;
 }
 
 }  // namespace apa_planner

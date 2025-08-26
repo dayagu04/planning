@@ -976,6 +976,7 @@ void PerpendicularTailInScenario::PathPlan() {
       SetParkingStatus(PARKING_FAILED);
     }
     SwitchProcessObsMethod();
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
     return;
   }
 
@@ -1003,6 +1004,7 @@ void PerpendicularTailInScenario::PathPlan() {
       ILOG_INFO << "postprocess path success!";
     } else {
       frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
       if (frame_.replan_fail_time > param.max_replan_failed_time) {
         SetParkingStatus(PARKING_FAILED);
       }

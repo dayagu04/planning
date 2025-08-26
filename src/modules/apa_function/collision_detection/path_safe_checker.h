@@ -31,7 +31,7 @@ class PathSafeChecker {
  public:
   PathSafeChecker(
       const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
-    SetObstacle(obs_manager);
+    obs_manager_ = obs_manager;
   }
   ~PathSafeChecker() {}
 
@@ -44,22 +44,12 @@ class PathSafeChecker {
 
   const bool IsPathCollision() const { return is_path_collision_; }
 
-  const bool IsEgoCollision() const { return is_ego_collision_; }
-
-  void UpdatePathValidDist(
-      const std::vector<pnc::geometry_lib::PathPoint>& path,
-      const Pose2D& ego_pose);
-
-  const double GetPathValidDist() const { return path_valid_dist_; }
-
-  const size_t GetPathCollisionID() const { return path_collision_idx_; }
-
   bool CalcEgoCollision(const Pose2D& ego_pose, const double lat_buffer,
                         const double lon_buffer);
 
-  const bool IsPolygonCollision(const Polygon2D* car);
-
-  const double GetEgoPathProjectS() const { return ego_project_s_; }
+  const bool IsCollisionByStaticMavableOD(
+      const Pose2D& ego_pose, const double lat_buffer, const double lon_buffer,
+      const std::vector<pnc::geometry_lib::PathPoint>& path);
 
  private:
   size_t GetNearestPathPoint(
@@ -101,26 +91,15 @@ class PathSafeChecker {
 
   const bool GetPolygonDistance(const Polygon2D* polygon, double* min_dist);
 
-  void GenerateEgoS(const size_t nearest_id,
-                    const std::vector<pnc::geometry_lib::PathPoint>& path,
-                    const Pose2D& pose);
-
-  void SetObstacle(
-      const std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager) {
-    obs_manager_ = obs_manager;
-    return;
-  }
+  const bool IsPolygonCollision(const Polygon2D* car);
 
  private:
   std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager_;
 
-  bool is_ego_collision_;
   bool is_path_collision_;
   size_t path_collision_idx_;
   GJK2DInterface gjk_interface_;
-
   size_t path_nearest_idx_;
-  double path_valid_dist_;
 
   PolygonFootPrint polygon_foot_print_;
 
@@ -128,6 +107,8 @@ class PathSafeChecker {
   double lon_buffer_;
 
   double ego_project_s_;
+
+  bool only_check_static_movable_obs_ = false;
 };
 
 }  // namespace planning

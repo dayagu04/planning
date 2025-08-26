@@ -122,5 +122,80 @@ void ApaObstacle::ClearDecision() {
   return;
 }
 
+void ApaObstacle::SetObsScemanticType(const iflyauto::ObjectType obs_type) {
+  obs_scemantic_type_ = ApaObsScemanticType::UNKNOWN;
+  switch (obs_type) {
+    case iflyauto::OBJECT_TYPE_OCC_COLUMN:
+      obs_scemantic_type_ = ApaObsScemanticType::COLUMN;
+      break;
+    case iflyauto::OBJECT_TYPE_OCC_WALL:
+      obs_scemantic_type_ = ApaObsScemanticType::WALL;
+      break;
+    case iflyauto::OBJECT_TYPE_OCC_CAR:
+    case iflyauto::OBJECT_TYPE_PICKUP:
+    case iflyauto::OBJECT_TYPE_SUV:
+    case iflyauto::OBJECT_TYPE_MPV:
+    case iflyauto::OBJECT_TYPE_ENGINEERING_VEHICLE:
+    case iflyauto::OBJECT_TYPE_COUPE:
+    case iflyauto::OBJECT_TYPE_MINIBUS:
+    case iflyauto::OBJECT_TYPE_VAN:
+    case iflyauto::OBJECT_TYPE_BUS:
+    case iflyauto::OBJECT_TYPE_TRUCK:
+    case iflyauto::OBJECT_TYPE_TRAILER:
+      obs_scemantic_type_ = ApaObsScemanticType::CAR;
+      break;
+    case iflyauto::OBJECT_TYPE_OCC_GROUDING_WIRE:
+      obs_scemantic_type_ = ApaObsScemanticType::CURB;
+      break;
+    case iflyauto::OBJECT_TYPE_OCC_CYCLIST:
+    case iflyauto::OBJECT_TYPE_TRICYCLE_RIDING:
+    case iflyauto::OBJECT_TYPE_MOTORCYCLE_RIDING:
+    case iflyauto::OBJECT_TYPE_CYCLE_RIDING:
+    case iflyauto::OBJECT_TYPE_TRICYCLE:
+    case iflyauto::OBJECT_TYPE_MOTORCYCLE:
+    case iflyauto::OBJECT_TYPE_BICYCLE:
+      obs_scemantic_type_ = ApaObsScemanticType::CYCLIST;
+      break;
+    case iflyauto::OBJECT_TYPE_ADULT:
+    case iflyauto::OBJECT_TYPE_TRAFFIC_POLICE:
+    case iflyauto::OBJECT_TYPE_CHILD:
+    case iflyauto::OBJECT_TYPE_ANIMAL:
+    case iflyauto::OBJECT_TYPE_PEDESTRIAN:
+      obs_scemantic_type_ = ApaObsScemanticType::PEOPLE;
+      break;
+    case iflyauto::OBJECT_TYPE_CTASH_BARREL:
+    case iflyauto::OBJECT_TYPE_TRAFFIC_BARREL:
+      obs_scemantic_type_ = ApaObsScemanticType::BARREL;
+      break;
+    case iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER:
+    case iflyauto::OBJECT_TYPE_TRAFFIC_CONE:
+      obs_scemantic_type_ = ApaObsScemanticType::BARRIER;
+      break;
+    case iflyauto::OBJECT_TYPE_FENCE:
+      obs_scemantic_type_ = ApaObsScemanticType::FENCE;
+      break;
+    default:
+      obs_scemantic_type_ = ApaObsScemanticType::UNKNOWN;
+      break;
+  }
+
+  return;
+}
+
+const bool ApaObstacle::IsMovableStaticObs() const {
+  if (obs_movement_type_ != ApaObsMovementType::STATIC) {
+    return false;
+  }
+
+  if (obs_scemantic_type_ == ApaObsScemanticType::BARRIER ||
+      obs_scemantic_type_ == ApaObsScemanticType::CYCLIST ||
+      obs_scemantic_type_ == ApaObsScemanticType::BARREL ||
+      obs_scemantic_type_ == ApaObsScemanticType::CAR) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

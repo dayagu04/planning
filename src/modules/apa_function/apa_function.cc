@@ -39,7 +39,7 @@ bool ApaFunction::Plan() {
   session_->mutable_planning_context()->mutable_planning_output() =
       apa_plan_interface_->GetPlaningOutput();
 
-  // currently only remaining distance is sent to planning hmi!
+  // todo: copy internal hmi.
   session_->mutable_planning_context()
       ->mutable_planning_hmi_info()
       ->apa_info.remain_dist = apa_plan_interface_->GetAPAHmi().remain_dist;
@@ -51,6 +51,14 @@ bool ApaFunction::Plan() {
       ->mutable_planning_hmi_info()
       ->apa_info.planning_park_dir =
       apa_plan_interface_->GetAPAHmi().planning_park_dir;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.is_parking_pause =
+      apa_plan_interface_->GetAPAHmi().is_parking_pause;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.parking_pause_reason =
+      apa_plan_interface_->GetAPAHmi().parking_pause_reason;
   return true;
 }
 

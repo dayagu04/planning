@@ -372,7 +372,7 @@
   "enable_delete_occ_in_slot": false,
   "enable_delete_occ_in_ego": true,
   "cubic_polynomial_pose_adjustment" :true,
-  "deadend_uss_stuck_replan_wait_time": 1.0,
+  "deadend_replan_time_by_obs": 1.0,
   "perpendicular_slot_auto_switch_to_astar": false,
   "parallel_slot_auto_switch_to_astar": false,
   "astar_parallel_finish_lon_err" : 0.25,

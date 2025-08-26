@@ -74,6 +74,8 @@ class ApaStateMachineManager final {
 
   const bool IsParkInStatus() const;
 
+  const bool IsParkSuspendStatus() const;
+
   void Reset() {
     state_machine_ = ApaStateMachine::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;

@@ -73,6 +73,9 @@ const std::string GetApaScenarioStatusString(
     case ParkingScenarioStatus::STATUS_FAIL:
       status = "STATUS_FAIL";
       break;
+    case ParkingScenarioStatus::STATUS_SUSPEND:
+      status = "STATUS_SUSPEND";
+      break;
     default:
       status = "STATUS_UNKNOWN";
       break;

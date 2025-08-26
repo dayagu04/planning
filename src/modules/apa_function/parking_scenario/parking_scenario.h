@@ -272,6 +272,7 @@ class ParkingScenario {
     uint8_t dynamic_replan_fail_count = 0;
     bool ego_stop_when_slot_jumps_much = false;
     uint8_t replan_reason = ReplanReason::NOT_REPLAN;
+    // record fail reason
     uint8_t plan_fail_reason = ParkingFailReason::NOT_FAILED;
     uint8_t total_plan_count = 0;
     uint8_t in_slot_plan_count = 0;
@@ -281,6 +282,7 @@ class ParkingScenario {
     double current_path_length = 0.0;
     double headin_current_path_length = 0.0;
     double path_extended_dist = 1.0;
+    // If ego is static and not manual mode, accumulate time;
     double stuck_time = 0.0;
     // stuck by static obs
     double stuck_obs_time = 0.0;
@@ -320,6 +322,7 @@ class ParkingScenario {
     // cur traj gear
     uint8_t gear_command = pnc::geometry_lib::SEG_GEAR_INVALID;
 
+    // closed obs in path is a dynamic obs.
     bool stuck_by_dynamic_obs = false;
 
     bool ego_should_stop_by_slot_jump = false;
@@ -384,6 +387,8 @@ class ParkingScenario {
   // 点击了车位，但还没点击开始泊车，那么调用这个函数，尝试一下看看路径生成是否成功.
   virtual void ScenarioTry();
 
+  virtual void ScenarioSuspend();
+
   const PlannerStateMachine &GetPlannerStates() const {
     return frame_.plan_stm;
   }
@@ -411,6 +416,11 @@ class ParkingScenario {
   }
 
   void RecordDebugPath();
+
+  const bool IsStopByDynamicObs() const;
+
+  // traffic_cone, water_safety_barrier, static bicycle, static vehicle,
+  const bool IsStopByStaticMovableObs() const;
 
  protected:
   virtual const bool CheckFinished() = 0;
@@ -495,6 +505,8 @@ class ParkingScenario {
   virtual const bool CheckDynamicGearSwitch();
 
   geometry_lib::PathPoint GetCurrentPathTerminal(const bool is_slot_coordinate);
+
+  void ClearTimeBySuspendStatus();
 
  protected:
   // TODO:

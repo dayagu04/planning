@@ -52,6 +52,7 @@ class ParkingScenarioManager final {
   void PubPreparePlanState();
 
   void RecommendParkingDirection();
+  void PubStopReason();
 
  private:
   // if user select a slot id, autonomous system will call this to try plan.
@@ -65,6 +66,8 @@ class ParkingScenarioManager final {
   // Do not publish path to HMI per frame for stable display.
   // If path is changed too much, publish it.
   const bool PubPreparePathByStableStrategy();
+
+  void ScenarioSuspend();
 
  private:
   // reset if scenario is null or slot is not release.

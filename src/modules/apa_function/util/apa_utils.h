@@ -48,4 +48,12 @@ const bool IsTrajValid(const iflyauto::Trajectory& traj);
 
 const ParkingVehDirection GetParkDir(const int dir);
 
+const bool IsODVeh(const iflyauto::ObjectType type);
+
+const bool IsODSpecificationer(const iflyauto::ObjectType type);
+
+const bool IsDynamicOD(const double v, const iflyauto::ObjectType type);
+
+const bool IsMovableStaticOD(const double v, const iflyauto::ObjectType type);
+
 }  // namespace  planning

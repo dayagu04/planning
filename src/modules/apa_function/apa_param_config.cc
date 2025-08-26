@@ -960,8 +960,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "enable_delete_occ_in_slot");
   JSON_READ_VALUE(param.astar_config.enable_delete_occ_in_ego, bool,
                   "enable_delete_occ_in_ego");
-  JSON_READ_VALUE(param.astar_config.deadend_uss_stuck_replan_wait_time, double,
-                  "deadend_uss_stuck_replan_wait_time");
+  JSON_READ_VALUE(param.astar_config.deadend_replan_time_by_obs, double,
+                  "deadend_replan_time_by_obs");
   JSON_READ_VALUE(param.astar_config.vertical_tail_in_end_straight_dist, double,
                   "vertical_tail_in_end_straight_dist");
 
