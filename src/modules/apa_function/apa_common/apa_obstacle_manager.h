@@ -27,7 +27,7 @@ class ApaObstacleManager final {
 
   void Update(const LocalView *local_view,
               const iflyauto::PlanningOutput *planning_output,
-              const std::shared_ptr<ApaStateMachineManager> &state_machine_ptr,
+              const ApaStateMachineManager &state_machine_manager,
               const size_t ego_slot_id);
 
   void Reset() {
@@ -69,11 +69,12 @@ class ApaObstacleManager final {
                        const ObjectDetectObsConfig &od_config);
 
  private:
+  // not allow any ptr variable
   size_t obs_id_generate_{0};
   std::unordered_map<size_t, ApaObstacle> obstacles_;
   std::vector<double> uss_dis_vec_;
 
-  std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
+  ApaStateMachineManager state_machine_manager_;
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;

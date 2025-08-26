@@ -10,6 +10,7 @@
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
 #include "collision_detection/path_safe_checker.h"
+#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "ifly_time.h"
 #include "log_glog.h"
@@ -195,6 +196,8 @@ void ApaSlotManager::Update(
     ego_info_under_slot_.slot.release_info_
         .release_state[ASTAR_PLANNING_RELEASE] = last_astar_release;
   }
+
+  JSON_DEBUG_VALUE("total_slot_size", slots_map_.size())
 
   return;
 }

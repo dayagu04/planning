@@ -24,7 +24,7 @@ namespace apa_planner {
 void ApaObstacleManager::Update(
     const LocalView* local_view,
     const iflyauto::PlanningOutput* planning_output,
-    const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
+    const ApaStateMachineManager& state_machine_manager,
     const size_t ego_slot_id) {
   if (local_view == nullptr || planning_output == nullptr) {
     ILOG_ERROR << "Update ApaObstacleManager, local_view_ptr is nullptr";
@@ -44,7 +44,7 @@ void ApaObstacleManager::Update(
 
   Reset();
 
-  state_machine_ptr_ = state_machine_ptr;
+  state_machine_manager_ = state_machine_manager;
 
   ILOG_INFO << "Update ApaObstacleManager";
 
@@ -357,7 +357,8 @@ void ApaObstacleManager::Update(
   }
 
   // limiters
-  if (param.enable_side_pass_limiter && state_machine_ptr_->IsParkingStatus()) {
+  if (param.enable_side_pass_limiter &&
+      state_machine_manager_.IsParkingStatus()) {
     std::vector<Eigen::Vector2d> limiter_points;
     limiter_points.clear();
     const iflyauto::ParkingFusionInfo* slot_list =
@@ -407,6 +408,8 @@ void ApaObstacleManager::Update(
     obstacles_[obs_id_generate_] = apa_obs;
     obs_id_generate_++;
   }
+
+  JSON_DEBUG_VALUE("total_obs_size", obstacles_.size())
 
   return;
 }
