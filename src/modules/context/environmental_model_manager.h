@@ -35,14 +35,14 @@ enum FeedType {
   FEED_TYPE_MAX,
 };
 
-enum TurnSwitchState {
-  NONE = 0,
-  LEFT_FIRMLY_TOUCH = 1,
-  RIGHT_FIRMLY_TOUCH = 2,
-  LEFT_LIGHTLY_TOUCH = 3,
-  RIGHT_LIGHTLY_TOUCH = 4,
-  ERROR = 5,
-};
+// enum TurnSwitchState {
+//   NONE = 0,
+//   LEFT_FIRMLY_TOUCH = 1,
+//   RIGHT_FIRMLY_TOUCH = 2,
+//   LEFT_LIGHTLY_TOUCH = 3,
+//   RIGHT_LIGHTLY_TOUCH = 4,
+//   ERROR = 5,
+// };
 
 class EnvironmentalModelManager {
  public:
