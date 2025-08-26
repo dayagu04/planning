@@ -28,6 +28,7 @@ class ParallelParkInScenario : public ParkingScenario {
   virtual const bool CheckFinished() override;
   virtual const bool GenObstacles() override;
   virtual void ExcutePathPlanningTask() override;
+  virtual void ScenarioTry() override;
   virtual void Log() const override;
 
   const double CalcSlotOccupiedRatio(const Eigen::Vector2d& terminal_err,

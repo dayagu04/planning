@@ -456,7 +456,12 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const uint8_t current_gear, const uint8_t current_arc_steer,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec);
 
-  const bool MultiAlignBody();  // multi align body if multi plan failed
+  const bool CheckTargetPoseValid(
+      const pnc::geometry_lib::PathPoint target_pose) const;
+
+  const bool MultiAlignBody(
+      std::vector<pnc::geometry_lib::PathSegment>
+          &path_seg_vec);  // multi align body if multi plan failed
 
   const bool OneArcPlan(
       pnc::geometry_lib::Arc &arc,
