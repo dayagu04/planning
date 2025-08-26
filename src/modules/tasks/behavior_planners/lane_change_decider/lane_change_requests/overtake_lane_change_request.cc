@@ -220,6 +220,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // const double max_pass_merge_distance_to_surpress_overtake_lane_change =
   //     virtual_lane_mgr_->dis_threshold_to_last_merge_point();
   double distance_to_first_road_split = NL_NMAX;
+  const double minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu = 2000.0;
   SplitDirection first_split_direction = SplitDirection::SPLIT_NONE;
   double dis_to_first_merge = NL_NMAX;
   SplitDirection first_merge_direction = SplitDirection::SPLIT_NONE;
@@ -229,29 +230,36 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const auto& split_region_info_list = route_info_output.split_region_info_list;
   const auto& merge_region_info_list = route_info_output.merge_region_info_list;
-  if (!split_region_info_list.empty()) {
-    if (split_region_info_list[0].is_valid) {
-      distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
-      first_split_direction = split_region_info_list[0].split_direction;
-      if (distance_to_first_road_split <= config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
-          split_region_info_list[0].is_ramp_split) {
-        return;
+  if (route_info_output.map_vendor == iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+    if (!split_region_info_list.empty()) {
+      if (split_region_info_list[0].is_valid) {
+        distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+        first_split_direction = split_region_info_list[0].split_direction;
+        if (distance_to_first_road_split <= config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
+            split_region_info_list[0].is_ramp_split) {
+          return;
+        }
       }
     }
-  }
-  if (!merge_region_info_list.empty()) {
-    if (merge_region_info_list[0].is_valid) {
-      dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
-      first_merge_direction = merge_region_info_list[0].split_direction;
+    if (!merge_region_info_list.empty()) {
+      if (merge_region_info_list[0].is_valid) {
+        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+        first_merge_direction = merge_region_info_list[0].split_direction;
+      }
+    }
+    if (distance_to_first_road_split >= dis_to_first_merge) {
+      distance_to_first_road_split = NL_NMAX;
+      first_split_direction = SplitDirection::SPLIT_NONE;
+    } else {
+      dis_to_first_merge = NL_NMAX;
+      first_merge_direction = SplitDirection::SPLIT_NONE;
+    }
+  } else if (route_info_output.map_vendor ==iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+    if (route_info_output.dis_to_ramp < minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu) {
+      return;
     }
   }
-  if (distance_to_first_road_split >= dis_to_first_merge) {
-    distance_to_first_road_split = NL_NMAX;
-    first_split_direction = SplitDirection::SPLIT_NONE;
-  } else {
-    dis_to_first_merge = NL_NMAX;
-    first_merge_direction = SplitDirection::SPLIT_NONE;
-  }
+
   int base_lane_virtual_id{current_lane_virtual_id};
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
