@@ -477,9 +477,9 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
       continue;
     }
 
-    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;
-    }
+    // if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+    //   continue;
+    // }
 
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
@@ -854,9 +854,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
-    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;
-    }
+    // if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+    //   continue;
+    // }
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
