@@ -37,6 +37,14 @@ struct IHCSysState {
   iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
+  
+  // Debug变量：记录切换近光灯的原因
+  bool low_beam_due_to_same_dir_vehicle;    // 是否由于同向车辆导致近光灯
+  bool low_beam_due_to_oncomming_vehicle;   // 是否由于对向机动车导致近光灯
+  bool low_beam_due_to_oncomming_cycle;     // 是否由于对向非机动车导致近光灯
+  
+  // 环境光线条件
+  int lighting_condition;  // 环境亮度条件：0-UNKNOWN, 1-BRIGHT, 2-MEDIUM, 3-DARK
 };
 
 // IHC算法结构体定义

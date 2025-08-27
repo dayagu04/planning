@@ -367,6 +367,10 @@ bool PlanningAdapter::Proc() {
         perception_scene_msg_recv_time_;
     is_perception_scene_msg_updated_.store(false);
   }
+  input_topic_timestamp->set_perception_scene(
+      local_view_ptr_->perception_scene_info.msg_header.stamp);
+  input_topic_latency->set_perception_scene(get_latency(
+      start_time, local_view_ptr_->perception_scene_info.msg_header.stamp));
 
   if (is_fusion_speed_bump_msg_updated_) {
     std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);
@@ -578,6 +582,14 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       local_view_ptr_->perception_tsr_info.msg_header.seq;
   msg_meta.input_list[input_list_count].stamp =
       local_view_ptr_->perception_tsr_info.msg_header.stamp;
+  input_list_count += 1;
+
+  msg_meta.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_SCENE;
+  msg_meta.input_list[input_list_count].seq =
+      local_view_ptr_->perception_scene_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->perception_scene_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list_size = input_list_count;

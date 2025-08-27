@@ -14,7 +14,7 @@ void IhcCore::RunOnce(void) {
 
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   if (GetContext.get_param()->ihc_use_json_code) {
-    // 如果使用json，则使用配置文件中的使能码、故障码
+    // 如果使用json，则使用配置文件中的使能码、禁用码、故障码
     ihc_sys_.input.ihc_main_switch = GetContext.get_param()->ihc_main_switch;
     ihc_sys_.state.ihc_enable_code = GetContext.get_param()->ihc_enable_code_maskcode;
     ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code_maskcode;
@@ -51,6 +51,16 @@ void IhcCore::RunOnce(void) {
                    ihc_sys_.input.ihc_main_switch);
   JSON_DEBUG_VALUE("ihc_function::auto_light_state",
                    ihc_sys_.input.auto_light_state);
+  JSON_DEBUG_VALUE("ihc_function::low_beam_due_to_same_dir_vehicle",
+                   ihc_sys_.state.low_beam_due_to_same_dir_vehicle);
+  JSON_DEBUG_VALUE("ihc_function::low_beam_due_to_oncomming_vehicle",
+                   ihc_sys_.state.low_beam_due_to_oncomming_vehicle);
+  JSON_DEBUG_VALUE("ihc_function::low_beam_due_to_oncomming_cycle",
+                   ihc_sys_.state.low_beam_due_to_oncomming_cycle);
+  
+  // 输出环境光线条件（已在IHCRequest中设置）
+  JSON_DEBUG_VALUE("ihc_function::lighting_condition",
+                   ihc_sys_.state.lighting_condition);
 }
 
 void IhcCore::GetInputInfo() {
@@ -93,6 +103,13 @@ void IhcCore::GetInputInfo() {
   // 后雾灯状态
   ihc_sys_.input.rear_fog_light_state =
       vehicle_service_output_info_ptr->rear_fog_light_state;
+  
+  // 获取环境光线条件记录信息
+  const auto scene_info_ptr = &GetContext.mutable_session()
+                                     ->mutable_environmental_model()
+                                     ->get_local_view()
+                                     .perception_scene_info;
+  ihc_sys_.state.lighting_condition = int(scene_info_ptr->lighting_condition);
 }
 
 uint16 IhcCore::UpdateIhcEnableCode() {
@@ -247,7 +264,7 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
         } else if (fault_code) {  // STANDBY->FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
-        } else if (enable_code == 31) {  // STANDBY->ACTIVE 11111
+        } else if (enable_code == 31) {  // STANDBY->ACTIVE
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
         } else {  // 继续维持在STANDBY状态
@@ -304,7 +321,7 @@ bool IhcCore::IHCRequestLightingFilter(bool ihc_request_lighting, uint8_t window
   2. 对向有车, 机动车200m内,切近光, 非机动车75m内, 切近光
   使用滞回控制避免临界距离抖动：在滞回区间内保持当前状态不变
 */
-bool IhcCore::IHCRequestDynamicObstacle() {
+bool IhcCore::IHCRequestDynamicObstacle(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool last_high_beam_request = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
   bool high_beam_request_temp = true;  // 默认远光
@@ -392,7 +409,6 @@ bool IhcCore::IHCRequest() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool ihc_request_temp = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
   
-  // 获取环境信息
   // TODO: thzhang5 0718 如果感知不准确，是否需要设置观察一段时间后在跳变
   const auto scene_info_ptr = &GetContext.mutable_session()
                                      ->mutable_environmental_model()
@@ -415,9 +431,10 @@ bool IhcCore::IHCRequest() {
       ihc_request_temp = IHCRequestDynamicObstacle();
     }
   } else {
-    // 未知环境
-    // 保持. 不做处理
+    // 中等亮度环境，保持
+    // do nothing
   }
+  
   return ihc_request_temp;
 }
 
