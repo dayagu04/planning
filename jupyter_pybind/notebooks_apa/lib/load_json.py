@@ -5,6 +5,14 @@ import os
 import sys
 sys.path.append("..")
 
+def load_json(file_path):
+    with open(str(file_path), "r", encoding="utf-8") as file:
+        return json.load(file)
+
+def save_json(data, file_path):
+    with open(str(file_path), "w", encoding="utf-8") as file:
+        json.dump(data, file, indent=4)
+
 def LoadScalar(ctrl_data, json_struct, name):
   try:
     ctrl_data[name] = json_struct[name]
