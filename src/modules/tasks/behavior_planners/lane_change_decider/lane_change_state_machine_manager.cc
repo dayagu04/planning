@@ -2549,6 +2549,8 @@ bool LaneChangeStateMachineManager::IsDashLineCurBoundary(
       (boundary_type ==
            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
        boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+       boundary_type ==
            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
   return is_dashed_line;
 }

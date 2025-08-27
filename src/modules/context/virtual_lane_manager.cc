@@ -1209,6 +1209,7 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_left_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==
@@ -1227,6 +1228,7 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_right_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==

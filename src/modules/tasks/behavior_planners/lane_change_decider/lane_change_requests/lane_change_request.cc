@@ -327,6 +327,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       if (left_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
           left_lane_boundarys.type_segments[iter].type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          left_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         dash_length += left_lane_boundarys.type_segments[iter].length;
       } else {
@@ -364,6 +366,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       if (right_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_DASHED ||
           right_lane_boundarys.type_segments[iter].type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          right_lane_boundarys.type_segments[iter].type ==
               iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         dash_length += right_lane_boundarys.type_segments[iter].length;
       } else {
@@ -397,8 +401,11 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
       if (left_boundary_type ==
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+          left_boundary_type == 
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           left_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
-          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
+          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+          left_boundary_type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID) {
         return true;
       }
     } else if (lc_request == RIGHT_CHANGE) {
@@ -406,8 +413,11 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_id);
       if (right_boundary_type ==
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+          right_boundary_type ==
+              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           right_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
-          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID) {
+          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
+          right_boundary_type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID) {
         return true;
       }
     }

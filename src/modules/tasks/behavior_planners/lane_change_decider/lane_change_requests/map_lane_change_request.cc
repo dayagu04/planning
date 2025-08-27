@@ -149,21 +149,33 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
     bool is_solid_right_lane_left =
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        MakesureCurrentBoundaryType(LEFT_CHANGE,
+                                    right_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_solid_right_lane_right =
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        MakesureCurrentBoundaryType(RIGHT_CHANGE,
+                                    right_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_right_lane_boundary_both_dash =
         !is_solid_right_lane_left && !is_solid_right_lane_right;
     bool is_solid_cur_lane_left =
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        MakesureCurrentBoundaryType(LEFT_CHANGE,
+                                    current_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_solid_cur_lane_right =
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID;
+        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+        MakesureCurrentBoundaryType(RIGHT_CHANGE,
+                                    current_lane->get_virtual_id()) ==
+        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_current_lane_is_leftmost =
         is_solid_cur_lane_left && !is_solid_cur_lane_right;
     is_ego_on_leftmost =
