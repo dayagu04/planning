@@ -80,6 +80,7 @@ class LaneBorrowDecider : public Task {
   Box2d PredictBoxPosition(const agent::Agent* agent, double delta_t);
   FrenetObstacleBoundary GetSLboundaryFromAgent(const Box2d& obs_box);
   void SendObserveToLatFlag();
+  void SendHMIData();
 
  private:
   LaneBorrowStatus lane_borrow_status_{kNoLaneBorrow};
@@ -130,6 +131,12 @@ class LaneBorrowDecider : public Task {
   std::unique_ptr<DPRoadGraph> dp_path_decider_;
   iflyauto::LaneBoundaryType left_lane_boundary_type_;
   iflyauto::LaneBoundaryType right_lane_boundary_type_;
+  // hmi cnt
+  int start_frame_{0};
+  bool nudging_prompt_{false};
+  bool takeover_prompt_{false};
+
+
 };
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

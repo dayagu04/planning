@@ -1,7 +1,7 @@
 #include "lane_borrow_deciderv2.h"
 #include <Eigen/src/Core/Matrix.h>
 #include <math.h>
-
+#include "planning_hmi_c.h"
 #include <cmath>
 
 #include "agent/agent_manager.h"
@@ -54,6 +54,7 @@ bool LaneBorrowDecider::Execute() {
   UpdateToDP();
   dp_path_decider_->LogDebugInfo();
   LogDebugInfo();
+  SendHMIData();
   return true;
 }
 
@@ -1942,6 +1943,53 @@ void LaneBorrowDecider::LogDebugInfo() {
   }
 
   lane_borrow_pb_info->set_intersection_state(intersection_state_);
+}
+void LaneBorrowDecider::SendHMIData(){
+  auto ad_info = &(session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info);
+  lane_borrow_decider_output_.takeover_prompt = false;
+  // 开始绕行信号
+  // 连续帧判断开始绕行
+  nudging_prompt_ = false;
+  takeover_prompt_ = false;
+
+  if(lane_borrow_status_ != kNoLaneBorrow){
+    start_frame_ ++;
+    start_frame_ = std::max(150,start_frame_);
+  }else{
+    start_frame_ = 0;
+  }
+
+// 结果
+  if(start_frame_ > 5){
+    nudging_prompt_ = true;
+    takeover_prompt_ = false;
+  }
+  if (lane_borrow_status_ == kNoLaneBorrow &&
+            nudging_prompt_ && ego_speed_ < 0.5) {
+    takeover_prompt_ = true;
+    nudging_prompt_ = false;
+  }
+  lane_borrow_decider_output_.takeover_prompt = takeover_prompt_;
+  //绕行提示
+  ad_info->start_nudging = nudging_prompt_;
+  //方向
+  ad_info->borrow_direction = lane_borrow_decider_output_.borrow_direction == LEFT_BORROW?
+                              iflyauto::LaneBorrowDirection::BORROW_LEFT :
+                              iflyauto::LaneBorrowDirection::BORROW_RIGHT;
+  //车道线
+  if(lane_borrow_decider_output_.borrow_direction == LEFT_BORROW){
+    ad_info->borrow_lane_type = lane_borrow_decider_output_.is_left_solid?
+    iflyauto::LaneBorrowLaneType::SOLID_LINE:
+    iflyauto::LaneBorrowLaneType::DASHED_LINE;
+  }else if(lane_borrow_decider_output_.borrow_direction == RIGHT_BORROW){
+    ad_info->borrow_lane_type = lane_borrow_decider_output_.is_right_solid?
+    iflyauto::LaneBorrowLaneType::SOLID_LINE:
+    iflyauto::LaneBorrowLaneType::DASHED_LINE;
+  }else{
+    ad_info->borrow_lane_type = iflyauto::LaneBorrowLaneType::LANE_NONE;
+  }
 }
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

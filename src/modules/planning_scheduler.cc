@@ -241,7 +241,8 @@ void PlanningScheduler::FillPlanningTrajectory(
       session_.environmental_model().get_virtual_lane_manager();
   const auto &speed_limit_decider_output =
       session_.planning_context().speed_limit_decider_output();
-
+  const auto lane_borrow_decider_output =
+      session_.planning_context().lane_borrow_decider_output();
   // 更新输出
   iflyauto::strcpy_array(planning_output->meta.plan_strategy_name,
                          "Real Time Planning");
@@ -497,6 +498,19 @@ void PlanningScheduler::FillPlanningTrajectory(
   }
 
   // planning request
+    //绕行接管
+  if(lane_borrow_decider_output.takeover_prompt){
+    planning_output->planning_request.take_over_req_level =
+        iflyauto::REQUEST_LEVEL_MILD;
+    planning_output->planning_request.request_reason =
+        iflyauto::REQUEST_REASON_BORROW_FAILED;
+  }else{
+    planning_output->planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
+    planning_output->planning_request.request_reason =
+        iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+  }
+
   if (speed_limit_decider_output.is_function_fading_away() &&
       config_.left_right_turn_func_fading_away_switch) {
     planning_output->planning_request.take_over_req_level =
@@ -673,6 +687,10 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.road_type = ad_info.road_type;
   planning_hmi_info->ad_info.ramp_pass_sts = ad_info.ramp_pass_sts;
   planning_hmi_info->ad_info.landing_point = ad_info.landing_point;
+  // lane borrow
+  planning_hmi_info->ad_info.start_nudging = ad_info.start_nudging;
+  planning_hmi_info->ad_info.borrow_lane_type = ad_info.borrow_lane_type;
+  planning_hmi_info->ad_info.borrow_direction = ad_info.borrow_direction;
 
   planning_hmi_info->ad_info.avoid_status =
       lat_offset_decider_output.avoid_id > 0
