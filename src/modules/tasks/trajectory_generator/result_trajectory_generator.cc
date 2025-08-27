@@ -485,6 +485,9 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
     ad_info.obstacle_info_size = 1;
+  } else if (lc_back_reason == "dash line length not satisfy") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
