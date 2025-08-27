@@ -20,7 +20,8 @@ void DebugAstarRequestString(const AstarRequest &request) {
   ILOG_INFO << " rs request: " << GetRSRequestType(request.rs_request)
             << ", plan reason = " << PlanReasonDebugString(request.plan_reason)
             << ", swap goal = " << request.swap_start_goal
-            << ", dir = " << static_cast<int>(request.direction_request);
+            << ", dir = " << static_cast<int>(request.direction_request)
+            << ", gear num = " << request.gear_switch_num;
 
   // ILOG_INFO << "start pose";
   // request.start_pose.DebugString();

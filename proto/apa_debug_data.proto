@@ -102,4 +102,5 @@ message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;
   optional ControlBasedPredictTraj predict_traj = 3;
+  optional double path_search_time = 4;
 }

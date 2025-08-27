@@ -171,7 +171,6 @@ class HybridAStarInterface {
   ParkReferenceLine ref_line_;
 
   int gear_switch_number_scenario_try_;
-  double search_time_;
 };
 
 }  // namespace planning

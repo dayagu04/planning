@@ -44,7 +44,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   enable_dp_cost_for_vertical_park = true;
   enable_ref_line_h_cost_for_vertical_park = true;
   enable_rs_path_h_cost_for_vertical_park = true;
-  max_gear_change_num = 10;
+  max_gear_change_num = 18;
   ref_line_heading_penalty = 0.0;
 
   rs_path_seg_advised_dist = 0.35;
@@ -55,7 +55,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   perpendicular_slot_head_out_node_step = 0.3;
   parallel_slot_node_step = 0.3;
 
-  max_search_time_ms = 5000;
+  max_search_time_ms = 4500;
   max_search_time_ms_for_no_gear_switch = 120;
   search_time_ms_scenario_try = 50;
   adjust_dist_inside_slot = 2.5;

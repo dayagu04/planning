@@ -51,6 +51,7 @@ struct AstarRequest {
   float slot_length;
 
   bool swap_start_goal;
+  int gear_switch_num = 20;
 
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;
@@ -58,6 +59,7 @@ struct AstarRequest {
     slot_id = 0;
     space_type = ParkSpaceType::NONE;
     direction_request = ParkingVehDirection::NONE;
+    gear_switch_num = 0;
     return;
   }
 };
