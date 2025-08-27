@@ -31,6 +31,7 @@
 #include "geometry_math.h"
 
 namespace planning {
+using namespace planning_math;
 namespace {
 constexpr double kEps = 1e-6;
 constexpr double kEgoReachBoundaryTime = 4.0;
