@@ -2763,6 +2763,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     EgoPlanningConfig::init(json);
     /* read config from json */
     ReadItem<bool>(json, pass_acc_mode, "lat_motion_ilqr", "pass_acc_mode");
+    ReadItem<bool>(json, enable_straight_rtk, "lat_motion_ilqr",
+                   "enable_straight_rtk");
     ReadItem<bool>(json, warm_start_enable, "lat_motion_ilqr",
                    "warm_start_enable");
     ReadItem<bool>(json, use_index_clip, "lat_motion_ilqr", "use_index_clip");
@@ -3022,6 +3024,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   }
 
   bool pass_acc_mode = false;
+  bool enable_straight_rtk = false;
   bool warm_start_enable = true;
   bool use_index_clip = true;
   bool use_acc_compensation = true;
@@ -3047,7 +3050,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 20000.0;
   double q_jerk_bound = 500000.0;
 
-  double first_qsoft_bound_ratio = 1.0;
+  double first_qsoft_bound_ratio = 0.0;
   double second_qsoft_bound_ratio = 1.0;
   std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
   std::vector<double> map_qhard_bound{500,    1000,   3000.0,

@@ -707,6 +707,7 @@
   },
   "lat_motion_ilqr": {
     "pass_acc_mode": true,
+    "enable_straight_rtk": false,
     "warm_start_enable": true,
     "use_index_clip": true,
     "use_acc_compensation": true,

@@ -38,7 +38,25 @@ class LateralMotionPlanner : public Task {
   bool Execute() override;
 
  private:
+  bool HandleInputData();
+
+  void ResetInput();
+
+  bool HandleReferencePathData();
+
+  bool HandleLateralBoundData();
+
+  bool HandleFeedbackInfoData();
+
   bool AssembleInput();
+
+  bool AssembleInputForHPP();
+
+  bool AssembleInputForRADS();
+
+  bool AssembleInputForNSA();
+
+  void StraightPathTest();
 
   bool Update();
 
@@ -58,10 +76,13 @@ class LateralMotionPlanner : public Task {
   std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
       planning_weight_ptr_;
 
+  bool is_divide_lane_into_two_;
+  bool is_need_reverse_;
+  bool is_use_second_bound_;
+  bool is_ref_consistent_;
   double avoid_back_time_;
   double enter_split_time_;
   double enter_lccnoa_time_;
-  bool is_divide_lane_into_two_;
   double curv_factor_;
   int low_speed_lane_change_cd_timer_;
   bool is_last_low_speed_lane_change_;
