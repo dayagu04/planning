@@ -561,6 +561,18 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::UNEXPECTED_GEAR;
   }
 
+  AstarPathGear gear;
+  if (traveled_distance > 0.0) {
+    gear = AstarPathGear::DRIVE;
+  } else {
+    gear = AstarPathGear::REVERSE;
+  }
+  new_node->SetGearType(gear);
+  if (parent_node->GetGearSwitchNum() >= request_.gear_switch_num &&
+      parent_node->IsPathGearChange(gear)) {
+    return NodeShrinkType::UNEXPECTED_GEAR;
+  }
+
   if (parent_node->IsStartNode()) {
     if (request_.first_action_request.gear_request == AstarPathGear::DRIVE &&
         traveled_distance < 0.0) {
@@ -631,13 +643,6 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   new_node->SetPre(parent_node);
 
-  AstarPathGear gear;
-  if (traveled_distance > 0.0) {
-    gear = AstarPathGear::DRIVE;
-  } else {
-    gear = AstarPathGear::REVERSE;
-  }
-  new_node->SetGearType(gear);
   if (parent_node->IsPathGearChange(gear)) {
     new_node->SetGearSwitchNum(parent_node->GetGearSwitchNum() + 1);
   } else {
@@ -2008,10 +2013,6 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
     // search neighbor nodes  over
   }
-
-  double search_end_time = IflyTime::Now_ms();
-  ILOG_INFO << "hybrid astar search time (ms) is "
-            << search_end_time - astar_search_start_time;
 
   // todo, use all astar node, maybe no need use rs path.
   if (best_rs_node.IsNodeValid()) {

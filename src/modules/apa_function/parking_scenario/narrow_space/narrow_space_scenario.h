@@ -160,6 +160,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void UpdateRecommentRouteBox();
 
+  void RecordSearchTime(const double time);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;

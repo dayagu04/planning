@@ -426,6 +426,7 @@ void NarrowSpaceScenario::Log() const {
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("dynamic_replan_count", frame_.dynamic_replan_count)
+  JSON_DEBUG_VALUE("total_plan_count", frame_.total_plan_count)
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)
 
   JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id);
@@ -2231,7 +2232,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     thread_.PublishResponse(&response_);
-    // ILOG_INFO << "publish path";
+    RecordSearchTime(response_.result.time_ms);
 
     if (!IsResponseNice(cur_request, response_)) {
       ThreadClearState();
@@ -2350,6 +2351,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     thread_.PublishResponse(&response_);
+    RecordSearchTime(response_.result.time_ms);
   }
 
   // request changed, reset response
@@ -2442,6 +2444,13 @@ void NarrowSpaceScenario::UpdateRecommentRouteBox() {
     box.ExtendY(2.0);
     recommend_route_bound_ = TransformMapBound(box);
   }
+  return;
+}
+
+void NarrowSpaceScenario::RecordSearchTime(const double time) {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->mutable_apa_path_debug()->set_path_search_time(time);
+
   return;
 }
 

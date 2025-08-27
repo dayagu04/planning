@@ -32,10 +32,8 @@ const Pose2f &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
 bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
                                            const AstarRequest *request) const {
   if (request->space_type == ParkSpaceType::VERTICAL) {
-    bool need_rs = false;
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      need_rs = NeedRsLinkByNodeHeadingForTailIn(node);
-      if (!need_rs) {
+      if (!NeedRsLinkByNodeHeadingForTailIn(node)) {
         return false;
       }
     } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
@@ -83,8 +81,7 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForTailIn(
   // use heuristic rule to do rs path expansion
   // use node heading to check.
   // if heading > 150 degree, shrink some rs expansion.
-  float heading = node->GetPhi();
-  if (std::fabs(heading) > ifly_deg2rad(150.0)) {
+  if (std::fabs(node->GetPhi()) > 1.57) {
     return false;
   }
 

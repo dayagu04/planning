@@ -70,6 +70,7 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
                                                 &edt_, &clear_zone_, &ref_line_,
                                                 dp_heuristic_generator_);
   hybrid_astar_->Init();
+  gear_switch_number_scenario_try_ = -1;
 
   ILOG_INFO << "astar interface success";
 
@@ -199,6 +200,13 @@ void HybridAStarInterface::UpdateOutput() {
                                 vehicle_param_);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
+  if (request_.path_generate_method == AstarPathGenerateType::TRY_SEARCHING ||
+      gear_switch_number_scenario_try_ < 0) {
+    request_.gear_switch_num = config_.max_gear_change_num;
+  } else {
+    request_.gear_switch_num = gear_switch_number_scenario_try_ + 5;
+  }
+
   DebugAstarRequestString(request_);
   hybrid_astar_->SetRequest(request_);
 
@@ -217,6 +225,10 @@ void HybridAStarInterface::UpdateOutput() {
   double response_end_time = IflyTime::Now_ms();
   ILOG_INFO << "hybrid astar finish, plan once time = "
             << response_end_time - response_start_time;
+
+  if (best_traj_ != nullptr) {
+    best_traj_->time_ms = response_end_time - response_start_time;
+  }
 
   // DebugPathString(best_traj_);
 
@@ -396,6 +408,9 @@ const AstarSearchState HybridAStarInterface::GetFullLengthPath(
     HybridAStarResult* result) {
   if (best_traj_ == nullptr || best_traj_->x.size() < 1) {
     GetFallBackPath(result);
+    if (best_traj_ != nullptr) {
+      result->time_ms = best_traj_->time_ms;
+    }
 
     return AstarSearchState::FAILURE;
   }
@@ -623,8 +638,6 @@ void HybridAStarInterface::PathClear() {
   for (size_t i = 0; i < traj_candidates_.size(); i++) {
     traj_candidates_.at(i).Clear();
   }
-  search_time_ = 0.0;
-
   // ILOG_INFO << "reset path";
 
   return;
@@ -808,6 +821,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     return;
   }
 
+  double search_time = 0.0;
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_outside.size();
        i++) {
     if (IsParkingOutRequest(request_.direction_request)) {
@@ -857,8 +871,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     }
 
     // check time
-    search_time_ += traj_candidates_[i].time_ms;
-    if (search_time_ > config_.max_search_time_ms) {
+    search_time += traj_candidates_[i].time_ms;
+    if (search_time > config_.max_search_time_ms) {
       ILOG_INFO << "time out";
       break;
     }

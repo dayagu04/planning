@@ -289,7 +289,7 @@ struct HybridAStarResult {
     kappa.clear();
     time_ms = 0;
     fail_type = AstarFailType::NONE;
-    gear_change_num = 0;
+    gear_change_num = -1;
 
     return;
   }
