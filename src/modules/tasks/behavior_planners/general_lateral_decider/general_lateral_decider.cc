@@ -18,7 +18,6 @@
 #include "frenet_ego_state.h"
 #include "general_lateral_decider_utils.h"
 #include "log.h"
-#include "task_basic_types.h"
 #include "utils/hysteresis_decision.h"
 #include "utils/kd_path.h"
 #include "vehicle_config_context.h"
@@ -36,6 +35,10 @@ GeneralLateralDecider::GeneralLateralDecider(
     : Task(config_builder, session) {
   config_ = config_builder->cast<GeneralLateralDeciderConfig>();
   name_ = "GeneralLateralDecider";
+  frenet_soft_bounds_.resize(config_.num_step + 1);
+  frenet_hard_bounds_.resize(config_.num_step + 1);
+  soft_bounds_info_.resize(config_.num_step + 1);
+  hard_bounds_info_.resize(config_.num_step + 1);
 }
 
 bool GeneralLateralDecider::InitInfo() {
@@ -74,6 +77,10 @@ bool GeneralLateralDecider::InitInfo() {
   soft_bounds_.clear();
   hard_bounds_.clear();
   kappa_map_.clear();
+  frenet_soft_bounds_.assign(frenet_soft_bounds_.size(), std::make_pair(0.0, 0.0));
+  frenet_hard_bounds_.assign(frenet_hard_bounds_.size(), std::make_pair(0.0, 0.0));
+  soft_bounds_info_.assign(soft_bounds_info_.size(), std::make_pair(BoundInfo(), BoundInfo()));
+  hard_bounds_info_.assign(hard_bounds_info_.size(), std::make_pair(BoundInfo(), BoundInfo()));
   is_blocked_obstacle_ =false;
   is_agent_current_pred_lonoverlap_ = false;
   return true;
@@ -115,27 +122,23 @@ bool GeneralLateralDecider::Execute() {
   GenerateObstaclesBoundary();
 
   // UnitTest();
-  std::vector<std::pair<double, double>> frenet_soft_bounds;
-  std::vector<std::pair<double, double>> frenet_hard_bounds;
-  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info;
-  std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
 
-  ExtractBoundary(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
-                  hard_bounds_info);
-  CalculateAvoidObstacles(frenet_soft_bounds, soft_bounds_info);
+  ExtractBoundary(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
+                  hard_bounds_info_);
+  CalculateAvoidObstacles(frenet_soft_bounds_, soft_bounds_info_);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds,
+  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds_,
                                       general_lateral_decider_output);
-  GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
+  GenerateLateralDeciderOutput(frenet_soft_bounds_, frenet_hard_bounds_,
                                general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
-  SaveLatDebugInfo(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
-                   hard_bounds_info, general_lateral_decider_output);
+  SaveLatDebugInfo(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
+                   hard_bounds_info_, general_lateral_decider_output);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCostTime", end_time - start_time);
@@ -448,6 +451,7 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
   double min_curv = 0.2;
   double last_preview_s = init_s;
   std::vector<double> preview_curv_vec;
+  preview_curv_vec.reserve(int((preview_end_time - preview_start_time) / preview_dt) + 1);
   // average curvature filter. sliding window
   for (double idx = preview_start_time; idx < preview_end_time; idx += preview_dt) {
     double preview_s = std::min(std::max(idx * ego_v, 0.0), 90.0);
@@ -1351,6 +1355,8 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
   std::vector<std::shared_ptr<FrenetObstacle>> static_obstacles;
   std::vector<std::shared_ptr<FrenetObstacle>> dynamic_obstacles;
+  static_obstacles.reserve(obs_vec.size());
+  dynamic_obstacles.reserve(obs_vec.size());
   for (const auto &obs : obs_vec) {
     if (obs->obstacle()->is_static()) {
       static_obstacles.emplace_back(obs);
@@ -2548,8 +2554,8 @@ void GeneralLateralDecider::ExtractBoundary(
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
-    frenet_hard_bounds.emplace_back(hard_bound);
-    hard_bounds_info.emplace_back(hard_bound_info);
+    frenet_hard_bounds[i] = hard_bound;
+    hard_bounds_info[i] = hard_bound_info;
   }
 
   for (int i = 0; i < soft_bounds_.size(); i++) {
@@ -2571,8 +2577,8 @@ void GeneralLateralDecider::ExtractBoundary(
     } else if (soft_bound.second < frenet_hard_bounds[i].first) {
       soft_bound.second = frenet_hard_bounds[i].first;
     }
-    frenet_soft_bounds.emplace_back(soft_bound);
-    soft_bounds_info.emplace_back(soft_bound_info);
+    frenet_soft_bounds[i] = soft_bound;
+    soft_bounds_info[i] = soft_bound_info;
   }
 
   assert(frenet_hard_bounds.size() == ref_traj_points_.size());
@@ -3184,13 +3190,6 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
       session_->environmental_model().get_virtual_lane_manager();
 
   // path points
-  std::vector<planning_math::PathPoint> path_points;
-  if (flane != nullptr && flane->get_reference_path() != nullptr) {
-    auto &ref_path = flane->get_reference_path();
-    for (auto &ref_point : ref_path->get_points()) {
-      path_points.emplace_back(ref_point.path_point);
-    }
-  }
   lateral_output.scenario = lane_change_decider_output.scenario;
   // lc info
   int lc_request = lane_change_decider_output.lc_request;
@@ -3243,26 +3242,26 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   // borrow_bicycle_lane
   lateral_output.lat_offset = lateral_offset_decider_output.lateral_offset;
   bool isRedLightStop = false;  // attention again!!!
-  TrackedObject *lead_one = session_->mutable_environmental_model()
-                                ->get_lateral_obstacle()
-                                ->leadone();
+  // TrackedObject *lead_one = session_->mutable_environmental_model()
+  //                               ->get_lateral_obstacle()
+  //                               ->leadone();
 
-  if (((virtual_lane_manager->current_lane_virtual_id() ==
-        virtual_lane_manager->get_lane_num() - 1) ||
-       (virtual_lane_manager->current_lane_virtual_id() ==
-            virtual_lane_manager->get_lane_num() - 2 &&
-        virtual_lane_manager->get_right_lane() != nullptr &&
-        virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
-    lateral_output.borrow_bicycle_lane = true;
-  } else {
-    lateral_output.borrow_bicycle_lane = false;
-  }
+  // if (((virtual_lane_manager->current_lane_virtual_id() ==
+  //       virtual_lane_manager->get_lane_num() - 1) ||
+  //      (virtual_lane_manager->current_lane_virtual_id() ==
+  //           virtual_lane_manager->get_lane_num() - 2 &&
+  //       virtual_lane_manager->get_right_lane() != nullptr &&
+  //       virtual_lane_manager->get_right_lane()->get_lane_type() ==
+  //           iflyauto::LANETYPE_NON_MOTOR)) &&
+  //     ((!isRedLightStop && lead_one != nullptr && lead_one->type == 20001))) {
+  //   lateral_output.borrow_bicycle_lane = true;
+  // } else {
+  //   lateral_output.borrow_bicycle_lane = false;
+  // }
   // enable intersection planner
-  lateral_output.enable_intersection_planner = false;  // attention again!!!
-  // dist rblane
-  lateral_output.dist_rblane = 10.;  // attention again!!!
+  // lateral_output.enable_intersection_planner = false;  // attention again!!!
+  // // dist rblane
+  // lateral_output.dist_rblane = 10.;  // attention again!!!
 
   // tleft_lane
   bool left_direct_exist = true;  // attention agagin!!!
@@ -3291,28 +3290,28 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   lateral_output.dist_intersect = 1000;
 
   // intersect length, attention again!!!
-  if (virtual_lane_manager->get_intersection_info().intsect_length() !=
-      DBL_MAX) {
-    lateral_output.intersect_length =
-        virtual_lane_manager->get_intersection_info().intsect_length();
-  } else {
-    lateral_output.intersect_length = 1000;
-  }
+  // if (virtual_lane_manager->get_intersection_info().intsect_length() !=
+  //     DBL_MAX) {
+  //   lateral_output.intersect_length =
+  //       virtual_lane_manager->get_intersection_info().intsect_length();
+  // } else {
+  //   lateral_output.intersect_length = 1000;
+  // }
 
   // is on highway
   lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
   // d_poly ,c_poly
-  auto &d_poly = lateral_output.d_poly;
-  auto &c_poly = lateral_output.c_poly;
+  // auto &d_poly = lateral_output.d_poly;
+  // auto &c_poly = lateral_output.c_poly;
 
-  d_poly.resize(flane->get_center_line().size());
-  c_poly.resize(flane->get_center_line().size());
+  // d_poly.resize(flane->get_center_line().size());
+  // c_poly.resize(flane->get_center_line().size());
 
-  std::reverse_copy(flane->get_center_line().begin(),
-                    flane->get_center_line().end(), d_poly.begin());
-  std::reverse_copy(flane->get_center_line().begin(),
-                    flane->get_center_line().end(), c_poly.begin());
+  // std::reverse_copy(flane->get_center_line().begin(),
+  //                   flane->get_center_line().end(), d_poly.begin());
+  // std::reverse_copy(flane->get_center_line().begin(),
+  //                   flane->get_center_line().end(), c_poly.begin());
 }
 
 void GeneralLateralDecider::ResetIsExceedObstacleHysteresisMap(int id) {

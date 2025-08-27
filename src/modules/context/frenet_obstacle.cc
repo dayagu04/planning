@@ -32,7 +32,7 @@ FrenetObstacle::FrenetObstacle(
 
 void FrenetObstacle::compute_frenet_obstacle(
     const ReferencePath &reference_path) {
-  FrenetEgoState frenet_ego_state = reference_path.get_frenet_ego_state();
+  const FrenetEgoState &frenet_ego_state = reference_path.get_frenet_ego_state();
   double ego_s = frenet_ego_state.s();
   double ego_l = frenet_ego_state.l();
   double ego_head_s = frenet_ego_state.head_s();

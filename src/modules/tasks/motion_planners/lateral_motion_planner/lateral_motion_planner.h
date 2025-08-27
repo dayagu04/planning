@@ -63,6 +63,19 @@ class LateralMotionPlanner : public Task {
   double enter_lccnoa_time_;
   bool is_divide_lane_into_two_;
   double curv_factor_;
+
+  std::vector<double> x_vec_;
+  std::vector<double> y_vec_;
+  std::vector<double> theta_vec_;
+  std::vector<double> delta_vec_;
+  std::vector<double> omega_vec_;
+  std::vector<double> curv_vec_;
+  std::vector<double> d_curv_vec_;
+  std::vector<double> s_vec_;
+  std::vector<double> t_vec_;
+
+  std::vector<double> expected_steer_vec_;
+  std::vector<double> ref_theta_vec_;
 };
 
 }  // namespace planning

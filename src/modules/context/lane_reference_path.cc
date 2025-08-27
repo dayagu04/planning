@@ -132,22 +132,14 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
   const double width = virtual_lane->width();
   ref_path_points.clear();
-  auto is_enu_valid = session_->environmental_model().location_valid();
+  ref_path_points.reserve(lane_points.size());
   for (auto &refline_pt : lane_points) {
     constexpr double kDefaultLaneBorderDis = 20.0;
     ReferencePathPoint ref_path_pt;
-    if (is_enu_valid) {
-      ref_path_pt.path_point.set_x(refline_pt.local_point.x);
-      ref_path_pt.path_point.set_y(refline_pt.local_point.y);
-      ref_path_pt.path_point.set_z(refline_pt.local_point.z);
-      ref_path_pt.path_point.set_theta(refline_pt.enu_heading);
-
-    } else {
-      ref_path_pt.path_point.set_x(refline_pt.car_point.x);
-      ref_path_pt.path_point.set_y(refline_pt.car_point.y);
-      ref_path_pt.path_point.set_z(0.0);
-      ref_path_pt.path_point.set_theta(refline_pt.car_heading);
-    }
+    ref_path_pt.path_point.set_x(refline_pt.local_point.x);
+    ref_path_pt.path_point.set_y(refline_pt.local_point.y);
+    ref_path_pt.path_point.set_z(refline_pt.local_point.z);
+    ref_path_pt.path_point.set_theta(refline_pt.enu_heading);
     ref_path_pt.path_point.set_kappa(refline_pt.curvature);
     // ref_path_pt.distance_to_left_lane_border = std::fmin(
     //     refline_pt.distance_to_left_lane_border, kDefaultLaneBorderDis);
@@ -230,6 +222,7 @@ bool LaneReferencePath::get_ref_points_hpp(ReferencePathPoints &ref_path_points)
   std::cout << "lane_points.size(): " << lane_points.size() << std::endl;
   const double width = virtual_lane->width();
   ref_path_points.clear();
+  ref_path_points.reserve(lane_points.size());
   auto is_enu_valid = session_->environmental_model().location_valid();
   for (auto &refline_pt : lane_points) {
     constexpr double kDefaultLaneBorderDis = 20.0;
