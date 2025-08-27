@@ -77,6 +77,14 @@ void IhcCore::GetInputInfo() {
                                             ->get_local_view()
                                             .vehicle_service_output_info;
 
+  // 获取环境光线条件记录信息
+  const auto scene_info_ptr = &GetContext.mutable_session()
+                                     ->mutable_environmental_model()
+                                     ->get_local_view()
+                                     .perception_scene_info;
+
+  ihc_sys_.state.lighting_condition = int(scene_info_ptr->lighting_condition);
+
   // 获取IHC开关状态
   ihc_sys_.input.ihc_main_switch =
       function_state_machine_info_ptr->switch_sts.ihc_main_switch;
@@ -104,12 +112,7 @@ void IhcCore::GetInputInfo() {
   ihc_sys_.input.rear_fog_light_state =
       vehicle_service_output_info_ptr->rear_fog_light_state;
   
-  // 获取环境光线条件记录信息
-  const auto scene_info_ptr = &GetContext.mutable_session()
-                                     ->mutable_environmental_model()
-                                     ->get_local_view()
-                                     .perception_scene_info;
-  ihc_sys_.state.lighting_condition = int(scene_info_ptr->lighting_condition);
+
 }
 
 uint16 IhcCore::UpdateIhcEnableCode() {
@@ -408,21 +411,15 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
 bool IhcCore::IHCRequest() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool ihc_request_temp = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
-  
-  // TODO: thzhang5 0718 如果感知不准确，是否需要设置观察一段时间后在跳变
-  const auto scene_info_ptr = &GetContext.mutable_session()
-                                     ->mutable_environmental_model()
-                                     ->get_local_view()
-                                     .perception_scene_info;
 
   // 环境亮度条件
-  if (scene_info_ptr->lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
+  if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
     // 昏暗环境, 根据障碍物信息判断是否需要切远光
     ihc_request_temp = IHCRequestDynamicObstacle();
-  } else if (scene_info_ptr->lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
+  } else if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     // 明亮环境
     ihc_request_temp = false;
-  } else if (scene_info_ptr->lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_MEDIUM) {
+  } else if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_MEDIUM) {
     // 中等亮度环境，根据当前车灯判断是否需要切远光
     if (ihc_request_temp == false) {
       // 当前为近光灯，保持

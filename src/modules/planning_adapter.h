@@ -270,6 +270,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::mutex map_msg_mutex_;
   std::mutex sd_map_infomsg_mutex_;
   std::mutex perception_tsr_msg_mutex_;
+  std::mutex perception_scene_msg_mutex_;
   std::mutex hmi_inner_info_msg_mutex_;
   std::mutex parking_map_info_msg_mutex_;
   std::mutex sdpro_map_info_msg_mutex_;

@@ -367,6 +367,7 @@ bool PlanningAdapter::Proc() {
         perception_scene_msg_recv_time_;
     is_perception_scene_msg_updated_.store(false);
   }
+
   input_topic_timestamp->set_perception_scene(
       local_view_ptr_->perception_scene_info.msg_header.stamp);
   input_topic_latency->set_perception_scene(get_latency(
@@ -585,7 +586,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
-      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_SCENE;
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->perception_scene_info.msg_header.seq;
   msg_meta.input_list[input_list_count].stamp =

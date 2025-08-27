@@ -842,11 +842,37 @@ void PlanningPlayer::PlayOneFrame(
               << " missing /iflytek/camera_perception/traffic_sign_recognition"
               << std::endl;
   }
-
-  // TODO: thzhang5 0718 perception_scene
-  auto perception_scene_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs::CameraPerceptionScene>(
-          TOPIC_PERCEPTION_SCENE, input_time_list.perception_scene());
+  
+  // BUG: thzhang5 0827 perception_scene()一直是0
+  // 现在 perception_scene 使用 TSR 的枚举值，所以会返回 TSR 的时间戳
+  uint64_t tsr_timestamp = input_time_list.perception_tsr();  // 实际上是TSR的时间戳
+  
+  struct_msgs::CameraPerceptionScene::Ptr perception_scene_ros_msg = nullptr;
+  
+  if (tsr_timestamp > 0) {
+    // 使用TSR时间戳去找最接近的perception_scene消息
+    perception_scene_ros_msg = find_ros_msg_with_header_time_upper_bound<struct_msgs::CameraPerceptionScene>(
+        TOPIC_PERCEPTION_SCENE, tsr_timestamp);
+    
+         if (!perception_scene_ros_msg) {
+       // 如果upper_bound没找到，尝试向前查找
+       for (auto it = msg_cache_[TOPIC_PERCEPTION_SCENE].begin(); 
+            it != msg_cache_[TOPIC_PERCEPTION_SCENE].end(); ++it) {
+         uint64_t scene_timestamp_us = it->first.toNSec() / 1000;  // 转换为微秒
+         if (scene_timestamp_us <= tsr_timestamp + 200000) {  // 允许200ms的时间差
+           perception_scene_ros_msg = boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(it->second);
+           break;
+         }
+       }
+     }
+  } else {
+    // 如果TSR时间戳还是0，使用第一个可用消息
+    if (!msg_cache_[TOPIC_PERCEPTION_SCENE].empty()) {
+      auto first_msg = msg_cache_[TOPIC_PERCEPTION_SCENE].begin();
+      perception_scene_ros_msg = boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(first_msg->second);
+    }
+  }
+  
   if (perception_scene_ros_msg) {
     iflyauto::CameraPerceptionScene perception_scene_msg{};
     convert(perception_scene_msg, *perception_scene_ros_msg,
