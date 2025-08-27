@@ -121,12 +121,10 @@ void EgoLaneTrackManger::TrackEgoLane(
   const double distance_to_stopline = session_->environmental_model()
                                     .get_virtual_lane_manager()
                                     ->GetEgoDistanceToStopline();
-  const double distance_to_crosswalk = session_->environmental_model()
-                                    .get_virtual_lane_manager()
-                                    ->GetEgoDistanceToCrosswalk();
+
   bool current_intersection_state =
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
-      distance_to_stopline <= 10.0 || distance_to_crosswalk <= 12.0;
+      distance_to_stopline <= 10.0;
 
   is_exist_split_on_ramp_ = false;
   is_exist_ramp_on_road_ = false;
