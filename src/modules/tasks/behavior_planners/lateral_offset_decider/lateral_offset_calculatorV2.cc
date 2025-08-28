@@ -590,8 +590,11 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
         clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
                  std::max(-avoid_obstacle.vs_lon_relative, 1e-6),
              5.0, 0.0);
+    double extra_buffer = interp(ego_cart_state_manager_->ego_v() * 3.6,
+                                config_.lateral_offset_obstacle_nudge_buffer_v_bp,
+                                config_.lateral_offset_nudge_buffer);
     double distance_ego_to_obstacle = base_distance +
-                                      0.015 * ego_cart_state_manager_->ego_v() -
+                                      extra_buffer -
                                       0.02 * pred_ts;
     lat_offset = half_ego_width + distance_ego_to_obstacle - nearest_l_to_ref;
   }

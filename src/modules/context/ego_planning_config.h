@@ -1721,6 +1721,15 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
                      "lateral_offset_decider", "extra_truck_nudge_lat_offset");
     open_side_lat_offset_nudge = read_json_key<bool>(
         json, "open_side_lat_offset_nudge", open_side_lat_offset_nudge);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"lateral_offset_decider",
+                                 "lateral_offset_obstacle_nudge_buffer_v_bp"},
+        lateral_offset_obstacle_nudge_buffer_v_bp);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"lateral_offset_decider",
+                                                   "lateral_offset_nudge_buffer"},
+                          lateral_offset_nudge_buffer);
   }
   double v_limit_max = 30;
   bool is_valid_lateral_offset = false;
@@ -1744,6 +1753,9 @@ struct LateralOffsetDeciderConfig : public EgoPlanningConfig {
   double care_static_object_t_threshold = 0.0;
   double extra_truck_nudge_lat_offset = 0.0;
   bool open_side_lat_offset_nudge = false;
+  std::vector<double> lateral_offset_obstacle_nudge_buffer_v_bp{10, 40,  60,
+                                                         80, 100, 130};
+  std::vector<double> lateral_offset_nudge_buffer{0.04, 0.16, 0.25, 0.33, 0.41, 0.54};
 };
 
 struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
