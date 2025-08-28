@@ -67,7 +67,11 @@ bool ParkingScenarioManager::Init(
 
 void ParkingScenarioManager::UpdateScenarioType() {
   ILOG_INFO << "UpdateScenarioType";
-  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
+      apa_world_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::STANDBY ||
+      apa_world_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ERROR) {
     Reset();
   }
 
@@ -173,6 +177,9 @@ void ParkingScenarioManager::Reset() {
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
 
   apa_world_->GetParkingTaskInterfacePtr()->Reset();
+  ClearPlanningOutput();
+  planning_output_.planning_status.apa_planning_status =
+      iflyauto::ApaPlanningStatus::APA_NONE;
 
   // reset all planner
   for (const auto &scene : scenario_list_) {
@@ -333,20 +340,13 @@ void ParkingScenarioManager::PubPreparePlanState() {
 }
 
 void ParkingScenarioManager::RecommendParkingDirection() {
-  ApaDirectionGenerator generator;
-  generator.ClearRecommendationDirectionFlag(apa_hmi_data_);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParityBit);
+  if (current_scenario_ == nullptr) {
+    ILOG_ERROR << "current_scenario_ is nullptr, cannot get APA HMI data";
+    return;
+  }
 
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFrontLeft);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParallelFrontLeft);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFront);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalFrontRight);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, ParallelFrontRight);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBack);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBackLeft);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalBackRight);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalHeadIn);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data_, VerticalTailIn);
+  apa_hmi_data_.planning_park_dir =
+      current_scenario_->GetAPAHmi().planning_park_dir;
 
   ILOG_INFO << "dir = " << apa_hmi_data_.planning_park_dir;
 

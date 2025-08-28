@@ -2,10 +2,12 @@
 #define __HYBRID_ASTAR_PARK_H__
 
 #include <cstddef>
+#include <cstdint>
 
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
 #include "narrow_space_decider.h"
+#include "planning_hmi_c.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "virtual_wall_decider.h"
 
@@ -157,6 +159,11 @@ class NarrowSpaceScenario : public ParkingScenario {
   const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
 
   const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
+  iflyauto::APAHMIData PubDirectionForParkOutTry(
+      const AstarRequest& cur_request);
+
+  void SetRequestForParkOutTry(AstarRequest& cur_request,
+                               const EgoInfoUnderSlot& ego_info);
 
   void UpdateRecommentRouteBox();
 

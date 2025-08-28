@@ -12,6 +12,7 @@
 #include "hybrid_a_star.h"
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
+#include "hybrid_astar_response.h"
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "polygon_base.h"
@@ -30,8 +31,7 @@ HybridAStarInterface::~HybridAStarInterface() {}
 
 int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
                                const float car_length, const float car_width,
-                               const float steer_ratio,
-                               const float wheel_base,
+                               const float steer_ratio, const float wheel_base,
                                const float min_turn_radius,
                                const float mirror_width) {
   config_.InitConfig();
@@ -214,8 +214,7 @@ void HybridAStarInterface::UpdateOutput() {
     PathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                  is_ego_overlap_with_slot);
   } else if (request_.path_generate_method ==
-                 AstarPathGenerateType::TRY_SEARCHING &&
-             request_.direction_request != ParkingVehDirection::NONE) {
+             AstarPathGenerateType::TRY_SEARCHING) {
     PathSearchForScenarioTry(target_pose_regulator);
   } else if (IsSamplingBasedPlanning(request_.path_generate_method)) {
     PathSamplingForScenarioRunning();
@@ -427,13 +426,11 @@ HybridAStarInterface::GetChildNodeForDebug() {
   return hybrid_astar_->GetChildNodeForDebug();
 }
 
-const std::vector<Vec2f>&
-HybridAStarInterface::GetPriorQueueNode() {
+const std::vector<Vec2f>& HybridAStarInterface::GetPriorQueueNode() {
   return hybrid_astar_->GetQueuePathForDebug();
 }
 
-const std::vector<Vec2f>&
-HybridAStarInterface::GetDelNodeQueueNode() {
+const std::vector<Vec2f>& HybridAStarInterface::GetDelNodeQueueNode() {
   return hybrid_astar_->GetDelQueuePathForDebug();
 }
 
@@ -456,8 +453,8 @@ void HybridAStarInterface::GetRSPathHeuristic(
       const RSPathSegment* path_segment = &path.paths[j];
 
       for (int k = 0; k < path_segment->size; k++) {
-        tmp_path.emplace_back(Vec2f(
-            path_segment->points[k].x, path_segment->points[k].y));
+        tmp_path.emplace_back(
+            Vec2f(path_segment->points[k].x, path_segment->points[k].y));
       }
     }
 
@@ -916,12 +913,34 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   }
 
   target_regulator_goal_ = target_regulator_result.first;
-  hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
-                             &traj_candidates_[0]);
-  ExtendPathToRealParkSpacePoint(&traj_candidates_[0], request_.real_goal);
 
-  best_traj_ = &traj_candidates_[0];
-  gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+  std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
+
+  if (request_.direction_request_size > 1) {
+    for (int8_t i = 0; i < request_.direction_request_size; i++) {
+      hybrid_astar_->AstarSearch(request_.start_pose,
+                                 request_.real_goal_stack[i], map_bounds_,
+                                 &traj_candidates_[0]);
+      if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
+        feasible_directions_[i] = true;
+      }
+
+      if (request_.direction_request == request_.direction_request_stack[i]) {
+        best_traj_ = &traj_candidates_[0];
+        gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+      }
+    }
+
+  } else {
+    hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
+                               &traj_candidates_[0]);
+    if (request_.direction_request == ParkingVehDirection::HEAD_IN ||
+        request_.direction_request == ParkingVehDirection::TAIL_IN) {
+      ExtendPathToRealParkSpacePoint(&traj_candidates_[0], request_.real_goal);
+    }
+    best_traj_ = &traj_candidates_[0];
+    gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+  }
 
   return;
 }

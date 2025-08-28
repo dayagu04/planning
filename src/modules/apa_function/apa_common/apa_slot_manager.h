@@ -130,6 +130,8 @@ struct EgoInfoUnderSlot {
 
   bool slot_disappear_flag = false;
 
+  double relative_direction_between_ego_and_slot;
+
   void Reset() {
     id = 0;
     slot_type = SlotType::INVALID;
@@ -174,6 +176,8 @@ struct EgoInfoUnderSlot {
     history_slot_type = SlotType::INVALID;
 
     slot_disappear_flag = false;
+
+    relative_direction_between_ego_and_slot = 1.0;
   }
 };
 
@@ -195,7 +199,7 @@ class ApaSlotManager final {
 
   void Update(
       const LocalView* local_view,
-      const iflyauto::PlanningOutput *planning_output,
+      const iflyauto::PlanningOutput* planning_output,
       const std::shared_ptr<ApaStateMachineManager>& state_machine_ptr,
       const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
       const std::shared_ptr<ApaObstacleManager>& obstacle_manager_ptr,

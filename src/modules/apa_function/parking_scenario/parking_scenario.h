@@ -508,6 +508,8 @@ class ParkingScenario {
 
   void ClearTimeBySuspendStatus();
 
+  void SetFeasibleDirectionFlag();
+
  protected:
   // TODO:
   // 1.
