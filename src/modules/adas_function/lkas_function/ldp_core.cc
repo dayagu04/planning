@@ -499,6 +499,11 @@ uint32 LdpCore::UpdateLdpFaultCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
 
   uint32 ldp_fault_code = 0;
 
@@ -609,6 +614,14 @@ uint32 LdpCore::UpdateLdpFaultCode(void) {
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
     ldp_fault_code += uint16_bit[12];
+  } else {
+    /*do nothing*/
+  }
+  // bit 13
+  // 故障降级
+  if ((degraded_driving_function_info_ptr->ldp.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->ldp.degraded == iflyauto::ERROR_DEGRADED)) {
+    ldp_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
   }
@@ -1428,7 +1441,7 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
-                        LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
+                        LDP_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (ldp_main_switch_ == false) {
       ldp_state =
@@ -1457,7 +1470,7 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
           iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldp_fault_code_) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
-          LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          LDP_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldp_enable_code_ == 0) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
           LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1479,7 +1492,7 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
           iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldp_fault_code_) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
-          LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          LDP_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldp_disable_code_) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
           LDP_FUNCTION_FSM_WORK_STATE_STANDBY;

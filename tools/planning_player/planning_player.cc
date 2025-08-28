@@ -908,6 +908,16 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/fusion/uss_perception_info" << std::endl;
   }
 
+  // TODO: thzhang5 0828 功能降级
+  // auto degraded_driving_function_ros_msg =
+  //     find_ros_msg_with_header_time<struct_msgs::DegradedDrivingFunction>(
+  //         TOPIC_DEGRADED_DRIVING_FUNCTION, input_time_list.degraded_driving_function());
+  // if (degraded_driving_function_ros_msg) {
+  //   iflyauto::DegradedDrivingFunction degraded_driving_function_msg{};
+  //   convert(degraded_driving_function_msg, *degraded_driving_function_ros_msg, ConvertTypeInfo::TO_STRUCT);
+  //   planning_adapter_->Feed_IflytekFmADegradeFunciton(degraded_driving_function_msg);
+  // }
+
   if (input_time_list_map_ != input_time_list.map()) {
     input_time_list_map_ = input_time_list.map();
     for (auto it = msg_cache_[TOPIC_HD_MAP].begin();

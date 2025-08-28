@@ -228,6 +228,14 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_perception_scene_msg_updated_.store(true);
   }
 
+  void Feed_IflytekFmADegradeFunciton(
+      const iflyauto::DegradedDrivingFunction& degraded_driving_function_msg) override {
+    std::lock_guard<std::mutex> lock(degraded_driving_function_msg_mutex_);
+    degraded_driving_function_msg_ = degraded_driving_function_msg;
+    degraded_driving_function_msg_recv_time_ = IflyTime::Now_ms();
+    is_degraded_driving_function_msg_updated_.store(true);
+  }
+
   void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput&)>&
           planning_writer) override {
@@ -282,6 +290,8 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::mutex parking_map_info_msg_mutex_;
   std::mutex sdpro_map_info_msg_mutex_;
 
+  std::mutex msg_mutex_;
+  std::mutex degraded_driving_function_msg_mutex_;
   iflyauto::PredictionResult prediction_result_msg_;
   int64_t prediction_result_msg_recv_time_;
   std::atomic<bool> is_prediction_result_msg_updated_{false};
@@ -289,6 +299,8 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   iflyauto::RoadInfo road_info_msg_;
   int64_t road_info_msg_recv_time_;
   std::atomic<bool> is_road_info_msg_updated_{false};
+
+
 
   iflyauto::FusionGroundLineInfo ground_line_perception_msg_;
   int64_t ground_line_perception_msg_recv_time_;
@@ -364,6 +376,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   int64_t perception_scene_msg_recv_time_;
   std::atomic<bool> is_perception_scene_msg_updated_{false};
 
+  iflyauto::DegradedDrivingFunction degraded_driving_function_msg_;
+  int64_t degraded_driving_function_msg_recv_time_;
+  std::atomic<bool> is_degraded_driving_function_msg_updated_{false};
 
   std::function<void(const iflyauto::PlanningOutput&)> planning_writer_ =
       nullptr;

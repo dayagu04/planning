@@ -149,6 +149,21 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
     /*do nothing*/
   }
 
+  // bit 6
+  // 故障降级
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+  
+  if ((degraded_driving_function_info_ptr->tsr.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->tsr.degraded == iflyauto::ERROR_DEGRADED)) {
+    // fault_code += uint16_bit[6];
+  } else {
+    /*do nothing*/
+  }
+
   return fault_code;
 }
 

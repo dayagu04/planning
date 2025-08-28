@@ -514,6 +514,13 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+
   uint16 elk_fault_code = 0;
   // bit 0
   // 实际车速信号无效
@@ -622,6 +629,15 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
     elk_fault_code += uint16_bit[12];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 13
+  // 故障降级
+  if ((degraded_driving_function_info_ptr->elk.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->elk.degraded == iflyauto::ERROR_DEGRADED)) {
+    elk_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
   }
@@ -1366,7 +1382,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
-                        ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
+                        ELK_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (elk_main_switch_ == false) {
       elk_state =
@@ -1395,7 +1411,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_enable_code_ == 0) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1417,7 +1433,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_disable_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -1721,9 +1737,8 @@ void ElkCore::RunOnce(void) {
       GetContext.get_param()->lka_r_vector,
       GetContext.get_param()->lka_dec_y_gap_by_c2_vector, R_temp_thr);
 
-  // ELK—Roadedge场景，触发线逻辑修改
-  // 弯道，触发线外移
-  double roadedge_y_gap_dec_by_curv = 0.0;
+  // 弯道场景，路沿的可触发区域调整
+  double roadedge_y_gap_dec_by_curv = 0.0;  //路沿场景晚触发阈值
   double roadedge_C2_temp_thr = 0.0;
   double roadedge_R_temp_thr = 0.0;
   if (GetContext.get_road_info()->current_lane.left_roadedge.valid == true) {

@@ -425,6 +425,21 @@ uint16 IhcCore::UpdateIhcFaultCode() {
     /*do nothing*/
   }
 
+  // bit 8
+  // 故障降级
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+  
+  if ((degraded_driving_function_info_ptr->ihc.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->ihc.degraded == iflyauto::ERROR_DEGRADED)) {
+    // fault_code += uint16_bit[8];
+  } else {
+    /*do nothing*/
+  }
+
   return fault_code;
 }
 
