@@ -3604,8 +3604,8 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 
     hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
     soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
-    hard_bounds_info_output.emplace_back(soft_bounds_info[i]);
-    soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    soft_bounds_info_output.emplace_back(soft_bounds_info[i]);
   }
 
   // 障碍物决策是否存在跳动
