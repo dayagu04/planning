@@ -290,7 +290,7 @@ bool LateralObstacleDecider::Execute() {
         // continue;
       }
       if (frenet_obs->d_s_rel() <= 0 &&
-          (history.side_2_front_count <= side_2_front_count_thr && config_.open_side_lat_offset_nudge)) {
+          (history.side_2_front_count <= side_2_front_count_thr || !config_.open_side_lat_offset_nudge)) {
         history.is_avd_car = false;
         if (frenet_obs->d_s_rel() <= -1 * (obs->length() + ego_length_)) {
           history.ncar_count = 0;
