@@ -70,6 +70,11 @@ void StartStopStatusManager::Update() {
                 ego_start_stop_info_.cipv_relative_s_when_ego_stopped() >
             config_.cipv_relative_s_begin_start_threshold));
       // intersection stop condition considers cipv and traffic light info
+      const double desired_stopped_distance_between_ego_and_cipv_threshold =
+          cipv_is_large()
+              ? config_
+                    .desired_stopped_distance_between_ego_and_large_cipv_threshold
+              : config_.desired_stopped_distance_between_ego_and_cipv_threshold;
       const bool traffic_light_stop_condition =
           (!current_traffic_light_can_pass() &&
            planning_init_state_velocity() <
@@ -77,15 +82,16 @@ void StartStopStatusManager::Update() {
           (planning_init_state_velocity() <
                config_.ego_vel_begin_stop_threshold &&
            cipv_nearby_intersection_is_static &&
-           std::fabs(
-               cipv_relative_s() -
-               config_
-                   .desired_stopped_distance_between_ego_and_cipv_threshold) <
+           std::fabs(cipv_relative_s() -
+                     desired_stopped_distance_between_ego_and_cipv_threshold) <
                config_.distance_stop_buffer_between_ego_and_cipv_threshold);
 
       const bool distance_to_go_condition =
           cipv_nearby_intersection_is_static &&
-          cipv_relative_s() > config_.distance_to_go_threshold;
+          cipv_relative_s() >
+              (cipv_is_large()
+                   ? config_.distance_to_go_threshold_behind_of_large_vehicle
+                   : config_.distance_to_go_threshold);
 
       // intersection start condition considers both cipv and traffic light info
       bool traffic_light_start_condition = false;
@@ -119,8 +125,7 @@ void StartStopStatusManager::Update() {
         }
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
                  traffic_light_start_condition &&
-                 cipv_relative_s() >
-                     cipv_relative_s_start_threshold_) {
+                 cipv_relative_s() > cipv_relative_s_start_threshold_) {
         // STOP --> START
         ego_start_stop_info_.set_state(common::StartStopInfo::START);
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::START &&
@@ -143,13 +148,17 @@ void StartStopStatusManager::Update() {
     } else {
       const bool is_cipv_static =
           std::fabs(cipv_vel_frenet()) < config_.cipv_vel_begin_start_threshold;
+      const double desired_stopped_distance_between_ego_and_cipv_threshold =
+          cipv_is_large()
+              ? config_
+                    .desired_stopped_distance_between_ego_and_large_cipv_threshold
+              : config_.desired_stopped_distance_between_ego_and_cipv_threshold;
       const bool ego_stop_condition =
           planning_init_state_velocity() <
               config_.ego_vel_begin_stop_threshold &&
           is_cipv_static &&
-          std::fabs(
-              cipv_relative_s() -
-              config_.desired_stopped_distance_between_ego_and_cipv_threshold) <
+          std::fabs(cipv_relative_s() -
+                    desired_stopped_distance_between_ego_and_cipv_threshold) <
               config_.distance_stop_buffer_between_ego_and_cipv_threshold;
       const bool ego_cruise_condition =
           planning_init_state_velocity() > ego_vel_start_mode_threshold;
@@ -160,7 +169,10 @@ void StartStopStatusManager::Update() {
            config_.cipv_relative_s_begin_start_threshold);
       const bool distance_to_go_condition =
           is_cipv_static &&
-          cipv_relative_s() > config_.distance_to_go_threshold;
+          cipv_relative_s() >
+              (cipv_is_large()
+                   ? config_.distance_to_go_threshold_behind_of_large_vehicle
+                   : config_.distance_to_go_threshold);
       const bool ego_start_condition =
           cipv_start_condition || distance_to_go_condition;
 
@@ -174,8 +186,7 @@ void StartStopStatusManager::Update() {
             cipv_relative_s());
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
                  ego_start_condition &&
-                 cipv_relative_s() >
-                     cipv_relative_s_start_threshold_) {
+                 cipv_relative_s() > cipv_relative_s_start_threshold_) {
         // STOP --> START
         ego_start_stop_info_.set_state(common::StartStopInfo::START);
       } else if (ego_start_stop_info_.state() == common::StartStopInfo::START &&

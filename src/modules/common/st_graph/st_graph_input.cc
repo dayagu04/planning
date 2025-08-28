@@ -109,6 +109,7 @@ void StGraphInput::Update() {
   const auto& planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
   is_lane_keeping_ = lane_change_status == kLaneKeeping;
+  is_lane_change_cancle_ = lane_change_status == kLaneChangeCancel;
   is_in_lane_borrow_status_ =
       session_->planning_context().lane_borrow_decider_output()
           .is_in_lane_borrow_status;

@@ -813,7 +813,9 @@
       "distance_start_between_ego_and_cipv_threshold": 0.3,
       "distance_to_stop_line_ego_threshold": 7.5,
       "desired_stopped_distance_between_ego_and_cipv_threshold": 3.0,
-      "distance_to_go_threshold": 5.7
+      "desired_stopped_distance_between_ego_and_large_cipv_threshold" : 5.5,
+      "distance_to_go_threshold": 5.7,
+      "distance_to_go_threshold_behind_of_large_vehicle": 7.7
     },
 
     "cruise_target": {

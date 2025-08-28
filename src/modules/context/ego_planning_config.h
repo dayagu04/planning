@@ -3773,10 +3773,16 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
                      desired_stopped_distance_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "desired_stopped_distance_between_ego_and_cipv_threshold");
+    ReadItem<double>(json, desired_stopped_distance_between_ego_and_large_cipv_threshold,
+             "speed_planning", "start_stop_decider",
+             "desired_stopped_distance_between_ego_and_large_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, ego_vel_start_mode_threshold_rads, "speed_planning",
                      "start_stop_decider", "ego_vel_start_mode_threshold_rads");
+    ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
+                     "speed_planning", "start_stop_decider",
+                     "distance_to_go_threshold_behind_of_large_vehicle");
   }
 
   double ego_vel_begin_stop_threshold = 0.5;
@@ -3788,7 +3794,9 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_cipv_threshold = 0.3;
   double distance_to_stop_line_ego_threshold = 5.5;
   double desired_stopped_distance_between_ego_and_cipv_threshold = 3.0;
+  double desired_stopped_distance_between_ego_and_large_cipv_threshold = 5.0;
   double distance_to_go_threshold = 5.5;
+  double distance_to_go_threshold_behind_of_large_vehicle = 7.7;
   double stop_destination_to_ego_distance = 6.0;
 };
 

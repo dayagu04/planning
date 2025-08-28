@@ -1071,7 +1071,8 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
         succ_decision_table) const {
   // make cipv yield decision when lane keep
   int64_t cipv_boundary_id = -1;
-  if (st_graph_input->is_lane_keeping()) {
+  if (st_graph_input->is_lane_keeping() ||
+      st_graph_input->is_lane_change_cancle()) {
     const auto cipv_id = cipv_info.cipv_id();
     if (cipv_id != -1 && agent_id_st_boundaries_map.find(cipv_id) !=
                              agent_id_st_boundaries_map.end()) {

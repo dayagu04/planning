@@ -68,6 +68,8 @@ void StartStopDecider::UpdateInput() {
       cipv_decider_output.relative_s();
   start_stop_status_manager_.mutable_cipv_vel_frenet() =
       cipv_decider_output.v_frenet();
+  start_stop_status_manager_.mutable_cipv_is_large() =
+      cipv_decider_output.is_large();
   // intersection info
   start_stop_status_manager_.mutable_current_distance_ego_to_stopline() =
       current_distance_ego_to_stopline;
