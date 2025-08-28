@@ -145,7 +145,6 @@ void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
       session_->planning_context().ego_lane_road_right_decider_output();
   const bool is_merge_region =
       ego_lane_road_right_decider_output.is_merge_region;
-  const int lane_nums = virtual_lane_mgr_->get_lane_num();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
   const int current_lane_order_id = current_lane->get_order_id();
 
@@ -232,6 +231,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double default_consider_lane_marks_length = 80.0;
+  const double max_trigger_merge_request_distance = 500.0;
   const auto& plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
@@ -239,6 +239,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
                          plannig_init_point.lat_init_state.y()};
   const auto& ego_lane_road_right_decider_output =
       session_->planning_context().ego_lane_road_right_decider_output();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   const bool is_merge_region =
       ego_lane_road_right_decider_output.is_merge_region;
   const auto& function_info = session_->environmental_model().function_info();
@@ -260,12 +262,42 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   const int lane_nums = virtual_lane_mgr_->get_lane_num();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
   const int current_lane_order_id = current_lane->get_order_id();
-  bool is_left_edge_side_lane = current_lane_order_id == 0;
-  bool is_right_edge_side_lane = current_lane_order_id == lane_nums - 1;
+  bool is_left_edge_side_lane = llane == nullptr;
+  bool is_right_edge_side_lane = rlane == nullptr;
 
   std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
-
+  const auto& merge_point_info = route_info_output.merge_point_info;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+    lane_merge_direction_ = merge_point_info.merge_type;
+    double distance_to_first_road_split = NL_NMAX;
+    double dis_to_first_merge = NL_NMAX;
+    const auto& split_region_info_list = route_info_output.split_region_info_list;
+    const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+    if (!split_region_info_list.empty()) {
+      if (split_region_info_list[0].is_valid) {
+        distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+      }
+    }
+    if (!merge_region_info_list.empty()) {
+      if (merge_region_info_list[0].is_valid) {
+        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+              }
+    }
+    if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
+        distance_to_merge_point_ < distance_to_first_road_split &&
+        distance_to_merge_point_ < dis_to_first_merge) {
+      // 依赖sdpro提供的前方最左侧车道/最右侧车道的LaneChangeType
+      if (is_left_edge_side_lane && lane_merge_direction_ == LEFT_MERGE) {
+        merge_lane_change_direction_ = RIGHT_CHANGE;
+        return;
+      } else if (is_right_edge_side_lane && lane_merge_direction_ == RIGHT_MERGE) {
+        merge_lane_change_direction_ = LEFT_CHANGE;
+        return;
+      }
+    }
+  }
   if (base_lane != nullptr) {
     double left_lane_line_length = 0.0;
     int left_current_segment_count = 0;
@@ -511,6 +543,8 @@ void MergeRequest::Reset() {
   merge_lane_change_direction_ = NO_CHANGE;
   is_exist_left_merge_direction_ = false;
   is_exist_right_merge_direction_ = false;
+  distance_to_merge_point_ = NL_NMAX;
+  lane_merge_direction_ = NO_MERGE;
 }
 
 }  // namespace planning

@@ -40,6 +40,8 @@ class MergeRequest : public LaneChangeRequest {
   int merge_alc_trigger_counter_ = 0;
   bool is_exist_left_merge_direction_ = false;
   bool is_exist_right_merge_direction_ = false;
+  double distance_to_merge_point_ = NL_NMAX;
+  MergeType lane_merge_direction_ = NO_MERGE;
 };
 
 }  // namespace planning
