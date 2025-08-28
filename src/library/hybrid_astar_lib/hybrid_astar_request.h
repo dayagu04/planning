@@ -1,7 +1,9 @@
 #pragma once
 
 #include <bits/stdint-uintn.h>
+#include <array>
 #include <cstddef>
+#include <cstdint>
 #include "./../reeds_shepp/rs_path_request.h"
 #include "hybrid_astar_common.h"
 #include "node3d.h"
@@ -30,6 +32,9 @@ struct AstarRequest {
 
   ParkingVehDirection direction_request;
 
+  int8_t direction_request_size = 1;
+  std::array<ParkingVehDirection, 6> direction_request_stack;
+
   RSPathRequestType rs_request;
   PlanningReason plan_reason;
 
@@ -46,6 +51,7 @@ struct AstarRequest {
 
   // real goal for park in, decide by slot limiter
   Pose2f real_goal;
+  std::array<Pose2f, 6> real_goal_stack;
 
   float slot_width;
   float slot_length;

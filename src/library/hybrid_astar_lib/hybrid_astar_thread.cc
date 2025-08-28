@@ -113,6 +113,9 @@ void HybridAStarThreadSolver::SetResponse() {
 
   request_response_state_.store(RequestResponseState::HAS_RESPONSE);
 
+  thread_response_data_.feasible_directions =
+      solver_interface_->GetFeasibleDirections();
+
   ILOG_INFO << "set output finish in thread";
 
   return;

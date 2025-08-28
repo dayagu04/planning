@@ -85,14 +85,16 @@ void VirtualWallDecider::Process(
           apa_param.GetParam().astar_config.head_in_slot_virtual_wall_y_offset;
     } else if (parking_type == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
                parking_type == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-               parking_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+               parking_type == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+               parking_type == ParkingVehDirection::NONE) {
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
       passage_height = head_out_passage_height;
       virtual_wall_y_offset = 0.7;
     } else if (parking_type == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
                parking_type == ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
-               parking_type == ParkingVehDirection::TAIL_OUT_TO_MIDDLE) {
+               parking_type == ParkingVehDirection::TAIL_OUT_TO_MIDDLE ||
+               parking_type == ParkingVehDirection::NONE) {
       passage_half_length = 18.0;
       virtual_wall_x_offset = 1.5;
       passage_height =

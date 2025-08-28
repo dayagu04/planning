@@ -25,6 +25,8 @@ struct AstarResponse {
     return first_seg_path.empty() ? 0.0f : first_seg_path.back().accumulated_s;
   }
 
+  std::array<bool, 6> feasible_directions;
+
   void Clear() {
     request.Clear();
     result.Clear();

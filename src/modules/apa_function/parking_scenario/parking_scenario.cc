@@ -21,6 +21,7 @@
 #include "jerk_limited_traj_optimizer/jerk_limited_traj_optimizer.h"
 #include "log_glog.h"
 #include "narrow_space_decider.h"
+#include "park_hmi_state.h"
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
@@ -52,6 +53,8 @@ void ParkingScenario::Reset() {
   current_path_point_global_vec_.clear();
   complete_path_point_global_vec_.clear();
   trajectory_.clear();
+  planning_output_.planning_status.apa_planning_status =
+      iflyauto::ApaPlanningStatus::APA_NONE;
 
   return;
 }
@@ -715,6 +718,8 @@ void ParkingScenario::ScenarioTry() {
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
 
+  SetFeasibleDirectionFlag();
+
   return;
 }
 
@@ -1176,6 +1181,16 @@ void ParkingScenario::ClearTimeBySuspendStatus() {
   frame_.dynamic_plan_time = 0.0;
   frame_.replan_fail_time = 0.0;
   return;
+}
+
+void ParkingScenario::SetFeasibleDirectionFlag() {
+  ApaDirectionGenerator generator;
+  generator.ClearRecommendationDirectionFlag(apa_hmi_);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, VerticalHeadIn);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, VerticalTailIn);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
 }
 
 }  // namespace apa_planner

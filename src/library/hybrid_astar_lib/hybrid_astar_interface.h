@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -53,6 +54,10 @@ class HybridAStarInterface {
   const int GetFallBackPath(std::vector<AStarPathPoint>& result);
 
   const int GetFallBackPath(HybridAStarResult* result);
+
+  const std::array<bool, 6> GetFeasibleDirections() {
+    return feasible_directions_;
+  };
 
   const ParkObstacleList& GetConstObstacles() const;
 
@@ -171,6 +176,8 @@ class HybridAStarInterface {
   ParkReferenceLine ref_line_;
 
   int gear_switch_number_scenario_try_;
+
+  std::array<bool, 6> feasible_directions_;
 };
 
 }  // namespace planning

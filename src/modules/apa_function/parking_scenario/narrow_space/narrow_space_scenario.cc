@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstdio>
 
 #include "aabb2d.h"
@@ -22,6 +23,7 @@
 #include "math/vec2d.h"
 #include "math_utils.h"
 #include "narrow_space_decider.h"
+#include "park_hmi_state.h"
 #include "parking_scenario.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
@@ -567,6 +569,9 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.history_gear = current_gear_;
   frame_.current_gear = GetGear(current_gear_);
   cur_request.goal = Pose2f(end.x, end.y, end.theta);
+
+  SetRequestForParkOutTry(cur_request, ego_info);
+
   FillPlanningReason(cur_request);
 
   // generate request
@@ -588,6 +593,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   // publish result
   if (is_scenario_try) {
     res = PubResponseForScenarioTry(ego_info, cur_request, obs);
+
+    apa_hmi_ = PubDirectionForParkOutTry(cur_request);
   } else {
     res = PubResponseForScenarioRunning(ego_info, cur_request, obs);
   }
@@ -2423,6 +2430,96 @@ const bool NarrowSpaceScenario::IsNeedClipping(const HybridAStarResult& result,
     return false;
   } else {
     return true;
+  }
+}
+
+iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
+    const AstarRequest& cur_request) {
+  iflyauto::APAHMIData apa_hmi_data;
+  ApaDirectionGenerator generator;
+  generator.ClearRecommendationDirectionFlag(apa_hmi_data);
+
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
+    ApaRecommendationDirection dir;
+
+    for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
+      if (response_.feasible_directions[i] == false) {
+        continue;
+      }
+
+      switch (cur_request.direction_request_stack[i]) {
+        case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+          dir = ApaRecommendationDirection::VerticalBackLeft;
+          break;
+        case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+          dir = ApaRecommendationDirection::VerticalBackRight;
+          break;
+        case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+          dir = ApaRecommendationDirection::VerticalBack;
+          break;
+        case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+          dir = ApaRecommendationDirection::VerticalFrontLeft;
+          break;
+        case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+          dir = ApaRecommendationDirection::VerticalFrontRight;
+          break;
+        case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+          dir = ApaRecommendationDirection::VerticalFront;
+          break;
+        default:
+          break;
+      }
+
+      generator.SetRecommendationDirectionFlag(apa_hmi_data, dir);
+      generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+    }
+  } else {
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParallelFrontLeft);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParallelFrontRight);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, VerticalHeadIn);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, VerticalTailIn);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+  }
+
+  return apa_hmi_data;
+}
+
+void NarrowSpaceScenario::SetRequestForParkOutTry(
+    AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
+    const double target_heading_rad = ego_info.slot.angle_ * M_PI / 180.0;
+
+    cur_request.direction_request_size = 6;
+    cur_request.direction_request_stack[0] =
+        ParkingVehDirection::HEAD_OUT_TO_LEFT;
+    cur_request.direction_request_stack[1] =
+        ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
+    cur_request.direction_request_stack[2] =
+        ParkingVehDirection::HEAD_OUT_TO_RIGHT;
+    cur_request.direction_request_stack[3] =
+        ParkingVehDirection::TAIL_OUT_TO_LEFT;
+    cur_request.direction_request_stack[4] =
+        ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+    cur_request.direction_request_stack[5] =
+        ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+    if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
+      cur_request.real_goal_stack[0] = Pose2f(7.0, 11.0, target_heading_rad);
+      cur_request.real_goal_stack[1] = Pose2f(5.0, 0.0, 0.0);
+      cur_request.real_goal_stack[2] = Pose2f(7.0, -11.0, -target_heading_rad);
+      cur_request.real_goal_stack[3] = Pose2f(-3.0, 5.0, target_heading_rad);
+      cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, 0.0);
+      cur_request.real_goal_stack[5] = Pose2f(-3.0, -5.0, -target_heading_rad);
+    } else {
+      cur_request.real_goal_stack[0] = Pose2f(-3.0, 11.0, target_heading_rad);
+      cur_request.real_goal_stack[1] = Pose2f(-4.0, 0.0, 0.0);
+      cur_request.real_goal_stack[2] = Pose2f(-3.0, -11.0, -target_heading_rad);
+      cur_request.real_goal_stack[3] = Pose2f(8.0, 5.0, target_heading_rad);
+      cur_request.real_goal_stack[4] = Pose2f(8.0, 0.0, 0.0);
+      cur_request.real_goal_stack[5] = Pose2f(8.0, -5.0, -target_heading_rad);
+    }
+
+  } else {
+    cur_request.direction_request_size = 0;
   }
 }
 

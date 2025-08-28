@@ -30,6 +30,12 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
             << static_cast<int>(fun_state_machine_info.current_state);
 
   switch (fun_state_machine_info.current_state) {
+    case iflyauto::FunctionalState_PARK_STANDBY:
+      state_machine_ = ApaStateMachine::STANDBY;
+      break;
+    case iflyauto::FunctionalState_PARK_ERROR:
+      state_machine_ = ApaStateMachine::ERROR;
+      break;
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
     case iflyauto::FunctionalState_HPP_CRUISE_ROUTING:
     case iflyauto::FunctionalState_HPP_CRUISE_SEARCHING:
@@ -174,6 +180,16 @@ const bool ApaStateMachineManager::IsSeachingStatus() const {
   return false;
 }
 
+const bool ApaStateMachineManager::IsSeachingOutStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool ApaStateMachineManager::IsParkingStatus() const {
   if (state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
       state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
@@ -269,6 +285,12 @@ std::string ApaStateMachineManager::GetApaStateMachineString(
       break;
     case ApaStateMachine::COMPLETE:
       state = "COMPLETE";
+      break;
+    case ApaStateMachine::STANDBY:
+      state = "STANDBY";
+      break;
+    case ApaStateMachine::ERROR:
+      state = "ERROR";
       break;
     default:
       state = "INVALID";

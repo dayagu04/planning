@@ -83,12 +83,13 @@ void ApaSlotManager::Update(
           ego_info_under_slot_.slot_type = it->second.slot_type_;
           // forced release of self slot
           ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
-          const double dot_ego_slot = measure_data_ptr_->GetHeadingVec().dot(
-              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
+          ego_info_under_slot_.relative_direction_between_ego_and_slot =
+              measure_data_ptr_->GetHeadingVec().dot(
+                  slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
           if (slot.slot_type_ == SlotType::PERPENDICULAR &&
               state_machine_ptr_->IsHeadOutStatus()) {
             // 对于垂直车头泊出，开口方向与自车方向不一致不释放车位
-            if (dot_ego_slot > 0.0) {
+            if (ego_info_under_slot_.relative_direction_between_ego_and_slot > 0.0) {
               slot.release_info_.release_state[RULE_BASED_RELEASE] =
                   SlotReleaseState::RELEASE;
             } else {

@@ -27,6 +27,8 @@ enum class ApaStateMachine : uint8_t {
   SUSPEND,
   SECURE,
   COMPLETE,
+  STANDBY,
+  ERROR,
   COUNT,
   INVALID,
 };
@@ -65,6 +67,8 @@ class ApaStateMachineManager final {
   const bool IsParkingStatus() const;
 
   const bool IsSeachingStatus() const;
+
+  const bool IsSeachingOutStatus() const;
 
   const bool IsParkOutStatus() const;
 
