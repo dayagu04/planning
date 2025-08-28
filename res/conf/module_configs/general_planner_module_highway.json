@@ -170,7 +170,7 @@
   "emegency_avoid_lareral_area": 0.3,
   "emergency_avoid_count_thr": 3,
   "is_use_last_lon_information": false,
-  "extra_truck_lat_buffer": 0.2,
+  "extra_truck_lat_buffer": 0.1,
 
   "expand_ego_vel": [0, 10],
   "expand_obs_rel_vel": [0, 1],
@@ -300,7 +300,7 @@
     "avd_lon_distance_3": 20,
     "avd_lon_distance_4": 28,
     "avd_lon_distance_5": 38,
-    "extra_truck_nudge_lat_offset":0.2
+    "extra_truck_nudge_lat_offset":0.1
   },
   "spatio_temporal_grid_map": {
     "map_size_x": 250,
