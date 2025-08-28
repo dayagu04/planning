@@ -415,7 +415,7 @@
   "head_in_slot_virtual_wall_y_offset" : 2.5,
 
   "comment_19": "uss pt params",
-  "use_uss_pt_cloud": false,
+  "use_uss_pt_cloud": true,
   "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
   "use_uss_pt_for_slot_release": true,
