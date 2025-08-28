@@ -28,6 +28,9 @@ struct IHCSysInput {
   iflyauto::ShiftLeverStateEnum shift_lever_state;  // 换档杆状态
   bool front_fog_light_state;  // 前雾灯状态
   bool rear_fog_light_state;   // 后雾灯状态
+
+// 环境光线条件
+  iflyauto::CameraPerceptionLightingCondition lighting_condition;  // 环境亮度条件：0-UNKNOWN, 1-BRIGHT, 2-MEDIUM, 3-DARK
 };
 
 // IHC算法状态结构体定义
@@ -42,9 +45,6 @@ struct IHCSysState {
   bool low_beam_due_to_same_dir_vehicle;    // 是否由于同向车辆导致近光灯
   bool low_beam_due_to_oncomming_vehicle;   // 是否由于对向机动车导致近光灯
   bool low_beam_due_to_oncomming_cycle;     // 是否由于对向非机动车导致近光灯
-  
-  // 环境光线条件
-  int lighting_condition;  // 环境亮度条件：0-UNKNOWN, 1-BRIGHT, 2-MEDIUM, 3-DARK
 };
 
 // IHC算法结构体定义

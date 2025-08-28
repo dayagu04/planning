@@ -60,7 +60,7 @@ void IhcCore::RunOnce(void) {
   
   // 输出环境光线条件（已在IHCRequest中设置）
   JSON_DEBUG_VALUE("ihc_function::lighting_condition",
-                   ihc_sys_.state.lighting_condition);
+                   int(ihc_sys_.input.lighting_condition));
 }
 
 void IhcCore::GetInputInfo() {
@@ -83,7 +83,7 @@ void IhcCore::GetInputInfo() {
                                      ->get_local_view()
                                      .perception_scene_info;
 
-  ihc_sys_.state.lighting_condition = int(scene_info_ptr->lighting_condition);
+  ihc_sys_.input.lighting_condition = scene_info_ptr->lighting_condition;
 
   // 获取IHC开关状态
   ihc_sys_.input.ihc_main_switch =
@@ -330,6 +330,11 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
   bool high_beam_request_temp = true;  // 默认远光
   bool found_obstacle_in_hysteresis = false;  // 是否发现滞回区间内的障碍物
   
+  // 初始化debug变量
+  ihc_sys_.state.low_beam_due_to_same_dir_vehicle = false;
+  ihc_sys_.state.low_beam_due_to_oncomming_vehicle = false;
+  ihc_sys_.state.low_beam_due_to_oncomming_cycle = false;
+  
   // 获取动态障碍物消息
   // 1. 同向有车(含非机动车)100m内, 切近光
   // 2. 对向有车, 机动车400m内,切近光, 非机动车75m内, 切近光
@@ -357,12 +362,14 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
           if (distance < 190.0f) {
             // 明确进入近光区域
             high_beam_request_temp = false;
+            ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
             break;
           } else if (distance <= 210.0f) {
             // 190m~210m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               high_beam_request_temp = false;
+              ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
               break;
             }
           }
@@ -372,12 +379,14 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
           if (distance < 90.0f) {
             // 明确进入近光区域
             high_beam_request_temp = false;
+            ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
             break;
           } else if (distance <= 110.0f) {
             // 90m~110m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               high_beam_request_temp = false;
+              ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
               break;
             }
           }
@@ -390,12 +399,14 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
           if (distance < 65.0f) {
             // 明确进入近光区域
             high_beam_request_temp = false;
+            ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
             break;
           } else if (distance <= 85.0f) {
             // 65m~85m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               high_beam_request_temp = false;
+              ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
               break;
             }
           }
@@ -413,13 +424,13 @@ bool IhcCore::IHCRequest() {
   bool ihc_request_temp = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
 
   // 环境亮度条件
-  if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
+  if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
     // 昏暗环境, 根据障碍物信息判断是否需要切远光
     ihc_request_temp = IHCRequestDynamicObstacle();
-  } else if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
+  } else if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     // 明亮环境
     ihc_request_temp = false;
-  } else if (ihc_sys_.state.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_MEDIUM) {
+  } else if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_MEDIUM) {
     // 中等亮度环境，根据当前车灯判断是否需要切远光
     if (ihc_request_temp == false) {
       // 当前为近光灯，保持
@@ -446,12 +457,10 @@ void IhcCore::SetIhcOutputInfo(void) {
       ihc_sys_.state.ihc_request_status;
     GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ =
         ihc_sys_.state.ihc_request;
-    JSON_DEBUG_VALUE("ihc_output_state_check", 1);  // 1: ACTIVE状态允许输出
   } else {
     // 非ACTIVE状态下，强制设置为无请求状态
     GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = false;
     GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = false;
-    JSON_DEBUG_VALUE("ihc_output_state_check", 0);  // 0: 非ACTIVE状态阻止输出
   }
   
   // 输出状态信息
