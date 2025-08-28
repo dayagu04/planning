@@ -310,7 +310,9 @@ const bool ParallelPathGenerator::Update() {
     } else {
       ILOG_INFO << "MultiPlan  failed!";
       if (is_multi_align_success) {
+        ILOG_INFO << "use multi align plan res!";
         AddPathSegToOutPut(path_seg_vec);
+        return true;
       }
     }
 
@@ -3382,7 +3384,7 @@ const bool ParallelPathGenerator::CheckTargetPoseValid(
       apa_param.GetParam().finish_parallel_heading_err;
 
   return (pos_error.x() < apa_param.GetParam().finish_parallel_lon_err &&
-          pos_error.y() < 0.05 && heading_cond);
+          pos_error.y() < 0.1 && heading_cond);
 }
 
 const bool ParallelPathGenerator::MultiAlignBody(

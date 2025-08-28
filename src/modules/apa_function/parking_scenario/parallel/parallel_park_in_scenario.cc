@@ -1323,7 +1323,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
                            0.75 * t_lane_.slot_length) &&
         heading_deg_diff_mag > 5.0) {
       extend_lenth = 0.5;
-      lon_buffer = 0.1;
+      lon_buffer = 0.15;
     }
 
     parallel_path_planner_.InsertLineSegAfterCurrentFollowLastPath(extend_lenth,
@@ -1500,8 +1500,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     complete_path_point_global_vec_.reserve(
         planner_output.all_gear_path_point_vec.size());
     for (const auto& path_point : planner_output.all_gear_path_point_vec) {
-      global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
       global_point.lat_buffer = path_point.lat_buffer;
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
