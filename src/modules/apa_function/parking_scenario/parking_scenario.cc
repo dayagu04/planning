@@ -508,11 +508,9 @@ const double ParkingScenario::CalRemainDistFromObs(
       static_lon_buffer;
 
   // check static obs, it can be radical
-  GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
+  GJKColDetRequest gjl_col_det_request(false, param.uss_config.use_uss_pt_cloud,
+                                       CarBodyType::NORMAL,
                                        ApaObsMovementType::STATIC);
-
-  gjl_col_det_request.use_uss_pt = param.uss_config.use_uss_pt_cloud &&
-                                   param.uss_config.use_uss_pt_for_speed;
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
@@ -528,7 +526,6 @@ const double ParkingScenario::CalRemainDistFromObs(
 
   // check dynamic obs, it should be conservative
   gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
-  gjl_col_det_request.use_uss_pt = false;
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_body_lat_buffer, 0.0, gjl_col_det_request, true,
@@ -1173,7 +1170,7 @@ void ParkingScenario::ScenarioSuspend() {
 
 void ParkingScenario::ClearTimeBySuspendStatus() {
   frame_.stuck_time = 0.0;
-  frame_.stuck_obs_time  = 0.0;
+  frame_.stuck_obs_time = 0.0;
   frame_.dynamic_plan_time = 0.0;
   frame_.replan_fail_time = 0.0;
   return;

@@ -121,14 +121,15 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   const GJKColDetRequest gjl_col_det_request(
-      base_on_slot_, false, CarBodyType::EXPAND_MIRROR_TO_FRONT);
+      base_on_slot_, param.uss_config.use_uss_pt_cloud,
+      CarBodyType::EXPAND_MIRROR_TO_FRONT);
 
   // 检查终点位置是否碰撞
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();
 
   ILOG_INFO << "target pose offset_y = " << offset_y;
-  if (std::fabs(offset_y) > 0.0) {
+  if (std::fabs(offset_y) > 1e-3) {
     std::vector<geometry_lib::PathPoint> tmp_pose_vec;
     geometry_lib::PathPoint tmp_pose;
     std::vector<double> lon_path_vec{
