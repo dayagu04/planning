@@ -97,6 +97,7 @@ constexpr double kLateralBufferInCheckLaneChangeSafety = 0.7;
 constexpr double kLowestSpeedInCheckLaneChangeSafety = 13.889;  // 50km/h
 constexpr double kHighestSpeedInCheckLaneChangeSafety = 33.333;
 constexpr double kDefaultLeadOneConsiderRange = 120.0;
+constexpr double kDefaultTargetLaneAgentConsiderRange = 144.0;
 constexpr double kCouldOvertakeMaintainSpeedDiffThresholdPercentage = 0.75;
 
 }  // namespace
@@ -667,7 +668,7 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
         continue;
       }
-      if (tr->d_s_rel() > kDefaultLeadOneConsiderRange) {
+      if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
       }
       side_front_obstacle_array.push_back(tr);
@@ -677,7 +678,7 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (!(tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
         continue;
       }
-      if (tr->d_s_rel() > kDefaultLeadOneConsiderRange) {
+      if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
       }
       side_front_obstacle_array.push_back(tr);
