@@ -102,21 +102,23 @@ void ParkingScenario::UpdateStuckTime() {
       plan_status == ParkingStatus::PARKING_PLANNING &&
       pathplan_result == PathPlannerResult::PLAN_UPDATE;
 
+  const bool auto_static = static_flag && !brake_flag;
+
   // update stuck time
-  if (static_flag) {
+  if (auto_static) {
     frame_.stuck_time += param.plan_time;
   } else {
     frame_.stuck_time = 0.0;
   }
 
   // update stuck by path time
-  if (static_flag && !path_update_success) {
+  if (auto_static && !path_update_success) {
     frame_.stuck_path_time += param.plan_time;
   } else {
     frame_.stuck_path_time = 0.0;
   }
 
-  if (static_flag && !path_update_success) {
+  if (auto_static && !path_update_success) {
     if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
       // obs here
       if (frame_.stuck_by_dynamic_obs || frame_.stuck_dynamic_obs_time > 1e-3) {
