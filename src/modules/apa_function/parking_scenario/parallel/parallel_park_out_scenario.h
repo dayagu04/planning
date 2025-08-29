@@ -40,6 +40,8 @@ class ParallelParkOutScenario : public ParkingScenario {
     return &parallel_out_path_planner_;
   }
 
+  virtual const double CalRealTimeBrakeDist() override;
+
  private:
   void Log() const override;
   virtual const bool GenObstacles() override;

@@ -41,6 +41,8 @@ class ParallelParkInScenario : public ParkingScenario {
 
   const Tlane& GetTlane() { return t_lane_; }
 
+  virtual const double CalRealTimeBrakeDist() override;
+
  private:
   // virtual func
   void CalStaticBufferInDiffSteps(double& lat_buffer,

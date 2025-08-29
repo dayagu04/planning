@@ -565,6 +565,10 @@ const double ParkingScenario::CalRemainDistFromObs(
   }
 }
 
+const double ParkingScenario::CalRealTimeBrakeDist() {
+  return CalRemainDistFromObs();
+}
+
 const double ParkingScenario::CalRemainDistFromPlanPathDangerous(
     const double static_lon_buffer, const double static_lat_buffer) {
   if (current_path_point_global_vec_.empty()) {
@@ -1171,6 +1175,8 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
 
 void ParkingScenario::ScenarioSuspend() {
   ClearTimeBySuspendStatus();
+
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
 
   return;
 }

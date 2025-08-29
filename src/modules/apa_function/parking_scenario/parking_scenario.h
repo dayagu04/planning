@@ -462,6 +462,8 @@ class ParkingScenario {
       const double static_lat_buffer = 0.0);
   virtual const bool PostProcessPath();
 
+  virtual const double CalRealTimeBrakeDist();
+
   // check if need replan
   virtual const bool CheckReplan(const CheckReplanParams &check_params);
 

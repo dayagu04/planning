@@ -169,6 +169,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void RecordSearchTime(const double time);
 
+  virtual const double CalRealTimeBrakeDist() override;
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;

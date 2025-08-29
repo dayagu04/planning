@@ -50,7 +50,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   const bool LateralPathOptimize(
       std::vector<geometry_lib::PathPoint>& optimal_path_vec);
   const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
-  const double CalRealTimeBrakeDist();
+  virtual const double CalRealTimeBrakeDist() override;
   const bool CalcPtInside();
   const bool CheckCanDelObsInSlot();
 

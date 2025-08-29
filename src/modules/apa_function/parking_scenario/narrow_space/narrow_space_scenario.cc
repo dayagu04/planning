@@ -237,7 +237,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   frame_.remain_dist_path = CalRemainDistFromPath();
 
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs = CalRemainDistFromObs(0.3);
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -330,6 +330,10 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
   // DebugPathString(current_path_point_global_vec_);
 
   return;
+}
+
+const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
+  return CalRemainDistFromObs(0.3);
 }
 
 void NarrowSpaceScenario::Log() const {

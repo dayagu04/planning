@@ -58,22 +58,8 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
-  double lat_buffer = 0.0;
-  double safe_uss_remain_dist = 0.0;
-  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
-  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
-  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
-
-  double dynaminc_lat_buffer = 0.0;
-  double dynamic_lon_buffer = 0.0;
-  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
-
-  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
   // calculate remain dist uss according to uss
-  frame_.remain_dist_obs = CalRemainDistFromObs(
-      safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
-      dynaminc_lat_buffer, dynaminc_lat_buffer);
-  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
+  frame_.remain_dist_obs = CalRealTimeBrakeDist();
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -311,6 +297,28 @@ void ParallelParkOutScenario::ScenarioTry() {
   TansformPreparePlanningTraj();
   ILOG_INFO << "recommendation direction = " << apa_hmi_.planning_park_dir;
   parkout_direction_ = ApaParkOutDirection::INVALID;
+}
+
+const double ParallelParkOutScenario::CalRealTimeBrakeDist() {
+  double lat_buffer = 0.0;
+  double safe_uss_remain_dist = 0.0;
+  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
+  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
+  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
+
+  double dynaminc_lat_buffer = 0.0;
+  double dynamic_lon_buffer = 0.0;
+  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
+
+  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+
+  const double remain_dist_obs = CalRemainDistFromObs(
+      safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
+      dynaminc_lat_buffer, dynaminc_lat_buffer);
+
+  ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
+
+  return remain_dist_obs;
 }
 
 const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
