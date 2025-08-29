@@ -79,17 +79,21 @@ struct RealTimeBrakeInfo {
   double body_lat_buffer = 0.0;
   double mirror_lat_buffer = 0.0;
   double min_lon_dist = 0.0;
+  double lon_buffer = 0.0;
 
   RealTimeBrakeInfo() = default;
   RealTimeBrakeInfo(const RealTimeBrakeType _brake_type,
                     const double _body_lat_buffer,
-                    const double _mirror_lat_buffer, const double _min_lon_dist)
+                    const double _mirror_lat_buffer, const double _min_lon_dist,
+                    const double _lon_buffer)
       : brake_type(_brake_type),
         body_lat_buffer(_body_lat_buffer),
         mirror_lat_buffer(_mirror_lat_buffer),
-        min_lon_dist(_min_lon_dist) {}
+        min_lon_dist(_min_lon_dist),
+        lon_buffer(_lon_buffer) {}
   void Set(const RealTimeBrakeType _brake_type, const double _body_lat_buffer,
-           const double _mirror_lat_buffer, const double _min_lon_dist) {
+           const double _mirror_lat_buffer, const double _min_lon_dist,
+           const double _lon_buffer) {
     this->brake_type = _brake_type;
     this->body_lat_buffer = _body_lat_buffer;
     this->mirror_lat_buffer = _mirror_lat_buffer;
