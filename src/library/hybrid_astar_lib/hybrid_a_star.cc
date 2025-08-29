@@ -1080,7 +1080,7 @@ const bool HybridAStar::BackwardPassByNode(
       const RSPathSegment* segment = &rs_path->paths[seg_id];
 
       if (segment->size < 1) {
-        ILOG_ERROR << "result size check failed";
+        ILOG_INFO << "result size check failed";
         continue;
       }
 
@@ -1193,7 +1193,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   // load nodes and obstacles
   if (start_node_ == nullptr) {
-    ILOG_ERROR << "start node nullptr";
+    ILOG_INFO << "start node nullptr";
 
     result->fail_type = AstarFailType::ALLOCATE_NODE_FAIL;
     return;
@@ -1201,7 +1201,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   start_node_->Set(NodePath(start), grid_map_bound_, config_, 0.0);
   if (!start_node_->IsNodeValid()) {
-    ILOG_ERROR << "start_node invalid";
+    ILOG_INFO << "start_node invalid";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return;
@@ -1223,7 +1223,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     // second check
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
-      ILOG_ERROR << "start_node in collision with obstacles "
+      ILOG_INFO << "start_node in collision with obstacles "
                  << static_cast<int>(start_node_->GetConstCollisionType());
 
       // start_node_->DebugString();
@@ -1238,7 +1238,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   // allocate end
   astar_end_node_ = node_pool_.AllocateNode();
   if (astar_end_node_ == nullptr) {
-    ILOG_ERROR << "end node nullptr";
+    ILOG_INFO << "end node nullptr";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return;
@@ -1249,7 +1249,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   astar_end_node_->DebugString();
 
   if (!astar_end_node_->IsNodeValid()) {
-    ILOG_ERROR << "end_node invalid";
+    ILOG_INFO << "end_node invalid";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return;
@@ -1629,7 +1629,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   // load nodes and obstacles
   if (start_node_ == nullptr) {
-    ILOG_ERROR << "start node nullptr";
+    ILOG_INFO << "start node nullptr";
 
     result->fail_type = AstarFailType::ALLOCATE_NODE_FAIL;
     return false;
@@ -1637,7 +1637,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   start_node_->Set(NodePath(start), grid_map_bound_, config_, 0.0);
   if (!start_node_->IsNodeValid()) {
-    ILOG_ERROR << "start_node invalid";
+    ILOG_INFO << "start_node invalid";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return false;
@@ -1659,7 +1659,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     // second check
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
-      ILOG_ERROR << "start_node in collision with obstacles "
+      ILOG_INFO << "start_node in collision with obstacles "
                  << static_cast<int>(start_node_->GetConstCollisionType());
 
       // start_node_->DebugString();

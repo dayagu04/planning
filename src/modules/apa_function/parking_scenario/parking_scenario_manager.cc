@@ -409,9 +409,6 @@ void ParkingScenarioManager::PubStopReason() {
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
     return;
   }
-  if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
-    return;
-  }
 
   if (current_scenario_ == nullptr) {
     return;
@@ -424,6 +421,8 @@ void ParkingScenarioManager::PubStopReason() {
     apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
     apa_hmi_data_.is_parking_pause = true;
   }
+
+  ILOG_INFO << "stop reason = " << apa_hmi_data_.parking_pause_reason;
 
   return;
 }

@@ -1019,30 +1019,25 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
   }
 
   if (frame_.remain_dist_obs < frame_.remain_dist_path) {
-    ILOG_INFO << "false";
     return false;
   }
 
   if (frame_.current_path_length < param.dist_thresh_for_current_path) {
-    ILOG_INFO << "false";
     return false;
   }
 
   double next_gear_path_len =
       GetSecondGearPathLength(complete_path_point_global_vec_);
   if (next_gear_path_len < param.dist_thresh_for_next_path) {
-    ILOG_INFO << "false";
     return false;
   }
 
   if (frame_.remain_dist_path > param.dist_thresh_for_gear_switch_point) {
-    ILOG_INFO << "false";
     return false;
   }
 
   if (std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel()) >
       param.vel_thresh_for_gear_switch_point) {
-    ILOG_INFO << "false";
     return false;
   }
 
@@ -1050,7 +1045,6 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
           ->GetEgoInfoUnderSlot()
           .slot_occupied_ratio >
       param.slot_occupied_ratio_for_gear_switch_point) {
-    ILOG_INFO << "false";
     return false;
   }
 
@@ -1058,7 +1052,6 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
           param.lat_error_for_dynamic_gear_switch ||
       std::fabs(apa_world_ptr_->GetPredictPathManagerPtr()->GetPhiErr()) >
           param.theta_error_for_dynamic_gear_switch) {
-    ILOG_INFO << "false";
     return false;
   }
 
@@ -1067,7 +1060,6 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
       CalRemainDistFromObs(param.cur_path_lon_buffer, param.cur_path_lat_buffer,
                            param.cur_path_lat_buffer);
   if (dist < frame_.remain_dist_path) {
-    ILOG_INFO << "false";
     return false;
   }
 
@@ -1146,7 +1138,8 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
     return false;
   }
 
-  if (frame_.replan_fail_time < 1.0) {
+  if (frame_.replan_fail_time < 1.0 &&
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     return false;
   }
 
