@@ -35,9 +35,9 @@ struct IHCSysInput {
 
 // IHC算法状态结构体定义
 struct IHCSysState {
-  uint16 ihc_enable_code;
-  uint16 ihc_disable_code;
-  uint16 ihc_fault_code;
+  uint16 ihc_enable_code = 0;
+  uint16 ihc_disable_code = 0;
+  uint16 ihc_fault_code = 0;
   iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam

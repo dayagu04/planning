@@ -120,7 +120,7 @@ uint16 IhcCore::UpdateIhcEnableCode() {
   uint16 ihc_enable_code_temp = 0;
 
   // condition0: 灯光挡位处于auto
-  if (ihc_sys_.input.auto_light_state == true) {
+  if (ihc_sys_.input.ihc_main_switch == true) {
     ihc_enable_code_temp += uint16_bit[0];
   } else {
     // do nothing
@@ -167,7 +167,7 @@ uint16 IhcCore::UpdateIhcDisableCode() {
   uint16 ihc_disable_code_temp = 0;
 
   // condition0：灯光挡位不是auto
-  if (ihc_sys_.input.auto_light_state == false) {
+  if (ihc_sys_.input.ihc_main_switch == false) {
     ihc_disable_code_temp += uint16_bit[0];
   } else {
     // do nothing
@@ -272,8 +272,8 @@ uint16 IhcCore::UpdateIhcFaultCode() {
 
   // bit 6
   // 雾灯信号无效
-  if (vehicle_service_output_info_ptr->front_fog_light_state == false ||
-      vehicle_service_output_info_ptr->rear_fog_light_state == false) {
+  if (vehicle_service_output_info_ptr->front_fog_light_state_available == false ||
+      vehicle_service_output_info_ptr->front_fog_light_state_available == false) {
     fault_code += uint16_bit[6];
   } else {
     /*do nothing*/
