@@ -909,11 +909,6 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   if (request_.direction_request_size > 1) {
     for (int8_t i = 0; i < request_.direction_request_size; i++) {
-      ILOG_INFO << "***************** [ " << static_cast<int>(i)
-                << " ] try, dir :  "
-                << static_cast<int>(request_.direction_request_stack[i])
-                << " ****************";
-
       TargetPoseRegulator target_pose_regulator;
       target_pose_regulator.Process(&edt_, &request_, ego_state_,
                                     request_.real_goal_stack[i], vehicle_param_,
