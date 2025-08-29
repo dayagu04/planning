@@ -173,7 +173,7 @@ void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
                                      const double max_bbox_lat_buffer) {
   const apa_planner::ApaParameters& config = apa_param.GetParam();
 
-  GetUpLeftCoordinatePolygonByParam(
+  GetVehPolygonBy4Edge(
       &polygon_foot_print_.body, config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,
       config.car_width / 2.0 + lateral_safe_buffer);
@@ -192,7 +192,7 @@ void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
   GenerateMirrorPolygon(&polygon_foot_print_.mirror_right, 0.3, radius * 2,
                         center);
 
-  GetUpLeftCoordinatePolygonByParam(
+  GetVehPolygonBy4Edge(
       &polygon_foot_print_.max_polygon,
       config.rear_overhanging + lon_safe_buffer,
       config.wheel_base + config.front_overhanging + lon_safe_buffer,

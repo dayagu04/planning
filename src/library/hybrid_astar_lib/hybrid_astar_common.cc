@@ -211,8 +211,8 @@ const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
   cdl::AABB path_point_aabb;
   cdl::AABB box = cdl::AABB();
   Polygon2D veh_local_polygon;
-  GetUpLeftCoordinatePolygonByParam(&veh_local_polygon, back_overhanging,
-                                    front_edge_to_rear_axis, half_width);
+  GetVehPolygonBy4Edge(&veh_local_polygon, back_overhanging,
+                       front_edge_to_rear_axis, half_width);
 
   for (size_t i = 0; i < result.x.size(); ++i) {
     global_pose.x = result.x[i];

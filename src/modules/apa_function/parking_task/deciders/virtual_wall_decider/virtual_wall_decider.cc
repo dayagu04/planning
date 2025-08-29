@@ -44,23 +44,21 @@ const bool VirtualWallDecider::IsVirtualWallPointCollision(
   return false;
 }
 
-void VirtualWallDecider::Process(
-    std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const ParkSpaceType slot_type, const pnc::geometry_lib::SlotSide slot_side,
-    const ParkingVehDirection parking_type,
-    const double head_out_passage_height, const int path_fail_num) {
-  start_ = ego_pose;
-  end_ = end;
-  slot_type_ = slot_type;
+void VirtualWallDecider::Process(std::vector<Position2D>& points,
+                                 const ApaSlot& slot, const Pose2D& ego_pose,
+                                 const pnc::geometry_lib::SlotSide slot_side,
+                                 const ParkingVehDirection parking_type,
+                                 const double head_out_passage_height,
+                                 const int path_fail_num) {
+  ego_pose_ = ego_pose;
   slot_side_ = slot_side;
   GenerateVehPolygonInSlot(ego_pose);
   // vehicle boundary
   GetVehicleBound();
   points.clear();
 
-  if (slot_type == ParkSpaceType::VERTICAL ||
-      slot_type == ParkSpaceType::SLANTING) {
+  if (slot.GetType() == SlotType::PERPENDICULAR ||
+      slot.GetType() == SlotType::SLANT) {
     double virtual_wall_x_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
     if (path_fail_num > 0) {
@@ -101,17 +99,15 @@ void VirtualWallDecider::Process(
           apa_param.GetParam().astar_config.vertical_slot_passage_height_bound;
     }
 
-    CalcVerticalVirtualWall(points, slot_width, slot_length, ego_pose, end,
+    CalcVerticalVirtualWall(points, slot.GetWidth(), slot.GetLength(),
                             virtual_wall_x_offset, virtual_wall_y_offset,
                             passage_half_length, passage_height);
 
   } else {
     if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
-      RightSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
-                                   end);
+      RightSideParallelVirtualWall(points, slot.GetWidth(), slot.GetLength());
     } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
-      LeftSideParallelVirtualWall(points, slot_width, slot_length, ego_pose,
-                                  end);
+      LeftSideParallelVirtualWall(points, slot.GetWidth(), slot.GetLength());
     }
 
     ILOG_INFO << "parallel slot virtual wall";
@@ -287,9 +283,9 @@ void VirtualWallDecider::SamplingInParallelBoundary(
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end,
-    const double virtual_wall_x_offset, const double virtual_wall_y_offset,
-    const double passage_half_length, const double passage_height) {
+    const double slot_length, const double virtual_wall_x_offset,
+    const double virtual_wall_y_offset, const double passage_half_length,
+    const double passage_height) {
   // slot virtual wall
   slot_boundary_.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
   slot_boundary_.x_upper = slot_length - virtual_wall_x_offset;
@@ -324,7 +320,7 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
 #define PARALLEL_SLOT_EXTRA_LEN (6.0)
 void VirtualWallDecider::RightSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    const double slot_length) {
   // slot virtual wall
   slot_boundary_.y_lower = -slot_width / 2.0 - 1.0;
   slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
@@ -359,7 +355,7 @@ void VirtualWallDecider::RightSideParallelVirtualWall(
 
 void VirtualWallDecider::LeftSideParallelVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const Pose2D& ego_pose, const Pose2D& end) {
+    const double slot_length) {
   // slot virtual wall
   slot_boundary_.y_lower = -slot_width / 2.0;
   slot_boundary_.x_upper = slot_length + PARALLEL_SLOT_EXTRA_LEN;
@@ -399,10 +395,10 @@ void VirtualWallDecider::Init(const Pose2D& ego_pose) {
 }
 
 void VirtualWallDecider::GetVehicleBound() {
-  double veh_upper_x = start_.x;
-  double veh_lower_x = start_.x;
-  double veh_left_y = start_.y;
-  double veh_right_y = start_.y;
+  double veh_upper_x = ego_pose_.x;
+  double veh_lower_x = ego_pose_.x;
+  double veh_left_y = ego_pose_.y;
+  double veh_right_y = ego_pose_.y;
   for (int i = 0; i < ego_polygon_in_slot_.vertex_num; i++) {
     veh_upper_x = std::max(veh_upper_x, ego_polygon_in_slot_.vertexes[i].x);
     veh_lower_x = std::min(veh_lower_x, ego_polygon_in_slot_.vertexes[i].x);

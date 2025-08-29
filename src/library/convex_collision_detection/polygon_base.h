@@ -216,10 +216,9 @@ void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
                              const Polygon2D *poly_local,
                              const Pose2D &global_pose);
 
-int GetUpLeftCoordinatePolygonByParam(Polygon2D *box,
-                                      const double back_overhanging,
-                                      const double front_edge_to_rear_axis,
-                                      const double half_width);
+void GetVehPolygonBy4Edge(Polygon2D *box, const double back_overhanging,
+                          const double front_edge_to_rear_axis,
+                          const double half_width);
 
 void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
                              const Polygon2D *poly_local,
@@ -228,8 +227,8 @@ void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
 void GlobalPolygonToULFLocal(const Polygon2D *poly_global,
                              const Transform2d &tf, Polygon2D *poly_local);
 
-void GetCompactPolygonByParam(const double lat_buffer, const double lon_buffer,
-                              Polygon2D *polygon);
+void GetVehPolygonBy8Edge(const double lat_buffer, const double lon_buffer,
+                          Polygon2D *polygon);
 
 // Compact car body for accurate safe check.
 void GenerateVehCompactPolygon(const double lateral_safe_buffer,
@@ -255,12 +254,15 @@ void FootPrintLocalToGlobal(const Transform2d &tf,
                             const PolygonFootPrint *local_foot_print,
                             PolygonFootPrint *global_foot_print);
 
-void GetUpLeftCoordinatePolygonByParam(std::array<Position2f, 4> &box,
-                                       const float back_overhanging,
-                                       const float front_edge_to_rear_axis,
-                                       const float half_width);
+void GetVehPolygonBy4Edge(std::array<Position2f, 4> &box,
+                          const float back_overhanging,
+                          const float front_edge_to_rear_axis,
+                          const float half_width);
 
 void GetBoundingBoxByPolygon(cdl::AABB2f *box,
                              const std::array<Position2f, 4> &polygon);
+
+void GetVehPolygonBy12Edge(const double lat_buffer, const double lon_buffer,
+                           Polygon2D *polygon);
 
 }  // namespace planning

@@ -1675,7 +1675,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   astar_end_node_ = node_pool_.AllocateNode();
 
   if (astar_end_node_ == nullptr) {
-    ILOG_ERROR << "end node nullptr";
+    ILOG_INFO << "end node nullptr";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return false;
@@ -1687,7 +1687,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   astar_end_node_->DebugString();
 
   if (!astar_end_node_->IsNodeValid()) {
-    ILOG_ERROR << "end_node invalid";
+    ILOG_INFO << "end_node invalid";
 
     result->fail_type = AstarFailType::OUT_OF_BOUND;
     return false;
