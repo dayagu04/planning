@@ -28,7 +28,7 @@ struct IHCSysInput {
   iflyauto::ShiftLeverStateEnum shift_lever_state;  // 换档杆状态
   bool front_fog_light_state;  // 前雾灯状态
   bool rear_fog_light_state;   // 后雾灯状态
-
+  bool wiper_speed_fast;       // 雨刮运行速度是否达到快速档位
 // 环境光线条件
   iflyauto::CameraPerceptionLightingCondition lighting_condition;  // 环境亮度条件：0-UNKNOWN, 1-BRIGHT, 2-MEDIUM, 3-DARK
 };
@@ -36,6 +36,7 @@ struct IHCSysInput {
 // IHC算法状态结构体定义
 struct IHCSysState {
   uint16 ihc_enable_code;
+  uint16 ihc_disable_code;
   uint16 ihc_fault_code;
   iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request

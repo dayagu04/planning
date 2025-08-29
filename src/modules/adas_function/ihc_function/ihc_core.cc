@@ -10,6 +10,7 @@ void IhcCore::RunOnce(void) {
 
   // 根据输入信息，更新使能码、禁用码、故障码、状态机跳转
   ihc_sys_.state.ihc_enable_code = UpdateIhcEnableCode();
+  ihc_sys_.state.ihc_disable_code = UpdateIhcDisableCode();
   ihc_sys_.state.ihc_fault_code = UpdateIhcFaultCode();
 
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
@@ -41,6 +42,8 @@ void IhcCore::RunOnce(void) {
 
   JSON_DEBUG_VALUE("ihc_function::ihc_enable_code",
                    ihc_sys_.state.ihc_enable_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_disable_code",
+                   ihc_sys_.state.ihc_disable_code);
   JSON_DEBUG_VALUE("ihc_function::ihc_fault_code",
                    ihc_sys_.state.ihc_fault_code);
   JSON_DEBUG_VALUE("ihc_function::ihc_state", int(ihc_sys_.state.ihc_state));
@@ -100,47 +103,45 @@ void IhcCore::GetInputInfo() {
   // 获取前雾灯状态
   ihc_sys_.input.front_fog_light_state =
       vehicle_service_output_info_ptr->front_fog_light_state;
-
-  // 获取自动灯光控制状态
-  ihc_sys_.input.auto_light_state = vehicle_service_output_info_ptr->auto_light_state;
   
-  // 前雾灯状态
-  ihc_sys_.input.front_fog_light_state =
-      vehicle_service_output_info_ptr->front_fog_light_state;
-
   // 后雾灯状态
   ihc_sys_.input.rear_fog_light_state =
       vehicle_service_output_info_ptr->rear_fog_light_state;
   
+  // 雨刮运行速度是否达到快速档位
+  // ihc_sys_.input.wiper_speed_fast = vehicle_service_output_info_ptr->wiper_speed_fast;
 
+
+  // 获取自动灯光控制状态
+  ihc_sys_.input.auto_light_state = vehicle_service_output_info_ptr->auto_light_state;
 }
 
 uint16 IhcCore::UpdateIhcEnableCode() {
   uint16 ihc_enable_code_temp = 0;
 
-  // condition0: 换挡杆是否处于D
-  if (ihc_sys_.input.shift_lever_state == iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+  // condition0: 灯光挡位处于auto
+  if (ihc_sys_.input.auto_light_state == true) {
     ihc_enable_code_temp += uint16_bit[0];
   } else {
-      // do nothing
-    }
+    // do nothing
+  }
 
-  // condition1: 灯光挡位处于auto
-  if (ihc_sys_.input.auto_light_state == true) {
+  // condition1: 车速是否大于等于40kph
+  if (ihc_sys_.input.vehicle_speed_display_kph >= 40.0F) {
     ihc_enable_code_temp += uint16_bit[1];
   } else {
     // do nothing
   }
 
-  // condition2: 车速是否大于等于40kph
-  if (ihc_sys_.input.vehicle_speed_display_kph >= 40.0F) {
+  // codition2：车速是否小于等于150kph
+  if (ihc_sys_.input.vehicle_speed_display_kph <= 150.0F) {
     ihc_enable_code_temp += uint16_bit[2];
   } else {
     // do nothing
   }
 
-  // codition3：车速是否小于等于150kph
-  if (ihc_sys_.input.vehicle_speed_display_kph <= 150.0F) {
+  // condition3：后雾灯状态为false
+  if (ihc_sys_.input.rear_fog_light_state == false) {
     ihc_enable_code_temp += uint16_bit[3];
   } else {
     // do nothing
@@ -153,34 +154,41 @@ uint16 IhcCore::UpdateIhcEnableCode() {
     // do nothing
   }
 
+  // condition5: 雨刮运行速度没有达到快速档位
+  // if (ihc_sys_.input.wiper_speed_fast == false) {
+  //   ihc_enable_code_temp += uint16_bit[5];
+  // } else {
+  //   // do nothing
+  // }
+
   return ihc_enable_code_temp;
 }
 uint16 IhcCore::UpdateIhcDisableCode() {
   uint16 ihc_disable_code_temp = 0;
 
-  // condition0：挡位不是D档
-  if (ihc_sys_.input.shift_lever_state != iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
+  // condition0：灯光挡位不是auto
+  if (ihc_sys_.input.auto_light_state == false) {
     ihc_disable_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
-  // condition1：灯光挡位不是auto
-  if (ihc_sys_.input.auto_light_state == false) {
+  // condition1: 车速小于等于30kph
+  if (ihc_sys_.input.vehicle_speed_display_kph < 30.0F) {
     ihc_disable_code_temp += uint16_bit[1];
   } else {
     // do nothing
   }
 
-  // condition2: 车速小于等于25kph
-  if (ihc_sys_.input.vehicle_speed_display_kph < 25.0F) {
+  // condition2：车速是否大于155kph
+  if (ihc_sys_.input.vehicle_speed_display_kph > 155.0F) {
     ihc_disable_code_temp += uint16_bit[2];
   } else {
     // do nothing
   }
 
-  // condition3：车速是否大于155kph
-  if (ihc_sys_.input.vehicle_speed_display_kph > 155.0F) {
+  // condition3：后雾灯状态为true
+  if (ihc_sys_.input.rear_fog_light_state == true) {
     ihc_disable_code_temp += uint16_bit[3];
   } else {
     // do nothing
@@ -193,20 +201,100 @@ uint16 IhcCore::UpdateIhcDisableCode() {
     // do nothing
   }
 
+  // condition5：雨刮运行速度达到快速档位
+  // if (ihc_sys_.input.wiper_speed_fast == true) {
+  //   ihc_disable_code_temp += uint16_bit[5];
+  // } else {
+  //   // do nothing
+  // }
+
   return ihc_disable_code_temp;
 }
 
 // TODO: thzhang5 0714 需要根据文档需求更改
 uint16 IhcCore::UpdateIhcFaultCode() {
-  uint16 ihc_fault_code_temp = 0;
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
-  return ihc_fault_code_temp;
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
+
+  uint16 fault_code = 0;
+
+  // bit 0
+  // 前视摄像头有故障(信号没有给出)
+  // if (vehicle_service_output_info_ptr->... == false) {
+  //   fault_code += uint16_bit[0];
+  // } else {
+  //   /*do nothing*/
+  // }
+
+  // bit 1
+  // IHC感知模块节点通讯丢失，持续5s
+  if (GetContext.mutable_state_info()->ihc_info_node_valid == false) {
+    fault_code += uint16_bit[1];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 障碍物融合模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->obstacle_fusion_info_node_valid == false) {
+    fault_code += uint16_bit[2];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // vehicle_service模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
+    fault_code += uint16_bit[3];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 实际车速信号无效
+  if (vehicle_service_output_info_ptr->vehicle_speed_available == false) {
+    fault_code += uint16_bit[4];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 5
+  // 仪表车速信号无效
+  if (vehicle_service_output_info_ptr->vehicle_speed_display_available == false) {
+    fault_code += uint16_bit[5];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 雾灯信号无效
+  if (vehicle_service_output_info_ptr->front_fog_light_state == false ||
+      vehicle_service_output_info_ptr->rear_fog_light_state == false) {
+    fault_code += uint16_bit[6];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 雨刮信号无效
+  if (vehicle_service_output_info_ptr->wiper_state_available == false) {
+    fault_code += uint16_bit[7];
+  } else {
+    /*do nothing*/
+  }
+
+  return fault_code;
 }
 
 iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
   bool main_switch = ihc_sys_.input.ihc_main_switch;
   uint16 fault_code = ihc_sys_.state.ihc_fault_code;
   uint16 enable_code = ihc_sys_.state.ihc_enable_code;
+  uint16 disable_code = ihc_sys_.state.ihc_disable_code;
 
   static uint8 ihc_state_machine_init_flag =
       0;  // IHC状态机初始化状态 0:未初始化过 1:已完成过初始化
@@ -233,7 +321,7 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         } else if (fault_code) {  // ACTIVE->FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         } else if (enable_code != 31) {  // ACTIVE->STANDBY (所有条件不满足时切换)
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -249,24 +337,33 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         } else {  // 继续维持在FAULT状态
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         }
         break;
       case IHC_StateMachine_IN_OFF:
-        if (main_switch) {  // OFF->STANDBY
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+        // OFF
+        if (main_switch) {
+          if (fault_code) {
+            // OFF->FAULT
+            ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
+            ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
+          } else {
+            // OFF->STANDBY
+            ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
+            ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+          }
         } else {  // 继续维持在OFF状态
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         }
         break;
       default:
+        // standby
         if (!main_switch) {  // STANDBY->OFF
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         } else if (fault_code) {  // STANDBY->FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         } else if (enable_code == 31) {  // STANDBY->ACTIVE
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
@@ -465,8 +562,8 @@ void IhcCore::SetIhcOutputInfo(void) {
   
   // 输出状态信息
   switch (ihc_sys_.state.ihc_state) {
-    case iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE:
-      GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+    case iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT:
+      GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
       break;
     case iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF:
       GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
@@ -478,6 +575,7 @@ void IhcCore::SetIhcOutputInfo(void) {
       GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
       break;
     default:
+      // 不可用状态，设置为 OFF
       GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
       break;
   }

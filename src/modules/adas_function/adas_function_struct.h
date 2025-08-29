@@ -238,6 +238,15 @@ struct StateInfo {
   // 定位模块节点通讯丢失
   //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
   bool localization_info_node_valid = true;
+  // TSR感知模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool tsr_info_node_valid = true;
+  // IHC感知模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool ihc_info_node_valid = true;
+  // 障碍物融合模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool obstacle_fusion_info_node_valid = true;
 };
 
 enum Enum_LineType {

@@ -478,6 +478,44 @@ void Preprocess::UpdateStateInfo(void) {
     GetContext.mutable_state_info()->localization_info_node_valid = true;
   }
 
+  // TSR感知模块节点通讯丢失
+  auto tsr_info_ptr = &GetContext.mutable_session()
+                            ->mutable_environmental_model()
+                            ->get_local_view()
+                            .perception_tsr_info;
+  if ((GetContext.mutable_state_info()->current_time_us -
+       tsr_info_ptr->msg_header.stamp) > 500000) {
+    GetContext.mutable_state_info()->tsr_info_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->tsr_info_node_valid = true;
+  }
+
+  // IHC感知模块节点通讯丢失
+  auto ihc_info_ptr = &GetContext.mutable_session()
+                            ->mutable_environmental_model()
+                            ->get_local_view()
+                            .perception_scene_info;
+  if ((GetContext.mutable_state_info()->current_time_us -
+       ihc_info_ptr->msg_header.stamp) > 5000000) {
+    // 由于感知一秒一帧, 设定为5s超时
+    GetContext.mutable_state_info()->ihc_info_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->ihc_info_node_valid = true;
+  }
+
+  // 障碍物融合模块节点通讯丢失
+  auto obstacle_fusion_info_ptr = &GetContext.mutable_session()
+                                      ->mutable_environmental_model()
+                                      ->get_local_view()
+                                      .fusion_objects_info;
+  if ((GetContext.mutable_state_info()->current_time_us -
+       obstacle_fusion_info_ptr->msg_header.stamp) > 500000) {
+    // 0.5s超时
+    GetContext.mutable_state_info()->obstacle_fusion_info_node_valid = false;
+  } else {
+    GetContext.mutable_state_info()->obstacle_fusion_info_node_valid = true;
+  }
+
   /*计算车辆左前、右前两个角点至车道线合路沿的距离*/
   // 公共部分：左前角点/右前角点坐标：
   // 计算tlc秒后,后轴中心的坐标值、计算角点位置
