@@ -396,11 +396,14 @@ void ParkingScenario::SetPlanningPath() {
   gear_command->available = true;
   if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_DRIVE) {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-  } else {
+  } else if (frame_.gear_command == pnc::geometry_lib::SEG_GEAR_REVERSE) {
     gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_REVERSE;
+  } else {
+    gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_NONE;
   }
   ILOG_INFO << "gear command in planning output = "
-            << static_cast<int>(gear_command->gear_command_value);
+            << static_cast<int>(gear_command->gear_command_value) << ", "
+            << static_cast<int>(frame_.gear_command);
 
   RecordDebugPath();
 

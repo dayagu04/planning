@@ -296,9 +296,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     candidate.dist_to_obs =
         GetDistToObsHeadOut(&global_pose, direction_request, edt);
     candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-    ILOG_INFO << " candidate.dist_to_obs  : " << candidate.dist_to_obs
-              << "  pose : " << candidate.pose.GetX() << " , "
-              << candidate.pose.GetY();
     candidate_info_.emplace_back(candidate);
   }
 
