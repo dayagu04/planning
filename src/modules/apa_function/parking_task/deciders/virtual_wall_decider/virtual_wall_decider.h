@@ -5,6 +5,7 @@
 #include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/geometry_lib/include/geometry_math.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "apa_slot.h"
 
 namespace planning {
 namespace apa_planner {
@@ -47,6 +48,14 @@ struct VirtualWallBoundary {
 
     return true;
   }
+
+  VirtualWallBoundary& operator+=(const VirtualWallBoundary& other) {
+    x_lower = std::min(x_lower, other.x_lower);
+    y_lower = std::min(y_lower, other.y_lower);
+    x_upper = std::max(x_upper, other.x_upper);
+    y_upper = std::max(y_upper, other.y_upper);
+    return *this;
+  }
 };
 
 // generate virtual wall by ego pose and slot, used by astar, need refact.
@@ -56,12 +65,11 @@ class VirtualWallDecider : public ParkingTask {
 
   void Init(const Pose2D& ego_pose);
 
-  void Process(std::vector<Position2D>& points, const double slot_width,
-               const double slot_length, const Pose2D& ego_pose,
-               const Pose2D& end, const ParkSpaceType slot_type,
+  void Process(std::vector<Position2D>& points, const ApaSlot& slot,
+               const Pose2D& ego_pose,
                const pnc::geometry_lib::SlotSide slot_side,
                const ParkingVehDirection parking_type,
-               const double passage_height, const int path_fail_num);
+               const double head_out_passage_height, const int path_fail_num);
 
   void Reset(const Pose2D& ego_pose) {
     passage_bound_ = VirtualWallBoundary(Position2D(ego_pose.x, ego_pose.y));
@@ -74,8 +82,8 @@ class VirtualWallDecider : public ParkingTask {
 
  private:
   void CalcVerticalVirtualWall(std::vector<Position2D>& points,
-                               const double slot_width, const double slot_length,
-                               const Pose2D& ego_pose, const Pose2D& end,
+                               const double slot_width,
+                               const double slot_length,
                                const double virtual_wall_x_offset,
                                const double virtual_wall_y_offset,
                                const double passage_half_length,
@@ -83,13 +91,11 @@ class VirtualWallDecider : public ParkingTask {
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
                                     const double slot_width,
-                                    const double slot_length,
-                                    const Pose2D& ego_pose, const Pose2D& end);
+                                    const double slot_length);
 
   void LeftSideParallelVirtualWall(std::vector<Position2D>& points,
                                    const double slot_width,
-                                   const double slot_length,
-                                   const Pose2D& ego_pose, const Pose2D& end);
+                                   const double slot_length);
 
   // If virtual wall is collision with ego, remove virtual wall point.
   const bool IsVirtualWallPointCollision(const Position2D& point);
@@ -112,8 +118,7 @@ class VirtualWallDecider : public ParkingTask {
 
  private:
   std::string name_;
-  Pose2D start_;
-  Pose2D end_;
+  Pose2D ego_pose_;
 
   Polygon2D ego_polygon_in_slot_;
   GJK2DInterface gjk_interface_;
@@ -125,7 +130,6 @@ class VirtualWallDecider : public ParkingTask {
   // vehicle boundary
   VirtualWallBoundary veh_boundary_;
 
-  ParkSpaceType slot_type_;
   pnc::geometry_lib::SlotSide slot_side_;
 };
 }  // namespace apa_planner

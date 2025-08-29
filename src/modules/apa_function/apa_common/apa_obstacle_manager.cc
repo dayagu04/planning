@@ -297,7 +297,7 @@ void ApaObstacleManager::Update(
       double lon_dist =
           std::max(config.uss_config.uss_lon_attention_dist,
                    config.uss_config.uss_dist_coefficient_by_vel * ego_v);
-      GetUpLeftCoordinatePolygonByParam(
+      GetVehPolygonBy4Edge(
           &ego_local, config.rear_overhanging + lon_dist,
           config.wheel_base + config.front_overhanging + lon_dist,
           config.max_car_width / 2.0 +

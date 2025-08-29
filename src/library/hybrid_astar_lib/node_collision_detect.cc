@@ -821,9 +821,8 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   ILOG_INFO << "outside buffer = " << lat_buffer_outside
             << ", inside buffer = " << lat_buffer_inside;
 
-  GetUpLeftCoordinatePolygonByParam(
-      veh_box_, vehicle_param.rear_edge_to_rear_axle,
-      vehicle_param.front_edge_to_rear_axle, safe_half_width);
+  GetVehPolygonBy4Edge(veh_box_, vehicle_param.rear_edge_to_rear_axle,
+                       vehicle_param.front_edge_to_rear_axle, safe_half_width);
   recommend_route_box_ = TransformMapBound(request_->recommend_route_bound);
   compact_route_box_ = recommend_route_box_;
   compact_route_box_.ShrinkX(vehicle_param.front_edge_to_rear_axle);

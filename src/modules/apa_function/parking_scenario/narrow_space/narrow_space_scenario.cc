@@ -526,21 +526,17 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
     virtual_wall_decider_.Init(start);
   }
 
-  float passage_height =
-      ego_info.slot_occupied_ratio >
-              apa_param.GetParam().pose_slot_occupied_ratio_2
-          ? 7.0f
-          : apa_param.GetParam()
-                .astar_config.vertical_slot_passage_height_bound;
+  auto& config = apa_param.GetParam();
+  double park_out_passage_height =
+      ego_info.slot_occupied_ratio > config.pose_slot_occupied_ratio_2
+          ? 7.0
+          : config.astar_config.vertical_slot_passage_height_bound;
   virtual_wall_decider_.Process(
-      obs.virtual_obs, static_cast<float>(ego_info.slot.slot_width_),
-      static_cast<float>(ego_info.slot.slot_length_), start, real_end,
-      slot_type, ego_info.slot_side, parking_dir_type, passage_height,
-      path_planning_fail_num_);
+      obs.virtual_obs, ego_info.slot, start, ego_info.slot_side,
+      parking_dir_type, park_out_passage_height, path_planning_fail_num_);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
-
   PointCloudObstacleTransform obstacle_generator;
   cdl::AABB slot_box;
   if (NeedBlindZonePlanning(ego_info)) {
