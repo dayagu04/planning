@@ -479,10 +479,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   const bool update_slot_move_dist =
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
-      (frame_.replan_flag &&
-       (frame_.replan_reason != ReplanReason::DYNAMIC ||
-        (frame_.replan_reason == ReplanReason::DYNAMIC &&
-         ego_info_under_slot.slot_occupied_ratio < 0.0968)));
+      (frame_.replan_flag && (frame_.replan_reason != ReplanReason::DYNAMIC ||
+                              (frame_.replan_reason == ReplanReason::DYNAMIC &&
+                               ego_info_under_slot.slot_occupied_ratio < 0.6)));
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
             << "  update_slot_move_dist = " << update_slot_move_dist
@@ -1539,8 +1538,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
                2.168) ||
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-       frame_.slot_jump_lat_err >
-           param.check_finish_params.lat_err_strict - 0.0168) ||
+       frame_.slot_jump_big_flag) ||
       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig());
 
@@ -1816,9 +1814,18 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
   ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
             << "  heading_err = " << heading_err;
 
+  JSON_DEBUG_VALUE("slot_lat_err", lat_err)
+  JSON_DEBUG_VALUE("slot_heading_err", heading_err)
+  JSON_DEBUG_VALUE("slot_lon_err", lon_err)
+
   frame_.slot_jump_lat_err = lat_err;
   frame_.slot_jump_lon_err = lon_err;
   frame_.slot_jump_heading_err = heading_err;
+
+  frame_.slot_jump_big_flag =
+      std::min(lat_err, std::fabs(ego_info_under_slot.terminal_err.GetY())) >
+          apa_param.GetParam().slot_jump_lat_big_err ||
+      heading_err > apa_param.GetParam().slot_jump_heading_big_err;
 }
 
 const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
@@ -1837,10 +1844,7 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   const auto& param = apa_param.GetParam();
 
-  if (frame_.slot_jump_lat_err <
-          param.check_finish_params.lat_err_strict - 1e-3 &&
-      frame_.slot_jump_heading_err <
-          param.check_finish_params.heading_err_strict - 1e-2) {
+  if (!frame_.slot_jump_big_flag) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;
@@ -1870,10 +1874,6 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
     frame_.ego_should_stop_dist_by_slot_jump =
         std::max(std::min(stop_dist1, stop_dist2), 1.268);
   }
-
-  // if (frame_.remain_dist_path < ego_stop_dist + 0.168) {
-
-  // }
 
   // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
   const double remain_dist_slot_jump =
@@ -2616,7 +2616,7 @@ void PerpendicularTailInScenario::Log() const {
                    ego_info_under_slot.lon_move_dist_replan_success)
 
   JSON_DEBUG_VALUE("replan_lon_move_slot_dist",
-                   ego_info_under_slot.lat_move_dist_every_replan)
+                   ego_info_under_slot.lon_move_dist_every_replan)
 
   ILOG_INFO << "lat_move_dist_replan_success = "
             << ego_info_under_slot.lat_move_dist_replan_success
@@ -2736,6 +2736,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("remain_dist_slot_jump", frame_.remain_dist_slot_jump)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
+  JSON_DEBUG_VALUE("stuck_path_time", frame_.stuck_path_time)
   JSON_DEBUG_VALUE("stuck_obs_time", frame_.stuck_obs_time)
   JSON_DEBUG_VALUE("stuck_dynamic_obs_time", frame_.stuck_dynamic_obs_time)
   JSON_DEBUG_VALUE("stuck_by_dynamic_obs", frame_.stuck_by_dynamic_obs)

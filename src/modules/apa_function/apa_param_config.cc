@@ -671,10 +671,10 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.max_front_exceed_line_dx, double,
                   "max_front_exceed_line_dx");
 
-  JSON_READ_VALUE(param.path_pos_err, double, "path_pos_err");
+  JSON_READ_VALUE(param.slot_jump_lat_big_err, double, "slot_jump_lat_big_err");
 
-  JSON_READ_VALUE(param.last_update_slot_occupied_ratio, double,
-                  "last_update_slot_occupied_ratio");
+  JSON_READ_VALUE(param.slot_jump_heading_big_err, double,
+                  "slot_jump_heading_big_err");
 
   // path planner params
   JSON_READ_VALUE(param.use_average_obs_dist, bool, "use_average_obs_dist");

@@ -16,6 +16,7 @@ parking_pre_plan_case_dict = {0: 'failed', 1: 'ego_pose', 2: 'mid_point'}
 parking_pre_plan_status_dict = {0: 'none', 1: 'computing', 2: 'success', 3: 'failed'}
 parking_plan_status_dict = {0: 'none', 1: 'in_progress', 2: 'finished', 3: 'failed'}
 parking_target_pose_type_dict = {0: 'fail', 1: 'normal', 2: 'fold_mirror'}
+parking_slot_lat_pos_preference_dict = {0: 'mid', 1: 'left', 2: 'right'}
 parking_fold_mirror_command_dict = {0: 'none', 1: 'fold_mirror', 2: 'unfold_mirror'}
 parking_vs_mirror_status_dict = {0: 'invalid', 1: 'have_folded', 2: 'not_folded'}
 parking_path_thread_status_dict = {0: 'inited', 1: 'running', 2: 'stopped', 3: "max_num"}
