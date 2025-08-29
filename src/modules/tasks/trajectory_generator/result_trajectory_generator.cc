@@ -440,9 +440,17 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+          ad_info.lane_change_status =
+              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+          ad_info.lane_change_reason =
+              iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+          ad_info.lane_change_status =
+              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
+          ad_info.lane_change_reason =
+              iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         }
       }
     }
