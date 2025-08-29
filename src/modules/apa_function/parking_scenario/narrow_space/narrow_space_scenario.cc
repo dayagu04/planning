@@ -570,7 +570,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   frame_.current_gear = GetGear(current_gear_);
   cur_request.goal = Pose2f(end.x, end.y, end.theta);
 
-  SetRequestForParkOutTry(cur_request, ego_info);
+  SetRequestForScenarioTry(cur_request, ego_info);
 
   FillPlanningReason(cur_request);
 
@@ -1753,9 +1753,11 @@ void NarrowSpaceScenario::ScenarioTry() {
   if (res == PathPlannerResult::PLAN_FAILED) {
     narrow_space_decider_.SetAstarState(AstarSearchState::FAILURE);
 
-    ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
+    if (!apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
+      ego_info_under_slot.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+    }
 
     ILOG_INFO << "astar path try fail";
   } else if (res == PathPlannerResult::PLAN_UPDATE) {
@@ -2447,6 +2449,12 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
         continue;
       }
 
+      apa_world_ptr_->GetSlotManagerPtr()
+          ->GetMutableEgoInfoUnderSlot()
+          .slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
+
       switch (cur_request.direction_request_stack[i]) {
         case ParkingVehDirection::TAIL_OUT_TO_LEFT:
           dir = ApaRecommendationDirection::VerticalBackLeft;
@@ -2484,7 +2492,7 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
   return apa_hmi_data;
 }
 
-void NarrowSpaceScenario::SetRequestForParkOutTry(
+void NarrowSpaceScenario::SetRequestForScenarioTry(
     AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     const double target_heading_rad = ego_info.slot.angle_ * M_PI / 180.0;

@@ -39,7 +39,8 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Process(EulerDistanceTransform *edt, const AstarRequest *request,
                const Pose2f &ego_pose, const Pose2f &center_line_target,
-               const VehicleParam &veh_param);
+               const VehicleParam &veh_param,
+               const ParkingVehDirection &direction_request);
 
   void Process(const Pose2f &start, const Pose2f &end);
 
@@ -61,6 +62,10 @@ class TargetPoseRegulator : public AstarDecider {
                                             const AstarRequest *request,
                                             const VehicleParam &veh_param);
 
+  void GenerateCandidatesForVerticalHeadOut(
+      EulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+      const VehicleParam &veh_param);
+
   void GenerateCandidatesForParallelSlot(EulerDistanceTransform *edt,
                                          const AstarRequest *request,
                                          const VehicleParam &veh_param);
@@ -70,12 +75,14 @@ class TargetPoseRegulator : public AstarDecider {
                                  EulerDistanceTransform *edt);
 
   const float GetDistToObsHeadOut(const Pose2f *global_pose,
+                                  const ParkingVehDirection &direction_request,
                                   EulerDistanceTransform *edt);
 
   void DebugString();
 
   void UpdateDefaultPoseInfo(const AstarRequest *request,
                              const VehicleParam &veh_param,
+                             const ParkingVehDirection &direction_request,
                              EulerDistanceTransform *edt);
 
   bool IsDefaultPoseSafeEnough();

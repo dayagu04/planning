@@ -197,7 +197,7 @@ void HybridAStarInterface::UpdateOutput() {
 
   TargetPoseRegulator target_pose_regulator;
   target_pose_regulator.Process(&edt_, &request_, ego_state_, goal_state_,
-                                vehicle_param_);
+                                vehicle_param_, request_.direction_request);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
   if (request_.path_generate_method == AstarPathGenerateType::TRY_SEARCHING ||
@@ -318,7 +318,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   TargetPoseRegulator target_pose_regulator;
   target_pose_regulator.Process(&edt_, &request_, ego_state_, goal_state_,
-                                vehicle_param_);
+                                vehicle_param_, request_.direction_request);
   hybrid_astar_->SetRequest(request_);
 
   float lat_buffer = 0.1;
@@ -904,23 +904,35 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   // todo: 需要限制搜索时间
   ILOG_INFO << "scenario try planning";
-  std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result =
-      regulator.GetCandidatePose(advised_lat_buffer_inside);
-  if (target_regulator_result.second < advised_lat_buffer_inside) {
-    ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-    ILOG_INFO << "target_regulator_goal_ will collide";
-  }
-
-  target_regulator_goal_ = target_regulator_result.first;
 
   std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
 
   if (request_.direction_request_size > 1) {
     for (int8_t i = 0; i < request_.direction_request_size; i++) {
-      hybrid_astar_->AstarSearch(request_.start_pose,
-                                 request_.real_goal_stack[i], map_bounds_,
-                                 &traj_candidates_[0]);
+      ILOG_INFO << "***************** [ " << static_cast<int>(i)
+                << " ] try, dir :  "
+                << static_cast<int>(request_.direction_request_stack[i])
+                << " ****************";
+
+      TargetPoseRegulator target_pose_regulator;
+      target_pose_regulator.Process(&edt_, &request_, ego_state_,
+                                    request_.real_goal_stack[i], vehicle_param_,
+                                    request_.direction_request_stack[i]);
+      float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
+
+      std::pair<Pose2f, float> target_regulator_result;
+      target_regulator_result =
+          target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
+      if (target_regulator_result.second < advised_lat_buffer_inside) {
+        ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+        ILOG_INFO << "target_regulator_goal_ will collide";
+        continue;
+      }
+
+      target_regulator_goal_ = target_regulator_result.first;
+
+      hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(),
+                                 map_bounds_, &traj_candidates_[0]);
       if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
         feasible_directions_[i] = true;
       }
@@ -932,6 +944,16 @@ void HybridAStarInterface::PathSearchForScenarioTry(
     }
 
   } else {
+    std::pair<Pose2f, float> target_regulator_result;
+    target_regulator_result =
+        regulator.GetCandidatePose(advised_lat_buffer_inside);
+    if (target_regulator_result.second < advised_lat_buffer_inside) {
+      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+      ILOG_INFO << "target_regulator_goal_ will collide";
+    }
+
+    target_regulator_goal_ = target_regulator_result.first;
+
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                &traj_candidates_[0]);
     if (request_.direction_request == ParkingVehDirection::HEAD_IN ||
