@@ -32,7 +32,7 @@ struct AstarRequest {
 
   ParkingVehDirection direction_request;
 
-  int8_t direction_request_size = 1;
+  int8_t direction_request_size = 0;
   std::array<ParkingVehDirection, 6> direction_request_stack;
 
   RSPathRequestType rs_request;

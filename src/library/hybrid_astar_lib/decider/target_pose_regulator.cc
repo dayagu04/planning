@@ -26,9 +26,9 @@ bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
   return false;
 }
 
-void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
-                                                const VehicleParam &veh_param,
-                                                EulerDistanceTransform *edt) {
+void TargetPoseRegulator::UpdateDefaultPoseInfo(
+    const AstarRequest *request, const VehicleParam &veh_param,
+    const ParkingVehDirection &direction_request, EulerDistanceTransform *edt) {
   // For vertical slot, need to check safe in path, not only a terminal point.
   float min_passage_width = 2.5;
   if (request->space_type == ParkSpaceType::VERTICAL) {
@@ -62,7 +62,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   AstarPathGear gear = AstarPathGear::NONE;
   if (IsParkingOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
-    dist = GetDistToObsHeadOut(&center_line_target_, edt);
+    dist = GetDistToObsHeadOut(&center_line_target_, direction_request, edt);
     ILOG_INFO << "center_line_target_ dist : " << dist;
   } else if (request->space_type == ParkSpaceType::VERTICAL) {
     dist = GetMinDistByXRange(&center_line_target_, edt);
@@ -89,19 +89,28 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(const AstarRequest *request,
   return;
 }
 
-void TargetPoseRegulator::Process(EulerDistanceTransform *edt,
-                                  const AstarRequest *request,
-                                  const Pose2f &ego_pose,
-                                  const Pose2f &center_line_target,
-                                  const VehicleParam &veh_param) {
+void TargetPoseRegulator::Process(
+    EulerDistanceTransform *edt, const AstarRequest *request,
+    const Pose2f &ego_pose, const Pose2f &center_line_target,
+    const VehicleParam &veh_param,
+    const ParkingVehDirection &direction_request) {
   Clear();
   center_line_target_ = center_line_target;
   request_ = request;
   max_cross_over_line_dist_ = 0.1;
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
-  UpdateDefaultPoseInfo(request, veh_param, edt);
+  UpdateDefaultPoseInfo(request, veh_param, direction_request, edt);
 
   if (IsSamplingBasedPlanning(request->path_generate_method)) {
+    return;
+  }
+
+  if (request_->direction_request_size > 1) {
+    // todo:
+    // 仅垂直泊车预规划使用，尾泊出还需测试，后续与GenerateCandidatesForVerticalHeadOut(edt,
+    // request, veh_param)
+    // 合并为一个函数.
+    GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
     return;
   }
 
@@ -242,8 +251,54 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
       default:
         continue;
     }
-    candidate.dist_to_obs = GetDistToObsHeadOut(&global_pose, edt);
+    candidate.dist_to_obs =
+        GetDistToObsHeadOut(&global_pose, request->direction_request, edt);
     candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+    candidate_info_.emplace_back(candidate);
+  }
+
+#if DEBUG_DECIDER
+  DebugString();
+#endif
+
+  // Todo: adjust x offset
+  return;
+}
+
+void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
+    EulerDistanceTransform *edt, const ParkingVehDirection &direction_request,
+    const VehicleParam &veh_param) {
+  // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
+  // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
+  Pose2f global_pose;
+  global_pose = center_line_target_;
+  constexpr size_t kMaxCandidateNum = 10;
+  constexpr float kYLowerMid = -0.1;
+
+  PoseRegulateCandidate candidate;
+  for (size_t i = 0; i < kMaxCandidateNum; i++) {
+    switch (direction_request) {
+      case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+        global_pose.x = 8.0;
+        global_pose.y -= 1.0;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+        global_pose.x = 8.0;
+        global_pose.y += 1.0;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+        global_pose.y = kYLowerMid + i * 0.02;
+        break;
+      default:
+        continue;
+    }
+
+    candidate.dist_to_obs =
+        GetDistToObsHeadOut(&global_pose, direction_request, edt);
+    candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+    ILOG_INFO << " candidate.dist_to_obs  : " << candidate.dist_to_obs
+              << "  pose : " << candidate.pose.GetX() << " , "
+              << candidate.pose.GetY();
     candidate_info_.emplace_back(candidate);
   }
 
@@ -285,22 +340,21 @@ const float TargetPoseRegulator::GetMinDistByXRange(
 }
 
 const float TargetPoseRegulator::GetDistToObsHeadOut(
-    const Pose2f *global_pose, EulerDistanceTransform *edt) {
+    const Pose2f *global_pose, const ParkingVehDirection &direction_request,
+    EulerDistanceTransform *edt) {
   Transform2f tf;
-  AstarPathGear gear = AstarPathGear::NONE;
+  AstarPathGear gear = AstarPathGear::DRIVE;
   float dist;
   float min_dist = 10.0;
   Pose2f pose = *global_pose;
   const size_t num = 10;
   const float y_step = 0.5;
   for (int j = 0; j < num; j++) {
-    if (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-        request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT) {
+    if (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+        direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT) {
       pose.y = global_pose->y - y_step * j;
-    } else if (request_->direction_request ==
-                   ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-               request_->direction_request ==
-                   ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+    } else if (direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+               direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
       pose.y = global_pose->y + y_step * j;
     } else {
       break;
@@ -317,11 +371,11 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
     }
   }
 
-  tf.SetBasePose(pose);
+  // tf.SetBasePose(pose);
 
-  edt->DistanceCheckForPoint(&dist, &tf, gear);
+  // edt->DistanceCheckForPoint(&dist, &tf, gear);
 
-  min_dist = std::min(min_dist, dist);
+  // min_dist = std::min(min_dist, dist);
 
   return min_dist;
 }

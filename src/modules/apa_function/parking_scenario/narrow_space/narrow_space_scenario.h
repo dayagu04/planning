@@ -162,7 +162,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   iflyauto::APAHMIData PubDirectionForParkOutTry(
       const AstarRequest& cur_request);
 
-  void SetRequestForParkOutTry(AstarRequest& cur_request,
+  void SetRequestForScenarioTry(AstarRequest& cur_request,
                                const EgoInfoUnderSlot& ego_info);
 
   void UpdateRecommentRouteBox();

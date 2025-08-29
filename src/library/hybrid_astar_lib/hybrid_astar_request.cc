@@ -108,7 +108,8 @@ const bool IsParkingOutRequest(const ParkingVehDirection &direction) {
       direction == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
       direction == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
       direction == ParkingVehDirection::TAIL_OUT_TO_MIDDLE ||
-      direction == ParkingVehDirection::TAIL_OUT_TO_RIGHT) {
+      direction == ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
+      direction == ParkingVehDirection::NONE) {
     return true;
   }
 
