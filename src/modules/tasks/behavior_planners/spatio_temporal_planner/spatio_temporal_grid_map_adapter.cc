@@ -97,32 +97,27 @@ void SLTGridMapAdapter::RunOnce() {
   const auto& obstacles_id_behind_ego =
       session_->mutable_planning_context()->mutable_lateral_obstacle_decider_output().obstacles_id_behind_ego;
 
-  reference_path_ = reference_path_mgr->get_reference_path_by_lane(
-      current_lane->get_virtual_id(), false);
+  reference_path_ = session_->planning_context()
+                            .lane_change_decider_output()
+                            .coarse_planning_info.reference_path;
+  if (reference_path_ == nullptr) {
+    return;
+  }
   // planning_init_point_ =
   //     ego_state_manager->planning_init_point();
 
   current_lane_coord_ = reference_path_->get_frenet_coord();
-  ego_frenet_state_ = current_lane->get_reference_path()->get_frenet_ego_state();
+  ego_frenet_state_ = reference_path_->get_frenet_ego_state();
   Point2D ego_cart_point(ego_state_manager->ego_pose().x, ego_state_manager->ego_pose().y);
-  Point2D ego_frenet_point;
-  if (!current_lane_coord_->XYToSL(ego_cart_point,
-                                    ego_frenet_point)) {
-    ILOG_DEBUG << "SLTGridMapAdapter::RunOnce() ego on reference path failed!";
-  }
-
-  if (reference_path_ != nullptr) {
-    origin_lane_width_ =
-        virtual_lane_mgr
-            ->get_lane_with_virtual_id(
-                current_lane->get_virtual_id())
-            ->width_by_s(ego_frenet_point.x);  // near s
-    use_query_lane_width_ = true;
+  Point2D ego_frenet_point(50.0,0.0);
+  if (current_lane_coord_ != nullptr) {
+    if (!current_lane_coord_->XYToSL(ego_cart_point,
+                                      ego_frenet_point)) {
+      ILOG_DEBUG << "SLTGridMapAdapter::RunOnce() ego on reference path failed!";
+    }
   } else {
-    origin_lane_width_ = kDefaultLaneWidth;
-    use_query_lane_width_ = false;
+    return;
   }
-
 
   // 计算自车初始状态initial_state_
   initial_state_.time_stamp = 0.0;
