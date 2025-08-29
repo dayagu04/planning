@@ -1044,7 +1044,6 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
       extra_jerk_buffer = 0.5;
       jerk_bound += 1.0;
-      emergency_level_ == EmergencyLevel::P0;
     }
     if (is_lane_change_hold_) {
       extra_jerk_buffer = 0.1;
@@ -1154,9 +1153,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     emergency_level_ = EmergencyLevel::P0;
   }
-  if (is_high_priority_back &&
-      (is_lane_change_hold_ ||
-       is_lane_change_back_)) {
+  if ((is_high_priority_back &&
+       (is_lane_change_hold_ ||
+        is_lane_change_back_)) ||
+      lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
     emergency_level_ = EmergencyLevel::P0;
     planning_input.set_q_continuity(0.0);
   }
@@ -1418,7 +1418,11 @@ void LateralMotionPlanningWeight::MakeRampDynamicWeight(
 
 void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
+  if (ref_vel_ > 5.0) {
+    end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
+  } else {
+    end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
+  }
   // if (std::fabs(avoid_dist_) > 0.1 &&
   //     target_road_radius_ > 400.0) {
   //   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
