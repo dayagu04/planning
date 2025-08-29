@@ -204,7 +204,7 @@
   "general_lateral_decider": {
     "lateral_ref_traj_type":false,
     "min_v_cruise": 1.0,
-    "lc_min_v_cruise": 3.333,
+    "lc_min_v_cruise": 3.0,
     "ramp_limit_v": 3.75,
     "ramp_limit_v_valid": true,
     "care_lon_area_road_border":80,

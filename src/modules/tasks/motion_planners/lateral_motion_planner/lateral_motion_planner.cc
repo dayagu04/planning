@@ -385,18 +385,24 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
   double max_steer_angle_rate =
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot / 57.3);
+  double max_steer_angle_rate_lc =
+      std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot_lc / 57.3);
   double max_wheel_angle =
       max_steer_angle / steer_ratio;
   double max_wheel_angle_rate =
       max_steer_angle_rate / steer_ratio;
+  double max_wheel_angle_rate_lc =
+      max_steer_angle_rate_lc / steer_ratio;
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
   double limit_jerk = max_wheel_angle_rate * kv2;
+  double limit_jerk_lc = max_wheel_angle_rate_lc * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
   std::vector<double> fp_max_jerk{limit_jerk, 1.8, 1.5, 1.4};
   double max_jerk = planning::interp(ref_vel, xp_v, fp_max_jerk);
   max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
+  planning_weight_ptr_->SetMaxJerkLC(limit_jerk_lc);
   const auto &coarse_planning_info =
       session_->planning_context()
               .lane_change_decider_output()
