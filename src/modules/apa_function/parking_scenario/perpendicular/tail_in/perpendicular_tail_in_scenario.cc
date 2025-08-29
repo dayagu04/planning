@@ -1551,28 +1551,31 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   if (true) {
     real_time_brake_info_vec[0].Set(
         RealTimeBrakeType::STOP, param.stop_lat_inflation,
-        param.stop_lat_inflation, param.stop_lon_dist);
-    real_time_brake_info_vec[1].Set(
-        RealTimeBrakeType::HEAVY_BRAKE, param.heavy_brake_lat_inflation,
-        param.heavy_brake_lat_inflation, param.moderate_brake_lon_dist);
-    real_time_brake_info_vec[2].Set(
-        RealTimeBrakeType::MODERATE_BRAKE, param.moderate_brake_lat_inflation,
-        param.moderate_brake_lat_inflation, param.slight_brake_lon_dist);
-    real_time_brake_info_vec[3].Set(
-        RealTimeBrakeType::SLIGHT_BRAKE, param.slight_brake_lat_inflation,
-        param.slight_brake_lat_inflation, param.slight_brake_lon_dist);
+        param.stop_lat_inflation, param.stop_lon_dist, lon_buffer);
+    real_time_brake_info_vec[1].Set(RealTimeBrakeType::HEAVY_BRAKE,
+                                    param.heavy_brake_lat_inflation,
+                                    param.heavy_brake_lat_inflation,
+                                    param.moderate_brake_lon_dist, lon_buffer);
+    real_time_brake_info_vec[2].Set(RealTimeBrakeType::MODERATE_BRAKE,
+                                    param.moderate_brake_lat_inflation,
+                                    param.moderate_brake_lat_inflation,
+                                    param.slight_brake_lon_dist, lon_buffer);
+    real_time_brake_info_vec[3].Set(RealTimeBrakeType::SLIGHT_BRAKE,
+                                    param.slight_brake_lat_inflation,
+                                    param.slight_brake_lat_inflation,
+                                    param.slight_brake_lon_dist, lon_buffer);
     if (increase_lat_err_flag) {
       real_time_brake_info_vec[0].Set(
           RealTimeBrakeType::STOP, param.moderate_brake_lat_inflation,
-          param.moderate_brake_lat_inflation, param.stop_lon_dist);
+          param.moderate_brake_lat_inflation, param.stop_lon_dist, lon_buffer);
     }
   }
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
-    double remain_dist =
-        CalRemainDistFromObs(lon_buffer, real_time_brake_info.body_lat_buffer,
-                             real_time_brake_info.mirror_lat_buffer);
+    double remain_dist = CalRemainDistFromObs(
+        real_time_brake_info.lon_buffer, real_time_brake_info.body_lat_buffer,
+        real_time_brake_info.mirror_lat_buffer);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
@@ -1581,6 +1584,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       param.smart_fold_mirror_params;
   if (smart_fold_mirror_params.has_smart_fold_mirror &&
       frame_.mirror_command == MirrorCommand::NONE &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
       frame_.is_last_path) {
     const geometry_lib::PathPoint& termial_err =

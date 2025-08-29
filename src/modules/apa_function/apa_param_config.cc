@@ -1241,6 +1241,21 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.lat_lon_speed_buffer.extra_reverse_gear_lon_buffer,
                   float, "extra_reverse_gear_lon_buffer");
 
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.enable_leave_initial_place, bool,
+                  "enable_leave_initial_place");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.leave_initial_place_body_lat_buffer, float,
+      "leave_initial_place_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.leave_initial_place_mirror_lat_buffer, float,
+      "leave_initial_place_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_lon_buffer,
+                  float, "leave_initial_place_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_min_lon_dist,
+                  float, "leave_initial_place_min_lon_dist");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_dist, float,
+                  "leave_initial_place_dist");
+
   // lat lon slot release buffer params
   JSON_READ_VALUE(param.lat_lon_slot_release_buffer.lon_buffer, float,
                   "slot_release_lon_buffer");

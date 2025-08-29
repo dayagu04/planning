@@ -243,6 +243,13 @@ struct ParkingLatLonSpeedBuffer {
   float extreme_case_lon_buffer;
 
   float extra_reverse_gear_lon_buffer;
+
+  bool enable_leave_initial_place;
+  float leave_initial_place_body_lat_buffer;
+  float leave_initial_place_mirror_lat_buffer;
+  float leave_initial_place_lon_buffer;
+  float leave_initial_place_min_lon_dist;
+  float leave_initial_place_dist;
 };
 
 struct ParkingLatLonSlotReleaseBuffer {

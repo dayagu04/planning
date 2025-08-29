@@ -492,6 +492,13 @@
   "extreme_case_lon_buffer": 0.2,
   "extra_reverse_gear_lon_buffer": 0.04,
 
+  "enable_leave_initial_place": true,
+  "leave_initial_place_body_lat_buffer": 0.04,
+  "leave_initial_place_mirror_lat_buffer": 0.04,
+  "leave_initial_place_lon_buffer": 0.15,
+  "leave_initial_place_min_lon_dist": -0.1,
+  "leave_initial_place_dist": 0.5,
+
   "comment_24": "lat lon slot release buffer",
   "slot_release_lon_buffer": 0.3,
   "slot_release_maximum_lat_buffer": 0.23,
