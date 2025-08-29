@@ -250,6 +250,7 @@ class ParkingScenario {
       slot_jump_lat_err = 0.0;
       slot_jump_lon_err = 0.0;
       slot_jump_heading_err = 0.0;
+      slot_jump_big_flag = false;
 
       mirror_command = MirrorCommand::NONE;
     }
@@ -332,6 +333,7 @@ class ParkingScenario {
     double slot_jump_lat_err = 0.0;
     double slot_jump_lon_err = 0.0;
     double slot_jump_heading_err = 0.0;
+    bool slot_jump_big_flag = false;
   };
 
   enum ParkingStatus {
