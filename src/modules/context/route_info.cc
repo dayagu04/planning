@@ -3749,13 +3749,21 @@ bool RouteInfo::CalculateLastFp(
     double itear_dis = 0.0;
     while (fp_pre_link->feature_points_size() == 0) {
       fp_pre_link = sdpro_map_.GetPreviousLinkOnRoute(fp_pre_link->id());
+      if (fp_pre_link == nullptr) {
+        return false;
+      }
+
       itear_dis = itear_dis + fp_pre_link->length() * 0.01;
-      if (fp_pre_link == nullptr || itear_dis > 500.0) {
+      if (itear_dis > 500.0) {
         return false;
       }
     }
 
     // 注：因为上面while计算，所以在这个地方feature_points_size不为0
+    if (fp_pre_link->feature_points().empty()) {
+      return false;
+    }
+    
     *last_fp = *fp_pre_link->feature_points().rbegin();
     return true;
   } else {
