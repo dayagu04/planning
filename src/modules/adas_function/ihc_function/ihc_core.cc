@@ -16,8 +16,8 @@ void IhcCore::RunOnce(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   if (GetContext.get_param()->ihc_use_json_code) {
     // 如果使用json，则使用配置文件中的使能码、禁用码、故障码
-    ihc_sys_.input.ihc_main_switch = GetContext.get_param()->ihc_main_switch;
     ihc_sys_.state.ihc_enable_code = GetContext.get_param()->ihc_enable_code_maskcode;
+    ihc_sys_.state.ihc_disable_code = GetContext.get_param()->ihc_disable_code_maskcode;
     ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code_maskcode;
   }
 
