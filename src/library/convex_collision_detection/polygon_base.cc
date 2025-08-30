@@ -746,14 +746,13 @@ void GenerateVehCompactPolygon(const double lateral_safe_buffer,
   const apa_planner::ApaParameters &config = apa_param.GetParam();
   Position2D center;
   center.x = 0.5 * (config.car_vertex_x_vec[19] + config.car_vertex_x_vec[16]);
-  center.y = 0.5 * (config.car_vertex_y_vec[18] + config.car_vertex_y_vec[19]) +
-             lateral_safe_buffer;
-  double y_length = config.car_vertex_y_vec[18] - config.car_vertex_y_vec[19];
+  center.y = 0.5 * (config.car_vertex_y_vec[18] + config.car_vertex_y_vec[19]);
+  double y_length = config.car_vertex_y_vec[18] - config.car_vertex_y_vec[19] +
+                    lateral_safe_buffer * 2.0;
   GenerateMirrorPolygon(0.3, y_length, center, &foot_print->mirror_left);
 
   // right mirror
-  center.y = 0.5 * (config.car_vertex_y_vec[6] + config.car_vertex_y_vec[7]) -
-             lateral_safe_buffer;
+  center.y = 0.5 * (config.car_vertex_y_vec[6] + config.car_vertex_y_vec[7]);
   GenerateMirrorPolygon(0.3, y_length, center, &foot_print->mirror_right);
 
   GetVehPolygonBy4Edge(
@@ -766,24 +765,26 @@ void GenerateVehCompactPolygon(const double lateral_safe_buffer,
 
 void GenerateMirrorPolygon(const double x_length, const double y_length,
                            const Position2D &center, Polygon2D *box) {
-  box->vertexes[0].x = center.x + x_length / 2;
-  box->vertexes[0].y = center.y - y_length / 2;
+  double half_x = x_length / 2;
+  double half_y = y_length / 2;
+  box->vertexes[0].x = center.x + half_x;
+  box->vertexes[0].y = center.y - half_y;
 
-  box->vertexes[1].x = center.x + x_length / 2;
-  box->vertexes[1].y = center.y + y_length / 2;
+  box->vertexes[1].x = center.x + half_x;
+  box->vertexes[1].y = center.y + half_y;
 
-  box->vertexes[2].x = center.x - x_length / 2;
-  box->vertexes[2].y = center.y + y_length / 2;
+  box->vertexes[2].x = center.x - half_x;
+  box->vertexes[2].y = center.y + half_y;
 
-  box->vertexes[3].x = center.x - x_length / 2;
-  box->vertexes[3].y = center.y - y_length / 2;
+  box->vertexes[3].x = center.x - half_x;
+  box->vertexes[3].y = center.y - half_y;
 
   box->vertex_num = 4;
 
   box->shape = PolygonShape::box;
   UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
 
-  box->min_tangent_radius = std::min(y_length / 2, x_length / 2);
+  box->min_tangent_radius = std::min(half_y, half_x);
 
   return;
 }
@@ -792,20 +793,22 @@ void GenerateBoundingBox(const double x_length, const double y_length,
                          const Eigen::Vector2d &center,
                          std::vector<Eigen::Vector2d> &box) {
   Eigen::Vector2d pt;
-  pt[0] = center.x() + x_length / 2;
-  pt[1] = center.y() - y_length / 2;
+  double half_x = x_length / 2;
+  double half_y = y_length / 2;
+  pt[0] = center.x() + half_x;
+  pt[1] = center.y() - half_y;
   box.emplace_back(pt);
 
-  pt[0] = center.x() + x_length / 2;
-  pt[1] = center.y() + y_length / 2;
+  pt[0] = center.x() + half_x;
+  pt[1] = center.y() + half_y;
   box.emplace_back(pt);
 
-  pt[0] = center.x() - x_length / 2;
-  pt[1] = center.y() + y_length / 2;
+  pt[0] = center.x() - half_x;
+  pt[1] = center.y() + half_y;
   box.emplace_back(pt);
 
-  pt[0] = center.x() - x_length / 2;
-  pt[1] = center.y() - y_length / 2;
+  pt[0] = center.x() - half_x;
+  pt[1] = center.y() - half_y;
   box.emplace_back(pt);
 
   return;

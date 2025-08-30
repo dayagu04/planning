@@ -70,6 +70,8 @@ class ApaObstacleManager final {
   void GenerateObsByOD(const LocalView *local_view,
                        const ObjectDetectObsConfig &od_config);
 
+  const size_t GetObstacleSize() const { return obstacles_.size(); }
+
  private:
   // not allow any ptr variable
   size_t obs_id_generate_{0};

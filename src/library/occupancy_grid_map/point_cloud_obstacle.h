@@ -69,9 +69,6 @@ class PointCloudObstacleTransform {
                            const Eigen::Vector2d& end,
                            std::vector<Position2D>* points);
 
-  void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
-                                   const double lon_buffer);
-
  private:
   GJK2DInterface gjk_;
 };

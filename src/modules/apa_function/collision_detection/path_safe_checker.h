@@ -56,21 +56,9 @@ class PathSafeChecker {
       const std::vector<pnc::geometry_lib::PathPoint>& path,
       const Pose2D& pose);
 
-  void GenerateMirrorPolygon(Polygon2D* box, const double x_length,
-                             const double y_length, const Position2D& center);
-
   const bool IsVehicleCollision(const Transform2d& tf,
                                 PolygonFootPrint* foot_print,
                                 VehCollisionPosition* collision_info);
-
-  // bounding box car body for coarse safe check.
-  // bbox_lat_buffer: 车辆最外侧简化成bound box, 而不是非凸的多边形.
-  void GenerateVehBox(const double lateral_safe_buffer,
-                      const double lon_safe_buffer,
-                      const double max_bbox_lat_buffer);
-
-  void GetCompactCarPolygonByParam(Polygon2D* box, const double lat_buffer,
-                                   const double lon_buffer);
 
   void DebugCollisionInfo(
       const size_t path_end_id, const VehCollisionPosition collision_component,

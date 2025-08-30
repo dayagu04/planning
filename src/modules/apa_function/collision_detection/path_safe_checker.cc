@@ -168,39 +168,6 @@ void PathSafeChecker::ExcuteCollisionCheck(
   return;
 }
 
-void PathSafeChecker::GenerateVehBox(const double lateral_safe_buffer,
-                                     const double lon_safe_buffer,
-                                     const double max_bbox_lat_buffer) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-
-  GetVehPolygonBy4Edge(
-      &polygon_foot_print_.body, config.rear_overhanging + lon_safe_buffer,
-      config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.car_width / 2.0 + lateral_safe_buffer);
-
-  // left mirror
-  Position2D center;
-  center.x = config.footprint_circle_x[6];
-  center.y = config.footprint_circle_y[6] + lateral_safe_buffer;
-  double radius = std::fabs(config.footprint_circle_r[6]);
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_left, 0.3, radius * 2,
-                        center);
-
-  // right mirror
-  center.x = config.footprint_circle_x[3];
-  center.y = config.footprint_circle_y[3] - lateral_safe_buffer;
-  GenerateMirrorPolygon(&polygon_foot_print_.mirror_right, 0.3, radius * 2,
-                        center);
-
-  GetVehPolygonBy4Edge(
-      &polygon_foot_print_.max_polygon,
-      config.rear_overhanging + lon_safe_buffer,
-      config.wheel_base + config.front_overhanging + lon_safe_buffer,
-      config.max_car_width / 2.0 + max_bbox_lat_buffer);
-
-  return;
-}
-
 size_t PathSafeChecker::GetNearestPathPoint(
     const std::vector<pnc::geometry_lib::PathPoint>& path, const Pose2D& pose) {
   double nearest_dist = 1000000.0;
@@ -279,71 +246,6 @@ const bool PathSafeChecker::IsPolygonCollision(const Polygon2D* car) {
   return false;
 }
 
-void PathSafeChecker::GenerateMirrorPolygon(Polygon2D* box,
-                                            const double x_length,
-                                            const double y_length,
-                                            const Position2D& center) {
-  box->vertexes[0].x = center.x + x_length / 2;
-  box->vertexes[0].y = center.y - y_length / 2;
-
-  box->vertexes[1].x = center.x + x_length / 2;
-  box->vertexes[1].y = center.y + y_length / 2;
-
-  box->vertexes[2].x = center.x - x_length / 2;
-  box->vertexes[2].y = center.y + y_length / 2;
-
-  box->vertexes[3].x = center.x - x_length / 2;
-  box->vertexes[3].y = center.y - y_length / 2;
-
-  box->vertex_num = 4;
-
-  box->shape = PolygonShape::box;
-  UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
-
-  box->min_tangent_radius = std::min(y_length / 2, x_length / 2);
-
-  return;
-}
-
-void PathSafeChecker::GetCompactCarPolygonByParam(Polygon2D* box,
-                                                  const double lat_buffer,
-                                                  const double lon_buffer) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-
-  box->vertexes[0].x = config.car_vertex_x_vec[2] + lon_buffer;
-  box->vertexes[0].y = config.car_vertex_y_vec[2] + lat_buffer;
-
-  box->vertexes[1].x = config.car_vertex_x_vec[0] + lon_buffer;
-  box->vertexes[1].y = config.car_vertex_y_vec[0] + lat_buffer;
-
-  box->vertexes[2].x = config.car_vertex_x_vec[15] - lon_buffer;
-  box->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
-
-  box->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
-  box->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer;
-
-  box->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
-  box->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer;
-
-  box->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer;
-  box->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
-
-  box->vertexes[6].x = config.car_vertex_x_vec[5] + lon_buffer;
-  box->vertexes[6].y = config.car_vertex_y_vec[5] - lat_buffer;
-
-  box->vertexes[7].x = config.car_vertex_x_vec[3] + lon_buffer;
-  box->vertexes[7].y = config.car_vertex_y_vec[3] - lat_buffer;
-
-  box->vertex_num = 8;
-
-  box->shape = PolygonShape::multi_edge;
-  UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
-
-  box->min_tangent_radius = config.car_width / 2 + lat_buffer;
-
-  return;
-}
-
 const bool PathSafeChecker::IsVehicleCollision(
     const Transform2d& tf, PolygonFootPrint* foot_print,
     VehCollisionPosition* collision_info) {
@@ -406,7 +308,8 @@ bool PathSafeChecker::CalcEgoCollision(const Pose2D& ego_pose,
   VehCollisionPosition collision_component = VehCollisionPosition::NONE;
 
   // generate veh local polygon
-  GenerateVehBox(lat_buffer, lon_buffer, lat_buffer);
+  GenerateVehCompactPolygon(lat_buffer, lon_buffer, lat_buffer,
+                            &polygon_foot_print_);
 
   is_collision =
       IsVehicleCollision(tf, &polygon_foot_print_, &collision_component);
