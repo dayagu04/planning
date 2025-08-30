@@ -26,7 +26,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
   Polygon2D ego_local_polygon;
   Polygon2D ego_global_polygon;
 
-  GetCompactCarPolygonByParam(&ego_local_polygon, 1e-3, 1e-3);
+  GetVehPolygonBy8Edge(1e-3, 1e-3, &ego_local_polygon);
   ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_start);
 
   // generate local obs
@@ -36,12 +36,13 @@ void PointCloudObstacleTransform::GenerateLocalObstacleByLocalView(
     return;
   }
 
+  // limiters stored in one obstacle.
   size_t number =
+      1 +
       static_cast<size_t>(
           local_view->fusion_occupancy_objects_info.fusion_object_size) +
       static_cast<size_t>(local_view->ground_line_perception.groundline_size);
-
-  obs_list.point_cloud_list.resize(number + 1);
+  obs_list.point_cloud_list.resize(number);
 
   // slot aabb
   cdl::AABB slot_box;
@@ -292,7 +293,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   }
 
   Polygon2D ego_local_polygon;
-  GetCompactCarPolygonByParam(&ego_local_polygon, 1e-3, 1e-3);
+  GetVehPolygonBy8Edge(1e-3, 1e-3, &ego_local_polygon);
 
   Polygon2D ego_global_polygon;
   ULFLocalPolygonToGlobal(&ego_global_polygon, &ego_local_polygon, ego_pose);
@@ -301,6 +302,7 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   bool is_collision;
   Position2D position;
 
+  obs_list.point_cloud_list.reserve(obs_manager->GetObstacleSize());
   planning::PointCloudObstacle obs;
   for (auto& pair : obs_manager->GetObstacles()) {
     if (pair.second.GetObsMovementType() ==
@@ -345,41 +347,4 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
   return;
 }
 
-void PointCloudObstacleTransform::GetCompactCarPolygonByParam(
-    Polygon2D* box, const double lat_buffer, const double lon_buffer) {
-  const apa_planner::ApaParameters& config = apa_param.GetParam();
-
-  box->vertexes[0].x = config.car_vertex_x_vec[2] + lon_buffer;
-  box->vertexes[0].y = config.car_vertex_y_vec[2] + lat_buffer;
-
-  box->vertexes[1].x = config.car_vertex_x_vec[0] + lon_buffer;
-  box->vertexes[1].y = config.car_vertex_y_vec[0] + lat_buffer;
-
-  box->vertexes[2].x = config.car_vertex_x_vec[15] - lon_buffer;
-  box->vertexes[2].y = config.car_vertex_y_vec[15] + lat_buffer;
-
-  box->vertexes[3].x = config.car_vertex_x_vec[13] - lon_buffer;
-  box->vertexes[3].y = config.car_vertex_y_vec[13] + lat_buffer;
-
-  box->vertexes[4].x = config.car_vertex_x_vec[12] - lon_buffer;
-  box->vertexes[4].y = config.car_vertex_y_vec[12] - lat_buffer;
-
-  box->vertexes[5].x = config.car_vertex_x_vec[10] - lon_buffer;
-  box->vertexes[5].y = config.car_vertex_y_vec[10] - lat_buffer;
-
-  box->vertexes[6].x = config.car_vertex_x_vec[5] + lon_buffer;
-  box->vertexes[6].y = config.car_vertex_y_vec[5] - lat_buffer;
-
-  box->vertexes[7].x = config.car_vertex_x_vec[3] + lon_buffer;
-  box->vertexes[7].y = config.car_vertex_y_vec[3] - lat_buffer;
-
-  box->vertex_num = 8;
-
-  box->shape = PolygonShape::multi_edge;
-  UpdatePolygonValue(box, NULL, 0, false, POLYGON_MAX_RADIUS);
-
-  box->min_tangent_radius = config.car_width / 2 + lat_buffer;
-
-  return;
-}
 }  // namespace planning
