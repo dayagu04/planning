@@ -2533,8 +2533,27 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
 
 const pnc::geometry_lib::PathSegGear NarrowSpaceScenario::GetGear(
     const AstarPathGear gear) {
-  return (gear == AstarPathGear::DRIVE) ? pnc::geometry_lib::SEG_GEAR_DRIVE
-                                        : pnc::geometry_lib::SEG_GEAR_REVERSE;
+  pnc::geometry_lib::PathSegGear path_seg_gear;
+  switch (gear) {
+    case AstarPathGear::NONE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
+      break;
+    case AstarPathGear::DRIVE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+      break;
+    case AstarPathGear::REVERSE:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+      break;
+    case AstarPathGear::NORMAL:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_NEUTRAL;
+      break;
+    case AstarPathGear::PARKING:
+      path_seg_gear = pnc::geometry_lib::SEG_GEAR_PARK;
+      break;
+    default:
+      break;
+  }
+  return path_seg_gear;
 }
 
 void NarrowSpaceScenario::UpdateRecommentRouteBox() {
