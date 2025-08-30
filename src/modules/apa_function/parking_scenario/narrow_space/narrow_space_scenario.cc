@@ -1122,8 +1122,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
 
     case ApaParkOutDirection::RIGHT_FRONT:
       ego_info_under_slot.target_pose.pos << kInitialTargetX, -kInitialTargetY;
-      ego_info_under_slot.target_pose.heading =
-          pnc::geometry_lib::NormalizeAngle(target_heading_rad_head_out + M_PI);
+      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
 
       // 特殊位置要对目标点进行特殊调整
@@ -1136,24 +1135,22 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       break;
 
     case ApaParkOutDirection::LEFT_REAR:
-      ego_info_under_slot.target_pose.pos =
-          alternate_pos - normalized_origin_corner_23 * kAlternateTargetY;
-      ego_info_under_slot.target_pose.heading =
-          pnc::geometry_lib::NormalizeAngle(target_heading_rad_head_out + M_PI);
-      ;
+      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+          -kAlternateTargetY;
+      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
 
       // 特殊位置要对目标点进行特殊调整
       if (std::abs(ego_info_under_slot.cur_pose.heading) <
           kHeadingThresholdRad1) {
         ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            kAlternateTargetY - 1.0;
+            -kAlternateTargetY + 1.0;
       }
       break;
 
     case ApaParkOutDirection::RIGHT_REAR:
-      ego_info_under_slot.target_pose.pos =
-          alternate_pos + normalized_origin_corner_23 * kAlternateTargetY;
+      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
+          kAlternateTargetY;
       ego_info_under_slot.target_pose.heading = target_heading_rad_head_out;
       ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
 
@@ -1161,7 +1158,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
       if (std::abs(ego_info_under_slot.cur_pose.heading) <
           kHeadingThresholdRad1) {
         ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            -kAlternateTargetY + 1.0;
+            kAlternateTargetY - 1.0;
       }
       break;
 
@@ -2499,8 +2496,6 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     const double target_heading_rad = ego_info.slot.angle_ * M_PI / 180.0;
-    const double opposite_target_heading_rad =
-        pnc::geometry_lib::NormalizeAngle(target_heading_rad + M_PI);
 
     cur_request.direction_request_size = 6;
     cur_request.direction_request_stack[0] =
@@ -2518,19 +2513,15 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
       cur_request.real_goal_stack[0] = Pose2f(7.0, 11.0, target_heading_rad);
       cur_request.real_goal_stack[1] = Pose2f(5.0, 0.0, 0.0);
-      cur_request.real_goal_stack[2] =
-          Pose2f(7.0, -11.0, opposite_target_heading_rad);
+      cur_request.real_goal_stack[2] = Pose2f(7.0, -11.0, -target_heading_rad);
       cur_request.real_goal_stack[3] = Pose2f(-3.0, 5.0, target_heading_rad);
       cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, 0.0);
-      cur_request.real_goal_stack[5] =
-          Pose2f(-3.0, -5.0, opposite_target_heading_rad);
+      cur_request.real_goal_stack[5] = Pose2f(-3.0, -5.0, -target_heading_rad);
     } else {
       cur_request.real_goal_stack[0] = Pose2f(-3.0, 11.0, target_heading_rad);
       cur_request.real_goal_stack[1] = Pose2f(-4.0, 0.0, 0.0);
-      cur_request.real_goal_stack[2] =
-          Pose2f(-3.0, -11.0, opposite_target_heading_rad);
-      cur_request.real_goal_stack[3] =
-          Pose2f(8.0, -5.0, opposite_target_heading_rad);
+      cur_request.real_goal_stack[2] = Pose2f(-3.0, -11.0, -target_heading_rad);
+      cur_request.real_goal_stack[3] = Pose2f(8.0, -5.0, -target_heading_rad);
       cur_request.real_goal_stack[4] = Pose2f(8.0, 0.0, 0.0);
       cur_request.real_goal_stack[5] = Pose2f(8.0, 5.0, target_heading_rad);
     }
