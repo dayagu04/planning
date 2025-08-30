@@ -432,6 +432,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
         }
       } else {
         // for NOA turn signal road to ramp
+        // 自车在滑入匝道时，需要更新ad_info.lane_change_reason，已供hmi模块使用
         const auto dir_turn_signal_road_to_ramp =
             lane_change_decider_output.dir_turn_signal_road_to_ramp;
         if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
@@ -503,7 +504,8 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
 
   // update LaneChangeReason
   const auto lc_request_source = lane_change_decider_output.lc_request_source;
-  if (lc_request_source == NO_REQUEST) {
+  if (lc_request_source == NO_REQUEST &&
+      lane_change_decider_output.dir_turn_signal_road_to_ramp == RAMP_NONE) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_NONE;
   } else if (lc_request_source == INT_REQUEST) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MANUAL;
