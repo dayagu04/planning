@@ -346,6 +346,11 @@ void ResultTrajectoryGenerator::UpdateTurnSignal() {
   auto &planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
   planning_result.turn_signal = RequestType::NO_CHANGE;
+  bool active = session_->environmental_model().GetVehicleDbwStatus();
+  if (!active) {
+    // planning_result.turn_signal = RequestType::NO_CHANGE;
+    return;
+  }
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   bool turn_signal_on_from_lane_borrow =
