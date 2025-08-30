@@ -25,10 +25,16 @@ max_time = bag_loader.load_all_data()
 global_var.set_value('g_is_display_enu', False)
 fig1, local_view_data = load_local_view_figure()
 fig1.legend.label_text_font_size = "8pt"
-fig1.height = 1150
+fig1.height = 1350
 fig1.width = 900
 
-fig1, fig2, fig3, data_st, lat_data_vec, ori_lat_data_vec = load_lc_path_figure(fig1)
+fig1, fig2, fig3, data_st, lat_data_vec, ori_lat_data_vec, lc_path_data_vec = load_lc_path_figure(fig1)
+agent_box_data_vec = ColumnDataSource(data = {'corners_y':[],
+                                               'corners_x':[]})
+ego_box_data_vec = ColumnDataSource(data = {'corners_y':[],
+                                               'corners_x':[]})
+fig1.patches('corners_y', 'corners_x', source = agent_box_data_vec, fill_color = "grey", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'agent')
+fig1.patches('corners_y', 'corners_x', source = ego_box_data_vec, fill_color = "green", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'ego')
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -121,7 +127,8 @@ def update_lc_data (noa_info, plan_debug_json):
 def slider_callback(bag_time):
   global plan_debug_msg_idx
   local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec,bag_loader, bag_time, local_view_data)
+  update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec, lc_path_data_vec, bag_loader, bag_time, local_view_data,
+                         ego_box_data_vec, agent_box_data_vec)
 
   if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
     plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']

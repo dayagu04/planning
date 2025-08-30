@@ -4357,4 +4357,14 @@ struct CongestionDetectionConfig : public EgoPlanningConfig {
   double jam_speed = 12.0;
   double speed_deviation = 1000.0;
 };
+struct LaneChangeDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    ReadItem<double>(json, lookahead_time, "lane_change_decider",
+                     "lookahead_time");
+  }
+
+  double lookahead_time = 3.0;
+};
 }  // namespace planning

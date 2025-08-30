@@ -34,6 +34,8 @@ add_subdirectory(library/occupancy_grid_map EXCLUDE_FROM_ALL)
 add_subdirectory(library/spiral EXCLUDE_FROM_ALL)
 add_subdirectory(library/arastar_lib EXCLUDE_FROM_ALL)
 add_subdirectory(library/glog EXCLUDE_FROM_ALL)
+add_subdirectory(library/lc_pure_pursuit_lib EXCLUDE_FROM_ALL)
+add_subdirectory(library/lc_idm_lib EXCLUDE_FROM_ALL)
 
 add_subdirectory(thirdparty/mjson EXCLUDE_FROM_ALL)
 

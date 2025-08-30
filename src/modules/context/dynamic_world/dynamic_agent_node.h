@@ -68,6 +68,7 @@ class DynamicAgentNode {
   double node_back_edge_to_ego_front_edge_distance() const;
   double node_front_edge_to_ego_back_edge_distance() const;
   const std::vector<trajectory::Trajectory>& node_trajectories() const;
+  const std::vector<trajectory::Trajectory>& node_trajectories_used_by_st_graph() const;
   const agent::AgentType type() const;
 
   bool is_agent_within_lane() const;

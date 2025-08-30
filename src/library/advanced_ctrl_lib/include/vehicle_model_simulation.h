@@ -40,7 +40,7 @@ class VehicleSimulation {
   VehicleState state_;
   VehicleControl control_;
   VehicleParameter param_;
-  double dt_ = 0.1;  // default time step
+  double dt_ = 0.2;  // default time step
 };
 
 }  // namespace steerModel
