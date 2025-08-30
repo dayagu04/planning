@@ -4,6 +4,21 @@ using namespace planning;
 namespace adas_function {
 namespace ihc_core {
 
+// IHC动态障碍物计时器（使用dt累积）
+static float ihc_same_dir_hold_time_s = 0.0f;         // 同向车累计时间
+static float ihc_oncoming_vehicle_hold_time_s = 0.0f; // 对向机动车累计时间
+static float ihc_oncoming_cycle_hold_time_s = 0.0f;   // 对向非机动车累计时间
+static float ihc_no_obstacle_hold_time_s = 0.0f;      // 无车空窗累计时间（用于近->远）
+static float ihc_high_beam_on_duration_s = 0.0f;      // 远光持续时间（用于最小2s）
+
+static inline void ResetIhcDynamicObstacleTimers() {
+  ihc_same_dir_hold_time_s = 0.0f;
+  ihc_oncoming_vehicle_hold_time_s = 0.0f;
+  ihc_oncoming_cycle_hold_time_s = 0.0f;
+  ihc_no_obstacle_hold_time_s = 0.0f;
+  ihc_high_beam_on_duration_s = 0.0f;
+}
+
 void IhcCore::RunOnce(void) {
   // 更新输入信息
   GetInputInfo();
@@ -427,10 +442,15 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
   bool high_beam_request_temp = true;  // 默认远光
   bool found_obstacle_in_hysteresis = false;  // 是否发现滞回区间内的障碍物
   
-  // 初始化debug变量
+  // 初始化debug变量（仅在持续满足2s后才会被置为true）
   ihc_sys_.state.low_beam_due_to_same_dir_vehicle = false;
   ihc_sys_.state.low_beam_due_to_oncomming_vehicle = false;
   ihc_sys_.state.low_beam_due_to_oncomming_cycle = false;
+  
+  // 本周期即时检测标志（不直接触发近光，仅用于时间累计）
+  bool detected_same_dir = false;
+  bool detected_oncoming_vehicle = false;
+  bool detected_oncoming_cycle = false;
   
   // 获取动态障碍物消息
   // 1. 同向有车(含非机动车)100m内, 切近光
@@ -457,34 +477,26 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车：滞回控制，190m~210m为滞回区间
           if (distance < 190.0f) {
-            // 明确进入近光区域
-            high_beam_request_temp = false;
-            ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
-            break;
+            // 明确进入近光区域（即时检测为true，用于时间累计）
+            detected_oncoming_vehicle = true;
           } else if (distance <= 210.0f) {
             // 190m~210m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
-              high_beam_request_temp = false;
-              ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
-              break;
+              detected_oncoming_vehicle = true;
             }
           }
           // distance > 210.0f 时继续检查其他障碍物
         } else {
           // 同向机动车：滞回控制，90m~110m为滞回区间
           if (distance < 90.0f) {
-            // 明确进入近光区域
-            high_beam_request_temp = false;
-            ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
-            break;
+            // 明确进入近光区域（即时检测为true，用于时间累计）
+            detected_same_dir = true;
           } else if (distance <= 110.0f) {
             // 90m~110m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
-              high_beam_request_temp = false;
-              ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
-              break;
+              detected_same_dir = true;
             }
           }
           // distance > 110.0f 时继续检查其他障碍物
@@ -494,22 +506,94 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
         // 对向非机动车：滞回控制，65m~85m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           if (distance < 65.0f) {
-            // 明确进入近光区域
-            high_beam_request_temp = false;
-            ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
-            break;
+            // 明确进入近光区域（即时检测为true，用于时间累计）
+            detected_oncoming_cycle = true;
           } else if (distance <= 85.0f) {
             // 65m~85m滞回区间，保持当前状态
             found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
-              high_beam_request_temp = false;
-              ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
-              break;
+              detected_oncoming_cycle = true;
             }
           }
           // distance > 85.0f 时继续检查其他障碍物
         }
       }
+    }
+  }
+  
+  // 基于时间的持续性判定：使用 dt 累积，阈值区分三类对象
+  const float dt = GetContext.get_param()->dt;      // 周期时长（秒）
+  
+  // 阈值：对向车1.5s、同向车2.0s、非机动车1.0s
+  const float THRESHOLD_SAME_DIR_S = 2.0f;
+  const float THRESHOLD_ONCOMING_VEHICLE_S = 1.5f;
+  const float THRESHOLD_ONCOMING_CYCLE_S = 1.0f;
+  
+  // 同向车辆
+  if (detected_same_dir) {
+    ihc_same_dir_hold_time_s += dt;
+    if (ihc_same_dir_hold_time_s >= THRESHOLD_SAME_DIR_S) {
+      ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
+    }
+  } else {
+    ihc_same_dir_hold_time_s = 0.0f;  // 中断则清零
+  }
+  
+  // 对向机动车
+  if (detected_oncoming_vehicle) {
+    ihc_oncoming_vehicle_hold_time_s += dt;
+    if (ihc_oncoming_vehicle_hold_time_s >= THRESHOLD_ONCOMING_VEHICLE_S) {
+      ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
+    }
+  } else {
+    ihc_oncoming_vehicle_hold_time_s = 0.0f;
+  }
+  
+  // 对向非机动车
+  if (detected_oncoming_cycle) {
+    ihc_oncoming_cycle_hold_time_s += dt;
+    if (ihc_oncoming_cycle_hold_time_s >= THRESHOLD_ONCOMING_CYCLE_S) {
+      ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
+    }
+  } else {
+    ihc_oncoming_cycle_hold_time_s = 0.0f;
+  }
+  
+  // 基于持续性结果的最终决策 + 近光转远光需要空窗2s + 远光最小持续2s
+  bool need_low_beam = (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
+                        ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||
+                        ihc_sys_.state.low_beam_due_to_oncomming_cycle);
+  
+  const float MIN_HIGH_BEAM_ON_S = 2.0f;           // 远光最小持续时间
+  const float MIN_NO_OBSTACLE_TO_HIGH_S = 1.0f;    // 从近光转远光需要的无车持续时间
+  
+  // 累计远光持续时间
+  if (last_high_beam_request) {
+    ihc_high_beam_on_duration_s += dt;
+  } else {
+    ihc_high_beam_on_duration_s = 0.0f;
+  }
+  
+  // 累计无车时间
+  if (!need_low_beam) {
+    ihc_no_obstacle_hold_time_s += dt;
+  } else {
+    ihc_no_obstacle_hold_time_s = 0.0f;
+  }
+  
+  // 决策：有车需近光，但若远光未满2s则保持远光
+  if (need_low_beam) {
+    if (last_high_beam_request && ihc_high_beam_on_duration_s < MIN_HIGH_BEAM_ON_S) {
+      high_beam_request_temp = true;   // 保持远光直到满2s
+    } else {
+      high_beam_request_temp = false;  // 切近光
+    }
+  } else {
+    // 无车：若当前近光，需无车持续>=2s才允许开远光；若当前远光则继续保持
+    if (!last_high_beam_request) {
+      high_beam_request_temp = (ihc_no_obstacle_hold_time_s >= MIN_NO_OBSTACLE_TO_HIGH_S);
+    } else {
+      high_beam_request_temp = true;
     }
   }
   
@@ -521,9 +605,11 @@ bool IhcCore::IHCRequest() {
   bool ihc_request_temp = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
 
   // 环境亮度条件
+  bool dynamic_called = false;
   if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
     // 昏暗环境, 根据障碍物信息判断是否需要切远光
     ihc_request_temp = IHCRequestDynamicObstacle();
+    dynamic_called = true;
   } else if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     // 明亮环境
     ihc_request_temp = false;
@@ -534,10 +620,16 @@ bool IhcCore::IHCRequest() {
     } else {
       // 当前为远光灯，判断是否要切近光
       ihc_request_temp = IHCRequestDynamicObstacle();
+      dynamic_called = true;
     }
   } else {
     // 中等亮度环境，保持
     // do nothing
+  }
+  
+  // 如果本周期未调用动态障碍物判定，则重置计时器，防止跨环境累计
+  if (!dynamic_called) {
+    ResetIhcDynamicObstacleTimers();
   }
   
   return ihc_request_temp;
