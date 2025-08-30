@@ -8,9 +8,6 @@
 #include "iflyauto_log.h"
 #endif
 
-#define CONCAT2(x) "%s " x
-#define CONCAT(x) CONCAT2(x)
-
 namespace iflyauto {
 enum LogLevel {
   LOGLEVEL_START = 0,
@@ -71,9 +68,10 @@ class Log {
 #endif
 // bst::Log::getInstance().getModulePointer(),
 #ifdef BST
+#define NANO_LOG_CONCAT(x) "%s " x
 #define LOG_BST_RELEASE(severity, format, ...)                        \
   do {                                                                \
-    NANO_LOG(severity, CONCAT(format),                                \
+    NANO_LOG(severity, NANO_LOG_CONCAT(format),                                \
              bst::Log::getInstance().getModuleName(), ##__VA_ARGS__); \
   } while (0)
 
