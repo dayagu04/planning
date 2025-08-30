@@ -41,6 +41,7 @@ class ParallelParkOutScenario : public ParkingScenario {
   }
 
   virtual const double CalRealTimeBrakeDist() override;
+  bool CheckFinishParallel();
 
  private:
   void Log() const override;
