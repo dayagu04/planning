@@ -517,13 +517,14 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                               ? NL_NMAX
                               : route_info_output.merge_region_info_list[0]
                                     .distance_to_split_point;
-    if (route_info_output.dis_to_ramp < 100.0 && route_info_output.dis_to_ramp < dis_to_merge) {
+    if (route_info_output.dis_to_ramp < 100.0 &&
+        route_info_output.dis_to_ramp < dis_to_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-    } else if (dis_to_merge < 100.0 &&
-        !route_info_output.merge_region_info_list[0].is_other_merge_to_road) {
+    } else if (route_info_output.mlc_decider_route_info.is_process_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
-      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+      ad_info.lane_change_reason =
+          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
