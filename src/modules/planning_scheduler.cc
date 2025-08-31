@@ -379,6 +379,7 @@ void PlanningScheduler::FillPlanningTrajectory(
       polynomial_limited[2] = current_lane->get_center_line()[1];
       polynomial_limited[3] = current_lane->get_center_line()[0];
     } else {
+      // todo(ldh): temporally hack, need to be optimized
       polynomial_limited[0] = d_polynomial[0];
       polynomial_limited[1] = d_polynomial[1];
       polynomial_limited[2] = d_polynomial[2];

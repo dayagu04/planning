@@ -3302,16 +3302,16 @@ void GeneralLateralDecider::CalcLateralBehaviorOutput() {
   lateral_output.isOnHighway = session_->environmental_model().is_on_highway();
 
   // d_poly ,c_poly
-  // auto &d_poly = lateral_output.d_poly;
-  // auto &c_poly = lateral_output.c_poly;
+  auto &d_poly = lateral_output.d_poly;
+  auto &c_poly = lateral_output.c_poly;
 
-  // d_poly.resize(flane->get_center_line().size());
-  // c_poly.resize(flane->get_center_line().size());
+  d_poly.resize(flane->get_center_line().size());
+  c_poly.resize(flane->get_center_line().size());
 
-  // std::reverse_copy(flane->get_center_line().begin(),
-  //                   flane->get_center_line().end(), d_poly.begin());
-  // std::reverse_copy(flane->get_center_line().begin(),
-  //                   flane->get_center_line().end(), c_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), d_poly.begin());
+  std::reverse_copy(flane->get_center_line().begin(),
+                    flane->get_center_line().end(), c_poly.begin());
 }
 
 void GeneralLateralDecider::ResetIsExceedObstacleHysteresisMap(int id) {
