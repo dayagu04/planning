@@ -496,13 +496,51 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetIsBoundAvoid(general_lateral_decider_output.bound_avoid);
   planning_weight_ptr_->SetExpectedAvoidJerk(general_lateral_decider_output.recommended_bound_avoid_jerk);
 
-  // lane change back
+  // lane change state
   const auto target_state =
       lane_change_decider_output.coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
   bool lane_change_hold = target_state == kLaneChangeHold;
   planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
+  bool is_merge_lc =
+      lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
+      lane_change_decider_output.lc_request_source == MAP_REQUEST;
+  bool merge_point_valid =
+      session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point_valid;
+  const auto& merge_point =
+      session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point;
+  double dist_to_merge_point = 10000.0;
+  if (merge_point_valid) {
+    dist_to_merge_point =
+      std::min(std::hypot(planning_init_point.lat_init_state.x() - merge_point.x,
+                          planning_init_point.lat_init_state.y() - merge_point.y),
+               dist_to_merge_point);
+  }
+  double distance_to_first_road_merge =
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output()
+              .distance_to_first_road_merge;
+  dist_to_merge_point =
+    std::min(dist_to_merge_point, distance_to_first_road_merge);
+  bool is_prevent_solid_line_lc =
+      lane_change_decider_output.is_dash_not_enough_for_lc;
+  bool is_emergency_lc = false;
+      // lane_change_decider_output.is_emergency_avoidance_situation;
+  if (is_emergency_lc) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
+  } else if (is_prevent_solid_line_lc ||
+             (is_merge_lc && std::fabs(dist_to_merge_point) < ref_vel * 5.0)) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
+  }
+  if (target_state == kLaneKeeping) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
+  }
 
   // lane borrow
   const auto &lane_borrow_decider_output =

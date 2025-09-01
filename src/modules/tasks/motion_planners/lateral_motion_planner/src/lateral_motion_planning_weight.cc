@@ -114,6 +114,14 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
     //   break;
     // }
     case LateralMotionScene::LANE_CHANGE: {
+      if (std::fabs(avoid_dist_) > 0.1) {
+        if (lc_style_ == LaneChangeStyle::STANDARD_LANE_CHANGE) {
+          lc_style_ = LaneChangeStyle::QUICKLY_LANE_CHANGE;
+        }
+        if (ego_vel_ < 4.167) {
+          lc_style_ = LaneChangeStyle::EMERGENCY_LANE_CHANGE;
+        }
+      }
       end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
       end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
       planning_input.set_q_ref_x(config_.q_ref_x_lane_change);
@@ -729,6 +737,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
       extra_jerk_buffer = 0.5;
       jerk_bound += 1.0;
+      emergency_level_ == EmergencyLevel::P0;
     }
   } else if (lateral_motion_scene_ == LateralMotionScene::LANE_BORROW) {
     extra_jerk_buffer = 0.3;
@@ -1073,11 +1082,11 @@ void LateralMotionPlanningWeight::MakeRampDynamicWeight(
 void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
-  if (std::fabs(avoid_dist_) > 0.1 &&
-      target_road_radius_ > 400.0) {
-    end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
-    end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
-  }
+  // if (std::fabs(avoid_dist_) > 0.1 &&
+  //     target_road_radius_ > 400.0) {
+  //   end_ratio_for_qrefxy_ = config_.end_ratio_for_qrefxy;
+  //   end_ratio_for_qreftheta_ = config_.end_ratio_for_qreftheta;
+  // }
   std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 750.0};
   std::vector<double> xp_v{1.0, 4.167, 8.333, 12.5, 16.667, 20.833, 25.0};
   std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
