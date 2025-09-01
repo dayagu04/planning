@@ -413,6 +413,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
       lc_complete_to_lk_time = IflyTime::Now_ms();
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+      lc_state_complete_frame_nums_ = 1;
     } else {
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
@@ -436,8 +437,21 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
         const auto dir_turn_signal_road_to_ramp =
             lane_change_decider_output.dir_turn_signal_road_to_ramp;
         if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
-          ad_info.lane_change_status =
-              iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+          if (last_frame_dir_turn_signal_road_to_ramp_ != RAMP_NONE) {
+            ad_info.lane_change_status =
+                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+            lc_state_complete_frame_nums_ = 1;
+          } else {
+            // 需要给hmi模块连续发3s的complete状态
+            if (lc_state_complete_frame_nums_ <= 30) {
+              ad_info.lane_change_status =
+                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+              lc_state_complete_frame_nums_++;
+            } else {
+              ad_info.lane_change_status =
+                  iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+            }
+          }
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_LEFT;
@@ -453,6 +467,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_reason =
               iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         }
+        last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;
       }
     }
   } else if (curr_state == kLaneChangePropose) {
