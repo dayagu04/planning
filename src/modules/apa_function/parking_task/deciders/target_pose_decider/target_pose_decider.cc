@@ -101,6 +101,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   tar_pose_global =
       geometry_lib::TransformPoseFromLocalToGlobal(tar_pose_local, l2g_tf);
 
+  ILOG_INFO << "target pose offset_y = " << offset_y;
+
   if (!consider_obs_) {
     result_.target_pose_type = TargetPoseType::NORMAL;
     result_.target_pose_local = tar_pose_local;
@@ -128,7 +130,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();
 
-  ILOG_INFO << "target pose offset_y = " << offset_y;
   if (std::fabs(offset_y) > 1e-3) {
     std::vector<geometry_lib::PathPoint> tmp_pose_vec;
     geometry_lib::PathPoint tmp_pose;

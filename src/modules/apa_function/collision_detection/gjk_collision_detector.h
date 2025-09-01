@@ -1,4 +1,5 @@
 #pragma once
+#include "apa_param_config.h"
 #include "base_collision_detector.h"
 #include "geometry_math.h"
 #include "gjk2d_interface.h"
@@ -16,7 +17,7 @@ enum class CarBodyType : uint8_t {
 
 struct GJKColDetRequest {
   bool use_obs_base_slot = true;
-  bool use_uss_pt = false;
+  bool use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud;
   CarBodyType car_body_type = CarBodyType::NORMAL;
   ApaObsMovementType movement_type = ApaObsMovementType::ALL;
   ApaObsHeightType height_type = ApaObsHeightType::HIGH;
@@ -24,7 +25,8 @@ struct GJKColDetRequest {
   GJKColDetRequest() = default;
   ~GJKColDetRequest() = default;
   GJKColDetRequest(
-      const bool _use_obs_base_slot, const bool _use_uss_pt = false,
+      const bool _use_obs_base_slot,
+      const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
       const CarBodyType _car_body_type = CarBodyType::NORMAL,
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
       const ApaObsHeightType _height_type = ApaObsHeightType::HIGH) {
@@ -32,10 +34,12 @@ struct GJKColDetRequest {
         _height_type);
   }
 
-  void Set(const bool _use_obs_base_slot = true, const bool _use_uss_pt = false,
-           const CarBodyType _car_body_type = CarBodyType::NORMAL,
-           const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
-           const ApaObsHeightType _height_type = ApaObsHeightType::HIGH) {
+  void Set(
+      const bool _use_obs_base_slot = true,
+      const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
+      const CarBodyType _car_body_type = CarBodyType::NORMAL,
+      const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
+      const ApaObsHeightType _height_type = ApaObsHeightType::HIGH) {
     use_obs_base_slot = _use_obs_base_slot;
     use_uss_pt = _use_uss_pt;
     car_body_type = _car_body_type;

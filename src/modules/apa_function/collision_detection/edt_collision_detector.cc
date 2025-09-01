@@ -86,6 +86,10 @@ void EDTCollisionDetector::AddObsToOGM() {
   const std::unordered_map<size_t, ApaObstacle> &obs_map =
       obs_manager_ptr_->GetObstacles();
 
+  ILOG_INFO << "AddObsToOGM, obs_map size: " << obs_map.size();
+
+  ogm_bound_.PrintInfo();
+
   OGMIndex index;
   // add pt cloud
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;

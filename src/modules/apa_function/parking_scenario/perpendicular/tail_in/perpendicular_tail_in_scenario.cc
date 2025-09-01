@@ -241,7 +241,8 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   TargetPoseDeciderRequest tar_pose_decider_request(
       std::vector<double>{0.15}, 0.3,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false, false);
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false, false,
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
 
   TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
       ego_info_under_slot.slot, tar_pose_decider_request);
@@ -1206,7 +1207,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
   const bool remain_obs_condition =
       frame_.remain_dist_obs < finish_params.max_remain_obs_dist;
 
-  GJKColDetRequest gjl_col_det_request(true, false);
+  GJKColDetRequest gjl_col_det_request(true, param.uss_config.use_uss_pt_cloud);
 
   bool end_pos_has_obs_condition = apa_world_ptr_->GetColDetInterfacePtr()
                                        ->GetGJKColDetPtr()
@@ -1811,13 +1812,6 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
 
   const auto& param = apa_param.GetParam();
 
-  ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
-            << "  heading_err = " << heading_err;
-
-  JSON_DEBUG_VALUE("slot_lat_err", lat_err)
-  JSON_DEBUG_VALUE("slot_heading_err", heading_err)
-  JSON_DEBUG_VALUE("slot_lon_err", lon_err)
-
   frame_.slot_jump_lat_err = lat_err;
   frame_.slot_jump_lon_err = lon_err;
   frame_.slot_jump_heading_err = heading_err;
@@ -1826,6 +1820,15 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
       std::min(lat_err, std::fabs(ego_info_under_slot.terminal_err.GetY())) >
           apa_param.GetParam().slot_jump_lat_big_err ||
       heading_err > apa_param.GetParam().slot_jump_heading_big_err;
+
+  ILOG_INFO << "lat_err = " << lat_err << "  lon_err = " << lon_err
+            << "  heading_err = " << heading_err
+            << "  slot_jump_big_flag = " << frame_.slot_jump_big_flag;
+
+  JSON_DEBUG_VALUE("slot_lat_err", lat_err)
+  JSON_DEBUG_VALUE("slot_heading_err", heading_err)
+  JSON_DEBUG_VALUE("slot_lon_err", lon_err)
+  JSON_DEBUG_VALUE("slot_jump_big_flag", frame_.slot_jump_big_flag)
 }
 
 const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {

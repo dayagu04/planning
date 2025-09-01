@@ -500,8 +500,8 @@ const double ParkingScenario::CalRemainDistFromObs(
     ColResult col_res = gjk_col_det_ptr->Update(
         apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
         static_body_lat_buffer, 0.0,
-        GJKColDetRequest(false, false, CarBodyType::ONLY_MIRROR,
-                         ApaObsMovementType::STATIC),
+        GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
+                         CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC),
         true, static_mirror_lat_buffer);
 
     return col_res.remain_dist - static_lon_buffer;
@@ -578,8 +578,9 @@ const double ParkingScenario::CalRemainDistFromPlanPathDangerous(
     return 36.8;
   }
 
-  GJKColDetRequest gjl_col_det_request(false, false, CarBodyType::NORMAL,
-                                       ApaObsMovementType::STATIC);
+  GJKColDetRequest gjl_col_det_request(
+      false, apa_param.GetParam().uss_config.use_uss_pt_cloud,
+      CarBodyType::NORMAL, ApaObsMovementType::STATIC);
   gjl_col_det_request.use_uss_pt = false;
 
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
