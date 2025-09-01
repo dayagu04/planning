@@ -2228,6 +2228,17 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     return;
   }
 
+  // 仅仅为计算自车前方的merge point info使用
+  iflymapdata::sdpro::FeaturePoint find_fp;
+  MergeType merge_type;
+  uint64 fp_link_id;
+  double dis_to_merge_fp = 0.0;
+
+  if (CalculateMergeFP(&merge_type, &find_fp, &fp_link_id, &dis_to_merge_fp)) {
+    route_info_output_.merge_point_info.dis_to_merge_fp = dis_to_merge_fp;
+    route_info_output_.merge_point_info.merge_type = merge_type;
+  }
+
   mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
   int minVal_seq = feasible_lane_sequence[0];
@@ -3813,7 +3824,7 @@ bool RouteInfo::CalculateLastFp(
     if (fp_pre_link->feature_points().empty()) {
       return false;
     }
-    
+
     *last_fp = *fp_pre_link->feature_points().rbegin();
     return true;
   } else {
