@@ -181,7 +181,7 @@
   "ihc_use_json_switch": false,
   "ihc_main_switch": true,
   "ihc_use_json_code": false,
-  "ihc_enable_code_maskcode": 31,
+  "ihc_enable_code_maskcode": 63,
   "ihc_disable_code_maskcode": 0,
   "ihc_fault_code_maskcode": 0,
   "meb_request_status_const": 0,

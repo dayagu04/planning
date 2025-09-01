@@ -704,6 +704,7 @@ class LoadRosbag:
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
                          "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle", 
                          "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition",
+                         "ihc_function::ihc_disable_code",
                          #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",

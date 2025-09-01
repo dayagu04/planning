@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/user/thzhang5/ihc_test_0822/data_collection_CHERY_M32T_81865_EVENT_MANUAL_2025-08-25-01-58-26_no_camera.bag.1756281308.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82005/fcw_trigger/20250829/20250829-21-37-40/fcw_in_data_collection_CHERY_M32T_82005_EVENT_FILTER_2025-08-29-21-37-40_no_camera.bag.1756721718.open-loop.scc.plan"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -46,6 +46,7 @@ ihc_json_value_list = [
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
                          "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle", 
                          "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition",
+                         "ihc_function::ihc_disable_code",
                         ]
 adas_json_value_list =  [ #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
@@ -105,6 +106,7 @@ fig_machine.line('time', 'ihc_function::auto_light_state', source = adas_json_li
 
 f_state_code = fig_state_code.line('time', 'ihc_function::ihc_enable_code', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ihc_enable_code')
 fig_state_code.line('time', 'ihc_function::ihc_fault_code', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ihc_fault_code')
+fig_state_code.line('time', 'ihc_function::ihc_disable_code', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ihc_disable_code')
 
 f_low_beam_reason = fig_low_beam_reason.line('time', 'ihc_function::low_beam_due_to_same_dir_vehicle', source = adas_json_list_dict, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'same_dir_vehicle')
 fig_low_beam_reason.line('time', 'ihc_function::low_beam_due_to_oncomming_vehicle', source = adas_json_list_dict, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'oncomming_vehicle')
@@ -114,7 +116,7 @@ fig_low_beam_reason.line('time', 'ihc_function::lighting_condition', source = ad
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('ihc_state', '@{ihc_function::ihc_state}'),('ihc_request_status', '@{ihc_function::ihc_request_status}'), ('ihc_request', '@{ihc_function::ihc_request}'),
                                                         ('ihc_main_switch', '@{ihc_function::ihc_main_switch}'), ('auto_light_state', '@{ihc_function::auto_light_state}')], mode='vline')
 hover_state_code = HoverTool(renderers=[f_state_code], tooltips=[('time', '@time'), ('ihc_enable_code', '@{ihc_function::ihc_enable_code}'),
-                                                       ('ihc_fault_code', '@{ihc_function::ihc_fault_code}')], mode='vline')
+                                                       ('ihc_fault_code', '@{ihc_function::ihc_fault_code}'), ('ihc_disable_code', '@{ihc_function::ihc_disable_code}')], mode='vline')
 hover_low_beam_reason = HoverTool(renderers=[f_low_beam_reason], tooltips=[('time', '@time'), ('same_direction_vehicle', '@{ihc_function::low_beam_due_to_same_dir_vehicle}'),
                                                        ('oncoming_motor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_vehicle}'), ('oncoming_nonmotor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_cycle}'), 
                                                        ('lighting_condition', '@{ihc_function::lighting_condition}')], mode='vline')

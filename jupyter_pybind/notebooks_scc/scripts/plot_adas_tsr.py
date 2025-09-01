@@ -12,7 +12,7 @@ sys.path.append('../../../')
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
 # bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50815/trigger/20250812/20250812-13-34-29/data_collection_CHERY_M32T_50815_EVENT_DOWNGRADE_2025-08-12-13-34-29_no_camera.bag.1755071599.open-loop.noa.plan"
 # bag_path = "/data_cold/abu_zone/user/thzhang5/data_collection_CHERY_M32T_74566_EVENT_FUNEXIT_2025-08-22-16-37-00_no_camera.bag" # 超速不报警
-bag_path = "/data_cold/abu_zone/user/thzhang5/checkpoint_tsr/data_collection_CHERY_M32T_74563_EVENT_MANUAL_2025-08-23-11-32-24_no_camera.bag" # 显示5
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82005/fcw_trigger/20250829/20250829-21-37-40/fcw_in_data_collection_CHERY_M32T_82005_EVENT_FILTER_2025-08-29-21-37-40_no_camera.bag.1756718480.open-loop.scc.plan" # 显示5
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

@@ -28,7 +28,7 @@ struct IHCSysInput {
   iflyauto::ShiftLeverStateEnum shift_lever_state;  // 换档杆状态
   bool front_fog_light_state;  // 前雾灯状态
   bool rear_fog_light_state;   // 后雾灯状态
-  bool wiper_speed_fast;       // 雨刮运行速度是否达到快速档位
+  uint32 wiper_state;       // 雨刮状态
 // 环境光线条件
   iflyauto::CameraPerceptionLightingCondition lighting_condition;  // 环境亮度条件：0-UNKNOWN, 1-BRIGHT, 2-MEDIUM, 3-DARK
 };
@@ -86,6 +86,8 @@ class IhcCore {
  private:
   IHCSys ihc_sys_;
   std::vector<bool> ihc_request_lighting_buffer_;
+  // 雨刮持续时间满足抑制阈值持续时间 单位:s
+  double wiper_state_supp_duration_ = 70.0;
 };
 }  // namespace ihc_core
 }  // namespace adas_function

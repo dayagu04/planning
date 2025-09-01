@@ -123,9 +123,8 @@ void IhcCore::GetInputInfo() {
   ihc_sys_.input.rear_fog_light_state =
       vehicle_service_output_info_ptr->rear_fog_light_state;
   
-  // 雨刮运行速度是否达到快速档位
-  // ihc_sys_.input.wiper_speed_fast = vehicle_service_output_info_ptr->wiper_speed_fast;
-
+  // 雨刮运行状态
+  ihc_sys_.input.wiper_state = vehicle_service_output_info_ptr->wiper_state;
 
   // 获取自动灯光控制状态
   ihc_sys_.input.auto_light_state = vehicle_service_output_info_ptr->auto_light_state;
@@ -170,15 +169,16 @@ uint16 IhcCore::UpdateIhcEnableCode() {
   }
 
   // condition5: 雨刮运行速度没有达到快速档位
-  // if (ihc_sys_.input.wiper_speed_fast == false) {
-  //   ihc_enable_code_temp += uint16_bit[5];
-  // } else {
-  //   // do nothing
-  // }
+  if (ihc_sys_.input.wiper_state != iflyauto::WiperStateEnum::WiperState_HighSpeed) {
+    ihc_enable_code_temp += uint16_bit[5];
+  } else {
+    // do nothing
+  }
 
   return ihc_enable_code_temp;
 }
 uint16 IhcCore::UpdateIhcDisableCode() {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   uint16 ihc_disable_code_temp = 0;
 
   // condition0：灯光挡位不是auto
@@ -216,12 +216,22 @@ uint16 IhcCore::UpdateIhcDisableCode() {
     // do nothing
   }
 
-  // condition5：雨刮运行速度达到快速档位
-  // if (ihc_sys_.input.wiper_speed_fast == true) {
-  //   ihc_disable_code_temp += uint16_bit[5];
-  // } else {
-  //   // do nothing
-  // }
+  // condition5：雨刮运行速度不是快速档位超过60s
+  if (ihc_sys_.input.wiper_state != iflyauto::WiperStateEnum::WiperState_HighSpeed) {
+    wiper_state_supp_duration_ += GetContext.get_param()->dt;
+    if (wiper_state_supp_duration_ > 70.0) {
+      wiper_state_supp_duration_ = 70.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    wiper_state_supp_duration_ = 0.0;
+  }
+  if (wiper_state_supp_duration_ < 60.0) {
+    ihc_disable_code_temp += uint16_bit[5];
+  } else {
+    /*do nothing*/
+  }
 
   return ihc_disable_code_temp;
 }
@@ -331,33 +341,36 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
     // 状态机处于完成过初始化的状态
     switch (ihc_state_fault_off_standby_active) {
       case IHC_StateMachine_IN_ACTIVE:
-        if (!main_switch) {  // ACTIVE->OFF
+        if (!main_switch) {  // 1. 优先级最高：开关关闭 -> OFF
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (fault_code) {  // ACTIVE->FAULT
+        } else if (fault_code) {  // 2. 其次：有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
-        } else if (enable_code != 31) {  // ACTIVE->STANDBY (所有条件不满足时切换)
+        } else if (disable_code > 0) {  // 3. disable条件 -> OFF (此时main_switch为true,所以只判断其他disable)
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        } else if (enable_code != 63) {  // 4. 使能条件不满足 -> STANDBY
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
-        } else {  // 继续维持在ACTIVE状态
+        } else {  // 维持ACTIVE
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
         }
         break;
       case IHC_StateMachine_IN_FAULT:
-        if (!main_switch) {  // FAULT->OFF
+        if (!main_switch) {  // 1. 开关关闭 -> OFF
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (!fault_code) {  // FAULT->STANDBY
+        } else if (!fault_code) {  // 2. 故障消失 -> STANDBY
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
-        } else {  // 继续维持在FAULT状态
+        } else {  // 维持FAULT (disable_code不在此处判断)
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         }
         break;
       case IHC_StateMachine_IN_OFF:
-        // OFF
-        if (main_switch) {
+        // 从OFF恢复, 必须满足: 1.开关打开 2.无disable条件(防止抖动)
+        if (main_switch && disable_code == 0) {
           if (fault_code) {
             // OFF->FAULT
             ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
@@ -367,22 +380,24 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
             ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
             ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
           }
-        } else {  // 继续维持在OFF状态
+        } else {  // 维持OFF
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         }
         break;
-      default:
-        // standby
-        if (!main_switch) {  // STANDBY->OFF
+      default: // STANDBY
+        if (!main_switch) {  // 1. 开关关闭 -> OFF
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (fault_code) {  // STANDBY->FAULT
+        } else if (fault_code) {  // 2. 有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
-        } else if (enable_code == 31) {  // STANDBY->ACTIVE
+        } else if (disable_code > 0) {  // 3. disable条件 -> OFF
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        } else if (enable_code == 63) {  // 4. 使能条件满足 -> ACTIVE
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
-        } else {  // 继续维持在STANDBY状态
+        } else {  // 维持STANDBY
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         }
         break;
