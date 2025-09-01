@@ -1243,6 +1243,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "is_use_last_lon_information", is_use_last_lon_information);
     extra_truck_lat_buffer = read_json_key<double>(
         json, "extra_truck_lat_buffer", extra_truck_lat_buffer);
+    start_nudge_ttc = read_json_key<double>(
+        json, "start_nudge_ttc", start_nudge_ttc);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1281,6 +1283,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   int emergency_avoid_count_thr = 0;
   bool is_use_last_lon_information = true;
   double extra_truck_lat_buffer = 0.0;
+  double start_nudge_ttc = 3.6;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -1688,6 +1691,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, bound_recurrence_v_limit_max,
                      "general_lateral_decider",
                      "bound_recurrence_v_limit_max");
+    ReadItem<double>(json, nudge_buffer2lane_boundary_buffer,
+                     "general_lateral_decider",
+                     "nudge_buffer2lane_boundary_buffer");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1794,7 +1800,7 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   bool is_cross_solid_lane = false;
   double dynamic_vru_nudge_lateral_buffer = 0.8;
   double bound_recurrence_v_limit_max = 60;
-
+  double nudge_buffer2lane_boundary_buffer = 0.0;
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -3191,7 +3197,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
       std::vector<std::string>{"speed_limit_decider","tunnel_vel_limit_dis_table",
                                 "dis_table"},
                                 tunnel_vel_limit_dis_table.dis_table);
-    
+
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};

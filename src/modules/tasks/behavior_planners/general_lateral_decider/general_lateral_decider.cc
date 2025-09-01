@@ -2615,6 +2615,8 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
           ->width();
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01; //变化的容忍阈值
@@ -2655,6 +2657,21 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   }
   // 防止buffer减少过多
   lat_buf_dis = std::fmax(lat_buf_dis, last_t_lat_buf_dis);
+  // 高速上限制bound大小
+  if (is_use_recurrence_) {
+    double nudge_buffer2lane_boundary_buffer = config_.nudge_buffer2lane_boundary_buffer;
+    if (is_nudge_left) {
+      double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
+      if (nudge_position < nudge_buffer2lane_boundary_buffer - 0.5 * lane_width) {
+        lat_buf_dis = overlap_min_y - vehicle_param.width + 0.5 * lane_width - nudge_buffer2lane_boundary_buffer;
+      }
+    } else {
+      double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
+      if (nudge_position > 0.5 * lane_width - nudge_buffer2lane_boundary_buffer) {
+        lat_buf_dis = 0.5 * lane_width - nudge_buffer2lane_boundary_buffer - vehicle_param.width - overlap_max_y;
+      }
+    }
+  }
   return lat_buf_dis;
 }
 
@@ -4131,7 +4148,7 @@ bool GeneralLateralDecider::IsObstacleOutsideRoadLimits(
   if (reference_path_ptr_->get_reference_point_by_lon(obstacle->frenet_s(),
                                                      refpath_pt)) {
     if (obstacle->frenet_l() > 0 && (obstacle->frenet_obstacle_boundary().l_start >
-        refpath_pt.distance_to_left_road_border  + extra_buffer_for_road)) {
+        refpath_pt.distance_to_left_road_border + extra_buffer_for_road)) {
       return true;
     } else if (obstacle->frenet_l() < 0 && (obstacle->frenet_obstacle_boundary().l_end <
         -refpath_pt.distance_to_right_road_border - extra_buffer_for_road)) {
