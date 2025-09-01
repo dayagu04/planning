@@ -196,6 +196,8 @@ bool LateralObstacleDecider::Execute() {
     std::vector<double> lon_overtake_avoid;
     avd_car_id.reserve(10);
     maintain_avoid.reserve(10);
+    emergency_avoid.reserve(10);
+    lon_overtake_avoid.reserve(10);
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
@@ -312,8 +314,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
   auto &is_emergency_avoid_release = session_->mutable_planning_context()
                           ->mutable_lateral_obstacle_decider_output()
                           .is_emergency_avoid_release;
-  auto &is_crossing_map = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
+  const auto &is_crossing_map = session_->mutable_planning_context()
+                          ->lateral_obstacle_decider_output()
                           .is_crossing_map;
   const auto lon_ref_path_decider_output =
       session_->planning_context()
@@ -479,8 +481,8 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
 
 bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
     const std::shared_ptr<ReferencePath> reference_path) {
+  const int obstacle_id = frenet_obstacle.id();
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
-  const auto &frenet_coord = reference_path->get_frenet_coord();
   // 纵向以一定的制动力减速还来不及的障碍物
   const double desired_stopped_distance_to_obstacle = 3.0;
   const double break_a = 2.5;
@@ -488,16 +490,12 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
   double obstacke_start_s = 0.0;
   bool is_lon_over_obstacle = false;
   std::array<double, 6> timestamps{0, 1, 2, 3, 4, 5};
+  bool ok = false;
   for (auto &i : timestamps) {
-    auto enu_polygon = frenet_obstacle.obstacle()->get_polygon_at_point(
-        frenet_obstacle.obstacle()->get_point_at_time(i));
-    for (auto &pt : enu_polygon.points()) {
-      Point2D frenet_point, carte_point;
-      carte_point.x = pt.x();
-      carte_point.y = pt.y();
-      if (frenet_coord->XYToSL(carte_point, frenet_point)) {
-        obstacke_start_s = frenet_point.x < obstacke_start_s ? frenet_point.x : obstacke_start_s;
-      }
+    Polygon2d obstacle_sl_polygon;
+    ok = reference_path->get_polygon_at_time(obstacle_id, int(i * 10), obstacle_sl_polygon);
+    if (ok) {
+      obstacke_start_s = obstacle_sl_polygon.min_x();
     }
     if ((std::fabs(ego_v_) / break_a) < i) {
       ego_end_s = 0.5 * ego_v_ * ego_v_ / break_a;
@@ -1297,11 +1295,11 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
 
 void LateralObstacleDecider::ConstructUniformPlanHistoryTraj(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
-  auto &plan_history_traj = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
+  const auto plan_history_traj = session_->mutable_planning_context()
+                          ->lateral_obstacle_decider_output()
                           .plan_history_traj;
-  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
+  const auto is_plan_history_traj_valid = session_->mutable_planning_context()
+                          ->lateral_obstacle_decider_output()
                           .is_plan_history_traj_valid;
   auto &uniform_plan_history_traj = session_->mutable_planning_context()
                           ->mutable_lateral_obstacle_decider_output()
@@ -1323,7 +1321,6 @@ void LateralObstacleDecider::ConstructUniformPlanHistoryTraj(
       }
     } else {
       is_uniform_plan_history_traj_valid = false;
-      return;
     }
   } else {
     is_uniform_plan_history_traj_valid = false;

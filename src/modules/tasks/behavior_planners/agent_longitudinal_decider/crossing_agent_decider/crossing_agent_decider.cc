@@ -91,6 +91,7 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   if (agent == nullptr) {
     return false;
   }
+  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() != agent::AgentType::PEDESTRIAN &&
       agent->type() != agent::AgentType::CYCLE_RIDING &&
@@ -242,11 +243,11 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
                                      is_vru_prediction_satisfied_for_virtual)) {
     is_vru_crossing = true;
   }
-  is_crossing_map[agent->agent_id()] = is_vru_crossing;
 
   if (is_vru_crossing ||
       vru_id_reverse_crossing_map_.count(
           agent->agent_id())) {  // can not this ,will feed  element
+    is_crossing_map[agent->agent_id()] = true;
     ConstructVirtualAgentByCrossing(agent, true, is_vru_reverse_crossing);
   }
   return true;
@@ -405,6 +406,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(
   if (agent == nullptr) {
     return false;
   }
+  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() == agent::AgentType::PEDESTRIAN ||
       agent->type() == agent::AgentType::CYCLE_RIDING ||
@@ -525,10 +527,10 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(
       vehicle_id_reverse_crossing_map_.erase(agent->agent_id());
     }
   }
-  is_crossing_map[agent->agent_id()] = is_vehicle_prediction_crossing;
 
   if (is_vehicle_prediction_crossing ||
       vehicle_id_reverse_crossing_map_.count(agent->agent_id())) {
+    is_crossing_map[agent->agent_id()] = true;
     ConstructVirtualAgentByCrossing(agent, false, false);
   }
   return true;
