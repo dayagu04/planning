@@ -2,6 +2,7 @@
 
 #include "lane_change_request.h"
 #include "tracked_object.h"
+#include "src/modules/common/math/filter/mean_filter.h"
 
 namespace planning {
 
@@ -39,7 +40,7 @@ class OvertakeRequest : public LaneChangeRequest {
                            const double ego_speed, const double reference_speed,
                            const int max_count_thres);
 
-  void updateRouteTrafficSpeed(const bool is_left, double* route_traffic_speed);
+  void updateRouteTrafficSpeed(const bool is_left, double* route_traffic_speed, planning::planning_math::MeanFilter &traffic_speed_filter);
 
   bool isCouldOvertakeByRoute(
       const std::shared_ptr<ReferencePath>& base_ref_line,
@@ -146,6 +147,9 @@ class OvertakeRequest : public LaneChangeRequest {
   bool is_right_lane_change_safe_ = false;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
+  planning::planning_math::MeanFilter left_traffic_speed_filter_;
+  planning::planning_math::MeanFilter right_traffic_speed_filter_;
+  planning::planning_math::MeanFilter leading_speed_filter_;
 };
 
 }  // namespace planning

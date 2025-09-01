@@ -110,6 +110,9 @@ OvertakeRequest::OvertakeRequest(
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
   base_frenet_coord_ = std::make_shared<KDPath>();
   config_ = config_builder->cast<EgoPlanningConfig>();
+  leading_speed_filter_.SetWindowSize(10);
+  left_traffic_speed_filter_.SetWindowSize(10);
+  right_traffic_speed_filter_.SetWindowSize(10);
 }
 
 void OvertakeRequest::Update(int lc_status) {
@@ -144,6 +147,7 @@ void OvertakeRequest::Update(int lc_status) {
     ILOG_DEBUG << "OvertakeRequest::Update: for left_lane: update:" << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
+    left_traffic_speed_filter_.Reset();
   }
 
   if (rlane != nullptr) {
@@ -152,6 +156,7 @@ void OvertakeRequest::Update(int lc_status) {
     ILOG_DEBUG << "OvertakeRequest::Update: for right_lane: update " << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
+    right_traffic_speed_filter_.Reset();
   }
 
   double current_timestamp = IflyTime::Now_s();
@@ -306,6 +311,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       cipv_info.relative_s() > kDefaultLeadOneConsiderRange) {
     ILOG_DEBUG << "not exist stable leading vehicle";
     overtake_count_ = 0;
+    leading_speed_filter_.Reset();
     Finish();
     return;
   }
@@ -370,19 +376,19 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   ILOG_DEBUG << "overtake_count :" << overtake_count_;
   JSON_DEBUG_VALUE("overtake_count_", overtake_count_);
 
-  if (overtake_count_ < left_count_thres) {
-    return;
-  }
-
   double left_route_traffic_speed = 0.0;
   double right_route_traffic_speed = 0.0;
 
-  updateRouteTrafficSpeed(true, &left_route_traffic_speed);
-  updateRouteTrafficSpeed(false, &right_route_traffic_speed);
-  const double leading_vehicle_speed = agent->speed();
+  updateRouteTrafficSpeed(true, &left_route_traffic_speed, left_traffic_speed_filter_);
+  updateRouteTrafficSpeed(false, &right_route_traffic_speed, right_traffic_speed_filter_);
+  double leading_vehicle_speed = agent->speed_fusion();
+  leading_vehicle_speed = leading_speed_filter_.Update(leading_vehicle_speed);
 
   JSON_DEBUG_VALUE("left_route_traffic_speed", left_route_traffic_speed);
   JSON_DEBUG_VALUE("right_route_traffic_speed", right_route_traffic_speed);
+  if (overtake_count_ < left_count_thres) {
+    return;
+  }
 
   const bool is_left_overtake =
       enable_l_
@@ -649,7 +655,8 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
 }
 
 void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
-                                              double* route_traffic_speed) {
+                                              double* route_traffic_speed,
+                                              planning::planning_math::MeanFilter &traffic_speed_filter) {
   if (!route_traffic_speed) {
     return;
   }
@@ -685,22 +692,28 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
     }
   }
 
-  double first_vehicle_speed = std::numeric_limits<double>::max();
-  double second_vehicle_speed = std::numeric_limits<double>::max();
-  for (const auto& front_obstacle : side_front_obstacle_array) {
-    if (std::numeric_limits<double>::max() == first_vehicle_speed) {
-      first_vehicle_speed = front_obstacle->velocity();
-    } else if (std::numeric_limits<double>::max() == second_vehicle_speed) {
-      second_vehicle_speed = front_obstacle->velocity();
-      break;
+  // double first_vehicle_speed = std::numeric_limits<double>::max();
+  // double second_vehicle_speed = std::numeric_limits<double>::max();
+  // for (const auto& front_obstacle : side_front_obstacle_array) {
+  //   if (std::numeric_limits<double>::max() == first_vehicle_speed) {
+  //     first_vehicle_speed = front_obstacle.v;
+  //   } else if (std::numeric_limits<double>::max() == second_vehicle_speed) {
+  //     second_vehicle_speed = front_obstacle.v;
+  //     break;
+  //   }
+  // }
+  // double refer_speed = ego_state->ego_v_cruise();
+  double final_speed = ego_state->ego_v_cruise();
+  double average_speed = 0.0;
+  if (!side_front_obstacle_array.empty()) {
+    for (const auto& front_obstacle : side_front_obstacle_array) {
+      average_speed += front_obstacle->velocity();
     }
+    average_speed = average_speed / side_front_obstacle_array.size();
+    final_speed = std::min(final_speed, average_speed);
   }
 
-  double refer_speed = ego_state->ego_v_cruise();
-  double final_speed = std::min(
-      std::min(first_vehicle_speed, second_vehicle_speed), refer_speed);
-
-  *route_traffic_speed = final_speed;
+  *route_traffic_speed = traffic_speed_filter.Update(final_speed);
 }
 
 bool OvertakeRequest::isCouldOvertakeByRoute(
@@ -1783,6 +1796,9 @@ void OvertakeRequest::Reset() {
   overtake_vehicle_speed_ = 0.0;
   overtake_count_ = 0;
   target_lane_exist_slow_front_veh_frame_num_ = 0;
+  leading_speed_filter_.Reset();
+  left_traffic_speed_filter_.Reset();
+  right_traffic_speed_filter_.Reset();
 }
 
 }  // namespace planning
