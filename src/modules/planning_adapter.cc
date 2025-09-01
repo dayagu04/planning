@@ -324,7 +324,7 @@ bool PlanningAdapter::Proc() {
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
   if (is_sdpro_map_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(sdpro_map_info_msg_mutex_);
     local_view_ptr_->sdpro_map_info = sdpro_map_info_msg_;
     local_view_ptr_->sdpro_map_info_recv_time = sdpro_map_info_msg_recv_time_;
     is_sdpro_map_info_msg_updated_.store(false);
@@ -361,7 +361,7 @@ bool PlanningAdapter::Proc() {
 
   // xlwei5 not done
   if (is_perception_scene_msg_updated_) {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(perception_scene_msg_mutex_);
     local_view_ptr_->perception_scene_info = perception_scene_msg_;
     local_view_ptr_->perception_scene_info_recv_time =
         perception_scene_msg_recv_time_;

@@ -41,7 +41,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
       const iflyauto::CameraPerceptionOccGridInfo&
           occupancy_grid_info_msg) override {
   }
-  
+
   void Feed_IflytekCameraPerceptionDrivableSpaceGrid(
     const iflyauto::CameraPerceptionDrivableSpaceGridInfo&
         occupancy_grid_info_msg) override {
@@ -185,7 +185,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekEhrSdpromapInfo(
       const iflyauto::StructContainer &sdpro_map_info_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(sdpro_map_info_msg_mutex_);
     auto sdpro_mapdata = std::make_shared<iflymapdata::sdpro::MapData>();
     sdpro_mapdata->ParseFromString(sdpro_map_info_msg.payload());
     int link_size = sdpro_mapdata->link_info().links_size();
@@ -216,7 +216,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void Feed_IflytekCameraPerceptionScene(
       const iflyauto::CameraPerceptionScene& perception_scene_msg) override {
-    std::lock_guard<std::mutex> lock(msg_mutex_);
+    std::lock_guard<std::mutex> lock(perception_scene_msg_mutex_);
     perception_scene_msg_ = perception_scene_msg;
     perception_scene_msg_recv_time_ = IflyTime::Now_ms();
     is_perception_scene_msg_updated_.store(true);
@@ -272,7 +272,8 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::mutex perception_tsr_msg_mutex_;
   std::mutex hmi_inner_info_msg_mutex_;
   std::mutex parking_map_info_msg_mutex_;
-  std::mutex msg_mutex_;
+  std::mutex sdpro_map_info_msg_mutex_;
+  std::mutex perception_scene_msg_mutex_;
 
   iflyauto::PredictionResult prediction_result_msg_;
   int64_t prediction_result_msg_recv_time_;
