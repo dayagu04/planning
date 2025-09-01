@@ -97,8 +97,9 @@ void SetIdlePlanningOutput(iflyauto::PlanningOutput& planning_output,
 }
 
 bool IsValidApaState(const iflyauto::FunctionalState& current_state) {
-  if (current_state >= iflyauto::FunctionalState_PARK_STANDBY &&
-      current_state <= iflyauto::FunctionalState_PARK_PRE_ACTIVE) {
+  if ((current_state >= iflyauto::FunctionalState_PARK_STANDBY &&
+      current_state <= iflyauto::FunctionalState_PARK_PRE_ACTIVE) ||
+      current_state == iflyauto::FunctionalState_PARK_ERROR) {
     return true;
   }
   return false;

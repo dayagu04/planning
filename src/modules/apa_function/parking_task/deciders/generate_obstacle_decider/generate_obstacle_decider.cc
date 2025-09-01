@@ -102,11 +102,13 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
         continue;
       }
 
-      // if obs is in expand car, lose it
-      if (!param.believe_in_fus_obs &&
-          col_det_interface_ptr_->GetGJKColDetPtr()->IsObsInCar(
-              ego_pose, param.car_lat_inflation_normal + 0.0168, obs)) {
-        continue;
+      if (true) {
+        // if obs is in expand car, lose it
+        if (!param.believe_in_fus_obs &&
+            col_det_interface_ptr_->GetGJKColDetPtr()->IsObsInCar(
+                ego_pose, param.car_lat_inflation_normal + 0.0168, obs)) {
+          continue;
+        }
       }
 
       // if obs is in del_obs_bound, move it

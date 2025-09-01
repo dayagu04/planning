@@ -71,6 +71,13 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
 
   RecordNodeReceiveTime(local_view_ptr);
 
+  if (local_view_ptr->function_state_machine_info.current_state ==
+      iflyauto::FunctionalState_PARK_ERROR) {
+    Reset();
+    ILOG_ERROR << "current state is PARK_ERROR, reset apa plan interface";
+    return false;
+  }
+
   const double start_timestamp_ms = IflyTime::Now_ms();
 
   // run apa world, always run when enter apa
