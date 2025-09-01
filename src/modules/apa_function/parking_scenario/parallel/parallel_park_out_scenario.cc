@@ -43,6 +43,21 @@ void ParallelParkOutScenario::Reset() {
   ParkingScenario::Reset();
 }
 
+bool ParallelParkOutScenario::CheckFinishParallel() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  if (ego_info_under_slot.slot_occupied_ratio < 0.1 &&
+      std::fabs(ego_info_under_slot.cur_pose.heading * kRad2Deg) <
+          apa_param.GetParam().finish_parallel_out_heading_mag) {
+    ILOG_INFO << "parallel out finish slot_occupied_ratio: "
+              << ego_info_under_slot.slot_occupied_ratio;
+    ILOG_INFO << "parallel out finish heading: "
+              << ego_info_under_slot.cur_pose.heading * kRad2Deg;
+    return true;
+  }
+  return false;
+}
+
 void ParallelParkOutScenario::ExcutePathPlanningTask() {
   ILOG_INFO << "---------------------parallel out ---------------------------";
   // init simulation
@@ -104,6 +119,11 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   if (!CheckReplan(replan_params)) {
     ILOG_INFO << "replan is not required!";
     SetParkingStatus(PARKING_RUNNING);
+    return;
+  }
+  if (CheckFinishParallel()) {
+    ILOG_INFO << "check apa parallel finished!";
+    SetParkingStatus(PARKING_FINISHED);
     return;
   }
 
@@ -613,10 +633,15 @@ const bool ParallelParkOutScenario::GenTlane() {
         // in_ego_cnt++;
         continue;
       }
-      if (mathlib::IsInBound(obs_pt_local.x(), 0.0, slot_length) &&
-        mathlib::IsInBound(obs_pt_local.y(), 0.0, (0.5 * slot_width + 0.5) * side_sgn)) {
-        ILOG_WARN << "out is obs, obs_pt_local = " << obs_pt_local.transpose();
-        return false;
+      if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
+        if (mathlib::IsInBound(obs_pt_local.x(), 1.0, slot_length - 0.5) &&
+            mathlib::IsInBound(obs_pt_local.y(),
+                               (0.5 * slot_width - 0.5) * side_sgn,
+                               (0.5 * slot_width + 0.8) * side_sgn)) {
+          ILOG_WARN << "out is obs, obs_pt_local = "
+                    << obs_pt_local.transpose();
+          return false;
+        }
       }
 
       if (mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
