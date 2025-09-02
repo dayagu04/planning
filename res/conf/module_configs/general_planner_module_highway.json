@@ -489,7 +489,7 @@
     "q_continuity": 2.0,
     "q_continuity_low_speed": 0.5,
     "q_continuity_search": 0.5,
-    "q_continuity_lane_change": 2.0,
+    "q_continuity_lane_change": 0.0,
     "q_acc": 0.4,
     "q_acc_spatio": 100.0,
     "q_jerk": 10.0,
