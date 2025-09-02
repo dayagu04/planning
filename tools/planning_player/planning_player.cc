@@ -734,24 +734,24 @@ void PlanningPlayer::PlayOneFrame(
   }
 
   // 兼容老版本的包，在老版本中，ego_pose的时间戳被加在input_topic_timestamp.localization字段
-  auto input_time_localization_estimate =
-      input_time_list.localization_estimate();
-  if (0 == input_time_localization_estimate) {
-    input_time_localization_estimate = input_time_list.localization();
-  }
-  auto localization_estimate_ros_msg = find_ros_msg_with_header_time<
-      struct_msgs_legacy_v2_4_6::LocalizationEstimate>(
-      TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
-  if (localization_estimate_ros_msg) {
-    iflyauto::interface_2_4_6::LocalizationEstimate localization_estimate_msg{};
-    convert(localization_estimate_msg, *localization_estimate_ros_msg,
-            ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedLocalizationEstimateOutput(
-        localization_estimate_msg);
-  } else {
-    // std::cerr << "frame_num " << frame_num_
-    //           << " missing /iflytek/localization/ego_pose" << std::endl;
-  }
+  // auto input_time_localization_estimate =
+  //     input_time_list.localization_estimate();
+  // if (0 == input_time_localization_estimate) {
+  //   input_time_localization_estimate = input_time_list.localization();
+  // }
+  // auto localization_estimate_ros_msg = find_ros_msg_with_header_time<
+  //     struct_msgs_legacy_v2_4_6::LocalizationEstimate>(
+  //     TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
+  // if (localization_estimate_ros_msg) {
+  //   iflyauto::interface_2_4_6::LocalizationEstimate localization_estimate_msg{};
+  //   convert(localization_estimate_msg, *localization_estimate_ros_msg,
+  //           ConvertTypeInfo::TO_STRUCT);
+  //   planning_adapter_->FeedLocalizationEstimateOutput(
+  //       localization_estimate_msg);
+  // } else {
+  //   // std::cerr << "frame_num " << frame_num_
+  //   //           << " missing /iflytek/localization/ego_pose" << std::endl;
+  // }
 
   auto localization_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::IFLYLocalization>(
@@ -804,16 +804,16 @@ void PlanningPlayer::PlayOneFrame(
     // std::cerr << "missing /iflytek/control/control_command" << std::endl;
   }
 
-  auto hmi_mcu_ros_msg =
-      find_ros_msg_with_header_time<struct_msgs_legacy_v2_4_5::HmiMcuInner>(
-          TOPIC_HMI_MCU_INNER, input_time_list.hmi());
-  if (hmi_mcu_ros_msg) {
-    iflyauto::interface_2_4_5::HmiMcuInner hmi_inner_msg{};
-    convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
-    planning_adapter_->FeedHmiMcuInner(hmi_inner_msg);
-  } else {
-    // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
-  }
+  // auto hmi_mcu_ros_msg =
+  //     find_ros_msg_with_header_time<struct_msgs_legacy_v2_4_5::HmiMcuInner>(
+  //         TOPIC_HMI_MCU_INNER, input_time_list.hmi());
+  // if (hmi_mcu_ros_msg) {
+  //   iflyauto::interface_2_4_5::HmiMcuInner hmi_inner_msg{};
+  //   convert(hmi_inner_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
+  //   planning_adapter_->FeedHmiMcuInner(hmi_inner_msg);
+  // } else {
+  //   // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
+  // }
 
   auto parking_fusion_ros_msg =
       find_ros_msg_with_header_time<struct_msgs::ParkingFusionInfo>(
@@ -2007,16 +2007,16 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       // std::cerr << "missing /iflytek/control/control_command" << std::endl;
     }
 
-    auto hmi_mcu_ros_msg = find_ros_msg_with_header_time_upper_bound<
-        struct_msgs_legacy_v2_4_5::HmiMcuInner>(TOPIC_HMI_MCU_INNER,
-                                                start_time);
-    if (hmi_mcu_ros_msg) {
-      iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_msg{};
-      convert(hmi_mcu_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
-      planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
-    } else {
-      // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
-    }
+    // auto hmi_mcu_ros_msg = find_ros_msg_with_header_time_upper_bound<
+    //     struct_msgs_legacy_v2_4_5::HmiMcuInner>(TOPIC_HMI_MCU_INNER,
+    //                                             start_time);
+    // if (hmi_mcu_ros_msg) {
+    //   iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_msg{};
+    //   convert(hmi_mcu_msg, *hmi_mcu_ros_msg, ConvertTypeInfo::TO_STRUCT);
+    //   planning_adapter_->FeedHmiMcuInner(hmi_mcu_msg);
+    // } else {
+    //   // std::cerr << "missing /iflytek/hmi/mcu_inner" << std::endl;
+    // }
 
     auto parking_fusion_ros_msg = find_ros_msg_with_header_time_upper_bound<
         struct_msgs::ParkingFusionInfo>(TOPIC_PARKING_FUSION, start_time);

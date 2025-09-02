@@ -59,6 +59,7 @@ message TopicTimeList {
   optional uint64 sd_map = 20;
   optional uint64 sdpro_map = 21;
   optional uint64 perception_scene = 22;
+  // 禁止再添加 时间的统计
 }
 
 message FrameInfo {
