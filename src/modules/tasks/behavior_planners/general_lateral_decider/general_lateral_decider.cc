@@ -1204,13 +1204,21 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   const double ego_v = planning_init_point.v;
   double max_collision_t, left_collision_t, right_collision_t;
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
-
-  *left_road_extra_buffer =
-      interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-             config_.extra_collision_lateral_buffer);
-  *right_road_extra_buffer =
-      interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-             config_.extra_collision_lateral_buffer);
+  // 计算的ttc在有效值之外，不参与计算buffer
+  if (left_collision_t > max_collision_t) {
+    *left_road_extra_buffer = 0;
+  } else {
+    *left_road_extra_buffer =
+        interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp,
+              config_.extra_collision_lateral_buffer);
+  }
+  if (right_collision_t > max_collision_t) {
+    *right_road_extra_buffer = 0;
+  } else {
+    *right_road_extra_buffer =
+        interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp,
+              config_.extra_collision_lateral_buffer);
+  }
   // *left_road_extra_buffer =
   //     std::min(0.2, (max_collision_t - left_collision_t) * 0.1);
   // *right_road_extra_buffer =
@@ -1314,12 +1322,13 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
     }
   }
 
-  if (*left_collision_t > *max_collision_t) {
-    *left_collision_t = *max_collision_t;
-  }
-  if (*right_collision_t > *max_collision_t) {
-    *right_collision_t = *max_collision_t;
-  }
+  // 当发现计算的ttc在有效值之外，不参与计算Buffer
+  // if (*left_collision_t > *max_collision_t) {
+  //   *left_collision_t = *max_collision_t;
+  // }
+  // if (*right_collision_t > *max_collision_t) {
+  //   *right_collision_t = *max_collision_t;
+  // }
 }
 
 void GeneralLateralDecider::GenerateObstaclesBoundary() {
