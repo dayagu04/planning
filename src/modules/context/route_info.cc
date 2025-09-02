@@ -3421,16 +3421,22 @@ bool RouteInfo::CalculateFeasibleLane(
         }
         const auto end_link_is_ramp = sdpro_map_.isRamp(end_link->link_type());
 
-        if (!end_link_is_ramp && !start_link_is_ramp) {
-          // 主路上，交换区内、前、后车道都一样
-          for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
-            before_excr_feasible_lane.emplace_back(i + 1);
-          }
-        } else {
-          // 交换区之后增加车道
-          on_excr_feasible_lane.emplace_back(1);
-          before_excr_feasible_lane.emplace_back(1);
+        // if (!end_link_is_ramp && !start_link_is_ramp) {
+        //   // 主路上，交换区内、前、后车道都一样
+        //   for (int i = 0; i < successor_exclnum; ++i) {
+        //     on_excr_feasible_lane.emplace_back(i + 1);
+        //     before_excr_feasible_lane.emplace_back(i + 1);
+        //   }
+        // } else {
+        //   // 交换区之后增加车道
+        //   on_excr_feasible_lane.emplace_back(1);
+        //   before_excr_feasible_lane.emplace_back(1);
+        // }
+        
+        // 主路上，交换区内、前、后车道都一样
+        for (int i = 0; i < successor_exclnum; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+          before_excr_feasible_lane.emplace_back(i + 1);
         }
 
       } else if (successor_exclnum <= before_exclnum) {
