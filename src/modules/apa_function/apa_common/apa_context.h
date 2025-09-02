@@ -98,6 +98,7 @@ struct RealTimeBrakeInfo {
     this->body_lat_buffer = _body_lat_buffer;
     this->mirror_lat_buffer = _mirror_lat_buffer;
     this->min_lon_dist = _min_lon_dist;
+    this->lon_buffer = _lon_buffer;
   }
   ~RealTimeBrakeInfo() = default;
 };
