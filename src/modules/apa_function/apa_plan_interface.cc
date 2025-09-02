@@ -54,6 +54,7 @@ void ApaPlanInterface::Reset() {
   // reset apa world
   apa_world_ptr_->Reset();
   scenario_manager_.Reset();
+  scenario_manager_.ClearHistoryPreparePlanTraj();
 
   ILOG_INFO << "reset apa plan interface";
   return;
@@ -71,13 +72,6 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
 
   RecordNodeReceiveTime(local_view_ptr);
 
-  if (local_view_ptr->function_state_machine_info.current_state ==
-      iflyauto::FunctionalState_PARK_ERROR) {
-    Reset();
-    ILOG_ERROR << "current state is PARK_ERROR, reset apa plan interface";
-    return false;
-  }
-
   const double start_timestamp_ms = IflyTime::Now_ms();
 
   // run apa world, always run when enter apa
@@ -86,9 +80,6 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   // run planner
   scenario_manager_.UpdateScenarioType();
   scenario_manager_.Process();
-  scenario_manager_.PubPreparePlanState();
-  scenario_manager_.RecommendParkingDirection();
-  scenario_manager_.PubStopReason();
   planning_output_ = scenario_manager_.GetPlanningOutput();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 

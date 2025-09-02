@@ -68,10 +68,7 @@ bool ParkingScenarioManager::Init(
 void ParkingScenarioManager::UpdateScenarioType() {
   ILOG_INFO << "UpdateScenarioType";
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
-      apa_world_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::STANDBY ||
-      apa_world_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::ERROR) {
+      apa_world_->GetStateMachineManagerPtr()->IsParkInvalidStatus()) {
     Reset();
   }
 
@@ -171,15 +168,11 @@ void ParkingScenarioManager::Process() {
 }
 
 void ParkingScenarioManager::Reset() {
+  memset(&planning_output_, 0, sizeof(planning_output_));
   memset(&apa_hmi_data_, 0, sizeof(apa_hmi_data_));
 
   scenario_type_ = ParkingScenarioType::SCENARIO_UNKNOWN;
   scenario_status_ = ParkingScenarioStatus::STATUS_UNKNOWN;
-
-  apa_world_->GetParkingTaskInterfacePtr()->Reset();
-  ClearPlanningOutput();
-  planning_output_.planning_status.apa_planning_status =
-      iflyauto::ApaPlanningStatus::APA_NONE;
 
   // reset all planner
   for (const auto &scene : scenario_list_) {
@@ -211,6 +204,8 @@ void ParkingScenarioManager::ScenarioRunning() {
   planning_output_ = current_scenario_->GetOutput();
 
   apa_hmi_data_ = current_scenario_->GetAPAHmi();
+
+  PubStopReason();
 
   ILOG_INFO << "scenario running";
   return;
@@ -268,6 +263,12 @@ void ParkingScenarioManager::ScenarioTry() {
     current_scenario_->ScenarioTry();
   }
 
+  planning_output_ = current_scenario_->GetOutput();
+
+  apa_hmi_data_ = current_scenario_->GetAPAHmi();
+
+  PublishPreparePlanInfo();
+
   ILOG_INFO << "GEOMETRY RELEASE = "
             << GetSlotReleaseStateString(
                    ego_info_under_slot.slot.release_info_
@@ -305,6 +306,44 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
   }
   ILOG_INFO << "use geometry plan";
   return false;
+}
+
+void ParkingScenarioManager::PublishPreparePlanInfo() {
+  if (!apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    return;
+  }
+
+  // fill prepare plan traj
+  // if true, use current scenario traj and update history prepare plan traj
+  // if false, use history prepare plan traj to keep stable
+  if (!PubPreparePathByStableStrategy()) {
+    ILOG_INFO << "use history prepare plan traj";
+    planning_output_.trajectory = history_prepare_plan_traj_;
+  } else {
+    ILOG_INFO << "use current scenario traj";
+    history_prepare_plan_traj_ = planning_output_.trajectory;
+  }
+
+  // fill prepare plan state
+  switch (apa_world_->GetSlotManagerPtr()->GetSlotReleaseState()) {
+    case SlotReleaseState::NOT_RELEASE:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_FAILED;
+      break;
+    case SlotReleaseState::RELEASE:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_SUCCESS;
+      break;
+    case SlotReleaseState::UNKOWN:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
+      break;
+    default:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;
+      break;
+  }
+
+  // fill prepare plan recommend park direction
+  apa_hmi_data_.planning_park_dir =
+      current_scenario_->GetAPAHmi().planning_park_dir;
+  ILOG_INFO << "recommend park dir = " << apa_hmi_data_.planning_park_dir;
 }
 
 void ParkingScenarioManager::PubPreparePlanState() {
@@ -360,7 +399,6 @@ void ParkingScenarioManager::ClearPlanningOutput() {
 
 const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
   if (current_scenario_ == nullptr) {
-    ClearPlanningOutput();
     return false;
   }
 
@@ -370,8 +408,8 @@ const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
     return true;
   }
 
-  auto &history_path = planning_output_.trajectory;
-  auto &new_path = current_scenario_->GetOutput().trajectory;
+  const auto &history_path = history_prepare_plan_traj_;
+  const auto &new_path = current_scenario_->GetOutput().trajectory;
 
   // If scenario planning fail, update path
   if (!IsTrajValid(new_path)) {
@@ -403,13 +441,6 @@ const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
 }
 
 void ParkingScenarioManager::PubStopReason() {
-  apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
-  apa_hmi_data_.is_parking_pause = false;
-
-  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
-    return;
-  }
-
   if (current_scenario_ == nullptr) {
     return;
   }
