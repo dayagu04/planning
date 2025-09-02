@@ -477,9 +477,9 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
       continue;
     }
 
-    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;
-    }
+    // if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+    //   continue;
+    // }
 
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
@@ -605,6 +605,11 @@ bool LaneBorrowDecider::CheckLaneBorrowCondition() {
 
   double first_obs_end =
       static_blocked_obstacles_[0]->frenet_obstacle_boundary().s_end;
+  if(std::fabs(distance_to_stop_line_ -
+                   (first_obs_end - ego_sl_state_.s())) < 15.0){
+    lane_borrow_decider_output_.lane_borrow_failed_reason = CLOSE_TO_JUNCTION;
+    return false;
+  }
   if (lane_borrow_status_ == kNoLaneBorrow && (!is_facility_) &&
       (left_lane_boundary_type_ == iflyauto::LaneBoundaryType_MARKING_SOLID ||
        right_lane_boundary_type_ == iflyauto::LaneBoundaryType_MARKING_SOLID)) {
@@ -854,9 +859,9 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     if (!obstacle->b_frenet_valid()) {
       continue;
     }
-    if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
-      continue;
-    }
+    // if (obs_type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN) {
+    //   continue;
+    // }
     if (!(obstacle->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
