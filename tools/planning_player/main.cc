@@ -64,7 +64,6 @@ int main(int argc, char **argv) {
       {"no-version-check", no_argument, &lopt, 10},
       {"car", required_argument, &lopt, 11},
       {"play-in-loop", no_argument, &lopt, 12}};
-
   while ((opt = getopt_long(argc, argv, optstring, long_options, &loidx)) !=
          -1) {
     if (opt == 0) opt = lopt;
@@ -136,7 +135,6 @@ int main(int argc, char **argv) {
         return -1;
     }
   }
-
   auto tp = std::chrono::time_point_cast<std::chrono::seconds>(
                 std::chrono::system_clock::now())
                 .time_since_epoch()

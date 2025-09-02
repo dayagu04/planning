@@ -103,10 +103,14 @@ PP_bag = f"{shm_path}/{task_id}_{scene_lib_id}_{case_id}.bag.PP"
 result_path = f"{out_dir}/case_result.json"
 command = f"/root/planning/install/bin/pp --play {file_path} --out-bag {PP_bag} --mileage-path {result_path} --close-loop --interface-check --no-version-check"
 try:
-    result = subprocess.run(command, shell=True, text=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    result = subprocess.run(command, shell=True, text=False, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # print("标准输出：")
+    # print(result.stdout)
+    # print("错误输出：")
+    # print(result.stderr)
 except subprocess.CalledProcessError as e:
     print(f"Runing PP error: {e}")
-    # print("PP Output:", e.stdout)
+    print("PP Output:", e.stdout)
     print("PP Error:", e.stderr)
 if (result.returncode != 0):
     print(f"Runing PP error !")
