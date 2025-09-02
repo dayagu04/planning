@@ -753,12 +753,12 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     } else {
       general_lateral_decider_output.complete_follow = false;
       if (!lane_borrow_decider_output.is_in_lane_borrow_status) {
-        if (is_LC_PROPOSE) {
-          HandleRefPathOffset(traj_points,
-              lane_change_decider_output.lateral_close_boundary_offset);
-        } else {
-          HandleRefPathOffset(traj_points, ref_lat_offset);
-        }
+        // if (is_LC_PROPOSE) {
+        //   HandleRefPathOffset(traj_points,
+        //       lane_change_decider_output.lateral_close_boundary_offset);
+        // } else {
+        HandleRefPathOffset(traj_points, ref_lat_offset);
+        // }
       }
     }
   }
