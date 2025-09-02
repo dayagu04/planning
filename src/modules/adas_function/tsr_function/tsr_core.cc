@@ -24,6 +24,9 @@ iflyauto::NotificationMainSwitch TsrCore::UpdateTsrMainSwitch(void) {
   return function_state_machine_info_ptr->switch_sts.tsr_main_switch;
 }
 
+// Enable Code
+// 0: 正常
+// >0: 异常
 uint16 TsrCore::UpdateTsrEnableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
@@ -52,6 +55,9 @@ uint16 TsrCore::UpdateTsrEnableCode(void) {
   return enable_code;
 }
 
+// Disable Code
+// 0: 正常
+// >0: 异常
 uint16 TsrCore::UpdateTsrDisableCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
@@ -80,6 +86,9 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
   return disable_code;
 }
 
+// Fault Code
+// 0: 正常
+// >0: 异常
 uint16 TsrCore::UpdateTsrFaultCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
@@ -195,7 +204,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (tsr_fault_code_) {
       tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          TSR_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (tsr_enable_code_ == 0) {
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
@@ -212,7 +221,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (tsr_fault_code_) {
       tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          TSR_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (tsr_disable_code_) {
       tsr_state = iflyauto::TSRFunctionFSMWorkState::
           TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -362,8 +371,6 @@ void TsrCore::UpdateTsrSuppInfo(void) {
 
 // 更新限速信息
 void TsrCore::UpdateTsrSpeedLimit(void) {
-  // 需要从规划拿数据
-  // 奇瑞要求功能关闭时也显示限速值,只是不会报警
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   auto peception_tsr_info = GetContext.get_session()
                                 ->environmental_model()
@@ -549,8 +556,8 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     // 2. 显示解除显示标识
     if (tsr_speed_limit_valid_ == true && tsr_speed_limit_ <= end_of_speed_sign_value_) {
       tsr_speed_limit_valid_ = false;
-      tsr_speed_limit_ = current_map_speed_limit_;
-      end_of_speed_sign_display_flag_ = true;
+      tsr_speed_limit_ = end_of_speed_sign_value_; // 解除限速牌限速值
+      end_of_speed_sign_display_flag_ = true; // 显示解除限速牌
       end_of_speed_sign_display_time_ = 0.0;
     }
   }
