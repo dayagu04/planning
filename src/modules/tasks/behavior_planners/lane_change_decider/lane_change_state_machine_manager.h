@@ -155,6 +155,7 @@ class LaneChangeStateMachineManager {
   bool IsOffTurnLight(const RampDirection ramp_direction);
   const double CalculateEgoFrontLineLength();
   void GetFrontRiskAgentTrajs();
+  void GetSideRiskAgents();
 
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request) const;
@@ -235,7 +236,10 @@ class LaneChangeStateMachineManager {
                     const RequestType direction);
   bool CheckFrontRiskAgentTrajs(
     const planning_data::DynamicAgentNode *agent_node, bool is_large_car);
-
+  void GetSideRiskAgent();
+  bool IfLateralCollision(std::pair<double, double> l1, double v1,
+                        std::pair<double, double> l2, double v2,
+                        double max_time = 4.0, double dt = 0.5);
  private:
 //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
@@ -288,6 +292,7 @@ class LaneChangeStateMachineManager {
   TrajectoryPoints ego_trajs_future_;
   TrajectoryPoints front_node_trajs_future_;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
+  std::vector<std::shared_ptr<FrenetObstacle>>  risk_side_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;

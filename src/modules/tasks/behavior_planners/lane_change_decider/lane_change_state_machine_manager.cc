@@ -1820,6 +1820,7 @@ void LaneChangeStateMachineManager::PreProcess() {
     //add second check for target node
   CheckTargetFrontNode(target_lane_front_node_id);
   GetFrontRiskAgentTrajs();
+  GetSideRiskAgent();
 
   if (target_lane_rear_node_) {
     is_large_car_in_side_ = IsLargeAgent(target_lane_rear_node_);
@@ -1931,8 +1932,67 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs(){
     if(agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_start){
       continue;
     }
+    if(agent_s - target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end){
+      continue;
+    }
     risk_agents_nodes_.push_back(target_lane_node);
   }
+}
+// 关注自车左右侧快速靠近的障碍物
+void LaneChangeStateMachineManager::GetSideRiskAgent(){
+  risk_side_agents_nodes_.clear();
+  const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto target_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          target_lane_virtual_id);
+  const auto& ego_sl_bd = target_reference_path
+                              ->get_ego_frenet_boundary();
+  const auto& ego_sl_state = target_reference_path
+                              ->get_frenet_ego_state();
+  const auto& obstacles = target_reference_path->get_obstacles();
+
+  double concerned_s_start = ego_sl_bd.s_start;
+  double concerned_s_end = ego_sl_bd.s_end;
+  RequestType direction = lc_req_mgr_->request();
+  for(const auto& obstacle: obstacles){
+    int id = obstacle->obstacle()->id();
+    double lat_vel = obstacle->frenet_velocity_l();
+    const auto& obstacle_sl = obstacle->frenet_obstacle_boundary();
+    bool is_lat_side = obstacle_sl.l_end < ego_sl_bd.l_start ||
+                    obstacle_sl.l_start > ego_sl_bd.l_end;
+    bool is_longi_concerned = !(obstacle_sl.s_start > concerned_s_end ||
+                              obstacle_sl.s_end < concerned_s_start); // 车尾出如果有车靠近，可能保守
+    if(!is_lat_side || !is_longi_concerned){
+      continue;
+    }
+    if(direction == RIGHT_CHANGE && obstacle_sl.l_start > ego_sl_bd.l_end){
+      continue;
+    }
+    if(direction == LEFT_CHANGE && obstacle_sl.l_end < ego_sl_bd.l_start){
+      continue;
+    }
+    risk_side_agents_nodes_.push_back(obstacle);
+  }
+  // 暂时只关注当前时刻 ttc
+  return;
+}
+bool LaneChangeStateMachineManager::IfLateralCollision(
+                        std::pair<double, double> l1, double v1,
+                        std::pair<double, double> l2, double v2,
+                        double max_time, double dt) {
+  for (double t = 0.0; t <= max_time; t += dt) {
+      double l1_s = l1.first + v1 * t;
+      double l1_e = l1.second + v1 * t;
+      double l2_s = l2.first + v2 * t;
+      double l2_e = l2.second + v2 * t;
+
+      if (!(l1_e <= l2_s || l2_e <= l1_s)) {
+          return true; // 碰撞
+      }
+  }
+  return false;
 }
 bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     const planning_data::DynamicAgentNode *agent_node, bool is_large_car) {
@@ -2420,6 +2480,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
 
   bool lc_safety = true;
   bool is_risk_node = false;
+  bool is_side_clsoing = false;
   if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE) {
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (transition_info_.lane_change_status == kLaneChangePropose) {
@@ -2539,6 +2600,41 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
         break;
       }
     }
+
+    const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+    const auto reference_path_manager =
+        session_->environmental_model().get_reference_path_manager();
+    // const auto virtual_lane_manager =
+    // session_->environmental_model().get_virtual_lane_manager();
+    // const auto target_lane =
+    //     virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+    // const double width_by_target = target_lane->width();
+    const auto &vehicle_param =
+    VehicleConfigurationContext::Instance()->get_vehicle_param();
+    double half_width = vehicle_param.max_width * 0.5;
+    double single_risk_buff = 0.3;
+    const auto target_reference_path =
+        reference_path_manager->get_reference_path_by_lane(
+            target_lane_virtual_id);
+    const auto& ego_sl_state = target_reference_path
+                              ->get_frenet_ego_state();
+    const auto& ego_sl_bd = target_reference_path
+                          ->get_ego_frenet_boundary();
+    std::pair<double, double> ego_lat{ego_sl_bd.l_start, ego_sl_bd.l_end};
+    std::pair<double, double> center_lat{- half_width - single_risk_buff,
+                                            half_width + single_risk_buff};
+    double ego_lat_vel = ego_sl_state.velocity_l();
+    for(const auto& side_obs: risk_side_agents_nodes_){
+      const auto& obstacle_sl = side_obs->frenet_obstacle_boundary();
+      std::pair<double, double> obs_lat{obstacle_sl.l_start, obstacle_sl.l_end};
+      double obs_lat_vel = side_obs->frenet_velocity_l();
+      bool lateral_collision = IfLateralCollision(center_lat, 0.0, obs_lat, obs_lat_vel);
+      if(lateral_collision){
+        lc_safety = false;
+        is_side_clsoing = true;
+        break;
+      }
+    }
   }
 
   if (!lc_safety) {
@@ -2557,6 +2653,12 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       }
       lc_back_track_.set_value(after_filter_agent->node_agent_id(),
                                distance_rel, node_v);
+      if(is_risk_node){
+        lc_state_info->lc_back_reason = "front risk node";
+      }
+      if(is_side_clsoing){
+        lc_state_info->lc_back_reason = "side clsoing";
+      }
     } else if (transition_info_.lane_change_status == kLaneChangePropose ||
         transition_info_.lane_change_status == kLaneChangeHold) {
       lc_invalid_track_.set_value(after_filter_agent->node_agent_id(),
@@ -2568,9 +2670,12 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
         lc_state_info->lc_invalid_reason = "side view invalid";
       }
     }
-  }
-  if(is_risk_node){
-    lc_state_info->lc_invalid_reason = "is_risk_node";
+    if(is_risk_node){
+      lc_state_info->lc_invalid_reason = "front risk node";
+    }
+    if(is_side_clsoing){
+      lc_state_info->lc_invalid_reason = "side clsoing";
+    }
   }
 }
 TrajectoryPoints LaneChangeStateMachineManager::CalculateAgentPredictionTrajs(
