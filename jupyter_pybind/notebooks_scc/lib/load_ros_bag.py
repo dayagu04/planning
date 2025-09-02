@@ -693,6 +693,7 @@ class LoadRosbag:
                          "elk_preview_left_y_gap","elk_preview_right_y_gap","elk_left_intervention_by_line","elk_left_intervention_by_roadedge",
                          "elk_right_intervention_by_line","elk_right_intervention_by_roadedge","elk_roadedge_offset",
                          "elk_left_has_risk","elk_right_has_risk","elk_fl_risk_code","elk_ml_risk_code","elk_rl_risk_code","elk_fr_risk_code","elk_mr_risk_code","elk_rr_risk_code",
+                         "left_has_risk_code","right_has_risk_code","elk_obj_fl_tlc_","elk_obj_ml_tlc_","elk_obj_rl_tlc_","elk_obj_fr_tlc_","elk_obj_mr_tlc_","elk_obj_rr_tlc_",
                          #tsr debug info
                          "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_speed_limit_","current_map_speed_limit_", "current_map_speed_limit_valid_", "tsr_speed_limit_valid_","tsr_warning_image_",
                          "tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_","tsr_state_",
@@ -713,7 +714,7 @@ class LoadRosbag:
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         "planning_hmi_ldp_state",]
+                         "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3"]
 
       json_vector_list = ["raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",

@@ -10,22 +10,22 @@ namespace elk_core {
 
 struct ElkParameters {
   double enable_vehspd_display_min =
-      60.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
+      65.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
   double enable_vehspd_display_max =
       150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
   double disable_vehspd_display_min =
-      55.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
+      60.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
   double disable_vehspd_display_max =
       155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
 
-  double earliest_warning_line = 1.5;           // 触发的最早报警线，单位：m
-  double latest_warning_line = -0.3;            // 触发的最晚报警线，单位：m
-  double reset_warning_line = 0.15;             // 触发的报警重置线，单位：m
+  double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
+  double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
+  double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double roadedge_earliest_warning_line = 1.8;  // 触发的最早报警线，单位：m
-  double roadedge_latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
-  double roadedge_reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
-  double supp_turn_light_recovery_time = 2.0;   // 转向灯抑制恢复时长，单位：s
-  double warning_time_max = 8.0;                // 单次最大报警时长，单位：s
+  double roadedge_latest_warning_line = -0.3;  // 触发的最晚报警线，单位：m
+  double roadedge_reset_warning_line = 0.15;  // 触发的报警重置线，单位：m
+  double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
+  double warning_time_max = 8.0;  // 单次最大报警时长，单位：s
 
   double roadegge_earliest_warning_line_curv =
       1.5;  // 路沿触发的最早报警线，单位：m
@@ -50,6 +50,8 @@ class ElkCore {
   double acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
   // 当前道线的弯道半径满足取消抑制阈值持续时间 单位:s
   double curve_C2_supp_recover_duration_ = 0.0;
+  // ELK Eoadedge场景，弯道抑制功能触发持续时间 单位：s
+  double elk_roadedge_curve_supp_duration_ = 0.0;
   // 当前方向盘转速条件满足取消抑制阈值持续时间 单位:s
   double str_wheel_ang_speed_recover_duration_ = 0.0;
   uint16 UpdateElkEnableCode(void);
@@ -102,7 +104,8 @@ class ElkCore {
   // 输出elk计算结果
   void SetElkOutputInfo();
 
-  uint16 RiskAlertJudge(const context::FusionObjExtractInfo &obj);
+  uint16 RiskAlertJudge(const context::FusionObjExtractInfo &obj,
+                        double &elk_obj_tlc);
   //   std::vector<double>ObjCornersCalculate(const
   //   context::FusionObjExtractInfo& obj);
 
@@ -116,7 +119,16 @@ class ElkCore {
   bool elk_state_machine_init_flag_ = false;
   iflyauto::ELKFunctionFSMWorkState ElkStateMachine(void);
 
+  double elk_obj_rr_tlc_ = 10.0;
+  double elk_obj_fr_tlc_ = 10.0;
+  double elk_obj_mr_tlc_ = 10.0;
+  double elk_obj_ml_tlc_ = 10.0;
+  double elk_obj_fl_tlc_ = 10.0;
+  double elk_obj_rl_tlc_ = 10.0;
   double UpdateTlcThreshold(void);
+  bool elk_right_has_risk_for_hmi_flag_ = false;
+  bool elk_left_has_risk_for_hmi_flag_ = false;
+  uint32 elk_obj_id_ = 0;
 };
 
 }  // namespace elk_core

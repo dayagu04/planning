@@ -112,7 +112,8 @@ void Preprocess::SyncParameters(void) {
                        "elk_main_switch");
   int tsr_main_switch_temp = 0;
   ADAS_JSON_READ_VALUE(tsr_main_switch_temp, int, "tsr_main_switch");
-  GetContext.mutable_param()->tsr_main_switch = static_cast<iflyauto::NotificationMainSwitch>(tsr_main_switch_temp);
+  GetContext.mutable_param()->tsr_main_switch =
+      static_cast<iflyauto::NotificationMainSwitch>(tsr_main_switch_temp);
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_tlc_thrd, double,
                        "elk_tlc_thrd");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_tlc_thrd,
@@ -151,10 +152,10 @@ void Preprocess::SyncParameters(void) {
                        "ihc_use_json_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_main_switch, bool,
                        "ihc_main_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_enable_code_maskcode, int,
-                       "ihc_enable_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_disable_code_maskcode, int,
-                       "ihc_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_enable_code_maskcode,
+                       int, "ihc_enable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_disable_code_maskcode,
+                       int, "ihc_disable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code_maskcode, int,
                        "ihc_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
@@ -169,8 +170,9 @@ void Preprocess::SyncParameters(void) {
                        std::vector<double>, "lka_dec_tlc_by_c2_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_dec_y_gap_by_c2_vector,
                        std::vector<double>, "lka_dec_y_gap_by_c2_vector");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->roadedge_dec_y_gap_by_c2_vector,
-                       std::vector<double>, "roadedge_dec_y_gap_by_c2_vector");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->roadedge_dec_y_gap_by_c2_vector,
+      std::vector<double>, "roadedge_dec_y_gap_by_c2_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_offset_vector,
                        std::vector<double>, "elk_roadedge_offset_vector");
   ADAS_JSON_READ_VALUE(
@@ -180,7 +182,10 @@ void Preprocess::SyncParameters(void) {
                        std::vector<double>, "y_gap_vy_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->dec_y_gap_by_vy_vector,
                        std::vector<double>, "dec_y_gap_by_vy_vector");
-
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ttc_collision_thrd_tab,
+                       std::vector<double>, "ttc_collision_thrd_tab");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->obj_relative_speed_tab,
+                       std::vector<double>, "obj_relative_speed_tab");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_fault_code_maskcode, int,
                        "ldp_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldp_enable_code_maskcode,
@@ -263,6 +268,34 @@ void Preprocess::SyncParameters(void) {
                        double, "kickdown_abs_hand_trq");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ELK_kickdown_hand_trq_dur,
                        double, "kickdown_hand_trq_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_enable_accel_pedal_pos_rate, double,
+      "enable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_enable_accel_pedal_pos_rate, double,
+      "enable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_enable_accel_pedal_pos_rate, double,
+      "enable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_disable_accel_pedal_pos_rate, double,
+      "disable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_disable_accel_pedal_pos_rate, double,
+      "disable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_disable_accel_pedal_pos_rate, double,
+      "disable_accel_pedal_pos_rate");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_enable_accel_pedal_pos_rate_dur, double,
+      "enable_accel_pedal_pos_rate_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_enable_accel_pedal_pos_rate_dur, double,
+      "enable_accel_pedal_pos_rate_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldw_enable_accel_pedal_pos_rate_dur, double,
+      "enable_accel_pedal_pos_rate_dur"); 
+
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
                        int, "meb_request_status_const");
   ADAS_JSON_READ_VALUE(
@@ -271,7 +304,13 @@ void Preprocess::SyncParameters(void) {
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->ELK_supp_CoolingTime_handtrq_thr, double,
       "supp_CoolingTime_handtrq_thr");
-
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_supp_curv_r_thr,
+                       double, "elk_roadedge_supp_curv_r_thr");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_roadedge_supp_curv_r_dur,
+                       double, "elk_roadedge_supp_curv_r_dur");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_roadedge_testswitch_temp_, bool,
+      "elk_roadedge_testswitch_temp_");
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }

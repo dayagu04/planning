@@ -12,7 +12,6 @@
 #include "spline.h"
 #include "transform_lib.h"
 #include "vehicle_service_c.h"
-#include "camera_perception_tsr_c.h"
 
 // using namespace iflyauto;
 namespace adas_function {
@@ -40,7 +39,7 @@ struct Parameters {
   std::vector<double> lka_dec_y_gap_by_c2_vector = {0.20, 0.10, 0.00, 0.00,
                                                     0.00};
   std::vector<double> roadedge_dec_y_gap_by_c2_vector = {0.00, 0.00, 0.00, 0.00,
-                                                    0.00};
+                                                         0.00};
   std::vector<double> elk_roadedge_earliest_line_c2_vector = {0.00, 0.00, 0.00,
                                                               0.00, 0.00};
   // 根据横向速度查表触发线offset
@@ -56,8 +55,13 @@ struct Parameters {
                                                           0.10, 0.00};
   double safe_departure_ttc = 3.0;
   // 根据横向速度查表elk 路沿的参数
-  std::vector<double> elk_roadedge_departure_V_vector = {0.0, 0.2, 0.4, 0.6, 0.8};
-  std::vector<double> elk_roadedge_offset_vector = {0.40, 0.40, 0.40, 0.40, 0.40};
+  std::vector<double> elk_roadedge_departure_V_vector = {0.0, 0.2, 0.4, 0.6,
+                                                         0.8};
+  std::vector<double> elk_roadedge_offset_vector = {0.40, 0.40, 0.40, 0.40,
+                                                    0.40};
+
+  std::vector<double> ttc_collision_thrd_tab = {2.0, 2.5, 3.0};
+  std::vector<double> obj_relative_speed_tab = {5.0, 10.0, 15.0};
   double ldw_enable_speed = 27.555;
   double ldw_tlc_thrd = 0.0;
   double ldp_tlc_thrd = 1.0;
@@ -147,6 +151,22 @@ struct Parameters {
   double LDP_supp_CoolingTime_handtrq_thr = 0.5;
   // 抑制冷却时间力矩条件的手力矩值 单位：Nm
   double ELK_supp_CoolingTime_handtrq_thr = 0.5;
+  //路沿半径抑制条件,不能为0
+  double elk_roadedge_supp_curv_r_thr = 220;
+  //路沿半径抑制条件持续时间阈值,不能为0
+  double elk_roadedge_supp_curv_r_dur = 2.0;
+  //临时测试，记得删
+  bool elk_roadedge_testswitch_temp_ = false;
+  //以下定义了enable/disable条件中油门踏板变化率的阈值条件
+  double elk_enable_accel_pedal_pos_rate = 30.0;
+  double elk_disable_accel_pedal_pos_rate = 70.0;
+  double ldp_enable_accel_pedal_pos_rate = 30.0;
+  double ldp_disable_accel_pedal_pos_rate = 70.0;
+  double ldw_enable_accel_pedal_pos_rate = 30.0;
+  double ldw_disable_accel_pedal_pos_rate = 70.0;
+  double elk_enable_accel_pedal_pos_rate_dur = 1.0;
+  double ldp_enable_accel_pedal_pos_rate_dur = 1.0;
+  double ldw_enable_accel_pedal_pos_rate_dur = 1.0;
   // test value
   int meb_request_status_const = 0;
   // IHC使能码掩码
@@ -323,8 +343,8 @@ struct LastCycleInfo {
 
 // 限速标识牌信息，包括限速，解除限速
 struct SpeedSignInfo {
-  uint64 isp_timestamp;           // 图像曝光中间时刻时间戳    (微秒)
-  uint8_t id;                     // 跟踪id号
+  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;            // 跟踪id号
   iflyauto::SuppSignType speed_sign_type;  // 限速标志牌类型
   // 是否为匝道限速牌
   bool ramp_flag = false;
@@ -338,12 +358,12 @@ struct SpeedSignInfo {
 
 // 辅助标识牌信息
 struct SuppSignInfo {
-  uint64 isp_timestamp;         // 图像曝光中间时刻时间戳    (微秒)
-  uint8_t id;                   // 跟踪id号
+  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;            // 跟踪id号
   iflyauto::SuppSignType supp_sign_type;  // 辅助标志牌类型
-  double supp_sign_x;           // 辅助标志牌纵向距离 (m)
-  double supp_sign_y;           // 辅助标志牌横向距离 (m)
-  double supp_sign_z;           // 辅助标志牌高度     (m)
+  double supp_sign_x;                     // 辅助标志牌纵向距离 (m)
+  double supp_sign_y;                     // 辅助标志牌横向距离 (m)
+  double supp_sign_z;                     // 辅助标志牌高度     (m)
 };
 
 // 道路标识信息, 包含多个限速标识牌和多个辅助标识牌
@@ -376,6 +396,11 @@ Intervention) 5:Active(Right Intervention) */
                  Intervention */
 };
 
+typedef struct {
+  boolean obj_valid;  // false:invalid true:valid
+  uint32 id;          // 障碍物id
+} _STRUCT_ALIGNED_ ELKRiskObjInfo;
+
 struct ElkOutputInfo {
   iflyauto::ELKFunctionFSMWorkState elk_state_{
       iflyauto::ELK_FUNCTION_FSM_WORK_STATE_OFF}; /* ELK功能状态
@@ -386,12 +411,15 @@ Intervention) 5:Active(Right Intervention) */
                  Intervention 1:Left Intervention */
   bool elk_right_intervention_flag_{
       false}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht*/
+
+  ELKRiskObjInfo elk_risk_obj_;
 };
 
 struct TSROutputInfo {
   iflyauto::TSRFunctionFSMWorkState tsr_state_;  // TSR功能状态
   uint32 tsr_speed_limit_;  // TSR识别到的限速标识牌    (公里/小时)
-  boolean isli_display_type_ = false;  // 限速标识类型 (true:显示解除限速 / false:显示限速)
+  boolean isli_display_type_ =
+      false;  // 限速标识类型 (true:显示解除限速 / false:显示限速)
   boolean tsr_warning_;  // TSR超速报警标志位 (true:Warning / false:No Warning)
 
   iflyauto::SuppSignType
@@ -457,6 +485,7 @@ struct FusionObjExtractInfo {
   double acceleration_relative_to_ground_x;
   double acceleration_relative_to_ground_y;
   double relative_theta;
+  double tlc = 0.0;
 };
 struct SingleAreaObjs {
   bool vehicle_info_valid = false;

@@ -61,7 +61,9 @@ void PlanningScheduler::Init(
       << "load vehicle param success! car type: "
       << VehicleConfigurationContext::Instance()->get_vehicle_param().car_type
       << ", the car wheel base is: "
-      << VehicleConfigurationContext::Instance()->get_vehicle_param().wheel_base;
+      << VehicleConfigurationContext::Instance()
+             ->get_vehicle_param()
+             .wheel_base;
 
   // TODO：配置文件改成和场景/功能有关，不能使用默认场景
   planning::common::SceneType scene_type = session_.get_scene_type();
@@ -366,9 +368,9 @@ void PlanningScheduler::FillPlanningTrajectory(
     }
 
     ILOG_DEBUG << "smooth dpoly enable_none_smooth: "
-              << config_.enable_none_smooth
-              << "   config_.none_consider_slope_thr:   "
-              << config_.none_consider_slope_thr << std::endl;
+               << config_.enable_none_smooth
+               << "   config_.none_consider_slope_thr:   "
+               << config_.none_consider_slope_thr << std::endl;
 
     ILOG_DEBUG << "limited_polynomial_3: " << limited_polynomial_3;
     std::vector<double> polynomial_limited(4);
@@ -610,6 +612,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->elk_output_info.elk_right_intervention_flag =
       GetContext.get_output_info()
           ->elk_output_info_.elk_right_intervention_flag_;
+
+  planning_hmi_info->elk_output_info.elk_risk_obj.obj_valid =
+      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.obj_valid;
+  planning_hmi_info->elk_output_info.elk_risk_obj.id =
+      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.id;
 
   // HMI for ihc
 

@@ -1,7 +1,7 @@
 {
   "car_type": "chery_m32t",
   "mark_date": "20241114",
-  "lkas_version":"20250729",
+  "lkas_version":"20250901",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -108,6 +108,19 @@
     0.40,
     0.40
   ],
+  "ttc_collision_thrd_tab": [
+    3.50,
+    3.50,
+    3.50
+  ], 
+  "obj_relative_speed_tab ": [
+    5.00,
+    10.00,
+    15.00
+  ], 
+
+  "elk_roadedge_supp_curv_r_thr":300.00,
+  "elk_roadedge_supp_curv_r_dur":2.0,
   "ldw_enable_speed": 27.555,
   "ldw_tlc_thrd": 1.0,
   "ldp_tlc_thrd": 1.0,
@@ -135,22 +148,22 @@
   "hmi_tsr_state": 0,
   "hmi_tsr_speed_limit": 0,
   "ldp_fault_code_maskcode": 4294967231,
-  "ldp_enable_code_maskcode": 4294950399,
-  "ldp_disable_code_maskcode": 4294950399,
+  "ldp_enable_code_maskcode": 4294950911,
+  "ldp_disable_code_maskcode": 4294950911,
   "ldp_left_suppression_code_maskcode": 4294964223,
   "ldp_left_kickdown_code_maskcode": 4294967295,
   "ldp_right_suppression_code_maskcode": 4294964223,
   "ldp_right_kickdown_code_maskcode": 4294967295,
-  "ldw_enable_code_maskcode": 4294950399,
-  "ldw_disable_code_maskcode": 4294950399,
+  "ldw_enable_code_maskcode": 4294950911,
+  "ldw_disable_code_maskcode": 4294950911,
   "ldw_fault_code_maskcode": 4294967231,
   "ldw_left_suppression_code_maskcode": 4294967295,
   "ldw_left_kickdown_code_maskcode": 4294967295,
   "ldw_right_suppression_code_maskcode": 4294967295,
   "ldw_right_kickdown_code_maskcode": 4294967295,
   "elk_fault_code_maskcode": 4294967231,
-  "elk_enable_code_maskcode": 4294950399,
-  "elk_disable_code_maskcode": 4294950399,
+  "elk_enable_code_maskcode": 4294950911,
+  "elk_disable_code_maskcode": 4294950911,
   "elk_left_suppression_code_maskcode": 4294966271,
   "elk_left_kickdown_code_maskcode": 4294967295,
   "elk_right_suppression_code_maskcode": 4294966271,
@@ -162,11 +175,15 @@
   "kickdown_abs_hand_trq": 1.5,
   "kickdown_hand_trq_dur": 0.5,
   "supp_CoolingTime_handtrq_thr": 0.5,
+  "enable_accel_pedal_pos_rate" : 40.0,
+  "enable_accel_pedal_pos_rate_dur" : 1.0,
+  "disable_accel_pedal_pos_rate" : 70.0,
   "ihc_use_json_switch": false,
   "ihc_use_json_code": true,
   "ihc_main_switch": true,
   "ihc_enable_code_maskcode": 31,
   "ihc_disable_code_maskcode": 0,
   "ihc_fault_code_maskcode": 0,
-  "meb_request_status_const": 0
+  "meb_request_status_const": 0,
+  "elk_roadedge_testswitch_temp_":false
 }

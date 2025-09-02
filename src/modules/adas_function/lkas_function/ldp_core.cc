@@ -160,7 +160,8 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
 
   // bit 9
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate < 30.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
+      GetContext.get_param()->ldp_enable_accel_pedal_pos_rate) {
     acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
     if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
       acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
@@ -170,7 +171,8 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   } else {
     acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
   }
-  if (acc_pedal_pos_rate_supp_recover_duration_ < 1.0) {
+  if (acc_pedal_pos_rate_supp_recover_duration_ <
+      GetContext.get_param()->ldp_enable_accel_pedal_pos_rate_dur) {
     enable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -202,9 +204,9 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
       GetContext.get_road_info()->current_lane.right_line.c2;
 
   if (((fabs(left_line_C2_temp) < 0.5 / 220) &&
-       ((GetContext.get_road_info()->current_lane.left_line.valid == true))) ||
-      (fabs(right_line_C2_temp) < 0.5 / 220) &&
-          (GetContext.get_road_info()->current_lane.right_line.valid == true)) {
+       (GetContext.get_road_info()->current_lane.left_line.valid == true)) ||
+      ((fabs(right_line_C2_temp) < 0.5 / 220) &&
+       (GetContext.get_road_info()->current_lane.right_line.valid == true))) {
     curve_C2_supp_recover_duration_ += GetContext.get_param()->dt;
     if (curve_C2_supp_recover_duration_ > 60.0) {
       curve_C2_supp_recover_duration_ = 60.0;
@@ -394,7 +396,8 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   }
   // bit 9
   // 油门踏板变化率>70%/s
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate > 70.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
+      GetContext.get_param()->ldp_disable_accel_pedal_pos_rate) {
     disable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -674,9 +677,10 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
     in_left_line_aera_flag = false;
   }
   // // 判断是否处于路沿允许左侧报警区域内
-  // if ((GetContext.get_road_info()->current_lane.left_roadedge.valid == true) &&
-  //     (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge > 0.0) &&
-  //     (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge <
+  // if ((GetContext.get_road_info()->current_lane.left_roadedge.valid == true)
+  // &&
+  //     (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge > 0.0)
+  //     && (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge <
   //      ldp_param_.roadedge_earliest_warning_line)) {
   //   in_left_roadedge_aera_flag = true;
   // } else {
@@ -1045,9 +1049,10 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
     in_right_line_aera_flag = false;
   }
   // // 判断是否处于路沿允许右侧报警区域内
-  // if ((GetContext.get_road_info()->current_lane.right_roadedge.valid == true) &&
-  //     (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge < 0.0) &&
-  //     (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge >
+  // if ((GetContext.get_road_info()->current_lane.right_roadedge.valid == true)
+  // &&
+  //     (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge < 0.0)
+  //     && (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge >
   //      (-1.0 * ldp_param_.roadedge_earliest_warning_line))) {
   //   in_right_roadedge_aera_flag = true;
   // } else {

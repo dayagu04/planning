@@ -10,11 +10,11 @@ namespace ldw_core {
 
 struct LdwParameters {
   double enable_vehspd_display_min =
-      60.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
+      65.0 / 3.6;  // 激活的最小仪表车速，单位：m/s
   double enable_vehspd_display_max =
       150.0 / 3.6;  // 激活的最大仪表车速，单位：m/s
   double disable_vehspd_display_min =
-      55.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
+      60.0 / 3.6;  // 退出的最小仪表车速，单位：m/s
   double disable_vehspd_display_max =
       155.0 / 3.6;  // 退出的最大仪表车速，单位：m/s
 

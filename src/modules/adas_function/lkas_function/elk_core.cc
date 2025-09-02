@@ -163,7 +163,8 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
 
   // bit 9
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate < 30.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
+      GetContext.get_param()->elk_enable_accel_pedal_pos_rate) {
     acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
     if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
       acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
@@ -173,7 +174,8 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
   } else {
     acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
   }
-  if (acc_pedal_pos_rate_supp_recover_duration_ < 1.0) {
+  if (acc_pedal_pos_rate_supp_recover_duration_ <
+      GetContext.get_param()->elk_enable_accel_pedal_pos_rate_dur) {
     enable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -203,10 +205,21 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
       GetContext.get_road_info()->current_lane.left_line.c2;
   double right_line_C2_temp =
       GetContext.get_road_info()->current_lane.right_line.c2;
+  double left_roadedge_C2_temp =
+      GetContext.get_road_info()->current_lane.left_roadedge.c2;
+  double right_roadedge_C2_temp =
+      GetContext.get_road_info()->current_lane.right_roadedge.c2;
+
   if (((fabs(left_line_C2_temp) < 0.5 / 220) &&
-       ((GetContext.get_road_info()->current_lane.left_line.valid == true))) ||
-      (fabs(right_line_C2_temp) < 0.5 / 220) &&
-          (GetContext.get_road_info()->current_lane.right_line.valid == true)) {
+       (GetContext.get_road_info()->current_lane.left_line.valid == true)) ||
+      ((fabs(right_line_C2_temp) < 0.5 / 220) &&
+       (GetContext.get_road_info()->current_lane.right_line.valid == true)) ||
+      ((fabs(left_roadedge_C2_temp) < 0.5 / 220) &&
+       (GetContext.get_road_info()->current_lane.left_roadedge.valid ==
+        true)) ||
+      ((fabs(right_roadedge_C2_temp) < 0.5 / 220) &&
+       (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+        true))) {
     curve_C2_supp_recover_duration_ += GetContext.get_param()->dt;
     if (curve_C2_supp_recover_duration_ > 60.0) {
       curve_C2_supp_recover_duration_ = 60.0;
@@ -398,7 +411,8 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
   }
   // bit 9
   // 油门踏板变化率>70%/s
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate > 70.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
+      GetContext.get_param()->elk_disable_accel_pedal_pos_rate) {
     disable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -1144,6 +1158,7 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
   } else {
     /*do nothing*/
   }
+
   return elk_right_suppression_code &
          GetContext.get_param()->elk_right_suppression_code_maskcode;
 }
@@ -1446,11 +1461,33 @@ void ElkCore::SetElkOutputInfo() {
     GetContext.mutable_output_info()
         ->elk_output_info_.elk_right_intervention_flag_ = false;
   }
+
+  if (((elk_state_ ==
+        iflyauto::ELKFunctionFSMWorkState::
+            ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) &&
+       (elk_left_has_risk_for_hmi_flag_ == true)) ||
+      ((elk_state_ ==
+        iflyauto::ELKFunctionFSMWorkState::
+            ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) &&
+       (elk_right_has_risk_for_hmi_flag_ == true))) {
+    GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.obj_valid =
+        true;
+    GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.id =
+        elk_obj_id_;
+  }
+
+  else {
+    GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.obj_valid =
+        false;
+  }
+
   return;
 }
 
-uint16 ElkCore::RiskAlertJudge(const context::FusionObjExtractInfo &obj) {
+uint16 ElkCore::RiskAlertJudge(const context::FusionObjExtractInfo &obj,
+                               double &elk_obj_tlc) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  //新增&elk_obj_tlc，存储各个目标车辆的tlc信息，用以分析问题
   uint16 risk_condition_code = 0;  //=0,有风险
   double collision_x = 0.0;
   double obj_collision_x = 0.0;
@@ -1480,10 +1517,12 @@ uint16 ElkCore::RiskAlertJudge(const context::FusionObjExtractInfo &obj) {
   // double obj_projection_inner_lane_latdist = 0.0;
   double ttc_collision_tmp = 10.0;
   double ttc_collision_thrd_tmp = 10.0;
-  std::vector<double> ttc_collision_thrd_tab = {2.0, 2.5, 3.0};
-  std::vector<double> obj_relative_speed_tab = {5.0, 10.0, 15.0};
+  // std::vector<double> ttc_collision_thrd_tab = {2.0, 2.5, 3.0};
+  // std::vector<double> obj_relative_speed_tab = {5.0, 10.0, 15.0};
+
   ttc_collision_thrd_tmp =
-      pnc::mathlib::Interp1(obj_relative_speed_tab, ttc_collision_thrd_tab,
+      pnc::mathlib::Interp1(GetContext.get_param()->obj_relative_speed_tab,
+                            GetContext.get_param()->ttc_collision_thrd_tab,
                             std::fabs(obj.relative_speed_x));
   ttc_collision_tmp =
       std::fabs((obj_collision_x - collision_x) / obj.relative_speed_x);
@@ -1516,6 +1555,7 @@ uint16 ElkCore::RiskAlertJudge(const context::FusionObjExtractInfo &obj) {
   // if (is_small_vehicle = true && (distance_sidecar_to_lane > 0.4)) {
   //   risk_condition_code += uint16_bit[2];
   // }
+  elk_obj_tlc = ttc_collision_tmp;
   return risk_condition_code;
 }
 
@@ -1608,7 +1648,8 @@ void ElkCore::RunOnce(void) {
   // 更新tlc_to_line_threshold_
   elk_tlc_threshold_ = UpdateTlcThreshold();
 
-  // //更新elk_roadedge_offset,修改为根据横向速度查表
+  // ELK—Roadedge场景，触发线逻辑修改
+  //更新elk_roadedge_offset,修改为根据横向速度查表
   double elk_roadedge_offset = 0.0;
   double elk_roadedge_offset_temp = 0.0;
   if ((GetContext.get_road_info()->current_lane.left_roadedge.valid) &&
@@ -1627,6 +1668,7 @@ void ElkCore::RunOnce(void) {
       GetContext.get_param()->elk_roadedge_offset_vector,
       elk_roadedge_offset_temp);
 
+  // ELK—Roadedge场景，触发线逻辑修改
   // 若压线行驶，触发线外移
   double preview_y_gap_Vy_offset = 0.0;
   if (GetContext.get_road_info()->close_to_right_line_flag ||
@@ -1635,8 +1677,8 @@ void ElkCore::RunOnce(void) {
   } else {
     preview_y_gap_Vy_offset = 0.0;
   }
-  // 弯道场景触发线外移
-  //  定义弯道tlc减少
+  // ELK—Solid line场景，触发线逻辑修改
+  // 弯道，触发线外移
   double y_gap_dec_by_curv = 0.0;
   double C2_temp_thr = 0.0;
   double R_temp_thr = 0.0;
@@ -1658,9 +1700,9 @@ void ElkCore::RunOnce(void) {
       GetContext.get_param()->lka_r_vector,
       GetContext.get_param()->lka_dec_y_gap_by_c2_vector, R_temp_thr);
 
-
-  // 弯道场景，路沿的可触发区域调整
-  double roadedge_y_gap_dec_by_curv = 0.0;  //路沿场景晚触发阈值
+  // ELK—Roadedge场景，触发线逻辑修改
+  // 弯道，触发线外移
+  double roadedge_y_gap_dec_by_curv = 0.0;
   double roadedge_C2_temp_thr = 0.0;
   double roadedge_R_temp_thr = 0.0;
   if (GetContext.get_road_info()->current_lane.left_roadedge.valid == true) {
@@ -1684,16 +1726,15 @@ void ElkCore::RunOnce(void) {
       GetContext.get_param()->roadedge_dec_y_gap_by_c2_vector,
       roadedge_R_temp_thr);
 
+  // ELK—Roadedge场景，路沿的可触发区域逻辑修改
   // 弯道场景，路沿的可触发区域调整
   double roadegge_earl_warning_line_offset_curv = 0.0;
   roadegge_earl_warning_line_offset_curv = pnc::mathlib::Interp1(
       GetContext.get_param()->lka_r_vector,
       GetContext.get_param()->elk_roadedge_earliest_line_c2_vector,
       roadedge_R_temp_thr);
-
   bool in_left_roadedge_aera_flag = false;
   bool in_right_roadedge_aera_flag = false;
-  //判断是否处于路沿允许右侧报警区域内
   if ((GetContext.get_road_info()->current_lane.left_roadedge.valid == true) &&
       (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge > 0.0) &&
       (GetContext.mutable_state_info()->fl_wheel_distance_to_roadedge <
@@ -1703,7 +1744,7 @@ void ElkCore::RunOnce(void) {
   } else {
     in_left_roadedge_aera_flag = false;
   }
-  // 判断是否处于路沿允许右侧报警区域内
+
   if ((GetContext.get_road_info()->current_lane.right_roadedge.valid == true) &&
       (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge < 0.0) &&
       (GetContext.mutable_state_info()->fr_wheel_distance_to_roadedge >
@@ -1713,8 +1754,64 @@ void ElkCore::RunOnce(void) {
   } else {
     in_right_roadedge_aera_flag = false;
   }
+  // ELK—Roadedge场景，路沿的可触发区域逻辑修改
+  // 弯道路沿场景，功能不触发
+  // R300 4秒
+  double left_roadedge_C2_temp =
+      GetContext.get_road_info()->current_lane.left_roadedge.c2;
+  double right_roadedge_C2_temp =
+      GetContext.get_road_info()->current_lane.right_roadedge.c2;
+  if (((fabs(left_roadedge_C2_temp) <
+        0.5 / GetContext.get_param()->elk_roadedge_supp_curv_r_thr) &&
+       ((GetContext.get_road_info()->current_lane.left_roadedge.valid ==
+         true))) ||
+      ((fabs(right_roadedge_C2_temp) <
+        0.5 / GetContext.get_param()->elk_roadedge_supp_curv_r_thr) &&
+       (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+        true))) {
+    elk_roadedge_curve_supp_duration_ += GetContext.get_param()->dt;
+    if (elk_roadedge_curve_supp_duration_ > 60.0) {
+      elk_roadedge_curve_supp_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    elk_roadedge_curve_supp_duration_ = 0.0;
+  }
+  bool elk_leftroadedge_left_curv_flag = false;  //左侧
+  bool elk_roadedge_left_curv_supp_flag = false;
+
+  if (GetContext.get_road_info()->current_lane.left_roadedge.valid == true &&
+      left_roadedge_C2_temp < 0.0) {
+    elk_leftroadedge_left_curv_flag = true;
+  }
+  if ((elk_roadedge_curve_supp_duration_ <
+       GetContext.get_param()->elk_roadedge_supp_curv_r_dur) &&
+      (elk_leftroadedge_left_curv_flag == true ||
+       GetContext.get_param()->elk_roadedge_testswitch_temp_ == true)) {
+    elk_roadedge_left_curv_supp_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  bool elk_rightroadedge_right_curv_flag = false;  //右侧
+  bool elk_roadedge_right_curv_supp_flag = false;
+
+  if (GetContext.get_road_info()->current_lane.right_roadedge.valid == true &&
+      right_roadedge_C2_temp > 0.0) {
+    elk_rightroadedge_right_curv_flag = true;
+  }
+  if (elk_roadedge_curve_supp_duration_ <
+          GetContext.get_param()->elk_roadedge_supp_curv_r_dur &&
+      (elk_rightroadedge_right_curv_flag == true ||
+       GetContext.get_param()->elk_roadedge_testswitch_temp_ == true)) {
+    elk_roadedge_right_curv_supp_flag = true;
+  } else {
+    /*do nothing*/
+  }
 
   // 更新elk_left_intervention_by_line和elk_left_intervention_by_roadedge
+  // 此处更新触发线offset逻辑
   double preview_left_y_gap =
       adas_function::LkasLineLeftIntervention(elk_tlc_threshold_);
   // double preview_left_roadedge_y_gap =
@@ -1734,7 +1831,8 @@ void ElkCore::RunOnce(void) {
   if ((preview_left_roadedge_y_gap + roadedge_y_gap_dec_by_curv) < 0.0 &&
       GetContext.get_road_info()->current_lane.left_roadedge.end_x >
           GetContext.get_param()->ego_length &&
-      in_left_roadedge_aera_flag == true) {
+      in_left_roadedge_aera_flag == true &&
+      elk_roadedge_left_curv_supp_flag == false) {
     elk_left_intervention_by_roadedge = true;
   }
   // 更新left_has_risk_code
@@ -1743,28 +1841,44 @@ void ElkCore::RunOnce(void) {
   uint16 left_risk_temp_code = 0;
   if (GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info_valid) {
     left_has_risk_code += uint16_bit[0];
+    elk_obj_ml_tlc_ = 0.0;
+    elk_obj_id_ =
+        GetContext.get_objs_info()->objs_selected.ml_objs.vehicle_info.id;
+  } else {
+    elk_obj_ml_tlc_ = 10.0;
   }
   if (GetContext.get_objs_info()->objs_selected.fl_objs.vehicle_info_valid) {
     left_risk_temp_code = RiskAlertJudge(
-        GetContext.get_objs_info()
-            ->objs_selected.fl_objs
-            .vehicle_info);  // 通过RiskAlertJudge，把左前车的信息输入进去判断是否存在风险，==0是有风险
+        GetContext.get_objs_info()->objs_selected.fl_objs.vehicle_info,
+        elk_obj_fl_tlc_);  // 通过RiskAlertJudge，把左前车的信息输入进去判断是否存在风险，==0是有风险
     if (left_risk_temp_code == 0) {
       left_has_risk_code += uint16_bit[1];
+      elk_obj_id_ =
+          GetContext.get_objs_info()->objs_selected.fl_objs.vehicle_info.id;
     }
+  } else {
+    elk_obj_fl_tlc_ = 10.0;
   }
+
   if (GetContext.get_objs_info()->objs_selected.rl_objs.vehicle_info_valid) {
     left_risk_temp_code = RiskAlertJudge(
-        GetContext.get_objs_info()->objs_selected.rl_objs.vehicle_info);
+        GetContext.get_objs_info()->objs_selected.rl_objs.vehicle_info,
+        elk_obj_rl_tlc_);
     if (left_risk_temp_code == 0) {
       left_has_risk_code += uint16_bit[2];
+      elk_obj_id_ =
+          GetContext.get_objs_info()->objs_selected.rl_objs.vehicle_info.id;
     }
+  } else {
+    elk_obj_rl_tlc_ = 10.0;
   }
   // 更新elk_left_intervention_
   if (elk_left_intervention_by_roadedge) {
     elk_left_intervention_ = true;
   } else if (elk_left_intervention_by_line && left_has_risk_code != 0) {
     elk_left_intervention_ = true;
+    bool elk_left_has_risk_for_hmi_flag_ = true;
+
   } else if (elk_left_intervention_by_line &&
              (GetContext.get_road_info()->current_lane.left_line.line_type ==
               context::Enum_LineType::Enum_LineType_Solid) &&
@@ -1773,6 +1887,7 @@ void ElkCore::RunOnce(void) {
     elk_left_intervention_ = true;
   } else {
     elk_left_intervention_ = false;
+    bool elk_left_has_risk_for_hmi_flag_ = false;
   }
 
   // 更新elk_right_intervention_by_line和elk_right_intervention_by_roadedge
@@ -1794,37 +1909,52 @@ void ElkCore::RunOnce(void) {
   if ((preview_right_roadedge_y_gap - roadedge_y_gap_dec_by_curv) > 0.0 &&
       GetContext.get_road_info()->current_lane.right_roadedge.end_x >
           GetContext.get_param()->ego_length &&
-      in_right_roadedge_aera_flag == true) {
+      in_right_roadedge_aera_flag == true &&
+      elk_roadedge_right_curv_supp_flag == false) {
     elk_right_intervention_by_roadedge = true;
   }
   // 更新right_has_risk_code
-  //  bit0：左旁侧区域内有车 bit1:左侧有Oncoming车 bit2:左侧有Overtaking车
+  //  bit0：右旁侧区域内有车 bit1:右侧有Oncoming车 bit2:右侧有Overtaking车
   uint16 right_has_risk_code = 0;
   uint16 right_risk_temp_code = 0;
   if (GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info_valid) {
     right_has_risk_code += uint16_bit[0];
+    elk_obj_mr_tlc_ = 0.0;
+    elk_obj_id_ =
+        GetContext.get_objs_info()->objs_selected.mr_objs.vehicle_info.id;
+  } else {
+    elk_obj_mr_tlc_ = 10.0;
   }
   if (GetContext.get_objs_info()->objs_selected.fr_objs.vehicle_info_valid) {
     right_risk_temp_code = RiskAlertJudge(
-        GetContext.get_objs_info()
-            ->objs_selected.fr_objs
-            .vehicle_info);  // 通过RiskAlertJudge，把左前车的信息输入进去判断是否存在风险，==0是有风险
+        GetContext.get_objs_info()->objs_selected.fr_objs.vehicle_info,
+        elk_obj_fr_tlc_);  // 通过RiskAlertJudge，把左前车的信息输入进去判断是否存在风险，==0是有风险
     if (right_risk_temp_code == 0) {
       right_has_risk_code += uint16_bit[1];
+      elk_obj_id_ =
+          GetContext.get_objs_info()->objs_selected.fr_objs.vehicle_info.id;
     }
+  } else {
+    elk_obj_fr_tlc_ = 10.0;
   }
   if (GetContext.get_objs_info()->objs_selected.rr_objs.vehicle_info_valid) {
     right_risk_temp_code = RiskAlertJudge(
-        GetContext.get_objs_info()->objs_selected.rr_objs.vehicle_info);
+        GetContext.get_objs_info()->objs_selected.rr_objs.vehicle_info,
+        elk_obj_rr_tlc_);
     if (right_risk_temp_code == 0) {
       right_has_risk_code += uint16_bit[2];
+      elk_obj_id_ =
+          GetContext.get_objs_info()->objs_selected.rr_objs.vehicle_info.id;
     }
+  } else {
+    elk_obj_rr_tlc_ = 10.0;
   }
   // 更新elk_right_intervention_
   if (elk_right_intervention_by_roadedge) {
     elk_right_intervention_ = true;
   } else if (elk_right_intervention_by_line && right_has_risk_code != 0) {
     elk_right_intervention_ = true;
+    elk_right_has_risk_for_hmi_flag_ = true;
   } else if (elk_right_intervention_by_line &&
              (GetContext.get_road_info()->current_lane.right_line.line_type ==
               context::Enum_LineType::Enum_LineType_Solid) &&
@@ -1833,6 +1963,7 @@ void ElkCore::RunOnce(void) {
     elk_right_intervention_ = true;
   } else {
     elk_right_intervention_ = false;
+    elk_right_has_risk_for_hmi_flag_ = false;
   }
 
   // 更新Elk开关状态
@@ -1907,12 +2038,12 @@ void ElkCore::RunOnce(void) {
   // JSON_DEBUG_VALUE("elk_roadedge_offset",
   //                  GetContext.get_param()->elk_roadedge_offset);
   JSON_DEBUG_VECTOR("elk_preview_ego_pos_vec", preview_ego_pos_vec, 2);
-  // JSON_DEBUG_VALUE("elk_fl_risk_code", fl_risk_code);
-  // JSON_DEBUG_VALUE("elk_ml_risk_code", ml_risk_code);
-  // JSON_DEBUG_VALUE("elk_rl_risk_code", rl_risk_code);
-  // JSON_DEBUG_VALUE("elk_fr_risk_code", fr_risk_code);
-  // JSON_DEBUG_VALUE("elk_mr_risk_code", mr_risk_code);
-  // JSON_DEBUG_VALUE("elk_rr_risk_code", rr_risk_code);
+  JSON_DEBUG_VALUE("elk_obj_fl_tlc_", elk_obj_fl_tlc_);
+  JSON_DEBUG_VALUE("elk_obj_ml_tlc_", elk_obj_ml_tlc_);
+  JSON_DEBUG_VALUE("elk_obj_rl_tlc_", elk_obj_rl_tlc_);
+  JSON_DEBUG_VALUE("elk_obj_fr_tlc_", elk_obj_fr_tlc_);
+  JSON_DEBUG_VALUE("elk_obj_mr_tlc_", elk_obj_mr_tlc_);
+  JSON_DEBUG_VALUE("elk_obj_rr_tlc_", elk_obj_rr_tlc_);
 }
 
 }  // namespace elk_core

@@ -157,7 +157,8 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
   // bit 9
   // 油门踏板变化率<30%/s，持续1s，未完成
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate < 30.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate) {
     acc_pedal_pos_rate_supp_recover_duration_ += GetContext.get_param()->dt;
     if (acc_pedal_pos_rate_supp_recover_duration_ > 60.0) {
       acc_pedal_pos_rate_supp_recover_duration_ = 60.0;
@@ -167,7 +168,8 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
   } else {
     acc_pedal_pos_rate_supp_recover_duration_ = 0.0;
   }
-  if (acc_pedal_pos_rate_supp_recover_duration_ < 1.0) {
+  if (acc_pedal_pos_rate_supp_recover_duration_ <
+      GetContext.get_param()->ldw_enable_accel_pedal_pos_rate_dur) {
     enable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -371,7 +373,8 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
   }
   // bit 9
   // 油门踏板变化率>70%/s
-  if (GetContext.get_state_info()->accelerator_pedal_pos_rate > 70.0) {
+  if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
+      GetContext.get_param()->ldw_disable_accel_pedal_pos_rate) {
     disable_code += uint16_bit[9];
   } else {
     /*do nothing*/
@@ -701,8 +704,7 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
     /*do nothing*/
   }
 
-  
-    // bit 9
+  // bit 9
   // 换道之后抑制两秒
   if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
     LDW_LaneChange_duration_ += GetContext.get_param()->dt;
@@ -718,7 +720,7 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
     ldw_left_suppression_code += uint16_bit[9];
   } else {
     /*do nothing*/
-  }  
+  }
 
   return ldw_left_suppression_code &
          GetContext.get_param()->ldw_left_suppression_code_maskcode;
@@ -971,7 +973,7 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
     /*do nothing*/
   }
 
-    // bit 10
+  // bit 10
   // 换道之后抑制两秒
   if (GetContext.get_road_info()->current_lane.lane_changed_flag == false) {
     LDW_LaneChange_duration_ += GetContext.get_param()->dt;
@@ -987,7 +989,7 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
     ldw_right_suppression_code += uint16_bit[9];
   } else {
     /*do nothing*/
-  }  
+  }
 
   return ldw_right_suppression_code &
          GetContext.get_param()->ldw_right_suppression_code_maskcode;
@@ -1131,11 +1133,10 @@ double LdwCore::UpdateTlcThreshold(void) {
   double R_temp_thr = 0.0;
   if (GetContext.get_road_info()->current_lane.left_line.valid == true) {
     C2_temp_thr = GetContext.get_road_info()->current_lane.left_line.c2;
-  }
-  else if (GetContext.get_road_info()->current_lane.right_line.valid == true) {
+  } else if (GetContext.get_road_info()->current_lane.right_line.valid ==
+             true) {
     C2_temp_thr = GetContext.get_road_info()->current_lane.right_line.c2;
-  }
-  else {
+  } else {
     C2_temp_thr = 0.00005;
   }
   if (fabs(C2_temp_thr) < 0.00005) {
