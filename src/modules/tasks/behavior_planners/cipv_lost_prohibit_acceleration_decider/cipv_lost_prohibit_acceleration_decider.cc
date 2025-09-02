@@ -237,20 +237,22 @@ void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
     const std::string &lc_status) {
   // check lead one
   bool is_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->leadone());
-  // check lead two
-  bool is_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->leadtwo());
-  // check temp lead one
-  bool is_temp_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->tleadone());
-  // check temp lead two
-  bool is_temp_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->tleadtwo());
-
+  // // check lead two
+  // bool is_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->leadtwo());
+  // // check temp lead one
+  // bool is_temp_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->tleadone());
+  // // check temp lead two
+  // bool is_temp_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->tleadtwo());
+  bool is_lead_two_vehicle = false;
+  bool is_temp_lead_one_vehicle = false;
+  bool is_temp_lead_two_vehicle = false;
   cipv_id_ = -1;
   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
     if (is_lead_one_vehicle) {
-      cipv_id_ = lateral_obstacle->leadone()->track_id;
+      cipv_id_ = lateral_obstacle->leadone()->id();
       cipv_has_ = true;
     } else if (!is_lead_one_vehicle && is_lead_two_vehicle) {
-      cipv_id_ = lateral_obstacle->leadtwo()->track_id;
+      // cipv_id_ = lateral_obstacle->leadtwo()->track_id;
       cipv_has_ = true;
     } else {
       cipv_has_ = false;
@@ -258,10 +260,10 @@ void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
     }
   } else {
     if (is_temp_lead_one_vehicle) {
-      cipv_id_ = lateral_obstacle->tleadone()->track_id;
+      // cipv_id_ = lateral_obstacle->tleadone()->track_id;
       cipv_has_ = true;
     } else if (!is_temp_lead_one_vehicle && is_temp_lead_two_vehicle) {
-      cipv_id_ = lateral_obstacle->tleadtwo()->track_id;
+      // cipv_id_ = lateral_obstacle->tleadtwo()->track_id;
       cipv_has_ = true;
     } else {
       cipv_has_ = false;
@@ -271,9 +273,9 @@ void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
 }
 
 bool CipvLostProhibitAccelerationDecider::IsLeadVehicle(
-    const TrackedObject *lead) {
+    const std::shared_ptr<FrenetObstacle> lead) {
   if (lead != nullptr) {
-    return lead->track_id != -1 && lead->is_lead && lead->is_car;
+    return lead->obstacle()->is_car();
   } else {
     return false;
   }

@@ -196,17 +196,17 @@ void SpeedAdjustDecider::ProcessEnvInfos() {
                                           .target_lane_virtual_id;
   const std::shared_ptr<DynamicWorld> dynamic_world =
       session_->environmental_model().get_dynamic_world();
-  const TrackedObject* lead_one =
+  const auto lead_one =
       session_->environmental_model().get_lateral_obstacle()->leadone();
 
   // leading veh
   leading_veh_ = LaneChangeVehInfo();
   if (lead_one != nullptr) {
-    if (lead_one->track_id > 0) {
-      leading_veh_.half_length = lead_one->length * 0.5;
-      leading_veh_.id = lead_one->track_id;
-      leading_veh_.v = lead_one->v;
-      leading_veh_.center_s = lead_one->d_rel;
+    if (lead_one->id() > 0) {
+      leading_veh_.half_length = lead_one->length() * 0.5;
+      leading_veh_.id = lead_one->id();
+      leading_veh_.v = lead_one->velocity();
+      leading_veh_.center_s = lead_one->d_s_rel();
     }
   }
 

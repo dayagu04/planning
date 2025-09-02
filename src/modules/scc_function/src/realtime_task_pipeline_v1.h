@@ -28,12 +28,12 @@ class RealtimeSccTaskPipeline : public BaseTaskPipeline {
   bool Run() override;
 
  private:
-  std::unique_ptr<LaneChangeDecider> lane_change_decider_;
-  std::unique_ptr<VisionLateralBehaviorPlanner>
-      vision_lateral_behavior_planner_;
-  std::unique_ptr<VisionLateralMotionPlanner> vision_lateral_motion_planner_;
-  std::unique_ptr<VisionLongitudinalBehaviorPlanner>
-      vision_longitudinal_behavior_planner_;
+//   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
+//   std::unique_ptr<VisionLateralBehaviorPlanner>
+//       vision_lateral_behavior_planner_;
+//   std::unique_ptr<VisionLateralMotionPlanner> vision_lateral_motion_planner_;
+//   std::unique_ptr<VisionLongitudinalBehaviorPlanner>
+//       vision_longitudinal_behavior_planner_;
 };
 
 }  // namespace planning

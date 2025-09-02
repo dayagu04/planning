@@ -77,13 +77,13 @@ class ReferencePath {
     return frenet_obstacles_map_;
   }
 
-  std::vector<int> &mutable_obstacles_in_lane_map() {
-    return obstacles_in_lane_map_;
-  }
+  // std::vector<int> &mutable_obstacles_in_lane_map() {
+  //   return obstacles_in_lane_map_;
+  // }
 
-  const std::vector<int> &get_obstacles_in_lane_map() const {
-    return obstacles_in_lane_map_;
-  }
+  // const std::vector<int> &get_obstacles_in_lane_map() const {
+  //   return obstacles_in_lane_map_;
+  // }
 
   virtual bool is_obstacle_ignorable(
       const std::shared_ptr<FrenetObstacle> obstacle);

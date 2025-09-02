@@ -27,7 +27,6 @@ LaneChangeRequestManager::LaneChangeRequestManager(
     : int_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       map_request_(session, config_builder, virtual_lane_mgr,
                    lane_change_lane_mgr),
-      act_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       overtake_request_(config_builder, session, virtual_lane_mgr, lane_change_lane_mgr),
       emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       cone_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
@@ -401,8 +400,6 @@ double LaneChangeRequestManager::GetReqStartTime(int source) const {
     return int_request_.tstart();
   } else if (source == MAP_REQUEST) {
     return map_request_.tstart();
-  } else if (source == ACT_REQUEST) {
-    return act_request_.tstart();
   } else if (source == OVERTAKE_REQUEST) {
     return overtake_request_.tstart();
   } else if (source == EMERGENCE_AVOID_REQUEST) {
@@ -420,8 +417,6 @@ double LaneChangeRequestManager::GetReqFinishTime(int source) const {
     return int_request_.tfinish();
   } else if (source == MAP_REQUEST) {
     return map_request_.tfinish();
-  } else if (source == ACT_REQUEST) {
-    return act_request_.tfinish();
   } else if (source == OVERTAKE_REQUEST) {
     return overtake_request_.tfinish();
   } else if (source == EMERGENCE_AVOID_REQUEST) {

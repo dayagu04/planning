@@ -99,8 +99,7 @@ class ObstacleManager {
       IndexedList<int, Obstacle> &obstacles, ReferencePath &reference_path,
       std::vector<std::shared_ptr<FrenetObstacle>> &frenet_obstacles,
       std::unordered_map<int, std::shared_ptr<FrenetObstacle>>
-          &frenet_obstacles_map,
-      std::vector<int> &obstacles_ids_in_lane_map);
+          &frenet_obstacles_map);
 
   void UpdateOccObstacle();
 

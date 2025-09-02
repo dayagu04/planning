@@ -97,7 +97,8 @@ class Obstacle {
   bool is_traffic_facilities() const { return is_traffic_facilities_; }
   bool is_car() const { return is_car_; }
   bool trajectory_valid() const { return trajectory_valid_; }
-
+  double set_cutin_prob(double cutin_prob) { cutin_prob_ = cutin_prob; }
+  double cutin_prob() const { return cutin_prob_; } // hack:clren,暂时不要用
   const std::vector<PncTrajectoryPoint> &trajectory() const {
     return trajectory_;
   }
@@ -154,6 +155,7 @@ class Obstacle {
   bool is_car_ = false;
   bool trajectory_valid_ = false;
   bool is_reverse_ = false;
+  double cutin_prob_ = 0.0;
   std::vector<PncTrajectoryPoint> trajectory_{};
   // iflyauto::FusionObject perception_obstacle_;
   planning_math::Box2d perception_bounding_box_;

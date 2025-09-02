@@ -2733,23 +2733,23 @@ void HppGeneralLateralDecider::CalcLateralBehaviorOutput() {
   // borrow_bicycle_lane
   lateral_output.lat_offset = 0.0;
   bool isRedLightStop = false;  // attention again!!!
-  TrackedObject *lead_one = session_->mutable_environmental_model()
-                                ->get_lateral_obstacle()
-                                ->leadone();
+  // TrackedObject *lead_one = session_->mutable_environmental_model()
+  //                               ->get_lateral_obstacle()
+  //                               ->leadone();
 
-  if (((virtual_lane_manager->current_lane_virtual_id() ==
-        virtual_lane_manager->get_lane_num() - 1) ||
-       (virtual_lane_manager->current_lane_virtual_id() ==
-            virtual_lane_manager->get_lane_num() - 2 &&
-        virtual_lane_manager->get_right_lane() != nullptr &&
-        virtual_lane_manager->get_right_lane()->get_lane_type() ==
-            iflyauto::LANETYPE_NON_MOTOR)) &&
-      ((!isRedLightStop && lateral_output.accident_ahead &&
-        lead_one != nullptr && lead_one->type == 20001))) {
-    lateral_output.borrow_bicycle_lane = true;
-  } else {
-    lateral_output.borrow_bicycle_lane = false;
-  }
+  // if (((virtual_lane_manager->current_lane_virtual_id() ==
+  //       virtual_lane_manager->get_lane_num() - 1) ||
+  //      (virtual_lane_manager->current_lane_virtual_id() ==
+  //           virtual_lane_manager->get_lane_num() - 2 &&
+  //       virtual_lane_manager->get_right_lane() != nullptr &&
+  //       virtual_lane_manager->get_right_lane()->get_lane_type() ==
+  //           iflyauto::LANETYPE_NON_MOTOR)) &&
+  //     ((!isRedLightStop && lateral_output.accident_ahead &&
+  //       lead_one != nullptr && lead_one->type == 20001))) {
+  //   lateral_output.borrow_bicycle_lane = true;
+  // } else {
+  //   lateral_output.borrow_bicycle_lane = false;
+  // }
   // enable intersection planner
   lateral_output.enable_intersection_planner = false;  // attention again!!!
   // dist rblane

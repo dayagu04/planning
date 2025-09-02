@@ -78,7 +78,7 @@ class OvertakeRequest : public LaneChangeRequest {
   void selectTargetObstacleIds(
       const std::shared_ptr<planning_math::KDPath>& ref_line,
       const Point2D ego_cart_point,
-      const std::vector<TrackedObject> candidate_obs_info,
+      const std::vector<std::shared_ptr<FrenetObstacle>> candidate_obs_info,
       const double search_range, const int max_target_num,
       const double ego_half_width, const double l_buffer,
       const double max_l_buffer, const bool order_reverse,
@@ -141,7 +141,6 @@ class OvertakeRequest : public LaneChangeRequest {
   bool is_left_lane_change_safe_ = false;
   bool is_right_lane_change_safe_ = false;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
-  std::unordered_map<int, TrackedObject> tracks_map_;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
 };
 

@@ -11,7 +11,6 @@
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
-#include "lateral_behavior_object_selector.h"
 #include "obstacle_manager.h"
 #include "planning_context.h"
 #include "reference_path.h"

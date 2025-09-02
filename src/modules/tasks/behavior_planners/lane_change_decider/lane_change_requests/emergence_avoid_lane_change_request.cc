@@ -18,7 +18,6 @@
 #include "log.h"
 #include "planning_context.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
-#include "tasks/behavior_planners/lane_change_decider/lateral_behavior_object_selector.h"
 #include "tracked_object.h"
 #include "virtual_lane_manager.h"
 
@@ -248,52 +247,53 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   int leading_vehicle_id_ = -1;
   double leading_vehicle_speed = std::numeric_limits<double>::max();
   double long_gap = std::numeric_limits<double>::max();
-  const std::vector<TrackedObject>& front_obstacles_array =
+  const auto &front_obstacles_array =
       lateral_obstacle_->front_tracks();
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   for (const auto& front_obstacle : front_obstacles_array) {
-    auto front_vehicle_iter = tracks_map.find(front_obstacle.track_id);
+    int obstacle_id = front_obstacle->id();
+    auto front_vehicle_iter = tracks_map.find(obstacle_id);
     if (front_vehicle_iter != tracks_map.end()) {
-      if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
+      if (obstacle_id == kInvalidAgentId) {
         continue;
       }
       // bool object_type_static =
       //     front_vehicle_iter->second.motion_pattern_current ==
       //     iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_STATIC;
       // if ((!object_type_static ||
-      //      (front_vehicle_iter->second.type !=
+      //      (front_vehicle_iter->second->type() !=
       //           iflyauto::OBJECT_TYPE_COUPE &&
-      //       front_vehicle_iter->second.type !=
+      //       front_vehicle_iter->second->type() !=
       //           iflyauto::OBJECT_TYPE_TRUCK) ||
       //       function_info.function_mode() ==
       //       common::DrivingFunctionInfo::NOA) &&
       // 对静止车暂时不做处理
-      if (front_vehicle_iter->second.type !=
+      if (front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
-          front_vehicle_iter->second.type !=
+          front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
-          front_vehicle_iter->second.type !=
+          front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
-          front_vehicle_iter->second.type !=
+          front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
         continue;
       }
-      const double long_dis = front_vehicle_iter->second.d_rel;
+      const double long_dis = front_vehicle_iter->second->d_s_rel();
       if (long_dis > kEmergencyAvoidancelongitudinalDistanceThreshold) {
         continue;
       }
-      const double half_width = front_vehicle_iter->second.width * 0.5;
+      const double half_width = front_vehicle_iter->second->width() * 0.5;
       const double front_track_left_boundary_l =
-          front_vehicle_iter->second.l + half_width;
+          front_vehicle_iter->second->frenet_l() + half_width;
       const double front_track_right_boundary_l =
-          front_vehicle_iter->second.l - half_width;
+          front_vehicle_iter->second->frenet_l() - half_width;
       const bool is_out_target_area =
           (front_track_right_boundary_l > lateral_left_offset ||
            front_track_left_boundary_l < -lateral_right_offset);
       if (!is_out_target_area) {
         has_emergency_leading_vehicle = true;
         leading_vehicle_id_ = front_vehicle_iter->first;
-        leading_vehicle_speed = front_vehicle_iter->second.v;
+        leading_vehicle_speed = front_vehicle_iter->second->obstacle()->velocity();
         long_gap = long_dis;
         break;
       }

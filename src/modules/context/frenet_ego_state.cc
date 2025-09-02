@@ -20,6 +20,7 @@ void FrenetEgoState::update(
     l_ = frenet_point.y;
   } else {
     ILOG_DEBUG << "kd_path coordinate conversion failed";
+    is_valid_ = false;
   }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();

@@ -8,45 +8,45 @@
 
 namespace planning {
 namespace lateral_offset_decider {
-bool IsStaticObstacle(const TrackedObject &tr) { return tr.v < 0.1; }
+bool IsStaticObstacle(const std::shared_ptr<FrenetObstacle> tr) { return tr->obstacle()->velocity() < 0.1; }
 
 bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle) {
   return avoid_obstacle.vs < 3;
 }
 
-bool IsAboutToEnterLonRange(const TrackedObject &tr, bool is_front) {
+bool IsAboutToEnterLonRange(const std::shared_ptr<FrenetObstacle> tr, bool is_front) {
   if (is_front) {
-    return tr.d_rel < std::max(std::min(-tr.v_rel * 15, 60.0), 20.0);
+    return tr->d_s_rel() < std::max(std::min(-tr->rel_v() * 15, 60.0), 20.0);
   } else {
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const double ego_length = vehicle_param.length;
     if (IsStaticObstacle(tr)) {
-      return tr.d_rel > -ego_length - 1;
+      return tr->d_s_rel() > -ego_length - 1;
     } else {
-      return tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel < 2;
+      return tr->d_s_rel() > std::min(-10.0 - tr->rel_v() * 2, -5.0) && tr->d_s_rel() < 2;
     }
   }
 }
 
-bool IsFasterThanEgo(const TrackedObject &tr) {
+bool IsFasterThanEgo(const std::shared_ptr<FrenetObstacle> tr) {
   // TODO(clren): consider lon
   std::array<double, 5> drel_x{1, 2, 5, 10, 20};
   std::array<double, 5> vrel_y{4, 2, 1.8, 1, 0.3};
 
-  double min_desire_v = interp(tr.d_rel, drel_x, vrel_y);
-  return tr.v_rel > min_desire_v;
+  double min_desire_v = interp(tr->d_s_rel(), drel_x, vrel_y);
+  return tr->rel_v() > min_desire_v;
 }
 
-bool IsFasterThanAvoidObstacle(const TrackedObject &tr,
+bool IsFasterThanAvoidObstacle(const std::shared_ptr<FrenetObstacle> tr,
                                const AvoidObstacleInfo &avoid_obstacle) {
-  return tr.v_lead > avoid_obstacle.vs;
+  return tr->frenet_velocity_s() > avoid_obstacle.vs;
 }
 
 // is_left: True: left tracked_object
 //          False: right tracked_object
 bool IsInConsiderFrontLateralRange(
-    const framework::Session *session, const TrackedObject &tr, bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     double normal_avoid_threshold,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
@@ -72,14 +72,14 @@ bool IsInConsiderFrontLateralRange(
       -normal_avoid_threshold + half_ego_width + safe_lat_distance;
 
   if (is_left) {
-    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetIsValidByValue(
-        tr.d_min_cpath - max_lat_position);
+    is_in_consider_lateral_range_hysteresis_map[tr->id()].SetIsValidByValue(
+        tr->d_min_cpath() - max_lat_position);
   } else {
-    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetIsValidByValue(
-        -(tr.d_max_cpath + max_lat_position));
+    is_in_consider_lateral_range_hysteresis_map[tr->id()].SetIsValidByValue(
+        -(tr->d_max_cpath() + max_lat_position));
   }
 
-  if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
+  if (!is_in_consider_lateral_range_hysteresis_map[tr->id()].IsValid()) {
     return false;
   }
 
@@ -87,7 +87,7 @@ bool IsInConsiderFrontLateralRange(
 }
 
 bool IsInConsiderSideLateralRange(
-    const framework::Session *session, const TrackedObject &tr, bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
@@ -106,8 +106,8 @@ bool IsInConsiderSideLateralRange(
 
   double lat_dis =
       is_left
-          ? tr.d_min_cpath - fix_ref->get_frenet_ego_state().boundary().l_end
-          : fix_ref->get_frenet_ego_state().boundary().l_start - tr.d_max_cpath;
+          ? tr->d_min_cpath() - fix_ref->get_frenet_ego_state().boundary().l_end
+          : fix_ref->get_frenet_ego_state().boundary().l_start - tr->d_max_cpath();
 
   if (lat_dis <= 0) {
     return false;
@@ -115,37 +115,38 @@ bool IsInConsiderSideLateralRange(
 
   const double max_lat_position = 1.0;
   if (is_left) {
-    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetIsValidByValue(
-        tr.d_min_cpath - max_lat_position);
+    is_in_consider_lateral_range_hysteresis_map[tr->id()].SetIsValidByValue(
+        tr->d_min_cpath() - max_lat_position);
   } else {
-    is_in_consider_lateral_range_hysteresis_map[tr.track_id].SetIsValidByValue(
-        -(tr.d_max_cpath + max_lat_position));
+    is_in_consider_lateral_range_hysteresis_map[tr->id()].SetIsValidByValue(
+        -(tr->d_max_cpath() + max_lat_position));
   }
 
-  if (!is_in_consider_lateral_range_hysteresis_map[tr.track_id].IsValid()) {
+  if (!is_in_consider_lateral_range_hysteresis_map[tr->id()].IsValid()) {
     return false;
   }
 
   return true;
 }
 
-bool IsCameraObstacle(const TrackedObject &tr) {
-  return tr.fusion_source & OBSTACLE_SOURCE_CAMERA;
+bool IsCameraObstacle(const std::shared_ptr<FrenetObstacle> tr) {
+  return tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA;
 }
 
 // return true: avoid obstacle_1 first, then avoid obstacle_2
 // return false: decide other way later
 bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
                                     const AvoidObstacleInfo &avoid_obstacle,
-                                    const TrackedObject &tr) {
-  if (1) {
-    const auto ego_cart_state_manager =
+                                    const std::shared_ptr<FrenetObstacle> tr) {
+  const auto ego_cart_state_manager =
         session->environmental_model().get_ego_state_manager();
     const double v_ego = ego_cart_state_manager->ego_v();
+  double rel_v = tr->frenet_velocity_s() - v_ego;
+  if (1) {
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const double ego_length = vehicle_param.length;
-    const double v_obstacle_2 = v_ego + tr.v_rel;
+    const double v_obstacle_2 = tr->frenet_velocity_s();
     std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
     std::array<double, 3> t_gap_vego_bp{5, 15, 30};
     const double safety_dist = 2.0;
@@ -157,9 +158,9 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
     const double desired_distance_to_obstacle_2 =
         safety_dist + v_obstacle_2 * t_gap;
     double relative_distance_nudge_obstacle =
-        tr.tail_rel_s - avoid_obstacle.tail_s_to_ego;
+        tr->tail_s_rel() - avoid_obstacle.tail_s_to_ego;
     const double relative_vel_nudge_obstacle =
-        tr.v_rel - avoid_obstacle.vs_lon_relative;
+        rel_v - avoid_obstacle.vs_lon_relative;
     const double distance_exceed_obstacle_1 = avoid_obstacle.tail_s_to_ego +
                                               avoid_obstacle.length +
                                               ego_length + safety_dist;
@@ -185,13 +186,10 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
                        desired_distance_to_obstacle_2 + 0.5 * v_ego;
     return is_side_way;
   } else {
-    const auto ego_cart_state_manager =
-        session->environmental_model().get_ego_state_manager();
-    const double v_ego = ego_cart_state_manager->ego_v();
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const double ego_length = vehicle_param.length;
-    const double v_obstacle_2 = v_ego + tr.v_rel;
+    const double v_obstacle_2 = v_ego + rel_v;
     const double kDistanceOffset = 3.5;
     std::array<double, 3> t_gap_vego_v{1.35, 1.55, 2.0};
     std::array<double, 3> t_gap_vego_bp{5, 15, 30};
@@ -204,9 +202,9 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
     const double desired_distance_to_obstacle_2 =
         kDistanceOffset + v_obstacle_2 * t_gap;
     double relative_distance_nudge_obstacle =
-        tr.tail_rel_s - avoid_obstacle.tail_s_to_ego;
+        tr->tail_s_rel() - avoid_obstacle.tail_s_to_ego;
     const double relative_vel_nudge_obstacle =
-        tr.v_rel - avoid_obstacle.vs_lon_relative;
+        rel_v - avoid_obstacle.vs_lon_relative;
     const double distance_exceed_obstacle_1 = avoid_obstacle.tail_s_to_ego +
                                               avoid_obstacle.length +
                                               ego_length + safety_dist;
@@ -234,22 +232,25 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
   }
 }
 
-bool IsFrontObstacle(const TrackedObject &tr) { return tr.d_rel > 0; }
+bool IsFrontObstacle(const std::shared_ptr<FrenetObstacle> tr) { return tr->d_s_rel() > 0; }
 
-bool IsCutIn(const TrackedObject &tr) { return tr.cutinp >= 0.4; }
+bool IsCutIn(const std::shared_ptr<FrenetObstacle> tr) { return tr->obstacle()->cutin_prob() > 0.4; }
 
 bool IsFrontObstacleConsider(
-    const framework::Session *session, const TrackedObject &tr, bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     const AvoidInfo &avoid_info,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
         &hysteresis_maps) {
+  const auto &lateral_obstacle_manager =  session->environmental_model().get_lateral_obstacle();
+  const auto& extra_obstacle_info_map = lateral_obstacle_manager->extra_obstacle_info_map();
   if (!IsCameraObstacle(tr)) {
     return false;
   }
 
-  if (IsFrontObstacle(tr) && (tr.is_lead)) {
+  if (IsFrontObstacle(tr) &&
+     (extra_obstacle_info_map.find(tr->id()) != extra_obstacle_info_map.end() && extra_obstacle_info_map.at(tr->id()).is_lead)) {
     return false;
   }
 
@@ -275,7 +276,7 @@ bool IsFrontObstacleConsider(
 }
 
 bool IsSideObstacleConsider(
-    const framework::Session *session, const TrackedObject &tr, bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>

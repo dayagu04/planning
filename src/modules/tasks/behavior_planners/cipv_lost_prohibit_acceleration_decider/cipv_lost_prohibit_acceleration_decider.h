@@ -36,7 +36,7 @@ class CipvLostProhibitAccelerationDecider : public Task {
   void UpdateCipvInfo(const std::shared_ptr<LateralObstacle>& lateral_obstacle,
                       const std::string& lc_status);
 
-  bool IsLeadVehicle(const TrackedObject* lead);
+  bool IsLeadVehicle(const std::shared_ptr<FrenetObstacle> lead);
 
  private:
   framework::Session* session_ = nullptr;

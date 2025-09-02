@@ -13,7 +13,6 @@ LateralOffsetDecider::LateralOffsetDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
-  lateral_offset_calculator_ = LateralOffsetCalculator(config_builder);
   lateral_offset_calculatorv2_ = LateralOffsetCalculatorV2(config_builder);
 }
 

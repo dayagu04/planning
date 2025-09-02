@@ -249,6 +249,11 @@ bool LateralObstacleDecider::Execute() {
     // write decider output info
     last_output_ = output_;
     output_.clear();
+    auto &debug_info_manager = DebugInfoManager::GetInstance();
+    auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    auto environment_model_debug_info =
+        planning_debug_data->mutable_environment_model_info();
+    environment_model_debug_info->mutable_obstacle()->Clear();
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
@@ -868,17 +873,35 @@ void LateralObstacleDecider::LateralObstacleDecision(
   }
 
   // log
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::EnvironmentModelInfo *environment_model_debug_info =
+  auto &debug_info_manager = DebugInfoManager::GetInstance();
+  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
-  for (size_t i = 0; i < environment_model_debug_info->obstacle_size(); ++i) {
-    auto obstacle_new = environment_model_debug_info->mutable_obstacle(i);
-    if (obstacle_new->id() == id) {
-      obstacle_new->set_lat_decision(static_cast<uint32_t>(output_[id]));
-    } else {
-      continue;
-    }
-  }
+  planning::common::Obstacle *log_obstacle =
+      environment_model_debug_info->add_obstacle();
+  log_obstacle->set_id(frenet_obstacle.id());
+  log_obstacle->set_type(frenet_obstacle.type());
+  log_obstacle->set_s(frenet_obstacle.frenet_s());
+  log_obstacle->set_l(frenet_obstacle.frenet_l());
+  log_obstacle->set_s_to_ego(frenet_obstacle.d_s_rel());
+  log_obstacle->set_max_l_to_ref(frenet_obstacle.d_max_cpath());
+  log_obstacle->set_min_l_to_ref(frenet_obstacle.d_min_cpath());
+  // log_obstacle->set_s_with_min_l(frenet_obstacle.s_min);
+  // log_obstacle->set_s_with_max_l(frenet_obstacle.s_max);
+  // log_obstacle->set_nearest_l_to_desire_path(frenet_obstacle.d_path);
+  // log_obstacle->set_nearest_l_to_ego(frenet_obstacle.d_path_self);
+  log_obstacle->set_vs_lat_relative(frenet_obstacle.frenet_relative_velocity_l());
+  log_obstacle->set_vs_lon_relative(frenet_obstacle.frenet_relative_velocity_s());
+  log_obstacle->set_vs_lon(frenet_obstacle.frenet_velocity_s());
+  // log_obstacle->set_nearest_y_to_desired_path(frenet_obstacle.y_rel);
+  // log_obstacle->set_is_accident_car(frenet_obstacle.is_accident_car);
+  // log_obstacle->set_is_accident_cnt(frenet_obstacle.is_accident_cnt);
+  // log_obstacle->set_is_avoid_car(frenet_obstacle.);
+  // log_obstacle->set_is_lane_lead_obstacle(frenet_obstacle.is_lead);
+  // log_obstacle->set_current_lead_obstacle_to_ego(frenet_obstacle.is_temp_lead);
+  log_obstacle->set_is_static(frenet_obstacle.is_static());
+  log_obstacle->set_lat_decision(static_cast<uint32_t>(output_[id]));
+    // log_obstacle->set_cutin_p(frenet_obstacle.cutinp);
 }
 
 bool LateralObstacleDecider::CalculateCutInAndCross(

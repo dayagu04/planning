@@ -15,12 +15,11 @@
 #include "debug_info_log.h"
 #include "define/geometry.h"
 #include "ego_state_manager.h"
+#include "lateral_obstacle.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "planning_context.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_request.h"
-#include "tasks/behavior_planners/lane_change_decider/lateral_behavior_object_selector.h"
-#include "tracked_object.h"
 #include "virtual_lane_manager.h"
 
 namespace planning {
@@ -130,7 +129,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
-
+          
+  const auto &frenet_obstacles_map = origin_refline->get_obstacles_map();
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
@@ -149,36 +149,45 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   cone_cluster_attribute_set_.clear();
 
   const auto& tracks_map = lateral_obstacle_->tracks_map();
-  const std::vector<TrackedObject>& front_obstacles_array =
+  const auto& front_obstacles_array =
       lateral_obstacle_->front_tracks();
-  for (const auto& front_obstacle : front_obstacles_array) {
-    auto front_vehicle_iter = tracks_map.find(front_obstacle.track_id);
+  for (const auto front_obstacle : front_obstacles_array) {
+    int obstacle_id = front_obstacle->id();
+    auto front_vehicle_iter = tracks_map.find(obstacle_id);
+    Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
+                         planning_init_point_.lat_init_state.y()};
     if (front_vehicle_iter != tracks_map.end()) {
-      if (front_vehicle_iter->second.track_id == kInvalidAgentId) {
+      if (obstacle_id == kInvalidAgentId) {
         continue;
       }
-      if (front_vehicle_iter->second.type ==
+      if (front_vehicle_iter->second->type() ==
           iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
-        if (front_vehicle_iter->second.d_rel < -ego_rear_edge ||
-            front_vehicle_iter->second.d_rel >
+        if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
+            front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
           continue;
         }
         cone_nums_of_front_objects++;
 
+
         Point2D obs_cart_point{0.0, 0.0};
         Point2D obs_frenet_point;
         obs_cart_point.x = ego_cart_point.x +
-                           front_vehicle_iter->second.center_x * ego_fx -
-                           front_vehicle_iter->second.center_y * ego_fy;
+                           front_vehicle_iter->second->obstacle()->x_center() * ego_fx -
+                           front_vehicle_iter->second->obstacle()->y_center() * ego_fy;
         obs_cart_point.y = ego_cart_point.y +
-                           front_vehicle_iter->second.center_x * ego_fy +
-                           front_vehicle_iter->second.center_y * ego_fx;
-        if (!base_frenet_coord_->XYToSL(obs_cart_point, obs_frenet_point)) {
+                           front_vehicle_iter->second->obstacle()->x_center() * ego_fy +
+                           front_vehicle_iter->second->obstacle()->y_center() * ego_fx;
+        // if (!base_frenet_coord_->XYToSL(obs_cart_point, obs_frenet_point)) {
+        //   continue;
+        // }
+        // Point2D obs_frenet_point(front_vehicle_iter->second->frenet_s(),  front_vehicle_iter->second->frenet_l());
+
+        if (frenet_obstacles_map.find(obstacle_id) == frenet_obstacles_map.end() || !frenet_obstacles_map.at(obstacle_id)->b_frenet_valid()) {
           continue;
         }
-        double cone_s = obs_frenet_point.x;
-        double cone_l = obs_frenet_point.y;
+        double cone_s = front_vehicle_iter->second->frenet_s();
+        double cone_l = front_vehicle_iter->second->frenet_l();
         double dist_to_left_boundary;
         if (!GetOriginLaneWidthByCone(base_lane, cone_s, cone_l, true,
                                       &dist_to_left_boundary)) {

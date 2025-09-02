@@ -5,7 +5,6 @@
 #include "adas_function/mrc_condition.h"
 #include "adas_function/start_stop_enable.h"
 #include "gtest/gtest.h"
-#include "lateral_behavior_object_selector.h"
 #include "vehicle_config_context.h"
 
 namespace planning {
