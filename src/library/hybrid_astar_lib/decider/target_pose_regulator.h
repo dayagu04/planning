@@ -71,10 +71,10 @@ class TargetPoseRegulator : public AstarDecider {
                                          const VehicleParam &veh_param);
 
   // check min dist by x range
-  const float GetMinDistByXRange(const Pose2f *global_pose,
+  const float GetMinDistByXRange(const Pose2f &global_pose,
                                  EulerDistanceTransform *edt);
 
-  const float GetDistToObsHeadOut(const Pose2f *global_pose,
+  const float GetDistToObsHeadOut(const Pose2f &global_pose,
                                   const ParkingVehDirection &direction_request,
                                   EulerDistanceTransform *edt);
 
@@ -89,11 +89,6 @@ class TargetPoseRegulator : public AstarDecider {
 
   const bool IsCandidatePoseSafe(const float lat_buffer) const;
 
-  // 0: none,
-  // -1: left;
-  // 1: right
-  const int GenerateOffsetPreference() const;
-
  private:
   // decide by end straight distance
   Pose2f center_line_target_;
@@ -103,7 +98,7 @@ class TargetPoseRegulator : public AstarDecider {
   TerminalCheckBoundary x_check_bounday_;
 
   // max dist to cross over slot inside line
-  float max_cross_over_line_dist_;
+  float cross_the_slot_line_max_dist_;
 
   float ego_dist_to_obs_;
 };
