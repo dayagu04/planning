@@ -53,11 +53,11 @@ void AdasFunction::StoreInfoForNextCycle(void) {
           ->get_local_view()
           .vehicle_service_output_info.right_turn_light_state;
 
-  GetContext.mutable_last_cycle_info()->yaw_rad =
-      GetContext.mutable_session()
-          ->mutable_environmental_model()
-          ->get_local_view()
-          .localization_estimate.pose.euler_angles.yaw;
+//   GetContext.mutable_last_cycle_info()->yaw_rad =
+//       GetContext.mutable_session()
+//           ->mutable_environmental_model()
+//           ->get_local_view()
+//           .localization_estimate.pose.euler_angles.yaw;
 
   GetContext.mutable_last_cycle_info()->accelerator_pedal_pos =
       GetContext.mutable_session()
@@ -563,8 +563,8 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE("state_yaw_rate", GetContext.get_state_info()->yaw_rate);
   JSON_DEBUG_VALUE("state_yaw_rate_observer",
                    GetContext.get_state_info()->yaw_rate_observer);
-  JSON_DEBUG_VALUE("state_yaw_rate_loc",
-                   GetContext.get_state_info()->yaw_rate_loc);
+//   JSON_DEBUG_VALUE("state_yaw_rate_loc",
+//                    GetContext.get_state_info()->yaw_rate_loc);
   JSON_DEBUG_VALUE("state_left_departure_speed",
                    GetContext.get_state_info()->veh_left_departure_speed);
   JSON_DEBUG_VALUE("state_right_departure_speed",

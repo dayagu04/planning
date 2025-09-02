@@ -1094,10 +1094,10 @@ uint32 LdwCore::UpdateLdwRightKickDownCode(void) {
 
 double LdwCore::UpdateTlcThreshold(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  auto hmi_mcu_inner_info_ptr = &GetContext.mutable_session()
-                                     ->mutable_environmental_model()
-                                     ->get_local_view()
-                                     .hmi_mcu_inner_info;
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .function_state_machine_info;
   // 定义基础tlc_base值
   double tlc_calculate_base = 0;
   if (GetContext.get_param()->ldw_tlc_thrd > 0.1) {
@@ -1105,15 +1105,15 @@ double LdwCore::UpdateTlcThreshold(void) {
     tlc_calculate_base = GetContext.get_param()->ldw_tlc_thrd;
     ;
   } else {
-    if (hmi_mcu_inner_info_ptr->ldw_set_sensitivity_level ==
-        iflyauto::interface_2_4_5::SensitivityLevel::SENSITIVITY_LEVEL_LOW) {
+    if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
+        iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_LOW) {
       tlc_calculate_base = ldw_tlc_near_;
-    } else if (hmi_mcu_inner_info_ptr->ldw_set_sensitivity_level ==
-               iflyauto::interface_2_4_5::SensitivityLevel::
+    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::
                    SENSITIVITY_LEVEL_MIDDLE) {
       tlc_calculate_base = ldw_tlc_medium_;
-    } else if (hmi_mcu_inner_info_ptr->ldw_set_sensitivity_level ==
-               iflyauto::interface_2_4_5::SensitivityLevel::
+    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::
                    SENSITIVITY_LEVEL_HIGH) {
       tlc_calculate_base = ldw_tlc_far_;
     } else {

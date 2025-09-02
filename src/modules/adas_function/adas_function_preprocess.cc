@@ -366,13 +366,14 @@ void Preprocess::UpdateStateInfo(void) {
   GetContext.mutable_state_info()->yaw_rate_observer =
       GetContext.get_state_info()->vehicle_speed * std::tan(front_wheel_angle) /
       GetContext.get_param()->wheel_base;
-  double yaw_rad_current = GetContext.mutable_session()
-                               ->mutable_environmental_model()
-                               ->get_local_view()
-                               .localization_estimate.pose.euler_angles.yaw;
-  double yaw_rad_last = GetContext.get_last_cycle_info()->yaw_rad;
-  double yaw_rate_loc = (yaw_rad_current - yaw_rad_last) * 10.0;
-  GetContext.mutable_state_info()->yaw_rate_loc = yaw_rate_loc;
+  // double yaw_rad_current = GetContext.mutable_session()
+  //                              ->mutable_environmental_model()
+  //                              ->get_local_view()
+  //                              .localization_estimate.pose.euler_angles.yaw;
+
+  // double yaw_rad_last = GetContext.get_last_cycle_info()->yaw_rad;
+  // double yaw_rate_loc = (yaw_rad_current - yaw_rad_last) * 10.0;
+  // GetContext.mutable_state_info()->yaw_rate_loc = yaw_rate_loc;
 
   // ego_curvature
   if (abs(GetContext.mutable_state_info()->vehicle_speed) < 0.5) {
