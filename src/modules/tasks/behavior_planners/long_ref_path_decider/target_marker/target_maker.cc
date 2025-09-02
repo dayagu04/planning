@@ -27,25 +27,26 @@ common::Status TargetMaker::Run() {
   // 1. cruise target @建伟
   CruiseTarget cruise_target(speed_planning_config_, session_);
 
-  // 2. follow target @翼闻
+  // 2. safety target @华文
+  SafetyTarget safety_target(speed_planning_config_, session_);
+
+  // 3. follow target @翼闻
   FollowTarget follow_target(speed_planning_config_, session_);
 
-  // 3. overtake target @国朋
+  // 4. overtake target @国朋
   OvertakeTarget overtake_target(speed_planning_config_, session_,
                                  follow_target);
 
-  // 4. neighbor target @建伟
+  // 5. neighbor target @建伟
   NeighborTarget neighbor_target(speed_planning_config_, session_);
 
-  // 5. caution target @国朋
+  // 6. caution target @国朋
   CautionTarget caution_target(speed_planning_config_, session_);
 
-  // 6. safety target @华文
-  SafetyTarget safety_target(speed_planning_config_, session_);
   // 7. cross VRU target @华文
   CrossVRUTarget cross_vru_target(speed_planning_config_, session_);
 
-  // 7. decider final target values
+  // 8. decider final target values
   const auto& start_stop_decider_output =
       session_->planning_context().start_stop_decider_output();
   const auto& stop_speed_decision_info =
@@ -70,7 +71,6 @@ common::Status TargetMaker::Run() {
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
 
-                    
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
@@ -115,7 +115,6 @@ common::Status TargetMaker::Run() {
       upper_target_value =
           Target::TargetMin(cross_vru_target_value, upper_target_value);
     }
-
 
     // TBD: 建伟合入neighbor
     // 5.update lower and upper value by neighbor target

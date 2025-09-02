@@ -34,7 +34,13 @@ struct LateralObstacleHistoryInfo {
   int emergency_avoid_count = 0;
   bool emergency_avoid = false;
   bool lon_overtake_avoid = false;
+  bool is_not_set = false;
 
+};
+
+struct FollowObstacleInfo {
+  bool is_need_folow = false;
+  double follow_confidence = 0;
 };
 
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
@@ -45,6 +51,8 @@ struct LateralObstacleDeciderOutput {
   std::unordered_map<uint32_t, bool> is_emergency_avoid_release;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
+  std::unordered_map<uint32_t, FollowObstacleInfo>
+      follow_obstacle_info;
   std::vector<int> obstacles_id_behind_ego;
   SearchResult search_result = SearchResult::NO_SEARCH;
   bool in_intersection = false;

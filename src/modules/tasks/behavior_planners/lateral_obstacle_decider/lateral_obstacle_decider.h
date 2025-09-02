@@ -60,12 +60,16 @@ class LateralObstacleDecider : public Task {
   bool CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
       const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
+  void IsPotentialFollowingObstacle(
+    FrenetObstacle &frenet_obstacle, double lane_width);
 
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;
+  std::unordered_map<uint32_t, FollowObstacleInfo>
+      &follow_obstacle_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;

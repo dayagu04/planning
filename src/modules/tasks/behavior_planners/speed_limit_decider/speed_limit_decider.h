@@ -37,15 +37,6 @@ class SpeedLimitDecider : public Task {
 
   bool Execute() override;
 
-  struct SpeedLimitAgent {
-    int32_t id;
-    double min_s;
-    double v_limit;
-    bool is_collison;
-    bool is_need_v_hold;
-    double v_follow_desired;
-  };
-
  private:
   void CalculateMapSpeedLimit();
 

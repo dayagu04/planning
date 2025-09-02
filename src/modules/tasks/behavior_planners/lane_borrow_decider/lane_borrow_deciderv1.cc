@@ -403,7 +403,8 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
         frenet_obstacle_sl.s_end < ego_frenet_boundary_.s_start) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
-          lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+          (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+           lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {
         continue;
       }
     } else {  // lon overlap

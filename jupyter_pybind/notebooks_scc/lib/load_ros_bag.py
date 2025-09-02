@@ -676,7 +676,7 @@ class LoadRosbag:
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "safety_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length"]
 

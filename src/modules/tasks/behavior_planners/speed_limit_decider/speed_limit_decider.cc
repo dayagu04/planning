@@ -176,6 +176,56 @@ bool IsPointOutsideLaneByLeftRightThred(
   return is_outside_lane;
 }
 
+bool CheckLateralConflict(
+    const PlanningInitPoint &ego_init_point,
+    const std::shared_ptr<VirtualLane> &ego_lane,
+    const std::shared_ptr<planning_math::KDPath> &ego_lane_coord,
+    const agent::Agent *agent, const double lane_width_ratio) {
+  if (agent == nullptr) return false;
+
+  double ego_s = 0.0, ego_l = 0.0;
+  if (!ego_lane_coord->XYToSL(ego_init_point.x, ego_init_point.y, &ego_s,
+                              &ego_l))
+    return false;
+
+  const auto &ego_vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_ego_width = ego_vehicle_param.width * 0.5;
+
+  const double ego_l_min = ego_l - half_ego_width;
+  const double ego_l_max = ego_l + half_ego_width;
+
+  double agent_s = 0.0, agent_l = 0.0;
+  const auto agent_center = agent->box().center();
+  if (!ego_lane_coord->XYToSL(agent_center.x(), agent_center.y(), &agent_s,
+                              &agent_l)) {
+    return false;
+  }
+
+  const auto &agent_corners = agent->box().GetAllCorners();
+  double obs_min_l = std::numeric_limits<double>::max(),
+         obs_max_l = -std::numeric_limits<double>::max();
+  for (const auto &agent_corner : agent_corners) {
+    double agent_corner_s = 0.0, agent_corner_l = 0.0;
+    if (ego_lane_coord->XYToSL(agent_corner.x(), agent_corner.y(),
+                               &agent_corner_s, &agent_corner_l)) {
+      obs_min_l = std::min(obs_min_l, agent_corner_l);
+      obs_max_l = std::max(obs_max_l, agent_corner_l);
+    }
+  }
+
+  double lateral_dist = 0.0;
+  if (obs_min_l > ego_l_max)
+    lateral_dist = obs_min_l - ego_l_max;
+  else if (obs_max_l < ego_l_min)
+    lateral_dist = ego_l_min - obs_max_l;
+
+  bool has_lateral_distance_conflict =
+      lateral_dist <= ego_lane->width_by_s(ego_s) * lane_width_ratio;
+
+  return has_lateral_distance_conflict;
+}
+
 }  // namespace
 
 SpeedLimitDecider::SpeedLimitDecider(
@@ -1094,27 +1144,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     const double avoid_agent_v = avoid_agent->speed();
     const bool is_triggered_vru =
         avoid_agent->agent_id() == triggered_vru_.id ? true : false;
-    // const double speed_diff = v_ego - avoid_agent->speed();
-
-    // bool is_need_v_hold = false;
-    // double speed_buffer = 0.0;
-    // if (is_static) {
-    //   if (speed_diff >= kStaticAgentAvoidLimitedSpeedHigh) {
-    //     speed_buffer = kStaticAgentAvoidLimitedSpeedHigh;
-    //   } else if (speed_diff >= kStaticAgentAvoidLimitedSpeedLow) {
-    //     is_need_v_hold = true;
-    //   } else {
-    //     continue;
-    //   }
-    // } else {
-    //   if (speed_diff < kDynamicAgentAvoidLimitedSpeedLow) {
-    //     continue;
-    //   } else if (speed_diff < kDynamicAgentAvoidLimitedSpeedHigh) {
-    //     is_need_v_hold = true;
-    //   } else {
-    //     speed_buffer = kDynamicAgentAvoidLimitedSpeedHigh;
-    //   }
-    // }
 
     Point2D agent_point(avoid_agent->x(), avoid_agent->y());
     Point2D frenet_point;
@@ -1125,6 +1154,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     double ego_s, ego_l = 0.0;
     if (!(current_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s,
                                      &ego_l))) {
+      continue;
+    }
+
+    if (!CheckLateralConflict(init_point, current_lane, current_lane_coord,
+                              avoid_agent, 0.3)) {
       continue;
     }
 
@@ -1158,7 +1192,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
                  min_follow_distance_m);
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    double d_rel = min_s_by_lat_path - ego_s - vehicle_param.front_edge_to_rear_axle;
+    double d_rel =
+        min_s_by_lat_path - ego_s - vehicle_param.front_edge_to_rear_axle;
+    if (d_rel <= 0.0) {
+      continue;
+    }
     double v_follow_desired =
         CalcDesiredVelocity(d_rel, s_desired, avoid_agent->speed(), v_ego);
     double invade_dis = avoid_agent->is_static() ? 0.8 : 0.4;
@@ -1223,26 +1261,13 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   };
 
   // bool is_first_agent = true;
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
   double v_avoid_tmp = 40.0;
   for (const auto &agent : speed_limit_agents) {
-    // if (is_first_agent) {
-    //   if (agent.is_need_v_hold) {
-    //     if (v_avoid_hold_ < 0.1) {
-    //       v_avoid_hold_ = v_ego;
-    //     }
-    //     v_avoid_tmp = std::fmin(v_avoid_hold_, v_avoid_tmp);
-    //   } else {
-    //     v_avoid_tmp = agent.v_limit;
-    //     v_avoid_hold_ = 0.0;
-    //   }
-    //   if (v_avoid_tmp < v_target_) {
-    //     update_speed_limit(v_avoid_tmp, agent);
-    //   }
-    //   is_first_agent = false;
-    //   continue;
-    // }
     if (agent.v_limit < v_target_) {
       update_speed_limit(agent.v_limit, agent);
+      speed_limit_output->set_avoid_speed_limit_info(agent);
     }
   }
 }

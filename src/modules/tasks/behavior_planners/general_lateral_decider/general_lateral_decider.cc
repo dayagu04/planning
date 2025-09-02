@@ -1529,14 +1529,16 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
       lat_obs_position_iter->second.emergency_avoid &&
       !obstacle->obstacle()->is_reverse() &&
       !is_blocked_obstacle_ &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     // 紧急避让不走正常避让逻辑
     return;
   }
   if (is_potential_dangerous_obstacle_ &&
       !obstacle->obstacle()->is_reverse() &&
       !is_blocked_obstacle_ &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     return;
   }
   // lane borrow
@@ -2099,7 +2101,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   // judge maintain_avoid_direction
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.maintain_avoid &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     // if (obstacle->frenet_l() < 0) {
     //   is_nudge_left = false;
     // } else if (obstacle->frenet_l() > 0) {
@@ -2112,14 +2115,16 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       lat_obs_position_iter->second.emergency_avoid &&
       !obstacle->obstacle()->is_reverse() &&
       !is_blocked_obstacle_ &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     // 紧急避让不走正常避让逻辑
     return;
   }
   if (is_potential_dangerous_obstacle_ &&
       !obstacle->obstacle()->is_reverse() &&
       !is_blocked_obstacle_ &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     return;
   }
   bool is_avoid_lon_overtake_obj = false;
@@ -2193,7 +2198,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_care_intersection_scene = false;
   if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
       !is_avoid_lon_overtake_obj &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     // 对向ignore的障碍物按当前位置避让, s用预测，l按照当前位置
     // if (obstacle->frenet_l() < 0) {
     //   is_nudge_left = false;
@@ -2325,8 +2331,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     if (general_lateral_decider_output.lane_change_scene ||
         !is_agent_current_pred_lonoverlap_ ||
         is_cut_out_side_obstacle || is_care_rear_obstacle ||
-        lat_obstacle_decision.at(obstacle->id()) ==
+        (lat_obstacle_decision.at(obstacle->id()) ==
         LatObstacleDecisionType::IGNORE ||
+        lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::FOLLOW
+        ) ||
         (extra_decrease_buffer < 1e-5 && !is_hack_yaw && !is_limit_buffer_for_side_obstacle)) {
       // 后续持续关注，后方障碍物与前方障碍物同避让buffer，是否存在不合理的场景
       for (auto index : indexes) {
@@ -2442,7 +2451,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
 
   // Step 2)  judge emergency_avoid_direction
   if (is_potential_dangerous_obstacle_ &&
-      lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
     // hack 不会触发危险障碍物避让
     // is_nudge_left = (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
     //   LateralManeuver :: RIGHT_NUDGE || potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
@@ -2452,7 +2462,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
         lat_obstacle_position.find(obstacle->id());
     if (lat_obs_position_iter != lat_obstacle_position.end() &&
         lat_obs_position_iter->second.emergency_avoid &&
-        lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE) {
+        (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
+         lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
       // if (obstacle->frenet_l() < 0) {
       //   is_nudge_left = false;
       // } else if (obstacle->frenet_l() > 0) {
@@ -3828,6 +3839,7 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
     }
     if ((bound_info.type == BoundType::DYNAMIC_AGENT ||
          bound_info.type == BoundType::AGENT ||
+         bound_info.type == BoundType::ADJACENT_AGENT ||
          bound_info.type == BoundType::REVERSE_AGENT) &&
          bound_info.id != -100) {
       bool is_avoid_car = is_upper ?

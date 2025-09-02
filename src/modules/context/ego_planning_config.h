@@ -1245,6 +1245,32 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "extra_truck_lat_buffer", extra_truck_lat_buffer);
     start_nudge_ttc = read_json_key<double>(
         json, "start_nudge_ttc", start_nudge_ttc);
+    ReadItem<double>(json, base_safe_intrusoin_for_dynamic, "potential_follow_obstacle",
+                     "base_safe_intrusoin_for_dynamic");
+    ReadItem<double>(json, base_safe_intrusoin_for_static, "potential_follow_obstacle",
+                     "base_safe_intrusoin_for_static");
+    ReadItem<double>(json, extra_buffer_for_truck, "potential_follow_obstacle",
+                     "extra_buffer_for_truck");
+    ReadItem<double>(json, extra_buffer_for_vru, "potential_follow_obstacle",
+                     "extra_buffer_for_vru");
+    ReadItem<double>(json, follow_hysteresis, "potential_follow_obstacle",
+                     "follow_hysteresis");
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"potential_follow_obstacle",
+                                                   "distacle_to_ego_bp"},
+                          distacle_to_ego_bp);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"potential_follow_obstacle",
+                                                   "distacle_to_ego_bp_factor"},
+                          distacle_to_ego_bp_factor);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"potential_follow_obstacle",
+                                                   "lane_width_bp"},
+                          lane_width_bp);
+    read_json_vec<double>(json,
+                          std::vector<std::string>{"potential_follow_obstacle",
+                                                   "lane_width_factor"},
+                          lane_width_factor);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1284,6 +1310,15 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   bool is_use_last_lon_information = true;
   double extra_truck_lat_buffer = 0.0;
   double start_nudge_ttc = 3.6;
+  double base_safe_intrusoin_for_dynamic = 0.3;
+  double base_safe_intrusoin_for_static = 0.5;
+  double extra_buffer_for_truck = 0.0;
+  double extra_buffer_for_vru = 0.0;
+  double follow_hysteresis = 1.0;
+  std::vector<double> distacle_to_ego_bp{0, 30, 60, 90, 120};
+  std::vector<double> distacle_to_ego_bp_factor{0.5, 0.5, 0.5, 0.5, 0.5};
+  std::vector<double> lane_width_bp{3.2, 3.5, 3.8};
+  std::vector<double> lane_width_factor{1, 1, 1};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
@@ -3729,14 +3764,14 @@ struct STGraphConfig : public EgoPlanningConfig {
   bool enable_backward_extend_st_boundary = true;
   double backward_extend_length_for_lane_change = 50.0;
   double backward_extend_sample_resolution = 3.0;
-  double lane_keeping_lower_lateral_buffer_m = 0.1;
+  double lane_keeping_lower_lateral_buffer_m = 0.2;
   double lane_keeping_upper_lateral_buffer_m = 0.3;
   double lane_keeping_lower_speed_kph = 10.0;
   double lane_keeping_upper_speed_kph = 30.0;
   double lane_keeping_large_agent_lateral_buffer_m = 0.2;
   double lane_change_lateral_buffer_m = 0.2;
   double lane_keeping_large_agent_lower_lateral_buffer_m = 0.2;
-  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.2;
+  double lane_keeping_large_agent_upper_lateral_buffer_m = 0.3;
   double lane_keeping_large_agent_lower_speed_kph = 10.0;
   double lane_keeping_large_agent_upper_speed_kph = 30.0;
   double front_agent_lower_s_safety_buffer_for_lane_change = 8.0;

@@ -30,6 +30,15 @@ enum class SpeedLimitType {
   NEAR_POI = 18
 };
 
+struct SpeedLimitAgent {
+  int32_t id;
+  double min_s;
+  double v_limit;
+  bool is_collison;
+  bool is_need_v_hold;
+  double v_follow_desired;
+};
+
 class SpeedLimitDeciderOutput {
  public:
   SpeedLimitDeciderOutput() = default;
@@ -93,6 +102,9 @@ class SpeedLimitDeciderOutput {
   void set_map_speed_limit_value(const double limited_speed);
   const double map_speed_limit_value() const;
 
+  void set_avoid_speed_limit_info(const SpeedLimitAgent speed_limit_agent_info);
+  const SpeedLimitAgent avoid_speed_limit_info() const;
+
  private:
   std::map<SpeedLimitType, double>
       speed_limit_map_;  //(type, speedlimit) for all scenes one by one
@@ -123,6 +135,7 @@ class SpeedLimitDeciderOutput {
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
 
   double v_limit_map_ramp_ = 0.0;
+  SpeedLimitAgent v_limit_avoid_agent_info_;
 };
 
 }  // namespace planning

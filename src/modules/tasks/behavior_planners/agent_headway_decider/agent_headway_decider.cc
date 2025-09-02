@@ -128,6 +128,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     if (!st_graph_helper->GetStBoundary(agent_st_boundary_id, &st_boundary)) {
       continue;
     }
+    if (st_boundary.min_t() > 3.0 &&
+        (st_boundary.max_t() - st_boundary.min_t()) < 0.4) {
+      continue;
+    }
 
     const auto* agent = agent_manager->GetAgent(st_agent_id);
     if (agent == nullptr) {
