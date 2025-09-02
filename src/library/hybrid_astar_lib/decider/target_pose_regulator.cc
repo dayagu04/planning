@@ -230,18 +230,17 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   global_pose = center_line_target_;
   constexpr size_t kMaxCandidateNum = 10;
   constexpr float kYLowerMid = -0.1;
+  global_pose.x = 8.0;
 
   PoseRegulateCandidate candidate;
   for (size_t i = 0; i < kMaxCandidateNum; i++) {
     switch (request->direction_request) {
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
-        global_pose.x = 8.0;
+      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
         global_pose.y -= 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-        global_pose.x = 8.0;
+      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
         global_pose.y += 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
@@ -275,15 +274,15 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   constexpr size_t kMaxCandidateNum = 10;
   constexpr float kYLowerMid = -0.1;
 
+  global_pose.x = global_pose.x > 0.0 ? 8.0 : -4.0;
+
   PoseRegulateCandidate candidate;
   for (size_t i = 0; i < kMaxCandidateNum; i++) {
     switch (direction_request) {
       case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-        global_pose.x = 8.0;
         global_pose.y -= 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-        global_pose.x = 8.0;
         global_pose.y += 1.0;
         break;
       case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
