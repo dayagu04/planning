@@ -256,6 +256,7 @@ class LaneChangeStateMachineManager {
   double pre_lane_change_finish_time_ = 0.0;
   int lc_back_cnt_ = 0;
   int lc_valid_cnt_ = 0;
+  int hold_state_dash_cnt = 0;
   int lc_target_lane_merge_to_origin_lane_cnt_ = 0;
   RequestType map_turn_signal_ = NO_CHANGE;
 

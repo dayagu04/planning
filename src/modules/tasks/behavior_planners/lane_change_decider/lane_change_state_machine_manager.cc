@@ -177,7 +177,12 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_frame_nums_++;
 
         //在hold状态下最多维持8s，不满足变道条件那么就返回原车道
-        bool is_hold_to_cancel = hold_state_frame_nums_ > 80;
+        bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+        transition_info_.lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
+        transition_info_.lane_change_status);
+        hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
+
+        bool is_hold_to_cancel = hold_state_frame_nums_ > 80 || (hold_state_dash_cnt >= 2);
 
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
@@ -365,14 +370,6 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     lane_change_stage_info_.lc_back_reason = "time out";
     return true;
   }
-
-  if (!lc_request_.IsDashEnoughForRepeatSegments(
-          lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
-          transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_back_reason = "dash line length not satisfy";
-    return true;
-  }
-
   bool is_target_lane_merge_to_origin_lane =
       IsNeedCancelLCTargetLaneMergeToOriginLane();
   bool is_no_care_mrege =
@@ -602,6 +599,9 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     RequestType direction) {
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
+  bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+            direction, lc_lane_mgr_->origin_lane_virtual_id(),
+            transition_info_.lane_change_status);
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST ||
@@ -609,7 +609,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
-  if (lane_change_stage_info_.gap_insertable) {
+  if (lane_change_stage_info_.gap_insertable && is_dash_enough) {
     lc_valid_cnt_ += 1;
     ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
@@ -621,6 +621,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     }
   } else {
     ILOG_DEBUG << "arbitrator lc invalid reason " << lane_change_stage_info_.lc_invalid_reason.c_str();
+    lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
   }
 }

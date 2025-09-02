@@ -21,7 +21,8 @@ constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kInputBoundaryLenLimit = 145.;
 constexpr double kDefaultBoundaryLen = 5000.;
 // https://yf2ljykclb.xfchat.iflytek.com/wiki/MXjXwlCjni6g7nkjgKGrfwGwzPb
-constexpr double kLaneChangeSolidLineTTC = 3;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeSolidLineTTC = 3.5;  // todo(ldh): 从配置中读取
+constexpr double kLaneChangeMinDistance = 9;
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 constexpr double kStandardLaneWidth = 3.8;
 constexpr double kEps = 1e-6;
@@ -380,7 +381,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   }
 
   const double lc_response_dist =
-      ego_v * CalculateDynamicTTCtime(origin_lane_id, lc_request);  // hack
+      std::max(ego_v * kLaneChangeSolidLineTTC, kLaneChangeMinDistance);  // hack
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
   std::cout << "dash_length:" << dash_length
             << ",lc_response_dist:" << lc_response_dist << std::endl;
@@ -389,7 +390,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
       all_lane_boundary_types_are_dashed || dash_length > lc_response_dist) {
     return true;
   }
-  
+
   const auto &cur_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
@@ -401,7 +402,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
       if (left_boundary_type ==
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
-          left_boundary_type == 
+          left_boundary_type ==
               iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           left_boundary_type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL ||
           left_boundary_type == iflyauto::LaneBoundaryType_MARKING_SOLID ||
@@ -673,14 +674,14 @@ double LaneChangeRequest::CalculateDynamicTTCtime(
 
   const double origin_lane_half_width = origin_lane->width_by_s(
       origin_reference_path->get_frenet_ego_state().s()) * 0.5;
-  
+
   // 车辆参数
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double kEgoWidth = vehicle_param.width;
 
   //六分之一的自车宽度
-  const double l_err = 0.16666666666667 * kEgoWidth; 
+  const double l_err = 0.16666666666667 * kEgoWidth;
   const double ego_l = origin_reference_path->get_frenet_ego_state().l();
 
   double lat_offset = 0.0;
@@ -690,7 +691,7 @@ double LaneChangeRequest::CalculateDynamicTTCtime(
     lat_offset = origin_lane_half_width + ego_l - l_err;
   }
   const double base_lat_offset = kStandardLaneWidth * 0.5 - l_err;
-  
+
   if (base_lat_offset < kEps) {
     return 0.0;
   }
