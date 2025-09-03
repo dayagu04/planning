@@ -1966,6 +1966,9 @@ void LaneChangeStateMachineManager::GetSideRiskAgent(){
     double obs_longi_vel = obstacle->frenet_velocity_s();
     bool is_lat_side = obstacle_sl.l_end < ego_sl_bd.l_start ||
                     obstacle_sl.l_start > ego_sl_bd.l_end;
+    if(obstacle->frenet_l() > 7.0 || obstacle->frenet_l() < -7.0){
+      continue;
+    }
     // bool is_longi_concerned = !(obstacle_sl.s_start > concerned_s_end ||
     //                           obstacle_sl.s_end < concerned_s_start); // 车尾出如果有车靠近，可能保守
     bool is_longi_concerned = IfFrenetCollision(ego_longi, ego_vel, obs_longi, obs_longi_vel, 5.0, 0.5);
