@@ -946,9 +946,9 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     return true;
   }
   for (const auto& id : left_potensial_objects) {
-    if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
-        tracks_map_[id].d_rel > kPotensialObjectLonRange ||
-        tracks_map_[id].l > potensial_max_l || tracks_map_[id].l < 0.0) {
+    if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
+        tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
+        tracks_map.at(id)->frenet_l() > potensial_max_l || tracks_map.at(id)->frenet_l() < 0.0) {
       continue;
     }
     ++potensial_counter;
@@ -1072,9 +1072,9 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     return true;
   }
   for (const auto& id : right_potensial_objects) {
-    if (tracks_map_[id].d_rel < -kPotensialObjectLonRange ||
-        tracks_map_[id].d_rel > kPotensialObjectLonRange ||
-        tracks_map_[id].l < potensial_min_l || tracks_map_[id].l > 0.0) {
+    if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
+        tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
+        tracks_map.at(id)->frenet_l() < potensial_min_l || tracks_map.at(id)->frenet_l() > 0.0) {
       continue;
     }
     ++potensial_counter;
