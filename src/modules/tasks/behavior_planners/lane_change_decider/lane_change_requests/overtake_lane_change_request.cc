@@ -99,7 +99,7 @@ constexpr double kDefaultLeadOneConsiderRange = 120.0;
 constexpr double kDefaultTargetLaneAgentConsiderRange = 144.0;
 constexpr double kCouldOvertakeMaintainSpeedDiffThresholdPercentage = 0.8;
 constexpr double kCouldGenerateOvertakeSpeedDiffThresholdPercentage = 1.2;
-
+constexpr double kTargetLaneExistTruckSpeedDiffThresholdPercentage = 1.2;
 
 }  // namespace
 // class: OvertakeRequest
@@ -379,7 +379,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   double left_route_traffic_speed = 0.0;
   double right_route_traffic_speed = 0.0;
-
+  left_lane_exist_truck_ = false;
+  right_lane_exist_truck_ = false;
   updateRouteTrafficSpeed(true, &left_route_traffic_speed, left_traffic_speed_filter_);
   updateRouteTrafficSpeed(false, &right_route_traffic_speed, right_traffic_speed_filter_);
   double leading_vehicle_speed = agent->speed_fusion();
@@ -617,7 +618,8 @@ bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
     return false;
   }
   double speed_threshold_percentage = 1.0;
-  if (leading_agent->type() == agent::AgentType::TRUCK) {
+  if (leading_agent->type() == agent::AgentType::TRUCK || leading_agent->type() == agent::AgentType::BUS ||
+      leading_agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
   const double speed_diff = std::max(reference_speed - leading_agent->speed(),
@@ -679,6 +681,10 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
       }
+      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK || tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+          tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+        left_lane_exist_truck_ = true;
+      }
       side_front_obstacle_array.push_back(tr);
     }
   } else {
@@ -688,6 +694,10 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       }
       if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
+      }
+      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK || tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+          tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+        right_lane_exist_truck_ = true;
       }
       side_front_obstacle_array.push_back(tr);
     }
@@ -730,10 +740,18 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     return false;
   }
   const double leading_vehicle_speed = agent->speed();
+  double target_lane_exist_truck_speed_threshold_percentage = 1.0;
   double speed_threshold_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK) {
+  if (agent->type() == agent::AgentType::TRUCK || agent->type() == agent::AgentType::BUS ||
+      agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
+  if (is_left && left_lane_exist_truck_) {
+    target_lane_exist_truck_speed_threshold_percentage = kTargetLaneExistTruckSpeedDiffThresholdPercentage;
+  } else if (!is_left && right_lane_exist_truck_) {
+    target_lane_exist_truck_speed_threshold_percentage = kTargetLaneExistTruckSpeedDiffThresholdPercentage;
+  }
+
   const auto &lane_change_style = session_->environmental_model()
                                   .get_local_view()
                                   .function_state_machine_info.pilot_req.lane_change_style;
@@ -769,6 +787,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   //   speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
   // }
   speed_threshold *= kCouldGenerateOvertakeSpeedDiffThresholdPercentage;
+  speed_threshold *= target_lane_exist_truck_speed_threshold_percentage;
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
@@ -782,11 +801,12 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
 }
 
 bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
-    const double lane_traffic_speed, const agent::Agent* agent,
-    const bool is_left) {
+    const double lane_traffic_speed, const agent::Agent* agent, const bool is_left) {
   const double leading_vehicle_speed = agent->speed();
   double speed_threshold_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK) {
+  double target_lane_exist_truck_maintain_percentage = 1.0;
+  if (agent->type() == agent::AgentType::TRUCK || agent->type() == agent::AgentType::BUS ||
+      agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
   const auto &lane_change_style = session_->environmental_model()
@@ -946,14 +966,17 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     return true;
   }
   for (const auto& id : left_potensial_objects) {
-    if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
-        tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
-        tracks_map.at(id)->frenet_l() > potensial_max_l || tracks_map.at(id)->frenet_l() < 0.0) {
-      continue;
-    }
-    ++potensial_counter;
-    if (potensial_counter >= kPotensialObjectNum) {
-      return false;
+    auto iter = tracks_map.find(id);
+    if (iter != tracks_map.end()) {
+      if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
+          tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
+          tracks_map.at(id)->frenet_l() > potensial_max_l || tracks_map.at(id)->frenet_l() < 0.0) {
+        continue;
+      }
+      ++potensial_counter;
+      if (potensial_counter >= kPotensialObjectNum) {
+        return false;
+      }
     }
   }
 
@@ -1072,14 +1095,17 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     return true;
   }
   for (const auto& id : right_potensial_objects) {
-    if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
-        tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
-        tracks_map.at(id)->frenet_l() < potensial_min_l || tracks_map.at(id)->frenet_l() > 0.0) {
-      continue;
-    }
-    ++potensial_counter;
-    if (potensial_counter >= kPotensialObjectNum) {
-      return false;
+    auto iter = tracks_map.find(id);
+    if (iter != tracks_map.end()) {
+      if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
+          tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
+          tracks_map.at(id)->frenet_l() < potensial_min_l || tracks_map.at(id)->frenet_l() > 0.0) {
+        continue;
+      }
+      ++potensial_counter;
+      if (potensial_counter >= kPotensialObjectNum) {
+        return false;
+      }
     }
   }
 

@@ -47,7 +47,7 @@ class OvertakeRequest : public LaneChangeRequest {
       const std::shared_ptr<VirtualLane>& target_lane,
       const double lane_traffic_speed, const agent::Agent* agent,
       const int left_lane_num, const int right_lane_num, const bool is_left);
-      
+
   bool isCouldOvertakeMaintainByRoute(
     const double lane_traffic_speed, const agent::Agent* agent,
     const bool is_left);
@@ -150,6 +150,8 @@ class OvertakeRequest : public LaneChangeRequest {
   planning::planning_math::MeanFilter left_traffic_speed_filter_;
   planning::planning_math::MeanFilter right_traffic_speed_filter_;
   planning::planning_math::MeanFilter leading_speed_filter_;
+  bool left_lane_exist_truck_ = false;
+  bool right_lane_exist_truck_ = false;
 };
 
 }  // namespace planning
