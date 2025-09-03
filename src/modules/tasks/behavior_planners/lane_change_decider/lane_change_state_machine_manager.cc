@@ -1359,8 +1359,29 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
     JSON_DEBUG_VECTOR("lat_path_t", std::vector<double>{0.0}, 2);
   }
 
-    JSON_DEBUG_VALUE("front_agent_id",lane_change_decider_output.lc_gap_info.front_node_id);
-    JSON_DEBUG_VALUE("rear_agent_id",lane_change_decider_output.lc_gap_info.rear_node_id);
+    // JSON_DEBUG_VALUE("front_agent_id",lane_change_decider_output.lc_gap_info.front_node_id);
+    // JSON_DEBUG_VALUE("rear_agent_id",lane_change_decider_output.lc_gap_info.rear_node_id);
+  int32_t rear_id = -1;
+  int32_t front_id = -1;
+  int32_t front_other_id = -1;
+  int32_t side_id = -1;
+  if(target_lane_rear_node_){
+    rear_id = target_lane_rear_node_->node_agent_id();
+  }
+  if(target_lane_front_node_){
+    front_id = target_lane_front_node_->node_agent_id();
+  }
+  if(!risk_agents_nodes_.empty()){
+    front_other_id = risk_agents_nodes_[0]->node_agent_id();
+  }
+  if(!risk_side_agents_nodes_.empty()){
+    side_id = risk_side_agents_nodes_[0]->obstacle()->id();
+  }
+  JSON_DEBUG_VALUE("front_agent_id",front_id);
+  JSON_DEBUG_VALUE("front_other_id",front_other_id);
+  JSON_DEBUG_VALUE("rear_agent_id",rear_id);
+  JSON_DEBUG_VALUE("side_id",side_id);
+
   if(agent_box_corners_x_.empty()||ego_box_corners_x_.empty()){
     JSON_DEBUG_VECTOR("agent_box_corners_x", std::vector<double>{0.0}, 2);
     JSON_DEBUG_VECTOR("agent_box_corners_y", std::vector<double>{0.0}, 2);
