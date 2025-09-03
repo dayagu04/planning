@@ -259,6 +259,11 @@ struct ParkingLatLonSlotReleaseBuffer {
   float accumulate_lat_buffer;
   float hold_lat_buffer;
   float subtract_lat_buffer;
+
+  float channel_width;
+  float channel_lat_offset;
+  float one_side_empty_channel_width;
+  float two_side_empty_channel_width;
 };
 
 struct ParkingLatLonTargetPoseBuffer {
@@ -625,7 +630,6 @@ struct ApaParameters {
   bool move_slot_with_little_buffer = false;
   size_t max_slot_window_size = 3;
   size_t max_limiter_window_size = 3;
-  double slot_release_channel_width = 4.86;
   // slot update
   double slot_update_in_or_out_occupied_ratio = 0.001;
   double slot_update_out_heading_max = 66.8;
@@ -651,8 +655,6 @@ struct ApaParameters {
   double min_slot_release_long_dist_slot2mirror = 3.86;
   double min_parallel_vis_slot_release_long_dist_slot2mirror = 1.87;
   double min_parallel_uss_slot_release_long_dist_slot2mirror = 3.86;
-  double one_side_empty_slot_release_channel_width = 7.68;
-  double two_side_empty_slot_release_channel_width = 7.68;
 
   double believe_obs_ego_area = 2.68;
   double limiter_length = 0.0;

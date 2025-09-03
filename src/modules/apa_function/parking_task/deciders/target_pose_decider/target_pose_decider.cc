@@ -60,6 +60,11 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     virtual_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() +
                     param.terminal_target_x;
 
+    if (slot_.slot_type_ == SlotType::SLANT) {
+      virtual_tar_x = slot_.processed_corner_coord_global_.pt_23_mid.x() +
+                      param.terminal_target_x;
+    }
+
     // park in the middle of the slot
     const double mid_ego_x =
         (slot_.processed_corner_coord_local_.pt_01_mid.x() -
