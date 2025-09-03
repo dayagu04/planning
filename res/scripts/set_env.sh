@@ -60,7 +60,10 @@ export GLOG_alsologtstderr=1
 export GLOG_logtostderr=0
 export GLOG_colorlogtostderr=1
 export GLOG_minloglevel=0
+export GLOG_v=2
 
 # for DEBUG log
-#export GLOG_minloglevel=-1
-# export GLOG_v=5
+export GLOG_minloglevel=-1
+export GLOG_v=5
+echo $GLOG_minloglevel
+echo $GLOG_v
