@@ -802,7 +802,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
   }
 
   if (target_lane_rear_node_) {
-    CalculateLCGapFeasibleWithPredictionInfo(
+    CalculateLCGapFeasibleWithPredictionInfo( //第2个 false， 对应 is_ego_lane_agent
         &lc_state_info, target_lane_rear_node_, false, false);
     if (lc_state_info.lc_should_back) {
       return lc_state_info;
@@ -2491,7 +2491,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
 
   bool lc_safety = true;
   bool is_risk_node = false;
-  bool is_side_clsoing = false;
+  bool is_side_closing = false;
   if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE) {
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (transition_info_.lane_change_status == kLaneChangePropose) {
@@ -2642,7 +2642,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       bool lateral_collision = IfFrenetCollision(center_lat, 0.0, obs_lat, obs_lat_vel, 4.0, 0.5);
       if(lateral_collision){
         lc_safety = false;
-        is_side_clsoing = true;
+        is_side_closing = true;
         break;
       }
     }
@@ -2667,8 +2667,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       if(is_risk_node){
         lc_state_info->lc_back_reason = "front risk node";
       }
-      if(is_side_clsoing){
-        lc_state_info->lc_back_reason = "side clsoing";
+      if(is_side_closing){
+        lc_state_info->lc_back_reason = "side closing";
       }
     } else if (transition_info_.lane_change_status == kLaneChangePropose ||
         transition_info_.lane_change_status == kLaneChangeHold) {
@@ -2684,8 +2684,8 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
     if(is_risk_node){
       lc_state_info->lc_invalid_reason = "front risk node";
     }
-    if(is_side_clsoing){
-      lc_state_info->lc_invalid_reason = "side clsoing";
+    if(is_side_closing){
+      lc_state_info->lc_invalid_reason = "side closing";
     }
   }
 }
@@ -3068,7 +3068,6 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
   if (IsFilterStaticAgentLC(*agent_node)) {
     return true;
   }
-
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
@@ -3129,7 +3128,43 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
   const double relative_v = is_front_agent
                                 ? ego_v - agent_prediction_trajs->at(0).v
                                 : agent_prediction_trajs->at(0).v - ego_v;
+  // 后方车
+  if(!is_front_agent){
+      // 针对提取的后方车，尝试用横向速度判断是否侵入目标车道
+    const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+    const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+    const auto target_reference_path =
+        reference_path_manager->get_reference_path_by_lane(
+            target_lane_virtual_id);
+    const auto& ego_sl_bd = target_reference_path
+                                ->get_ego_frenet_boundary();
+    const auto& ego_sl_state = target_reference_path
+                                ->get_frenet_ego_state();
+    const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+      double half_width = vehicle_param.max_width * 0.5;
+    const auto& obstacles_map = target_reference_path->get_obstacles_map();
 
+    auto it = obstacles_map.find(agent_node->node_agent_id());
+    if (it != obstacles_map.end()) {
+        const auto& rear_obs = it->second;
+      double single_risk_buff = 0.4;
+      double concerned_s_start = ego_sl_bd.s_start;
+      double concerned_s_end = ego_sl_bd.s_end;
+      std::pair<double, double> ego_longi{concerned_s_start, concerned_s_end};
+      double ego_vel = ego_sl_state.velocity_s();
+      std::pair<double, double> center_lat{- half_width - single_risk_buff,
+                                                half_width + single_risk_buff};
+      double ego_lat_vel = ego_sl_state.velocity_l();
+
+      const auto& obstacle_sl = rear_obs->frenet_obstacle_boundary();
+      std::pair<double, double> obs_lat{obstacle_sl.l_start, obstacle_sl.l_end};
+      double obs_lat_vel = rear_obs->frenet_velocity_l();
+      bool is_rear_cut_in = IfFrenetCollision(center_lat, 0.0, obs_lat, obs_lat_vel, 4.0, 0.5);
+      return !is_rear_cut_in;
+    }
+  }
 
   if (is_ego_lane_agent) {
     const auto &cur_lane = virtual_lane_manager->get_current_lane();
@@ -3175,7 +3210,7 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
     const double tar_lane_width =
         tar_lane->width_by_s(agent_prediction_trajs->at(0).s);
     const double lat_consider_dis = tar_lane_width * 0.5;
-
+    // 这里实际上是 只用了 预测轨迹的起点和终点，但是考虑到预测轨迹的特性，并不合适
     bool is_lat_safe = std::abs(agent_prediction_trajs->at(0).l) > lat_consider_dis &&
                        std::abs(agent_prediction_trajs->back().l) > lat_consider_dis &&
                        agent_prediction_trajs->at(0).l * agent_prediction_trajs->back().l > 0;
@@ -3190,7 +3225,6 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
       return true;
     }
   }
-
   return false;
 }
 void LaneChangeStateMachineManager::StoreObjDebugPredictionInfo(
