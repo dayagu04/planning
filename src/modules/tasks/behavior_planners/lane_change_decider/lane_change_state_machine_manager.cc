@@ -435,6 +435,9 @@ bool LaneChangeStateMachineManager::CheckIfHoldToCancel(
 bool LaneChangeStateMachineManager::CheckIfHoldToExecution(
     const RequestType &lane_change_direction,
     const RequestSource &lane_change_type) {
+  if(ego_trajs_future_.empty()){
+    return false;
+  }
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
 
