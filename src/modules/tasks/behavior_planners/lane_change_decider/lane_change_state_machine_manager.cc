@@ -1408,6 +1408,9 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   is_high_priority_back_ = false;
   ego_trajs_future_.clear();
   lc_path_generate_.reset();
+  is_dash_not_enough_for_lc_ = false;
+  execution_state_dash_cnt = 0;
+  hold_state_dash_cnt = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
