@@ -3394,6 +3394,14 @@ bool RouteInfo::CalculateFeasibleLane(
         }
         before_excr_feasible_lane.emplace_back(before_exclnum);
 
+      } else if (before_exclnum == on_exclnum &&
+                 on_exclnum == successor_exclnum) {
+        // 分叉，右边是主路的
+        for (int i = 0; i < successor_exclnum; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+          before_excr_feasible_lane.emplace_back(i + 1);
+        }
+
       } else {
         on_excr_feasible_lane.emplace_back(on_exclnum);
         before_excr_feasible_lane.emplace_back(before_exclnum);
@@ -3432,7 +3440,7 @@ bool RouteInfo::CalculateFeasibleLane(
         //   on_excr_feasible_lane.emplace_back(1);
         //   before_excr_feasible_lane.emplace_back(1);
         // }
-        
+
         // 主路上，交换区内、前、后车道都一样
         for (int i = 0; i < successor_exclnum; ++i) {
           on_excr_feasible_lane.emplace_back(i + 1);
