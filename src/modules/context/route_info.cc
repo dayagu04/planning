@@ -15,6 +15,7 @@
 #include "environmental_model.h"
 #include "google/protobuf/arena.h"
 #include "planning_context.h"
+#include "sdmap/sdmap.h"
 namespace planning {
 
 namespace {
@@ -3339,10 +3340,45 @@ bool RouteInfo::CalculateFeasibleLane(
   const int successor_exclnum = recommand_lane_num[2].total_lane_num;
   const int successor_other_exclnum = recommand_lane_num[3].total_lane_num;
 
+  const bool successor_lane_num_condition = on_exclnum <= successor_exclnum + successor_other_exclnum;
+  const bool on_exclnum_lane_num_condition = before_exclnum == on_exclnum;
+  const bool is_continue_lane = on_exclnum_lane_num_condition && successor_lane_num_condition;
+
   bool is_split_right =
       split_region_info->split_direction == SplitDirection::SPLIT_RIGHT;
   bool is_split_left =
       split_region_info->split_direction == SplitDirection::SPLIT_LEFT;
+
+  // 判断other split是否是ramp
+  const auto split_link_id = split_region_info->split_link_id;
+  const auto split_link = sdpro_map_.GetLinkOnRoute(split_link_id);
+  if (split_link == nullptr) {
+    return false;
+  }
+
+  const auto next_link = sdpro_map_.GetNextLinkOnRoute(split_link_id);
+  if (next_link == nullptr) {
+    return false;
+  }
+
+  uint64 other_split_link_id = 0;
+  if (split_link->successor_link_ids_size() == 2) {
+    const auto& successor_link_ids = split_link->successor_link_ids();
+    if (successor_link_ids[0] == next_link->id()) {
+      other_split_link_id = successor_link_ids[1];
+    } else {
+      other_split_link_id = successor_link_ids[0];
+    }
+  }
+
+  const auto& other_split_link = sdpro_map_.GetLinkOnRoute(other_split_link_id);
+  if (other_split_link == nullptr) {
+    return false;
+  }
+
+  // bool is_other_split_ramp = sdpro_map_.isRamp(other_split_link->link_type());
+  bool is_other_split_ramp = other_split_link->link_type() !=
+                             iflymapdata::sdpro::LinkType::LT_MAIN_ROAD;
 
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
@@ -3402,6 +3438,22 @@ bool RouteInfo::CalculateFeasibleLane(
           before_excr_feasible_lane.emplace_back(i + 1);
         }
 
+        if (is_other_split_ramp && !is_continue_lane) {
+          auto it = std::find(before_excr_feasible_lane.begin(),
+                              before_excr_feasible_lane.end(), 1);
+
+          if (it != before_excr_feasible_lane.end()) {
+            before_excr_feasible_lane.erase(it);
+          }
+
+          auto it1 = std::find(on_excr_feasible_lane.begin(),
+                              on_excr_feasible_lane.end(), 1);
+
+          if (it1 != on_excr_feasible_lane.end()) {
+            on_excr_feasible_lane.erase(it1);
+          }
+        }
+
       } else {
         on_excr_feasible_lane.emplace_back(on_exclnum);
         before_excr_feasible_lane.emplace_back(before_exclnum);
@@ -3414,20 +3466,20 @@ bool RouteInfo::CalculateFeasibleLane(
     // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
     if (successor_exclnum <= on_exclnum) {
       if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
-        const auto start_link = sdpro_map_.GetLinkOnRoute(
-            split_region_info->start_fp_point.link_id);
-        if (start_link == nullptr) {
-          return false;
-        }
-        const auto start_link_is_ramp =
-            sdpro_map_.isRamp(start_link->link_type());
+        // const auto start_link = sdpro_map_.GetLinkOnRoute(
+        //     split_region_info->start_fp_point.link_id);
+        // if (start_link == nullptr) {
+        //   return false;
+        // }
+        // const auto start_link_is_ramp =
+        //     sdpro_map_.isRamp(start_link->link_type());
 
-        const auto& end_fp_point = split_region_info->end_fp_point;
-        const auto end_link = sdpro_map_.GetLinkOnRoute(end_fp_point.link_id);
-        if (end_link == nullptr) {
-          return false;
-        }
-        const auto end_link_is_ramp = sdpro_map_.isRamp(end_link->link_type());
+        // const auto& end_fp_point = split_region_info->end_fp_point;
+        // const auto end_link = sdpro_map_.GetLinkOnRoute(end_fp_point.link_id);
+        // if (end_link == nullptr) {
+        //   return false;
+        // }
+        // const auto end_link_is_ramp = sdpro_map_.isRamp(end_link->link_type());
 
         // if (!end_link_is_ramp && !start_link_is_ramp) {
         //   // 主路上，交换区内、前、后车道都一样
@@ -3445,6 +3497,22 @@ bool RouteInfo::CalculateFeasibleLane(
         for (int i = 0; i < successor_exclnum; ++i) {
           on_excr_feasible_lane.emplace_back(i + 1);
           before_excr_feasible_lane.emplace_back(i + 1);
+        }
+
+        if (is_other_split_ramp && !is_continue_lane) {
+          auto it = std::find(before_excr_feasible_lane.begin(),
+                              before_excr_feasible_lane.end(), successor_exclnum);
+
+          if (it != before_excr_feasible_lane.end()) {
+            before_excr_feasible_lane.erase(it);
+          }
+
+          auto it1 = std::find(on_excr_feasible_lane.begin(),
+                              on_excr_feasible_lane.end(), successor_exclnum);
+
+          if (it1 != on_excr_feasible_lane.end()) {
+            on_excr_feasible_lane.erase(it1);
+          }
         }
 
       } else if (successor_exclnum <= before_exclnum) {
