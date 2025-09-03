@@ -66,7 +66,7 @@ void IntRequest::Update(int lc_status) {
   const auto& ego_blinker = session_->mutable_environmental_model()
                                   ->get_ego_state_manager()
                                   ->ego_blinker();
-  ProcessBlinkState(ego_blinker);
+  ProcessBlinkState(ego_blinker, lc_status);
   JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
 
   // init lanes with id
@@ -284,13 +284,23 @@ void IntRequest::PrintForbidGeneratingReason(
   }
 }
 
-void IntRequest::ProcessBlinkState(const uint ego_blinker) {
+void IntRequest::ProcessBlinkState(const uint ego_blinker, const int lc_status) {
   if (ego_blinker != last_frame_blinker_) {
     last_frame_blinker_ = ego_blinker;
     if (ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH) {
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
+      if (lc_status != 0 &&
+          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      } else {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
+      }
     } else if (ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH) {
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_LEFT;
+      if (lc_status != 0 &&
+          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT) {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      } else {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_LEFT;
+      }
     } else if (ego_blinker == TurnSwitchState::RIGHT_LIGHTLY_TOUCH &&
                lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
       lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
