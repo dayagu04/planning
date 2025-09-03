@@ -229,7 +229,7 @@ bool SpeedLimitDecider::Execute() {
                       ->ad_info);
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
-  
+
   if (SpeedLimitType::CURVATURE == v_target_type_) {
     ad_info->is_curva = true;
   } else {
@@ -788,7 +788,89 @@ void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
 
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}
 
-void SpeedLimitDecider::CalculatePOISpeedLimit() {}
+void SpeedLimitDecider::CalculatePOISpeedLimit() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto &route_info_output =
+      environmental_model.get_route_info()->get_route_info_output();
+  if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
+    return;
+  }
+  ad_common::math::Vec2d current_point;
+  const auto &ego_state = environmental_model.get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+  double nearest_s = 0;
+  double nearest_l = 0;
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+  if (current_segment == nullptr) {
+    return;
+  } else {
+    bool poi_v_limit_set = false;
+    double cur_link_v_limit = current_segment->speed_limit();
+    double v_limit_dis = 10000.0;
+    v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
+      speed_limit_config_.tunnel_vel_limit_dis_table.dis_table);
+
+    auto tunnel_info = sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
+    if (tunnel_info.first != nullptr && tunnel_info.second > 0 && tunnel_info.second < v_limit_dis) {
+    //less than calibration distance before entering tunnel speed limit works
+      v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
+      poi_v_limit_set = true;
+    } else if (tunnel_info.second < kEpsilon && current_segment->link_type() == iflymapdata::sdpro::LinkType::LT_TUNNEL) {
+    //inside tunnel speed limit works
+      v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
+      poi_v_limit_set = true;
+    } else {
+      v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.toll_station_vel_limit_dis_table.vel_limit_table,
+        speed_limit_config_.toll_station_vel_limit_dis_table.dis_table);
+      auto toll_station_info = sdpro_map.GetTollStationInfo(current_segment->id(), nearest_s, 700.0);
+      if (toll_station_info.first != nullptr && toll_station_info.second > 0 && toll_station_info.second <
+        speed_limit_config_.function_off_dis_before_toll_station + v_limit_dis) {
+      //less than calibration distance before entering toll station speed limit works
+        v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
+        poi_v_limit_set = true;
+      } else {
+        v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.sapa_vel_limit_dis_table.vel_limit_table,
+          speed_limit_config_.sapa_vel_limit_dis_table.dis_table);
+        auto sapa_info = sdpro_map.GetSaPaInfo(current_segment->id(), nearest_s, 700.0);
+        if (sapa_info.first != nullptr && sapa_info.second > 0 && sapa_info.second < v_limit_dis) {
+          //less than calibration distance before entering sapa speed limit works
+            v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
+            poi_v_limit_set = true;
+        } else if (sapa_info.second < kEpsilon && current_segment->link_type() == iflymapdata::sdpro::LinkType::LT_SAPA) {
+            v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
+            poi_v_limit_set = true;
+        } else {
+          //GetNonExpressInfo, less than calibration distance before entering non-express speed limit works
+          v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.non_express_vel_limit_dis_table.vel_limit_table,
+            speed_limit_config_.non_express_vel_limit_dis_table.dis_table);
+          auto none_express_info = sdpro_map.GetNonExpressInfo(current_segment->id(), nearest_s, 700.0);
+          if (none_express_info.first != nullptr && none_express_info.second > 0 && none_express_info.second < v_limit_dis) {
+            v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
+            poi_v_limit_set = true;
+          }
+        }
+      }
+    }
+    if (poi_v_limit_set && v_cruise_limit_ / 3.6 < v_target_) {
+      v_target_ = v_cruise_limit_ / 3.6;
+      v_target_type_ = SpeedLimitType::NEAR_POI;
+    }
+    JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
+    auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+    speed_limit_output->SetSpeedLimitIntoMap(v_cruise_limit_ / 3.6,
+                                           SpeedLimitType::NEAR_POI);
+  }
+
+}
 
 void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
   // get lane borrow agent
