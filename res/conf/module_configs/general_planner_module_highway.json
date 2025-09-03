@@ -743,6 +743,11 @@
     "dangerous_obs_lon_dis_high": 40.0,
     "dangerous_obs_lon_dis_low": 1.7,
     "enable_dangerous_obs_speed_limit": true,
+    "toll_station_vel_limit_kph": 60.0,
+    "sapa_vel_limit_kph": 60.0,
+    "non_express_vel_limit_kph": 60.0,
+    "tunnel_vel_limit_kph": 80.0,
+    "function_off_dis_before_toll_station": 250.0,
     "vehicle_lat_dis_rel_vel_table": {
       "lat_dis_table": [
         0.7, 1.0, 1.5
@@ -765,6 +770,38 @@
       ],
       "rel_vel_table": [
         11.11, 12.5, 13.89
+      ]
+    },
+    "toll_station_vel_limit_dis_table": {
+      "vel_limit_table": [
+        120, 110, 100, 90, 80, 70
+      ],
+      "dis_table": [
+        400, 320, 250, 170, 100, 50
+      ]
+    },
+    "sapa_vel_limit_dis_table": {
+      "vel_limit_table": [
+        120, 110, 100, 90, 80, 70
+      ],
+      "dis_table": [
+        400, 320, 250, 170, 100, 50
+      ]
+    },
+    "non_express_vel_limit_dis_table": {
+      "vel_limit_table": [
+        120, 110, 100, 90, 80, 70
+      ],
+      "dis_table": [
+        400, 320, 250, 170, 100, 50
+      ]
+    },
+    "tunnel_vel_limit_dis_table": {
+      "vel_limit_table": [
+        120, 110, 100, 90
+      ],
+      "dis_table": [
+        300, 220, 140, 70
       ]
     }
   },
@@ -931,6 +968,24 @@
         "jerk_negative_speed_upper": 25.0
       },
       "avoid_agent_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -1.0,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "near_poi_kinematic_param": {
         "acc_positive_upper": 1.35,
         "acc_positive_speed_lower": 4.2,
         "acc_positive_lower": 0.5,

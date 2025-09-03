@@ -152,6 +152,9 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::DANGEROUS_OBSTACLE:
       kinematic_param = config_.comfort_kinematic_param;
       break;
+    case SpeedLimitType::NEAR_POI:
+      kinematic_param = config_.near_poi_kinematic_param;
+      break;
     default:
       break;
   }
