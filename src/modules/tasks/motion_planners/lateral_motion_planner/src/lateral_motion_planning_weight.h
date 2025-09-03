@@ -349,7 +349,6 @@ class LateralMotionPlanningWeight {
   pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
-  double recommended_jerk_;
 };
 
 }  // namespace lateral_planning

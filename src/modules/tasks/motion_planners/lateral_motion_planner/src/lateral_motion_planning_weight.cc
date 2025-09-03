@@ -73,7 +73,6 @@ void LateralMotionPlanningWeight::Init() {
   history_path_points_.clear();
   weight_.Init();
   weight_.dt = config_.delta_t;
-  recommended_jerk_ = 0;
 }
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
