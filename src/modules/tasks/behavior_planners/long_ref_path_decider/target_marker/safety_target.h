@@ -32,15 +32,15 @@ class SafetyTarget : public Target {
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;
-    double b_max = 2.0;
     double b = 1.0;
+    double b_max = 2.0;
+    double b_hard = 4.0;
     double delta = 4.0;
-    double b_hard = 2.0;
-    double front_b_hard = 5.0;
     double max_a_jerk = 5.0;
     double max_b_jerk = 1.0;
     double virtual_front_s = 200.0;
-    double min_distance = 0.5;
+    double cool_factor = 0.99;
+    double over_speed_factor = 0.3;
   };
 
  private:
@@ -48,14 +48,15 @@ class SafetyTarget : public Target {
 
   void GenerateSafetyTarget();
 
-  double CalculateSafetyAcceleration(const double current_vel, const double front_s,
-                                     const double front_vel,
+  double CalculateSafetyAcceleration(const double current_acc,
+                                     const double current_vel,
                                      const double current_s,
-                                     const double current_acc,
-                                     const double tau) const;
+                                     const double front_vel,
+                                     const double front_s, const double tau) const;
 
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
+
 
   void AddSafetyTargetDataToProto();
 
@@ -65,8 +66,6 @@ class SafetyTarget : public Target {
   std::vector<UpperBoundInfo> upper_bound_infos_;
 
   common::SafetyTarget safety_target_pb_;
-
-  double min_safety_distance_m_ = 4.0;
 };
 
 }  // namespace planning

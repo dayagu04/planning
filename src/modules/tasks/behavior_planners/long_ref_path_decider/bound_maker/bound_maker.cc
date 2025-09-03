@@ -425,13 +425,14 @@ void BoundMaker::MakeSafetyBound() {
     auto iter = agents_headway_Info.find(lead_id);
     double tau = max_tau;
     if (iter != agents_headway_Info.end()) {
-      tau = std::min(iter->second.current_headway, max_tau);
+      tau = iter->second.current_headway;
     }
 
     const double v_rel = std::max(v_ego - v_lead, 0.0);
 
     double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
     double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
+    
     double s_safety = 0.0;
     if (s_current > s_comfort) {
       s_safety = s_0 + tau * v_ego;
