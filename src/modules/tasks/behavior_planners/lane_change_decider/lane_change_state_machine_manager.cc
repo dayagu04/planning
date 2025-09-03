@@ -152,6 +152,17 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToHold(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
 
+        bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+                  transition_info_.lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
+                  transition_info_.lane_change_status);
+        if (!is_dash_enough) {
+          execution_state_dash_cnt++;
+        } else{
+          execution_state_dash_cnt = 0;
+        }
+        if (execution_state_dash_cnt >= 2){
+          is_dash_not_enough_for_lc_ = true;
+        }
         if (is_lane_change_complete) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeComplete;
@@ -1178,6 +1189,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_back_track = lc_back_track_;
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
+  lane_change_decider_output.is_dash_not_enough_for_lc = is_dash_not_enough_for_lc_;
 
   lane_change_decider_output.is_ego_on_leftmost_lane = is_ego_on_leftmost_lane_;
   lane_change_decider_output.is_ego_on_rightmost_lane =
