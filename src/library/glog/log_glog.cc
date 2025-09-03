@@ -98,10 +98,10 @@ void InitGlog(const char *file) {
     google::InstallFailureWriter(&SignalHandler);
 #endif
 
-    google::InitGoogleLogging("");
-    google::SetLogDestination(google::ERROR, "");
-    google::SetLogDestination(google::WARNING, "");
-    google::SetLogDestination(google::FATAL, "");
+    google::InitGoogleLogging(file);
+    google::SetLogDestination(google::ERROR, file);
+    google::SetLogDestination(google::WARNING, file);
+    google::SetLogDestination(google::FATAL, file);
 
     // Init async logger
     async_logger_ = new planning::cyber::logger::AsyncLogger(
