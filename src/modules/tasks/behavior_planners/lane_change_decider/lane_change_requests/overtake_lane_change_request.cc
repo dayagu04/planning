@@ -36,13 +36,12 @@ constexpr double kOvertakeMaintainCountTtcThreshold = 48.0;
 constexpr double kOvertakeLeadingVehicleDistanceThreshold = 130.0;
 constexpr double kOvertakeEgoHighSpeedThreshold = 25.00;           // 90km/h
 constexpr double kOvertakeHighSpeedDiffThreshold = 1.39;           // 5km/h
-constexpr double kOvertakeUpdateSpeedDiffThreshold = 2.77;         // 10km/h
-
+constexpr double kOvertakeUpdateSpeedDiffThreshold = 2.78;         // 10km/h
 constexpr double kOvertakeHighSpeedDiffThresholdRainMode = 3.33;   // 12km/h
 constexpr double kOvertakeLowSpeedDiffThreshold = 1.39;            // 5km/h
 constexpr double kOvertakeLowSpeedDiffThresholdRainMode = 2.5;     // 9km/h
 constexpr double kOvertakeMaintainCountSpeedDiffThreshold = 1.39;  // 5km/h
-constexpr double kOvertakeUpdateCountRatioThreshold = 0.10;
+constexpr double kOvertakeUpdateCountRatioThreshold = 0.12;
 constexpr double kOvertakeUpdateCountRatioThresholdRainMode = 0.15;
 constexpr double kOvertakeMaintainCountRatioThreshold = 0.05;
 constexpr double kOvertakeUpdateCountSpeedRatioThreshold = 0.3;
@@ -53,7 +52,6 @@ constexpr double kOvertakeLeadingVehicleLowSpeedThreshold = 16.67;   // 60km/h
 constexpr double kOvertakeLeadingVehicleHighSpeedDiffThreshold = 1.94;  // 7km/h
 constexpr double kOvertakeLeadingVehicleLowSpeedDiffThreshold = 3.89;  // 14km/h
 constexpr double kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold = 2.78;  // 10km/h
-
 constexpr double kOvertakeRightTurnExtraSpeedThreshold = 1.39;         // 5km/h
 constexpr int kOvertakeInhibitExtraSpeedTotalLaneNum = 3;
 constexpr double kOvertakeMinSpeedDiffThreshold = 0.01;
@@ -100,6 +98,8 @@ constexpr double kHighestSpeedInCheckLaneChangeSafety = 33.333;
 constexpr double kDefaultLeadOneConsiderRange = 120.0;
 constexpr double kDefaultTargetLaneAgentConsiderRange = 144.0;
 constexpr double kCouldOvertakeMaintainSpeedDiffThresholdPercentage = 0.8;
+constexpr double kCouldGenerateOvertakeSpeedDiffThresholdPercentage = 1.2;
+
 
 }  // namespace
 // class: OvertakeRequest
@@ -487,7 +487,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
-  if (trigger_left_overtake) {
+  if (trigger_left_overtake  && current_time - tfinish_ >= 3.0) {
     if (request_type_ != LEFT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
@@ -513,7 +513,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       overtake_vehicle_speed_ = leading_vehicle_speed;
       ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
-  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres) {
+  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres && current_time - tfinish_ >= 3.0) {
     if (request_type_ != RIGHT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
@@ -768,6 +768,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   // if (!is_left && !inhibit_extra_speed) {
   //   speed_threshold += kOvertakeRightTurnExtraSpeedThreshold;
   // }
+  speed_threshold *= kCouldGenerateOvertakeSpeedDiffThresholdPercentage;
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
@@ -792,19 +793,6 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
                                   .get_local_view()
                                   .function_state_machine_info.pilot_req.lane_change_style;
   double speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
-  // if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
-  //   speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
-  // } else if (leading_vehicle_speed <=
-  //           kOvertakeLeadingVehicleLowSpeedThreshold) {
-  //   speed_threshold = kOvertakeLeadingVehicleLowSpeedDiffThreshold;
-  // } else {
-  //   speed_threshold = planning_math::lerp(
-  //       kOvertakeLeadingVehicleLowSpeedDiffThreshold,
-  //       kOvertakeLeadingVehicleLowSpeedThreshold,
-  //       kOvertakeLeadingVehicleHighSpeedDiffThreshold,
-  //       kOvertakeLeadingVehicleHighSpeedThreshold, leading_vehicle_speed);
-  // }
-
   if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_ASSISTIVE) {
     if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
       speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
