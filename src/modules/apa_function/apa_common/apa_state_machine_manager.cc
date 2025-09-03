@@ -369,5 +369,14 @@ const bool ApaStateMachineManager::IsParkSuspendStatus() const {
   return false;
 }
 
+const bool ApaStateMachineManager::IsParkInvalidStatus() const {
+  if (state_machine_ == ApaStateMachine::STANDBY ||
+      state_machine_ == ApaStateMachine::ERROR) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace apa_planner
 }  // namespace planning

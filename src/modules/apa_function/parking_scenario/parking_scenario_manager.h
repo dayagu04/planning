@@ -22,6 +22,11 @@ class ParkingScenarioManager final {
   // slot cruise state: reset.
   void Reset();
 
+  void ClearHistoryPreparePlanTraj() {
+    history_prepare_plan_traj_.trajectory_points_size = 0;
+    history_prepare_plan_traj_.available = false;
+  }
+
   const iflyauto::PlanningOutput& GetPlanningOutput() const {
     return planning_output_;
   }
@@ -51,6 +56,8 @@ class ParkingScenarioManager final {
 
   void PubPreparePlanState();
 
+  void PublishPreparePlanInfo();
+
   void RecommendParkingDirection();
   void PubStopReason();
 
@@ -76,6 +83,8 @@ class ParkingScenarioManager final {
   std::shared_ptr<ParkingScenario> current_scenario_;
   ParkingScenarioType scenario_type_;
   ParkingScenarioStatus scenario_status_;
+
+  iflyauto::Trajectory history_prepare_plan_traj_;
 
   std::unordered_map<ParkingScenarioType, std::shared_ptr<ParkingScenario>>
       scenario_list_;

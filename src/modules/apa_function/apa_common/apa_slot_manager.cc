@@ -89,7 +89,8 @@ void ApaSlotManager::Update(
           if (slot.slot_type_ == SlotType::PERPENDICULAR &&
               state_machine_ptr_->IsHeadOutStatus()) {
             // 对于垂直车头泊出，开口方向与自车方向不一致不释放车位
-            if (ego_info_under_slot_.relative_direction_between_ego_and_slot > 0.0) {
+            if (ego_info_under_slot_.relative_direction_between_ego_and_slot >
+                0.0) {
               slot.release_info_.release_state[RULE_BASED_RELEASE] =
                   SlotReleaseState::RELEASE;
             } else {
