@@ -127,7 +127,7 @@ void ParallelPathGenerator::Preprocess() {
   const double tlane_length =
       input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x();
 
-  if (tlane_length >= 6.2) {
+  if (tlane_length >= 6.8) {
     calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
   } else if (tlane_length > apa_param.GetParam().car_width + 0.8) {
     calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
@@ -1536,13 +1536,19 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
   const double channel_width =
       std::fabs(input_.tlane.channel_y) - 0.5 * input_.tlane.slot_width;
 
-  std::vector<double> heading_vec = {47.5, 50.0, 60.0, 40.0, 55.0};
+  ILOG_INFO << "is_short_channel =" << input_.tlane.is_short_channel;
+  ILOG_INFO << "channel_y =" << input_.tlane.channel_y;
+  if (!(input_.tlane.is_short_channel)) {
+    return false;
+  }
+  std::vector<double> heading_vec = {22.5, 27.5, 47.5, 55.0, 35.0, 60.0};
 
   const double step = 0.2;
-  size_t max_num = 10;
+  size_t max_num = 16;
 
   for (const auto& heading_deg : heading_vec) {
-    const double heading_rad = heading_deg * kDeg2Rad;
+    const double heading_rad =
+        heading_deg * kDeg2Rad * input_.tlane.slot_side_sgn;
     const auto v_preparing_line_heading =
         pnc::geometry_lib::GenHeadingVec(heading_rad);
 
@@ -1568,10 +1574,10 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
       // ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
       for (size_t i = 0; i < max_num; i++) {
         auto start_pos =
-            tp + x_tmp * input_.tlane.slot_side_sgn * i * step + y_tmp * 2;
+            tp + v_preparing_line_norm * input_.tlane.slot_side_sgn * i * step +
+            y_tmp * 2;
 
-        if (std::fabs(start_pos.x()) - 2.0 <
-            std::fabs(input_.tlane.obs_pt_outside.x())) {
+        if (start_pos.x() - 1.0 < input_.tlane.obs_pt_outside.x()) {
           break;
         }
 
@@ -2419,7 +2425,9 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     for (size_t i = 1; i < sorted_path_vec.size(); ++i) {
       const double curr_x =
           sorted_path_vec[i].path_segment_vec.back().GetStartPos().x();
-      if (curr_x < min_x) {
+      const double curr_y =
+          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
+      if (curr_x < min_x && curr_y < (input_.tlane.slot_width * 0.5)) {
         min_x = curr_x;
         min_x_idx = i;
       }
@@ -2430,7 +2438,11 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     double base_heading = sorted_path_vec.front().park_out_heading_deg;
     for (int i = 1; i < sorted_path_vec.size(); ++i) {
       double cur_heading = sorted_path_vec[i].park_out_heading_deg;
-      if (cur_heading > base_heading && cur_heading < kMaxHeadingDeg) {
+      const double curr_y =
+          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
+      if (cur_heading > base_heading && cur_heading < kMaxHeadingDeg &&
+          curr_y < (input_.tlane.slot_width * 0.5)) {
+        base_heading = cur_heading;
         max_heading_id = i;
       }
     }
@@ -2441,9 +2453,9 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     } else {
       selected_path_vec = {sorted_path_vec.front()};
     }
-    if (sorted_path_vec[max_heading_id].park_out_heading_deg -
-            sorted_path_vec.front().park_out_heading_deg >
-        1.0) {
+    if (std::fabs(sorted_path_vec[max_heading_id].park_out_heading_deg -
+      sorted_path_vec.front().park_out_heading_deg) > 1.0
+      && max_heading_id != min_x_idx) {
       selected_path_vec.emplace_back(sorted_path_vec[max_heading_id]);
     }
   }
@@ -2456,6 +2468,11 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
   debug_info_.debug_inslot_path_vec = selected_path_vec;
   sorted_path_vec = selected_path_vec;
+  for (const auto& path : selected_path_vec) {
+    ILOG_INFO << "2 heading deg:" << path.park_out_heading_deg << " radian : "
+              << path.path_segment_vec.back().GetStartPose().heading << " pos: "
+              << path.path_segment_vec.back().GetStartPos().transpose();
+  }
   // std::cout << "heading = ";
   // for (const auto& path : sorted_path_vec) {
   //   std::cout << std::setw(10) << path.park_out_heading_deg;
@@ -2651,7 +2668,9 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
   if (CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
                            forward_steer, calc_params_.lon_buffer_rev_trials)) {
     if (CheckParkOutCornerSafeWithObsPin(forward_arc)) {
-      gear_vec.erase(gear_vec.begin());
+      if (!(input_.tlane.is_short_channel)) {
+        gear_vec.erase(gear_vec.begin());
+      }
       ILOG_INFO << "ego can park out at first, no need use backward loop!";
     }
   }
