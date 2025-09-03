@@ -118,6 +118,7 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
   auto agent_l_min_max = CalculateLRange(
       agent_matched_point.s(), agent_match_l_value, agent_matched_point.theta(),
       agent->theta(), agent->length(), agent->width());
+  agent_l_min_max_ = agent_l_min_max;
 
   double left_width, right_width;
   if (!agent_matched_point.get_left_lane_width(&left_width)) {
@@ -346,6 +347,9 @@ double DynamicAgentNode::node_accel() const {
 }
 
 double DynamicAgentNode::node_s() const { return node_s_; }
+std::pair<double, double> DynamicAgentNode::node_l_min_max() const {
+  return agent_l_min_max_;
+}
 double DynamicAgentNode::node_t() const { return node_t_; }
 double DynamicAgentNode::node_length() const { return node_length_; }
 double DynamicAgentNode::node_to_ego_distance() const {

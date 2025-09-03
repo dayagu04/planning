@@ -90,6 +90,9 @@ class SpeedLimitDeciderOutput {
     request_reason_ = request_reason;
   }
 
+  void set_map_speed_limit_value(const double limited_speed);
+  const double map_speed_limit_value() const;
+
  private:
   std::map<SpeedLimitType, double>
       speed_limit_map_;  //(type, speedlimit) for all scenes one by one
@@ -118,6 +121,8 @@ class SpeedLimitDeciderOutput {
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+
+  double v_limit_map_ramp_ = 0.0;
 };
 
 }  // namespace planning

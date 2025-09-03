@@ -1553,7 +1553,7 @@
 //       if (agent != nullptr) {
 //         is_reverse_obs_in_large_curv = agent->is_reverse_in_large_curv();
 //         is_far_obs_in_large_curv = agent->is_far_in_large_curv();
-//         is_reverse_cutin_agent = agent->is_reverse_cutin();
+//         is_reverse_cutin_agent = agent->is_reverse_relieve_agent();
 //         is_static_cutin_agent = agent->is_static();
 //       }
 //     }

@@ -6,12 +6,13 @@
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "../tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
+#include "../tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider_output.h"
+#include "../tasks/behavior_planners/parallel_longitudinal_avoid_decider/parallel_longitudinal_avoid_decider_output.h"
 #include "../tasks/behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
 #include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
-#include "../tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -132,6 +133,15 @@ class PlanningContext {
   }
   AgentHeadwayDeciderOutput &mutable_agent_headway_decider_output() {
     return agent_headway_decider_output_;
+  }
+
+  const ParallelLongitudinalAvoidDeciderOutput &
+  parallel_longitudinal_avoid_decider_output() const {
+    return parallel_longitudinal_avoid_decider_output_;
+  }
+  ParallelLongitudinalAvoidDeciderOutput &
+  mutable_parallel_longitudinal_avoid_decider_output() {
+    return parallel_longitudinal_avoid_decider_output_;
   }
 
   const SpeedLimitDeciderOutput &speed_limit_decider_output() const {
@@ -273,7 +283,7 @@ class PlanningContext {
     return mrc_brake_decider_output_;
   }
 
-  MRCBrakeDeciderOutput* mutable_mrc_brake_decider_output() {
+  MRCBrakeDeciderOutput *mutable_mrc_brake_decider_output() {
     return &mrc_brake_decider_output_;
   }
 
@@ -519,6 +529,9 @@ class PlanningContext {
 
   // AgentHeadwayDecider
   AgentHeadwayDeciderOutput agent_headway_decider_output_;
+
+  ParallelLongitudinalAvoidDeciderOutput
+      parallel_longitudinal_avoid_decider_output_;
 
   StartStopDeciderOutPut start_stop_decider_output_;
   StopDestinationDeciderOutput stop_destination_decider_output_;

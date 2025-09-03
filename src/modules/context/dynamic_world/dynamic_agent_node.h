@@ -61,6 +61,7 @@ class DynamicAgentNode {
   double node_speed() const;
   double node_accel() const;
   double node_s() const;
+  std::pair<double, double> node_l_min_max() const;
   double node_t() const;
   double node_length() const;
   double node_width() const;
@@ -97,6 +98,7 @@ class DynamicAgentNode {
 
   double node_s_ = 0.0;
   double node_t_ = 0.0;
+  std::pair<double, double> agent_l_min_max_{0.0, 0.0};
   double node_length_ = 0.0;
   double node_to_ego_distance_ = 0.0;
   double node_front_edge_to_ego_back_edge_distance_ = 0.0;

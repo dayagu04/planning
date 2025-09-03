@@ -232,13 +232,16 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\
                               "lat_path_length", "extend_path_length", \
+
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["cross_vru_agent_ids", "soft_safety_distance", "safety_target_vel", "safety_dynamic_vel", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
+  st_search_value_list = ["cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance",
+                          "soft_safety_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
                           "cipv_vel_frenet", "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion", "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
                           "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",

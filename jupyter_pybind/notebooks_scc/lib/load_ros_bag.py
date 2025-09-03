@@ -653,8 +653,7 @@ class LoadRosbag:
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
                          "is_leaving_ramp","is_nearing_ramp", 'road_to_ramp_turn_signal','lat_diff', "far_kappa_radius",'ramp_direction','is_merge_region', 'is_split_region', 'merge_lane_virtual_id', \
                          'ego_lane_boundary_exist_virtual_line','target_lane_boundary_exist_virtual_line', \
-                         'sdmap_min_curv_radius',"is_static_avoid_scene", \
-                         "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
+                         'sdmap_min_curv_radius',"is_static_avoid_scene", "is_overlap", "merge_target_one_id", "merge_target_two_id", "v_target_merge", "rear_agent_merge_time", "merge_orintation","merge_direction_plan",'ego_has_rightof_tar_lane',
                          'merge_exist','is_merge_region_plan', 'merge_point_distance', "merge_point_x", "merge_point_y", "current_lane_is_continue", 'cipv_id_st',
                          'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
                          'macroeconomic_decider_merge_point_x','macroeconomic_decider_merge_point_y','cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -665,10 +664,10 @@ class LoadRosbag:
                          "cipv_vel_frenet","cipv_vel_fusion",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
                          "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
-                         "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length","gear_command", "THW",
-                         "can_left_borrow", "can_right_borrow", "maintain_avoid","lateral_emergency_level", "goal_point_x", "goal_point_y", "pp_init_x", "pp_init_y",
-                          "lon_decision_to_invade_ego_motion_sim_path","invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
-                          "left_road_extra_buffer", "right_road_extra_buffer","target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
+                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length", "gear_command", "THW", "can_left_borrow",
+                          "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
+                          "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
+                          "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
                           "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_safety_distance",
                           "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel",
                           "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
@@ -676,10 +675,10 @@ class LoadRosbag:
                           "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away", "cur_lane_mark",
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
-                          "cur_lane_mark_plan", "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id",
-                          "is_truck_overtake", "is_truck_yield", "truck_decider_state", "truck_running_frames",
-                          "truck_cooldown_frames", "truck_lateral_distance", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD"]
+                          "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD",
+                          "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck", 
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance",]
 
 
       json_value_list += [#new_ldw debug info:
