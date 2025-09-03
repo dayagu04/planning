@@ -31,7 +31,7 @@
 #include "geometry_math.h"
 
 namespace planning {
-using namespace planning_math;
+using namespace planning_math; // fix
 namespace {
 constexpr double kEps = 1e-6;
 constexpr double kEgoReachBoundaryTime = 4.0;
@@ -1932,9 +1932,9 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs(){
     if(agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_start){
       continue;
     }
-    if(agent_s - target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end){
-      continue;
-    }
+    // if(agent_s - target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end){
+    //   continue;
+    // }
     risk_agents_nodes_.push_back(target_lane_node);
   }
 }
@@ -1955,15 +1955,20 @@ void LaneChangeStateMachineManager::GetSideRiskAgent(){
 
   double concerned_s_start = ego_sl_bd.s_start;
   double concerned_s_end = ego_sl_bd.s_end;
+  std::pair<double, double> ego_longi{concerned_s_start, concerned_s_end};
+  double ego_vel = ego_sl_state.velocity_s();
+
   RequestType direction = lc_req_mgr_->request();
   for(const auto& obstacle: obstacles){
     int id = obstacle->obstacle()->id();
-    double lat_vel = obstacle->frenet_velocity_l();
     const auto& obstacle_sl = obstacle->frenet_obstacle_boundary();
+    std::pair<double, double> obs_longi{obstacle_sl.s_start, obstacle_sl.s_end};
+    double obs_longi_vel = obstacle->frenet_velocity_s();
     bool is_lat_side = obstacle_sl.l_end < ego_sl_bd.l_start ||
                     obstacle_sl.l_start > ego_sl_bd.l_end;
-    bool is_longi_concerned = !(obstacle_sl.s_start > concerned_s_end ||
-                              obstacle_sl.s_end < concerned_s_start); // 车尾出如果有车靠近，可能保守
+    // bool is_longi_concerned = !(obstacle_sl.s_start > concerned_s_end ||
+    //                           obstacle_sl.s_end < concerned_s_start); // 车尾出如果有车靠近，可能保守
+    bool is_longi_concerned = IfFrenetCollision(ego_longi, ego_vel, obs_longi, obs_longi_vel, 5.0, 0.5);
     if(!is_lat_side || !is_longi_concerned){
       continue;
     }
@@ -1978,7 +1983,7 @@ void LaneChangeStateMachineManager::GetSideRiskAgent(){
   // 暂时只关注当前时刻 ttc
   return;
 }
-bool LaneChangeStateMachineManager::IfLateralCollision(
+bool LaneChangeStateMachineManager::IfFrenetCollision(
                         std::pair<double, double> l1, double v1,
                         std::pair<double, double> l2, double v2,
                         double max_time, double dt) {
@@ -2628,7 +2633,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
       const auto& obstacle_sl = side_obs->frenet_obstacle_boundary();
       std::pair<double, double> obs_lat{obstacle_sl.l_start, obstacle_sl.l_end};
       double obs_lat_vel = side_obs->frenet_velocity_l();
-      bool lateral_collision = IfLateralCollision(center_lat, 0.0, obs_lat, obs_lat_vel);
+      bool lateral_collision = IfFrenetCollision(center_lat, 0.0, obs_lat, obs_lat_vel, 4.0, 0.5);
       if(lateral_collision){
         lc_safety = false;
         is_side_clsoing = true;
@@ -2914,8 +2919,8 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForPredictionTrajs(// front tar
   double box_ttc = 4.0;
   //根据目标前车速度 调整速度阈值
   double agent_kph =agent_traj[0].v * 3.6 ;
-  std::array<double, 6> xp{10., 20., 50., 80.0,100., 120.};// 自车速度kph
-  std::array<double, 6> fp{0.0, 8.0, 12.,15.,20., 30.}; // 0时刻 超过同速车的安全变道距离 m
+  std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};// 自车速度kph
+  std::array<double, 6> fp{0.0, 6.0, 8.0, 12.,20., 30.}; // 0时刻 超过同速车的安全变道距离 m
   const double vel_buff = interp(agent_kph, xp, fp) /4.0; // 距离/ 时间
   for (int i = 0; i < iter_count; i++) {
     // 新的纵向安全距离/ 每对box的安全阈值 假设变道时间为4s

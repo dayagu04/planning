@@ -15,7 +15,7 @@
 #include "trajectory1d/third_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
 namespace planning {
-using namespace planning_math;
+using namespace planning_math;// fix
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
   RequestType lane_change_direction = NO_CHANGE;
@@ -237,7 +237,7 @@ class LaneChangeStateMachineManager {
   bool CheckFrontRiskAgentTrajs(
     const planning_data::DynamicAgentNode *agent_node, bool is_large_car);
   void GetSideRiskAgent();
-  bool IfLateralCollision(std::pair<double, double> l1, double v1,
+  bool IfFrenetCollision(std::pair<double, double> l1, double v1,
                         std::pair<double, double> l2, double v2,
                         double max_time = 4.0, double dt = 0.5);
  private:
