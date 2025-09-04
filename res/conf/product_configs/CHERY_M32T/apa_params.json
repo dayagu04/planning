@@ -74,7 +74,7 @@
   "car2line_dist_threshold": 0.0,
 
   "comment_4": "terminal pose params",
-  "terminal_target_x": 1.15,
+  "terminal_target_x": 1.08,
   "terminal_target_y": 0.0,
   "terminal_target_heading": 0.0,
   "terminal_target_x_to_limiter": 0.15,
