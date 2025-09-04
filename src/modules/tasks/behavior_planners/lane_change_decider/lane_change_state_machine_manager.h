@@ -15,6 +15,7 @@
 #include "virtual_lane.h"
 #include "traffic_congestion_decider.h"
 namespace planning {
+using namespace planning_math;
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
   RequestType lane_change_direction = NO_CHANGE;
@@ -227,7 +228,7 @@ class LaneChangeStateMachineManager {
                     const std::shared_ptr<ReferencePath> ref_path);
   void CheckTargetFrontNode(int64_t target_lane_front_node_id);
   FrenetObstacleBoundary  GetSLboundaryFromAgent(
-    const std::shared_ptr<ReferencePath>ref_path, const Box2d& obs_box);
+    const std::shared_ptr<ReferencePath>ref_path, const planning_math::Box2d& obs_box);
   bool PassInLane(double lane_width,
                     const FrenetObstacleBoundary& obs_bd,
                     const double car_width,
