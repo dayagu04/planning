@@ -269,7 +269,7 @@
 
   "comment_14": "slot update params when replan",
   "uss_slot_occupied_ratio": 0.25,
-  "max_front_exceed_line_dx": 1.86,
+  "max_front_exceed_line_dx": 1.5,
   "slot_jump_lat_big_err": 0.12,
   "slot_jump_heading_big_err": 2.68,
 
@@ -357,9 +357,6 @@
   "slot_occupied_ratio_max_heading_err": 76.8,
   "max_slot_window_size": 3,
   "max_limiter_window_size": 3,
-  "slot_release_channel_width": 4.5,
-  "one_side_empty_slot_release_channel_width": 4.0,
-  "two_side_empty_slot_release_channel_width": 3.55,
 
   "comment_17": "gen output params",
   "max_velocity": 0.6,
@@ -512,6 +509,10 @@
   "target_pose_special_max_lat_buffer": 0.14,
   "target_pose_preference_lat_offset": 0.05,
   "target_pose_preference_lon_buffer": -0.2,
+  "slot_release_channel_width": 4.5,
+  "slot_release_one_side_empty_channel_width": 4.0,
+  "slot_release_two_side_empty_channel_width": 3.55,
+  "slot_release_channel_lat_offset": -0.05,
 
   "comment_26": "dynamic gear switch params",
   "enable_dynamic_gear_switch": false,

@@ -841,9 +841,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.max_limiter_window_size, int,
                   "max_limiter_window_size");
 
-  JSON_READ_VALUE(param.slot_release_channel_width, double,
-                  "slot_release_channel_width");
-
   // slot update
   JSON_READ_VALUE(param.slot_update_in_or_out_occupied_ratio, double,
                   "slot_update_in_or_out_occupied_ratio");
@@ -909,12 +906,6 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.min_parallel_vis_slot_release_long_dist_slot2mirror,
                   double,
                   "min_parallel_vis_slot_release_long_dist_slot2mirror");
-
-  JSON_READ_VALUE(param.one_side_empty_slot_release_channel_width, double,
-                  "one_side_empty_slot_release_channel_width");
-
-  JSON_READ_VALUE(param.two_side_empty_slot_release_channel_width, double,
-                  "two_side_empty_slot_release_channel_width");
 
   JSON_READ_VALUE(param.believe_obs_ego_area, double, "believe_obs_ego_area");
 
@@ -1267,6 +1258,17 @@ void SyncParkingParameters(const bool is_simulation) {
                   "slot_release_hold_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_buffer, float,
                   "slot_release_subtract_lat_buffer");
+
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.channel_width, double,
+                  "slot_release_channel_width");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.channel_lat_offset, double,
+                  "slot_release_channel_lat_offset");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.one_side_empty_channel_width, double,
+      "slot_release_one_side_empty_channel_width");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.two_side_empty_channel_width, double,
+      "slot_release_two_side_empty_channel_width");
 
   // lat lon slot target pose params
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.lon_buffer, float,

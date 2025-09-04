@@ -399,24 +399,18 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
     return SlotReleaseVoterType::CLEAR;
   }
 
-  // 产品定义是最大车辆宽度加0.4米释放  即单侧buffer 0.2米
-  // 0.26米如果没有碰撞 直接释放
-  // 0.20米如果没有碰撞 累加
-  // 0.17米如果没有碰撞 维持不变
-  // 0.16米如果没有碰撞 累减
-  // 0.16米如果碰撞 直接不释放
-  // const std::vector<std::pair<double, SlotReleaseVoterType>>
-  //     lat_buffer_pair_vec = {{0.26, SlotReleaseVoterType::MAXIMUM},
-  //                            {0.20, SlotReleaseVoterType::ACCUMULATE},
-  //                            {0.17, SlotReleaseVoterType::HOLD},
-  //                            {0.16, SlotReleaseVoterType::SUBTRACT}};
+  const auto& slot_release_buffer = param.lat_lon_slot_release_buffer;
 
-  std::vector<double> lat_buffer_vec{0.23, 0.17, 0.14, 0.13};
+  const std::vector<double> lat_buffer_vec{
+      slot_release_buffer.maximum_lat_buffer,
+      slot_release_buffer.accumulate_lat_buffer,
+      slot_release_buffer.hold_lat_buffer,
+      slot_release_buffer.subtract_lat_buffer};
 
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
   TargetPoseDeciderRequest tar_pose_decider_request(
-      lat_buffer_vec, 0.3, ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
-      true, false);
+      lat_buffer_vec, slot_release_buffer.lon_buffer,
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false);
 
   TargetPoseDeciderResult res =
       tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
@@ -444,20 +438,12 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   ILOG_INFO << "release_voter_type = "
             << GetSlotReleaseVoterTypeString(release_voter_type);
 
-  const double lat_buffer = 0.0368;
-
-  Eigen::Vector2d pt_0 = pM01 - t * (param.max_car_width * 0.5 + lat_buffer);
-  Eigen::Vector2d pt_1 = pM01 + t * (param.max_car_width * 0.5 + lat_buffer);
-
-  pt_0 = pt_0 + res.safe_lat_move_dist * t;
-  pt_1 = pt_1 + res.safe_lat_move_dist * t;
-
-  double channel_width = param.slot_release_channel_width;
+  double channel_width = slot_release_buffer.channel_width;
 
   if (release_voter_type == SlotReleaseVoterType::MAXIMUM) {
-    channel_width = param.slot_release_channel_width - 0.2;
+    channel_width = slot_release_buffer.channel_width - 0.2;
   } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
-    channel_width = param.slot_release_channel_width + 0.2;
+    channel_width = slot_release_buffer.channel_width + 0.2;
   }
 
   // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
@@ -478,10 +464,18 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
           polygon, GJKColDetRequest(false));
 
   if (left_empty && right_empty) {
-    channel_width = param.two_side_empty_slot_release_channel_width;
+    channel_width = slot_release_buffer.two_side_empty_channel_width;
   } else if (left_empty || right_empty) {
-    channel_width = param.one_side_empty_slot_release_channel_width;
+    channel_width = slot_release_buffer.one_side_empty_channel_width;
   }
+
+  const double lat_buffer = slot_release_buffer.channel_lat_offset;
+
+  Eigen::Vector2d pt_0 = pM01 - t * (param.car_width * 0.5 + lat_buffer);
+  Eigen::Vector2d pt_1 = pM01 + t * (param.car_width * 0.5 + lat_buffer);
+
+  pt_0 = pt_0 + res.safe_lat_move_dist * t;
+  pt_1 = pt_1 + res.safe_lat_move_dist * t;
 
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pt_0, pt_0 + channel_width * n, pt_1 + channel_width * n, pt_1});

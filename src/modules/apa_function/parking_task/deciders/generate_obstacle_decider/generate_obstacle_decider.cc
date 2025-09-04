@@ -117,10 +117,13 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
                ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS) &&
           del_obs_bound.IsPtInRectangleBound(obs)) {
         // move obs to inside area
-        double threshold = threshold =
+        double threshold =
             slot.processed_corner_coord_local_.pt_01_mid.y() + 0.86;
         if (ego_pose.pos.y() > 0.0) {
           threshold = slot.processed_corner_coord_local_.pt_01_mid.y() - 0.86;
+        }
+        if (param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+          threshold = 0.0;
         }
         if (obs.y() > threshold) {
           obs.y() = del_obs_bound.max_y;
