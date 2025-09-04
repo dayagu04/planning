@@ -42,7 +42,7 @@ void AsyncLogger::Start() {
   CHECK_EQ(state_.load(std::memory_order_acquire), INITTED);
   state_.store(RUNNING, std::memory_order_release);
   log_thread_ = std::thread(&AsyncLogger::RunThread, this);
-  printf("Async Logger Start!");
+  // printf("Async Logger Start!");
 }
 
 void AsyncLogger::Stop() {
