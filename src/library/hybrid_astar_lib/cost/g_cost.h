@@ -28,6 +28,7 @@ struct NodeGCost {
   float obs_dist_cost;
 
   float recommend_route_box_cost;
+  float zigzag_cost;
 
   float total_cost;
 };

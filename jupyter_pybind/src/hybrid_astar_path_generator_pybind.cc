@@ -48,7 +48,7 @@ static std::shared_ptr<planning::HybridAStarInterface> hybrid_astar_interface_;
 static planning::apa_planner::ApaPlanInterface*parking_interface = nullptr;
 
 std::vector<Eigen::Vector3d> global_path_;
-std::vector<double> global_path_s_;
+std::vector<Eigen::Vector3d> global_path_kappa_;
 std::vector<Eigen::Vector3d> rs_path_;
 std::vector<Eigen::Vector3d> polynomial_path_;
 // 独立的rs，验证rs
@@ -111,10 +111,10 @@ int StopPybind() {
 
 void ResetHybridAstarPath() {
   global_path_.clear();
-  global_path_s_.clear();
   search_sequence_path_.clear();
   rs_h_path_.clear();
   rs_path_.clear();
+  global_path_kappa_.clear();
 
   return;
 }
@@ -124,7 +124,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
                            const Eigen::Vector3d &ego_pose) {
   //
   global_path_.clear();
-  global_path_s_.clear();
+  global_path_kappa_.clear();
   bool success = false;
 
   Transform2d tf;
@@ -142,7 +142,7 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
   state = hybrid_astar_interface_->GetFullLengthPath(&result);
   if (result.x.size() > 0) {
     global_path_.reserve(result.x.size());
-    global_path_s_.reserve(result.x.size());
+    global_path_kappa_.reserve(result.x.size());
 
     rs_path_.clear();
     polynomial_path_.clear();
@@ -160,7 +160,13 @@ int GetPathFromHybridAstar(const EgoInfoUnderSlot &ego_slot_info,
       global_path_.emplace_back(
           Eigen::Vector3d(global_position[0], global_position[1], heading));
 
-      global_path_s_.emplace_back(result.accumulated_s[i]);
+      if (IsCurveBasedNode(result.type[i])) {
+        global_path_kappa_.emplace_back(
+            Eigen::Vector3d(result.accumulated_s[i], result.kappa[i], 0.0));
+      } else {
+        global_path_kappa_.emplace_back(
+            Eigen::Vector3d(result.accumulated_s[i], result.kappa[i], 1.0));
+      }
 
       if (result.type[i] == AstarPathType::REEDS_SHEPP) {
         rs_path_.emplace_back(
@@ -1004,6 +1010,10 @@ const std::vector<Eigen::Vector3d> &GetFootPrintModelLocal() {
 const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
 const Eigen::Vector3d GetCurrentGearPathEnd() { return astar_current_path_end_; }
 
+const std::vector<Eigen::Vector3d> GetPathKappa() {
+  return global_path_kappa_;
+}
+
 PYBIND11_MODULE(hybrid_astar_py, m) {
   m.doc() = "m";
 
@@ -1026,6 +1036,7 @@ PYBIND11_MODULE(hybrid_astar_py, m) {
       .def("GetAstarEndPose", &GetAstarEndPose)
       .def("GetCurrentGearPathEnd", &GetCurrentGearPathEnd)
       .def("GetFootPrintModelLocal", &GetFootPrintModelLocal)
+      .def("GetPathKappa", &GetPathKappa)
       .def("GetVirtualWallObstacles", &GetVirtualWallObstacles);
   ;
 }

@@ -362,4 +362,16 @@ float Node3d::DistToPose(const Pose2f& pose) {
   return dist;
 }
 
+const bool Node3d::IsSteerOpposite(const float next) const {
+  if (steering_ > 0.01 && next < -0.01) {
+    return true;
+  }
+
+  if (steering_ < -0.01 && next > 0.01) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning

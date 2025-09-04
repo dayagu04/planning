@@ -787,42 +787,32 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   }
 
   // 2. gear punish
-  if (current_node->IsPathGearChange(next_node->GetGearType())) {
+  bool is_gear_switch =
+      current_node->IsPathGearChange(next_node->GetGearType());
+  if (is_gear_switch) {
     piecewise_cost += config_.gear_switch_penalty;
-  }
+  } else {
+    // 3. Turning cost (direction size + change amount + zigzag), todo::
+    // currently, it is only targeted at parking out
+    if (!current_node->IsStartNode()) {
+      // 3.1 Steering angle penalty (large steering is discouraged, but not
+      // restricted)
+      // piecewise_cost +=
+      //     config_.traj_steer_penalty * std::fabs(next_node->GetSteer());
 
-  // 3. Turning cost (direction size + change amount + zigzag), todo::
-  // currently, it is only targeted at parking out
-  if (!current_node->IsStartNode() &&
-      IsParkingOutRequest(request_.direction_request)) {
-    const float steer_now = next_node->GetSteer();
-    const float steer_last = current_node->GetSteer();
-    const float steer_delta = steer_now - steer_last;
-    const float steer_change = std::fabs(steer_delta);
-    const bool steer_sign_changed = (steer_now * steer_last < 0.0f);
-    const float steer_abs = std::fabs(steer_now);
-    const bool gear_change =
-        (current_node->IsPathGearChange(next_node->GetGearType()));
+      // 3.2 Steering change penalty:
+      // Strong penalty for small changes to control
+      // zigzag; large changes are allowed to avoid penalizing paths with large
+      // curvature and increasing the number of gear shifts
+      piecewise_cost +=
+          config_.traj_steer_change_penalty *
+          std::fabs(current_node->GetSteerChange(next_node->GetSteer()));
 
-    // 3.1 Steering angle penalty (large steering is discouraged, but not
-    // restricted)
-    piecewise_cost += config_.traj_steer_penalty * steer_abs;
-
-    // 3.2 Steering change penalty:
-    // Strong penalty for small changes to control
-    // zigzag; large changes are allowed to avoid penalizing paths with large
-    // curvature and increasing the number of gear shifts
-    if (!gear_change) {
-      constexpr float steer_change_threshold = 0.2f;  // 允许突变的最大变化
-      float effective_change = std::min(steer_change, steer_change_threshold);
-
-      piecewise_cost += config_.traj_steer_change_penalty * effective_change;
-    }
-
-    // 3.3 Zigzag penalty: directional jump change with an angle exceeding a
-    // certain value
-    if (steer_sign_changed && steer_change > 0.1f && !gear_change) {
-      piecewise_cost += config_.zigzag_penalty;
+      // 3.3 Zigzag penalty: directional jump change with an angle exceeding a
+      // certain value
+      if (current_node->IsSteerOpposite(next_node->GetSteer())) {
+        piecewise_cost += config_.zigzag_penalty;
+      }
     }
   }
 
@@ -874,23 +864,26 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   float gear_cost = 0.0;
   float steer_change_cost = 0.0;
   float box_cost = 0.0;
+  bool is_gear_switch;
   for (int i = 0; i < rs_path_.size - 1; i++) {
     // gear cost
-    if (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) {
+    is_gear_switch =
+        (rs_path_.paths[i].gear != rs_path_.paths[i + 1].gear) ? true : false;
+    if (is_gear_switch) {
       gear_cost += config_.gear_switch_penalty;
 
       rs_node->AddGearSwitchNumber();
-    }
-
-    // steer change cost
-    if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
-      if (rs_path_.paths[i].steer == RS_STRAIGHT ||
-          rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
-        steer_change_cost +=
-            config_.traj_steer_change_penalty * max_steer_angle_;
-      } else {
-        steer_change_cost +=
-            config_.traj_steer_change_penalty * max_steer_angle_ * 2;
+    } else {
+      // steer change cost
+      if (rs_path_.paths[i].steer != rs_path_.paths[i + 1].steer) {
+        if (rs_path_.paths[i].steer == RS_STRAIGHT ||
+            rs_path_.paths[i + 1].steer == RS_STRAIGHT) {
+          steer_change_cost +=
+              config_.traj_steer_change_penalty * max_steer_angle_;
+        } else {
+          steer_change_cost +=
+              config_.traj_steer_change_penalty * max_steer_angle_ * 2;
+        }
       }
     }
 
@@ -905,20 +898,21 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   piecewise_cost += box_cost;
 
   // gear cost
-  bool gear_switch = current_node->IsPathGearChange(rs_path_.paths[0].gear);
-  if (gear_switch) {
+  is_gear_switch = current_node->IsPathGearChange(rs_path_.paths[0].gear);
+  if (is_gear_switch) {
     gear_cost += config_.gear_switch_penalty;
     rs_node->AddGearSwitchNumber();
   }
-  piecewise_cost += gear_cost;
-
   // steer cost
-  if (current_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
-    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
-  } else if (current_node->GetSteer() < 0.0 &&
-             rs_path_.paths[0].steer != RS_RIGHT) {
-    steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+  else {
+    if (current_node->GetSteer() > 0.0 && rs_path_.paths[0].steer != RS_LEFT) {
+      steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+    } else if (current_node->GetSteer() < 0.0 &&
+               rs_path_.paths[0].steer != RS_RIGHT) {
+      steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
+    }
   }
+  piecewise_cost += gear_cost;
   piecewise_cost += steer_change_cost;
 
   // request dist and gear cost
@@ -939,7 +933,7 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
     rs_node->SetGearSwitchNode(current_node->GearSwitchNode());
   } else if (rs_node->GetGearSwitchNum() == 0) {
     rs_node->SetGearSwitchNode(nullptr);
-  } else if (gear_switch) {
+  } else if (is_gear_switch) {
     // 正常节点没有换档，rs起点换档
     rs_node->SetGearSwitchNode(current_node);
   } else {

@@ -398,6 +398,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   best_traj_ = &traj_candidates_[0];
   ExtendPathToRealParkSpacePoint(best_traj_, request_.real_goal);
 
+  // DebugPathString(best_traj_);
   ILOG_INFO << "hybrid astar finish, point size " << best_traj_->x.size();
 
   return;

@@ -13,6 +13,7 @@ sys.path.append('../../../')
 sys.path.append('python_proto')
 from jupyter_pybind.python_proto import common_pb2
 from jupyter_pybind import hybrid_astar_py
+from lib.load_lat_path_cost import *
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook(INLINE)
@@ -70,6 +71,10 @@ data_rs_lib_test = ColumnDataSource(data = {'plan_path_x':[],
 data_veh_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[], 'car_circle_rn':[]})
 
 fig1 = bkp.figure(x_axis_label='x', y_axis_label='y', width=960, height=640, match_aspect = True, aspect_scale=1)
+
+# plot
+pans, path_plan_data = create_online_lat_plan_figure(fig1)
+
 fig1.patch('car_xn', 'car_yn', source = data_car, fill_color = "palegreen", line_color = "black", line_width = 1, line_alpha = 0.5,legend_label = 'car',visible = True,fill_alpha = 0.2)
 # fig1.patch('car_xn', 'car_yn', source = data_moving_car, fill_color = "palegreen", line_color = "black", line_width = 1, legend_label = 'moving_car',visible = False)
 # fig1.patch('car_xn', 'car_yn', source = data_car_target_pos, fill_color = "blue", line_color = "red", line_width = 1, line_alpha = 0.5, legend_label = 'car_target_pos')
@@ -96,7 +101,7 @@ fig1.circle('x', 'y', source = data_obstacle_points, size=4, color='red', legend
 fig1.line('plan_path_x', 'plan_path_y', source = data_full_astar_path, line_width = 6, line_color = 'green', line_dash = 'solid', line_alpha = 0.5, legend_label = 'sim_tuned_plan')
 fig1.line('plan_path_x', 'plan_path_y', source = data_rs_path, line_width = 6, line_color = 'orange', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_path')
 fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
-fig1.line('plan_path_x', 'plan_path_y', source = data_rs_lib_test, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_lib_test')
+fig1.line('plan_path_x', 'plan_path_y', source = data_rs_lib_test, line_width = 6, line_color = 'black', line_dash = 'solid', line_alpha = 0.5, legend_label = 'rs_lib_test',visible = False)
 fig1.line('x_vec', 'y_vec', source = data_search_path, line_width = 2, line_color = 'black', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_path')
 fig1.circle('x_vec', 'y_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('x_vec', 'y_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
@@ -169,9 +174,9 @@ hybrid_astar_py.Init()
 
 class LocalViewSlider:
   def __init__(self,  slider_callback):
-    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=0.61, step=0.01)
-    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=2.2, step=0.01)
-    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=93.0, step=1)
+    self.ego_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_x",min=-10, max=10, value=8.48, step=0.01)
+    self.ego_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_y",min=-10, max=10, value=1.37, step=0.01)
+    self.ego_heading_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "ego_heading",min=0, max=360, value=156.0, step=1)
 
     self.parking_dir = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "parking_dir",min=0, max=8, value=1, step=1)
     self.trigger_plan = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="trigger_plan", min=0, max=1, value=0, step=1)
@@ -192,7 +197,7 @@ class LocalViewSlider:
     self.slot_pt0_x_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_x",min=-10, max=10, value=2.0, step=0.01)
     self.slot_pt0_y_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "slot_pt0_y",min=-10, max=10, value=-2.0, step=0.01)
     self.swap_start_goal = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="swap_start_goal", min=0, max=1, value=0, step=1)
-    self.gear_request = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="gear_request", min=0, max=3, value=1, step=1)
+    self.gear_request = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description="gear_request", min=0, max=3, value=0, step=1)
 
     ipywidgets.interact(slider_callback, ego_x=self.ego_x_slider,
                         ego_y=self.ego_y_slider,
@@ -756,7 +761,12 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
       'car_circle_rn': car_circle_rn,
     })
 
+  # plot kappa
+  kappa = hybrid_astar_py.GetPathKappa()
+  update_sk_online_data(kappa, path_plan_data)
+
   push_notebook()
 
-bkp.show(row(fig1), notebook_handle=True)
+# bkp.show(row(fig1), notebook_handle=True)
+bkp.show(row(fig1, pans), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
