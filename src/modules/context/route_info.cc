@@ -25,6 +25,7 @@ constexpr double kEpsilon = 1.0e-4;
 
 namespace {
 constexpr uint64_t kStaticMapOvertimeThreshold = 20000000;  // 20s
+constexpr double kStandardLaneWidth = 3.8;
 }  // namespace
 RouteInfo::RouteInfo(const EgoPlanningConfigBuilder* config_builder,
                      planning::framework::Session* session) {
@@ -115,6 +116,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
   }
 
   double nearest_s;
+  double nearest_l;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
   const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s);
@@ -124,9 +126,16 @@ void RouteInfo::UpdateRouteInfoForNOA(
   // }
 
   const iflymapdata::sdpro::LinkInfo_Link* link =
-      UpdateEgoLinkInfo(sdpro_map, &nearest_s);
+      UpdateEgoLinkInfo(sdpro_map, &nearest_s, &nearest_l);
   if (!link) {
     std::cout << "update ego link info failed!!!" << std::endl;
+    route_info_output_.reset();
+    return;
+  }
+
+  if (IsMissSplitPoint(*link,nearest_l,nearest_s)) {
+    route_info_output_.reset();
+    route_info_output_.is_miss_split_point = true;
     return;
   }
 
@@ -1311,7 +1320,7 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
 }
 
 const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
-    const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s) {
+    const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s, double* nearest_l) {
   const iflymapdata::sdpro::LinkInfo_Link* link = nullptr;
   if (!nearest_s) {
     route_info_output_.reset();
@@ -1368,6 +1377,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
 
   link = current_link;
   *nearest_s = s;
+  *nearest_l = l;
   // route_info_output_.is_on_highway =
   //     current_link->link_class() ==
   //     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY;
@@ -3100,9 +3110,12 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("maxVal_seq", route_info_output_.maxVal_seq);
   JSON_DEBUG_VALUE(
       "ego_status_on_route",
-      static_cast<int>(
-          route_info_output_.mlc_decider_route_info.ego_status_on_route));
-  JSON_DEBUG_VALUE("is_find_exc_fp", (int)route_info_output_.is_find_exc_fp);
+      static_cast<int>(route_info_output_.mlc_decider_route_info.ego_status_on_route));
+  JSON_DEBUG_VALUE("is_find_exc_fp",
+                   (int)route_info_output_.is_find_exc_fp);
+  JSON_DEBUG_VALUE(
+      "is_miss_split_point",
+      static_cast<int>(route_info_output_.is_miss_split_point));
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
@@ -4819,6 +4832,154 @@ bool RouteInfo::IsClosingIntersectionEntrance(
 
   return false;
 }
+
+bool RouteInfo::IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& link,
+                                 const double l, const double s) {
+  bool current_frame_is_process_split =
+      mlc_decider_route_info_.is_process_split ||
+      mlc_decider_route_info_.is_process_split_split;
+
+  if (current_frame_is_process_split) {
+    split_link_id_ =
+        mlc_decider_route_info_.first_static_split_region_info.split_link_id;
+  }
+
+  const auto& ego_pose =
+      session_->environmental_model().get_ego_state_manager()->ego_pose();
+
+  int lane_num = 0;
+
+  // 1、触发需要判断是否错过split的条件
+  if (last_frame_is_process_split_ && !current_frame_is_process_split) {
+    is_need_judge_miss_split_ = true;
+    split_point_.set_x(ego_pose.GetX());
+    split_point_.set_y(ego_pose.GetY());
+  }
+
+  // 2、在非noa模式下，把标志位置false
+  if (session_->environmental_model().function_info().function_mode() !=
+      common::DrivingFunctionInfo::NOA) {
+    is_need_judge_miss_split_ = false;
+  }
+
+  // 3、给连续帧间判断赋值
+  last_frame_is_process_split_ = current_frame_is_process_split;
+
+  // 4、根据标志位做判断
+  if (is_need_judge_miss_split_) {
+    const double dx = ego_pose.x - split_point_.x();
+    const double dy = ego_pose.y - split_point_.y();
+
+    const double accumulate_dis_to_last_split_point =
+        std::sqrt(dx * dx + dy * dy);
+
+    // TODO:需要根据场景细分一下这个距离，暂定100m
+    if (accumulate_dis_to_last_split_point > 100) {
+      is_need_judge_miss_split_ = false;
+      return false;
+    }
+
+    // 从当前的link向前继搜索，搜到split link，然后找到split link 的other 后继，
+
+    // 获取split link
+    const auto split_link = sdpro_map_.GetLinkOnRoute(split_link_id_);
+    if (split_link == nullptr) {
+      return false;
+    }
+
+    if (split_link->successor_link_ids_size() < 2) {
+      return false;
+    }
+
+    const auto split_next_link = sdpro_map_.GetNextLinkOnRoute(split_link_id_);
+
+    if (split_next_link == nullptr) {
+      return false;
+    }
+
+    std::vector <uint64> other_link_id_vec;
+    for (const auto tep_link_id: split_link->successor_link_ids()) {
+      if (tep_link_id == split_next_link->id()) {
+        continue;
+      }
+      other_link_id_vec.emplace_back(tep_link_id);
+    }
+
+    // 判断每一个other link与自车当前的横向l是否小于自车与route link的横向距离
+    double dis_to_other_link = NL_NMAX;
+    for (const auto tep_link_id: other_link_id_vec) {
+      const auto tep_link = sdpro_map_.GetLinkOnRoute(tep_link_id);
+      if (tep_link == nullptr) {
+        continue;
+      }
+
+      planning_math::Vec2d point{ego_pose.x, ego_pose.y};
+
+      const auto& tep_link_points = tep_link->points().boot().points();
+      if (tep_link_points.empty()) {
+        continue;
+      }
+
+      planning_math::Vec2d segment_start{tep_link_points.begin()->x(),
+                                         tep_link_points.begin()->y()};
+      planning_math::Vec2d segment_end{tep_link_points.rbegin()->x(),
+                                       tep_link_points.rbegin()->y()};
+
+      double dis_to_other_link = DistanceToLine(point, segment_start, segment_end);
+
+      if (dis_to_other_link < std::abs(l)) {
+        break;
+      }
+    }
+
+    iflymapdata::sdpro::FeaturePoint last_fp;
+
+    if (CalculateLastFPInCurrentLink(&last_fp, &link, s)) {
+      for (const auto& lane_id : last_fp.lane_ids()) {
+        if (IsEmergencyLane(lane_id, sdpro_map_)) {
+          continue;
+        }
+
+        lane_num++;
+      }
+    } else {
+      lane_num = link.lane_num();
+    }
+
+    const double lat_error = lane_num * kStandardLaneWidth;
+
+    if (std::abs(l) > lat_error &&
+        dis_to_other_link < std::abs(l)) {
+      return true;
+    }
+
+  }
+
+  return false;
+}
+
+double RouteInfo::DistanceToLine(const planning_math::Vec2d& point,
+                      const planning_math::Vec2d& segment_start,
+                      const planning_math::Vec2d& segment_end) {
+    // 计算线段向量
+    planning_math::Vec2d segment = segment_end - segment_start;
+    // 计算点到线段起点的向量
+    planning_math::Vec2d point_to_start = point - segment_start;
+
+    // 计算线段长度
+    const double segment_len = segment.Length();
+
+    // 处理线段长度为0的特殊情况（起点和终点重合）
+    if (segment_len < planning_math::kMathEpsilon) {
+        return point.DistanceTo(segment_start);
+    }
+
+    // 计算叉积的绝对值（平行四边形面积）
+    double cross_product = std::fabs(point_to_start.CrossProd(segment));
+
+    // 垂直距离 = 平行四边形面积 / 底边长（线段长度）
+    return cross_product / segment_len;
+  }
 
 bool RouteInfo::IsTriggerContinueLCInPerceptionSplitRegion(
     const int perception_left_lane_num,
