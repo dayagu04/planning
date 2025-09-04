@@ -39,6 +39,7 @@
 #include "planning_hmi_c.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "speed/speed_limit.h"
+#include "src/modules/tasks/behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "st_graph/st_graph.h"
 #include "st_graph/st_graph_helper.h"
 
@@ -432,6 +433,14 @@ class PlanningContext {
 
   void set_v_limit(const double &v_limit) { v_limit_ = v_limit; }
 
+  const std::vector<TargetType> &lon_s_ref_target_types() const {
+    return lon_s_ref_target_types_;
+  }
+
+  std::vector<TargetType> &mutable_lon_s_ref_target_types() {
+    return lon_s_ref_target_types_;
+  }
+
   void Clear() {
     planning_success_ = false;
     planning_completed_ = false;
@@ -466,6 +475,7 @@ class PlanningContext {
   bool planning_completed_{false};
   double v_ref_cruise_;
   double v_limit_;
+  std::vector<TargetType> lon_s_ref_target_types_;
   PlanningResult planning_result_;
   // std::shared_ptr<PlanningResult> last_planning_result_;
   PlanningResult last_planning_result_;

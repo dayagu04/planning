@@ -77,6 +77,16 @@ class StGraphHelper {
   const std::unordered_map<int32_t, std::vector<int64_t>>&
   close_pass_agent_id_st_boundaries_map() const;
 
+  const std::unordered_map<int32_t, double>&
+  yeild_agents_ids_periods_in_st_pass_corridor() const {
+    return st_graph_.yeild_agents_ids_periods_in_st_pass_corridor();
+  }
+
+  const std::unordered_map<int32_t, double>&
+  overtake_agents_ids_periods_in_st_pass_corridor() const {
+    return st_graph_.overtake_agents_ids_periods_in_st_pass_corridor();
+  }
+
  private:
   bool IsTimeInRange(double t) const;
   void MakeSpeedLimitedConeBucketStBoundary(

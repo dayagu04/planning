@@ -106,6 +106,15 @@ class STGraph {
 
   const std::vector<int32_t>& caution_yield_agent_ids() const;
   const std::vector<int32_t>& relieve_jerk_agent_ids() const;
+
+  const std::unordered_map<int32_t, double>&
+  yeild_agents_ids_periods_in_st_pass_corridor() const {
+    return yeild_agents_ids_periods_in_st_pass_corridor_;
+  }
+  const std::unordered_map<int32_t, double>&
+  overtake_agents_ids_periods_in_st_pass_corridor() const {
+    return overtake_agents_ids_periods_in_st_pass_corridor_;
+  }
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();
@@ -170,6 +179,10 @@ class STGraph {
 
   // st_pass_corridor: order is <upper_point, lower_point>
   std::vector<std::pair<STPoint, STPoint>> st_pass_corridor_;
+  std::unordered_map<int32_t, double>
+      yeild_agents_ids_periods_in_st_pass_corridor_;
+  std::unordered_map<int32_t, double>
+      overtake_agents_ids_periods_in_st_pass_corridor_;
 
   // bellow is for neighbor corridor
   std::vector<std::pair<STPoint, STPoint>> neighbor_corridor_;
