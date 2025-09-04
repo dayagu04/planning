@@ -10,7 +10,7 @@ from lib.load_local_view import *
 from bokeh.resources import INLINE
 
 # bag path and frame dt
-bag_path = "/share//data_cold/abu_zone/autoparse/chery_e0y_20260/common_frame/20250325/20250325-08-42-37/data_collection_CHERY_E0Y_20260_ALL_MANUAL_2025-03-25-08-42-37_no_camera.bag"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_m32t_51483/trigger/20250704/20250704-20-46-38/data_collection_CHERY_M32T_51483_EVENT_FILTER_2025-07-04-20-46-38_no_camera.bag"
 
 frame_dt = 0.02 # sec
 

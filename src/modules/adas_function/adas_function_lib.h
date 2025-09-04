@@ -10,6 +10,7 @@
 namespace adas_function {
 
 extern uint16 uint16_bit[16];
+extern uint32 uint32_bit[32];
 
 /*二维矩形结构体定义
 坐标系:
@@ -69,7 +70,20 @@ extern void CalProjectionPointForLong(const pnc::mathlib::spline &x_s_spline,
                                       const double s_start, const double s_end,
                                       const Eigen::Vector2d &x, double &s_proj);
 
-extern std::vector<double>ObjCornersCalculate(const context::FusionObjExtractInfo& obj);
+extern std::vector<double> ObjCornersCalculate(
+    const context::FusionObjExtractInfo &obj);
+
+extern double integer_power(const double &x, int order);
+
+extern void leastSquareFitting(const std::vector<double> &points_x_vec,
+                               const std::vector<double> &points_y_vec,
+                               const int &order,
+                               adas_function::context::LineInfo *line_info_ptr);
+
+extern void leastSquareFittingForRoadedge(
+    const std::vector<double> &points_x_vec,
+    const std::vector<double> &points_y_vec, const int &order,
+    adas_function::context::RoadedgeInfo *line_info_ptr);
 
 }  // namespace adas_function
 

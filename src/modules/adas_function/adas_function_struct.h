@@ -3,12 +3,17 @@
 
 #include <string>
 
+#include "camera_perception_tsr_c.h"
 #include "common_c.h"
+#include "common_platform_type_soc.h"
+#include "func_state_machine_c.h"
 #include "fusion_road_c.h"
 #include "planning_hmi_c.h"
 #include "spline.h"
 #include "transform_lib.h"
+#include "vehicle_service_c.h"
 
+// using namespace iflyauto;
 namespace adas_function {
 namespace context {
 
@@ -25,9 +30,38 @@ struct Parameters {
   double origin_2_rear_bumper = 0.950;  // 后轴中心到后保的距离 单位：m
 
   // LKAS_Function 参数
-  std::vector<double> ldp_vel_vector = {40.0, 60.0, 80.0, 100.0, 120.0,140.0};
-  std::vector<double> ldp_tlc_vector = {1.0, 1.0, 0.9,0.8,0.7,0.7};
+  std::vector<double> lka_vel_vector = {40.0, 60.0, 80.0, 100.0, 120.0, 140.0};
+  std::vector<double> lka_tlc_vector = {1.0, 1.0, 0.9, 0.8, 0.7, 0.7};
+
+  // 根据曲率查表tlc的参数
+
+  std::vector<double> lka_dec_tlc_by_c2_vector = {0.70, 0.40, 0.15, 0.05, 0.00};
+  std::vector<double> lka_dec_y_gap_by_c2_vector = {0.20, 0.10, 0.00, 0.00,
+                                                    0.00};
+  std::vector<double> roadedge_dec_y_gap_by_c2_vector = {0.00, 0.00, 0.00, 0.00,
+                                                         0.00};
+  std::vector<double> elk_roadedge_earliest_line_c2_vector = {0.00, 0.00, 0.00,
+                                                              0.00, 0.00};
+  // 根据横向速度查表触发线offset
+  std::vector<double> y_gap_vy_vector = {0.0001, 0.20, 0.40, 0.60, 0.70, 0.90};
+  std::vector<double> dec_y_gap_by_vy_vector = {0.00, 0.00, 0.00,
+                                                0.00, 0.00, 0.00};
+
+  std::vector<double> lka_r_vector = {200.0, 500.0, 1000.0, 1500.0, 2000.0};
+
+  // 根据道宽查表tlc的参数
+  std::vector<double> lka_lane_width_vector = {2.50, 2.75, 3.00, 3.25, 3.50};
+  std::vector<double> lka_tlc_dec_by_lane_width_vector = {0.80, 0.60, 0.40,
+                                                          0.10, 0.00};
   double safe_departure_ttc = 3.0;
+  // 根据横向速度查表elk 路沿的参数
+  std::vector<double> elk_roadedge_departure_V_vector = {0.0, 0.2, 0.4, 0.6,
+                                                         0.8};
+  std::vector<double> elk_roadedge_offset_vector = {0.40, 0.40, 0.40, 0.40,
+                                                    0.40};
+
+  std::vector<double> ttc_collision_thrd_tab = {2.0, 2.5, 3.0};
+  std::vector<double> obj_relative_speed_tab = {5.0, 10.0, 15.0};
   double ldw_enable_speed = 27.555;
   double ldw_tlc_thrd = 0.0;
   double ldp_tlc_thrd = 1.0;
@@ -43,10 +77,14 @@ struct Parameters {
   bool ldw_main_switch = false;
   bool ldp_main_switch = false;
   bool elk_main_switch = false;
-  bool tsr_main_switch = true;
+  iflyauto::NotificationMainSwitch tsr_main_switch =
+      iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
+  bool ihc_use_json_switch = false;
+  bool ihc_use_json_code = false;
+  bool ihc_main_switch = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
-  double elk_roadedge_offset = 0.15;
+  // double elk_roadedge_offset = 0.15;
   double lon_distance_buffer0 = 3.0;
   double lon_distance_buffer1 = 60.0;
   double lat_buffer_to_line = 4.0;
@@ -65,9 +103,83 @@ struct Parameters {
   int hmi_elk_state = 0;
   int hmi_tsr_state = 0;
   int hmi_tsr_speed_limit = 0;
+  uint32 ldp_fault_code_maskcode = 0;
+  uint32 ldp_enable_code_maskcode = 0;
+  uint32 ldp_disable_code_maskcode = 0;
+  uint32 ldp_left_suppression_code_maskcode = 0;
+  uint32 ldp_left_kickdown_code_maskcode = 0;
+  uint32 ldp_right_suppression_code_maskcode = 0;
+  uint32 ldp_right_kickdown_code_maskcode = 0;
+  uint32 ldw_enable_code_maskcode = 0;
+  uint32 ldw_disable_code_maskcode = 0;
+  uint32 ldw_fault_code_maskcode = 0;
+  uint32 ldw_left_suppression_code_maskcode = 0;
+  uint32 ldw_left_kickdown_code_maskcode = 0;
+  uint32 ldw_right_suppression_code_maskcode = 0;
+  uint32 ldw_right_kickdown_code_maskcode = 0;
+  uint32 elk_fault_code_maskcode = 0;
+  uint32 elk_enable_code_maskcode = 0;
+  uint32 elk_disable_code_maskcode = 0;
+  uint32 elk_left_suppression_code_maskcode = 0;
+  uint32 elk_left_kickdown_code_maskcode = 0;
+  uint32 elk_right_suppression_code_maskcode = 0;
+  uint32 elk_right_kickdown_code_maskcode = 0;
+  // 打断纠偏的横向速度持续时间，单位：S
+  double ldp_kickdown_lat_v_dur = 3.0;
+  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_suppression_driver_hand_trq = 2.0;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_samedir_hand_trq = 2.3;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_oppodir_hand_trq = 2.5;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double LDP_kickdown_abs_hand_trq = 1.5;
+  // 打断纠偏的手力矩绝对值持续时间，单位：S
+  double LDP_kickdown_hand_trq_dur = 0.5;
+  // 抑制报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_suppression_driver_hand_trq = 2.0;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_samedir_hand_trq = 2.3;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_oppodir_hand_trq = 2.5;
+  // 打断报警的驾驶员手力矩(绝对值)阈值，单位：Nm
+  double ELK_kickdown_abs_hand_trq = 1.5;
+  // 打断纠偏的手力矩绝对值持续时间，单位：S
+  double ELK_kickdown_hand_trq_dur = 0.5;
+
+  // 抑制冷却时间力矩条件的手力矩值 单位：Nm
+  double LDP_supp_CoolingTime_handtrq_thr = 0.5;
+  // 抑制冷却时间力矩条件的手力矩值 单位：Nm
+  double ELK_supp_CoolingTime_handtrq_thr = 0.5;
+  //路沿半径抑制条件,不能为0
+  double elk_roadedge_supp_curv_r_thr = 220;
+  //路沿半径抑制条件持续时间阈值,不能为0
+  double elk_roadedge_supp_curv_r_dur = 2.0;
+  //临时测试，记得删
+  bool elk_roadedge_testswitch_temp_ = false;
+  //以下定义了enable/disable条件中油门踏板变化率的阈值条件
+  double elk_enable_accel_pedal_pos_rate = 30.0;
+  double elk_disable_accel_pedal_pos_rate = 70.0;
+  double ldp_enable_accel_pedal_pos_rate = 30.0;
+  double ldp_disable_accel_pedal_pos_rate = 70.0;
+  double ldw_enable_accel_pedal_pos_rate = 30.0;
+  double ldw_disable_accel_pedal_pos_rate = 70.0;
+  double elk_enable_accel_pedal_pos_rate_dur = 1.0;
+  double ldp_enable_accel_pedal_pos_rate_dur = 1.0;
+  double ldw_enable_accel_pedal_pos_rate_dur = 1.0;
+  // test value
+  int meb_request_status_const = 0;
+  // IHC使能码掩码
+  uint16 ihc_enable_code_maskcode = 31;
+  // IHC禁用码掩码
+  uint16 ihc_disable_code_maskcode = 0;
+  // IHC故障码掩码
+  uint16 ihc_fault_code_maskcode = 0;
 };
 
 struct StateInfo {
+  double current_time_us = 0.0;  // 当前时间
+
   double vehicle_speed = 0.0;          // 本车实际车速 单位:m/s
   double display_vehicle_speed = 0.0;  // 本车实际车速 单位:m/s
   double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
@@ -94,7 +206,7 @@ struct StateInfo {
   // 驾驶员手力矩，单位 Nm
   double driver_hand_trq = 0.0;
 
-  // 左、右偏离车道线速度 单位 m/s
+  // 左、右偏离车道线速度 单位 m/s 左正右负
   double veh_left_departure_speed = 0.0;
   double veh_right_departure_speed = 0.0;
 
@@ -106,11 +218,35 @@ struct StateInfo {
   // 实际制动踏板开度百分比 范围:[0-100] 不是所有车均有此信号
   double brake_pedal_pos = 0.0;
   bool brake_pedal_pressed = false;
-  //enu2car 变换矩阵
+  // enu2car 变换矩阵
   Eigen::Vector2d current_pos_i;
   Eigen::Matrix2d rotm2d = Eigen::Matrix2d::Identity();
-  //偏离加速度
+  // 偏离加速度
   double lat_departure_acc = 0.0;
+  double accelerator_pedal_pos_rate = 0.0;  // 油门踏板速率 %/s
+
+  // 定义当前挡位值
+  iflyauto::ShiftLeverStateEnum shift_lever_state =
+      iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
+
+  // vehicle_service模块节点通讯丢失
+  // 1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool vehicle_service_node_valid = true;
+  // 车道线融合模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool road_info_node_valid = true;
+  // 定位模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool localization_info_node_valid = true;
+  // TSR感知模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool tsr_info_node_valid = true;
+  // IHC感知模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool ihc_info_node_valid = true;
+  // 障碍物融合模块节点通讯丢失
+  //  1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
+  bool obstacle_fusion_info_node_valid = true;
 };
 
 enum Enum_LineType {
@@ -173,6 +309,10 @@ struct RoadedgeInfo {
   bool valid;
   std::vector<double> all_dx_vec_;  // 左侧路沿所有点x坐标
   std::vector<double> all_dy_vec_;  // 左侧路沿所有点y坐标
+  double c0;  // 车道线方程系数c0 y=c0+c1*x+c2*x*x +c3*x*x*x
+  double c1;  // 车道线方程系数c1
+  double c2;  // 车道线方程系数c2
+  double c3;  // 车道线方程系数c3
 };
 
 struct LaneInfo {
@@ -185,18 +325,60 @@ struct LaneInfo {
   bool lane_changed_flag;
   bool left_sideway_exist_flag;
   bool right_sideway_exist_flag;
-  bool left_safe_departure_permission_flag = false;
-  bool right_safe_departure_permission_flag = false;
+  // bool left_safe_departure_permission_flag = false;
+  // bool right_safe_departure_permission_flag = false;
+  bool left_parallel_car_flag = false;
+  bool right_parallel_car_flag = false;
+  bool right_front_car_flag = false;
+  bool left_front_car_flag = false;
 };
 
 struct RoadInfo {
   LaneInfo current_lane;
+
+  // 定义左右压线行驶
+  bool close_to_left_line_flag = false;
+  bool close_to_right_line_flag = false;
+  double close_to_right_line_dur = 0.0;
+  double close_to_left_line_dur = 0.0;
 };
 
 struct LastCycleInfo {
-  bool left_turn_light_state;   // 左转向灯状态  false:关闭 true:开启
-  bool right_turn_light_state;  // 右转向灯状态  false:关闭 true:开启
-  double yaw_rad = 0.0;         // 定位yaw角
+  bool left_turn_light_state = false;  // 左转向灯状态  false:关闭 true:开启
+  bool right_turn_light_state = false;  // 右转向灯状态  false:关闭 true:开启
+  double yaw_rad = 0.0;                 // 定位yaw角
+  double accelerator_pedal_pos = 0.0;  // 实际加速踏板开度百分比 范围:[0-100]
+};
+
+// 限速标识牌信息，包括限速，解除限速
+struct SpeedSignInfo {
+  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;            // 跟踪id号
+  iflyauto::SuppSignType speed_sign_type;  // 限速标志牌类型
+  // 是否为匝道限速牌
+  bool ramp_flag = false;
+  double supp_sign_x;  // 限速标志牌纵向距离 (m)
+  double supp_sign_y;  // 限速标志牌横向距离 (m)
+  double supp_sign_z;  // 限速标志牌高度     (m)
+  double
+      speed_limit;  // 限速速度值(km/h)
+                    // 仅在标识牌类型为【MAXIMUM_SPEED】、【MINIMUM_SPEED】、【END_OF_SPEED_LIMIT】时对该字段赋值,否则该字段默认赋值为0
+};
+
+// 辅助标识牌信息
+struct SuppSignInfo {
+  uint64 isp_timestamp;  // 图像曝光中间时刻时间戳    (微秒)
+  uint8_t id;            // 跟踪id号
+  iflyauto::SuppSignType supp_sign_type;  // 辅助标志牌类型
+  double supp_sign_x;                     // 辅助标志牌纵向距离 (m)
+  double supp_sign_y;                     // 辅助标志牌横向距离 (m)
+  double supp_sign_z;                     // 辅助标志牌高度     (m)
+};
+
+// 道路标识信息, 包含多个限速标识牌和多个辅助标识牌
+struct TsrInfo {
+  std::vector<SpeedSignInfo> speed_sign_info_vector;
+  std::vector<SuppSignInfo> supp_sign_info_vector;
 };
 
 struct LdwOutputInfo {
@@ -223,6 +405,11 @@ Intervention) 5:Active(Right Intervention) */
                  Intervention */
 };
 
+typedef struct {
+  boolean obj_valid;  // false:invalid true:valid
+  uint32 id;          // 障碍物id
+} _STRUCT_ALIGNED_ ELKRiskObjInfo;
+
 struct ElkOutputInfo {
   iflyauto::ELKFunctionFSMWorkState elk_state_{
       iflyauto::ELK_FUNCTION_FSM_WORK_STATE_OFF}; /* ELK功能状态
@@ -233,12 +420,26 @@ Intervention) 5:Active(Right Intervention) */
                  Intervention 1:Left Intervention */
   bool elk_right_intervention_flag_{
       false}; /* ELK功能触发右侧报警标志位 0:No Intervention 1:Rirht*/
+
+  ELKRiskObjInfo elk_risk_obj_;
 };
 
 struct TSROutputInfo {
   iflyauto::TSRFunctionFSMWorkState tsr_state_;  // TSR功能状态
   uint32 tsr_speed_limit_;  // TSR识别到的限速标识牌    (公里/小时)
+  boolean isli_display_type_ =
+      false;  // 限速标识类型 (true:显示解除限速 / false:显示限速)
   boolean tsr_warning_;  // TSR超速报警标志位 (true:Warning / false:No Warning)
+
+  iflyauto::SuppSignType
+      supp_sign_type;  // 辅助标志牌类型,
+                       // 和限速牌区分，辅助标识牌是让行，停止之类的标识牌
+};
+
+struct IHCOutputInfo {
+  iflyauto::IHCFunctionFSMWorkState ihc_state_;  // IHC功能状态
+  bool ihc_request_status_;  // IHC请求状态 (true:Request / false:No Request)
+  bool ihc_request_;         // IHC请求 (true:HighBeam / false:LowBeam)
 };
 
 struct AdasOutputInfo {
@@ -246,6 +447,9 @@ struct AdasOutputInfo {
   LdpOutputInfo ldp_output_info_;
   ElkOutputInfo elk_output_info_;
   TSROutputInfo tsr_output_info_;
+  IHCOutputInfo ihc_output_info_;
+  iflyauto::AMAPOutputInfoStr amap_output_info_;
+  iflyauto::MEBOutputInfoStr meb_output_info_;
 };
 
 enum Enum_LaneLocType {
@@ -290,6 +494,7 @@ struct FusionObjExtractInfo {
   double acceleration_relative_to_ground_x;
   double acceleration_relative_to_ground_y;
   double relative_theta;
+  double tlc = 0.0;
 };
 struct SingleAreaObjs {
   bool vehicle_info_valid = false;

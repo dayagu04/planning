@@ -441,15 +441,25 @@ const bool ParkingScenarioManager::PubPreparePathByStableStrategy() {
 }
 
 void ParkingScenarioManager::PubStopReason() {
+  apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_NONE;
+  apa_hmi_data_.is_parking_pause = false;
+
+  if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    return;
+  }
+  if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
+    return;
+  }
+
   if (current_scenario_ == nullptr) {
     return;
   }
 
   if (current_scenario_->IsStopByDynamicObs()) {
-    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
+    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_BY_DYNAMIC_OBS;
     apa_hmi_data_.is_parking_pause = true;
   } else if (current_scenario_->IsStopByStaticMovableObs()) {
-    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_OTHER;
+    apa_hmi_data_.parking_pause_reason = iflyauto::PARKING_PAUSE_FOR_STATIC_OBS;
     apa_hmi_data_.is_parking_pause = true;
   }
 

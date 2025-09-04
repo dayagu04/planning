@@ -6,6 +6,7 @@ from scipy.misc import derivative
 from lib.load_rotate import *
 sys.path.append('../../python_proto')
 from ehr_sdmap_pb2 import *
+from map_data_pb2 import *
 from bokeh.models import TextInput
 import ipywidgets
 import itertools
@@ -234,6 +235,250 @@ def load_sd_map_segments(segments,x,y,yaw,Max_sdmap_segment_size):
   sdmap_road_line_info['outlinek_y_vec'] = outlink_y
   return sdmap_road_line_info
 
+def load_sdpro_map_segments(links,route_links,x,y,yaw,Max_sdmap_segment_size):
+  sdpromap_road_line_info = {'sdpromap_road_line_x_vec':[], 'sdpromap_road_line_y_vec':[],
+                          'sdpromap_ramp_line_x_vec':[], 'sdpromap_ramp_line_y_vec':[],
+                          'sdpromap_expressway_line_x_vec':[], 'sdpromap_expressway_line_y_vec':[],
+                          'inlinek_x_vec':[], 'inlinek_y_vec':[],
+                          'outlinek_x_vec':[], 'outlinek_y_vec':[],
+                          'sdpromap_road_info':[],
+                          'data_sdpromap_FP_info':[],'data_sdpromap_FP_x_vec':[], 'data_sdpromap_FP_y_vec':[],
+                          'load_inlink_info':[], 'load_outlink_info':[]}
+  line_x = []
+  line_y = []
+  ramp_line_x = []
+  ramp_line_y = []
+  expressway_line_x = []
+  expressway_line_y = []
+  inlink_x = []
+  inlink_y = []
+  outlink_x = []
+  outlink_y = []
+
+  fp_type_map = {
+    0: "无",
+    1: "车道类型变化",
+    2: "车道数变化",
+    3: "数据边界开始",
+    4: "数据边界结束",
+    5: "车道连续点",
+    6: "交换区起点",
+    7: "交换区终点",
+    8: "普通路口进入点",
+    9: "普通路口退出点",
+    10: "掉头路口进入点",
+    11: "掉头路口退出点",
+    12: "宽车道进入点",
+    13: "宽车道退出点",
+    14: "收费站进入点",
+    15: "收费站退出点",
+    16: "交换区内点",
+    17: "宽车道内点",
+    18: "收费站内点",
+    19: "标线变化点",
+    20: "T型路口进入点"
+  }
+  link_class_map = {
+    0: "无",
+    1: "高速公路",
+    2: "城市快速路",
+    3: "国道",
+    4: "省道",
+    5: "县道",
+    6: "乡道",
+    7: "特服道路",
+    8: "步行道路",
+    9: "人渡",
+    10: "轮渡",
+    11: "其他道路"
+  }
+  link_type_map = {
+      0x00000000: "普通",
+      0x00000001: "隧道",
+      0x00000002: "桥",
+      0x00000004: "收费站道路",
+      0x00000008: "断头路",
+      0x00000010: "IC(高速连接普通路的道路)",
+      0x00000020: "JCT(高速连接高速的道路)",
+      0x00000040: "SAPA(服务器、停车区道路)",
+      0x00000080: "路口内道路",
+      0x00000100: "授权道路",
+      0x00000200: "收费岛道路",
+      0x00000400: "废弃收费岛道路",
+      0x00000800: "检查站道路",
+      0x00001000: "环岛内道路",
+      0x00002000: "锯齿道路",
+      0x00004000: "主路(main road)",
+      0x00008000: "辅路(side road)",
+      0x00010000: "主辅路连接路(mainside connection)",
+      0x00020000: "无小路口",
+      0x00040000: "小路口左侧道路",
+      0x00080000: "小路口右侧道路",
+      0x00100000: "小路口两侧道路",
+      0x00200000: "路口内道路（编译计算）",
+      0x00400000: "出口收费站",
+      0x00800000: "入口收费站",
+      0x01000000: "出入口收费站"
+  }
+
+  route_link_ids = set([route_link.link_id for route_link in route_links])
+
+  # 构建一个将 link_id 映射到 link 对象的字典，以此加快查找速度
+  link_dict = {link.id: link for link in links}
+  route_link_dict = {link.link_id: link for link in route_links}
+
+  # 按照 route_links 的顺序筛选并生成 filtered_links
+  filtered_links = []
+  for route_link in route_links:
+      link_id = route_link.link_id
+      if link_id in link_dict:
+          filtered_links.append(link_dict[link_id])
+
+  # 用于记录每个坐标点对应的info_str索引
+  point_to_info_idx = {}
+  for link in filtered_links:
+    #1、存放link上feature point的相关信息
+    for fp_info in link.feature_points:
+      fp = fp_info.location_info.boot
+      ehr_x = fp.x
+      ehr_y = fp.y
+      car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+      sdpromap_road_line_info['data_sdpromap_FP_x_vec'].append(car_x)
+      sdpromap_road_line_info['data_sdpromap_FP_y_vec'].append(car_y)
+
+      # 通过映射字典获取中文类型名称
+      # type_name = fp_type_map.get(fp_info.type, f"未知类型({fp_info.type})")
+      type_values = fp_info.type
+      type_names = [fp_type_map.get(t, f"未知类型({t})") for t in type_values]
+      type_name = ", ".join(type_names)
+      info_str = (
+          f"fp_id: {fp_info.id}, "
+          f"fp_type: {type_name}, "
+          f"fp_projection_percent: {fp_info.projection_percent}, "
+          f"fp_lane_ids: {fp_info.lane_ids}, "
+      )
+      sdpromap_road_line_info['data_sdpromap_FP_info'].append(info_str)
+
+    #2、存放link的相关信息
+    # 构建当前link的信息
+    link_class_name = link_class_map.get(link.link_class, f"未知类型({link.link_class})")
+    link_type_name = link_type_map.get(link.link_type, f"未知类型({link.link_type})")
+    info_str = (
+        f"link_id: {link.id}, "
+        f"link_type: {link_type_name}, "
+        f"link_class: {link_class_name}, "
+        f"lane_num: {link.lane_num}, "
+        # f"main_action: {route_link_dict[link.id].main_action}, "
+        # f"assi_action: {route_link_dict[link.id].assi_action}, "
+    )
+    for point in link.points.boot.points:
+        ehr_x, ehr_y = point.x, point.y
+        car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+        line_x.append(car_x)
+        line_y.append(car_y)
+
+        # 生成点的唯一键（坐标字符串）
+        point_key = f"{car_x}_{car_y}"
+
+        # 检查该点是否已存在于字典中
+        if point_key in point_to_info_idx:
+            # 重叠点：追加信息到已存在的info_str
+            existing_idx = point_to_info_idx[point_key]
+            sdpromap_road_line_info['sdpromap_road_info'][existing_idx] += f" | {info_str}"
+            # 为当前点添加相同的info_str（保持长度一致）
+            sdpromap_road_line_info['sdpromap_road_info'].append(
+                sdpromap_road_line_info['sdpromap_road_info'][existing_idx]
+            )
+        else:
+            # 新点：添加新的info_str并记录其索引
+            sdpromap_road_line_info['sdpromap_road_info'].append(info_str)
+            point_to_info_idx[point_key] = len(sdpromap_road_line_info['sdpromap_road_info']) - 1
+
+    # 跳过非高速公路
+    if link.link_class not in (LinkClass.LC_EXPRESSWAY, LinkClass.LC_CITY_EXPRESSWAY):
+      continue
+
+    # 判断是否为主路
+
+    # 按位或运算构造掩码（与C++的LT_IC | LT_JCT等价）
+    ramp_mask = LinkType.LT_IC | LinkType.LT_JCT
+    # 按位与运算检查是否包含任一标志（与C++的link_type & (LT_IC | LT_JCT)等价）
+    is_ramp = (link.link_type & ramp_mask) != 0
+    is_main_road = not is_ramp
+    # is_main_road = link.link_type not in (LinkType.LT_IC, LinkType.LT_JCT, LinkType.LT_MAINROAD_CONNECTION)
+
+    if is_main_road:
+      for point in link.points.boot.points:
+          ehr_x, ehr_y = point.x, point.y
+          car_x, car_y = global2local(ehr_x, ehr_y, x, y, yaw)
+          expressway_line_x.append(car_x)
+          expressway_line_y.append(car_y)
+
+    if not is_main_road:
+      for point in link.points.boot.points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        ramp_line_x.append(car_x)
+        ramp_line_y.append(car_y)
+
+    for inlink_id in link.predecessor_link_ids:
+      if inlink_id in route_link_ids:
+        continue
+      if inlink_id not in link_dict:
+        continue
+      in_link = link_dict[inlink_id]
+      # 构建inlink的信息
+      link_class_name = link_class_map.get(in_link.link_class, f"未知类型({in_link.link_class})")
+      link_type_name = link_type_map.get(in_link.link_type, f"未知类型({in_link.link_type})")
+      info_str = (
+          f"link_id: {in_link.id}, "
+          f"link_type: {link_type_name}, "
+          f"link_class: {link_class_name}, "
+          f"lane_num: {in_link.lane_num}, "
+      )
+      for point in in_link.points.boot.points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        inlink_x.append(car_x)
+        inlink_y.append(car_y)
+        sdpromap_road_line_info['load_inlink_info'].append(info_str)
+
+    for outlink_id in link.successor_link_ids:
+      if outlink_id in route_link_ids:
+        continue
+      if outlink_id not in link_dict:
+        continue
+      out_link = link_dict[outlink_id]
+      # 构建当前link的信息
+      link_class_name = link_class_map.get(out_link.link_class, f"未知类型({out_link.link_class})")
+      link_type_name = link_type_map.get(out_link.link_type, f"未知类型({out_link.link_type})")
+      info_str = (
+          f"link_id: {out_link.id}, "
+          f"link_type: {link_type_name}, "
+          f"link_class: {link_class_name}, "
+          f"lane_num: {out_link.lane_num}, "
+      )
+      for point in out_link.points.boot.points:
+        ehr_x = point.x
+        ehr_y = point.y
+        car_x, car_y= global2local(ehr_x, ehr_y, x, y, yaw)
+        outlink_x.append(car_x)
+        outlink_y.append(car_y)
+        sdpromap_road_line_info['load_outlink_info'].append(info_str)
+
+  sdpromap_road_line_info['sdpromap_road_line_x_vec'] = line_x
+  sdpromap_road_line_info['sdpromap_road_line_y_vec'] = line_y
+  sdpromap_road_line_info['sdpromap_ramp_line_x_vec'] = ramp_line_x
+  sdpromap_road_line_info['sdpromap_ramp_line_y_vec'] = ramp_line_y
+  sdpromap_road_line_info['sdpromap_expressway_line_x_vec'] = expressway_line_x
+  sdpromap_road_line_info['sdpromap_expressway_line_y_vec'] = expressway_line_y
+  sdpromap_road_line_info['inlinek_x_vec'] = inlink_x
+  sdpromap_road_line_info['inlinek_y_vec'] = inlink_y
+  sdpromap_road_line_info['outlinek_x_vec'] = outlink_x
+  sdpromap_road_line_info['outlinek_y_vec'] = outlink_y
+  return sdpromap_road_line_info
 def ehr_load_road_boundary_lines(road_boundaries, x, y, yaw, Road_boundary_max_line_size, g_is_display_enu = False):
   ehr_road_boundary_info_list = []
   for i in range(Road_boundary_max_line_size):

@@ -3,6 +3,7 @@
 #include <string>
 
 #include "local_view.h"
+#include "src/modules/common/speed/apa_speed_decision.h"
 
 namespace planning {
 namespace apa_planner {
@@ -57,7 +58,9 @@ class ApaStateMachineManager final {
   }
 
   const ApaSlotLatPosPreference GetSlotLatPosPreference() const {
-    return slot_lat_pos_preference_;
+    return slot_lat_pos_preference_;}
+  const ParkingSpeedMode GetParkingSpeedMode() const {
+    return parking_speed_mode_;
   }
 
   void SetParkOutDirection(const ApaParkOutDirection& park_out_direction) {
@@ -85,6 +88,7 @@ class ApaStateMachineManager final {
   void Reset() {
     state_machine_ = ApaStateMachine::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;
+    parking_speed_mode_ = ParkingSpeedMode::INVALID;
   }
 
   static std::string GetApaStateMachineString(
@@ -102,6 +106,10 @@ class ApaStateMachineManager final {
 
   static void PrintApaSlotLatPosPreference(
       const ApaSlotLatPosPreference slot_lat_pos_preference);
+  static std::string GetParkingSpeedModeString(
+      const ParkingSpeedMode parking_speed_mode);
+
+  static void PrintParkingSpeedMode(const ParkingSpeedMode parking_speed_mode);
 
  private:
   ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
@@ -110,6 +118,7 @@ class ApaStateMachineManager final {
 
   ApaSlotLatPosPreference slot_lat_pos_preference_ =
       ApaSlotLatPosPreference::MID;
+  ParkingSpeedMode parking_speed_mode_ = ParkingSpeedMode::INVALID;
 };
 
 }  // namespace apa_planner

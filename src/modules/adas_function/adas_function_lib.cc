@@ -7,6 +7,13 @@ namespace adas_function {
 uint16 uint16_bit[16] = {1,   2,   4,    8,    16,   32,   64,    128,
                          256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
 
+uint32 uint32_bit[32] = {
+    1,         2,         4,          8,         16,       32,       64,
+    128,       256,       512,        1024,      2048,     4096,     8192,
+    16384,     32768,     65536,      131072,    262144,   524288,   1048576,
+    2097152,   4194304,   8388608,    16777216,  33554432, 67108864, 134217728,
+    268435456, 536870912, 1073741824, 2147483648};
+
 // 函数功能:更新box四个角点的坐标
 void BoxCornersCoordinateUpdate(Box2DStr *box) {
   float32 dx1 = 0.5F * box->input.length * box->input.cos_heading_angle;
@@ -243,7 +250,8 @@ double LkasLineLeftIntervention(double tlc_to_line_threshold) {
   double preview_distance_x = ego_box.state.fl_x;
   double preview_distance_y = ego_box.state.fl_y;
 
-  double line_width = GetContext.get_param()->lane_line_width;  // 道线的宽度,单位:m
+  double line_width =
+      GetContext.get_param()->lane_line_width;  // 道线的宽度,单位:m
 
   // 计算前轮处道线的横向坐标值
   Eigen::Vector2d pos_proj;
@@ -316,7 +324,8 @@ double LkasLineRightIntervention(double tlc_to_line_threshold) {
   double preview_distance_x = ego_box.state.fr_x;
   double preview_distance_y = ego_box.state.fr_y;
 
-  double line_width = GetContext.get_param()->lane_line_width;  // 道线的宽度,单位:m
+  double line_width =
+      GetContext.get_param()->lane_line_width;  // 道线的宽度,单位:m
 
   // 计算前轮处道线的横向坐标值
   Eigen::Vector2d pos_proj;
@@ -600,4 +609,87 @@ std::vector<double> ObjCornersCalculate(
   return obj_vec;
 }
 
+// 定义最小二乘法确定车道线参数
+double integer_power(const double &x, int order) {
+  double ret = 1.0;
+  while (order > 0) {
+    ret *= x;
+    order--;
+  }
+  return ret;
+}
+
+void leastSquareFitting(const std::vector<double> &points_x_vec,
+                        const std::vector<double> &points_y_vec,
+                        const int &order,
+                        adas_function::context::LineInfo *line_info_ptr) {
+  std::vector<double> ret(order + 1, 0.0);
+  if (points_x_vec.empty() || points_x_vec.size() < order + 1) {
+    line_info_ptr->c0 = ret[0];
+    line_info_ptr->c1 = ret[1];
+    line_info_ptr->c2 = ret[2];
+    line_info_ptr->c3 = ret[3];
+    return;
+  }
+
+  int points_num = points_x_vec.size();
+  Eigen::MatrixXd X(points_num, order + 1);
+  Eigen::MatrixXd Y(points_num, 1);
+
+  for (size_t i = 0; i < points_num; ++i) {
+    for (size_t j = 0; j < order + 1; ++j) {
+      X(i, j) = integer_power(points_x_vec[i], j);
+    }
+    Y(i, 0) = points_y_vec[i];
+  }
+
+  Eigen::MatrixXd XT_X = X.transpose() * X;
+  Eigen::VectorXd XT_Y = X.transpose() * Y;
+  Eigen::VectorXd beta = XT_X.ldlt().solve(XT_Y);
+
+  for (int i = 0; i <= order; ++i) {
+    ret[i] = std::isnan(beta[i]) ? 0.0 : beta[i];
+  }
+  line_info_ptr->c0 = ret[0];
+  line_info_ptr->c1 = ret[1];
+  line_info_ptr->c2 = ret[2];
+  line_info_ptr->c3 = ret[3];
+}
+
+void leastSquareFittingForRoadedge(const std::vector<double> &points_x_vec,
+                        const std::vector<double> &points_y_vec,
+                        const int &order,
+                        adas_function::context::RoadedgeInfo *line_info_ptr) {
+  std::vector<double> ret(order + 1, 0.0);
+  if (points_x_vec.empty() || points_x_vec.size() < order + 1) {
+    line_info_ptr->c0 = ret[0];
+    line_info_ptr->c1 = ret[1];
+    line_info_ptr->c2 = ret[2];
+    line_info_ptr->c3 = ret[3];
+    return;
+  }
+
+  int points_num = points_x_vec.size();
+  Eigen::MatrixXd X(points_num, order + 1);
+  Eigen::MatrixXd Y(points_num, 1);
+
+  for (size_t i = 0; i < points_num; ++i) {
+    for (size_t j = 0; j < order + 1; ++j) {
+      X(i, j) = integer_power(points_x_vec[i], j);
+    }
+    Y(i, 0) = points_y_vec[i];
+  }
+
+  Eigen::MatrixXd XT_X = X.transpose() * X;
+  Eigen::VectorXd XT_Y = X.transpose() * Y;
+  Eigen::VectorXd beta = XT_X.ldlt().solve(XT_Y);
+
+  for (int i = 0; i <= order; ++i) {
+    ret[i] = std::isnan(beta[i]) ? 0.0 : beta[i];
+  }
+  line_info_ptr->c0 = ret[0];
+  line_info_ptr->c1 = ret[1];
+  line_info_ptr->c2 = ret[2];
+  line_info_ptr->c3 = ret[3];
+}
 }  // namespace adas_function

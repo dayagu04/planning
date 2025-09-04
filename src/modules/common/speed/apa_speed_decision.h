@@ -99,13 +99,11 @@ enum class AccelerationMode {
   CRUISE,
 };
 
-enum class SpeedMode {
-  // 5 km/h
+enum class ParkingSpeedMode : uint8_t {
+  INVALID,
+  SLOW,
+  NORMAL,
   FAST,
-  // 4 km/h
-  MIDDLE,
-  // 3 km/h
-  SLOW
 };
 
 const ParkLonDecision* GetCloseStopDecision(

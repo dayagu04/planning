@@ -466,11 +466,12 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
                                prediction_obj_id_set);
     } else {
       // hack:hpp暂时只用融合障碍物
-      for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size; i++) {
+      for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
+           i++) {
         const auto &obj = local_view.fusion_objects_info.fusion_object[i];
-          transform_fusion_to_prediction_longtime(
-              obj, (double)local_view.fusion_objects_info.msg_header.stamp,
-              prediction_info);
+        transform_fusion_to_prediction_longtime(
+            obj, (double)local_view.fusion_objects_info.msg_header.stamp,
+            prediction_info);
       }
     }
 
@@ -814,6 +815,10 @@ void EnvironmentalModelManager::truncate_prediction_info(
     PredictionObject cur_predicion_obj;
     cur_predicion_obj.id =
         prediction_object.fusion_obstacle.additional_info.track_id;
+    cur_predicion_obj.is_dangerous =
+        prediction_object.fusion_obstacle.common_info.is_dangerous;
+    cur_predicion_obj.dangerous_confidence =
+        prediction_object.fusion_obstacle.common_info.dangerous_conf;
     prediction_obj_id_set.emplace(cur_predicion_obj.id);
     cur_predicion_obj.type =
         (iflyauto::ObjectType)
@@ -994,7 +999,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // Attention:PREDICTION_TRAJ_POINT_NUM whether valid in C struct
     // size of prediction_traj.trajectory_point maybe not equal to
     // PREDICTION_TRAJ_POINT_NUM
-    cur_predicion_obj.trajectory_valid = trajectory_point_size < 1 ? false : true;
+    cur_predicion_obj.trajectory_valid =
+        trajectory_point_size < 1 ? false : true;
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
       const auto &point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
@@ -1528,7 +1534,7 @@ void EnvironmentalModelManager::RunBlinkState(
       if (active) {
         // 如果上一帧还是ilc，这一帧不是了，说明ilc状态变了，那么该置0.
         if (history_lc_source_[0] == INT_REQUEST &&
-             history_lc_source_[1] != INT_REQUEST) {
+            history_lc_source_[1] != INT_REQUEST) {
           current_turn_signal_ = common::TurnSignalType::NONE;
         } else if (state == kLaneKeeping && num_firmly_touch_ > 200) {
           current_turn_signal_ = common::TurnSignalType::NONE;

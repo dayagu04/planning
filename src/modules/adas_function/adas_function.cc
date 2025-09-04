@@ -6,6 +6,7 @@
 #include "debug_info_log.h"
 #include "general_planning_context.h"
 #include "planning_context.h"
+#include "planning_hmi_c.h"
 
 namespace planning {
 
@@ -33,6 +34,8 @@ void AdasFunction::Init(void) {
   elk_core_ptr_ = std::make_shared<adas_function::elk_core::ElkCore>();
   // srCore
   tsr_core_ptr_ = std::make_shared<adas_function::tsr_core::TsrCore>();
+  // IhcCore
+  ihc_core_ptr_ = std::make_shared<adas_function::ihc_core::IhcCore>();
 }
 
 void AdasFunction::StoreInfoForNextCycle(void) {
@@ -49,11 +52,18 @@ void AdasFunction::StoreInfoForNextCycle(void) {
           ->mutable_environmental_model()
           ->get_local_view()
           .vehicle_service_output_info.right_turn_light_state;
-  GetContext.mutable_last_cycle_info()->yaw_rad =
+
+//   GetContext.mutable_last_cycle_info()->yaw_rad =
+//       GetContext.mutable_session()
+//           ->mutable_environmental_model()
+//           ->get_local_view()
+//           .localization_estimate.pose.euler_angles.yaw;
+
+  GetContext.mutable_last_cycle_info()->accelerator_pedal_pos =
       GetContext.mutable_session()
           ->mutable_environmental_model()
           ->get_local_view()
-          .localization_estimate.pose.euler_angles.yaw;
+          .vehicle_service_output_info.accelerator_pedal_pos;
 }
 
 bool AdasFunction::Plan() {
@@ -77,7 +87,8 @@ bool AdasFunction::Plan() {
   double start_time_preprocess = IflyTime::Now_ms();
   preprocess_ptr_->RunOnce();
   double end_time_preprocess = IflyTime::Now_ms();
-  ILOG_DEBUG << "adas_preprocess_cost_time is [" << end_time_preprocess - start_time_preprocess << "]ms";
+  ILOG_DEBUG << "adas_preprocess_cost_time is ["
+             << end_time_preprocess - start_time_preprocess << "]ms";
   JSON_DEBUG_VALUE("adas_preprocess_cost_time",
                    (end_time_preprocess - start_time_preprocess));
 
@@ -89,6 +100,10 @@ bool AdasFunction::Plan() {
   elk_core_ptr_->RunOnce();
   // TsrCore
   tsr_core_ptr_->RunOnce();
+
+  // IhcCore
+  ihc_core_ptr_->RunOnce();
+
   // run lkas_function
   double start_time_lkas = IflyTime::Now_ms();
   if (GetContext.get_param()->hmi_test_switch == true) {
@@ -96,7 +111,8 @@ bool AdasFunction::Plan() {
   }
   SetLkaTrajectory();
   double end_time_lkas = IflyTime::Now_ms();
-  ILOG_DEBUG << "lkas_function cost is [" << end_time_lkas - start_time_lkas << "]ms";
+  ILOG_DEBUG << "lkas_function cost is [" << end_time_lkas - start_time_lkas
+             << "]ms";
   JSON_DEBUG_VALUE("lkas_function_cost_time_ms",
                    (end_time_lkas - start_time_lkas));
 
@@ -113,6 +129,19 @@ bool AdasFunction::Plan() {
   //     session_->mutable_planning_context()->traffic_sign_recognition_function();
   // tsr_function_ptr->RunOnce();
   // double end_time_tsr = IflyTime::Now_ms();
+
+  // meb
+  GetContext.mutable_output_info()->meb_output_info_.meb_state =
+      iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
+  GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+      GetContext.get_param()->meb_request_status_const;
+  GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
+
+  // amap
+  GetContext.mutable_output_info()->amap_output_info_.amap_state =
+      iflyauto::AMAP_FUNCTION_FSM_WORK_STATE_OFF;
+  GetContext.mutable_output_info()->amap_output_info_.amap_request_flag = false;
+  GetContext.mutable_output_info()->amap_output_info_.amap_trq_limit_max = 0.0;
 
   Log();
   // 存储数据用于下一次循环
@@ -353,6 +382,15 @@ void AdasFunction::TestLkasForHmi(void) {
         ->ldp_output_info_.ldp_right_intervention_flag_ = false;
   }
   // test for elk
+  const auto &fusion_objs = GetContext.get_session()
+                                ->environmental_model()
+                                .get_local_view()
+                                .fusion_objects_info.fusion_object;
+  int fusion_objs_num = GetContext.get_session()
+                            ->environmental_model()
+                            .get_local_view()
+                            .fusion_objects_info.fusion_object_size;
+
   if (GetContext.get_param()->hmi_elk_state == 1) {
     GetContext.mutable_output_info()->elk_output_info_.elk_state_ =
         iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
@@ -367,14 +405,66 @@ void AdasFunction::TestLkasForHmi(void) {
     GetContext.mutable_output_info()->elk_output_info_.elk_state_ =
         iflyauto::ELKFunctionFSMWorkState::
             ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION;
+    if (fusion_objs_num > 0) {
+      int id = 0;
+      bool find_veh_flag = false;
+      for (int i = 0; i < fusion_objs_num; i++) {
+        if (fusion_objs[i].common_info.type > 2 &&
+            fusion_objs[i].common_info.type < 9) {
+          find_veh_flag = true;
+          id = fusion_objs->common_info.id;
+
+          break;
+        } else {
+          continue;
+        }
+      }
+      if (find_veh_flag == true) {
+        GetContext.mutable_output_info()
+            ->elk_output_info_.elk_risk_obj_.obj_valid = true;
+        GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.id =
+            id;
+      }
+    }
   } else if (GetContext.get_param()->hmi_elk_state == 5) {
     GetContext.mutable_output_info()->elk_output_info_.elk_state_ =
         iflyauto::ELKFunctionFSMWorkState::
             ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
+
+    if (fusion_objs_num > 0) {
+      int id = 0;
+      bool find_veh_flag = false;
+      for (int i = 0; i < fusion_objs_num; i++) {
+        if (fusion_objs[i].common_info.type > 2 &&
+            fusion_objs[i].common_info.type < 9) {
+          find_veh_flag = true;
+          id = fusion_objs->common_info.id;
+
+          break;
+        } else {
+          continue;
+        }
+      }
+      if (find_veh_flag == true) {
+        GetContext.mutable_output_info()
+            ->elk_output_info_.elk_risk_obj_.obj_valid = true;
+        GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.id =
+            id;
+      }
+
+    } else {
+      GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.id = 0;
+      GetContext.mutable_output_info()
+          ->elk_output_info_.elk_risk_obj_.obj_valid = false;
+    }
+
   } else {
     GetContext.mutable_output_info()->elk_output_info_.elk_state_ = iflyauto::
         ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+    GetContext.mutable_output_info()->elk_output_info_.elk_risk_obj_.obj_valid =
+        false;
   }
+
   if (GetContext.get_output_info()->elk_output_info_.elk_state_ ==
       iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
@@ -473,8 +563,8 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE("state_yaw_rate", GetContext.get_state_info()->yaw_rate);
   JSON_DEBUG_VALUE("state_yaw_rate_observer",
                    GetContext.get_state_info()->yaw_rate_observer);
-  JSON_DEBUG_VALUE("state_yaw_rate_loc",
-                   GetContext.get_state_info()->yaw_rate_loc);
+//   JSON_DEBUG_VALUE("state_yaw_rate_loc",
+//                    GetContext.get_state_info()->yaw_rate_loc);
   JSON_DEBUG_VALUE("state_left_departure_speed",
                    GetContext.get_state_info()->veh_left_departure_speed);
   JSON_DEBUG_VALUE("state_right_departure_speed",
@@ -496,12 +586,25 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE(
       "road_right_sideway_exist_flag",
       GetContext.get_road_info()->current_lane.right_sideway_exist_flag);
-  JSON_DEBUG_VALUE("road_left_departure_permission_flag",
-                   GetContext.get_road_info()
-                       ->current_lane.left_safe_departure_permission_flag);
-  JSON_DEBUG_VALUE("road_right_departure_permission_flag",
-                   GetContext.get_road_info()
-                       ->current_lane.right_safe_departure_permission_flag);
+  //   JSON_DEBUG_VALUE("road_left_departure_permission_flag",
+  //                    GetContext.get_road_info()
+  //                        ->current_lane.left_safe_departure_permission_flag);
+  //   JSON_DEBUG_VALUE("road_right_departure_permission_flag",
+  //                    GetContext.get_road_info()
+  //                        ->current_lane.right_safe_departure_permission_flag);
+  JSON_DEBUG_VALUE(
+      "road_left_parallel_car_flag",
+      GetContext.get_road_info()->current_lane.left_parallel_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_right_parallel_car_flag",
+      GetContext.get_road_info()->current_lane.right_parallel_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_right_front_car_flag",
+      GetContext.get_road_info()->current_lane.right_front_car_flag);
+  JSON_DEBUG_VALUE(
+      "road_left_front_car_flag",
+      GetContext.get_road_info()->current_lane.left_front_car_flag);
+
   /*left*/
   JSON_DEBUG_VALUE(
       "road_left_line_boundary_type",
@@ -698,6 +801,28 @@ void AdasFunction::Log(void) {
           GetContext.get_objs_info()->objs_selected.rr_objs.vehicle_info);
     }
     JSON_DEBUG_VECTOR("obj_rr_obj_loc_vec", obj_corner_vector, 2);
+
+    JSON_DEBUG_VALUE("road_left_roadedge_c0",
+                     GetContext.get_road_info()->current_lane.left_roadedge.c0);
+    JSON_DEBUG_VALUE("road_left_roadedge_c1",
+                     GetContext.get_road_info()->current_lane.left_roadedge.c1);
+    JSON_DEBUG_VALUE("road_left_roadedge_c2",
+                     GetContext.get_road_info()->current_lane.left_roadedge.c2);
+    JSON_DEBUG_VALUE("road_left_roadedge_c3",
+                     GetContext.get_road_info()->current_lane.left_roadedge.c3);
+
+    JSON_DEBUG_VALUE(
+        "road_right_roadedge_c0",
+        GetContext.get_road_info()->current_lane.right_roadedge.c0);
+    JSON_DEBUG_VALUE(
+        "road_right_roadedge_c1",
+        GetContext.get_road_info()->current_lane.right_roadedge.c1);
+    JSON_DEBUG_VALUE(
+        "road_right_roadedge_c2",
+        GetContext.get_road_info()->current_lane.right_roadedge.c2);
+    JSON_DEBUG_VALUE(
+        "road_right_roadedge_c3",
+        GetContext.get_road_info()->current_lane.right_roadedge.c3);
   }
   // adas debug info
 

@@ -40,6 +40,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   is_enu_to_car = global_var.get_value('is_enu_to_car')
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
+  is_vis_sdpromap = global_var.get_value('is_vis_sdpromap')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   car_type = global_var.get_value('car_type')
   car_xb, car_yb = load_car_params_patch(car_type)
@@ -75,6 +76,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ctrl_debug_msg, ctrl_debug_json_msg = [], []
   ehr_static_map_msg = find_nearest(bag_loader.ehr_static_map_msg, bag_time)
   ehr_sd_map_msg = find_nearest(bag_loader.ehr_sd_map_msg, bag_time)
+  ehr_sdpro_map_msg = find_nearest(bag_loader.ehr_sdpro_map_msg, bag_time)
   ground_line_msg = find_nearest(bag_loader.fus_ground_line_msg, bag_time)
   planning_hmi_msg = find_nearest(bag_loader.planning_hmi_msg, bag_time)
   rdg_lane_lines_msg = find_nearest(bag_loader.rdg_lane_lines_msg, bag_time)
@@ -1432,6 +1434,47 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'data_sdmap_outlink_y': sdmap_road_line_info['outlinek_y_vec']
     })
 
+  # 加载sdpromap info
+  if is_vis_sdpromap and bag_loader.ehr_sdpro_map_msg['enable'] == True:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+
+    sdpromap_road_line_info = load_sdpro_map_segments(ehr_sdpro_map_msg.link_info.links, ehr_sdpro_map_msg.route.route_links,
+                                          cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
+    local_view_data['data_sdpromap_road_line'].data.update({
+      'data_sdpromap_road_line_x': sdpromap_road_line_info['sdpromap_road_line_x_vec'],
+      'data_sdpromap_road_line_y': sdpromap_road_line_info['sdpromap_road_line_y_vec'],
+      'sdpromap_road_info_vec': sdpromap_road_line_info['sdpromap_road_info']
+    })
+    #注：sdpromap_road_info_vec的长度必须与data_sdpromap_road_line_x的长度相等
+    local_view_data['data_sdpromap_ramp_line'].data.update({
+      'data_sdpromap_ramp_line_x': sdpromap_road_line_info['sdpromap_ramp_line_x_vec'],
+      'data_sdpromap_ramp_line_y': sdpromap_road_line_info['sdpromap_ramp_line_y_vec']
+    })
+    local_view_data['data_sdpromap_inlink'].data.update({
+      'data_sdpromap_inlink_x': sdpromap_road_line_info['inlinek_x_vec'],
+      'data_sdpromap_inlink_y': sdpromap_road_line_info['inlinek_y_vec'],
+      'inlink_info': sdpromap_road_line_info['load_inlink_info']
+    })
+    local_view_data['data_sdpromap_outlink'].data.update({
+      'data_sdpromap_outlink_x': sdpromap_road_line_info['outlinek_x_vec'],
+      'data_sdpromap_outlink_y': sdpromap_road_line_info['outlinek_y_vec'],
+      'outlink_info': sdpromap_road_line_info['load_outlink_info']
+    })
+    local_view_data['data_sdpromap_other_road'].data.update({
+      'data_sdpromap_other_road_x': sdpromap_road_line_info['sdpromap_expressway_line_x_vec'],
+      'data_sdpromap_other_road_y': sdpromap_road_line_info['sdpromap_expressway_line_y_vec']
+    })
+    # local_view_data['data_sdpromap_road_line'].data.update({
+    #   'sdpromap_road_info_vec': sdpromap_road_line_info['sdpromap_road_info']
+    # })
+    local_view_data['data_sdpromap_FP_vec'].data.update({
+      'data_sdpromap_FP_vec_x': sdpromap_road_line_info['data_sdpromap_FP_x_vec'],
+      'data_sdpromap_FP_vec_y': sdpromap_road_line_info['data_sdpromap_FP_y_vec'],
+      'data_sdpromap_FP_info_vec': sdpromap_road_line_info['data_sdpromap_FP_info']
+    })
+
   # 加载ehr_static_map
   if bag_loader.ehr_static_map_msg['enable'] == True:
     if bag_loader.plan_debug_msg['enable'] == False:
@@ -1812,6 +1855,7 @@ def load_measure_distance_tool(fig):
 def load_local_view_figure():
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
+  is_vis_sdpromap = global_var.get_value('is_vis_sdpromap')
   is_vis_hpp = global_var.get_value('is_vis_hpp')
   is_vis_radar = global_var.get_value('is_vis_radar')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
@@ -1967,6 +2011,15 @@ def load_local_view_figure():
     data_sdmap_ramp_line = ColumnDataSource(data = {'data_sdmap_ramp_line_y':[], 'data_sdmap_ramp_line_x':[]})
     data_sdmap_inlink = ColumnDataSource(data = {'data_sdmap_inlink_y':[], 'data_sdmap_inlink_x':[]})
     data_sdmap_outlink = ColumnDataSource(data = {'data_sdmap_outlink_y':[], 'data_sdmap_outlink_x':[]})
+
+  ## add plot sdpromap info
+  if is_vis_sdpromap:
+    data_sdpromap_road_line = ColumnDataSource(data = {'data_sdpromap_road_line_y':[], 'data_sdpromap_road_line_x':[],'sdpromap_road_info_vec':[]})
+    data_sdpromap_ramp_line = ColumnDataSource(data = {'data_sdpromap_ramp_line_y':[], 'data_sdpromap_ramp_line_x':[]})
+    data_sdpromap_inlink = ColumnDataSource(data = {'data_sdpromap_inlink_y':[], 'data_sdpromap_inlink_x':[], 'inlink_info':[]})
+    data_sdpromap_outlink = ColumnDataSource(data = {'data_sdpromap_outlink_y':[], 'data_sdpromap_outlink_x':[], 'outlink_info':[]})
+    data_sdpromap_other_road = ColumnDataSource(data = {'data_sdpromap_other_road_y':[], 'data_sdpromap_other_road_x':[]})
+    data_sdpromap_FP_vec = ColumnDataSource(data = {'data_sdpromap_FP_vec_y':[], 'data_sdpromap_FP_vec_x':[], 'data_sdpromap_FP_info_vec':[]})
 
   data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[], 'center_line_0_id':[], 'center_line_0_s':[], 'center_line_0_k':[], 'center_line_0_confidence':[]})
   data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[], 'center_line_1_id':[], 'center_line_1_s':[], 'center_line_1_k':[], 'center_line_1_confidence':[]})
@@ -2211,6 +2264,7 @@ def load_local_view_figure():
                 'ehr_static_map_msg_idx': 0,
                 'planning_hmi_msg_idx': 0,
                 'ehr_sd_map_msg_idx': 0,
+                'ehr_sdpro_map_msg_idx': 0,
                }
 
   data_msg = {'plan_msg': None,
@@ -2429,6 +2483,15 @@ def load_local_view_figure():
     local_view_data ["data_sdmap_inlink"] = data_sdmap_inlink
     local_view_data ["data_sdmap_outlink"] = data_sdmap_outlink
 
+  if is_vis_sdpromap:
+    local_view_data ["data_sdpromap_road_line"] = data_sdpromap_road_line
+    local_view_data ["data_sdpromap_ramp_line"] = data_sdpromap_ramp_line
+    local_view_data ["data_sdpromap_inlink"] = data_sdpromap_inlink
+    local_view_data ["data_sdpromap_outlink"] = data_sdpromap_outlink
+    local_view_data ["data_sdpromap_other_road"] = data_sdpromap_other_road
+    local_view_data ["data_sdpromap_FP_vec"] = data_sdpromap_FP_vec
+
+
   ### figures config
   fig1 = bkp.figure(x_axis_label='y', y_axis_label='x', width=1000, height=1350, match_aspect = True, aspect_scale=1)
   fig1.background_fill_color = 'lightgray'
@@ -2544,6 +2607,14 @@ def load_local_view_figure():
     fig1.circle('data_sdmap_ramp_line_y', 'data_sdmap_ramp_line_x', source = data_sdmap_ramp_line, radius = 0.3, fill_color="red", line_color='red', legend_label = 'ramp_segment')
     fig1.circle('data_sdmap_inlink_y', 'data_sdmap_inlink_x', source = data_sdmap_inlink, radius = 0.3, fill_color="green", line_color='green', legend_label = 'inlink_segment')
     fig1.circle('data_sdmap_outlink_y', 'data_sdmap_outlink_x', source = data_sdmap_outlink, radius = 0.3, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
+  if is_vis_sdpromap:
+    sdpromap_line_info = fig1.line('data_sdpromap_road_line_y','data_sdpromap_road_line_x',source = data_sdpromap_road_line, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'sdpromap_road_line')
+    fig1.circle('data_sdpromap_road_line_y','data_sdpromap_road_line_x',source = data_sdpromap_road_line, radius = 0.75, fill_color = 'black', line_color='black', legend_label = 'road_point')
+    fig1.circle('data_sdpromap_other_road_y','data_sdpromap_other_road_x',source = data_sdpromap_other_road, radius = 0.75, fill_color = 'black', line_color='red', line_width = 1, legend_label = 'expewsswy_point')
+    fig1.circle('data_sdpromap_ramp_line_y', 'data_sdpromap_ramp_line_x', source = data_sdpromap_ramp_line, radius = 0.75, fill_color="red", line_color='red', legend_label = 'ramp_segment')
+    inlink_info = fig1.circle('data_sdpromap_inlink_y', 'data_sdpromap_inlink_x', source = data_sdpromap_inlink, radius = 0.5, fill_color="green", line_color='green', legend_label = 'inlink_segment')
+    outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
+    feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
   fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
@@ -2670,6 +2741,15 @@ def load_local_view_figure():
   hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
   hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
   hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
+  if is_vis_sdpromap:
+    hover1_12 = HoverTool(renderers=[sdpromap_line_info], tooltips=[('sdpromap_road_info', '@sdpromap_road_info_vec')])
+    fig1.add_tools(hover1_12)
+    hover1_13 = HoverTool(renderers=[feature_point_info], tooltips=[('data_sdpromap_FP_info', '@data_sdpromap_FP_info_vec')])
+    fig1.add_tools(hover1_13)
+    hover1_14 = HoverTool(renderers=[inlink_info], tooltips=[('load_inlink_info', '@inlink_info')])
+    fig1.add_tools(hover1_14)
+    hover1_15 = HoverTool(renderers=[outlink_info], tooltips=[('load_outlink_info', '@outlink_info')])
+    fig1.add_tools(hover1_15)
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)

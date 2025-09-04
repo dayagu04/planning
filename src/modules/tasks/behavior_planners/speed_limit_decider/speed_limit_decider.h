@@ -49,7 +49,11 @@ class SpeedLimitDecider : public Task {
 
   void CalculateSpeedLimitFromTFLDis();
 
+  void CalculateSpeedLimitForDangerousObstacle();
+
   void CalculateAvoidAgentSpeedLimit();
+
+  void CalculateFunctionFadingAwaySpeedLimit();
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
@@ -65,6 +69,8 @@ class SpeedLimitDecider : public Task {
   double v_target_;                      // final v target
   SpeedLimitType v_target_type_;         // final v target type
   double v_avoid_hold_ = 0.0;
+  pnc::filters::SlopeFilter vel_slope_filter_function_fading_away_;
+  double last_vel_function_fading_away_;
 
   // used in intersection speed limit
   planning::common::IntersectionState last_intersection_state_ =
@@ -72,6 +78,11 @@ class SpeedLimitDecider : public Task {
   planning::common::IntersectionState current_intersection_state_ =
       planning::common::UNKNOWN;
   double v_limit_with_intersection_ = 0.0;
+
+  double v_limit_for_dangerous_obstacle_ = 0.0;
+  bool is_function_fading_away_ = false;
+  iflyauto::RequestReason request_reason_ =
+      iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
 };
 
 }  // namespace planning

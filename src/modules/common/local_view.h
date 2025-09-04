@@ -4,6 +4,7 @@
 
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
+#include "map_data.pb.h"
 #include "planning_intf.h"
 // #include "ifly_parking_map.pb.h"
 #include "func_state_machine_c.h"
@@ -73,8 +74,15 @@ struct LocalView {
 
   SdMapSwtx::SdMap sd_map_info;
   double sd_map_info_recv_time = 0.0;
+
+  iflymapdata::sdpro::MapData sdpro_map_info;
+  double sdpro_map_info_recv_time = 0.0;
+
   iflyauto::CameraPerceptionTsrInfo perception_tsr_info;
   double perception_tsr_info_recv_time = 0.0;
+
+  iflyauto::CameraPerceptionScene perception_scene_info;
+  double perception_scene_info_recv_time = 0.0;
 
   // IFLYParkingMap::ParkingInfo parking_map_info;
   // double parking_map_info_recv_time = 0.0;

@@ -136,7 +136,8 @@ bool PlanningAdapter::Proc() {
     is_localization_msg_updated_.store(false);
   }
   input_topic_timestamp->set_localization(
-      local_view_ptr_->localization.msg_header.stamp);// 2.10.0 localization adapt
+      local_view_ptr_->localization.msg_header
+          .stamp);  // 2.10.0 localization adapt
   input_topic_latency->set_localization(
       get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
 
@@ -322,6 +323,17 @@ bool PlanningAdapter::Proc() {
   input_topic_latency->set_sd_map(get_latency(
       start_time, local_view_ptr_->sd_map_info.header().timestamp()));
 
+  if (is_sdpro_map_info_msg_updated_) {
+    std::lock_guard<std::mutex> lock(sdpro_map_info_msg_mutex_);
+    local_view_ptr_->sdpro_map_info = sdpro_map_info_msg_;
+    local_view_ptr_->sdpro_map_info_recv_time = sdpro_map_info_msg_recv_time_;
+    is_sdpro_map_info_msg_updated_.store(false);
+  }
+  input_topic_timestamp->set_sdpro_map(
+      local_view_ptr_->sdpro_map_info.header().timestamp());
+  input_topic_latency->set_sdpro_map(get_latency(
+      start_time, local_view_ptr_->sdpro_map_info.header().timestamp()));
+
   // 1.13 receive parking_map
   //   if (is_parking_map_info_msg_updated_) {
   //     std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);
@@ -346,6 +358,20 @@ bool PlanningAdapter::Proc() {
       local_view_ptr_->perception_tsr_info.msg_header.stamp);
   input_topic_latency->set_perception_tsr(get_latency(
       start_time, local_view_ptr_->perception_tsr_info.msg_header.stamp));
+
+  // xlwei5 not done
+  if (is_perception_scene_msg_updated_) {
+    std::lock_guard<std::mutex> lock(perception_scene_msg_mutex_);
+    local_view_ptr_->perception_scene_info = perception_scene_msg_;
+    local_view_ptr_->perception_scene_info_recv_time =
+        perception_scene_msg_recv_time_;
+    is_perception_scene_msg_updated_.store(false);
+  }
+
+  input_topic_timestamp->set_perception_scene(
+      local_view_ptr_->perception_scene_info.msg_header.stamp);
+  input_topic_latency->set_perception_scene(get_latency(
+      start_time, local_view_ptr_->perception_scene_info.msg_header.stamp));
 
   if (is_fusion_speed_bump_msg_updated_) {
     std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);
@@ -451,6 +477,8 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->prediction_result.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->prediction_result.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
@@ -459,9 +487,13 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   if (IsSwitchApaState(state_machine.current_state)) {
     msg_meta.input_list[input_list_count].seq =
         local_view_ptr_->parking_fusion_info.msg_header.seq;
+    msg_meta.input_list[input_list_count].stamp =
+        local_view_ptr_->parking_fusion_info.msg_header.stamp;
   } else {
     msg_meta.input_list[input_list_count].seq =
         local_view_ptr_->road_info.msg_header.seq;
+    msg_meta.input_list[input_list_count].stamp =
+        local_view_ptr_->road_info.msg_header.stamp;
   }
   input_list_count += 1;
 
@@ -469,60 +501,96 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->localization.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->localization.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->fusion_objects_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->fusion_objects_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICES;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->vehicle_service_output_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->vehicle_service_output_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->control_output.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->control_output.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->hmi_inner_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->hmi_inner_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->function_state_machine_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->function_state_machine_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_WAVE;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->uss_wave_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->uss_wave_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->uss_percept_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->uss_percept_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->static_map_info.header().seq();
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->static_map_info.header().timestamp();
   input_list_count += 1;
 
   msg_meta.input_list[input_list_count].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
   msg_meta.input_list[input_list_count].seq =
       local_view_ptr_->sd_map_info.header().seq();
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->sd_map_info.header().timestamp();
+  input_list_count += 1;
+
+  msg_meta.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+  msg_meta.input_list[input_list_count].seq =
+      local_view_ptr_->perception_tsr_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->perception_tsr_info.msg_header.stamp;
+  input_list_count += 1;
+
+  msg_meta.input_list[input_list_count].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+  msg_meta.input_list[input_list_count].seq =
+      local_view_ptr_->perception_scene_info.msg_header.seq;
+  msg_meta.input_list[input_list_count].stamp =
+      local_view_ptr_->perception_scene_info.msg_header.stamp;
   input_list_count += 1;
 
   msg_meta.input_list_size = input_list_count;

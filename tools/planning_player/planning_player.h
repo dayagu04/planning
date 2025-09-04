@@ -119,6 +119,7 @@ class PlanningPlayer {
   uint64_t planning_dubug_info_header_time_us_ = 0;
   uint64_t input_time_list_map_ = 0;
   uint64_t input_time_list_sd_map_ = 0;
+  uint64_t input_time_list_sdpro_map_ = 0;
   // uint64_t input_time_list_ehr_parking_map_ = 0;
   uint64_t input_time_list_road_fusion_ = 0;
   uint64_t planning_start_timestamp_ = 0;

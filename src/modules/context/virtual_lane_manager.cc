@@ -55,7 +55,8 @@ constexpr double kEpsilon = 1.0e-4;
 
 VirtualLaneManager::VirtualLaneManager(
     const EgoPlanningConfigBuilder* config_builder,
-    planning::framework::Session* session): session_(session), ego_lane_track_manager_(config_builder, session){
+    planning::framework::Session* session)
+    : session_(session), ego_lane_track_manager_(config_builder, session) {
   SetConfig(config_builder);
 }
 
@@ -816,12 +817,19 @@ bool VirtualLaneManager::update(
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      route_info->UpdateMLCInfoDecider(relative_id_lanes_);
-      for (const auto& relative_id_lane : relative_id_lanes_) {
-        relative_id_lane->update_lane_tasks(
-            route_info->get_route_info_output());
+      if (route_info_output_.map_vendor ==
+          iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+        route_info->UpdateMLCInfoDecider(relative_id_lanes_);
+        for (const auto& relative_id_lane : relative_id_lanes_) {
+          relative_id_lane->update_lane_tasks(
+              route_info->get_route_info_output());
+        }
+      } else {
+        route_info->UpdateMLCInfoDeciderBaseTencent(relative_id_lanes_);
       }
     }
+  } else {
+    route_info->ResetMLCInfoDecider();
   }
 
   // 9.计算自车到停止线的距离
@@ -1047,12 +1055,19 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
         route_info_output_.distance_to_route_end <
             cancel_mlc_dis_threshold_to_route_end;
     if (!is_inhibitory_noa_task) {
-      route_info->UpdateMLCInfoDecider(relative_id_lanes_);
-      for (const auto& relative_id_lane : relative_id_lanes_) {
-        relative_id_lane->update_lane_tasks(
-            route_info->get_route_info_output());
+      if (route_info_output_.map_vendor ==
+          iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+        route_info->UpdateMLCInfoDecider(relative_id_lanes_);
+        for (const auto& relative_id_lane : relative_id_lanes_) {
+          relative_id_lane->update_lane_tasks(
+              route_info->get_route_info_output());
+        }
+      } else {
+        route_info->UpdateMLCInfoDeciderBaseTencent(relative_id_lanes_);
       }
     }
+  } else {
+    route_info->ResetMLCInfoDecider();
   }
   // 更新route的可视化信息
   route_info->UpdateVisionInfo();
@@ -1066,7 +1081,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 11.更新路口状态
   UpdateIntersectionState();
 
-  ILOG_DEBUG << "input lane";
+  // 12.获取自车车头位置的车道方向属性
+  UpdateEgoCurrentPoseLaneMark();
+
+  LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info =
@@ -1316,7 +1334,7 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
   if (stop_line.type == iflyauto::LANE_LINE_TYPE_STOPLINE) {
     if (location_valid) {
       const auto& ego_state =
-        session_->environmental_model().get_ego_state_manager();
+          session_->environmental_model().get_ego_state_manager();
       Point2D ego_cart(ego_state->ego_pose().x, ego_state->ego_pose().y);
 
       const auto frenet_coord = current_lane_->get_lane_frenet_coord();
@@ -1333,11 +1351,13 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
           }
         }
         auto compare_y = [&](Point2D p1, Point2D p2) { return p1.y < p2.y; };
-        std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(), compare_y);
+        std::sort(stop_line_points_vec.begin(), stop_line_points_vec.end(),
+                  compare_y);
         int idx = -1;
         for (int i = 0; i < stop_line_points_vec.size() - 1; i++) {
           if (stop_line_points_vec[i].y < 0.0 &&
-              stop_line_points_vec[i + 1].y > 0.0 && stop_line_points_vec[i + 1].y < 100.0) {
+              stop_line_points_vec[i + 1].y > 0.0 &&
+              stop_line_points_vec[i + 1].y < 100.0) {
             idx = i;
             break;
           }
@@ -1346,10 +1366,12 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
           double ego_s = 0.0;
           double ego_l = 0.0;
           if (frenet_coord->XYToSL(ego_cart.x, ego_cart.y, &ego_s, &ego_l)) {
-            ego_to_stopline_dis = (stop_line_points_vec[idx].x + stop_line_points_vec[idx + 1].x) / 2.0 - ego_s;
+            ego_to_stopline_dis = (stop_line_points_vec[idx].x +
+                                   stop_line_points_vec[idx + 1].x) /
+                                      2.0 -
+                                  ego_s;
           }
         }
-
       }
     } else {
       std::vector<iflyauto::Point2f> stop_line_points_vec;
@@ -1375,7 +1397,7 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
         planning::planning_math::Vec2d p_left(stop_line_points_vec[idx].x,
                                               stop_line_points_vec[idx].y);
         planning::planning_math::Vec2d p_right(stop_line_points_vec[idx + 1].x,
-                                              stop_line_points_vec[idx + 1].y);
+                                               stop_line_points_vec[idx + 1].y);
         planning::planning_math::LineSegment2d line_seg(p_left, p_right);
         int id = 0;
         planning::StopLine lane_stop_line = planning::StopLine(id, line_seg);
@@ -1383,7 +1405,6 @@ bool VirtualLaneManager::UpdateEgoDistanceToStopline() {
             lane_stop_line.RawDistanceTo(planning::planning_math::Vec2d(0, 0));
         ego_to_stopline_dis = -1.0 * raw_dis;
       }
-
     }
   }
   stopline_window_.pop_front();
@@ -1415,13 +1436,13 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
       if (location_valid) {
         cw_pts.resize(cross_walk.local_ground_marking_points_set_size);
         for (int idx = 0; idx < cross_walk.local_ground_marking_points_set_size;
-            idx++) {
+             idx++) {
           cw_pts[idx] = cross_walk.local_ground_marking_points_set[idx];
         }
       } else {
         cw_pts.resize(cross_walk.ground_marking_points_set_size);
         for (int idx = 0; idx < cross_walk.ground_marking_points_set_size;
-            idx++) {
+             idx++) {
           cw_pts[idx] = cross_walk.ground_marking_points_set[idx];
         }
       }
@@ -1452,8 +1473,8 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
         std::sort(cw_frenet_pt_vec.begin(), cw_frenet_pt_vec.end(), compare_y);
         int idx = -1;
         for (int i = 0; i < cw_frenet_pt_vec.size() - 1; i++) {
-          if (cw_frenet_pt_vec[i].y < 0.0 && cw_frenet_pt_vec[i + 1].y > 0.0
-              && cw_frenet_pt_vec[i + 1].y < 100.0) {
+          if (cw_frenet_pt_vec[i].y < 0.0 && cw_frenet_pt_vec[i + 1].y > 0.0 &&
+              cw_frenet_pt_vec[i + 1].y < 100.0) {
             idx = i;
             break;
           }
@@ -1480,7 +1501,6 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
         } else {
           continue;
         }
-
       }
     }
   } else {
@@ -1510,7 +1530,8 @@ bool VirtualLaneManager::UpdateEgoDistanceToCrosswalk(
             pos_l_min_s = cw_pt_vec[i].x;
           }
         }
-        cw_idx_dis_vec.push_back(std::make_pair(j, 0.5 * (neg_l_min_s + pos_l_min_s)));
+        cw_idx_dis_vec.push_back(
+            std::make_pair(j, 0.5 * (neg_l_min_s + pos_l_min_s)));
       } else {
         continue;
       }
@@ -1903,4 +1924,129 @@ std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
   }
   return nullptr;
 }
+
+void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
+  const auto& ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& ego_vehi_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_rear_axle_to_front_edge =
+      ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle;
+  ego_currrent_pos_lane_has_straight_attributes_ = true;
+
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_manager->get_current_lane();
+
+  static size_t cur_lane_mark_count = 0;
+  static bool init_flag = true;
+  static int default_value_debug = std::numeric_limits<int>::max();
+
+  if (!current_lane) {
+    lane_mark_at_ego_front_edge_pos_current_ = iflyauto::LaneDrivableDirection::
+        LaneDrivableDirection_DIRECTION_UNKNOWN;
+    LOG_ERROR("current lane is nullptr, return from virtual lane manager\n");
+    JSON_DEBUG_VALUE("cur_lane_mark_plan", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_origin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_begin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_end", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_ego_s", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_ego_front_edge_s", default_value_debug)
+    return;
+  }
+
+  const auto cur_lane_ego_s = current_lane->get_ego_longit_s();
+  const double cur_lane_ego_front_edge_s =
+      cur_lane_ego_s + ego_rear_axle_to_front_edge;
+  JSON_DEBUG_VALUE("cur_lane_ego_s", cur_lane_ego_s)
+  JSON_DEBUG_VALUE("cur_lane_ego_front_edge_s", cur_lane_ego_front_edge_s)
+
+  const auto& cur_lane_marks = current_lane->lane_marks();
+  if (cur_lane_marks.empty()) {
+    lane_mark_at_ego_front_edge_pos_current_ = iflyauto::LaneDrivableDirection::
+        LaneDrivableDirection_DIRECTION_UNKNOWN;
+    LOG_DEBUG(
+        "current lane marks is empty, return from virtual lane manager\n");
+    JSON_DEBUG_VALUE("cur_lane_mark_plan", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_origin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_begin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_end", default_value_debug)
+    return;
+  }
+
+  std::map<float64, iflyauto::LaneMarkMsg> lane_mark_begin_s_lane_mark_map;
+  for (const auto& lane_mark : cur_lane_marks) {
+    lane_mark_begin_s_lane_mark_map.emplace(lane_mark.begin, lane_mark);
+  }
+  lane_mark_begin_s_lane_mark_map.emplace(cur_lane_ego_front_edge_s,
+                                          iflyauto::LaneMarkMsg{});
+  auto ego_front_edge_s_on_lane_marks_pos =
+      lane_mark_begin_s_lane_mark_map.find(cur_lane_ego_front_edge_s);
+  if (ego_front_edge_s_on_lane_marks_pos ==
+      lane_mark_begin_s_lane_mark_map.begin()) {
+    lane_mark_at_ego_front_edge_pos_current_ = iflyauto::LaneDrivableDirection::
+        LaneDrivableDirection_DIRECTION_UNKNOWN;
+    LOG_DEBUG(
+        "ego_s on lane marks pos is the first one, return from virtual lane "
+        "manager\n");
+    JSON_DEBUG_VALUE("cur_lane_mark_plan", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_origin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_begin", default_value_debug)
+    JSON_DEBUG_VALUE("cur_lane_mark_end", default_value_debug)
+    return;
+  }
+  --ego_front_edge_s_on_lane_marks_pos;
+  const auto cur_lane_mark_origin =
+      (ego_front_edge_s_on_lane_marks_pos->second).lane_mark;
+  if (init_flag) {
+    lane_mark_at_ego_front_edge_pos_current_ = cur_lane_mark_origin;
+    init_flag = false;
+    cur_lane_mark_count = 0;
+  } else {
+    if (lane_mark_at_ego_front_edge_pos_current_ != cur_lane_mark_origin &&
+        cur_lane_mark_count < 3) {
+      ++cur_lane_mark_count;
+    } else if (lane_mark_at_ego_front_edge_pos_current_ !=
+                   cur_lane_mark_origin &&
+               cur_lane_mark_count >= 3) {
+      lane_mark_at_ego_front_edge_pos_current_ = cur_lane_mark_origin;
+      cur_lane_mark_count = 0;
+    } else if (lane_mark_at_ego_front_edge_pos_current_ ==
+               cur_lane_mark_origin) {
+      cur_lane_mark_count = 0;
+    }
+  }
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+      turning_directions_set = {
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT,
+          iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_UTURN,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT_UTURN,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURNLEFT_RIGHT};
+
+  ego_currrent_pos_lane_has_straight_attributes_ =
+      turning_directions_set.find(lane_mark_at_ego_front_edge_pos_current_) ==
+      turning_directions_set.end();
+
+  JSON_DEBUG_VALUE("cur_lane_mark_plan",
+                   static_cast<int>(lane_mark_at_ego_front_edge_pos_current_))
+  JSON_DEBUG_VALUE("cur_lane_mark_origin",
+                   static_cast<int>(cur_lane_mark_origin))
+  JSON_DEBUG_VALUE("cur_lane_mark_begin",
+                   (ego_front_edge_s_on_lane_marks_pos->second).begin)
+  JSON_DEBUG_VALUE("cur_lane_mark_end",
+                   (ego_front_edge_s_on_lane_marks_pos->second).end)
+}
+
 }  // namespace planning

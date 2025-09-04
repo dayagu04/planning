@@ -38,7 +38,8 @@ class ParkSpeedLimitDecider : public ParkingTask {
    * [out]: path,speed_decisions;
    */
   void Execute(std::vector<pnc::geometry_lib::PathPoint>& path,
-               SpeedDecisions* speed_decisions);
+               SpeedDecisions* speed_decisions,
+               const ParkingSpeedMode& park_speed_mode);
 
   // Get minimum speed limit decision
   const ParkLonDecision* GetSpeedLimitDecisionBySRange(

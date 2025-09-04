@@ -161,17 +161,15 @@ void EgoLaneTrackManger::TrackEgoLane(
         return;
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-        if (is_ego_on_expressway_ && zero_relative_id_nums >= 2
-            &&!is_in_lane_borrow_status
-            && ego_in_split_region_) {
-          bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
+        if (zero_relative_id_nums >= 2 &&!is_in_lane_borrow_status && ego_in_split_region_) {
+          bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
           ILOG_DEBUG << "EgoLaneTrackManger::is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation_;
 
           if (is_on_road_select_ramp_situation_ &&
               distance_to_first_road_split_ < dis_to_split_threshold &&
-              !is_leaving_ramp_ && lane_keep_status) {
+              lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
@@ -182,7 +180,7 @@ void EgoLaneTrackManger::TrackEgoLane(
             }
           }
 
-          bool is_in_ramp_select_split = CheckIfInRampSelectSplit(
+          bool is_in_ramp_select_split = CheckIfInRampSelectSplitForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_in_ramp_select_split_situation_ = is_in_ramp_select_split;
           ILOG_DEBUG << "EgoLaneTrackManger::is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation_;
@@ -209,6 +207,63 @@ void EgoLaneTrackManger::TrackEgoLane(
             }
           }
         }
+
+        // for sd_map
+        // if (is_ego_on_expressway_ && zero_relative_id_nums >= 2
+        //     &&!is_in_lane_borrow_status
+        //     && ego_in_split_region_) {
+        //   bool is_on_road_select_ramp = CheckIfInRoadSelectRamp(
+        //       relative_id_lanes, order_ids_of_same_zero_relative_id);
+        //   is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
+        //   LOG_DEBUG(
+        //       "EgoLaneTrackManger::is_on_road_select_ramp_situation: %d \n",
+        //       is_on_road_select_ramp_situation_);
+
+        //   if (is_on_road_select_ramp_situation_ &&
+        //       distance_to_first_road_split_ < dis_to_split_threshold &&
+        //       !is_leaving_ramp_ && lane_keep_status) {
+        //     // hack::针对分流 感知未提供分汇流点信息 作如下后处理
+        //     PreprocessRoadSplit(relative_id_lanes,
+        //                         order_ids_of_same_zero_relative_id);
+        //     LOG_DEBUG("EgoLaneTrackManger::is_exist_ramp_on_road: %d \n",
+        //               is_exist_ramp_on_road_);
+
+        //     if (is_exist_ramp_on_road_) {
+        //       return;
+        //     }
+        //   }
+
+        //   bool is_in_ramp_select_split = CheckIfInRampSelectSplit(
+        //       relative_id_lanes, order_ids_of_same_zero_relative_id);
+        //   is_in_ramp_select_split_situation_ = is_in_ramp_select_split;
+        //   LOG_DEBUG(
+        //       "EgoLaneTrackManger::is_in_ramp_select_split_situation: %d \n",
+        //       is_in_ramp_select_split_situation_);
+        //   if (is_in_ramp_select_split_situation_ && lane_keep_status) {
+        //     //选择匝道上的分叉
+        //     PreprocessRampSplit(relative_id_lanes,
+        //                         order_ids_of_same_zero_relative_id);
+        //     LOG_DEBUG("EgoLaneTrackManger::is_exist_split_on_ramp: %d \n",
+        //               is_exist_split_on_ramp_);
+
+        //     if (is_exist_split_on_ramp_) {
+        //       return;
+        //     }
+        //   }
+
+        //   //处理高架快速路普通分流口
+        //   if (lane_keep_status) {
+        //     PreprocessOrdinarySplit(relative_id_lanes,
+        //                             order_ids_of_same_zero_relative_id,
+        //                             virtual_id_mapped_lane);
+        //     LOG_DEBUG(
+        //         "EgoLaneTrackManger::is_exist_split_on_expressway_: %d \n",
+        //         is_exist_split_on_expressway_);
+        //     if (is_exist_split_on_expressway_) {
+        //       return;
+        //     }
+        //   }
+        // }
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status
@@ -2173,6 +2228,84 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplit(
   return true;
 }
 
+
+bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
+    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<int>& order_ids) {
+  if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
+    LOG_DEBUG("CheckIfInRampSelectSplitForSdpro::sd_map is invalid!!!");
+    return false;
+  }
+  LOG_DEBUG("CheckIfInRampSelectSplitForSdpro::sd_map is valid");
+
+  if (order_ids.size() < 2) {
+    LOG_DEBUG("CheckIfInRampSelectSplitForSdpro::order_ids.size() < 2");
+    return false;
+  }
+
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double default_consider_lane_length = 150.0;
+  const double search_distance = 50.0;
+  const double max_heading_diff = M_PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
+
+  const auto& sdpro_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  // 获取当前的segment
+  double temp_nearest_s = 0;
+  double nearest_l = 0;
+
+    for (size_t i = 0; i < order_ids.size(); i++) {
+      if (relative_id_lanes.size() > order_ids[i]) {
+        std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
+        if (base_lane != nullptr) {
+          std::shared_ptr<KDPath> base_lane_frenet_crd =
+              base_lane->get_lane_frenet_coord();
+          if (base_lane_frenet_crd != nullptr) {
+            Point2D ego_cart_frenet_point;
+            double ego_s = 0.0;
+            if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                              ego_cart_frenet_point)) {
+              return false;
+            } else {
+              ego_s = ego_cart_frenet_point.x;
+            }
+            double target_s = std::min(ego_s + default_consider_lane_length,
+                                      base_lane_frenet_crd->Length());
+            planning_math::PathPoint ego_s_nearest_point =
+                base_lane_frenet_crd->GetPathPointByS(target_s);
+
+            ad_common::math::Vec2d segment_target_point;
+            segment_target_point.set_x(ego_s_nearest_point.x());
+            segment_target_point.set_y(ego_s_nearest_point.y());
+            double nearest_s = 0;
+            double nearest_l = 0;
+            const iflymapdata::sdpro::LinkInfo_Link* target_link =
+                sdpro_map.GetNearestLinkWithHeading(segment_target_point, search_distance,
+                                                    ego_heading_angle, max_heading_diff,
+                                            temp_nearest_s, nearest_l);
+            if (target_link != nullptr) {
+              if (!sdpro_map.isRamp(target_link->link_type())) {
+                return false;
+              }
+            }
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+
+  return true;
+}
+
 bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
     const std::vector<int>& order_ids) {
@@ -2244,6 +2377,98 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRamp(
         return false;
       }
     }
+  }
+
+  return false;
+}
+
+bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
+    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<int>& order_ids) {
+  if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
+    LOG_DEBUG("CheckIfInRoadSelectRampForSdpro::sd_map is invalid!!!");
+    return false;
+  }
+  LOG_DEBUG("CheckIfInRoadSelectRampForSdpro::sd_map is valid");
+
+  if (order_ids.size() < 2) {
+    LOG_DEBUG("CheckIfInRoadSelectRampForSdpro::order_ids.size() < 2");
+    return false;
+  }
+
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double default_consider_lane_length = 150.0;
+  const double search_distance = 50.0;
+  const double max_heading_diff = M_PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  Point2D ego_cart_point{plannig_init_point.lat_init_state.x(),
+                         plannig_init_point.lat_init_state.y()};
+
+  const auto& sdpro_map =
+      session_->environmental_model().get_route_info()->get_sdpro_map();
+  const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
+  // 获取当前的segment
+  ad_common::math::Vec2d current_point;
+  const auto& pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  double temp_nearest_s = 0;
+  double nearest_l = 0;
+
+  const iflymapdata::sdpro::LinkInfo_Link* current_link =
+      sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
+                                          ego_heading_angle, max_heading_diff,
+                                          temp_nearest_s, nearest_l);
+  if (current_link == nullptr) {
+    return false;
+  }
+  const bool current_is_on_ramp = sdpro_map.isRamp(current_link->link_type());
+  if (!current_is_on_ramp) {
+    for (size_t i = 0; i < order_ids.size(); i++) {
+      if (relative_id_lanes.size() > order_ids[i]) {
+        std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
+        if (base_lane != nullptr) {
+          std::shared_ptr<KDPath> base_lane_frenet_crd =
+              base_lane->get_lane_frenet_coord();
+          if (base_lane_frenet_crd != nullptr) {
+            Point2D ego_cart_frenet_point;
+            double ego_s = 0.0;
+            if (!base_lane_frenet_crd->XYToSL(ego_cart_point,
+                                              ego_cart_frenet_point)) {
+              return false;
+            } else {
+              ego_s = ego_cart_frenet_point.x;
+            }
+            double target_s = std::min(ego_s + default_consider_lane_length,
+                                      base_lane_frenet_crd->Length());
+            planning_math::PathPoint ego_s_nearest_point =
+                base_lane_frenet_crd->GetPathPointByS(target_s);
+
+            ad_common::math::Vec2d segment_target_point;
+            segment_target_point.set_x(ego_s_nearest_point.x());
+            segment_target_point.set_y(ego_s_nearest_point.y());
+            double nearest_s = 0;
+            double nearest_l = 0;
+            const iflymapdata::sdpro::LinkInfo_Link* next_link =
+                sdpro_map.GetNearestLinkWithHeading(segment_target_point, search_distance,
+                                                    ego_heading_angle, max_heading_diff,
+                                            temp_nearest_s, nearest_l);
+            if (next_link != nullptr) {
+              if (sdpro_map.isRamp(next_link->link_type())) {
+                return true;
+              }
+            }
+          } else {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   return false;
@@ -2350,7 +2575,7 @@ void EgoLaneTrackManger::ComputeZeroRelativeIdOrderIdIndex(
         if (s < target_ego_s) {
           continue;
         }
-        total_lateral_offset += lateral_offset;
+        total_lateral_offset += std::fabs(lateral_offset);
         point_nums += 1;
         if (point_nums >= kDefaultPointNums ||
             s > target_ego_s + kDefaultMappingConsiderLaneLength) {

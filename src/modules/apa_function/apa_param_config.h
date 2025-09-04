@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include "src/modules/common/speed/apa_speed_decision.h"
 
 #ifndef apa_param
 #define apa_param planning::apa_planner::ApaParametersSetting::GetInstance()
@@ -93,19 +94,24 @@ struct ParkingSpeedBound {
   double upper;
 };
 
-struct ParkingSpeedConfig {
-  bool enable_apa_speed_plan;
+struct SpeedModeParams {
   double default_cruise_speed;
-  double min_cruise_speed;
-  int apa_speed_mode;
-  double fast_cruise_speed;
-  double middle_cruise_speed;
-  double slow_cruise_speed;
-
   // If obs dist is smaller than this value, add speed limit.
   ParkingSpeedBound speed_limit_by_obs_dist;
   ParkingSpeedBound speed_limit_by_kappa;
   ParkingSpeedBound speed_limit_by_kappa_switch;
+};
+
+struct ParkingSpeedConfig {
+  bool enable_apa_speed_plan;
+  double min_cruise_speed;
+  double fast_cruise_speed;
+  double middle_cruise_speed;
+  double slow_cruise_speed;
+
+  SpeedModeParams fast_mode;
+  SpeedModeParams middle_mode;
+  SpeedModeParams slow_mode;
 
   // speed limit
   double path_thresh_for_acc_bound = 0.4;
@@ -120,6 +126,9 @@ struct ParkingSpeedConfig {
 
   double optimizer_time_limit = 0.4;
   bool use_remain_dist;
+
+  const SpeedModeParams &GetSpeedParams(
+      const ParkingSpeedMode &park_speed_mode) const;
 };
 
 struct UssConfig {

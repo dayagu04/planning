@@ -34,7 +34,8 @@ class DpSpeedOptimizer : public ParkingTask {
   void Excute(const std::vector<pnc::geometry_lib::PathPoint>& path,
               const Pose2D& ego_pose, const SVPoint& init_point,
               const SpeedDecisions* speed_decisions,
-              const SpeedLimitProfile* speed_limit_profile);
+              const SpeedLimitProfile* speed_limit_profile,
+              const ParkingSpeedMode& park_speed_mode);
 
   bool Init(const double path_length);
 
@@ -130,6 +131,8 @@ class DpSpeedOptimizer : public ParkingTask {
   SVGraphNode* end_node_;
 
   SpeedData speed_data_;
+
+  ParkingSpeedMode park_speed_mode_ = ParkingSpeedMode::FAST;
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -19,6 +19,7 @@ namespace planning {
 VirtualLane::VirtualLane() {}
 
 void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
+  reference_line_msg_ = lane;
   is_nearing_ramp_mlc_task_ = false;
   is_nearing_split_mlc_task_ = false;
   order_id_ = lane.order_id;
@@ -37,6 +38,10 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   lane_sources_.reserve(lane.lane_sources_size);
   for (int i = 0; i < lane.lane_sources_size; i++) {
     lane_sources_.emplace_back(lane.lane_sources[i]);
+  }
+  lane_nums_.reserve(lane.lane_num_size);
+  for (int i = 0; i < lane.lane_num_size; i++) {
+    lane_nums_.emplace_back(lane.lane_num[i]);
   }
   lane_merge_split_point_ = lane.lane_merge_split_point;
   left_lane_boundary_ = lane.left_lane_boundary;

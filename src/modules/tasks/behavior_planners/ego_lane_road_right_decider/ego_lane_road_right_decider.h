@@ -63,6 +63,7 @@ class EgoLaneRoadRightDecider : public Task {
   bool is_split_region_ = false;
   MergeDirection merge_direction_ = NONE_LANE_MERGE;
   int merge_lane_virtual_id_;
+  int split_lane_virtual_id_;
   Point2D merge_point_;
   Point2D boundary_merge_point_;
   bool cur_lane_is_continue_;

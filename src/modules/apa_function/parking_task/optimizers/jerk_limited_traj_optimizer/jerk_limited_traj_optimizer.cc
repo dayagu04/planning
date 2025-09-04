@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstddef>
 
+#include "apa_param_config.h"
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "log_glog.h"
@@ -29,7 +30,9 @@ bool JerkLimitedTrajOptimizer::Init() {
 void JerkLimitedTrajOptimizer::Execute(
     const SVPoint& stitch_speed_point, const SVPoint& ego_speed_point,
     const std::vector<pnc::geometry_lib::PathPoint>& path,
-    const SpeedDecisions* speed_decisions) {
+    const SpeedDecisions* speed_decisions,
+    const ParkingSpeedMode& park_speed_mode) {
+  park_speed_mode_ = park_speed_mode;
   Init();
 
   if (path.empty()) {
@@ -87,7 +90,8 @@ const bool JerkLimitedTrajOptimizer::GenerateJLTSpeed(const SVPoint& init_point,
 
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
-  state_limit.v_max = speed_config.default_cruise_speed;
+  state_limit.v_max =
+      speed_config.GetSpeedParams(park_speed_mode_).default_cruise_speed;
   state_limit.v_min = -0.1;
 
   if (s_des > speed_config.path_thresh_for_acc_bound) {
@@ -240,8 +244,8 @@ void JerkLimitedTrajOptimizer::DebugJLTSpeed(
   return;
 }
 
-void JerkLimitedTrajOptimizer::GenerateStoppingTraj(
-    const SVPoint& init_point, const double s_des) {
+void JerkLimitedTrajOptimizer::GenerateStoppingTraj(const SVPoint& init_point,
+                                                    const double s_des) {
   speed_data_.clear();
 
   // path is none, need emergency brake.

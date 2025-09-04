@@ -10,10 +10,10 @@
 #include "ego_planning_config.h"
 #include "session.h"
 #include "task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "traffic_congestion_decider.h"
 #include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "trajectory1d/third_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
-#include "traffic_congestion_decider.h"
 namespace planning {
 using namespace planning_math;
 struct StateTransitionInfo {
@@ -105,7 +105,6 @@ class LaneChangeStateMachineManager {
  private:
   void PreProcess();
   void RunStateMachine();
-  void UpdateHMIInfo();
   bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
                                 RequestSource* const lane_change_type) const;
   bool CheckIfProposeToExecution(const RequestType& lane_change_direction,

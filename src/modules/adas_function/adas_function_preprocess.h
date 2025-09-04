@@ -25,6 +25,8 @@ class Preprocess {
 
   void UpdateObjsInfo(void);
 
+  void UpdateTsrInfo(void);
+
   void RunOnce(void);
 
   double count_ = 0;

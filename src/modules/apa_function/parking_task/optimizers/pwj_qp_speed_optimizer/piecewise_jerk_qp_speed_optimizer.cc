@@ -20,7 +20,7 @@ namespace apa_planner {
 PiecewiseJerkSpeedQPOptimizer::PiecewiseJerkSpeedQPOptimizer() {}
 
 bool PiecewiseJerkSpeedQPOptimizer::Init() {
-  qp_config_.Init();
+  qp_config_.Init(park_speed_mode_);
   state_ = TaskExcuteState::NONE;
   ClearDebugInfo();
 
@@ -84,7 +84,9 @@ void PiecewiseJerkSpeedQPOptimizer::GenerateInitState(
 
 void PiecewiseJerkSpeedQPOptimizer::Execute(
     const SVPoint& init_point, const SpeedLimitProfile* speed_limit_profile,
-    const SpeedData& dp_speed_data, const SpeedDecisions* speed_decisions) {
+    const SpeedData& dp_speed_data, const SpeedDecisions* speed_decisions,
+    const ParkingSpeedMode& park_speed_mode) {
+  park_speed_mode_ = park_speed_mode;
   Init();
   speed_limit_profile_ = speed_limit_profile;
   qp_speed_data_ = dp_speed_data;

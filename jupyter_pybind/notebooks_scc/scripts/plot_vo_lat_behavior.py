@@ -88,7 +88,7 @@ data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=100)
 data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=1000)
-data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=500)
+data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=600)
 data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=200)
 data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=200)
 
@@ -240,7 +240,8 @@ def update_overtake_request_lc_data (plan_debug_json):
   overtake_lc_vars_ = ["enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_",
                        "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake",
                        "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len",
-                       "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold"]
+                       "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold",
+                       "left_lane_is_on_navigation_route", "right_lane_is_on_navigation_route"]
   for name in overtake_lc_vars_:
     try:
       datas.append((plan_debug_json[name]))

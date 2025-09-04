@@ -4,6 +4,8 @@
 #include <map>
 #include <string>
 #include <vector>
+
+#include "planning_plan_c.h"
 namespace planning {
 
 enum class SpeedLimitType {
@@ -23,7 +25,8 @@ enum class SpeedLimitType {
   INTERSECTION = 13,
   LANE_BORROW = 14,
   NEAR_TFL = 15,
-  AVOID_AGENT = 16
+  AVOID_AGENT = 16,
+  DANGEROUS_OBSTACLE = 17
 };
 
 class SpeedLimitDeciderOutput {
@@ -73,6 +76,16 @@ class SpeedLimitDeciderOutput {
   void set_vru_round_debug_string(
       const std::string& cipv_lost_speed_limit_debug_string_);
 
+  bool is_function_fading_away() const { return is_function_fading_away_; }
+  void set_is_function_fading_away(const bool is_function_fading_away) {
+    is_function_fading_away_ = is_function_fading_away;
+  }
+
+  iflyauto::RequestReason request_reason() const { return request_reason_; }
+  void set_request_reason(const iflyauto::RequestReason request_reason) {
+    request_reason_ = request_reason;
+  }
+
  private:
   std::map<SpeedLimitType, double>
       speed_limit_map_;  //(type, speedlimit) for all scenes one by one
@@ -96,7 +109,10 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::MERGE_ALC,    SpeedLimitType::MAP_NEAR_RAMP,
       SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION,
       SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL,
-      SpeedLimitType::AVOID_AGENT};
+      SpeedLimitType::AVOID_AGENT,  SpeedLimitType::DANGEROUS_OBSTACLE};
+  bool is_function_fading_away_ = false;
+  iflyauto::RequestReason request_reason_ =
+      iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
 };
 
 }  // namespace planning

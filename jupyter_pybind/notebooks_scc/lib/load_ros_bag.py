@@ -8,6 +8,7 @@ from planning_debug_info_pb2 import *
 from control_debug_info_pb2 import *
 from ehr_pb2 import *
 from ehr_sdmap_pb2 import *
+from map_data_pb2 import *
 
 import numpy as np
 import time
@@ -107,6 +108,9 @@ class LoadRosbag:
 
     # ehr sd map msg
     self.ehr_sd_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
+
+    # ehr sdpro map msg
+    self.ehr_sdpro_map_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
 
     # fusion ground line msg
     self.fus_ground_line_msg = {'t':[], 'data':[], 'enable':[], 'timestamp':[]}
@@ -631,10 +635,11 @@ class LoadRosbag:
                          'gap_v_limit_lc', "max_brake_distance", "gap_base_car_id", "gap_front_car_id",\
                          "fast_lead_id", "slow_lead_id", "fast_car_cut_in_id", "slow_car_cut_in_id", \
                          "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
-                         'sdmap_valid_','lane_change_cmd_','cur_state','lc_map_decision', "lat_path_length", "extend_path_length", \
+                         'sdpromap_valid_','lane_change_cmd_','cur_state','lc_map_decision', "lat_path_length", "extend_path_length", \
                          "is_in_merge_area","current_lane_order_id","current_lane_virtual_id","current_lane_relative_id","left_boundary_type","right_boundary_type", \
                          "enable_l_", "enable_r_", "is_left_lane_change_safe_", "is_right_lane_change_safe_", "overtake_count_", "is_left_overtake", "is_right_overtake", "trigger_left_overtake", "trigger_right_overtake", "overtake_vehicle_id", "dash_line_len", \
                          "left_route_traffic_speed", "right_route_traffic_speed", "speed_threshold", \
+                         "left_lane_is_on_navigation_route", "right_lane_is_on_navigation_route", \
                          "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
                          "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
@@ -642,7 +647,7 @@ class LoadRosbag:
                          "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', 'avoid_agent_id', 'avoid_agent_v_limit', \
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
                          "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
-                         "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", \
+                         "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", "v_target_for_dangerous_obs", "dangerous_obs_id",\
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
                          "select_avoid_car_ids_1", "select_avoid_car_ids_2", "turn_switch_state","is_ego_on_expressway","current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point","sum_dis_to_last_split_point", \
@@ -671,7 +676,7 @@ class LoadRosbag:
                           "cur_lane_mark", "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id", "cur_lane_mark_plan",
                           "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id", "is_truck_overtake", "is_truck_yield",
-                          "truck_decider_state", "truck_running_frames", "truck_cooldown_frames", "truck_lateral_distance"]
+                          "truck_decider_state", "truck_running_frames", "truck_cooldown_frames", "truck_lateral_distance",'right_lane_num','emergency_lane_num']
 
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
@@ -688,10 +693,18 @@ class LoadRosbag:
                          "elk_preview_left_y_gap","elk_preview_right_y_gap","elk_left_intervention_by_line","elk_left_intervention_by_roadedge",
                          "elk_right_intervention_by_line","elk_right_intervention_by_roadedge","elk_roadedge_offset",
                          "elk_left_has_risk","elk_right_has_risk","elk_fl_risk_code","elk_ml_risk_code","elk_rl_risk_code","elk_fr_risk_code","elk_mr_risk_code","elk_rr_risk_code",
+                         "left_has_risk_code","right_has_risk_code","elk_obj_fl_tlc_","elk_obj_ml_tlc_","elk_obj_rl_tlc_","elk_obj_fr_tlc_","elk_obj_mr_tlc_","elk_obj_rr_tlc_",
                          #tsr debug info
-                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_speed_limit_","tsr_speed_limit_valid_","tsr_warning_image_",
+                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_speed_limit_","current_map_speed_limit_", "current_map_speed_limit_valid_", "tsr_speed_limit_valid_","tsr_warning_image_",
                          "tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_","tsr_state_",
-                         "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_",
+                         "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_",
+                         "speed_limit_suppression_flag_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_display_flag_",
+                         # ihc debug info
+                         "ihc_function::ihc_enable_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
+                         "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
+                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle", 
+                         "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition",
+                         "ihc_function::ihc_disable_code",
                          #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
@@ -707,7 +720,7 @@ class LoadRosbag:
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         "planning_hmi_ldp_state",]
+                         "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3"]
 
       json_vector_list = ["raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",
@@ -960,6 +973,28 @@ class LoadRosbag:
     except Exception as e:
       self.ehr_sd_map_msg['enable'] = False
       print('missing /iflytek/ehr/sdmap topic !!!')
+
+    # load ehr sdpro map msg
+    try:
+      ehr_sdpro_map_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/ehr/sdpromap_info"):
+        sdpromap = MapData()
+        sdpromap.ParseFromString(msg.debug_info)
+        ehr_sdpro_map_msg_dict[sdpromap.header.timestamp / 1e6] = sdpromap
+      ehr_sdpro_map_msg_dict = {key: val for key, val in sorted(ehr_sdpro_map_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in ehr_sdpro_map_msg_dict.items():
+        self.ehr_sdpro_map_msg['t'].append(t)
+        self.ehr_sdpro_map_msg['data'].append(msg)
+        self.ehr_sdpro_map_msg['timestamp'].append(msg.header.timestamp)
+      self.ehr_sdpro_map_msg['t'] = [tmp - t0  for tmp in self.ehr_sdpro_map_msg['t']]
+      print('ehr_sdpro_map_msg time:',self.ehr_sdpro_map_msg['t'][-1])
+      if len(self.ehr_sdpro_map_msg['t']) > 0:
+        self.ehr_sdpro_map_msg['enable'] = True
+      else:
+        self.ehr_sdpro_map_msg['enable'] = False
+    except Exception as e:
+      self.ehr_sdpro_map_msg['enable'] = False
+      print('missing /iflytek/ehr/sdpromap topic !!!')
 
     # load fus_ground_line_msg
     try:

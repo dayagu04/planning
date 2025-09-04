@@ -5,10 +5,12 @@
 
 namespace planning {
 namespace apa_planner {
-void DpSpeedConfig::Init(const double path_length) {
+void DpSpeedConfig::Init(const double path_length,
+                         const ParkingSpeedMode& park_speed_mode) {
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
 
-  dp_cruise_speed = speed_config.default_cruise_speed;
+  dp_cruise_speed =
+      speed_config.GetSpeedParams(park_speed_mode).default_cruise_speed;
   unit_v_for_long_path = 0.1;
   unit_s_for_long_path = 0.3;
 

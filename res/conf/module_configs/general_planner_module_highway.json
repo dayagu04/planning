@@ -21,9 +21,14 @@
   "active_lane_change_min_duration_threshold": 100,
   "use_lateral_distance_to_judge_cutout_in_active_lane_change": true,
   "use_overtake_lane_change_request_instead_of_active_lane_change_request": true,
+  "overtake_standard_left_lane_change_speed_threshold": 3.61,
+  "overtake_standard_right_lane_change_speed_threshold": 4.17,
+  "overtake_radical_lane_change_speed_threshold": 2.78,
+  "overtake_soft_lane_change_speed_threshold": 5.56,
+
   "enable_use_speed_limit_to_suppress_interactive_lane_change": true,
-  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 2000,
-  "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 1500,
+  "minimum_distance_nearby_ramp_to_surpress_overtake_lane_change": 500,
+  "minimum_distance_nearby_split_to_surpress_specific_direction_overtake": 500,
   "minimum_ego_cruise_speed_for_active_lane_change": 19.45,
   "enable_fusion_occupancy_objects": true,
   "enable_fusion_parking_slot": true,
@@ -199,6 +204,7 @@
   "dist_to_parking_space_thr": 2.0,
   "processed_trajectory_filter_alpha": 0.4,
   "processed_trajectory_acc_thr": 0.5,
+  "left_right_turn_func_fading_away_switch": false,
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
@@ -697,7 +703,41 @@
     "acc_to_ramp": -0.7,
     "pre_accelerate_distance_for_merge": 150.0,
     "straight_ramp_v_limit": 19.44,
-    "v_intersection_min_limit": 11.11
+    "v_intersection_min_limit": 11.11,
+    "min_acc_function_fading_away": -0.9,
+    "function_fading_away_distance_to_intersection": 50.0,
+    "v_limit_one_still_danger_obs": 12.5,
+    "v_limit_more_still_danger_obs": 11.11,
+    "v_rel_limit_for_dynamic_danger_obs": 4.17,
+    "high_speed_scene_ego_v_thred": 16.67,
+    "high_speed_scene_cruise_v_thred": 22.22,
+    "dangerous_obs_lon_dis_high": 40.0,
+    "dangerous_obs_lon_dis_low": 1.7,
+    "enable_dangerous_obs_speed_limit": true,
+    "vehicle_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        0.7, 1.0, 1.5
+      ],
+      "rel_vel_table": [
+        4.17, 6.94, 11.11
+      ]
+    },
+    "vru_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        1.15, 1.65, 2.15
+      ],
+      "rel_vel_table": [
+        4.17, 6.94, 11.11
+      ]
+    },
+    "static_lat_dis_rel_vel_table": {
+      "lat_dis_table": [
+        0.7, 1.0, 1.5
+      ],
+      "rel_vel_table": [
+        11.11, 12.5, 13.89
+      ]
+    }
   },
 
   "result_trajectory_generator": {
@@ -1039,6 +1079,14 @@
   "heavy_density" : 60,
   "jam_speed" : 12,
   "speed_deviation" : 1000
+},
+"map_lane_change_decider": {
+  "default_pre_triggle_road_to_ramp_distance_threshold_value" : 3000 ,
+  "default_pre_triggle_merge_to_road_distance_threshold_value" : 200,
+  "merge_split_gap_threshold" : 200,
+  "other_merge_split_gap_threshold" : 500,
+  "split_split_gap_threshold" : 300,
+  "split_region_pre_mlc_threshold" : 130
 }
 }
 

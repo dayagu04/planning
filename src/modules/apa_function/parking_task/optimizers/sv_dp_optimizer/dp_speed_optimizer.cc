@@ -6,6 +6,7 @@
 #include <limits>
 #include <string>
 
+#include "apa_param_config.h"
 #include "debug_info_log.h"
 #include "dp_speed_common.h"
 #include "ifly_time.h"
@@ -24,7 +25,7 @@ namespace apa_planner {
 DpSpeedOptimizer::DpSpeedOptimizer() {}
 
 bool DpSpeedOptimizer::Init(const double path_length) {
-  config_.Init(path_length);
+  config_.Init(path_length, park_speed_mode_);
 
   start_node_ = nullptr;
   end_node_ = nullptr;
@@ -40,7 +41,9 @@ void DpSpeedOptimizer::Excute(
     const std::vector<pnc::geometry_lib::PathPoint>& path,
     const Pose2D& ego_pose, const SVPoint& init_point,
     const SpeedDecisions* speed_decisions,
-    const SpeedLimitProfile* speed_limit_profile) {
+    const SpeedLimitProfile* speed_limit_profile,
+    const ParkingSpeedMode& park_speed_mode) {
+  park_speed_mode_ = park_speed_mode;
   if (speed_decisions == nullptr || speed_limit_profile == nullptr ||
       path.empty()) {
     return;

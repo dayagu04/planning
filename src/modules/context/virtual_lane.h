@@ -59,6 +59,9 @@ class VirtualLane {
   double width_by_s(double s);
   double width(double x);
   double width() { return width_; };
+  const iflyauto::ReferenceLineMsg &get_reference_line_msg() const {
+    return reference_line_msg_;
+  }
 
   // WB：用户设置巡航车速不应与地图限速耦合
   double velocity_limit() const { return v_cruise_; };
@@ -126,7 +129,7 @@ class VirtualLane {
                ? lane_marks_[0].lane_mark
                : iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
   };
-  std::vector<iflyauto::LaneMarkMsg> lane_marks() const { return lane_marks_; }
+  const std::vector<iflyauto::LaneMarkMsg>& lane_marks() const { return lane_marks_; }
   iflyauto::LaneSource get_lane_source() const {
     return lane_sources_.size() > 0 ? lane_sources_[0].source
                                     : iflyauto::LaneSource_SOURCE_UNKNOWN;
@@ -158,6 +161,8 @@ class VirtualLane {
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
+  void set_current_tasks(const std::vector<int> &current_tasks)  {  current_tasks_ = current_tasks; };
+
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
@@ -169,6 +174,8 @@ class VirtualLane {
   bool is_nearing_split_mlc_task() const { return is_nearing_split_mlc_task_; }
   void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
   void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
+
+  const std::vector<iflyauto::LaneNumMsg>& get_lane_nums() const { return lane_nums_; }
 
  private:
   planning::framework::Session *session_ = nullptr;
@@ -192,6 +199,8 @@ class VirtualLane {
 
   iflyauto::LaneBoundary stop_line_;
 
+  std::vector<iflyauto::LaneNumMsg> lane_nums_;
+
   std::vector<std::string> center_line_points_track_id_;
   // todo:clren 后面改成map，适配多种reference_path
   std::shared_ptr<LaneReferencePath> reference_path_;
@@ -205,6 +214,7 @@ class VirtualLane {
   bool is_in_merge_area_ = false;
   bool is_nearing_ramp_mlc_task_ = false;
   bool is_nearing_split_mlc_task_ = false;
+  iflyauto::ReferenceLineMsg reference_line_msg_;
 };
 }  // namespace planning
 #endif

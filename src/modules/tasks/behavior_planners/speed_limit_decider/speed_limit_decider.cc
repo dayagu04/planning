@@ -1,7 +1,9 @@
 #include "speed_limit_decider.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -11,9 +13,12 @@
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
+#include "filters.h"
+#include "mjson/json.hpp"
 #include "planning_context.h"
 #include "utils/kd_path.h"
 #include "vec2d.h"
+#include "vehicle_config_context.h"
 
 namespace planning {
 namespace {
@@ -145,6 +150,8 @@ SpeedLimitDecider::SpeedLimitDecider(
     : Task(config_builder, session) {
   speed_limit_config_ = config_builder->cast<SpeedLimitConfig>();
   name_ = "SpeedLimitDecider";
+  vel_slope_filter_function_fading_away_.Init(
+      speed_limit_config_.min_acc_function_fading_away, 0.0, 1e-3, 40, 0.1);
 }
 bool SpeedLimitDecider::Execute() {
   ILOG_INFO << "=======SpeedLimitDecider=======";
@@ -173,12 +180,20 @@ bool SpeedLimitDecider::Execute() {
   // 9. speed limit from avoid agent
   CalculateAvoidAgentSpeedLimit();
 
+  CalculateSpeedLimitForDangerousObstacle();
+  /* NOTE: CalculateFunctionFadingAwaySpeedLimit() need to be set up at the end
+   * of speed limiter!!!*/
+  // 10. speed limit for LCC/NOA fading away
+  CalculateFunctionFadingAwaySpeedLimit();
+
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
   auto &ad_info = session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
                       ->ad_info;
+  speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
+  speed_limit_output->set_request_reason(request_reason_);
   if (SpeedLimitType::CURVATURE == v_target_type_) {
     ad_info.is_curva = true;
   } else {
@@ -258,9 +273,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
     JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
     auto speed_limit_output = session_->mutable_planning_context()
-                                ->mutable_speed_limit_decider_output();
+                                  ->mutable_speed_limit_decider_output();
     speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
-                                           SpeedLimitType::CURVATURE);
+                                             SpeedLimitType::CURVATURE);
     return;
   }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
@@ -382,31 +397,38 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       ReferencePathPoint detect_merge_front_pnt;
       double ego_s;
       const auto &current_lane = virtual_lane_manager->get_current_lane();
-      if (current_lane != nullptr && current_lane->get_reference_path() != nullptr) {
+      if (current_lane != nullptr &&
+          current_lane->get_reference_path() != nullptr) {
         ego_s = current_lane->get_reference_path()->get_frenet_ego_state().s();
       } else {
         ego_s = -100.0;
       }
-      if (ego_s > 0 && current_lane->get_reference_path()->get_reference_point_by_lon(
-          ego_s + dis_to_merge + kMergePointDetectedDistance, detect_merge_front_pnt)) {
+      if (ego_s > 0 &&
+          current_lane->get_reference_path()->get_reference_point_by_lon(
+              ego_s + dis_to_merge + kMergePointDetectedDistance,
+              detect_merge_front_pnt)) {
         double nearest_s = 0;
         double nearest_l = 0;
         double search_distance = 50.0;
         double max_heading_diff = PI / 4;
-        double detected_heading_angle = detect_merge_front_pnt.path_point.theta();
-        ad_common::math::Vec2d detected_point(detect_merge_front_pnt.path_point.x(), detect_merge_front_pnt.path_point.y());
+        double detected_heading_angle =
+            detect_merge_front_pnt.path_point.theta();
+        ad_common::math::Vec2d detected_point(
+            detect_merge_front_pnt.path_point.x(),
+            detect_merge_front_pnt.path_point.y());
         if (environmental_model.get_route_info()->get_sdmap_valid()) {
-          const auto &sd_map = environmental_model.get_route_info()->get_sd_map();
+          const auto &sd_map =
+              environmental_model.get_route_info()->get_sd_map();
           const auto segment = sd_map.GetNearestRoadWithHeading(
-            detected_point, search_distance, detected_heading_angle, max_heading_diff,
-            nearest_s, nearest_l);
-          if (segment != nullptr && segment ->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY
-             && segment ->priority() != SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
-              v_target_ramp = speed_limit_config_.v_limit_ramp;
+              detected_point, search_distance, detected_heading_angle,
+              max_heading_diff, nearest_s, nearest_l);
+          if (segment != nullptr &&
+              segment->priority() != SdMapSwtx::RoadPriority::EXPRESSWAY &&
+              segment->priority() != SdMapSwtx::RoadPriority::CITY_EXPRESSWAY) {
+            v_target_ramp = speed_limit_config_.v_limit_ramp;
           }
         }
       }
-
     }
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
@@ -464,7 +486,7 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   if (dis_tfl < kTFLSpeedLimitDis) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
-      traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
+        traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
       v_limit_tfl_dis = 50 / 3.6;
     }
   }
@@ -514,6 +536,179 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimitIntoMap(v_target_intersection,
                                            SpeedLimitType::INTERSECTION);
+}
+
+void SpeedLimitDecider::CalculateSpeedLimitForDangerousObstacle() {
+  LOG_DEBUG("----calc_speed_limit_for_dangerous_obstacle--- \n");
+  const auto &environmental_model = session_->environmental_model();
+  const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+  const auto init_point = ego_state_mgr->planning_init_point();
+  double v_ego = ego_state_mgr->ego_v();
+  double v_cruise = ego_state_mgr->ego_v_cruise();
+  const auto &function_state_machine_info =
+      environmental_model.get_local_view().function_state_machine_info;
+  double v_cruise_fsm =
+      function_state_machine_info.pilot_req.acc_curise_real_spd;
+  double v_target_for_dangerous_obs = 40.0;
+  if (!speed_limit_config_.enable_dangerous_obs_speed_limit) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  if (v_ego > speed_limit_config_.high_speed_scene_ego_v_thred ||
+      v_cruise > speed_limit_config_.high_speed_scene_cruise_v_thred ||
+      v_cruise_fsm > speed_limit_config_.high_speed_scene_cruise_v_thred) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  std::vector<const agent::Agent *> danger_agents;
+  const auto &all_current_agents = agent_manager->GetAllCurrentAgents();
+  for (const auto agt_ptr : all_current_agents) {
+    if (agt_ptr->is_dangerous() == true && agt_ptr->is_reverse() == false &&
+        (agt_ptr->d_rel() > speed_limit_config_.dangerous_obs_lon_dis_low &&
+         agt_ptr->d_rel() < speed_limit_config_.dangerous_obs_lon_dis_high)) {
+      danger_agents.emplace_back(agt_ptr.get());
+    }
+  }
+  if (danger_agents.empty()) {
+    JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+    return;
+  }
+  bool all_agents_static = true;
+  for (const auto agt_ptr : danger_agents) {
+    if (!agt_ptr->is_static()) {
+      all_agents_static = false;
+      break;
+    }
+  }
+  if (all_agents_static) {
+    if (danger_agents.size() == 1) {
+      double lat_dis_static = danger_agents[0]->d_path();
+      double vel_by_lat_dis = interp(
+          lat_dis_static,
+          speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+          speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+      v_target_for_dangerous_obs = std::max(
+          speed_limit_config_.v_limit_one_still_danger_obs, vel_by_lat_dis);
+    } else {
+      double min_lat_dis = 100.0;
+      for (const auto agt_ptr : danger_agents) {
+        if (agt_ptr->d_path() < min_lat_dis) {
+          min_lat_dis = agt_ptr->d_path();
+        }
+      }
+      v_target_for_dangerous_obs = interp(
+          min_lat_dis,
+          speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+          speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+      ;
+    }
+  } else {
+    if (danger_agents.size() == 1) {
+      if (danger_agents[0]->type() == agent::AgentType::PEDESTRIAN ||
+          danger_agents[0]->type() == agent::AgentType::CYCLE_RIDING ||
+          danger_agents[0]->type() == agent::AgentType::MOTORCYCLE_RIDING ||
+          danger_agents[0]->type() == agent::AgentType::TRICYCLE_RIDING) {
+        v_target_for_dangerous_obs =
+            danger_agents[0]->speed() +
+            interp(danger_agents[0]->d_path(),
+                   speed_limit_config_.vru_lat_dis_rel_vel_table.lat_dis_table,
+                   speed_limit_config_.vru_lat_dis_rel_vel_table.rel_vel_table);
+      } else {
+        v_target_for_dangerous_obs =
+            danger_agents[0]->speed() +
+            interp(
+                danger_agents[0]->d_path(),
+                speed_limit_config_.vehicle_lat_dis_rel_vel_table.lat_dis_table,
+                speed_limit_config_.vehicle_lat_dis_rel_vel_table
+                    .rel_vel_table);
+      }
+    } else {
+      // average vel of dangerous_obs by distance weight
+      std::vector<double> dis_vec;
+      std::vector<double> vel_vec;
+      std::vector<double> weight_vec;
+      std::vector<double> weight_numerator_vec;
+      double weight_denominator = 0.0;
+      auto compare_danger_obs_by_dis = [&](const agent::Agent *agt_ptr_1,
+                                           const agent::Agent *agt_ptr_2) {
+        return std::fabs(agt_ptr_1->d_rel()) < std::fabs(agt_ptr_2->d_rel());
+      };
+      std::sort(danger_agents.begin(), danger_agents.end(),
+                compare_danger_obs_by_dis);
+      int used_num = danger_agents.size() > 4 ? 4 : danger_agents.size();
+      for (int i = 0; i < used_num; i++) {
+        double rel_vel = 40.0;
+        if (danger_agents[i]->type() == agent::AgentType::PEDESTRIAN ||
+            danger_agents[i]->type() == agent::AgentType::CYCLE_RIDING ||
+            danger_agents[i]->type() == agent::AgentType::MOTORCYCLE_RIDING ||
+            danger_agents[i]->type() == agent::AgentType::TRICYCLE_RIDING) {
+          if (danger_agents[i]->is_static()) {
+            double vel_by_lat_dis = interp(
+                danger_agents[i]->d_path(),
+                speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+                speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+            rel_vel = vel_by_lat_dis - danger_agents[i]->speed();
+          } else {
+            rel_vel = interp(
+                danger_agents[i]->d_path(),
+                speed_limit_config_.vru_lat_dis_rel_vel_table.lat_dis_table,
+                speed_limit_config_.vru_lat_dis_rel_vel_table.rel_vel_table);
+          }
+        } else {
+          if (danger_agents[i]->is_static()) {
+            double vel_by_lat_dis = interp(
+                danger_agents[i]->d_path(),
+                speed_limit_config_.static_lat_dis_rel_vel_table.lat_dis_table,
+                speed_limit_config_.static_lat_dis_rel_vel_table.rel_vel_table);
+            rel_vel = vel_by_lat_dis - danger_agents[i]->speed();
+          } else {
+            rel_vel = interp(
+                danger_agents[i]->d_path(),
+                speed_limit_config_.vehicle_lat_dis_rel_vel_table.lat_dis_table,
+                speed_limit_config_.vehicle_lat_dis_rel_vel_table
+                    .rel_vel_table);
+          }
+        }
+        vel_vec.emplace_back(danger_agents[i]->speed() + rel_vel);
+        dis_vec.emplace_back(
+            std::max(std::fabs(danger_agents[i]->d_rel()), 0.1));
+      }
+      for (int i = 0; i < used_num; i++) {
+        double base = 1.0;
+        for (int j = 0; j < used_num; j++) {
+          if (j == i) {
+            continue;
+          } else {
+            base = base * dis_vec[j];
+          }
+        }
+        weight_denominator = weight_denominator + base;
+        weight_numerator_vec.emplace_back(base);
+      }
+      double avg_vel = 0.0;
+      for (int i = 0; i < used_num; i++) {
+        avg_vel = avg_vel +
+                  (weight_numerator_vec[i] / weight_denominator) * vel_vec[i];
+      }
+      v_target_for_dangerous_obs = avg_vel;
+    }
+  }
+
+  if (v_target_for_dangerous_obs < v_target_) {
+    v_target_ = v_target_for_dangerous_obs;
+    v_target_type_ = SpeedLimitType::DANGEROUS_OBSTACLE;
+  }
+  JSON_DEBUG_VALUE("v_target_for_dangerous_obs", v_target_for_dangerous_obs);
+  auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_for_dangerous_obs,
+                                           SpeedLimitType::DANGEROUS_OBSTACLE);
 }
 
 void SpeedLimitDecider::CalculatePerceptVisibSpeedLimit() {}
@@ -838,4 +1033,115 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     }
   }
 }
+
+void SpeedLimitDecider::CalculateFunctionFadingAwaySpeedLimit() {
+  const auto &ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  // const auto ego_blinker = ego_state_mgr->ego_blinker();
+  const auto &ego_vehi_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_rear_axle_to_front_edge =
+      ego_vehi_param.length - ego_vehi_param.rear_edge_to_rear_axle;
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto current_ego_lane_mark =
+      virtual_lane_manager->lane_mark_at_ego_front_edge_pos_current();
+
+  if (!speed_limit_config_.left_right_turn_func_fading_away_switch) {
+    JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+    return;
+  }
+
+  is_function_fading_away_ = false;
+  request_reason_ = iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
+  static bool is_first_time_funciton_fading_away = true;
+
+  const auto distance_to_stop_line =
+      virtual_lane_manager->GetEgoDistanceToStopline();
+  const auto distance_to_crosswalk =
+      virtual_lane_manager->GetEgoDistanceToCrosswalk();
+
+  // static const std::unordered_set<iflyauto::LaneDrivableDirection>
+  //     turning_directions_set = {
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_RIGHT,
+  //         iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_LEFT,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_UTURN_LEFT,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_UTURN_RIGHT,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_LEFT_UTURN,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_RIGHT_UTURN,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_LEFT_RIGHT,
+  //         iflyauto::LaneDrivableDirection::
+  //             LaneDrivableDirection_DIRECTION_UTURNLEFT_RIGHT};
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+      left_turning_direction_set = {
+          iflyauto::LaneDrivableDirection::LaneDrivableDirection_DIRECTION_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_LEFT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_UTURN,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_LEFT_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURNLEFT_RIGHT};
+
+  static const std::unordered_set<iflyauto::LaneDrivableDirection>
+      right_turning_direction_set = {
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_UTURN_RIGHT,
+          iflyauto::LaneDrivableDirection::
+              LaneDrivableDirection_DIRECTION_RIGHT_UTURN};
+
+  // const auto &ego_lane_mark_it =
+  //     turning_directions_set.find(current_ego_lane_mark);
+  if (current_intersection_state_ == common::APPROACH_INTERSECTION &&
+      (distance_to_stop_line <
+           speed_limit_config_.function_fading_away_distance_to_intersection ||
+       distance_to_crosswalk <
+           speed_limit_config_.function_fading_away_distance_to_intersection)) {
+    is_function_fading_away_ =
+        !virtual_lane_manager->ego_currrent_pos_lane_has_straight_attributes();
+  }
+
+  if (is_function_fading_away_) {
+    if (left_turning_direction_set.find(current_ego_lane_mark) !=
+        left_turning_direction_set.end()) {
+      request_reason_ =
+          iflyauto::RequestReason::REQUEST_REASON_ON_INTERSECTION_LEFT_LANE;
+    } else if (right_turning_direction_set.find(current_ego_lane_mark) !=
+               right_turning_direction_set.end()) {
+      request_reason_ =
+          iflyauto::RequestReason::REQUEST_REASON_ON_INTERSECTION_RIGHT_LANE;
+    }
+  }
+
+  // JSON_DEBUG_VALUE("ego_blinker", ego_blinker)
+  if (!is_function_fading_away_) {
+    is_first_time_funciton_fading_away = true;
+    JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+    return;
+  }
+  if (is_first_time_funciton_fading_away) {
+    vel_slope_filter_function_fading_away_.SetState(v_target_);
+    is_first_time_funciton_fading_away = false;
+  } else {
+    vel_slope_filter_function_fading_away_.SetState(
+        last_vel_function_fading_away_);
+  }
+
+  vel_slope_filter_function_fading_away_.Update(0.0);
+  v_target_ =
+      std::min(vel_slope_filter_function_fading_away_.GetOutput(), v_target_);
+  last_vel_function_fading_away_ = v_target_;
+  JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+}
+
 }  // namespace planning

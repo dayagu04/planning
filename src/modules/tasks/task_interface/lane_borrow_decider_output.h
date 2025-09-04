@@ -66,6 +66,7 @@ struct LaneBorrowDeciderOutput {
   bool is_left_solid{false};
   bool is_right_solid{false};
   std::unordered_map<int32_t, int32_t> lat_flag_map;
+  bool takeover_prompt{false};
 };
 
 }  // namespace planning

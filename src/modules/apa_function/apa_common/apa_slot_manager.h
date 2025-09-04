@@ -14,6 +14,7 @@
 #include "geometry_math.h"
 #include "local_view.h"
 #include "target_pose_decider/target_pose_decider.h"
+#include "hmi_inner_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -265,6 +266,8 @@ class ApaSlotManager final {
   // temp use
   bool is_ego_col_vertical_ = false;
   bool is_ego_col_parallel_ = false;
+  bool free_slot_activate = false;
+  iflyauto::FreeSlotSelectedStatus is_free_slot_selected;
 };
 }  // namespace apa_planner
 }  // namespace planning

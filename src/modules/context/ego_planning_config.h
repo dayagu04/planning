@@ -201,6 +201,20 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json,
                             "use_overtake_lane_change_request_instead_of_"
                             "active_lane_change_request");
+
+    overtake_standard_left_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_standard_left_lane_change_speed_threshold");
+    overtake_standard_right_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_standard_right_lane_change_speed_threshold");
+    overtake_radical_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_radical_lane_change_speed_threshold");
+    overtake_soft_lane_change_speed_threshold =
+        read_json_key<double>(json,
+                            "overtake_soft_lane_change_speed_threshold");
+
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(json,
                             "enable_use_speed_limit_to_suppress_interactive_lane_change");
@@ -236,6 +250,8 @@ struct EgoPlanningConfig : public Config {
     raw_ref_extend_buff =
         read_json_key<double>(json, "raw_ref_extend_buff", raw_ref_extend_buff);
     enable_lane_borrow_deciderV2 = read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
+    left_right_turn_func_fading_away_switch =
+        read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -249,6 +265,10 @@ struct EgoPlanningConfig : public Config {
   bool use_lateral_distance_to_judge_cutout_in_active_lane_change = true;
   bool use_overtake_lane_change_request_instead_of_active_lane_change_request =
       true;
+  double overtake_standard_left_lane_change_speed_threshold = 3.61;
+  double overtake_standard_right_lane_change_speed_threshold = 4.17;
+  double overtake_radical_lane_change_speed_threshold = 2.78;
+  double overtake_soft_lane_change_speed_threshold = 5.56;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change =
       true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
@@ -267,6 +287,7 @@ struct EgoPlanningConfig : public Config {
   double hpp_min_search_range = 20;
   double raw_ref_extend_buff = 0;
   bool enable_lane_borrow_deciderV2 =  true;
+  bool left_right_turn_func_fading_away_switch = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
@@ -591,6 +612,43 @@ struct DPSpeedGraphConfig: public EgoPlanningConfig {
   double matrix_dimension_s = 10;
   double matrix_dimension_t = 10;
 
+};
+
+struct MLCDeciderConfig: public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+
+    default_pre_triggle_road_to_ramp_distance_threshold_value = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "default_pre_triggle_road_to_ramp_distance_threshold_value"});
+    default_pre_triggle_merge_to_road_distance_threshold_value = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "default_pre_triggle_merge_to_road_distance_threshold_value"});
+    merge_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "merge_split_gap_threshold"});
+    other_merge_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "other_merge_split_gap_threshold"});
+    split_split_gap_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "split_split_gap_threshold"});
+    split_region_pre_mlc_threshold = read_json_keys<double>(
+        json, std::vector<std::string>{
+                  "map_lane_change_decider",
+                  "split_region_pre_mlc_threshold"});
+  }
+  double default_pre_triggle_road_to_ramp_distance_threshold_value = 3000.0;
+  double default_pre_triggle_merge_to_road_distance_threshold_value = 200;
+  double merge_split_gap_threshold = 200;
+  double other_merge_split_gap_threshold = 500;
+  double split_split_gap_threshold = 300;
+  double split_region_pre_mlc_threshold = 130;
 };
 
 struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
@@ -2929,7 +2987,68 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, acc_to_ramp, "speed_limit_decider", "acc_to_ramp");
     ReadItem<double>(json, v_intersection_min_limit, "speed_limit_decider",
                      "v_intersection_min_limit");
+    ReadItem<double>(json, v_limit_one_still_danger_obs, "speed_limit_decider",
+                      "v_limit_one_still_danger_obs");
+    ReadItem<double>(json, v_limit_more_still_danger_obs, "speed_limit_decider",
+                        "v_limit_more_still_danger_obs");
+    ReadItem<double>(json, v_rel_limit_for_dynamic_danger_obs, "speed_limit_decider",
+                          "v_rel_limit_for_dynamic_danger_obs");
+    ReadItem<double>(json, min_acc_function_fading_away, "speed_limit_decider",
+                            "min_acc_function_fading_away");
+    ReadItem<double>(json, function_fading_away_distance_to_intersection, "speed_limit_decider",
+                        "function_fading_away_distance_to_intersection");
+    ReadItem<double>(json, high_speed_scene_ego_v_thred, "speed_limit_decider",
+                            "high_speed_scene_ego_v_thred");
+    ReadItem<double>(json, high_speed_scene_cruise_v_thred, "speed_limit_decider",
+                              "high_speed_scene_cruise_v_thred");
+    ReadItem<double>(json, dangerous_obs_lon_dis_high, "speed_limit_decider",
+                                "dangerous_obs_lon_dis_high");
+    ReadItem<double>(json, dangerous_obs_lon_dis_low, "speed_limit_decider",
+                                  "dangerous_obs_lon_dis_low");
+    ReadItem<bool>(json, enable_dangerous_obs_speed_limit, "speed_limit_decider",
+                                    "enable_dangerous_obs_speed_limit");
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                vehicle_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                vehicle_lat_dis_rel_vel_table.rel_vel_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vru_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                vru_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","vru_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                vru_lat_dis_rel_vel_table.rel_vel_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","static_lat_dis_rel_vel_table",
+                                "lat_dis_table"},
+                                static_lat_dis_rel_vel_table.lat_dis_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","static_lat_dis_rel_vel_table",
+                                "rel_vel_table"},
+                                static_lat_dis_rel_vel_table.rel_vel_table);
   }
+  struct VehicleLatDisRelVelTable {
+    std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
+    std::vector<double> rel_vel_table{4.17, 6.94, 11.11};
+  };
+  struct VRULatDisRelVelTable {
+    std::vector<double> lat_dis_table{1.15, 1.65, 2.15};
+    std::vector<double> rel_vel_table{4.17, 6.94, 11.11};
+  };
+
+  struct StaticLatDisRelVelTable {
+    std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
+    std::vector<double> rel_vel_table{11.11, 12.5, 13.89};
+  };
+
   int lon_num_step = 25;
   double delta_time = 0.2;
   double preview_x = 80.0;
@@ -2943,6 +3062,20 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double brake_dis_near_ramp_zone = 700.0;
   double acc_to_ramp = -0.7;
   double v_intersection_min_limit = 11.11;
+  double v_limit_one_still_danger_obs = 12.5;
+  double v_limit_more_still_danger_obs = 11.11;
+  double v_rel_limit_for_dynamic_danger_obs = 4.17;
+  double min_acc_function_fading_away = -1.0;
+  double function_fading_away_distance_to_intersection = 50.0;
+  double high_speed_scene_ego_v_thred = 16.67;
+  double high_speed_scene_cruise_v_thred = 22.22;
+  double dangerous_obs_lon_dis_high = 40.0;
+  double dangerous_obs_lon_dis_low = 1.7;
+  bool enable_dangerous_obs_speed_limit = true;
+
+  VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
+  VRULatDisRelVelTable vru_lat_dis_rel_vel_table;
+  StaticLatDisRelVelTable static_lat_dis_rel_vel_table;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {

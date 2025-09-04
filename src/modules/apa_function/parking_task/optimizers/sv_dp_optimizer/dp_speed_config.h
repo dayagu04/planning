@@ -1,5 +1,7 @@
 #pragma once
 
+#include "apa_param_config.h"
+#include "apa_state_machine_manager.h"
 namespace planning {
 namespace apa_planner {
 struct DpSpeedConfig {
@@ -44,7 +46,7 @@ struct DpSpeedConfig {
 
   double s_interpolate_step;
 
-  void Init(const double path_length);
+  void Init(const double path_length, const ParkingSpeedMode& park_speed_mode);
 };
 }  // namespace apa_planner
 }  // namespace planning

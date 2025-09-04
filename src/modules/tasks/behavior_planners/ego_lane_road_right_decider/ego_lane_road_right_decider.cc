@@ -50,6 +50,7 @@ EgoLaneRoadRightDecider::EgoLaneRoadRightDecider(
 void EgoLaneRoadRightDecider::Init() {
   is_merge_region_ = false;
   merge_lane_virtual_id_ = 0;
+  split_lane_virtual_id_ = 0;
   cur_lane_is_continue_ = true;
   boundary_merge_point_valid_ = false;
   merge_direction_ = NONE_LANE_MERGE;
@@ -57,6 +58,7 @@ void EgoLaneRoadRightDecider::Init() {
 
 bool EgoLaneRoadRightDecider::Execute() {
   merge_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+  split_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
   const bool active = session_->environmental_model().GetVehicleDbwStatus();
   const int current_lc_status =
       session_->planning_context().lane_change_decider_output().curr_state;
@@ -110,6 +112,7 @@ bool EgoLaneRoadRightDecider::Execute() {
                                  ->mutable_ego_lane_road_right_decider_output();
   road_right_decider.cur_lane_is_continue = cur_lane_is_continue_;
   road_right_decider.merge_lane_virtual_id = merge_lane_virtual_id_;
+  road_right_decider.split_lane_virtual_id = split_lane_virtual_id_;
   road_right_decider.boundary_merge_point_valid = boundary_merge_point_valid_;
   road_right_decider.is_merge_region = is_merge_region_;
   road_right_decider.is_split_region = is_split_region_;
@@ -717,6 +720,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
+      split_lane_virtual_id_ = llane->get_virtual_id();
       return;
     }
   }
@@ -767,6 +771,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
+      split_lane_virtual_id_ = rlane->get_virtual_id();
       return;
     }
   }

@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_14529/trigger/20250605/20250605-11-24-25/data_collection_CHERY_E0Y_14529_EVENT_MANUAL_2025-06-05-11-24-25_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250806/20250806-18-00-42/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-08-06-18-00-42_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -119,8 +119,10 @@ adas_json_list_dict['time'] = lka_t_ldp_debug
 # figures
 # fig1.line('dy_ref_mpc_vec', 'dx_ref_mpc_vec', source = data_vector, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref', visible=True)
 # fig1.line('dy_mpc_vec', 'dx_mpc_vec', source = data_vector, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'mpc', visible=True)
+#fig1.line('road_left_line_all_dy_vec_', 'road_right_line_all_dx_vec_', source = data_vector1, line_width = 3, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'left_line', visible=True)
+fig1.line('road_right_line_all_dy_vec_', 'road_right_line_all_dx_vec_', source = data_vector1, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_line', visible=True)
 fig1.line('road_left_line_all_dy_vec_', 'road_left_line_all_dx_vec_', source = data_vector1, line_width = 3, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'left_line', visible=True)
-fig1.line('road_right_line_all_dy_vec_', 'road_right_line_all_dx_vec_', source = data_vector1, line_width = 3, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_line', visible=True)
+#fig1.line('road_right_line_all_dy_vec_', 'road_right_line_all_dx_vec_', source = data_vector1, line_width = 3, line_color = 'blue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_line', visible=True)
 fig1.line('road_left_roadedge_all_dy_vec_', 'road_left_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'left_roadedge', visible=True)
 fig1.line('road_right_roadedge_all_dy_vec_', 'road_right_roadedge_all_dx_vec_', source = data_vector, line_width = 3, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'right_roadedge', visible=True)
 fig1.patch('car_yn', 'car_xn', source = data_car_preview, fill_color = "red", fill_alpha = 0.25, line_color = "black", line_width = 1, legend_label = 'preview_eog_pose', visible = True)
@@ -304,6 +306,10 @@ fig_left_line_base_info.line('time', 'road_left_line_c3', source = adas_json_lis
 # fig_left_line_info.line('time', 'road_left_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'left_line_boundary_type')
 # fig_left_line_info.line('time', 'state_fl_wheel_distance_to_roadedge', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'left_roadedge_distance')
 
+
+
+
+
 f_right_line_base_info = fig_right_line_base_info.line('time', 'road_right_line_begin', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'right_line_begin')
 fig_right_line_base_info.line('time', 'road_right_line_end', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'right_line_end')
 fig_right_line_base_info.line('time', 'road_right_roadedge_begin_x', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'right_roadedge_begin_x')
@@ -339,9 +345,9 @@ hover_right_line_info = HoverTool(renderers=[f_right_line_info], tooltips=[('tim
 hover_relative_line_info = HoverTool(renderers=[f_relative_line_info], tooltips=[('time', '@time'), ('state_fl_wheel_distance_to_line', '@state_fl_wheel_distance_to_line'), ('state_fl_wheel_distance_to_roadedge', '@state_fl_wheel_distance_to_roadedge'),
                                              ('state_fr_wheel_distance_to_line', '@state_fr_wheel_distance_to_line'), ('state_fr_wheel_distance_to_roadedge', '@state_fr_wheel_distance_to_roadedge'), ('road_lane_width_valid', '@road_lane_width_valid'),
                                              ('road_lane_width', '@road_lane_width')], mode='vline')
-hover_left_line_base_info = HoverTool(renderers=[f_left_line_base_info], tooltips=[('time', '@time'), ('road_left_line_begin', '@road_left_line_begin'), ('road_left_line_end', '@road_left_line_end'),
-                                                         ('road_left_roadedge_begin_x', '@road_left_roadedge_begin_x'), ('road_left_roadedge_end_x', '@road_left_roadedge_end_x'),('road_left_line_c0', '@road_left_line_c0'),
-                                                         ('road_left_line_c1', '@road_left_line_c1'),('road_left_line_c2', '@road_left_line_c2'),('road_left_line_c3', '@road_left_line_c3'),], mode='vline')
+hover_left_line_base_info = HoverTool(renderers=[f_left_line_base_info], tooltips=[('time', '@time'), ('road_left_line_c0', '@road_left_line_c0'),('road_left_line_c1', '@road_left_line_c1'),('road_left_line_c2', '@road_left_line_c2'),('road_left_line_c3', '@road_left_line_c3'),
+                                                                                   ], mode='vline')
+
 hover_right_line_base_info = HoverTool(renderers=[f_right_line_base_info], tooltips=[('time', '@time'), ('road_right_line_begin', '@road_right_line_begin'), ('road_right_line_end', '@road_right_line_end'),
                                                          ('road_right_roadedge_begin_x', '@road_right_roadedge_begin_x'), ('road_right_roadedge_end_x', '@road_right_roadedge_end_x'),('road_right_line_c0', '@road_right_line_c0'),
                                                          ('road_right_line_c1', '@road_right_line_c1'),('road_right_line_c2', '@road_right_line_c2'),('road_right_line_c3', '@road_right_line_c3'),], mode='vline')
