@@ -36,10 +36,14 @@ double MeanFilter::Update(const double measurement) {
   }
   Insert(measurement);
   if (values_.size() > 2) {
-    return (sum_ - GetMin() - GetMax()) /
-           static_cast<double>(values_.size() - 2);
+    mean_value_ =
+        (sum_ - GetMin() - GetMax()) /
+        static_cast<double>(values_.size() - 2);
+    return mean_value_;
   } else {
-    return sum_ / static_cast<double>(values_.size());
+    mean_value_ =
+        sum_ / static_cast<double>(values_.size());
+    return mean_value_;
   }
 }
 
@@ -76,6 +80,16 @@ void MeanFilter::Insert(const double value) {
     max_candidates_.pop_back();
   }
   max_candidates_.push_back(std::make_pair(time_, value));
+}
+
+bool MeanFilter::Reset() {
+  sum_ = 0.0;
+  mean_value_ = 0.0;
+  time_ = 0;
+  values_.clear();
+  min_candidates_.clear();
+  max_candidates_.clear();
+  return true;
 }
 
 }  // namespace planning_math

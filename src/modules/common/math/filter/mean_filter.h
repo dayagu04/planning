@@ -44,6 +44,19 @@ class MeanFilter {
    */
   double Update(const double measurement);
 
+  void SetWindowSize(const std::uint_fast8_t window_size) {
+    window_size_ = window_size;
+  }
+
+  const double GetMeanValue() const {
+    return mean_value_;
+  }
+
+  const size_t GetValuesSize() const {
+    return values_.size();
+  }
+
+  bool Reset();
  private:
   void RemoveEarliest();
   void Insert(const double value);
@@ -60,6 +73,7 @@ class MeanFilter {
   // front = max
   std::deque<std::pair<std::uint_fast8_t, double>> max_candidates_;
   bool initialized_ = false;
+  double mean_value_ = 0.0;
 };
 
 }  // namespace planning_math

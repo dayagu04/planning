@@ -1773,12 +1773,12 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
           kCancelOverTakeLnChgTargetLaneVehHighDst) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
       } else if (ego_left_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second.d_rel)) {
+                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel())) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
       } else {
         speed_threshold =
             planning_math::lerp(kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second.d_rel),
+                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel()),
                                 kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
                                 kCancelOverTakeLnChgTargetLaneVehHighDst,
                                 ego_left_front_leading_vehivle_long_distance);
@@ -1831,12 +1831,12 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
           kCancelOverTakeLnChgTargetLaneVehHighDst) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
       } else if (ego_right_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second.d_rel)) {
+                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel())) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
       } else {
         speed_threshold =
             planning_math::lerp(kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second.d_rel),
+                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel()),
                                 kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
                                 kCancelOverTakeLnChgTargetLaneVehHighDst,
                                 ego_right_front_leading_vehivle_long_distance);
