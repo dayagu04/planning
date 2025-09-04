@@ -234,6 +234,10 @@ class ApaSlotManager final {
 
   const size_t GetEgoSlotInfoID() const;
 
+  const bool GetFreeSlotActivate() const {
+    return free_slot_activate_;
+  }
+
  private:
   void ParkingLotCruiseProcess();
 
@@ -266,8 +270,8 @@ class ApaSlotManager final {
   // temp use
   bool is_ego_col_vertical_ = false;
   bool is_ego_col_parallel_ = false;
-  bool free_slot_activate = false;
-  iflyauto::FreeSlotSelectedStatus is_free_slot_selected;
+  bool free_slot_activate_ = false;
+  iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;
 };
 }  // namespace apa_planner
 }  // namespace planning

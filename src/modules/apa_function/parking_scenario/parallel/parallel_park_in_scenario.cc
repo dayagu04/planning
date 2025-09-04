@@ -859,29 +859,35 @@ const bool ParallelParkInScenario::GenTlane() {
     lower_bound += apa_param.GetParam().parallel_terminal_x_offset_with_obs;
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
-  if (lower_bound > upper_bound) {
-    const double small_obs_buffer = 0.2;
-    lower_bound = ori_lower_bound + (rear_vacant ? 0.0 : small_obs_buffer);
-    upper_bound = ori_upper_bound - (front_vacant ? 0.0 : small_obs_buffer);
-    ILOG_INFO << "new upper bound = " << upper_bound;
-    ILOG_INFO << "new lowwer bound = " << lower_bound;
-
+  if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
     if (lower_bound > upper_bound) {
-      ILOG_ERROR << "lower_bound > upper_bound, too much failed!";
-      return false;
+      const double small_obs_buffer = 0.2;
+      lower_bound = ori_lower_bound + (rear_vacant ? 0.0 : small_obs_buffer);
+      upper_bound = ori_upper_bound - (front_vacant ? 0.0 : small_obs_buffer);
+      ILOG_INFO << "new upper bound = " << upper_bound;
+      ILOG_INFO << "new lowwer bound = " << lower_bound;
+
+      if (lower_bound > upper_bound) {
+        ILOG_ERROR << "lower_bound > upper_bound, too much failed!";
+        return false;
+      } else {
+        ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
+            ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
+      }
+
     } else {
       ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
           ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
     }
-
+    ILOG_INFO << "ego_info_under_slot.target_pose.pos.x() before = "
+              << ego_info_under_slot.target_pose.pos.x();
+    ILOG_INFO << "bound = [ " << lower_bound << ", " << upper_bound << " ]";
   } else {
-    ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
-        ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
+    ego_info_under_slot.target_pose.pos.x() =
+        0.5 * (ego_info_under_slot.slot.slot_length_ -
+               apa_param.GetParam().car_length) +
+        apa_param.GetParam().rear_overhanging;
   }
-
-  ILOG_INFO << "ego_info_under_slot.target_pose.pos.x() before = "
-            << ego_info_under_slot.target_pose.pos.x();
-  ILOG_INFO << "bound = [ " << lower_bound << ", " << upper_bound << " ]";
 
   ILOG_INFO << "t_lane_.is_inside_rigid = " << t_lane_.is_inside_rigid;
   // set target y with curb
@@ -896,12 +902,16 @@ const bool ParallelParkInScenario::GenTlane() {
   ILOG_INFO << "curb_y_limit = " << curb_y_limit
             << " target_y_with_curb = " << target_y_with_curb;
 
-  ego_info_under_slot.target_pose.pos.y() =
-      (side_sgn > 0.0
-           ? std::max(-apa_param.GetParam().terminal_parallel_y_offset,
-                      target_y_with_curb)
-           : std::min(apa_param.GetParam().terminal_parallel_y_offset,
-                      target_y_with_curb));
+  if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
+    ego_info_under_slot.target_pose.pos.y() =
+        (side_sgn > 0.0
+            ? std::max(-apa_param.GetParam().terminal_parallel_y_offset,
+                        target_y_with_curb)
+            : std::min(apa_param.GetParam().terminal_parallel_y_offset,
+                        target_y_with_curb));
+  } else {
+    ego_info_under_slot.target_pose.pos.y() = 0.0;
+  }
 
   ILOG_INFO << "ego pose = " << ego_info_under_slot.cur_pose.pos.transpose();
 

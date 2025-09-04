@@ -29,6 +29,11 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   ILOG_INFO << "fun_state_machine_info.current_state = "
             << static_cast<int>(fun_state_machine_info.current_state);
 
+  is_free_slot_selected_ = fun_state_machine_info.parking_req.apa_free_slot_info
+                               .is_free_slot_selected;
+  free_slot_activate_ =
+      fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate;
+
   switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_PARK_STANDBY:
       state_machine_ = ApaStateMachine::STANDBY;
