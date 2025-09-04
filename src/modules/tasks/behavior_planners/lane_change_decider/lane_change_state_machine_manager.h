@@ -240,6 +240,7 @@ class LaneChangeStateMachineManager {
   bool IfFrenetCollision(std::pair<double, double> l1, double v1,
                         std::pair<double, double> l2, double v2,
                         double max_time = 4.0, double dt = 0.5);
+  void CheckOtherAgents(LaneChangeStageInfo *const lc_state_info);
  private:
 //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
