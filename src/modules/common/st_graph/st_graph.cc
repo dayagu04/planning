@@ -499,9 +499,9 @@ void STGraph::MakeDynamicAgentStBoundary(
 
     if (!st_point_pairs.empty()) {
       // 补全0~1秒的ST边界
-      CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path, path_range,
-                            path_border_querier, planning_init_point_box, type,
-                            is_rads_scene);
+      // CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path, path_range,
+      //                       path_border_querier, planning_init_point_box, type,
+      //                       is_rads_scene);
 
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
