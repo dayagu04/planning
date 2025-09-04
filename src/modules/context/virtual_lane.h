@@ -177,6 +177,10 @@ class VirtualLane {
 
   const std::vector<iflyauto::LaneNumMsg>& get_lane_nums() const { return lane_nums_; }
 
+  const double get_max_virtual_seg_ahead_x() const { return max_virtual_seg_ahead_x_; };
+
+  const double get_max_virtual_seg_ahead_length() const { return max_virtual_seg_ahead_length_; };
+
  private:
   planning::framework::Session *session_ = nullptr;
   int order_id_ = -1;
@@ -215,6 +219,9 @@ class VirtualLane {
   bool is_nearing_ramp_mlc_task_ = false;
   bool is_nearing_split_mlc_task_ = false;
   iflyauto::ReferenceLineMsg reference_line_msg_;
+
+  double max_virtual_seg_ahead_x_ = 0.0;
+  double max_virtual_seg_ahead_length_ = 0.0;
 };
 }  // namespace planning
 #endif

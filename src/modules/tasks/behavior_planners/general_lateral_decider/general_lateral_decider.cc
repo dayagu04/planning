@@ -501,10 +501,19 @@ bool GeneralLateralDecider::CalCruiseVelByCurvature(
   double far_min_kappa_radius = 1.0 / std::max(max_curv, 0.0001);
   double far_max_kappa_radius = 1.0 / std::max(min_curv, 0.0001);
   JSON_DEBUG_VALUE("far_kappa_radius", far_min_kappa_radius);
+  double max_virtual_seg_ahead_x =
+      virtual_lane_manager->get_current_lane()
+                          ->get_max_virtual_seg_ahead_x();
+  double max_virtual_seg_ahead_length =
+      virtual_lane_manager->get_current_lane()
+                          ->get_max_virtual_seg_ahead_length();
   if (virtual_lane_manager
           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
       virtual_lane_manager
-          ->GetIntersectionState() <= common::OFF_INTERSECTION) {
+          ->GetIntersectionState() <= common::OFF_INTERSECTION &&
+      (max_virtual_seg_ahead_x > 0.0 &&
+       max_virtual_seg_ahead_x < ego_v * 5.0 &&
+       max_virtual_seg_ahead_length > 15.0)) {
     if (far_min_kappa_radius <= 50.0) {
       return true;
     }
@@ -604,7 +613,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     }
     limit_ref_vel_on_ramp_valid = true;
     kMaxAcc = 1e-6;
-    kMinAcc = -0.8;
+    kMinAcc = -0.4;
   }
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
     kMaxAcc = 0.4;

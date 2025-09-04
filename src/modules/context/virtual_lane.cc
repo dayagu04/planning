@@ -48,6 +48,80 @@ void VirtualLane::update_data(const iflyauto::ReferenceLineMsg &lane) {
   right_lane_boundary_ = lane.right_lane_boundary;
   stop_line_ = lane.stop_line;
 
+  max_virtual_seg_ahead_length_ = 0.0;
+  max_virtual_seg_ahead_x_ = 0.0;
+  double max_virtual_length = 0.0;
+  double max_left_virtual_length = 0.0;
+  double max_left_virtual_x = 0.0;
+  double left_boundary_x = left_lane_boundary_.begin;
+  for (int i = 0; i < left_lane_boundary_.type_segments_size; i++) {
+    const auto& left_boundary_seg =
+        left_lane_boundary_.type_segments[i];
+    double left_boundary_seg_end_x =
+        left_boundary_x + left_boundary_seg.length;
+    if (left_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      if (left_boundary_x >= 0) {
+        max_virtual_length += left_boundary_seg.length;
+      } else if (left_boundary_seg_end_x >= 0) {
+        max_virtual_length += left_boundary_seg_end_x;
+      }
+      if (max_virtual_length > max_left_virtual_length) {
+        max_left_virtual_length = max_virtual_length;
+        max_left_virtual_x =
+            left_boundary_seg_end_x - max_left_virtual_length;
+      }
+    } else {
+      max_virtual_length = 0;
+    }
+    left_boundary_x += left_boundary_seg.length;
+  }
+  max_virtual_length = 0.0;
+  double max_right_virtual_length = 0.0;
+  double max_right_virtual_x = 0.0;
+  double right_boundary_x = right_lane_boundary_.begin;
+  for (int i = 0; i < right_lane_boundary_.type_segments_size; i++) {
+    const auto& right_boundary_seg =
+        right_lane_boundary_.type_segments[i];
+     double right_boundary_seg_end_x =
+        right_boundary_x + right_boundary_seg.length;
+    if (right_boundary_seg.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      if (right_boundary_x >= 0) {
+        max_virtual_length += right_boundary_seg.length;
+      } else if (right_boundary_seg_end_x >= 0) {
+        max_virtual_length += right_boundary_seg_end_x;
+      }
+      if (max_virtual_length > max_right_virtual_length) {
+        max_right_virtual_length = max_virtual_length;
+        max_right_virtual_x =
+            right_boundary_seg_end_x - max_right_virtual_length;
+      }
+    } else {
+      max_virtual_length = 0;
+    }
+    right_boundary_x += right_boundary_seg.length;
+  }
+  if (max_left_virtual_x < max_right_virtual_x &&
+      max_left_virtual_x + max_left_virtual_length > max_right_virtual_x) {
+    max_virtual_seg_ahead_x_ = max_left_virtual_x;
+    max_virtual_seg_ahead_length_ =
+        (max_right_virtual_x - max_left_virtual_x) +
+        max_right_virtual_length;
+  } else if (max_right_virtual_x < max_left_virtual_x &&
+             max_right_virtual_x + max_right_virtual_length > max_left_virtual_x) {
+    max_virtual_seg_ahead_x_ = max_right_virtual_x;
+    max_virtual_seg_ahead_length_ =
+        (max_left_virtual_x - max_right_virtual_x) +
+        max_left_virtual_length;
+  } else {
+    if (max_left_virtual_length > max_right_virtual_length) {
+      max_virtual_seg_ahead_x_ = max_left_virtual_x;
+      max_virtual_seg_ahead_length_ = max_left_virtual_length;
+    } else {
+      max_virtual_seg_ahead_x_ = max_right_virtual_x;
+      max_virtual_seg_ahead_length_ = max_right_virtual_length;
+    }
+  }
+
   if (left_lane_boundary_.existence) {
     if (right_lane_boundary_.existence) {
       lane_status_ = BOTH_AVAILABLE;
