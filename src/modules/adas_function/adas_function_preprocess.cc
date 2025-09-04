@@ -294,7 +294,7 @@ void Preprocess::SyncParameters(void) {
       "enable_accel_pedal_pos_rate_dur");
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->ldw_enable_accel_pedal_pos_rate_dur, double,
-      "enable_accel_pedal_pos_rate_dur"); 
+      "enable_accel_pedal_pos_rate_dur");
 
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->meb_request_status_const,
                        int, "meb_request_status_const");

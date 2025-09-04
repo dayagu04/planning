@@ -12,6 +12,27 @@
 
 namespace planning {
 
+enum INPUT_TOPIC {
+  PREDICTION = 0,
+  STATIC_FUSION = 1,
+  LOCALIZATION = 2,
+  OBSTACLE_FUSION = 3,
+  VIHECLE_SERVICES = 4,
+  CONTROL = 5,
+  HMI_SERVICE_MCU_INNER = 6,
+  STATE_MACHINE = 7,
+  USS_WAVE = 8,
+  USS_PERCEPTION = 9,
+  STATIC_MAP = 10,
+  EHR = 11,
+  TSR = 12,
+  SD_PRO = 13,
+  FUSION_OCC = 14,
+  PARK_FUSION = 15,
+  PERCEPTION_SCENE = 16,
+  GROUND_LINE = 17,
+  FUSION_SPEED_BUMP = 18
+};
 class PlanningAdapter : public iflyauto::interface::PlanningInterface {
  public:
   PlanningAdapter() = default;
@@ -79,15 +100,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     is_localization_msg_updated_.store(true);
   }
 
-  void FeedLocalizationEstimateOutput(
-      const iflyauto::interface_2_4_6::LocalizationEstimate&
-          localization_estimate_msg) {
-    std::lock_guard<std::mutex> lock(localization_estimate_msg_mutex_);
-    localization_estimate_msg_ = localization_estimate_msg;
-    localization_estimate_msg_recv_time_ = IflyTime::Now_ms();
-    is_localization_estimate_msg_updated_.store(true);
-  }
-
   void Feed_IflytekPredictionPredictionResult(
       const iflyauto::PredictionResult& prediction_result_msg) override {
     std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
@@ -119,14 +131,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   //   hmi_inner_info_msg_recv_time_ = IflyTime::Now_ms();
   //   is_hmi_inner_info_msg_updated_.store(true);
   // }
-
-  void FeedHmiMcuInner(
-      const iflyauto::interface_2_4_5::HmiMcuInner& hmi_mcu_inner_info_msg) {
-    std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
-    hmi_mcu_inner_info_msg_ = hmi_mcu_inner_info_msg;
-    hmi_mcu_inner_info_msg_recv_time_ = IflyTime::Now_ms();
-    is_hmi_mcu_inner_info_msg_updated_.store(true);
-  }
 
   void Feed_IflytekFusionParkingSlot(
       const iflyauto::ParkingFusionInfo& parking_fusion_info_msg) override {
@@ -295,10 +299,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   int64_t localization_msg_recv_time_;
   std::atomic<bool> is_localization_msg_updated_{false};
 
-  iflyauto::interface_2_4_6::LocalizationEstimate localization_estimate_msg_;
-  int64_t localization_estimate_msg_recv_time_;
-  std::atomic<bool> is_localization_estimate_msg_updated_{false};
-
   iflyauto::FusionObjectsInfo fusion_objects_info_msg_;
   int64_t fusion_objects_info_msg_recv_time_;
   std::atomic<bool> is_fusion_objects_info_msg_updated_{false};
@@ -319,9 +319,9 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   // int64_t hmi_inner_info_msg_recv_time_;
   // std::atomic<bool> is_hmi_inner_info_msg_updated_{false};
 
-  iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_inner_info_msg_;
-  int64_t hmi_mcu_inner_info_msg_recv_time_;
-  std::atomic<bool> is_hmi_mcu_inner_info_msg_updated_{false};
+  // iflyauto::interface_2_4_5::HmiMcuInner hmi_mcu_inner_info_msg_;
+  // int64_t hmi_mcu_inner_info_msg_recv_time_;
+  // std::atomic<bool> is_hmi_mcu_inner_info_msg_updated_{false};
 
   iflyauto::ParkingFusionInfo parking_fusion_info_msg_;
   int64_t parking_fusion_info_msg_recv_time_;

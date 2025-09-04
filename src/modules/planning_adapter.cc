@@ -141,19 +141,6 @@ bool PlanningAdapter::Proc() {
   input_topic_latency->set_localization(
       get_latency(start_time, local_view_ptr_->localization.msg_header.stamp));
 
-  // 老定位
-  if (is_localization_estimate_msg_updated_) {
-    std::lock_guard<std::mutex> lock(localization_estimate_msg_mutex_);
-    local_view_ptr_->localization_estimate = localization_estimate_msg_;
-    local_view_ptr_->localization_estimate_recv_time =
-        localization_estimate_msg_recv_time_;
-    is_localization_estimate_msg_updated_.store(false);
-  }
-  input_topic_timestamp->set_localization_estimate(
-      local_view_ptr_->localization_estimate.header.timestamp);
-  input_topic_latency->set_localization_estimate(get_latency(
-      start_time, local_view_ptr_->localization_estimate.header.timestamp));
-
   // 1.4 receive ground_line
   if (is_ground_line_perception_msg_updated_) {
     std::lock_guard<std::mutex> lock(ground_line_msg_mutex_);
@@ -235,17 +222,17 @@ bool PlanningAdapter::Proc() {
   // input_topic_latency->set_hmi(get_latency(
   //     start_time, local_view_ptr_->hmi_inner_info.msg_header.stamp));
 
-  if (is_hmi_mcu_inner_info_msg_updated_) {
-    std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
-    local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
-    local_view_ptr_->hmi_mcu_inner_info_recv_time =
-        hmi_mcu_inner_info_msg_recv_time_;
-    is_hmi_mcu_inner_info_msg_updated_.store(false);
-  }
-  input_topic_timestamp->set_hmi(
-      local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
-  input_topic_latency->set_hmi(get_latency(
-      start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
+//   if (is_hmi_mcu_inner_info_msg_updated_) {
+//     std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
+//     local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
+//     local_view_ptr_->hmi_mcu_inner_info_recv_time =
+//         hmi_mcu_inner_info_msg_recv_time_;
+//     is_hmi_mcu_inner_info_msg_updated_.store(false);
+//   }
+//   input_topic_timestamp->set_hmi(
+//       local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
+//   input_topic_latency->set_hmi(get_latency(
+//       start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
 
   // 1.7 receive parking_fusion
   if (is_parking_fusion_info_msg_updated_) {
@@ -471,129 +458,142 @@ bool PlanningAdapter::Proc() {
 }
 
 void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
-  int input_list_count = 0;
   // 更新input_list
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::PREDICTION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PREDICTION;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::PREDICTION].seq =
       local_view_ptr_->prediction_result.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::PREDICTION].stamp =
       local_view_ptr_->prediction_result.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::STATIC_FUSION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATIC_FUSION;
-  const auto &state_machine = local_view_ptr_->function_state_machine_info;
-  if (IsSwitchApaState(state_machine.current_state)) {
-    msg_meta.input_list[input_list_count].seq =
-        local_view_ptr_->parking_fusion_info.msg_header.seq;
-    msg_meta.input_list[input_list_count].stamp =
-        local_view_ptr_->parking_fusion_info.msg_header.stamp;
-  } else {
-    msg_meta.input_list[input_list_count].seq =
-        local_view_ptr_->road_info.msg_header.seq;
-    msg_meta.input_list[input_list_count].stamp =
-        local_view_ptr_->road_info.msg_header.stamp;
-  }
-  input_list_count += 1;
+  msg_meta.input_list[INPUT_TOPIC::STATIC_FUSION].seq =
+      local_view_ptr_->road_info.msg_header.seq;
+  msg_meta.input_list[INPUT_TOPIC::STATIC_FUSION].stamp =
+      local_view_ptr_->road_info.msg_header.stamp;
 
-  msg_meta.input_list[input_list_count].input_type =
+
+  msg_meta.input_list[INPUT_TOPIC::LOCALIZATION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::LOCALIZATION].seq =
       local_view_ptr_->localization.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::LOCALIZATION].stamp =
       local_view_ptr_->localization.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::OBSTACLE_FUSION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_OBSTACLE_FUSION;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::OBSTACLE_FUSION].seq =
       local_view_ptr_->fusion_objects_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::OBSTACLE_FUSION].stamp =
       local_view_ptr_->fusion_objects_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::VIHECLE_SERVICES].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_VIHECLE_SERVICES;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::VIHECLE_SERVICES].seq =
       local_view_ptr_->vehicle_service_output_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::VIHECLE_SERVICES].stamp =
       local_view_ptr_->vehicle_service_output_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::CONTROL].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_CONTROL;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::CONTROL].seq =
       local_view_ptr_->control_output.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::CONTROL].stamp =
       local_view_ptr_->control_output.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::HMI_SERVICE_MCU_INNER].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_HMI_SERVICE_MCU_INNER;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::HMI_SERVICE_MCU_INNER].seq =
       local_view_ptr_->hmi_inner_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::HMI_SERVICE_MCU_INNER].stamp =
       local_view_ptr_->hmi_inner_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::STATE_MACHINE].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_STATE_MACHINE;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::STATE_MACHINE].seq =
       local_view_ptr_->function_state_machine_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::STATE_MACHINE].stamp =
       local_view_ptr_->function_state_machine_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::USS_WAVE].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_WAVE;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::USS_WAVE].seq =
       local_view_ptr_->uss_wave_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::USS_WAVE].stamp =
       local_view_ptr_->uss_wave_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::USS_PERCEPTION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_USS_PERCEPTION;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::USS_PERCEPTION].seq =
       local_view_ptr_->uss_percept_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::USS_PERCEPTION].stamp =
       local_view_ptr_->uss_percept_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::STATIC_MAP].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_MAP;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::STATIC_MAP].seq =
       local_view_ptr_->static_map_info.header().seq();
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::STATIC_MAP].stamp =
       local_view_ptr_->static_map_info.header().timestamp();
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::EHR].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_EHR;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::EHR].seq =
       local_view_ptr_->sd_map_info.header().seq();
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::EHR].stamp =
       local_view_ptr_->sd_map_info.header().timestamp();
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
+  msg_meta.input_list[INPUT_TOPIC::TSR].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::TSR].seq =
       local_view_ptr_->perception_tsr_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::TSR].stamp =
       local_view_ptr_->perception_tsr_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list[input_list_count].input_type =
-      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
-  msg_meta.input_list[input_list_count].seq =
+  msg_meta.input_list[INPUT_TOPIC::SD_PRO].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_SDPRO;
+  msg_meta.input_list[INPUT_TOPIC::SD_PRO].seq =
+      local_view_ptr_->sdpro_map_info.header().seq();
+  msg_meta.input_list[INPUT_TOPIC::SD_PRO].stamp =
+      local_view_ptr_->sdpro_map_info.header().timestamp();
+
+  msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_SCENE;
+  msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].seq =
       local_view_ptr_->perception_scene_info.msg_header.seq;
-  msg_meta.input_list[input_list_count].stamp =
+  msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].stamp =
       local_view_ptr_->perception_scene_info.msg_header.stamp;
-  input_list_count += 1;
 
-  msg_meta.input_list_size = input_list_count;
+  msg_meta.input_list[INPUT_TOPIC::FUSION_OCC].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_FUSION_OCCUPANCY_OBJ;
+  msg_meta.input_list[INPUT_TOPIC::FUSION_OCC].seq =
+      local_view_ptr_->fusion_occupancy_objects_info.msg_header.seq;
+  msg_meta.input_list[INPUT_TOPIC::FUSION_OCC].stamp =
+      local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp;
+
+  msg_meta.input_list[INPUT_TOPIC::PARK_FUSION].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_FUSION_PARKING_SLOT;
+  msg_meta.input_list[INPUT_TOPIC::PARK_FUSION].seq =
+      local_view_ptr_->parking_fusion_info.msg_header.seq;
+  msg_meta.input_list[INPUT_TOPIC::PARK_FUSION].stamp =
+      local_view_ptr_->parking_fusion_info.msg_header.stamp;
+
+  msg_meta.input_list[INPUT_TOPIC::GROUND_LINE].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_FUSION_GROUND_LINE;
+  msg_meta.input_list[INPUT_TOPIC::GROUND_LINE].seq =
+      local_view_ptr_->ground_line_perception.msg_header.seq;
+  msg_meta.input_list[INPUT_TOPIC::GROUND_LINE].stamp =
+      local_view_ptr_->ground_line_perception.msg_header.stamp;
+
+//   msg_meta.input_list[INPUT_TOPIC::FUSION_SPEED_BUMP].input_type =
+//       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+//   msg_meta.input_list[input_list_count].seq =
+//       local_view_ptr_->perception_tsr_info.msg_header.seq;
+//   msg_meta.input_list[input_list_count].stamp =
+//       local_view_ptr_->perception_tsr_info.msg_header.stamp;
+
+  msg_meta.input_list_size = INPUT_TOPIC::GROUND_LINE + 1;
 }
 
 void PlanningAdapter::UpdateApaResetFlag() {
