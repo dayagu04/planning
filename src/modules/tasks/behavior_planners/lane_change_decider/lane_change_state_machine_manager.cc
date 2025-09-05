@@ -731,90 +731,121 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
   return lc_state_info;
 }
-void LaneChangeStateMachineManager::CheckOtherAgents(LaneChangeStageInfo *const lc_state_info){
-      // // 安全检查函数 other front nodes
-      // add check for risk agent_s
-    int risk_front_agent_id = -1;
-    int risk_side_agent_id = -1;
-    bool lc_safety = true;
-    bool is_risk_node = false;
-    bool is_side_clsoing = false;
-    for (const auto risk_node: risk_agents_nodes_){
-      bool is_large =  IsLargeAgent(risk_node);
-      bool is_risk = !CheckFrontRiskAgentTrajs(risk_node, is_large);
-      if(is_risk){
-        lc_safety = false;
-        is_risk_node = true;
-        risk_front_agent_id = risk_node->node_agent_id();
-        break;
-      }
+void LaneChangeStateMachineManager::CheckOtherAgents(
+    LaneChangeStageInfo *const lc_state_info) {
+  int risk_front_agent_id = -1;
+  int risk_side_agent_id = -1;
+  bool lc_safety = true;
+  bool is_risk_node = false;
+  bool is_side_closing = false;
+// === 前方检查 ===
+  for (const auto &risk_node : risk_agents_nodes_) {
+    bool is_large = IsLargeAgent(risk_node);
+    bool is_risk = !CheckFrontRiskAgentTrajs(risk_node, is_large);
+    if (is_risk) {
+      lc_safety = false;
+      is_risk_node = true;
+      risk_front_agent_id = risk_node->node_agent_id();
+      break;
     }
-    const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
-    const auto reference_path_manager =
-        session_->environmental_model().get_reference_path_manager();
-    const auto virtual_lane_manager =
-    session_->environmental_model().get_virtual_lane_manager();
-    const auto target_lane =
-        virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
-    const double half_width_by_target = target_lane->width() * 0.5;
-    const auto &vehicle_param =
-    VehicleConfigurationContext::Instance()->get_vehicle_param();
-    double half_width = vehicle_param.max_width * 0.5;
-    double single_risk_buff = 1.0;
-    const auto target_reference_path =
-        reference_path_manager->get_reference_path_by_lane(
-            target_lane_virtual_id);
-    const auto& ego_sl_state = target_reference_path
-                              ->get_frenet_ego_state();
-    const auto& ego_sl_bd = target_reference_path
-                          ->get_ego_frenet_boundary();
-    std::pair<double, double> ego_lat{ego_sl_bd.l_start - single_risk_buff, ego_sl_bd.l_end + single_risk_buff};
-    // std::pair<double, double> center_lat{- half_width - single_risk_buff,
-                                            // half_width + single_risk_buff};
-    double ego_lat_vel = ego_sl_state.velocity_l();
-    for(const auto& side_obs: risk_side_agents_nodes_){
-      const auto& obstacle_sl = side_obs->frenet_obstacle_boundary();
-      std::pair<double, double> obs_lat{obstacle_sl.l_start, obstacle_sl.l_end};
-      double obs_lat_vel = side_obs->frenet_velocity_l();
-      //横向是否在明显靠近 ：+符号的都代表远离，-符号的都代表靠近， 靠近则更敏感, 正常直行的允许轮胎压线
-      double tolerance_buff = (side_obs->frenet_velocity_lateral() < -0.05)? 0.0: 0.20;
-      std::pair<double, double> center_lat{- half_width_by_target + tolerance_buff,
-                                            half_width_by_target - tolerance_buff};
-      bool lateral_collision = IfFrenetCollision(center_lat, 0.0, obs_lat, obs_lat_vel, 4.0, 1.0);//目标车4s横向
-      bool ego_collision = IfFrenetCollision(ego_lat, ego_lat_vel, obs_lat, obs_lat_vel, 4.0, 1.0);//两车4s横向
-      if(lateral_collision || ego_collision){
-        lc_safety = false;
-        is_side_clsoing = true;
-        risk_side_agent_id = side_obs->obstacle()->id();
-        break;
-      }
-    }
+  }
 
-    if (!lc_safety) {
+  const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+  const auto reference_path_manager =
+      session_->environmental_model().get_reference_path_manager();
+  const auto virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  if (virtual_lane_manager == nullptr || reference_path_manager == nullptr) {
+    return;
+  }
+
+  const auto target_lane =
+      virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  const double half_width_by_target = target_lane->width() * 0.5;
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double half_width = vehicle_param.max_width * 0.5;
+  const double single_risk_buff = 1.0;
+
+  const auto target_reference_path =
+      reference_path_manager->get_reference_path_by_lane(
+          target_lane_virtual_id);
+
+  const auto &ego_sl_state = target_reference_path->get_frenet_ego_state();
+  const auto &ego_sl_bd = target_reference_path->get_ego_frenet_boundary();
+
+  std::pair<double, double> ego_lat{
+      ego_sl_bd.l_start - single_risk_buff,
+      ego_sl_bd.l_end + single_risk_buff};
+
+  double ego_lat_vel = ego_sl_state.velocity_l();
+
+  // === 侧边车辆安全检查 ===
+  for (const auto &side_obs : risk_side_agents_nodes_) {
+    const auto &obstacle_sl = side_obs->frenet_obstacle_boundary();
+    std::pair<double, double> obs_lat{obstacle_sl.l_start, obstacle_sl.l_end};
+    double obs_lat_vel = side_obs->frenet_velocity_l();
+
+    // frenet_velocity_lateral 横向是否在明显靠近：
+    //   - 符号 > 0 代表远离
+    //   - 符号 < 0 代表靠近
+    //   - 正常直行允许轮胎压线
+    double tolerance_buff =
+        (side_obs->frenet_velocity_lateral() < -0.05) ? 0.0 : 0.20;
+
+    std::pair<double, double> center_lat{
+        -half_width_by_target + tolerance_buff,
+         half_width_by_target - tolerance_buff};
+
+    bool lateral_collision =
+        IfFrenetCollision(center_lat, 0.0,
+                          obs_lat, obs_lat_vel,
+                          4.0, 1.0); // 目标车 4s 横向
+    bool ego_collision =
+        IfFrenetCollision(ego_lat, ego_lat_vel,
+                          obs_lat, obs_lat_vel,
+                          4.0, 1.0); // 两车 4s 横向
+
+    if (lateral_collision || ego_collision) {
+      lc_safety = false;
+      is_side_closing = true;
+      risk_side_agent_id = side_obs->obstacle()->id();
+      break;
+    }
+  }
+
+  // 输出失败id
+  if (!lc_safety) {
     if (transition_info_.lane_change_status == kLaneChangeExecution) {
       lc_state_info->lc_should_back = true;
-      if(is_risk_node){
+
+      if (is_risk_node) {
         lc_state_info->lc_back_reason = "front risk node";
         lc_back_track_.set_value(risk_front_agent_id, 0.0, 0.0);
       }
-      if(is_side_clsoing){
-        lc_state_info->lc_back_reason = "side clsoing";
+      if (is_side_closing) {
+        lc_state_info->lc_back_reason = "side closing";
         lc_back_track_.set_value(risk_side_agent_id, 0.0, 0.0);
       }
+
     } else if (transition_info_.lane_change_status == kLaneChangePropose ||
-        transition_info_.lane_change_status == kLaneChangeHold) {
+               transition_info_.lane_change_status == kLaneChangeHold) {
       lc_state_info->gap_insertable = false;
-      if(is_risk_node){
+
+      if (is_risk_node) {
         lc_state_info->lc_invalid_reason = "front risk node";
         lc_invalid_track_.set_value(risk_front_agent_id, 0.0, 0.0);
       }
-      if(is_side_clsoing){
-        lc_state_info->lc_invalid_reason = "side clsoing";
+      if (is_side_closing) {
+        lc_state_info->lc_invalid_reason = "side closing";
         lc_invalid_track_.set_value(risk_side_agent_id, 0.0, 0.0);
       }
     }
   }
 }
+
 void LaneChangeStateMachineManager::CheckLaneChangeBackValid(
     RequestType direction) {
   lane_change_stage_info_ = CheckIfNeedLCBack(direction);
@@ -1919,7 +1950,7 @@ void LaneChangeStateMachineManager::PreProcess() {
     //add second check for target node
   CheckTargetFrontNode(target_lane_front_node_id);
   GetFrontRiskAgentTrajs();
-  GetSideRiskAgent();
+  GetSideRiskAgents();
 
   if (target_lane_rear_node_) {
     is_large_car_in_side_ = IsLargeAgent(target_lane_rear_node_);
@@ -2038,7 +2069,7 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs(){
   }
 }
 // 关注自车左右侧快速靠近的障碍物
-void LaneChangeStateMachineManager::GetSideRiskAgent(){
+void LaneChangeStateMachineManager::GetSideRiskAgents(){
   risk_side_agents_nodes_.clear();
   const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
   const auto reference_path_manager =
