@@ -109,6 +109,11 @@ void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
 
 void RouteInfo::UpdateRouteInfoForNOA(
     const ad_common::sdpromap::SDProMap& sdpro_map) {
+  if (!sdpro_map.isRouteValid()) {
+    route_info_output_.reset();
+    return; 
+  }
+  
   double nearest_s;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
