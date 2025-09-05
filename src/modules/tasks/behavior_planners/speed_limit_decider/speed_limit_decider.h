@@ -73,7 +73,7 @@ class SpeedLimitDecider : public Task {
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map);
-  bool JudgeCurvBySDProMap();
+  double JudgeCurvBySDProMap();
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};

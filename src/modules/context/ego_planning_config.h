@@ -3068,8 +3068,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, pre_accelerate_distance_for_merge,
                      "speed_limit_decider",
                      "pre_accelerate_distance_for_merge");
-    ReadItem<double>(json, straight_ramp_v_limit, "speed_limit_decider",
-                     "straight_ramp_v_limit");
+    ReadItem<double>(json, straight_ramp_v_limit_low, "speed_limit_decider",
+                     "straight_ramp_v_limit_low");
+    ReadItem<double>(json, straight_ramp_v_limit_high, "speed_limit_decider",
+                     "straight_ramp_v_limit_high");
+    ReadItem<double>(json, ramp_curv_radius_small, "speed_limit_decider",
+                      "ramp_curv_radius_small");
+    ReadItem<double>(json, ramp_curv_radius_big, "speed_limit_decider",
+                      "ramp_curv_radius_big");
     ReadItem<double>(json, v_limit_ramp, "speed_limit_decider", "v_limit_ramp");
     ReadItem<double>(json, v_limit_near_ramp_zone, "speed_limit_decider",
                      "v_limit_near_ramp_zone");
@@ -3082,8 +3088,6 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "v_intersection_min_limit");
     ReadItem<double>(json, v_reduce_rate_intersection, "speed_limit_decider",
                       "v_reduce_rate_intersection");
-    ReadItem<double>(json, v_reduce_intersection, "speed_limit_decider",
-                      "v_reduce_intersection");
     ReadItem<bool>(json, enable_sdmap_curv_v_adjust, "speed_limit_decider",
                       "enable_sdmap_curv_v_adjust");
     ReadItem<double>(json, search_sdmap_curv_dis, "speed_limit_decider",
@@ -3210,7 +3214,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double t_curv = 2.0;
   double dis_curv = 80.0;
   double pre_accelerate_distance_for_merge = 80.0;
-  double straight_ramp_v_limit = 22.22;
+  double straight_ramp_v_limit_high = 22.22;
+  double straight_ramp_v_limit_low = 19.44;
+  double ramp_curv_radius_small = 350.0;
+  double ramp_curv_radius_big = 500.0;
   double v_limit_ramp = 16.67;
   double v_limit_near_ramp_zone = 25.0;
   double dis_near_ramp_zone = 1200.0;

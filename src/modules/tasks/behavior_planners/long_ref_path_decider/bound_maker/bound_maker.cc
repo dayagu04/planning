@@ -154,8 +154,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         continue;
       }
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] =
-          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+      acc_upper_bound_[i] = acc_target.second;
       continue;
     }
 
@@ -176,12 +175,11 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
                   upper_bound_a, &acc_target);
     acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-    acc_upper_bound_[i] =
-        std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
+    acc_upper_bound_[i] = acc_target.second;
     // only allow acc upper bound over 1.0 in start state
     if (start_stop_decider_output.ego_start_stop_info().state() !=
         common::StartStopInfo::START) {
-      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
+      //acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
   }
 }
@@ -404,11 +402,11 @@ void BoundMaker::MakeSafetyBound() {
 
   std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
 
-  constexpr double s_0 = 3.5;        
-  constexpr double a_comfort = 2.0;  
-  constexpr double max_tau = 1.2;    
-  constexpr double b_max = 5.0;      
-  constexpr double a_max = 4.0;     
+  constexpr double s_0 = 3.5;
+  constexpr double a_comfort = 2.0;
+  constexpr double max_tau = 1.2;
+  constexpr double b_max = 5.0;
+  constexpr double a_max = 4.0;
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const auto& upper_bound_info = upper_bound_infos_[i];

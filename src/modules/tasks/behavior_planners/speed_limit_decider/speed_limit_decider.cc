@@ -23,8 +23,8 @@
 namespace planning {
 namespace {
 constexpr double kEpsilon = 1e-6;
-constexpr double kHighVel = 100 / 3.6;
-constexpr double kLaneBorrowLimitedSpeed = 5.56;
+constexpr double kLaneBorrowLimitedSpeed = 8.33;
+constexpr double kHighVel = 60 / 3.6;
 constexpr double kSpeedlimitScale = 0.6;
 constexpr double kSSharpBendRadius = 300.0;
 constexpr double kSSharpBendCurvDis = 30.0;
@@ -275,13 +275,13 @@ bool SpeedLimitDecider::IsSSharpBend(
   return false;
 }
 
-bool SpeedLimitDecider::JudgeCurvBySDProMap() {
+double SpeedLimitDecider::JudgeCurvBySDProMap() {
   if (!speed_limit_config_.enable_sdmap_curv_v_adjust) {
-    return true;
+    return 300.0;
   }
   if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
     std::cout << "sd_map is invalid!!!" << std::endl;
-    return true;
+    return 300.0;
   }
   ad_common::math::Vec2d current_point;
   const auto &ego_state =
@@ -303,24 +303,20 @@ bool SpeedLimitDecider::JudgeCurvBySDProMap() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (!current_segment) {
-    return true;  // 返回true,代表判断出弯道，不加速，有异常就不加速
+    return 300.0;  // 返回300.0,较小的曲率半径，代表判断出弯道，不加速，有异常就不加速
   }
   std::vector<std::pair<double, double>> curv_list;
   curv_list = sdpro_map.GetCurvatureList(current_segment->id(), nearest_s,
   speed_limit_config_.search_sdmap_curv_dis);
   double min_curv_radius = 10000.0;
-  bool has_curv = true;
   for (int i = 0; i < curv_list.size(); i++) {
     double one_curv_radius = 1.0 / (std::abs(curv_list[i].second));
     if (one_curv_radius < min_curv_radius) {
       min_curv_radius = one_curv_radius;
     }
   }
-  if (min_curv_radius > speed_limit_config_.sdmap_curv_thred) {
-    has_curv = false;
-  }
   JSON_DEBUG_VALUE("sdpromap_min_curv_radius", min_curv_radius)
-  return has_curv;
+  return min_curv_radius;
 }
 
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
@@ -501,14 +497,17 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  bool sdmap_has_curv = JudgeCurvBySDProMap();  // 先不考虑匝道内小曲率的情况，后面补充
+  //bool sdmap_has_curv = JudgeCurvBySDProMap();
+  double sdpro_min_curv = JudgeCurvBySDProMap();
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
-      if (sdmap_has_curv) {
-        v_target_ramp = speed_limit_config_.v_limit_ramp;
+      if (sdpro_min_curv > speed_limit_config_.ramp_curv_radius_small && sdpro_min_curv < speed_limit_config_.ramp_curv_radius_big) {
+        v_target_ramp = speed_limit_config_.straight_ramp_v_limit_low;
+      } else if (sdpro_min_curv >= speed_limit_config_.ramp_curv_radius_big) {
+        v_target_ramp = speed_limit_config_.straight_ramp_v_limit_high;
       } else {
-        v_target_ramp = speed_limit_config_.straight_ramp_v_limit;
+        v_target_ramp = speed_limit_config_.v_limit_ramp;
       }
     } else {
       ReferencePathPoint detect_merge_front_pnt;

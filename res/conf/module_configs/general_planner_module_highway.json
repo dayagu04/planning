@@ -732,7 +732,10 @@
     "search_sdmap_curv_dis": 300.0,
     "sdmap_curv_thred": 1000.0,
     "pre_accelerate_distance_for_merge": 150.0,
-    "straight_ramp_v_limit": 19.44,
+    "straight_ramp_v_limit_low": 19.44,
+    "straight_ramp_v_limit_high": 22.22,
+    "ramp_curv_radius_small": 350.0,
+    "ramp_curv_radius_big": 500.0,
     "v_intersection_min_limit": 11.11,
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
@@ -937,8 +940,8 @@
       "comfort_kinematic_param": {
         "acc_positive_upper": 1.35,
         "acc_positive_speed_lower": 4.2,
-        "acc_positive_lower": 0.5,
-        "acc_positive_speed_upper": 12.0,
+        "acc_positive_lower": 0.3,
+        "acc_positive_speed_upper": 27.8,
         "acc_negative_lower": -0.8,
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -0.5,
@@ -955,8 +958,8 @@
       "kappa_kinematic_param": {
         "acc_positive_upper": 1.35,
         "acc_positive_speed_lower": 4.2,
-        "acc_positive_lower": 0.5,
-        "acc_positive_speed_upper": 12.0,
+        "acc_positive_lower": 0.3,
+        "acc_positive_speed_upper": 27.8,
         "acc_negative_lower": -1.0,
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -1.0,
@@ -973,8 +976,8 @@
       "avoid_agent_kinematic_param": {
         "acc_positive_upper": 1.35,
         "acc_positive_speed_lower": 4.2,
-        "acc_positive_lower": 0.5,
-        "acc_positive_speed_upper": 12.0,
+        "acc_positive_lower": 0.3,
+        "acc_positive_speed_upper": 27.8,
         "acc_negative_lower": -1.0,
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -1.0,
@@ -1069,10 +1072,10 @@
       "lane_keeping_non_cipv_start_acc_bound": 1.5,
       "cruise_acc_bound_table": {
         "vel_table": [
-          0.0, 5.0, 10.0, 20.0, 40.0
+          0.0, 5.56, 11.11, 16.67, 22.22, 27.78, 36.11
         ],
         "acc_table": [
-          1.0, 0.85, 0.6, 0.5, 0.3
+          1.5, 1.25, 1.0, 0.8, 0.6, 0.4, 0.3
         ]
       },
       "cruise_dec_bound_table": {
