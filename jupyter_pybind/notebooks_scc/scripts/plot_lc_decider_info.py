@@ -110,9 +110,12 @@ def update_lc_data (noa_info, plan_debug_json):
              'left_boundary_type','right_boundary_type',"current_segment_id","distance_to_route_end","sum_dis_to_last_merge_point",
              'is_leaving_ramp','is_nearing_ramp','road_to_ramp_turn_signal','merge_lane_virtual_id','is_merge_region',"cur_lane_is_continue",
              'is_split_region', 'distance_to_ramp','distance_to_first_road_merge','distance_to_first_road_split','is_nearing_other_lane_merge_to_road_point',
-             'current_segment_passed_distance', 'forward_lane_num',
-             'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-             'ramp_pass_sts', 'target_lane_congestion_level','lat_offset_propose','lat_offset_lc_hold', "ego_press_line_ratio",'ego_status_on_route','left_lane_num', 'minVal_seq', 'maxVal_seq', 'right_lane_num', 'emergency_lane_num']
+            'current_segment_passed_distance', 'forward_lane_num', 'is_ego_on_split_region', 'last_split_seg_dir',
+            'need_continue_lc_num_on_off_ramp_region', 'ego_status_on_route', 'left_lane_num', 'minVal_seq',
+            'maxVal_seq', 'right_lane_num', 'emergency_lane_num', 'lat_offset_lc_hold',
+            'ego_press_line_ratio', 'ramp_pass_sts', 'target_lane_congestion_level', 'lat_offset_propose',
+            'front_agent_id', 'front_other_id', 'rear_agent_id', 'side_id']
+
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))

@@ -665,18 +665,22 @@ class LoadRosbag:
                          "cipv_vel_frenet","cipv_vel_fusion",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
                          "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
-                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length", "gear_command", "THW", "can_left_borrow",
-                          "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
-                          "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
-                          "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
+                         "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length","gear_command", "THW",
+                         "can_left_borrow", "can_right_borrow", "maintain_avoid","lateral_emergency_level", "goal_point_x", "goal_point_y", "pp_init_x", "pp_init_y",
+                          "lon_decision_to_invade_ego_motion_sim_path","invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
+                          "left_road_extra_buffer", "right_road_extra_buffer","target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
                           "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_safety_distance",
-                          "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel", "ego_status_on_route",
-                          "left_lane_num", "minVal_seq", "maxVal_seq", "average_lon_acc", "potential_hard_break_count",
-                          "emergency_avoid_obstacle_ids", "lon_overtake_avoid", "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away",
-                          "cur_lane_mark", "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
-                          "take_over_request", "request_reason", "front_agent_id", "rear_agent_id", "cur_lane_mark_plan",
-                          "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id", "is_truck_overtake", "is_truck_yield",
-                          "truck_decider_state", "truck_running_frames", "truck_cooldown_frames", "truck_lateral_distance",'right_lane_num','emergency_lane_num']
+                          "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel",
+                          "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq",
+                          "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
+                          "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away", "cur_lane_mark",
+                          "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",
+                          "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
+                          "cur_lane_mark_plan", "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id",
+                          "is_truck_overtake", "is_truck_yield", "truck_decider_state", "truck_running_frames",
+                          "truck_cooldown_frames", "truck_lateral_distance", "right_lane_num", "emergency_lane_num",
+                          "front_other_id", "side_id"]
+
 
       json_value_list += [#new_ldw debug info:
                          "ldw_main_switch_","ldw_enable_code_", "ldw_disable_code_", "ldw_fault_code_", "ldw_left_suppression_code_","ldw_left_kickdown_code_",
@@ -702,7 +706,7 @@ class LoadRosbag:
                          # ihc debug info
                          "ihc_function::ihc_enable_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
-                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle", 
+                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle",
                          "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition",
                          "ihc_function::ihc_disable_code",
                          #adas_debug info
@@ -738,7 +742,9 @@ class LoadRosbag:
                          "st_path_final_nodes_cost_jerk_vec","st_path_final_nodes_cost_length_vec", "st_path_final_nodes_time_vec", 'lateral_avoid_ids',
                          'front_obj_s_vec', 'rear_obj_s_vec', 'ego_s_vec', 't_vec','front_obj_s_tar_lane_vec',"front_obj_need_dis_vec",'rear_obj_need_dis_vec',
                          'front_obj_future_v_vec', 'rear_obj_future_v_vec', 'ego_future_v_vec', 'expected_steer_vec', "lat_path_x", "lat_path_y", "ori_lat_path_x", "ori_lat_path_y",
-                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec']
+                         'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'agent_box_corners_x', 'agent_box_corners_y', 'ego_box_corners_x', 'ego_box_corners_y', 'lat_path_v',
+                         'lat_path_t','ego_sim_s']
+
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
                          "LateralMotionPlannerTime","GeneralLongitudinalDeciderTime","LongitudinalMotionPlannerTime",\
