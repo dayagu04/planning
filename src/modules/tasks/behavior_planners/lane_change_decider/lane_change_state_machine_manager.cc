@@ -2075,6 +2075,9 @@ void LaneChangeStateMachineManager::GetSideRiskAgent(){
     if(target_lane_front_node_!= nullptr && id == target_lane_front_node_->node_agent_id()){
       continue;
     }
+    if(target_lane_rear_node_ != nullptr && id == target_lane_rear_node_->node_agent_id()){
+      continue;
+    }
     risk_side_agents_nodes_.push_back(obstacle);
   }
   // 暂时只关注当前时刻 ttc
