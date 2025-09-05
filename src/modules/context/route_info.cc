@@ -4042,7 +4042,9 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() const{
   bool is_process_split = false;
   bool is_process_split_split = false;
   bool is_process_other_merge_split = false;
-  if (mlc_decider_route_info_.is_process_split) {
+  if (mlc_decider_route_info_.is_process_split ||
+      mlc_decider_route_info_.is_process_split_split ||
+      mlc_decider_route_info_.is_process_other_merge_split) {
     if (mlc_decider_route_info_.first_static_split_region_info
             .split_direction == SPLIT_LEFT) {
       // 暂时由于不知道右侧有几个车道，因此在当前车道上执行一次变道动作
