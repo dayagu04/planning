@@ -314,8 +314,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
   auto &is_emergency_avoid_release = session_->mutable_planning_context()
                           ->mutable_lateral_obstacle_decider_output()
                           .is_emergency_avoid_release;
-  const auto &is_crossing_map = session_->mutable_planning_context()
-                          ->lateral_obstacle_decider_output()
+  const auto &is_crossing_map = session_->planning_context()
+                          .crossing_agent_decider_output()
                           .is_crossing_map;
   const auto lon_ref_path_decider_output =
       session_->planning_context()

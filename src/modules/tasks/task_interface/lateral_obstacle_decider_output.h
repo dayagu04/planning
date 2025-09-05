@@ -43,7 +43,6 @@ struct LateralObstacleDeciderOutput {
   ara_star::HybridARAStarResult hybrid_ara_result;
   std::unordered_map<uint32_t, LatObstacleDecisionType> lat_obstacle_decision;
   std::unordered_map<uint32_t, bool> is_emergency_avoid_release;
-  std::unordered_map<uint32_t, bool> is_crossing_map;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info;
   std::vector<int> obstacles_id_behind_ego;

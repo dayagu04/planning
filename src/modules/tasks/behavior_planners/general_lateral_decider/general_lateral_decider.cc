@@ -2898,7 +2898,7 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
                                           .lateral_obstacle_decider_output()
                                           .lateral_obstacle_history_info;
   const auto &is_crossing_map = session_->planning_context()
-                                          .lateral_obstacle_decider_output()
+                                          .crossing_agent_decider_output()
                                           .is_crossing_map;
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()

@@ -50,7 +50,10 @@ bool CrossingAgentDecider::Execute() {
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
-
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_crossing_agent_decider_output()
+                                          .is_crossing_map;
+  is_crossing_map.clear();
   const auto& environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
@@ -86,7 +89,7 @@ bool CrossingAgentDecider::Execute() {
 bool CrossingAgentDecider::MakeYieldToVRUDecision(
     const agent::Agent* const agent) {
   auto &is_crossing_map = session_->mutable_planning_context()
-                                          ->mutable_lateral_obstacle_decider_output()
+                                          ->mutable_crossing_agent_decider_output()
                                           .is_crossing_map;
   if (agent == nullptr) {
     return false;
@@ -401,7 +404,7 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
 bool CrossingAgentDecider::MakeYieldToVehicleDecision(
     const agent::Agent* const agent) {
   auto &is_crossing_map = session_->mutable_planning_context()
-                                          ->mutable_lateral_obstacle_decider_output()
+                                          ->mutable_crossing_agent_decider_output()
                                           .is_crossing_map;
   if (agent == nullptr) {
     return false;
