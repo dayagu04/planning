@@ -201,6 +201,9 @@ class RouteInfo {
       iflymapdata::sdpro::FeaturePoint* find_fp,
       const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s);
 
+  bool IsTriggerContinueLCInPerceptionSplitRegion(
+      const int left_lane_num, const int right_lane_num) const;
+
   std::vector<int> CalculateMLCTaskNoLaneNum() const;
 
   std::vector<int> CommonElements(const std::vector<int>& A,
@@ -235,7 +238,7 @@ class RouteInfo {
     if (vec.size() <= 1) {
       return;
     }
-    
+
     auto it = std::find(vec.begin(), vec.end(), target);
 
     if (it != vec.end()) {

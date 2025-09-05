@@ -2290,10 +2290,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
     JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
 
-    bool is_nearing_ramp_scenary =
+    const bool is_triggle_continue_lc =
+        IsTriggerContinueLCInPerceptionSplitRegion(
+            left_lane_num, right_lane_num - emergency_lane_num);
+
+    const bool is_nearing_ramp_scenary =
         mlc_decider_route_info_.first_static_split_region_info.is_ramp_split;
-    if (perception_lane_num != map_lane_num &&
-        is_nearing_ramp_scenary) {
+    if (perception_lane_num != map_lane_num && is_nearing_ramp_scenary ||
+        is_triggle_continue_lc) {
       relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
       continue;
     }
@@ -3029,7 +3033,7 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type ==
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_START) {
-              
+
           //增加判断在当前merge link上是否有下一个交换区的起点
           if (temp_seg->id() == merge_segment.id() && is_exist_next_start_fp &&
             fp_point.projection_percent() > temp_end_fp.projection_percent()) {
@@ -3867,7 +3871,7 @@ bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
       }
     }
     itera_dis = itera_dis + current_link->length() * 0.01;
-    
+
     current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
     if (!current_link) {
       return false;
@@ -4050,5 +4054,53 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() const{
     }
   }
   return task_num;
+}
+
+bool RouteInfo::IsTriggerContinueLCInPerceptionSplitRegion(
+    const int perception_left_lane_num, const int perception_right_lane_num) const {
+  bool is_split_region = session_->planning_context()
+                             .ego_lane_road_right_decider_output()
+                             .is_split_region;
+
+  if (!is_split_region) {
+    return false;
+  }
+
+  bool is_split_region_process =
+      mlc_decider_route_info_.is_process_split ||
+      mlc_decider_route_info_.is_process_other_merge_split ||
+      mlc_decider_route_info_.is_process_split_split;
+
+  if (!is_split_region_process) {
+    return false;
+  }
+
+  if (route_info_output_.split_region_info_list.empty()) {
+    return false;
+  }
+
+  const auto& split_region_info_list =
+      route_info_output_.split_region_info_list[0];
+
+  const auto& split_direction = split_region_info_list.split_direction;
+
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+
+  int split_lane_vitrual_id = session_->planning_context()
+                                  .ego_lane_road_right_decider_output()
+                                  .split_lane_virtual_id;
+
+  bool is_exist_right_lane = virtual_lane_manager->get_right_lane() != nullptr;
+  bool is_exist_left_lane = virtual_lane_manager->get_left_lane() != nullptr;
+
+  if (split_direction == SPLIT_RIGHT && is_exist_right_lane &&
+      perception_right_lane_num == 0) {
+    return true;
+  } else if (split_direction == SPLIT_LEFT && is_exist_left_lane &&
+             perception_left_lane_num == 0) {
+    return true;
+  }
+  return false;
 }
 }  // namespace planning
