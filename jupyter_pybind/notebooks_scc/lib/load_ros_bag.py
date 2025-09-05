@@ -679,7 +679,7 @@ class LoadRosbag:
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "truck_longitudinal_avoid_active", "truck_agent_id",
                           "is_truck_overtake", "is_truck_yield", "truck_decider_state", "truck_running_frames",
                           "truck_cooldown_frames", "truck_lateral_distance", "right_lane_num", "emergency_lane_num",
-                          "front_other_id", "side_id"]
+                          "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD"]
 
 
       json_value_list += [#new_ldw debug info:

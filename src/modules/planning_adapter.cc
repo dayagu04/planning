@@ -299,6 +299,7 @@ bool PlanningAdapter::Proc() {
       start_time, local_view_ptr_->static_map_info.header().timestamp()));
 
   // 1.12 receive sd_map
+  double start_time_sd = IflyTime::Now_us();
   if (is_sd_map_info_msg_updated_) {
     std::lock_guard<std::mutex> lock(sd_map_infomsg_mutex_);
     local_view_ptr_->sd_map_info = sd_map_info_msg_;
@@ -320,7 +321,7 @@ bool PlanningAdapter::Proc() {
       local_view_ptr_->sdpro_map_info.header().timestamp());
   input_topic_latency->set_sdpro_map(get_latency(
       start_time, local_view_ptr_->sdpro_map_info.header().timestamp()));
-
+  JSON_DEBUG_VALUE("FeedDataTimeSD", (IflyTime::Now_us() - start_time_sd) / 1000.0);
   // 1.13 receive parking_map
   //   if (is_parking_map_info_msg_updated_) {
   //     std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);
@@ -372,6 +373,7 @@ bool PlanningAdapter::Proc() {
   input_topic_latency->set_fusion_speed_bump(get_latency(
       start_time, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
 
+  JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time) / 1000.0);
   UpdateApaResetFlag();
 
   // 2.planning run

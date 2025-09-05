@@ -795,6 +795,40 @@ def load_lateral_offset(bag_loader):
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   return fig
 
+def load_receive_topic_time(bag_loader):
+  data_fig = ColumnDataSource(data ={
+    'receive_topic_time': [],
+    "receive_sd_time":[],
+    'frame_num_y': [],
+  })
+
+  receive_topic_time = []
+  receive_sd_time = []
+  frame_nums = []
+  x_start = 0
+  x_end = 0
+  if bag_loader.plan_debug_msg['enable'] == True:
+    for i, plan_json_debug in enumerate(bag_loader.plan_debug_msg['json']):
+      plan_debug_msg = bag_loader.plan_debug_msg['data'][i]
+      frame_nums.append(plan_debug_msg.frame_info.frame_num)
+      receive_topic_time.append(plan_json_debug['FeedDataTime'])
+      receive_sd_time.append(plan_json_debug['FeedDataTimeSD'])
+    frame_num_0 = frame_nums[0]
+    frame_nums = [frame_num - frame_num_0 for frame_num in frame_nums]
+    x_start = frame_nums[0]
+    x_end = frame_nums[-1]
+
+  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='timecost',x_range = [x_start, x_end], width=800, height=200)
+  data_fig.data.update({
+    'receive_topic_time':receive_topic_time,
+    'receive_sd_time':receive_sd_time,
+    'frame_num_y':frame_nums,
+  })
+  f1 = fig.line('frame_num_y', 'receive_topic_time', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'receive_topic_time')
+  fig.line('frame_num_y', 'receive_sd_time', source = data_fig, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'receive_sd_time')
+  fig.legend.click_policy = 'hide'
+  fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
+  return fig
 
 def load_lat_plan_figure(fig1, local_view_data):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],

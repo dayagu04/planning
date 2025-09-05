@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250724/20250724-19-57-40/data_collection_CHERY_M32T_50813_EVENT_FUNEXIT_2025-07-24-19-57-40_no_camera.bag"
+bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250903/20250903-16-13-15/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-09-03-16-13-15_no_camera.bag"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -37,6 +37,7 @@ fig1.height = 1500
 load_measure_distance_tool(fig1)
 fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
+fig_receive_topic_time = load_receive_topic_time(bag_loader)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
 # behavior
@@ -250,7 +251,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   push_notebook()
 
 pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_12)), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_lat_offset, row(column(data_behavior_table_1), column(data_hmi_ad_info_table, data_hmi_hpp_info_table)))), title="TableInfo")
+pan2 = Panel(child=row(column(fig_lat_offset, row(column(data_behavior_table_1), column(data_hmi_ad_info_table, data_hmi_hpp_info_table,fig_receive_topic_time)))), title="TableInfo")
 pan3 = Panel(child=row(column(fig7)), title="!Figure")
 pans = Tabs(tabs=[ pan1, pan2, pan3 ])
 if global_fig_plot:
