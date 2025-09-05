@@ -107,6 +107,10 @@ class HybridAStarInterface {
 
   FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
 
+  const SearchTimeBenchmark& GetTimeBenchmark() const {
+    return time_benchmark_;
+  }
+
  private:
   int UpdateEDT();
 
@@ -178,6 +182,9 @@ class HybridAStarInterface {
   int gear_switch_number_scenario_try_;
 
   std::array<bool, 6> feasible_directions_;
+
+  // for debug
+  SearchTimeBenchmark time_benchmark_;
 };
 
 }  // namespace planning

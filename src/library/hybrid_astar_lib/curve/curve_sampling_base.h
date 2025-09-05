@@ -14,12 +14,14 @@ namespace planning {
 class CurveSampling {
  public:
   CurveSampling() = default;
-  explicit CurveSampling(const MapBound* XYbounds, const ParkObstacleList* obstacles,
-                const AstarRequest* request, EulerDistanceTransform* edt,
-                const ObstacleClearZone* clear_zone,
-                ParkReferenceLine* ref_line,
-                const PlannerOpenSpaceConfig* config, const float min_radius,
-                std::shared_ptr<NodeCollisionDetect> collision_detect);
+  explicit CurveSampling(const MapBound* XYbounds,
+                         const ParkObstacleList* obstacles,
+                         const AstarRequest* request,
+                         EulerDistanceTransform* edt,
+                         ParkReferenceLine* ref_line,
+                         const PlannerOpenSpaceConfig* config,
+                         const float min_radius,
+                         std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   virtual ~CurveSampling() = default;
 
@@ -31,9 +33,6 @@ class CurveSampling {
 
  protected:
   const ParkObstacleList* obstacles_;
-  // if search node in aabb, no need to check collision;
-  const ObstacleClearZone* clear_zone_;
-
   EulerDistanceTransform* edt_;
 
   // xmin, xmax, ymin, ymax

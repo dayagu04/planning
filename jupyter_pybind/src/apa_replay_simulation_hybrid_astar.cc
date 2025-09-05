@@ -93,6 +93,7 @@ planning::apa_planner::EgoInfoUnderSlot ego_slot_info_;
 
 static planning::LocalView local_view;
 std::vector<Eigen::Vector3d> global_astar_path_;
+std::vector<Eigen::Vector3d> anchor_points_;
 std::vector<double> global_path_s_;
 // record rs path in astar total path.
 std::vector<Eigen::Vector3d> static_rs_path_;
@@ -166,8 +167,6 @@ void UpdateFootprintCircle(const AstarPathGear gear,
     return;
   }
 
-  model->Init(0.1, 0.1, 0.1);
-
   const FootPrintCircleList circle_footprint =
       model->GetLocalFootPrintCircleByGear(gear);
 
@@ -204,6 +203,7 @@ int GetPathFromHybridAstar() {
   static_rs_path_.clear();
   polynomial_path_.clear();
   global_astar_path_.clear();
+  anchor_points_.clear();
 
   HybridAStarResult result;
 
@@ -225,21 +225,30 @@ int GetPathFromHybridAstar() {
       local_position.theta = result.phi[i];
 
       tf.ULFLocalPoseToGlobal(&global_position, local_position);
-      global_astar_path_.emplace_back(Eigen::Vector3d(
-          global_position.x, global_position.y, global_position.theta));
+
+      Eigen::Vector3d tmp(global_position.x, global_position.y,
+                          global_position.theta);
+      global_astar_path_.emplace_back(tmp);
 
       global_path_s_.emplace_back(result.accumulated_s[i]);
 
       if (result.type[i] == planning::AstarPathType::REEDS_SHEPP) {
-        static_rs_path_.push_back(Eigen::Vector3d(
-            global_position.x, global_position.y, global_position.theta));
+        static_rs_path_.push_back(tmp);
       }
 
       if (result.type[i] == AstarPathType::QUNTIC_POLYNOMIAL ||
           result.type[i] == AstarPathType::CUBIC_POLYNOMIAL ||
           result.type[i] == AstarPathType::SPIRAL) {
-        polynomial_path_.emplace_back(Eigen::Vector3d(
-            global_position.x, global_position.y, global_position.theta));
+        polynomial_path_.emplace_back(tmp);
+      }
+
+      if (i == 0 || i == result.x.size() - 1) {
+        anchor_points_.emplace_back(tmp);
+      }
+      if (i < result.x.size() - 1) {
+        if (result.gear[i] != result.gear[i + 1]) {
+          anchor_points_.emplace_back(tmp);
+        }
       }
     }
   }
@@ -873,6 +882,8 @@ const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
   return polynomial_path_;
 }
 
+const std::vector<Eigen::Vector3d> &GetAnchorPoints() { return anchor_points_; }
+
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
   m.doc() = "m";
 
@@ -900,5 +911,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetPolynomialPath", &GetPolynomialPath)
-      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo);
+      .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
+      .def("GetAnchorPoints", &GetAnchorPoints);
 }

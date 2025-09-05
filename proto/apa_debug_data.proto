@@ -98,9 +98,18 @@ message ControlBasedPredictTraj {
   repeated Pose2d points = 1;
 }
 
+message SearchTimeForPath {
+  repeated double search_time = 1;
+  optional double total_search_time = 4;
+}
+
+message PathTimeBenchmark {
+  optional SearchTimeForPath astar_time = 1;
+}
+
 message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;
   optional ControlBasedPredictTraj predict_traj = 3;
-  optional double path_search_time = 4;
+  optional PathTimeBenchmark path_time = 4;
 }

@@ -26,11 +26,13 @@ struct AstarResponse {
   }
 
   std::array<bool, 6> feasible_directions;
+  SearchTimeBenchmark time;
 
   void Clear() {
     request.Clear();
     result.Clear();
     first_seg_path.clear();
+    time.Clear();
     return;
   }
 };

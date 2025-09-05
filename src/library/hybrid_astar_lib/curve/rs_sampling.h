@@ -12,7 +12,6 @@ class RSSampling : public CurveSampling {
   explicit RSSampling(const MapBound* XYbounds,
                       const ParkObstacleList* obstacles,
                       const AstarRequest* request, EulerDistanceTransform* edt,
-                      const ObstacleClearZone* clear_zone,
                       ParkReferenceLine* ref_line,
                       const PlannerOpenSpaceConfig* config,
                       const float min_radius,

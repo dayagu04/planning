@@ -62,6 +62,8 @@ class HybridAStar {
 
   void SetRequest(const AstarRequest& request);
 
+  void SetSearchTime(const double time);
+
   /**
    * start: astar start
    * end: astar end, maybe different from real goal in slot.
@@ -201,19 +203,19 @@ class HybridAStar {
                        const bool is_forward);
 
   // dist_to_start: if forward, dist_to_start is positive
-  int GetStraightLinePoint(Pose2f* goal_state, const Pose2f* start_state,
-                           const float dist_to_start,
-                           const Pose2f* unit_vector);
+  void GetStraightLinePoint(Pose2f* goal_state, const Pose2f* start_state,
+                            const float dist_to_start,
+                            const Pose2f* unit_vector);
 
   // radius: if left turn, radius is positive
-  int GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2f* pose,
-                         const float radius, const AstarPathGear gear);
+  void GetVehCircleByPose(VehicleCircle* veh_circle, const Pose2f* pose,
+                          const float radius, const AstarPathGear gear);
 
   // arc is positive.
   // inverse_radius is positive
-  int InterpolateByArcOffset(Pose2f* pose, const VehicleCircle* veh_circle,
-                             const Pose2f* start_pose, const float arc,
-                             const float inverse_radius);
+  void InterpolateByArcOffset(Pose2f* pose, const VehicleCircle* veh_circle,
+                              const Pose2f* start_pose, const float arc,
+                              const float inverse_radius);
 
   void UpdatePoseByPathPointInterval(const Pose2f* old_pose, const float radius,
                                      const float interval, Pose2f* pose,

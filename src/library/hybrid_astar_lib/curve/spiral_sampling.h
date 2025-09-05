@@ -14,8 +14,8 @@ class SpiralSampling : public CurveSampling {
   explicit SpiralSampling(
       const MapBound* XYbounds, const ParkObstacleList* obstacles,
       const AstarRequest* request, EulerDistanceTransform* edt,
-      const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-      const PlannerOpenSpaceConfig* config, const float min_radius,
+      ParkReferenceLine* ref_line, const PlannerOpenSpaceConfig* config,
+      const float min_radius,
       std::shared_ptr<NodeCollisionDetect> collision_detect);
 
   ~SpiralSampling() = default;

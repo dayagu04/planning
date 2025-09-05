@@ -62,13 +62,13 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
       obstacles_, edt_, clear_zone_, &grid_map_bound_, &request_);
 
   polynomial_sampling_ = std::make_shared<PolynomialCurveSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
       &config_, vehicle_param_.min_turn_radius, collision_detect_);
   rs_sampling_ = std::make_shared<RSSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
       &config_, vehicle_param_.min_turn_radius, collision_detect_);
   spiral_sampling_ = std::make_shared<SpiralSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, clear_zone_, ref_line_,
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
       &config_, vehicle_param_.min_turn_radius, collision_detect_);
 }
 
@@ -983,11 +983,7 @@ float HybridAStar::ObstacleHeuristicWithHolonomic(Node3d* next_node) {
 }
 
 float HybridAStar::GenerateHeuristicCost(Node3d* next_node) {
-  float h_cost = 0.0;
-
-  h_cost += ObstacleHeuristicWithHolonomic(next_node);
-
-  return h_cost;
+  return ObstacleHeuristicWithHolonomic(next_node);
 }
 
 float HybridAStar::GenerateRefLineHeuristicCost(Node3d* next_node,
@@ -1280,12 +1276,13 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   node_set_.emplace(start_node_->GetGlobalID(), start_node_);
 
   // a star searching
-  size_t explored_node_num = 0;
-  size_t explored_rs_path_num = 0;
-  size_t h_cost_rs_path_num = 0;
+  int32_t explored_node_num = 0;
+  int32_t explored_rs_path_num = 0;
+  int32_t h_cost_node_num = 0;
   double astar_search_start_time = IflyTime::Now_ms();
   double astar_search_time;
   heuristic_time_ = 0.0;
+  double current_time = 0;
 
   Node3d* current_node = nullptr;
   Node3d* next_node_in_pool = nullptr;
@@ -1344,8 +1341,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     // check if an analystic curve could be connected from current
     // configuration to the end configuration without collision. if so,
     // search ends.
-    double current_time = IflyTime::Now_ms();
-
+    current_time = IflyTime::Now_ms();
     // if bigger than 100 ms，break
     astar_search_time = current_time - astar_search_start_time;
     if (astar_search_time > config_.max_search_time_ms_for_no_gear_switch) {
@@ -1462,8 +1458,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       // find a new node
       if (vis_type == AstarNodeVisitedType::NOT_VISITED) {
         GetSingleShotNodeHeuCost(current_node, &new_node);
-
-        h_cost_rs_path_num++;
+        h_cost_node_num++;
 
         // next_node_in_pool->CopyNode(&new_node);
         *next_node_in_pool = new_node;
@@ -1486,8 +1481,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
         // in open set and need update
         if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
           GetSingleShotNodeHeuCost(current_node, &new_node);
-
-          h_cost_rs_path_num++;
+          h_cost_node_num++;
 
           open_pq_.erase(next_node_in_pool->GetMultiMapIter());
 
@@ -1520,8 +1514,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
           }
 
           GetSingleShotNodeHeuCost(current_node, &new_node);
-
-          h_cost_rs_path_num++;
+          h_cost_node_num++;
 
           *next_node_in_pool = new_node;
           next_node_in_pool->SetFCost();
@@ -1566,7 +1559,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   ILOG_INFO << "explored node num is " << explored_node_num
             << " ,rs path size is: " << explored_rs_path_num
-            << " ,h cost rs num " << h_cost_rs_path_num
+            << " ,h cost node num " << h_cost_node_num
             << " ,node pool size:" << node_pool_.PoolSize()
             << " ,open_pq_.size=" << open_pq_.size();
 
@@ -1718,9 +1711,9 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   node_set_.emplace(start_node_->GetGlobalID(), start_node_);
 
   // Hybrid A*
-  size_t explored_node_num = 0;
-  size_t explored_rs_path_num = 0;
-  size_t h_cost_rs_path_num = 0;
+  int32_t explored_node_num = 0;
+  int32_t explored_rs_path_num = 0;
+  int32_t h_cost_node_num = 0;
   double astar_search_start_time = IflyTime::Now_ms();
   double astar_search_time;
   heuristic_time_ = 0.0;
@@ -1773,7 +1766,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     current_time = IflyTime::Now_ms();
     // if bigger than 5.0 s，break
     astar_search_time = current_time - astar_search_start_time;
-    if (astar_search_time > config_.max_search_time_ms) {
+    if (astar_search_time > request_.search_time) {
       // ILOG_INFO << "time out " << astar_search_time;
       break;
     }
@@ -1918,8 +1911,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       // find a new node
       if (vis_type == AstarNodeVisitedType::NOT_VISITED) {
         CalculateNodeHeuristicCost(current_node, &new_node);
-
-        h_cost_rs_path_num++;
+        h_cost_node_num++;
 
         *next_node_in_pool = new_node;
         next_node_in_pool->SetFCost();
@@ -1941,8 +1933,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
         // in open set and need update
         if (new_node.GetGCost() < next_node_in_pool->GetGCost()) {
           CalculateNodeHeuristicCost(current_node, &new_node);
-
-          h_cost_rs_path_num++;
+          h_cost_node_num++;
 
           open_pq_.erase(next_node_in_pool->GetMultiMapIter());
 
@@ -1975,8 +1966,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
           }
 
           CalculateNodeHeuristicCost(current_node, &new_node);
-
-          h_cost_rs_path_num++;
+          h_cost_node_num++;
 
           *next_node_in_pool = new_node;
           next_node_in_pool->SetFCost();
@@ -2020,7 +2010,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   ILOG_INFO << "explored node num is " << explored_node_num
             << " , rs path size is : " << explored_rs_path_num
-            << " , h cost rs num: " << h_cost_rs_path_num
+            << " , h cost node num: " << h_cost_node_num
             << " , node pool size: " << node_pool_.PoolSize()
             << " , open_pq.size: " << open_pq_.size()
             << " , RS success number = " << rs_path_success_num;
@@ -2281,11 +2271,11 @@ const ParkReferenceLine* HybridAStar::GetConstRefLine() const {
   return ref_line_;
 }
 
-int HybridAStar::InterpolateByArcOffset(Pose2f* pose,
-                                        const VehicleCircle* veh_circle,
-                                        const Pose2f* start_pose,
-                                        const float arc,
-                                        const float inverse_radius) {
+void HybridAStar::InterpolateByArcOffset(Pose2f* pose,
+                                         const VehicleCircle* veh_circle,
+                                         const Pose2f* start_pose,
+                                         const float arc,
+                                         const float inverse_radius) {
   float delta_theta, theta;
 
   delta_theta = arc * inverse_radius;
@@ -2311,32 +2301,32 @@ int HybridAStar::InterpolateByArcOffset(Pose2f* pose,
   pose->y = veh_circle->center.y - radius * std::cos(theta);
   pose->theta = IflyUnifyTheta(theta, M_PIf32);
 
-  return 1;
+  return;
 }
 
 // radius: if left turn, radius is positive
-int HybridAStar::GetVehCircleByPose(VehicleCircle* veh_circle,
-                                    const Pose2f* pose, const float radius,
-                                    const AstarPathGear gear) {
+void HybridAStar::GetVehCircleByPose(VehicleCircle* veh_circle,
+                                     const Pose2f* pose, const float radius,
+                                     const AstarPathGear gear) {
   veh_circle->radius = radius;
   veh_circle->gear = gear;
 
   veh_circle->center.x = pose->x - radius * std::sin(pose->theta);
   veh_circle->center.y = pose->y + radius * std::cos(pose->theta);
 
-  return 1;
+  return;
 }
 
-int HybridAStar::GetStraightLinePoint(Pose2f* goal_state,
-                                      const Pose2f* start_state,
-                                      const float dist_to_start,
-                                      const Pose2f* unit_vector) {
+void HybridAStar::GetStraightLinePoint(Pose2f* goal_state,
+                                       const Pose2f* start_state,
+                                       const float dist_to_start,
+                                       const Pose2f* unit_vector) {
   goal_state->x = start_state->x + dist_to_start * unit_vector->x;
   goal_state->y = start_state->y + dist_to_start * unit_vector->y;
 
   goal_state->theta = start_state->theta;
 
-  return 1;
+  return;
 }
 
 void HybridAStar::UpdateCarBoxBySafeBuffer(const float lat_buffer_outside,
@@ -2579,6 +2569,10 @@ void HybridAStar::UpdateMaxGridIndex() {
       std::ceil((M_PIf32 * 2.0f) * config_.phi_grid_resolution_inv);
 
   return;
+}
+
+void HybridAStar::SetSearchTime(const double time) {
+  request_.search_time = time;
 }
 
 }  // namespace planning

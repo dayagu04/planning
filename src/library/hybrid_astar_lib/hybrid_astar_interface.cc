@@ -71,6 +71,7 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
                                                 dp_heuristic_generator_);
   hybrid_astar_->Init();
   gear_switch_number_scenario_try_ = -1;
+  time_benchmark_.Clear();
 
   ILOG_INFO << "astar interface success";
 
@@ -139,7 +140,7 @@ void HybridAStarInterface::UpdateOutput() {
 
   UpdateEDT();
   // update clear zone. This zone not contain any obstacle.
-  clear_zone_.GenerateBoundingBox(ego_state_, &obs_);
+  clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
 
   dp_heuristic_generator_->GenerateDpMap(
       request_.real_goal.x, request_.real_goal.y, map_bounds_, &obs_);
@@ -222,12 +223,9 @@ void HybridAStarInterface::UpdateOutput() {
 
   search_state_ = AstarSearchState::SUCCESS;
   double response_end_time = IflyTime::Now_ms();
+  time_benchmark_.total_time_ms = response_end_time - response_start_time;
   ILOG_INFO << "hybrid astar finish, plan once time = "
-            << response_end_time - response_start_time;
-
-  if (best_traj_ != nullptr) {
-    best_traj_->time_ms = response_end_time - response_start_time;
-  }
+            << time_benchmark_.total_time_ms;
 
   // DebugPathString(best_traj_);
 
@@ -268,7 +266,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   search_state_ = AstarSearchState::SEARCHING;
 
   UpdateEDT();
-  clear_zone_.GenerateBoundingBox(ego_state_, &obs_);
+  clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
   // vertical parking center ref line
   switch (request_.direction_request) {
     case ParkingVehDirection::HEAD_IN:
@@ -332,6 +330,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     lon_buffer = 0.4;
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   }
+  hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
 
   DebugAstarRequestString(request_);
 
@@ -408,18 +407,11 @@ const AstarSearchState HybridAStarInterface::GetFullLengthPath(
     HybridAStarResult* result) {
   if (best_traj_ == nullptr || best_traj_->x.size() < 1) {
     GetFallBackPath(result);
-    if (best_traj_ != nullptr) {
-      result->time_ms = best_traj_->time_ms;
-    }
-
     return AstarSearchState::FAILURE;
   }
 
   *result = *best_traj_;
-
-  AstarSearchState search_state = AstarSearchState::SUCCESS;
-
-  return search_state;
+  return AstarSearchState::SUCCESS;
 }
 
 const std::vector<DebugAstarSearchPoint>&
@@ -637,6 +629,7 @@ void HybridAStarInterface::PathClear() {
     traj_candidates_.at(i).Clear();
   }
   // ILOG_INFO << "reset path";
+  time_benchmark_.Clear();
 
   return;
 }
@@ -833,6 +826,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
                                             lat_buffer_inside, lon_buffer);
+    hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     // search single shot path.
     if (target_regulator_result.second >
@@ -850,6 +844,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
         ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
                                        request_.real_goal);
+        time_benchmark_.time_ms[i] = traj_candidates_[i].time_ms;
+        time_benchmark_.size++;
         break;
       }
     }
@@ -870,6 +866,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
     // check time
     search_time += traj_candidates_[i].time_ms;
+    time_benchmark_.time_ms[i] = traj_candidates_[i].time_ms;
+    time_benchmark_.size++;
     if (search_time > config_.max_search_time_ms) {
       ILOG_INFO << "time out";
       break;
@@ -902,6 +900,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   lon_buffer = config_.safe_buffer.scenario_try_lon_buffer;
   hybrid_astar_->UpdateCarBoxBySafeBuffer(
       lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+  hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
 
   // todo: 需要限制搜索时间
   ILOG_INFO << "scenario try planning";
@@ -958,6 +957,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
     }
     best_traj_ = &traj_candidates_[0];
     gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+    time_benchmark_.time_ms[0] = best_traj_->time_ms;
+    time_benchmark_.size = 1;
   }
 
   return;
@@ -992,6 +993,7 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
     hybrid_astar_->UpdateCarBoxBySafeBuffer(
         lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+    hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     if (IsSamplingBasedPlanning(request_.path_generate_method)) {
       // parallel

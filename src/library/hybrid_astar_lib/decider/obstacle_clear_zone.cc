@@ -33,8 +33,14 @@ bool ObstacleClearZone::IsCollisionForBox(const cdl::AABB& box,
   return false;
 }
 
-bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
-                                            const ParkObstacleList* obstacles) {
+void ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
+                                            const ParkObstacleList* obstacles,
+                                            const bool enable_clear_zone) {
+  is_clear_zone_valid_ = false;
+  if (!enable_clear_zone) {
+    return;
+  }
+
   box_.Reset(cdl::Vector2r(start.x, start.y));
 
   box_.ExtendX(0.5);
@@ -177,10 +183,11 @@ bool ObstacleClearZone::GenerateBoundingBox(const Pose2f& start,
   }
 
   box_ = tmp;
+  is_clear_zone_valid_ = true;
 
   // box_.DebugString();
 
-  return true;
+  return;
 }
 
 const bool ObstacleClearZone::IsContain(const cdl::AABB& box) const {

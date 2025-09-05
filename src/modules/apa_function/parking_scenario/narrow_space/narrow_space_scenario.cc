@@ -557,7 +557,6 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.space_type = slot_type;
   cur_request.direction_request = parking_dir_type;
   cur_request.rs_request = RSPathRequestType::NONE;
-  cur_request.timestamp_ms = astar_start_time;
   cur_request.slot_id = ego_info.id;
 
   cur_request.start_pose = Pose2f(start.x, start.y, start.theta);
@@ -2241,7 +2240,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     thread_.PublishResponse(&response_);
-    RecordSearchTime(response_.result.time_ms);
+    RecordSearchTime(response_.time);
 
     if (!IsResponseNice(cur_request, response_)) {
       ThreadClearState();
@@ -2360,7 +2359,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
     // get output
     thread_.PublishResponse(&response_);
-    RecordSearchTime(response_.result.time_ms);
+    RecordSearchTime(response_.time);
   }
 
   // request changed, reset response
@@ -2571,9 +2570,21 @@ void NarrowSpaceScenario::UpdateRecommentRouteBox() {
   return;
 }
 
-void NarrowSpaceScenario::RecordSearchTime(const double time) {
+void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
   auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  debug->mutable_apa_path_debug()->set_path_search_time(time);
+  debug->mutable_apa_path_debug()
+      ->mutable_path_time()
+      ->mutable_astar_time()
+      ->set_total_search_time(time.total_time_ms);
+  // ILOG_INFO << "total time = " << time.total_time_ms;
+
+  for (int8_t i = 0; i < time.size; i++) {
+    debug->mutable_apa_path_debug()
+        ->mutable_path_time()
+        ->mutable_astar_time()
+        ->add_search_time(time.time_ms[i]);
+    // ILOG_INFO << "search time = " << time.time_ms[i];
+  }
 
   return;
 }

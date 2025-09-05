@@ -115,10 +115,12 @@ bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
 
     RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
 
-    GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
-      // ILOG_INFO << "clear";
-      continue;
+    if (clear_zone_->IsValidClearZone()) {
+      GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
+      if (clear_zone_->IsContain(path_point_aabb)) {
+        // ILOG_INFO << "clear";
+        continue;
+      }
     }
 
     for (const auto& obstacle : obstacles_->virtual_obs) {
@@ -357,10 +359,12 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
 
       RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
 
-      GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-      if (clear_zone_->IsContain(path_point_aabb)) {
-        // ILOG_INFO << "clear";
-        continue;
+      if (clear_zone_->IsValidClearZone()) {
+        GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
+        if (clear_zone_->IsContain(path_point_aabb)) {
+          // ILOG_INFO << "clear";
+          continue;
+        }
       }
 
       for (const auto& obstacle : obstacles_->virtual_obs) {
@@ -552,12 +556,14 @@ size_t NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
     veh_local_polygon = GetVehPolygon(result->gear[i]);
     RULocalPolygonToGlobal(&polygon, veh_local_polygon, &global_pose);
 
-    GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
-    if (clear_zone_->IsContain(path_point_aabb)) {
+    if (clear_zone_->IsValidClearZone()) {
+      GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
+      if (clear_zone_->IsContain(path_point_aabb)) {
 #if DEBUG_GJK
-      ILOG_INFO << "i=" << i << "clear";
+        ILOG_INFO << "i=" << i << "clear";
 #endif
-      continue;
+        continue;
+      }
     }
 
     for (const auto& obstacle : obstacles_->point_cloud_list) {
@@ -744,8 +750,8 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
 }
 
 FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
-  return &hierachy_circle_model_
-              .footprint_model[HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+  return &hierachy_circle_model_.footprint_model
+              [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER];
 }
 
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
