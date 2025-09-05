@@ -22,9 +22,9 @@
 
 namespace planning {
 
-#define DP_MAX_X_SEARCH_SIZE (100)
-#define DP_MAX_Y_SEARCH_SIZE (150)
-#define DP_NODE_LAYER_MAX_NUMBER (600)
+#define DP_MAX_X_SEARCH_SIZE (81)
+#define DP_MAX_Y_SEARCH_SIZE (100)
+#define DP_NODE_LAYER_MAX_NUMBER (380)
 
 enum class NodeLayerTag {
   NONE,
@@ -40,15 +40,16 @@ struct NodeLayer {
   NodeLayerTag tag;
 
   void AddNode(Node2d* node) {
+    if (size >= DP_NODE_LAYER_MAX_NUMBER) {
+      return;
+    }
     node_layer[size] = node;
     size++;
-
     return;
   }
 
   void Clear() {
     size = 0;
-
     return;
   }
 

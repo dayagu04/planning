@@ -8,13 +8,12 @@ namespace planning {
 RSSampling::RSSampling(const MapBound* XYbounds,
                        const ParkObstacleList* obstacles,
                        const AstarRequest* request, EulerDistanceTransform* edt,
-                       const ObstacleClearZone* clear_zone,
                        ParkReferenceLine* ref_line,
                        const PlannerOpenSpaceConfig* config,
                        const float min_radius,
                        std::shared_ptr<NodeCollisionDetect> collision_detect)
-    : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
-                    config, min_radius, collision_detect) {}
+    : CurveSampling(XYbounds, obstacles, request, edt, ref_line, config,
+                    min_radius, collision_detect) {}
 
 const bool RSSampling::IsExpectedGearForRsPath(const RSPath& path) {
   for (int j = 0; j < path.size; j++) {

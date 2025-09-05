@@ -258,6 +258,18 @@ struct HybridAStarTrajPoint {
   AStarSTPoint speed_point;
 };
 
+struct SearchTimeBenchmark {
+  double time_ms[6];
+  int8_t size;
+  double total_time_ms;
+
+  void Clear() {
+    total_time_ms = 0;
+    size = 0;
+    return;
+  }
+};
+
 // need refact this data
 struct HybridAStarResult {
   std::vector<float> x;

@@ -26,8 +26,8 @@ GridSearch::GridSearch(const PlannerOpenSpaceConfig& open_space_conf) {
   Init(open_space_conf);
 }
 
-float GridSearch::EuclidDistance(const float x1, const float y1,
-                                  const float x2, const float y2) {
+float GridSearch::EuclidDistance(const float x1, const float y1, const float x2,
+                                 const float y2) {
   return std::sqrt((x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2));
 }
 
@@ -102,39 +102,39 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   int current_node_y = current_node->GetGridY();
 
   float current_node_path_cost = current_node->GetCost();
-  float diagonal_distance = 1.414;
-  float edge_distance = 1.0;
+  float diagonal_distance = 1.414f;
+  float edge_distance = 1.0f;
 
   Node2d up = Node2d(current_node_x, current_node_y + 1, grid_map_bound_,
                      heuristic_grid_resolution_);
   up.SetCost(current_node_path_cost + edge_distance);
 
-  Node2d up_right = Node2d(current_node_x + 1, current_node_y + 1, grid_map_bound_,
-                           heuristic_grid_resolution_);
+  Node2d up_right = Node2d(current_node_x + 1, current_node_y + 1,
+                           grid_map_bound_, heuristic_grid_resolution_);
   up_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d right = Node2d(current_node_x + 1, current_node_y, grid_map_bound_,
                         heuristic_grid_resolution_);
   right.SetCost(current_node_path_cost + edge_distance);
 
-  Node2d down_right = Node2d(current_node_x + 1, current_node_y - 1, grid_map_bound_,
-                             heuristic_grid_resolution_);
+  Node2d down_right = Node2d(current_node_x + 1, current_node_y - 1,
+                             grid_map_bound_, heuristic_grid_resolution_);
   down_right.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d down = Node2d(current_node_x, current_node_y - 1, grid_map_bound_,
                        heuristic_grid_resolution_);
   down.SetCost(current_node_path_cost + edge_distance);
 
-  Node2d down_left = Node2d(current_node_x - 1, current_node_y - 1, grid_map_bound_,
-                            heuristic_grid_resolution_);
+  Node2d down_left = Node2d(current_node_x - 1, current_node_y - 1,
+                            grid_map_bound_, heuristic_grid_resolution_);
   down_left.SetCost(current_node_path_cost + diagonal_distance);
 
   Node2d left = Node2d(current_node_x - 1, current_node_y, grid_map_bound_,
                        heuristic_grid_resolution_);
   left.SetCost(current_node_path_cost + edge_distance);
 
-  Node2d up_left = Node2d(current_node_x - 1, current_node_y + 1, grid_map_bound_,
-                          heuristic_grid_resolution_);
+  Node2d up_left = Node2d(current_node_x - 1, current_node_y + 1,
+                          grid_map_bound_, heuristic_grid_resolution_);
   up_left.SetCost(current_node_path_cost + diagonal_distance);
 
   if (NodeIndexValid(up.GetGridIndex()) &&
@@ -198,10 +198,10 @@ bool GridSearch::GenerateDpMap(const float ex, const float ey,
 
   // XYbounds with xmin, xmax, ymin, ymax
   grid_map_bound_ = XYbounds;
-  max_grid_y_ =
-      std::round((grid_map_bound_.y_max - grid_map_bound_.y_min) * inv_xy_resolution_);
-  max_grid_x_ =
-      std::round((grid_map_bound_.x_max - grid_map_bound_.x_min) * inv_xy_resolution_);
+  max_grid_y_ = std::round((grid_map_bound_.y_max - grid_map_bound_.y_min) *
+                           inv_xy_resolution_);
+  max_grid_x_ = std::round((grid_map_bound_.x_max - grid_map_bound_.x_min) *
+                           inv_xy_resolution_);
 
   ResetNodePool();
   NodeLayer node_layer1;
@@ -326,14 +326,12 @@ bool GridSearch::GenerateDpMap(const float ex, const float ey,
 }
 
 float GridSearch::CheckDpMap(const float sx, const float sy) {
-  Node2dIndex index = Node2d::CalcIndex(sx, sy, inv_xy_resolution_, grid_map_bound_);
+  Node2dIndex index =
+      Node2d::CalcIndex(sx, sy, inv_xy_resolution_, grid_map_bound_);
 
   Node2d* node = GetNodeFromPool(index);
-
-  float max_cost = 100000.0;
-
   if (node == nullptr) {
-    return max_cost;
+    return 100000.0f;
   }
 
   return node->GetCost() * heuristic_grid_resolution_;
@@ -391,7 +389,7 @@ void GridSearch::NodePoolPush(Node2d* node) {
 
 Node2d* GridSearch::GetNodeFromPool(const Node2dIndex& id) {
   if (!NodeIndexValid(id)) {
-    ILOG_INFO << "get node from pool fail" << id.x << " " << id.y;
+    // ILOG_INFO << "get node from pool fail" << id.x << " " << id.y;
     return nullptr;
   }
 
@@ -408,8 +406,8 @@ bool GridSearch::NodeIndexValid(const Node2dIndex& id) {
 }
 
 bool GridSearch::NodePositionValid(const float x, const float y) {
-  if (x < grid_map_bound_.x_min || x > grid_map_bound_.x_max || y < grid_map_bound_.y_min ||
-      y > grid_map_bound_.y_max) {
+  if (x < grid_map_bound_.x_min || x > grid_map_bound_.x_max ||
+      y < grid_map_bound_.y_min || y > grid_map_bound_.y_max) {
     return false;
   }
 
@@ -469,12 +467,7 @@ void GridSearch::ProjectObstacleToNodeMap() {
     index.x = std::round((obs.x - grid_map_bound_.x_min) * inv_xy_resolution_);
     index.y = std::round((obs.y - grid_map_bound_.y_min) * inv_xy_resolution_);
 
-    if (!NodeIndexValid(index)) {
-      continue;
-    }
-
     node = GetNodeFromPool(index);
-
     if (node == nullptr) {
       continue;
     }
@@ -495,15 +488,12 @@ void GridSearch::ProjectObstacleToNodeMap() {
         continue;
       }
 
-      index.x = std::round((position.x - grid_map_bound_.x_min) * inv_xy_resolution_);
-      index.y = std::round((position.y - grid_map_bound_.y_min) * inv_xy_resolution_);
-
-      if (!NodeIndexValid(index)) {
-        continue;
-      }
+      index.x =
+          std::round((position.x - grid_map_bound_.x_min) * inv_xy_resolution_);
+      index.y =
+          std::round((position.y - grid_map_bound_.y_min) * inv_xy_resolution_);
 
       node = GetNodeFromPool(index);
-
       if (node == nullptr) {
         continue;
       }

@@ -32,26 +32,26 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(
   // For vertical slot, need to check safe in path, not only a terminal point.
   if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-      float veh_front_edge_to_slot = 1.8;
+      float veh_front_edge_to_slot = 2.3f;
       float veh_x_upper = veh_front_edge_to_slot + request->slot_length -
                           veh_param.front_edge_to_rear_axle;
       x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
       // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
-      float veh_back_edge_to_slot = 4.0;
+      float veh_back_edge_to_slot = 4.0f;
       float veh_x_upper = request->slot_length + veh_back_edge_to_slot -
                           veh_param.rear_edge_to_rear_axle;
       x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
     }
 
     x_check_bounday_.lower = center_line_target_.x;
-    x_check_bounday_.step = 0.2;
+    x_check_bounday_.step = 0.2f;
   } else {
     x_check_bounday_.upper =
         request->slot_length - veh_param.front_edge_to_rear_axle;
     x_check_bounday_.lower = veh_param.rear_edge_to_rear_axle;
-    x_check_bounday_.step = 0.1;
+    x_check_bounday_.step = 0.1f;
   }
   x_check_bounday_.number =
       std::ceil((x_check_bounday_.upper - x_check_bounday_.lower) /
@@ -73,7 +73,7 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(
   }
 
   PoseRegulateCandidate candidate;
-  candidate.lat_offset = 0.0;
+  candidate.lat_offset = 0.0f;
   candidate.dist_to_obs = dist;
   candidate.pose = center_line_target_;
   candidate_info_.emplace_back(candidate);

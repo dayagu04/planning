@@ -25,7 +25,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_81859/trigger/20250902/20250902-20-20-36/park_in_data_collection_CHERY_M32T_81859_ALL_FILTER_2025-09-02-20-20-36_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_74574/trigger/20250904/20250904-15-07-49/park_in_data_collection_CHERY_M32T_74574_ALL_FILTER_2025-09-04-15-07-49_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -242,8 +242,9 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
   kwargs = locals()
   # vehicle_type = 'JAC_S811'
-  vehicle_type = 'CHERY_E0X'
+  # vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_T26'
+  vehicle_type = 'CHERY_M32T'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
   car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
@@ -353,8 +354,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
 
     print('speed type',
           plan_debug_msg.apa_speed_debug.speed_type)
-    print('path time',
-          plan_debug_msg.apa_path_debug.path_search_time)
+    print('mdc thread time',
+          plan_debug_msg.apa_path_debug.path_time.astar_time.total_search_time)
 
     # update value
     data_record_rs_path.data.update({
@@ -762,32 +763,13 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     car_circle_y.append(footprint_model[i][1])
     car_circle_r.append(footprint_model[i][2])
 
-  for i in range(len(car_circle_x)):
-    tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], pose[0], pose[1], pose[2])
-    car_circle_xn.append(tmp_x)
-    car_circle_yn.append(tmp_y)
-    car_circle_rn.append(car_circle_r[i])
-
-  # ego pose circle list
-  for i in range(len(car_circle_x)):
-
-    x = loc_msg.position.position_boot.x
-    y = loc_msg.position.position_boot.y
-    heading = loc_msg.orientation.euler_boot.yaw
-    tmp_x, tmp_y = local2global(
-        car_circle_x[i], car_circle_y[i], x, y, heading)
-    car_circle_xn.append(tmp_x)
-    car_circle_yn.append(tmp_y)
-    car_circle_rn.append(car_circle_r[i])
-
-  # astar current gear path target
-  for i in range(len(car_circle_x)):
-    tmp_x, tmp_y = local2global(
-        car_circle_x[i], car_circle_y[i], current_gear_end_x, current_gear_end_y, current_gear_end_theta)
-
-    car_circle_xn.append(tmp_x)
-    car_circle_yn.append(tmp_y)
-    car_circle_rn.append(car_circle_r[i])
+  points = replay_simulation_hybrid_astar.GetAnchorPoints()
+  for j in range(len(points)):
+    for i in range(len(car_circle_x)):
+      tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], points[j][0], points[j][1], points[j][2])
+      car_circle_xn.append(tmp_x)
+      car_circle_yn.append(tmp_y)
+      car_circle_rn.append(car_circle_r[i])
 
   data_anchor_point_circle.data.update({
     'car_circle_xn': car_circle_xn,

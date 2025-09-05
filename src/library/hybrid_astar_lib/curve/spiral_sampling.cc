@@ -5,11 +5,11 @@ namespace planning {
 SpiralSampling::SpiralSampling(
     const MapBound* XYbounds, const ParkObstacleList* obstacles,
     const AstarRequest* request, EulerDistanceTransform* edt,
-    const ObstacleClearZone* clear_zone, ParkReferenceLine* ref_line,
-    const PlannerOpenSpaceConfig* config, const float min_radius,
+    ParkReferenceLine* ref_line, const PlannerOpenSpaceConfig* config,
+    const float min_radius,
     std::shared_ptr<NodeCollisionDetect> collision_detect)
-    : CurveSampling(XYbounds, obstacles, request, edt, clear_zone, ref_line,
-                    config, min_radius, collision_detect) {}
+    : CurveSampling(XYbounds, obstacles, request, edt, ref_line, config,
+                    min_radius, collision_detect) {}
 
 /**
  * This function is a general function for generating a cubic spiral.Originally,
