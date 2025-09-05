@@ -152,6 +152,17 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             CheckIfExecutionToHold(transition_info_.lane_change_direction,
                                    transition_info_.lane_change_type);
 
+        bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+                  transition_info_.lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
+                  transition_info_.lane_change_status);
+        if (!is_dash_enough) {
+          execution_state_dash_cnt++;
+        } else{
+          execution_state_dash_cnt = 0;
+        }
+        if (execution_state_dash_cnt >= 2){
+          is_dash_not_enough_for_lc_ = true;
+        }
         if (is_lane_change_complete) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneChangeComplete;
@@ -177,7 +188,12 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         hold_state_frame_nums_++;
 
         //在hold状态下最多维持8s，不满足变道条件那么就返回原车道
-        bool is_hold_to_cancel = hold_state_frame_nums_ > 80;
+        bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+        transition_info_.lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
+        transition_info_.lane_change_status);
+        hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
+
+        bool is_hold_to_cancel = hold_state_frame_nums_ > 80 || (hold_state_dash_cnt >= 2);
 
         bool is_hold_to_execution =
             CheckIfHoldToExecution(transition_info_.lane_change_direction,
@@ -365,14 +381,6 @@ bool LaneChangeStateMachineManager::CheckIfExecutionToCancel(
     lane_change_stage_info_.lc_back_reason = "time out";
     return true;
   }
-
-  if (!lc_request_.IsDashEnoughForRepeatSegments(
-          lane_change_direction, lc_lane_mgr_->origin_lane_virtual_id(),
-          transition_info_.lane_change_status)) {
-    lane_change_stage_info_.lc_back_reason = "dash line length not satisfy";
-    return true;
-  }
-
   bool is_target_lane_merge_to_origin_lane =
       IsNeedCancelLCTargetLaneMergeToOriginLane();
   bool is_no_care_mrege =
@@ -602,6 +610,9 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     RequestType direction) {
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
+  bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
+            direction, lc_lane_mgr_->origin_lane_virtual_id(),
+            transition_info_.lane_change_status);
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST ||
@@ -609,7 +620,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
-  if (lane_change_stage_info_.gap_insertable) {
+  if (lane_change_stage_info_.gap_insertable && is_dash_enough) {
     lc_valid_cnt_ += 1;
     ILOG_DEBUG << "decide_lc_valid_info lc_valid_cnt :" << lc_valid_cnt_;
     if (lc_valid_cnt_ > lc_valid_thre) {
@@ -621,6 +632,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
     }
   } else {
     ILOG_DEBUG << "arbitrator lc invalid reason " << lane_change_stage_info_.lc_invalid_reason.c_str();
+    lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
   }
 }
@@ -1177,6 +1189,7 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
   lane_change_decider_output.lc_back_track = lc_back_track_;
   lane_change_decider_output.lc_valid_cnt = lc_valid_cnt_;
   lane_change_decider_output.lc_back_cnt = lc_back_cnt_;
+  lane_change_decider_output.is_dash_not_enough_for_lc = is_dash_not_enough_for_lc_;
 
   lane_change_decider_output.is_ego_on_leftmost_lane = is_ego_on_leftmost_lane_;
   lane_change_decider_output.is_ego_on_rightmost_lane =
@@ -1395,6 +1408,9 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   is_high_priority_back_ = false;
   ego_trajs_future_.clear();
   lc_path_generate_.reset();
+  is_dash_not_enough_for_lc_ = false;
+  execution_state_dash_cnt = 0;
+  hold_state_dash_cnt = 0;
 }
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
@@ -2548,6 +2564,8 @@ bool LaneChangeStateMachineManager::IsDashLineCurBoundary(
   const bool is_dashed_line =
       (boundary_type ==
            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DASHED ||
+       boundary_type ==
+           iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
        boundary_type ==
            iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_VIRTUAL);
   return is_dashed_line;

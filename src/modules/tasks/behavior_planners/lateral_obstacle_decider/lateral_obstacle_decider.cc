@@ -1136,6 +1136,7 @@ void LateralObstacleDecider::UpdateLaneBorrowDirection() {
   // If the lane marking is not left dashed/right solid or double dashed, return
   // False.
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+      left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
       left_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
       left_lane_boundary_type !=
@@ -1148,6 +1149,7 @@ void LateralObstacleDecider::UpdateLaneBorrowDirection() {
 
   // todo: if left lane is reverse, then left_boorow is false
   if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
+      right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
       right_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
     right_borrow_ = false;

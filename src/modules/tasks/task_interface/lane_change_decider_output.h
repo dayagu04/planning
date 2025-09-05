@@ -57,6 +57,7 @@ struct LaneChangeDeciderOutput {
   RequestType hpp_turn_signal = NO_CHANGE;
   double lc_hold_state_lat_offset = 0;
   bool is_high_priority_back = false;
+  bool is_dash_not_enough_for_lc = false;
 };
 
 }  // namespace planning

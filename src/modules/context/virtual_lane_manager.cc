@@ -808,14 +808,9 @@ bool VirtualLaneManager::update(
                    is_on_road_select_ramp_situation);
 
   // 9.生成导航变道的任务
-  const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (route_info_output_.is_ego_on_expressway) {
     const bool is_inhibitory_noa_task =
-        (route_info_output_.is_exist_toll_station &&
-         route_info_output_.distance_to_toll_station <
-             cancel_mlc_dis_threshold_to_route_end) ||
-        route_info_output_.distance_to_route_end <
-            cancel_mlc_dis_threshold_to_route_end;
+        route_info_output_.is_exist_toll_station;
     if (!is_inhibitory_noa_task) {
       if (route_info_output_.map_vendor ==
           iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
@@ -1045,15 +1040,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   // 9.生成导航变道的任务
   const auto& function_info = session_->environmental_model().function_info();
-  const double cancel_mlc_dis_threshold_to_route_end = 400;
   if (route_info_output_.is_ego_on_expressway &&
       function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     const bool is_inhibitory_noa_task =
-        (route_info_output_.is_exist_toll_station &&
-         route_info_output_.distance_to_toll_station <
-             cancel_mlc_dis_threshold_to_route_end) ||
-        route_info_output_.distance_to_route_end <
-            cancel_mlc_dis_threshold_to_route_end;
+        route_info_output_.is_exist_toll_station;
     if (!is_inhibitory_noa_task) {
       if (route_info_output_.map_vendor ==
           iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
@@ -1209,6 +1199,7 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_left_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==
@@ -1227,6 +1218,7 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_right_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==

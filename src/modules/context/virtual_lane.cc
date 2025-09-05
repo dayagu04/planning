@@ -308,6 +308,8 @@ bool VirtualLane::is_dash_line(
       return target_lane_boundary.type_segments[i].type ==
                  iflyauto::LaneBoundaryType_MARKING_DASHED ||
              target_lane_boundary.type_segments[i].type ==
+                 iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+             target_lane_boundary.type_segments[i].type ==
                  iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
     }
   }
