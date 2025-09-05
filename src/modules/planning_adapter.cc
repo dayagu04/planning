@@ -432,7 +432,7 @@ bool PlanningAdapter::Proc() {
     auto &msg_meta = planning_output.msg_meta;
     msg_header.stamp = output_time_us;
     msg_header.seq = frame_num_;
-    msg_meta.start_time = start_time;
+    // msg_meta.start_time = start_time;
     iflyauto::strcpy_array(msg_meta.version, __version_str__);
     UpdateInputListInfo(msg_meta);
     planning_writer_(planning_output);
@@ -443,7 +443,7 @@ bool PlanningAdapter::Proc() {
     auto &hmi_msg_meta = planning_hmi_info.msg_meta;
     hmi_msg_header.stamp = output_time_us;
     hmi_msg_header.seq = frame_num_;
-    hmi_msg_meta.start_time = start_time;
+    hmi_msg_meta.start_time = planning_output.msg_meta.start_time;
     iflyauto::strcpy_array(hmi_msg_meta.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
