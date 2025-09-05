@@ -1558,58 +1558,73 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
   // 3、当前自车还在高速路上(NOA模式下);
   // 4、当前没有生成变道请求。
   // 5、当前还在主路上，即不在匝道上。
-  const auto virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
+  const auto &function_mode =
+      session_->environmental_model().function_info().function_mode();
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  if (virtual_lane_manager == nullptr) {
-    road_to_ramp_turn_signal_ = RAMP_NONE;
-    return;
-  }
-  const auto reference_path_manager =
-      session_->environmental_model().get_reference_path_manager();
-  if (reference_path_manager == nullptr) {
-    road_to_ramp_turn_signal_ = RAMP_NONE;
-    return;
-  }
-  int origin_relative_id_zero_nums =
-      virtual_lane_manager->origin_relative_id_zero_nums();
-  bool is_ego_on_expressway = route_info_output.is_ego_on_expressway;
-  JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
-                   origin_relative_id_zero_nums);
-  // overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
-  bool is_off_turn_signal = false;
-  if (origin_relative_id_zero_nums > 1) {
-    RampDirection ramp_direction = RAMP_NONE;
-    if (IsSplitRegion(&ramp_direction)) {
-      if (is_ego_on_expressway &&
-          transition_info_.lane_change_status == kLaneKeeping) {
-        if (ramp_direction == RAMP_ON_RIGHT) {
-          road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
-        } else if (ramp_direction == RAMP_ON_LEFT) {
-          road_to_ramp_turn_signal_ = RAMP_ON_LEFT;
-        } else {
-          road_to_ramp_turn_signal_ = RAMP_NONE;
-        }
-      }
-    }
-  } else {
-    if (road_to_ramp_turn_signal_ != RAMP_NONE &&
-        IsOffTurnLight(road_to_ramp_turn_signal_)) {
+  if (function_mode == common::DrivingFunctionInfo::NOA) {
+    if (!route_info_output.is_ego_on_expressway) {
       road_to_ramp_turn_signal_ = RAMP_NONE;
-      is_off_turn_signal = true;
+      return;
     }
+    if (route_info_output.dis_to_ramp > 200.0) {
+      road_to_ramp_turn_signal_ = RAMP_NONE;
+      return;
+    }
+    road_to_ramp_turn_signal_ = route_info_output.ramp_direction;
+    return;
   }
-  const auto distance_to_toll_station =
-      route_info_output.distance_to_toll_station;
-  const auto distance_to_route_end = route_info_output.distance_to_route_end;
-  // 接近收费站或者终点时，抑制分流点的判断
-  if (distance_to_toll_station < 400 || distance_to_route_end < 400) {
-    road_to_ramp_turn_signal_ = RAMP_NONE;
-  }
-  JSON_DEBUG_VALUE("is_off_turn_signal", static_cast<int>(is_off_turn_signal));
-  JSON_DEBUG_VALUE("road_to_ramp_turn_signal",
-                   static_cast<int>(road_to_ramp_turn_signal_));
+  // const auto virtual_lane_manager =
+  //     session_->environmental_model().get_virtual_lane_manager();
+
+  // if (virtual_lane_manager == nullptr) {
+  //   road_to_ramp_turn_signal_ = RAMP_NONE;
+  //   return;
+  // }
+  // const auto reference_path_manager =
+  //     session_->environmental_model().get_reference_path_manager();
+  // if (reference_path_manager == nullptr) {
+  //   road_to_ramp_turn_signal_ = RAMP_NONE;
+  //   return;
+  // }
+  // int origin_relative_id_zero_nums =
+  //     virtual_lane_manager->origin_relative_id_zero_nums();
+  // bool is_ego_on_expressway = route_info_output.is_ego_on_expressway;
+  // JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
+  //                  origin_relative_id_zero_nums);
+  // // overlap_lane_virtual_id_ = virtual_lane_manager->current_lane_virtual_id();
+  // bool is_off_turn_signal = false;
+  // if (origin_relative_id_zero_nums > 1) {
+  //   RampDirection ramp_direction = RAMP_NONE;
+  //   if (IsSplitRegion(&ramp_direction)) {
+  //     if (is_ego_on_expressway &&
+  //         transition_info_.lane_change_status == kLaneKeeping) {
+  //       if (ramp_direction == RAMP_ON_RIGHT) {
+  //         road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
+  //       } else if (ramp_direction == RAMP_ON_LEFT) {
+  //         road_to_ramp_turn_signal_ = RAMP_ON_LEFT;
+  //       } else {
+  //         road_to_ramp_turn_signal_ = RAMP_NONE;
+  //       }
+  //     }
+  //   }
+  // } else {
+  //   if (road_to_ramp_turn_signal_ != RAMP_NONE &&
+  //       IsOffTurnLight(road_to_ramp_turn_signal_)) {
+  //     road_to_ramp_turn_signal_ = RAMP_NONE;
+  //     is_off_turn_signal = true;
+  //   }
+  // }
+  // const auto distance_to_toll_station =
+  //     route_info_output.distance_to_toll_station;
+  // const auto distance_to_route_end = route_info_output.distance_to_route_end;
+  // // 接近收费站或者终点时，抑制分流点的判断
+  // if (distance_to_toll_station < 400 || distance_to_route_end < 400) {
+  //   road_to_ramp_turn_signal_ = RAMP_NONE;
+  // }
+  // JSON_DEBUG_VALUE("is_off_turn_signal", static_cast<int>(is_off_turn_signal));
+  // JSON_DEBUG_VALUE("road_to_ramp_turn_signal",
+  //                  static_cast<int>(road_to_ramp_turn_signal_));
 }
 
 bool LaneChangeStateMachineManager::IsSplitRegion(
