@@ -1258,7 +1258,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
   SetMinJerkWeightByVel(planning_input);
   // set large pos diff protection
   if (last_path_max_dist2ref_ > 10.0 && weight_.remotely_index > 17) {
-    planning_input.set_q_continuity(config_.q_continuity_lane_change);
+    planning_input.set_q_continuity(config_.q_continuity);
   }
 }
 
