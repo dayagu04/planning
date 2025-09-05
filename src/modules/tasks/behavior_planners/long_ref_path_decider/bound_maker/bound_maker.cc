@@ -134,10 +134,22 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
+  const auto &lane_borrow_output =
+      session_->planning_context().lane_borrow_decider_output();
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
+      if (start_stop_decider_output.ego_start_stop_info().state() ==
+        common::StartStopInfo::START && lane_borrow_output.is_in_lane_borrow_status
+        == false && lane_change_state == kLaneKeeping) {
+        acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
+        acc_upper_bound_[i] = std::fmax(speed_planning_config_.lane_keeping_non_cipv_start_acc_bound, acc_target.second);
+        continue;
+      }
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
       acc_upper_bound_[i] =
           std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);

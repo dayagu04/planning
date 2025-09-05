@@ -2987,6 +2987,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, acc_to_ramp, "speed_limit_decider", "acc_to_ramp");
     ReadItem<double>(json, v_intersection_min_limit, "speed_limit_decider",
                      "v_intersection_min_limit");
+    ReadItem<double>(json, v_reduce_rate_intersection, "speed_limit_decider",
+                      "v_reduce_rate_intersection");
     ReadItem<double>(json, v_limit_one_still_danger_obs, "speed_limit_decider",
                       "v_limit_one_still_danger_obs");
     ReadItem<double>(json, v_limit_more_still_danger_obs, "speed_limit_decider",
@@ -3062,6 +3064,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double brake_dis_near_ramp_zone = 700.0;
   double acc_to_ramp = -0.7;
   double v_intersection_min_limit = 11.11;
+  double v_reduce_rate_intersection = 0.05;
   double v_limit_one_still_danger_obs = 12.5;
   double v_limit_more_still_danger_obs = 11.11;
   double v_rel_limit_for_dynamic_danger_obs = 4.17;
@@ -3581,6 +3584,18 @@ struct StopDestinationDeciderConfig : public EgoPlanningConfig {
 
   double stop_destination_virtual_agent_time_headway = 1.0;
   double stop_destination_extended_s_buffer = 2.0;
+};
+
+struct MRCBrakeDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, mrc_brake_deceleration,
+                     "speed_planning", "mrc_brake_decider",
+                     "mrc_brake_deceleration");
+
+  }
+
+  double mrc_brake_deceleration = -2.0;
 };
 
 struct StGraphSearcherConfig : public EgoPlanningConfig {
@@ -4246,6 +4261,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                     "low_speed_follow_accel_release_traj_len");
     ReadItem<bool>(json, enable_speed_adjust, "speed_adjust",
                    "enable_speed_adjust");
+    ReadItem<double>(json, lane_keeping_non_cipv_start_acc_bound, "speed_planning",
+                    "bound_maker", "lane_keeping_non_cipv_start_acc_bound");
 
     // neighbor target
     {
@@ -4377,6 +4394,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double lane_change_upper_speed_limit_kph = 150.0;
   double low_speed_follow_speed_thred_mps = 1.0;
   double low_speed_follow_accel_release_traj_len = 5.0;
+  double lane_keeping_non_cipv_start_acc_bound = 1.5;
   struct KinematicParam {
     double acc_positive_upper = 1.35;
     double acc_positive_speed_lower = 4.2;

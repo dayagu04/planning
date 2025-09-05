@@ -706,6 +706,8 @@
     "v_intersection_min_limit": 11.11,
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
+    "v_reduce_intersection": 0.0,
+    "v_reduce_rate_intersection": 0.05,
     "v_limit_one_still_danger_obs": 12.5,
     "v_limit_more_still_danger_obs": 11.11,
     "v_rel_limit_for_dynamic_danger_obs": 4.17,
@@ -797,6 +799,9 @@
     "enable_speed_adjust": true
   },
   "speed_planning": {
+    "mrc_brake_decider": {
+      "mrc_brake_deceleration": -1.2
+    },
     "stop_destination_decider": {
       "stop_destination_virtual_agent_time_headway": 0.1
     },
@@ -976,6 +981,7 @@
         "neighbor_target_neighbor_limit_velocity": 5.0
     },
     "bound_maker": {
+      "lane_keeping_non_cipv_start_acc_bound": 1.5,
       "cruise_acc_bound_table": {
         "vel_table": [
           0.0, 5.0, 10.0, 20.0, 40.0

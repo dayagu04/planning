@@ -41,6 +41,14 @@ const std::vector<double> _P_SLOPE_BP{0., 40.0};
 const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 constexpr double follow_time_gap = 1.0;
 constexpr double min_follow_distance_m = 3.5;
+constexpr double kEnterVruRoundEgoVelThr = 15 / 3.6;
+constexpr double kEnterVruRoundDistanceThr = 50.0;
+constexpr double kEnterVruRoundTtcThr = 4.5;
+constexpr int32_t kTriggerVruRoundcounterThr = 5;
+constexpr double kExitVruRoundLateralBufferThr = 1.0;
+constexpr double kExitVruRoundDistanceThr = 80.0;
+constexpr double kLowSpeedVruVelThr = 30 / 3.6;
+constexpr double kVRURoundDecelRatio = 0.7;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -143,6 +151,31 @@ double CalcDesiredVelocity(const double d_rel, const double d_des,
   double v_target = v_rel_des + v_lead;
   return v_target;
 }
+bool IsPointOutsideLaneByLeftRightThred(
+  const std::shared_ptr<VirtualLane>& ego_lane, const planning_math::Vec2d& point,
+  const double distance_to_left_boundary_threshold,
+  const double distance_to_right_boundary_threshold) {
+  bool is_outside_lane = false;
+  double match_s = 0.0;
+  double match_l = 0.0;
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return true;
+  }
+  const auto& ego_lane_coord = ego_reference_path ->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return true;
+  }
+
+  if (!ego_lane_coord->XYToSL(point.x(), point.y(), &match_s, &match_l)) {
+    return true;
+  }
+  double lane_width = ego_lane->width_by_s(match_s);
+  is_outside_lane = (match_l > lane_width / 2.0 + distance_to_left_boundary_threshold) ||
+                    (match_l < -lane_width / 2.0 - distance_to_right_boundary_threshold);
+  return is_outside_lane;
+}
+
 }  // namespace
 
 SpeedLimitDecider::SpeedLimitDecider(
@@ -177,6 +210,8 @@ bool SpeedLimitDecider::Execute() {
   CalculateLaneBorrowSpeedLimit();
   // 8. speed limit from tfl distance
   CalculateSpeedLimitFromTFLDis();
+
+  CalculateVRURoundSpeedLimit();
   // 9. speed limit from avoid agent
   CalculateAvoidAgentSpeedLimit();
 
@@ -189,16 +224,20 @@ bool SpeedLimitDecider::Execute() {
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
-  auto &ad_info = session_->mutable_planning_context()
+  auto ad_info = &(session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
-                      ->ad_info;
+                      ->ad_info);
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
+  
   if (SpeedLimitType::CURVATURE == v_target_type_) {
-    ad_info.is_curva = true;
+    ad_info->is_curva = true;
   } else {
-    ad_info.is_curva = false;
+    ad_info->is_curva = false;
   }
+  v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
+  JSON_DEBUG_VALUE("v_cruise_limit", v_cruise_limit_);
+  ad_info->cruise_speed = v_cruise_limit_;
   return true;
 }
 
@@ -372,11 +411,41 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
   ILOG_DEBUG << "----CalculateMapSpeedLimit for ramp---";
   const auto &environmental_model = session_->environmental_model();
+  const auto &function_state_machine_info =
+              environmental_model.get_local_view().function_state_machine_info;
+  double v_cruise_fsm = function_state_machine_info.pilot_req.acc_curise_real_spd;
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
+  //set v_cruise_limit by map info
+  if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
+    std::cout << "sd_map is invalid!!!" << std::endl;
+    //map info invalid, using fsm cruise speed
+    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+  }
+  ad_common::math::Vec2d current_point;
+  const auto &ego_state = environmental_model.get_ego_state_manager();
+  const auto &pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+  double nearest_s = 0;
+  double nearest_l = 0;
+  const double search_distance = 50.0;
+  const double max_heading_diff = PI / 4;
+  const double ego_heading_angle = ego_state->heading_angle();
+  const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+  if (current_segment == nullptr) {
+    //get ego link failed, using fsm cruise speed
+    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+  } else {
+    v_cruise_limit_ = current_segment->speed_limit();//kph
+  }
+
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
@@ -430,6 +499,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         }
       }
     }
+    v_cruise_limit_ = 80;//80kph in ramp in first version
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
@@ -477,13 +547,18 @@ void SpeedLimitDecider::CalculateStaticAgentLimit() {}
 
 void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
   ILOG_DEBUG << "----calc_speed_limit_from_tfl_dis---";
+  const auto &local_view = session_->environmental_model().get_local_view();
+  auto fsm_state = local_view.function_state_machine_info.current_state;
+  bool noa_mode = (fsm_state == iflyauto::FunctionalState_NOA_ACTIVATE) ||
+                  (fsm_state == iflyauto::FunctionalState_NOA_OVERRIDE);
+
   double v_limit_tfl_dis = 40.0;
   const auto &environmental_model = session_->environmental_model();
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
-  if (dis_tfl < kTFLSpeedLimitDis) {
+  if (dis_tfl < kTFLSpeedLimitDis && (!noa_mode)) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
         traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
@@ -517,7 +592,7 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
         speed_limit_config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
       v_limit_with_intersection_ =
-          std::max(v_ego - 3.0, speed_limit_config_.v_intersection_min_limit);
+          std::max(v_ego - speed_limit_config_.v_reduce_rate_intersection * v_ego, speed_limit_config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {
@@ -836,7 +911,6 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     return;
   }
 
-  // get lane borrow agent
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (agent_manager == nullptr) {
@@ -858,10 +932,21 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   }
 
   std::vector<const agent::Agent *> avoid_agents;
+  bool is_triggered_vru_in_avoid_agent = false;
   for (const auto avoid_agent_id : avoid_ids) {
+    if (avoid_agent_id == triggered_vru_.id) {
+      is_triggered_vru_in_avoid_agent = true;
+    }
     const auto avoid_agent = agent_manager->GetAgent(avoid_agent_id);
     if (avoid_agent != nullptr) {
       avoid_agents.emplace_back(avoid_agent);
+    }
+  }
+
+  if (triggered_vru_.id != -1 && !is_triggered_vru_in_avoid_agent) {
+    const auto avoid_vru = agent_manager->GetAgent(triggered_vru_.id);
+    if (avoid_vru != nullptr) {
+      avoid_agents.emplace_back(avoid_vru);
     }
   }
 
@@ -884,6 +969,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   for (auto avoid_agent : avoid_agents) {
     const bool is_static = avoid_agent->is_static();
     const double avoid_agent_v = avoid_agent->speed();
+    const bool is_triggered_vru =
+        avoid_agent->agent_id() == triggered_vru_.id ? true : false;
+    // const double speed_diff = v_ego - avoid_agent->speed();
 
     // bool is_need_v_hold = false;
     // double speed_buffer = 0.0;
@@ -947,7 +1035,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
                  min_follow_distance_m);
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    double d_rel = min_s_by_lat_path - ego_s - 0.5 * vehicle_param.length;
+    double d_rel = min_s_by_lat_path - ego_s - vehicle_param.front_edge_to_rear_axle;
     double v_follow_desired =
         CalcDesiredVelocity(d_rel, s_desired, avoid_agent->speed(), v_ego);
     double invade_dis = avoid_agent->is_static() ? 0.8 : 0.4;
@@ -955,6 +1043,7 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agents_info.end()) {
       invade_dis = std::max(avoid_agents_info.at(avoid_agent->agent_id()), 0.0);
     }
+    // invade_dis = is_triggered_vru ? 0.2 : invade_dis;
     std::array<double, 2> xp{lane_half_width - invade_dis,
                              lane_half_width + 0.2};
     std::array<double, 2> fp{v_follow_desired, v_ego};
@@ -969,10 +1058,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
         avoid_agent->is_static()
             ? interp(lane_half_width - fabs(min_lat_l), xp1, fp1)
             : interp(lane_half_width - fabs(min_lat_l), xp1, fp2);
-
+    // v_limit_lower = is_triggered_vru ? 1.0 : v_limit_lower;
     // const double v_limit_lower = avoid_agent->is_static()
     //                                  ? kStaticAgentAvoidLimitedSpeedHigh
     //                                  : kDynamicAgentAvoidLimitedSpeedHigh;
+    // double v_limit_lower_tmp = is_triggered_vru ? 1.0 : avoid_agent_v + 2.0;
     double v_limit_lower_tmp = avoid_agent_v + 2.0;
     v_limit = std::max(v_limit, v_limit_lower);
     v_limit = std::max(v_limit, v_limit_lower_tmp);
@@ -1142,6 +1232,157 @@ void SpeedLimitDecider::CalculateFunctionFadingAwaySpeedLimit() {
       std::min(vel_slope_filter_function_fading_away_.GetOutput(), v_target_);
   last_vel_function_fading_away_ = v_target_;
   JSON_DEBUG_VALUE("v_target_func_fade_away", v_target_)
+}
+void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
+  LOG_DEBUG("----calc_speed_limit_for_vru_round--- \n");
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  if (agent_manager == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+  const auto& agents = agent_manager->GetAllCurrentAgents();
+  const auto& agents_set = agent_manager->GetAgentSet();
+  if (agents.empty()) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
+  if (virtual_lane_manager == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+  const auto &current_lane = virtual_lane_manager->get_current_lane();
+  if (current_lane == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &planned_kd_path =
+      session_->planning_context().motion_planner_output().lateral_path_coord;
+  if (planned_kd_path == nullptr) {
+    vru_round_map_.clear();
+    return;
+  }
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
+  const double rear_edge_to_rear_axle = vehicle_param.rear_edge_to_rear_axle;
+
+  const auto ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  double v_ego = ego_state_mgr->ego_v();
+  const auto init_point = ego_state_mgr->planning_init_point();
+
+  /* if (init_point.v < kEnterVruRoundEgoVelThr) {
+    vru_round_map_.clear();
+    return;
+  } */
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    vru_round_map_.clear();
+    return ;
+  }
+  const double ego_back_s = ego_s - rear_edge_to_rear_axle;
+  const double ego_front_s = ego_s + front_edge_to_rear_axle;
+
+  historical_vru_round_map_ = vru_round_map_;
+  for (const auto& agent : agents) {
+    if (agent->type() != agent::AgentType::PEDESTRIAN &&
+        agent->type() != agent::AgentType::CYCLE_RIDING &&
+        agent->type() != agent::AgentType::MOTORCYCLE_RIDING &&
+        agent->type() != agent::AgentType::TRICYCLE_RIDING) {
+      continue;
+    }
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    bool is_longotidinal_satisfied = false;
+    if (!planned_kd_path->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      return;
+    }
+    double agent_to_ego_distance = agent_s - ego_front_s - agent->length() * 0.5;
+
+    planning_math::Vec2d agent_pose(agent->x(), agent->y());
+    bool is_lateral_buffer_satisfied = false;
+    is_lateral_buffer_satisfied = !IsPointOutsideLaneByLeftRightThred(current_lane,
+          agent_pose, kExitVruRoundLateralBufferThr, kExitVruRoundLateralBufferThr);
+    double agent_speed = agent->is_reverse() ? -agent->speed() : agent->speed();
+    double ttc =
+        (agent_s) / std::max(init_point.v - agent_speed, std::numeric_limits<double>::min());
+    if (ttc < kEnterVruRoundTtcThr && agent_s > std::numeric_limits<double>::min()) {
+      is_longotidinal_satisfied = true;
+    }
+
+    if (agent->speed() < kLowSpeedVruVelThr &&
+        is_longotidinal_satisfied && is_lateral_buffer_satisfied) {
+      if (vru_round_map_.find(agent->agent_id()) != vru_round_map_.end()) {
+        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].ttc = ttc;
+        vru_round_map_[agent->agent_id()].id = agent->agent_id();
+        vru_round_map_[agent->agent_id()].last_is_satisfied_round =
+            vru_round_map_[agent->agent_id()].is_satisfied_round;
+        vru_round_map_[agent->agent_id()].is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].enter_counter++;
+        vru_round_map_[agent->agent_id()].is_trigger =
+            vru_round_map_[agent->agent_id()].enter_counter >= kTriggerVruRoundcounterThr ? true
+                                                                                          : false;
+
+      } else {
+        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].ttc = ttc;
+        vru_round_map_[agent->agent_id()].id = agent->agent_id();
+        vru_round_map_[agent->agent_id()].is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].last_is_satisfied_round = true;
+        vru_round_map_[agent->agent_id()].enter_counter = 1;
+        vru_round_map_[agent->agent_id()].is_trigger = false;
+      }
+    } else {
+      // erase unsatisfied vru
+      vru_round_map_.erase(agent->agent_id());
+    }
+  }
+  for (const auto& historical_vru : historical_vru_round_map_) {
+    if (agents_set.find(historical_vru.first) == agents_set.end()) {
+      vru_round_map_.erase(historical_vru.first);
+    }
+  }
+
+  if (HasTriggeredVRU(vru_round_map_)) {
+    if (triggered_vru_.enter_counter == kTriggerVruRoundcounterThr) {
+      vru_round_triggered_ = true;
+    }
+    JSON_DEBUG_VALUE("vru_round_triggered_id", triggered_vru_.id);
+
+  } else {
+    vru_round_triggered_ = false;
+  }
+}
+
+bool SpeedLimitDecider::HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map) {
+  triggered_vru_.id = -1;
+  triggered_vru_.is_trigger = false;
+  if (vru_round_map_.empty()) {
+    return false;
+  }
+  int32_t triggered_vru_id = -1;
+  double min_distance = std::numeric_limits<double>::max();
+  for (const auto& vru : vru_round_map_) {
+    if (vru.second.is_trigger && vru.second.distance_to_ego < min_distance) {
+      min_distance = vru.second.distance_to_ego;
+      triggered_vru_id = vru.first;
+    }
+  }
+
+  if (triggered_vru_id != -1 && min_distance < kEnterVruRoundDistanceThr) {
+    triggered_vru_ = vru_round_map_[triggered_vru_id];
+    return true;
+  } else {
+    return false;
+  }
 }
 
 }  // namespace planning

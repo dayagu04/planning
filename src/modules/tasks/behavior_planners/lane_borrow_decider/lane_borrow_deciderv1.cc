@@ -1,4 +1,5 @@
 #include "lane_borrow_deciderv1.h"
+
 #include <Eigen/src/Core/Matrix.h>
 #include <math.h>
 
@@ -53,6 +54,9 @@ constexpr double kBackNeededDistance = 5.0;
 namespace planning {
 namespace lane_borrow_deciderV1 {
 bool LaneBorrowDecider::Execute() {
+  if (session_->environmental_model().is_mrc_mode()) {
+    return true;
+  }
   Update();
 
   LogDebugInfo();

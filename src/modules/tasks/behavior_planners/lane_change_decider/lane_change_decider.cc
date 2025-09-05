@@ -59,7 +59,8 @@ bool LaneChangeDecider::Execute() {
   update_scenario();  // cruise or low speed or ...
 
   if (!active ||
-      function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
+      function_info.function_mode() == common::DrivingFunctionInfo::ACC ||
+      session_->environmental_model().is_mrc_mode()) {
     lc_sm_mgr_->ResetStateMachine();
   }
 
@@ -75,7 +76,7 @@ bool LaneChangeDecider::Execute() {
       }
       const auto cur_frame_lc_req_source = lc_req_mgr_->request_source();
       const auto cur_frame_lc_req_dir = lc_req_mgr_->request();
-      //如果正在进行其他类型变道过程中，有交互式变道，优先响应交互式变道。
+      // 如果正在进行其他类型变道过程中，有交互式变道，优先响应交互式变道。
       if (last_frame_lc_req_source_ != NO_REQUEST &&
           last_frame_lc_req_source_ != INT_REQUEST &&
           cur_frame_lc_req_source == INT_REQUEST) {
