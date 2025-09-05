@@ -271,7 +271,7 @@ struct EgoPlanningConfig : public Config {
   double overtake_soft_lane_change_speed_threshold = 5.56;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change =
       true;
-  double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 1500;
+  double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 500;
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =
       1500;
   double minimum_ego_cruise_speed_for_active_lane_change = 16.67;

@@ -2,6 +2,7 @@
 
 #include "lane_change_request.h"
 #include "tracked_object.h"
+#include "src/modules/common/math/filter/mean_filter.h"
 
 namespace planning {
 
@@ -39,13 +40,17 @@ class OvertakeRequest : public LaneChangeRequest {
                            const double ego_speed, const double reference_speed,
                            const int max_count_thres);
 
-  void updateRouteTrafficSpeed(const bool is_left, double* route_traffic_speed);
+  void updateRouteTrafficSpeed(const bool is_left, double* route_traffic_speed, planning::planning_math::MeanFilter &traffic_speed_filter);
 
   bool isCouldOvertakeByRoute(
       const std::shared_ptr<ReferencePath>& base_ref_line,
       const std::shared_ptr<VirtualLane>& target_lane,
-      const double lane_traffic_speed, const double leading_vehicle_speed,
+      const double lane_traffic_speed, const agent::Agent* agent,
       const int left_lane_num, const int right_lane_num, const bool is_left);
+
+  bool isCouldOvertakeMaintainByRoute(
+    const double lane_traffic_speed, const agent::Agent* agent,
+    const bool is_left);
 
   void updateLaneChangeSafety(
       const std::shared_ptr<ReferencePath>& left_ref_line,
@@ -142,6 +147,11 @@ class OvertakeRequest : public LaneChangeRequest {
   bool is_right_lane_change_safe_ = false;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
+  planning::planning_math::MeanFilter left_traffic_speed_filter_;
+  planning::planning_math::MeanFilter right_traffic_speed_filter_;
+  planning::planning_math::MeanFilter leading_speed_filter_;
+  bool left_lane_exist_truck_ = false;
+  bool right_lane_exist_truck_ = false;
 };
 
 }  // namespace planning

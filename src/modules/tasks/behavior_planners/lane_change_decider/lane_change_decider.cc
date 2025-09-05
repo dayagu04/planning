@@ -90,7 +90,7 @@ bool LaneChangeDecider::Execute() {
                               cur_frame_lc_req_dir != NO_CHANGE &&
                               cur_frame_lc_req_dir != last_frame_lc_req_dir_;
 
-      if (is_exist_same_lc_req && is_different_dir) {
+      if (is_exist_same_lc_req && is_different_dir && current_lc_status != kLaneChangePropose) {
         lc_sm_mgr_->ResetStateMachine();
       }
 

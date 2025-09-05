@@ -2167,9 +2167,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     std::vector<int> merge_lane;
     if (CalculateMergeLaneInfo(merge_lane) && !merge_lane.empty()) {
-      bool dis_condition_satisfy = route_info_output_.dis_to_merge_fp <
+      bool dis_condition_satisfy =
+          route_info_output_.merge_point_info.dis_to_merge_fp <
           mlc_decider_route_info_.static_merge_region_info
-              .distance_to_split_point;
+                  .distance_to_split_point -
+              kEpsilon;
 
       if (dis_condition_satisfy) {
         for (int element : merge_lane) {
@@ -2220,14 +2222,24 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
-
-  mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
-
   if (feasible_lane_sequence.empty() ||
       (!is_exist_merge_fp &&
        mlc_decider_route_info_.ego_status_on_route == ON_MAIN)) {
     return;
   }
+
+  // 仅仅为计算自车前方的merge point info使用
+  iflymapdata::sdpro::FeaturePoint find_fp;
+  MergeType merge_type;
+  uint64 fp_link_id;
+  double dis_to_merge_fp = 0.0;
+
+  if (CalculateMergeFP(&merge_type, &find_fp, &fp_link_id, &dis_to_merge_fp)) {
+    route_info_output_.merge_point_info.dis_to_merge_fp = dis_to_merge_fp;
+    route_info_output_.merge_point_info.merge_type = merge_type;
+  }
+
+  mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
   int minVal_seq = feasible_lane_sequence[0];
   int maxVal_seq = feasible_lane_sequence[0];
@@ -3183,6 +3195,27 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
   merge_region_info.recommend_lane_num.emplace_back(other_lane_num,
                                                     std::vector<int>{});
 
+  // 计算merge type
+  for (const auto& fp_type : end_fp.type()) {
+    if (fp_type == iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
+      iflymapdata::sdpro::LaneChangeType merge_type;
+      if (IsMergeFP(&merge_type, end_fp)) {
+        if (merge_type ==
+            iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
+          merge_region_info.merge_type = LEFT_MERGE;
+        } else if (merge_type ==
+                   iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane) {
+          merge_region_info.merge_type = RIGHT_MERGE;
+        } else if (merge_type == iflymapdata::sdpro::LaneChangeType::
+                                     BothDirectionMergingLane) {
+          merge_region_info.merge_type = BOTH_MERGE;
+        } else {
+          merge_region_info.merge_type = NO_MERGE;
+        }
+      }
+    }
+  }
+
   merge_region_info.is_valid = true;
   return merge_region_info;
 }
@@ -3462,11 +3495,13 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
 
   bool is_merge_right =
       split_region_info->split_direction == SplitDirection::SPLIT_RIGHT;
+  bool is_merge_left =
+      split_region_info->split_direction == SplitDirection::SPLIT_LEFT;
 
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
   std::vector<int> succerssor_excr_feasible_lane;
-  // TODO(fengwang31:需要考虑split的路是否未主路的情况)
+  // TODO(fengwang31:需要考虑是否有merge lane的情况)
   if (is_merge_right) {
     // 现在假设交换区终点后的lane都是由交换区分出来的，所以交换区的lane数为on_exclnum
     // = successor_exclnum + successor_other_exclnum
@@ -3483,6 +3518,15 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
         on_excr_feasible_lane.emplace_back(i + 1);
       }
       before_excr_feasible_lane.emplace_back(1);
+    }
+  } else if (is_merge_left && (split_region_info->merge_type == LEFT_MERGE ||
+                               split_region_info->merge_type == BOTH_MERGE)) {
+    if (successor_exclnum < on_exclnum ) {
+      before_excr_feasible_lane.emplace_back(before_exclnum);
+      on_excr_feasible_lane.emplace_back(before_exclnum + 1);
+      for (int i = 0; i < successor_exclnum; ++i) {
+        succerssor_excr_feasible_lane.emplace_back(i + 1);
+      }
     }
   }
 
@@ -3617,12 +3661,14 @@ bool RouteInfo::CalculateMergeLaneInfo(
   uint64 fp_link_id;
   double ego_s_in_cur_link;
   double dis_to_merge_fp = 0.0;
+  MergeType merge_type;
 
-  if (!CalculateMergeFP(&find_fp, &fp_link_id, &dis_to_merge_fp)) {
-      return false;
+  if (!CalculateMergeFP(&merge_type, &find_fp, &fp_link_id, &dis_to_merge_fp)) {
+    return false;
   }
 
-  route_info_output_.dis_to_merge_fp = dis_to_merge_fp;
+  route_info_output_.merge_point_info.dis_to_merge_fp = dis_to_merge_fp;
+  route_info_output_.merge_point_info.merge_type = merge_type;
 
   // if (!CalculateLastFp(&last_fp, fp_link_id, find_fp)) {
   //     return false;
@@ -3659,9 +3705,11 @@ bool RouteInfo::CalculateMergeLaneInfo(
   return false;
 }
 
-bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
+bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
+                                 iflymapdata::sdpro::FeaturePoint* find_fp,
                                  uint64* fp_link_id, double* dis_to_merge_fp) {
-  if (find_fp == nullptr || fp_link_id == nullptr || dis_to_merge_fp == nullptr) {
+  if (merge_type == nullptr || find_fp == nullptr || fp_link_id == nullptr ||
+      dis_to_merge_fp == nullptr) {
     return false;
   }
 
@@ -3685,11 +3733,24 @@ bool RouteInfo::CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
           if (itera_dis < kEpsilon) {
             continue;
           }
-
-          if (IsMergeFP(fp)) {
+          iflymapdata::sdpro::LaneChangeType temp_merge_type;
+          if (IsMergeFP(&temp_merge_type, fp)) {
             *find_fp = fp;
             *fp_link_id = current_link->id();
             *dis_to_merge_fp = itera_dis;
+
+            if (temp_merge_type ==
+                iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
+              *merge_type = LEFT_MERGE;
+            } else if (temp_merge_type == iflymapdata::sdpro::LaneChangeType::
+                                              RightTurnMergingLane) {
+              *merge_type = RIGHT_MERGE;
+            } else if (temp_merge_type == iflymapdata::sdpro::LaneChangeType::
+                                              BothDirectionMergingLane) {
+              *merge_type = BOTH_MERGE;
+            } else {
+              *merge_type = NO_MERGE;
+            }
             return true;
           }
         }
@@ -3763,7 +3824,7 @@ bool RouteInfo::CalculateLastFp(
     if (fp_pre_link->feature_points().empty()) {
       return false;
     }
-    
+
     *last_fp = *fp_pre_link->feature_points().rbegin();
     return true;
   } else {
@@ -3777,7 +3838,11 @@ bool RouteInfo::CalculateLastFp(
   return false;
 }
 
-bool RouteInfo::IsMergeFP(const iflymapdata::sdpro::FeaturePoint& fp) const {
+bool RouteInfo::IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type, const iflymapdata::sdpro::FeaturePoint& fp) const {
+  if (merge_type == nullptr) {
+    return false;
+  }
+
   for (const auto& lane_id : fp.lane_ids()) {
     const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
     if (lane_info == nullptr) {
@@ -3790,6 +3855,7 @@ bool RouteInfo::IsMergeFP(const iflymapdata::sdpro::FeaturePoint& fp) const {
         iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane ||
         lane_info->change_type() ==
         iflymapdata::sdpro::LaneChangeType::BothDirectionMergingLane) {
+      *merge_type = lane_info->change_type();
       return true;
     }
   }

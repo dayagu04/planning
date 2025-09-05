@@ -183,7 +183,8 @@ class RouteInfo {
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
 
-  bool CalculateMergeFP(iflymapdata::sdpro::FeaturePoint* find_fp,
+  bool CalculateMergeFP(MergeType* merge_type,
+                        iflymapdata::sdpro::FeaturePoint* find_fp,
                         uint64* fp_link_id, double* dis_to_merge_fp);
   bool CalculateFeasibleLane(
       NOASplitRegionInfo* split_region_info,
@@ -193,7 +194,7 @@ class RouteInfo {
       NOASplitRegionInfo* split_region_info) const;
   bool CalculateOtherMergeRoadFeasibleLane(
       NOASplitRegionInfo* split_region_info) const;
-  bool IsMergeFP(const iflymapdata::sdpro::FeaturePoint& fp) const;
+  bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type, const iflymapdata::sdpro::FeaturePoint& fp) const;
   const iflymapdata::sdpro::LinkInfo_Link* CalculateCurrentLink(double* s,
                                                                 double* l);
   bool CalculateLastFPInCurrentLink(
