@@ -734,6 +734,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
 void LaneChangeStateMachineManager::CheckOtherAgents(LaneChangeStageInfo *const lc_state_info){
       // // 安全检查函数 other front nodes
       // add check for risk agent_s
+    int risk_front_agent_id = -1;
+    int risk_side_agent_id = -1;
     bool lc_safety = true;
     bool is_risk_node = false;
     bool is_side_clsoing = false;
@@ -743,6 +745,7 @@ void LaneChangeStateMachineManager::CheckOtherAgents(LaneChangeStageInfo *const 
       if(is_risk){
         lc_safety = false;
         is_risk_node = true;
+        risk_front_agent_id = risk_node->node_agent_id();
         break;
       }
     }
@@ -782,6 +785,7 @@ void LaneChangeStateMachineManager::CheckOtherAgents(LaneChangeStageInfo *const 
       if(lateral_collision || ego_collision){
         lc_safety = false;
         is_side_clsoing = true;
+        risk_side_agent_id = side_obs->obstacle()->id();
         break;
       }
     }
@@ -790,19 +794,23 @@ void LaneChangeStateMachineManager::CheckOtherAgents(LaneChangeStageInfo *const 
     if (transition_info_.lane_change_status == kLaneChangeExecution) {
       lc_state_info->lc_should_back = true;
       if(is_risk_node){
-        lc_state_info->lc_invalid_reason = "front risk node";
+        lc_state_info->lc_back_reason = "front risk node";
+        lc_back_track_.set_value(risk_front_agent_id, 0.0, 0.0);
       }
       if(is_side_clsoing){
-        lc_state_info->lc_invalid_reason = "side clsoing";
+        lc_state_info->lc_back_reason = "side clsoing";
+        lc_back_track_.set_value(risk_side_agent_id, 0.0, 0.0);
       }
     } else if (transition_info_.lane_change_status == kLaneChangePropose ||
         transition_info_.lane_change_status == kLaneChangeHold) {
       lc_state_info->gap_insertable = false;
       if(is_risk_node){
         lc_state_info->lc_invalid_reason = "front risk node";
+        lc_invalid_track_.set_value(risk_front_agent_id, 0.0, 0.0);
       }
       if(is_side_clsoing){
         lc_state_info->lc_invalid_reason = "side clsoing";
+        lc_invalid_track_.set_value(risk_side_agent_id, 0.0, 0.0);
       }
     }
   }
