@@ -809,8 +809,7 @@ bool VirtualLaneManager::update(
 
   // 9.生成导航变道的任务
   if (route_info_output_.is_ego_on_expressway) {
-    const bool is_inhibitory_noa_task =
-        route_info_output_.is_exist_toll_station;
+    const bool is_inhibitory_noa_task = false;
     if (!is_inhibitory_noa_task) {
       if (route_info_output_.map_vendor ==
           iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
@@ -1042,8 +1041,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   const auto& function_info = session_->environmental_model().function_info();
   if (route_info_output_.is_ego_on_expressway &&
       function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    const bool is_inhibitory_noa_task =
-        route_info_output_.is_exist_toll_station;
+    const bool is_inhibitory_noa_task = false;
     if (!is_inhibitory_noa_task) {
       if (route_info_output_.map_vendor ==
           iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
