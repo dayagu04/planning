@@ -163,13 +163,17 @@ class NarrowSpaceScenario : public ParkingScenario {
       const AstarRequest& cur_request);
 
   void SetRequestForScenarioTry(AstarRequest& cur_request,
-                               const EgoInfoUnderSlot& ego_info);
+                                const EgoInfoUnderSlot& ego_info);
 
   void UpdateRecommentRouteBox();
 
   void RecordSearchTime(const SearchTimeBenchmark& time);
 
   virtual const double CalRealTimeBrakeDist() override;
+
+  const float SetPassageHeight(const EgoInfoUnderSlot& ego_info);
+
+  void SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info);
 
  private:
   RequestResponseState thread_state_;
@@ -202,6 +206,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   int path_planning_fail_num_;
 
   MapBound recommend_route_bound_;
+  Eigen::Vector2d direction_origin_corner_23_normalized_;
 };
 
 }  // namespace apa_planner

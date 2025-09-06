@@ -92,8 +92,7 @@ class HybridAStarThreadSolver {
       std::vector<std::vector<Eigen::Vector2d>>& list);
 
   // for debug
-  void GetRSPathHeuristicInThread(
-      std::vector<std::vector<Vec2f>>& path_list);
+  void GetRSPathHeuristicInThread(std::vector<std::vector<Vec2f>>& path_list);
 
   // for debug
   void GetRSPathLinkInThread(std::vector<Vec2f>& path);

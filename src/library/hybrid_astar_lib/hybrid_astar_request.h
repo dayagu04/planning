@@ -1,9 +1,11 @@
 #pragma once
 
 #include <bits/stdint-uintn.h>
+
 #include <array>
 #include <cstddef>
 #include <cstdint>
+
 #include "./../reeds_shepp/rs_path_request.h"
 #include "hybrid_astar_common.h"
 #include "node3d.h"
@@ -61,6 +63,7 @@ struct AstarRequest {
   Eigen ::Vector2d target_heading_vec;
   // different buffer use different time
   double search_time;
+  Eigen ::Vector2d x_axis_direction_coordinate_slant;
 
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;
@@ -69,6 +72,7 @@ struct AstarRequest {
     space_type = ParkSpaceType::NONE;
     direction_request = ParkingVehDirection::NONE;
     gear_switch_num = 0;
+    x_axis_direction_coordinate_slant.setZero();
     return;
   }
 };

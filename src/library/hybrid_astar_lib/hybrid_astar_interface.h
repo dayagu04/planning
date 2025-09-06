@@ -147,6 +147,8 @@ class HybridAStarInterface {
 
   void PathCandidateCompare();
 
+  void GenerateRefLine();
+
  private:
   // read vehicle param from file
   VehicleParam vehicle_param_;
