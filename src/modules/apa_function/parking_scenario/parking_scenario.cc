@@ -322,7 +322,11 @@ void ParkingScenario::SetPlanningPath() {
       speed_config.GetSpeedParams(park_speed_mode).default_cruise_speed;
 
   if (!apa_param.GetParam().speed_config.enable_apa_speed_plan) {
-    double total_s = current_path_point_global_vec_.back().s;
+    double total_s = 0.0;
+    if (!current_path_point_global_vec_.empty()) {
+      total_s = current_path_point_global_vec_.back().s;
+    }
+
     double delta_point_s = total_s / PLANNING_TRAJ_POINTS_MAX_NUM;
     double path_s = 0.0;
     int path_point_id = 0;
