@@ -56,6 +56,7 @@ void NarrowSpaceScenario::Reset() {
 
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
+  direction_origin_corner_23_normalized_(0, 0);
 
   return;
 }
@@ -525,15 +526,10 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try || frame_.replan_reason == FIRST_PLAN) {
     virtual_wall_decider_.Init(start);
   }
-
-  auto& config = apa_param.GetParam();
-  double park_out_passage_height =
-      ego_info.slot_occupied_ratio > config.pose_slot_occupied_ratio_2
-          ? 7.0
-          : config.astar_config.vertical_slot_passage_height_bound;
-  virtual_wall_decider_.Process(
-      obs.virtual_obs, ego_info.slot, start, ego_info.slot_side,
-      parking_dir_type, park_out_passage_height, path_planning_fail_num_);
+  const float passage_height = SetPassageHeight(ego_info);
+  virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot, start,
+                                ego_info.slot_side, parking_dir_type,
+                                passage_height, path_planning_fail_num_);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -568,6 +564,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   cur_request.history_gear = current_gear_;
   frame_.current_gear = GetGear(current_gear_);
   cur_request.goal = Pose2f(end.x, end.y, end.theta);
+
+  cur_request.x_axis_direction_coordinate_slant = direction_origin_corner_23_normalized_;
 
   SetRequestForScenarioTry(cur_request, ego_info);
 
@@ -716,16 +714,21 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
-  constexpr float kHeadHeadingStartDeg = 80.0f;
+  constexpr float kHeadHeadingStartDeg = 40.0f;
   constexpr float kTailHeadingStartDeg = 95.0f;
   constexpr float kHeadingEndDeg = 89.9f;
   constexpr float kHeadingDiffThresh = 1e-3f;
   constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
 
+  const float heading_end_deg =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_;
+
   bool heading_flag = true;
   bool sample_finish = false;
 
   pnc::geometry_lib::PathPoint point;
+  const bool need_trim_path =
+      first_seg_path[0].phi * kRad2Deg < heading_end_deg;
 
   for (size_t i = 0; i < first_seg_path.size(); ++i) {
     const AStarPathPoint& path_pt = first_seg_path[i];
@@ -734,7 +737,8 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
     point.s = path_pt.accumulated_s;
     point.gear = GetGear(path_pt.gear);
 
-    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus()) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus() &&
+        need_trim_path) {
       const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
       if (heading_deg > kHeadHeadingStartDeg && i > 5) {
@@ -742,14 +746,15 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
         heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
       }
 
-      if (std::abs(path_pt.phi) * kRad2Deg <= kHeadingEndDeg &&
+      if (std::abs(path_pt.phi) * kRad2Deg <= heading_end_deg &&
           !sample_finish && heading_flag) {
         local_path.emplace_back(point);
       } else {
         sample_finish = true;
       }
 
-    } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsTailOutStatus()) {
+    } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsTailOutStatus() &&
+               need_trim_path) {
       const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
 
       if (heading_deg < kHeadHeadingStartDeg && i > 5) {
@@ -757,7 +762,7 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
         heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
       }
 
-      if (heading_deg >= kHeadingEndDeg && !sample_finish && heading_flag) {
+      if (heading_deg >= heading_end_deg && !sample_finish && heading_flag) {
         local_path.emplace_back(point);
       } else {
         sample_finish = true;
@@ -1089,92 +1094,7 @@ const bool NarrowSpaceScenario::UpdateVerticalOutSlotInfo() {
     }
   }
 
-  constexpr double kInitialTargetX = 7.0;
-  constexpr double kInitialTargetY = 11.0;
-  constexpr double kAlternateTargetX = 8.0;
-  constexpr double kAlternateTargetY = 4.0;
-  constexpr double kPositionThresholdX = 7.0;
-  constexpr double kHeadingThresholdRad0 = 60.0 * M_PI / 180.0;
-  constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
-
-  const double target_heading_rad_head_out =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_ *
-      M_PI / 180.0;
-
-  const ApaParkOutDirection park_out_direction =
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
-
-  switch (park_out_direction) {
-    case ApaParkOutDirection::LEFT_FRONT:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX, kInitialTargetY;
-      ego_info_under_slot.target_pose.heading = target_heading_rad_head_out;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
-
-      // 特殊位置要对目标点进行特殊调整
-      if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
-          std::abs(ego_info_under_slot.cur_pose.heading) >
-              kHeadingThresholdRad0) {
-        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            kAlternateTargetY;
-      }
-      break;
-
-    case ApaParkOutDirection::RIGHT_FRONT:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX, -kInitialTargetY;
-      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
-
-      // 特殊位置要对目标点进行特殊调整
-      if (ego_info_under_slot.cur_pose.pos.x() < kInitialTargetX &&
-          std::abs(ego_info_under_slot.cur_pose.heading) >
-              kHeadingThresholdRad0) {
-        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            -kAlternateTargetY;
-      }
-      break;
-
-    case ApaParkOutDirection::LEFT_REAR:
-      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-          -kAlternateTargetY;
-      ego_info_under_slot.target_pose.heading = -target_heading_rad_head_out;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
-
-      // 特殊位置要对目标点进行特殊调整
-      if (std::abs(ego_info_under_slot.cur_pose.heading) <
-          kHeadingThresholdRad1) {
-        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            -kAlternateTargetY + 1.0;
-      }
-      break;
-
-    case ApaParkOutDirection::RIGHT_REAR:
-      ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-          kAlternateTargetY;
-      ego_info_under_slot.target_pose.heading = target_heading_rad_head_out;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 1);
-
-      // 特殊位置要对目标点进行特殊调整
-      if (std::abs(ego_info_under_slot.cur_pose.heading) <
-          kHeadingThresholdRad1) {
-        ego_info_under_slot.target_pose.pos << kAlternateTargetX,
-            kAlternateTargetY - 1.0;
-      }
-      break;
-
-    case ApaParkOutDirection::REAR:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX + 1.0, 0.0;
-      ego_info_under_slot.target_pose.heading = M_PI;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, -1);
-
-      break;
-
-    case ApaParkOutDirection::FRONT:
-    default:
-      ego_info_under_slot.target_pose.pos << kInitialTargetX - 2.5, 0.0;
-      ego_info_under_slot.target_pose.heading = 0.0;
-      ego_info_under_slot.target_pose.heading_vec = Eigen::Vector2d(0, 0);
-      break;
-  }
+  SetTargetPoseForParkOut(ego_info_under_slot);
 
   // 终点误差
   ego_info_under_slot.terminal_err.Set(
@@ -2439,9 +2359,16 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
   iflyauto::APAHMIData apa_hmi_data;
   ApaDirectionGenerator generator;
   generator.ClearRecommendationDirectionFlag(apa_hmi_data);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
 
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     ApaRecommendationDirection dir;
+
+    apa_world_ptr_->GetSlotManagerPtr()
+        ->GetMutableEgoInfoUnderSlot()
+        .slot.release_info_
+        .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
 
     for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
       if (response_.feasible_directions[i] == false) {
@@ -2478,7 +2405,6 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
       }
 
       generator.SetRecommendationDirectionFlag(apa_hmi_data, dir);
-      generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
     }
   } else {
     generator.SetRecommendationDirectionFlag(apa_hmi_data, ParallelFrontLeft);
@@ -2495,6 +2421,10 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     const double target_heading_rad = ego_info.slot.angle_ * M_PI / 180.0;
+    const double opposite_target_heading_rad =
+        planning_math::NormalizeAngle(target_heading_rad + M_PI);
+
+    cur_request.x_axis_direction_coordinate_slant = direction_origin_corner_23_normalized_;
 
     cur_request.direction_request_size = 6;
     cur_request.direction_request_stack[0] =
@@ -2509,18 +2439,34 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
         ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
     cur_request.direction_request_stack[5] =
         ParkingVehDirection::TAIL_OUT_TO_RIGHT;
+
+    const Eigen::Vector2d temp_head_pos(7.0, 0.0);
+    const double offset_y = ego_info.slot_type == SlotType::SLANT ? 3.0 : 11.0;
+
+    const Eigen::Vector2d target_pos_head_left =
+        temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
+    const Eigen::Vector2d target_pos_head_right =
+        temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
+
     if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
-      cur_request.real_goal_stack[0] = Pose2f(7.0, 11.0, target_heading_rad);
+      cur_request.real_goal_stack[0] =
+          Pose2f(target_pos_head_left.x(), target_pos_head_left.y(),
+                 target_heading_rad);
       cur_request.real_goal_stack[1] = Pose2f(5.0, 0.0, 0.0);
-      cur_request.real_goal_stack[2] = Pose2f(7.0, -11.0, -target_heading_rad);
-      cur_request.real_goal_stack[3] = Pose2f(-3.0, 5.0, target_heading_rad);
+      cur_request.real_goal_stack[2] =
+          Pose2f(target_pos_head_right.x(), target_pos_head_right.y(),
+                 opposite_target_heading_rad);
+      cur_request.real_goal_stack[3] =
+          Pose2f(-3.0, -5.0, opposite_target_heading_rad);
       cur_request.real_goal_stack[4] = Pose2f(-4.0, 0.0, 0.0);
-      cur_request.real_goal_stack[5] = Pose2f(-3.0, -5.0, -target_heading_rad);
+      cur_request.real_goal_stack[5] = Pose2f(-3.0, 5.0, target_heading_rad);
     } else {
-      cur_request.real_goal_stack[0] = Pose2f(-3.0, 11.0, target_heading_rad);
+      cur_request.real_goal_stack[0] =
+          Pose2f(-3.0, -11.0, opposite_target_heading_rad);
       cur_request.real_goal_stack[1] = Pose2f(-4.0, 0.0, 0.0);
-      cur_request.real_goal_stack[2] = Pose2f(-3.0, -11.0, -target_heading_rad);
-      cur_request.real_goal_stack[3] = Pose2f(8.0, -5.0, -target_heading_rad);
+      cur_request.real_goal_stack[2] = Pose2f(-3.0, 11.0, target_heading_rad);
+      cur_request.real_goal_stack[3] =
+          Pose2f(8.0, -5.0, opposite_target_heading_rad);
       cur_request.real_goal_stack[4] = Pose2f(8.0, 0.0, 0.0);
       cur_request.real_goal_stack[5] = Pose2f(8.0, 5.0, target_heading_rad);
     }
@@ -2587,6 +2533,116 @@ void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
   }
 
   return;
+}
+
+const float NarrowSpaceScenario::SetPassageHeight(
+    const EgoInfoUnderSlot& ego_info) {
+  const float passage_height =
+      ego_info.slot_occupied_ratio >
+              apa_param.GetParam().pose_slot_occupied_ratio_2
+          ? 7.0f
+          : apa_param.GetParam()
+                .astar_config.vertical_slot_passage_height_bound;
+
+  const bool is_slant_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type ==
+              SlotType::SLANT
+          ? true
+          : false;
+
+  const float real_passage_height = is_slant_slot ? 10.0f : passage_height;
+  return real_passage_height;
+}
+
+void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
+  Eigen::Vector2d direction_origin_corner_23 = ego_info.slot.GetOriginCornerCoordLocal().pt_3 -
+                                ego_info.slot.GetOriginCornerCoordLocal().pt_2;
+  direction_origin_corner_23_normalized_ =
+      direction_origin_corner_23.normalized();
+
+  constexpr double kInitialTargetX = 7.0;
+  constexpr double kInitialTargetY = 11.0;
+  constexpr double kAlternateTargetX = 8.0;
+  constexpr double kAlternateTargetY = 4.0;
+  constexpr double kPositionThresholdX = 7.0;
+  constexpr double kHeadingThresholdRad0 = 60.0 * M_PI / 180.0;
+  constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
+
+  const double offset_y =
+      ego_info.slot_type == SlotType::SLANT ? 3.0 : kInitialTargetY;
+  const Eigen::Vector2d temp_head_pos(kInitialTargetX, 0.0);
+
+  const Eigen::Vector2d target_pos_head_left =
+      temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
+  const Eigen::Vector2d target_pos_head_right =
+      temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
+
+  const double target_heading_rad_head_out =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_ *
+      M_PI / 180.0;
+
+  const double opposite_target_heading_rad_head_out =
+      planning_math::NormalizeAngle(target_heading_rad_head_out + M_PI);
+
+  const ApaParkOutDirection park_out_direction =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
+
+  switch (park_out_direction) {
+    case ApaParkOutDirection::LEFT_FRONT:
+      ego_info.target_pose.pos = target_pos_head_left;
+      ego_info.target_pose.heading = target_heading_rad_head_out;
+      ego_info.target_pose.heading_vec = direction_origin_corner_23_normalized_;
+
+      // 特殊位置要对目标点进行特殊调整
+      if (ego_info.cur_pose.pos.x() < kInitialTargetX &&
+          std::abs(ego_info.cur_pose.heading) > kHeadingThresholdRad0) {
+        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY;
+      }
+      break;
+    case ApaParkOutDirection::RIGHT_FRONT:
+      ego_info.target_pose.pos = target_pos_head_right;
+      ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
+      ego_info.target_pose.heading_vec = -direction_origin_corner_23_normalized_;
+
+      // 特殊位置要对目标点进行特殊调整
+      if (ego_info.cur_pose.pos.x() < kInitialTargetX &&
+          std::abs(ego_info.cur_pose.heading) > kHeadingThresholdRad0) {
+        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY;
+      }
+      break;
+    case ApaParkOutDirection::LEFT_REAR:
+      ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY;
+      ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
+      ego_info.target_pose.heading_vec = -direction_origin_corner_23_normalized_;
+
+      // 特殊位置要对目标点进行特殊调整
+      if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
+        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY + 1.0;
+      }
+      break;
+    case ApaParkOutDirection::RIGHT_REAR:
+      ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY;
+      ego_info.target_pose.heading = target_heading_rad_head_out;
+      ego_info.target_pose.heading_vec = direction_origin_corner_23_normalized_;
+
+      // 特殊位置要对目标点进行特殊调整
+      if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
+        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY - 1.0;
+      }
+      break;
+    case ApaParkOutDirection::REAR:
+      ego_info.target_pose.pos << kInitialTargetX + 1.0, 0.0;
+      ego_info.target_pose.heading = M_PI;
+      ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
+
+      break;
+    case ApaParkOutDirection::FRONT:
+    default:
+      ego_info.target_pose.pos << kInitialTargetX - 2.5, 0.0;
+      ego_info.target_pose.heading = 0.0;
+      ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
+      break;
+  }
 }
 
 }  // namespace apa_planner

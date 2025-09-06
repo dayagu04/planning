@@ -32,7 +32,8 @@ void NarrowScenarioDecider::UpdateNarrowScenario(
   is_need_astar_ = false;
 
   // 目前，只在垂直车尾入库作用.
-  if (slot_type != ParkSpaceType::VERTICAL) {
+  if (slot_type != ParkSpaceType::VERTICAL &&
+      slot_type != ParkSpaceType::SLANTING) {
     return;
   }
 

@@ -148,44 +148,7 @@ void HybridAStarInterface::UpdateOutput() {
   hybrid_astar_->Clear();
 
   // vertical parking center ref line
-  switch (request_.direction_request) {
-    case ParkingVehDirection::HEAD_IN:
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x - 10.0,
-                               request_.real_goal.y, request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::TAIL_IN:
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x + 10.0,
-                               request_.real_goal.y, request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
-      ILOG_INFO << "OUT_TO_LEFT";
-      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
-                                                   request_.real_goal.y + 10.0,
-                                                   request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-      ILOG_INFO << "OUT_TO_RIGHT";
-      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
-                                                   request_.real_goal.y - 10.0,
-                                                   request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
-    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
-    default:
-      ILOG_INFO << "Unknown Direction : OUT_TO_MIDDLE";
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
-                               request_.real_goal.theta));
-      break;
-  }
+  GenerateRefLine();
 
   // update future path decider
   FuturePathDecider future_path_decider;
@@ -268,46 +231,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   UpdateEDT();
   clear_zone_.GenerateBoundingBox(ego_state_, &obs_, config_.enable_clear_zone);
   // vertical parking center ref line
-  switch (request_.direction_request) {
-    case ParkingVehDirection::HEAD_IN:
-      ILOG_INFO << "HEAD_IN";
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x - 10.0,
-                               request_.real_goal.y, request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::TAIL_IN:
-      ILOG_INFO << "TAIL_IN";
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x + 10.0,
-                               request_.real_goal.y, request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
-      ILOG_INFO << "OUT_TO_LEFT";
-      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
-                                                   request_.real_goal.y + 10.0,
-                                                   request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-      ILOG_INFO << "OUT_TO_RIGHT";
-      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
-                                                   request_.real_goal.y - 10.0,
-                                                   request_.real_goal.theta));
-      break;
-
-    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
-    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
-    default:
-      ILOG_INFO << "Unknown Direction : OUT_TO_MIDDLE";
-      ref_line_.Process(request_.real_goal,
-                        Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
-                               request_.real_goal.theta));
-      break;
-  }
+  GenerateRefLine();
 
   // update future path decider
   FuturePathDecider future_path_decider;
@@ -909,6 +833,10 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   if (request_.direction_request_size > 1) {
     for (int8_t i = 0; i < request_.direction_request_size; i++) {
+      ILOG_INFO << "***************** [ " << static_cast<int>(i)
+                << " ] try, dir :  "
+                << static_cast<int>(request_.direction_request_stack[i])
+                << " ****************";
       TargetPoseRegulator target_pose_regulator;
       target_pose_regulator.Process(&edt_, &request_, ego_state_,
                                     request_.real_goal_stack[i], vehicle_param_,
@@ -1091,6 +1019,47 @@ void HybridAStarInterface::PathCandidateCompare() {
   }
 
   return;
+}
+
+void HybridAStarInterface::GenerateRefLine() {
+  switch (request_.direction_request) {
+    case ParkingVehDirection::HEAD_IN:
+      ref_line_.Process(request_.real_goal,
+                        Pose2f(request_.real_goal.x - 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+
+    case ParkingVehDirection::TAIL_IN:
+      ref_line_.Process(request_.real_goal,
+                        Pose2f(request_.real_goal.x + 10.0,
+                               request_.real_goal.y, request_.real_goal.theta));
+      break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      ILOG_INFO << "OUT_TO_LEFT";
+      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
+                                                   request_.real_goal.y + 10.0,
+                                                   request_.real_goal.theta));
+      break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      ILOG_INFO << "OUT_TO_RIGHT";
+      ref_line_.Process(request_.real_goal, Pose2f(request_.real_goal.x,
+                                                   request_.real_goal.y - 10.0,
+                                                   request_.real_goal.theta));
+      break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+    default:
+      ILOG_INFO << "Unknown Direction : OUT_TO_MIDDLE";
+      ref_line_.Process(request_.real_goal,
+                        Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
+                               request_.real_goal.theta));
+      break;
+  }
 }
 
 }  // namespace planning
