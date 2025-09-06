@@ -1076,7 +1076,13 @@ const bool PlanningScheduler::ExcuteParkingFunction(
   // 泊车规划部分
   bool planning_success = apa_function_->Plan();
 
+  iflyauto::MsgHeader msg_header = planning_output->msg_header;
+  iflyauto::MsgMeta msg_meta = planning_output->msg_meta;
+  iflyauto::PlanMeta meta = planning_output->meta;
   *planning_output = session_.planning_context().planning_output();
+  planning_output->msg_header = msg_header;
+  planning_output->msg_meta = msg_meta;
+  planning_output->meta = meta;
 
   return planning_success;
 }
