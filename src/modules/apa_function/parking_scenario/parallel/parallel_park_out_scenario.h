@@ -62,6 +62,7 @@ class ParallelParkOutScenario : public ParkingScenario {
   std::unordered_map<ApaParkOutDirection,
       std::vector<pnc::geometry_lib::PathPoint>> multi_parkout_path_vec;
   ApaParkOutDirection parkout_direction_ = ApaParkOutDirection::INVALID;
+  bool is_try_tlane_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning
