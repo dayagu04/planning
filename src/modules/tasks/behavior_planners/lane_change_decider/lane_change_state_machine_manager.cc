@@ -353,7 +353,7 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
     const RequestType &lane_change_direction,
     const RequestSource &lane_change_type) const{
   const double ego_press_line_ratio = lc_request_.CalculatePressLineRatio(
-      lc_lane_mgr_->origin_lane_virtual_id(),
+      lc_lane_mgr_->target_lane_virtual_id(),
       lane_change_direction);
 
   JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
