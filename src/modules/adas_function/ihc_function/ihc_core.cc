@@ -603,12 +603,6 @@ bool IhcCore::DynamicObstacleCheck(void) {
 
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          // 对向机动车：当自车速度大于70km/h时，不考虑对向车辆影响
-          if (ego_speed_kph > 70.0) {
-            // 高速行驶时忽略对向机动车，继续检查其他障碍物
-            continue;
-          }
-          
           // 对向机动车：滞回控制，190m~210m为滞回区间
           if (distance < 190.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
@@ -637,12 +631,6 @@ bool IhcCore::DynamicObstacleCheck(void) {
                  fusion_objs[i].common_info.type <= iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
         // 对向非机动车：滞回控制，65m~85m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          // 对向非机动车：当自车速度大于70km/h时，不考虑对向非机动车影响
-          if (ego_speed_kph > 70.0) {
-            // 高速行驶时忽略对向非机动车，继续检查其他障碍物
-            continue;
-          }
-          
           if (distance < 65.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
