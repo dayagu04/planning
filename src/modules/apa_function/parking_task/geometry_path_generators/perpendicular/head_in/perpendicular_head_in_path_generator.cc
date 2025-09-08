@@ -642,8 +642,8 @@ const bool PerpendicularPathHeadingInPlanner::CalMultiSafeCircle() {
   // ILOG_INFO << "multi safe circle info: center = " <<
   // multi_safe_circle.center
   //           << "  radius = " << multi_safe_circle.radius);
-  ILOG_INFO << "multi safe circle info: center = " << multi_safe_circle.center
-            << "  radius = " << multi_safe_circle.radius;
+  // ILOG_INFO << "multi safe circle info: center = " << multi_safe_circle.center
+  //           << "  radius = " << multi_safe_circle.radius;
 
   return true;
 }
