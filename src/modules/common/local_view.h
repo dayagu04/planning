@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "control_command_c.h"
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
 #include "map_data.pb.h"
@@ -17,6 +18,10 @@
 #include "hmi_inner_c.h"
 #include "ifly_localization_c.h"
 #include "ifly_parking_map_c.h"
+#include "prediction_c.h"
+#include "uss_perception_info_c.h"
+#include "uss_wave_info_c.h"
+#include "camera_perception_scene_c.h"
 // #include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 // #include "interface/src/legacy/interface2.4.6/localization_c.h"
 

@@ -3,6 +3,7 @@
 
 #include "Platform_Types.h"
 #include "adas_function_context.h"
+#include "camera_perception_scene_c.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "obstacle_manager.h"
@@ -41,7 +42,7 @@ struct IHCSysState {
   iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
-  
+
   // Debug变量：记录切换近光灯的原因
   bool low_beam_due_to_same_dir_vehicle;    // 是否由于同向车辆导致近光灯
   bool low_beam_due_to_oncomming_vehicle;   // 是否由于对向机动车导致近光灯
