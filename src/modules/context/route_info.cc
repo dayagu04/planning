@@ -2795,8 +2795,6 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   iflymapdata::sdpro::FeaturePoint start_fp;
   iflymapdata::sdpro::FeaturePoint end_fp;
 
-  const iflymapdata::sdpro::LinkInfo_Link* split_region_start_pre_link =
-      nullptr;
   auto previous_seg = &split_segment;
 
   if (previous_seg == nullptr) {
@@ -2854,13 +2852,6 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     }
 
     if (is_find_split_region_start) {
-      split_region_start_pre_link =
-          sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
-
-      if (split_region_start_pre_link == nullptr) {
-        return split_region_info;
-      }
-
       break;
     }
 
