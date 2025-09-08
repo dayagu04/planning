@@ -576,9 +576,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   // calculate lc hold ref buffer
   double lc_hold_offset = 0;
-  if (gap_selector_decider_output.is_quitic_spline_change_to_center_line &&
-      coarse_planning_info.trajectory_points.size() > 0) {
-    lc_hold_offset = coarse_planning_info.trajectory_points.front().l;
+  // if (gap_selector_decider_output.is_quitic_spline_change_to_center_line &&
+  //     coarse_planning_info.trajectory_points.size() > 0) {
+  //   lc_hold_offset = coarse_planning_info.trajectory_points.front().l;
+  // }
+  if (is_LC_HOLD) {
+    lc_hold_offset =
+      lane_change_decider_output.lc_hold_state_lat_offset;
   }
   // construct ref
   traj_points = coarse_planning_info.trajectory_points;
