@@ -964,9 +964,9 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
   // 固定车位,计算占库比
   if (std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
-          param.slot_occupied_ratio_max_lat_err &&
+          param.astar_config.lat_err_for_fix_slot &&
       std::fabs(ego_info_under_slot.terminal_err.heading) <
-          param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
+          param.astar_config.heading_err_for_fix_slot * kDeg2Rad) {
     // 车头泊入占比
     if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {

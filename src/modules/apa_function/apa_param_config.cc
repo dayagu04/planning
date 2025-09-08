@@ -123,6 +123,10 @@ void SyncParkingParameters(const bool is_simulation) {
                   "max_replan_number_inside_slot");
   JSON_READ_VALUE(param.astar_config.vertical_min_path_length, double,
                   "vertical_min_path_length");
+  JSON_READ_VALUE(param.astar_config.lat_err_for_fix_slot, double,
+                  "lat_err_for_fix_slot");
+  JSON_READ_VALUE(param.astar_config.heading_err_for_fix_slot, double,
+                  "heading_err_for_fix_slot");
 
   // car params
   std::string car_type_string;
