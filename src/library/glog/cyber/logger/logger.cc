@@ -28,7 +28,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 static std::unordered_map<std::string, LogFileObject*> moduleLoggerMap;
 

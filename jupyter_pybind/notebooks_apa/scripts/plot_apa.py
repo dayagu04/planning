@@ -16,7 +16,7 @@ from lib.load_common import *
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold3/abu_zone/autoparse/chery_m32t_40735/trigger/20250823/20250823-14-04-55/park_in_data_collection_CHERY_M32T_40735_ALL_FILTER_2025-08-23-14-04-56_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74574/trigger/20250908/20250908-15-43-58/park_in_data_collection_CHERY_M32T_74574_ALL_FILTER_2025-09-08-15-43-58_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -310,6 +310,14 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
           'x': stop_sign_lines_x,
           'y': stop_sign_lines_y,
       })
+
+    try:
+      for i in range(len(planning_proto.apa_path_debug.path_time.astar_time.search_time)):
+        print("time", planning_proto.apa_path_debug.path_time.astar_time.search_time[i])
+
+      print("total time", planning_proto.apa_path_debug.path_time.astar_time.total_search_time)
+    except:
+      pass
 
   push_notebook()
 

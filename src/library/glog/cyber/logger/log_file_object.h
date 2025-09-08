@@ -14,8 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#ifndef CYBER_LOGGER_LOG_FILE_OBJECT_H_
-#define CYBER_LOGGER_LOG_FILE_OBJECT_H_
+#pragma once
 
 #include <cstdint>
 #include <iomanip>
@@ -26,7 +25,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 // the C99 format
 typedef int32_t int32;
@@ -102,4 +101,3 @@ class LogFileObject : public google::base::Logger {
 }  // namespace cyber
 }  // namespace planning
 
-#endif  // CYBER_LOGGER_LOG_FILE_OBJECT_H_

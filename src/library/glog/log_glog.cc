@@ -1,5 +1,6 @@
 #include "log_glog.h"
 
+#ifndef ENABLE_MDC_AP_LOG
 #include <dirent.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -9,13 +10,14 @@
 #include <string>
 
 #include "./cyber/logger/async_logger.h"
+#endif
 
 namespace planning {
 #ifndef ENABLE_MDC_AP_LOG
 
 #define BACKTRACE_LOG (0)
 
-planning::cyber::logger::AsyncLogger *async_logger_ = nullptr;
+planning::cyber::ilog::AsyncLogger *async_logger_ = nullptr;
 static GlogFlag glog_flag_;
 
 #if BACKTRACE_LOG
@@ -104,7 +106,7 @@ void InitGlog(const char *file) {
     google::SetLogDestination(google::FATAL, "");
 
     // Init async logger
-    async_logger_ = new planning::cyber::logger::AsyncLogger(
+    async_logger_ = new planning::cyber::ilog::AsyncLogger(
         google::base::GetLogger(FLAGS_minloglevel));
 
     google::base::SetLogger(FLAGS_minloglevel, async_logger_);
@@ -144,7 +146,10 @@ const void ResetGLogFile() {
 
 #else
 
-void InitGlog(const char *file) { return; }
+void InitGlog(const char *file) {
+  AINFO << "init ad log";
+  return;
+}
 
 void StopGlog() { return; }
 

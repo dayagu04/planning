@@ -31,7 +31,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 static int32_t g_main_thread_pid = getpid();
 

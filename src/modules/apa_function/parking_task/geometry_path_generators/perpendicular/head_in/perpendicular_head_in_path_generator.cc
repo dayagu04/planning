@@ -1459,7 +1459,8 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
     current_arc.headingA = pnc::geometry_lib::NormalizeAngle(temp_pose.heading);
 
     // cal the dist from current_turn_center to target line
-    ILOG_INFO << "current_turn_center = " << current_turn_center.transpose();
+    ILOG_INFO << "current_turn_center = " << current_turn_center.x() << " "
+              << current_turn_center.y();
     double dist = pnc::geometry_lib::CalPoint2LineDist(
         current_turn_center, calc_params_.target_line);
     ILOG_INFO << "origin dist = " << dist;

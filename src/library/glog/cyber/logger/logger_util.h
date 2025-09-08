@@ -18,8 +18,7 @@
  * @file
  */
 
-#ifndef CYBER_LOGGER_LOGGER_UTIL_H_
-#define CYBER_LOGGER_LOGGER_UTIL_H_
+#pragma once
 
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -37,7 +36,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 inline int64_t CycleClock_Now() {
   struct timeval tv;
@@ -83,4 +82,3 @@ inline void FindModuleName(std::string* log_message, std::string* module_name) {
 }  // namespace cyber
 }  // namespace planning
 
-#endif  // CYBER_LOGGER_LOGGER_UTIL_H_

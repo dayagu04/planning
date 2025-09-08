@@ -288,7 +288,7 @@ struct PathPoint {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "pos = " << pos.transpose() << "  headingA = " << heading * kRad2Deg;
+        << "pos = " << pos.x()<<"," <<pos.y() << "  headingA = " << heading * kRad2Deg;
   }
 
   const double GetX() const { return pos.x(); }
@@ -353,7 +353,7 @@ struct Pt2ObsDistInfo {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "pos = " << dist_pt.second.pos.transpose()
+        << "pos = " << dist_pt.second.pos.x() <<","<<dist_pt.second.pos.y()
         << "  heading = " << dist_pt.second.heading * kRad2Deg
         << "  dist = " << dist_pt.first << "  circle_id = " << circle_id
         << "  car_safe_pos = " << static_cast<int>(car_safe_pos);
@@ -378,13 +378,13 @@ struct ObsDistConsiderSlot {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "out slot pt = " << out_slot.second.pos.transpose()
+        << "out slot pt = " << out_slot.second.pos.x() <<","<<out_slot.second.pos.y()
         << "  heading = " << out_slot.second.heading * kRad2Deg
         << "out_slot dist= " << out_slot.first
-        << "in slot pt = " << out_slot.second.pos.transpose()
+        << "in slot pt = " << out_slot.second.pos.x() <<","<<out_slot.second.pos.y()
         << "  heading = " << in_slot.second.heading * kRad2Deg
         << "  in_slot = " << in_slot.first
-        << "  integrated pt = " << integrated.second.pos.transpose()
+        << "  integrated pt = " << integrated.second.pos.x() <<","<<integrated.second.pos.y()
         << "  heading = " << integrated.second.heading * kRad2Deg
         << "  integrated = " << integrated.first;
   }
@@ -446,7 +446,7 @@ struct LineSegment {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "pA = " << pA.x()<<"," << pA.x()<< "  pB = " << pB.x()<<","<<pB.y()
         << "  headingA = " << heading * kRad2Deg << "  length = " << length;
   }
 
@@ -522,10 +522,11 @@ struct Arc {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "pA = " << pA.transpose() << "  pB = " << pB.transpose()
+        << "pA = " << pA.x()<<"," << pA.y()<< "  pB = " << pB.x()<<","<<pB.y()
         << "  headingA = " << headingA * kRad2Deg
         << "  headingB = " << headingB * kRad2Deg << "  length = " << length
-        << "  center = " << circle_info.center
+        << "  center x = " << circle_info.center.x()
+        << "  center y = " << circle_info.center.y()
         << "  radius = " << circle_info.radius
         << "  is_anti_clockwise = " << is_anti_clockwise
         << "  is_ignored = " << is_ignored;

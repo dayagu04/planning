@@ -1604,9 +1604,9 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
     ILOG_INFO_IF(enable_log) << "need_use_accurate = " << need_use_accurate;
 
     if (need_use_accurate) {
-      ILOG_INFO_IF(enable_log)
-          << "obs dist = " << res.pt_closest2obs.first
-          << "  pt = " << res.pt_closest2obs.second.pos.transpose();
+      ILOG_INFO_IF(enable_log) << "obs dist = " << res.pt_closest2obs.first
+                               << "  pt = " << res.pt_closest2obs.second.pos.x()
+                               << " " << res.pt_closest2obs.second.pos.y();
       if (method == ColDetMethod::EDT_GEOMETRY) {
         res = geometry_col_det_ptr->Update(path_seg, lat_inflation,
                                            lon_safe_dist);

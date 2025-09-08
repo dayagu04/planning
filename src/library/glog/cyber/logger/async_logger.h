@@ -14,8 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#ifndef CYBER_LOGGER_ASYNC_LOGGER_H_
-#define CYBER_LOGGER_ASYNC_LOGGER_H_
+#pragma once
 
 #include <atomic>
 #include <condition_variable>
@@ -38,7 +37,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 /**
  * @class AsyncLogger
@@ -205,4 +204,3 @@ class AsyncLogger : public google::base::Logger {
 }  // namespace cyber
 }  // namespace planning
 
-#endif  // CYBER_LOGGER_ASYNC_LOGGER_H_

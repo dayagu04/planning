@@ -66,8 +66,8 @@ struct CarFootPrintCircle {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "center_local: " << center_local.transpose()
-        << "   center_global: " << center_global.transpose()
+        << "center_local: " << center_local.x() <<" "<<center_local.y()
+        << "   center_global: " << center_global.x() <<" " <<center_global.y()
         << "  radius = " << radius;
   };
 };

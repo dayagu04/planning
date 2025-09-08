@@ -93,7 +93,8 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 }
 
 bool PlanningAdapter::Proc() {
-  ILOG_INFO << "PlanningScheduler::RunOnce";
+  ILOG_INFO << "PlanningAdapter::Proc()";
+  AINFO << "AINFO PlanningAdapter::Proc()";
   double start_time = IflyTime::Now_us();
 
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();

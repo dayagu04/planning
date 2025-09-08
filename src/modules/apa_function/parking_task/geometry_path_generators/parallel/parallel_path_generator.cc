@@ -166,7 +166,7 @@ void ParallelPathGenerator::ExpandObstacles() {
         calc_params_.front_corner_obs_vec.emplace_back(tlane_obs_pt +
                                                        coord_diff);
         ILOG_INFO << "VIRTUAL OBS = "
-                  << (tlane_obs_pt + coord_diff).transpose();
+                  << (tlane_obs_pt + coord_diff).x();
       }
     }
   }
@@ -945,11 +945,11 @@ const bool ParallelPathGenerator::OneStepDubinsTryInTripplePlan(
                       apa_param.GetParam().min_turn_radius + 1.0);
   }
 
-  ILOG_INFO << "terminal pos = " << input_.tlane.pt_terminal_pos.transpose();
+  ILOG_INFO << "terminal pos = " << input_.tlane.pt_terminal_pos.x();
 
   ILOG_INFO << "target pose ---------------";
   for (const auto& target_pt : calc_params_.valid_target_pt_vec) {
-    ILOG_INFO << "target_pt_x =" << target_pt.pos.transpose();
+    ILOG_INFO << "target_pt_x =" << target_pt.pos.x();
   }
 
   for (const auto& radius : radius_vec) {
@@ -2471,7 +2471,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   for (const auto& path : selected_path_vec) {
     ILOG_INFO << "2 heading deg:" << path.park_out_heading_deg << " radian : "
               << path.path_segment_vec.back().GetStartPose().heading << " pos: "
-              << path.path_segment_vec.back().GetStartPos().transpose();
+              << path.path_segment_vec.back().GetStartPos().x();
   }
   // std::cout << "heading = ";
   // for (const auto& path : sorted_path_vec) {
@@ -2688,7 +2688,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
       continue;
     }
 
-    ILOG_INFO << "Line limit = " << first_line.pB.transpose();
+    ILOG_INFO << "Line limit = " << first_line.pB.x();
 
     double line_length = (first_line.pB - target_pose.pos).norm();
     if (line_length < 0.1) {
@@ -3029,7 +3029,7 @@ const bool ParallelPathGenerator::TwoSameGearArcPlanToLine(
   auto col_res = collision_detector_ptr_->UpdateByObsMap(arc_1, arc_1.headingA);
   if (col_res.collision_flag ||
       col_res.remain_car_dist > col_res.remain_obstacle_dist - buffer) {
-    ILOG_INFO << "col pt = " << col_res.col_pt_obs_global.transpose();
+    ILOG_INFO << "col pt = " << col_res.col_pt_obs_global.x();
     // debug_info_.debug_arc_vec.emplace_back(arc_1);
     ILOG_INFO << "TwoSameGearArcPlanToLine arc1 collided!";
     return false;

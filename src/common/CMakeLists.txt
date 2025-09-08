@@ -41,7 +41,6 @@ file(GLOB_RECURSE SRC_FILES
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${SRC_FILES})
 
 if(CMAKE_BUILD_TYPE STREQUAL "Release" AND NOT PLATFORM STREQUAL "X86")
-  add_definitions(-DENABLE_IFLYTEK_LOG)
   target_link_libraries(${PROJECT_NAME} PUBLIC
     iflyauto_log
   )
@@ -61,6 +60,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
   lat_lon_vehicle_motion_simulator_lib
   mjson
   planning_proto
+  ifly_glog
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR})

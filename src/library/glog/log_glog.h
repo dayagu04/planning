@@ -1,11 +1,11 @@
 #pragma once
 
-#include "glog/logging.h"
-#include "glog/raw_logging.h"
-
 #ifdef ENABLE_MDC_AP_LOG
 #include "iflyauto_log.h"
 #endif
+
+#include "glog/logging.h"
+#include "glog/raw_logging.h"
 
 namespace planning {
 
@@ -161,12 +161,12 @@ void StopGlog();
 
 const void ResetGLogFile();
 
-#define ILOG_DEBUG ILOGD
-#define ILOG_INFO ILOGI
-#define ILOG_WARN ILOGW
-#define ILOG_ERROR ILOGE
-#define ILOG_FATAL ILOGF
-#define ILOG_INFO_IF(cond) !(cond) ? (void)0 : ILOG_INFO
+#define ILOG_DEBUG ADEBUG
+#define ILOG_INFO AINFO
+#define ILOG_WARN AWARN
+#define ILOG_ERROR AERROR
+#define ILOG_FATAL AFATAL
+#define ILOG_INFO_IF(cond) ADEBUG
 
 #endif
 

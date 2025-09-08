@@ -76,8 +76,8 @@ class ConfigurationContext {
       ILOG_ERROR << "There is no module config file!";
       return false;
     }
-    auto module_cfg_dir = json_data["module_cfg_dir"];
-    ILOG_INFO << "json module_cfg_dir: !!!====" << module_cfg_dir;
+    std::string module_cfg_dir = json_data["module_cfg_dir"];
+    ILOG_INFO << "json module_cfg_dir: !!!====" <<module_cfg_dir;
     engine_conf_.module_cfg_dir = module_cfg_dir;
 
     // 加载log配置文件路径
@@ -97,7 +97,7 @@ class ConfigurationContext {
       ILOG_ERROR << "There is no vehicle config file!";
       return false;
     }
-    auto vehicle_cfg_dir = json_data["vehicle_cfg_dir"];
+    std::string vehicle_cfg_dir = json_data["vehicle_cfg_dir"];
     ILOG_INFO << "json vehicle_cfg_dir: !!!====" << vehicle_cfg_dir;
     engine_conf_.vehicle_cfg_dir = vehicle_cfg_dir;
 

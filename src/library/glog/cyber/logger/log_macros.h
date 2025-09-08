@@ -14,8 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#ifndef CYBER_BASE_MACROS_H_
-#define CYBER_BASE_MACROS_H_
+#pragma once
 
 #include <cstdlib>
 #include <new>
@@ -36,4 +35,3 @@ inline void glog_cpu_relax() {
 #endif
 }
 
-#endif  // CYBER_BASE_MACROS_H_

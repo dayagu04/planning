@@ -14,8 +14,7 @@
  * limitations under the License.
  *****************************************************************************/
 
-#ifndef CYBER_LOGGER_LOGGER_H_
-#define CYBER_LOGGER_LOGGER_H_
+#pragma once
 
 #include <mutex>
 
@@ -23,7 +22,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 class Logger : public google::base::Logger {
  public:
@@ -42,5 +41,3 @@ class Logger : public google::base::Logger {
 }  // namespace logger
 }  // namespace cyber
 }  // namespace planning
-
-#endif  // CYBER_LOGGER_LOGGER_H_

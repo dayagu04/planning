@@ -26,7 +26,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 static const std::unordered_map<char, int> log_level_map = {
     {'F', 3}, {'E', 2}, {'W', 1}, {'I', 0}};
