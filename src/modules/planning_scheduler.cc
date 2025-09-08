@@ -370,7 +370,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     ILOG_DEBUG << "smooth dpoly enable_none_smooth: "
                << config_.enable_none_smooth
                << "   config_.none_consider_slope_thr:   "
-               << config_.none_consider_slope_thr << std::endl;
+               << config_.none_consider_slope_thr;
 
     ILOG_DEBUG << "limited_polynomial_3: " << limited_polynomial_3;
     std::vector<double> polynomial_limited(4);
