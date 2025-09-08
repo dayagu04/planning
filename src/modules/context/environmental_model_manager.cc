@@ -290,7 +290,7 @@ bool EnvironmentalModelManager::Run() {
     environmental_model->set_function_info(common::DrivingFunctionInfo::RADS,
                                            function_state);
   } else {
-    LOG_NOTICE("function mode error\n");
+    LOG_NOTICE("function mode error");
     environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,
                                            function_state);
   }

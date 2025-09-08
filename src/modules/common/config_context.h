@@ -77,7 +77,7 @@ class ConfigurationContext {
       return false;
     }
     std::string module_cfg_dir = json_data["module_cfg_dir"];
-    ILOG_INFO << "json module_cfg_dir: !!!====" <<module_cfg_dir;
+    ILOG_INFO << "json module_cfg_dir: !!!====" << module_cfg_dir;
     engine_conf_.module_cfg_dir = module_cfg_dir;
 
     // 加载log配置文件路径

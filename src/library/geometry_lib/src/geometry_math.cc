@@ -2955,14 +2955,18 @@ void PrintSegmentInfo(const pnc::geometry_lib::PathSegment &seg) {
   ILOG_INFO << "length: " << seg.GetLength();
 
   if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_LINE) {
-    ILOG_INFO << "start_pos: " << seg.GetLineSeg().pA.x()<<" "<<seg.GetLineSeg().pA.y();
+    ILOG_INFO << "start_pos: " << seg.GetLineSeg().pA.x() << " "
+              << seg.GetLineSeg().pA.y();
     ILOG_INFO << "start_heading deg: " << seg.GetLineSeg().heading * kRad2Deg;
-    ILOG_INFO << "end_pos: " << seg.GetLineSeg().pB.x()<<" "<<seg.GetLineSeg().pB.y();
+    ILOG_INFO << "end_pos: " << seg.GetLineSeg().pB.x() << " "
+              << seg.GetLineSeg().pB.y();
     ILOG_INFO << "end_heading deg: " << seg.GetLineSeg().heading * kRad2Deg;
   } else {
-    ILOG_INFO << "start_pos: " << seg.GetArcSeg().pA.x()<<" "<<seg.GetArcSeg().pA.y();
+    ILOG_INFO << "start_pos: " << seg.GetArcSeg().pA.x() << " "
+              << seg.GetArcSeg().pA.y();
     ILOG_INFO << "start_heading deg: " << seg.GetArcSeg().headingA * kRad2Deg;
-    ILOG_INFO << "end_pos: " << seg.GetArcSeg().pB.x()<<" "<<seg.GetArcSeg().pB.y();
+    ILOG_INFO << "end_pos: " << seg.GetArcSeg().pB.x() << " "
+              << seg.GetArcSeg().pB.y();
     ILOG_INFO << "end_heading deg: " << seg.GetArcSeg().headingB * kRad2Deg;
   }
 }
@@ -2984,7 +2988,7 @@ void PrintSegmentsVecInfo(
 
       ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      ILOG_INFO << "start_pos: " << line_seg.pA.x() <<" " <<line_seg.pA.y();
+      ILOG_INFO << "start_pos: " << line_seg.pA.x() << " " << line_seg.pA.y();
       ILOG_INFO << "start_heading deg: " << line_seg.heading * kRad2Deg;
       ILOG_INFO << "end_pos: " << line_seg.pB.x() <<" "<<line_seg.pB.y();
     } else {
@@ -2998,11 +3002,12 @@ void PrintSegmentsVecInfo(
 
       ILOG_INFO << "seg_steer: " << static_cast<int>(current_seg.seg_steer);
 
-      ILOG_INFO << "start_pos: " << arc_seg.pA.x() <<" " <<arc_seg.pA.y();
+      ILOG_INFO << "start_pos: " << arc_seg.pA.x() << " " << arc_seg.pA.y();
       ILOG_INFO << "start_heading deg: " << arc_seg.headingA * kRad2Deg;
       ILOG_INFO << "end_pos: " << arc_seg.pB.x() << arc_seg.pB.y();
       ILOG_INFO << "end_heading deg: " << arc_seg.headingB * kRad2Deg;
-      ILOG_INFO << "center: " << arc_seg.circle_info.center.x() <<" " <<arc_seg.circle_info.center.y()
+      ILOG_INFO << "center: " << arc_seg.circle_info.center.x() << " "
+                << arc_seg.circle_info.center.y()
                 << "radius = " << arc_seg.circle_info.radius;
     }
   }

@@ -157,7 +157,7 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
   }
 
   ILOG_INFO << "local_move_dist = " << local_move_dist << " m";
-  ILOG_INFO << "pos = " << pos_.x() << " " << pos_.x()
+  ILOG_INFO << "pos = " << pos_.x() << " " << pos_.y()
             << "  heading = " << heading_ * kRad2Deg << "  vel = " << vel_
             << " m/s"
             << ", acc = " << acceleration_;

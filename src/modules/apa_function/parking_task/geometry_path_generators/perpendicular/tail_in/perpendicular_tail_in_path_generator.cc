@@ -144,8 +144,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
   ILOG_INFO << "\n ---enter prepare plan---";
 
   ILOG_INFO << "first prepare init pos = "
-            << input_.ego_info_under_slot.cur_pose.pos.x()
-            << "  heading = "
+            << input_.ego_info_under_slot.cur_pose.pos.x() << " "
+            << input_.ego_info_under_slot.cur_pose.pos.y() << "  heading = "
             << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
   const double pre_start_time = IflyTime::Now_ms();

@@ -165,8 +165,8 @@ void ParallelPathGenerator::ExpandObstacles() {
               tlane_obs_pt, input_.tlane.obs_pt_inside) <= 1) {
         calc_params_.front_corner_obs_vec.emplace_back(tlane_obs_pt +
                                                        coord_diff);
-        ILOG_INFO << "VIRTUAL OBS = "
-                  << (tlane_obs_pt + coord_diff).x();
+        ILOG_INFO << "VIRTUAL OBS = " << (tlane_obs_pt + coord_diff).x() << " "
+                  << (tlane_obs_pt + coord_diff).y();
       }
     }
   }

@@ -39,8 +39,10 @@ void ParallelOutPathGenerator::Preprocess() {
   PrintGear("input_.ref_gear", input_.ref_gear);
   PrintSteer("input_.ref_arc_steer = ", input_.ref_arc_steer);
 
-  ILOG_INFO << "tlane Pt in = " << input_.tlane.obs_pt_inside.x();
-  ILOG_INFO << "tlane Pt out = " << input_.tlane.obs_pt_outside.x();
+  ILOG_INFO << "tlane Pt in = " << input_.tlane.obs_pt_inside.x() << " "
+            << input_.tlane.obs_pt_inside.y();
+  ILOG_INFO << "tlane Pt out = " << input_.tlane.obs_pt_outside.x() << " "
+            << input_.tlane.obs_pt_outside.y();
   ExpandObstacles();
   MoveChannelObstacles();
   CalcEgoParams();

@@ -140,7 +140,6 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
-  ILOG_INFO << "scene_type " << scene_type;
   return scene_type;
 }
 
