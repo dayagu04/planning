@@ -34,7 +34,8 @@ void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
     ShrinkChildrenByHeadingForHeadIn();
   }
 
-  constexpr float kXBoundLowerForHeadOut = 1.0f;
+  constexpr float kXBoundUpperForHeadOut = 12.0f;
+  x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
 
   switch (park_dir) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
@@ -43,12 +44,10 @@ void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
     case ParkingVehDirection::TAIL_OUT_TO_LEFT:
     case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
     case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-      x_bound_.upper = 12.0f;
-      x_bound_.lower = kXBoundLowerForHeadOut;
+      x_bound_.upper = kXBoundUpperForHeadOut;
       break;
     default:
       x_bound_.upper = XYbounds.x_max;
-      x_bound_.lower = std::min(limiter_pose.x + 0.4, start.x - 0.1);
       break;
   }
 
