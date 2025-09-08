@@ -35,7 +35,6 @@ struct TargetPoseDeciderRequest {
         is_searching_stage(_is_searching_stage) {}
   ~TargetPoseDeciderRequest() {}
 };
-
 enum class TargetPoseType {
   FAIL,
   NORMAL,
@@ -92,7 +91,8 @@ class TargetPoseDecider final : public ParkingTask {
       col_det_interface_ptr_;
   ApaSlot slot_;
   std::vector<double> lat_buffer_vec_;
-  ApaSlotLatPosPreference slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
+  ApaSlotLatPosPreference slot_lat_pos_preference_ =
+      ApaSlotLatPosPreference::MID;
   double lon_buffer_ = 0.0;
   bool consider_obs_ = false;
   bool base_on_slot_ = false;

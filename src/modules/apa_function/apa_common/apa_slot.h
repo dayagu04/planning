@@ -119,7 +119,7 @@ enum SlotReleaseMethod : uint8_t {
 
 enum class SlotReleaseState : uint8_t {
   // 不经过计算，不确定是否释放
-  UNKOWN = 0,
+  UNKNOWN = 0,
   RELEASE = 1,
   NOT_RELEASE = 2,
   // 计算中
@@ -139,7 +139,7 @@ struct SlotReleaseInfo {
 
   void Clear() {
     for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
-      release_state[i] = SlotReleaseState::UNKOWN;
+      release_state[i] = SlotReleaseState::UNKNOWN;
     }
   }
 };

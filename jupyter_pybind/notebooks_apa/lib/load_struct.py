@@ -1,3 +1,4 @@
+import bisect
 from enum import Enum, IntEnum
 import sys, math, os
 import numpy as np
@@ -918,6 +919,31 @@ def load_prediction_objects(obstacle_list, localization_info):
       trajectory_info['y'].append(p_y)
 
     return obs_info, trajectory_info
+
+def find_closest_index(values, target):
+  """
+  在已排序的列表中查找最接近目标值的索引
+
+  :param values: 已排序的数值列表
+  :param target: 目标值
+  :return: 最接近目标值的索引
+  """
+  if not values:
+      return 0
+
+  # 使用二分查找
+  idx = bisect.bisect_left(values, target)
+
+  if idx == 0:
+      return 0
+  if idx == len(values):
+      return len(values) - 1
+
+  # 比较前后两个值
+  prev_diff = target - values[idx-1]
+  next_diff = values[idx] - target
+
+  return idx - 1 if prev_diff < next_diff else idx
 
 if __name__ == "__main__":
   import matplotlib.pyplot as plt
