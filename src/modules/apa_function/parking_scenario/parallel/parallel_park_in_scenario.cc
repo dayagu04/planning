@@ -408,7 +408,7 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
     const double cross_ego_to_slot_heading =
         pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
                                                 v_23mid_to_01);
-    ILOG_INFO << "v_23mid_to_01 " << v_23mid_to_01.transpose().;
+    ILOG_INFO << "v_23mid_to_01 " << v_23mid_to_01.x();
 
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
     if (cross_ego_to_slot_heading > 1e-3) {
@@ -643,7 +643,7 @@ const bool ParallelParkInScenario::GenTlane() {
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn &&
           is_rigid) {
-        ILOG_INFO << "rigid obs = " << obs_pt_local.transpose()
+        ILOG_INFO << "rigid obs = " << obs_pt_local.x()
                   << " type = " << static_cast<int>(obs_scement);
         ILOG_INFO << "obs pt = " << obs_pt_local.x();
         t_lane_.is_inside_rigid = true;

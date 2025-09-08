@@ -550,9 +550,6 @@ void PerpendicularPathHeadingInPlanner::CalMonoSafeCircle() {
 
   calc_params_.mono_safe_circle.center.x() = pt_inside.x() - delta_x;
 
-  ILOG_INFO << "mono safe circle info: center = "
-            << calc_params_.mono_safe_circle.center.transpose()
-            << "  radius = " << calc_params_.mono_safe_circle.radius;
   // ILOG_INFO << "mono safe circle info: center = "
   //             << calc_params_.mono_safe_circle.center.transpose()
   //             << "   radius = " << calc_params_.mono_safe_circle.radius);
@@ -753,9 +750,6 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
   bool prepare_success = false;
   int iter_num = 0;
   while (iter_num < 5) {
-    ILOG_INFO << "first_prepare_point = " << first_prepare_point.pos.transpose()
-              << " heading = " << first_prepare_point.heading * kRad2Deg
-              << std::endl;
     input.Set(input_.ego_info_under_slot.cur_pose.pos, first_prepare_point.pos,
               input_.ego_info_under_slot.cur_pose.heading,
               first_prepare_point.heading);
@@ -807,9 +801,6 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
   // gen prepare line
   calc_params_.prepare_line =
       pnc::geometry_lib::BuildLineSegByPose(start_pose.pos, start_pose.heading);
-
-  ILOG_INFO << "prepareline = " << start_pose.pos.transpose()
-            << " heading = " << start_heading * kRad2Deg;
 
   calc_params_.pre_line_tangent_vec = line_tangent_vec;
   calc_params_.pre_line_normal_vec = line_normal_vec;
@@ -907,12 +898,6 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     // inside is vacant or outside is vacant
     if (!calc_params_.is_inside_occupied || !calc_params_.is_outside_occupied) {
       if (MonoPreparePlan(target_pose.pos)) {
-        ILOG_INFO << "ego_pose = "
-                  << input_.ego_info_under_slot.cur_pose.pos.transpose()
-                  << " heading = "
-                  << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
-        ILOG_INFO << "point_tangent = " << target_pose.pos.transpose()
-                  << " heading = " << target_pose.heading * kRad2Deg;
 
         calc_params_.cal_tang_pt_success = true;
         calc_params_.safe_circle_tang_pt = target_pose;
@@ -946,12 +931,6 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     // inside and outside are occupied
     // if mono prepare fail, use multi prepare to find target point
     if (MultiPreparePlan(target_pose.pos)) {
-      ILOG_INFO << "ego_pose = "
-                << input_.ego_info_under_slot.cur_pose.pos.transpose()
-                << " heading = "
-                << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
-      ILOG_INFO << "point_tangent = " << target_pose.pos.transpose()
-                << " heading = " << target_pose.heading * kRad2Deg;
 
       calc_params_.cal_tang_pt_success = true;
       calc_params_.safe_circle_tang_pt = target_pose;
@@ -1107,9 +1086,9 @@ const bool PerpendicularPathHeadingInPlanner::CheckArcOrLineAvailable(
   if (pnc::geometry_lib::CheckTwoPoseIsSame(
           pose1, pose2, apa_param.GetParam().static_pos_eps,
           apa_param.GetParam().static_heading_eps * kDeg2Rad)) {
-    ILOG_INFO << "arc.pA = " << arc.pA.transpose()
+    ILOG_INFO << "arc.pA = " << arc.pA.x()
               << "  arc.headingA = " << arc.headingA * kRad2Deg
-              << "  arc.pB = " << arc.pB.transpose()
+              << "  arc.pB = " << arc.pB.x()
               << "  arc.headingB = " << arc.headingB * kRad2Deg;
 
     return false;
@@ -1404,7 +1383,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInMulti(
   ILOG_INFO << "-----CalSinglePathInMulti-----";
   ILOG_INFO << "current_arc_steer = " << static_cast<int>(current_arc_steer)
             << ",  current_gear = " << static_cast<int>(current_gear)
-            << ",  current_pos = " << current_pose.pos.transpose()
+            << ",  current_pos = " << current_pose.pos.x()
             << ",  current_heading = " << current_pose.heading * kRad2Deg;
 
   const double lat_err = apa_param.GetParam().target_pos_err;
@@ -1824,7 +1803,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     ILOG_INFO << "--- No." << i << " MultiLineArcPlan ---";
     ILOG_INFO << "current_arc_steer = " << static_cast<int>(current_arc_steer)
               << ",  current_gear = " << static_cast<int>(current_gear)
-              << ",  current_pos = " << current_pose.pos.transpose()
+              << ",  current_pos = " << current_pose.pos.x()
               << ",  current_heading = " << current_pose.heading * kRad2Deg;
 
     // 0. prepare
@@ -1895,7 +1874,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
              !calc_params_.is_outside_occupied)) {
           ILOG_INFO << "drive arc path col invalid/shorten";
         } else {
-          ILOG_INFO << "arc0 end pos = " << arc_seg_0.GetEndPos().transpose()
+          ILOG_INFO << "arc0 end pos = " << arc_seg_0.GetEndPos().x()
                     << " arc0 end heading = "
                     << arc_seg_0.GetEndHeading() * kRad2Deg;
 
@@ -1978,7 +1957,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
     }
 
     if (use_reverse_arc) {
-      ILOG_INFO << "arc end pos = " << arc_seg.GetEndPos().transpose()
+      ILOG_INFO << "arc end pos = " << arc_seg.GetEndPos().x()
                 << " arc end heading = " << arc_seg.GetEndHeading() * kRad2Deg;
 
       plan_output.gear_cmd_vec.emplace_back(arc_seg.seg_gear);
@@ -2132,7 +2111,7 @@ const bool PerpendicularPathHeadingInPlanner::MultiLineArcPlan() {
       return false;
     }
 
-    ILOG_INFO << "arc2 end pos = " << arc_seg_2.GetEndPos().transpose()
+    ILOG_INFO << "arc2 end pos = " << arc_seg_2.GetEndPos().x()
               << " arc2 end heading = " << arc_seg_2.GetEndHeading() * kRad2Deg;
 
     plan_output.gear_cmd_vec.emplace_back(arc_seg_2.seg_gear);
@@ -2573,7 +2552,7 @@ const bool PerpendicularPathHeadingInPlanner::CalSinglePathInAdjust(
     const double& steer_change_radius, const size_t& i) {
   ILOG_INFO << "-----CalSinglePathInAdjust-----";
   ILOG_INFO << "current_gear = " << static_cast<int>(current_gear)
-            << ",  current_pos = " << current_pose.pos.transpose()
+            << ",  current_pos = " << current_pose.pos.x()
             << ",  current_heading = " << current_pose.heading * kRad2Deg;
 
   const double lat_err = apa_param.GetParam().target_pos_err;
@@ -2932,8 +2911,8 @@ PerpendicularPathHeadingInPlanner::TrimPathByCollisionDetection(
   if (safe_remain_dist < 1e-5) {
     ILOG_INFO << "safe_remain_dist is samller than 0.0, the path do not meet"
                  "requirements";
-    ILOG_INFO << "col_pt_ego_global = " << col_res.col_pt_ego_global.transpose()
-              << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose()
+    ILOG_INFO << "col_pt_ego_global = " << col_res.col_pt_ego_global.x()
+              << "  obs_pt_global = " << col_res.col_pt_obs_global.x()
               << "  car_line_order = " << col_res.car_line_order
               << "  obs_type = " << static_cast<int>(col_res.obs_type);
 
@@ -2944,9 +2923,9 @@ PerpendicularPathHeadingInPlanner::TrimPathByCollisionDetection(
     // ILOG_INFO <<
     //     "the path will collide, the length need shorten to "
     //     "safe_remain_dist";
-    ILOG_INFO << "col_pt_ego_global = " << col_res.col_pt_ego_global.transpose()
-              << "  col_pt_ego_local = " << col_res.col_pt_ego_local.transpose()
-              << "  obs_pt_global = " << col_res.col_pt_obs_global.transpose()
+    ILOG_INFO << "col_pt_ego_global = " << col_res.col_pt_ego_global.x()
+              << "  col_pt_ego_local = " << col_res.col_pt_ego_local.x()
+              << "  obs_pt_global = " << col_res.col_pt_obs_global.x()
               << "  car_line_order = " << col_res.car_line_order
               << "  obs_type = " << static_cast<int>(col_res.obs_type);
 

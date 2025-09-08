@@ -144,7 +144,7 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
   ILOG_INFO << "\n ---enter prepare plan---";
 
   ILOG_INFO << "first prepare init pos = "
-            << input_.ego_info_under_slot.cur_pose.pos.transpose()
+            << input_.ego_info_under_slot.cur_pose.pos.x()
             << "  heading = "
             << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
@@ -582,12 +582,12 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
           output_.path_segment_vec.back().GetEndPose();
       calc_params_.first_path_gear = output_.current_gear;
       ILOG_INFO << "first prepare target pos = "
-                << input_.ego_info_under_slot.cur_pose.pos.transpose()
-                << "  heading = "
+                << input_.ego_info_under_slot.cur_pose.pos.x() << " "
+                << input_.ego_info_under_slot.cur_pose.pos.y() << "  heading = "
                 << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg
                 << "  safe_circle_tang_pt pos = "
-                << calc_params_.safe_circle_tang_pt.pos.transpose()
-                << " heading = "
+                << calc_params_.safe_circle_tang_pt.pos.x() << " "
+                << calc_params_.safe_circle_tang_pt.pos.y() << " heading = "
                 << calc_params_.safe_circle_tang_pt.heading * kRad2Deg
                 << "  path length = " << output_.length
                 << "  first_path_gear = "
@@ -1166,8 +1166,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
   const geometry_lib::PathPoint target_pose = calc_params_.safe_circle_tang_pt;
 
   ILOG_INFO << "second prepare init pos = "
-            << input_.ego_info_under_slot.cur_pose.pos.transpose()
-            << "  heading = "
+            << input_.ego_info_under_slot.cur_pose.pos.x() << " "
+            << input_.ego_info_under_slot.cur_pose.pos.y() << "  heading = "
             << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
   if (geometry_lib::CheckTwoPoseIsSame(start_pose, target_pose, 0.0468,
@@ -1251,8 +1251,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
                  "success";
 
     ILOG_INFO << "second prepare target pos = "
-              << input_.ego_info_under_slot.cur_pose.pos.transpose()
-              << "  heading = "
+              << input_.ego_info_under_slot.cur_pose.pos.x() << " "
+              << input_.ego_info_under_slot.cur_pose.pos.y() << "  heading = "
               << input_.ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
     return true;
@@ -1733,7 +1733,7 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
         // just seeking one more solution, only i=0, first plan
         ILOG_INFO_IF(enable_log)
             << "use single_cur_pose to one line path plan, single_cur_pose = "
-            << single_cur_pose.pos.transpose() << "  "
+            << single_cur_pose.pos.x() << " " << single_cur_pose.pos.y() << "  "
             << single_cur_pose.heading * kRad2Deg;
         if (OneLinePathPlan(single_cur_pose, single_ref_gear,
                             apa_param.GetParam().car_lat_inflation_normal,
@@ -1765,7 +1765,8 @@ const bool PerpendicularTailInPathGenerator::RoughMultiAdjustPathPlan(
         ILOG_INFO_IF(enable_log)
             << "continue use single multi_adjust plan end pose to one "
                "line path plan, _pose = "
-            << geometry_path.end_pose.pos.transpose() << "  "
+            << geometry_path.end_pose.pos.x() << " "
+            << geometry_path.end_pose.pos.y() << "  "
             << geometry_path.end_pose.heading * kRad2Deg;
         if (OneLinePathPlan(geometry_path.end_pose, single_ref_gear,
                             apa_param.GetParam().car_lat_inflation_normal,
@@ -1900,7 +1901,8 @@ const bool PerpendicularTailInPathGenerator::OneStepMultiAdjustPathPlan(
       ILOG_INFO_IF(enable_log)
           << "continue use single multi_adjust plan end pose to one "
              "line path plan, _pose = "
-          << geometry_path.end_pose.pos.transpose() << "  "
+          << geometry_path.end_pose.pos.x() << " "
+          << geometry_path.end_pose.pos.y() << "  "
           << geometry_path.end_pose.heading * kRad2Deg;
       geometry_lib::GeometryPath one_line_geometry_path;
       if (OneLinePathPlan(geometry_path.end_pose, ref_gear,
@@ -2026,7 +2028,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
         // just seeking one more solution, only i=0, first plan
         ILOG_INFO
             << "use single_cur_pose to one line path plan, single_cur_pose = "
-            << single_cur_pose.pos.transpose() << "  "
+            << single_cur_pose.pos.x() << " " << single_cur_pose.pos.y() << "  "
             << single_cur_pose.heading * kRad2Deg;
         if (OneLinePathPlan(single_cur_pose, single_ref_gear,
                             apa_param.GetParam().car_lat_inflation_normal,
@@ -2068,7 +2070,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
         }
         ILOG_INFO << "continue use single multi_adjust plan end pose to one "
                      "line path plan, _pose = "
-                  << geometry_path.end_pose.pos.transpose() << "  "
+                  << geometry_path.end_pose.pos.x() << " "
+                  << geometry_path.end_pose.pos.y() << "  "
                   << geometry_path.end_pose.heading * kRad2Deg;
         if (OneLinePathPlan(geometry_path.end_pose, single_ref_gear,
                             apa_param.GetParam().car_lat_inflation_normal,
@@ -2572,7 +2575,7 @@ const bool PerpendicularTailInPathGenerator::SingleMultiAdjustPathPlan(
     const bool enable_log) {
   geometry_path_vec.clear();
   ILOG_INFO_IF(enable_log) << "\n --- enter SingleMultiAdjustPathPlan ---";
-  ILOG_INFO_IF(enable_log) << "pos = " << pose.pos.transpose()
+  ILOG_INFO_IF(enable_log) << "pos = " << pose.pos.x() << " " << pose.pos.y()
                            << "  heading = " << pose.heading * kRad2Deg
                            << "  ref gear = " << static_cast<int>(ref_gear);
 
@@ -3707,7 +3710,8 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
         std::max(tar_pose.pos.x(), calc_params_.target_line.pA.x() + 1e-3);
   }
 
-  ILOG_INFO_IF(enable_log) << "dubins target pos = " << tar_pose.pos.transpose()
+  ILOG_INFO_IF(enable_log) << "dubins target pos = " << tar_pose.pos.x() << " "
+                           << tar_pose.pos.y()
                            << "  heading = " << tar_pose.heading * kRad2Deg;
 
   dubins_lib::DubinsLibrary::Input input(pose.pos, tar_pose.pos, pose.heading,

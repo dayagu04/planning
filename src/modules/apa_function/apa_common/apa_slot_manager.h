@@ -65,10 +65,10 @@ struct TLane {
 
   void PrintInfo(const bool enable_print = true) const {
     ILOG_INFO_IF(enable_print)
-        << "A = " << A.transpose() << "  B = " << B.transpose()
-        << "  C = " << C.transpose() << "  D = " << D.transpose()
-        << "  E = " << E.transpose() << "  F = " << F.transpose()
-        << "  G = " << G.transpose() << "  H = " << H.transpose()
+        << "A = " << A.x() << " " << A.y() << "  B = " << B.x()
+        << "  C = " << C.x() << "  D = " << D.x()
+        << "  E = " << E.x() << "  F = " << F.x()
+        << "  G = " << G.x() << "  H = " << H.x()
         << "  min_x = " << min_x << "  min_x = " << min_y
         << "  max_x = " << max_x << "  max_x = " << max_y;
   }

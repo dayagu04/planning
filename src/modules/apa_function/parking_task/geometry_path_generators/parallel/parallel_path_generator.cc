@@ -970,7 +970,7 @@ const bool ParallelPathGenerator::OneStepDubinsTryInTripplePlan(
       }
 
       ILOG_INFO << "plan from ego pose to valid target pose success!"
-                << " valid pos= " << target_pose.pos.transpose()
+                << " valid pos= " << target_pose.pos.x()
                 << ", radius =" << radius;
 
       GetPathSegVecByDubins(path_seg_vec);
@@ -3008,7 +3008,7 @@ const bool ParallelPathGenerator::TwoSameGearArcPlanToLine(
   arc_1.headingA = start_pose.heading;
   arc_1.circle_info.radius = radius;
 
-  ILOG_INFO << "target line =" << target_line.pA.transpose()
+  ILOG_INFO << "target line =" << target_line.pA.x()
             << ", heading deg = " << target_line.heading * kRad2Deg;
 
   const uint8_t arc_1_steer = (pnc::geometry_lib::IsPointOnLeftSideOfLineSeg(
@@ -3217,7 +3217,7 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
   ILOG_INFO << "-----CalSinglePathInMulti-----";
   ILOG_INFO << "current_arc_steer = " << static_cast<int>(current_arc_steer)
             << ",  current_gear = " << static_cast<int>(current_gear)
-            << ",  current_pos = " << current_pose.pos.transpose()
+            << ",  current_pos = " << current_pose.pos.x()
             << ",  current_heading = " << current_pose.heading * kRad2Deg;
 
   path_seg_vec.clear();
@@ -3325,7 +3325,7 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
     } else if (col_res == PATH_COL_SHORTEN) {
       path_seg_vec.emplace_back(tmp_path_seg);
       ILOG_INFO << "No. " << i << " cut, due to collision, end point ="
-                << tmp_path_seg.GetEndPos().transpose()
+                << tmp_path_seg.GetEndPos().x()
                 << ", heading =" << tmp_path_seg.GetEndHeading() * kRad2Deg;
       if (multi_plan_method == MultiPlanMethod::LineArcMultiPlan && i == 0) {
         ILOG_INFO << "line-arc cut at line, quit multi-plan";
@@ -3351,7 +3351,7 @@ const bool ParallelPathGenerator::CalSinglePathInMulti(
       } else if (col_res == PATH_COL_SHORTEN) {
         path_seg_vec.emplace_back(tmp_path_seg);
         ILOG_INFO << "No. " << i << " cut, due to collision, end point ="
-                  << tmp_path_seg.GetEndPos().transpose()
+                  << tmp_path_seg.GetEndPos().x()
                   << ", heading =" << tmp_path_seg.GetEndHeading() * kRad2Deg;
         if (multi_plan_method == MultiPlanMethod::LineArcMultiPlan && i == 0) {
           ILOG_INFO << "line-arc cut at line, quit multi-plan";
@@ -3528,7 +3528,7 @@ const bool ParallelPathGenerator::AdjustPlan() {
   ILOG_INFO << "adjust plan input steer ="
             << static_cast<int>(current_arc_steer);
 
-  ILOG_INFO << "current pose =" << current_pose.pos.transpose() << ", "
+  ILOG_INFO << "current pose =" << current_pose.pos.x() << ", "
             << current_pose.heading * kRad2Deg;
 
   // check pose, if error is large, adjust is not suitable
@@ -3623,7 +3623,7 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     ILOG_INFO << "continue to plan after multi\n";
   }
 
-  ILOG_INFO << "current pose =" << current_pose.pos.transpose() << ", "
+  ILOG_INFO << "current pose =" << current_pose.pos.x() << ", "
             << current_pose.heading * kRad2Deg;
 
   // check gear and steer
@@ -4624,8 +4624,8 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
         search_start_path_vec.emplace_back(
             pnc::geometry_lib::PathSegment(gear, line));
 
-        ILOG_INFO << "pa = " << line.pA.transpose()
-                  << ", pB = " << line.pB.transpose()
+        ILOG_INFO << "pa = " << line.pA.x()
+                  << ", pB = " << line.pB.x()
                   << "heading (deg)= " << pB.heading * kRad2Deg
                   << "gear = " << static_cast<int>(gear);
       } else {
@@ -5420,10 +5420,10 @@ const bool ParallelPathGenerator::OneLinePlan(
   pnc::geometry_lib::PathPoint pose;
   pose.Set(line.pA, line.heading);
 
-  ILOG_INFO << "last pose deg" << pose.pos.transpose() << ", "
+  ILOG_INFO << "last pose deg" << pose.pos.x() << ", "
             << pose.heading * kRad2Deg;
 
-  ILOG_INFO << "target line" << calc_params_.target_line.pA.transpose()
+  ILOG_INFO << "target line" << calc_params_.target_line.pA.x()
             << calc_params_.target_line.heading * kRad2Deg;
 
   if (pnc::geometry_lib::IsPoseOnLine(
@@ -5535,7 +5535,7 @@ const bool ParallelPathGenerator::OneLinePlanAlongEgoHeading(
   const pnc::geometry_lib::PathPoint fixed_target_pose(
       start_pose.pos + len * v_start_heading, start_pose.heading);
 
-  ILOG_INFO << "fixed target pose =" << fixed_target_pose.pos.transpose()
+  ILOG_INFO << "fixed target pose =" << fixed_target_pose.pos.x()
             << " ,heading =" << fixed_target_pose.heading * kRad2Deg;
 
   if (!IsOnTargetLine(fixed_target_pose)) {
