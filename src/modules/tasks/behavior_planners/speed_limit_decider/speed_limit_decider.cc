@@ -546,7 +546,8 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         }
       }
     }
-    v_cruise_limit_ = 80;//80kph in ramp in first version
+    v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
+    v_target_ramp = std::min(v_cruise_limit_ / 3.6, v_target_ramp);
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
