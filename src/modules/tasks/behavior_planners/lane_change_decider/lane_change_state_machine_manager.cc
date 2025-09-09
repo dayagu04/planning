@@ -1573,6 +1573,8 @@ void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
     }
     road_to_ramp_turn_signal_ = route_info_output.ramp_direction;
     return;
+  } else {
+    road_to_ramp_turn_signal_ = RAMP_NONE;
   }
   // const auto virtual_lane_manager =
   //     session_->environmental_model().get_virtual_lane_manager();
