@@ -140,7 +140,6 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
       DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_frame_info();
   frame_info->set_scene_type(common::SceneType_Name(scene_type));
 
-  ILOG_INFO << "scene_type " << scene_type;
   return scene_type;
 }
 
@@ -370,7 +369,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     ILOG_DEBUG << "smooth dpoly enable_none_smooth: "
                << config_.enable_none_smooth
                << "   config_.none_consider_slope_thr:   "
-               << config_.none_consider_slope_thr << std::endl;
+               << config_.none_consider_slope_thr;
 
     ILOG_DEBUG << "limited_polynomial_3: " << limited_polynomial_3;
     std::vector<double> polynomial_limited(4);

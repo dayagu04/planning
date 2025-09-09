@@ -560,9 +560,10 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     const auto limiter_start_pt_local = g2l_tf.GetPos(limiter.start_pt);
     const auto limiter_end_pt_local = g2l_tf.GetPos(limiter.end_pt);
     ILOG_INFO << "limiter_start_pt_local start pos = "
-              << limiter_start_pt_local.transpose();
-    ILOG_INFO << "limiter_end_pt_local end pos = "
-              << limiter_end_pt_local.transpose();
+              << limiter_start_pt_local.x() << " "
+              << limiter_start_pt_local.y();
+    ILOG_INFO << "limiter_end_pt_local end pos = " << limiter_end_pt_local.x()
+              << " " << limiter_end_pt_local.y();
 
     const double max_limiter_x =
         std::max(limiter_start_pt_local.x(), limiter_end_pt_local.x());

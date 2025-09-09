@@ -5,20 +5,6 @@ file(GLOB ifly_glog_file
     "cyber/logger/*.cc"
 )
 
-set(MDC_AP_LOG_FLAG True)
-
-if (PLATFORM STREQUAL "X86")
-  add_definitions(-DIFLY_GLOG_PATH)
-  message("cyber config")
-else()
-  if (MDC_AP_LOG_FLAG)
-    add_definitions(-DENABLE_MDC_AP_LOG)
-    message("use huawei ap log")
-  else()
-    message("use google log")
-  endif()
-endif()
-
 add_library(${PROJECT_NAME} STATIC EXCLUDE_FROM_ALL ${ifly_glog_file})
 target_include_directories(${PROJECT_NAME} PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}

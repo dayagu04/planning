@@ -29,7 +29,7 @@ static uint64_t get_latency(double now, uint64_t input_time) {
 }
 
 bool PlanningAdapter::Init() {
-  ILOG_INFO << "The planning component init!!!" << std::endl;
+  ILOG_INFO << "The planning component init!!!";
   std::string engine_config_path =
       params_["res_path"] +
       "/res/conf/engine_configs/planning_engine_config_ap.json";
@@ -93,7 +93,7 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 }
 
 bool PlanningAdapter::Proc() {
-  ILOG_INFO << "PlanningScheduler::RunOnce";
+  ILOG_INFO << "PlanningAdapter::Proc()";
   double start_time = IflyTime::Now_us();
 
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();

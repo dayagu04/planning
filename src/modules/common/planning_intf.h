@@ -70,7 +70,7 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::CameraPerceptionScene &data) = 0;
   virtual void Feed_IflytekCameraPerceptionOccGrid(
       const iflyauto::CameraPerceptionOccGridInfo &data) = 0;
-    
+
   virtual void Feed_IflytekCameraPerceptionDrivableSpaceGrid(
       const iflyauto::CameraPerceptionDrivableSpaceGridInfo &data) = 0;
   virtual void Feed_IflytekFusionObjects(

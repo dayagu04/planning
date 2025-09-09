@@ -1247,7 +1247,8 @@ const bool SlotManager::UpdateEgoParallelSlotInfo(
   ego_slot_info.target_ego_heading_slot = 0.0;
 
   ILOG_INFO << "target ego pos in slot ="
-            << ego_slot_info.target_ego_pos_slot.transpose()
+            << ego_slot_info.target_ego_pos_slot.x() << " "
+            << ego_slot_info.target_ego_pos_slot.y()
             << " heading =" << ego_slot_info.target_ego_heading_slot * kRad2Deg;
 
   // calc terminal error once

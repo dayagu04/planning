@@ -60,7 +60,7 @@
 
 namespace planning {
 namespace cyber {
-namespace logger {
+namespace ilog {
 
 #define PATH_SEPARATOR '/'
 

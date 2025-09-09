@@ -1012,9 +1012,9 @@ const bool PerpendicularPathOutPlanner::CheckArcOrLineAvailable(
   if (pnc::geometry_lib::CheckTwoPoseIsSame(
           pose1, pose2, apa_param.GetParam().static_pos_eps,
           apa_param.GetParam().static_heading_eps * kDeg2Rad)) {
-    ILOG_INFO << "arc.pA = " << arc.pA.transpose()
+    ILOG_INFO << "arc.pA = " << arc.pA.x()
               << "  arc.headingA = " << arc.headingA * kRad2Deg
-              << "  arc.pB = " << arc.pB.transpose()
+              << "  arc.pB = " << arc.pB.x()
               << "  arc.headingB = " << arc.headingB * kRad2Deg;
 
     return false;

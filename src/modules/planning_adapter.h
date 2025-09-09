@@ -9,6 +9,7 @@
 #include "local_view.h"
 #include "map_data.pb.h"
 #include "planning_scheduler.h"
+#include "camera_perception_occupancy_grid_c.h"
 
 namespace planning {
 
