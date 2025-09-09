@@ -110,16 +110,23 @@ bool TaskPipelineRADS::Run() {
     return false;
   }
 
+  // if (enable_lane_borrow_deciderV2_) {
+  //   ok = lane_borrow_deciderV2_->Execute();
+  //   if (!ok) {
+  //     AddErrorInfo(lane_borrow_deciderV2_->Name());
+  //     return false;
+  //   }
+  // } else {
+  //   ok = lane_borrow_deciderV1_->Execute();
+  //   if (!ok) {
+  //     AddErrorInfo(lane_borrow_deciderV1_->Name());
+  //     return false;
+  //   }
+  // }
   if (enable_lane_borrow_deciderV2_) {
     ok = lane_borrow_deciderV2_->Execute();
     if (!ok) {
       AddErrorInfo(lane_borrow_deciderV2_->Name());
-      return false;
-    }
-  } else {
-    ok = lane_borrow_deciderV1_->Execute();
-    if (!ok) {
-      AddErrorInfo(lane_borrow_deciderV1_->Name());
       return false;
     }
   }

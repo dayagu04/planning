@@ -99,6 +99,13 @@ bool LongTimeTaskPipelineV2::Run() {
   //     return false;
   //   }
   // }
+  // if (enable_lane_borrow_deciderV2_) {
+  //   ok = lane_borrow_deciderV2_->Execute();
+  //   if (!ok) {
+  //     AddErrorInfo(lane_borrow_deciderV2_->Name());
+  //     return false;
+  //   }
+  // }
 
   // ok = lateral_offset_decider_->Execute();
   // if (!ok) {
