@@ -1759,6 +1759,7 @@ void ParallelParkInScenario::Log() const {
   JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)
 
   JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.slot.id_)

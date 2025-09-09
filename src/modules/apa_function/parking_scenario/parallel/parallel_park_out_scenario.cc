@@ -39,6 +39,7 @@ void ParallelParkOutScenario::Reset() {
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
   parallel_out_path_planner_.Reset();
+  is_try_tlane_ = false;
 
   ParkingScenario::Reset();
 }
@@ -85,10 +86,11 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   }
   ILOG_INFO << "update ego slot info success!";
 
+  is_try_tlane_ = false;
   // generate t-lane
   if (!GenTlane()) {
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    frame_.plan_fail_reason = NO_TARGET_POSE;
     return;
   }
 
@@ -169,6 +171,7 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
+  is_try_tlane_ = true;
   // init simulation
   InitSimulation();
 
@@ -270,6 +273,7 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
 
   frame_.is_replan_first = true;
+  is_try_tlane_ = false;
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
@@ -627,21 +631,21 @@ const bool ParallelParkOutScenario::GenTlane() {
         continue;
       }
 
+      if (is_try_tlane_ && ego_info_under_slot.slot_occupied_ratio > 0.1) {
+        if (mathlib::IsInBound(obs_pt_local.x(), 1.0, slot_length - 0.5) &&
+            mathlib::IsInBound(obs_pt_local.y(),
+                               (0.5 * slot_width - 0.5) * side_sgn,
+                               (0.5 * slot_width + 0.8) * side_sgn)) {
+          ILOG_WARN << "out is obs, obs_pt_local = " << obs_pt_local.x();
+          return false;
+        }
+      }
+
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pt_local, ego_info_under_slot.cur_pose,
               kDeletedObsDistOutSlot)) {
         // in_ego_cnt++;
         continue;
-      }
-      if (ego_info_under_slot.slot_occupied_ratio > 0.1) {
-        if (mathlib::IsInBound(obs_pt_local.x(), 1.0, slot_length - 0.5) &&
-            mathlib::IsInBound(obs_pt_local.y(),
-                               (0.5 * slot_width - 0.5) * side_sgn,
-                               (0.5 * slot_width + 0.8) * side_sgn)) {
-          ILOG_WARN << "out is obs, obs_pt_local = "
-                    << obs_pt_local.x();
-          return false;
-        }
       }
 
       if (mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
@@ -1365,6 +1369,7 @@ void ParallelParkOutScenario::Log() const {
   JSON_DEBUG_VALUE("remain_dist_obs", frame_.remain_dist_obs)
   JSON_DEBUG_VALUE("stuck_time", frame_.stuck_time)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
+  JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
 
   JSON_DEBUG_VALUE("ego_heading_slot", ego_info_under_slot.cur_pose.heading)
   JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.slot.id_)
