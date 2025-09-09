@@ -991,7 +991,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
-                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[]}
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[], 'dist_to_lborder':[], 'dist_to_rborder':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
@@ -1001,7 +1001,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_mark_s_vec = [lane.lane_marks[j].end for j in range(virtual_lane_marks_size)]
       lane_mark_s_begin_vec = [lane.lane_marks[j].begin for j in range(virtual_lane_marks_size)]
       lane_info['lane_mark_vec'] = [lane.lane_marks[j].lane_mark for j in range(virtual_lane_marks_size)]
-
+      lane_info['dist_to_lborder'] = [virtual_lane_refline_points[j].distance_to_left_road_border for j in range(virtual_lane_refline_points_size)]
+      lane_info['dist_to_rborder'] = [virtual_lane_refline_points[j].distance_to_right_road_border for j in range(virtual_lane_refline_points_size)]
       lane_mark_point_x = []
       lane_mark_point_y = []
       lane_mark_loc_x = []
@@ -1108,6 +1109,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['d_poly_curvature_vec'] = [0]
       lane_info['confidence_vec'] = [0]
       lane_info['lane_mark_vec'] = []
+      lane_info['dist_to_lborder'] = [0]
+      lane_info['dist_to_rborder'] = [0]
 
     lane_info['lane_mark_point_x'] = lane_mark_point_x
     lane_info['lane_mark_point_y'] = lane_mark_point_y
