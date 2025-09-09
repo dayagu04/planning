@@ -102,7 +102,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   const ApaParameters& config = apa_param.GetParam();
 
   const bool lon_condition =
-      ego_info.terminal_err.pos.x() < config.finish_lon_err;
+      std::fabs(ego_info.terminal_err.pos.x()) < config.finish_lon_err;
 
   const double lat_offset =
       std::fabs(ego_info.cur_pose.pos.y() - lateral_offset_);
@@ -160,6 +160,25 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
 
   if (parking_finish) {
     return true;
+  }
+
+  // for more wide slot
+  if (lon_condition && static_condition && remain_s_condition) {
+    Polygon2D local;
+    GetVehPolygonBy12Edge(0.08, 0.0, &local);
+    Polygon2D global;
+    ULFLocalPolygonToGlobal(
+        &global, &local,
+        Pose2D(ego_info.cur_pose.pos.x(), ego_info.cur_pose.pos.y(),
+               ego_info.cur_pose.GetTheta()));
+
+    cdl::AABB box;
+    GetBoundingBoxByPolygon(&box, &global);
+
+    double half_width = ego_info.slot.slot_width_;
+    if (box.max_[1] < half_width && box.min_[1] > -half_width) {
+      return true;
+    }
   }
 
   return false;
