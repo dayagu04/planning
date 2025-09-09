@@ -98,7 +98,7 @@ void TargetPoseRegulator::Process(
   Clear();
   center_line_target_ = center_line_target;
   request_ = request;
-  cross_the_slot_line_max_dist_ = 0.1;
+  cross_the_slot_line_max_dist_ = 0.0;
   edt->UpdateSafeBuffer(0.0, 0.2, 0.0);
   UpdateDefaultPoseInfo(request, veh_param, direction_request, edt);
 
