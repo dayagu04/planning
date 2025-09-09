@@ -187,7 +187,10 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
   } else if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
                                     TSR_FUNCTION_FSM_WORK_STATE_OFF) {
     // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_OFF状态
-    if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
+    if (tsr_fault_code_) {  // 1. 优先级最高：有故障 -> FAULT
+      tsr_state = iflyauto::TSRFunctionFSMWorkState::
+          TSR_FUNCTION_FSM_WORK_STATE_FAULT;
+    } else if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
         tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_AND_AUDIO) {
       tsr_state = iflyauto::TSRFunctionFSMWorkState::
           TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -230,17 +233,18 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
     }
   } else {
-    // 处于异常状态
+    // 处于FAULT状态
     if (tsr_fault_code_ == 0) {
-      // 全部系统故障解除
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-    } else {
-      // ISLI设置项关闭
-      if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF) {
-        tsr_state =
-            iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
+      // 全部系统故障解除 -> 根据开关状态决定下一状态
+      if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
+          tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
+        tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
+      } else {
+        tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
       }
+    } else {
+      // 有故障时维持FAULT状态，不受开关状态影响
+      tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
     }
   }
 

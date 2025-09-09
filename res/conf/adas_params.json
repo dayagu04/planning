@@ -178,12 +178,12 @@
   "enable_accel_pedal_pos_rate" : 40.0,
   "enable_accel_pedal_pos_rate_dur" : 1.0,
   "disable_accel_pedal_pos_rate" : 70.0,
-  "ihc_use_json_switch": false,
-  "ihc_main_switch": true,
+  "ihc_set_main_switch": false,
   "ihc_use_json_code": false,
-  "ihc_enable_code_maskcode": 63,
-  "ihc_disable_code_maskcode": 0,
-  "ihc_fault_code_maskcode": 0,
+  "ihc_high_beam_code": 0,
+  "ihc_low_beam_code": 0,
+  "ihc_fault_code": 0,
+  "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
   "elk_roadedge_testswitch_temp_":false
 }
