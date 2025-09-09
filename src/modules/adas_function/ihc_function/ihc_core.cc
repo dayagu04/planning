@@ -19,6 +19,29 @@ static inline void ResetIhcDynamicObstacleTimers() {
   ihc_high_beam_on_duration_s = 0.0f;
 }
 
+bool IhcCore::IsWiperNotHighSpeedLast(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  
+  // 更新当前雨刷是否为快速档的状态
+  wiper_is_high_speed_ = (ihc_sys_.input.wiper_state == iflyauto::WiperStateEnum::WiperState_HighSpeed);
+  
+  // 雨刷状态时间累积逻辑
+  if (!wiper_is_high_speed_) {
+    // 非快速档，累积时间
+    wiper_state_supp_duration_ += GetContext.get_param()->dt;
+    if (wiper_state_supp_duration_ > 70.0) {
+      wiper_state_supp_duration_ = 70.0;  // 防止溢出
+    }
+  } else {
+    // 快速档，清零时间
+    wiper_state_supp_duration_ = 0.0;
+  }
+  
+  // 返回雨刷不为快速档是否超过60s
+  return (wiper_state_supp_duration_ >= 60.0);
+}
+
+
 void IhcCore::RunOnce(void) {
   // 更新输入信息
   GetInputInfo();
@@ -30,6 +53,9 @@ void IhcCore::RunOnce(void) {
 
   // 获取范围内是否有车
   dynamic_obstacle_check_ = DynamicObstacleCheck();
+
+  // 判断雨刷不为快速档是否超过60s
+  wiper_not_high_speed_last_ = IsWiperNotHighSpeedLast();
 
   // 根据输入信息，更新远光灯使能码、近光灯使能码、故障码、激活码
   ihc_sys_.state.ihc_high_beam_code = UpdateIhcHighBeamCode();
@@ -230,8 +256,10 @@ uint16 IhcCore::UpdateIhcHighBeamCode() {
     // do nothing
   }
 
-  // condition2: 雨刮运行速度没有达到快速档位
-  if (ihc_sys_.input.wiper_state == iflyauto::WiperStateEnum::WiperState_HighSpeed) {
+  // condition2: 雨刮运行速度相关条件
+  // 2.1: 雨刷快速档时禁用远光灯
+  // 2.2: 雨刷非快速档且未满60s时也禁用远光灯（避免频繁切换）
+  if (wiper_is_high_speed_ || !wiper_not_high_speed_last_) {
     ihc_enable_code_temp += uint16_bit[2];
   } else {
     // do nothing
@@ -295,17 +323,7 @@ uint16 IhcCore::UpdateIhcLowBeamCode() {
   }
 
   // condition2：雨刮运行速度不是切换为非快速档位后持续时间未超过60s, 近光
-  if (ihc_sys_.input.wiper_state != iflyauto::WiperStateEnum::WiperState_HighSpeed) {
-    wiper_state_supp_duration_ += GetContext.get_param()->dt;
-    if (wiper_state_supp_duration_ > 70.0) {
-      wiper_state_supp_duration_ = 70.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    wiper_state_supp_duration_ = 0.0;
-  }
-  if (wiper_state_supp_duration_ < 60.0) {
+  if (!wiper_not_high_speed_last_) {
     ihc_disable_code_temp += uint16_bit[2];
   } else {
     /*do nothing*/

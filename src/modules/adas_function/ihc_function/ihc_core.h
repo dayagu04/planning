@@ -84,6 +84,8 @@ class IhcCore {
   bool IHCRequestLightingFilter(bool ihc_request_lighting, uint8_t window_size, float ratio_threshold, uint8_t max_trasition);
   // 动态障碍物检查，判断范围内是否有稳定的障碍物
   bool DynamicObstacleCheck(void);
+  // 判断雨刷不为快速档是否超过60s
+  bool IsWiperNotHighSpeedLast(void);
   // IHC 灯光处理部分，如感知到车辆在前方等，需要近光灯
   bool IHCRequest(void);
 
@@ -98,6 +100,10 @@ class IhcCore {
   bool last_high_beam_request_ = false;
   // 附近车辆状态，判断范围内是否有车
   bool dynamic_obstacle_check_;
+  // 雨刷不为快速档是否超过60s
+  bool wiper_not_high_speed_last_;
+  // 当前雨刷是否为快速档
+  bool wiper_is_high_speed_;
   std::vector<bool> ihc_request_lighting_buffer_;
   // 雨刮持续时间满足抑制阈值持续时间 单位:s
   double wiper_state_supp_duration_ = 70.0;
