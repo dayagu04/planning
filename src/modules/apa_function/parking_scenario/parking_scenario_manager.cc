@@ -447,10 +447,6 @@ void ParkingScenarioManager::PubStopReason() {
   if (apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
     return;
   }
-  if (apa_world_->GetStateMachineManagerPtr()->IsParkSuspendStatus()) {
-    return;
-  }
-
   if (current_scenario_ == nullptr) {
     return;
   }
@@ -473,6 +469,8 @@ void ParkingScenarioManager::ScenarioSuspend() {
     return;
   }
   current_scenario_->ScenarioSuspend();
+
+  PubStopReason();
 
   return;
 }
