@@ -3068,8 +3068,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, pre_accelerate_distance_for_merge,
                      "speed_limit_decider",
                      "pre_accelerate_distance_for_merge");
-    ReadItem<double>(json, straight_ramp_v_limit, "speed_limit_decider",
-                     "straight_ramp_v_limit");
+    ReadItem<double>(json, straight_ramp_v_limit_low, "speed_limit_decider",
+                     "straight_ramp_v_limit_low");
+    ReadItem<double>(json, straight_ramp_v_limit_high, "speed_limit_decider",
+                     "straight_ramp_v_limit_high");
+    ReadItem<double>(json, ramp_curv_radius_small, "speed_limit_decider",
+                      "ramp_curv_radius_small");
+    ReadItem<double>(json, ramp_curv_radius_big, "speed_limit_decider",
+                      "ramp_curv_radius_big");
     ReadItem<double>(json, v_limit_ramp, "speed_limit_decider", "v_limit_ramp");
     ReadItem<double>(json, v_limit_near_ramp_zone, "speed_limit_decider",
                      "v_limit_near_ramp_zone");
@@ -3082,6 +3088,12 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "v_intersection_min_limit");
     ReadItem<double>(json, v_reduce_rate_intersection, "speed_limit_decider",
                       "v_reduce_rate_intersection");
+    ReadItem<bool>(json, enable_sdmap_curv_v_adjust, "speed_limit_decider",
+                      "enable_sdmap_curv_v_adjust");
+    ReadItem<double>(json, search_sdmap_curv_dis, "speed_limit_decider",
+                      "search_sdmap_curv_dis");
+    ReadItem<double>(json, sdmap_curv_thred, "speed_limit_decider",
+                      "sdmap_curv_thred");
     ReadItem<double>(json, v_limit_one_still_danger_obs, "speed_limit_decider",
                       "v_limit_one_still_danger_obs");
     ReadItem<double>(json, v_limit_more_still_danger_obs, "speed_limit_decider",
@@ -3102,6 +3114,16 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                                   "dangerous_obs_lon_dis_low");
     ReadItem<bool>(json, enable_dangerous_obs_speed_limit, "speed_limit_decider",
                                     "enable_dangerous_obs_speed_limit");
+    ReadItem<double>(json, toll_station_vel_limit_kph, "speed_limit_decider",
+      "toll_station_vel_limit_kph");
+    ReadItem<double>(json, sapa_vel_limit_kph, "speed_limit_decider",
+      "sapa_vel_limit_kph");
+    ReadItem<double>(json, non_express_vel_limit_kph, "speed_limit_decider",
+      "non_express_vel_limit_kph");
+    ReadItem<double>(json, tunnel_vel_limit_kph, "speed_limit_decider",
+      "tunnel_vel_limit_kph");
+    ReadItem<double>(json, function_off_dis_before_toll_station, "speed_limit_decider",
+      "function_off_dis_before_toll_station");
 
     read_json_vec(json,
       std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
@@ -3129,6 +3151,43 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
       std::vector<std::string>{"speed_limit_decider","static_lat_dis_rel_vel_table",
                                 "rel_vel_table"},
                                 static_lat_dis_rel_vel_table.rel_vel_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","sapa_vel_limit_dis_table",
+                                "vel_limit_table"},
+                                sapa_vel_limit_dis_table.vel_limit_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","sapa_vel_limit_dis_table",
+                                "dis_table"},
+                                sapa_vel_limit_dis_table.dis_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","toll_station_vel_limit_dis_table",
+                                "vel_limit_table"},
+                                toll_station_vel_limit_dis_table.vel_limit_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","toll_station_vel_limit_dis_table",
+                                "dis_table"},
+                                toll_station_vel_limit_dis_table.dis_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","non_express_vel_limit_dis_table",
+                                "vel_limit_table"},
+                                non_express_vel_limit_dis_table.vel_limit_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","non_express_vel_limit_dis_table",
+                                "dis_table"},
+                                non_express_vel_limit_dis_table.dis_table);
+
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","tunnel_vel_limit_dis_table",
+                                "vel_limit_table"},
+                                tunnel_vel_limit_dis_table.vel_limit_table);
+    read_json_vec(json,
+      std::vector<std::string>{"speed_limit_decider","tunnel_vel_limit_dis_table",
+                                "dis_table"},
+                                tunnel_vel_limit_dis_table.dis_table);
+    
   }
   struct VehicleLatDisRelVelTable {
     std::vector<double> lat_dis_table{0.7, 1.0, 1.5};
@@ -3144,18 +3203,29 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     std::vector<double> rel_vel_table{11.11, 12.5, 13.89};
   };
 
+  struct POIVelLimitDisTable {
+    std::vector<double> vel_limit_table{120, 110, 100, 90, 80, 70};
+    std::vector<double> dis_table{400, 320, 250, 170, 100, 50};
+  };
+
   int lon_num_step = 25;
   double delta_time = 0.2;
   double preview_x = 80.0;
   double t_curv = 2.0;
   double dis_curv = 80.0;
   double pre_accelerate_distance_for_merge = 80.0;
-  double straight_ramp_v_limit = 22.22;
+  double straight_ramp_v_limit_high = 22.22;
+  double straight_ramp_v_limit_low = 19.44;
+  double ramp_curv_radius_small = 350.0;
+  double ramp_curv_radius_big = 500.0;
   double v_limit_ramp = 16.67;
   double v_limit_near_ramp_zone = 25.0;
   double dis_near_ramp_zone = 1200.0;
   double brake_dis_near_ramp_zone = 700.0;
   double acc_to_ramp = -0.7;
+  bool enable_sdmap_curv_v_adjust = true;
+  double search_sdmap_curv_dis = 300.0;
+  double sdmap_curv_thred = 1000.0;
   double v_intersection_min_limit = 11.11;
   double v_reduce_rate_intersection = 0.05;
   double v_limit_one_still_danger_obs = 12.5;
@@ -3167,11 +3237,20 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double high_speed_scene_cruise_v_thred = 22.22;
   double dangerous_obs_lon_dis_high = 40.0;
   double dangerous_obs_lon_dis_low = 1.7;
+  double toll_station_vel_limit_kph = 60.0;
+  double sapa_vel_limit_kph = 60.0;
+  double non_express_vel_limit_kph = 60.0;
+  double tunnel_vel_limit_kph = 80.0;
+  double function_off_dis_before_toll_station = 250.0;
   bool enable_dangerous_obs_speed_limit = true;
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
   VRULatDisRelVelTable vru_lat_dis_rel_vel_table;
   StaticLatDisRelVelTable static_lat_dis_rel_vel_table;
+  POIVelLimitDisTable sapa_vel_limit_dis_table;
+  POIVelLimitDisTable toll_station_vel_limit_dis_table;
+  POIVelLimitDisTable non_express_vel_limit_dis_table;
+  POIVelLimitDisTable tunnel_vel_limit_dis_table;
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
@@ -4275,6 +4354,71 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "avoid_agent_kinematic_param", "jerk_negative_speed_upper");
     }
 
+    // near_poi_kinematic_param
+    {
+      ReadItem<double>(json, near_poi_kinematic_param.acc_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(json, near_poi_kinematic_param.acc_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_positive_speed_lower");
+      ReadItem<double>(json, near_poi_kinematic_param.acc_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_positive_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.acc_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_positive_speed_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.acc_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_negative_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.acc_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_negative_speed_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.acc_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_negative_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.acc_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "acc_negative_speed_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_positive_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_positive_speed_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_positive_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_positive_speed_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_negative_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_negative_speed_lower");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_negative_upper");
+
+      ReadItem<double>(json, near_poi_kinematic_param.jerk_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "near_poi_kinematic_param", "jerk_negative_speed_upper");
+    }
+
     //  kappa_speed_limit_table
     {
       read_json_vec(json,
@@ -4551,6 +4695,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   KinematicParam comfort_kinematic_param;
   KinematicParam kappa_kinematic_param;
   KinematicParam avoid_agent_kinematic_param;
+  KinematicParam near_poi_kinematic_param;
 
   SpeedPlanningBound speed_planning_bound;
 

@@ -404,11 +404,11 @@ void BoundMaker::MakeSafetyBound() {
 
   std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
 
-  constexpr double s_0 = 3.5;        
-  constexpr double a_comfort = 2.0;  
-  constexpr double max_tau = 1.2;    
-  constexpr double b_max = 5.0;      
-  constexpr double a_max = 4.0;     
+  constexpr double s_0 = 3.5;
+  constexpr double a_comfort = 2.0;
+  constexpr double max_tau = 1.2;
+  constexpr double b_max = 5.0;
+  constexpr double a_max = 4.0;
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const auto& upper_bound_info = upper_bound_infos_[i];

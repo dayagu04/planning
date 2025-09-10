@@ -217,7 +217,7 @@ bool GriddedPathTimeGraph::Search(
 
   auto speed_limit_params = spatio_temporal_union_plan_input->mutable_speed_limit_params();
   speed_limit_params->Clear();
-  speed_limit_params->set_straight_ramp_v_limit(speed_limit_config_.straight_ramp_v_limit);
+  speed_limit_params->set_straight_ramp_v_limit(speed_limit_config_.straight_ramp_v_limit_low);
   speed_limit_params->set_v_limit_near_ramp_zone(speed_limit_config_.v_limit_near_ramp_zone);
   speed_limit_params->set_brake_dis_near_ramp_zone(speed_limit_config_.brake_dis_near_ramp_zone);
   speed_limit_params->set_dis_near_ramp_zone(speed_limit_config_.dis_near_ramp_zone);
