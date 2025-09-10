@@ -100,9 +100,9 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
     }
 
     CalcVerticalVirtualWall(points, slot.GetWidth(), slot.GetLength(),
-                            virtual_wall_x_offset, virtual_wall_y_offset,
-                            passage_half_length, passage_height);
-
+                            slot.GetType(), virtual_wall_x_offset,
+                            virtual_wall_y_offset, passage_half_length,
+                            passage_height);
   } else {
     if (slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       RightSideParallelVirtualWall(points, slot.GetWidth(), slot.GetLength());
@@ -283,14 +283,17 @@ void VirtualWallDecider::SamplingInParallelBoundary(
 
 void VirtualWallDecider::CalcVerticalVirtualWall(
     std::vector<Position2D>& points, const double slot_width,
-    const double slot_length, const double virtual_wall_x_offset,
-    const double virtual_wall_y_offset, const double passage_half_length,
-    const double passage_height) {
+    const double slot_length, const SlotType slot_type,
+    const double virtual_wall_x_offset, const double virtual_wall_y_offset,
+    const double passage_half_length, const double passage_height) {
   // slot virtual wall
   slot_boundary_.y_lower = -slot_width / 2.0 - virtual_wall_y_offset;
   slot_boundary_.x_upper = slot_length - virtual_wall_x_offset;
   slot_boundary_.y_upper = slot_width / 2.0 + virtual_wall_y_offset;
   double lower_bound_x = -1.0;
+  if (slot_type == SlotType::SLANT) {
+    lower_bound_x = -2.0;
+  }
   slot_boundary_.x_lower = lower_bound_x;
 
   // passage virtual wall

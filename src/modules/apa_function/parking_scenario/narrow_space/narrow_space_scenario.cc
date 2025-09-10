@@ -941,10 +941,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
   } else {
-    // 根据后面两个角点计算停车终点
-    virtual_tar_x =
-        ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
-        param.terminal_target_x;
+    virtual_tar_x = GeneVirtualLimiter(ego_info_under_slot);
   }
 
   // 如果限位器很靠后 可以结合一下前面两个车位角点信息
@@ -2662,6 +2659,41 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
       break;
   }
+}
+
+double NarrowSpaceScenario::GeneVirtualLimiter(
+    const EgoInfoUnderSlot& ego_slot) {
+  // 根据后面两个角点计算停车终点
+  const ApaParameters& param = apa_param.GetParam();
+  double virtual_x =
+      ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+      param.terminal_target_x;
+
+  if (ego_slot.slot_type == SlotType::SLANT) {
+    double clip_len = 0;
+    if (param.car_width < ego_slot.slot.GetWidth()) {
+      auto vec = ego_slot.slot.origin_corner_coord_global_.pt_0 -
+                 ego_slot.slot.origin_corner_coord_global_.pt_2;
+      double line_len = vec.norm();
+
+      double triangle_len = line_len - ego_slot.slot.GetLength();
+      double width =
+          (ego_slot.slot.GetWidth() - param.car_width) / 2 + param.car_width;
+
+      clip_len = triangle_len - width / ego_slot.slot.GetWidth() * triangle_len;
+    }
+
+    const ApaStateMachine fsm =
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+      virtual_x = param.rear_overhanging - clip_len;
+    } else {
+      virtual_x = param.front_overhanging - clip_len;
+    }
+  }
+
+  return virtual_x;
 }
 
 }  // namespace apa_planner

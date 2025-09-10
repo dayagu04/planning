@@ -81,13 +81,11 @@ class VirtualWallDecider : public ParkingTask {
   const MapBound GetVehBound() const;
 
  private:
-  void CalcVerticalVirtualWall(std::vector<Position2D>& points,
-                               const double slot_width,
-                               const double slot_length,
-                               const double virtual_wall_x_offset,
-                               const double virtual_wall_y_offset,
-                               const double passage_half_length,
-                               const double passage_height);
+  void CalcVerticalVirtualWall(
+      std::vector<Position2D>& points, const double slot_width,
+      const double slot_length, const SlotType slot_type,
+      const double virtual_wall_x_offset, const double virtual_wall_y_offset,
+      const double passage_half_length, const double passage_height);
 
   void RightSideParallelVirtualWall(std::vector<Position2D>& points,
                                     const double slot_width,
