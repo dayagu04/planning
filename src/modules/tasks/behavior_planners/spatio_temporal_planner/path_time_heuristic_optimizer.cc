@@ -251,9 +251,9 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
           agent_box = it->second;
           longit_dis = agent_box.LongitDistanceTo(ego_box_set_[i]);
           if (longit_dis < longit_overlap_Threshold) {
-            if (ego_box_set_[i].max_y() < agent_box.min_y()) {
+            if (ego_box_set_[i].center_y() < agent_box.min_y()) {
               lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::RIGHT;
-            } else if (ego_box_set_[i].min_y() > agent_box.max_y()) {
+            } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
               lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::LEFT;
             } else {
               lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::IGNORE;
