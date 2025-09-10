@@ -175,7 +175,7 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
     cdl::AABB box;
     GetBoundingBoxByPolygon(&box, &global);
 
-    double half_width = ego_info.slot.slot_width_;
+    double half_width = ego_info.slot.slot_width_ * 0.5;
     if (box.max_[1] < half_width && box.min_[1] > -half_width) {
       return true;
     }
