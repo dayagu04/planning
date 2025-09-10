@@ -207,6 +207,11 @@ void LateralOffsetDecider::GenerateOutput() {
       avoid_obstacle_maintainer5v_.avd_obstacles();
   lateral_offset_decider_output.avoid_id = -1;
   lateral_offset_decider_output.avoid_direction = 0;
+  const auto ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
+  if (ego_v < 0.1) {
+    return;
+  }
+  
   if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
     if (lateral_offset_ > 0.1) {
       if (avd_obstacles[0].max_l_to_ref < 0) {
