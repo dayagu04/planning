@@ -2,6 +2,7 @@
 #include "hybrid_astar_common.h"
 #include <cmath>
 #include "point_cloud_obstacle.h"
+#include "vecf32.h"
 
 namespace planning {
 
@@ -152,9 +153,19 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
   }
 
   float phi = result->phi.back();
-  AstarPathGear gear = result->gear.back();
   float astar_end_s = result->accumulated_s.back();
   AstarPathType path_type = AstarPathType::LINE_SEGMENT;
+
+  AstarPathGear gear;
+  planning::Vec2f to_end(real_end.x - astar_end_point[0],
+               real_end.y - astar_end_point[1]);
+  float theta_diff = to_end.Angle() - IflyUnifyTheta(real_end.theta, M_PIf32);
+  theta_diff = IflyUnifyTheta(theta_diff, M_PIf32);
+  if (std::fabs(theta_diff) > M_PI_2f32) {
+    gear = AstarPathGear::REVERSE;
+  } else {
+    gear = AstarPathGear::DRIVE;
+  }
 
   Eigen::Vector2f unit_line_vec = Eigen::Vector2f(-1.0, 0.0);
 
