@@ -336,6 +336,7 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
   double lon_ttc = 0;
   int max_emergency_avoid_count = 6;
   int emergency_avoid_count_thr = config_.emergency_avoid_count_thr;
+  double half_lane_width = lane_width * 0.5;
 
   if (config_.is_use_last_lon_information) {
     // 上一帧纵向释放的紧急障碍物id
@@ -351,8 +352,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
               (lon_ttc < config_.emegency_avoid_ttc_upper &&
               d_s_rel < config_.emegency_avoid_front_area);
           // 横向距离条件
-          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
-            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
+            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
           // 是否为正前方障碍物（如果纵向跟停的时候不会释放，可以先注释）
           bool is_straight_ahead = d_max_cpath > 0 && d_min_cpath < 0;
           // 过滤横穿的障碍物（VRU预测轨迹不准需要进一步优化）
@@ -396,8 +397,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
               (lon_ttc < config_.emegency_avoid_ttc_upper &&
               d_s_rel < config_.emegency_avoid_front_area);
           // 横向距离条件
-          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
-            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
+            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
           // 横向是否ignore
           bool is_lateral_ignore = output_[obstacle.id()] == LatObstacleDecisionType::IGNORE;
           bool lon_overtake_avoid = is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
@@ -420,8 +421,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
             (lon_ttc < config_.emegency_avoid_ttc_upper &&
             d_s_rel < config_.emegency_avoid_front_area);
         // 横向距离条件
-        bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + lane_width / 2)) ||
-          ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - lane_width / 2));
+        bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
+          ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
         const auto cossing_map_iter = is_crossing_map.find(obstacle.id());
         bool is_cross_lane = (cossing_map_iter != is_crossing_map.end() &&
             cossing_map_iter->second);
