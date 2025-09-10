@@ -1868,20 +1868,23 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
       frame_.current_path_length - frame_.remain_dist_path;
 
   if (!frame_.ego_should_stop_by_slot_jump) {
-    double stop_dist1, stop_dist2;
+    double lon_stop_dist = 0.0, heading_stop_dist = 0.0;
     for (const auto& path_point : current_path_point_global_vec_) {
       if (path_point.pos.x() > ego_info_under_slot.target_pose.pos.x() + 1.68) {
-        stop_dist1 = path_point.s;
+        lon_stop_dist = path_point.s;
       }
       if (std::fabs(path_point.heading) * kRad2Deg > 12.68) {
-        stop_dist2 = path_point.s;
+        heading_stop_dist = path_point.s;
       }
     }
 
-    stop_dist1 -= car_already_move_dist;
-    stop_dist2 -= car_already_move_dist;
+    ILOG_INFO << "lon_stop_dist = " << lon_stop_dist
+              << "  heading_stop_dist = " << heading_stop_dist;
+
+    lon_stop_dist -= car_already_move_dist;
+    heading_stop_dist -= car_already_move_dist;
     frame_.ego_should_stop_dist_by_slot_jump =
-        std::max(std::min(stop_dist1, stop_dist2), 1.268);
+        std::max(std::min(lon_stop_dist, heading_stop_dist), 1.268);
   }
 
   // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
@@ -1895,7 +1898,10 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
   ILOG_INFO
       << "should stop because of the slot jump much, remain_dist_slot_jump = "
       << remain_dist_slot_jump
-      << "  ego_stop_dist = " << frame_.ego_should_stop_dist_by_slot_jump;
+      << "  ego_stop_dist = " << frame_.ego_should_stop_dist_by_slot_jump
+      << "  car_already_move_dist = " << car_already_move_dist
+      << "  car_already_move_dist_last = " << car_already_move_dist_last
+      << "  frame_.car_already_move_dist = " << frame_.car_already_move_dist;
 
   frame_.ego_should_stop_by_slot_jump = true;
 
