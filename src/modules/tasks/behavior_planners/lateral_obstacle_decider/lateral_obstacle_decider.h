@@ -52,6 +52,13 @@ class LateralObstacleDecider : public Task {
   void CheckObstaclesIsReverse();
   void ConstructPlanHistoryTraj(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void ConstructUniformPlanHistoryTraj(
+      const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void CheckLateralEmergencyAvoidObstacle(FrenetObstacle &frenet_obstacle, double lane_width,
+      const std::shared_ptr<ReferencePath> reference_path_ptr);
+  bool CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
+      const std::shared_ptr<ReferencePath> reference_path_ptr);
+  bool IsTruck(const FrenetObstacle &frenet_obstacle);
 
  private:
   planning::framework::Session *session_;

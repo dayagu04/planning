@@ -50,7 +50,10 @@ bool CrossingAgentDecider::Execute() {
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
-
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_crossing_agent_decider_output()
+                                          .is_crossing_map;
+  is_crossing_map.clear();
   const auto& environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
@@ -85,9 +88,13 @@ bool CrossingAgentDecider::Execute() {
 
 bool CrossingAgentDecider::MakeYieldToVRUDecision(
     const agent::Agent* const agent) {
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_crossing_agent_decider_output()
+                                          .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
+  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() != agent::AgentType::PEDESTRIAN &&
       agent->type() != agent::AgentType::CYCLE_RIDING &&
@@ -243,6 +250,7 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
   if (is_vru_crossing ||
       vru_id_reverse_crossing_map_.count(
           agent->agent_id())) {  // can not this ,will feed  element
+    is_crossing_map[agent->agent_id()] = true;
     ConstructVirtualAgentByCrossing(agent, true, is_vru_reverse_crossing);
   }
   return true;
@@ -395,9 +403,13 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
 
 bool CrossingAgentDecider::MakeYieldToVehicleDecision(
     const agent::Agent* const agent) {
+  auto &is_crossing_map = session_->mutable_planning_context()
+                                          ->mutable_crossing_agent_decider_output()
+                                          .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
+  is_crossing_map[agent->agent_id()] = false;
 
   if (agent->type() == agent::AgentType::PEDESTRIAN ||
       agent->type() == agent::AgentType::CYCLE_RIDING ||
@@ -521,6 +533,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(
 
   if (is_vehicle_prediction_crossing ||
       vehicle_id_reverse_crossing_map_.count(agent->agent_id())) {
+    is_crossing_map[agent->agent_id()] = true;
     ConstructVirtualAgentByCrossing(agent, false, false);
   }
   return true;

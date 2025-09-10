@@ -29,6 +29,7 @@ void ReferencePath::init() {
 void ReferencePath::update(planning::framework::Session *session) {
   session_ = session;
   obstacles_frenet_infos_.clear();
+  obstacles_frenet_infos_recurrence_.clear();
   // Step 1) update ego state
   frenet_ego_state_.update(
       frenet_coord_,
@@ -431,44 +432,87 @@ bool ReferencePath::transform_trajectory_point(TrajectoryPoint &traj_pt) const {
 }
 
 bool ReferencePath::get_polygon_at_time(const int id,
+    bool is_use_recurrence,
     const int relative_time,
     planning_math::Polygon2d &obstacle_polygon) {
-  if (obstacles_frenet_infos_.find(id) != obstacles_frenet_infos_.end()) {
-    if (obstacles_frenet_infos_[id].find(relative_time) != obstacles_frenet_infos_[id].end()) {
-      obstacle_polygon = obstacles_frenet_infos_[id][relative_time];
-      return true;
-    }
-  }
-  auto obstacle_manager_ =
+  auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
-  const auto obstacle_ptr_ = obstacle_manager_->find_obstacle(id);
-  if (obstacle_ptr_ == nullptr) {
+  const auto obstacle_ptr = obstacle_manager->find_obstacle(id);
+  if (obstacle_ptr == nullptr) {
     return false;
   }
-
-  const auto &enu_polygon = obstacle_ptr_->get_bounding_box(
-      obstacle_ptr_->get_point_at_time(relative_time * 0.1));
-
-  std::vector<planning_math::Vec2d> frenet_points;
-  const auto &corners = enu_polygon.GetAllCorners();
-  for (auto &pt : corners) {
-    Point2D frenet_point, carte_point;
-    carte_point.x = pt.x();
-    carte_point.y = pt.y();
-    if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-      ILOG_ERROR << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!!!!";
-      continue;
+  if (is_use_recurrence) {
+    if (obstacles_frenet_infos_recurrence_.find(id) != obstacles_frenet_infos_recurrence_.end()) {
+      if (obstacles_frenet_infos_recurrence_[id].find(relative_time) != obstacles_frenet_infos_recurrence_[id].end()) {
+        obstacle_polygon = obstacles_frenet_infos_recurrence_[id][relative_time];
+        return true;
+      }
     }
-    frenet_points.push_back(
-        planning_math::Vec2d(frenet_point.x, frenet_point.y));
+    Point2D frenet_point, carte_point;
+    double frenet_s;
+    carte_point.x = obstacle_ptr->x_center();
+    carte_point.y = obstacle_ptr->y_center();
+    if (!frenet_coord_->XYToSL(carte_point, frenet_point) ||
+        std::isnan(frenet_point.x) || std::isnan(frenet_point.y)) {
+      return false;
+    } else {
+      frenet_s = frenet_point.x;
+    }
+    double curve_heading = frenet_coord_->GetPathCurveHeading(frenet_s);
+    double frenet_relative_velocity_angle = planning_math::NormalizeAngle(
+        obstacle_ptr->velocity_angle() - curve_heading);
+    double frenet_velocity_s =
+        obstacle_ptr->velocity() * std::cos(frenet_relative_velocity_angle);
+    double prediction_frenet_s = frenet_velocity_s * relative_time * 0.1;
+    auto enu_polygon =
+        obstacle_ptr->get_polygon_at_point(obstacle_ptr->get_point_at_time(0));
+    std::vector<planning_math::Vec2d> frenet_points;
+    for (auto &pt : enu_polygon.points()) {
+      Point2D frenet_point, carte_point;
+      carte_point.x = pt.x();
+      carte_point.y = pt.y();
+      if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
+        ILOG_ERROR << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!";
+        continue;
+      }
+      frenet_points.push_back(planning_math::Vec2d(
+          frenet_point.x + prediction_frenet_s, frenet_point.y));
+    }
+    bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
+                                                          &obstacle_polygon);
+    if (ok) {
+      obstacles_frenet_infos_recurrence_[id][relative_time] = obstacle_polygon;
+    }
+    return ok;
+  } else {
+    if (obstacles_frenet_infos_.find(id) != obstacles_frenet_infos_.end()) {
+      if (obstacles_frenet_infos_[id].find(relative_time) != obstacles_frenet_infos_[id].end()) {
+        obstacle_polygon = obstacles_frenet_infos_[id][relative_time];
+        return true;
+      }
+    }
+    const auto &enu_polygon = obstacle_ptr->get_bounding_box(
+        obstacle_ptr->get_point_at_time(relative_time * 0.1));
+    std::vector<planning_math::Vec2d> frenet_points;
+    const auto &corners = enu_polygon.GetAllCorners();
+    for (auto &pt : corners) {
+      Point2D frenet_point, carte_point;
+      carte_point.x = pt.x();
+      carte_point.y = pt.y();
+      if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
+        ILOG_ERROR << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!!!";
+        continue;
+      }
+      frenet_points.push_back(
+          planning_math::Vec2d(frenet_point.x, frenet_point.y));
+    }
+    bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
+                                                          &obstacle_polygon);
+    if (ok) {
+      obstacles_frenet_infos_[id][relative_time] = obstacle_polygon;
+    }
+    return ok;
   }
-
-  bool ok = planning_math::Polygon2d::ComputeConvexHull(frenet_points,
-                                                        &obstacle_polygon);
-  if (ok) {
-    obstacles_frenet_infos_[id][relative_time] = obstacle_polygon;
-  }
-  return ok;
 }
 
 }  // namespace planning

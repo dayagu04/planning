@@ -22,6 +22,8 @@ const std::string BoundType2String(BoundType in) {
       return "EGO_POSITION";
     case BoundType::LOW_PRIORITY_AGENT:
       return "LOW_PRIORITY_AGENT";
+    case BoundType::REVERSE_AGENT:
+      return "REVERSE_AGENT";
 
     case BoundType::GROUNDLINE:
       return "GROUNDLINE";

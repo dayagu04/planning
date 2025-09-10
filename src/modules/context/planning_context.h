@@ -28,6 +28,7 @@
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/task_interface/crossing_agent_decider_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -173,6 +174,14 @@ class PlanningContext {
 
   LateralObstacleDeciderOutput &mutable_lateral_obstacle_decider_output() {
     return lateral_obstacle_decider_output_;
+  }
+
+  const CrossingAgentDeciderOutput &crossing_agent_decider_output() const {
+    return crossing_agent_decider_output_;
+  }
+
+  CrossingAgentDeciderOutput &mutable_crossing_agent_decider_output() {
+    return crossing_agent_decider_output_;
   }
 
   const GeneralLateralDeciderOutput &general_lateral_decider_output() const {
@@ -454,7 +463,7 @@ class PlanningContext {
   StatusInfo status_info_;
   LateralObstacleDeciderOutput lateral_obstacle_decider_output_;
   LateralOffsetDeciderOutput lateral_offset_decider_output_;
-
+  CrossingAgentDeciderOutput crossing_agent_decider_output_;
   common::LaneStatus lane_status_;  // TODO: 拆分到独立的Task里面
   LateralBehaviorPlannerOutput
       lateral_behavior_planner_output_;  // TODO: 拆分到独立的Task里面

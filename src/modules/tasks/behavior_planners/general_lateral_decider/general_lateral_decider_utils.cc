@@ -19,9 +19,9 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 GeneralLateralDeciderConfig &config) {
   double base_dis = 0.7;
   if (IsVRU(obstacle->type())) {
-    base_dis = 0.9;
+    base_dis = config.dynamic_vru_nudge_lateral_buffer;
   } else if (IsTruck(obstacle)) {
-    base_dis = 0.7;
+    base_dis = 0.7 + config.extra_truck_nudge_buffer;
   }
   if (obstacle->obstacle()->is_reverse()) {
     base_dis += config.nudge_extra_buffer_reverse_obstacle;
@@ -66,10 +66,10 @@ double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
-                                      iflyauto::ObjectType type,
+                                      const std::shared_ptr<FrenetObstacle> obstacle,
                                       bool is_update_hard_bound,
                                       GeneralLateralDeciderConfig &config) {
-  const double kStaticVRUMaxExtraLateralBuffer = 0.55;
+  const double kStaticVRUMaxExtraLateralBuffer = config.static_vru_max_lateral_buffer;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
@@ -79,14 +79,16 @@ double CalDesireStaticLateralDistance(const double base_distance,
   }
 
   double max_extra_lateral_buffer = 0;
-  if (IsVRU(type)) {
+  if (IsVRU(obstacle->type())) {
     max_extra_lateral_buffer = kStaticVRUMaxExtraLateralBuffer;
-  } else if (IsCone(type)) {
+  } else if (IsCone(obstacle->type())) {
     max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
   } else {
     max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
   }
-
+  if (IsTruck(obstacle)) {
+    max_extra_lateral_buffer += config.extra_truck_nudge_buffer;
+  }
   double min_extra_lateral_buffer =
       std::fmin(0.15 * ego_vel, max_extra_lateral_buffer);
 
@@ -133,6 +135,9 @@ int GetBoundTypePriority(BoundType type) {
       return 3;
     case BoundType::LOW_PRIORITY_AGENT:
       return 3;
+    case BoundType::REVERSE_AGENT:
+      return 2;
+
     //  the same level
     // case BoundType::PURNE_VEHICLE_WIDTH:
     //   return 4;

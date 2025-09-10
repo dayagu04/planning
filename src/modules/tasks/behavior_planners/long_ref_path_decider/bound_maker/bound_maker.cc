@@ -2,6 +2,8 @@
 
 #include <cmath>
 
+#include "debug_info_log.h"
+
 namespace planning {
 namespace {
 constexpr double IsoAccLimitUpper = -2.0;
@@ -60,6 +62,7 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
 
   // 5. RSS safety bound
   MakeRSSBound();
+  JudgeDangerAgentByMaxDecelCurve(target_maker);
 
   // 6. Safety bound (IDM + CAH)
   MakeSafetyBound();
@@ -706,6 +709,54 @@ double BoundMaker::CalcRSSDistance(double ego_speed, double ego_acc,
 
   return distance_during_reaction + ego_braking_distance -
          lead_brake_compensation + approach_margin;
+}
+
+void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
+    const TargetMaker& target_maker) {
+  constexpr int32_t kConsiderNum = 25;  // 5.0s
+  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
+  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
+  const auto& st_graph = session_->planning_context().st_graph_helper();
+
+  if (!st_graph) {
+    return;
+  }
+
+  auto mutable_lon_ref_path_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lon_ref_path_decider_output();
+  if (!mutable_lon_ref_path_decider_output) {
+    return;
+  }
+  auto& danger_info = mutable_lon_ref_path_decider_output->danger_agent_info;
+  danger_info.agents_id_set.clear();
+
+  for (int32_t i = kConsiderNum - 1; i >= 0; --i) {
+    const double t = i * dt_;
+    const double s_safe = max_deceleration_curve.Evaluate(0, t);
+    const auto corridor_upper_point = st_graph->GetPassCorridorUpperBound(t);
+    if (corridor_upper_point.agent_id() == speed::kNoAgentId) {
+      continue;
+    }
+    const double agent_s = corridor_upper_point.s();
+    const double vel = virtual_acc_curve->Evaluate(1, t);
+    const double brake_buffer = vel * kBrakeDelayTimeBuffer;
+    auto target_value = target_maker.target_value(t);
+    if (target_value.target_type() == TargetType::kFollow ||
+        target_value.target_type() == TargetType::kNeighborYield ||
+        target_value.target_type() == TargetType::kCautionYield) {
+      // check s_target by s_safe
+      if (agent_s - brake_buffer < s_safe) {
+        if (danger_info.agents_id_set.find(corridor_upper_point.agent_id()) ==
+            danger_info.agents_id_set.end()) {
+          danger_info.agents_id_set.insert(corridor_upper_point.agent_id());
+        }
+      }
+    }
+  }
+  std::vector<double> ids_double(danger_info.agents_id_set.begin(),
+                                 danger_info.agents_id_set.end());
+  JSON_DEBUG_VECTOR("lon_danger_agent_ids", ids_double, 0)
 }
 
 double BoundMaker::s_lower_bound(const double t) const {

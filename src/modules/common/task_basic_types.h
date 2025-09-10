@@ -53,6 +53,7 @@ enum class BoundType {
   TRAFFIC_LIGHT,
   DESTINATION,
   LOW_PRIORITY_AGENT,
+  REVERSE_AGENT,
 };
 
 struct BoundInfo {

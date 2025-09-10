@@ -49,9 +49,11 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=250)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=400, height=800)
 
-def update_lat_behavior_data(lat_behavior_common):
+def update_lat_behavior_data(local_view_data):
+  lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
+  planning_json = local_view_data['data_msg']['plan_debug_json_msg']
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
           'lc_request','lc_request_source','turn_light','map_turn_light','lc_turn_light','act_request_source','lc_back_invalid_reason','lc_status',\
             'is_lc_valid','lc_valid_cnt','lc_invalid_obj_id','lc_invalid_reason',\
@@ -59,7 +61,7 @@ def update_lat_behavior_data(lat_behavior_common):
         'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
             'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', ]
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', 'emergency_avoid_obstacle_ids', 'lon_overtake_avoid', 'potential_dangerous_agent_id']
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
   datas = []
@@ -70,6 +72,27 @@ def update_lat_behavior_data(lat_behavior_common):
       names.append(name)
     except:
       pass
+
+    if name == 'emergency_avoid_obstacle_ids':
+      try:
+        datas.append(planning_json[name])
+        names.append(name)
+      except:
+        pass
+
+    if name == 'lon_overtake_avoid':
+      try:
+        datas.append(planning_json[name])
+        names.append(name)
+      except:
+        pass
+
+    if name == 'potential_dangerous_agent_id':
+      try:
+        datas.append(planning_json[name])
+        names.append(name)
+      except:
+        pass
 
   behavior_data_1.data.update({
     'name': names,
@@ -241,8 +264,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_center_line_info(data_center_line_info, local_view_data)
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
-    lat_behavior_common = local_view_data['data_msg']['plan_debug_msg'].lat_behavior_common
-    update_lat_behavior_data(lat_behavior_common)
+    update_lat_behavior_data(local_view_data)
   if bag_loader.planning_hmi_msg['enable'] ==True:
     hmi_ad_info = local_view_data['data_msg']['planning_hmi_msg'].ad_info
     data_hmi_ad_info_table = update_hmi_ad_info(hmi_ad_info)
