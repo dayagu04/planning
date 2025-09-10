@@ -581,45 +581,53 @@ bool IhcCore::DynamicObstacleCheck(void) {
   bool detected_same_dir = false;
   bool detected_oncoming_vehicle = false;
   bool detected_oncoming_cycle = false;
-
-  // 获取动态障碍物消息
-  const auto &fusion_objs = GetContext.get_session()
-                                ->environmental_model()
-                                .get_local_view()
-                                .fusion_objects_info.fusion_object;
-  const int fusion_objs_num = GetContext.get_session()
-                                ->environmental_model()
-                                .get_local_view()
-                                .fusion_objects_info.fusion_object_size;
-
+  
+  // 获取动态障碍物消息 - 优化：减少重复的调用链访问
+  const auto &fusion_objects_info = GetContext.get_session()
+                                        ->environmental_model()
+                                        .get_local_view()
+                                        .fusion_objects_info;
+  const auto &fusion_objs = fusion_objects_info.fusion_object;
+  const int fusion_objs_num = fusion_objects_info.fusion_object_size;
+  
   for (int i = 0; i < fusion_objs_num; i++) {
-    float distance = fusion_objs[i].common_info.relative_center_position.x;
-
+    float distance_x = fusion_objs[i].common_info.relative_center_position.x;
+    float distance_y = fusion_objs[i].common_info.relative_center_position.y;
+    
     // 筛选前方的车辆动态障碍物，使用滞回控制
-    if (distance > 0 && distance < 220.0F) {  // 扩大检测范围
+    if (distance_x > 0 && distance_x < 220.0F) {  // 扩大检测范围
       // 判断障碍物是否为机动车
       if (fusion_objs[i].common_info.type >= iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
           fusion_objs[i].common_info.type <= iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
-
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          // 对向机动车：滞回控制，190m~210m为滞回区间
-          if (distance < 190.0f) {
+          // 对向机动车
+          // // 如果对向车纵向距离过近（<70m），横向距离太远(>20m)，则不在灯光影响区域
+          // if (distance_x < 70.0f && abs(distance_y) > 20.0f) {
+          //   continue;
+          // }
+          // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
+          if (distance_x  + fusion_objs[i].common_info.relative_velocity.x * 1.0f <= 0){
+            // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
+            continue;
+          }
+          // 滞回控制，190m~210m为滞回区间
+          if (distance_x < 190.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_vehicle = true;
-          } else if (distance <= 210.0f) {
+          } else if (distance_x <= 210.0f) {
             // 190m~210m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_vehicle = true;
             }
           }
           // distance > 210.0f 时继续检查其他障碍物
-        } else {
+        } else if(fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING){
           // 同向机动车：滞回控制，90m~110m为滞回区间
-          if (distance < 90.0f) {
+          if (distance_x < 90.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_same_dir = true;
-          } else if (distance <= 110.0f) {
+          } else if (distance_x <= 110.0f) {
             // 90m~110m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_same_dir = true;
@@ -631,10 +639,10 @@ bool IhcCore::DynamicObstacleCheck(void) {
                  fusion_objs[i].common_info.type <= iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
         // 对向非机动车：滞回控制，65m~85m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          if (distance < 65.0f) {
+          if (distance_x < 65.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
-          } else if (distance <= 85.0f) {
+          } else if (distance_x <= 85.0f) {
             // 65m~85m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_cycle = true;
