@@ -3,6 +3,7 @@
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "node3d.h"
+#include "time_benchmark.h"
 
 namespace planning {
 

@@ -88,8 +88,10 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   const auto end_timestamp_ms = IflyTime::Now_ms();
   const auto frame_duration = end_timestamp_ms - start_timestamp_ms;
 
-  ILOG_INFO << "total time consumption = " << frame_duration << "ms";
   JSON_DEBUG_VALUE("total_plan_consume_time", frame_duration)
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_TOTAL_TIME,
+                                        frame_duration);
+  TimeBenchmark::Instance().DebugString();
 
   return (scenario_manager_.GetScenarioStatus() !=
           ParkingScenarioStatus::STATUS_UNKNOWN)

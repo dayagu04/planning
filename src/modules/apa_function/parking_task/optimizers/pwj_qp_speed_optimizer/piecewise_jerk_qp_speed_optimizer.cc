@@ -11,6 +11,7 @@
 #include "dp_speed_common.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -274,7 +275,8 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   state_ = TaskExcuteState::SUCCESS;
 
   double opt_time_ms = IflyTime::Now_ms() - opt_start_time;
-  ILOG_INFO << "speed qp opt finish, optimizer time = " << opt_time_ms;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_QP_TIME,
+                                        opt_time_ms);
 
   return;
 }

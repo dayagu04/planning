@@ -8,6 +8,7 @@
 #include "debug_info_log.h"
 #include "ifly_time.h"
 #include "log_glog.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -71,7 +72,8 @@ void JerkLimitedTrajOptimizer::Execute(
   // TaskDebug();
 #endif
 
-  ILOG_INFO << "jlt optimizer time = " << IflyTime::Now_ms() - opt_start_time;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_JLT_TIME,
+                                        IflyTime::Now_ms() - opt_start_time);
 
   return;
 }

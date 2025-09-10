@@ -15,6 +15,7 @@
 #include "speed/apa_speed_decision.h"
 #include "task_basic_types.h"
 #include "vec2d.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -33,6 +34,7 @@ void ParkingStopDecider::Execute(
   gear_ = gear;
   config_.Init();
 
+  double start_time = IflyTime::Now_ms();
   AddDecisionByPathTargetPoint(lateral_path);
 
   // todo: use lateral path and control path
@@ -40,6 +42,10 @@ void ParkingStopDecider::Execute(
     AddDecisionByObstacle(control_path, false);
     RecordDebugInfo(lateral_path);
   }
+
+  double time_ms = IflyTime::Now_ms() - start_time;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_STOP_DECIDER,
+                                    time_ms);
 
 #if DECIDER_DEBUG
   TaskDebug();
