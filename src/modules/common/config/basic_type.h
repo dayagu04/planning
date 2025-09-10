@@ -33,6 +33,12 @@ enum class ErrorType {
   kUnknown = 3
 };
 
+enum MarkingLineChangeType {
+  NO_TYPE_CHANGE = 0,
+  SOLID_TO_DASH = 1,
+  DASH_TO_SOLID = 2,
+};
+
 // 匝道的方向
 enum RampDirection {
   RAMP_NONE = 0,
@@ -95,6 +101,7 @@ struct FPPoint {
   uint64 link_id = -1;
   double fp_distance_to_split_point = 0.0;
   std::vector<uint64> lane_ids;
+  iflymapdata::sdpro::FeaturePoint fp;
 
   void reset () {
     link_id = -1;

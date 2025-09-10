@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "common_platform_type_soc.h"
@@ -1589,12 +1590,21 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   //   mlc_decider_route_info_.reset();
   //   return;
   // }
+  double lsl_length = 0;
+  if (!split_region_info_list.empty()) {
+    const auto start_fp = split_region_info_list[0].start_fp_point;
+    lsl_length =
+        LengthSolidLineJudge(start_fp.link_id, start_fp.fp,
+                             split_region_info_list[0].distance_to_split_point);
+  }
+
+  JSON_DEBUG_VALUE("lsl_length", lsl_length)
 
   const bool is_near_split =
       !split_region_info_list.empty() &&
       split_region_info_list[0].distance_to_split_point <
           mlc_decider_config_
-              .default_pre_triggle_road_to_ramp_distance_threshold_value;
+              .default_pre_triggle_road_to_ramp_distance_threshold_value + lsl_length;
 
   bool is_near_merge = false;
   if (!merge_region_info_list.empty()) {
@@ -2972,6 +2982,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   split_region_info.recommend_lane_num.emplace_back(
       other_successor_link->lane_num(), std::vector<int>{});
 
+  split_region_info.start_fp_point.fp = start_fp;
+  split_region_info.end_fp_point.fp = end_fp;
+
   split_region_info.is_valid = true;
   return split_region_info;
 }
@@ -4095,5 +4108,436 @@ bool RouteInfo::IsTriggerContinueLCInPerceptionSplitRegion(
     return true;
   }
   return false;
+}
+
+bool RouteInfo::IsExistLengthSolidLine(
+    std::vector<std::pair<const MarkingLineChangeType, double>>&
+        mlc_fp_info_list,
+    const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp, const double first_distance_to_split_point) {
+  iflymapdata::sdpro::FeaturePoint mlc_fp;
+  uint64 mlc_link_id;
+  double cal_sum_dis;
+
+  uint64 temp_fp_link_id = fp_link_id;
+  iflymapdata::sdpro::FeaturePoint temp_cur_fp = cur_fp;
+
+  bool is_continue_find_mlc_fp = true;
+
+  while (is_continue_find_mlc_fp) {
+    if (CalculateLastMarkingLineChangeFp(&mlc_fp, &mlc_link_id, &cal_sum_dis,
+                                         temp_fp_link_id, temp_cur_fp, first_distance_to_split_point)) {
+      MarkingLineChangeType marking_line_change_type;
+      if (IsDashSolidLineTypeChnage(&marking_line_change_type, mlc_fp,
+                                    mlc_link_id)) {
+        mlc_fp_info_list.emplace_back(marking_line_change_type, cal_sum_dis);
+      }
+
+      temp_fp_link_id = mlc_link_id;
+      temp_cur_fp = mlc_fp;
+    } else {
+      if (mlc_fp_info_list.empty()) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+
+    // todo: 需要根据实际变道距离替换3000m
+    is_continue_find_mlc_fp =
+        cal_sum_dis < 3000.0 &&
+        cal_sum_dis < first_distance_to_split_point;
+  }
+
+  if (mlc_fp_info_list.empty()) {
+    return false;
+  } else {
+    return true;
+  }
+
+  return false;
+}
+
+bool RouteInfo::CalculateLastMarkingLineChangeFp(
+    iflymapdata::sdpro::FeaturePoint* mlc_fp, uint64* mlc_link_id,
+    double* cal_sum_dis, const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+    const double first_distance_to_split_point) {
+  const auto& fp_link = sdpro_map_.GetLinkOnRoute(fp_link_id);
+  //fp_link->feature_points().empty() 这个条件不对，有可能当前link上就是没有fp
+  if (mlc_fp == nullptr || fp_link == nullptr) {
+    return false;
+  }
+
+  bool is_continue_find_mlc_fp = true;
+
+  iflymapdata::sdpro::FeaturePoint temp_mlc_fp;
+  double sum_dis = *cal_sum_dis;
+  uint64 cur_link_id = fp_link_id;
+
+  while (is_continue_find_mlc_fp) {
+    double temp_sum_dis = 0.0;
+    if (cur_link_id == fp_link_id) {
+      if (IsExistMarkingLineChangeFPCurLink(&temp_mlc_fp, &temp_sum_dis,
+                                            cur_link_id, cur_fp)) {
+        *mlc_fp = temp_mlc_fp;
+        *mlc_link_id = cur_link_id;
+
+        sum_dis = sum_dis + temp_sum_dis;
+        *cal_sum_dis = sum_dis;
+        return true;
+      } else {
+        const auto& pre_link = sdpro_map_.GetPreviousLinkOnRoute(cur_link_id);
+        //如果是nullptr的时候，需要注意处理这种情况
+        if (pre_link == nullptr) {
+          return false;
+        } else {
+          cur_link_id = pre_link->id();
+          sum_dis = sum_dis + temp_sum_dis;
+        }
+      }
+    } else {
+      if (IsExistMarkingLineChangeFP(&temp_mlc_fp, &temp_sum_dis, cur_link_id)) {
+        *mlc_fp = temp_mlc_fp;
+        *mlc_link_id = cur_link_id;
+
+        sum_dis = sum_dis + temp_sum_dis;
+        *cal_sum_dis = sum_dis;
+        return true;
+
+      } else {
+        const auto& pre_link = sdpro_map_.GetPreviousLinkOnRoute(cur_link_id);
+        //如果是nullptr的时候，需要注意处理这种情况
+        if (pre_link == nullptr) {
+          return false;
+        } else {
+          cur_link_id = pre_link->id();
+          sum_dis = sum_dis + temp_sum_dis;
+        }
+      }
+    }
+
+    *cal_sum_dis = sum_dis;
+    // todo：后续用需要的变道距离来替换3000m
+    is_continue_find_mlc_fp =
+        sum_dis < 3000.0 &&
+        sum_dis < first_distance_to_split_point;
+  }
+
+  return false;
+}
+
+bool RouteInfo::IsExistMarkingLineChangeFP(
+    iflymapdata::sdpro::FeaturePoint* mlc_fp,
+    double* sum_dis, const uint64 cur_link_id) {
+  const auto& cur_link = sdpro_map_.GetLinkOnRoute(cur_link_id);
+  if (mlc_fp == nullptr || cur_link == nullptr) {
+    return false;
+  }
+
+  if (cur_link->feature_points().empty()) {
+
+    *sum_dis = cur_link->length() * 0.01;
+    // *pre_link_id = pre_link->id();
+    return false;
+  }
+
+  std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+  for (const auto& fp : cur_link->feature_points()) {
+    fp_vec.emplace_back(fp);
+  }
+
+  std::sort(fp_vec.begin(), fp_vec.end(),
+            [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+               const iflymapdata::sdpro::FeaturePoint& fp_b) {
+              return fp_a.projection_percent() > fp_b.projection_percent();
+            });
+
+  for (const auto& fp : fp_vec) {
+    for (const auto& fp_type : fp.type()) {
+      if (fp_type ==
+          iflymapdata::sdpro::FeaturePointType::MARKING_LINE_CHANGE_POINT) {
+        *sum_dis = (1 - fp.projection_percent()) * cur_link->length() * 0.01;
+        *mlc_fp = fp;
+        return true;
+      }
+    }
+  }
+
+  *sum_dis = cur_link->length() * 0.01;
+
+  return false;
+}
+
+bool RouteInfo::IsExistMarkingLineChangeFPCurLink(
+    iflymapdata::sdpro::FeaturePoint* mlc_fp, double* sum_dis,
+    const uint64 cur_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp) {
+  const auto& cur_link = sdpro_map_.GetLinkOnRoute(cur_link_id);
+  if (mlc_fp == nullptr || cur_link == nullptr || sum_dis == nullptr) {
+    return false;
+  }
+
+  if (cur_link->feature_points().empty()) {
+    // 由于传进来的是当前link和link上的fp，不应该进入到这里来
+    *sum_dis = cur_link->length() * 0.01;
+    // *pre_link_id = pre_link->id();
+    return false;
+  }
+
+  std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+  for (const auto& fp : cur_link->feature_points()) {
+    fp_vec.emplace_back(fp);
+  }
+
+  std::sort(fp_vec.begin(), fp_vec.end(),
+            [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+               const iflymapdata::sdpro::FeaturePoint& fp_b) {
+              return fp_a.projection_percent() > fp_b.projection_percent();
+            });
+
+  for (const auto& fp : fp_vec) {
+    if (fp.projection_percent() > cur_fp.projection_percent() - kEpsilon) {
+      continue;
+    }
+
+    for (const auto& fp_type : fp.type()) {
+      if (fp_type ==
+          iflymapdata::sdpro::FeaturePointType::MARKING_LINE_CHANGE_POINT) {
+        *sum_dis = std::abs((fp.projection_percent() - cur_fp.projection_percent())) *
+                   cur_link->length() * 0.01;
+        *mlc_fp = fp;
+        return true;
+      }
+    }
+  }
+
+  *sum_dis = cur_fp.projection_percent() * cur_link->length() * 0.01;
+
+  return false;
+}
+
+bool RouteInfo::IsDashSolidLineTypeChnage(
+    MarkingLineChangeType* marking_line_change_type,
+    const iflymapdata::sdpro::FeaturePoint& mlc_fp, const uint64 mlc_link_id) {
+  bool is_solid_front = false;
+  bool is_solid_rear = false;
+
+  const int emergency_lane_num = EmergencyLaneNum(mlc_fp);
+  for (const auto& lane_id : mlc_fp.lane_ids()) {
+    if (IsSolidBoundary(lane_id)) {
+      // lane的boundary是否为实线时，需要考虑最左边车道的左边界和最右边车道的右boundary。
+      // todo：目前仅考虑了最右边车道的右boundary。
+      const auto& lane = sdpro_map_.GetLaneInfoByID(lane_id);
+      if (lane == nullptr) {
+        continue;
+      }
+
+      if (lane->sequence() == 1 + emergency_lane_num) {
+        continue;
+      }
+
+      is_solid_front = true;
+      break;
+    }
+  }
+
+  iflymapdata::sdpro::FeaturePoint last_fp;
+  if (CalculateLastFp(&last_fp, mlc_link_id, mlc_fp)) {
+    const int emergency_lane_num = EmergencyLaneNum(last_fp);
+    for (const auto& lane_id : last_fp.lane_ids()) {
+      if (IsSolidBoundary(lane_id)) {
+
+        // lane的boundary是否为实线时，需要考虑最左边车道的左边界和最右边车道的右boundary。
+        // todo：目前仅考虑了最右边车道的右boundary。
+        const auto& lane = sdpro_map_.GetLaneInfoByID(lane_id);
+        if (lane == nullptr) {
+          continue;
+        }
+
+        if (lane->sequence() == 1 + emergency_lane_num) {
+          continue;
+        }
+
+        is_solid_rear = true;
+        break;
+      }
+    }
+  }
+
+  if ((is_solid_front && is_solid_rear) ||
+      (!is_solid_front && !is_solid_rear)) {
+    return false;
+  } else if (is_solid_front && !is_solid_rear) {
+    *marking_line_change_type = MarkingLineChangeType::DASH_TO_SOLID;
+    return true;
+  } else if (!is_solid_front && is_solid_rear) {
+    *marking_line_change_type = MarkingLineChangeType::SOLID_TO_DASH;
+    return true;
+  }
+
+  return false;
+}
+
+bool RouteInfo::IsSolidBoundary(const uint64 lane_id) {
+  const auto& lane = sdpro_map_.GetLaneInfoByID(lane_id);
+  if (lane == nullptr) {
+    return false;
+  }
+
+  if (IsEmergencyLane(lane_id, sdpro_map_)) {
+    return false;
+  }
+
+  for(const auto& boundary:lane->right_boundaries()) {
+    if (boundary.divider_marking_type() ==
+        iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+            LaneBoundary_DivederMarkingType_DMT_MARKING_SINGLE_SOLID_LINE ||
+        boundary.divider_marking_type() ==
+        iflymapdata::sdpro::LaneBoundary::DivederMarkingType::
+            LaneBoundary_DivederMarkingType_DMT_MARKING_DOUBLE_SOLID_LINE) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+double RouteInfo::LengthSolidLineJudge(
+    const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp, const double first_distance_to_split_point) {
+  double pre_mlc_dis = 0.0;
+  // 从交换区起点到自车按顺序加入虚、实线改变的标线变化点
+  std::vector<std::pair<const MarkingLineChangeType, double>> mlc_fp_info_list;
+
+  if (!IsExistLengthSolidLine(mlc_fp_info_list, fp_link_id, cur_fp,
+                         first_distance_to_split_point)) {
+    return pre_mlc_dis;
+  }
+
+  // 1、只有一个虚线到实线的标线变换点
+  if (mlc_fp_info_list.size() == 1 &&
+      mlc_fp_info_list[0].first == MarkingLineChangeType::DASH_TO_SOLID) {
+    return mlc_fp_info_list[0].second;
+  }
+
+  // 2、第一个是虚线到实线的变化点，后面的是单独的实线段，需要判断这个两个实线段之间的距离相隔多远。
+  // 2.1 首先判断需要变几次道，计算变道所需要的距离
+  double lc_need_dis = 0.0;
+  const double v_cruise =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+
+  const auto& cur_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+
+  if (cur_lane == nullptr) {
+    return pre_mlc_dis;
+  }
+
+  int left_lane_num = 0;
+  int right_lane_num = 0;
+  for (const auto& lane_num : cur_lane->get_lane_nums()) {
+    if (lane_num.end > kEpsilon) {
+      left_lane_num = lane_num.left_lane_num;
+      right_lane_num = lane_num.right_lane_num;
+      break;
+    }
+  }
+
+
+  if (route_info_output_.split_region_info_list.empty()) {
+    return pre_mlc_dis;
+  }
+  const auto& split_link_info = route_info_output_.split_region_info_list[0];
+
+  const auto& split_link = sdpro_map_.GetLinkOnRoute(split_link_info.split_link_id);
+  if (split_link == nullptr) {
+    return pre_mlc_dis;
+  }
+
+  int lc_num = 0;
+  if (split_link_info.split_direction == SplitDirection::SPLIT_RIGHT) {
+    lc_num = split_link->lane_num() - (left_lane_num + 1);
+    lc_num = std::max(0, lc_num);
+  } else if (split_link_info.split_direction == SplitDirection::SPLIT_LEFT) {
+    lc_num = std::max(0, left_lane_num);
+  }
+
+  lc_need_dis = lc_num * v_cruise * 6.0;
+
+  int mlc_fp_size = mlc_fp_info_list.size();
+  if (mlc_fp_size > 1 &&
+      mlc_fp_info_list[0].first == MarkingLineChangeType::DASH_TO_SOLID) {
+    // pair<实线起点距离，实线终点距离>
+    std::vector<std::pair<double, double>> solid_lines_info;
+    for (int i = 1; i + 1 < mlc_fp_size; ++i) {
+      if (mlc_fp_info_list[i].first == MarkingLineChangeType::SOLID_TO_DASH &&
+          mlc_fp_info_list[i + 1].first ==
+              MarkingLineChangeType::DASH_TO_SOLID) {
+      solid_lines_info.emplace_back(mlc_fp_info_list[i].second,
+                                    mlc_fp_info_list[i + 1].second);
+      }
+    }
+
+    if (solid_lines_info.empty()) {
+      return mlc_fp_info_list[0].second;
+    }
+
+    for (int i = 0; i < solid_lines_info.size(); ++i) {
+      if (i == 0) {
+        if (solid_lines_info[i].first - mlc_fp_info_list[0].second >
+            lc_need_dis) {
+            return mlc_fp_info_list[0].second;
+        }
+      } else {
+        if (solid_lines_info[i].first - solid_lines_info[i - 1].second >
+            lc_need_dis) {
+            return solid_lines_info[i - 1].second;
+        }
+      }
+    }
+
+    return solid_lines_info.back().second;
+
+  } else if (mlc_fp_size > 1 &&
+      mlc_fp_info_list[0].first == MarkingLineChangeType::SOLID_TO_DASH) {
+    if (mlc_fp_info_list[0].second > lc_need_dis) {
+      return 0.0;
+    }
+
+    // pair<实线起点距离，实线终点距离>
+    std::vector<std::pair<double, double>> solid_lines_info;
+    for (int i = 0; i + 1 < mlc_fp_size; ++i) {
+      if (mlc_fp_info_list[i].first == MarkingLineChangeType::SOLID_TO_DASH &&
+          mlc_fp_info_list[i + 1].first ==
+              MarkingLineChangeType::DASH_TO_SOLID) {
+      solid_lines_info.emplace_back(mlc_fp_info_list[i].second,
+                                    mlc_fp_info_list[i + 1].second);
+      }
+    }
+
+    if (solid_lines_info.empty()) {
+      return 0.0;
+    }
+
+    for (int i = 1; i < solid_lines_info.size(); ++i) {
+      if (solid_lines_info[i].first - solid_lines_info[i - 1].second >
+          lc_need_dis) {
+          return solid_lines_info[i - 1].second;
+      }
+    }
+
+    return solid_lines_info.back().second;
+  }
+
+  return pre_mlc_dis;
+}
+
+int RouteInfo::EmergencyLaneNum(const iflymapdata::sdpro::FeaturePoint& mlc_fp) {
+  int emergency_lane_num = 0;
+  for (const auto& lane_id : mlc_fp.lane_ids()) {
+    if (IsEmergencyLane(lane_id, sdpro_map_)) {
+      emergency_lane_num++;
+    }
+  }
+  
+  return emergency_lane_num;
 }
 }  // namespace planning

@@ -204,6 +204,35 @@ class RouteInfo {
   bool IsTriggerContinueLCInPerceptionSplitRegion(
       const int left_lane_num, const int right_lane_num) const;
 
+  bool IsExistLengthSolidLine(
+      std::vector<std::pair<const MarkingLineChangeType, double>>&
+          mlc_fp_info_list,
+      const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp, const double first_distance_to_split_point);
+
+  bool CalculateLastMarkingLineChangeFp(
+      iflymapdata::sdpro::FeaturePoint* mlc_fp, uint64* mlc_link_id,
+      double* sum_dis, const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+      const double first_distance_to_split_point);
+
+  bool IsExistMarkingLineChangeFP(iflymapdata::sdpro::FeaturePoint* last_fp,
+                                  double* sum_dis, const uint64 fp_link_id);
+
+  bool IsExistMarkingLineChangeFPCurLink(
+      iflymapdata::sdpro::FeaturePoint* last_fp, double* sum_dis,
+      const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp);
+
+  bool IsDashSolidLineTypeChnage(
+      MarkingLineChangeType* marking_line_change_type,
+      const iflymapdata::sdpro::FeaturePoint& mlc_fp,
+      const uint64 mlc_link_id);
+
+  bool IsSolidBoundary(const uint64 lane_id);
+
+  int EmergencyLaneNum(const iflymapdata::sdpro::FeaturePoint& mlc_fp);
+
+  double LengthSolidLineJudge(const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+                              const double first_distance_to_split_point);
+
   std::vector<int> CalculateMLCTaskNoLaneNum() const;
 
   std::vector<int> CommonElements(const std::vector<int>& A,
