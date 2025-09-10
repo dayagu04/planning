@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+
 #include "planning_hmi_c.h"
 
 namespace planning {
@@ -29,14 +30,23 @@ class ApaDirectionGenerator {
     return 1 << state_bit;
   }
 
-  void SetRecommendationDirectionFlag(iflyauto::APAHMIData &state,
-                                      const uint16_t state_bit) {
+  void SetReleaseDirectionFlag(iflyauto::APAHMIData &state,
+                               const uint16_t state_bit) {
     state.planning_park_dir |= RecommendationDirectionMask(state_bit);
   }
 
-  void ClearRecommendationDirectionFlag(iflyauto::APAHMIData &state) {
+  void ClearReleaseDirectionFlag(iflyauto::APAHMIData &state) {
     state.planning_park_dir = 0;
   }
+
+  // void SetRecommendationDirectionFlag(iflyauto::APAHMIData &state,
+  //                                     const uint16_t state_bit) {
+  //   state.planning_recommend_park_dir |= RecommendationDirectionMask(state_bit);
+  // }
+
+  // void ClearRecommendationDirectionFlag(iflyauto::APAHMIData &state) {
+  //   state.planning_recommend_park_dir = 0;
+  // }
 
   const bool IsRecommendationDirection(iflyauto::APAHMIData &state,
                                        const uint16_t state_bit) {
@@ -51,5 +61,4 @@ class ApaDirectionGenerator {
   }
 };
 
-
-}
+}  // namespace planning

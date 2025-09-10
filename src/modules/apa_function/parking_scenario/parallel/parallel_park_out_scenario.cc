@@ -281,45 +281,51 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
 }
 
 void ParallelParkOutScenario::ScenarioTry() {
-  //ApaParkOutDirection::RIGHT_FRONT
+  // ApaParkOutDirection::RIGHT_FRONT
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
+      .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+      SlotReleaseState::NOT_RELEASE;
   multi_parkout_direction.clear();
   multi_parkout_path_vec.clear();
   ApaParkOutDirection directions[] = {ApaParkOutDirection::LEFT_FRONT,
                                       ApaParkOutDirection::RIGHT_FRONT};
   for (auto direction : directions) {
-    apa_world_ptr_->GetStateMachineManagerPtr()->SetParkOutDirection(
-      direction);
+    apa_world_ptr_->GetStateMachineManagerPtr()->SetParkOutDirection(direction);
     parkout_direction_ = direction;
-    if(ParkOutDirectionTry()) {
+    if (ParkOutDirectionTry()) {
       multi_parkout_direction[direction] = true;
       ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::RELEASE;
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
     } else {
       multi_parkout_direction[direction] = false;
     }
-    ILOG_INFO << "direction = " << static_cast<int>(direction) <<
-      " multi_parkout_direction = " << multi_parkout_direction[direction];
+    ILOG_INFO << "direction = " << static_cast<int>(direction)
+              << " multi_parkout_direction = "
+              << multi_parkout_direction[direction];
   }
   ApaDirectionGenerator generator;
-  generator.ClearRecommendationDirectionFlag(apa_hmi_);
+  generator.ClearReleaseDirectionFlag(apa_hmi_);
+  generator.SetReleaseDirectionFlag(apa_hmi_, ParityBit);
+  // generator.ClearRecommendationDirectionFlag(apa_hmi_);
+  // generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
   if (multi_parkout_direction[ApaParkOutDirection::RIGHT_FRONT]) {
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
-    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::RIGHT_FRONT];
+    generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontRight);
+    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
   }
   if (multi_parkout_direction[ApaParkOutDirection::LEFT_FRONT]) {
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
-    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
-    complete_path_point_global_vec_ = multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
+    generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
+    // generator.ClearRecommendationDirectionFlag(apa_hmi_);
+    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
   }
   TansformPreparePlanningTraj();
-  ILOG_INFO << "recommendation direction = " << apa_hmi_.planning_park_dir;
+  // ILOG_INFO << "relaese direction = "
+  //           << apa_hmi_.planning_park_dir
+  //           << ", recommendation direction = "
+  //           << apa_hmi_.planning_recommend_park_dir;
   parkout_direction_ = ApaParkOutDirection::INVALID;
 }
 
@@ -921,7 +927,8 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
-  double dist_to_cat = slot_side_sgn > 0 ? std::min(B.y(), E.y()) : std::max(B.y(), E.y());
+  double dist_to_cat =
+      slot_side_sgn > 0 ? std::min(B.y(), E.y()) : std::max(B.y(), E.y());
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
     const bool channel_y_condition =
@@ -1215,8 +1222,9 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   if (parkout_direction_ != ApaParkOutDirection::INVALID) {
     std::vector<pnc::geometry_lib::PathPoint> cur_dir_path_point_global_vec;
     for (const auto& path_point : path_planner_output.all_gear_path_point_vec) {
-      global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
       global_point.lat_buffer = path_point.lat_buffer;
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;

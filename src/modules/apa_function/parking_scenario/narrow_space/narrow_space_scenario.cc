@@ -584,7 +584,8 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   frame_.current_gear = GetGear(current_gear_);
   cur_request.goal = Pose2f(end.x, end.y, end.theta);
 
-  cur_request.x_axis_direction_coordinate_slant = direction_origin_corner_23_normalized_;
+  cur_request.x_axis_direction_coordinate_slant =
+      direction_origin_corner_23_normalized_;
 
   SetRequestForScenarioTry(cur_request, ego_info);
 
@@ -2374,8 +2375,10 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
     const AstarRequest& cur_request) {
   iflyauto::APAHMIData apa_hmi_data;
   ApaDirectionGenerator generator;
-  generator.ClearRecommendationDirectionFlag(apa_hmi_data);
-  generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+  generator.ClearReleaseDirectionFlag(apa_hmi_data);
+  // generator.ClearRecommendationDirectionFlag(apa_hmi_data);
+  generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
+  // generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
 
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     ApaRecommendationDirection dir;
@@ -2420,14 +2423,26 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
           break;
       }
 
-      generator.SetRecommendationDirectionFlag(apa_hmi_data, dir);
+      generator.SetReleaseDirectionFlag(apa_hmi_data, dir);
     }
+
+    EgoInfoUnderSlot& ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+    const ApaRecommendationDirection planning_recommend_park_dir =
+        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+            ? ApaRecommendationDirection::VerticalFront
+            : ApaRecommendationDirection::VerticalBack;
+
+    // generator.SetRecommendationDirectionFlag(apa_hmi_data,
+    //                                          planning_recommend_park_dir);
+
   } else {
-    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParallelFrontLeft);
-    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParallelFrontRight);
-    generator.SetRecommendationDirectionFlag(apa_hmi_data, VerticalHeadIn);
-    generator.SetRecommendationDirectionFlag(apa_hmi_data, VerticalTailIn);
-    generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+    generator.SetReleaseDirectionFlag(apa_hmi_data, ParallelFrontLeft);
+    generator.SetReleaseDirectionFlag(apa_hmi_data, ParallelFrontRight);
+    generator.SetReleaseDirectionFlag(apa_hmi_data, VerticalHeadIn);
+    generator.SetReleaseDirectionFlag(apa_hmi_data, VerticalTailIn);
+    generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
   }
 
   return apa_hmi_data;
@@ -2440,7 +2455,8 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     const double opposite_target_heading_rad =
         planning_math::NormalizeAngle(target_heading_rad + M_PI);
 
-    cur_request.x_axis_direction_coordinate_slant = direction_origin_corner_23_normalized_;
+    cur_request.x_axis_direction_coordinate_slant =
+        direction_origin_corner_23_normalized_;
 
     cur_request.direction_request_size = 6;
     cur_request.direction_request_stack[0] =
@@ -2571,8 +2587,9 @@ const float NarrowSpaceScenario::SetPassageHeight(
 }
 
 void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
-  Eigen::Vector2d direction_origin_corner_23 = ego_info.slot.GetOriginCornerCoordLocal().pt_3 -
-                                ego_info.slot.GetOriginCornerCoordLocal().pt_2;
+  Eigen::Vector2d direction_origin_corner_23 =
+      ego_info.slot.GetOriginCornerCoordLocal().pt_3 -
+      ego_info.slot.GetOriginCornerCoordLocal().pt_2;
   direction_origin_corner_23_normalized_ =
       direction_origin_corner_23.normalized();
 
@@ -2618,7 +2635,8 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
     case ApaParkOutDirection::RIGHT_FRONT:
       ego_info.target_pose.pos = target_pos_head_right;
       ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
-      ego_info.target_pose.heading_vec = -direction_origin_corner_23_normalized_;
+      ego_info.target_pose.heading_vec =
+          -direction_origin_corner_23_normalized_;
 
       // 特殊位置要对目标点进行特殊调整
       if (ego_info.cur_pose.pos.x() < kInitialTargetX &&
@@ -2629,7 +2647,8 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
     case ApaParkOutDirection::LEFT_REAR:
       ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY;
       ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
-      ego_info.target_pose.heading_vec = -direction_origin_corner_23_normalized_;
+      ego_info.target_pose.heading_vec =
+          -direction_origin_corner_23_normalized_;
 
       // 特殊位置要对目标点进行特殊调整
       if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
