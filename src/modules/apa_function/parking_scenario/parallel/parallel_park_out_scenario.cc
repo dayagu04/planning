@@ -70,6 +70,9 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   }
 
   UpdateStuckTime();
+  parkout_direction_ =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetParkOutDirection();
+  is_try_tlane_ = false;
 
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
@@ -85,14 +88,6 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     return;
   }
   ILOG_INFO << "update ego slot info success!";
-
-  is_try_tlane_ = false;
-  // generate t-lane
-  if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = NO_TARGET_POSE;
-    return;
-  }
 
   // check finish
   if (CheckFinished()) {
@@ -129,6 +124,13 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  // generate t-lane
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = NO_TARGET_POSE;
+    return;
+  }
+
   // update obstacles
   GenTBoundaryObstacles();
 
@@ -160,6 +162,12 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
+  complete_path_point_global_vec_.clear();
+  if (multi_parkout_path_vec.find(parkout_direction_) !=
+      multi_parkout_path_vec.end()) {
+    complete_path_point_global_vec_ =
+        multi_parkout_path_vec[parkout_direction_];
+  }
 
   // print planning status
   ILOG_INFO << "parking status = "
@@ -289,6 +297,7 @@ void ParallelParkOutScenario::ScenarioTry() {
       SlotReleaseState::NOT_RELEASE;
   multi_parkout_direction.clear();
   multi_parkout_path_vec.clear();
+  complete_path_point_global_vec_.clear();
   ApaParkOutDirection directions[] = {ApaParkOutDirection::LEFT_FRONT,
                                       ApaParkOutDirection::RIGHT_FRONT};
   for (auto direction : directions) {

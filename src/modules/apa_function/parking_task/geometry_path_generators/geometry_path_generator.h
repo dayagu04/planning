@@ -94,6 +94,7 @@ struct GeometryPathInput {
   bool is_simulation = false;
 
   bool enable_smart_fold_mirror = false;
+  int parallel_replan_again_ = 0;
 
   Tlane tlane;
 };

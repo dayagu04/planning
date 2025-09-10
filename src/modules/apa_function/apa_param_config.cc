@@ -425,6 +425,8 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.max_replan_count, int, "max_replan_count");
 
+  JSON_READ_VALUE(param.parallel_replan_dist, double, "parallel_replan_dist");
+
   // construct t_lane params
   JSON_READ_VALUE(param.vacant_pt_outside_dx, double, "vacant_pt_outside_dx");
 
