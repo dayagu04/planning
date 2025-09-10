@@ -1003,6 +1003,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
     // 防止感知误检，同时有横向和纵向overlap
     if (lat_overlap) {
       if (!in_intersection_) {
+        obstacles_id_behind_ego_.emplace_back(id);
         output_[id] = LatObstacleDecisionType::IGNORE;
       } else {
         const auto &ego_state_manager =
@@ -1017,6 +1018,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
             ego_state_manager->ego_pose().theta, ego_length_, ego_width_);
         if (frenet_obstacle.obstacle()->perception_bounding_box().HasOverlap(
                 ego_box)) {
+          obstacles_id_behind_ego_.emplace_back(id);
           output_[id] = LatObstacleDecisionType::IGNORE;
         }
       }
