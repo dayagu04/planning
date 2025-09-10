@@ -175,6 +175,8 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info);
 
+  double GeneVirtualLimiter(const EgoInfoUnderSlot& ego_slot);
+
  private:
   RequestResponseState thread_state_;
   HybridAStarThreadSolver thread_;
