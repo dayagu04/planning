@@ -579,7 +579,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double end_s = traj_points.back().s;
   double total_s = end_s - start_s;
   double kMaxAcc = 0.8;
-  const double kMinAcc = -5.5;
+  double kMinAcc = -5.5;
   double cruise_v = std::max(config_.min_v_cruise,
                               session_->planning_context().v_ref_cruise());
   double ego_v =
@@ -594,8 +594,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           ->get_is_exist_intersection_split()) {
     kMaxAcc = 0.2;
   } else if (CalCruiseVelByCurvature(ego_v, coarse_planning_info, cruise_v)) {
+    double road_speed_limit;
+    bool is_exist_speed_limit =
+        session_->planning_context()
+                .speed_limit_decider_output()
+                .GetSpeedLimitByType(SpeedLimitType::CURVATURE, &road_speed_limit);
+    if (is_exist_speed_limit) {
+      cruise_v = road_speed_limit;
+    }
     limit_ref_vel_on_ramp_valid = true;
-    kMaxAcc = 0.2;
+    kMaxAcc = 1e-6;
+    kMinAcc = -0.8;
   }
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
     kMaxAcc = 0.4;
@@ -3595,8 +3604,8 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 
     hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
     soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
-    hard_bounds_info_output.emplace_back(soft_bounds_info[i]);
-    soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    soft_bounds_info_output.emplace_back(soft_bounds_info[i]);
   }
 
   // 障碍物决策是否存在跳动

@@ -286,6 +286,7 @@ class LateralMotionPlanningWeight {
   bool is_search_success_;
   bool is_s_bend_;
   bool is_use_spatio_planner_result_;
+  bool is_sharp_turn_;
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
