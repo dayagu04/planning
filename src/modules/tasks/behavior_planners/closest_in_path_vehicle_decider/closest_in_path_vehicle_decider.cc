@@ -31,13 +31,21 @@ bool ClosestInPathVehicleDecider::Execute() {
   auto res = CipvDecision();
   if (!res) {
     JSON_DEBUG_VALUE("cipv_id_st", -1.0)
+    JSON_DEBUG_VALUE("cipv_theta", 0.0)
+    JSON_DEBUG_VALUE("cipv_theta_fusion", 0.0)
     return false;
   }
   res = DetermineIfConeBucketCIPV();
   const auto cipv_decider_output =
       session_->planning_context().cipv_decider_output();
+  const auto agent_mgr = session_->environmental_model().get_agent_manager();
   DetermineCIPVInfoForHMI();
   JSON_DEBUG_VALUE("cipv_id_st", cipv_decider_output.cipv_id())
+  const auto agent = agent_mgr->GetAgent(cipv_decider_output.cipv_id());
+  if (agent) {
+    JSON_DEBUG_VALUE("cipv_theta", agent->theta())
+    JSON_DEBUG_VALUE("cipv_theta_fusion", agent->theta_fusion())
+  }
   JSON_DEBUG_VALUE("cipv_vel_fusion", cipv_decider_output.v_fusion_frenet());
   JSON_DEBUG_VALUE("cipv_acc", cipv_decider_output.acceleration())
   JSON_DEBUG_VALUE("cipv_acc_fusion", cipv_decider_output.acceleration_fusion())

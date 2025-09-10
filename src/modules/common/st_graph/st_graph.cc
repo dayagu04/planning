@@ -1293,20 +1293,27 @@ void STGraph::AddStGraphDataToProto() {
     if (agent == nullptr) {
       continue;
     }
-    auto* agents_trajectory = st_graph_data_pb_.add_agents_trajectory();
-    agents_trajectory->set_agent_id(agent->agent_id());
+
+    auto* agents_trajectories = st_graph_data_pb_.add_agents_trajectories();
+    agents_trajectories->set_agent_id(agent->agent_id());
+
     auto agent_processed_trajectories = agent->trajectories_used_by_st_graph();
     if (agent_processed_trajectories.empty()) {
       continue;
     }
-    auto agent_processed_trajectory = agent_processed_trajectories[0];
-    if (agent_processed_trajectory.empty()) {
-      continue;
-    }
-    for (const auto& trajectory_point : agent_processed_trajectory) {
-      auto* agent_trajectory = agents_trajectory->add_agent_trajectory();
-      agent_trajectory->set_x(trajectory_point.x());
-      agent_trajectory->set_y(trajectory_point.y());
+
+    for (const auto& one_trajectory : agent_processed_trajectories) {
+      if (one_trajectory.empty()) {
+        continue;
+      }
+
+      auto* agent_trajectory = agents_trajectories->add_agent_trajectories();
+
+      for (const auto& trajectory_point : one_trajectory) {
+        auto* point = agent_trajectory->add_agent_trajectory();
+        point->set_x(trajectory_point.x());
+        point->set_y(trajectory_point.y());
+      }
     }
   }
 

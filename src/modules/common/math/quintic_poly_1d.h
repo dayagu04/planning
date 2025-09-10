@@ -82,6 +82,21 @@ class QuinticPoly1d {
     }
   }
 
+  std::pair<double, double> GetLateralAccAndJerk(const double p,
+                                                 const double vel) const {
+    const double dy = Evaluate(1, p);
+    const double ddy = Evaluate(2, p);
+    const double dddy = Evaluate(3, p);
+    double dy_square_plus_1 = 1 + dy * dy;
+    double kappa = ddy / std::pow(dy_square_plus_1, 1.5);
+    double dx_dt = vel / std::sqrt(dy_square_plus_1);
+    double dk_dx = (dddy * dy_square_plus_1 - 3 * dy * ddy * ddy) /
+                   std::pow(dy_square_plus_1, 2.5);
+    double lateral_acc = vel * vel * kappa;
+    double lateral_jerk = vel * vel * dk_dx * dx_dt;
+    return {lateral_acc, lateral_jerk};
+  }
+
   const double &get_end_s() const { return end_s_; }
 
  private:

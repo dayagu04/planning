@@ -79,6 +79,7 @@ struct PredictionObject {
   float speed_fusion;
   float yaw;    // for obj
   float theta;  // for velocity
+  float theta_fusion;
   float acc;
   float acc_fusion;
   iflyauto::ObjectMotionType motion_pattern_current;
