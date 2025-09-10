@@ -18,6 +18,16 @@ message ApaPathPoint {
   optional int32 type = 10;
 }
 
+message HistoryApaStatus {
+  /*
+  0: static
+  1: left
+  2: right
+  */
+  optional int32 direction_arrival = 1;
+  optional bool is_finish = 2;
+}
+
 message AstarNode {
   repeated TrajectoryPoint path_point = 1;
 }
@@ -112,4 +122,6 @@ message ApaPathDebug {
   optional ObstacleListDebug obs_list = 2;
   optional ControlBasedPredictTraj predict_traj = 3;
   optional PathTimeBenchmark path_time = 4;
+  optional double path_search_time = 5;
+  optional HistoryApaStatus history_apa_status = 6;
 }

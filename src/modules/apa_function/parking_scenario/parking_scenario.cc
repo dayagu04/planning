@@ -1199,12 +1199,12 @@ void ParkingScenario::ClearTimeBySuspendStatus() {
 
 void ParkingScenario::SetFeasibleDirectionFlag() {
   ApaDirectionGenerator generator;
-  generator.ClearRecommendationDirectionFlag(apa_hmi_);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, VerticalHeadIn);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, VerticalTailIn);
-  generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+  generator.ClearReleaseDirectionFlag(apa_hmi_);
+  generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
+  generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontRight);
+  generator.SetReleaseDirectionFlag(apa_hmi_, VerticalHeadIn);
+  generator.SetReleaseDirectionFlag(apa_hmi_, VerticalTailIn);
+  generator.SetReleaseDirectionFlag(apa_hmi_, ParityBit);
 }
 
 }  // namespace apa_planner
