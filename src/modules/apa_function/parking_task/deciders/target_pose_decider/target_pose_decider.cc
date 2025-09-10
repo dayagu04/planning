@@ -204,11 +204,26 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   // 生成纵向移动距离数组
-  std::vector<double> lon_dist_vec;
+  std::vector<double> small_lon_dist_vec;
+  std::vector<double> big_lon_dist_vec;
+  std::vector<std::vector<double>> all_lon_dist_vec;
   for (double lon_move_dist = 0.0;
        lon_move_dist < max_lon_move_dist + lon_move_step * 0.5;
        lon_move_dist += lon_move_step) {
-    lon_dist_vec.emplace_back(lon_move_dist);
+    if (lon_move_dist < max_lon_move_dist * 0.5) {
+      small_lon_dist_vec.emplace_back(lon_move_dist);
+    } else {
+      big_lon_dist_vec.emplace_back(lon_move_dist);
+    }
+  }
+
+  if (is_searching_stage_) {
+    small_lon_dist_vec.insert(small_lon_dist_vec.end(),
+                              big_lon_dist_vec.begin(), big_lon_dist_vec.end());
+    all_lon_dist_vec.emplace_back(big_lon_dist_vec);
+  } else {
+    all_lon_dist_vec.emplace_back(small_lon_dist_vec);
+    all_lon_dist_vec.emplace_back(big_lon_dist_vec);
   }
 
   // 生成横向移动距离数组
@@ -221,49 +236,53 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   bool exist_target_pose = false;
-
   geometry_lib::PathPoint tmp_pose;
-  for (const double lat_buffer : lat_buffer_vec_) {
-    for (const double lat_move_dist : lat_dist_vec) {
-      for (const double lon_move_dist : lon_dist_vec) {
-        std::vector<geometry_lib::PathPoint> tmp_pose_vec;
-        // 考虑车辆纵向行驶路径上 如果有障碍物 则也视为不安全
-        std::vector<double> lon_path_vec{
-            lon_move_dist, lon_move_dist - lon_buffer_, lon_move_dist + 1.0,
-            lon_move_dist + 2.0};
-        for (const double dist : lon_path_vec) {
-          if (base_on_slot_) {
-            tmp_pose = tar_pose_local;
-          } else {
-            tmp_pose = tar_pose_global;
+  for (const std::vector<double>& lon_dist_vec : all_lon_dist_vec) {
+    for (const double lat_buffer : lat_buffer_vec_) {
+      for (const double lat_move_dist : lat_dist_vec) {
+        for (const double lon_move_dist : lon_dist_vec) {
+          std::vector<geometry_lib::PathPoint> tmp_pose_vec;
+          // 考虑车辆纵向行驶路径上 如果有障碍物 则也视为不安全
+          std::vector<double> lon_path_vec{
+              lon_move_dist, lon_move_dist - lon_buffer_, lon_move_dist + 1.0,
+              lon_move_dist + 2.0};
+          for (const double dist : lon_path_vec) {
+            if (base_on_slot_) {
+              tmp_pose = tar_pose_local;
+            } else {
+              tmp_pose = tar_pose_global;
+            }
+            tmp_pose.pos = tmp_pose.pos + lat_move_dist * lat_move_dir +
+                           dist * lon_move_dir;
+            tmp_pose_vec.emplace_back(tmp_pose);
           }
-          tmp_pose.pos =
-              tmp_pose.pos + lat_move_dist * lat_move_dir + dist * lon_move_dir;
-          tmp_pose_vec.emplace_back(tmp_pose);
-        }
-        if (!gjl_det_ptr
-                 ->Update(tmp_pose_vec, lat_buffer, 0.0, gjl_col_det_request)
-                 .col_flag) {
-          exist_target_pose = true;
-          result_.safe_lon_move_dist = lon_move_dist;
-          result_.safe_lat_move_dist = lat_move_dist;
-          result_.safe_lat_buffer = lat_buffer;
-          if (base_on_slot_) {
-            result_.target_pose_local = tmp_pose_vec.front();
-            result_.target_pose_global =
-                geometry_lib::TransformPoseFromLocalToGlobal(
-                    result_.target_pose_local, l2g_tf);
-          } else {
-            result_.target_pose_global = tmp_pose_vec.front();
-            result_.target_pose_local =
-                geometry_lib::TransformPoseFromGlobalToLocal(
-                    result_.target_pose_global, g2l_tf);
-          }
+          if (!gjl_det_ptr
+                   ->Update(tmp_pose_vec, lat_buffer, 0.0, gjl_col_det_request)
+                   .col_flag) {
+            exist_target_pose = true;
+            result_.safe_lon_move_dist = lon_move_dist;
+            result_.safe_lat_move_dist = lat_move_dist;
+            result_.safe_lat_buffer = lat_buffer;
+            if (base_on_slot_) {
+              result_.target_pose_local = tmp_pose_vec.front();
+              result_.target_pose_global =
+                  geometry_lib::TransformPoseFromLocalToGlobal(
+                      result_.target_pose_local, l2g_tf);
+            } else {
+              result_.target_pose_global = tmp_pose_vec.front();
+              result_.target_pose_local =
+                  geometry_lib::TransformPoseFromGlobalToLocal(
+                      result_.target_pose_global, g2l_tf);
+            }
 
-          ILOG_INFO << "exist_target_pose = " << exist_target_pose
-                    << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
-                    << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
-                    << "  safe_lat_buffer = " << result_.safe_lat_buffer;
+            ILOG_INFO << "exist_target_pose = " << exist_target_pose
+                      << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
+                      << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
+                      << "  safe_lat_buffer = " << result_.safe_lat_buffer;
+            break;
+          }
+        }
+        if (exist_target_pose) {
           break;
         }
       }
