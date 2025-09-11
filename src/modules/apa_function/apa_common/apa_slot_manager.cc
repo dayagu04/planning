@@ -22,6 +22,8 @@ namespace apa_planner {
 
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
+static const double kMaxEgoSlotAbsoluteDist = 10.68;
+static const double kMaxEgoSlotRelativeDist = 7.2;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
@@ -85,6 +87,15 @@ void ApaSlotManager::Update(
 
     dist_id_map_[dist] = slot.GetId();
     slots_map_[slot.GetId()] = slot;
+
+    const double ego_dist =
+        geometry_lib::CalPoint2LineDist(car_mirror_pos, slot.GetMidLine());
+    if (ego_slot_min_dist_map_.count(slot.GetId()) != 0) {
+      ego_slot_min_dist_map_[slot.GetId()] =
+          std::min(ego_slot_min_dist_map_[slot.GetId()], ego_dist);
+    } else {
+      ego_slot_min_dist_map_[slot.GetId()] = ego_dist;
+    }
   }
 
   // 泊出
@@ -314,11 +325,21 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
       continue;
     }
 
-    if (dist_id.first > 10.68) {
+    if (ego_slot_min_dist_map_.count(slot.GetId()) != 0 &&
+        slot.GetType() != SlotType::PARALLEL &&
+        ego_slot_min_dist_map_[slot.GetId()] > kMaxEgoSlotRelativeDist) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
-      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over " << 10.68
-                << " m!";
+      ILOG_INFO << "NOT_RELEASE reason: ego slot dist over "
+                << kMaxEgoSlotRelativeDist << " m!";
+      continue;
+    }
+
+    if (dist_id.first > kMaxEgoSlotAbsoluteDist) {
+      slot.release_info_.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over "
+                << kMaxEgoSlotAbsoluteDist << " m!";
       continue;
     }
 

@@ -249,6 +249,8 @@ class ApaSlot final {
 
   const SlotReleaseInfo& GetReleaseInfo() const { return release_info_; }
 
+  const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
+
  private:
   void CorrectSlotPointOrder();
 
@@ -280,6 +282,8 @@ class ApaSlot final {
   Limiter limiter_;
 
   SlotReleaseInfo release_info_;
+
+  geometry_lib::LineSegment mid_line_;
 
   geometry_lib::GlobalToLocalTf g2l_tf_;
   geometry_lib::LocalToGlobalTf l2g_tf_;
