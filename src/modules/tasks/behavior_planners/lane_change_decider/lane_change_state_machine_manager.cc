@@ -102,6 +102,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangePropose: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangePropose) {
+
+              
         const auto &virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
         propose_state_frame_nums_++;
@@ -1391,6 +1393,30 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   transition_info_.Rest();
   lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
   lc_req_mgr_->FinishRequest();
+  lane_change_stage_info_.Reset();
+  lc_timer_.Reset();
+
+  pre_ego_l_ = 0;
+  lc_valid_cnt_ = 0;
+  lc_back_cnt_ = 0;
+  lc_target_lane_merge_to_origin_lane_cnt_ = 0;
+  lc_invalid_track_.reset();
+  lc_back_track_.reset();
+  must_change_lane_ = false;
+  propose_state_frame_nums_ = 0;
+  execution_state_frame_nums_ = 0;
+  hold_state_frame_nums_ = 0;
+  complete_state_frame_nums_ = 0;
+  is_high_priority_back_ = false;
+  ego_trajs_future_.clear();
+  lc_path_generate_.reset();
+  is_dash_not_enough_for_lc_ = false;
+  execution_state_dash_cnt = 0;
+  hold_state_dash_cnt = 0;
+}
+void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
+  transition_info_.Rest();
+  lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
   lane_change_stage_info_.Reset();
   lc_timer_.Reset();
 
