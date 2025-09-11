@@ -158,6 +158,10 @@ void Preprocess::SyncParameters(void) {
                        int, "ihc_low_beam_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code, int,
                        "ihc_fault_code");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_use_json_code, bool,
+                       "tsr_use_json_code");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code, int,
+                       "tsr_fault_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
                        std::vector<double>, "lka_vel_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,

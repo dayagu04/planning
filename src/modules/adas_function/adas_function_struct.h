@@ -82,6 +82,7 @@ struct Parameters {
   bool ihc_use_json_code = false;
   bool ihc_set_main_switch = false;
   bool ihc_high_beam_switch = false;
+  bool tsr_use_json_code = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
   // double elk_roadedge_offset = 0.15;
@@ -175,6 +176,8 @@ struct Parameters {
   uint16 ihc_low_beam_code = 0;
   // IHC故障码
   uint16 ihc_fault_code = 0;
+  // TSR故障码
+  uint16 tsr_fault_code = 0;
 };
 
 struct StateInfo {

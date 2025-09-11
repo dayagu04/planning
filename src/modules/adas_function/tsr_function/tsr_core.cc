@@ -922,6 +922,8 @@ void TsrCore::ResetRealTimeTsrInfo(void) {
 }
 
 void TsrCore::RunOnce(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  
   // 更新tsr开关状态
   tsr_main_switch_ = UpdateTsrMainSwitch();
 
@@ -933,6 +935,11 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
+  
+  if (GetContext.get_param()->tsr_use_json_code) {
+    // 如果使用json，则使用配置文件中的故障码
+    tsr_fault_code_ = GetContext.get_param()->tsr_fault_code;
+  }
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();
@@ -942,7 +949,6 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_speed_limit_
   // 获取功能状态信息来判断是否为NOA激活模式
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   auto function_state_machine_info_ptr = &GetContext.mutable_session()
                                      ->mutable_environmental_model()
                                      ->get_local_view()
