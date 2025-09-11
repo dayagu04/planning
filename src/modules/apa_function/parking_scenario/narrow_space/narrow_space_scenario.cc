@@ -192,19 +192,19 @@ const bool NarrowSpaceScenario::CheckHeadOutFinished() {
   const EgoInfoUnderSlot& ego_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  const double& target_heading_deg_head_out =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_;
+  const double& target_heading_head_out = apa_world_ptr_->GetSlotManagerPtr()
+                                              ->GetEgoInfoUnderSlot()
+                                              .target_pose.heading;
 
-  constexpr double kTargetHeadingThreshold = 5.0;
+  constexpr double kTargetHeadingThreshold = 0.087;
 
   const bool heading_condition_1 =
-      std::fabs(ego_info.cur_pose.heading) <=
-      (target_heading_deg_head_out + kTargetHeadingThreshold) *
-          kDeg2Rad;  // TODU::
+      ego_info.cur_pose.heading <=
+      (target_heading_head_out + kTargetHeadingThreshold);  // TODU::
 
   const bool heading_condition_2 =
-      std::fabs(ego_info.cur_pose.heading) >=
-      (target_heading_deg_head_out - kTargetHeadingThreshold) * kDeg2Rad;
+      ego_info.cur_pose.heading >=
+      (target_heading_head_out - kTargetHeadingThreshold);
 
   const bool lat_condition = heading_condition_1 && heading_condition_2;
 
@@ -2451,7 +2451,9 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
 void NarrowSpaceScenario::SetRequestForScenarioTry(
     AstarRequest& cur_request, const EgoInfoUnderSlot& ego_info) {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
-    const double target_heading_rad = ego_info.slot.angle_ * M_PI / 180.0;
+    const double target_heading_rad = geometry_lib::GetAngleFromTwoVec(
+        ego_info.slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_vec,
+        ego_info.slot.GetOriginCornerCoordGlobal().pt_01_vec);
     const double opposite_target_heading_rad =
         planning_math::NormalizeAngle(target_heading_rad + M_PI);
 
@@ -2479,12 +2481,16 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
         temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
     const Eigen::Vector2d target_pos_head_right =
         temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
+    const Eigen::Vector2d target_pos_tail_left =
+        temp_head_pos - direction_origin_corner_23_normalized_ * 3.0;
+    const Eigen::Vector2d target_pos_tail_right =
+        temp_head_pos + direction_origin_corner_23_normalized_ * 3.0;
 
     if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
       cur_request.real_goal_stack[0] =
           Pose2f(target_pos_head_left.x(), target_pos_head_left.y(),
                  target_heading_rad);
-      cur_request.real_goal_stack[1] = Pose2f(5.0, 0.0, 0.0);
+      cur_request.real_goal_stack[1] = Pose2f(4.0, 0.0, 0.0);
       cur_request.real_goal_stack[2] =
           Pose2f(target_pos_head_right.x(), target_pos_head_right.y(),
                  opposite_target_heading_rad);
@@ -2498,9 +2504,12 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
       cur_request.real_goal_stack[1] = Pose2f(-4.0, 0.0, 0.0);
       cur_request.real_goal_stack[2] = Pose2f(-3.0, 11.0, target_heading_rad);
       cur_request.real_goal_stack[3] =
-          Pose2f(8.0, -5.0, opposite_target_heading_rad);
-      cur_request.real_goal_stack[4] = Pose2f(8.0, 0.0, 0.0);
-      cur_request.real_goal_stack[5] = Pose2f(8.0, 5.0, target_heading_rad);
+          Pose2f(target_pos_tail_left.x(), target_pos_tail_left.y(),
+                 opposite_target_heading_rad);
+      cur_request.real_goal_stack[4] = Pose2f(7.5, 0.0, 0.0);
+      cur_request.real_goal_stack[5] =
+          Pose2f(target_pos_tail_right.x(), target_pos_tail_right.y(),
+                 target_heading_rad);
     }
 
   } else {
@@ -2613,10 +2622,13 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
   const Eigen::Vector2d target_pos_head_right =
       temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
-
-  const double target_heading_rad_head_out =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_ *
-      M_PI / 180.0;
+  const Eigen::Vector2d target_pos_tail_left =
+      temp_head_pos - direction_origin_corner_23_normalized_ * 3.0;
+  const Eigen::Vector2d target_pos_tail_right =
+      temp_head_pos + direction_origin_corner_23_normalized_ * 3.0;
+  const double target_heading_rad_head_out = geometry_lib::GetAngleFromTwoVec(
+      ego_info.slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_vec,
+      ego_info.slot.GetOriginCornerCoordGlobal().pt_01_vec);
 
   const double opposite_target_heading_rad_head_out =
       planning_math::NormalizeAngle(target_heading_rad_head_out + M_PI);
@@ -2649,35 +2661,35 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       }
       break;
     case ApaParkOutDirection::LEFT_REAR:
-      ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY;
+      ego_info.target_pose.pos << target_pos_tail_left;
       ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
       ego_info.target_pose.heading_vec =
           -direction_origin_corner_23_normalized_;
 
       // 特殊位置要对目标点进行特殊调整
       if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
-        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY + 1.0;
+        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY + 2.0;
       }
       break;
     case ApaParkOutDirection::RIGHT_REAR:
-      ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY;
+      ego_info.target_pose.pos << target_pos_tail_right;
       ego_info.target_pose.heading = target_heading_rad_head_out;
       ego_info.target_pose.heading_vec = direction_origin_corner_23_normalized_;
 
       // 特殊位置要对目标点进行特殊调整
       if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
-        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY - 1.0;
+        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY - 2.0;
       }
       break;
     case ApaParkOutDirection::REAR:
-      ego_info.target_pose.pos << kInitialTargetX + 1.0, 0.0;
+      ego_info.target_pose.pos << kInitialTargetX + 0.5, 0.0;
       ego_info.target_pose.heading = M_PI;
       ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
 
       break;
     case ApaParkOutDirection::FRONT:
     default:
-      ego_info.target_pose.pos << kInitialTargetX - 2.5, 0.0;
+      ego_info.target_pose.pos << kInitialTargetX - 3.0, 0.0;
       ego_info.target_pose.heading = 0.0;
       ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
       break;
@@ -2688,9 +2700,8 @@ double NarrowSpaceScenario::GeneVirtualLimiter(
     const EgoInfoUnderSlot& ego_slot) {
   // 根据后面两个角点计算停车终点
   const ApaParameters& param = apa_param.GetParam();
-  double virtual_x =
-      ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
-      param.terminal_target_x;
+  double virtual_x = ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+                     param.terminal_target_x;
 
   if (ego_slot.slot_type == SlotType::SLANT) {
     double clip_len = 0;

@@ -232,7 +232,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // constexpr size_t kNumberRows = 3;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
-  constexpr float kXStep = 0.5f;           // X轴步长
+  constexpr float kXStep = 0.3f;           // X轴步长
   constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
   constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
 
@@ -305,13 +305,17 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
+  if (center_line_target_.GetX() < 0.0) {
+    // todo :: 现在的虚拟墙不支持 目标点小于0 的搜索，先跳过；
+    return;
+  }
   Pose2f global_pose;
   global_pose = center_line_target_;
   constexpr size_t kMaxCandidateNum = 10;  // 最大候选数量
   // constexpr size_t kNumberRows = 3;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
-  constexpr float kXStep = 0.5f;           // X轴步长
+  constexpr float kXStep = 0.3f;           // X轴步长
   constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
   constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
 
@@ -428,7 +432,12 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   Pose2f current_pose = global_pose;
   constexpr size_t kNumSteps = 10;
   constexpr float kYStep = 0.5f;
-  constexpr float kMinSafetyDist = 0.04f;
+  // constexpr float kMinSafetyDist = 0.5f;
+  const float min_safety_dist =
+      (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+       direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
+          ? 0.04f
+          : 0.5f;
   const Eigen::Vector2d base_pos(global_pose.GetX(), global_pose.GetY());
   Eigen::Vector2d temp_pos;
 
@@ -457,7 +466,7 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
 
       min_dist = std::min(min_dist, dist);
 
-      if (min_dist < kMinSafetyDist) {
+      if (min_dist < min_safety_dist) {
         break;
       }
     }
@@ -494,7 +503,13 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
   }
 
   float dist;
-  float extra_buffer = 0.05;
+  float extra_buffer =
+      (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+       request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
+       request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+       request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
+          ? 0.5f
+          : 0.05f;
   const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {
