@@ -55,6 +55,7 @@ class ParkingScenarioManager final {
   }
 
   void PubPreparePlanState();
+  void PubPreparePlanStateFreeSlot();
 
   void PublishPreparePlanInfo();
 

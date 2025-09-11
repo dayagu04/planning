@@ -48,7 +48,10 @@ void ApaSlotManager::Update(
   if (state_machine_ptr->IsSeachingStatus() && free_slot_activate_ &&
       is_free_slot_selected_ != iflyauto::FreeSlotSelectedStatus::
                                     FREE_SLOT_SELECTED_STATUS_FINISHED) {
-    ego_info_under_slot_.slot.release_info_.Clear();
+    for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
+      ego_info_under_slot_.slot.release_info_.release_state[i] =
+          SlotReleaseState::NOT_RELEASE;
+    }
   }
 
   ILOG_INFO << "Update ApaSlotManager";
@@ -173,8 +176,8 @@ void ApaSlotManager::Update(
                  !slots_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
-        ego_info_under_slot_.id = slots_map_[1].id_;
-        ego_info_under_slot_.slot_type = slots_map_[1].slot_type_;
+        ego_info_under_slot_.id = slots_map_.begin()->second.id_;
+        ego_info_under_slot_.slot_type = slots_map_.begin()->second.slot_type_;
       } else {
         ego_info_under_slot_.Reset();
       }
