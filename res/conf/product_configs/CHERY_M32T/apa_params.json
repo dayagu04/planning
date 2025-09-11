@@ -428,7 +428,7 @@
   "uss_dist_coefficient_by_vel" : 2.0,
 
   "comment_20": "fold mirror params",
-  "has_smart_fold_mirror": false,
+  "has_smart_fold_mirror": true,
   "force_fold_mirror": false,
   "locked_obs_slot_with_fold_mirror": false,
   "fold_mirror_consume_time": 2.4,
