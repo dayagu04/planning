@@ -777,6 +777,9 @@ void LaneChangeStateMachineManager::CheckOtherAgents(
 
   const auto target_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  if(target_lane == nullptr){
+      return;
+  }
   const double half_width_by_target = target_lane->width() * 0.5;
 
   const auto &vehicle_param =
@@ -1997,6 +2000,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       session_->environmental_model().get_virtual_lane_manager();
   const auto &target_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  if(target_lane == nullptr){
+      return;
+  }
   const auto &ref_path = session_->environmental_model()
                              .get_reference_path_manager()
                              ->get_reference_path_by_lane(target_lane_virtual_id);
@@ -2045,6 +2051,9 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs(){
       session_->environmental_model().get_virtual_lane_manager();
   const auto &target_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  if(target_lane == nullptr){
+      return;
+  }
   double target_lane_half_width = target_lane->width() * 0.5;
   const auto &ref_path = session_->environmental_model()
                              .get_reference_path_manager()
@@ -2108,6 +2117,9 @@ void LaneChangeStateMachineManager::GetSideRiskAgents(){
     session_->environmental_model().get_virtual_lane_manager();
   const auto target_lane =
         virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
+  if(target_lane == nullptr){
+      return;
+  }
   const double half_width_by_target = target_lane->width() * 0.5;
   double lat_range_buff = 0.1;
   const auto reference_path_manager =
