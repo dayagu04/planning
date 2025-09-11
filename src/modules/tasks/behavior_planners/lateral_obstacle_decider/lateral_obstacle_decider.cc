@@ -213,6 +213,8 @@ bool LateralObstacleDecider::Execute() {
     maintain_avoid.reserve(10);
     emergency_avoid.reserve(10);
     lon_overtake_avoid.reserve(10);
+    int side_2_front_count_thr = config_.side_2_front_count_thr;
+    int side_2_front_max_count = config_.side_2_front_max_count;
     for (auto frenet_obs : reference_path_ptr->get_obstacles()) {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
