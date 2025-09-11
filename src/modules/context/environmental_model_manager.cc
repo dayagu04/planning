@@ -748,6 +748,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
   std::unordered_map<int32_t, double> fusion_objects_acc_map;
   // <key: Perception id, value: fusion obj vel>
   std::unordered_map<int32_t, double> fusion_objects_vel_map;
+  // <key: Perception id, value: fusion obj theta>
+  std::unordered_map<int32_t, double> fusion_objects_theta_map;
   for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
     const auto &fusion_obj = fusion_objects_result.fusion_object[i];
     double obj_yaw = fusion_obj.common_info.heading_angle;
@@ -762,12 +764,23 @@ void EnvironmentalModelManager::truncate_prediction_info(
     double fusion_acc = fusion_obj_acc_vec.dot(obj_heading_vec);
     double fusion_vel = std::hypot(fusion_obj.common_info.velocity.x,
                                    fusion_obj.common_info.velocity.y);
+
+    double fusion_theta = 0.0;
+    bool is_low_speed_object = fusion_vel < 2.78 ? true : false;
+    if (is_low_speed_object) {
+      fusion_theta = fusion_obj.common_info.heading_angle;
+    } else {
+      fusion_theta = std::atan2(fusion_obj.common_info.velocity.y,
+                                fusion_obj.common_info.velocity.x);
+    }
     int32_t obj_fusion_source = fusion_obj.additional_info.fusion_source;
     if (obj_fusion_source & OBSTACLE_SOURCE_CAMERA) {
       fusion_objects_acc_map.insert(
           {fusion_obj.additional_info.sensor_source_id[0], fusion_acc});
       fusion_objects_vel_map.insert(
           {fusion_obj.additional_info.sensor_source_id[0], fusion_vel});
+      fusion_objects_theta_map.insert(
+          {fusion_obj.additional_info.sensor_source_id[0], fusion_theta});
     }
   }
 
@@ -874,6 +887,13 @@ void EnvironmentalModelManager::truncate_prediction_info(
         std::fmod(cur_predicion_obj.relative_theta, 2 * M_PI);
     if (cur_predicion_obj.relative_theta > M_PI) {
       cur_predicion_obj.relative_theta -= 2 * M_PI;
+    }
+
+    auto iter2 = fusion_objects_theta_map.find(cur_predicion_obj.id);
+    if (iter2 != fusion_objects_acc_map.end()) {
+      cur_predicion_obj.theta_fusion = iter2->second;
+    } else {
+      cur_predicion_obj.theta_fusion = cur_predicion_obj.theta;
     }
 
     if ((int)cur_predicion_obj.relative_theta == 255) {

@@ -105,6 +105,9 @@ class Agent {
   const double theta() const;
   void set_theta(const double theta);
 
+  const double theta_fusion() const;
+  void set_theta_fusion(const double theta_fusion);
+
   const double speed() const;
   void set_speed(const double speed);
 
@@ -251,6 +254,7 @@ class Agent {
   double x_ = 0.0;
   double y_ = 0.0;
   double theta_ = 0.0;
+  double theta_fusion_ = 0.0;
   double speed_ = 0.0;
   double speed_fusion_ = 0.0;
   double accel_ = 0.0;

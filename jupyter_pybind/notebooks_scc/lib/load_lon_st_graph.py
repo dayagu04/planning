@@ -172,34 +172,35 @@ def load_st_polygen_lower_upper_point(st_graph_data):
 
 def load_processed_trajectory(st_graph_data):
   agents_trajectories_info = []
-  agents_trajectories = st_graph_data.agents_trajectory
-  agents_size = len(agents_trajectories)
+  agents_trajectories_list = st_graph_data.agents_trajectories
+  agents_size = len(agents_trajectories_list)
 
-  vec_size = int(st_graph_data.end_time // 0.2) + 1
-  default_x_vec = [0 for _ in range(vec_size)]
-  default_y_vec = [0 for _ in range(vec_size)]
+  default_x_vec = []
+  default_y_vec = []
 
   for i in range(20):
     if i < agents_size:
-      agent_trajectories = agents_trajectories[i]
-      agent_trajectory_info = {'x_vec': [], 'y_vec': []}
-
+      agent_trajectories_obj = agents_trajectories_list[i]
       x_vec = []
       y_vec = []
-      for point in agent_trajectories.agent_trajectory:
-        x_vec.append(point.x)
-        y_vec.append(point.y)
 
-      agent_trajectory_info['x_vec'] = x_vec
-      agent_trajectory_info['y_vec'] = y_vec
+      for trajectory in agent_trajectories_obj.agent_trajectories:
+          for point in trajectory.agent_trajectory:
+              x_vec.append(point.x)
+              y_vec.append(point.y)
+
+      agent_trajectory_info = {
+          'x_vec': x_vec,
+          'y_vec': y_vec
+      }
+
       agents_trajectories_info.append(agent_trajectory_info)
-
     else:
-      agent_trajectory_info = {'x_vec': [], 'y_vec': []}
-      agent_trajectory_info['x_vec'] = default_x_vec
-      agent_trajectory_info['y_vec'] = default_y_vec
+      agent_trajectory_info = {
+          'x_vec': default_x_vec.copy(),
+          'y_vec': default_y_vec.copy()
+      }
       agents_trajectories_info.append(agent_trajectory_info)
-
   return agents_trajectories_info
 
 def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
@@ -239,12 +240,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ["soft_safety_distance", "safety_target_vel", "safety_dynamic_vel", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'v3_start_stop_status','gear_command','cipv_id_st', 'cipv_id_hmi','cipv_relative_s','time_headway_level','THW','cipv_relative_s_ego_stop',"distance_to_go_condition",
-                          "cipv_vel_frenet","cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
-                          "ignore_gap_rear_agent","rear_agent_ttc_to_ego","lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
-                          "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path',
-                          "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s",
-                          "take_over_request", "request_reason",'cur_lane_ego_s',"cur_lane_ego_front_edge_s","cur_lane_mark_plan","cur_lane_mark_origin","cur_lane_mark_begin","cur_lane_mark_end",'v_target_func_fade_away', 'current_intersection_state',"distance_to_stopline","distance_to_crosswalk"
-                          ]
+                          "cipv_vel_frenet", "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion", "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
+                          "coarse_planning_info_ref_pnts_size","coarse_planning_info_ref_line_s","raw_virtual_lane_pnts_size","raw_virtual_lane_s"]
 
   # st_search_value_list += ['cipv_id_hmi',"lon_decision_to_invade",'invade_neighbor_front_agent_id',"lon_decision_to_invade_ego_motion_sim_path",
                           # "invade_neighbor_front_agent_id_ego_motion_sim_path",'ego_ttc_to_front_invade_agent','ego_ttc_to_front_invade_agent_ego_sim_path','invade_neighbor_decision','invade_neighbor_decision_ego_motion_sim_path']
@@ -977,6 +974,8 @@ def load_lon_global_figure(bag_loader):
   acc_max_vec = []
   cipv_acc = []
   cipv_acc_fusion = []
+  cipv_theta = []
+  cipv_theta_fusion = []
 
   t_vs_vec = bag_loader.vs_msg['t']
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
@@ -984,6 +983,8 @@ def load_lon_global_figure(bag_loader):
   #   acc_max_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['acc_target_high'], 2))
       cipv_acc.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc'], 2))
       cipv_acc_fusion.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_acc_fusion'], 2))
+      cipv_theta.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_theta'], 2))
+      cipv_theta_fusion.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_theta_fusion'], 2))
   for ind in range(len(bag_loader.vs_msg['data'])):
     ego_acc_vec.append(round(bag_loader.vs_msg['data'][ind].long_acceleration, 2))
 
@@ -997,6 +998,10 @@ def load_lon_global_figure(bag_loader):
                               legend_label='cipv_acc', color="green")
   acc_fig.line(t_plan_vec, cipv_acc_fusion, line_width=2,
                               legend_label='cipv_acc_fusion', color="red")
+  acc_fig.line(t_plan_vec, cipv_theta, line_width=2,
+                              legend_label='cipv_theta', color="pink")
+  acc_fig.line(t_plan_vec, cipv_theta_fusion, line_width=2,
+                              legend_label='cipv_theta_fusion', color="cyan")
   acc_fig.legend.click_policy = 'hide'
 
   # 各阶段耗时

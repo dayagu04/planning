@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+
 #include "crossing_agent_decider/crossing_agent_decider.h"
 #include "dynamic_world/dynamic_world.h"
 #include "ego_state_manager.h"
@@ -11,6 +12,23 @@
 
 namespace planning {
 
+struct AgentHistoryState {
+  double timestamp;
+  double x;
+  double y;
+  double vx;
+  double vy;
+  double speed;
+  double theta;
+  double s = 0.0;
+  double l = 0.0;
+  double s_start = 0.0;
+  double s_end = 0.0;
+  double l_start = 0.0;
+  double l_end = 0.0;
+  double s_dot = 0.0;
+  double l_dot = 0.0;
+};
 class AgentLongitudinalDecider : public Task {
  public:
   explicit AgentLongitudinalDecider(
@@ -42,6 +60,7 @@ class AgentLongitudinalDecider : public Task {
                          const double ego_half_length,
                          const double ego_half_width,
                          const PlanningInitPoint init_point,
+                         const double road_curvature_radius,
                          const double cut_in_distance_range_m,
                          const double cut_in_lateral_threshold_m,
                          agent::AgentManager* const mutable_agent_manager);
@@ -60,8 +79,17 @@ class AgentLongitudinalDecider : public Task {
       const std::shared_ptr<VirtualLane> ego_lane,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const agent::Agent& agent, const double agent_max_s,
-      const double cut_in_distance_range_m, const double ego_half_length,
-      const double ego_s, const double ego_theta, const double ego_speed_mps);
+      const double cut_in_distance_range_m,
+      const double large_agent_lower_small_heading_diff,
+      const double ego_half_length, const double ego_s, const double ego_theta,
+      const double ego_speed_mps);
+
+  bool CheckSlowLargeAgentCutIn(
+    const agent::Agent& agent,
+    const double ego_speed_mps,
+    const AgentHistoryState& current_state,
+    const std::shared_ptr<planning_math::KDPath>& planned_path,
+    const std::shared_ptr<VirtualLane>& ego_lane);
 
   void IsSlowSpeedCutinSuppression(
       const std::shared_ptr<planning_math::KDPath>& planned_path,
@@ -76,6 +104,20 @@ class AgentLongitudinalDecider : public Task {
       double* const ptr_large_lateral_distance);
 
   bool IsLargeAgent(const agent::Agent& agent);
+  double GetDynamicBoundaryBuffer(double ego_speed_mps, double agent_speed_mps);
+
+  bool IsVruCutIn(
+    const agent::Agent& agent, const double object_l_speed_mps,
+    const double small_lateral_distance, const double max_s,
+    const double ego_s, const double ego_half_length,
+    const std::shared_ptr<planning_math::KDPath>& planned_path);
+  bool IsVruCutInWithHistory(
+    const agent::Agent& agent,
+    const std::shared_ptr<planning_math::KDPath>& planned_path);
+  void UpdateAndGetAgentState(
+    const agent::Agent& agent, const PlanningInitPoint& init_point,
+    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+    AgentHistoryState& current_state);
 
   void UpdateCutInAgentTable();
 
@@ -118,13 +160,22 @@ class AgentLongitudinalDecider : public Task {
                                      const double agent_min_l) const;
 
   double CalculateRoadCurvature(const double v_ego);
+  double CalculateRoadCurvatureByKDpath(const double ego_s, const double v_ego);
 
   double CalculateIntersectionLength(const double start_1, const double end_1,
                                      const double start_2,
                                      const double end_2) const;
+  double CalculateMean(const std::vector<double>& values) const;
+
+  double CalculateVariance(const std::vector<double>& values, double mean) const;
+
+  std::deque<AgentHistoryState> GetHistoryInWindow(
+    const std::deque<AgentHistoryState>& history, double window_duration) const;
+
 
  private:
   // framework::Session *session_ = nullptr;
+  FrenetBoundary ego_frenet_boundary_;
   std::shared_ptr<planning_data::DynamicWorld> dynamic_world_;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_;
   std::shared_ptr<EgoStateManager> ego_state_manager_;
@@ -139,5 +190,6 @@ class AgentLongitudinalDecider : public Task {
   std::unordered_map<int32_t, int32_t> cut_out_agent_count_;
 
   std::shared_ptr<CrossingAgentDecider> crossing_agent_decider_;
+  std::unordered_map<int32_t, std::deque<AgentHistoryState>> agent_history_map_;
 };
 }  // namespace planning

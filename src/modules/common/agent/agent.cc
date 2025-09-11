@@ -30,6 +30,7 @@ Agent::Agent(const Agent& agent)
   x_ = agent.x();
   y_ = agent.y();
   theta_ = agent.theta();
+  theta_fusion_ = agent.theta_fusion();
   speed_ = agent.speed();
   speed_fusion_ = agent.speed_fusion();
   accel_ = agent.accel();
@@ -65,7 +66,8 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
   y_ = prediction_object.position_y;
   // theta定义
   // theta_ = prediction_object.relative_theta;
-  theta_ = prediction_object.theta;
+  theta_ = prediction_object.theta_fusion;
+  theta_fusion_ = prediction_object.theta_fusion;
   speed_ = prediction_object.speed_fusion;
   speed_fusion_ = prediction_object.speed_fusion;
   accel_ = prediction_object.acc;
@@ -144,6 +146,11 @@ void Agent::set_y(const double y) { y_ = y; }
 
 const double Agent::theta() const { return theta_; }
 void Agent::set_theta(const double theta) { theta_ = theta; }
+
+const double Agent::theta_fusion() const { return theta_fusion_; };
+void Agent::set_theta_fusion(const double theta_fusion) {
+  theta_fusion_ = theta_fusion;
+};
 
 const double Agent::speed() const { return speed_; }
 void Agent::set_speed(const double speed) { speed_ = speed; }

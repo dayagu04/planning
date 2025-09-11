@@ -28,8 +28,12 @@ message AgentStBoundary {
 }
 
 message AgentTrajectory {
-  optional int32 agent_id = 1;
   repeated Point2D agent_trajectory = 2;
+}
+
+message AgentTrajectories {
+  optional int32 agent_id = 1;
+  repeated AgentTrajectory agent_trajectories = 2;
 }
 
 message StGraphData {
@@ -40,5 +44,5 @@ message StGraphData {
   repeated StBoundary st_boundaries = 5;
   repeated Point2D planned_path = 6;
   repeated StBoundary neighbor_st_boundaries = 7;
-  repeated AgentTrajectory agents_trajectory = 8;
+  repeated AgentTrajectories agents_trajectories = 8;
 }
