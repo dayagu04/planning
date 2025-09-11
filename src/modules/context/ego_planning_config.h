@@ -286,7 +286,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_ehr_column_box = false;
   double hpp_min_search_range = 20;
   double raw_ref_extend_buff = 0;
-  bool enable_lane_borrow_deciderV2 =  true;
+  bool enable_lane_borrow_deciderV2 =  false;
   bool left_right_turn_func_fading_away_switch = false;
 };
 
