@@ -228,7 +228,8 @@ void ParkingScenarioManager::ScenarioTry() {
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     // 车尾泊入功能
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
+        ego_info_under_slot.slot_type == SlotType::SLANT) {
       std::shared_ptr<ParkingScenario> temp_narrow_scenario =
           scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
