@@ -2382,9 +2382,9 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
   iflyauto::APAHMIData apa_hmi_data;
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_data);
-  // generator.ClearRecommendationDirectionFlag(apa_hmi_data);
+  generator.ClearRecommendationDirectionFlag(apa_hmi_data);
   generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
-  // generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
+  generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
 
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
     ApaRecommendationDirection dir;
@@ -2440,8 +2440,8 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
             ? ApaRecommendationDirection::VerticalFront
             : ApaRecommendationDirection::VerticalBack;
 
-    // generator.SetRecommendationDirectionFlag(apa_hmi_data,
-    //                                          planning_recommend_park_dir);
+    generator.SetRecommendationDirectionFlag(apa_hmi_data,
+                                             planning_recommend_park_dir);
 
   } else {
     generator.SetReleaseDirectionFlag(apa_hmi_data, ParallelFrontLeft);

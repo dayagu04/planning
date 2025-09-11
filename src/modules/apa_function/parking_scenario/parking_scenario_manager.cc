@@ -381,7 +381,10 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
   // fill prepare plan recommend park direction
   apa_hmi_data_.planning_park_dir =
       current_scenario_->GetAPAHmi().planning_park_dir;
-  ILOG_INFO << "recommend park dir = " << apa_hmi_data_.planning_park_dir;
+  apa_hmi_data_.planning_recommend_park_dir =
+      current_scenario_->GetAPAHmi().planning_recommend_park_dir;
+  ILOG_INFO << "release park dir = " << apa_hmi_data_.planning_park_dir
+            << ", recommend park dir = " << apa_hmi_data_.planning_recommend_park_dir;
 }
 
 void ParkingScenarioManager::PubPreparePlanState() {
@@ -453,12 +456,12 @@ void ParkingScenarioManager::RecommendParkingDirection() {
   apa_hmi_data_.planning_park_dir =
       current_scenario_->GetAPAHmi().planning_park_dir;
 
-  // apa_hmi_data_.planning_recommend_park_dir =
-  //     current_scenario_->GetAPAHmi().planning_recommend_park_dir;
+  apa_hmi_data_.planning_recommend_park_dir =
+      current_scenario_->GetAPAHmi().planning_recommend_park_dir;
 
-  // ILOG_INFO << "release dir = " << apa_hmi_data_.planning_park_dir
-  //           << ", recommend park dir = "
-  //           << apa_hmi_data_.planning_recommend_park_dir;
+  ILOG_INFO << "release dir = " << apa_hmi_data_.planning_park_dir
+            << ", recommend park dir = "
+            << apa_hmi_data_.planning_recommend_park_dir;
 
   return;
 }

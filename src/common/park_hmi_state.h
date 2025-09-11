@@ -39,6 +39,16 @@ class ApaDirectionGenerator {
     state.planning_park_dir = 0;
   }
 
+  void SetRecommendationDirectionFlag(iflyauto::APAHMIData &state,
+                                      const uint16_t state_bit) {
+    state.planning_recommend_park_dir |=
+    RecommendationDirectionMask(state_bit);
+  }
+
+  void ClearRecommendationDirectionFlag(iflyauto::APAHMIData &state) {
+    state.planning_recommend_park_dir = 0;
+  }
+
   // void SetRecommendationDirectionFlag(iflyauto::APAHMIData &state,
   //                                     const uint16_t state_bit) {
   //   state.planning_recommend_park_dir |= RecommendationDirectionMask(state_bit);
