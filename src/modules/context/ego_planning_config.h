@@ -3124,6 +3124,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
       "tunnel_vel_limit_kph");
     ReadItem<double>(json, function_off_dis_before_toll_station, "speed_limit_decider",
       "function_off_dis_before_toll_station");
+    ReadItem<bool>(json, enable_tfl_v_limit, "speed_limit_decider",
+      "enable_tfl_v_limit");
 
     read_json_vec(json,
       std::vector<std::string>{"speed_limit_decider","vehicle_lat_dis_rel_vel_table",
@@ -3243,6 +3245,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double tunnel_vel_limit_kph = 80.0;
   double function_off_dis_before_toll_station = 250.0;
   bool enable_dangerous_obs_speed_limit = true;
+  bool enable_tfl_v_limit = true;
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
   VRULatDisRelVelTable vru_lat_dis_rel_vel_table;

@@ -740,7 +740,7 @@
     "min_acc_function_fading_away": -0.9,
     "function_fading_away_distance_to_intersection": 50.0,
     "v_reduce_intersection": 0.0,
-    "v_reduce_rate_intersection": 0.05,
+    "v_reduce_rate_intersection": 0.00,
     "v_limit_one_still_danger_obs": 12.5,
     "v_limit_more_still_danger_obs": 11.11,
     "v_rel_limit_for_dynamic_danger_obs": 4.17,
@@ -749,6 +749,7 @@
     "dangerous_obs_lon_dis_high": 40.0,
     "dangerous_obs_lon_dis_low": 1.7,
     "enable_dangerous_obs_speed_limit": true,
+    "enable_tfl_v_limit": false,
     "toll_station_vel_limit_kph": 60.0,
     "sapa_vel_limit_kph": 60.0,
     "non_express_vel_limit_kph": 60.0,
@@ -822,7 +823,7 @@
     "lon_jerk_thr": 1.5
   },
   "traffic_light_decider": {
-    "enable_tfl_decider": true,
+    "enable_tfl_decider": false,
     "virtual_dis_before_stopline": 25.5,
     "stopline_tfl_dis_thred": 50
   },
