@@ -15,6 +15,7 @@
 #include "ifly_time.h"
 #include "log_glog.h"
 #include "target_pose_decider/target_pose_decider.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -35,6 +36,8 @@ void ApaSlotManager::Update(
     ILOG_ERROR << "Update ApaSlotManager, local_view_ptr is nullptr";
     return;
   }
+
+  double start_time = IflyTime::Now_ms();
 
   free_slot_activate_ = state_machine_ptr->GetFreeSlotActivate();
   is_free_slot_selected_ = state_machine_ptr->GetFreeSlotSelectedStatus();
@@ -217,6 +220,10 @@ void ApaSlotManager::Update(
   }
 
   JSON_DEBUG_VALUE("total_slot_size", slots_map_.size())
+
+  TimeBenchmark::Instance().SetTime(
+      TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME,
+      IflyTime::Now_ms() - start_time);
 
   return;
 }

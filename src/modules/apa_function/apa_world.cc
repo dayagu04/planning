@@ -37,6 +37,8 @@ void ApaWorld::Init() {
 
   parking_task_interface_ptr_ = std::make_shared<ParkingTaskInterface>(
       obstacle_manager_ptr_, col_det_interface_ptr_, measure_data_ptr_);
+
+  TimeBenchmark::Instance().InitName();
 }
 
 void ApaWorld::Reset() {
@@ -59,6 +61,7 @@ const bool ApaWorld::Update() {
     return false;
   }
   ILOG_INFO << "---- apa_world: Update() ---";
+  TimeBenchmark::Instance().Clear();
 
   measure_data_ptr_->Update(local_view_ptr_);
 

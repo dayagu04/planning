@@ -2550,6 +2550,7 @@ void NarrowSpaceScenario::UpdateRecommentRouteBox() {
 
 void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
   auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->mutable_apa_path_debug()->clear_path_time();
   debug->mutable_apa_path_debug()
       ->mutable_path_time()
       ->mutable_astar_time()
@@ -2563,6 +2564,9 @@ void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
         ->add_search_time(time.time_ms[i]);
     // ILOG_INFO << "search time = " << time.time_ms[i];
   }
+
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
+                                    time.total_time_ms);
 
   return;
 }

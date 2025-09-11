@@ -71,3 +71,47 @@ def GetProtoStopSigns(planning_proto):
       stop_sign_lines_y.append([stop_sign[1], stop_sign[3]])
 
   return stop_sign_lines_x, stop_sign_lines_y
+
+# Define the JavaScript callback code
+callback_code = """
+    var x = cb_obj.x;
+    var y = cb_obj.y;
+
+    source.data['x'].push(x);
+    source.data['y'].push(y);
+
+    if (source.data['x'].length > 2) {
+        source.data['x'].shift();
+        source.data['y'].shift();
+        source.data['x'].shift();
+        source.data['y'].shift();
+    }
+    source.change.emit();
+
+    if (source.data['x'].length >= 2) {
+        var x1 = source.data['x'][source.data['x'].length - 2];
+        var y1 = source.data['y'][source.data['y'].length - 2];
+        var x2 = x;
+        var y2 = y;
+        var x3 = (x1 + x2) / 2;
+        var y3 = (y1 + y2) / 2;
+
+        var distance = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+
+        console.log("Distance between the last two points: " + distance);
+
+        distance = distance.toFixed(4);
+        text_source.data = {'x': [x3], 'y': [y3], 'text': [distance]};
+        text_source.change.emit();
+
+        line_source.data = {'x': [x1, x2], 'y': [y1, y2]};
+        line_source.change.emit();
+    }
+
+    if (source.data['x'].length == 1) {
+        text_source.data['x'].shift();
+        text_source.data['y'].shift();
+        text_source.data['text'].shift();
+    }
+    text_source.change.emit();
+"""

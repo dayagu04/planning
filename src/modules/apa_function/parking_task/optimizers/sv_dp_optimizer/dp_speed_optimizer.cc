@@ -13,6 +13,7 @@
 #include "log_glog.h"
 #include "speed/apa_speed_decision.h"
 #include "sv_graph_node.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -80,8 +81,8 @@ void DpSpeedOptimizer::Excute(
 
   RecordDebugInfo(path);
 
-  ILOG_INFO << "dp optimizer time = " << IflyTime::Now_ms() - opt_start_time;
-
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_DP_TIME,
+                                        IflyTime::Now_ms() - opt_start_time);
   return;
 }
 

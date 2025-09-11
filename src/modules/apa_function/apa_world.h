@@ -24,6 +24,7 @@
 #include "slot_manager.h"
 #include "spline.h"
 #include "spline_projection.h"
+#include "time_benchmark.h"
 
 #define APA_COMPARE_PLANNING_TRAJ_POINTS_MAX_NUM 26
 

@@ -8,6 +8,7 @@
 #include "debug_info_log.h"
 #include "log_glog.h"
 #include "speed/apa_speed_decision.h"
+#include "time_benchmark.h"
 
 namespace planning {
 namespace apa_planner {
@@ -21,6 +22,7 @@ void ParkSpeedLimitDecider::Execute(
     return;
   }
 
+  double opt_start_time = IflyTime::Now_ms();
   config_.Init(park_speed_mode);
 
   Pose2D ego_pose = measure_data_ptr_->GetPose();
@@ -30,6 +32,10 @@ void ParkSpeedLimitDecider::Execute(
   AddSpeedLimitDecisions(path, speed_decisions);
 
   PublishDebugInfo(path);
+
+  double opt_time_ms = IflyTime::Now_ms() - opt_start_time;
+  TimeBenchmark::Instance().SetTime(
+      TimeBenchmarkType::TB_APA_SPEED_LIMIT_DECIDER, opt_time_ms);
 
 #if DECIDER_DEBUG
   TaskDebug(path);
