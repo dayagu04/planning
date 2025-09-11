@@ -62,14 +62,14 @@ HybridAStar::HybridAStar(const PlannerOpenSpaceConfig& open_space_conf,
       obstacles_, edt_, clear_zone_, &grid_map_bound_, &request_);
 
   polynomial_sampling_ = std::make_shared<PolynomialCurveSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
-      &config_, vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
+      vehicle_param_.min_turn_radius, collision_detect_);
   rs_sampling_ = std::make_shared<RSSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
-      &config_, vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
+      vehicle_param_.min_turn_radius, collision_detect_);
   spiral_sampling_ = std::make_shared<SpiralSampling>(
-      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_,
-      &config_, vehicle_param_.min_turn_radius, collision_detect_);
+      &grid_map_bound_, obstacles_, &request_, edt_, ref_line_, &config_,
+      vehicle_param_.min_turn_radius, collision_detect_);
 }
 
 bool HybridAStar::CalcRSPathToGoal(Node3d* current_node,
@@ -1214,7 +1214,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
       ILOG_INFO << "start_node in collision with obstacles "
-                 << static_cast<int>(start_node_->GetConstCollisionType());
+                << static_cast<int>(start_node_->GetConstCollisionType());
 
       // start_node_->DebugString();
       result->fail_type = AstarFailType::START_COLLISION;
@@ -1647,7 +1647,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
       ILOG_INFO << "start_node in collision with obstacles "
-                 << static_cast<int>(start_node_->GetConstCollisionType());
+                << static_cast<int>(start_node_->GetConstCollisionType());
 
       // start_node_->DebugString();
 
