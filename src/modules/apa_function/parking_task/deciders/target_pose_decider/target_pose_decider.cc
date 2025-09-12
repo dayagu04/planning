@@ -55,6 +55,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     if (virtual_tar_x >
         slot_.processed_corner_coord_local_.pt_01_mid.x() - 0.68) {
       slot_.limiter_.valid = false;
+    } else if (virtual_tar_x <
+               slot_.processed_corner_coord_local_.pt_23_mid.x() + 0.18) {
+      slot_.limiter_.valid = false;
     }
   }
   if (!slot_.limiter_.valid) {
