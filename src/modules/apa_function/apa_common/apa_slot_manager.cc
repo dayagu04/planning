@@ -76,6 +76,10 @@ void ApaSlotManager::Update(
     ApaSlot slot;
     slot.Update(fusion_slot);
 
+    if (free_slot_activate_) {
+      slot.slot_source_type_ = SlotSourceType::SELF_DEFINE;
+    }
+
     const double dist =
         (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_center).norm();
 
@@ -151,9 +155,11 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = select_slot_id;
         ego_info_under_slot_.slot_type = slots_map_[select_slot_id].slot_type_;
-      } else if (free_slot_activate_ && is_free_slot_selected_ ==
-        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED &&
-        !slots_map_.empty()){
+      } else if (free_slot_activate_ &&
+                 is_free_slot_selected_ ==
+                     iflyauto::FreeSlotSelectedStatus::
+                         FREE_SLOT_SELECTED_STATUS_FINISHED &&
+                 !slots_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = slots_map_[1].id_;
@@ -221,9 +227,8 @@ void ApaSlotManager::Update(
 
   JSON_DEBUG_VALUE("total_slot_size", slots_map_.size())
 
-  TimeBenchmark::Instance().SetTime(
-      TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME,
-      IflyTime::Now_ms() - start_time);
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME,
+                                    IflyTime::Now_ms() - start_time);
 
   return;
 }

@@ -180,7 +180,12 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   if (slot_.slot_type_ == SlotType::SLANT) {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
   }
-  max_lon_move_dist = front_exceed_line_dx + dx;
+
+  if (slot_.slot_source_type_ == SlotSourceType::SELF_DEFINE) {
+    front_exceed_line_dx = 0.0;
+  }
+
+  max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
   max_lon_move_dist = std::max(max_lon_move_dist, 0.0001);
 
   ILOG_INFO << "max_lon_move_dist = " << max_lon_move_dist

@@ -130,6 +130,7 @@ enum class SlotSourceType : uint8_t {
   CAMERA,
   USS,
   CAMERA_USS,
+  SELF_DEFINE,
   INVALID,
 };
 
