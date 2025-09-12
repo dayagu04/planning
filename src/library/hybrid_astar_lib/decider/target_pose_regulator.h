@@ -46,7 +46,7 @@ class TargetPoseRegulator : public AstarDecider {
 
   void Clear();
 
-  // Get most safe target pose
+  // Get most safe target pose, 15 cm is ok.
   const std::pair<Pose2f, float> GetCandidatePose(const float lat_buffer) const;
 
   const float GetEgoObsDist() const { return ego_dist_to_obs_; }
@@ -95,12 +95,14 @@ class TargetPoseRegulator : public AstarDecider {
   std::vector<PoseRegulateCandidate> candidate_info_;
   const AstarRequest *request_;
 
+  // rear axis center
   TerminalCheckBoundary x_check_bounday_;
 
   // max dist to cross over slot inside line
   float cross_the_slot_line_max_dist_;
 
   float ego_dist_to_obs_;
+  float max_lat_buffer_;
 };
 
 }  // namespace planning

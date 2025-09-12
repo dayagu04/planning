@@ -15,11 +15,10 @@
 namespace planning {
 
 #define DEBUG_DECIDER (0)
-#define SAFE_ENOUGH_BUFFER (0.5)
 
 bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
   if (candidate_info_.size() > 0 &&
-      candidate_info_[0].dist_to_obs > SAFE_ENOUGH_BUFFER) {
+      candidate_info_[0].dist_to_obs > max_lat_buffer_) {
     return true;
   }
 
@@ -38,7 +37,6 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(
       x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
-      // todo: 使用新的方式，加速这里的计算. 采样的计算方式并不快.
       float veh_back_edge_to_slot = 4.0f;
       float veh_x_upper = request->slot_length + veh_back_edge_to_slot -
                           veh_param.rear_edge_to_rear_axle;
@@ -99,6 +97,7 @@ void TargetPoseRegulator::Process(
   center_line_target_ = center_line_target;
   request_ = request;
   cross_the_slot_line_max_dist_ = 0.0;
+  max_lat_buffer_ = 0.3;
   edt->UpdateSafeBuffer(0.0, 0.2, 0.0);
   UpdateDefaultPoseInfo(request, veh_param, direction_request, edt);
 
@@ -208,7 +207,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     ILOG_INFO << "offset = " << y_offset << ", dist = " << dist;
 #endif
 
-    if (dist > SAFE_ENOUGH_BUFFER) {
+    if (dist > max_lat_buffer_) {
       break;
     }
   }
@@ -509,13 +508,13 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
        request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
        request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
           ? 0.5f
-          : 0.05f;
+          : 0.0f;
   const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {
     // If pose is big buffer, return
-    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
-    if (dist > 0.0) {
+    dist = obj.dist_to_obs - lat_buffer;
+    if (dist > 0.0f) {
       ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
                 << ",obs dist = " << obj.dist_to_obs;
       return std::make_pair(obj.pose, obj.dist_to_obs);

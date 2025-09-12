@@ -720,8 +720,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // judge target regulator goal if collide
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result =
-      regulator.GetCandidatePose(config_.safe_buffer.lat_safe_buffer_inside[0]);
+  target_regulator_result = regulator.GetCandidatePose(0.15);
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
@@ -974,7 +973,8 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
 const float HybridAStarInterface::GetLatBufferForInsideSlot(
     const float target_obs_dist, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
-  float inside_slot_min_obs_dist = 0.0;
+  // 1. generate obs dist
+  float inside_slot_min_obs_dist = 0.0f;
   // ego is inside slot
   if (is_ego_overlap_with_slot) {
     inside_slot_min_obs_dist = std::min(ego_obs_dist, target_obs_dist);
@@ -983,12 +983,13 @@ const float HybridAStarInterface::GetLatBufferForInsideSlot(
     inside_slot_min_obs_dist = target_obs_dist;
   }
 
-  // For searching a solution easily, safe buffer should smaller than obstacle
-  // distance.
-  float search_efficiency_buffer = 0.15;
+  // 2. For searching a solution easily, safe buffer should smaller than
+  // obstacle distance.
+  float search_efficiency_buffer = 0.15f;
   inside_slot_min_obs_dist -= search_efficiency_buffer;
+  inside_slot_min_obs_dist = std::max(0.0f, inside_slot_min_obs_dist);
 
-  float safe_buffer = config_.safe_buffer.lat_safe_buffer_inside[0];
+  float safe_buffer = 0.0f;
   for (size_t i = 0; i < config_.safe_buffer.lat_safe_buffer_inside.size();
        i++) {
     safe_buffer = config_.safe_buffer.lat_safe_buffer_inside[i];
