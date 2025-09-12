@@ -16,8 +16,6 @@ namespace planning {
 void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end) {
   AstarDecider::Process(start, end);
 
-  ShrinkChildrenByHeadingForTailIn();
-
   return;
 }
 

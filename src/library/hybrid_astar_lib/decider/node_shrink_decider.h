@@ -11,6 +11,7 @@ namespace planning {
 
 struct NodeHeadingShrink {
   bool limit_search_heading_;
+  // [0, Pi]
   float heading_low_bound_;
   float heading_up_bound_;
 };
