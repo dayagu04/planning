@@ -3283,7 +3283,7 @@ bool GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
             obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {
           return false;
         } else if (!is_nudge_left && (care_lateral_distacle <
-            ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().s_end)) {
+            ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().l_end)) {
           return false;
         } else {
           // if (obstacle->frenet_l() < 0) {
