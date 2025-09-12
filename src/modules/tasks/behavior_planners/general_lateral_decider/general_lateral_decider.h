@@ -142,8 +142,10 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
   void ProtectBoundByInitPoint(std::pair<double, double> &bound,
                                std::pair<BoundInfo, BoundInfo> &bound_info);
@@ -156,8 +158,10 @@ class GeneralLateralDecider : public Task {
                         std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
   void GenerateObstaclePreliminaryDecision(
@@ -180,12 +184,15 @@ class GeneralLateralDecider : public Task {
                                 bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
@@ -290,11 +297,14 @@ class GeneralLateralDecider : public Task {
   ObstacleDecisions dynamic_obstacle_decisions_;
 
   std::vector<WeightedBounds> soft_bounds_;
+  std::vector<WeightedBounds> soft_bounds_second_;
   std::vector<WeightedBounds> hard_bounds_;
 
   std::vector<std::pair<double, double>> frenet_soft_bounds_;
+  std::vector<std::pair<double, double>> frenet_soft_bounds_second_;
   std::vector<std::pair<double, double>> frenet_hard_bounds_;
   std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_second_info_;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
   FrenetEgoState ego_frenet_state_;

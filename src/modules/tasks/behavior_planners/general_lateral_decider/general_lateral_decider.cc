@@ -35,6 +35,7 @@ GeneralLateralDecider::GeneralLateralDecider(
   config_ = config_builder->cast<GeneralLateralDeciderConfig>();
   name_ = "GeneralLateralDecider";
   frenet_soft_bounds_.resize(config_.num_step + 1);
+  frenet_soft_bounds_second_.resize(config_.num_step + 1);
   frenet_hard_bounds_.resize(config_.num_step + 1);
   soft_bounds_info_.resize(config_.num_step + 1);
   hard_bounds_info_.resize(config_.num_step + 1);
@@ -81,8 +82,11 @@ bool GeneralLateralDecider::InitInfo() {
   match_index_map_.clear();
   ref_path_points_.clear();
   soft_bounds_.clear();
+  soft_bounds_second_.clear();
   hard_bounds_.clear();
   frenet_soft_bounds_.assign(frenet_soft_bounds_.size(),
+                             std::make_pair(0.0, 0.0));
+  frenet_soft_bounds_second_.assign(frenet_soft_bounds_second_.size(),
                              std::make_pair(0.0, 0.0));
   frenet_hard_bounds_.assign(frenet_hard_bounds_.size(),
                              std::make_pair(0.0, 0.0));
@@ -144,10 +148,9 @@ bool GeneralLateralDecider::Execute() {
 
   GenerateObstaclesBoundary();
 
-  // UnitTest();
-
-  ExtractBoundary(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
-                  hard_bounds_info_);
+  ExtractBoundary(frenet_soft_bounds_, frenet_soft_bounds_second_,
+                  frenet_hard_bounds_, soft_bounds_info_,
+                  soft_bounds_second_info_, hard_bounds_info_);
   CalculateAvoidObstacles(frenet_soft_bounds_, soft_bounds_info_);
   LimitFrenetLateralSlope(frenet_soft_bounds_);
   LimitFrenetLateralSlope(frenet_hard_bounds_);
@@ -157,14 +160,16 @@ bool GeneralLateralDecider::Execute() {
           ->mutable_general_lateral_decider_output();
   PostProcessReferenceTrajBySoftBound(frenet_soft_bounds_,
                                       general_lateral_decider_output);
-  GenerateLateralDeciderOutput(frenet_soft_bounds_, frenet_hard_bounds_,
-                               soft_bounds_info_, hard_bounds_info_,
+
+  GenerateLateralDeciderOutput(frenet_soft_bounds_, frenet_soft_bounds_second_,
+                               frenet_hard_bounds_, soft_bounds_info_,
+                               soft_bounds_second_info_, hard_bounds_info_,
                                general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
-  SaveLatDebugInfo(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
-                   hard_bounds_info_);
+  SaveLatDebugInfo(frenet_soft_bounds_, frenet_soft_bounds_second_, frenet_hard_bounds_, soft_bounds_info_,
+                   soft_bounds_second_info_, hard_bounds_info_);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCostTime", end_time - start_time);
@@ -1428,6 +1433,7 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   soft_bounds_.resize(ref_traj_points_.size());
+  soft_bounds_second_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-min_road_radius_, min_road_radius_};
     Bound hard_bound_road{-min_road_radius_, min_road_radius_};
@@ -1475,6 +1481,8 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     soft_bounds_[i].emplace_back(WeightedBound{
         soft_bound_road.lower, soft_bound_road.upper,
         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+
+    // generate soft_bounds_second_ according to hard_bounds_ and soft_bounds_
   }
 }
 
@@ -3790,8 +3798,10 @@ void GeneralLateralDecider::RefineConflictLatDecisions(
 
 void GeneralLateralDecider::ExtractBoundary(
     std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
     std::vector<std::pair<double, double>> &frenet_hard_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
     std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
   const double planning_init_point_l =
       ego_frenet_state_.planning_init_point().frenet_state.r;
@@ -4417,8 +4427,10 @@ void GeneralLateralDecider::PostProcessBound(
 
 void GeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
   const auto &potential_dangerous_agent_decider_output =
       session_->planning_context()
@@ -4442,6 +4454,10 @@ void GeneralLateralDecider::SaveLatDebugInfo(
   lat_debug_info_.mutable_soft_lower_bound_info_vec()->Reserve(
       ref_traj_points_.size());
   lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_lower_bound_second_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_soft_upper_bound_second_info_vec()->Reserve(
       ref_traj_points_.size());
 
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
@@ -4478,6 +4494,22 @@ void GeneralLateralDecider::SaveLatDebugInfo(
         soft_bounds_info[i].second.id);
     soft_upper_bound_info->mutable_bound_info()->set_type(
         BoundType2String(soft_bounds_info[i].second.type));
+
+    auto soft_lower_bound_second_info =
+        lat_debug_info_.mutable_soft_lower_bound_second_info_vec()->Add();
+    soft_lower_bound_second_info->set_lower(frenet_soft_bounds_second[i].first);
+    soft_lower_bound_second_info->mutable_bound_info()->set_id(
+        soft_bounds_second_info[i].first.id);
+    soft_lower_bound_second_info->mutable_bound_info()->set_type(
+        BoundType2String(soft_bounds_second_info[i].first.type));
+
+    auto soft_upper_bound_second_info =
+        lat_debug_info_.mutable_soft_upper_bound_second_info_vec()->Add();
+    soft_upper_bound_second_info->set_upper(frenet_soft_bounds_second[i].second);
+    soft_upper_bound_second_info->mutable_bound_info()->set_id(
+        soft_bounds_second_info[i].second.id);
+    soft_upper_bound_second_info->mutable_bound_info()->set_type(
+        BoundType2String(soft_bounds_second_info[i].second.type));
   }
 
   // 障碍物决策是否存在跳动
@@ -4521,14 +4553,17 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
 
 void GeneralLateralDecider::GenerateLateralDeciderOutput(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   general_lateral_decider_output.soft_bounds = std::move(soft_bounds_);
+  general_lateral_decider_output.soft_bounds_second = std::move(soft_bounds_second_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  GenerateEnuBoundaryPoints(frenet_soft_bounds, frenet_hard_bounds,
+  GenerateEnuBoundaryPoints(frenet_soft_bounds, frenet_soft_bounds_second, frenet_hard_bounds,
                             general_lateral_decider_output);
 
   GenerateEnuReferenceTheta(general_lateral_decider_output);
@@ -4537,23 +4572,30 @@ void GeneralLateralDecider::GenerateLateralDeciderOutput(
 
   auto &hard_bounds_frenet_output =
       general_lateral_decider_output.hard_bounds_frenet_point;
+  auto &soft_bounds_second_frenet_output =
+      general_lateral_decider_output.soft_bounds_second_frenet_point;
   auto &soft_bounds_frenet_output =
       general_lateral_decider_output.soft_bounds_frenet_point;
   auto &hard_bounds_info_output =
       general_lateral_decider_output.hard_bounds_info;
+  auto &soft_bounds_second_info_output =
+      general_lateral_decider_output.soft_bounds_second_info;
   auto &soft_bounds_info_output =
       general_lateral_decider_output.soft_bounds_info;
 
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
+    soft_bounds_second_frenet_output.emplace_back(frenet_soft_bounds_second[i]);
     soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
     hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    soft_bounds_second_info_output.emplace_back(soft_bounds_second_info[i]);
     soft_bounds_info_output.emplace_back(soft_bounds_info[i]);
   }
 }
 
 void GeneralLateralDecider::GenerateEnuBoundaryPoints(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &soft_bounds_output =
