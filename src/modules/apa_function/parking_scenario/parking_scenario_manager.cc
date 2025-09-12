@@ -83,14 +83,14 @@ void ParkingScenarioManager::UpdateScenarioType() {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
       if (apa_param.GetParam().path_generator_type ==
           ParkPathGenerationType::GEOMETRY_BASED) {
-        scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
         // check is narrow space or not
         if (IsSlotReleaseByHybridAstar()) {
           scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+        } else {
+          scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
         }
       } else {
         // only use astar
-        JSON_DEBUG_VALUE("geometry_path_release", false);
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
     } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
@@ -207,6 +207,12 @@ void ParkingScenarioManager::ScenarioRunning() {
 
   PubStopReason();
 
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_NARROW_SPACE) {
+    JSON_DEBUG_VALUE("geometry_path_release", false);
+  } else {
+    JSON_DEBUG_VALUE("geometry_path_release", true);
+  }
+
   ILOG_INFO << "scenario running";
   return;
 }
@@ -228,7 +234,8 @@ void ParkingScenarioManager::ScenarioTry() {
 
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
     // 车尾泊入功能
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
+        ego_info_under_slot.slot_type == SlotType::SLANT) {
       std::shared_ptr<ParkingScenario> temp_narrow_scenario =
           scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
@@ -291,21 +298,11 @@ const bool ParkingScenarioManager::IsSlotReleaseByHybridAstar() {
           ->GetEgoInfoUnderSlot()
           .slot.release_info_.release_state[GEOMETRY_PLANNING_RELEASE];
 
-  if (planning_output_.planning_status.apa_planning_status ==
-          iflyauto::APA_IN_PROGRESS ||
-      planning_output_.planning_status.hpp_planning_status ==
-          iflyauto::HPP_RUNNING) {
-    JSON_DEBUG_VALUE("geometry_path_release",
-                     !(astar_path_release == SlotReleaseState::RELEASE));
+  if (geometry_path_release == SlotReleaseState::RELEASE) {
+    return false;
   }
 
-  if (geometry_path_release == SlotReleaseState::NOT_RELEASE &&
-      astar_path_release == SlotReleaseState::RELEASE) {
-    ILOG_INFO << "use astar plan";
-    return true;
-  }
-  ILOG_INFO << "use geometry plan";
-  return false;
+  return astar_path_release != SlotReleaseState::UNKNOWN;
 }
 
 void ParkingScenarioManager::PublishPreparePlanInfo() {
@@ -332,13 +329,15 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
     case SlotReleaseState::RELEASE:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_SUCCESS;
       break;
-    case SlotReleaseState::UNKOWN:
+    case SlotReleaseState::UNKNOWN:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
       break;
     default:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;
       break;
   }
+
+  ILOG_INFO << "prepare_plan_state = " << apa_hmi_data_.prepare_plan_state;
 
   // fill prepare plan recommend park direction
   apa_hmi_data_.planning_park_dir =
@@ -364,7 +363,7 @@ void ParkingScenarioManager::PubPreparePlanState() {
     case SlotReleaseState::RELEASE:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_SUCCESS;
       break;
-    case SlotReleaseState::UNKOWN:
+    case SlotReleaseState::UNKNOWN:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
       break;
     default:

@@ -22,6 +22,8 @@ namespace apa_planner {
 
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
+static const double kMaxEgoSlotAbsoluteDist = 10.68;
+static const double kMaxEgoSlotRelativeDist = 7.2;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
@@ -76,11 +78,24 @@ void ApaSlotManager::Update(
     ApaSlot slot;
     slot.Update(fusion_slot);
 
+    if (free_slot_activate_) {
+      slot.slot_source_type_ = SlotSourceType::SELF_DEFINE;
+    }
+
     const double dist =
         (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_center).norm();
 
     dist_id_map_[dist] = slot.GetId();
     slots_map_[slot.GetId()] = slot;
+
+    const double ego_dist =
+        geometry_lib::CalPoint2LineDist(car_mirror_pos, slot.GetMidLine());
+    if (ego_slot_min_dist_map_.count(slot.GetId()) != 0) {
+      ego_slot_min_dist_map_[slot.GetId()] =
+          std::min(ego_slot_min_dist_map_[slot.GetId()], ego_dist);
+    } else {
+      ego_slot_min_dist_map_[slot.GetId()] = ego_dist;
+    }
   }
 
   // 泊出
@@ -151,9 +166,11 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = select_slot_id;
         ego_info_under_slot_.slot_type = slots_map_[select_slot_id].slot_type_;
-      } else if (free_slot_activate_ && is_free_slot_selected_ ==
-        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_FINISHED &&
-        !slots_map_.empty()){
+      } else if (free_slot_activate_ &&
+                 is_free_slot_selected_ ==
+                     iflyauto::FreeSlotSelectedStatus::
+                         FREE_SLOT_SELECTED_STATUS_FINISHED &&
+                 !slots_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = slots_map_[1].id_;
@@ -221,9 +238,8 @@ void ApaSlotManager::Update(
 
   JSON_DEBUG_VALUE("total_slot_size", slots_map_.size())
 
-  TimeBenchmark::Instance().SetTime(
-      TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME,
-      IflyTime::Now_ms() - start_time);
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_SLOT_MANAGER_TIME,
+                                    IflyTime::Now_ms() - start_time);
 
   return;
 }
@@ -238,30 +254,33 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       continue;
     }
     const ApaSlot& slot = slots_map_[pair.second];
+
+    if (slot.release_info_.release_state[RULE_BASED_RELEASE] !=
+        SlotReleaseState::RELEASE) {
+      continue;
+    }
+
+    bool is_slot_release = false;
+
     if (slot.id_ != ego_info_under_slot_.id && !free_slot_activate_) {
-      if (slot.release_info_.release_state[RULE_BASED_RELEASE] ==
-          SlotReleaseState::RELEASE) {
-        release_slot_id_vec_.emplace_back(slot.id_);
-      }
+      is_slot_release = true;
     } else {
-      if (ego_info_under_slot_.slot.release_info_
-                  .release_state[RULE_BASED_RELEASE] ==
-              SlotReleaseState::RELEASE &&
-          (ego_info_under_slot_.slot.release_info_
-                   .release_state[GEOMETRY_PLANNING_RELEASE] ==
-               SlotReleaseState::RELEASE ||
-           ego_info_under_slot_.slot.release_info_
-                   .release_state[ASTAR_PLANNING_RELEASE] ==
-               SlotReleaseState::RELEASE)) {
-        release_slot_id_vec_.emplace_back(slot.id_);
-      } else if (ego_info_under_slot_.slot.release_info_
-                         .release_state[RULE_BASED_RELEASE] ==
-                     SlotReleaseState::RELEASE &&
-                 ego_info_under_slot_.slot.release_info_
-                         .release_state[ASTAR_PLANNING_RELEASE] ==
-                     SlotReleaseState::COMPUTING) {
-        release_slot_id_vec_.emplace_back(slot.id_);
+      const SlotReleaseInfo& ego_release_info =
+          ego_info_under_slot_.slot.release_info_;
+      const SlotReleaseState& geometry_release_state =
+          ego_release_info.release_state[GEOMETRY_PLANNING_RELEASE];
+      const SlotReleaseState& astar_release_state =
+          ego_release_info.release_state[ASTAR_PLANNING_RELEASE];
+      if (geometry_release_state == SlotReleaseState::COMPUTING ||
+          geometry_release_state == SlotReleaseState::RELEASE ||
+          astar_release_state == SlotReleaseState::COMPUTING ||
+          astar_release_state == SlotReleaseState::RELEASE) {
+        is_slot_release = true;
       }
+    }
+
+    if (is_slot_release) {
+      release_slot_id_vec_.emplace_back(slot.id_);
     }
   }
 }
@@ -306,11 +325,21 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
       continue;
     }
 
-    if (dist_id.first > 10.68) {
+    if (ego_slot_min_dist_map_.count(slot.GetId()) != 0 &&
+        slot.GetType() != SlotType::PARALLEL &&
+        ego_slot_min_dist_map_[slot.GetId()] > kMaxEgoSlotRelativeDist) {
       slot.release_info_.release_state[RULE_BASED_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
-      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over " << 10.68
-                << " m!";
+      ILOG_INFO << "NOT_RELEASE reason: ego slot dist over "
+                << kMaxEgoSlotRelativeDist << " m!";
+      continue;
+    }
+
+    if (dist_id.first > kMaxEgoSlotAbsoluteDist) {
+      slot.release_info_.release_state[RULE_BASED_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "NOT_RELEASE reason: nearest slot dist over "
+                << kMaxEgoSlotAbsoluteDist << " m!";
       continue;
     }
 
@@ -434,7 +463,8 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
   TargetPoseDeciderRequest tar_pose_decider_request(
       lat_buffer_vec, slot_release_buffer.lon_buffer,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false);
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false,
+      ApaSlotLatPosPreference::MID, true);
 
   TargetPoseDeciderResult res =
       tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
@@ -449,13 +479,21 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
             << "  lat_buffer = " << res.safe_lat_buffer;
 
   SlotReleaseVoterType release_voter_type;
-  if (geometry_lib::IsTwoNumerEqual(0.23, res.safe_lat_buffer)) {
+  if (res.exceed_allow_max_dx > 0.02) {
+    release_voter_type = SlotReleaseVoterType::SUBTRACT;
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.maximum_lat_buffer, res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::MAXIMUM;
-  } else if (geometry_lib::IsTwoNumerEqual(0.17, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.accumulate_lat_buffer,
+                 res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::ACCUMULATE;
-  } else if (geometry_lib::IsTwoNumerEqual(0.14, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(slot_release_buffer.hold_lat_buffer,
+                                           res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::HOLD;
-  } else if (geometry_lib::IsTwoNumerEqual(0.13, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.subtract_lat_buffer,
+                 res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   }
 
@@ -707,21 +745,8 @@ const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
     return SlotReleaseState::RELEASE;
   }
 
-  if (ego_info_under_slot_.slot.release_info_
-          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
-      SlotReleaseState::RELEASE) {
-    return SlotReleaseState::RELEASE;
-  } else if (ego_info_under_slot_.slot.release_info_
-                 .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
-             SlotReleaseState::NOT_RELEASE) {
-    return SlotReleaseState::NOT_RELEASE;
-  } else if (ego_info_under_slot_.slot.release_info_
-                 .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] ==
-             SlotReleaseState::COMPUTING) {
-    return SlotReleaseState::COMPUTING;
-  }
-
-  return SlotReleaseState::UNKOWN;
+  return ego_info_under_slot_.slot.release_info_
+      .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE];
 }
 
 const size_t ApaSlotManager::GetEgoSlotInfoID() const {

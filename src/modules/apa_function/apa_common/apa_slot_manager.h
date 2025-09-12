@@ -213,6 +213,7 @@ class ApaSlotManager final {
     slots_map_.clear();
     slot_release_voter_.clear();
     release_slot_id_vec_.clear();
+    ego_slot_min_dist_map_.clear();
   }
 
   void GenerateReleaseSlotIdVec();
@@ -258,6 +259,8 @@ class ApaSlotManager final {
   std::map<double, size_t> dist_id_map_;
   std::unordered_map<size_t, ApaSlot> slots_map_;
   std::unordered_map<size_t, uint8_t> slot_release_voter_;
+
+  std::unordered_map<size_t, double> ego_slot_min_dist_map_;
 
   std::vector<size_t> release_slot_id_vec_;
 

@@ -117,6 +117,9 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
     g2l_tf_ = geometry_lib::GlobalToLocalTf(origin_pos, origin_heading);
     l2g_tf_ = geometry_lib::LocalToGlobalTf(origin_pos, origin_heading);
   }
+
+  mid_line_.SetPoints(origin_corner_coord_global_.pt_01_mid,
+                       origin_corner_coord_global_.pt_23_mid);
 }
 
 void ApaSlot::TransformCoordFromGlobalToLocal(

@@ -650,9 +650,11 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
                           apa_param.GetParam().prepare_line_min_x_offset_slot /
                               input_.ego_info_under_slot.slot.sin_angle_);
 
-  const double max_x =
+  double max_x =
       cur_pose.pos.x() + apa_param.GetParam().prepare_line_max_x_offset_slot /
                              input_.ego_info_under_slot.slot.sin_angle_;
+
+  max_x = std::max(max_x, min_x + 2.0);
 
   const double dx = apa_param.GetParam().prepare_line_dx_offset_slot /
                     input_.ego_info_under_slot.slot.sin_angle_;
@@ -832,6 +834,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   calc_params_.tange_pose_vec.clear();
   calc_params_.tange_pose_vec.reserve(number);
   calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
+  int try_dubins_number = 0, try_dubins_success_number = 0;
   for (size_t i = 0;
        i < tang_pose_vec.size() && find_all_result && !exceed_time_flag; ++i) {
     bool continue_use_same_1arc = true;
@@ -877,6 +880,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         const auto& tang_pose = inner_inner_tang_pose_vec[k];
 
         // tang_pose.PrintInfo();
+        try_dubins_number++;
 
         bool dubins_connect_goal = false;
         std::vector<double> dubins_radius_vec;
@@ -924,6 +928,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         }
 
         if (result == DubinsPlanResult::SUCCESS) {
+          try_dubins_success_number++;
           if (RoughMultiAdjustPathPlan(tang_pose,
                                        geometry_lib::SEG_GEAR_REVERSE,
                                        rough_geometry_path)) {
@@ -972,7 +977,9 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
             << IflyTime::Now_ms() - pre_start_time << "ms"
             << "  dubins_plan_time = " << calc_params_.dubins_plan_time << "ms"
             << "  rough_plan_time= " << calc_params_.rough_plan_time << "ms"
-            << "  col_det_time = " << calc_params_.col_det_time << "ms";
+            << "  col_det_time = " << calc_params_.col_det_time << "ms"
+            << "  try_dubins_number = " << try_dubins_number
+            << "  try_dubins_success_number = " << try_dubins_success_number;
 
   if (calc_params_.is_searching_stage) {
     return pair_geometry_path_vec.size() >= min_path_count_searching;

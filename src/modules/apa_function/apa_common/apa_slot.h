@@ -119,7 +119,7 @@ enum SlotReleaseMethod : uint8_t {
 
 enum class SlotReleaseState : uint8_t {
   // 不经过计算，不确定是否释放
-  UNKOWN = 0,
+  UNKNOWN = 0,
   RELEASE = 1,
   NOT_RELEASE = 2,
   // 计算中
@@ -130,6 +130,7 @@ enum class SlotSourceType : uint8_t {
   CAMERA,
   USS,
   CAMERA_USS,
+  SELF_DEFINE,
   INVALID,
 };
 
@@ -138,7 +139,7 @@ struct SlotReleaseInfo {
 
   void Clear() {
     for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
-      release_state[i] = SlotReleaseState::UNKOWN;
+      release_state[i] = SlotReleaseState::UNKNOWN;
     }
   }
 };
@@ -248,6 +249,8 @@ class ApaSlot final {
 
   const SlotReleaseInfo& GetReleaseInfo() const { return release_info_; }
 
+  const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
+
  private:
   void CorrectSlotPointOrder();
 
@@ -279,6 +282,8 @@ class ApaSlot final {
   Limiter limiter_;
 
   SlotReleaseInfo release_info_;
+
+  geometry_lib::LineSegment mid_line_;
 
   geometry_lib::GlobalToLocalTf g2l_tf_;
   geometry_lib::LocalToGlobalTf l2g_tf_;
