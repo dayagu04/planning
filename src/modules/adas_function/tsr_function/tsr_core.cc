@@ -394,26 +394,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                   .get_route_info()
                                   ->get_sd_map();
     
-    // 获取当前道路限速值
-    // ego_motion信息
-    auto localization_info = GetContext.mutable_session()->mutable_environmental_model()->
-                              get_ego_state_manager(); // enu实际上是boot
-    ad_common::math::Vec2d current_point;
-    current_point.set_x(localization_info->location_enu().position.x);
-    current_point.set_y(localization_info->location_enu().position.y); // enu实际上是boot
-    const double search_distance = 50.0;
-    const double max_heading_diff = PI / 4;
-    double temp_nearest_s = 0;
-    double nearest_l = 0;
-    const double ego_heading_angle = localization_info->heading_angle();
-    const SdMapSwtx::Segment* current_link = sd_map_info_ptr.GetNearestRoadWithHeading(
-        current_point, search_distance, ego_heading_angle, max_heading_diff,
-        temp_nearest_s, nearest_l);
-    if (!current_link) {
+    if (sd_map_info_ptr.GetNaviRoadInfo() == std::nullopt) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
     } else {
-      current_map_speed_limit_ = current_link->speed_limit();
+      current_map_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
       current_map_speed_limit_valid_ = true;
     }
   } else {
@@ -593,32 +578,16 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
                                   .get_route_info()
                                   ->get_sd_map();
     
-    // 获取当前道路限速值
-    // ego_motion信息
-    auto localization_info = GetContext.mutable_session()->mutable_environmental_model()->
-                              get_ego_state_manager(); // enu实际上是boot
-    ad_common::math::Vec2d current_point;
-    current_point.set_x(localization_info->location_enu().position.x);
-    current_point.set_y(localization_info->location_enu().position.y); // enu实际上是boot
-    const double search_distance = 50.0;
-    const double max_heading_diff = PI / 4;
-    double temp_nearest_s = 0;
-    double nearest_l = 0;
-    const double ego_heading_angle = localization_info->heading_angle();
-    const SdMapSwtx::Segment* current_link = sd_map_info_ptr.GetNearestRoadWithHeading(
-        current_point, search_distance, ego_heading_angle, max_heading_diff,
-        temp_nearest_s, nearest_l);
-    
-    if (!current_link) {
+    if (sd_map_info_ptr.GetNaviRoadInfo() == std::nullopt) {
       tsr_speed_limit_ = 0;
       tsr_speed_limit_valid_ = false;
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
     } else {
-      tsr_speed_limit_ = current_link->speed_limit();
+      tsr_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
       tsr_speed_limit_valid_ = true;
       current_map_speed_limit_valid_ = true;
-      current_map_speed_limit_ = current_link->speed_limit();
+      current_map_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
     }
   } else {
     tsr_speed_limit_ = 0;
