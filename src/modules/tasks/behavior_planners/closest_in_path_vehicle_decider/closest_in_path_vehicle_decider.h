@@ -32,13 +32,15 @@ class ClosestInPathVehicleDecider : public Task {
                     double* acc, double* acc_fusion, double* const cipv_ttc,
                     int32_t* const dangerous_level, bool* const is_virtual,
                     bool* const is_large);
-  void DetermineCIPVInfoForHMI() const;
+  void DetermineCIPVInfoForHMI();
 
  private:
   //<double, std::pair<bool, int32_t>> :
   //   <distance to ego at cur time,
   //        <is virtual, agent id>>
   std::map<double, std::pair<bool, int32_t>> agents_distance_id_map_;
+  //used by filtering out crossing cipv display for hmi
+  int32_t filtered_out_crossing_cipv_id_ = -1;
 };
 
 }  // namespace planning

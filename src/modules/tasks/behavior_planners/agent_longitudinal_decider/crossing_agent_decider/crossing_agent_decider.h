@@ -19,11 +19,11 @@ class CrossingAgentDecider : public Task {
   bool Reset();
 
  private:
-  bool MakeYieldToVRUDecision(const agent::Agent* const agent);
+  bool MakeYieldToVRUDecision(agent::Agent* agent);
 
   bool ClearVRUIdReverseCrossingMap();
 
-  bool MakeYieldToVehicleDecision(const agent::Agent* const agent);
+  bool MakeYieldToVehicleDecision(agent::Agent* agent);
 
   bool ConstructVirtualAgentByCrossing(const agent::Agent* const agent,
                                        const bool is_vru,
