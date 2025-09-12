@@ -516,7 +516,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
        ego_length > apa_param.GetParam().min_path_length) ||
       (ego_gear == SEG_GEAR_REVERSE && ego_length > 0.01);
 
-  if (is_ego_line_needed) {
+  if (!is_park_out && is_ego_line_needed) {
     path_seg_vec.emplace_back(PathSegment(ego_gear, ego_line));
   }
 
@@ -1030,9 +1030,19 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
 
       ILOG_INFO << "first try ego line plan success!";
-      if (ego_line_geo_path.gear_change_count == 0) {
+      if (ego_line_geo_path.gear_change_count == 0 ||
+          input_.parallel_replan_again_ == 1) {
         debug_info_.debug_all_path_vec.emplace_back(ego_line_geo_path);
         AddPathSegToOutPut(ego_line_geo_path.path_segment_vec);
+        calc_params_.park_out_path_in_slot.clear();
+        for (size_t i = 0; i < calc_params_.valid_target_pt_vec.size(); i++) {
+          if (CheckSamePose(
+                  ego_line_geo_path.path_segment_vec.back().GetEndPose(),
+                  calc_params_.valid_target_pt_vec[i])) {
+            calc_params_.park_out_path_in_slot =
+                calc_params_.inversed_path_vec_in_slot[i].path_segment_vec;
+          }
+        }
         ILOG_INFO << "ego line path vec -----------------------------";
         geometry_lib::PrintSegmentsVecInfo(ego_line_geo_path.path_segment_vec);
         ILOG_INFO << "no need change gear in preparing step!";
@@ -1041,6 +1051,10 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       geo_path_vec.emplace_back(ego_line_geo_path);
     } else {
       ILOG_INFO << "first try ego line failed!";
+      if (input_.parallel_replan_again_ == 1) {
+        ILOG_INFO << "try to replan again! BackwardNormalPlan failed!";
+        return false;
+      }
     }
   }
 
@@ -1101,7 +1115,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       ILOG_INFO << "commonly prepare success, so skip!";
       break;
     }
-    if (tiled_success_cnt_map[preparing_pose_vec[i].heading] >= 1 ||
+    if (tiled_success_cnt_map[preparing_pose_vec[i].heading] > 1 ||
         (tiled_line_size <= i && i < big_ang_tiled_line_size &&
          big_ang_tiled_success_cnt > 2)) {
       continue;
@@ -2470,33 +2484,10 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   sorted_path_vec = selected_path_vec;
   for (const auto& path : selected_path_vec) {
     ILOG_INFO << "2 heading deg:" << path.park_out_heading_deg << " radian : "
-              << path.path_segment_vec.back().GetStartPose().heading << " pos: "
-              << path.path_segment_vec.back().GetStartPos().x();
+              << path.path_segment_vec.back().GetStartPose().heading
+              << " pos: " << path.path_segment_vec.back().GetStartPos().x()
+              << " " << path.path_segment_vec.back().GetStartPos().y();
   }
-  // std::cout << "heading = ";
-  // for (const auto& path : sorted_path_vec) {
-  //   std::cout << std::setw(10) << path.park_out_heading_deg;
-  // }
-  // std::cout << std::endl;
-
-  // std::cout << "x       = ";
-  // for (const auto& path : sorted_path_vec) {
-  //   std::cout << std::setw(10)
-  //             << path.path_segment_vec.back().GetStartPose().pos.x();
-  // }
-  // std::cout << std::endl;
-
-  // std::cout << "y       = ";
-  // for (const auto& path : sorted_path_vec) {
-  //   std::cout << std::setw(10)
-  //             << path.path_segment_vec.back().GetStartPose().pos.y();
-  // }
-  // std::cout << std::endl;
-  // std::cout << "heading = ";
-  // for (const auto& path : selected_path_vec) {
-  //   std::cout << std::setw(10) << path.park_out_heading_deg;
-  // }
-  // std::cout << std::endl;
   return true;
 }
 

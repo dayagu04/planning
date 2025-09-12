@@ -51,9 +51,14 @@ class ParallelParkInScenario : public ParkingScenario {
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
 
+  bool CheckReplanParallel();
+  const GeometryPathOutput& SuitablePathReplan();
+
   Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
+  int parallel_replan_again_ = 0;
+  GeometryPathOutput previous_output_path_;
 };
 
 }  // namespace apa_planner

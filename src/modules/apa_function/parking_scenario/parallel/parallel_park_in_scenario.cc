@@ -65,8 +65,41 @@ void ParallelParkInScenario::Reset() {
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
   parallel_path_planner_.Reset();
+  parallel_replan_again_ = 0;
+  previous_output_path_.Reset();
 
   ParkingScenario::Reset();
+}
+
+bool ParallelParkInScenario::CheckReplanParallel() {
+  ILOG_INFO << "Enter CheckReplanParallel";
+  if (parallel_replan_again_ != 0) {
+    return false;
+  }
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  pnc::geometry_lib::PathSegGear cur_gear =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear();
+  pnc::geometry_lib::PathPoint& cur_pose = ego_info_under_slot.cur_pose;
+
+  ILOG_INFO << "cur_pose pos: " << cur_pose.GetPos().x() << " "
+            << cur_pose.GetPos().y()
+            << " slot length: " << ego_info_under_slot.slot.GetLength()
+            << " cur_pose.gear: " << static_cast<int>(cur_gear);
+  const double step_dist = 0.2;
+  if (cur_pose.GetX() < ego_info_under_slot.slot.GetLength() +
+                            apa_param.GetParam().parallel_replan_dist +
+                            step_dist &&
+      cur_pose.GetX() > ego_info_under_slot.slot.GetLength() +
+                            apa_param.GetParam().parallel_replan_dist &&
+      cur_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
+    ILOG_INFO << "replan once when car is coming slot";
+    frame_.replan_reason = ReplanReason::DYNAMIC;
+    parallel_replan_again_ = 1;
+    return true;
+  }
+  return false;
 }
 
 void ParallelParkInScenario::ExcutePathPlanningTask() {
@@ -95,13 +128,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  // generate t-lane
-  if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    ILOG_INFO << "GenTlane failed!";
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
-    return;
-  }
 
   // check finish
   if (CheckFinished()) {
@@ -127,12 +153,23 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       0.168, apa_param.GetParam().stuck_replan_time);
   // check replan
   if (!CheckReplan(replan_params)) {
-    ILOG_INFO << "replan is not required!";
-    SetParkingStatus(PARKING_RUNNING);
-    return;
+    if (!CheckReplanParallel()) {
+      ILOG_INFO << "replan is not required!";
+      SetParkingStatus(PARKING_RUNNING);
+      return;
+    }
   }
 
   ILOG_INFO << "replan is required!";
+  // generate t-lane
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    ILOG_INFO << "GenTlane failed!";
+    frame_.plan_fail_reason = NO_TARGET_POSE;
+    return;
+  }
+  previous_output_path_.Reset();
+  previous_output_path_ = parallel_path_planner_.GetOutput();
 
   // update obstacles
   GenTBoundaryObstacles();
@@ -1221,6 +1258,26 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   }
 }
 
+const GeometryPathOutput& ParallelParkInScenario::SuitablePathReplan() {
+  if (parallel_replan_again_ != 1) {
+    ILOG_INFO << "use replan path";
+    return parallel_path_planner_.GetOutput();
+  }
+  uint8_t cur_replan_gear =
+      parallel_path_planner_.GetOutput().gear_cmd_vec.front();
+  pnc::geometry_lib::PathSegGear cur_car_gear =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear();
+  ILOG_INFO << "cur_car_gear: " << int(cur_car_gear)
+            << " cur_replan_gear: " << int(cur_replan_gear);
+  parallel_replan_again_ = 2;
+  if (cur_car_gear != cur_replan_gear) {
+    ILOG_INFO << "use previous path";
+    return previous_output_path_;
+  }
+  ILOG_INFO << "use replan path";
+  return parallel_path_planner_.GetOutput();
+}
+
 const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "start PathPlanOnce -------------";
   // construct input
@@ -1267,6 +1324,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "ref steer to path planner input ="
             << static_cast<int>(path_planner_input.ref_arc_steer);
 
+  path_planner_input.parallel_replan_again_ = parallel_replan_again_;
   parallel_path_planner_.SetInput(path_planner_input);
 
   const double path_plan_start_time = IflyTime::Now_ms();
@@ -1277,6 +1335,40 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "path planner cost time(ms) = "
             << IflyTime::Now_ms() - path_plan_start_time;
   // const auto& path_planner_output = parallel_path_planner_.GetOutput();
+
+  if (parallel_replan_again_ == 1 && !path_plan_success) {
+    ILOG_INFO << "path planner replan failed, using last path";
+    const auto& planner_output = previous_output_path_;
+    frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
+    current_path_point_global_vec_.clear();
+    current_path_point_global_vec_.reserve(
+        planner_output.path_point_vec.size());
+
+    pnc::geometry_lib::PathPoint global_point;
+    for (const auto& path_point : planner_output.path_point_vec) {
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.s = path_point.s;
+      global_point.kappa = path_point.kappa;
+
+      current_path_point_global_vec_.emplace_back(global_point);
+    }
+    complete_path_point_global_vec_.clear();
+    complete_path_point_global_vec_.reserve(
+        planner_output.all_gear_path_point_vec.size());
+    for (const auto& path_point : planner_output.all_gear_path_point_vec) {
+      global_point.Set(
+          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
+          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
+      global_point.lat_buffer = path_point.lat_buffer;
+      global_point.s = path_point.s;
+      global_point.kappa = path_point.kappa;
+      global_point.gear = path_point.gear;
+      complete_path_point_global_vec_.emplace_back(global_point);
+    }
+    return PathPlannerResult::PLAN_UPDATE;
+  }
 
   uint8_t plan_result = 0;
   if (!path_plan_success) {
@@ -1404,7 +1496,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   frame_.is_replan_first = false;
 
-  const auto& planner_output = parallel_path_planner_.GetOutput();
+  const auto& planner_output = SuitablePathReplan();
   frame_.gear_command = planner_output.current_gear;
 
   ILOG_INFO << "start lat optimizer!";

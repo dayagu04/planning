@@ -479,6 +479,7 @@ struct ApaParameters {
   double min_drive_dist = 0.08;
   int max_replan_count = 12;
   int headin_max_replan_count = 20;
+  double parallel_replan_dist = 0.0;
 
   // construct t_lane params
   double nearby_slot_corner_dist = 0.6;
