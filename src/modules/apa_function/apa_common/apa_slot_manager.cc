@@ -439,7 +439,8 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
   TargetPoseDeciderRequest tar_pose_decider_request(
       lat_buffer_vec, slot_release_buffer.lon_buffer,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false);
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false,
+      ApaSlotLatPosPreference::MID, true);
 
   TargetPoseDeciderResult res =
       tar_pose_decider.CalcTargetPose(slot, tar_pose_decider_request);
@@ -454,13 +455,21 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
             << "  lat_buffer = " << res.safe_lat_buffer;
 
   SlotReleaseVoterType release_voter_type;
-  if (geometry_lib::IsTwoNumerEqual(0.23, res.safe_lat_buffer)) {
+  if (res.exceed_allow_max_dx > 0.02) {
+    release_voter_type = SlotReleaseVoterType::SUBTRACT;
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.maximum_lat_buffer, res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::MAXIMUM;
-  } else if (geometry_lib::IsTwoNumerEqual(0.17, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.accumulate_lat_buffer,
+                 res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::ACCUMULATE;
-  } else if (geometry_lib::IsTwoNumerEqual(0.14, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(slot_release_buffer.hold_lat_buffer,
+                                           res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::HOLD;
-  } else if (geometry_lib::IsTwoNumerEqual(0.13, res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.subtract_lat_buffer,
+                 res.safe_lat_buffer)) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   }
 

@@ -21,6 +21,7 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   consider_obs_ = request.consider_obs;
   base_on_slot_ = request.base_on_slot;
   slot_lat_pos_preference_ = request.slot_lat_pos_preference;
+  is_searching_stage_ = request.is_searching_stage;
 
   if (request.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
@@ -194,6 +195,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   // calc lat_move_step and lon_move_step
   double lat_move_step{0.01};
   double lon_move_step{0.025};
+  if (is_searching_stage_) {
+    lat_move_step = 0.05;
+    lon_move_step = 0.1;
+  }
 
   // 生成纵向移动距离数组
   std::vector<double> lon_dist_vec;
@@ -269,10 +274,14 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
 
   if (exist_target_pose) {
-    dx = slot_.processed_corner_coord_local_.pt_01_mid.x() -
-         (result_.target_pose_local.pos.x() + param.wheel_base +
-          param.front_overhanging);
-    if (dx < -front_exceed_line_dx) {
+    dx = result_.target_pose_local.pos.x() + param.wheel_base +
+         param.front_overhanging -
+         slot_.processed_corner_coord_local_.pt_01_mid.x();
+    result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
+    ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
+              << "  front_exceed_line_dx = " << front_exceed_line_dx
+              << "  dx = " << dx;
+    if (result_.exceed_allow_max_dx > 0.1) {
       exist_target_pose = false;
     }
   }

@@ -16,6 +16,7 @@ struct TargetPoseDeciderRequest {
   bool base_on_slot = false;
   ApaSlotLatPosPreference slot_lat_pos_preference =
       ApaSlotLatPosPreference::MID;
+  bool is_searching_stage = false;
 
   TargetPoseDeciderRequest() {}
   TargetPoseDeciderRequest(
@@ -23,13 +24,15 @@ struct TargetPoseDeciderRequest {
       const ParkingScenarioType _scenario_type, const bool _consider_obs = true,
       const bool _base_on_slot = false,
       const ApaSlotLatPosPreference _slot_lat_pos_preference =
-          ApaSlotLatPosPreference::MID)
+          ApaSlotLatPosPreference::MID,
+      const bool _is_searching_stage = false)
       : lat_buffer_vec(_lat_buffer_vec),
         lon_buffer(_lon_buffer),
         scenario_type(_scenario_type),
         consider_obs(_consider_obs),
         base_on_slot(_base_on_slot),
-        slot_lat_pos_preference(_slot_lat_pos_preference) {}
+        slot_lat_pos_preference(_slot_lat_pos_preference),
+        is_searching_stage(_is_searching_stage) {}
   ~TargetPoseDeciderRequest() {}
 };
 
@@ -46,6 +49,7 @@ struct TargetPoseDeciderResult {
   double safe_lat_move_dist = 0.0;
   double safe_lon_move_dist = 0.0;
   double safe_lat_buffer = 0.0;
+  double exceed_allow_max_dx = 0.0;
 
   void Reset() {
     target_pose_type = TargetPoseType::FAIL;
@@ -54,6 +58,7 @@ struct TargetPoseDeciderResult {
     safe_lat_move_dist = 0.0;
     safe_lon_move_dist = 0.0;
     safe_lat_buffer = 0.0;
+    exceed_allow_max_dx = 0.0;
   }
 };
 
@@ -91,6 +96,7 @@ class TargetPoseDecider final : public ParkingTask {
   double lon_buffer_ = 0.0;
   bool consider_obs_ = false;
   bool base_on_slot_ = false;
+  bool is_searching_stage_ = false;
   TargetPoseDeciderResult result_;
 };
 }  // namespace apa_planner
