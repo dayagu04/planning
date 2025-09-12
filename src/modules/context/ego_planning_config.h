@@ -2245,6 +2245,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "jerk_bound_split");
     ReadItem<bool>(json, ramp_valid, "lat_motion_ilqr", "ramp_valid");
     ReadItem<double>(json, acc_bound_ramp, "lat_motion_ilqr", "acc_bound_ramp");
+    ReadItem<double>(json, jerk_bound_ramp, "lat_motion_ilqr", "jerk_bound_ramp");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_jerk_bound_ramp"},
         map_jerk_bound_ramp, map_jerk_bound_ramp);
@@ -2372,6 +2373,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
 
   bool ramp_valid = false;
   double acc_bound_ramp = 3.0;
+  double jerk_bound_ramp = 1.0;
   std::vector<double> map_jerk_bound_ramp{1.0, 0.8, 0.6, 0.5};
   double q_ref_x_ramp = 400.0;
   double q_ref_y_ramp = 400.0;

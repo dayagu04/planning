@@ -583,6 +583,7 @@
     "enter_ramp_on_road_time": 6.0,
     "ramp_valid": true,
     "acc_bound_ramp": 3.0,
+    "jerk_bound_ramp": 0.5,
     "map_jerk_bound_ramp": [1.0, 0.8, 0.6, 0.5],
     "q_ref_x_ramp": 400.0,
     "q_ref_y_ramp": 400.0,
