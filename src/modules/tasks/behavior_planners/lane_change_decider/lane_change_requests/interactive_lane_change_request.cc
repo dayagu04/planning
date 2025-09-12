@@ -54,15 +54,21 @@ void IntRequest::Update(int lc_status) {
   // ego_blinker 0-lane follow, 1-left, 2-right
   request_cancel_reason_ = NO_CANCEL;
   ilc_virtual_req_ = NO_CHANGE;
-  lane_change_cmd_ = session_->mutable_environmental_model()
-                         ->get_ego_state_manager()
-                         ->ego_blinker();
+  // lane_change_cmd_ = session_->mutable_environmental_model()
+  //                        ->get_ego_state_manager()
+  //                        ->ego_blinker();
+  // JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
+  // if (lane_change_cmd_ == 0 || is_lever_status_valid_last_frame_) {
+  //   is_lever_status_valid_ = true;
+  // }
+  // is_lever_status_valid_last_frame_ =
+  //     is_lever_status_valid_;  //反方向拨杆时，能触发反方向的变道请求
+  const auto& ego_blinker = session_->mutable_environmental_model()
+                                  ->get_ego_state_manager()
+                                  ->ego_blinker();
+  ProcessBlinkState(ego_blinker, lc_status);
   JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
-  if (lane_change_cmd_ == 0 || is_lever_status_valid_last_frame_) {
-    is_lever_status_valid_ = true;
-  }
-  is_lever_status_valid_last_frame_ =
-      is_lever_status_valid_;  //反方向拨杆时，能触发反方向的变道请求
+
   // init lanes with id
   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
   auto tlane = lane_change_lane_mgr_->tlane();
@@ -105,7 +111,7 @@ void IntRequest::Update(int lc_status) {
 
   count_threshold_ = -1;
   if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT &&
-      request_type_ != LEFT_CHANGE && is_lever_status_valid_) {
+      request_type_ != LEFT_CHANGE) {
     counter_right_ = 0;
     counter_left_++;
 
@@ -117,6 +123,8 @@ void IntRequest::Update(int lc_status) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = LEFT_CHANGE;
       counter_right_ = 0;
+      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      last_frame_blinker_ = 0;
       return;
     }
 
@@ -167,7 +175,7 @@ void IntRequest::Update(int lc_status) {
       ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive changing lane to left";
     }
   } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT &&
-             request_type_ != RIGHT_CHANGE && is_lever_status_valid_) {
+             request_type_ != RIGHT_CHANGE) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
 
@@ -180,6 +188,8 @@ void IntRequest::Update(int lc_status) {
       request_cancel_reason_ = SOLID_LC;
       ilc_virtual_req_ = RIGHT_CHANGE;
       counter_right_ = 0;
+      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      last_frame_blinker_ = 0;
       return;
     }
 
@@ -271,6 +281,33 @@ void IntRequest::PrintForbidGeneratingReason(
   for (const auto& reason : forbid_generating_reason) {
     std::cout << "[IntRequest], Disable Reason: " << reason.c_str()
               << std::endl;
+  }
+}
+
+void IntRequest::ProcessBlinkState(const uint ego_blinker, const int lc_status) {
+  if (ego_blinker != last_frame_blinker_) {
+    last_frame_blinker_ = ego_blinker;
+    if (ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH) {
+      if (lc_status != 0 &&
+          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      } else {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
+      }
+    } else if (ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH) {
+      if (lc_status != 0 &&
+          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT) {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+      } else {
+        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_LEFT;
+      }
+    } else if (ego_blinker == TurnSwitchState::RIGHT_LIGHTLY_TOUCH &&
+               lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
+      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+    } else if (ego_blinker == TurnSwitchState::LEFT_LIGHTLY_TOUCH &&
+               lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT) {
+      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+    }
   }
 }
 
