@@ -707,6 +707,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
                            (d_min_cpath <= 0 && d_max_cpath <= 0));
 
       double potential_dist_limit = lane_width * 0.5 + potential_near_car_thr;
+      // hack 感知大车减去后视镜宽度
+      if (IsTruck(frenet_obstacle)) {
+        dist_limit += config_.extra_truck_lat_buffer;
+        potential_dist_limit += config_.extra_truck_lat_buffer;
+      }
       // need avoid flag
       bool is_need_avoid =
           (d_max_cpath < 0 && std::fabs(d_max_cpath) < dist_limit) ||
