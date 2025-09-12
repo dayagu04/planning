@@ -4,63 +4,124 @@ using namespace planning;
 namespace adas_function {
 namespace ihc_core {
 
-// IHC动态障碍物计时器（使用dt累积）
+// IHC计时器（使用dt累积）
 static float ihc_same_dir_hold_time_s = 0.0f;         // 同向车累计时间
 static float ihc_oncoming_vehicle_hold_time_s = 0.0f; // 对向机动车累计时间
 static float ihc_oncoming_cycle_hold_time_s = 0.0f;   // 对向非机动车累计时间
-static float ihc_no_obstacle_hold_time_s = 0.0f;      // 无车空窗累计时间（用于近->远）
+static float ihc_low_beam_on_duration_s = 0.0f;      // 无车空窗累计时间（用于近->远）
 static float ihc_high_beam_on_duration_s = 0.0f;      // 远光持续时间（用于最小2s）
 
 static inline void ResetIhcDynamicObstacleTimers() {
   ihc_same_dir_hold_time_s = 0.0f;
   ihc_oncoming_vehicle_hold_time_s = 0.0f;
   ihc_oncoming_cycle_hold_time_s = 0.0f;
-  ihc_no_obstacle_hold_time_s = 0.0f;
+  ihc_low_beam_on_duration_s = 0.0f;
   ihc_high_beam_on_duration_s = 0.0f;
 }
+
+bool IhcCore::IsWiperNotHighSpeedLast(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  
+  // 更新当前雨刷是否为快速档的状态
+  wiper_is_high_speed_ = (ihc_sys_.input.wiper_state == iflyauto::WiperStateEnum::WiperState_HighSpeed);
+  
+  // 雨刷状态时间累积逻辑
+  if (!wiper_is_high_speed_) {
+    // 非快速档，累积时间
+    wiper_state_supp_duration_ += GetContext.get_param()->dt;
+    if (wiper_state_supp_duration_ > 70.0) {
+      wiper_state_supp_duration_ = 70.0;  // 防止溢出
+    }
+  } else {
+    // 快速档，清零时间
+    wiper_state_supp_duration_ = 0.0;
+  }
+  
+  // 返回雨刷不为快速档是否超过60s
+  return (wiper_state_supp_duration_ >= 60.0);
+}
+
 
 void IhcCore::RunOnce(void) {
   // 更新输入信息
   GetInputInfo();
-
-  // 根据输入信息，更新使能码、禁用码、故障码、状态机跳转
-  ihc_sys_.state.ihc_enable_code = UpdateIhcEnableCode();
-  ihc_sys_.state.ihc_disable_code = UpdateIhcDisableCode();
-  ihc_sys_.state.ihc_fault_code = UpdateIhcFaultCode();
-
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  // 读取配置文件是否强制打开IHC软开关
+  if (GetContext.get_param()->ihc_set_main_switch) {
+    ihc_sys_.input.ihc_main_switch = true;
+  }
+
+  // 获取范围内是否有车
+  dynamic_obstacle_check_ = DynamicObstacleCheck();
+
+  // 判断雨刷不为快速档是否超过60s
+  wiper_not_high_speed_last_ = IsWiperNotHighSpeedLast();
+
+  // 根据输入信息，更新远光灯使能码、近光灯使能码、故障码、激活码
+  ihc_sys_.state.ihc_high_beam_code = UpdateIhcHighBeamCode();
+  ihc_sys_.state.ihc_low_beam_code = UpdateIhcLowBeamCode(); // 现阶段未使用
+  ihc_sys_.state.ihc_fault_code = UpdateIhcFaultCode();
+  ihc_sys_.state.ihc_active_code = IhcActiveCode();
+
   if (GetContext.get_param()->ihc_use_json_code) {
     // 如果使用json，则使用配置文件中的使能码、禁用码、故障码
-    ihc_sys_.state.ihc_enable_code = GetContext.get_param()->ihc_enable_code_maskcode;
-    ihc_sys_.state.ihc_disable_code = GetContext.get_param()->ihc_disable_code_maskcode;
-    ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code_maskcode;
+    ihc_sys_.state.ihc_high_beam_code = GetContext.get_param()->ihc_high_beam_code;
+    ihc_sys_.state.ihc_low_beam_code = GetContext.get_param()->ihc_low_beam_code;
+    ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code;
   }
 
   ihc_sys_.state.ihc_state = IHCStateMachine();
 
-  // IHC功能处于激活状态
+  // 记录上次远光灯请求状态
+  last_high_beam_request_ = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
+
+  // 应用时间保护策略
+  const float dt = GetContext.get_param()->dt;
+  
+  // 累计灯光持续时间
+  if (last_high_beam_request_) {
+    // 累计远光持续时间, 清零近光持续时间
+    ihc_low_beam_on_duration_s = 0.0f;
+    ihc_high_beam_on_duration_s += dt;
+    if (ihc_high_beam_on_duration_s > 10) {
+      ihc_high_beam_on_duration_s = 10.0f;
+    }
+  } else {
+    // 累计近光持续时间, 清零远光持续时间
+    ihc_high_beam_on_duration_s = 0.0f;
+    ihc_low_beam_on_duration_s += dt;
+    if (ihc_low_beam_on_duration_s > 10) {
+      ihc_low_beam_on_duration_s = 10.0f;
+    }
+  }
+
+  // 根据状态机和功能逻辑确定灯光状态（时间保护策略已在IHCRequest中实现）
   if (ihc_sys_.state.ihc_state == iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE) {
     ihc_sys_.state.ihc_request_status = true;
-    ihc_sys_.state.ihc_request = IHCRequest();
+    ihc_sys_.state.ihc_request = IHCRequest();  // IHCRequest中已包含时间保护策略
   } else {
     ihc_sys_.state.ihc_request_status = false;
-    ihc_sys_.state.ihc_request = false;
+    ihc_sys_.state.ihc_request = false;  // 非激活状态强制近光
   }
+
+  // 灯光状态已在时间保护策略中设置
   SetIhcOutputInfo();
 
-  // 从配置文件中读取ihc_main_switch值, 测试用, 后续需要移动到XXXcode中
-  if (GetContext.get_param()->ihc_use_json_switch) {
+  // 强制打开远光灯, 测试用
+  if (GetContext.get_param()->ihc_high_beam_switch) {
     JsonSwitchIhcMainSwitch();
   } else {
     // do nothing
   }
 
-  JSON_DEBUG_VALUE("ihc_function::ihc_enable_code",
-                   ihc_sys_.state.ihc_enable_code);
-  JSON_DEBUG_VALUE("ihc_function::ihc_disable_code",
-                   ihc_sys_.state.ihc_disable_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_high_beam_code",
+                   ihc_sys_.state.ihc_high_beam_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_low_beam_code",
+                   ihc_sys_.state.ihc_low_beam_code);
   JSON_DEBUG_VALUE("ihc_function::ihc_fault_code",
                    ihc_sys_.state.ihc_fault_code);
+  JSON_DEBUG_VALUE("ihc_function::ihc_active_code",
+                   ihc_sys_.state.ihc_active_code);
   JSON_DEBUG_VALUE("ihc_function::ihc_state", int(ihc_sys_.state.ihc_state));
   JSON_DEBUG_VALUE("ihc_function::ihc_request_status",
                    ihc_sys_.state.ihc_request_status);
@@ -115,6 +176,12 @@ void IhcCore::GetInputInfo() {
   ihc_sys_.input.shift_lever_state =
       static_cast<iflyauto::ShiftLeverStateEnum>(vehicle_service_output_info_ptr->shift_lever_state);
 
+  // 获取近光灯状态
+  ihc_sys_.input.low_beam_state = vehicle_service_output_info_ptr->low_beam_state;
+
+  // 获取远光灯状态
+  ihc_sys_.input.high_beam_state = vehicle_service_output_info_ptr->high_beam_state;
+
   // 获取前雾灯状态
   ihc_sys_.input.front_fog_light_state =
       vehicle_service_output_info_ptr->front_fog_light_state;
@@ -130,113 +197,159 @@ void IhcCore::GetInputInfo() {
   ihc_sys_.input.auto_light_state = vehicle_service_output_info_ptr->auto_light_state;
 }
 
-uint16 IhcCore::UpdateIhcEnableCode() {
+// IHC standby->active码: 0: 使能, 其他: 禁用 (全部满足)
+uint16 IhcCore::IhcActiveCode() {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  uint16 ihc_active_code_temp = 0;
+  // condition0: IGN ON
+  // 待补充
+
+  // condition1: 大灯开关挡位在AUTO档 (auto_light_state一直为false)
+  // if (ihc_sys_.input.auto_light_state != true) {
+  //   ihc_active_code_temp += uint16_bit[1];
+  // } else {
+  //   // do nothing
+  // }
+
+  // condition2: 近光灯点亮
+  if (ihc_sys_.input.low_beam_state != true) {
+    ihc_active_code_temp += uint16_bit[2];
+  } else {
+    // do nothing
+  }
+
+  return ihc_active_code_temp;
+}
+
+// 远光灯使能码: 0: 使能, 其他: 禁用 (全部满足)
+uint16 IhcCore::UpdateIhcHighBeamCode() {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   uint16 ihc_enable_code_temp = 0;
 
-  // condition0: 灯光挡位处于auto
-  if (ihc_sys_.input.ihc_main_switch == true) {
+  // condition0: 范围内有车, 置位
+  if (dynamic_obstacle_check_ == true) {
     ihc_enable_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
-  // condition1: 车速是否大于等于40kph
+  // condition1: 车速是否小于40kph, 或者车速大于等于40kph但未持续0.5s, 置位
+  const float dt = GetContext.get_param()->dt;
+  const float SPEED_40KPH_THRESHOLD_S = 0.5f;  // 40kph持续时间阈值
+  
   if (ihc_sys_.input.vehicle_speed_display_kph >= 40.0F) {
+    // 车速>=40kph，累计持续时间
+    speed_above_40kph_duration_ += dt;
+    if (speed_above_40kph_duration_ > 10.0f) {
+      speed_above_40kph_duration_ = 10.0f;  // 防止溢出
+    }
+  } else {
+    // 车速<40kph，清零持续时间
+    speed_above_40kph_duration_ = 0.0f;
+  }
+  
+  // 判断是否需要置位：车速<40kph 或者 车速>=40kph但未持续0.5s
+  if (ihc_sys_.input.vehicle_speed_display_kph < 40.0F || 
+      speed_above_40kph_duration_ < SPEED_40KPH_THRESHOLD_S) {
     ihc_enable_code_temp += uint16_bit[1];
   } else {
     // do nothing
   }
 
-  // codition2：车速是否小于等于150kph
-  if (ihc_sys_.input.vehicle_speed_display_kph <= 150.0F) {
+  // condition2: 雨刮运行速度相关条件
+  // 2.1: 雨刷快速档时禁用远光灯
+  // 2.2: 雨刷非快速档且未满60s时也禁用远光灯（避免频繁切换）
+  if (wiper_is_high_speed_ || !wiper_not_high_speed_last_) {
     ihc_enable_code_temp += uint16_bit[2];
   } else {
     // do nothing
   }
 
-  // condition3：后雾灯状态为false
-  if (ihc_sys_.input.rear_fog_light_state == false) {
-    ihc_enable_code_temp += uint16_bit[3];
-  } else {
-    // do nothing
-  }
+  // condition3: 摄像头未出现临时遮挡问题
+  // TODO: thzhang5 0907 需要根据文档需求更改
 
-  // condition4: 前雾灯状态是否为false
-  if (ihc_sys_.input.front_fog_light_state == false) {
+  // condition4：雾灯状态为false
+  if (ihc_sys_.input.rear_fog_light_state || ihc_sys_.input.front_fog_light_state) {
     ihc_enable_code_temp += uint16_bit[4];
   } else {
     // do nothing
   }
 
-  // condition5: 雨刮运行速度没有达到快速档位
-  if (ihc_sys_.input.wiper_state != iflyauto::WiperStateEnum::WiperState_HighSpeed) {
-    ihc_enable_code_temp += uint16_bit[5];
+  // condition5: 转向灯关闭
+  // 待确认
+
+  // condition6: 环境昏暗
+  if (ihc_sys_.input.lighting_condition != iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
+    ihc_enable_code_temp += uint16_bit[6];
   } else {
     // do nothing
   }
 
   return ihc_enable_code_temp;
 }
-uint16 IhcCore::UpdateIhcDisableCode() {
+
+// 近光灯使能码: 0: 禁用, 其他: 使能 (任一满足)
+uint16 IhcCore::UpdateIhcLowBeamCode() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   uint16 ihc_disable_code_temp = 0;
 
-  // condition0：灯光挡位不是auto
-  if (ihc_sys_.input.ihc_main_switch == false) {
+  // condition0: 范围内有车, 置位
+  if (dynamic_obstacle_check_ == true) {
     ihc_disable_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
-  // condition1: 车速小于等于30kph
+  // condition1: 仪表车速降至30km/h以下，持续时间0.5s(可标定)
+  const float dt = GetContext.get_param()->dt;
+  const float SPEED_30KPH_THRESHOLD_S = 0.5f;  // 30kph持续时间阈值
+  
   if (ihc_sys_.input.vehicle_speed_display_kph < 30.0F) {
+    // 车速<30kph，累计持续时间
+    speed_above_30kph_duration_ += dt;
+    if (speed_above_30kph_duration_ > 10.0f) {
+      speed_above_30kph_duration_ = 10.0f;  // 防止溢出
+    }
+  } else {
+    // 车速>=30kph，清零持续时间
+    speed_above_30kph_duration_ = 0.0f;
+  }
+  
+  // 判断是否满足持续时间要求（车速低于30kph且持续0.5s就置位）
+  if (speed_above_30kph_duration_ >= SPEED_30KPH_THRESHOLD_S) {
     ihc_disable_code_temp += uint16_bit[1];
   } else {
     // do nothing
   }
 
-  // condition2：车速是否大于155kph
-  if (ihc_sys_.input.vehicle_speed_display_kph > 155.0F) {
+  // condition2：雨刮运行速度不是切换为非快速档位后持续时间未超过60s, 近光
+  if (!wiper_not_high_speed_last_) {
     ihc_disable_code_temp += uint16_bit[2];
   } else {
-    // do nothing
+    /*do nothing*/
   }
 
-  // condition3：后雾灯状态为true
-  if (ihc_sys_.input.rear_fog_light_state == true) {
+  // condition3：雾灯状态为true
+  if (ihc_sys_.input.rear_fog_light_state == true || ihc_sys_.input.front_fog_light_state == true) {
     ihc_disable_code_temp += uint16_bit[3];
   } else {
     // do nothing
   }
 
-  // condition4：前雾灯状态为true
-  if (ihc_sys_.input.front_fog_light_state == true) {
+  // condition4：摄像头等关联键故障
+  // TODO: thzhang5 0907 状态机还未给出
+
+  // 环境亮度过高
+  if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     ihc_disable_code_temp += uint16_bit[4];
   } else {
     // do nothing
   }
 
-  // condition5：雨刮运行速度不是快速档位超过60s
-  if (ihc_sys_.input.wiper_state != iflyauto::WiperStateEnum::WiperState_HighSpeed) {
-    wiper_state_supp_duration_ += GetContext.get_param()->dt;
-    if (wiper_state_supp_duration_ > 70.0) {
-      wiper_state_supp_duration_ = 70.0;
-    } else {
-      /*do nothing*/
-    }
-  } else {
-    wiper_state_supp_duration_ = 0.0;
-  }
-  if (wiper_state_supp_duration_ < 60.0) {
-    ihc_disable_code_temp += uint16_bit[5];
-  } else {
-    /*do nothing*/
-  }
-
   return ihc_disable_code_temp;
 }
 
-// TODO: thzhang5 0714 需要根据文档需求更改
+// 故障码: 0: 无故障, 其他: 故障 (任一满足)
 uint16 IhcCore::UpdateIhcFaultCode() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
@@ -316,10 +429,9 @@ uint16 IhcCore::UpdateIhcFaultCode() {
 }
 
 iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
-  bool main_switch = ihc_sys_.input.ihc_main_switch;
-  uint16 fault_code = ihc_sys_.state.ihc_fault_code;
-  uint16 enable_code = ihc_sys_.state.ihc_enable_code;
-  uint16 disable_code = ihc_sys_.state.ihc_disable_code;
+  bool main_switch = ihc_sys_.input.ihc_main_switch; // IHC开关状态
+  uint16 fault_code = ihc_sys_.state.ihc_fault_code; // 故障码: 0: 无故障, 其他: 故障 (任一满足)
+  uint16 active_code = ihc_sys_.state.ihc_active_code; // 激活码: 0: 使能, 其他: 禁用 (全部满足)
 
   static uint8 ihc_state_machine_init_flag =
       0;  // IHC状态机初始化状态 0:未初始化过 1:已完成过初始化
@@ -331,11 +443,20 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
     // 状态机处于初始化状态 根据开关状态,决定第一个周期是输出OFF还是STANDBY
     ihc_state_machine_init_flag = 1;
     if (!main_switch) {
+      // 开关关闭 -> OFF
       ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
       ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
     } else {
-      ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
-      ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+      // 开关打开 -> 根据故障码决定状态
+      if (fault_code > 0) {
+        // 有故障 -> FAULT
+        ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
+        ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
+      } else {
+        // 无故障 -> STANDBY
+        ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
+        ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+      }
     }
   } else {
     // 状态机处于完成过初始化的状态
@@ -347,10 +468,7 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
         } else if (fault_code) {  // 2. 其次：有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
-        } else if (disable_code > 0) {  // 3. disable条件 -> OFF (此时main_switch为true,所以只判断其他disable)
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (enable_code != 63) {  // 4. 使能条件不满足 -> STANDBY
+        } else if (active_code > 0) {  // 3. standby条件 -> STANDBY, >0为禁用
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         } else {  // 维持ACTIVE
@@ -358,45 +476,37 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
         }
         break;
       case IHC_StateMachine_IN_FAULT:
-        if (!main_switch) {  // 1. 开关关闭 -> OFF
+        if (!main_switch) {  // 1. 优先级最高：开关关闭 -> OFF
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         } else if (!fault_code) {  // 2. 故障消失 -> STANDBY
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
-        } else {  // 维持FAULT (disable_code不在此处判断)
+        } else {  // 3. 有故障时维持FAULT状态
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         }
         break;
       case IHC_StateMachine_IN_OFF:
-        // 从OFF恢复, 必须满足: 1.开关打开 2.无disable条件(防止抖动)
-        if (main_switch && disable_code == 0) {
-          if (fault_code) {
-            // OFF->FAULT
-            ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
-            ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
-          } else {
-            // OFF->STANDBY
-            ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
-            ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
-          }
-        } else {  // 维持OFF
+        if (fault_code && main_switch) {  // 1. 有故障且开关打开 -> FAULT
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
+        } else if (main_switch) {  // 2. 无故障且开关打开 -> STANDBY
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_STANDBY;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
+        } else {  // 3. 维持OFF
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         }
         break;
       default: // STANDBY
-        if (!main_switch) {  // 1. 开关关闭 -> OFF
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (fault_code) {  // 2. 有故障 -> FAULT
+        if (fault_code) {  // 1. 有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
-        } else if (disable_code > 0) {  // 3. disable条件 -> OFF
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else if (enable_code == 63) {  // 4. 使能条件满足 -> ACTIVE
+        } else if (active_code == 0) {  // 3. active条件 -> ACTIVE, ==0为使能
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+        } else if (main_switch == false) {  // 4. 开关关闭 -> OFF
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
         } else {  // 维持STANDBY
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         }
@@ -416,7 +526,7 @@ bool IhcCore::IHCRequestLightingFilter(bool ihc_request_lighting, uint8_t window
     ihc_request_lighting_buffer_.push_back(ihc_request_lighting);
     // 计算信号是否稳定
     uint8_t transitions = 0;
-    for (uint8_t i = 0; i < ihc_request_lighting_buffer_.size(); ++i) {
+    for (uint8_t i = 0; i < ihc_request_lighting_buffer_.size() - 1; ++i) {
       if (ihc_request_lighting_buffer_[i] != ihc_request_lighting_buffer_[i + 1]) {
         transitions++;
       }
@@ -446,18 +556,23 @@ bool IhcCore::IHCRequestLightingFilter(bool ihc_request_lighting, uint8_t window
 }
 
 /*
-  动态障碍物消息处理, 返回是否需要切远光
-  1. 同向有车(含非机动车)100m内, 切近光
-  2. 对向有车, 机动车200m内,切近光, 非机动车75m内, 切近光
-  使用滞回控制避免临界距离抖动：在滞回区间内保持当前状态不变
+  动态障碍物检查函数
+  功能：持续检测范围内是否有稳定的障碍物
+  返回值：true - 检测到稳定的障碍物（需要近光灯）
+         false - 无稳定障碍物（可以使用远光灯）
 */
-bool IhcCore::IHCRequestDynamicObstacle(void) {
+bool IhcCore::DynamicObstacleCheck(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool last_high_beam_request = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
-  bool high_beam_request_temp = true;  // 默认远光
-  bool found_obstacle_in_hysteresis = false;  // 是否发现滞回区间内的障碍物
-
-  // 初始化debug变量（仅在持续满足2s后才会被置为true）
+  
+  // 获取自车速度信息
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
+  double ego_speed_kph = vehicle_service_output_info_ptr->vehicle_speed_display * 3.6;  // 转换为km/h
+  
+  // 初始化debug变量（仅在持续满足阈值时间后才会被置为true）
   ihc_sys_.state.low_beam_due_to_same_dir_vehicle = false;
   ihc_sys_.state.low_beam_due_to_oncomming_vehicle = false;
   ihc_sys_.state.low_beam_due_to_oncomming_cycle = false;
@@ -466,50 +581,54 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
   bool detected_same_dir = false;
   bool detected_oncoming_vehicle = false;
   bool detected_oncoming_cycle = false;
-
-  // 获取动态障碍物消息
-  // 1. 同向有车(含非机动车)100m内, 切近光
-  // 2. 对向有车, 机动车400m内,切近光, 非机动车75m内, 切近光
-  const auto &fusion_objs = GetContext.get_session()
-                                ->environmental_model()
-                                .get_local_view()
-                                .fusion_objects_info.fusion_object;
-  const int fusion_objs_num = GetContext.get_session()
-                                ->environmental_model()
-                                .get_local_view()
-                                .fusion_objects_info.fusion_object_size;
-
+  
+  // 获取动态障碍物消息 - 优化：减少重复的调用链访问
+  const auto &fusion_objects_info = GetContext.get_session()
+                                        ->environmental_model()
+                                        .get_local_view()
+                                        .fusion_objects_info;
+  const auto &fusion_objs = fusion_objects_info.fusion_object;
+  const int fusion_objs_num = fusion_objects_info.fusion_object_size;
+  
   for (int i = 0; i < fusion_objs_num; i++) {
-    float distance = fusion_objs[i].common_info.relative_center_position.x;
-
+    float distance_x = fusion_objs[i].common_info.relative_center_position.x;
+    float distance_y = fusion_objs[i].common_info.relative_center_position.y;
+    
     // 筛选前方的车辆动态障碍物，使用滞回控制
-    if (distance > 0 && distance < 220.0F) {  // 扩大检测范围
+    if (distance_x > 0 && distance_x < 220.0F) {  // 扩大检测范围
       // 判断障碍物是否为机动车
       if (fusion_objs[i].common_info.type >= iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
           fusion_objs[i].common_info.type <= iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
-
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          // 对向机动车：滞回控制，190m~210m为滞回区间
-          if (distance < 190.0f) {
+          // 对向机动车
+          // // 如果对向车纵向距离过近（<70m），横向距离太远(>20m)，则不在灯光影响区域
+          // if (distance_x < 70.0f && abs(distance_y) > 20.0f) {
+          //   continue;
+          // }
+          // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
+          if (distance_x  + fusion_objs[i].common_info.relative_velocity.x * 1.0f <= 0){
+            // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
+            continue;
+          }
+          // 滞回控制，190m~210m为滞回区间
+          if (distance_x < 190.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_vehicle = true;
-          } else if (distance <= 210.0f) {
+          } else if (distance_x <= 210.0f) {
             // 190m~210m滞回区间，保持当前状态
-            found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               detected_oncoming_vehicle = true;
             }
           }
           // distance > 210.0f 时继续检查其他障碍物
-        } else {
+        } else if(fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING){
           // 同向机动车：滞回控制，90m~110m为滞回区间
-          if (distance < 90.0f) {
+          if (distance_x < 90.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_same_dir = true;
-          } else if (distance <= 110.0f) {
+          } else if (distance_x <= 110.0f) {
             // 90m~110m滞回区间，保持当前状态
-            found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               detected_same_dir = true;
             }
@@ -520,12 +639,11 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
                  fusion_objs[i].common_info.type <= iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
         // 对向非机动车：滞回控制，65m~85m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          if (distance < 65.0f) {
+          if (distance_x < 65.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
-          } else if (distance <= 85.0f) {
+          } else if (distance_x <= 85.0f) {
             // 65m~85m滞回区间，保持当前状态
-            found_obstacle_in_hysteresis = true;
             if (!last_high_beam_request) {
               detected_oncoming_cycle = true;
             }
@@ -573,84 +691,46 @@ bool IhcCore::IHCRequestDynamicObstacle(void) {
   } else {
     ihc_oncoming_cycle_hold_time_s = 0.0f;
   }
-
-  // 基于持续性结果的最终决策 + 近光转远光需要空窗2s + 远光最小持续2s
-  bool need_low_beam = (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
-                        ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||
-                        ihc_sys_.state.low_beam_due_to_oncomming_cycle);
-
-  const float MIN_HIGH_BEAM_ON_S = 2.0f;           // 远光最小持续时间
-  const float MIN_NO_OBSTACLE_TO_HIGH_S = 1.0f;    // 从近光转远光需要的无车持续时间
-
-  // 累计远光持续时间
-  if (last_high_beam_request) {
-    ihc_high_beam_on_duration_s += dt;
-  } else {
-    ihc_high_beam_on_duration_s = 0.0f;
-  }
-
-  // 累计无车时间
-  if (!need_low_beam) {
-    ihc_no_obstacle_hold_time_s += dt;
-  } else {
-    ihc_no_obstacle_hold_time_s = 0.0f;
-  }
-
-  // 决策：有车需近光，但若远光未满2s则保持远光
-  if (need_low_beam) {
-    if (last_high_beam_request && ihc_high_beam_on_duration_s < MIN_HIGH_BEAM_ON_S) {
-      high_beam_request_temp = true;   // 保持远光直到满2s
-    } else {
-      high_beam_request_temp = false;  // 切近光
-    }
-  } else {
-    // 无车：若当前近光，需无车持续>=2s才允许开远光；若当前远光则继续保持
-    if (!last_high_beam_request) {
-      high_beam_request_temp = (ihc_no_obstacle_hold_time_s >= MIN_NO_OBSTACLE_TO_HIGH_S);
-    } else {
-      high_beam_request_temp = true;
-    }
-  }
-
-  return high_beam_request_temp;
+  
+  // 返回是否检测到稳定的障碍物
+  return (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
+          ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||
+          ihc_sys_.state.low_beam_due_to_oncomming_cycle);
 }
 
 bool IhcCore::IHCRequest() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool ihc_request_temp = GetContext.get_output_info()->ihc_output_info_.ihc_request_;
 
-  // 环境亮度条件
-  bool dynamic_called = false;
-  if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
-    // 昏暗环境, 根据障碍物信息判断是否需要切远光
-    ihc_request_temp = IHCRequestDynamicObstacle();
-    dynamic_called = true;
-  } else if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
-    // 明亮环境
-    ihc_request_temp = false;
-  } else if (ihc_sys_.input.lighting_condition == iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_MEDIUM) {
-    // 中等亮度环境，根据当前车灯判断是否需要切远光
-    if (ihc_request_temp == false) {
-      // 当前为近光灯，保持
-    } else {
-      // 当前为远光灯，判断是否要切近光
-      ihc_request_temp = IHCRequestDynamicObstacle();
-      dynamic_called = true;
+  uint16 high_beam_code = ihc_sys_.state.ihc_high_beam_code; // 远光灯使能码: 0: 使能, 其他: 禁用 (全部满足)
+  uint16 low_beam_code = ihc_sys_.state.ihc_low_beam_code; // 近光灯使能码: 0: 禁用, 其他: 使能 (任一满足)
+
+  // 时间保护策略常量
+  const float MIN_HIGH_BEAM_ON_S = 2.0f;           // 远光最小持续时间
+  const float MIN_LOW_BEAM_ON_S = 1.0f;            // 近光最小持续时间
+
+  if (last_high_beam_request_ == true) {
+    // 当前远光灯(上次为远光灯请求), 在满足前置条件的情况下, 根据近光灯使能码判断是否需要切近光
+    // 前置条件: 1. 处于active, 2. 远光灯最小点亮时长满足
+    if (ihc_sys_.state.ihc_state == iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE &&
+        ihc_high_beam_on_duration_s >= MIN_HIGH_BEAM_ON_S) {
+      if (low_beam_code > 0) {
+        ihc_request_temp = false;
+      }
     }
   } else {
-    // 中等亮度环境，保持
-    // do nothing
-  }
-
-  // 如果本周期未调用动态障碍物判定，则重置计时器，防止跨环境累计
-  if (!dynamic_called) {
-    ResetIhcDynamicObstacleTimers();
+    // 当前近光灯, 在满足前置条件的情况下, 根据远光灯使能码判断是否需要切远光
+    // 前置条件: 1. 处于active, 2. 近光灯最小点亮时长满足
+    if (ihc_sys_.state.ihc_state == iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE && 
+        ihc_low_beam_on_duration_s >= MIN_LOW_BEAM_ON_S) {
+      if (high_beam_code == 0) {
+        ihc_request_temp = true;
+      }
+    }
   }
 
   return ihc_request_temp;
 }
-
-
 
 void IhcCore::SetIhcOutputInfo(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
@@ -688,25 +768,12 @@ void IhcCore::SetIhcOutputInfo(void) {
   }
 }
 
-bool IhcCore::JsonSwitchIhcMainSwitch() {
+void IhcCore::JsonSwitchIhcMainSwitch(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
-  // 读取配置文件中的 ihc_main_switch 值
-  bool ihc_switch = GetContext.get_param()->ihc_main_switch;
-
-  if (ihc_switch) {
-    // 如果为1，设置为true
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = true;
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = true;
-  } else {
-    // 如果为0，设置为false
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = true;
-    GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = false;
-  }
-
-  return ihc_switch;
+  GetContext.mutable_output_info()->ihc_output_info_.ihc_state_ = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
+  GetContext.mutable_output_info()->ihc_output_info_.ihc_request_status_ = true;
+  GetContext.mutable_output_info()->ihc_output_info_.ihc_request_ = true;
 }
 
 }  // namespace ihc_core

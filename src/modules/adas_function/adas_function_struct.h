@@ -79,9 +79,10 @@ struct Parameters {
   bool elk_main_switch = false;
   iflyauto::NotificationMainSwitch tsr_main_switch =
       iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
-  bool ihc_use_json_switch = false;
   bool ihc_use_json_code = false;
-  bool ihc_main_switch = false;
+  bool ihc_set_main_switch = false;
+  bool ihc_high_beam_switch = false;
+  bool tsr_use_json_code = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
   // double elk_roadedge_offset = 0.15;
@@ -169,12 +170,14 @@ struct Parameters {
   double ldw_enable_accel_pedal_pos_rate_dur = 1.0;
   // test value
   int meb_request_status_const = 0;
-  // IHC使能码掩码
-  uint16 ihc_enable_code_maskcode = 31;
-  // IHC禁用码掩码
-  uint16 ihc_disable_code_maskcode = 0;
-  // IHC故障码掩码
-  uint16 ihc_fault_code_maskcode = 0;
+  // IHC远光灯码
+  uint16 ihc_high_beam_code = 0;
+  // IHC近光灯码
+  uint16 ihc_low_beam_code = 0;
+  // IHC故障码
+  uint16 ihc_fault_code = 0;
+  // TSR故障码
+  uint16 tsr_fault_code = 0;
 };
 
 struct StateInfo {

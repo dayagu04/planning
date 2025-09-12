@@ -187,7 +187,10 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
   } else if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
                                     TSR_FUNCTION_FSM_WORK_STATE_OFF) {
     // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_OFF状态
-    if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
+    if (tsr_fault_code_) {  // 1. 优先级最高：有故障 -> FAULT
+      tsr_state = iflyauto::TSRFunctionFSMWorkState::
+          TSR_FUNCTION_FSM_WORK_STATE_FAULT;
+    } else if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
         tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_VISUAL_AND_AUDIO) {
       tsr_state = iflyauto::TSRFunctionFSMWorkState::
           TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -230,17 +233,18 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
     }
   } else {
-    // 处于异常状态
+    // 处于FAULT状态
     if (tsr_fault_code_ == 0) {
-      // 全部系统故障解除
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-    } else {
-      // ISLI设置项关闭
-      if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF) {
-        tsr_state =
-            iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
+      // 全部系统故障解除 -> 根据开关状态决定下一状态
+      if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
+          tsr_main_switch_ == iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
+        tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
+      } else {
+        tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
       }
+    } else {
+      // 有故障时维持FAULT状态，不受开关状态影响
+      tsr_state = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
     }
   }
 
@@ -918,6 +922,8 @@ void TsrCore::ResetRealTimeTsrInfo(void) {
 }
 
 void TsrCore::RunOnce(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  
   // 更新tsr开关状态
   tsr_main_switch_ = UpdateTsrMainSwitch();
 
@@ -929,6 +935,11 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
+  
+  if (GetContext.get_param()->tsr_use_json_code) {
+    // 如果使用json，则使用配置文件中的故障码
+    tsr_fault_code_ = GetContext.get_param()->tsr_fault_code;
+  }
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();
@@ -938,7 +949,6 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_speed_limit_
   // 获取功能状态信息来判断是否为NOA激活模式
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   auto function_state_machine_info_ptr = &GetContext.mutable_session()
                                      ->mutable_environmental_model()
                                      ->get_local_view()
