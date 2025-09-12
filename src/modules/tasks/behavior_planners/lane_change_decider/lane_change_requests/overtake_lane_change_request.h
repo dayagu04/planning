@@ -1,5 +1,6 @@
 #pragma once
 
+#include "config/basic_type.h"
 #include "lane_change_request.h"
 #include "tracked_object.h"
 #include "src/modules/common/math/filter/mean_filter.h"
@@ -152,6 +153,7 @@ class OvertakeRequest : public LaneChangeRequest {
   planning::planning_math::MeanFilter leading_speed_filter_;
   bool left_lane_exist_truck_ = false;
   bool right_lane_exist_truck_ = false;
+  RequestType last_request_type_ = NO_CHANGE;
 };
 
 }  // namespace planning

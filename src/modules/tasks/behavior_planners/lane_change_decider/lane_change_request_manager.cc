@@ -313,7 +313,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_source_ = MERGE_REQUEST;
     target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();
   } else {
-    ILOG_DEBUG << "overtake_request_.request_type():" << overtake_request_.request_type();
+    // ILOG_DEBUG << "overtake_request_.request_type():" << overtake_request_.request_type();
     request_ = overtake_request_.request_type();
     request_source_ = (request_ != NO_CHANGE) ? OVERTAKE_REQUEST : NO_REQUEST;
     target_lane_virtual_id_ =
