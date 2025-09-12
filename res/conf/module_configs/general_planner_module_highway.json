@@ -299,7 +299,9 @@
     "max_nudge_buffer2side_car": 0.6,
     "lower_risk_jerk_bound": 1,
     "high_risk_jerk_bound": 1.5,
-    "limit_nudge_change_rate": 0.15
+    "limit_nudge_change_rate": 0.15,
+    "extra_static_nudge_buffer2second_bound":0.1,
+    "extra_dynamic_nudge_buffer2second_bound":0.15
 
   },
   "lateral_offset_decider": {

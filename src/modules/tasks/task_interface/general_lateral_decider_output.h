@@ -12,20 +12,20 @@
 namespace planning {
 struct GeneralLateralDeciderOutput {
   planning::common::LateralInitState init_state;
-  std::vector<WeightedBounds> soft_bounds; //默认为soft_bounds_first
-  std::vector<WeightedBounds> soft_bounds_second;
+  std::vector<WeightedBounds> soft_bounds; // 默认和之前一样，为第二层软约束
+  std::vector<WeightedBounds> first_soft_bounds; // 稳定
   std::vector<WeightedBounds> hard_bounds;
   std::vector<std::pair<double, double>> enu_ref_path;
   std::vector<std::pair<double, double>> front_axis_enu_ref_path;
   std::vector<std::pair<double, double>> last_enu_ref_path;
   std::vector<std::pair<Point2D, Point2D>> soft_bounds_cart_point;
-  std::vector<std::pair<Point2D, Point2D>> soft_bounds_second_cart_point;
+  std::vector<std::pair<Point2D, Point2D>> first_soft_bounds_cart_point;
   std::vector<std::pair<Point2D, Point2D>> hard_bounds_cart_point;
   std::vector<std::pair<double, double>> soft_bounds_frenet_point;
-  std::vector<std::pair<double, double>> soft_bounds_second_frenet_point;
+  std::vector<std::pair<double, double>> first_soft_bounds_frenet_point;
   std::vector<std::pair<double, double>> hard_bounds_frenet_point;
   std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info;
-  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_second_info;
+  std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
   std::vector<double> enu_ref_theta;
   std::vector<double> last_enu_ref_theta;
@@ -53,16 +53,16 @@ struct GeneralLateralDeciderOutput {
     enu_ref_path.clear();
     last_enu_ref_path.clear();
     soft_bounds.clear();
-    soft_bounds_second.clear();
+    first_soft_bounds.clear();
     hard_bounds.clear();
     soft_bounds_cart_point.clear();
-    soft_bounds_second_cart_point.clear();
+    first_soft_bounds_cart_point.clear();
     hard_bounds_cart_point.clear();
     soft_bounds_frenet_point.clear();
-    soft_bounds_second_frenet_point.clear();
+    first_soft_bounds_frenet_point.clear();
     hard_bounds_frenet_point.clear();
     soft_bounds_info.clear();
-    soft_bounds_second_info.clear();
+    first_soft_bounds_info.clear();
     hard_bounds_info.clear();
     enu_ref_theta.clear();
     last_enu_ref_theta.clear();

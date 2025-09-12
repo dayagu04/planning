@@ -106,13 +106,13 @@ class GeneralLateralDecider : public Task {
       ObstacleDecisions &obstacle_decisions);
   void GenerateStaticObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
+      ObstacleDecision &obstacle_decision, BoundHierarchy bound_hierarchy);
   void GenerateDynamicObstaclesBoundary(
       const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
       ObstacleDecisions &obstacle_decisions);
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
+      ObstacleDecision &obstacle_decision, BoundHierarchy bound_hierarchy);
   double CalculateExtraDecreaseBuffer(
       const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left,
@@ -142,10 +142,10 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &frenet_soft_bounds,
-      std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
+      std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
   void ProtectBoundByInitPoint(std::pair<double, double> &bound,
                                std::pair<BoundInfo, BoundInfo> &bound_info);
@@ -158,10 +158,10 @@ class GeneralLateralDecider : public Task {
                         std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
   void GenerateObstaclePreliminaryDecision(
@@ -179,20 +179,20 @@ class GeneralLateralDecider : public Task {
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
-                                bool is_update_hard_bound = false,
+                                BoundHierarchy bound_hierarchy = BoundHierarchy::FIRST_SOFT_BOUND,
                                 bool is_avoid_side_ignore_obj = false,
                                 bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_second_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds_second,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
@@ -239,14 +239,14 @@ class GeneralLateralDecider : public Task {
                                  double overlap_min_y, double overlap_max_y,
                                  bool is_side_obstacle,
                                  double extra_lane_type_decrease_buffer,
-                                 bool is_update_hard_bound, double lane_width,
+                                 BoundHierarchy bound_hierarchy, double lane_width,
                                  bool is_care_reverse_ignore_obj);
   double CalDynamicNudgeLatBufDis(
       const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
       bool is_nudge_left, double overlap_min_y, double overlap_max_y,
       double limit_overlap_min_y, double limit_overlap_max_y, double pred_ts,
       double extra_lane_type_decrease_buffer,
-      bool is_same_side_obstacle_during_lane_change, bool is_update_hard_bound,
+      bool is_same_side_obstacle_during_lane_change, BoundHierarchy bound_hierarchy,
       double extra_reverse_obj_decrease_buffer, bool is_care_reverse_ignore_obj,
       double last_t_lat_buf_dis, double &updated_overlap_min_y,
       double &updated_overlap_max_y);
@@ -296,15 +296,16 @@ class GeneralLateralDecider : public Task {
   ObstacleDecisions static_obstacle_decisions_;
   ObstacleDecisions dynamic_obstacle_decisions_;
 
-  std::vector<WeightedBounds> soft_bounds_;
-  std::vector<WeightedBounds> soft_bounds_second_;
+  std::vector<WeightedBounds> second_soft_bounds_;
+  std::vector<WeightedBounds> first_soft_bounds_;
   std::vector<WeightedBounds> hard_bounds_;
+  std::vector<WeightedBounds> last_first_soft_bounds_;
 
   std::vector<std::pair<double, double>> frenet_soft_bounds_;
-  std::vector<std::pair<double, double>> frenet_soft_bounds_second_;
+  std::vector<std::pair<double, double>> first_frenet_soft_bounds_;
   std::vector<std::pair<double, double>> frenet_hard_bounds_;
   std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info_;
-  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_second_info_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info_;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
 
   FrenetEgoState ego_frenet_state_;

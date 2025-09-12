@@ -15,7 +15,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 bool is_same_side_obstacle_during_lane_change,
-                                bool is_update_hard_bound,
+                                BoundHierarchy bound_hierarchy,
                                 GeneralLateralDeciderConfig &config) {
   double base_dis = 0.7;
   if (IsVRU(obstacle->type())) {
@@ -39,12 +39,17 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
       interp(ego_vel * 3.6, config.lateral_obstacle_nudge_buffer_v_bp,
              config.lateral_nudge_buffer);
   // return std::fmax(base_dis + 0.015 * ego_vel, 0.);
-  if (is_update_hard_bound) {
+  if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
     return std::fmax(
         config.hard_buffer2dynamic_agent - extra_pred_ts_decrease_buffer, 0.);
-  } else {
+  } else if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
     base_dis =
         std::fmax(base_dis + extra_buffer, config.hard_buffer2dynamic_agent);
+    return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
+  } else {
+    base_dis = std::fmax(
+        base_dis + extra_buffer + config.extra_dynamic_nudge_buffer2second_bound,
+        config.hard_buffer2dynamic_agent);
     return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
   }
 }
@@ -70,7 +75,7 @@ double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(
     const double base_distance, const double ego_vel, const double ego_l,
-    const std::shared_ptr<FrenetObstacle> obstacle, bool is_update_hard_bound,
+    const std::shared_ptr<FrenetObstacle> obstacle, BoundHierarchy bound_hierarchy,
     GeneralLateralDeciderConfig &config) {
   const double kStaticVRUMaxExtraLateralBuffer =
       config.static_vru_max_lateral_buffer;
@@ -78,7 +83,7 @@ double CalDesireStaticLateralDistance(
   const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
 
-  if (is_update_hard_bound) {
+  if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
     return base_distance;
   }
 
@@ -101,7 +106,13 @@ double CalDesireStaticLateralDistance(
       min_extra_lateral_buffer +
       clip_ego_l * (max_extra_lateral_buffer - min_extra_lateral_buffer) /
           kMaxEgoLCoeff;
-  return base_distance + lateral_extra_buffer;
+
+  if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
+    return base_distance + lateral_extra_buffer;
+  } else if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
+    return base_distance + lateral_extra_buffer + config.extra_static_nudge_buffer2second_bound;
+  }
+
 }
 
 double GetBoundWeight(

@@ -2014,6 +2014,12 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, limit_nudge_change_rate,
                      "general_lateral_decider",
                      "limit_nudge_change_rate");
+    ReadItem<double>(json, extra_static_nudge_buffer2second_bound,
+                     "general_lateral_decider",
+                     "extra_static_nudge_buffer2second_bound");
+    ReadItem<double>(json, extra_dynamic_nudge_buffer2second_bound,
+                     "general_lateral_decider",
+                     "extra_dynamic_nudge_buffer2second_bound");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -2031,6 +2037,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double kVirtualLaneBoundWeight = 1;
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
+  double kSecondSoftBoundWeight = -10;
+  double kFirstSoftBoundWeight = 10;
+
   double soft_buffer2lane = 0.0;
   double extra_soft_buffer2road = 0.0;
   double hard_buffer2lane = 0.0;
@@ -2129,6 +2138,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double lower_risk_jerk_bound = 0.4;
   double high_risk_jerk_bound = 0.4;
   double limit_nudge_change_rate = 0.1;
+  double extra_static_nudge_buffer2second_bound = 0.0;
+  double extra_dynamic_nudge_buffer2second_bound = 0.0;
+
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
