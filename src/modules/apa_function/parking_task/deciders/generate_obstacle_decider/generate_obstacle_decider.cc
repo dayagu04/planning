@@ -164,10 +164,16 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
   const double bound_threshold = 0.68;
 
-  geometry_lib::RectangleBound bound(virtual_tlane_.min_x - bound_threshold,
-                                     virtual_tlane_.min_y - bound_threshold,
-                                     virtual_tlane_.max_x + bound_threshold,
-                                     virtual_tlane_.max_y + bound_threshold);
+  const double min_x =
+      std::min(virtual_tlane_.C.x(), virtual_tlane_.D.x()) - bound_threshold;
+  const double max_x =
+      std::max(virtual_tlane_.G.x(), virtual_tlane_.H.x()) + bound_threshold;
+  const double min_y =
+      std::min(virtual_tlane_.F.y(), virtual_tlane_.G.y()) - bound_threshold;
+  const double max_y =
+      std::max(virtual_tlane_.A.y(), virtual_tlane_.H.y()) + bound_threshold;
+
+  geometry_lib::RectangleBound bound(min_x, min_y, max_x, max_y);
 
   bound.PrintInfo();
 
