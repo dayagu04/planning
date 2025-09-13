@@ -223,6 +223,9 @@ void ParkingScenarioManager::ScenarioTry() {
   }
 
   if (!apa_world_->GetSlotManagerPtr()->IsTargetSlotReleaseByRule()) {
+    ILOG_INFO << "Exit IsTargetSlotReleaseByRule prepare_plan_state: "
+              << apa_hmi_data_.prepare_plan_state;
+    PubPreparePlanStateFreeSlot();
     return;
   }
 
@@ -373,6 +376,34 @@ void ParkingScenarioManager::PubPreparePlanState() {
 
   if (PubPreparePathByStableStrategy()) {
     planning_output_ = current_scenario_->GetOutput();
+  }
+
+  ILOG_INFO << "release state = " << apa_hmi_data_.prepare_plan_state;
+
+  return;
+}
+
+void ParkingScenarioManager::PubPreparePlanStateFreeSlot() {
+  if (!apa_world_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
+    return;
+  }
+
+  SlotReleaseState state =
+      apa_world_->GetSlotManagerPtr()->GetSlotReleaseState();
+  switch (state) {
+    case SlotReleaseState::NOT_RELEASE:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_FAILED;
+      break;
+    case SlotReleaseState::RELEASE:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_SUCCESS;
+      break;
+    case SlotReleaseState::UNKNOWN:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
+      break;
+    default:
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;
+      break;
   }
 
   ILOG_INFO << "release state = " << apa_hmi_data_.prepare_plan_state;
