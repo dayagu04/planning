@@ -106,7 +106,7 @@
   "check_finish_lat_err_strict": 0.1,
   "check_finish_heading_err": 2.5,
   "check_finish_heading_err_strict": 1.8,
-  "check_finish_obs_stuck_slot_occupied_ratio": 0.798,
+  "check_finish_obs_stuck_slot_occupied_ratio": 0.68,
   "check_finish_min_car2line_dist": -0.02,
   "check_finish_max_car2line_dist": 0.1,
   "check_finish_max_remain_path_dist": 1.068,
