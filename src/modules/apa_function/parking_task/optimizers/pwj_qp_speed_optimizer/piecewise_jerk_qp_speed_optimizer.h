@@ -29,7 +29,7 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
 
   const SpeedData& GetSpeedData() const { return qp_speed_data_; }
 
-  bool Init() override;
+  const bool Init() override;
 
  private:
   void DebugPiecewiseJerkProblem(const PiecewiseJerkSpeedProblem& pwj);

@@ -78,21 +78,32 @@ void ParkingScenarioManager::UpdateScenarioType() {
   const EgoInfoUnderSlot &ego_info_under_slot =
       apa_world_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
+  const ApaParameters &param = apa_param.GetParam();
+
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
     if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
-        // check is narrow space or not
-        if (IsSlotReleaseByHybridAstar()) {
-          scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
-        } else {
-          scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
-        }
-      } else {
-        // only use astar
-        scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+      if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+        // only run PERPENDICULAR_TAIL_IN
+        scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
       }
+
+      else {
+        if (apa_param.GetParam().path_generator_type ==
+            ParkPathGenerationType::GEOMETRY_BASED) {
+          // check is narrow space or not
+          if (IsSlotReleaseByHybridAstar()) {
+            scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+          } else {
+            scenario_type_ =
+                ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+          }
+        } else {
+          // only use astar
+          scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
+        }
+      }
+
     } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_SLANT_TAIL_IN;
     } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
@@ -235,42 +246,50 @@ void ParkingScenarioManager::ScenarioTry() {
   const EgoInfoUnderSlot &ego_info_under_slot =
       apa_world_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
-  if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
-    // 车尾泊入功能
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
-        ego_info_under_slot.slot_type == SlotType::SLANT) {
-      std::shared_ptr<ParkingScenario> temp_narrow_scenario =
-          scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
+  const ApaParameters &param = apa_param.GetParam();
+  if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    current_scenario_->ScenarioTry();
+  }
 
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
-        // 先用几何尝试
-        std::shared_ptr<ParkingScenario> temp_geometry_scenario =
-            scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
-        temp_geometry_scenario->ScenarioTry();
-      }
+  else {
+    if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+      // 车尾泊入功能
+      if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
+          ego_info_under_slot.slot_type == SlotType::SLANT) {
+        std::shared_ptr<ParkingScenario> temp_narrow_scenario =
+            scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
-      if (ego_info_under_slot.slot.release_info_
-              .release_state[GEOMETRY_PLANNING_RELEASE] ==
-          SlotReleaseState::RELEASE) {
-        ILOG_INFO << "scenario geometry path try success, clear astar";
+        if (apa_param.GetParam().path_generator_type ==
+            ParkPathGenerationType::GEOMETRY_BASED) {
+          // 先用几何尝试
+          std::shared_ptr<ParkingScenario> temp_geometry_scenario =
+              scenario_list_
+                  [ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
+          temp_geometry_scenario->ScenarioTry();
+        }
 
-        // A星跑了一半，也要将其清空.
-        temp_narrow_scenario->ThreadClearState();
+        if (ego_info_under_slot.slot.release_info_
+                .release_state[GEOMETRY_PLANNING_RELEASE] ==
+            SlotReleaseState::RELEASE) {
+          ILOG_INFO << "scenario geometry path try success, clear astar";
+
+          // A星跑了一半，也要将其清空.
+          temp_narrow_scenario->ThreadClearState();
+        } else {
+          ILOG_INFO << "scenario geometry path try fail, try astar";
+          temp_narrow_scenario->ScenarioTry();
+        }
+      } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
+        // todo: 看是否要A星介入
+        current_scenario_->ScenarioTry();
       } else {
-        ILOG_INFO << "scenario geometry path try fail, try astar";
-        temp_narrow_scenario->ScenarioTry();
+        // todo: 平行车位
+        current_scenario_->ScenarioTry();
       }
-    } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
-      // todo: 看是否要A星介入
-      current_scenario_->ScenarioTry();
     } else {
-      // todo: 平行车位
+      // todo: head in, head out, tail out.
       current_scenario_->ScenarioTry();
     }
-  } else {
-    // todo: head in, head out, tail out.
-    current_scenario_->ScenarioTry();
   }
 
   planning_output_ = current_scenario_->GetOutput();

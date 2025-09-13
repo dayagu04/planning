@@ -24,7 +24,7 @@ class ApaPlanInterface {
 
   void Init(const bool is_simulation = false);
 
-  void Reset();
+  void Reset(const bool is_simulation = false);
 
   // local_view_ptr: input, upstream info;
   // navigation_traj: input, navigation traj;
@@ -59,6 +59,10 @@ class ApaPlanInterface {
   std::shared_ptr<ParkingScenario> GetPlannerByType(
       const ParkingScenarioType type);
 
+  const std::shared_ptr<ApaWorld>& GetApaWorldPtr() const {
+    return apa_world_ptr_;
+  }
+
  private:
   void AddReleasedSlotInfo(iflyauto::PlanningOutput& planning_output);
 
@@ -78,7 +82,7 @@ class ApaPlanInterface {
 
   // planning result by navigation. Need generate stitching traj for parking in
   // hpp.
-  const PlanningResult *navigation_traj_;
+  const PlanningResult* navigation_traj_;
 };
 
 }  // namespace apa_planner

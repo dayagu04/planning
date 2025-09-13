@@ -17,7 +17,7 @@ namespace apa_planner {
 #define DEBUG_SAMPLING (0)
 #define DEBUG_RESULT (1)
 
-bool JerkLimitedTrajOptimizer::Init() {
+const bool JerkLimitedTrajOptimizer::Init() {
   config_.Init();
   speed_data_.clear();
   ClearDebugInfo();

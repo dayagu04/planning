@@ -15,6 +15,33 @@ using namespace pnc;
 
 #define MAX_CAR_FOOTPRINT_CIRCLE_NUM (12)
 
+struct ColResultF {
+  bool col_flag = false;
+  float remain_dist = 26.8f;
+
+  float min_obs_dist = 26.8f;
+
+  void Reset() {
+    col_flag = false;
+    remain_dist = 26.8f;
+    min_obs_dist = 26.8f;
+  }
+};
+
+struct ColDetBuffer {
+  float lon_buffer;
+  float body_lat_buffer;
+  float mirror_lat_buffer;
+
+  ColDetBuffer() {}
+  ~ColDetBuffer() {}
+  ColDetBuffer(const float _lon_buffer, const float _body_lat_buffer,
+               const float _mirror_lat_buffer)
+      : lon_buffer(_lon_buffer),
+        body_lat_buffer(_body_lat_buffer),
+        mirror_lat_buffer(_mirror_lat_buffer) {}
+};
+
 struct ColResult {
   bool col_flag = false;
   // 纵向
@@ -31,6 +58,9 @@ struct ColResult {
 
   std::vector<geometry_lib::Pt2ObsDistInfo> pt_obs_dist_info_vec;
 
+  Eigen::Vector2d dangerous_obs_pt;
+  Eigen::Vector2d dangerous_path_pt;
+
   void Reset() {
     col_flag = false;
     remain_dist = 26.8;
@@ -41,6 +71,8 @@ struct ColResult {
     pt_closest2obs = std::make_pair(26.8, geometry_lib::PathPoint());
     path_rectangle_bound.Reset();
     pt_obs_dist_info_vec.clear();
+    dangerous_obs_pt.setZero();
+    dangerous_path_pt.setZero();
   }
 };
 
@@ -121,7 +153,7 @@ class BaseCollisionDetector {
   BaseCollisionDetector() {}
   virtual ~BaseCollisionDetector() = default;
   void Init(const bool fold_mirror_flag);
-  void SetObsManager(
+  void SetObsManagerPtr(
       const std::shared_ptr<ApaObstacleManager> &obs_manager_ptr) {
     obs_manager_ptr_ = obs_manager_ptr;
   };

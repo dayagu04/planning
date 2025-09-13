@@ -604,6 +604,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.col_obs_safe_dist_strict, double,
                   "col_obs_safe_dist_strict");
 
+  JSON_READ_VALUE(param.gen_ref_length_lat_buffer, double,
+                  "gen_ref_length_lat_buffer");
+
+  JSON_READ_VALUE(param.gen_ref_length_lon_buffer, double,
+                  "gen_ref_length_lon_buffer");
+
   JSON_READ_VALUE(param.max_obs_lat_invasion_slot_dist, double,
                   "max_obs_lat_invasion_slot_dist");
 

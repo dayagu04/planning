@@ -9,7 +9,7 @@ class GeometryCollisionDetector final : public BaseCollisionDetector {
   GeometryCollisionDetector() {}
   GeometryCollisionDetector(
       const std::shared_ptr<ApaObstacleManager> &obs_manager_ptr) {
-    SetObsManager(obs_manager_ptr);
+    SetObsManagerPtr(obs_manager_ptr);
   }
   ~GeometryCollisionDetector(){};
 

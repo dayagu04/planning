@@ -29,7 +29,7 @@ class JerkLimitedTrajOptimizer : public ParkingTask {
 
   virtual ~JerkLimitedTrajOptimizer() = default;
 
-  bool Init() override;
+  const bool Init() override;
 
   /**
    * [in]: init_point, path, speed_decisions

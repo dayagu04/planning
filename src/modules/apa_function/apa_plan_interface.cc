@@ -43,13 +43,13 @@ void ApaPlanInterface::Init(const bool is_simulation) {
   return;
 }
 
-void ApaPlanInterface::Reset() {
+void ApaPlanInterface::Reset(const bool is_simulation) {
   // reset planning output
   memset(&planning_output_, 0, sizeof(planning_output_));
 
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
-  SyncParkingParameters();
+  SyncParkingParameters(is_simulation);
 
   // reset apa world
   apa_world_ptr_->Reset();
