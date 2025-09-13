@@ -664,6 +664,8 @@ struct ApaParameters {
   double x_max_internal_obstacles = 6.68;
   double min_x_value_park_out_position = 2.3;
   bool is_parallel_advanced_method = true;
+  bool is_trim_limter_parallel_enable = false;
+  double trim_limter_tire_distance = 0.15;
   ParkPathGenerationType path_generator_type =
       ParkPathGenerationType::GEOMETRY_BASED;
   bool use_geometry_path_head_out = false;

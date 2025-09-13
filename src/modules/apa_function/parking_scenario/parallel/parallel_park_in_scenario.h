@@ -58,6 +58,7 @@ class ParallelParkInScenario : public ParkingScenario {
 
   const double UpdateRemainDistObs(const double remain_dist_path,
                                    const double remain_dist_obs);
+  const bool PostProcessPathPara() ;
 
   Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;

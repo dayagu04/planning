@@ -1,5 +1,6 @@
 #include "parallel_path_generator.h"
 #include "parallel_out_path_generator.h"
+#include <Eigen/src/Core/Matrix.h>
 #include <google/protobuf/message.h>
 #include <math.h>
 #include <sys/types.h>
@@ -28,6 +29,15 @@
 #include "log_glog.h"
 #include "math_lib.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+
+// #define DEBUG_TRIM_LIMITER
+#ifdef DEBUG_TRIM_LIMITER
+
+std::vector<double> right_tire_point_global_vec_x;
+std::vector<double> right_tire_point_global_vec_y;
+std::vector<double> left_tire_point_global_vec_x;
+std::vector<double> left_tire_point_global_vec_y;
+#endif
 
 namespace planning {
 namespace apa_planner {
@@ -234,6 +244,14 @@ const bool ParallelPathGenerator::Update() {
   // preprocess
   Preprocess();
 
+#ifdef DEBUG_TRIM_LIMITER
+  if (right_tire_point_global_vec_x.size() > 0) {
+    right_tire_point_global_vec_x.clear();
+    right_tire_point_global_vec_y.clear();
+    left_tire_point_global_vec_x.clear();
+    left_tire_point_global_vec_y.clear();
+  }
+#endif
   if (!CheckTlaneAvailable()) {
     ILOG_INFO << "tlane_too short!";
     return false;
@@ -5596,6 +5614,11 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
 
   if (remain_car_dist <= safe_remain_dist) {
     // ILOG_INFO << "the path will not collide\n";
+    if (apa_param.GetParam().is_trim_limter_parallel_enable &&
+        input_.is_searching_stage) {
+      TrimPathByLimiter(path_seg);
+    }
+
     return PATH_COL_NORMAL;
   }
 
@@ -5614,6 +5637,10 @@ const uint8_t ParallelPathGenerator::TrimPathByCollisionDetection(
       return PATH_COL_INVALID;
     }
   }
+  if(apa_param.GetParam().is_trim_limter_parallel_enable && input_.is_searching_stage){
+    TrimPathByLimiter(path_seg);
+  }
+
   return PATH_COL_SHORTEN;
 }
 // collision detect end
@@ -6281,6 +6308,232 @@ const bool ParallelPathGenerator::AddLastLine(
 
   return false;
 }
+
+std::pair<Eigen::Vector2d, Eigen::Vector2d>
+ParallelPathGenerator::ExtendLineSegAlongHeading(const Eigen::Vector2d& P1,
+                                                 const Eigen::Vector2d& P2,
+                                                 double heading_rad,
+                                                 double move_length) {
+  Eigen::Vector2d midpoint = (P1 + P2) / 2.0;
+  Eigen::Vector2d dir;
+  dir.x() = cos(heading_rad);
+  dir.y() = sin(heading_rad);
+  Eigen::Vector2d point_forward = midpoint + dir * move_length;
+  Eigen::Vector2d point_backward = midpoint - dir * move_length;
+
+  auto slot_coos = input_.ego_info_under_slot.slot.GetOriginCornerCoordGlobal();
+  pnc::geometry_lib::LineSegment line_seg_01(
+      slot_coos.pt_0, slot_coos.pt_1,
+      std::atan2(slot_coos.pt_01_vec(1), slot_coos.pt_01_vec(0)));
+  pnc::geometry_lib::LineSegment line_seg_23(
+      slot_coos.pt_2, slot_coos.pt_3,
+      std::atan2(slot_coos.pt_23_vec(1), slot_coos.pt_23_vec(0)));
+  pnc::geometry_lib::LineSegment line_seg_01_extend(
+      point_forward, point_backward, heading_rad);
+  Eigen::Vector2d intsect_pt_01;
+  Eigen::Vector2d intsect_pt_23;
+  pnc::geometry_lib::CalcTwoLineSegIntersection(intsect_pt_01, line_seg_01,
+                                                line_seg_01_extend);
+  pnc::geometry_lib::CalcTwoLineSegIntersection(intsect_pt_23, line_seg_23,
+                                                line_seg_01_extend);
+  return {point_forward, point_backward};
+}
+
+void ParallelPathGenerator::TrimPathByLimiter(
+    pnc::geometry_lib::PathSegment& path_seg) {
+  if (input_.is_searching_stage) {
+    return;
+  }
+  if (!input_.ego_info_under_slot.slot.GetLimiter().valid) {
+    return;
+  }
+
+  auto limiter = input_.ego_info_under_slot.slot.GetLimiter();
+  Eigen::Vector2d limiter_start_pt = limiter.start_pt;
+  Eigen::Vector2d limiter_end_pt = limiter.end_pt;
+
+  std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
+  path_seg_vec.reserve(1);
+  path_seg_vec.emplace_back(path_seg);
+  auto sampled_path_seg =
+      pnc::geometry_lib::SamplePathSegVec(path_seg_vec, 0.04);
+  double limiter_heading = std::atan((limiter_end_pt(1) - limiter_start_pt(1)) /
+                                     (limiter_end_pt(0) - limiter_start_pt(0)));
+  auto half_length = input_.ego_info_under_slot.slot.slot_width_ / 2;
+  auto new_limiter = ExtendLineSegAlongHeading(limiter_start_pt, limiter_end_pt,
+                                               limiter_heading, half_length);
+  pnc::geometry_lib::LineSegment obs_line_limter(
+      new_limiter.first, new_limiter.second, limiter_heading);
+  double tire_radius = apa_param.GetParam().trim_limter_tire_distance;
+  auto left_tire_point_ego =
+      Eigen::Vector2d(-tire_radius, apa_param.GetParam().car_width / 2);
+  auto right_tire_point_ego =
+      Eigen::Vector2d(-tire_radius, -apa_param.GetParam().car_width / 2);
+  if (sampled_path_seg.size() > 1) {
+    int j = 0;
+    for (int i = 1; i < sampled_path_seg.size(); i++) {
+      auto ego_heading_sgn =
+          sampled_path_seg[i].heading * calc_params_.slot_side_sgn;
+      Eigen::Matrix2d rot_mat =
+          Eigen::Rotation2Dd(sampled_path_seg[i].heading).toRotationMatrix();
+      Eigen::Vector2d left_tire_point_slot =
+          rot_mat * left_tire_point_ego + sampled_path_seg[i].pos;
+      auto left_tire_point_global =
+          input_.ego_info_under_slot.l2g_tf.GetPos(left_tire_point_slot);
+
+      Eigen::Vector2d right_tire_point_slot =
+          rot_mat * right_tire_point_ego + sampled_path_seg[i].pos;
+      auto right_tire_point_global =
+          input_.ego_info_under_slot.l2g_tf.GetPos(right_tire_point_slot);
+
+      double tireline_temp_heading =
+          std::atan((left_tire_point_global(1) - right_tire_point_global(1)) /
+                    (left_tire_point_global(0) - right_tire_point_global(0)));
+      pnc::geometry_lib::LineSegment tire_temp_line(right_tire_point_global,
+                                                    left_tire_point_global,
+                                                    tireline_temp_heading);
+
+      Eigen::Vector2d intersection;
+      if (pnc::geometry_lib::CalcTwoLineSegIntersection(
+              intersection, tire_temp_line, obs_line_limter)) {
+        j = i;
+        break;
+      }
+#ifdef DEBUG_TRIM_LIMITER
+      right_tire_point_global_vec_x.emplace_back(right_tire_point_global(0));
+      right_tire_point_global_vec_y.emplace_back(right_tire_point_global(1));
+      left_tire_point_global_vec_x.emplace_back(left_tire_point_global(0));
+      left_tire_point_global_vec_y.emplace_back(left_tire_point_global(1));
+#endif
+    }
+#ifdef DEBUG_TRIM_LIMITER
+    right_tire_point_global_vec_x.emplace_back(new_limiter.first(0));
+    right_tire_point_global_vec_y.emplace_back(new_limiter.first(1));
+    left_tire_point_global_vec_x.emplace_back(new_limiter.second(0));
+    left_tire_point_global_vec_y.emplace_back(new_limiter.second(1));
+    JSON_DEBUG_VECTOR("right_tire_point_global_vec_x",
+                      right_tire_point_global_vec_x, 2);
+    JSON_DEBUG_VECTOR("right_tire_point_global_vec_y",
+                      right_tire_point_global_vec_y, 2);
+    JSON_DEBUG_VECTOR("left_tire_point_global_vec_x",
+                      left_tire_point_global_vec_x, 2);
+    JSON_DEBUG_VECTOR("left_tire_point_global_vec_y",
+                      left_tire_point_global_vec_y, 2);
+#endif
+    if (j >= 1) {
+      auto global_trim_pt =
+          input_.ego_info_under_slot.l2g_tf.GetPos(Eigen::Vector2d(
+              sampled_path_seg[j - 1].GetX(), sampled_path_seg[j - 1].GetY()));
+      auto global_trim_heading = input_.ego_info_under_slot.l2g_tf.GetHeading(
+          sampled_path_seg[j - 1].heading);
+      ILOG_INFO << "global_trim_pt X" << global_trim_pt.x();
+      ILOG_INFO << "global_trim_pt Y" << global_trim_pt.y();
+      path_seg.SetEndPose(Eigen::Vector2d(sampled_path_seg[j - 1].GetX(),
+                                          sampled_path_seg[j - 1].GetY()),
+                          sampled_path_seg[j - 1].heading);
+    }
+  }
+}
+
+void ParallelPathGenerator::TrimPathByLimiterPathPoint(
+    std::vector<geometry_lib::PathPoint>& sampled_path_seg, bool is_global) {
+  if (input_.is_searching_stage) {
+    return;
+  }
+  if (!input_.ego_info_under_slot.slot.GetLimiter().valid) {
+    return;
+  }
+
+  auto limiter = input_.ego_info_under_slot.slot.GetLimiter();
+  Eigen::Vector2d limiter_start_pt = limiter.start_pt;
+  Eigen::Vector2d limiter_end_pt = limiter.end_pt;
+
+  // std::vector<pnc::geometry_lib::PathSegment> path_seg_vec;
+  // path_seg_vec.reserve(1);
+  // path_seg_vec.emplace_back(path_seg);
+  // auto sampled_path_seg =
+  //     pnc::geometry_lib::SamplePathSegVec(path_seg_vec, 0.04);
+  double limiter_heading = std::atan((limiter_end_pt(1) - limiter_start_pt(1)) /
+                                     (limiter_end_pt(0) - limiter_start_pt(0)));
+  auto half_length = input_.ego_info_under_slot.slot.slot_width_ / 2;
+  auto new_limiter = ExtendLineSegAlongHeading(limiter_start_pt, limiter_end_pt,
+                                               limiter_heading, half_length);
+  pnc::geometry_lib::LineSegment obs_line_limter(
+      new_limiter.first, new_limiter.second, limiter_heading);
+  double tire_radius = apa_param.GetParam().trim_limter_tire_distance;
+  auto left_tire_point_ego =
+      Eigen::Vector2d(-tire_radius, apa_param.GetParam().car_width / 2);
+  auto right_tire_point_ego =
+      Eigen::Vector2d(-tire_radius, -apa_param.GetParam().car_width / 2);
+  if (sampled_path_seg.size() > 1) {
+    int j = 0;
+    for (int i = 1; i < sampled_path_seg.size(); i++) {
+      auto ego_heading_sgn =
+          sampled_path_seg[i].heading * calc_params_.slot_side_sgn;
+      Eigen::Matrix2d rot_mat =
+          Eigen::Rotation2Dd(sampled_path_seg[i].heading).toRotationMatrix();
+      Eigen::Vector2d left_tire_point_slot =
+          rot_mat * left_tire_point_ego + sampled_path_seg[i].pos;
+      auto left_tire_point_global =
+          input_.ego_info_under_slot.l2g_tf.GetPos(left_tire_point_slot);
+
+      Eigen::Vector2d right_tire_point_slot =
+          rot_mat * right_tire_point_ego + sampled_path_seg[i].pos;
+      auto right_tire_point_global =
+          input_.ego_info_under_slot.l2g_tf.GetPos(right_tire_point_slot);
+      if (is_global) {
+        left_tire_point_global = left_tire_point_slot;
+        right_tire_point_global = right_tire_point_slot;
+      }
+
+      double tireline_temp_heading =
+          std::atan((left_tire_point_global(1) - right_tire_point_global(1)) /
+                    (left_tire_point_global(0) - right_tire_point_global(0)));
+      pnc::geometry_lib::LineSegment tire_temp_line(right_tire_point_global,
+                                                    left_tire_point_global,
+                                                    tireline_temp_heading);
+
+      Eigen::Vector2d intersection;
+      if (pnc::geometry_lib::CalcTwoLineSegIntersection(
+              intersection, tire_temp_line, obs_line_limter)) {
+        j = i;
+        break;
+      }
+#ifdef DEBUG_TRIM_LIMITER
+      right_tire_point_global_vec_x.emplace_back(right_tire_point_global(0));
+      right_tire_point_global_vec_y.emplace_back(right_tire_point_global(1));
+      left_tire_point_global_vec_x.emplace_back(left_tire_point_global(0));
+      left_tire_point_global_vec_y.emplace_back(left_tire_point_global(1));
+#endif
+    }
+#ifdef DEBUG_TRIM_LIMITER
+    right_tire_point_global_vec_x.emplace_back(new_limiter.first(0));
+    right_tire_point_global_vec_y.emplace_back(new_limiter.first(1));
+    left_tire_point_global_vec_x.emplace_back(new_limiter.second(0));
+    left_tire_point_global_vec_y.emplace_back(new_limiter.second(1));
+    JSON_DEBUG_VECTOR("right_tire_point_global_vec_x",
+                      right_tire_point_global_vec_x, 2);
+    JSON_DEBUG_VECTOR("right_tire_point_global_vec_y",
+                      right_tire_point_global_vec_y, 2);
+    JSON_DEBUG_VECTOR("left_tire_point_global_vec_x",
+                      left_tire_point_global_vec_x, 2);
+    JSON_DEBUG_VECTOR("left_tire_point_global_vec_y",
+                      left_tire_point_global_vec_y, 2);
+#endif
+    if (j >= 1) {
+      auto global_trim_pt =
+          input_.ego_info_under_slot.l2g_tf.GetPos(Eigen::Vector2d(
+              sampled_path_seg[j - 1].GetX(), sampled_path_seg[j - 1].GetY()));
+      auto global_trim_heading = input_.ego_info_under_slot.l2g_tf.GetHeading(
+          sampled_path_seg[j - 1].heading);
+      ILOG_INFO << "global_trim_pt X" << global_trim_pt.x();
+      ILOG_INFO << "global_trim_pt Y" << global_trim_pt.y();
+      sampled_path_seg = std::vector<geometry_lib::PathPoint>(
+          sampled_path_seg.begin(), sampled_path_seg.begin() + j - 1);
+    }
+  }
+}
+
 
 }  // namespace apa_planner
 }  // namespace planning
