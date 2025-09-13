@@ -86,44 +86,44 @@ bool LaneChangeRequest::AggressiveChange() const {
 }
 
 double LaneChangeRequest::CalculatePressLineRatio(
-    const int origin_lane_id, const RequestType &lc_request) const {
+    const int target_lane_id, const RequestType &lc_request) const {
   double press_line_ratio = 0.0;
 
   // press_line_ratio = target_lane->press_line_ratio();
-  auto origin_reference_path =
+  auto target_reference_path =
       session_->environmental_model()
           .get_reference_path_manager()
-          ->get_reference_path_by_lane(origin_lane_id, false);
-  auto origin_lane =
-      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+          ->get_reference_path_by_lane(target_lane_id, false);
+  auto target_lane =
+      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
 
-  if (nullptr == origin_lane || origin_reference_path == nullptr) {
+  if (nullptr == target_lane || target_reference_path == nullptr) {
     return 0.0;
   }
   const auto &ego_frenent_boundary =
-      origin_reference_path->get_ego_frenet_boundary();
+      target_reference_path->get_ego_frenet_boundary();
   const double ego_center_s =
       ego_frenent_boundary.s_start +
       (ego_frenent_boundary.s_end - ego_frenent_boundary.s_start) / 2.0;
   const double frenent_ego_width =
       ego_frenent_boundary.l_end - ego_frenent_boundary.l_start;
-  double lane_width = origin_lane->width_by_s(ego_center_s);
+  double lane_width = target_lane->width_by_s(ego_center_s);
   double half_lane_width = lane_width * 0.5;
   if (lc_request == LEFT_CHANGE) {
-    if (ego_frenent_boundary.l_end < half_lane_width) {
+    if (ego_frenent_boundary.l_end < -half_lane_width) {
       press_line_ratio = 0.0;
-    } else if (ego_frenent_boundary.l_end > half_lane_width) {
+    } else if (ego_frenent_boundary.l_end > -half_lane_width) {
       press_line_ratio =
-          (ego_frenent_boundary.l_end - half_lane_width) / frenent_ego_width;
+          (ego_frenent_boundary.l_end + half_lane_width) / frenent_ego_width;
     } else {
       press_line_ratio = 0.0;
     }
   } else if (lc_request == RIGHT_CHANGE) {
-    if (ego_frenent_boundary.l_start > -half_lane_width) {
+    if (ego_frenent_boundary.l_start > half_lane_width) {
       press_line_ratio = 0.0;
-    } else if (ego_frenent_boundary.l_start < -half_lane_width) {
+    } else if (ego_frenent_boundary.l_start < half_lane_width) {
       press_line_ratio =
-          (-ego_frenent_boundary.l_start - half_lane_width) / frenent_ego_width;
+          (-ego_frenent_boundary.l_start + half_lane_width) / frenent_ego_width;
     } else {
       press_line_ratio = 0.0;
     }
