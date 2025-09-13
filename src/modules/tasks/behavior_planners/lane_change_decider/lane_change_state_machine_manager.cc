@@ -3693,7 +3693,11 @@ bool LaneChangeStateMachineManager::IsTargetLaneMergeToOriginLane() const {
                                             ->current_lane_virtual_id();
 
   bool is_same_lane = current_lane_virtual_id == fix_lane_virtual_id;
-
+  // 如果地图变道请求，不看感知主路辅路，直接return false
+  bool is_map_lc = transition_info_.lane_change_type == MAP_REQUEST;
+  if (is_map_lc) {
+    return false;
+  }
   if (transition_info_.lane_change_status == kLaneChangeExecution) {
     if (is_merge_region && !cur_lane_is_continue &&
         origin_lane_virtual_id == merge_lane_virtual_id && is_same_lane) {
@@ -3713,7 +3717,7 @@ bool LaneChangeStateMachineManager::
     IsNeedCancelLCTargetLaneMergeToOriginLane() {
   bool is_target_lane_merge_to_origin_lane = IsTargetLaneMergeToOriginLane();
 
-  if (is_target_lane_merge_to_origin_lane) {
+  if (is_target_lane_merge_to_origin_lane ) {
     lc_target_lane_merge_to_origin_lane_cnt_++;
     if (lc_target_lane_merge_to_origin_lane_cnt_ >= 3) {
       lane_change_stage_info_.lc_back_reason =
