@@ -30,6 +30,7 @@
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
 #include "../tasks/task_interface/crossing_agent_decider_output.h"
+#include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -97,6 +98,14 @@ class PlanningContext {
 
   LaneChangeDeciderOutput &mutable_lane_change_decider_output() {
     return lane_change_decider_output_;
+  }
+
+  const SpatioTemporalUnionPlanOutput &spatio_temporal_union_plan_output() const {
+    return spatio_temporal_union_plan_output_;
+  }
+
+  SpatioTemporalUnionPlanOutput &mutable_spatio_temporal_union_plan_output() {
+    return spatio_temporal_union_plan_output_;
   }
 
   const GapSelectorDeciderOutput &gap_selector_decider_output() const {
@@ -494,6 +503,7 @@ class PlanningContext {
   // lane change task pipeline
   EgoLaneRoadRightDeciderOutput ego_lane_road_right_decider_output_;
   LaneChangeDeciderOutput lane_change_decider_output_;
+  SpatioTemporalUnionPlanOutput spatio_temporal_union_plan_output_;
   GapSelectorDeciderOutput gap_selector_decider_output_;
 
   // lateral task pipeline

@@ -77,6 +77,8 @@ bool SpatioTemporalPlanner::Execute() {
       session_->planning_context().lane_change_decider_output();
   const auto& coarse_planning_info =
       lane_change_decider_output.coarse_planning_info;
+  auto &spatio_temporal_union_plan_output =
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
   const auto lc_state = coarse_planning_info.target_state;
   const auto& virtual_lane_manager =
         session_->environmental_model().get_virtual_lane_manager();
@@ -84,6 +86,9 @@ bool SpatioTemporalPlanner::Execute() {
   spatio_temporal_union_plan->set_st_dp_is_sucess(false);
   spatio_temporal_union_plan->set_cost_time(0.0);
   spatio_temporal_union_plan->set_enable_using_st_plan(false);
+  spatio_temporal_union_plan_output.st_dp_is_sucess = false;
+  spatio_temporal_union_plan_output.cost_time = 0.0;
+  spatio_temporal_union_plan_output.enable_using_st_plan = false;
 
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
@@ -129,6 +134,8 @@ bool SpatioTemporalPlanner::Execute() {
 
   spatio_temporal_union_plan->set_cost_time(st_end_time - st_pre_time);
   spatio_temporal_union_plan->set_enable_using_st_plan(true);
+  spatio_temporal_union_plan_output.cost_time = st_end_time - st_pre_time;
+  spatio_temporal_union_plan_output.enable_using_st_plan = true;
   last_enable_using_st_plan_ = true;
 
   LogDebugInfo(traj_points, agent_trajs_state);
@@ -147,6 +154,8 @@ void SpatioTemporalPlanner::LogDebugInfo(
   auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
                                  .GetDebugInfoPb()
                                  ->mutable_spatio_temporal_union_plan();
+  auto &spatio_temporal_union_plan_output =
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
   const auto& ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
 
@@ -197,6 +206,8 @@ void SpatioTemporalPlanner::LogDebugInfo(
 
   spatio_temporal_union_plan->set_st_dp_is_sucess(
         path_time_heuristic_optimizer_.GetStDpIsSuccess());
+  spatio_temporal_union_plan_output.st_dp_is_sucess =
+      path_time_heuristic_optimizer_.GetStDpIsSuccess();
 
   // trajectory points
   auto mutable_traj_points = spatio_temporal_union_plan->mutable_trajectory_points();
