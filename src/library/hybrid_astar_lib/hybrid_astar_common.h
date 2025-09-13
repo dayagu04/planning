@@ -85,8 +85,10 @@ enum class NodeCollisionType {
 enum class AstarPathType {
   NONE = 0,
   REEDS_SHEPP,
+  LINK_POSE_LINE,
   DUBINS,
   NODE_SEARCHING,
+  NODE_CURVE,
   LINE_SEGMENT,
   START_NODE,
   END_NODE,
@@ -124,6 +126,16 @@ enum class AstarPathGear {
   NORMAL,
   PARKING,
   MAX_NUM
+};
+
+enum class AstarPathSegType : uint8_t { NONE = 0, LINE = 1, ARC = 2, MAX_NUM };
+
+enum RSPathSteer {
+  RS_NOP = 0,
+  RS_LEFT = 1,
+  RS_STRAIGHT = 2,
+  RS_RIGHT = 3,
+  RS_STEER_MAX
 };
 
 enum class AstarNodeVisitedType {
@@ -183,11 +195,19 @@ struct MapBound {
   float x_max;
   float y_min;
   float y_max;
+  float phi_min;
+  float phi_max;
 
   MapBound() = default;
   MapBound(const float x_min_, const float x_max_, const float y_min_,
-           const float y_max_)
-      : x_min(x_min_), x_max(x_max_), y_min(y_min_), y_max(y_max_) {}
+           const float y_max_, const float phi_min_ = -M_PIf32,
+           const float phi_max_ = M_PIf32)
+      : x_min(x_min_),
+        x_max(x_max_),
+        y_min(y_min_),
+        y_max(y_max_),
+        phi_min(phi_min_),
+        phi_max(phi_max_) {}
 
   bool Contain(const Pose2f& p) const {
     if (x_min > p.x || y_min > p.y) {
@@ -283,14 +303,33 @@ struct HybridAStarResult {
   // left turn is is positive
   std::vector<float> kappa;
 
-  int gear_change_num;
+  std::vector<std::vector<float>> x_vec_vec;
+  std::vector<std::vector<float>> y_vec_vec;
+  std::vector<std::vector<float>> phi_vec_vec;
+  std::vector<std::vector<AstarPathType>> type_vec_vec;
+  std::vector<std::vector<float>> kappa_vec_vec;
+  std::vector<std::vector<float>> accumulated_s_vec_vec;
+  std::vector<AstarPathGear> gear_vec;
+  std::vector<float> length_vec;
+
+  AstarPathGear cur_gear = AstarPathGear::NONE;
+
+  bool path_plan_success = false;
+
+  int gear_change_num = -1;
 
   // slot pose
   Pose2D base_pose;
 
-  double time_ms;
+  double time_ms = 0.0;
 
-  AstarFailType fail_type;
+  AstarFailType fail_type = AstarFailType::NONE;
+
+  double search_consume_time_ms = 0;
+
+  int solve_number = 0;
+
+  int search_node_num = 0;
 
   void Clear() {
     x.clear();
@@ -300,9 +339,26 @@ struct HybridAStarResult {
     gear.clear();
     type.clear();
     kappa.clear();
+    length_vec.clear();
     time_ms = 0;
     fail_type = AstarFailType::NONE;
     gear_change_num = -1;
+
+    path_plan_success = false;
+
+    x_vec_vec.clear();
+    y_vec_vec.clear();
+    phi_vec_vec.clear();
+    type_vec_vec.clear();
+    kappa_vec_vec.clear();
+    accumulated_s_vec_vec.clear();
+    gear_vec.clear();
+
+    search_consume_time_ms = 0;
+
+    solve_number = 0;
+
+    search_node_num = 0;
 
     return;
   }
@@ -379,11 +435,87 @@ struct PolynomialPathCost {
   }
 };
 
+struct ObsToPathDistRelativeSlot {
+  float obs_dist_out_slot_straight = 16.8;
+  float obs_dist_out_slot_turn = 16.8;
+  float obs_dist_entrance_slot_straight = 16.8;
+  float obs_dist_entrance_slot_turn = 16.8;
+  float obs_dist_in_slot_straight = 16.8;
+  float obs_dist_in_slot_turn = 16.8;
+
+  ObsToPathDistRelativeSlot() = default;
+
+  ObsToPathDistRelativeSlot(float _obs_dist_out_slot_straight,
+                            float _obs_dist_out_slot_turn,
+                            float _obs_dist_entrance_slot_straight,
+                            float _obs_dist_entrance_slot_turn,
+                            float _obs_dist_in_slot_straight,
+                            float _obs_dist_in_slot_turn)
+      : obs_dist_out_slot_straight(_obs_dist_out_slot_straight),
+        obs_dist_out_slot_turn(_obs_dist_out_slot_turn),
+        obs_dist_entrance_slot_straight(_obs_dist_entrance_slot_straight),
+        obs_dist_entrance_slot_turn(_obs_dist_entrance_slot_turn),
+        obs_dist_in_slot_straight(_obs_dist_in_slot_straight),
+        obs_dist_in_slot_turn(_obs_dist_in_slot_turn) {}
+
+  void SetDist(float dist) {
+    obs_dist_out_slot_straight = dist;
+    obs_dist_out_slot_turn = dist;
+    obs_dist_entrance_slot_straight = dist;
+    obs_dist_entrance_slot_turn = dist;
+    obs_dist_in_slot_straight = dist;
+    obs_dist_in_slot_turn = dist;
+  }
+
+  void SetSmallerDist(const ObsToPathDistRelativeSlot& other) {
+    obs_dist_out_slot_straight =
+        std::min(obs_dist_out_slot_straight, other.obs_dist_out_slot_straight);
+    obs_dist_out_slot_turn =
+        std::min(obs_dist_out_slot_turn, other.obs_dist_out_slot_turn);
+    obs_dist_entrance_slot_straight = std::min(
+        obs_dist_entrance_slot_straight, other.obs_dist_entrance_slot_straight);
+    obs_dist_entrance_slot_turn = std::min(obs_dist_entrance_slot_turn,
+                                           other.obs_dist_entrance_slot_turn);
+    obs_dist_in_slot_straight =
+        std::min(obs_dist_in_slot_straight, other.obs_dist_in_slot_straight);
+    obs_dist_in_slot_turn =
+        std::min(obs_dist_in_slot_turn, other.obs_dist_in_slot_turn);
+  }
+
+  ~ObsToPathDistRelativeSlot() = default;
+};
+
 std::string PathGearDebugString(const AstarPathGear gear);
 
 std::string GetPathSteerDebugString(const AstarPathSteer type);
 
+bool IsGearSame(const AstarPathGear left, const AstarPathGear right);
+
+bool IsGearSame(const AstarPathGear left, const uint8_t right);
+
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right);
+
+bool IsGearDifferent(const AstarPathGear left, const uint8_t right);
+
+bool IsGearDifferent(const uint8_t left, const uint8_t right);
+
+bool IsTurn(const AstarPathSteer steer);
+
+bool IsTurn(const uint8_t steer);
+
+AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear);
+
+uint8_t GetSegGearFromAstarGear(const AstarPathGear gear);
+
+AstarPathSteer GetAstarSteerFromSegSteer(const uint8_t seg_steer);
+
+uint8_t GetSegSteerFromAstarSteer(const AstarPathSteer steer);
+
+AstarPathSteer GetAstarSteerFromRsSteer(const RSPathSteer rs_steer);
+
+AstarPathGear ReversePathGear(const AstarPathGear gear);
+
+RSPathSteer GetRsSteerFromAstarSteer(const AstarPathSteer steer);
 
 std::string PlanReasonDebugString(const PlanningReason reason);
 

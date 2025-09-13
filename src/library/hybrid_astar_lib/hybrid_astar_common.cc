@@ -3,6 +3,7 @@
 #include <cmath>
 #include "point_cloud_obstacle.h"
 #include "vecf32.h"
+#include "geometry_math.h"
 
 namespace planning {
 
@@ -60,6 +61,32 @@ std::string GetNodeCurveDebugString(const AstarPathType type) {
   return "NONE";
 }
 
+bool IsGearSame(const AstarPathGear left, const AstarPathGear right) {
+  if (left == AstarPathGear::DRIVE && right == AstarPathGear::DRIVE) {
+    return true;
+  }
+
+  if (left == AstarPathGear::REVERSE && right == AstarPathGear::REVERSE) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsGearSame(const AstarPathGear left, const uint8_t right) {
+  if (left == AstarPathGear::DRIVE &&
+      right == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+    return true;
+  }
+
+  if (left == AstarPathGear::REVERSE &&
+      right == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+    return true;
+  }
+
+  return false;
+}
+
 bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right) {
   if (left == AstarPathGear::DRIVE && right == AstarPathGear::REVERSE) {
     return true;
@@ -70,6 +97,136 @@ bool IsGearDifferent(const AstarPathGear left, const AstarPathGear right) {
   }
 
   return false;
+}
+
+bool IsGearDifferent(const AstarPathGear left, const uint8_t right) {
+  if (right == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE &&
+      left == AstarPathGear::REVERSE) {
+    return true;
+  }
+
+  if (right == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
+      left == AstarPathGear::DRIVE) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsGearDifferent(const uint8_t left, const uint8_t right) {
+  if (left == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE &&
+      right == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+    return true;
+  }
+
+  if (left == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE &&
+      right == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsTurn(const AstarPathSteer steer) {
+  if (steer == AstarPathSteer::LEFT || steer == AstarPathSteer::RIGHT) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsTurn(const uint8_t steer) {
+  if (steer == pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT ||
+      steer == pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT) {
+    return true;
+  }
+
+  return false;
+}
+
+AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear) {
+  switch (seg_gear) {
+    case pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE:
+      return AstarPathGear::DRIVE;
+    case pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE:
+      return AstarPathGear::REVERSE;
+    default:
+      return AstarPathGear::NONE;
+  }
+}
+
+uint8_t GetSegGearFromAstarGear(const AstarPathGear gear) {
+  switch (gear) {
+    case AstarPathGear::DRIVE:
+      return pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE;
+    case AstarPathGear::REVERSE:
+      return pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE;
+    default:
+      return pnc::geometry_lib::PathSegGear::SEG_GEAR_INVALID;
+  }
+}
+
+AstarPathSteer GetAstarSteerFromSegSteer(const uint8_t seg_steer) {
+  switch (seg_steer) {
+    case pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT:
+      return AstarPathSteer::LEFT;
+    case pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT:
+      return AstarPathSteer::RIGHT;
+    case pnc::geometry_lib::PathSegSteer::SEG_STEER_STRAIGHT:
+      return AstarPathSteer::STRAIGHT;
+    default:
+      return AstarPathSteer::NONE;
+  }
+}
+
+uint8_t GetSegSteerFromAstarSteer(const AstarPathSteer steer) {
+  switch (steer) {
+    case AstarPathSteer::LEFT:
+      return pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT;
+    case AstarPathSteer::RIGHT:
+      return pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT;
+    case AstarPathSteer::STRAIGHT:
+      return pnc::geometry_lib::PathSegSteer::SEG_STEER_STRAIGHT;
+    default:
+      return pnc::geometry_lib::PathSegSteer::SEG_STEER_INVALID;
+  }
+}
+
+AstarPathSteer GetAstarSteerFromRsSteer(const RSPathSteer rs_steer) {
+  switch (rs_steer) {
+    case RSPathSteer::RS_LEFT:
+      return AstarPathSteer::LEFT;
+    case RSPathSteer::RS_RIGHT:
+      return AstarPathSteer::RIGHT;
+    case RSPathSteer::RS_STRAIGHT:
+      return AstarPathSteer::STRAIGHT;
+    default:
+      return AstarPathSteer::NONE;
+  }
+}
+
+AstarPathGear ReversePathGear(const AstarPathGear gear) {
+  switch (gear) {
+    case AstarPathGear::DRIVE:
+      return AstarPathGear::REVERSE;
+    case AstarPathGear::REVERSE:
+      return AstarPathGear::DRIVE;
+    default:
+      return AstarPathGear::NONE;
+  }
+}
+
+RSPathSteer GetRsSteerFromAstarSteer(const AstarPathSteer steer) {
+  switch (steer) {
+    case AstarPathSteer::LEFT:
+      return RSPathSteer::RS_LEFT;
+    case AstarPathSteer::RIGHT:
+      return RSPathSteer::RS_RIGHT;
+    case AstarPathSteer::STRAIGHT:
+      return RSPathSteer::RS_STRAIGHT;
+    default:
+      return RSPathSteer::RS_NOP;
+  }
 }
 
 std::string PlanReasonDebugString(const PlanningReason reason) {

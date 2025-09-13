@@ -114,6 +114,20 @@ struct RSPath {
 
     return;
   }
+
+  const AstarPathGear GetFirstGear() const {
+    if (size < 1) {
+      return AstarPathGear::NONE;
+    }
+    return paths[0].gear;
+  }
+
+  const AstarPathGear GetLastGear() const {
+    if (size < 1) {
+      return AstarPathGear::NONE;
+    }
+    return paths[size - 1].gear;
+  }
 };
 
 struct VehicleCircle {
