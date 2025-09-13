@@ -259,7 +259,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   DebugAstarRequestString(request_);
 
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
+  target_regulator_result = target_pose_regulator.GetCandidatePose();
 
   // todo : head out no need target_pose_regulator;
   if (request_.direction_request == ParkingVehDirection::TAIL_IN ||
@@ -720,7 +720,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // judge target regulator goal if collide
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = regulator.GetCandidatePose(0.15);
+  target_regulator_result = regulator.GetCandidatePose(0.15f);
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
@@ -843,8 +843,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
       float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
       std::pair<Pose2f, float> target_regulator_result;
-      target_regulator_result =
-          target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
+      target_regulator_result = target_pose_regulator.GetCandidatePose();
       if (target_regulator_result.second < advised_lat_buffer_inside) {
         ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
         ILOG_INFO << "target_regulator_goal_ will collide";
@@ -867,8 +866,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   } else {
     std::pair<Pose2f, float> target_regulator_result;
-    target_regulator_result =
-        regulator.GetCandidatePose(advised_lat_buffer_inside);
+    target_regulator_result = regulator.GetCandidatePose();
     if (target_regulator_result.second < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
       ILOG_INFO << "target_regulator_goal_ will collide";

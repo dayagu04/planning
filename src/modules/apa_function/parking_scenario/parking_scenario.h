@@ -518,6 +518,8 @@ class ParkingScenario {
 
   void SetFeasibleDirectionFlag();
 
+  void UpdatePlanFailTime();
+
  protected:
   // TODO:
   // 1.

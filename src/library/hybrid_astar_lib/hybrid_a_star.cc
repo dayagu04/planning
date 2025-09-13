@@ -2578,4 +2578,25 @@ void HybridAStar::SetSearchTime(const double time) {
   request_.search_time = time;
 }
 
+float HybridAStar::GenRefLineCost(Node3d* next_node) {
+  if (next_node->GetX() > request_.slot_length) {
+    return 0.0f;
+  }
+
+  // heading cost
+  float theta1 = next_node->GetPhi();
+  float theta2 = ref_line_->GetHeading();
+  float heading_error = std::fabs(Getf32ThetaDiff(theta1, theta2));
+  if (heading_error < 1.57f) {
+    return 0.0f;
+  }
+
+#if DEBUG_REF_LINE_COST
+  ILOG_INFO << "node heading = " << next_node->GetPhi() * 57.3
+            << ", ref line heading =" << theta2 * 57.3;
+#endif
+
+  return heading_error * 100.0f;
+}
+
 }  // namespace planning

@@ -1717,8 +1717,8 @@ const bool NarrowSpaceScenario::NeedBlindZonePlanning(
   double position_y_error = std::fabs(ego_info.cur_pose.pos[1]);
   double position_x_error = std::fabs(ego_info.cur_pose.pos[0]);
   if (position_y_error < ego_info.slot.slot_width_ / 2 &&
-      (position_x_error > 0.0 &&
-       position_x_error < ego_info.slot.slot_length_ + 1.0)) {
+      position_x_error > 0.0 &&
+      position_x_error < ego_info.slot.slot_length_ + 2.5) {
     return false;
   }
 

@@ -260,6 +260,8 @@ class HybridAStar {
 
   void UpdateMaxGridIndex();
 
+  float GenRefLineCost(Node3d* next_node);
+
  private:
   PlannerOpenSpaceConfig config_;
   VehicleParam vehicle_param_;

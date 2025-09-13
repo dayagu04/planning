@@ -29,6 +29,8 @@ struct NodeGCost {
 
   float recommend_route_box_cost;
   float zigzag_cost;
+  // heading error accumulate
+  float ref_line_heading_cost;
 
   float total_cost;
 };

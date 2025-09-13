@@ -57,8 +57,7 @@ bool NodeShrinkDecider::IsLegalForHeading(const float heading) {
     return true;
   }
 
-  float normalize_heading = IflyUnifyTheta(heading, M_PIf32);
-  normalize_heading = std::fabs(normalize_heading);
+  float normalize_heading = std::fabs(IflyUnifyTheta(heading, M_PIf32));
 
   if (normalize_heading < heading_shrink_.heading_low_bound_ ||
       normalize_heading > heading_shrink_.heading_up_bound_) {
@@ -88,7 +87,7 @@ void NodeShrinkDecider::ShrinkChildrenByHeadingForTailIn() {
   // heading shrink
 
   // 搜索时,heading 尽量不超过150度
-  float heading_check_bound = ifly_deg2rad(150.0);
+  float heading_check_bound = ifly_deg2rad(135.0);
   float heading_buffer = ifly_deg2rad(20.0);
 
   heading_shrink_.limit_search_heading_ = true;
