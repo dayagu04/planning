@@ -239,6 +239,7 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
   ref_s_vec.reserve(min_ref_size);
   ref_l_vec.reserve(min_ref_size);
   double ref_last_s = 0;
+  double concerned_end_s = 0;
   for (size_t i = 0; i < min_ref_size; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
                                   planning_input.ref_y_vec(i));
@@ -250,6 +251,9 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
       ref_last_s = frenet_ref_xy.x;
       ref_s_vec.emplace_back(frenet_ref_xy.x);
       ref_l_vec.emplace_back(frenet_ref_xy.y);
+      if (i <= weight_.remotely_index) {
+        concerned_end_s = frenet_ref_xy.x;
+      }
     }
   }
   if (ref_s_vec.size() < 3) {
@@ -262,9 +266,11 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
                                    planning_input.last_y_vec(j));
     planning::Point2D frenet_last_xy;
     if (frenet_coord->XYToSL(cart_last_xy, frenet_last_xy)) {
-      if (frenet_last_xy.x < ref_s_vec.front() ||
-          frenet_last_xy.x > ref_s_vec.back()) {
+      if (frenet_last_xy.x < ref_s_vec.front()) {
         continue;
+      } else if (frenet_last_xy.x > ref_s_vec.back() ||
+                 frenet_last_xy.x > concerned_end_s) {
+        break;
       }
       double ref_rel_l = ref_l_s_spline(frenet_last_xy.x);
       last_path_max_dist2ref_ = std::max(
@@ -1583,6 +1589,53 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   // }
 }
 
+void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
+    planning::common::LateralPlanningInput &planning_input) {
+  if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
+      lateral_motion_scene_ != LateralMotionScene::LANE_BORROW &&
+      ref_vel_ > 2.0 &&
+      last_path_max_dist2ref_ > 2.0 &&
+      weight_.remotely_index >= 17) {
+    for (size_t i = 0; i < weight_.point_num; ++i) {
+      weight_.jerk_upper_bound[i] =
+        std::min(weight_.jerk_upper_bound[i], config_.jerk_bound_inactivated_limit);
+      weight_.jerk_lower_bound[i] =
+        std::max(weight_.jerk_lower_bound[i], -config_.jerk_bound_inactivated_limit);
+      weight_.q_pos_soft_bound[i] *= 0.01;
+      // weight_.q_pos_hard_bound[i] *= 0.1;
+    }
+    std::vector<double> xp_path_dist2ref{2.0, 2.5, 3.0};
+    std::vector<double> fp_xy_ratio{0.5, 0.3, 0.1};
+    std::vector<double> fp_theta_ratio{2.0, 3.0, 4.0};
+    std::vector<double> fp_sbound_ratio{0.5, 0.1, 0.01};
+    std::vector<double> fp_q_continuity{0.0, 1.0, config_.q_continuity};
+    double q_ref_xy_ratio =
+        planning::interp(std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_xy_ratio);
+    double q_ref_theta_ratio =
+        planning::interp(std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_theta_ratio);
+    double q_soft_bound_ratio =
+        planning::interp(std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_sbound_ratio);
+    double q_continuity =
+        planning::interp(std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_q_continuity);
+    double q_ref_x =
+        planning_input.q_ref_x();
+    planning_input.set_q_ref_x(q_ref_x * q_ref_xy_ratio);
+    double q_ref_y =
+        planning_input.q_ref_y();
+    planning_input.set_q_ref_y(q_ref_y * q_ref_xy_ratio);
+    double q_ref_theta =
+        planning_input.q_ref_theta();
+    planning_input.set_q_ref_theta(q_ref_theta * q_ref_theta_ratio);
+    end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
+    planning_input.set_q_acc(0.0);
+    planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
+    double q_soft_bound =
+        planning_input.q_soft_corridor();
+    planning_input.set_q_soft_corridor(q_soft_bound * q_soft_bound_ratio);
+    planning_input.set_q_continuity(q_continuity);
+  }
+}
+
 void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     const bool origin_complete_follow, const bool is_divide_lane_into_two,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
@@ -1670,18 +1723,20 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     MakeSplitDynamicWeight(is_divide_lane_into_two, planning_input);
   } else if (is_sharp_turn_) {
     weight_.complete_follow = true;
+    planning_input.set_q_acc(0.0);
   }
 
   // set complete hold flag, concerned index
   planning_input.set_complete_follow(weight_.complete_follow);
   planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
   last_remotely_index_ = weight_.remotely_index;
+  if (weight_.complete_follow) {
+    planning_input.set_q_acc(0.0);
+  }
   // set low speed protection
   SetMinJerkWeightByVel(planning_input);
-  // set large pos diff protection
-  if (last_path_max_dist2ref_ > 10.0 && weight_.remotely_index > 17) {
-    planning_input.set_q_continuity(config_.q_continuity);
-  }
+  // set protection for large pos diff between two frame
+  SetWeightProtectionForLargePosDiff(planning_input);
 }
 
 void LateralMotionPlanningWeight::ConstructVirtualRef(

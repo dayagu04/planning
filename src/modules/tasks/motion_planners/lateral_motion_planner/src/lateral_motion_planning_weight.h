@@ -263,6 +263,9 @@ class LateralMotionPlanningWeight {
   void SetMinJerkWeightByVel(
       planning::common::LateralPlanningInput &planning_input);
 
+  void SetWeightProtectionForLargePosDiff(
+      planning::common::LateralPlanningInput &planning_input);
+
   void MakeDynamicWeight(
       planning::common::LateralPlanningInput &planning_input);
 
