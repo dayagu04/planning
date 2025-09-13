@@ -323,12 +323,16 @@ void ParallelParkOutScenario::ScenarioTry() {
   if (multi_parkout_direction[ApaParkOutDirection::RIGHT_FRONT]) {
     generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontRight);
     // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
+    complete_path_point_global_vec_ =
+        multi_parkout_path_vec[ApaParkOutDirection::RIGHT_FRONT];
   }
   if (multi_parkout_direction[ApaParkOutDirection::LEFT_FRONT]) {
     generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
     // generator.ClearRecommendationDirectionFlag(apa_hmi_);
     // generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
     // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
+    complete_path_point_global_vec_ =
+        multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
   }
   TansformPreparePlanningTraj();
   // ILOG_INFO << "relaese direction = "
@@ -368,14 +372,10 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 
   auto& select_slot_global =
       ego_info_under_slot.slot.origin_corner_coord_global_;
-  ILOG_INFO << " select_slot_global pt 0 = "
-            << select_slot_global.pt_0.x();
-  ILOG_INFO << " select_slot_global pt 1 = "
-            << select_slot_global.pt_1.x();
-  ILOG_INFO << " select_slot_global pt 2 = "
-            << select_slot_global.pt_2.x();
-  ILOG_INFO << " select_slot_global pt 3 = "
-            << select_slot_global.pt_3.x();
+  ILOG_INFO << " select_slot_global pt 0 = " << select_slot_global.pt_0.x();
+  ILOG_INFO << " select_slot_global pt 1 = " << select_slot_global.pt_1.x();
+  ILOG_INFO << " select_slot_global pt 2 = " << select_slot_global.pt_2.x();
+  ILOG_INFO << " select_slot_global pt 3 = " << select_slot_global.pt_3.x();
 
   if (select_slot_global.pt_0 == select_slot_global.pt_1 ||
       select_slot_global.pt_0 == select_slot_global.pt_2 ||
@@ -486,8 +486,7 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   ego_info_under_slot.cur_pose.heading_vec =
       pnc::geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
 
-  ILOG_INFO << "ego_pos_slot = "
-            << ego_info_under_slot.cur_pose.pos.x();
+  ILOG_INFO << "ego_pos_slot = " << ego_info_under_slot.cur_pose.pos.x();
   ILOG_INFO << "ego_heading_slot (deg)= "
             << ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
@@ -852,10 +851,8 @@ const bool ParallelParkOutScenario::GenTlane() {
   }
   ILOG_INFO << "obs_pt_inside = " << t_lane_.obs_pt_inside.x();
   ILOG_INFO << "obs_pt_outside = " << t_lane_.obs_pt_outside.x();
-  ILOG_INFO << "corner_inside_slot = "
-            << t_lane_.corner_inside_slot.x();
-  ILOG_INFO << "corner_outside_slot = "
-            << t_lane_.corner_outside_slot.x();
+  ILOG_INFO << "corner_inside_slot = " << t_lane_.corner_inside_slot.x();
+  ILOG_INFO << "corner_outside_slot = " << t_lane_.corner_outside_slot.x();
 
   ILOG_INFO << "pt_outside = " << t_lane_.pt_outside.x();
   ILOG_INFO << "pt_inside = " << t_lane_.pt_inside.x();

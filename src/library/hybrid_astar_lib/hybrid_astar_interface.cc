@@ -859,10 +859,10 @@ void HybridAStarInterface::PathSearchForScenarioTry(
         feasible_directions_[i] = true;
       }
 
-      if (request_.direction_request == request_.direction_request_stack[i]) {
-        best_traj_ = &traj_candidates_[0];
-        gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
-      }
+      // if (request_.direction_request == request_.direction_request_stack[i]) {
+      //   best_traj_ = &traj_candidates_[0];
+      //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+      // }
     }
 
   } else {

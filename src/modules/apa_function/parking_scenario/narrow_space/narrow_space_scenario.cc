@@ -734,21 +734,16 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
-  constexpr float kHeadHeadingStartDeg = 40.0f;
-  constexpr float kTailHeadingStartDeg = 95.0f;
-  constexpr float kHeadingEndDeg = 89.9f;
-  constexpr float kHeadingDiffThresh = 1e-3f;
-  constexpr float kRad2Deg = 180.0f / static_cast<float>(M_PI);
-
-  const float heading_end_deg =
-      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot.angle_;
-
-  bool heading_flag = true;
-  bool sample_finish = false;
-
+  constexpr float kFristXDiffThresh = 0.5f;
+  constexpr float kHeadingDiffThresh = 0.01f;
+  const float target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
+                                       ->GetEgoInfoUnderSlot()
+                                       .target_pose.heading;
+  const float target_x = apa_world_ptr_->GetSlotManagerPtr()
+                             ->GetEgoInfoUnderSlot()
+                             .target_pose.pos.x();
+  const float first_x_error = fabs(target_x - first_seg_path[0].x);
   pnc::geometry_lib::PathPoint point;
-  const bool need_trim_path =
-      first_seg_path[0].phi * kRad2Deg < heading_end_deg;
 
   for (size_t i = 0; i < first_seg_path.size(); ++i) {
     const AStarPathPoint& path_pt = first_seg_path[i];
@@ -757,35 +752,17 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
     point.s = path_pt.accumulated_s;
     point.gear = GetGear(path_pt.gear);
 
-    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsHeadOutStatus() &&
-        need_trim_path) {
-      const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
-
-      if (heading_deg > kHeadHeadingStartDeg && i > 5) {
-        float heading_diff = path_pt.phi - first_seg_path[i - 1].phi;
-        heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
-      }
-
-      if (std::abs(path_pt.phi) * kRad2Deg <= heading_end_deg &&
-          !sample_finish && heading_flag) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+      const float heading_error = fabs(target_heading_rad - point.heading);
+      if (heading_error >= kHeadingDiffThresh ||
+          first_x_error >= kFristXDiffThresh) {
         local_path.emplace_back(point);
       } else {
-        sample_finish = true;
-      }
-
-    } else if (apa_world_ptr_->GetStateMachineManagerPtr()->IsTailOutStatus() &&
-               need_trim_path) {
-      const float heading_deg = std::abs(path_pt.phi * kRad2Deg);
-
-      if (heading_deg < kHeadHeadingStartDeg && i > 5) {
-        float heading_diff = path_pt.phi - first_seg_path[i - 1].phi;
-        heading_flag = std::abs(heading_diff) > kHeadingDiffThresh;
-      }
-
-      if (heading_deg >= heading_end_deg && !sample_finish && heading_flag) {
-        local_path.emplace_back(point);
-      } else {
-        sample_finish = true;
+        ILOG_INFO << "heading_error = " << heading_error
+                  << ", first_x_error = " << first_x_error
+                  << ", target_heading_rad = " << target_heading_rad
+                  << ", point.heading = " << point.heading;
+        break;
       }
     } else {
       local_path.emplace_back(point);
@@ -2475,7 +2452,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
         ParkingVehDirection::TAIL_OUT_TO_RIGHT;
 
     const Eigen::Vector2d temp_head_pos(7.0, 0.0);
-    const double offset_y = ego_info.slot_type == SlotType::SLANT ? 3.0 : 11.0;
+    const double offset_y = ego_info.slot_type == SlotType::SLANT ? 3.0 : 5.0;
 
     const Eigen::Vector2d target_pos_head_left =
         temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
@@ -2607,7 +2584,7 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       direction_origin_corner_23.normalized();
 
   constexpr double kInitialTargetX = 7.0;
-  constexpr double kInitialTargetY = 11.0;
+  constexpr double kInitialTargetY = 5.0;
   constexpr double kAlternateTargetX = 8.0;
   constexpr double kAlternateTargetY = 4.0;
   constexpr double kPositionThresholdX = 7.0;

@@ -67,6 +67,7 @@ struct PlannerOpenSpaceConfig {
 
   float traj_forward_penalty = 1.0;
   float traj_reverse_penalty = 1.0;
+  float traj_forward_penalty_park_out = 3.0;
   float gear_switch_penalty = 20.0;
   float traj_steer_penalty = 0.0;
   float traj_steer_change_penalty = 0.0;

@@ -433,8 +433,8 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   constexpr float kYStep = 0.5f;
   // constexpr float kMinSafetyDist = 0.5f;
   const float min_safety_dist =
-      (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-       direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
+      (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+       direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE)
           ? 0.04f
           : 0.5f;
   const Eigen::Vector2d base_pos(global_pose.GetX(), global_pose.GetY());
