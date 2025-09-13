@@ -1599,6 +1599,10 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   rs_time_ms_ = 0.0;
   rs_interpolate_time_ms_ = 0.0;
 
+  config_.traj_forward_penalty = IsParkingOutRequest(request_.direction_request)
+                                     ? config_.traj_forward_penalty_park_out
+                                     : config_.traj_forward_penalty;
+
   ILOG_INFO << "hybrid astar begin";
 
   // load XYbounds

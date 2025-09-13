@@ -29,6 +29,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
 
   traj_forward_penalty = 1.0;
   traj_reverse_penalty = 1.0;
+  traj_forward_penalty_park_out = 3.0;
   gear_switch_penalty = 10.0;
   traj_steer_penalty = 0.0;
   traj_steer_change_penalty = 4.0;
