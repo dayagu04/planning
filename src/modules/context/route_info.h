@@ -189,7 +189,7 @@ class RouteInfo {
   bool CalculateFeasibleLane(
       NOASplitRegionInfo* split_region_info,
       const ad_common::sdpromap::SDProMap& sdpro_map) const;
-  bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) const;
+  bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info);
   bool CalculateMergeRegionFeasibleLane(
       NOASplitRegionInfo* split_region_info) const;
   bool CalculateOtherMergeRoadFeasibleLane(
@@ -200,6 +200,9 @@ class RouteInfo {
   bool CalculateLastFPInCurrentLink(
       iflymapdata::sdpro::FeaturePoint* find_fp,
       const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s);
+
+  bool IsTriggerContinueLCInPerceptionSplitRegion(
+      const int left_lane_num, const int right_lane_num) const;
 
   std::vector<int> CalculateMLCTaskNoLaneNum() const;
 
@@ -230,6 +233,18 @@ class RouteInfo {
 
   // 正确排序跨越π的射线
   std::vector<char> SortRaysByDirection(const std::vector<RayInfo>& rays);
+
+  void RemoveElement(std::vector<int>& vec, int target) {
+    if (vec.size() <= 1) {
+      return;
+    }
+
+    auto it = std::find(vec.begin(), vec.end(), target);
+
+    if (it != vec.end()) {
+        vec.erase(it);
+    }
+  }
 
   // for HPP function
   void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);
