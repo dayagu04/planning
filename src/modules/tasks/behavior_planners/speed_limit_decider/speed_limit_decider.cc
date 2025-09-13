@@ -534,7 +534,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     JSON_DEBUG_VALUE("v_limit_tencent", v_cruise_limit_);
   }
 
-  double v_limit_gaode = -10;
+  double v_limit_gaode = 0;
   if (!environmental_model.get_route_info()->get_sdmap_valid()) {
     std::cout << "sd_map is invalid!!!" << std::endl;
   } else {
@@ -545,13 +545,19 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     const auto cur_seg = sd_map.GetNearestRoadWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
-    auto v_limit_camera_list_info = sd_map.GetCameraInfoList(cur_seg->id(), nearest_s, 400.0);
-    int camera_num = 10;
-    camera_num = v_limit_camera_list_info.size();
-    JSON_DEBUG_VALUE("camera_num", camera_num);
+    if (cur_seg != nullptr) {
+      auto v_limit_camera_list_info = sd_map.GetCameraInfoList(cur_seg->id(), nearest_s, 400.0);
+      int camera_num = 10;
+      camera_num = v_limit_camera_list_info.size();
+      JSON_DEBUG_VALUE("camera_num", camera_num);
+    }
     //GetCameraInfoList();
   }
   JSON_DEBUG_VALUE("v_limit_gaode", v_limit_gaode);
+
+  if (v_limit_gaode > 30.0) {
+    v_cruise_limit_ = v_limit_gaode;
+  }
 
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
