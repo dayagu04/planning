@@ -102,8 +102,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangePropose: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangePropose) {
-
-              
         const auto &virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
         propose_state_frame_nums_++;
@@ -3717,7 +3715,7 @@ bool LaneChangeStateMachineManager::
     IsNeedCancelLCTargetLaneMergeToOriginLane() {
   bool is_target_lane_merge_to_origin_lane = IsTargetLaneMergeToOriginLane();
 
-  if (is_target_lane_merge_to_origin_lane ) {
+  if (is_target_lane_merge_to_origin_lane) {
     lc_target_lane_merge_to_origin_lane_cnt_++;
     if (lc_target_lane_merge_to_origin_lane_cnt_ >= 3) {
       lane_change_stage_info_.lc_back_reason =

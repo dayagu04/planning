@@ -94,7 +94,6 @@ bool LaneChangeDecider::Execute() {
       if (is_exist_same_lc_req && is_different_dir) {
         lc_sm_mgr_->WeaklyResetStateMachine();
       }
-
       lc_sm_mgr_->Update();
       last_frame_lc_req_source_ = lc_req_mgr_->request_source();
       last_frame_lc_req_dir_ = lc_req_mgr_->request();
