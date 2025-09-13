@@ -185,6 +185,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
   }
 
+  if (!is_searching_stage_) {
+    front_exceed_line_dx += 0.68;
+  }
+
   if (slot_.slot_source_type_ == SlotSourceType::SELF_DEFINE) {
     front_exceed_line_dx = 0.0;
   }
