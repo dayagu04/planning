@@ -19,15 +19,7 @@ namespace planning {
        : ((-1 == ifly_sign(signed_length)) ? AstarPathGear::REVERSE \
                                            : AstarPathGear::NONE))
 
-enum RSPathSteer {
-  RS_NOP = 0,
-  RS_LEFT = 1,
-  RS_STRAIGHT = 2,
-  RS_RIGHT = 3,
-  RS_STEER_MAX
-};
-
-#define MAX_RS_PATH_NUM (5)
+#define MAX_RS_PATH_NUM (6)
 
 struct RSPathParam {
   float t;

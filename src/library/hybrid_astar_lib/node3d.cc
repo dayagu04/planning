@@ -24,9 +24,9 @@ Node3d::Node3d(const float x, const float y, const float phi) {
 
   is_start_node_ = false;
 
-  dist_to_start_ = 0.0;
+  dist_to_start_ = 0.0f;
   global_id_ = 0;
-  dist_to_obs_ = 100.0f;
+  dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
   gear_switch_node_ = nullptr;
 }
@@ -43,7 +43,7 @@ Node3d::Node3d(float x, float y, float phi, const MapBound& XYbounds,
   grid_index_.phi =
       std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
 
-  path_.path_dist = 0;
+  path_.path_dist = 0.0f;
   path_.point_size = 1;
   path_.points[0].x = x;
   path_.points[0].y = y;
@@ -53,9 +53,9 @@ Node3d::Node3d(float x, float y, float phi, const MapBound& XYbounds,
 
   is_start_node_ = false;
 
-  dist_to_start_ = 0.0;
+  dist_to_start_ = 0.0f;
   global_id_ = 0;
-  dist_to_obs_ = 100.0f;
+  dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
   gear_switch_node_ = nullptr;
 }
@@ -76,10 +76,10 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
 
   visited_type_ = AstarNodeVisitedType::NOT_VISITED;
   is_start_node_ = false;
-  dist_to_start_ = 0.0;
+  dist_to_start_ = 0.0f;
 
   global_id_ = 0;
-  dist_to_obs_ = 100.0f;
+  dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
   gear_switch_node_ = nullptr;
 
@@ -109,7 +109,7 @@ void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   ResetCost();
 
   is_start_node_ = false;
-  dist_to_obs_ = 100.0f;
+  dist_to_obs_ = 26.8f;
 
   if (NodeIndexValid(grid_index_)) {
     global_id_ = IDTransform(grid_index_);
@@ -124,12 +124,47 @@ void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   gear_switch_num_ = 0;
   gear_switch_node_ = nullptr;
 
-  radius_ = 100000.0;
+  radius_ = 100000.0f;
+  steering_ = 0.0f;
+  kappa_ = 0.0f;
+  gear_type_ = AstarPathGear::NONE;
+  path_type_ = AstarPathType::NONE;
+  traj_cost_ = 0.0f;
+  heuristic_cost_ = 0.0f;
+  f_cost_ = 0.0f;
+
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
 #endif
 
   return;
+}
+
+int Node3d::UpdatePath(const NodePath& path, const MapBound& XYbounds,
+                       const PlannerOpenSpaceConfig& open_space_conf,
+                       const float node_path_dist) {
+  path_ = path;
+  path_.path_dist = node_path_dist;
+
+  // XYbounds in xmin, xmax, ymin, ymax
+  grid_index_.x = std::round((path_.GetEndPoint().x - XYbounds.x_min) *
+                             open_space_conf.xy_grid_resolution_inv);
+  grid_index_.y = std::round((path_.GetEndPoint().y - XYbounds.y_min) *
+                             open_space_conf.xy_grid_resolution_inv);
+
+  float theta = IflyUnifyTheta(path_.GetEndPoint().theta, M_PIf32);
+  grid_index_.phi =
+      std::round((theta - (-M_PI)) * open_space_conf.phi_grid_resolution_inv);
+
+  if (NodeIndexValid(grid_index_)) {
+    global_id_ = IDTransform(grid_index_);
+  } else {
+    ILOG_INFO << "invalid node id";
+
+    // invalid node
+    path_.Clear();
+  }
+  return 1;
 }
 
 void Node3d::ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf) {
@@ -183,12 +218,12 @@ void Node3d::DebugString() const {
 
   ILOG_INFO << "index " << grid_index_.x << ", " << grid_index_.y << " "
             << grid_index_.phi << " point size " << path_.point_size
-            << " steering_ " << steering_ * 57.3 << " gear "
+            << " steering_ " << steering_ * 57.2957795 << " gear "
             << PathGearDebugString(gear_type_) << " (g, h, f) = (" << traj_cost_
-            << ", " << heuristic_cost_ << ", " << f_cost_ << "), collision_type "
-            << static_cast<int>(collision_type_) << ", dist to start "
-            << dist_to_start_ << ", id " << global_id_ << " , size "
-            << path_.point_size << " ,safe dist " << dist_to_obs_
+            << ", " << heuristic_cost_ << ", " << f_cost_
+            << "), collision_type " << static_cast<int>(collision_type_)
+            << ", dist to start " << dist_to_start_ << ", id " << global_id_
+            << " , size " << path_.point_size << " ,safe dist " << dist_to_obs_
             << ", gear switch num: " << gear_switch_num_;
 
   if (gear_switch_node_ != nullptr) {
@@ -196,8 +231,8 @@ void Node3d::DebugString() const {
               << gear_switch_node_->GetDistToStart();
 
     ILOG_INFO << "x = " << gear_switch_node_->GetPose().x
-              << ",y = " << gear_switch_node_->GetPose().y << ",theta = "
-              << gear_switch_node_->GetPose().theta * 180 / M_PI;
+              << ",y = " << gear_switch_node_->GetPose().y
+              << ",theta = " << gear_switch_node_->GetPose().theta * 57.2957795;
   }
 
   // for (size_t i = 0; i < path_.point_size; i++) {
@@ -211,14 +246,15 @@ void Node3d::DebugString() const {
 void Node3d::DebugPoseString() const {
   ILOG_INFO << "x,y,theta(degree): " << path_.GetEndPoint().x << " , "
             << path_.GetEndPoint().y << " , "
-            << path_.GetEndPoint().theta * 57.3;
+            << path_.GetEndPoint().theta * 57.2957795;
 
   return;
 }
 
 void Node3d::DebugCost() const {
   ILOG_INFO << "g: " << traj_cost_ << " ,safe dist " << dist_to_obs_
-            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_ << " astar dist ";
+            << " ,h: " << heuristic_cost_ << ", f:" << f_cost_
+            << " astar dist ";
 
 #if DEBUG_NODE_HCOST
   ILOG_INFO << h_cost_debug_.astar_dist << " rs_path_dist "
@@ -297,7 +333,7 @@ void Node3d::Clear() {
 
   path_type_ = AstarPathType::NONE;
   global_id_ = 0;
-  dist_to_obs_ = 100.0f;
+  dist_to_obs_ = 26.8f;
 
   gear_switch_node_ = nullptr;
 
@@ -346,12 +382,20 @@ void Node3d::CoordinateToGridIndex(const float x, const float y,
 const Pose2f& Node3d::GetPose() const { return path_.GetEndPoint(); }
 
 const float Node3d::GetEulerDist(const Node3d* end) const {
+  return std::hypot(path_.GetEndPoint().x - end->GetX(),
+                    path_.GetEndPoint().y - end->GetY());
+
   float dist;
 
   dist = std::pow(path_.GetEndPoint().x - end->GetX(), 2) +
          std::pow(path_.GetEndPoint().y - end->GetY(), 2);
 
   return std::sqrt(dist);
+}
+
+const float Node3d::GetPhiErr(const Node3d* end) const {
+  return IflyUnifyTheta(std::fabs(path_.GetEndPoint().theta - end->GetPhi()),
+                        M_PIf32);
 }
 
 void Node3d::SetDistToObs(const float dist) { dist_to_obs_ = dist; }

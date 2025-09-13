@@ -26,9 +26,13 @@ namespace planning {
 #define PER_DIMENSION_MAX_NODE (1000)
 
 struct NodeGridIndex {
-  size_t x;
-  size_t y;
-  size_t phi;
+  int x;
+  int y;
+  int phi;
+
+  void PrintInfo(const bool enable_log = true) {
+    ILOG_INFO << "x: " << x << ", y: " << y << ", phi: " << phi;
+  }
 };
 
 struct NodePath {
@@ -36,11 +40,11 @@ struct NodePath {
   // node points max number is 8. If this node is rs, please restore path in rs
   // path.
   Pose2f points[NODE_PATH_MAX_POINT];
-  float path_dist;
+  float path_dist = 0.0f;
 
   void Clear() {
     point_size = 0;
-    path_dist = 0.0;
+    path_dist = 0.0f;
     return;
   }
 
@@ -101,6 +105,10 @@ class Node3d {
            const PlannerOpenSpaceConfig& open_space_conf,
            const float node_path_dist);
 
+  int UpdatePath(const NodePath& path, const MapBound& XYbounds,
+                 const PlannerOpenSpaceConfig& open_space_conf,
+                 const float node_path_dist);
+
   void SetGlobalID(const size_t id);
 
   static ad_common::math::Box2d GetBoundingBox(
@@ -148,6 +156,8 @@ class Node3d {
 
   const float GetRadius() const { return radius_; }
 
+  const float GetKappa() const { return kappa_; }
+
   Node3d* GetPreNode() const { return pre_node_; }
 
   const NodePath& GetNodePath() const { return path_; }
@@ -188,6 +198,12 @@ class Node3d {
   void SetSteer(float steering) { steering_ = steering; }
 
   void SetRadius(const float radius) { radius_ = radius; }
+
+  void SetKappa(const float kappa) { kappa_ = kappa; }
+
+  void SetSingleGearLength(const float length) { single_gear_length_ = length; }
+
+  const float GetSingleGearLength() const { return single_gear_length_; }
 
   const AstarPathType GetPathType() const { return path_type_; }
 
@@ -243,9 +259,20 @@ class Node3d {
   // todo: move all heuristic_cost to this file
   const float GetEulerDist(const Node3d* end) const;
 
+  const float GetPhiErr(const Node3d* end) const;
+
   void SetDistToObs(const float dist);
 
   float GetDistToObs() const { return dist_to_obs_; }
+
+  void SetObsDistRelativeSlot(
+      const ObsToPathDistRelativeSlot& dist_to_obs_relative_slot) {
+    dist_to_obs_relative_slot_ = dist_to_obs_relative_slot;
+  }
+
+  const ObsToPathDistRelativeSlot& GetObsDistRelativeSlot() const {
+    return dist_to_obs_relative_slot_;
+  }
 
   void SetGearSwitchNum(const int number) {
     gear_switch_num_ = number;
@@ -253,6 +280,8 @@ class Node3d {
   }
 
   void AddGearSwitchNumber() { gear_switch_num_++; }
+
+  void AddGearSwitchNumber(const int number) { gear_switch_num_ += number; }
 
   int GetGearSwitchNum() const { return gear_switch_num_; }
 
@@ -283,7 +312,14 @@ class Node3d {
     return;
   }
 
- private:
+  Node3d* NextGearSwitchNode() const { return next_gear_switch_node_; }
+
+  void SetNextGearSwitchNode(Node3d* node) {
+    next_gear_switch_node_ = node;
+    return;
+  }
+
+ protected:
   // path point size
   NodePath path_;
 
@@ -301,6 +337,7 @@ class Node3d {
   // [0.15-0.5],cost: (1/dist -2) * weight;
   // [0.5-1000], cost:0;
   float dist_to_obs_;
+  ObsToPathDistRelativeSlot dist_to_obs_relative_slot_;
 
   // g cost
   float traj_cost_ = 0.0;
@@ -319,6 +356,8 @@ class Node3d {
   // left is positive
   float steering_ = 0.0;
   float radius_;
+  float kappa_;
+  float single_gear_length_ = 0.0;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
@@ -346,6 +385,8 @@ class Node3d {
   // 如果换档点在搜索节点，需要记录. 这里如果搜索节点和rs曲线连接处换档，也记录.
   // 如果换档点在rs曲线上，不需要记录.
   Node3d* gear_switch_node_ = nullptr;
+  // 下一个换挡点.
+  Node3d* next_gear_switch_node_ = nullptr;
 };
 
 }  // namespace planning

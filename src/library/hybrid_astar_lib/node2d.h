@@ -164,6 +164,13 @@ class Node2d {
     return;
   }
 
+  void DebugNodeString() {
+    ILOG_INFO << "id, x " << grid_index_.x << ", id y " << grid_index_.y
+              << ", x " << x_ << ", y " << y_ << ", dist " << cost_
+              << ", is collision " << static_cast<int>(is_collision_);
+    return;
+  }
+
   void DebugNodeString(const float xy_resolution) {
     ILOG_INFO << "id, x " << grid_index_.x << ", id y " << grid_index_.y
               << ", x " << x_ << ", y " << y_ << ", dist "
