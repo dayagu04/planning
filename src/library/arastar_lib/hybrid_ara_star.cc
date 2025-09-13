@@ -439,9 +439,7 @@ bool HybridARAStar::ImprovePath() {
   // std::cout << "ImprovePath: prepare time " << (end_time - start_time)
   //           << std::endl;
 
-  auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto hybrid_ara_expand = planning_debug_data->mutable_hybrid_ara_info()
-                               ->mutable_hybrid_ara_expand();
+
 
   while (true) {
     auto current_time = (uint64_t)IflyTime::Now_ms();
@@ -580,7 +578,7 @@ bool HybridARAStar::ImprovePath() {
       break;
     }
 
-    LogNodeDebugInfo(current_node, hybrid_ara_expand);
+    LogNodeDebugInfo(current_node);
 
   }  // end while loop
 
@@ -613,8 +611,10 @@ bool HybridARAStar::ImprovePath() {
 }
 
 void HybridARAStar::LogNodeDebugInfo(
-    const std::shared_ptr<Node3D>& current_node,
-    common::HybridARAExpand* hybrid_ara_expand) {
+    const std::shared_ptr<Node3D>& current_node) {
+  auto& planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto hybrid_ara_expand = planning_debug_data->mutable_hybrid_ara_info()
+                               ->mutable_hybrid_ara_expand();
   // put data into debug info
   auto expand_node = hybrid_ara_expand->add_hybrid_ara_expand();
   auto expand_current_node = expand_node->mutable_current_node();

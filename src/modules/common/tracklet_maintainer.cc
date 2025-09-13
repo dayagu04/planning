@@ -762,40 +762,6 @@ void TrackletMaintainer::calc(
   // is_leadone_potential_avoiding_car(lead_cars.lead_one, scenario, lane_width,
   //                                   borrow_bicycle_lane, rightest_lane,
   //                                   dist_intersect, isRedLightStop);
-  auto &debug_info_manager = DebugInfoManager::GetInstance();
-  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  auto environment_model_debug_info =
-      planning_debug_data->mutable_environment_model_info();
-  environment_model_debug_info->set_ego_s(s_ego_);
-  environment_model_debug_info->set_ego_l(l_ego_);
-  environment_model_debug_info->mutable_obstacle()->Clear();
-  for (auto tr : tracked_objects) {
-    planning::common::Obstacle *obstacle =
-        environment_model_debug_info->add_obstacle();
-    obstacle->set_id(tr->track_id);
-    obstacle->set_type(tr->type);
-    obstacle->set_s(tr->s);
-    obstacle->set_l(tr->l);
-    obstacle->set_s_to_ego(tr->d_rel);
-    obstacle->set_max_l_to_ref(tr->d_max_cpath);
-    obstacle->set_min_l_to_ref(tr->d_min_cpath);
-    obstacle->set_s_with_min_l(tr->s_min);
-    obstacle->set_s_with_max_l(tr->s_max);
-    obstacle->set_nearest_l_to_desire_path(tr->d_path);
-    obstacle->set_nearest_l_to_ego(tr->d_path_self);
-    obstacle->set_vs_lat_relative(tr->v_lat);
-    obstacle->set_vs_lon_relative(tr->v_rel);
-    obstacle->set_vs_lon(tr->v_lead);
-    obstacle->set_nearest_y_to_desired_path(tr->y_rel);
-    obstacle->set_is_accident_car(tr->is_accident_car);
-    obstacle->set_is_accident_cnt(tr->is_accident_cnt);
-    obstacle->set_is_avoid_car(tr->is_avd_car);
-    obstacle->set_is_lane_lead_obstacle(tr->is_lead);
-    obstacle->set_current_lead_obstacle_to_ego(tr->is_temp_lead);
-    obstacle->set_is_static(tr->is_static);
-    // obstacle->set_cutin_p(tr->cutinp);
-  }
-
   // auto ad_info = session_->mutable_planning_context()
   //                    ->mutable_planning_hmi_info()
   //                    ->mutable_ad_info();

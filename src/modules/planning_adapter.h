@@ -255,7 +255,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void UpdateInputListInfo(iflyauto::MsgMeta& msg_meta);
 
   void UpdateApaResetFlag();
-
+  void Log();
  private:
   std::mutex fusion_objects_msg_mutex_;
   std::mutex fusion_occupancy_objects_msg_mutex_;
@@ -375,7 +375,10 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::unique_ptr<PlanningScheduler> planning_scheduler_ = nullptr;
   iflyauto::PlanningOutput last_planning_output_;
 
+  bool run_success_ = false;
   uint64_t frame_num_ = 0;
+  uint64_t start_time_;
+  uint64_t output_time_us_;
 };
 
 }  // namespace planning

@@ -454,9 +454,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    auto input_topic_timestamp = DebugInfoManager::GetInstance()
-                                     .GetDebugInfoPb()
-                                     ->mutable_input_topic_timestamp();
     auto timestamp = local_view.localization.meta.timestamp;
     if (!session_->is_hpp_scene()) {
       truncate_prediction_info(local_view.prediction_result,
@@ -502,10 +499,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
   const auto &localization = local_view.localization;
-  auto input_topic_timestamp = DebugInfoManager::GetInstance()
-                                   .GetDebugInfoPb()
-                                   ->mutable_input_topic_timestamp();
-  bool new_local = 0 != input_topic_timestamp->localization();
+  bool new_local = true;
   const auto &function_state_machine_info =
       local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(

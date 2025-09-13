@@ -314,34 +314,6 @@ void LateralObstacle::select_lead_cars() {
   lead_one_ = lead_one;
 }
 
-void LateralObstacle::LateralObstacleDecision(
-    const std::vector<std::shared_ptr<FrenetObstacle>> &tracked_objects) {
-  auto config_builder =
-      session_->environmental_model().highway_config_builder();
-  LateralObstacleDeciderConfig config =
-      config_builder->cast<LateralObstacleDeciderConfig>();
-  const auto ego_l = DebugInfoManager::GetInstance()
-                         .GetDebugInfoPb()
-                         ->environment_model_info()
-                         .ego_l();
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto ego_car_width = vehicle_param.width;
-  const auto ego_car_length = vehicle_param.length;
-  const auto &lateral_output =
-      session_->planning_context().lateral_behavior_planner_output();
-  auto lane_width = lateral_output.flane_width;
-  double ref_dis = 1;
-  double avoid_front_buffer = 0.0;
-  double expand_vel =
-      interp(session_->environmental_model().get_ego_state_manager()->ego_v(),
-             config.expand_ego_vel, config.expand_obs_rel_vel);
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto environment_model_debug_info =
-      planning_debug_data->mutable_environment_model_info();
-
-}
-
 void LateralObstacle::update_tracks() {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
