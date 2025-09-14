@@ -16,19 +16,6 @@ namespace planning {
 
 class LongitudinalDecisionDecider : public Task {
  public:
-  struct InvadeNeighborAgentsDecisionInfo {
-    bool ignore_rear_agent = true;
-    bool ignore_front_agent = true;
-    int32_t rear_agent_id = agent::AgentDefaultInfo::kNoAgentId;
-    int32_t front_agent_id = agent::AgentDefaultInfo::kNoAgentId;
-    // double ego_ttc_to_front_agent = std::numeric_limits<double>::max();
-    // double current_distance_ego_to_front_agent =
-    //     std::numeric_limits<double>::max();
-    speed::STBoundary::DecisionType current_front_agent_decision =
-        speed::STBoundary::DecisionType::UNKNOWN;
-    speed::STBoundary::DecisionType last_front_agent_decision =
-        speed::STBoundary::DecisionType::UNKNOWN;
-  };
   LongitudinalDecisionDecider(const EgoPlanningConfigBuilder *config_builder,
                               framework::Session *session);
   ~LongitudinalDecisionDecider() override = default;
@@ -40,16 +27,12 @@ class LongitudinalDecisionDecider : public Task {
  private:
   void DetermineKinematicBoundForCruiseScenario();
 
-  void UpdateInvadeNeighborResults();
-
-  void UpdateInvadeNeighborResultsForEgoMotionSimPath();
-
   // only consider lane change execution stage
   void UpdateLaneChangeNeighborResults();
 
-  bool ConstructNeighborLaneStGraph(const agent::Agent *const neighbor_agent);
+  void UpdateParallelLongitudinalAvoidResults();
 
-  void MakeDebugMessage();
+  bool ConstructNeighborLaneStGraph(const agent::Agent *const neighbor_agent);
 
   double CalculateAgentsAverageSpeedAroundEgo() const;
 
@@ -61,32 +44,6 @@ class LongitudinalDecisionDecider : public Task {
   bool IgnoreLaneChangeGapRearAgent(const agent::Agent *gap_rear_agent,
                                     const std::shared_ptr<planning_math::KDPath>
                                         &target_lane_frenet_coord) const;
-
-  std::pair<bool, bool> IgnoreInvadeNeighborAgents(
-      const agent::Agent *invade_gap_rear_agent,
-      const agent::Agent *invade_gap_front_agent,
-      const std::shared_ptr<planning_math::KDPath> &planned_path,
-      const bool use_ego_motion_sim_path = false) const;
-
-  void CalculateInvadeNeighborAgentsDecisionInfo(
-      const agent::Agent *invade_gap_rear_agent,
-      const agent::Agent *invade_gap_front_agent,
-      const std::shared_ptr<planning_math::KDPath> &planned_path,
-      const bool use_ego_motion_sim_path = false);
-
-  void RestInvadeNeighborAgentsDecisionInfo();
-
-  void DetermineClosestInvadeNeighborGapInfo(
-      const std::shared_ptr<VirtualLane> &ego_cur_lane,
-      const double planning_init_x, const double planning_init_y,
-      const double planned_path_length,
-      const std::unordered_map<uint32_t, LatObstacleDecisionType>
-          &lat_obstacle_decision,
-      const std::set<int32_t> &lane_borrow_blocked_obs_id_set,
-      const std::shared_ptr<agent::AgentManager> &agent_manager,
-      const speed::StGraphHelper *st_graph_helper,
-      const std::shared_ptr<planning_math::KDPath> &planned_path,
-      const bool use_ego_motion_sim_path = false);
 
  private:
   LongitudinalDecisionDeciderConfig config_;
@@ -109,13 +66,7 @@ class LongitudinalDecisionDecider : public Task {
   static constexpr double kAroundEgoLongitudinalPreviewTimeThd = 3.0;
   static constexpr double kAroundEgoLongitudinalBackwardTimeThd = 1.0;
 
-  // closet gap of neighbor invade agents
-  // first: lower agent id, second: upper agent id
-  std::pair<int32_t, int32_t> closest_neighbor_invade_gap_agents_id_{-1, -1};
-  bool has_lon_decision_to_invade_agents_{false};
-  bool has_lon_decision_to_invade_agents_beside_ego_motion_sim_path_{false};
-
-  InvadeNeighborAgentsDecisionInfo invade_neighbor_agents_decision_info_;
+ private:
 };
 
 }  // namespace planning

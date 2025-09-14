@@ -238,6 +238,7 @@ bool SpeedLimitDecider::Execute() {
   v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
   JSON_DEBUG_VALUE("v_cruise_limit", v_cruise_limit_);
   ad_info->cruise_speed = v_cruise_limit_;
+  speed_limit_output->set_map_speed_limit_value(v_cruise_limit_);
   return true;
 }
 

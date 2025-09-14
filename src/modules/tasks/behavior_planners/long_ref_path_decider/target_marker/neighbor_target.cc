@@ -7,6 +7,7 @@
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "planning_context.h"
+#include "src/modules/context/environmental_model.h"
 #include "st_graph/st_point.h"
 #include "trajectory1d/trajectory1d.h"
 
@@ -53,10 +54,6 @@ void NeighborTarget::GenerateNeighborTarget() {
 }
 
 void NeighborTarget::GenerateNeighborTargetCurve() {
-  // if (!IsNeighborTargetValid()) {
-  //   return;
-  // }
-
   auto* st_graph_helper = session_->planning_context().st_graph_helper();
   if (st_graph_helper == nullptr) {
     return;
@@ -68,7 +65,6 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   bool is_overtake_valid =
       st_graph_helper->GetFirstNeighborLowerBound(&first_neighbor_lower_bound);
   if (is_yield_valid == false && is_overtake_valid == false) {
-    ILOG_DEBUG << "GenerateNeighborTargetCurve(): both yield and overtake are invalid";
     return;
   }
 
@@ -78,8 +74,11 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   double overtake_s =
       first_neighbor_lower_bound.s() +
       first_neighbor_lower_bound.velocity() * first_neighbor_lower_bound.t();
+
+  double yield_v = first_neighbor_upper_bound.velocity();
+  double overtake_v = first_neighbor_lower_bound.velocity();
+
   if (yield_s < overtake_s) {
-    ILOG_DEBUG << "GenerateNeighborTargetCurve(): yield_s < overtake_s, invalid";
     return;
   }
 
@@ -88,8 +87,28 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
       config_.neighbor_target_vel_upper_bound,
       config_.neighbor_target_max_acc_lower,
       config_.neighbor_target_vel_lower_bound, init_lon_state_[1]);
-  const double v_upper_end =
-      init_lon_state_[1] + config_.neighbor_target_vel_buffer;
+
+  double v_upper_end = init_lon_state_[1] + config_.neighbor_target_vel_buffer;
+  const auto& speed_limit_output =
+      session_->planning_context().speed_limit_decider_output();
+  v_upper_end =
+      std::min(v_upper_end, speed_limit_output.map_speed_limit_value() / 3.6);
+
+  const auto& parallel_longitudinal_avoid_output =
+      session_->planning_context().parallel_longitudinal_avoid_decider_output();
+
+  if (parallel_longitudinal_avoid_output
+          .is_need_parallel_longitudinal_avoid() &&
+      (parallel_longitudinal_avoid_output.is_parallel_yield() ||
+       parallel_longitudinal_avoid_output.is_lead_and_target_is_truck())) {
+    yield_s = std::min(yield_s, parallel_longitudinal_avoid_output.trajectory_start_s());
+    yield_v = std::min(yield_v, parallel_longitudinal_avoid_output.trajectory_start_v());
+  } else if (parallel_longitudinal_avoid_output
+                 .is_need_parallel_longitudinal_avoid() &&
+             parallel_longitudinal_avoid_output.is_parallel_overtake()) {
+    overtake_s = std::max(overtake_s, parallel_longitudinal_avoid_output.trajectory_start_s());
+    overtake_v = std::max(overtake_v, parallel_longitudinal_avoid_output.trajectory_start_v());
+  }
 
   LonState init_state;
   init_state.p = init_lon_state_[0];
@@ -100,17 +119,12 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
   state_limit.p_end = 0.0;
   state_limit.v_end = 0.0;
   state_limit.v_max = v_upper_end;
-  state_limit.v_min = -config_.neighbor_target_kEpsilon;
+  state_limit.v_min = config_.neighbor_target_kEpsilon;
   state_limit.a_max = max_acc;
   state_limit.a_min = config_.neighbor_target_min_acc;
   state_limit.j_max = config_.neighbor_target_max_jerk;
   state_limit.j_min = config_.neighbor_target_min_jerk;
-  // NOTE: cp consider lateral invade agent
-  //    DetermineStateLimitParams(first_neighbor_upper_bound.agent_id(),
-  //                              first_neighbor_lower_bound.agent_id(),
-  //                              &state_limit);
-  const double yield_v = first_neighbor_upper_bound.velocity();
-  double overtake_v = first_neighbor_lower_bound.velocity();
+
   CoordinateParam variable_coordinate_param;
   if (is_yield_valid && is_overtake_valid) {
     variable_coordinate_param.s_start = (yield_s + overtake_s) * 0.5;
@@ -135,7 +149,7 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
               config_.neighbor_target_p_precision));
 
   auto state_limit_lower_bound = state_limit;
-  state_limit.v_end = config_.neighbor_target_neighbor_limit_velocity;
+  state_limit_lower_bound.v_end = config_.neighbor_target_neighbor_limit_velocity;
   neighbor_target_curve_lower_bound_ =
       std::make_unique<SecondOrderTimeOptimalTrajectory>(
           SecondOrderTimeOptimalTrajectory(init_state,

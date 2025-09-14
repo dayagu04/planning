@@ -344,6 +344,31 @@ const STPoint StGraphHelper::GetSoftPassCorridorUpperBound(
   return init_upper_point;
 }
 
+bool StGraphHelper::GetNeighborAgentStBoundaries(
+    const int32_t agent_id, std::vector<int64_t>* const st_boundaries) const {
+  const auto& neighbor_agent_id_st_boundaries_map =
+      st_graph_.neighbor_agent_id_st_boundaries_map();
+  const auto it = neighbor_agent_id_st_boundaries_map.find(agent_id);
+  if (it == neighbor_agent_id_st_boundaries_map.end()) {
+    return false;
+  }
+  st_boundaries->reserve(it->second.size());
+  *st_boundaries = it->second;
+  return true;
+}
+
+bool StGraphHelper::GetNeighborAgentStBoundary(
+    const int64_t boundary_id, STBoundary* const st_boundary) const {
+  const auto& neighbor_boundary_id_st_boundaries_map =
+      st_graph_.neighbor_boundary_id_st_boundaries_map();
+  const auto it = neighbor_boundary_id_st_boundaries_map.find(boundary_id);
+  if (it == neighbor_boundary_id_st_boundaries_map.end()) {
+    return false;
+  }
+  *st_boundary = *(it->second.get());
+  return true;
+}
+
 const std::pair<double, double> StGraphHelper::GetPathRange() const {
   return st_graph_.path_range();
 }

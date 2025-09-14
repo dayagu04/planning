@@ -4616,7 +4616,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   double acc_cipv = -1.0;
 
   // neighbor target
-  double neighbor_target_min_jerk = -1.5;
+  double neighbor_target_min_jerk = -1.0;
   double neighbor_target_max_jerk = 2.0;
   double neighbor_target_min_acc = -1.5;
   double neighbor_target_max_acc_lower = 0.8;

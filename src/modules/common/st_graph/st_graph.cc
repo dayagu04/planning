@@ -498,6 +498,11 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
 
     if (!st_point_pairs.empty()) {
+      // 补全0~1秒的ST边界
+      // CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path, path_range,
+      //                       path_border_querier, planning_init_point_box, type,
+      //                       is_rads_scene);
+
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
       st_boundaries.emplace_back(boundary_id);
@@ -532,112 +537,6 @@ void STGraph::MakeDynamicAgentStBoundary(
   } else if (is_candicate_for_close_pass) {
     // the agent has no original st boundary and is candicate for close pass
     dynamic_close_pass_candicate_agent_ids_.insert(agent.agent_id());
-  }
-
-  for (int i = 0; i < trajectories.size(); ++i) {
-    if (!ego_motion_simulation_path) {
-      break;
-    }
-
-    if (trajectories[i].empty()) {
-      continue;
-    }
-
-    if (!is_lane_keeping) {
-      break;
-    }
-
-    if (is_in_lane_borrow_status) {
-      break;
-    }
-
-    if (agent.is_static()) {
-      break;
-    }
-
-    const double agent_pred_end_time = trajectories[i].back().absolute_time();
-    std::vector<std::pair<STPoint, STPoint>> st_point_pairs;
-    st_point_pairs.reserve(reserve_num);
-    const int64_t boundary_id =
-        (agent.agent_id() << 8) + i + agent.trajectories().size();
-    if (boundary_id_st_boundaries_map_.find(boundary_id) !=
-        boundary_id_st_boundaries_map_.end()) {
-      continue;
-    }
-    for (double relative_time = time_range.first; relative_time <= time_horizon;
-         relative_time += kTimeResolution) {
-      // find path_border_segments which have collison risk
-      trajectory::TrajectoryPoint point;
-      if (start_absolute_time + relative_time < agent_pred_end_time) {
-        if (is_need_truncate_traj) {
-          point = trajectories[i].Evaluate(std::fmin(
-              start_absolute_time + relative_time, kConsideredReverseVruTime));
-        } else {
-          point = trajectories[i].Evaluate(start_absolute_time + relative_time);
-        }
-      } else {
-        if (is_need_truncate_traj) {
-          point = trajectories[i].Evaluate(kConsideredReverseVruTime);
-        } else {
-          StGraphUtils::LinearExtendTrajectory(
-              trajectories[i], start_absolute_time + relative_time, &point);
-        }
-      }
-      double specific_lat_buffer = need_adjust_buffer_by_t
-                                       ? StGraphUtils::AdjustLateralBufferByT(
-                                             point, lat_buffer, ptr_obj_lane)
-                                       : lat_buffer;
-
-      specific_lat_buffer =
-          need_dynamic_buffer
-              ? StGraphUtils::CalculateLateralBufferForTimeRange(
-                    0.0, specific_lat_buffer, kDynamicLowerT, kDynamicUpperT,
-                    relative_time)
-              : specific_lat_buffer;
-
-      Box2d obs_box(Vec2d(point.x(), point.y()), point.theta(),
-                    agent.length() + 2.0 * lon_buffer,
-                    agent.width() + 2.0 * specific_lat_buffer);
-
-      // max_s min_s max_l min_l
-      std::vector<double> agent_sl_boundary(4);
-      std::vector<std::pair<int32_t, Vec2d>> considered_corners;
-
-      bool is_success = StGraphUtils::CalculateAgentSLBoundary(
-          ego_motion_simulation_path, obs_box, &agent_sl_boundary,
-          &considered_corners);
-      if (!is_success) {
-        continue;
-      }
-      const double max_l = agent_sl_boundary[2];
-      const double min_l = agent_sl_boundary[3];
-      double lower_s = std::numeric_limits<double>::max();
-      double upper_s = std::numeric_limits<double>::lowest();
-      if (StGraphUtils::CalculateSRange(
-              ego_motion_simulation_path, *path_border_querier, obs_box, type,
-              path_range, agent_sl_boundary, considered_corners,
-              planning_init_point_box, &lower_s, &upper_s, is_rads_scene)) {
-        min_t = std::fmin(min_t, relative_time);
-        st_point_pairs.emplace_back(
-            STPoint(lower_s, relative_time, agent.agent_id(), boundary_id,
-                    point.vel(), point.acc(), min_l),
-            STPoint(upper_s, relative_time, agent.agent_id(), boundary_id,
-                    point.vel(), point.acc(), max_l));
-      }
-    }
-
-    if (!st_point_pairs.empty()) {
-      std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
-      st_boundary->set_id(boundary_id);
-      // st_boundary->set_decision_type(STBoundary::DecisionType::NEIGHBOR_YIELD);
-      st_boundaries_ego.emplace_back(boundary_id);
-      neighbor_boundary_id_st_boundaries_map_.insert(
-          std::make_pair(boundary_id, std::move(st_boundary)));
-    }
-  }
-
-  if (!st_boundaries_ego.empty()) {
-    neighbor_agent_id_st_boundaries_map_[agent.agent_id()] = st_boundaries_ego;
   }
 
   if (is_large_agent && !reuse_for_close_pass) {
@@ -1336,6 +1235,80 @@ void STGraph::AddStGraphDataToProto() {
   }
 
   mutable_st_graph_data->CopyFrom(st_graph_data_pb_);
+}
+
+void STGraph::CompleteStBoundaryGap(
+    std::vector<std::pair<STPoint, STPoint>>& st_point_pairs,
+    const agent::Agent& agent,
+    const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
+    const std::pair<double, double>& path_range,
+    const PathBorderQuerier* path_border_querier,
+    const planning_math::Box2d& planning_init_point_box,
+    const StBoundaryType type, const bool is_rads_scene) {
+
+  if (!agent.is_cutin()) {
+    return;
+  }
+
+  double earliest_time = std::numeric_limits<double>::max();
+  for (const auto& point_pair : st_point_pairs) {
+    earliest_time = std::min(earliest_time, point_pair.first.t());
+  }
+
+  if (earliest_time < 0.2 || earliest_time > 1.0) {
+    return;
+  }
+
+  STPoint ref_lower_point_1_0, ref_upper_point_1_0;
+  STPoint ref_lower_point_1_2, ref_upper_point_1_2;
+
+  for (const auto& point_pair : st_point_pairs) {
+    if (std::fabs(point_pair.first.t() - 1.0) < kMathEpsilon) {
+      ref_lower_point_1_0 = point_pair.first;
+      ref_upper_point_1_0 = point_pair.second;
+    } else if (std::fabs(point_pair.first.t() - 1.2) < kMathEpsilon) {
+      ref_lower_point_1_2 = point_pair.first;
+      ref_upper_point_1_2 = point_pair.second;
+    }
+  }
+
+  double lower_slope = (ref_lower_point_1_2.s() - ref_lower_point_1_0.s()) /
+                       (ref_lower_point_1_2.t() - ref_lower_point_1_0.t());
+  double upper_slope = (ref_upper_point_1_2.s() - ref_upper_point_1_0.s()) /
+                       (ref_upper_point_1_2.t() - ref_upper_point_1_0.t());
+
+  st_point_pairs.erase(
+      std::remove_if(st_point_pairs.begin(), st_point_pairs.end(),
+                     [](const auto& point_pair) {
+                       double t = point_pair.first.t();
+                       return t >= 0.0 && t <= 1.0;
+                     }),
+      st_point_pairs.end());
+
+  std::vector<std::pair<STPoint, STPoint>> new_points;
+  for (double t = 0.0; t <= 1.0; t += 0.2) {
+    double lower_s =
+        ref_lower_point_1_0.s() + lower_slope * (t - ref_lower_point_1_0.t());
+    double upper_s =
+        ref_upper_point_1_0.s() + upper_slope * (t - ref_upper_point_1_0.t());
+    upper_s = std::max(upper_s, lower_s);
+
+    new_points.emplace_back(
+        STPoint(lower_s, t, agent.agent_id(), ref_lower_point_1_0.boundary_id(),
+                ref_lower_point_1_0.velocity(),
+                ref_lower_point_1_0.acceleration(),
+                ref_lower_point_1_0.extreme_l()),
+        STPoint(upper_s, t, agent.agent_id(), ref_upper_point_1_0.boundary_id(),
+                ref_upper_point_1_0.velocity(),
+                ref_upper_point_1_0.acceleration(),
+                ref_upper_point_1_0.extreme_l()));
+  }
+
+  st_point_pairs.insert(st_point_pairs.end(), new_points.begin(),
+                        new_points.end());
+  std::sort(
+      st_point_pairs.begin(), st_point_pairs.end(),
+      [](const auto& a, const auto& b) { return a.first.t() < b.first.t(); });
 }
 
 void STGraph::Reset() {

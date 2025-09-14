@@ -1055,17 +1055,17 @@
       }
     },
     "neighbor_target": {
-        "neighbor_target_min_jerk": -1.5,
+        "neighbor_target_min_jerk": -1.0,
         "neighbor_target_max_jerk": 2.0,
         "neighbor_target_min_acc": -1.5,
         "neighbor_target_max_acc_lower": 0.8,
         "neighbor_target_max_acc_upper": 2.0,
         "neighbor_target_vel_lower_bound": 5.0,
-        "neighbor_target_vel_upper_bound": 15.0,
-        "neighbor_target_vel_buffer": 5.0,
+        "neighbor_target_vel_upper_bound": 30.0,
+        "neighbor_target_vel_buffer": 3.0,
         "neighbor_target_p_precision": 0.3,
-        "neighbor_target_kEpsilon": 1e-10,
-        "neighbor_target_neighbor_yield_distance": 10.0,
+        "neighbor_target_kEpsilon": 1e-6,
+        "neighbor_target_neighbor_yield_distance": 8.0,
         "neighbor_target_neighbor_overtake_distance": 10.0,
         "neighbor_target_neighbor_limit_velocity": 5.0
     },

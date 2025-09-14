@@ -59,8 +59,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   st_graph_helper_ = std::make_shared<speed::StGraphHelper>(*st_graph_);
   st_graph_searcher_ =
       std::make_unique<StGraphSearcher>(config_builder, session);
-  truck_longitudinal_avoid_decider_ =
-      std::make_unique<TruckLongitudinalAvoidDecider>(config_builder, session);
+  parallel_longitudinal_avoid_decider_ =
+      std::make_unique<ParallelLongitudinalAvoidDecider>(config_builder, session);
   agent_headway_decider_ =
       std::make_unique<AgentHeadwayDecider>(config_builder, session);
   longitudinal_decision_decider_ =
@@ -257,9 +257,9 @@ bool LongTimeTaskPipelineV3::Run() {
   }
   JSON_DEBUG_VALUE("st_graph_searcher_cost", time_end - time_start);
 
-  ok = truck_longitudinal_avoid_decider_->Execute();
+  ok = parallel_longitudinal_avoid_decider_->Execute();
   if (!ok) {
-    AddErrorInfo(truck_longitudinal_avoid_decider_->Name());
+    AddErrorInfo(parallel_longitudinal_avoid_decider_->Name());
     return false;
   }
 

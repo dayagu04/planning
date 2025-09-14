@@ -41,6 +41,15 @@ void SpeedLimitDeciderOutput::SetSpeedLimitIntoMap(
   }
 }
 
+void SpeedLimitDeciderOutput::set_map_speed_limit_value(
+    const double limited_speed) {
+  v_limit_map_ramp_ = limited_speed;
+}
+
+const double SpeedLimitDeciderOutput::map_speed_limit_value() const {
+  return v_limit_map_ramp_;
+}
+
 std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     const SpeedLimitType type) {
   std::string ret;
