@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <unordered_set>
+#include <vector>  // Added for std::vector
 
 struct FollowTargetInfo {
   int32_t enable_far_slow_jlt_count;
@@ -19,4 +20,5 @@ struct DangerAgentInfo {
 struct LonRefPathDeciderOutput {
   TargetMakerInfo target_maker_info;
   DangerAgentInfo danger_agent_info;
+  bool is_cross_vru_target_pre_handle = false;
 };

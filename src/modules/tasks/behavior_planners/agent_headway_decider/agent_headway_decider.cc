@@ -122,6 +122,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
     const bool is_lane_borrow_virtual_agent = agent->is_lane_borrow_virtual_obs();
+    const bool is_vru_crossing_virtual_agent = agent->is_vru_crossing_virtual_obs();
     double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
@@ -134,6 +135,11 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double v_relative = agent->speed() - v_ego;
     if (v_relative > kHighSpeedDiffThd) {
       headway_step = 0.5 * config_.headway_step;
+    }
+
+    if(is_vru_crossing_virtual_agent){
+      agents_headway_map_[st_agent_id].current_headway = 0.0;
+      continue;
     }
 
     // first appear

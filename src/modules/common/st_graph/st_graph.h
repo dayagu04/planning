@@ -105,6 +105,7 @@ class STGraph {
   const int32_t first_neighbor_overtake_index() const;
 
   const std::vector<int32_t>& caution_yield_agent_ids() const;
+  const std::vector<int32_t>& relieve_jerk_agent_ids() const;
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();
@@ -169,6 +170,7 @@ class STGraph {
   int32_t first_neighbor_overtake_agent_id_ =
       agent::AgentDefaultInfo::kNoAgentId;
   std::vector<int32_t> caution_yield_agent_ids_;
+  std::vector<int32_t> relieve_jerk_agent_ids_;
   std::vector<int32_t> ignore_agent_ids_;
   // <double, NeighborCorridorYieldInfo> : <yield_st_point.s(),
   // NeighborCorridorYieldInfo>

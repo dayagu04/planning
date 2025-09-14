@@ -18,6 +18,7 @@ message TargetMaker {
   optional CautionTarget caution_target = 6;
   optional MaxDecelTarget max_decel_target = 7;
   optional SafetyTarget safety_target = 8;
+  optional CrossVRUTarget cross_vru_target = 9;
 }
 
 message WeightMaker {
@@ -60,4 +61,8 @@ message WeightMakerReplayInfo {
   optional bool is_urgent = 1;
   repeated TargetPoint target_point = 2;
   optional double urgent_scale = 3;
+}
+
+message CrossVRUTarget {
+  repeated TargetPoint cross_vru_target_s_ref = 1;
 }

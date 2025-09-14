@@ -202,8 +202,8 @@ class Agent {
   const bool is_far_in_large_curv() const;
   void set_is_far_in_large_curv(const bool is_far_in_large_curv);
 
-  const bool is_reverse_cutin() const;
-  void set_is_reverse_cutin(const bool is_reverse);
+  const bool is_reverse_relieve_agent() const;
+  void set_is_reverse_relieve_agent(const bool is_reverse);
 
   const bool has_low_spd_unstable_trajectory() const;
   void set_has_low_spd_unstable_trajectory(
@@ -230,7 +230,8 @@ class Agent {
   const bool is_lane_borrow_virtual_obs() const;
   void set_is_lane_borrow_virtual_obs(
       bool is_lane_borrow_virtual_obs);
-
+  const bool is_vru_crossing_virtual_obs() const;
+  void set_is_vru_crossing_virtual_obs(bool is_vru_crossing_virtual_obs);
   const double d_path() const;
   void set_d_path(double d_path);
 
@@ -311,13 +312,14 @@ class Agent {
   bool need_backward_extend_ = false;
   bool is_far_in_large_curv_ = false;
   bool is_reverse_in_large_curv_ = false;
-  bool is_reverse_cutin_ = false;
+  bool is_reverse_relieve_agent_ = false;
 
   bool is_cut_out_for_lane_change_ = false;
 
   bool is_tfl_virtual_obs_ = false;
   bool is_stop_destination_virtual_obs_ = false;
   bool is_lane_borrow_virtual_obs_ = false;
+  bool is_vru_crossing_virtual_obs_ = false;
   unsigned int fusion_source_;
 };
 

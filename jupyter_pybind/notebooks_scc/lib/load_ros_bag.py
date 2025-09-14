@@ -618,7 +618,7 @@ class LoadRosbag:
                          "solver_condition", "dist_err", "lat_err", "theta_err", "lon_err", "dbw_status", "iLqr_lat_update_time", "concerned_start_q_jerk", \
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
-                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost', \
+                         "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
                          'v_limit_road', 'v_limit_in_turns','v_target', 'v_cruise', 'v_ego', \
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
@@ -671,7 +671,7 @@ class LoadRosbag:
                           "left_road_extra_buffer", "right_road_extra_buffer","target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
                           "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_safety_distance",
                           "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel",
-                          "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq",
+                          "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
                           "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
                           "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away", "cur_lane_mark",
                           "cur_lane_mark_begin", "cur_lane_mark_end", "cur_lane_ego_s", "cur_lane_ego_front_edge_s",

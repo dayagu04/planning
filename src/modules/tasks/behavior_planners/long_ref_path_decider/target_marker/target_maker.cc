@@ -3,6 +3,7 @@
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "caution_target.h"
 #include "common/math/common_utils.h"
+#include "cross_vru_target.h"
 #include "cruise_target.h"
 #include "debug_info_log.h"
 #include "follow_target.h"
@@ -41,6 +42,8 @@ common::Status TargetMaker::Run() {
 
   // 6. safety target @华文
   SafetyTarget safety_target(speed_planning_config_, session_);
+  // 7. cross VRU target @华文
+  CrossVRUTarget cross_vru_target(speed_planning_config_, session_);
 
   // 7. decider final target values
   const auto& start_stop_decider_output =
@@ -57,6 +60,8 @@ common::Status TargetMaker::Run() {
         neighbor_target.target_value(relative_t);
     TargetValue caution_target_value = caution_target.target_value(relative_t);
     TargetValue safety_target_value = safety_target.target_value(relative_t);
+    TargetValue cross_vru_target_value =
+        cross_vru_target.target_value(relative_t);
 
     TargetValue upper_target_value(0.0, false,
                                    std::numeric_limits<double>::max(), 0.0,
@@ -75,6 +80,7 @@ common::Status TargetMaker::Run() {
       }
     } 
 
+                                
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
@@ -106,8 +112,9 @@ common::Status TargetMaker::Run() {
           Target::TargetMin(caution_target_value, upper_target_value);
     }
 
+
     // TBD: 建伟合入neighbor
-    // 3.update lower and upper value by neighbor target
+    // 4.update lower and upper value by neighbor target
     if (neighbor_target_value.has_target()) {
       // neighbor
       if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
@@ -150,6 +157,13 @@ common::Status TargetMaker::Run() {
 
     auto final_target_value =
         Target::TargetMin(final_lower_bound_value, upper_target_value);
+
+    // 华文合入cross_vru_target
+    if (cross_vru_target_value.has_target()) {
+      final_target_value =
+          Target::TargetMin(final_target_value, cross_vru_target_value);
+    }
+
     target_values_.push_back(std::move(final_target_value));
   }
   RefineStarget();

@@ -29,6 +29,8 @@ constexpr double kCautionYieldLowBoundThres = 0.1;
 constexpr double kCutInHeadingthres = 4.0 / 180.0 * 3.14;
 constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
 constexpr double kStaticAgentSpeedThrMps = 0.5;
+constexpr double kVRUHeadingRelieveJerkMinThreshold = 45 / 57.3;
+constexpr double kVRUHeadingRelieveJerkMaxThreshold = 135 / 57.3;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -242,6 +244,152 @@ void StGraphUtils::DetermineCautionYieldDecision(
       ptr_st_boundary->set_decision_type(
           STBoundary::DecisionType::CAUTION_YIELD);
       caution_yield_agent_ids.emplace_back(agent_id);
+    }
+  }
+}
+
+void StGraphUtils::DetermineRelieveJerkDecision(
+    const std::shared_ptr<StGraphInput>& st_graph_input,
+    const std::unordered_map<int32_t, std::vector<int64_t>>&
+        agent_id_st_boundaries_map,
+    const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+        boundary_id_st_boundaries_map,
+    std::vector<int32_t>& relieve_jerk_agent_ids) {
+  relieve_jerk_agent_ids.clear();
+  const auto& agents = st_graph_input->filtered_agents();
+  for (const auto agent : agents) {
+    if (agent == nullptr) {
+      continue;
+    }
+    if (!agent_id_st_boundaries_map.count(agent->agent_id())) {
+      continue;
+    }
+
+    // 1. select cross vru
+    if (agent->is_vru_crossing_virtual_obs()) {
+      int32_t vru_crossing_agent_id = agent->agent_id();
+      relieve_jerk_agent_ids.emplace_back(vru_crossing_agent_id);
+      // vru crossing virtual obs id calc by vru origin id +10000
+      int32_t vru_origin_id = vru_crossing_agent_id - 10000;
+      if (std::find(relieve_jerk_agent_ids.begin(),
+                    relieve_jerk_agent_ids.end(),
+                    vru_origin_id) == relieve_jerk_agent_ids.end()) {
+        if (agent_id_st_boundaries_map.count(vru_origin_id)) {
+          relieve_jerk_agent_ids.emplace_back(vru_origin_id);
+        }
+      }
+      continue;
+    }
+    if (agent->is_cutin()) {
+      continue;
+    }
+    const auto& ego_lane = st_graph_input->ego_lane();
+    if (ego_lane == nullptr) {
+      return;
+    }
+    // get reference path from ego lane
+    const auto& ego_reference_path = ego_lane->get_reference_path();
+    if (ego_reference_path == nullptr) {
+      return;
+    }
+    const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+    if (ego_lane_coord == nullptr) {
+      return;
+    }
+
+    if (agent->trajectories_used_by_st_graph().empty()) {
+      continue;
+    }
+    if (agent->trajectories_used_by_st_graph().front().empty()) {
+      continue;
+    }
+    auto init_point = st_graph_input->planning_init_point();
+    const auto& veh_param =
+        VehicleConfigurationContext::Instance()->get_vehicle_param();
+    const auto ego_half_width = veh_param.width * 0.5;
+    auto vru_pred_last_point = agent->trajectories_used_by_st_graph().front().back();
+    double vru_current_s, vru_current_l;
+    double vru_pred_last_point_s, vru_pred_last_point_l;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &vru_current_s,
+                                &vru_current_l)) {
+      return;
+    }
+    if (!ego_lane_coord->XYToSL(vru_pred_last_point.x(),
+                                vru_pred_last_point.y(), &vru_pred_last_point_s,
+                                &vru_pred_last_point_l)) {
+      return;
+    }
+
+    double ego_s, ego_l;
+    if (!ego_lane_coord->XYToSL(init_point.x(), init_point.y(), &ego_s,
+                                &ego_l)) {
+      return;
+    }
+    if (vru_current_s < ego_s + veh_param.front_edge_to_rear_axle) {
+      continue;
+    }
+
+    // 2. select large heading diff agent
+    bool is_heading_diff_satisfied_for_relieve = false;
+    bool is_vru_prediction_satisfied_for_relieve = false;
+    auto vru_matched_point = ego_lane_coord->GetPathPointByS(vru_current_s);
+    const auto vru_heading = agent->theta();
+    const auto heading_diff = std::fabs(
+        planning_math::NormalizeAngle(vru_heading - vru_matched_point.theta()));
+    if (heading_diff > kVRUHeadingRelieveJerkMinThreshold &&
+        heading_diff < kVRUHeadingRelieveJerkMaxThreshold) {
+      is_heading_diff_satisfied_for_relieve = true;
+    }
+    if (std::fabs(vru_pred_last_point_l) < ego_half_width ||
+        (vru_pred_last_point_l * vru_current_l < 0.0)) {
+      is_vru_prediction_satisfied_for_relieve = true;
+    }
+    if (is_heading_diff_satisfied_for_relieve &&
+        is_vru_prediction_satisfied_for_relieve) {
+      relieve_jerk_agent_ids.emplace_back(agent->agent_id());
+      continue;
+    }
+
+    // 3. select reverse agent
+    const auto& virtual_lane_manager =
+        st_graph_input->ptr_virtual_lane_manager();
+    const auto is_not_in_intersection =
+        virtual_lane_manager->GetIntersectionState() == common::NO_INTERSECTION;
+    bool is_within_ego_lane = false;
+    bool is_within_ego_neighbor_lane = false;
+    double nearest_s = 0.0;
+    double nearest_l = 0.0;
+    const auto& ptr_obj_lane = virtual_lane_manager->GetNearestLane(
+        {agent->x(), agent->y()}, &nearest_s, &nearest_l);
+    const double half_ego_lane_width = 0.5 * ego_lane->width_by_s(nearest_s);
+    if (nullptr != ptr_obj_lane) {
+      is_within_ego_lane =
+          ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
+          nearest_l < half_ego_lane_width;
+      is_within_ego_neighbor_lane =
+          std::abs(ego_lane->get_virtual_id() -
+                   ptr_obj_lane->get_virtual_id()) == 1 &&
+          nearest_l < half_ego_lane_width;
+    }
+    const bool is_relieve_jerk_reverse_agent =
+        is_not_in_intersection && agent->is_reverse() &&
+        (is_within_ego_lane || is_within_ego_neighbor_lane);
+    if (is_relieve_jerk_reverse_agent) {
+      relieve_jerk_agent_ids.emplace_back(agent->agent_id());
+      continue;
+    }
+  }
+  // set boundry attr of relieve_jerk_agent_ids so that st search neglect
+  // these boundries
+  for (const auto& agent_id : relieve_jerk_agent_ids) {
+    const auto& st_boundaries = agent_id_st_boundaries_map.at(agent_id);
+    for (const auto& st_boundary_id : st_boundaries) {
+      if (!boundary_id_st_boundaries_map.count(st_boundary_id)) {
+        continue;
+      }
+      auto& ptr_st_boundary = boundary_id_st_boundaries_map.at(st_boundary_id);
+      ptr_st_boundary->set_decision_type(
+          STBoundary::DecisionType::RELIEVE_JERK);
     }
   }
 }

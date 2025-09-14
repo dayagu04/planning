@@ -57,6 +57,14 @@ class StGraphUtils {
           boundary_id_st_boundaries_map,
       std::vector<int32_t>& caution_yield_agent_ids);
 
+  static void DetermineRelieveJerkDecision(
+      const std::shared_ptr<StGraphInput>& st_graph_input,
+      const std::unordered_map<int32_t, std::vector<int64_t>>&
+          agent_id_st_boundaries_map,
+      const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
+          boundary_id_st_boundaries_map,
+      std::vector<int32_t>& relieve_jerk_agent_ids);
+
   // TODO: 待Cross决策加入后添加
   static void SetCrossingAgentCautionYieldDecision(
       const std::shared_ptr<StGraphInput>& st_graph_input,

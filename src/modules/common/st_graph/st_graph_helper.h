@@ -58,6 +58,10 @@ class StGraphHelper {
     return st_graph_.neighbor_agent_id_st_boundaries_map();
   }
 
+  const std::vector<int32_t>& relieve_jerk_agent_ids() const {
+    return st_graph_.relieve_jerk_agent_ids();
+  }
+
   void DetermineIfConeBucketCIPV(
       const std::vector<std::shared_ptr<agent::Agent>>& agents);
 

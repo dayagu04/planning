@@ -595,7 +595,8 @@ bool CrossingAgentDecider::ConstructVirtualAgentByCrossing(
   virtual_agent.set_theta(obs_point.theta());
   virtual_agent.set_accel(0.0);
   virtual_agent.set_fusion_source(1);  // camera avoiding filtered in st
-
+  
+  virtual_agent.set_is_vru_crossing_virtual_obs(is_vru);
   planning_math::Box2d box(
       planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),
       virtual_agent.theta(), virtual_agent.length(), virtual_agent.width());
