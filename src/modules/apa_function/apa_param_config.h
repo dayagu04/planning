@@ -545,6 +545,8 @@ struct ApaParameters {
   double max_obs_lon_invasion_slot_dist_dynamic_col = -0.068;
   double slot_entrance_obs_x = 2.468;
   double col_obs_safe_dist_strict = 0.2;
+  double gen_ref_length_lat_buffer = 0.1;
+  double gen_ref_length_lon_buffer = 0.32;
   double parallel_obs2slot_max_dist = 16.66;
   double parallel_channel_y_mag = 8.5;
   double parallel_channel_x_mag = 16.6;

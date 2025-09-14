@@ -451,6 +451,7 @@ void ApaObstacleManager::Update(
   }
 
   JSON_DEBUG_VALUE("total_obs_size", obstacles_.size())
+  ILOG_INFO << "obstacle size: " << obstacles_.size();
 
   return;
 }

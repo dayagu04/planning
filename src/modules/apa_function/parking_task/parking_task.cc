@@ -5,11 +5,13 @@ namespace apa_planner {
 
 ParkingTask::ParkingTask() : name_("") {}
 
-bool ParkingTask::Init() { return true; }
+const bool ParkingTask::Init() { return true; }
 
 const std::string& ParkingTask::Name() const { return name_; }
 
 void ParkingTask::Execute() { return; }
+
+const bool ParkingTask::Update() { return false; }
 
 void ParkingTask::Reset() { return; }
 

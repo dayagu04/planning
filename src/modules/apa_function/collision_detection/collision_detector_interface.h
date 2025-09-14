@@ -22,11 +22,15 @@ enum class CollisionDetectorType : uint8_t {
 
 class CollisionDetectorInterface {
  public:
+  CollisionDetectorInterface() = default;
   CollisionDetectorInterface(
       const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr,
       const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
       const std::shared_ptr<ApaPredictPathManager>& predict_path_ptr);
-  ~CollisionDetectorInterface() {}
+  ~CollisionDetectorInterface() { has_constructed_flag_ = false; }
+
+  void SetObsManagerPtr(
+      const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr);
 
   const std::shared_ptr<GeometryCollisionDetector>& GetGeometryColDetPtr()
       const {
@@ -50,9 +54,14 @@ class CollisionDetectorInterface {
   }
 
   void Init(const bool fold_mirror_flag);
-  void Reset();
+
+  const std::shared_ptr<ApaObstacleManager>& GetObsManagerPtr() const {
+    return obs_manager_ptr_;
+  }
 
   const bool GetFoldMirrorFlag() const { return fold_mirror_flag_; }
+
+  void Reset();
 
  private:
   std::shared_ptr<GeometryCollisionDetector> geometry_col_det_ptr_;
@@ -66,6 +75,8 @@ class CollisionDetectorInterface {
   bool fold_mirror_flag_ = false;
 
   bool init_flag_ = false;
+
+  bool has_constructed_flag_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

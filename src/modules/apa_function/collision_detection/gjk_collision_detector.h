@@ -53,7 +53,7 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
   GJKCollisionDetector() {}
   GJKCollisionDetector(
       const std::shared_ptr<ApaObstacleManager>& obs_manager_ptr) {
-    SetObsManager(obs_manager_ptr);
+    SetObsManagerPtr(obs_manager_ptr);
   }
   ~GJKCollisionDetector() {}
 

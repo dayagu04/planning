@@ -34,6 +34,7 @@ namespace apa_planner {
 struct SimulationParam {
   int force_mid_process_plan = 0;
   int process_obs_method = -1;
+  int ref_solve_number = 100000;
   bool is_simulation = false;
   int plan_type = 0;
   bool is_complete_path = false;
@@ -65,6 +66,10 @@ struct SimulationParam {
   bool enable_debug_swap_start_goal = false;
   bool swap_start_goal = false;
   ParkingVehDirection dir;
+
+  int ref_gear = 0;
+  int pre_search_mode = 1;
+  bool decide_cul_de_sac = true;
 };
 
 class ApaWorld {

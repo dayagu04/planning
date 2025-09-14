@@ -47,7 +47,7 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
  public:
   EDTCollisionDetector() {}
   EDTCollisionDetector(const std::shared_ptr<ApaObstacleManager> &obs_manager) {
-    SetObsManager(obs_manager);
+    SetObsManagerPtr(obs_manager);
   }
   ~EDTCollisionDetector(){};
 

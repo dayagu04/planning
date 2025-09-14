@@ -218,6 +218,8 @@
   "car_lat_inflation_dynamic_plan": 0.12,
   "car_lat_inflation_normal": 0.07,
   "car_lat_inflation_strict": 0.1586,
+  "gen_ref_length_lat_buffer": 0.1,
+  "gen_ref_length_lon_buffer": 0.32,
   "safe_threshold": 0.07,
   "max_obs_lat_invasion_slot_dist": -0.0568,
   "max_obs_lat_invasion_slot_dist_dynamic_col": -0.0268,

@@ -28,17 +28,19 @@ class ParkingTask {
 
   const std::string& Name() const;
 
-  virtual bool Init();
+  virtual const bool Init();
 
   virtual void Execute();
+
+  virtual const bool Update();
 
   virtual void Reset();
 
   // push debug info in here.
   virtual void TaskDebug();
 
-  void SetCollisionDetectorIntefacePtr(
-      const std::shared_ptr<apa_planner::CollisionDetectorInterface>&
+  virtual void SetCollisionDetectorIntefacePtr(
+      const std::shared_ptr<CollisionDetectorInterface>&
           col_det_interface_ptr) {
     col_det_interface_ptr_ = col_det_interface_ptr;
   }
