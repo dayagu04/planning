@@ -106,6 +106,8 @@ struct PlannerOpenSpaceConfig {
   // if search node in aabb, no need to check collision;
   bool enable_clear_zone;
 
+  int s_curve_max_num_for_node;
+
   OpenSpaceSafeBuffer safe_buffer;
 
   void InitConfig();

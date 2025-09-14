@@ -319,6 +319,28 @@ class Node3d {
     return;
   }
 
+  const bool IsSteerOppositeWithParent() const;
+
+  const bool IsScurveWithParent() const;
+
+  const bool IsScurve(const AstarPathGear type, const float steer) const;
+
+  const bool IsSameSteerDir(const float next) const;
+
+  const bool IsReturnPath(const bool is_gear_switch, const float steer);
+
+  void SetScurveNum(const int number) {
+    s_curve_num_ = number;
+    return;
+  }
+
+  void AddScurveNumber() {
+    s_curve_num_++;
+    return;
+  }
+
+  const int GetScurveNum() const { return s_curve_num_; }
+
  protected:
   // path point size
   NodePath path_;
@@ -365,6 +387,8 @@ class Node3d {
   // gear numer is 0: only one gear path;
   // gear numer is 1: two different gear path;
   int gear_switch_num_;
+
+  int s_curve_num_;
 
   // is positive
   float dist_to_start_;

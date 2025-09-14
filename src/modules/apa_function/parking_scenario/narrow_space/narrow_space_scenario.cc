@@ -2243,7 +2243,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
 
     ThreadClearState();
     frame_.gear_command = frame_.current_gear;
-    ILOG_INFO << "path gear = " << static_cast<int>(frame_.gear_command);
+    // ILOG_INFO << "path gear = " << static_cast<int>(frame_.gear_command);
   } else if (thread_state_ == RequestResponseState::NONE ||
              thread_state_ == RequestResponseState::HAS_PUBLISHED_RESPONSE) {
     // send request
@@ -2537,18 +2537,17 @@ void NarrowSpaceScenario::UpdateRecommentRouteBox() {
 void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
   auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
   debug->mutable_apa_path_debug()->clear_path_time();
-  debug->mutable_apa_path_debug()
-      ->mutable_path_time()
-      ->mutable_astar_time()
-      ->set_total_search_time(time.total_time_ms);
-  // ILOG_INFO << "total time = " << time.total_time_ms;
+  common::SearchTimeForPath* path_time_debug = debug->mutable_apa_path_debug()
+                                                   ->mutable_path_time()
+                                                   ->mutable_astar_time();
+  path_time_debug->set_total_search_time(time.total_time_ms);
+  ILOG_INFO << "total time = " << time.total_time_ms;
 
   for (int8_t i = 0; i < time.size; i++) {
-    debug->mutable_apa_path_debug()
-        ->mutable_path_time()
-        ->mutable_astar_time()
-        ->add_search_time(time.time_ms[i]);
-    // ILOG_INFO << "search time = " << time.time_ms[i];
+    path_time_debug->add_search_time(time.time_ms[i]);
+    path_time_debug->add_node_pool_size(time.node_pool_size[i]);
+    ILOG_INFO << "search time = " << time.time_ms[i];
+    ILOG_INFO << "node_pool_size = " << time.node_pool_size[i];
   }
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,

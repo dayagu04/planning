@@ -105,10 +105,6 @@ void ParkingScenario::UpdateStuckTime() {
       plan_status == ParkingStatus::PARKING_PLANNING &&
       pathplan_result == PathPlannerResult::PLAN_UPDATE;
 
-  ILOG_INFO << "frame_.pathplan_result"
-            << static_cast<int>(frame_.pathplan_result);
-  ILOG_INFO << "frame_.plan_status" << static_cast<int>(plan_status);
-
   const bool auto_static = static_flag && !brake_flag;
 
   // update stuck time
@@ -1153,15 +1149,6 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
   if (!apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
     return false;
   }
-
-  ILOG_INFO << "frame_.remain_dist_obs" << frame_.remain_dist_obs;
-  ILOG_INFO << "frame_.stuck_time" << frame_.stuck_time;
-  ILOG_INFO << "frame_.stuck_obs_time" << frame_.stuck_obs_time;
-  ILOG_INFO << "frame_.stuck_path_time" << frame_.stuck_path_time;
-  ILOG_INFO << "frame_.replan_fail_time" << frame_.replan_fail_time;
-  ILOG_INFO << "frame_.replan_reason" << static_cast<int>(frame_.replan_reason);
-  ILOG_INFO << "frame_.stuck_by_dynamic_obs" << frame_.stuck_by_dynamic_obs;
-  ILOG_INFO << "frame_.stuck_dynamic_obs_time" << frame_.stuck_dynamic_obs_time;
 
   if (frame_.stuck_by_dynamic_obs) {
     return false;

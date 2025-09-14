@@ -11,6 +11,7 @@ enum TimeBenchmarkType : int32_t {
   TB_APA_STOP_DECIDER = 5,
   TB_APA_SPEED_LIMIT_DECIDER = 6,
   TB_APA_ASTAR = 7,
+  TB_PLANNING_TOTAL = 8,
   TB_MAX,
 };
 
@@ -67,6 +68,7 @@ class TimeBenchmark {
         "speed_limit_decider";
 
     times[TimeBenchmarkType::TB_APA_ASTAR].name_ = "astar_time";
+    times[TimeBenchmarkType::TB_PLANNING_TOTAL].name_ = "planning_total_time";
     return;
   }
 

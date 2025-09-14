@@ -43,7 +43,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   enable_dp_cost_for_vertical_park = true;
   enable_ref_line_h_cost_for_vertical_park = true;
   enable_rs_path_h_cost_for_vertical_park = true;
-  max_gear_change_num = 18;
+  max_gear_change_num = 15;
   ref_line_heading_penalty = 0.0;
 
   rs_path_seg_advised_dist = 0.35;
@@ -61,6 +61,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   search_time_by_buffer[1] = 1200;
   search_time_by_buffer[2] = 3600;
   adjust_dist_inside_slot = 2.5;
+  s_curve_max_num_for_node = 3;
 
   // update safe buffer
   // todo: use more safe buffer in release version.
@@ -84,7 +85,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lon_min_safe_buffer = 0.01;
 
   // slot release related
-  safe_buffer.scenario_try_lat_buffer_outside = 0.12;
+  safe_buffer.scenario_try_lat_buffer_outside = 0.10;
   safe_buffer.scenario_try_lat_buffer_inside = 0.08;
   safe_buffer.scenario_try_lon_buffer = 0.3;
 

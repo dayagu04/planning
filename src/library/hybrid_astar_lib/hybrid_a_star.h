@@ -128,6 +128,8 @@ class HybridAStar {
         result, start, target, lon_min_sampling_length);
   }
 
+  const size_t NodePoolSize() const { return node_pool_.PoolSize(); }
+
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,

@@ -86,12 +86,11 @@ bool NodeShrinkDecider::IsLegalByXBound(const float x) {
 void NodeShrinkDecider::ShrinkChildrenByHeadingForTailIn() {
   // heading shrink
 
-  // 搜索时,heading 尽量不超过150度
+  // 搜索时,heading 尽量不超过角度
   float heading_check_bound = ifly_deg2rad(135.0);
   float heading_buffer = ifly_deg2rad(20.0);
 
   heading_shrink_.limit_search_heading_ = true;
-
   heading_shrink_.heading_low_bound_ = 0.0f;
 
   heading_shrink_.heading_up_bound_ =

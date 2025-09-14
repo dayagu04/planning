@@ -30,8 +30,8 @@ void ApaTrajectoryStitcher::Execute(
   traj_gear_ = plan_gear;
   veh_gear_ = veh_gear;
 
-  ILOG_INFO << "traj gear = " << static_cast<int>(traj_gear_)
-            << ", veh gear = " << static_cast<int>(veh_gear_);
+  // ILOG_INFO << "traj gear = " << static_cast<int>(traj_gear_)
+  //           << ", veh gear = " << static_cast<int>(veh_gear_);
 
   stitch_path_.clear();
   trajectory_.clear();
