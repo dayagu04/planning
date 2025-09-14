@@ -5,9 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <memory>
 
-#include "behavior_planners/long_ref_path_decider/bound_maker/bound_maker.h"
 #include "behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
@@ -17,15 +15,12 @@
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "math/linear_interpolation.h"
-#include "math/math_utils.h"
 #include "modules/context/vehicle_config_context.h"
 #include "planning_context.h"
-#include "utils/pose2d_utils.h"
 
 namespace planning {
 
 namespace {
-constexpr double kOvertakeAccelValue = 3.0;
 constexpr double kSafetyDistance = 3.5;
 }  // namespace
 
@@ -36,17 +31,48 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  params_.v0 = ego_state_manager->ego_v_cruise();
-  params_.s0 = 3.5;
-  params_.T = 0.5;
+  const double cruise_speed = ego_state_manager->ego_v_cruise();
+
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const auto is_in_lane_change_execution =
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeCancel;
+
+  const auto& speed_limit_decider_output =
+      session_->planning_context().speed_limit_decider_output();
+
+  double speed_limit_normal = cruise_speed;
+  const double speed_limit_from_lane_change =
+      is_in_lane_change_execution
+          ? config_.lane_change_upper_speed_limit_kph / 3.6
+          : std::numeric_limits<double>::max();
+  speed_limit_normal =
+      std::fmin(speed_limit_normal, speed_limit_from_lane_change);
+
+  double speed_limit_ref = std::numeric_limits<double>::max();
+  auto speed_limit_type_ref = SpeedLimitType::NONE;
+  speed_limit_decider_output.GetSpeedLimit(&speed_limit_ref,
+                                           &speed_limit_type_ref);
+
+  const double desired_speed = std::fmin(speed_limit_normal, speed_limit_ref);
+
+  params_.v0 = desired_speed;
+  params_.s0 = 5.0;
+  params_.T = 1.0;
   params_.a = 1.5;
-  params_.b = 2.0;
+  params_.b = 1.0;
+  params_.b_max = 2.0;
   params_.delta = 4.0;
   params_.b_hard = 4.0;
-  params_.max_a_jerk = 4.0;
-  params_.max_b_jerk = 1.5;
+  params_.max_a_jerk = 5.0;
+  params_.max_b_jerk = 4.0;
   params_.default_front_s = 200;
   params_.cool_factor = 0.99;
+  params_.over_speed_factor = 0.3;
+  params_.end_time_buffer = 0.5;
 
   AnalyzeCrossVRUAgentsAndInitialize();
 
@@ -60,6 +86,7 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
 void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
   agent_infos_.clear();
   cross_vru_agent_ids_.clear();
+  is_pre_handle_cross_vru_ = false;
 
   target_values_ = std::vector<TargetValue>(
       plan_points_num_, TargetValue(0.0, false, 0.0, 0.0, TargetType::kNotSet));
@@ -151,11 +178,6 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
     info.agent_traj_s.clear();
     info.agent_traj_s.reserve(plan_points_num_);
 
-    bool is_need_overtake = false;
-    MakeYieldOrOvertakeDecision(agent, st_boundary.min_t(), ego_lane_coord,
-                                rear_edge_to_rear_axle, planning_init_point,
-                                &is_need_overtake);
-
     const auto& trajectory = agent_trajectories.front();
     double t = 0.0;
     for (size_t i = 0; i < plan_points_num_; ++i) {
@@ -170,39 +192,24 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
       auto matched_point = ego_lane_coord->GetPathPointByS(center_s);
       double heading_diff = traj_point.theta() - matched_point.theta();
       double agent_speed = traj_point.vel() * std::cos(heading_diff);
-      double overtake_speed = planning_init_point.v + kOvertakeAccelValue;
-      if (!is_need_overtake) {
-        if (t <= info.crossing_start_time) {
-          info.agent_traj_s.push_back(st_boundary.min_s());
-          info.agent_traj_v.push_back(agent_speed);
-        } else if (t <= info.crossing_end_time) {
-          int32_t index =
-              static_cast<int32_t>((t - info.crossing_start_time) / dt_);
-          info.agent_traj_s.push_back(st_boundary.lower_points()[index].s());
-          info.agent_traj_v.push_back(agent_speed);
-        } else {
-          info.agent_traj_s.push_back(params_.default_front_s);
-          info.agent_traj_v.push_back(params_.v0);
-        }
+      if (t <= info.crossing_start_time) {
+        info.agent_traj_s.push_back(st_boundary.min_s());
+        info.agent_traj_v.push_back(agent_speed);
+      } else if (t <= info.crossing_end_time + params_.end_time_buffer) {
+        int32_t index =
+            static_cast<int32_t>((t - info.crossing_start_time) / dt_);
+        info.agent_traj_s.push_back(st_boundary.lower_points()[index].s());
+        info.agent_traj_v.push_back(agent_speed);
       } else {
-        const double safety_dis = ego_vehicle_param.length + kSafetyDistance;
-        if (t <= info.crossing_start_time) {
-          info.agent_traj_s.push_back(st_boundary.max_s() + safety_dis);
-          info.agent_traj_v.push_back(overtake_speed);
-        } else if (t <= info.crossing_end_time) {
-          int32_t index =
-              static_cast<int32_t>((t - info.crossing_start_time) / dt_);
-          info.agent_traj_s.push_back(st_boundary.upper_points()[index].s());
-          info.agent_traj_v.push_back(overtake_speed);
-        } else {
-          info.agent_traj_s.push_back(params_.default_front_s);
-          info.agent_traj_v.push_back(params_.v0);
-        }
+        info.agent_traj_s.push_back(params_.default_front_s);
+        info.agent_traj_v.push_back(params_.v0);
       }
     }
 
     agent_infos_.emplace_back(info);
   }
+
+  is_pre_handle_cross_vru_ = true;
 }
 
 void CrossVRUTarget::GenerateCrossVRUTarget() {
@@ -237,36 +244,98 @@ void CrossVRUTarget::GenerateCrossVRUTarget() {
   }
 }
 
+double CrossVRUTarget::CalcDesiredVelocity(const double d_rel,
+                                           const double d_des,
+                                           const double v_lead,
+                                           const double v_ego) const {
+  double v_lead_clip = std::max(v_lead, 0.0);
+  const double max_runaway_speed = -2.0;
+  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
+  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
+  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
+
+  double v_rel = v_ego - v_lead;
+  double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
+  if (d_rel < d_des) {
+    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
+    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
+    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
+  } else if (d_rel < d_des + x_linear_to_parabola) {
+    v_rel_des = (d_rel - d_des) * l_slope;
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
+  } else {
+    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
+  }
+  double v_target = v_rel_des + v_lead;
+  return v_target;
+}
+
 double CrossVRUTarget::CalculateVRUDecelerationCore(
     const double current_vel, const double current_s, const double front_s,
     const double front_vel, const double headway_time) const {
   double v0 = params_.v0;
   double a = params_.a;
   double b = params_.b;
+  double b_max = params_.b_max;
   double b_hard = params_.b_hard;
   double delta = params_.delta;
   double s0 = params_.s0;
   double cool_factor = params_.cool_factor;
-
+  double over_speed_factor = params_.over_speed_factor;
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
-  double s_star = s0 + current_vel * headway_time +
-                  (current_vel * delta_v) / (2.0 * std::sqrt(a * b));
+  double s_star = s0 + std::max(0.0, current_vel * headway_time +
+                                         (current_vel * delta_v) /
+                                             (2.0 * std::sqrt(a * b_max)));
 
   double s_safe = s0 + current_vel * headway_time;
 
-  double a_free;
-  if (current_vel <= v0) {
-    a_free = a * (1.0 - std::pow(current_vel / v0, delta));
+  double s_desired = std::max(s0, front_s - s_safe);
+
+  double dynamic_v0 =
+      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
+
+  double desired_v0 = std::min(v0, dynamic_v0);
+
+  double final_v0 = 0.0;
+
+  if (current_s < s_desired) {
+    final_v0 = v0;
   } else {
-    a_free = -b * (1.0 - std::pow(v0 / current_vel, a * delta / b));
+    final_v0 = desired_v0;
+  }
+
+  double a_free;
+  if (current_vel <= final_v0) {
+    a_free = a * (1.0 - std::pow(current_vel / final_v0, delta));
+  } else if (current_vel > final_v0 && current_s < s_desired) {
+    double s_progress = std::max(0.0, std::min(1.0, current_s / s_desired));
+    double over_vel_ratio = current_vel / std::max(final_v0, 1e-6);
+    double position_ratio = 1.0 - s_progress;
+    double over_speed_ratio = over_vel_ratio - 1.0;
+    double over_speed_demand =
+        position_ratio - over_speed_ratio * over_speed_factor;
+    if (over_speed_demand > 0.1) {
+      a_free = a * over_speed_factor * over_speed_demand;
+    } else {
+      a_free = -b * over_speed_factor * over_speed_ratio;
+    }
+  } else {
+    a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
   }
 
   double z = s_star / s_alpha;
 
   double a_idm;
-  if (current_vel <= v0) {
+  if (current_vel <= final_v0) {
     if (z >= 1.0) {
       a_idm = a * (1.0 - std::pow(z, 2.0));
     } else {
@@ -297,13 +366,12 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
 
   double final_acc;
   if (a_idm >= a_cah) {
-    final_acc = a_idm;
+    double distance_ratio = std::min(current_s / s_desired, 1.0);
+    final_acc = a_idm * distance_ratio + a_cah * (1.0 - distance_ratio);
   } else {
     final_acc = (1.0 - cool_factor) * a_idm +
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
   }
-
-  final_acc = std::max(std::min(a, final_acc), -params_.b_hard);
 
   return final_acc;
 }
@@ -342,64 +410,6 @@ double CrossVRUTarget::CalculateVRUDeceleration(
   return target_acc;
 }
 
-void CrossVRUTarget::MakeYieldOrOvertakeDecision(
-    const agent::Agent* agent, const double interaction_t,
-    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-    const double rear_edge_to_rear_axle,
-    const PlanningInitPoint& planning_init_point, bool* is_overtake) {
-  if (agent->is_reverse_relieve_agent()) {
-    *is_overtake = false;
-  }
-  double ego_s = 0.0, ego_l = 0.0;
-  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
-                              &ego_s, &ego_l)) {
-    return;
-  }
-  const auto& agent_corners = agent->box().GetAllCorners();
-  double obs_min_l = std::numeric_limits<double>::max(),
-         obs_max_l = -std::numeric_limits<double>::max(),
-         obs_min_s = std::numeric_limits<double>::max(),
-         obs_max_s = -std::numeric_limits<double>::max();
-  for (const auto& agent_corner : agent_corners) {
-    double agent_corner_s = 0.0, agent_corner_l = 0.0;
-    if (ego_lane_coord->XYToSL(agent_corner.x(), agent_corner.y(),
-                               &agent_corner_s, &agent_corner_l)) {
-      obs_min_l = std::min(obs_min_l, agent_corner_l);
-      obs_max_l = std::max(obs_max_l, agent_corner_l);
-      obs_min_s = std::min(obs_min_s, agent_corner_s);
-      obs_max_s = std::max(obs_max_s, agent_corner_s);
-    }
-  }
-
-  std::vector<double> overtake_traj;
-  double v_target = planning_init_point.v + kOvertakeAccelValue;
-  const auto ego_overtake_traj =
-      GenerateOvertakeTrajByJLT(v_target, planning_init_point);
-  const double interaction_s = ego_s +
-                               ego_overtake_traj.Evaluate(0, interaction_t) -
-                               rear_edge_to_rear_axle;
-  if (interaction_s > obs_max_s + kSafetyDistance) {
-    *is_overtake = true;
-  }
-}
-
-SecondOrderTimeOptimalTrajectory CrossVRUTarget::GenerateOvertakeTrajByJLT(
-    const double v_target, const PlanningInitPoint& planning_init_point) {
-  LonState init_state;
-  init_state.p = 0.0;
-  init_state.v = planning_init_point.v;
-  init_state.a = planning_init_point.a;
-
-  StateLimit state_limit;
-  state_limit.v_end = v_target;
-  state_limit.a_min = -2.0;
-  state_limit.a_max = 2.0;
-  state_limit.j_min = -2.0;
-  state_limit.j_max = 2.0;
-
-  return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
-}
-
 void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_cross_vru_target_data =
@@ -417,16 +427,11 @@ void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
   auto mutable_lon_ref_path_decider_output =
       session_->mutable_planning_context()
           ->mutable_lon_ref_path_decider_output();
-  if (mutable_lon_ref_path_decider_output) {
-    mutable_lon_ref_path_decider_output->vru_agent_infos.clear();
-    for (const auto& agent_info : agent_infos_) {
-      VRUAgentInfo vru_info;
-      vru_info.agent_id = agent_info.agent_id;
-      mutable_lon_ref_path_decider_output->vru_agent_infos.push_back(vru_info);
-    }
-  }
+
+  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
+      is_pre_handle_cross_vru_;
 
   mutable_cross_vru_target_data->CopyFrom(cross_vru_target_pb_);
 }
 
-}  // namespace planning
+}  

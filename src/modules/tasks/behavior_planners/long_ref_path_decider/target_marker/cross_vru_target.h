@@ -2,9 +2,6 @@
 
 #include <vector>
 
-#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
-#include "common/st_graph/st_graph_utils.h"
-#include "common/trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "lon_target_maker.pb.h"
 #include "session.h"
 #include "target.h"
@@ -14,17 +11,20 @@ namespace planning {
 constexpr double kInvalid = -1.0;
 
 struct CrossVRUProfileParams {
-  double v0 = 11.35;
-  double s0 = 3.5;
-  double T = 0.5;
-  double a = 2.0;
-  double b = 3.0;
+  double v0 = 33.5;
+  double s0 = 5.0;
+  double T = 1.0;
+  double a = 1.5;
+  double b = 1.0;
+  double b_max = 2.0;
   double delta = 4.0;
-  double b_hard = 4.5;
-  double max_a_jerk = 4.0;
-  double max_b_jerk = 1.5;
+  double b_hard = 4.0;
+  double max_a_jerk = 5.0;
+  double max_b_jerk = 4.0;
   double default_front_s = 200;
   double cool_factor = 0.99;
+  double over_speed_factor = 0.3;
+  double end_time_buffer = 0.5;
 };
 
 struct CrossVRUAgentInfo {
@@ -41,7 +41,14 @@ class CrossVRUTarget : public Target {
   CrossVRUTarget(const SpeedPlannerConfig& config, framework::Session* session);
   ~CrossVRUTarget() = default;
 
+  const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
+  const std::vector<double> _L_SLOPE_V{0.35, 0.08};
+  const std::vector<double> _P_SLOPE_BP{0., 40.0};
+  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
+
   void GenerateCrossVRUTarget();
+  double CalcDesiredVelocity(const double d_rel, const double d_des,
+                             const double v_lead, const double v_ego) const;
   void AnalyzeCrossVRUAgentsAndInitialize();
   double CalculateVRUDeceleration(
       const double current_vel, const double current_s,
@@ -52,13 +59,6 @@ class CrossVRUTarget : public Target {
                                       const double front_s,
                                       const double front_vel,
                                       const double headway_time) const;
-  void MakeYieldOrOvertakeDecision(
-      const agent::Agent* agent, const double interaction_t,
-      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-      const double rear_edge_to_rear_axle,
-      const PlanningInitPoint& planning_init_point, bool* is_need_overtake);
-  SecondOrderTimeOptimalTrajectory GenerateOvertakeTrajByJLT(
-      const double v_target, const PlanningInitPoint& planning_init_point);
   void AddCrossVRUTargetDataToProto();
 
  private:
@@ -66,6 +66,7 @@ class CrossVRUTarget : public Target {
   planning::common::CrossVRUTarget cross_vru_target_pb_;
   std::vector<double> cross_vru_agent_ids_;
   std::vector<CrossVRUAgentInfo> agent_infos_;
+  bool is_pre_handle_cross_vru_ = false;
 };
 
 }  // namespace planning

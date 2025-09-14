@@ -104,9 +104,8 @@ class STGraph {
   const int32_t first_neighbor_yield_index() const;
   const int32_t first_neighbor_overtake_index() const;
 
-  const std::vector<int32_t>& caution_yield_agent_ids() const;  
-  const std::vector<int32_t>& relieve_jerk_agent_ids() const;  
-
+  const std::vector<int32_t>& caution_yield_agent_ids() const;
+  const std::vector<int32_t>& relieve_jerk_agent_ids() const;
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();

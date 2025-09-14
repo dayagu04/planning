@@ -17,12 +17,8 @@ struct DangerAgentInfo {
   std::unordered_set<int32_t> agents_id_set;
 };
 
-  struct VRUAgentInfo {
-    int32_t agent_id;
-  };
-
 struct LonRefPathDeciderOutput {
   TargetMakerInfo target_maker_info;
   DangerAgentInfo danger_agent_info;
-  std::vector<VRUAgentInfo> vru_agent_infos;
+  bool is_cross_vru_target_pre_handle = false;
 };
