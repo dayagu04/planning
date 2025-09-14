@@ -98,7 +98,6 @@ ParallelLongitudinalAvoidDecider::ParallelLongitudinalAvoidDecider(
 }
 
 bool ParallelLongitudinalAvoidDecider::Execute() {
-  LOG_DEBUG("=======ParallelLongitudinalAvoidDecider======= \n");
   ProcessStateMachine();
   return true;
 }
