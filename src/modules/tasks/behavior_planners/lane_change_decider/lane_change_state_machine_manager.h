@@ -101,7 +101,7 @@ class LaneChangeStateMachineManager {
 
   void Update();
   void ResetStateMachine();
-
+  void WeaklyResetStateMachine();
  private:
   void PreProcess();
   void RunStateMachine();

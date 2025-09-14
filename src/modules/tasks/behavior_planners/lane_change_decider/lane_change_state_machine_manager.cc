@@ -1412,6 +1412,30 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   execution_state_dash_cnt = 0;
   hold_state_dash_cnt = 0;
 }
+void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
+  transition_info_.Rest();
+  lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
+  lane_change_stage_info_.Reset();
+  lc_timer_.Reset();
+
+  pre_ego_l_ = 0;
+  lc_valid_cnt_ = 0;
+  lc_back_cnt_ = 0;
+  lc_target_lane_merge_to_origin_lane_cnt_ = 0;
+  lc_invalid_track_.reset();
+  lc_back_track_.reset();
+  must_change_lane_ = false;
+  propose_state_frame_nums_ = 0;
+  execution_state_frame_nums_ = 0;
+  hold_state_frame_nums_ = 0;
+  complete_state_frame_nums_ = 0;
+  is_high_priority_back_ = false;
+  ego_trajs_future_.clear();
+  lc_path_generate_.reset();
+  is_dash_not_enough_for_lc_ = false;
+  execution_state_dash_cnt = 0;
+  hold_state_dash_cnt = 0;
+}
 
 bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
                                             bool *is_start_count,
@@ -3667,7 +3691,11 @@ bool LaneChangeStateMachineManager::IsTargetLaneMergeToOriginLane() const {
                                             ->current_lane_virtual_id();
 
   bool is_same_lane = current_lane_virtual_id == fix_lane_virtual_id;
-
+  // 如果地图变道请求，不看感知主路辅路，直接return false
+  bool is_map_lc = transition_info_.lane_change_type == MAP_REQUEST;
+  if (is_map_lc) {
+    return false;
+  }
   if (transition_info_.lane_change_status == kLaneChangeExecution) {
     if (is_merge_region && !cur_lane_is_continue &&
         origin_lane_virtual_id == merge_lane_virtual_id && is_same_lane) {
