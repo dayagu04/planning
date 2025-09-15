@@ -422,43 +422,6 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
         }
-      } else {
-        // for NOA turn signal road to ramp
-        // 自车在滑入匝道时，需要更新ad_info.lane_change_reason，已供hmi模块使用
-        const auto dir_turn_signal_road_to_ramp =
-            lane_change_decider_output.dir_turn_signal_road_to_ramp;
-        if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
-          if (last_frame_dir_turn_signal_road_to_ramp_ != RAMP_NONE) {
-            ad_info.lane_change_status =
-                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
-            lc_state_complete_frame_nums_ = 1;
-          } else {
-            // 需要给hmi模块连续发3s的complete状态
-            if (lc_state_complete_frame_nums_ <= 30) {
-              ad_info.lane_change_status =
-                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
-              lc_state_complete_frame_nums_++;
-            } else {
-              ad_info.lane_change_status =
-                  iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-            }
-          }
-        } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
-          ad_info.lane_change_direction =
-              iflyauto::LaneChangeDirection::LC_DIR_LEFT;
-          ad_info.lane_change_status =
-              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-          ad_info.lane_change_reason =
-              iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-        } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
-          ad_info.lane_change_direction =
-              iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
-          ad_info.lane_change_status =
-              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
-          ad_info.lane_change_reason =
-              iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-        }
-        last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;
       }
     }
   } else if (curr_state == kLaneChangePropose) {
@@ -527,10 +490,15 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
-    if (route_info_output.dis_to_ramp < 100.0 &&
-        route_info_output.dis_to_ramp < dis_to_merge) {
-      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-    } else if (route_info_output.mlc_decider_route_info.is_process_merge) {
+    // const double dis_to_merge = route_info_output.merge_region_info_list.empty()
+    //                           ? NL_NMAX
+    //                           : route_info_output.merge_region_info_list[0]
+    //                                 .distance_to_split_point;
+    // if (route_info_output.dis_to_ramp < 100.0 &&
+    //     route_info_output.dis_to_ramp < dis_to_merge) {
+    //   ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    // } else
+    if (route_info_output.mlc_decider_route_info.is_process_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
@@ -539,6 +507,40 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   } else if (lc_request_source == MERGE_REQUEST) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
+  // for NOA turn signal road to ramp
+  // 自车在滑入匝道时，需要更新ad_info.lane_change_reason，已供hmi模块使用
+  const auto dir_turn_signal_road_to_ramp =
+      lane_change_decider_output.dir_turn_signal_road_to_ramp;
+  if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
+    if (last_frame_dir_turn_signal_road_to_ramp_ != RAMP_NONE) {
+      ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+      lc_state_complete_frame_nums_ = 1;
+    } else {
+      // 需要给hmi模块连续发3s的complete状态
+      if (lc_state_complete_frame_nums_ <= 30) {
+        ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+        ad_info.lane_change_reason =
+            iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+        lc_state_complete_frame_nums_++;
+      } else {
+        ad_info.lane_change_status =
+            iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+      }
+    }
+  } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
+    ad_info.lane_change_direction = iflyauto::LaneChangeDirection::LC_DIR_LEFT;
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+  } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
+    ad_info.lane_change_direction = iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+  }
+  last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;
+
   // update route info
   if (!route_info_output.is_on_ramp) {
     ad_info.distance_to_ramp = route_info_output.dis_to_ramp;
