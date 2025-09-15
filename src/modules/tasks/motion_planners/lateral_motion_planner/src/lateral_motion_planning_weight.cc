@@ -1593,6 +1593,8 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   planning_input.set_q_soft_corridor(q_soft_bound);
   planning_input.set_q_hard_corridor(q_hard_bound);
   for (size_t i = 0; i < weight_.point_num; ++i) {
+    weight_.q_pos_first_soft_bound[i] =
+        config_.first_qsoft_bound_ratio * q_soft_bound * soft_bound_qratio_vec_[i];
     weight_.q_pos_soft_bound[i] = q_soft_bound * soft_bound_qratio_vec_[i];
     weight_.q_pos_hard_bound[i] = q_hard_bound * hard_bound_qratio_vec_[i];
   }

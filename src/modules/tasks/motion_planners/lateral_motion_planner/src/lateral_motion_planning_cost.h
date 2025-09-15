@@ -26,6 +26,14 @@ enum iLqrCostconfigId {
   DELTA_LOWER_BOUND,
   OMEGA_UPPER_BOUND,
   OMEGA_LOWER_BOUND,
+  FIRST_SOFT_UPPER_BOUND_X0,
+  FIRST_SOFT_UPPER_BOUND_Y0,
+  FIRST_SOFT_UPPER_BOUND_X1,
+  FIRST_SOFT_UPPER_BOUND_Y1,
+  FIRST_SOFT_LOWER_BOUND_X0,
+  FIRST_SOFT_LOWER_BOUND_Y0,
+  FIRST_SOFT_LOWER_BOUND_X1,
+  FIRST_SOFT_LOWER_BOUND_Y1,
   SOFT_UPPER_BOUND_X0,
   SOFT_UPPER_BOUND_Y0,
   SOFT_UPPER_BOUND_X1,
@@ -57,6 +65,7 @@ enum iLqrCostconfigId {
   W_JERK,
   W_ACC_BOUND,
   W_JERK_BOUND,
+  W_FIRST_SOFT_CORRIDOR,
   W_SOFT_CORRIDOR,
   W_HARD_CORRIDOR,
   W_SNAP,
@@ -73,6 +82,7 @@ enum iLqrCostId {
   LAT_JERK_COST,
   LAT_ACC_BOUND_COST,
   LAT_JERK_BOUND_COST,
+  PATH_FIRST_SOFT_CORRIDOR_COST,
   PATH_SOFT_CORRIDOR_COST,
   PATH_HARD_CORRIDOR_COST,
   LAT_SNAP_COST,
@@ -193,6 +203,25 @@ class LatJerkBoundCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT &luu) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LAT_JERK_BOUND_COST; }
+};
+
+class PathFirstSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  PathFirstSoftCorridorCostTerm() = default;
+  double GetCost(const ilqr_solver::State & /*x*/,
+                 const ilqr_solver::Control &u) override;
+  void GetGradientHessian(const ilqr_solver::State & /*x*/,
+                          const ilqr_solver::Control &u,
+                          ilqr_solver::LxMT & /*lx*/, ilqr_solver::LuMT &lu,
+                          ilqr_solver::LxxMT & /*lxx*/,
+                          ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT &luu) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return PATH_FIRST_SOFT_CORRIDOR_COST; }
+
+ private:
+  planning::planning_math::Vec2d ubound_direction_;
+  planning::planning_math::Vec2d lbound_direction_;
 };
 
 class PathSoftCorridorCostTerm : public ilqr_solver::BaseCostTerm {

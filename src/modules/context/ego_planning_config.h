@@ -2431,6 +2431,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_jerk, "lat_motion_ilqr", "q_jerk");
     ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
     ReadItem<double>(json, q_jerk_bound, "lat_motion_ilqr", "q_jerk_bound");
+    ReadItem<double>(json, first_qsoft_bound_ratio, "lat_motion_ilqr", "first_qsoft_bound_ratio");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
         map_qsoft_bound, map_qsoft_bound);
@@ -2657,6 +2658,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_acc_bound = 20000.0;
   double q_jerk_bound = 500000.0;
 
+  double first_qsoft_bound_ratio = 1.0;
   std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
   std::vector<double> map_qhard_bound{500,    1000,   3000.0,
                                       5000.0, 6000.0, 7000.0};
