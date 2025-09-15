@@ -655,7 +655,7 @@ iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
   auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   double ego_v = std::fmax(1.0, ego_state_manager->ego_v_cruise() * 0.2);
-  double l_min = 0.15;
+  double l_min = 0.08;
   if (is_lane_keeping) {
     target_reference = session_->environmental_model()
                            .get_reference_path_manager()
