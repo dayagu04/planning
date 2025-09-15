@@ -1,7 +1,7 @@
 project(jupyter_pybind)
 cmake_minimum_required(VERSION 3.2)
 
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(PYBIND11_PYTHON_VERSION 3.7)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -DX86")
@@ -314,7 +314,7 @@ target_link_libraries(apa_speed_optimizer_py PRIVATE
   modules_tasks
   hybrid_astar_lib
   )
-  
+
 pybind11_add_module(spatio_temporal_union_planning_py MODULE src/spatio_temporal_union_plan_pybind.cc)
 target_link_libraries(spatio_temporal_union_planning_py PRIVATE
   autoplt

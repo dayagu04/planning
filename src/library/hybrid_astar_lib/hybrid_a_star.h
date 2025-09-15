@@ -173,7 +173,7 @@ class HybridAStar {
 
   // do searching in normal pipline, no gear request
   const NodeShrinkType NextNodeGenerator(Node3d* new_node, Node3d* parent_node,
-                                         size_t next_node_index,
+                                         int next_node_index,
                                          const AstarPathGear gear_request_info);
 
   bool IsAllPathSegmentLongEnough(const RSPath* reeds_shepp_to_end,
@@ -267,7 +267,7 @@ class HybridAStar {
   float min_radius_;
   float inv_radius_;
 
-  size_t next_node_num_ = 0;
+  int next_node_num_ = 0;
   // front wheel angle, [-pi, +pi]
   // left is positive
   AstarSamplingAngle next_node_angles_;
@@ -304,7 +304,7 @@ class HybridAStar {
   std::multimap<float, Node3d*> open_pq_;
 
   // open set + close set
-  std::unordered_map<size_t, Node3d*> node_set_;
+  std::unordered_map<int, Node3d*> node_set_;
 
   // rs related
   RSExpansionDecider rs_expansion_decider_;

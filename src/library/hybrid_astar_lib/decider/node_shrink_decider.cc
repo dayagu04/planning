@@ -147,7 +147,7 @@ bool NodeShrinkDecider::IsShrinkByParent(const Node3d *parent,
   return false;
 }
 
-bool NodeShrinkDecider::IsShrinkByStartNode(const size_t start_id,
+bool NodeShrinkDecider::IsShrinkByStartNode(const int start_id,
                                             Node3d *child) {
   if (child->GetGlobalID() == start_id) {
     return true;
@@ -203,8 +203,8 @@ const bool NodeShrinkDecider::IsLoopBackNode(const Node3d *new_node,
     return false;
   }
 
-  const size_t new_node_id = new_node->GetGlobalID();
-  for (size_t i = 0; i < 10000; i++) {
+  const int new_node_id = new_node->GetGlobalID();
+  for (int i = 0; i < 10000; i++) {
     if (parent->GetGlobalID() == new_node_id) {
       return true;
     }

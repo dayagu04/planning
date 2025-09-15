@@ -49,11 +49,11 @@ class NodeCollisionDetect {
   const bool IsPolynomialPathSafeByEDT(const std::vector<AStarPathPoint>& path,
                                        Node3d* node);
 
-  size_t GetPathCollisionIndex(HybridAStarResult* result);
+  int GetPathCollisionIndex(HybridAStarResult* result);
 
-  size_t GetPathCollisionIDByEDT(HybridAStarResult* result);
+  int GetPathCollisionIDByEDT(HybridAStarResult* result);
 
-  size_t GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
+  int GetPathCollisionIDByEDT(const std::vector<AStarPathPoint>& poly_path);
 
   const bool IsPolygonCollision(const Polygon2D* polygon);
 

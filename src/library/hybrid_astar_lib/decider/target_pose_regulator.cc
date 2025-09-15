@@ -249,7 +249,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
       is_middle_direction ? kMaxCandidateNum : (number_rows * kMaxCandidateNum);
   candidate_info_.reserve(candidate_info_.size() + total_candidates);
 
-  Eigen ::Vector2d temp_pos(0, 0);
+  Eigen::Vector2d temp_pos(0, 0);
 
   PoseRegulateCandidate candidate;
   // 处理中间方向（只需要1列）

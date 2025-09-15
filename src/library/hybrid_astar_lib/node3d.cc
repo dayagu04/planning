@@ -129,9 +129,6 @@ void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   kappa_ = 0.0f;
   gear_type_ = AstarPathGear::NONE;
   path_type_ = AstarPathType::NONE;
-  traj_cost_ = 0.0f;
-  heuristic_cost_ = 0.0f;
-  f_cost_ = 0.0f;
 
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
@@ -344,24 +341,24 @@ const AstarNodeVisitedType Node3d::GetVisitedType() const {
   return visited_type_;
 }
 
-size_t Node3d::IDTransform(const NodeGridIndex& id) {
-  size_t x_id = id.x;
-  size_t y_id = id.y << 10;
-  size_t theta_id = id.phi << 20;
+int Node3d::IDTransform(const NodeGridIndex& id) {
+  int x_id = id.x;
+  int y_id = id.y << 10;
+  int theta_id = id.phi << 20;
 
   return x_id + y_id + theta_id;
 }
 
-void Node3d::SetGlobalID(const size_t id) {
+void Node3d::SetGlobalID(const int id) {
   global_id_ = id;
 
   return;
 }
 
 void Node3d::ResetCost() {
-  traj_cost_ = 0.0;
-  heuristic_cost_ = 0.0;
-  f_cost_ = 0.0;
+  traj_cost_ = 0.0f;
+  heuristic_cost_ = 0.0f;
+  f_cost_ = 0.0f;
 
   return;
 }
@@ -384,13 +381,6 @@ const Pose2f& Node3d::GetPose() const { return path_.GetEndPoint(); }
 const float Node3d::GetEulerDist(const Node3d* end) const {
   return std::hypot(path_.GetEndPoint().x - end->GetX(),
                     path_.GetEndPoint().y - end->GetY());
-
-  float dist;
-
-  dist = std::pow(path_.GetEndPoint().x - end->GetX(), 2) +
-         std::pow(path_.GetEndPoint().y - end->GetY(), 2);
-
-  return std::sqrt(dist);
 }
 
 const float Node3d::GetPhiErr(const Node3d* end) const {

@@ -79,12 +79,12 @@ bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
     return true;
   }
 
-  size_t node_step_size = node->GetStepSize();
+  int node_step_size = node->GetStepSize();
   const NodePath& path = node->GetNodePath();
 
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
-  size_t check_start_index = 0;
+  int check_start_index = 0;
   if (node_step_size == 1) {
     check_start_index = 0;
   } else {
@@ -102,7 +102,7 @@ bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
 
   Polygon2D* veh_local_polygon = GetVehPolygon(node->GetGearType());
 
-  for (size_t i = check_start_index; i < node_step_size; ++i) {
+  for (int i = check_start_index; i < node_step_size; ++i) {
     // check bound
     if (IsPointBeyondBound(path.points[i].x, path.points[i].y)) {
       node->SetCollisionType(NodeCollisionType::MAP_BOUND);
@@ -241,8 +241,8 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
 
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
-  size_t node_step_size = node->GetStepSize();
-  size_t check_start_index = 0;
+  int node_step_size = node->GetStepSize();
+  int check_start_index = 0;
   if (node_step_size == 1) {
     check_start_index = 0;
   } else {
@@ -260,7 +260,7 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
   float dist = 100.0;
   float min_dist = 100.0;
 
-  for (size_t i = check_start_index; i < node_step_size; ++i) {
+  for (int i = check_start_index; i < node_step_size; ++i) {
     // check bound
     if (IsPointBeyondBound(path.points[i].x, path.points[i].y)) {
       node->SetCollisionType(NodeCollisionType::MAP_BOUND);
@@ -323,10 +323,10 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
     return true;
   }
 
-  size_t point_size;
+  int point_size;
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
-  size_t check_start_index = 0;
+  int check_start_index = 0;
 
   Polygon2D global_polygon;
   Pose2D global_pose;
@@ -344,7 +344,7 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
       check_start_index = 1;
     }
 
-    for (size_t i = check_start_index; i < point_size; ++i) {
+    for (int i = check_start_index; i < point_size; ++i) {
       // check bound
       if (IsPointBeyondBound(segment->points[i].x, segment->points[i].y)) {
         node->SetCollisionType(NodeCollisionType::MAP_BOUND);
@@ -414,11 +414,11 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
     return true;
   }
 
-  size_t point_size;
+  int point_size;
 
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
-  size_t check_start_index = 0;
+  int check_start_index = 0;
 
   Pose2f global_pose;
   // bool is_collision;
@@ -438,7 +438,7 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
     }
     is_circle_path = IsCirclePathByKappa(segment->kappa);
 
-    for (size_t i = check_start_index; i < point_size; ++i) {
+    for (int i = check_start_index; i < point_size; ++i) {
       // check bound
       if (IsPointBeyondBound(segment->points[i].x, segment->points[i].y)) {
         node->SetCollisionType(NodeCollisionType::MAP_BOUND);
@@ -475,17 +475,17 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
     return true;
   }
 
-  size_t point_size = path.size();
+  int point_size = path.size();
 
   // The first {x, y, phi} is collision free unless they are start and end
   // configuration of search problem
-  size_t check_start_index = 0;
+  int check_start_index = 0;
   Pose2f global_pose;
   // bool is_collision;
   Transform2f tf;
   AstarPathGear point_gear;
 
-  for (size_t i = check_start_index; i < point_size; ++i) {
+  for (int i = check_start_index; i < point_size; ++i) {
     // check bound
     if (IsPointBeyondBound(path[i].x, path[i].y)) {
       node->SetCollisionType(NodeCollisionType::MAP_BOUND);
@@ -514,7 +514,7 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
   return true;
 }
 
-size_t NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
+int NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
   if (result == nullptr) {
     return 0;
   }
@@ -523,7 +523,7 @@ size_t NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
     return 0;
   }
 
-  size_t path_end_id = result->x.size() - 1;
+  int path_end_id = result->x.size() - 1;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
     return path_end_id;
@@ -533,12 +533,12 @@ size_t NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
   Pose2D global_pose;
   bool is_collision;
 
-  size_t collision_index = 100000;
+  int collision_index = 100000;
   cdl::AABB path_point_aabb;
 
   Polygon2D* veh_local_polygon = nullptr;
 
-  for (size_t i = 0; i <= path_end_id; ++i) {
+  for (int i = 0; i <= path_end_id; ++i) {
     // check bound
     if (IsPointBeyondBound(result->x[i], result->y[i])) {
       collision_index = i;
@@ -597,7 +597,7 @@ size_t NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
   return collision_index;
 }
 
-size_t NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
+int NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
   if (result == nullptr) {
     return 0;
   }
@@ -606,17 +606,17 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     return 0;
   }
 
-  size_t path_end_id = result->x.size() - 1;
+  int path_end_id = result->x.size() - 1;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
     return path_end_id;
   }
 
   Pose2f global_pose;
-  size_t collision_index = 100000;
+  int collision_index = 100000;
   Transform2f tf;
 
-  for (size_t i = 0; i <= path_end_id; ++i) {
+  for (int i = 0; i <= path_end_id; ++i) {
     // check bound
     if (IsPointBeyondBound(result->x[i], result->y[i])) {
       collision_index = i;
@@ -639,23 +639,23 @@ size_t NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
   return collision_index;
 }
 
-size_t NodeCollisionDetect::GetPathCollisionIDByEDT(
+int NodeCollisionDetect::GetPathCollisionIDByEDT(
     const std::vector<AStarPathPoint>& poly_path) {
   if (poly_path.empty()) {
     return 0;
   }
 
-  size_t path_end_id = poly_path.size() - 1;
+  int path_end_id = poly_path.size() - 1;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
     return path_end_id;
   }
 
   Pose2f global_pose;
-  size_t collision_index = 100000;
+  int collision_index = 100000;
   Transform2f tf;
 
-  for (size_t i = 0; i <= path_end_id; ++i) {
+  for (int i = 0; i <= path_end_id; ++i) {
     // check bound
     if (IsPointBeyondBound(poly_path[i].x, poly_path[i].y)) {
       collision_index = i;

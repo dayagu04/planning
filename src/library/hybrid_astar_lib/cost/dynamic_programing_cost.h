@@ -84,7 +84,7 @@ class GridSearch {
 
   void ResetNodePool();
 
-  float GetNodeGCost(const size_t x_id, const size_t y_id) {
+  float GetNodeGCost(const int x_id, const int y_id) {
     return node_pool_[x_id][y_id].GetCost();
   }
 

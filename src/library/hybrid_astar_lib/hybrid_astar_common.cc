@@ -15,6 +15,8 @@ std::string PathGearDebugString(const AstarPathGear gear) {
       return "reverse";
     case AstarPathGear::NORMAL:
       return "normal";
+    case AstarPathGear::NONE:
+      return "NONE";
     default:
       return "parking";
       break;
@@ -54,6 +56,10 @@ std::string GetNodeCurveDebugString(const AstarPathType type) {
       return "QUNTIC_POLYNOMIAL";
     case AstarPathType::SPIRAL:
       return "SPIRAL";
+    case AstarPathType::START_NODE:
+      return "START";
+    case AstarPathType::END_NODE:
+      return "END_NODE";
     default:
       break;
   }

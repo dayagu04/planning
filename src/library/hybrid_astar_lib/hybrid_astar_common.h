@@ -365,11 +365,11 @@ struct HybridAStarResult {
 };
 
 struct QueuePoint {
-  size_t node_id;
+  int node_id;
   float f_cost;
 
   QueuePoint() = default;
-  QueuePoint(const size_t id, const float f) : node_id(id), f_cost(f) {}
+  QueuePoint(const int id, const float f) : node_id(id), f_cost(f) {}
 };
 
 struct QueueCompare {
@@ -380,7 +380,7 @@ struct QueueCompare {
 
 #define astar_max_angle_number (16)
 struct AstarSamplingAngle {
-  size_t size;
+  int size;
   float angles[astar_max_angle_number];
   // left turn is positive
   float radius[astar_max_angle_number];
@@ -425,7 +425,7 @@ struct PolynomialPathCost {
   float accumulated_s;
   float tail_heading;
 
-  size_t point_size;
+  int point_size;
 
   void Clear() {
     offset_to_center = 100.0;
