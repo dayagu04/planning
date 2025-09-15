@@ -38,6 +38,7 @@ GeneralLateralDecider::GeneralLateralDecider(
   first_frenet_soft_bounds_.resize(config_.num_step + 1);
   frenet_hard_bounds_.resize(config_.num_step + 1);
   soft_bounds_info_.resize(config_.num_step + 1);
+  first_soft_bounds_info_.resize(config_.num_step + 1);
   hard_bounds_info_.resize(config_.num_step + 1);
   has_enough_speed_emergency_avoid_hysteresis_.SetThreValue(
       config_.emergency_avoid_v_limit_max + 5,
@@ -91,6 +92,8 @@ bool GeneralLateralDecider::InitInfo() {
   frenet_hard_bounds_.assign(frenet_hard_bounds_.size(),
                              std::make_pair(0.0, 0.0));
   soft_bounds_info_.assign(soft_bounds_info_.size(),
+                           std::make_pair(BoundInfo(), BoundInfo()));
+  first_soft_bounds_info_.assign(first_soft_bounds_info_.size(),
                            std::make_pair(BoundInfo(), BoundInfo()));
   hard_bounds_info_.assign(hard_bounds_info_.size(),
                            std::make_pair(BoundInfo(), BoundInfo()));
@@ -1994,9 +1997,96 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
                                    dynamic_obstacle_decisions_);
   last_desire_final_nudge_l_map_ = current_desire_final_nudge_l_map_;
   // 针对第一层软约束加帧间滞回
-
+  ApplyFirstSoftBoundsHysteresis();
+  // 保存当前帧的边界作为下一帧的参考
   last_first_soft_bounds_ = first_soft_bounds_;
+}
 
+void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
+  // 如果上一帧的边界为空，直接保存当前帧的边界
+  if (last_first_soft_bounds_.empty()) {
+    return;
+  }
+
+  // 如果当前帧的边界为空，清空上一帧的边界
+  // if (first_soft_bounds_.empty()) {
+  //   last_first_soft_bounds_.clear();
+  //   return;
+  // }
+
+  // 确保两个边界向量大小一致
+  if (last_first_soft_bounds_.size() != first_soft_bounds_.size()) {
+    return;
+  }
+
+  // 对每个点的边界进行滞回处理
+  for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
+    const auto& current_bounds = first_soft_bounds_[i];
+    const auto& last_bounds = last_first_soft_bounds_[i];
+    // 如果上一帧边界为空，使用当前边界
+    if (last_bounds.empty() || current_bounds.empty()) {
+      continue;
+    }
+    // 对每个边界进行滞回处理
+    WeightedBounds smoothed_bounds;
+    smoothed_bounds.reserve(current_bounds.size());
+    for (const auto& current_bound : current_bounds) {
+      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER) {
+        // 道路边缘bound不处理
+        continue;
+      }
+      // 寻找上一帧中对应的边界（基于bound_info的id和type）
+      auto last_bound_it = std::find_if(last_bounds.begin(), last_bounds.end(),
+          [&current_bound](const WeightedBound& last_bound) {
+            return last_bound.bound_info.id == current_bound.bound_info.id &&
+                   last_bound.bound_info.type == current_bound.bound_info.type;
+          });
+
+      if (last_bound_it != last_bounds.end()) {
+        if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER) {
+          // 道路边缘bound不处理
+          continue;
+        }
+        // 找到对应的上一帧边界，进行滞回处理
+        const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
+        const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
+        WeightedBound smoothed_bound = current_bound;
+
+        // 对lower边界进行滞回处理
+        double lower_diff = current_bound.lower - last_bound_it->lower;
+        if (lower_diff > 0) {
+          // 避让值变大
+          if (lower_diff > hysteresis_threshold_up) {
+            smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
+          }
+        } else {
+          // 避让值变小
+          if (std::abs(lower_diff) > hysteresis_threshold_down) {
+            smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+          }
+        }
+
+        // 对upper边界进行滞回处理
+        double upper_diff = current_bound.upper - last_bound_it->upper;
+        if (upper_diff > 0) {
+          // 避让值变小
+          if (upper_diff > hysteresis_threshold_up) {
+            smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
+          }
+        } else {
+          // 避让值变大
+          if (std::abs(upper_diff) > hysteresis_threshold_down) {
+            smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
+          }
+        }
+        smoothed_bounds.push_back(smoothed_bound);
+      } else {
+        // 没有找到对应的上一帧边界，直接使用当前边界
+        smoothed_bounds.push_back(current_bound);
+      }
+    }
+    first_soft_bounds_[i] = std::move(smoothed_bounds);
+  }
 }
 
 void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
@@ -4504,9 +4594,9 @@ void GeneralLateralDecider::SaveLatDebugInfo(
       ref_traj_points_.size());
   lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_lower_bound_second_info_vec()->Reserve(
+  lat_debug_info_.mutable_first_soft_lower_bound_info_vec()->Reserve(
       ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_upper_bound_second_info_vec()->Reserve(
+  lat_debug_info_.mutable_first_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
 
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
@@ -4545,7 +4635,7 @@ void GeneralLateralDecider::SaveLatDebugInfo(
         BoundType2String(soft_bounds_info[i].second.type));
 
     auto first_soft_lower_bound_info =
-        lat_debug_info_.mutable_soft_lower_bound_second_info_vec()->Add();
+        lat_debug_info_.mutable_first_soft_lower_bound_info_vec()->Add();
     first_soft_lower_bound_info->set_lower(first_frenet_soft_bounds[i].first);
     first_soft_lower_bound_info->mutable_bound_info()->set_id(
         first_soft_bounds_info[i].first.id);
@@ -4553,7 +4643,7 @@ void GeneralLateralDecider::SaveLatDebugInfo(
         BoundType2String(first_soft_bounds_info[i].first.type));
 
     auto first_soft_upper_bound_info =
-        lat_debug_info_.mutable_soft_upper_bound_second_info_vec()->Add();
+        lat_debug_info_.mutable_first_soft_upper_bound_info_vec()->Add();
     first_soft_upper_bound_info->set_upper(first_frenet_soft_bounds[i].second);
     first_soft_upper_bound_info->mutable_bound_info()->set_id(
         first_soft_bounds_info[i].second.id);

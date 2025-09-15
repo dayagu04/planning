@@ -74,6 +74,16 @@ void LateralMotionPlanner::Init() {
   planning_input_.mutable_hard_lower_bound_x1_vec()->Resize(N, 0.0);
   planning_input_.mutable_hard_lower_bound_y1_vec()->Resize(N, 0.0);
 
+  planning_input_.mutable_first_soft_upper_bound_x0_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_upper_bound_y0_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_upper_bound_x1_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_upper_bound_y1_vec()->Resize(N, 0.0);
+
+  planning_input_.mutable_first_soft_lower_bound_x0_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_lower_bound_y0_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_lower_bound_x1_vec()->Resize(N, 0.0);
+  planning_input_.mutable_first_soft_lower_bound_y1_vec()->Resize(N, 0.0);
+
   planning_input_.mutable_control_vec()->Resize(N, 0.0);
 
   planning_input_.mutable_front_axis_ref_x_vec()->Resize(N, 0.0);
@@ -309,7 +319,10 @@ bool LateralMotionPlanner::AssembleInput() {
       general_lateral_decider_output.soft_bounds_cart_point;
   const auto &hard_bounds_cart_point =
       general_lateral_decider_output.hard_bounds_cart_point;
+  const auto &first_soft_bounds_cart_point =
+      general_lateral_decider_output.first_soft_bounds_cart_point;
   assert(soft_bounds_cart_point.size() == hard_bounds_cart_point.size());
+  assert(soft_bounds_cart_point.size() == first_soft_bounds_cart_point.size());
 
   for (size_t i = 0; i < soft_bounds_cart_point.size(); ++i) {
     size_t index = i;
@@ -369,6 +382,29 @@ bool LateralMotionPlanner::AssembleInput() {
         i, next_hard_upper_bound.x);
     planning_input_.mutable_hard_upper_bound_y1_vec()->Set(
         i, next_hard_upper_bound.y);
+
+    const auto &first_soft_lower_bound = first_soft_bounds_cart_point[index].first;
+    const auto &first_soft_upper_bound = first_soft_bounds_cart_point[index].second;
+    const auto &next_first_soft_lower_bound = first_soft_bounds_cart_point[next_index].first;
+    const auto &next_first_soft_upper_bound = first_soft_bounds_cart_point[next_index].second;
+
+    planning_input_.mutable_first_soft_lower_bound_x0_vec()->Set(i,
+                                                           first_soft_lower_bound.x);
+    planning_input_.mutable_first_soft_lower_bound_y0_vec()->Set(i,
+                                                           first_soft_lower_bound.y);
+    planning_input_.mutable_first_soft_lower_bound_x1_vec()->Set(
+        i, next_first_soft_lower_bound.x);
+    planning_input_.mutable_first_soft_lower_bound_y1_vec()->Set(
+        i, next_first_soft_lower_bound.y);
+
+    planning_input_.mutable_first_soft_upper_bound_x0_vec()->Set(i,
+                                                           first_soft_upper_bound.x);
+    planning_input_.mutable_first_soft_upper_bound_y0_vec()->Set(i,
+                                                           first_soft_upper_bound.y);
+    planning_input_.mutable_first_soft_upper_bound_x1_vec()->Set(
+        i, next_first_soft_upper_bound.x);
+    planning_input_.mutable_first_soft_upper_bound_y1_vec()->Set(
+        i, next_first_soft_upper_bound.y);
   }
 
   const auto &vehicle_param =

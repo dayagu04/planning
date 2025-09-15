@@ -101,6 +101,7 @@ class GeneralLateralDecider : public Task {
 
   // 3. construct the obstacle decisions
   void GenerateObstaclesBoundary();
+  void ApplyFirstSoftBoundsHysteresis();
   void GenerateStaticObstaclesBoundary(
       const std::vector<std::shared_ptr<FrenetObstacle>> obs_vec,
       ObstacleDecisions &obstacle_decisions);
