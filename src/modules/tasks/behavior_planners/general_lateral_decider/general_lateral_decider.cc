@@ -558,10 +558,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   // get scene
   bool is_use_spatio_planner_result = false;
   bool enable_using_st_plan =
-      DebugInfoManager::GetInstance()
-          .GetDebugInfoPb()
-          ->spatio_temporal_union_plan()
-          .enable_using_st_plan();
+      session_->planning_context()
+      .spatio_temporal_union_plan_output()
+      .enable_using_st_plan;
   if (config_.enable_use_spatio_temporal_planning &&
       enable_using_st_plan) {
     is_use_spatio_planner_result = true;
