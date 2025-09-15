@@ -80,14 +80,9 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   std::copy(traj_points.begin(), traj_points.end(),
             ego_planning_result.raw_traj_points.begin());
   // const auto &num_point = traj_points.size();
-  const auto &lateral_motion_planning_input =
-      DebugInfoManager::GetInstance()
-          .GetDebugInfoPb()
-          ->lateral_motion_planning_input();
-  double curv_factor =
-      lateral_motion_planning_input.curv_factor();
   auto &motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
+  double curv_factor = motion_planner_output.curv_factor;
   pnc::mathlib::spline s_t_spline;
   pnc::mathlib::spline l_t_spline;
 
@@ -164,11 +159,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   if (ramp_scene) {
     lat_jerk_thr = config_.ramp_lat_jerk_thr;
   }
-  // dynamic lat jerk thr
-  if (config_.use_dynamic_lat_jerk_thr) {
-    lat_jerk_thr =
-        lateral_motion_planning_input.jerk_bound();
-  }
+
   // judge condition
   auto &ad_info =
       session_->mutable_planning_context()

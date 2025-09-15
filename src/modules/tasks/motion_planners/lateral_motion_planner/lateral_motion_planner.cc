@@ -744,7 +744,7 @@ bool LateralMotionPlanner::Update() {
   motion_planner_output.lateral_t_s_spline.set_points(s_vec_, t_vec_);
   motion_planner_output.s_lat_vec = s_vec_;
   motion_planner_output.lat_init_flag = true;
-
+  motion_planner_output.curv_factor = curv_factor_;
   ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
