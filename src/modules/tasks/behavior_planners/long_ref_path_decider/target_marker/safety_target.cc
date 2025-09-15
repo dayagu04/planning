@@ -266,7 +266,7 @@ double SafetyTarget::CalculateSafetyAcceleration(
     a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_alpha;
+  double z = s_star / s_desired;
 
   double a_idm;
   if (current_vel <= final_v0) {
@@ -290,18 +290,18 @@ double SafetyTarget::CalculateSafetyAcceleration(
   double ds_star = s_alpha - s_star;
   double ds_safe = s_alpha - s_safe;
   double a_cah;
-  if (ds_safe > 0.0 && ds_star < 0.0 || ds_safe < 0.0 && ds_star < 0.0) {
+  if (ds_safe < 0.0 && ds_star < 0.0) {
     a_cah = b_hard * ds_star / s_star;
   } else if (ds_safe > 0.0 && ds_star < 0.0) {
     a_cah = b * ds_star / s_star;
   } else {
-    a_cah = a_free;
+    a_cah = a_idm;
   }
 
   double final_acc;
   if (a_idm >= a_cah) {
     double distance_ratio = std::min(current_s / s_desired, 1.0);
-    final_acc = a_idm * distance_ratio + a_cah * (1.0 - distance_ratio);
+    final_acc = a_idm * (1.0 - distance_ratio) + a_cah * distance_ratio;
   } else {
     final_acc = (1.0 - cool_factor) * a_idm +
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));

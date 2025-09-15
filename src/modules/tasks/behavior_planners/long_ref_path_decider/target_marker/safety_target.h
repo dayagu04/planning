@@ -28,7 +28,7 @@ class SafetyTarget : public Target {
   ~SafetyTarget() = default;
 
   struct IdmParameters {
-    double v0 = 30.0;
+    double v0 = 33.5;
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;

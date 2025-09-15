@@ -63,8 +63,7 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   // 4. jerk bound
   MakeJerkBound(target_maker);
 
-  // 5. RSS safety bound
-  MakeRSSBound();
+  // 5. Judge danger agent by max decel curve
   JudgeDangerAgentByMaxDecelCurve(target_maker);
 
   // 6. Safety bound (IDM + CAH)
@@ -140,7 +139,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
-  const auto &lane_borrow_output =
+  const auto& lane_borrow_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -150,10 +149,13 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
       if (start_stop_decider_output.ego_start_stop_info().state() ==
-        common::StartStopInfo::START && lane_borrow_output.is_in_lane_borrow_status
-        == false && lane_change_state == kLaneKeeping) {
+              common::StartStopInfo::START &&
+          lane_borrow_output.is_in_lane_borrow_status == false &&
+          lane_change_state == kLaneKeeping) {
         acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-        acc_upper_bound_[i] = std::fmax(speed_planning_config_.lane_keeping_non_cipv_start_acc_bound, acc_target.second);
+        acc_upper_bound_[i] = std::fmax(
+            speed_planning_config_.lane_keeping_non_cipv_start_acc_bound,
+            acc_target.second);
         continue;
       }
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
@@ -378,44 +380,21 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   }
 }
 
-void BoundMaker::MakeRSSBound() {
-  const auto& ego_state_mgr =
-      session_->environmental_model().get_ego_state_manager();
-  double v_ego = ego_state_mgr->ego_v();
-  double acc_ego = ego_state_mgr->ego_acc();
-  rss_upper_bound_ = std::vector<double>(plan_points_num_, 200.0);
-
-  for (int32_t i = 0; i < plan_points_num_; ++i) {
-    const double bound_v = upper_bound_infos_[i].v;
-    const double reaction_time = 0.5;
-    const double ego_acc_lower =
-        planning_math::LerpWithLimit(-4.0, IsoAccLimitSpeedLower, -3.0,
-                                     IsoAccLimitSpeedUpper, init_lon_state_[1]);
-    const double agent_max_brake_acc = 2.0;
-    const double rss_bound =
-        CalcRSSDistance(v_ego, acc_ego, bound_v, reaction_time, -ego_acc_lower,
-                        agent_max_brake_acc);
-    rss_upper_bound_[i] =
-        std::max(s_upper_bound_[i] - std::max(rss_bound, 3.5), 3.5);
-  }
-}
-
 void BoundMaker::MakeSafetyBound() {
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const double v_ego = ego_state_mgr->ego_v();
-  const double acc_ego = ego_state_mgr->ego_acc();
   const auto& agents_headway_Info = session_->planning_context()
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
 
   std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
 
-  constexpr double s_0 = 3.5;
-  constexpr double a_comfort = 2.0;
-  constexpr double max_tau = 1.2;
-  constexpr double b_max = 5.0;
-  constexpr double a_max = 4.0;
+  constexpr double s0 = 3.5;
+  constexpr double max_tau = 1.35;
+  constexpr double b_max = 2.5;
+  constexpr double b_hard = 4.0;
+  constexpr double a = 1.5;
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const auto& upper_bound_info = upper_bound_infos_[i];
@@ -427,32 +406,32 @@ void BoundMaker::MakeSafetyBound() {
 
     const int32_t lead_id = upper_bound_info.agent_id;
     const double v_lead = upper_bound_info.v;
-    const double a_lead = upper_bound_info.a;
     const double s_current = upper_bound_info.s;
     auto iter = agents_headway_Info.find(lead_id);
     double tau = max_tau;
     if (iter != agents_headway_Info.end()) {
-      tau = iter->second.current_headway;
+      tau = std::min(tau, iter->second.current_headway);
     }
 
-    const double v_rel = std::max(v_ego - v_lead, 0.0);
+    const double v_rel = v_ego - v_lead;
+    double s_desired = s0 + tau * v_ego;
+    double s_comfort =
+        s0 + std::max(0.0, v_ego * tau +
+                               v_ego * v_rel / (2.0 * std::sqrt(a * b_max)));
 
-    double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
-    double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
-
-    double s_safety = 0.0;
-    if (s_current > s_comfort) {
-      s_safety = s_0 + tau * v_ego;
-    } else if (s_current > s_max_decel) {
-      s_safety = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
+    double s_safety;
+    if (s_current > s_comfort && s_current > s_desired) {
+      s_safety = s0 + tau * v_ego;
+    } else if (s_current < s_desired && s_current < s_comfort) {
+      s_safety = s0 + tau * v_ego +
+                 std::max(v_ego * v_ego / (2.0 * b_max) -
+                              v_lead * v_lead / (2.0 * b_hard),
+                          v_ego * v_rel / (2.0 * b_hard));
     } else {
-      s_safety = s_0 + tau * v_ego +
-                 std::max(v_ego * v_rel / (2.0 * a_max),
-                          v_ego * v_ego / (2.0 * a_max) -
-                              v_lead * v_lead / (2.0 * b_max));
+      s_safety = s0 + std::max(0.0, tau * v_ego + v_ego * v_rel / (2.0 * b_max));
     }
 
-    const double soft_safety_distance = std::max(s_safety, s_0);
+    const double soft_safety_distance = std::max(s_safety, s0);
     safety_upper_bound[i] =
         std::max(0.0, s_upper_bound_[i] - soft_safety_distance);
   }
@@ -691,34 +670,6 @@ double BoundMaker::CalcDesiredVelocity(const double d_rel, const double d_des,
   return v_target;
 }
 
-double BoundMaker::CalcRSSDistance(double ego_speed, double ego_acc,
-                                   double front_speed, double reaction_time,
-                                   double min_brake, double max_brake) const {
-  double relative_v = front_speed - ego_speed;
-  const double closing_speed = (relative_v < 0.0) ? -relative_v : 0.0;
-
-  // 1. 反应时间内行驶的距离
-  double distance_during_reaction =
-      ego_speed * reaction_time + 0.5 * ego_acc * reaction_time * reaction_time;
-  double vel_during_reaction = ego_speed + ego_acc * reaction_time;
-
-  // 2. 自车制动距离
-  double ego_braking_distance =
-      (vel_during_reaction * vel_during_reaction) / (2 * min_brake);
-
-  // 3. 前车制动距离（仅当自车比前车快时）
-  double lead_brake_compensation = 0.0;
-  if (relative_v < 0.0) {
-    lead_brake_compensation = (front_speed * front_speed) / (2 * max_brake);
-  }
-
-  // 4. 速度相关安全余量
-  const double approach_margin = 0.1 * closing_speed * reaction_time;
-
-  return distance_during_reaction + ego_braking_distance -
-         lead_brake_compensation + approach_margin;
-}
-
 void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
     const TargetMaker& target_maker) {
   constexpr int32_t kConsiderNum = 25;  // 5.0s
@@ -822,11 +773,6 @@ double BoundMaker::jerk_lower_bound(const double t) const {
 double BoundMaker::jerk_upper_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
   return jerk_upper_bound_[index];
-}
-
-double BoundMaker::rss_bound(const double t) const {
-  int32_t index = static_cast<int32_t>(std::round(t / dt_));
-  return rss_upper_bound_[index];
 }
 
 double BoundMaker::safety_bound(const double t) const {

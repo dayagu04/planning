@@ -70,17 +70,7 @@ common::Status TargetMaker::Run() {
                                    -std::numeric_limits<double>::max(), 0.0,
                                    TargetType::kNotSet);
 
-    // 0. fusion follow_target and safety_target, take the min value as new follow_target
-    if (follow_target_value.has_target() && safety_target_value.has_target()) {
-      if (safety_target_value.s_target_val() <
-          follow_target_value.s_target_val()) {
-        follow_target_value = safety_target_value;
-        follow_target_value.set_target_type(
-            TargetType::kFollow);
-      }
-    }
-
-
+                    
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
@@ -112,9 +102,23 @@ common::Status TargetMaker::Run() {
           Target::TargetMin(caution_target_value, upper_target_value);
     }
 
+    // TBD: 华文合入safety_target
+    // 3.update upper value by safety target
+    if (safety_target_value.has_target()) {
+      upper_target_value =
+          Target::TargetMin(safety_target_value, upper_target_value);
+    }
+
+    // TBD: 华文合入cross_vru_target
+    // 4.update upper value by cross_vru_target
+    if (cross_vru_target_value.has_target()) {
+      upper_target_value =
+          Target::TargetMin(cross_vru_target_value, upper_target_value);
+    }
+
 
     // TBD: 建伟合入neighbor
-    // 4.update lower and upper value by neighbor target
+    // 5.update lower and upper value by neighbor target
     if (neighbor_target_value.has_target()) {
       // neighbor
       if (neighbor_target_value.target_type() == TargetType::kNeighbor) {
@@ -158,12 +162,7 @@ common::Status TargetMaker::Run() {
     auto final_target_value =
         Target::TargetMin(final_lower_bound_value, upper_target_value);
 
-    // 华文合入cross_vru_target
-    if (cross_vru_target_value.has_target()) {
-      final_target_value =
-          Target::TargetMin(final_target_value, cross_vru_target_value);
-    }
-
+  
     target_values_.push_back(std::move(final_target_value));
   }
   RefineStarget();

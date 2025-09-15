@@ -28,7 +28,7 @@ constexpr double kCautionYieldHeadingThres = 0.785;
 constexpr double kCautionYieldLowBoundThres = 0.1;
 constexpr double kCutInHeadingthres = 4.0 / 180.0 * 3.14;
 constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
-constexpr double kStaticAgentSpeedThrMps = 0.5;
+constexpr double kStaticAgentSpeedThrMps = 0.2;
 constexpr double kVRUHeadingRelieveJerkMinThreshold = 45 / 57.3;
 constexpr double kVRUHeadingRelieveJerkMaxThreshold = 135 / 57.3;
 }  // namespace
