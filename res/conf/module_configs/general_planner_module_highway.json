@@ -300,8 +300,8 @@
     "lower_risk_jerk_bound": 1,
     "high_risk_jerk_bound": 1.5,
     "limit_nudge_change_rate": 0.15,
-    "extra_static_nudge_buffer2second_bound":0.1,
-    "extra_dynamic_nudge_buffer2second_bound":0.15
+    "extra_static_nudge_buffer2first_bound":0.15,
+    "extra_dynamic_nudge_buffer2first_bound":0.25
 
   },
   "lateral_offset_decider": {
@@ -539,7 +539,7 @@
     "q_jerk": 10.0,
     "q_acc_bound": 100000.0,
     "q_jerk_bound": 1000000.0,
-    "first_qsoft_bound_ratio": 0.5,
+    "first_qsoft_bound_ratio": 1.5,
     "map_qsoft_bound": [200, 500, 750.0, 1000.0, 1250.0, 1500.0],
     "map_qhard_bound": [500, 1000, 1500.0, 2000.0, 2500.0, 3000.0],
     "emergence_avoid_factor": 2.0,

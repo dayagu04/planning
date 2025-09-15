@@ -168,7 +168,7 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds_,
+  PostProcessReferenceTrajBySoftBound(first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
   GenerateLateralDeciderOutput(frenet_soft_bounds_, first_frenet_soft_bounds_,

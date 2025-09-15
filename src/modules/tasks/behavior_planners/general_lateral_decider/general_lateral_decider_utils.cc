@@ -48,7 +48,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
     return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
   } else {
     base_dis = std::fmax(
-        base_dis + extra_buffer + config.extra_dynamic_nudge_buffer2second_bound,
+        base_dis + extra_buffer + config.extra_dynamic_nudge_buffer2first_bound,
         config.hard_buffer2dynamic_agent);
     return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
   }
@@ -110,7 +110,7 @@ double CalDesireStaticLateralDistance(
   if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
     return base_distance + lateral_extra_buffer;
   } else if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
-    return base_distance + lateral_extra_buffer + config.extra_static_nudge_buffer2second_bound;
+    return base_distance + lateral_extra_buffer + config.extra_static_nudge_buffer2first_bound;
   }
 
 }
