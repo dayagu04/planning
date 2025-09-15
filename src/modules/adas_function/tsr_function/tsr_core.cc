@@ -388,17 +388,32 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   // sd_map信息，获取限速
   if (GetContext.get_session()->environmental_model()
                                 .get_route_info()
-                                ->get_sdmap_valid()) {
-    const auto &sd_map_info_ptr = GetContext.get_session()
+                                ->get_sdpromap_valid()) {
+    const auto &sd_pro_map_info_ptr = GetContext.get_session()
                                   ->environmental_model()
                                   .get_route_info()
-                                  ->get_sd_map();
+                                  ->get_sdpro_map();
     
-    if (sd_map_info_ptr.GetNaviRoadInfo() == std::nullopt) {
+    // 获取当前道路限速值
+    // ego_motion信息
+    auto localization_info = GetContext.mutable_session()->mutable_environmental_model()->
+                              get_ego_state_manager(); // enu实际上是boot
+    ad_common::math::Vec2d current_point;
+    current_point.set_x(localization_info->location_enu().position.x);
+    current_point.set_y(localization_info->location_enu().position.y); // enu实际上是boot
+    const double search_distance = 50.0;
+    const double max_heading_diff = PI / 4;
+    double temp_nearest_s = 0;
+    double nearest_l = 0;
+    const double ego_heading_angle = localization_info->heading_angle();
+    const iflymapdata::sdpro::LinkInfo_Link* current_link = sd_pro_map_info_ptr.GetNearestLinkWithHeading(
+        current_point, search_distance, ego_heading_angle, max_heading_diff,
+        temp_nearest_s, nearest_l);
+    if (!current_link) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
     } else {
-      current_map_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      current_map_speed_limit_ = current_link->speed_limit();
       current_map_speed_limit_valid_ = true;
     }
   } else {
