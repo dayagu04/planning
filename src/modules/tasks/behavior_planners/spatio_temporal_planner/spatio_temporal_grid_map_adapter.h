@@ -26,6 +26,7 @@
 #include "tasks/task.h"
 #include "utils_math.h"
 #include "virtual_lane.h"
+#include "spatio_temporal_union_plan.pb.h"
 
 namespace planning {
 
@@ -73,7 +74,7 @@ class SLTGridMapAdapter {
   /**
    * @brief Run one planning round with given states
    */
-  void RunOnce();
+  void RunOnce(planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input);
 
   const std::vector<AgentFrenetSpatioTemporalInFo>
       &SurroundForwardAgentsTrajs() {
@@ -104,7 +105,7 @@ class SLTGridMapAdapter {
   /**
    * @brief transform all the states in a batch
    */
-  void StateTransformForInputData();
+  void StateTransformForInputData(planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input);
 
   void GetVehicleVertices(const State &state,
                           std::vector<planning_math::Vec2d> *vertices);
