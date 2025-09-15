@@ -1294,11 +1294,23 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
   const double dist_ego_limiter = geometry_lib::CalPoint2LineDist(
       ego_info_under_slot.cur_pose.pos, limiter_line);
 
-  double car_to_limiter_dis = param.car_to_limiter_dis;
-  if (ego_info_under_slot.slot_occupied_ratio_postprocess >
-      ego_info_under_slot.slot_occupied_ratio + 0.0168) {
-    car_to_limiter_dis = param.car_to_limiter_dis + 0.86;
+  const double diff = ego_info_under_slot.slot_occupied_ratio_postprocess -
+                      ego_info_under_slot.slot_occupied_ratio;
+
+  double delta_dis = 0.0;
+  if (diff < 0.06) {
+    delta_dis = 0.0;
+  } else if (diff < 0.12) {
+    delta_dis = 0.43;
+  } else if (diff < 0.24) {
+    delta_dis = 0.86;
+  } else if (diff < 0.36) {
+    delta_dis = 1.72;
+  } else {
+    delta_dis = 2.58;
   }
+
+  const double car_to_limiter_dis = param.car_to_limiter_dis + delta_dis;
 
   ILOG_INFO << "dist_ego_limiter = " << dist_ego_limiter
             << "  car_to_limiter_dis = " << car_to_limiter_dis;
@@ -1332,10 +1344,12 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     return false;
   }
 
+  const double max_extend_dist = 2.5;
+
   double s_proj = 0.0;
   bool success = geometry_lib::CalProjFromSplineByBisection(
-      0.0, frame_.current_path_length + frame_.path_extended_dist, s_proj,
-      limiter_mid, frame_.x_s_spline, frame_.y_s_spline);
+      0.0, frame_.current_path_length + max_extend_dist, s_proj, limiter_mid,
+      frame_.x_s_spline, frame_.y_s_spline);
 
   if (!success) {
     ILOG_INFO << "path is err";
