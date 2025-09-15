@@ -379,7 +379,7 @@ class Node3d {
   float steering_ = 0.0;
   float radius_;
   float kappa_;
-  float single_gear_length_ = 0.0;
+  float single_gear_length_ = 0.0f;
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
