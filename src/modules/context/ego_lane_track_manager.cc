@@ -1045,7 +1045,7 @@ void EgoLaneTrackManger::PreprocessRoadSplit(
   bool enable_using_last_frame_track_ego_lane = true;
   bool find_last_frame_track_ego_lane = true;
 
-  if (last_zero_relative_id_nums_ > 1) {
+  if (last_zero_relative_id_nums_ > 1 && first_split_dir_dis_info_.second < 50.0) {
     ILOG_DEBUG << "PreprocessRoadSplit::last_zero_relative_id_nums_ > 1";
     if (last_zero_relative_id_order_id_index_ != -1) {
       ComputeZeroRelativeIdOrderIdIndex(last_track_ego_lane_,
