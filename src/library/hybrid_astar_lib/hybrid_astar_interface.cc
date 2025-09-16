@@ -852,6 +852,15 @@ void HybridAStarInterface::PathSearchForScenarioTry(
         continue;
       }
 
+      if (fabs(target_regulator_result.first.GetY()) < 1.0 &&
+          request_.space_type == ParkSpaceType::VERTICAL) {
+        ILOG_INFO << "target_regulator_goal_ = "
+                  << target_regulator_result.first.GetX() << ", "
+                  << target_regulator_result.first.GetY();
+        ILOG_INFO << "insufficient space on both sides";
+        continue;
+      }
+
       target_regulator_goal_ = target_regulator_result.first;
 
       hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(),
@@ -860,7 +869,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
         feasible_directions_[i] = true;
       }
 
-      // if (request_.direction_request == request_.direction_request_stack[i]) {
+      // if (request_.direction_request == request_.direction_request_stack[i])
+      // {
       //   best_traj_ = &traj_candidates_[0];
       //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
       // }

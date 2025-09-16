@@ -513,7 +513,7 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
 
   for (auto &obj : candidate_info_) {
     // If pose is big buffer, return
-    dist = obj.dist_to_obs - lat_buffer;
+    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
     if (dist > 0.0f) {
       ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
                 << ",obs dist = " << obj.dist_to_obs;
