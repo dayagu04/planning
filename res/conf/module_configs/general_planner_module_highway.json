@@ -300,8 +300,8 @@
     "lower_risk_jerk_bound": 1,
     "high_risk_jerk_bound": 1.5,
     "limit_nudge_change_rate": 0.15,
-    "extra_static_nudge_buffer2first_bound":0.15,
-    "extra_dynamic_nudge_buffer2first_bound":0.15,
+    "extra_static_nudge_buffer2first_bound":0.05,
+    "extra_dynamic_nudge_buffer2first_bound":0.1,
     "use_first_soft_bound":true
 
   },
