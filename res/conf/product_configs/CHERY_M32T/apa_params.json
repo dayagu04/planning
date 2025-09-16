@@ -266,7 +266,7 @@
   "parallel_dynamic_lat_buffer": 0.5,
   "parallel_dynamic_lon_buffer": 1.78,
   "parallel_dynamic_lat_buffer_in_slot": 0.2,
-  "parallel_dynamic_lon_buffer_in_slot": 0.8,
+  "parallel_dynamic_lon_buffer_in_slot": 1.2,
 
   "comment_13": "slot update params when parking",
   "fix_slot_occupied_ratio": 0.868,

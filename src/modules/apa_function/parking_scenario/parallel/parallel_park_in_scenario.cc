@@ -673,16 +673,15 @@ const bool ParallelParkInScenario::GenTlane() {
         // in_ego_cnt++;
         continue;
       }
-
-      if (mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
-          obs_pt_local.y() * side_sgn < -0.25 * slot_width * side_sgn &&
-          obs_pt_local.y() * side_sgn >
+      if (is_rigid &&
+          mathlib::IsInBound(obs_pt_local.x(), 0.8, slot_length - 0.8) &&
+          mathlib::IsInBound(
+              obs_pt_local.y(), -0.25 * slot_width * side_sgn,
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
-                  side_sgn &&
-          is_rigid) {
+                  side_sgn)) {
         ILOG_INFO << "rigid obs = " << obs_pt_local.x()
+                  << " y = " << obs_pt_local.y()
                   << " type = " << static_cast<int>(obs_scement);
-        ILOG_INFO << "obs pt = " << obs_pt_local.x();
         t_lane_.is_inside_rigid = true;
       }
 
@@ -1338,6 +1337,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   if (parallel_replan_again_ == 1 && !path_plan_success) {
     ILOG_INFO << "path planner replan failed, using last path";
+    parallel_replan_again_ = 2;
     const auto& planner_output = previous_output_path_;
     frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
     current_path_point_global_vec_.clear();
@@ -1512,7 +1512,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     const auto path_length = (planner_output.path_point_vec.front().pos -
                               planner_output.path_point_vec.back().pos)
                                  .norm();
-    if (path_length < apa_param.GetParam().min_opt_path_length) {
+    const double compensate_distance = 0.6;
+    if (path_length < apa_param.GetParam().min_opt_path_length + compensate_distance) {
       ILOG_INFO << "path length is too short, optimizer is closed ";
 
       is_use_optimizer = false;
