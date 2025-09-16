@@ -345,6 +345,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
       transition_info_.lane_change_type == INT_REQUEST ||
       transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
       transition_info_.lane_change_type == CONE_REQUEST;
+  if (propose_time_out) {
+    lane_change_stage_info_.lc_invalid_reason = "propose time out";
+  }
 
   if (is_no_lc_request || propose_time_out ||
       (is_target_lane_merge_to_origin_lane && !is_no_care_mrege)) {
@@ -635,6 +638,9 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
                << lane_change_stage_info_.lc_invalid_reason.c_str();
     lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
+    if (!is_dash_enough && transition_info_.lane_change_type == INT_REQUEST) {
+      lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+    }
   }
 }
 

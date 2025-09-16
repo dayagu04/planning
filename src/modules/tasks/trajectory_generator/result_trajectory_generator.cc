@@ -114,8 +114,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
       traj_points[i].y = cart_pt.y;
 
       ILOG_DEBUG << "result traj_point s=" << traj_points[i].s
-                 << ", l=" << traj_points[i].l
-                 << ", x=" << traj_points[i].x
+                 << ", l=" << traj_points[i].l << ", x=" << traj_points[i].x
                  << ", y=" << traj_points[i].y;
     }
     t_vec_[i] = traj_points[i].t;
@@ -153,18 +152,14 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   ddkappa_t_spline.set_points(t_vec_, ddkappa_vec_);
   double lat_jerk_thr = config_.lat_jerk_thr;
   const bool &ramp_scene =
-    session_->planning_context()
-            .general_lateral_decider_output()
-            .ramp_scene;
+      session_->planning_context().general_lateral_decider_output().ramp_scene;
   if (ramp_scene) {
     lat_jerk_thr = config_.ramp_lat_jerk_thr;
   }
-
   // judge condition
-  auto &ad_info =
-      session_->mutable_planning_context()
-              ->mutable_planning_hmi_info()
-              ->ad_info;
+  auto &ad_info = session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info;
   if ((traj_max_lat_acc > config_.lat_acc_thr) ||
       (traj_max_lat_jerk > lat_jerk_thr) ||
       (traj_max_lon_acc > config_.lon_acc_thr) ||
@@ -390,7 +385,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                       ->ad_info;
   const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  //ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
+  // ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
   ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
   // update LaneChangeStatus
@@ -447,7 +442,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
     ad_info.lane_change_direction =
         (iflyauto::LaneChangeDirection)
-            lane_change_decider_output.ilc_virtual_req;
+            lane_change_decider_output.lc_request;  // LC_DIR_LEFT/RIGHT
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
   } else if (int_request_cancel_reason == MANUAL_CANCEL) {
     ad_info.status_update_reason =
@@ -463,9 +458,14 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
     ad_info.obstacle_info_size = 1;
-  } else if (lc_back_reason == "dash line length not satisfy") {
+  } else if (lc_back_reason == "dash line length not satisfy" ||
+             lane_change_decider_output.lc_invalid_reason ==
+                 "dash not enough") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (lane_change_decider_output.lc_invalid_reason == "propose time out") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;

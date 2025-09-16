@@ -62,7 +62,7 @@ class IntRequest : public LaneChangeRequest {
   void PrintForbidGeneratingReason(
       const std::vector<std::string> forbid_generating_reason);
 
-  void ProcessBlinkState(const uint ego_blinker, const int lc_status);
+  void ProcessBlinkState(const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status);
 
   // void check_lc_forbid_reason(
   //     std::vector<std::string>& forbid_generating_left_reason,

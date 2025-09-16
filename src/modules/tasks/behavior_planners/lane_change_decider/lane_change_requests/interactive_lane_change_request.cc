@@ -13,9 +13,9 @@
 namespace planning {
 
 namespace {
-  constexpr double kMaxSpeedTriggerILCReq = 33.333;
-  constexpr double kMinSpeedTriggerILCReq = 11.111;
-}
+constexpr double kMaxSpeedTriggerILCReq = 33.333;
+constexpr double kMinSpeedTriggerILCReq = 11.111;
+}  // namespace
 // class: IntRequest
 IntRequest::IntRequest(
     planning::framework::Session* session,
@@ -33,9 +33,10 @@ void IntRequest::Update(int lc_status) {
   const auto& lc_req_source = session_->planning_context()
                                   .lane_change_decider_output()
                                   .lc_request_source;
-  //其他变道进行到execution状态中，则抑制拨杆变道
+  // 其他变道进行到execution状态中，则抑制拨杆变道
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
       lc_req_source != INT_REQUEST) {
+    lane_change_cmd_ = TurnSwitchState::NONE;
     ILOG_DEBUG << "IntRequest::Update: ego not in lane keeping!";
     return;
   }
@@ -48,6 +49,7 @@ void IntRequest::Update(int lc_status) {
 
   if (int_request_config_.enable_speed_interal_surpress &&
       request_type_ == NO_CHANGE && is_triggle_speed_surpress_ilc) {
+    lane_change_cmd_ == TurnSwitchState::NONE;
     return;
   }
 
@@ -64,9 +66,10 @@ void IntRequest::Update(int lc_status) {
   // is_lever_status_valid_last_frame_ =
   //     is_lever_status_valid_;  //反方向拨杆时，能触发反方向的变道请求
   const auto& ego_blinker = session_->mutable_environmental_model()
-                                  ->get_ego_state_manager()
-                                  ->ego_blinker();
-  ProcessBlinkState(ego_blinker, lc_status);
+                                ->get_ego_state_manager()
+                                ->ego_blinker();
+  ProcessBlinkState(ego_blinker,
+                    static_cast<StateMachineLaneChangeStatus>(lc_status));
   JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
 
   // init lanes with id
@@ -105,28 +108,30 @@ void IntRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("left_boundary_type", (int)left_boundary_type);
   JSON_DEBUG_VALUE("right_boundary_type", (int)right_boundary_type);
   ILOG_DEBUG << "[IntRequest::update] lane_change_cmd: " << lane_change_cmd_;
-  ILOG_DEBUG << "[IntRequest::update] current_lane_virtual_id: " << current_lane_virtual_id
+  ILOG_DEBUG << "[IntRequest::update] current_lane_virtual_id: "
+             << current_lane_virtual_id
              << ", origin_lane_virtual_id:" << origin_lane_virtual_id_
              << ", target_lane_virtual_id:" << target_lane_virtual_id_;
 
   count_threshold_ = -1;
-  if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT &&
+  if (lane_change_cmd_ == TurnSwitchState::LEFT_FIRMLY_TOUCH &&
       request_type_ != LEFT_CHANGE) {
     counter_right_ = 0;
     counter_left_++;
 
     // 判断虚线长度是否满足变道条件
-    const RequestType target_direction = LEFT_CHANGE;
-    bool is_dash_enough = IsDashEnoughForRepeatSegments(
-        target_direction, current_lane_virtual_id, static_cast<StateMachineLaneChangeStatus>(lc_status));
-    if (!is_dash_enough) {
-      request_cancel_reason_ = SOLID_LC;
-      ilc_virtual_req_ = LEFT_CHANGE;
-      counter_right_ = 0;
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-      last_frame_blinker_ = 0;
-      return;
-    }
+    // const RequestType target_direction = LEFT_CHANGE;
+    // bool is_dash_enough = IsDashEnoughForRepeatSegments(
+    //     target_direction, current_lane_virtual_id,
+    //     static_cast<StateMachineLaneChangeStatus>(lc_status));
+    // if (!is_dash_enough) {
+    //   request_cancel_reason_ = SOLID_LC;
+    //   ilc_virtual_req_ = LEFT_CHANGE;
+    //   counter_right_ = 0;
+    //   // lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+    //   // last_frame_blinker_ = 0;
+    //   return;
+    // }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
     if (!zero_relative_id_order_ids.empty() &&
@@ -156,42 +161,48 @@ void IntRequest::Update(int lc_status) {
     if (counter_left_ > count_threshold_ || is_in_diverted_lane_change_) {
       auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
           target_lane_virtual_id_tmp);
-      if (tlane != nullptr && tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
+      if (tlane != nullptr &&
+          tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
         GenerateRequest(LEFT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[IntRequest::update] Ask for interactive changing lane to left";
+        ILOG_DEBUG
+            << "[IntRequest::update] Ask for interactive changing lane to left";
         if ((lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
             IsRoadBorderSurpressLaneChange(LEFT_CHANGE, origin_lane_virtual_id_,
                                            target_lane_virtual_id_)) {
-          ILOG_DEBUG << " [IntRequest::update] Road border surpress lane change to left";
+          ILOG_DEBUG << " [IntRequest::update] Road border surpress lane "
+                        "change to left";
           Finish();
+          lane_change_cmd_ = TurnSwitchState::NONE;
           set_target_lane_virtual_id(current_lane_virtual_id);
         }
       } else {
-        ILOG_WARN << "[IntRequest::update] Ask for interactive changing lane to left "
-            "but left lane is null";
+        ILOG_WARN
+            << "[IntRequest::update] Ask for interactive changing lane to left "
+               "but left lane is null";
       }
     } else {
-      ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive changing lane to left";
+      ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive "
+                    "changing lane to left";
     }
-  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT &&
+  } else if (lane_change_cmd_ == TurnSwitchState::RIGHT_FIRMLY_TOUCH &&
              request_type_ != RIGHT_CHANGE) {
     counter_left_ = 0;
     counter_right_ = counter_right_ + 1;
 
     // 判断虚线长度是否满足变道条件
     const RequestType target_direction = RIGHT_CHANGE;
-    bool is_dash_enough = IsDashEnoughForRepeatSegments(
-        target_direction, current_lane_virtual_id,
-        static_cast<StateMachineLaneChangeStatus>(lc_status));
-    if (!is_dash_enough) {
-      request_cancel_reason_ = SOLID_LC;
-      ilc_virtual_req_ = RIGHT_CHANGE;
-      counter_right_ = 0;
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-      last_frame_blinker_ = 0;
-      return;
-    }
+    // bool is_dash_enough = IsDashEnoughForRepeatSegments(
+    //     target_direction, current_lane_virtual_id,
+    //     static_cast<StateMachineLaneChangeStatus>(lc_status));
+    // if (!is_dash_enough) {
+    //   request_cancel_reason_ = SOLID_LC;
+    //   ilc_virtual_req_ = RIGHT_CHANGE;
+    //   // counter_right_ = 0;
+    //   // lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
+    //   // last_frame_blinker_ = 0;
+    //   return;
+    // }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
     if (!zero_relative_id_order_ids.empty() &&
@@ -221,34 +232,41 @@ void IntRequest::Update(int lc_status) {
     if (counter_right_ > count_threshold_ || is_in_diverted_lane_change_) {
       auto tlane = virtual_lane_mgr_->get_lane_with_virtual_id(
           target_lane_virtual_id_tmp);
-      if (tlane != nullptr && tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
+      if (tlane != nullptr &&
+          tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
         GenerateRequest(RIGHT_CHANGE);
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[IntRequest::update] Ask for interactive changing lane to right";
+        ILOG_DEBUG << "[IntRequest::update] Ask for interactive changing lane "
+                      "to right";
         if ((lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
             IsRoadBorderSurpressLaneChange(RIGHT_CHANGE,
                                            origin_lane_virtual_id_,
                                            target_lane_virtual_id_)) {
-          ILOG_DEBUG << "[IntRequest::update] Road border surpress lane change to right";
+          ILOG_DEBUG << "[IntRequest::update] Road border surpress lane change "
+                        "to right";
+          lane_change_cmd_ = TurnSwitchState::NONE;
           Finish();
           set_target_lane_virtual_id(current_lane_virtual_id);
         }
       } else {
-        ILOG_WARN << "[IntRequest::update] Ask for interactive changing lane to right "
-            "but right lane is null";
+        ILOG_WARN << "[IntRequest::update] Ask for interactive changing lane "
+                     "to right "
+                     "but right lane is null";
       }
     } else {
-      ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive changing lane to right";
+      ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive "
+                    "changing lane to right";
     }
-  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_NONE &&
-             request_type_ != NO_CHANGE && lc_status == kLaneChangeExecution) {
+  } else if (lane_change_cmd_ == TurnSwitchState::NONE &&
+             request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
     if (lane_change_lane_mgr_->has_target_lane() &&
         (std::fabs(frenet_ego_state_l) <
          tlane->width() / 2 +
              int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
       // 取消换道，但此时已经进入目标车道，则保持至换道完成
-      ILOG_DEBUG << "[IntRequest::update]: Cancel int lc blinker when ego car on target lane and continue lc state";
+      ILOG_DEBUG << "[IntRequest::update]: Cancel int lc blinker when ego car "
+                    "on target lane and continue lc state";
     } else {
       request_cancel_reason_ = MANUAL_CANCEL;
       Finish();
@@ -256,8 +274,7 @@ void IntRequest::Update(int lc_status) {
       counter_left_ = 0;
       counter_right_ = 0;
     }
-  } else if (lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_NONE ||
-             lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_EMERGENCY_FLASH) {
+  } else if (lane_change_cmd_ == TurnSwitchState::NONE) {
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
     counter_left_ = 0;
@@ -270,8 +287,9 @@ void IntRequest::finish_and_clear() {
   Finish();
   counter_left_ = 0;
   counter_right_ = 0;
-  lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-  ILOG_DEBUG << "[IntRequest::update] " << __FUNCTION__ << ": clear int request and set lane_change_cmd_ off";
+  lane_change_cmd_ = TurnSwitchState::NONE;
+  ILOG_DEBUG << "[IntRequest::update] " << __FUNCTION__
+             << ": clear int request and set lane_change_cmd_ off";
   is_lever_status_valid_ = false;
   is_in_diverted_lane_change_ = false;
 }
@@ -284,31 +302,43 @@ void IntRequest::PrintForbidGeneratingReason(
   }
 }
 
-void IntRequest::ProcessBlinkState(const uint ego_blinker, const int lc_status) {
-  if (ego_blinker != last_frame_blinker_) {
-    last_frame_blinker_ = ego_blinker;
-    if (ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH) {
-      if (lc_status != 0 &&
-          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
-        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-      } else {
-        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_RIGHT;
-      }
-    } else if (ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH) {
-      if (lc_status != 0 &&
-          lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT) {
-        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-      } else {
-        lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_LEFT;
-      }
-    } else if (ego_blinker == TurnSwitchState::RIGHT_LIGHTLY_TOUCH &&
-               lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_LEFT) {
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-    } else if (ego_blinker == TurnSwitchState::LEFT_LIGHTLY_TOUCH &&
-               lane_change_cmd_ == iflyauto::TURN_SIGNAL_TYPE_RIGHT) {
-      lane_change_cmd_ = iflyauto::TURN_SIGNAL_TYPE_NONE;
-    }
+void IntRequest::ProcessBlinkState(
+    const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status) {
+  bool is_allowed_cancel_state =
+      (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeHold ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeCancel);
+  bool trigger_left_lane_change =
+      ((last_frame_blinker_ == TurnSwitchState::NONE ||
+        last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
+       ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH);
+  bool trigger_right_lane_change =
+      ((last_frame_blinker_ == TurnSwitchState::NONE ||
+        last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
+       ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH);
+  bool trigger_left_lane_change_cancel =
+      is_allowed_cancel_state &&
+      (lane_change_cmd_ == TurnSwitchState::LEFT_FIRMLY_TOUCH &&
+       (ego_blinker == TurnSwitchState::RIGHT_LIGHTLY_TOUCH ||
+        ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH));
+  bool trigger_right_lane_change_cancel =
+      is_allowed_cancel_state &&
+      (lane_change_cmd_ == TurnSwitchState::RIGHT_FIRMLY_TOUCH &&
+       (ego_blinker == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH));
+  if (trigger_left_lane_change) {
+    lane_change_cmd_ = TurnSwitchState::LEFT_FIRMLY_TOUCH;
+  } else if (trigger_right_lane_change) {
+    lane_change_cmd_ = TurnSwitchState::RIGHT_FIRMLY_TOUCH;
   }
+
+  if (trigger_left_lane_change_cancel || trigger_right_lane_change_cancel) {
+    lane_change_cmd_ = TurnSwitchState::NONE;
+  }
+  last_frame_blinker_ = ego_blinker;
 }
 
 // void IntRequest::check_lc_forbid_reason(
