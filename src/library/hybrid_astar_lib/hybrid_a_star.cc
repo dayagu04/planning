@@ -530,7 +530,7 @@ void HybridAStar::GetPathByLine(NodePath* path, const float arc,
 }
 
 const NodeShrinkType HybridAStar::NextNodeGenerator(
-    Node3d* new_node, Node3d* parent_node, size_t next_node_index,
+    Node3d* new_node, Node3d* parent_node, int next_node_index,
     const AstarPathGear gear_request_info) {
   float front_wheel_angle = 0.0;
   float radius = 0.0;
@@ -545,7 +545,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     radius = next_node_angles_.radius[next_node_index];
     traveled_distance = node_path_dist_resolution_;
   } else if (next_node_index < next_node_angles_.size * 2) {
-    size_t index = next_node_index - next_node_angles_.size;
+    int index = next_node_index - next_node_angles_.size;
     front_wheel_angle = next_node_angles_.angles[index];
     radius = next_node_angles_.radius[index];
     traveled_distance = -node_path_dist_resolution_;
@@ -567,7 +567,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   } else {
     gear = AstarPathGear::REVERSE;
   }
-  new_node->SetGearType(gear);
+
   if (parent_node->GetGearSwitchNum() >= request_.gear_switch_num &&
       parent_node->IsPathGearChange(gear)) {
     return NodeShrinkType::UNEXPECTED_GEAR;
@@ -611,6 +611,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   }
 
   new_node->Set(path, grid_map_bound_, config_, path.path_dist);
+  new_node->SetGearType(gear);
 
   // check search bound
   if (!NodeInSearchBound(new_node->GetIndex())) {
@@ -1031,7 +1032,6 @@ const bool HybridAStar::BackwardPassByNode(
     child_node = parent_node;
   }
 
-  size_t point_size;
   float kappa;
 
   AstarPathGear last_gear_type = AstarPathGear::NONE;
@@ -1122,11 +1122,10 @@ const bool HybridAStar::BackwardPassByNode(
   // get path lengh
   UpdatePathS(result);
   result->fail_type = AstarFailType::SUCCESS;
-
-  // DebugPathString(result);
   ILOG_INFO << "get result finish, path point size " << result->x.size();
 
 #if DEBUG_SEARCH_RESULT
+  DebugPathString(result);
   DebugNodeList(node_list);
 #endif
 
@@ -1368,7 +1367,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
     explored_rs_path_num++;
 
-    for (size_t i = 0; i < next_node_num_; ++i) {
+    for (int i = 0; i < next_node_num_; ++i) {
       NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
       explored_node_num++;
 
@@ -1823,7 +1822,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
     explored_rs_path_num++;
 
-    for (size_t i = 0; i < next_node_num_; ++i) {
+    for (int i = 0; i < next_node_num_; ++i) {
       NextNodeGenerator(&new_node, current_node, i, full_path_gear_request);
       explored_node_num++;
 
@@ -2124,7 +2123,7 @@ void HybridAStar::GetNodeListMessage(planning::common::AstarNodeList* list) {
 
     planning::common::AstarNode* tmp_node = list->add_nodes();
 
-    for (size_t m = 0; m < path.point_size; m++) {
+    for (int m = 0; m < path.point_size; m++) {
       point.set_x(path.points[m].x);
       point.set_y(path.points[m].y);
       point.set_heading_angle(path.points[m].theta);
@@ -2148,7 +2147,7 @@ void HybridAStar::GetNodeListMessage(
     const NodePath& path = i->second->GetNodePath();
 
     std::vector<Eigen::Vector2d> node;
-    for (size_t m = 0; m < path.point_size; m++) {
+    for (int m = 0; m < path.point_size; m++) {
       node.emplace_back(Eigen::Vector2d(path.points[m].x, path.points[m].y));
     }
 
@@ -2428,7 +2427,7 @@ void HybridAStar::CopyNodePath(const Node3d* node,
   AstarPathType path_type = node->GetPathType();
   AstarPathGear cur_gear_type = node->GetGearType();
 
-  size_t point_size;
+  int point_size;
 
   // todo
   if (node->GetConstNextNode() == nullptr) {
@@ -2446,7 +2445,7 @@ void HybridAStar::CopyNodePath(const Node3d* node,
 
   float kappa = std::tan(node->GetSteer()) / vehicle_param_.wheel_base;
 
-  for (size_t k = 0; k < point_size; k++) {
+  for (int k = 0; k < point_size; k++) {
     astar_path->x.emplace_back(path.points[k].x);
     astar_path->y.emplace_back(path.points[k].y);
     astar_path->phi.emplace_back(path.points[k].theta);
@@ -2548,7 +2547,7 @@ void HybridAStar::DebugNodeList(const std::vector<Node3d*>& node_list) {
               << ", node type "
               << GetNodeCurveDebugString(node_list[i]->GetPathType())
               << ", length: "
-              << node_path_dist_resolution_ * node_list[i]->GetStepSize();
+              << node_list[i]->GetNodePath().path_dist;
   }
 
   return;

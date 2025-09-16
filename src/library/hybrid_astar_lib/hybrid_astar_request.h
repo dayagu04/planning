@@ -60,10 +60,10 @@ struct AstarRequest {
   bool swap_start_goal;
   int gear_switch_num = 20;
 
-  Eigen ::Vector2d target_heading_vec;
+  Eigen::Vector2d target_heading_vec;
   // different buffer use different time
   double search_time;
-  Eigen ::Vector2d x_axis_direction_coordinate_slant;
+  Eigen::Vector2d x_axis_direction_coordinate_slant;
 
   void Clear() {
     path_generate_method = AstarPathGenerateType::NONE;

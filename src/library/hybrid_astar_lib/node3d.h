@@ -36,7 +36,7 @@ struct NodeGridIndex {
 };
 
 struct NodePath {
-  size_t point_size = 0;
+  int point_size = 0;
   // node points max number is 8. If this node is rs, please restore path in rs
   // path.
   Pose2f points[NODE_PATH_MAX_POINT];
@@ -109,7 +109,7 @@ class Node3d {
                  const PlannerOpenSpaceConfig& open_space_conf,
                  const float node_path_dist);
 
-  void SetGlobalID(const size_t id);
+  void SetGlobalID(const int id);
 
   static ad_common::math::Box2d GetBoundingBox(
       const VehicleParam& vehicle_param, const float rear_overhanging,
@@ -121,11 +121,11 @@ class Node3d {
 
   float GetHeuCost() const { return heuristic_cost_; }
 
-  size_t GetGridX() const { return grid_index_.x; }
+  int GetGridX() const { return grid_index_.x; }
 
-  size_t GetGridY() const { return grid_index_.y; }
+  int GetGridY() const { return grid_index_.y; }
 
-  size_t GetGridPhi() const { return grid_index_.phi; }
+  int GetGridPhi() const { return grid_index_.phi; }
 
   const float GetX() const { return path_.GetEndPoint().x; }
 
@@ -140,7 +140,7 @@ class Node3d {
 
   const NodeGridIndex& GetIndex() const { return grid_index_; }
 
-  size_t GetStepSize() const { return path_.point_size; }
+  int GetStepSize() const { return path_.point_size; }
 
   const bool IsRsPath() const;
 
@@ -222,7 +222,7 @@ class Node3d {
   void ResetCost();
 
   // must check NodeGridIndex before use IDTransform.
-  size_t IDTransform(const NodeGridIndex& id);
+  int IDTransform(const NodeGridIndex& id);
 
   void SetIsStartNode(const bool is_start) { is_start_node_ = is_start; }
 
@@ -245,7 +245,7 @@ class Node3d {
 
   const bool IsNodeValid();
 
-  const size_t GetGlobalID() const { return global_id_; }
+  const int GetGlobalID() const { return global_id_; }
 
   const AstarNodeVisitedType GetVisitedType() const;
 
@@ -285,12 +285,12 @@ class Node3d {
 
   int GetGearSwitchNum() const { return gear_switch_num_; }
 
-  void SetCollisionID(const size_t collision_id) {
+  void SetCollisionID(const int collision_id) {
     collision_id_ = collision_id;
     return;
   }
 
-  const size_t GetCollisionID() const { return collision_id_; }
+  const int GetCollisionID() const { return collision_id_; }
 
   void ShrinkPathByCollisionID(const PlannerOpenSpaceConfig& conf);
 
@@ -330,7 +330,7 @@ class Node3d {
   AstarNodeVisitedType visited_type_;
 
   // generate global id by node position
-  size_t global_id_;
+  int global_id_;
 
   // weight: 15
   // [0-0.15], cost: 1000;
@@ -377,7 +377,7 @@ class Node3d {
   // NodeHeuristicCost h_cost_debug_;
 
   NodeCollisionType collision_type_;
-  size_t collision_id_;
+  int collision_id_;
 
   std::multimap<float, Node3d*>::iterator multimap_iter_;
 
