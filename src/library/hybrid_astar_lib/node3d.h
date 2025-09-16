@@ -376,7 +376,7 @@ class Node3d {
 
   // front wheel angle, [-pi, +pi]
   // left is positive
-  float steering_ = 0.0;
+  float steering_ = 0.0f;
   float radius_;
   float kappa_;
   float single_gear_length_ = 0.0f;

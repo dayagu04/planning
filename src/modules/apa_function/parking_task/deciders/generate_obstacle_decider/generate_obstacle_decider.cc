@@ -102,7 +102,7 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
         continue;
       }
 
-      if (true) {
+      if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
         // if obs is in expand car, lose it
         if (!param.believe_in_fus_obs &&
             col_det_interface_ptr_->GetGJKColDetPtr()->IsObsInCar(
@@ -112,7 +112,9 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
       }
 
       // if obs is in del_obs_bound, move it
-      if ((request_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT ||
+      if (pair.second.GetObsScemanticType() !=
+              ApaObsScemanticType::SPECIFICATIONER &&
+          (request_.process_obs_method == ProcessObsMethod::MOVE_OBS_OUT_SLOT ||
            request_.process_obs_method ==
                ProcessObsMethod::MOVE_OBS_OUT_CAR_SAFE_POS) &&
           del_obs_bound.IsPtInRectangleBound(obs)) {
