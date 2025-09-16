@@ -614,10 +614,10 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
     } else {
-      tsr_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      tsr_speed_limit_ = current_link->speed_limit();
       tsr_speed_limit_valid_ = true;
       current_map_speed_limit_valid_ = true;
-      current_map_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      current_map_speed_limit_ = current_link->speed_limit();
     }
   } else {
     tsr_speed_limit_ = 0;
