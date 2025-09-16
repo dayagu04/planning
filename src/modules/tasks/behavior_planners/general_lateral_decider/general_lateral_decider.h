@@ -180,7 +180,7 @@ class GeneralLateralDecider : public Task {
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
-                                BoundHierarchy bound_hierarchy = BoundHierarchy::FIRST_SOFT_BOUND,
+                                BoundHierarchy bound_hierarchy = BoundHierarchy::SECOND_SOFT_BOUND,
                                 bool is_avoid_side_ignore_obj = false,
                                 bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
