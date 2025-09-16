@@ -121,9 +121,8 @@ class GeneralLateralDecider : public Task {
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
-      GeneralLateralDeciderOutput &general_lateral_decider_output);
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
   void GenerateObstaclePreliminaryDecision(
       double ego_l, double distance_to_right_lane_border,
@@ -144,6 +143,8 @@ class GeneralLateralDecider : public Task {
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,

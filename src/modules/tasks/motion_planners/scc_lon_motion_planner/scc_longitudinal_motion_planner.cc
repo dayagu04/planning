@@ -81,6 +81,7 @@ bool SccLongitudinalMotionPlanner::Execute() {
   LOG_DEBUG("update time:%f\n", calculate_time - start_time);
 
   // record input and output
+#ifdef ENABLE_PROTO_LOG
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_longitudinal_motion_planning_input()
@@ -90,6 +91,7 @@ bool SccLongitudinalMotionPlanner::Execute() {
       .GetDebugInfoPb()
       ->mutable_longitudinal_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
+#endif
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("SccLonMotionCostTime", end_time - start_time);

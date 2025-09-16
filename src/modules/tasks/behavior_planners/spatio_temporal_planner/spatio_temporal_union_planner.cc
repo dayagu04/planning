@@ -147,6 +147,7 @@ bool SpatioTemporalPlanner::Execute() {
 void SpatioTemporalPlanner::LogDebugInfo(
     const TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agents_state) {
+#ifdef ENABLE_PROTO_LOG
   auto& lateral_obstacle_decision = session_->mutable_planning_context()
       ->mutable_lateral_obstacle_decider_output().lat_obstacle_decision;
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -251,6 +252,7 @@ void SpatioTemporalPlanner::LogDebugInfo(
       .GetDebugInfoPb()
       ->mutable_spatio_temporal_union_plan()
       ->CopyFrom(spatio_temporal_union_plan_);
+#endif
   return;
 }
 

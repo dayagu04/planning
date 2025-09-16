@@ -1,0 +1,7 @@
+syntax = "proto2";
+
+message SimulationCoreParam {
+  optional double planning_loop_dt = 1;
+  optional double prediction_relative_time = 2;
+  optional double localizatoin_latency = 3;
+}

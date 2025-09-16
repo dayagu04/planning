@@ -74,6 +74,7 @@ void CautionTarget::GenerateCautionTarget() {
 }
 
 void CautionTarget::AddCautionTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_caution_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_caution_target();
@@ -86,6 +87,7 @@ void CautionTarget::AddCautionTargetDataToProto() {
     }
   }
   mutable_caution_target_data->CopyFrom(caution_target_pb_);
+#endif
 }
 
 }  // namespace planning

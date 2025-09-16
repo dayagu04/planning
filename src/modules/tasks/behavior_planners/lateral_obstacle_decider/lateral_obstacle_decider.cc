@@ -1633,6 +1633,7 @@ void LateralObstacleDecider::CheckObstaclesIsReverse() {
 
 void LateralObstacleDecider::HppLog(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+#ifdef ENABLE_PROTO_LOG
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
@@ -1664,10 +1665,12 @@ void LateralObstacleDecider::HppLog(
       }
     }
   }
+#endif
 }
 
 void LateralObstacleDecider::Log(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
+#ifdef ENABLE_PROTO_LOG
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
@@ -1705,6 +1708,7 @@ void LateralObstacleDecider::Log(
     obstacle_log->set_lat_decision(static_cast<uint32_t>(decision));
     // obstacle_log->set_cutin_p(frenet_obstacle.cutinp);
   }
+#endif
 }
 
 bool LateralObstacleDecider::CheckSideObstacle(

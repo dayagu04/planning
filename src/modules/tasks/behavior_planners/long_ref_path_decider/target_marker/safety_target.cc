@@ -321,6 +321,7 @@ double SafetyTarget::CalculateSafetyAcceleration(
 
 
 void SafetyTarget::AddSafetyTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_safety_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_safety_target();
@@ -335,6 +336,7 @@ void SafetyTarget::AddSafetyTargetDataToProto() {
   }
 
   mutable_safety_target_data->CopyFrom(safety_target_pb_);
+#endif
 }
 
 }  // namespace planning

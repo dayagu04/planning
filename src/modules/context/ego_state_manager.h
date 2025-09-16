@@ -203,6 +203,8 @@ class EgoStateManager {
 
   define::Transform car2enu_;
   define::Transform enu2car_;
+
+  double planning_loop_dt_ = 0.1;
 };
 }  // namespace planning
 

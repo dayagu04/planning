@@ -172,6 +172,7 @@ void LongRefPathDecider::SaveToSession() {
 void LongRefPathDecider::SaveToDebugInfo() {
   // 转存纵向决策信息至debuginfo
   // 1.update t_list
+#ifdef ENABLE_PROTO_LOG
   lon_behavior_output_pb_.mutable_t_list()->Reserve(
       lon_behavior_output_.t_list.size());
   for (const auto &t : lon_behavior_output_.t_list) {
@@ -258,6 +259,7 @@ void LongRefPathDecider::SaveToDebugInfo() {
   auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto long_ref_path_pb = debug_info_pb->mutable_long_ref_path();
   long_ref_path_pb->CopyFrom(lon_behavior_output_pb_);
+#endif
 }
 
 void LongRefPathDecider::ClearOutput() {

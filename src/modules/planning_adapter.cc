@@ -529,85 +529,120 @@ void PlanningAdapter::Log() {
   // 1.update all inputs to local_view
   auto input_topic_timestamp =
       planning_debug_data->mutable_input_topic_timestamp();
-  auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
-        input_topic_timestamp->set_prediction(
-      local_view_ptr_->prediction_result.msg_header.stamp);
-  input_topic_latency->set_prediction(get_latency(
-      start_time_, local_view_ptr_->prediction_result.msg_header.stamp));
-input_topic_timestamp->set_fusion_road(
+
+  input_topic_timestamp->set_fusion_road(
       local_view_ptr_->road_info.msg_header.stamp);
-  input_topic_latency->set_fusion_road(
-      get_latency(start_time_, local_view_ptr_->road_info.msg_header.stamp));
+
   input_topic_timestamp->set_localization(
       local_view_ptr_->localization.msg_header
           .stamp);  // 2.10.0 localization adapt
-  input_topic_latency->set_localization(
-      get_latency(start_time_, local_view_ptr_->localization.msg_header.stamp));
-      input_topic_timestamp->set_ground_line(
+
+  input_topic_timestamp->set_ground_line(
       local_view_ptr_->ground_line_perception.msg_header.stamp);
-  input_topic_latency->set_ground_line(get_latency(
-      start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
 
   input_topic_timestamp->set_fusion_object(
       local_view_ptr_->fusion_objects_info.msg_header.stamp);
-  input_topic_latency->set_fusion_object(get_latency(
-      start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
+
   input_topic_timestamp->set_fusion_occupancy_object(
       local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp);
+
+  input_topic_timestamp->set_vehicle_service(
+      local_view_ptr_->vehicle_service_output_info.msg_header.stamp);
+
+  input_topic_timestamp->set_control_output(
+      local_view_ptr_->control_output.msg_header.stamp);
+
+  input_topic_timestamp->set_parking_fusion(
+      local_view_ptr_->parking_fusion_info.msg_header.stamp);
+
+  input_topic_timestamp->set_uss_perception(
+      local_view_ptr_->uss_percept_info.msg_header.stamp);
+
+  input_topic_timestamp->set_function_state_machine(
+      local_view_ptr_->function_state_machine_info.msg_header.stamp);
+
+  input_topic_timestamp->set_uss_wave(
+      local_view_ptr_->uss_wave_info.msg_header.stamp);
+
+  input_topic_timestamp->set_map(
+      local_view_ptr_->static_map_info.header().timestamp());
+
+  input_topic_timestamp->set_sd_map(
+      local_view_ptr_->sd_map_info.header().timestamp());
+
+  input_topic_timestamp->set_sdpro_map(
+      local_view_ptr_->sdpro_map_info.header().timestamp());
+
+  input_topic_timestamp->set_perception_tsr(
+      local_view_ptr_->perception_tsr_info.msg_header.stamp);
+
+  input_topic_timestamp->set_perception_scene(
+      local_view_ptr_->perception_scene_info.msg_header.stamp);
+
+  input_topic_timestamp->set_fusion_speed_bump(
+      local_view_ptr_->fusion_speed_bump_info.msg_header.stamp);
+
+// #ifdef ENABLE_PROTO_LOG
+  auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
+        input_topic_timestamp->set_prediction(
+      local_view_ptr_->prediction_result.msg_header.stamp);
+
+  input_topic_latency->set_prediction(get_latency(
+      start_time_, local_view_ptr_->prediction_result.msg_header.stamp));
+
+  input_topic_latency->set_fusion_road(
+      get_latency(start_time_, local_view_ptr_->road_info.msg_header.stamp));
+
+  input_topic_latency->set_localization(
+      get_latency(start_time_, local_view_ptr_->localization.msg_header.stamp));
+
+  input_topic_latency->set_ground_line(get_latency(
+      start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
+
+  input_topic_latency->set_fusion_object(get_latency(
+      start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
+
   input_topic_latency->set_fusion_occupancy_object(get_latency(
       start_time_,
       local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp));
-  input_topic_timestamp->set_vehicle_service(
-      local_view_ptr_->vehicle_service_output_info.msg_header.stamp);
+
   input_topic_latency->set_vehicle_service(get_latency(
       start_time_,
       local_view_ptr_->vehicle_service_output_info.msg_header.stamp));
-  input_topic_timestamp->set_control_output(
-      local_view_ptr_->control_output.msg_header.stamp);
+
   input_topic_latency->set_control_output(get_latency(
       start_time_, local_view_ptr_->control_output.msg_header.stamp));
-  input_topic_timestamp->set_parking_fusion(
-      local_view_ptr_->parking_fusion_info.msg_header.stamp);
+
   input_topic_latency->set_parking_fusion(get_latency(
       start_time_, local_view_ptr_->parking_fusion_info.msg_header.stamp));
-  input_topic_timestamp->set_uss_perception(
-      local_view_ptr_->uss_percept_info.msg_header.stamp);
+
   input_topic_latency->set_uss_perception(get_latency(
       start_time_, local_view_ptr_->uss_percept_info.msg_header.stamp));
-  input_topic_timestamp->set_function_state_machine(
-      local_view_ptr_->function_state_machine_info.msg_header.stamp);
+
   input_topic_latency->set_function_state_machine(get_latency(
       start_time_,
       local_view_ptr_->function_state_machine_info.msg_header.stamp));
-  input_topic_timestamp->set_uss_wave(
-      local_view_ptr_->uss_wave_info.msg_header.stamp);
-  input_topic_latency->set_uss_wave(
-      get_latency(start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
-  input_topic_timestamp->set_map(
-      local_view_ptr_->static_map_info.header().timestamp());
+
+  input_topic_latency->set_uss_wave(get_latency(start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
+
   input_topic_latency->set_map(get_latency(
       start_time_, local_view_ptr_->static_map_info.header().timestamp()));
-  input_topic_timestamp->set_sd_map(
-      local_view_ptr_->sd_map_info.header().timestamp());
+
   input_topic_latency->set_sd_map(get_latency(
       start_time_, local_view_ptr_->sd_map_info.header().timestamp()));
-  input_topic_timestamp->set_sdpro_map(
-      local_view_ptr_->sdpro_map_info.header().timestamp());
+
   input_topic_latency->set_sdpro_map(get_latency(
       start_time_, local_view_ptr_->sdpro_map_info.header().timestamp()));
-      input_topic_timestamp->set_perception_tsr(
-      local_view_ptr_->perception_tsr_info.msg_header.stamp);
+
   input_topic_latency->set_perception_tsr(get_latency(
       start_time_, local_view_ptr_->perception_tsr_info.msg_header.stamp));
-  input_topic_timestamp->set_perception_scene(
-      local_view_ptr_->perception_scene_info.msg_header.stamp);
+
   input_topic_latency->set_perception_scene(get_latency(
       start_time_, local_view_ptr_->perception_scene_info.msg_header.stamp));
-  input_topic_timestamp->set_fusion_speed_bump(
-      local_view_ptr_->fusion_speed_bump_info.msg_header.stamp);
+
   input_topic_latency->set_fusion_speed_bump(get_latency(
       start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
-
+// #endif
 
   planning_debug_data->mutable_frame_info()->set_version(__version_str__);
   const auto &debug_info_json =

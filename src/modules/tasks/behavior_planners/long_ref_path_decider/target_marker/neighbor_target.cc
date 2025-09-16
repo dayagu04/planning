@@ -157,6 +157,7 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
 }
 
 void NeighborTarget::AddNeighborTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_neighbor_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_neighbor_target();
@@ -171,6 +172,7 @@ void NeighborTarget::AddNeighborTargetDataToProto() {
   } else {
     mutable_neighbor_target_data->Clear();
   }
+#endif
 }
 
 }  // namespace planning

@@ -80,7 +80,7 @@ common::Status TargetMaker::Run() {
       }
     }
 
-                                
+
     // 1. update lower and upper value by follow target and overtake target
     if (follow_target_value.has_target() &&
         follow_target_value.s_target_val() <
@@ -209,6 +209,7 @@ void TargetMaker::RefineStarget() {
 }
 
 void TargetMaker::AddFinalTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_final_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_final_target();
@@ -220,6 +221,7 @@ void TargetMaker::AddFinalTargetDataToProto() {
     }
   }
   mutable_final_target_data->CopyFrom(final_target_pb_);
+#endif
 }
 
 }  // namespace planning

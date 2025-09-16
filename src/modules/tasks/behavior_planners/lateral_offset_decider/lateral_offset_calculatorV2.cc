@@ -1272,6 +1272,7 @@ void LateralOffsetCalculatorV2::ResetOffsetHysteresisMaps() {
 }
 
 void LateralOffsetCalculatorV2::SaveDebugInfo() {
+#ifdef ENABLE_PROTO_LOG
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
@@ -1282,6 +1283,7 @@ void LateralOffsetCalculatorV2::SaveDebugInfo() {
       avoid_info_.allow_front_max_opposite_offset);
   lateral_offset_decider_info->set_allow_max_opposite_offset_id(
       avoid_info_.allow_front_max_opposite_offset_id);
+#endif
 
   if (flane_ != nullptr) {
     JSON_DEBUG_VALUE("lane_width", flane_->width());

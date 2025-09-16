@@ -411,6 +411,7 @@ double CrossVRUTarget::CalculateVRUDeceleration(
 }
 
 void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_cross_vru_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_cross_vru_target();
@@ -432,6 +433,7 @@ void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
       is_pre_handle_cross_vru_;
 
   mutable_cross_vru_target_data->CopyFrom(cross_vru_target_pb_);
+#endif
 }
 
-}  
+}

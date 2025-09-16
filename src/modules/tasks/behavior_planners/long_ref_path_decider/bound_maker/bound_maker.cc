@@ -439,7 +439,7 @@ void BoundMaker::MakeSafetyBound() {
 
     double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
     double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
-    
+
     double s_safety = 0.0;
     if (s_current > s_comfort) {
       s_safety = s_0 + tau * v_ego;
@@ -770,6 +770,7 @@ void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
 void BoundMaker::AddMaxDecelCurveDataToProto(
     const SecondOrderTimeOptimalTrajectory& max_deceleration_curve) {
   // store max decel s curve in proto
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_max_decel_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
@@ -781,6 +782,7 @@ void BoundMaker::AddMaxDecelCurveDataToProto(
     ptr->set_t(t);
   }
   mutable_max_decel_target_data->CopyFrom(max_decel_target_pb_);
+#endif
 }
 
 double BoundMaker::s_lower_bound(const double t) const {

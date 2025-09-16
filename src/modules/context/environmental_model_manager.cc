@@ -822,11 +822,16 @@ void EnvironmentalModelManager::truncate_prediction_info(
                  << " init_relative_time " << init_relative_time;
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
-    JSON_DEBUG_VALUE("prediction_relative_time", prediction_relative_time);
+
 #ifdef X86
     cur_predicion_obj.delay_time =
         SimulationContext::Instance()->prediction_relative_time();
 #endif
+
+    auto &debug_info_manager = DebugInfoManager::GetInstance();
+    auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    planning_debug_data->mutable_simulation_core_param()->set_prediction_relative_time(cur_predicion_obj.delay_time);
+
     if (prediction_object.obstacle_intent.type ==
         iflyauto::OBSTACLE_INTENT_COMMON) {
       cur_predicion_obj.intention = ObstacleIntentType::COMMON;

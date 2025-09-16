@@ -886,6 +886,7 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
 
 void LateralMotionPlanner::SaveDebugInfo() {
   // record input and output
+#ifdef ENABLE_PROTO_LOG
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_input()
@@ -894,5 +895,6 @@ void LateralMotionPlanner::SaveDebugInfo() {
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
+#endif
 }
 }  // namespace planning

@@ -581,6 +581,7 @@ void VirtualLaneManager::construct_reference_line_msg(
 }
 void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
     const iflyauto::LaneReferenceLine& refline) {
+#ifdef ENABLE_PROTO_LOG
   planning::common::ReferenceLine refline_to_debug;
   for (int i = 0; i < FUSION_ROAD_LINE_POLYNOMIAL_NUM; i++) {
     refline_to_debug.add_poly_coefficient_car(refline.poly_coefficient_car[i]);
@@ -645,6 +646,7 @@ void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
   }
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   debug_info_pb->add_generated_refline_info()->CopyFrom(refline_to_debug);
+#endif
 }
 
 // for rads only
@@ -836,12 +838,15 @@ bool VirtualLaneManager::update(
   UpdateIntersectionState();
 
   ILOG_DEBUG << "input lane:";
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->set_currrent_lane_vitual_id(
       current_lane_virtual_id_);
+  #endif
+
   ILOG_DEBUG << "current lane virtual id:" << current_lane_virtual_id_;
   for (const auto& lane : relative_id_lanes_) {
     ILOG_DEBUG << "relative id:" << lane->get_relative_id() << ", virtual id:" << lane->get_virtual_id();
