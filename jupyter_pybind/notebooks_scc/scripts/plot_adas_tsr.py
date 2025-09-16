@@ -12,7 +12,7 @@ sys.path.append('../../../')
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
 # bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50815/trigger/20250812/20250812-13-34-29/data_collection_CHERY_M32T_50815_EVENT_DOWNGRADE_2025-08-12-13-34-29_no_camera.bag.1755071599.open-loop.noa.plan"
 # bag_path = "/data_cold/abu_zone/user/thzhang5/data_collection_CHERY_M32T_74566_EVENT_FUNEXIT_2025-08-22-16-37-00_no_camera.bag" # 超速不报警
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82005/fcw_trigger/20250829/20250829-21-37-40/fcw_in_data_collection_CHERY_M32T_82005_EVENT_FILTER_2025-08-29-21-37-40_no_camera.bag.1756718480.open-loop.scc.plan" # 显示5
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250913/20250913-18-55-52/data_collection_CHERY_M32T_74563_EVENT_FUNEXIT_2025-09-13-18-55-52_no_camera.bag.1758024992.open-loop.noa.plan" # 显示5
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -64,7 +64,7 @@ counter = 0
 tsr_json_value_list = [
                          #tsr debug info
                          "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_", "current_map_speed_limit_", "current_map_speed_limit_valid_", "speed_limit_suppression_flag_",
-                         "end_of_speed_sign_display_flag_", "tsr_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
+                         "end_of_speed_sign_display_flag_", "perception_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
                          "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_",
                          "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_",
                         ]
@@ -211,7 +211,7 @@ fig_display_info.line('time', 'tsr_warning_image_', source = tsr_json_list_dict,
 fig_display_info.line('time', 'tsr_warning_voice_', source = tsr_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'warning_voice')
 
 # 动态状态
-f_dynamic_state = fig_dynamic_state.line('time', 'tsr_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'tsr_speed_limit_valid')
+f_dynamic_state = fig_dynamic_state.line('time', 'perception_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'tsr_speed_limit_valid')
 fig_dynamic_state.line('time', 'current_map_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'current_map_speed_limit_valid')
 fig_dynamic_state.line('time', 'speed_limit_suppression_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'yellow', line_dash = 'solid', legend_label = 'speed_limit_suppression_flag')
 fig_dynamic_state.line('time', 'end_of_speed_sign_display_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'pink', line_dash = 'solid', legend_label = 'end_of_speed_sign_display_flag')
@@ -229,7 +229,7 @@ hover_speed_info_tsr = HoverTool(renderers=[f_tsr_speed_limit, f_map_speed_limit
 hover_display_info = HoverTool(renderers=[f_display_info], tooltips=[('time', '@time'), ('tsr_output_supp_sign_info_', '@tsr_output_supp_sign_info_'),
                                                                      ('tsr_overspeed_status_', '@tsr_overspeed_status_'), ('tsr_warning_image_', '@tsr_warning_image_'),
                                                                      ('tsr_warning_voice_', '@tsr_warning_voice_')], mode='vline')
-hover_dynamic_state = HoverTool(renderers=[f_dynamic_state], tooltips=[('time', '@time'), ('tsr_speed_limit_valid_', '@tsr_speed_limit_valid_'), ('current_map_speed_limit_valid_', '@current_map_speed_limit_valid_'),
+hover_dynamic_state = HoverTool(renderers=[f_dynamic_state], tooltips=[('time', '@time'), ('perception_speed_limit_valid_', '@perception_speed_limit_valid_'), ('current_map_speed_limit_valid_', '@current_map_speed_limit_valid_'),
                                                                      ('speed_limit_suppression_flag_', '@speed_limit_suppression_flag_'), ('end_of_speed_sign_display_flag_', '@end_of_speed_sign_display_flag_'),
                                                                      ('supp_sign_in_suppression_flag_', '@supp_sign_in_suppression_flag_'), ('tsr_speed_limit_exist_in_view_flag_', '@tsr_speed_limit_exist_in_view_flag_'),
                                                                      ('tsr_speed_limit_change_flag_', '@tsr_speed_limit_change_flag_')], mode='vline')
