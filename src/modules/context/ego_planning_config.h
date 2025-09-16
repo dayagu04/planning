@@ -2020,6 +2020,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, extra_dynamic_nudge_buffer2first_bound,
                      "general_lateral_decider",
                      "extra_dynamic_nudge_buffer2first_bound");
+    ReadItem<bool>(json, use_first_soft_bound,
+                     "general_lateral_decider",
+                     "use_first_soft_bound");
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -2037,8 +2040,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double kVirtualLaneBoundWeight = 1;
   double kHardBoundWeight = -1.;
   double dynamic_bound_slack_coefficient = 1.;
-  double kSecondSoftBoundWeight = -10;
-  double kFirstSoftBoundWeight = 10;
+  double kFirstSoftBoundWeight = 5;
+  double kSecondSoftBoundWeight = 10;
 
   double soft_buffer2lane = 0.0;
   double extra_soft_buffer2road = 0.0;
@@ -2140,6 +2143,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double limit_nudge_change_rate = 0.1;
   double extra_static_nudge_buffer2first_bound = 0.0;
   double extra_dynamic_nudge_buffer2first_bound = 0.0;
+  bool use_first_soft_bound = false;
+
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -2431,6 +2436,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_acc_bound, "lat_motion_ilqr", "q_acc_bound");
     ReadItem<double>(json, q_jerk_bound, "lat_motion_ilqr", "q_jerk_bound");
     ReadItem<double>(json, first_qsoft_bound_ratio, "lat_motion_ilqr", "first_qsoft_bound_ratio");
+    ReadItem<double>(json, second_qsoft_bound_ratio, "lat_motion_ilqr", "second_qsoft_bound_ratio");
     read_json_vec<double>(
         json, std::vector<std::string>{"lat_motion_ilqr", "map_qsoft_bound"},
         map_qsoft_bound, map_qsoft_bound);
@@ -2658,6 +2664,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_bound = 500000.0;
 
   double first_qsoft_bound_ratio = 1.0;
+  double second_qsoft_bound_ratio = 1.0;
   std::vector<double> map_qsoft_bound{200, 500, 1500.0, 3000.0, 4000.0, 5000.0};
   std::vector<double> map_qhard_bound{500,    1000,   3000.0,
                                       5000.0, 6000.0, 7000.0};

@@ -159,7 +159,6 @@ bool GeneralLateralDecider::Execute() {
 
   CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
 
-
   LimitFrenetLateralSlope(first_frenet_soft_bounds_);
   LimitFrenetLateralSlope(frenet_soft_bounds_);
   LimitFrenetLateralSlope(frenet_hard_bounds_);
@@ -168,8 +167,18 @@ bool GeneralLateralDecider::Execute() {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(first_frenet_soft_bounds_,
-                                      general_lateral_decider_output);
+
+  if (config_.use_first_soft_bound) {
+    CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
+
+    PostProcessReferenceTrajBySoftBound(first_frenet_soft_bounds_,
+                                        general_lateral_decider_output);
+  } else {
+    CalculateAvoidObstacles(frenet_soft_bounds_, soft_bounds_info_);
+
+    PostProcessReferenceTrajBySoftBound(frenet_soft_bounds_,
+                                        general_lateral_decider_output);
+  }
 
   GenerateLateralDeciderOutput(frenet_soft_bounds_, first_frenet_soft_bounds_,
                                frenet_hard_bounds_, soft_bounds_info_,
@@ -2010,7 +2019,6 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
 
   // 如果当前帧的边界为空，清空上一帧的边界
   // if (first_soft_bounds_.empty()) {
-  //   last_first_soft_bounds_.clear();
   //   return;
   // }
 
@@ -2019,6 +2027,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     return;
   }
 
+  const double l_offset_limit = 10.0;
+  constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
     const auto& current_bounds = first_soft_bounds_[i];
@@ -2042,48 +2052,49 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
                    last_bound.bound_info.type == current_bound.bound_info.type;
           });
 
+      WeightedBound smoothed_bound = current_bound;
       if (last_bound_it != last_bounds.end()) {
         if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER) {
           // 道路边缘bound不处理
           continue;
         }
-        // 找到对应的上一帧边界，进行滞回处理
-        const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
-        const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
-        WeightedBound smoothed_bound = current_bound;
-
-        // 对lower边界进行滞回处理
-        double lower_diff = current_bound.lower - last_bound_it->lower;
-        if (lower_diff > 0) {
-          // 避让值变大
-          if (lower_diff > hysteresis_threshold_up) {
-            smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
+        // 当前后帧障碍物避让方向相反时，清空历史避让值和方向，采用当前帧的避让
+        if ((std::fabs(current_bound.lower + l_offset_limit) < kEps &&
+             std::fabs(last_bound_it->lower + l_offset_limit) < kEps) ||
+             (std::fabs(current_bound.upper - l_offset_limit) < kEps &&
+             std::fabs(last_bound_it->upper - l_offset_limit) < kEps)) {
+          // 找到对应的上一帧边界，进行滞回处理
+          const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
+          const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
+          // 对lower边界进行滞回处理
+          double lower_diff = current_bound.lower - last_bound_it->lower;
+          if (lower_diff > 0) {
+            // 避让值变大
+            if (lower_diff > hysteresis_threshold_up) {
+              smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
+            }
+          } else {
+            // 避让值变小
+            if (std::abs(lower_diff) > hysteresis_threshold_down) {
+              smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+            }
           }
-        } else {
-          // 避让值变小
-          if (std::abs(lower_diff) > hysteresis_threshold_down) {
-            smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+          // 对upper边界进行滞回处理
+          double upper_diff = current_bound.upper - last_bound_it->upper;
+          if (upper_diff > 0) {
+            // 避让值变小
+            if (upper_diff > hysteresis_threshold_up) {
+              smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
+            }
+          } else {
+            // 避让值变大
+            if (std::abs(upper_diff) > hysteresis_threshold_down) {
+              smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
+            }
           }
         }
-
-        // 对upper边界进行滞回处理
-        double upper_diff = current_bound.upper - last_bound_it->upper;
-        if (upper_diff > 0) {
-          // 避让值变小
-          if (upper_diff > hysteresis_threshold_up) {
-            smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
-          }
-        } else {
-          // 避让值变大
-          if (std::abs(upper_diff) > hysteresis_threshold_down) {
-            smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
-          }
-        }
-        smoothed_bounds.push_back(smoothed_bound);
-      } else {
-        // 没有找到对应的上一帧边界，直接使用当前边界
-        smoothed_bounds.push_back(current_bound);
       }
+      smoothed_bounds.push_back(smoothed_bound);
     }
     first_soft_bounds_[i] = std::move(smoothed_bounds);
   }
@@ -3814,12 +3825,12 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
   } else if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
     position_decision.lat_bounds.push_back(WeightedBound{
         bound.lower, bound.upper,
-        config_.kFirstSoftBoundWeight,
+        config_.kSecondSoftBoundWeight,
         bound_info});
   } else {
     position_decision.lat_bounds.push_back(WeightedBound{
         bound.lower, bound.upper,
-        config_.kSecondSoftBoundWeight,
+        config_.kFirstSoftBoundWeight,
         bound_info});
   }
 
@@ -4029,7 +4040,7 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
   if (plan_history_traj_.size() <= 0 || ref_traj_points_.size() <= 0) {
     return;
   }
-  double eps = 0.1;
+  constexpr double kEps = 1e-4;
   for (auto &obstacle_position_decision :
        obstacle_decision.position_decisions) {
     for (size_t i = 0; i < plan_history_traj_.size(); i++) {
@@ -4037,11 +4048,11 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
           1e-2) {
         auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
         for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < eps) {
+          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < kEps) {
             for (auto index : match_index_map_[i]) {
               hard_bounds_[index].emplace_back(obstacle_pos_bound);
             }
-          } else if (std::fabs(obstacle_pos_bound.weight - config_.kFirstSoftBoundWeight) < eps) {
+          } else if (std::fabs(obstacle_pos_bound.weight - config_.kSecondSoftBoundWeight) < kEps) {
             for (auto index : match_index_map_[i]) {
               second_soft_bounds_[index].emplace_back(obstacle_pos_bound);
             }
@@ -4061,7 +4072,7 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
   if (ref_traj_points_.size() <= 0) {
     return;
   }
-  double eps = 0.1;
+  constexpr double kEps = 1e-4;
   for (auto &obstacle_position_decision :
        obstacle_decision.position_decisions) {
     for (size_t i = 0; i < ref_traj_points_.size(); i++) {
@@ -4069,9 +4080,9 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
           1e-2) {
         auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
         for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < eps) {
+          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < kEps) {
             hard_bounds_[i].emplace_back(obstacle_pos_bound);
-          } else if (std::fabs(obstacle_pos_bound.weight - config_.kFirstSoftBoundWeight) < eps) {
+          } else if (std::fabs(obstacle_pos_bound.weight - config_.kSecondSoftBoundWeight) < kEps) {
             second_soft_bounds_[i].emplace_back(obstacle_pos_bound);
           } else {
             first_soft_bounds_[i].emplace_back(obstacle_pos_bound);
