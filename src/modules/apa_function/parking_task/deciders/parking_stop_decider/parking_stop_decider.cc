@@ -20,7 +20,7 @@
 namespace planning {
 namespace apa_planner {
 
-#define DECIDER_DEBUG (1)
+#define DECIDER_DEBUG (0)
 
 void ParkingStopDecider::Execute(
     const SVPoint& init_point,
@@ -98,7 +98,7 @@ void ParkingStopDecider::RecordDebugInfo(
     speed_debug->add_stop_signs()->CopyFrom(stop_sign);
   }
 
-  ILOG_INFO << "stop sign size = " << speed_debug->stop_signs_size();
+  // ILOG_INFO << "stop sign size = " << speed_debug->stop_signs_size();
 
   return;
 }

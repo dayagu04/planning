@@ -764,14 +764,14 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
         Eigen::Vector2f(request_->slot_length + (float)vehicle_param.length,
                         request_->slot_width / 2));
   } else {
-    slot_box_ = cdl::AABB2f(
-        Eigen::Vector2f(0.0f, -request_->slot_width / 2),
-        Eigen::Vector2f(request_->slot_length + 1.5, request_->slot_width / 2));
+    slot_box_ = cdl::AABB2f(Eigen::Vector2f(0.0f, -request_->slot_width / 2),
+                            Eigen::Vector2f(request_->slot_length + 2.5f,
+                                            request_->slot_width / 2));
   }
 
   // gear d
   float safe_half_width =
-      (vehicle_param.max_width + lat_buffer_outside * 2 + 0.1) * 0.5;
+      (vehicle_param.max_width + lat_buffer_outside * 2) * 0.5f;
 
   GetRightUpCoordinatePolygonByParam(
       &veh_box_gear_drive_,

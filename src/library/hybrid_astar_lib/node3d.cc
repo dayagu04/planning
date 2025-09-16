@@ -28,6 +28,7 @@ Node3d::Node3d(const float x, const float y, const float phi) {
   global_id_ = 0;
   dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
+  s_curve_num_ = 0;
   gear_switch_node_ = nullptr;
 }
 
@@ -57,6 +58,7 @@ Node3d::Node3d(float x, float y, float phi, const MapBound& XYbounds,
   global_id_ = 0;
   dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
+  s_curve_num_ = 0;
   gear_switch_node_ = nullptr;
 }
 
@@ -81,6 +83,7 @@ Node3d::Node3d(const NodePath& path, const MapBound& XYbounds,
   global_id_ = 0;
   dist_to_obs_ = 26.8f;
   gear_switch_num_ = 0;
+  s_curve_num_ = 0;
   gear_switch_node_ = nullptr;
 
 #if DEBUG_NODE3D
@@ -122,6 +125,7 @@ void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
 
   collision_type_ = NodeCollisionType::NONE;
   gear_switch_num_ = 0;
+  s_curve_num_ = 0;
   gear_switch_node_ = nullptr;
 
   radius_ = 100000.0f;
@@ -221,7 +225,9 @@ void Node3d::DebugString() const {
             << "), collision_type " << static_cast<int>(collision_type_)
             << ", dist to start " << dist_to_start_ << ", id " << global_id_
             << " , size " << path_.point_size << " ,safe dist " << dist_to_obs_
-            << ", gear switch num: " << gear_switch_num_;
+            << ", gear switch num: " << gear_switch_num_ << ", s curve num "
+            << s_curve_num_ << ", path type "
+            << GetNodeCurveDebugString(path_type_);
 
   if (gear_switch_node_ != nullptr) {
     ILOG_INFO << "gear switch node dist to start = "
@@ -397,12 +403,72 @@ float Node3d::DistToPose(const Pose2f& pose) {
 }
 
 const bool Node3d::IsSteerOpposite(const float next) const {
-  if (steering_ > 0.01 && next < -0.01) {
+  if (steering_ > 0.01f && next < -0.01f) {
     return true;
   }
 
-  if (steering_ < -0.01 && next > 0.01) {
+  if (steering_ < -0.01f && next > 0.01f) {
     return true;
+  }
+
+  return false;
+}
+
+const bool Node3d::IsSteerOppositeWithParent() const {
+  if (pre_node_ == nullptr) {
+    return false;
+  }
+
+  return IsSteerOpposite(pre_node_->GetSteer());
+}
+
+const bool Node3d::IsScurveWithParent() const {
+  if (pre_node_ == nullptr) {
+    return false;
+  }
+
+  if (IsPathGearChange(pre_node_->GetGearType())) {
+    return false;
+  }
+
+  return IsSteerOppositeWithParent();
+}
+
+const bool Node3d::IsScurve(const AstarPathGear type,
+                            const float steer) const {
+  if (IsPathGearChange(type)) {
+    return false;
+  }
+
+  // define s curve:
+  // left to right, is s curve;
+  // straight to left, is not s curve;
+  // straight to right, is not s curve;
+  // left to straight, is not s curve;
+  // right to straight, is not s curve;
+  return IsSteerOpposite(steer);
+}
+
+const bool Node3d::IsSameSteerDir(const float next) const {
+  // left turn, left turn is same turn direction
+  if (steering_ > 0.01f && next > 0.01f) {
+    return true;
+  }
+
+  if (steering_ < -0.01f && next < -0.01f) {
+    return true;
+  }
+
+  if (std::fabs(steering_ - next) < 0.01f) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool Node3d::IsReturnPath(const bool is_gear_switch, const float steer) {
+  if (is_gear_switch) {
+    return IsSameSteerDir(steer);
   }
 
   return false;

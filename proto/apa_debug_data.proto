@@ -110,7 +110,8 @@ message ControlBasedPredictTraj {
 
 message SearchTimeForPath {
   repeated double search_time = 1;
-  optional double total_search_time = 4;
+  repeated int32 node_pool_size = 2;
+  optional double total_search_time = 3;
 }
 
 message PathTimeBenchmark {
@@ -122,6 +123,5 @@ message ApaPathDebug {
   optional ObstacleListDebug obs_list = 2;
   optional ControlBasedPredictTraj predict_traj = 3;
   optional PathTimeBenchmark path_time = 4;
-  optional double path_search_time = 5;
   optional HistoryApaStatus history_apa_status = 6;
 }

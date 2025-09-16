@@ -17,6 +17,7 @@
 #include "log_glog.h"
 #include "planning_debug_info.pb.h"
 #include "version.h"
+#include "time_benchmark.h"
 
 namespace planning {
 
@@ -455,7 +456,8 @@ bool PlanningAdapter::Proc() {
   }
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
-  ILOG_DEBUG << "The cost time of proc() is:  " << planning_cost_time << " ms";
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
+                                    planning_cost_time);
   return true;
 }
 

@@ -259,7 +259,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   DebugAstarRequestString(request_);
 
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = target_pose_regulator.GetCandidatePose(lat_buffer);
+  target_regulator_result = target_pose_regulator.GetCandidatePose();
 
   // todo : head out no need target_pose_regulator;
   if (request_.direction_request == ParkingVehDirection::TAIL_IN ||
@@ -720,7 +720,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // judge target regulator goal if collide
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = regulator.GetCandidatePose(0.15);
+  target_regulator_result = regulator.GetCandidatePose(0.15f);
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
@@ -768,6 +768,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
         ExtendPathToRealParkSpacePoint(&traj_candidates_[i],
                                        request_.real_goal);
         time_benchmark_.time_ms[i] = traj_candidates_[i].time_ms;
+        time_benchmark_.node_pool_size[i] = hybrid_astar_->NodePoolSize();
         time_benchmark_.size++;
         break;
       }
@@ -790,6 +791,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     // check time
     search_time += traj_candidates_[i].time_ms;
     time_benchmark_.time_ms[i] = traj_candidates_[i].time_ms;
+    time_benchmark_.node_pool_size[i] = hybrid_astar_->NodePoolSize();
     time_benchmark_.size++;
     if (search_time > config_.max_search_time_ms) {
       ILOG_INFO << "time out";
@@ -843,8 +845,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
       float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
       std::pair<Pose2f, float> target_regulator_result;
-      target_regulator_result =
-          target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
+      target_regulator_result = target_pose_regulator.GetCandidatePose();
       if (target_regulator_result.second < advised_lat_buffer_inside) {
         ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
         ILOG_INFO << "target_regulator_goal_ will collide";
@@ -867,8 +868,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
 
   } else {
     std::pair<Pose2f, float> target_regulator_result;
-    target_regulator_result =
-        regulator.GetCandidatePose(advised_lat_buffer_inside);
+    target_regulator_result = regulator.GetCandidatePose(0.15f);
     if (target_regulator_result.second < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
       ILOG_INFO << "target_regulator_goal_ will collide";
@@ -885,6 +885,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
     best_traj_ = &traj_candidates_[0];
     gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
     time_benchmark_.time_ms[0] = best_traj_->time_ms;
+    time_benchmark_.node_pool_size[0] = hybrid_astar_->NodePoolSize();
     time_benchmark_.size = 1;
   }
 

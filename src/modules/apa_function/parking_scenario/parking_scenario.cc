@@ -138,11 +138,7 @@ void ParkingScenario::UpdateStuckTime() {
     frame_.stuck_dynamic_obs_time = 0.0;
   }
 
-  if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    frame_.replan_fail_time += apa_param.GetParam().plan_time;
-  } else {
-    frame_.replan_fail_time = 0.0;
-  }
+  UpdatePlanFailTime();
 
   return;
 }
@@ -1167,19 +1163,7 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
     return false;
   }
 
-  // TODO: If the obs is static, check it could be movable, such as
-  // traffic_cone, water_safety_barrier, static bicycle, static vehicle.
-  ObjectDetectObsConfig od_config;
-  od_config.use_dynamic_obs = false;
-  od_config.use_specificationer = false;
-  od_config.use_movable_static_obs = true;
-  auto obs_manager = apa_world_ptr_->GetObstacleManagerPtr();
-  obs_manager->GenerateObsByOD(apa_world_ptr_->GetLocalViewPtr(), od_config);
-
-  PathSafeChecker checker(obs_manager);
-  if (checker.IsCollisionByStaticMavableOD(
-          apa_world_ptr_->GetMeasureDataManagerPtr()->GetPose(), 0.06, 0.3,
-          current_path_point_global_vec_)) {
+  if (frame_.remain_dist_obs < 0.5) {
     return true;
   }
 
@@ -1210,6 +1194,16 @@ void ParkingScenario::SetFeasibleDirectionFlag() {
   generator.SetReleaseDirectionFlag(apa_hmi_, VerticalHeadIn);
   generator.SetReleaseDirectionFlag(apa_hmi_, VerticalTailIn);
   generator.SetReleaseDirectionFlag(apa_hmi_, ParityBit);
+}
+
+void ParkingScenario::UpdatePlanFailTime() {
+  if (frame_.pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    frame_.replan_fail_time += apa_param.GetParam().plan_time;
+  } else if (frame_.pathplan_result == PathPlannerResult::PLAN_UPDATE) {
+    frame_.replan_fail_time = 0.0;
+  }
+
+  return;
 }
 
 }  // namespace apa_planner
