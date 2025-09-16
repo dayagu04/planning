@@ -742,7 +742,6 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
   const float target_x = apa_world_ptr_->GetSlotManagerPtr()
                              ->GetEgoInfoUnderSlot()
                              .target_pose.pos.x();
-  const float first_x_error = fabs(target_x - first_seg_path[0].x);
   pnc::geometry_lib::PathPoint point;
 
   for (size_t i = 0; i < first_seg_path.size(); ++i) {
@@ -754,12 +753,10 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
 
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
       const float heading_error = fabs(target_heading_rad - point.heading);
-      if (heading_error >= kHeadingDiffThresh ||
-          first_x_error >= kFristXDiffThresh) {
+      if (heading_error >= kHeadingDiffThresh) {
         local_path.emplace_back(point);
       } else {
         ILOG_INFO << "heading_error = " << heading_error
-                  << ", first_x_error = " << first_x_error
                   << ", target_heading_rad = " << target_heading_rad
                   << ", point.heading = " << point.heading;
         break;
@@ -2617,45 +2614,23 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       ego_info.target_pose.pos = target_pos_head_left;
       ego_info.target_pose.heading = target_heading_rad_head_out;
       ego_info.target_pose.heading_vec = direction_origin_corner_23_normalized_;
-
-      // 特殊位置要对目标点进行特殊调整
-      if (ego_info.cur_pose.pos.x() < kInitialTargetX &&
-          std::abs(ego_info.cur_pose.heading) > kHeadingThresholdRad0) {
-        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY;
-      }
       break;
     case ApaParkOutDirection::RIGHT_FRONT:
       ego_info.target_pose.pos = target_pos_head_right;
       ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
       ego_info.target_pose.heading_vec =
           -direction_origin_corner_23_normalized_;
-
-      // 特殊位置要对目标点进行特殊调整
-      if (ego_info.cur_pose.pos.x() < kInitialTargetX &&
-          std::abs(ego_info.cur_pose.heading) > kHeadingThresholdRad0) {
-        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY;
-      }
       break;
     case ApaParkOutDirection::LEFT_REAR:
       ego_info.target_pose.pos << target_pos_tail_left;
       ego_info.target_pose.heading = opposite_target_heading_rad_head_out;
       ego_info.target_pose.heading_vec =
           -direction_origin_corner_23_normalized_;
-
-      // 特殊位置要对目标点进行特殊调整
-      if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
-        ego_info.target_pose.pos << kAlternateTargetX, -kAlternateTargetY + 2.0;
-      }
       break;
     case ApaParkOutDirection::RIGHT_REAR:
       ego_info.target_pose.pos << target_pos_tail_right;
       ego_info.target_pose.heading = target_heading_rad_head_out;
       ego_info.target_pose.heading_vec = direction_origin_corner_23_normalized_;
-
-      // 特殊位置要对目标点进行特殊调整
-      if (std::abs(ego_info.cur_pose.heading) < kHeadingThresholdRad1) {
-        ego_info.target_pose.pos << kAlternateTargetX, kAlternateTargetY - 2.0;
-      }
       break;
     case ApaParkOutDirection::REAR:
       ego_info.target_pose.pos << kInitialTargetX + 0.5, 0.0;
