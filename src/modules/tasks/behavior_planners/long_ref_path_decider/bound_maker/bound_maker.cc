@@ -191,8 +191,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
-    jerk_lower_bound_ =
-        std::vector<double>(plan_points_num_, kJerkMaxLowerBound);
+    acc_lower_bound_ =
+        std::vector<double>(plan_points_num_, kAccMaxLowerBound);
   }
 }
 
