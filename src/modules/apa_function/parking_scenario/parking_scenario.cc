@@ -124,7 +124,7 @@ void ParkingScenario::UpdateStuckTime() {
   if (auto_static && !path_update_success) {
     if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
       // obs here
-      if (frame_.stuck_by_dynamic_obs || frame_.stuck_dynamic_obs_time > 1e-3) {
+      if (frame_.stuck_by_dynamic_obs) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;

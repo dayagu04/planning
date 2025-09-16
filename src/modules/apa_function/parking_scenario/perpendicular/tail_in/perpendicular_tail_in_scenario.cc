@@ -2536,7 +2536,8 @@ const bool PerpendicularTailInScenario::CheckDynamicUpdate() {
 
   const bool remain_dist_case =
       frame_.remain_dist_path >
-      param.gear_switch_config.dist_thresh_for_gear_switch_point;
+          param.gear_switch_config.dist_thresh_for_gear_switch_point &&
+      frame_.remain_dist_obs > 2.5 * param.min_drive_dist;
 
   const bool dynamic_update_flag = gear_case && car_motion_case &&
                                    slot_confidence_case && car_pos_case &&
