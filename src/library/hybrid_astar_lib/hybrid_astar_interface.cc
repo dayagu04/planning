@@ -833,49 +833,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   std::fill(feasible_directions_.begin(), feasible_directions_.end(), false);
 
   if (request_.direction_request_size > 1) {
-    for (int8_t i = 0; i < request_.direction_request_size; i++) {
-      ILOG_INFO << "***************** [ " << static_cast<int>(i)
-                << " ] try, dir :  "
-                << static_cast<int>(request_.direction_request_stack[i])
-                << " ****************";
-      TargetPoseRegulator target_pose_regulator;
-      target_pose_regulator.Process(&edt_, &request_, ego_state_,
-                                    request_.real_goal_stack[i], vehicle_param_,
-                                    request_.direction_request_stack[i]);
-      float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
-
-      std::pair<Pose2f, float> target_regulator_result;
-      target_regulator_result = target_pose_regulator.GetCandidatePose();
-      if (target_regulator_result.second < advised_lat_buffer_inside) {
-        ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-        ILOG_INFO << "target_regulator_goal_ will collide";
-        continue;
-      }
-
-      if (fabs(target_regulator_result.first.GetY()) < 1.0 &&
-          request_.space_type == ParkSpaceType::VERTICAL) {
-        ILOG_INFO << "target_regulator_goal_ = "
-                  << target_regulator_result.first.GetX() << ", "
-                  << target_regulator_result.first.GetY();
-        ILOG_INFO << "insufficient space on both sides";
-        continue;
-      }
-
-      target_regulator_goal_ = target_regulator_result.first;
-
-      hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(),
-                                 map_bounds_, &traj_candidates_[0]);
-      if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
-        feasible_directions_[i] = true;
-      }
-
-      // if (request_.direction_request == request_.direction_request_stack[i])
-      // {
-      //   best_traj_ = &traj_candidates_[0];
-      //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
-      // }
-    }
-
+    ParkingDirectionAttempt(advised_lat_buffer_inside);
   } else {
     std::pair<Pose2f, float> target_regulator_result;
     target_regulator_result = regulator.GetCandidatePose(0.15f);
@@ -1071,6 +1029,61 @@ void HybridAStarInterface::GenerateRefLine() {
                         Pose2f(request_.real_goal.x + 5.0, request_.real_goal.y,
                                request_.real_goal.theta));
       break;
+  }
+}
+
+void HybridAStarInterface::ParkingDirectionAttempt(
+    const float& advised_lat_buffer_inside) {
+  for (int8_t i = 0; i < request_.direction_request_size; i++) {
+    ILOG_INFO << "***************** [ " << static_cast<int>(i)
+              << " ] try, dir :  "
+              << static_cast<int>(request_.direction_request_stack[i])
+              << " ****************";
+    TargetPoseRegulator target_pose_regulator;
+    target_pose_regulator.Process(&edt_, &request_, ego_state_,
+                                  request_.real_goal_stack[i], vehicle_param_,
+                                  request_.direction_request_stack[i]);
+    float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
+
+    std::pair<Pose2f, float> target_regulator_result;
+    target_regulator_result =
+        target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
+    if (target_regulator_result.second < advised_lat_buffer_inside) {
+      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+      ILOG_INFO << "target_regulator_goal_ will collide";
+      continue;
+    }
+    if (request_.direction_request_stack[i] ==
+            ParkingVehDirection::TAIL_OUT_TO_LEFT ||
+        request_.direction_request_stack[i] ==
+            ParkingVehDirection::TAIL_OUT_TO_RIGHT ||
+        request_.direction_request_stack[i] ==
+            ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+        request_.direction_request_stack[i] ==
+            ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
+      if (fabs(target_regulator_result.first.GetY()) < 1.0 &&
+          request_.space_type == ParkSpaceType::VERTICAL) {
+        ILOG_INFO << "target_regulator_goal_ = "
+                  << target_regulator_result.first.GetX() << ", "
+                  << target_regulator_result.first.GetY();
+        ILOG_INFO << "insufficient space on both sides";
+        continue;
+      }
+    }
+
+    target_regulator_goal_ = target_regulator_result.first;
+
+    hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
+                               &traj_candidates_[0]);
+    if (traj_candidates_[0].x.size() > 5 && i < feasible_directions_.size()) {
+      feasible_directions_[i] = true;
+    }
+
+    // if (request_.direction_request == request_.direction_request_stack[i])
+    // {
+    //   best_traj_ = &traj_candidates_[0];
+    //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
+    // }
   }
 }
 
