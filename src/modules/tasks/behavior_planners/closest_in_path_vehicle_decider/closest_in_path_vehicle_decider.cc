@@ -228,22 +228,48 @@ bool ClosestInPathVehicleDecider::DetermineIfConeBucketCIPV() {
   return true;
 }
 
-void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() const {
+void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
   auto hmi_info =
       session_->mutable_planning_context()->mutable_planning_hmi_info();
+  const auto dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  if (nullptr == dynamic_world) {
+    ILOG_DEBUG << "dynamic_world is nullptr";
+    return;
+  }
+  const auto agent_manager = dynamic_world->agent_manager();
+  if (nullptr == agent_manager) {
+    ILOG_DEBUG << "agent_manager is nullptr";
+    return;
+  }
   for (const auto &[agent_cur_distance_to_ego, isvirtual_agentid] :
        agents_distance_id_map_) {
     if (isvirtual_agentid.first) {  // if virtual, skip
       continue;
     } else {
-      hmi_info->cipv_info.cipv_id = isvirtual_agentid.second;
-      hmi_info->cipv_info.has_cipv = true;
+      const auto *agt_ptr = agent_manager->GetAgent(isvirtual_agentid.second);
+      if (nullptr == agt_ptr) {
+        return;
+      }
+      if (agt_ptr->is_crossing()) {
+        filtered_out_crossing_cipv_id_ = isvirtual_agentid.second;
+        hmi_info->cipv_info.cipv_id = -1;
+        hmi_info->cipv_info.has_cipv = false;
+      } else if (isvirtual_agentid.second == filtered_out_crossing_cipv_id_) {
+        hmi_info->cipv_info.cipv_id = -1;
+        hmi_info->cipv_info.has_cipv = false;
+      } else {
+        hmi_info->cipv_info.cipv_id = isvirtual_agentid.second;
+        hmi_info->cipv_info.has_cipv = true;
+        filtered_out_crossing_cipv_id_ = -1;
+      }
       JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
       return;
     }
   }
   hmi_info->cipv_info.cipv_id = -1;
   hmi_info->cipv_info.has_cipv = false;
+  filtered_out_crossing_cipv_id_ = -1;
   JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
   return;
 }
