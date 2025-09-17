@@ -5,6 +5,20 @@
 #include "tasks/task.h"
 namespace planning {
 
+enum class HMIAvoidState : int {
+  RUNNING,
+  EXITING,
+  COOLDOWN,
+  IDLE
+};
+
+struct HMIAvoidParam {
+  int cooldown_count = 0;
+  int exit_count = 0;
+  int avoid_id = -1;
+  int avoid_direction = 0;
+};
+
 class LateralOffsetDecider : public Task {
  public:
   explicit LateralOffsetDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -25,6 +39,8 @@ class LateralOffsetDecider : public Task {
       LatObstacleDecisionType current_decision);
   void Reset();
   void GenerateOutput();
+  bool IsStartRunning();
+  bool IsStopRunning();
   LateralOffsetDeciderConfig config_;
 
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
@@ -36,6 +52,9 @@ class LateralOffsetDecider : public Task {
   uint last_second_obstacle_id_ = 0;
 
   double lateral_offset_ = 0.0;
+
+  HMIAvoidState current_state_ = HMIAvoidState::IDLE;
+  HMIAvoidParam hmi_avoid_param_;
 };
 
 }  // namespace planning

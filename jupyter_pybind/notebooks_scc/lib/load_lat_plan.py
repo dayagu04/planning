@@ -795,6 +795,28 @@ def load_lateral_offset(bag_loader):
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   return fig
 
+def load_avoid_hmi(bag_loader):
+  data_fig = ColumnDataSource(data ={
+    'avoid_ids': [],
+    'frame_num': [],
+  })
+
+  avoid_ids = []
+  if bag_loader.plan_debug_msg['enable'] == True:
+    for i, planning_hmi_msg in enumerate(bag_loader.planning_hmi_msg['data']):
+      hmi_ad_info = planning_hmi_msg.ad_info
+      avoid_ids.append(hmi_ad_info.aovid_id)
+
+  fig = bkp.figure(x_axis_label='frame_num', y_axis_label='lat_offset',x_range = [0, len(avoid_ids)], width=800, height=200)
+  data_fig.data.update({
+    'avoid_ids':avoid_ids,
+    'frame_num':range(len(avoid_ids)),
+  })
+  f1 = fig.line('frame_num', 'avoid_ids', source = data_fig, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'avoid_ids')
+  fig.legend.click_policy = 'hide'
+  fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
+  return fig
+
 def load_receive_topic_time(bag_loader):
   data_fig = ColumnDataSource(data ={
     'receive_topic_time': [],

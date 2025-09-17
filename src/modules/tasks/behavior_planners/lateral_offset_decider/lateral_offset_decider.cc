@@ -9,6 +9,7 @@ namespace planning {
 
 const double kMaxLateralOffsetChangeRate = 0.05;
 const double kMaxChangeRateEgoSpeed = 10.;
+const int kCoolDownCount = 5;
 LateralOffsetDecider::LateralOffsetDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
     : Task(config_builder, session) {
@@ -203,46 +204,108 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.avoid_ids.clear();
 
   // for hmi
+  switch(current_state_) {
+    case HMIAvoidState::IDLE:
+      if (IsStartRunning()) {
+        current_state_ = HMIAvoidState::RUNNING;
+      }
+      break;
+
+    case HMIAvoidState::RUNNING:
+      if (IsStopRunning()) {
+        current_state_ = HMIAvoidState::EXITING;
+        hmi_avoid_param_.exit_count = 0;
+        hmi_avoid_param_.avoid_id = -1;
+        hmi_avoid_param_.avoid_direction = 0;
+      }
+      break;
+
+    case HMIAvoidState::EXITING:
+      current_state_ = HMIAvoidState::COOLDOWN;
+      hmi_avoid_param_.cooldown_count = 0;
+      break;
+
+    case HMIAvoidState::COOLDOWN:
+      if (hmi_avoid_param_.cooldown_count <= kCoolDownCount) {
+        hmi_avoid_param_.cooldown_count ++;
+      } else {
+        current_state_ = HMIAvoidState::IDLE;
+        hmi_avoid_param_.cooldown_count = 0;
+        hmi_avoid_param_.exit_count = 0;
+      }
+      break;
+  }
+
+  lateral_offset_decider_output.avoid_id = hmi_avoid_param_.avoid_id;
+  lateral_offset_decider_output.avoid_direction = hmi_avoid_param_.avoid_direction;
+}
+
+bool LateralOffsetDecider::IsStartRunning() {
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =
       avoid_obstacle_maintainer5v_.avd_obstacles();
-  lateral_offset_decider_output.avoid_id = -1;
-  lateral_offset_decider_output.avoid_direction = 0;
+  // lateral_offset_decider_output.avoid_id = -1;
+  // lateral_offset_decider_output.avoid_direction = 0;
   const auto ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
-  if (ego_v < 0.1) {
-    return;
+  if (ego_v < 5 / 3.6) {
+    return false;
   }
-  
+
   if (avd_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
     if (lateral_offset_ > 0.1) {
-      if (avd_obstacles[0].max_l_to_ref < 0) {
-        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-        lateral_offset_decider_output.avoid_direction = 1;
+      if (avd_obstacles[0].max_l_to_ref < 0 && avd_obstacles[0].s_to_ego > 0) {
+        hmi_avoid_param_.avoid_id = avd_obstacles[0].track_id;
+        hmi_avoid_param_.avoid_direction = 1;
+        return true;
       } else {
         if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
-            avd_obstacles[1].max_l_to_ref < 0) {
-          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
-          lateral_offset_decider_output.avoid_direction = 1;
+            avd_obstacles[1].max_l_to_ref < 0 && avd_obstacles[1].s_to_ego > 0) {
+          hmi_avoid_param_.avoid_id = avd_obstacles[1].track_id;
+          hmi_avoid_param_.avoid_direction = 1;
+          return true;
         }
       }
     } else if (lateral_offset_ < -0.1) {
-      if (avd_obstacles[0].min_l_to_ref > 0) {
-        lateral_offset_decider_output.avoid_id = avd_obstacles[0].track_id;
-        lateral_offset_decider_output.avoid_direction = 2;
+      if (avd_obstacles[0].min_l_to_ref > 0 && avd_obstacles[0].s_to_ego > 0) {
+        hmi_avoid_param_.avoid_id = avd_obstacles[0].track_id;
+        hmi_avoid_param_.avoid_direction = 2;
+        return true;
       } else {
         if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
-            avd_obstacles[1].min_l_to_ref > 0) {
-          lateral_offset_decider_output.avoid_id = avd_obstacles[1].track_id;
-          lateral_offset_decider_output.avoid_direction = 2;
+            avd_obstacles[1].min_l_to_ref > 0 && avd_obstacles[1].s_to_ego > 0) {
+          hmi_avoid_param_.avoid_id = avd_obstacles[1].track_id;
+          hmi_avoid_param_.avoid_direction = 2;
+          return true;
         }
       }
     }
   }
-  // if (lateral_offset_decider_output.avoid_id != -1) {
-  //   if (std::find(lateral_offset_decider_output.avoid_ids.begin(),
-  //       lateral_offset_decider_output.avoid_ids.end(),
-  //       lateral_offset_decider_output.avoid_id) == lateral_offset_decider_output.avoid_ids.end()) {
-  //     lateral_offset_decider_output.avoid_ids.emplace_back(lateral_offset_decider_output.avoid_id);
-  //   }
-  // }
+  return false;
 }
+
+bool LateralOffsetDecider::IsStopRunning() {
+  LateralOffsetDeciderOutput &lateral_offset_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lateral_offset_decider_output();
+  const std::array<AvoidObstacleInfo, 2> avd_obstacles =
+      avoid_obstacle_maintainer5v_.avd_obstacles();
+
+  const auto ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
+  if (ego_v < 3 / 3.6) {
+    return true;
+  }
+
+  if (lateral_offset_decider_output.avoid_id < 0) {
+    return true;
+  }
+
+  if (not ((avd_obstacles[0].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[0].track_id == lateral_offset_decider_output.avoid_id) ||
+           (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[1].track_id == lateral_offset_decider_output.avoid_id))) {
+    return true;
+  }
+
+  return false;
+}
+
 }  // namespace planning
