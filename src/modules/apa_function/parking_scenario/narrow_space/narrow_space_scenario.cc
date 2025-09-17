@@ -2655,27 +2655,37 @@ double NarrowSpaceScenario::GeneVirtualLimiter(
                      param.terminal_target_x;
 
   if (ego_slot.slot_type == SlotType::SLANT) {
-    double clip_len = 0;
+    double contact_point_len = 0;
+    const ApaStateMachine fsm =
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
     if (param.car_width < ego_slot.slot.GetWidth()) {
       auto vec = ego_slot.slot.origin_corner_coord_global_.pt_0 -
                  ego_slot.slot.origin_corner_coord_global_.pt_2;
       double line_len = vec.norm();
 
       double triangle_len = line_len - ego_slot.slot.GetLength();
-      double width =
-          (ego_slot.slot.GetWidth() - param.car_width) / 2 + param.car_width;
+      double contact_point_width = 0.0;
+      if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+          fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+        contact_point_width =
+            ego_slot.slot.GetWidth() / 2.0 + param.car_vertex_y_vec[13];
+      } else {
+        contact_point_width =
+            ego_slot.slot.GetWidth() / 2.0 + param.car_vertex_y_vec[2];
+      }
 
-      clip_len = triangle_len - width / ego_slot.slot.GetWidth() * triangle_len;
+      contact_point_len = triangle_len -
+                 contact_point_width / ego_slot.slot.GetWidth() * triangle_len;
     }
 
-    const ApaStateMachine fsm =
-        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
     if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
-      virtual_x = param.rear_overhanging - clip_len;
+      virtual_x = param.rear_overhanging - contact_point_len;
     } else {
-      virtual_x = param.front_overhanging - clip_len;
+      virtual_x = param.front_overhanging - contact_point_len;
     }
+
+    virtual_x = std::max(0.0, virtual_x);
   }
 
   return virtual_x;
