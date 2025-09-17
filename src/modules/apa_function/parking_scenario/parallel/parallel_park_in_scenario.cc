@@ -1341,19 +1341,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
     const auto& planner_output = previous_output_path_;
     frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
     current_path_point_global_vec_.clear();
-    current_path_point_global_vec_.reserve(
-        planner_output.path_point_vec.size());
+    current_path_point_global_vec_ = previous_current_path_point_global_vec_;
 
     pnc::geometry_lib::PathPoint global_point;
-    for (const auto& path_point : planner_output.path_point_vec) {
-      global_point.Set(
-          ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
-          ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
-      global_point.s = path_point.s;
-      global_point.kappa = path_point.kappa;
-
-      current_path_point_global_vec_.emplace_back(global_point);
-    }
     complete_path_point_global_vec_.clear();
     complete_path_point_global_vec_.reserve(
         planner_output.all_gear_path_point_vec.size());
@@ -1584,6 +1574,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
+    previous_current_path_point_global_vec_.clear();
+    previous_current_path_point_global_vec_ = current_path_point_global_vec_;
     complete_path_point_global_vec_.clear();
     complete_path_point_global_vec_.reserve(
         planner_output.all_gear_path_point_vec.size());
@@ -1623,6 +1615,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
+    previous_current_path_point_global_vec_.clear();
+    previous_current_path_point_global_vec_ = current_path_point_global_vec_;
     complete_path_point_global_vec_.clear();
     complete_path_point_global_vec_.reserve(
         planner_output.all_gear_path_point_vec.size());
