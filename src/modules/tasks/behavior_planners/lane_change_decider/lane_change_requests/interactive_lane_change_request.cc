@@ -41,6 +41,12 @@ void IntRequest::Update(int lc_status) {
     return;
   }
 
+  // intersection ilc surpression
+  if (EgoInIntersection()) {
+    finish_and_clear();
+    return;
+  }
+
   const double ego_v =
       session_->environmental_model().get_ego_state_manager()->ego_v();
 
