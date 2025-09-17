@@ -59,6 +59,8 @@ class ParallelParkInScenario : public ParkingScenario {
   ParallelPathGenerator parallel_path_planner_;
   int parallel_replan_again_ = 0;
   GeometryPathOutput previous_output_path_;
+  std::vector<pnc::geometry_lib::PathPoint>
+      previous_current_path_point_global_vec_;
 };
 
 }  // namespace apa_planner
