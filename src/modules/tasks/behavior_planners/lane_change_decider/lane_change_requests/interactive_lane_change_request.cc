@@ -310,11 +310,13 @@ void IntRequest::ProcessBlinkState(
        lc_status == StateMachineLaneChangeStatus::kLaneChangeHold ||
        lc_status == StateMachineLaneChangeStatus::kLaneChangeCancel);
   bool trigger_left_lane_change =
+      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping) &&
       ((last_frame_blinker_ == TurnSwitchState::NONE ||
         last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
         last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
        ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH);
   bool trigger_right_lane_change =
+      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping) &&
       ((last_frame_blinker_ == TurnSwitchState::NONE ||
         last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
         last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
