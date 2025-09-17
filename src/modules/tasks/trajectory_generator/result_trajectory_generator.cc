@@ -518,6 +518,14 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   }
 
   // update LaneChangeReason
+  const double dis_to_merge = route_info_output.merge_region_info_list.empty()
+                            ? NL_NMAX
+                            : route_info_output.merge_region_info_list[0]
+                                  .distance_to_split_point;
+  const double dis_to_split = route_info_output.split_region_info_list.empty()
+                            ? NL_NMAX
+                            : route_info_output.split_region_info_list[0]
+                                  .distance_to_split_point;
   const auto lc_request_source = lane_change_decider_output.lc_request_source;
   if (lc_request_source == NO_REQUEST &&
       lane_change_decider_output.dir_turn_signal_road_to_ramp == RAMP_NONE) {
@@ -528,10 +536,6 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
-    const double dis_to_merge = route_info_output.merge_region_info_list.empty()
-                              ? NL_NMAX
-                              : route_info_output.merge_region_info_list[0]
-                                    .distance_to_split_point;
     if (route_info_output.dis_to_ramp < 100.0 &&
         route_info_output.dis_to_ramp < dis_to_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
@@ -550,9 +554,9 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   } else {
     ad_info.distance_to_ramp = NL_NMAX;
   }
-  ad_info.distance_to_split = route_info_output.distance_to_first_road_split;
+  ad_info.distance_to_split = dis_to_split;
   if (route_info_output.is_ramp_merge_to_road_on_expressway) {
-    ad_info.distance_to_merge = route_info_output.distance_to_first_road_merge;
+    ad_info.distance_to_merge = dis_to_merge;
   } else {
     ad_info.distance_to_merge = NL_NMAX;
   }
