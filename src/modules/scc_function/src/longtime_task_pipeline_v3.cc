@@ -269,15 +269,15 @@ bool LongTimeTaskPipelineV3::Run() {
   //   return false;
   // }
 
-  ok = agent_headway_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(agent_headway_decider_->Name());
-    return false;
-  }
-
   ok = longitudinal_decision_decider_->Execute();
   if (!ok) {
     AddErrorInfo(longitudinal_decision_decider_->Name());
+    return false;
+  }
+
+  ok = agent_headway_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(agent_headway_decider_->Name());
     return false;
   }
 

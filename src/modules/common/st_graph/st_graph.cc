@@ -47,6 +47,7 @@ using namespace planning_math;
 constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
 constexpr double kConsideredReverseVruTime = 2.0;
+constexpr double kPlanningdt = 0.1;
 }  // namespace
 
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
@@ -817,6 +818,8 @@ bool STGraph::UpdateStBoundaryDecisionResults(
     const std::unordered_map<int64_t, STBoundary::DecisionType>&
         decision_table) {
   if (decision_table.empty()) {
+    overtake_agents_ids_periods_in_st_pass_corridor_.clear();
+    yeild_agents_ids_periods_in_st_pass_corridor_.clear();
     return true;
   }
   for (const auto& decision_entry : decision_table) {
@@ -843,6 +846,10 @@ bool STGraph::CalculateStPassCorridor() {
   }
 
   const auto& time_range = st_graph_input_->time_range();
+  std::unordered_set<int32_t> cur_yield_agents_ids_in_st_pass_corridor;
+  std::unordered_set<int32_t> cur_overtake_agents_ids_in_st_pass_corridor;
+  cur_yield_agents_ids_in_st_pass_corridor.reserve(10);
+  cur_overtake_agents_ids_in_st_pass_corridor.reserve(10);
   for (size_t i = 0; i < st_pass_corridor_.size(); i++) {
     double t = time_range.first + i * kTimeResolution;
     STPoint upper_point = STPoint::HighestSTPoint();
@@ -883,11 +890,47 @@ bool STGraph::CalculateStPassCorridor() {
     }
     if (find_upper) {
       st_pass_corridor_[i].first = upper_point;
+      cur_yield_agents_ids_in_st_pass_corridor.insert(upper_point.agent_id());
     }
     if (find_lower) {
       st_pass_corridor_[i].second = lower_point;
+      cur_overtake_agents_ids_in_st_pass_corridor.insert(
+          lower_point.agent_id());
     }
   }
+
+  // calculate yield agents id and periods in st pass corridor
+  yeild_agents_ids_periods_in_st_pass_corridor_.reserve(10);
+  auto& yield_periods = yeild_agents_ids_periods_in_st_pass_corridor_;
+  for (const auto agent_id : cur_yield_agents_ids_in_st_pass_corridor) {
+    yield_periods[agent_id] += kPlanningdt;
+  }
+
+  for (auto iter = yield_periods.begin(); iter != yield_periods.end();) {
+    if (cur_yield_agents_ids_in_st_pass_corridor.find(iter->first) ==
+        cur_yield_agents_ids_in_st_pass_corridor.end()) {
+      iter = yield_periods.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
+  // calculate overtake agents id and periods in st pass corridor
+  overtake_agents_ids_periods_in_st_pass_corridor_.reserve(10);
+  auto& overtake_periods = overtake_agents_ids_periods_in_st_pass_corridor_;
+  for (const auto agent_id : cur_overtake_agents_ids_in_st_pass_corridor) {
+    overtake_periods[agent_id] += kPlanningdt;
+  }
+
+  for (auto iter = overtake_periods.begin(); iter != overtake_periods.end();) {
+    if (cur_overtake_agents_ids_in_st_pass_corridor.find(iter->first) ==
+        cur_overtake_agents_ids_in_st_pass_corridor.end()) {
+      iter = overtake_periods.erase(iter);
+    } else {
+      ++iter;
+    }
+  }
+
   return true;
 }
 
@@ -1118,7 +1161,7 @@ bool STGraph::CalculateNeighborCorridor() {
     const auto [closet_s_to_ego, neighbor_corridor_overtake_info] =
         *neighbor_corridor_overtake_info_map_.begin();
     neighbor_corridor_[neighbor_corridor_overtake_info.first_overtake_index]
-        .first = neighbor_corridor_overtake_info.first_overtake_st_point;
+        .second = neighbor_corridor_overtake_info.first_overtake_st_point;
     first_neighbor_overtake_index_ =
         neighbor_corridor_overtake_info.first_overtake_index;
     first_neighbor_overtake_agent_id_ =

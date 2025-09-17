@@ -78,7 +78,7 @@ common::Status TargetMaker::Run() {
         follow_target_value.set_target_type(
             TargetType::kFollow);
       }
-    } 
+    }
 
                                 
     // 1. update lower and upper value by follow target and overtake target
@@ -194,11 +194,18 @@ void TargetMaker::Reset() {
 
 void TargetMaker::RefineStarget() {
   const int target_size = static_cast<int>(target_values_.size());
+  auto& s_ref_target_types =
+      session_->mutable_planning_context()->mutable_lon_s_ref_target_types();
+  s_ref_target_types.clear();
+  s_ref_target_types.reserve(target_size);
+  s_ref_target_types.emplace_back(target_values_.back().target_type());
   for (int i = target_size - 2; i >= 0; i--) {
     const auto s_target_tmp = std::fmin(target_values_[i].s_target_val(),
                                         target_values_[i + 1].s_target_val());
     target_values_[i].set_s_target_val(s_target_tmp);
+    s_ref_target_types.emplace_back(target_values_[i].target_type());
   }
+  std::reverse(s_ref_target_types.begin(), s_ref_target_types.end());
 }
 
 void TargetMaker::AddFinalTargetDataToProto() {

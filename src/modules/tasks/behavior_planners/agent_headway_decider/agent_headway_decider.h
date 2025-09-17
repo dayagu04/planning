@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <memory>
 
 #include "agent/agent.h"
@@ -27,7 +28,12 @@ class AgentHeadwayDecider : public Task {
  private:
   bool UpdateAgentsHeadwayInfos();
 
-  void MatchHeadwayWithGearTable(double* const desired_headway) const;
+  void MatchHeadwayWithGearTable(double& desired_headway) const;
+
+  void CalculateTHWInLaneChange(const int32_t gap_front_agent_id,
+                                const double thw_request);
+
+  bool CalculateTHWInLaneChangeToLaneKeep(const double thw_request);
 
   bool IsNeighborTargetValid(const speed::StGraphHelper* st_graph_helper) const;
 
@@ -38,8 +44,10 @@ class AgentHeadwayDecider : public Task {
  private:
   std::unordered_map<int32_t, AgentHeadwayInfo> agents_headway_map_;
   AgentHeadwayConfig config_;
+  pnc::filters::SlopeFilter thw_lane_change_slope_filter_;
   int32_t plan_points_num_ = 0;
   double plan_time_ = 0.0;
+  int32_t last_gap_front_agent_id_ = -1;
   double dt_ = 0.0;
 };
 

@@ -1,7 +1,11 @@
 #include "agent_headway_decider.h"
+
+#include <math.h>
+
 #include <vector>
 
 #include "agent/agent.h"
+#include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
@@ -20,6 +24,10 @@ constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = -0.5;
 constexpr double kTflVirtualAgentHW = 1.5;
+constexpr double kInterestPredictionTrajScope_s = 3.6;
+constexpr double kTimeResolutionPredTraj = 0.2;
+constexpr double kPlanningdt = 0.1;
+constexpr double kVelDiffInLaneChangeThrd = 2.5;
 }  // namespace
 
 AgentHeadwayDecider::AgentHeadwayDecider(
@@ -35,7 +43,7 @@ AgentHeadwayDecider::AgentHeadwayDecider(
 void AgentHeadwayDecider::Reset() { agents_headway_map_.clear(); }
 
 bool AgentHeadwayDecider::Execute() {
-  ILOG_INFO  << "=======AgentHeadwayDecider=======";
+  ILOG_INFO << "=======AgentHeadwayDecider=======";
   auto res = UpdateAgentsHeadwayInfos();
 
   auto& mutable_output = session_->mutable_planning_context()
@@ -52,19 +60,36 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   const double smallest_headway = config_.smallest_headway_threshold;
   double headway_step = config_.headway_step;
   double gear_headway = smallest_headway;
-  MatchHeadwayWithGearTable(&gear_headway);
+  MatchHeadwayWithGearTable(gear_headway);
 
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change_execution =
-      lane_change_state == kLaneChangeExecution ||
-      lane_change_state == kLaneChangeComplete;
+  const bool is_in_lane_change = lane_change_state == kLaneChangeExecution ||
+                                 lane_change_state == kLaneChangeComplete;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
+  const auto& yeild_agents_ids_periods_in_st_pass_corridor =
+      st_graph_helper->yeild_agents_ids_periods_in_st_pass_corridor();
+
+  const auto gap_front_node_id =
+      lane_change_decider_output.lc_gap_info.front_node_id;
+  const auto gap_rear_node_id =
+      lane_change_decider_output.lc_gap_info.rear_node_id;
+  int32_t gap_front_agent_id = -1;
+  if (dynamic_world->GetNode(gap_front_node_id)) {
+    gap_front_agent_id =
+        dynamic_world->GetNode(gap_front_node_id)->node_agent_id();
+  }
+  int32_t gap_rear_agent_id = -1;
+  if (dynamic_world->GetNode(gap_rear_node_id)) {
+    gap_rear_agent_id =
+        dynamic_world->GetNode(gap_rear_node_id)->node_agent_id();
+  }
+
   if (st_graph_helper == nullptr) {
     ILOG_DEBUG << "[AgentHeadwayDecider] st_graph is nullptr";
     return false;
@@ -86,8 +111,11 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   // get cipv id from closest_in_path_vehicle_decider
   const int32_t cipv_id =
       session_->planning_context().cipv_decider_output().cipv_id();
-  const bool is_neighbor_target_valid = IsNeighborTargetValid(st_graph_helper);
+  // const bool is_neighbor_target_valid =
+  // IsNeighborTargetValid(st_graph_helper);
 
+  const double v_ego =
+      ego_state_manager->planning_init_point().lon_init_state.v();
   for (const auto& st_agent_boundary_id_map :
        st_graph_helper->GetAgentIdSTBoundariesMap()) {
     const auto st_agent_id = st_agent_boundary_id_map.first;
@@ -121,8 +149,10 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double init_headway_by_ego =
         CalcAgentInitHeadway(ego_state_manager, agent);
     const bool is_tfl_virtual_agent = agent->is_tfl_virtual_obs();
-    const bool is_lane_borrow_virtual_agent = agent->is_lane_borrow_virtual_obs();
-    const bool is_vru_crossing_virtual_agent = agent->is_vru_crossing_virtual_obs();
+    const bool is_lane_borrow_virtual_agent =
+        agent->is_lane_borrow_virtual_obs();
+    const bool is_vru_crossing_virtual_agent =
+        agent->is_vru_crossing_virtual_obs();
     double first_appear_time_gap = k_first_appear_time_gap;
     if (is_tfl_virtual_agent) {
       gear_headway = kTflVirtualAgentHW;
@@ -131,15 +161,27 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
 
-    const double v_ego = ego_state_manager->ego_v();
     const double v_relative = agent->speed() - v_ego;
     if (v_relative > kHighSpeedDiffThd) {
       headway_step = 0.5 * config_.headway_step;
     }
 
-    if(is_vru_crossing_virtual_agent){
+    if (is_vru_crossing_virtual_agent) {
       agents_headway_map_[st_agent_id].current_headway = 0.0;
       continue;
+    }
+
+    if (gap_front_agent_id == st_agent_id) {
+      CalculateTHWInLaneChange(st_agent_id, gear_headway);
+      last_gap_front_agent_id_ = gap_front_agent_id;
+      continue;
+    } else if (yeild_agents_ids_periods_in_st_pass_corridor.find(
+                   last_gap_front_agent_id_) !=
+                   yeild_agents_ids_periods_in_st_pass_corridor.end() &&
+               st_agent_id == last_gap_front_agent_id_) {
+      if (CalculateTHWInLaneChangeToLaneKeep(gear_headway)) {
+        continue;
+      }
     }
 
     // first appear
@@ -165,18 +207,47 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     //       std::fmin(matched_cut_in_headway + headway_step, gear_headway);
     //   continue;
     // }
-    if(is_lane_borrow_virtual_agent){
+    if (is_lane_borrow_virtual_agent) {
       agents_headway_map_[st_agent_id].current_headway = 0.0;
       continue;
     }
 
-    if (is_neighbor_target_valid) {
-      const double neighbor_target_headway = std::fmin(
-          (user_time_gap - neighbor_valid_decrease_time_gap), current_headway);
-      agents_headway_map_[st_agent_id].current_headway =
-          std::fmin(neighbor_target_headway + headway_step, gear_headway);
-      continue;
-    }
+    // if (is_neighbor_target_valid) {
+    //   const auto neighbor_yield_agent_id =
+    //       st_graph_helper->GetFirstNeighborYieldAgentId();
+    //   const auto neighbor_yield_agent =
+    //       agent_manager->GetAgent(neighbor_yield_agent_id);
+
+    //   const auto& neighbor_yield_agent_prediction_trajs =
+    //       neighbor_yield_agent
+    //           ? neighbor_yield_agent->trajectories_used_by_st_graph()
+    //           : std::vector<trajectory::Trajectory>{};
+
+    //   if (neighbor_yield_agent_prediction_trajs.empty() ||
+    //       neighbor_yield_agent_prediction_trajs.front().empty()) {
+    //   } else {
+    //     const auto& neighbor_yield_agent_traj =
+    //         neighbor_yield_agent_prediction_trajs.front();
+    //     double sum_vel = 0.0;
+    //     size_t traj_point_size = std::round(kInterestPredictionTrajScope_s /
+    //                                         kTimeResolutionPredTraj);
+    //     for (size_t i = 0; i < traj_point_size; ++i) {
+    //       sum_vel += neighbor_yield_agent_traj[i].vel();
+    //     }
+    //     double average_vel = sum_vel / traj_point_size;
+    //     if (average_vel - v_ego > 0.3 && is_in_lane_change) {
+    //       agents_headway_map_[st_agent_id].current_headway = 0.8;
+    //       continue;
+    //     }
+    //   }
+
+    //   const double neighbor_target_headway = std::fmin(
+    //       (user_time_gap - neighbor_valid_decrease_time_gap),
+    //       current_headway);
+    //   agents_headway_map_[st_agent_id].current_headway =
+    //       std::fmin(neighbor_target_headway + headway_step, gear_headway);
+    //   continue;
+    // }
 
     // if (is_in_lane_change_execution) {
     //   const double lane_change_headway = std::fmin(
@@ -241,8 +312,159 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   return true;
 }
 
+void AgentHeadwayDecider::CalculateTHWInLaneChange(
+    const int32_t gap_front_agent_id, const double thw_request) {
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const bool is_in_lane_change = lane_change_state == kLaneChangeExecution ||
+                                 lane_change_state == kLaneChangeComplete;
+  const auto& st_graph = session_->planning_context().st_graph_helper();
+  const auto& dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto* agent_manager = dynamic_world->agent_manager();
+  const auto* st_graph_helper = session_->planning_context().st_graph_helper();
+  const double v_ego =
+      ego_state_manager->planning_init_point().lon_init_state.v();
+
+  if (!is_in_lane_change) {
+    return;
+  }
+
+  const auto& yeild_agents_ids_periods_in_st_pass_corridor =
+      st_graph_helper->yeild_agents_ids_periods_in_st_pass_corridor();
+  const auto gap_yield_agent_id_period_iter =
+      yeild_agents_ids_periods_in_st_pass_corridor.find(gap_front_agent_id);
+  const auto yield_gap_front_agent_decision_exsits =
+      gap_yield_agent_id_period_iter !=
+      yeild_agents_ids_periods_in_st_pass_corridor.end();
+
+  if (yield_gap_front_agent_decision_exsits) {
+    const auto neighbor_yield_agent =
+        agent_manager->GetAgent(gap_front_agent_id);
+
+    const auto& neighbor_yield_agent_prediction_trajs =
+        neighbor_yield_agent
+            ? neighbor_yield_agent->trajectories_used_by_st_graph()
+            : std::vector<trajectory::Trajectory>{};
+
+    if (neighbor_yield_agent_prediction_trajs.empty() ||
+        neighbor_yield_agent_prediction_trajs.front().empty()) {
+      if (gap_yield_agent_id_period_iter->second <= kPlanningdt) {
+        thw_lane_change_slope_filter_.Init(
+            0.0, 0.0, config_.thw_low_rate_lane_change,
+            config_.thw_init_value_lane_change,
+            config_.thw_target_low_value_lane_change, kPlanningdt);
+        thw_lane_change_slope_filter_.Update(thw_request);
+        agents_headway_map_[gap_front_agent_id].current_headway =
+            thw_lane_change_slope_filter_.GetOutput();
+      } else {
+        thw_lane_change_slope_filter_.Update(thw_request);
+        agents_headway_map_[gap_front_agent_id].current_headway =
+            thw_lane_change_slope_filter_.GetOutput();
+      }
+    } else {
+      const auto& neighbor_yield_agent_traj =
+          neighbor_yield_agent_prediction_trajs.front();
+      double sum_vel = 0.0;
+      size_t traj_point_size =
+          std::round(kInterestPredictionTrajScope_s / kTimeResolutionPredTraj);
+      for (size_t i = 0; i < traj_point_size; ++i) {
+        sum_vel += neighbor_yield_agent_traj[i].vel();
+      }
+      double average_vel = sum_vel / traj_point_size;
+      const double vel_diff = average_vel - v_ego;
+      if (vel_diff > 0.3) {
+        if (gap_yield_agent_id_period_iter->second <= kPlanningdt) {
+          thw_lane_change_slope_filter_.Init(
+              0.0, 0.0, config_.thw_low_rate_lane_change,
+              config_.thw_init_value_lane_change,
+              config_.thw_target_low_value_lane_change, kPlanningdt);
+          thw_lane_change_slope_filter_.Update(
+              config_.thw_target_low_value_lane_change);
+          agents_headway_map_[gap_front_agent_id].current_headway =
+              thw_lane_change_slope_filter_.GetOutput();
+        } else {
+          const double slope_filter_max_limit =
+              agents_headway_map_[gap_front_agent_id].current_headway >
+                      config_.thw_target_low_value_lane_change
+                  ? agents_headway_map_[gap_front_agent_id].current_headway
+                  : config_.thw_target_low_value_lane_change;
+          thw_lane_change_slope_filter_.SetLimit(
+              config_.thw_init_value_lane_change, slope_filter_max_limit);
+          thw_lane_change_slope_filter_.SetRate(
+              -config_.thw_high_rate_lane_change,
+              config_.thw_low_rate_lane_change);
+          thw_lane_change_slope_filter_.Update(
+              config_.thw_target_low_value_lane_change);
+          agents_headway_map_[gap_front_agent_id].current_headway =
+              thw_lane_change_slope_filter_.GetOutput();
+        }
+      } else {
+        if (gap_yield_agent_id_period_iter->second <= kPlanningdt) {
+          thw_lane_change_slope_filter_.Init(
+              0.0, 0.0, config_.thw_low_rate_lane_change,
+              config_.thw_init_value_lane_change, thw_request, kPlanningdt);
+          if (vel_diff < -kVelDiffInLaneChangeThrd) {
+            thw_lane_change_slope_filter_.SetRate(
+                0.0, config_.thw_high_rate_lane_change);
+          }
+          thw_lane_change_slope_filter_.Update(thw_request);
+          agents_headway_map_[gap_front_agent_id].current_headway =
+              thw_lane_change_slope_filter_.GetOutput();
+        } else {
+          thw_lane_change_slope_filter_.Init(
+              agents_headway_map_[gap_front_agent_id].current_headway, 0.0,
+              config_.thw_low_rate_lane_change,
+              config_.thw_init_value_lane_change, thw_request, kPlanningdt);
+          if (vel_diff < -kVelDiffInLaneChangeThrd) {
+            thw_lane_change_slope_filter_.SetRate(
+                0.0, config_.thw_high_rate_lane_change);
+          }
+          thw_lane_change_slope_filter_.Update(thw_request);
+          agents_headway_map_[gap_front_agent_id].current_headway =
+              thw_lane_change_slope_filter_.GetOutput();
+        }
+      }
+    }
+  }
+}
+
+bool AgentHeadwayDecider::CalculateTHWInLaneChangeToLaneKeep(
+    const double thw_request) {
+  if (fabs(agents_headway_map_[last_gap_front_agent_id_].current_headway -
+           thw_request) < 1e-3) {
+    last_gap_front_agent_id_ = -1;
+    return true;
+  }
+  const auto& last_lon_s_ref_target_types =
+      session_->planning_context().lon_s_ref_target_types();
+  double last_follow_types_size = 0;
+  for (const auto type : last_lon_s_ref_target_types) {
+    if (type == planning::TargetType::kFollow) {
+      last_follow_types_size += 1.0;
+    }
+  }
+  const double last_follow_types_percent =
+      last_follow_types_size / last_lon_s_ref_target_types.size();
+  if (last_follow_types_percent >= 0.65) {
+    thw_lane_change_slope_filter_.Init(
+        agents_headway_map_[last_gap_front_agent_id_].current_headway, 0.0,
+        config_.thw_low_rate_lane_change_to_lane_keep,
+        config_.thw_init_value_lane_change, thw_request, kPlanningdt);
+    thw_lane_change_slope_filter_.Update(thw_request);
+    agents_headway_map_[last_gap_front_agent_id_].current_headway =
+        thw_lane_change_slope_filter_.GetOutput();
+    return true;
+  }
+
+  return false;
+}
+
 void AgentHeadwayDecider::MatchHeadwayWithGearTable(
-    double* const matched_desired_headway) const {
+    double& matched_desired_headway) const {
   auto time_headway_table = config_.ego_normal_thw_table_level_3;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -289,10 +511,10 @@ void AgentHeadwayDecider::MatchHeadwayWithGearTable(
     return;
   }
 
-  *matched_desired_headway =
-      planning::interp(planning_init_vel, config_.ego_vel_table, time_headway_table);
+  matched_desired_headway = planning::interp(
+      planning_init_vel, config_.ego_vel_table, time_headway_table);
   JSON_DEBUG_VALUE("time_headway_level", time_headway_level);
-  JSON_DEBUG_VALUE("THW", *matched_desired_headway);
+  JSON_DEBUG_VALUE("THW", matched_desired_headway);
   return;
 }
 
