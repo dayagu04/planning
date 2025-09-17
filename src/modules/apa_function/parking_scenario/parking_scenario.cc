@@ -124,7 +124,7 @@ void ParkingScenario::UpdateStuckTime() {
   if (auto_static && !path_update_success) {
     if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
       // obs here
-      if (frame_.stuck_by_dynamic_obs || frame_.stuck_dynamic_obs_time > 1e-3) {
+      if (frame_.stuck_by_dynamic_obs) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;
@@ -219,7 +219,7 @@ void ParkingScenario::TansformPreparePlanningTraj() {
   }
 
   auto publish_traj = &(planning_output_.trajectory);
-  publish_traj->available = true;
+  publish_traj->available = false;
   publish_traj->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
   publish_traj->target_reference.target_velocity = 0;
 
@@ -279,6 +279,10 @@ void ParkingScenario::SetPlanningPath() {
   planning_output_.planning_status.hpp_planning_status = iflyauto::HPP_RUNNING;
   planning_output_.planning_status.apa_planning_status =
       iflyauto::APA_IN_PROGRESS;
+
+  if (current_path_point_global_vec_.empty()) {
+    return;
+  }
 
   // record last frame remain dist path
   frame_.remain_dist_path_last = frame_.remain_dist_path;

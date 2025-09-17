@@ -89,7 +89,7 @@ void ParkingScenarioManager::UpdateScenarioType() {
       }
 
       else {
-        if (apa_param.GetParam().path_generator_type ==
+        if (param.path_generator_type ==
             ParkPathGenerationType::GEOMETRY_BASED) {
           // check is narrow space or not
           if (IsSlotReleaseByHybridAstar()) {
@@ -367,7 +367,8 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
   // apa_hmi_data_.planning_recommend_park_dir =
   //     current_scenario_->GetAPAHmi().planning_recommend_park_dir;
   // ILOG_INFO << "release park dir = " << apa_hmi_data_.planning_park_dir
-  //           << ", recommend park dir = " << apa_hmi_data_.planning_recommend_park_dir;
+  //           << ", recommend park dir = " <<
+  //           apa_hmi_data_.planning_recommend_park_dir;
 }
 
 void ParkingScenarioManager::PubPreparePlanState() {

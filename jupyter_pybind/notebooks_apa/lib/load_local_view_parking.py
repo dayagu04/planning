@@ -71,7 +71,7 @@ version_245 = True
 # OD obstacle
 read_fus_obj_msg = True
 corner_points_size = 4
-NUM_OF_OUTLINE_DATAORI = 2
+NUM_OF_OUTLINE_DATAORI = 1
 smallest_abs_t = 0.0
 ego_init_x = 0.0
 ego_init_y = 0.0
