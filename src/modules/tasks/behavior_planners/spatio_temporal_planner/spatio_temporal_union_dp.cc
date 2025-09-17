@@ -1397,6 +1397,7 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
     ds = std::max(ds, 1e-6);
     dl = lateral_curve.Evaluate(1, cur_t);
     dl_ds = dl / ds;
+    ego_heading_angle = std::atan(dl_ds);
     ego_heading_angle = NormalizeAngle(dl_ds);
     // 获取sl坐标系下自车box的顶点坐标集合
     cos_theta = cos(ego_heading_angle);
