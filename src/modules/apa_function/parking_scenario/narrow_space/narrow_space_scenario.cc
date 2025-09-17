@@ -1711,12 +1711,27 @@ const bool NarrowSpaceScenario::NeedBlindZonePlanning(
     return false;
   }
 
+  // If vehicle is in nearby slot, no need blind planning.
   double position_y_error = std::fabs(ego_info.cur_pose.pos[1]);
   double position_x_error = std::fabs(ego_info.cur_pose.pos[0]);
   if (position_y_error < ego_info.slot.slot_width_ / 2 &&
       position_x_error > 0.0 &&
       position_x_error < ego_info.slot.slot_length_ + 2.5) {
     return false;
+  }
+
+  // head in, no need blind zone planning
+  const ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
+  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+    // 10 degree
+    if (std::fabs(ego_info.terminal_err.GetTheta()) < 0.17 &&
+        position_y_error < ego_info.slot.slot_width_ / 2 &&
+        position_x_error > 0.0 &&
+        position_x_error < ego_info.slot.slot_length_ + 4.5) {
+      return false;
+    }
   }
 
   return true;
