@@ -44,7 +44,8 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
       car_length - back_edge_to_rear_axis - wheel_base;
   vehicle_param_.steer_ratio = steer_ratio;
   vehicle_param_.wheel_base = wheel_base;
-  vehicle_param_.min_turn_radius = min_turn_radius + config_.turn_radius_buffer;
+  vehicle_param_.min_turn_radius =
+      min_turn_radius + config_.node_turn_radius_buffer;
   vehicle_param_.mirror_width = mirror_width;
   vehicle_param_.rear_edge_to_rear_axle = back_edge_to_rear_axis;
   vehicle_param_.front_edge_to_rear_axle = car_length - back_edge_to_rear_axis;

@@ -46,6 +46,7 @@ if(THIRDPARTY_ENABLE)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/nlohmann_json)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/osqp)
   add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/rapidjson)
+  add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/thirdparty/mdc_osqp)
 endif()
 
 if(INTERFACE_ENABLE)
