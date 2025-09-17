@@ -86,7 +86,7 @@ const double CalTwoPointDistSquare(const Eigen::Vector2d &p0,
 const double CalPoint2LineDist(const Eigen::Vector2d &pO,
                                const LineSegment &line) {
   double dist_square = CalPoint2LineDistSquare(pO, line);
-  if (dist_square < 1e-6) {
+  if (dist_square < 1e-4) {
     return 0.0;
   }
   return std::sqrt(dist_square);
@@ -99,7 +99,7 @@ const double CalPoint2LineDistSquare(const Eigen::Vector2d &pO,
 
   const double v_AO_dot_v_AB = v_AO.dot(v_AB);
 
-  if (NormSquareOfVector2d(v_AB) < 1e-4) {
+  if (NormSquareOfVector2d(v_AB) < 1e-3) {
     return 0.0;
   }
 
@@ -241,6 +241,25 @@ double GetAngleFromTwoVec(const Eigen::Vector2d &a, const Eigen::Vector2d &b) {
 
     return theta;
   }
+}
+
+const double FastSignedAngle(const Eigen::Vector2d &a,
+                             const Eigen::Vector2d &b) {
+  // const double angle_a = std::atan2(a.y(), a.x());
+  // const double angle_b = std::atan2(b.y(), b.x());
+  // const double delta = angle_b - angle_a;
+  // return std::fmod(delta + M_PI, 2 * M_PI) - M_PI;
+
+  // 单次atan2优化版本
+  const double a_cross_b = a.x() * b.y() - a.y() * b.x();  // 叉积决定方向
+  const double a_dot_b = a.x() * b.x() + a.y() * b.y();    // 点积决定模长
+
+  // // 零向量处理（保持与原始逻辑一致）
+  // if (a.norm() < 1e-9 || b.norm() < 1e-9) {
+  //   return 0.0;
+  // }
+
+  return std::atan2(a_cross_b, a_dot_b);  // 单次三角函数计算
 }
 
 const Eigen::Matrix2d GetRotm2dFromTheta(const double theta) {
@@ -390,6 +409,43 @@ const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
   double determinant = AB.x() * (-CD.y()) - (-CD.x()) * AB.y();
   if (IsDoubleEqual(determinant, 0.0)) {
     return LogErr(__func__, 2);
+  } else {
+    t1 = (AC.x() * (-CD.y()) - (-CD.x() * AC.y())) / determinant;
+    // t2 = (AB.x() * AC.y() - AC.x() * AB.y()) / determinant;
+  }
+
+  intersection = line1.pA + t1 * AB;
+
+  return true;
+}
+
+const bool GetIntersectionFromTwoLines(Eigen::Vector2d &intersection,
+                                       const LineSegment &line1,
+                                       const LineSegment &line2) {
+  const Eigen::Vector2d AB = line1.pB - line1.pA;
+  const Eigen::Vector2d CD = line2.pB - line2.pA;
+
+  if (mathlib::IsDoubleEqual(GetCrossFromTwoVec2d(AB, CD), 0.0)) {
+    // ILOG_INFO
+    //     << "two lines are parallel or overlapping, which must be ruled
+    //     out\n";
+    return false;
+  }
+
+  const Eigen::Vector2d AC = line2.pA - line1.pA;
+
+  // P is the intersection of line segment AB and CD
+  // P = A + t1 * AB;  P = C + t2 * CD
+  // t1 * AB - t2 * CD = C - A
+  // t1 * AB.x - t2 * CD.x = AC.x
+  // t1 * AB.y - t2 * CD.y = AC.y
+  // D = | AB.x  -CD.x |
+  //     | AB.y  -CD.y |
+  double t1 = 0.0;
+  // double t2 = 0.0;
+  const double determinant = AB.x() * (-CD.y()) - (-CD.x()) * AB.y();
+  if (mathlib::IsDoubleEqual(determinant, 0.0)) {
+    return false;
   } else {
     t1 = (AC.x() * (-CD.y()) - (-CD.x() * AC.y())) / determinant;
     // t2 = (AB.x() * AC.y() - AC.x() * AB.y()) / determinant;
@@ -1559,6 +1615,64 @@ const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
   }
 }
 
+const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
+                                   const PathSegment &path_seg, const double ds,
+                                   const double kappa) {
+  point_set.clear();
+  point_set.reserve(50);
+
+  PathPoint pn;
+  // get first point
+  pn.pos = path_seg.GetStartPos();
+  pn.heading = path_seg.GetStartHeading();
+  pn.kappa = kappa;
+  point_set.emplace_back(pn);
+
+  // get mid point
+  if (path_seg.seg_type == SEG_TYPE_LINE) {
+    const Eigen::Vector2d unit_line_vec =
+        (path_seg.GetEndPos() - path_seg.GetStartPos()).normalized();
+    double s = ds;
+    while (s < path_seg.GetLength()) {
+      pn.pos = path_seg.GetStartPos() + s * unit_line_vec;
+      pn.heading = path_seg.GetStartHeading();
+      pn.s = s;
+      pn.kappa = kappa;
+      point_set.emplace_back(pn);
+      s += ds;
+    }
+  } else {
+    const Eigen::Vector2d &pO = path_seg.GetCenter();
+    Eigen::Vector2d v_n = path_seg.GetStartPos() - pO;
+    double heading = path_seg.GetStartHeading();
+    const double dheading = ds / path_seg.GetRadius() *
+                            (path_seg.GetIsAntiClockwise() ? 1.0 : -1.0);
+
+    const Eigen::Matrix2d rot_m =
+        pnc::geometry_lib::GetRotm2dFromTheta(dheading);
+    double s = ds;
+    while (s < path_seg.GetLength()) {
+      v_n = rot_m * v_n;
+      pn.pos = pO + v_n;
+      heading += dheading;
+      pn.heading = NormalizeAngle(heading);
+      pn.s = s;
+      pn.kappa = kappa;
+      point_set.emplace_back(pn);
+      s += ds;
+    }
+  }
+
+  // get last point
+  pn.pos = path_seg.GetEndPos();
+  pn.heading = path_seg.GetEndHeading();
+  pn.s = path_seg.GetLength();
+  pn.kappa = kappa;
+  point_set.emplace_back(pn);
+
+  return true;
+}
+
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
                             const Eigen::Vector2d &point) {
   // int crossProductSign = 0;
@@ -1651,6 +1765,34 @@ const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err) {
   return true;
 }
 
+const bool CalcOneArcWithLine(Arc &arc, const LineSegment &line,
+                              const double r_err) {
+  const double dist = CalPoint2LineDist(arc.circle_info.center, line);
+  if (!(dist <= arc.circle_info.radius + r_err &&
+        dist >= arc.circle_info.radius - r_err)) {
+    return false;
+  }
+
+  Eigen::Vector2d line_norm_vec;
+  if (!CalcLineUnitNormVecByPos(arc.circle_info.center, line, line_norm_vec)) {
+    return false;
+  }
+
+  // note C is the tangent, also the arc end point
+  // AC = AO + OC --> OC = line_norm_vec * radius
+  const Eigen::Vector2d AO = arc.circle_info.center - line.pA;
+  arc.pB = AO + line_norm_vec * arc.circle_info.radius + line.pA;
+  if (!CompleteArcInfomation(arc)) {
+    return false;
+  }
+
+  if (!IsHeadingEqual(arc.headingB, line.heading)) {
+    return false;
+  }
+
+  return true;
+}
+
 const bool CalTwoArcWithLine(const PathPoint &pose, LineSegment &line,
                              const double radius1, const double radius2,
                              std::vector<std::pair<Arc, Arc>> &arc_pair_vec) {
@@ -1724,6 +1866,84 @@ const bool CalTwoArcWithLine(const PathPoint &pose, LineSegment &line,
         arc2.pB = center2 - C2O2;
 
         if (!CompleteArcInfo(arc2)) {
+          continue;
+        }
+
+        arc_pair_vec.emplace_back(std::make_pair(arc1, arc2));
+      }
+    }
+  }
+  return arc_pair_vec.size() > 0;
+}
+
+const bool CalcTwoArcWithLine(const PathPoint &pose, const LineSegment &line,
+                              const double radius1, const double radius2,
+                              std::vector<std::pair<Arc, Arc>> &arc_pair_vec) {
+  arc_pair_vec.clear();
+  arc_pair_vec.reserve(8);
+
+  const Eigen::Vector2d pose_heading_tang_vec = pose.heading_vec;
+  std::vector<Eigen::Vector2d> center1_vec;
+  center1_vec.reserve(2);
+  Eigen::Vector2d center1 =
+      pose.pos + radius1 * Eigen::Vector2d(pose_heading_tang_vec.y(),
+                                           -pose_heading_tang_vec.x());
+
+  center1_vec.emplace_back(center1);
+  center1 = pose.pos + radius1 * Eigen::Vector2d(-pose_heading_tang_vec.y(),
+                                                 pose_heading_tang_vec.x());
+  center1_vec.emplace_back(center1);
+
+  const Eigen::Vector2d line_tang_vec = line.heading_vec;
+  std::vector<Eigen::Vector2d> line_norm_vec_vec{
+      {-line_tang_vec.y(), line_tang_vec.x()},
+      {line_tang_vec.y(), -line_tang_vec.x()}};
+
+  for (const Eigen::Vector2d &center1 : center1_vec) {
+    for (const Eigen::Vector2d &line2_norm_vec : line_norm_vec_vec) {
+      // the O2 is on arc2_center_line
+      LineSegment arc2_center_line(line.pA + line2_norm_vec * radius2,
+                                   line.pB + line2_norm_vec * radius2);
+      // the O2 is on virtual circle, arc1 is tangent with arc2, than the dist
+      // of O1 and O2 is 2*r
+      Circle virtual_circle(center1, radius1 + radius2);
+      // the intersection of arc2_center_line and virtual arc is arc2 center
+      std::vector<Eigen::Vector2d> center2_vec;
+      if (CalcCrossPointsOfLineAndCircle(arc2_center_line, virtual_circle,
+                                         center2_vec) < 1) {
+        continue;
+      }
+      for (const Eigen::Vector2d &center2 : center2_vec) {
+        Arc arc1;
+        arc1.pA = pose.pos;
+        arc1.headingA = pose.heading;
+        arc1.headingA_vec = pose.heading_vec;
+        arc1.circle_info.radius = radius1;
+        arc1.circle_info.center = center1;
+
+        // calc two arc tangent
+        const Eigen::Vector2d arc1_arc2_tangent =
+            center1 + radius1 * (center2 - center1).normalized();
+
+        arc1.pB = arc1_arc2_tangent;
+
+        if (!CompleteArcInfomation(arc1)) {
+          continue;
+        }
+
+        Arc arc2;
+        arc2.pA = arc1.pB;
+        arc2.headingA = arc1.headingB;
+        arc2.headingA_vec << std::cos(arc2.headingA), std::sin(arc2.headingA);
+        arc2.circle_info.radius = radius2;
+        arc2.circle_info.center = center2;
+
+        // assume C2 is the tangent of arc2 and line
+        // C2O2 = O2 - C2 -> C2 = O2
+        const Eigen::Vector2d C2O2 = radius2 * line2_norm_vec;
+        arc2.pB = center2 - C2O2;
+
+        if (!CompleteArcInfomation(arc2)) {
           continue;
         }
 
@@ -2027,6 +2247,70 @@ const bool CalCommonTangentCircleOfTwoLine(
   return true;
 }
 
+const bool CalcCommonTangentCircleOfTwoLine(
+    const LineSegment &line1, const LineSegment &line2, const double radius,
+    std::vector<Eigen::Vector2d> &centers,
+    std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss) {
+  Eigen::Vector2d intersection = Eigen::Vector2d::Zero();
+  if (GetIntersectionFromTwoLines(intersection, line1, line2)) {
+    const Eigen::Vector2d unit_line1_vec = (line1.pB - line1.pA).normalized();
+    const Eigen::Vector2d unit_line2_vec = (line2.pB - line2.pA).normalized();
+    // every line have two direction, so two lines have four combination
+    std::vector<Eigen::Vector2d> combination{
+        Eigen::Vector2d(1.0, 1.0), Eigen::Vector2d(1.0, -1.0),
+        Eigen::Vector2d(-1.0, 1.0), Eigen::Vector2d(-1.0, -1.0)};
+    centers.clear();
+    centers.reserve(combination.size());
+    tangent_ptss.clear();
+    tangent_ptss.reserve(combination.size());
+    for (size_t i = 0; i < combination.size(); i++) {
+      const Eigen::Vector2d actual_unit_line1_vec =
+          unit_line1_vec * combination[i].x();
+      const Eigen::Vector2d actual_unit_line2_vec =
+          unit_line2_vec * combination[i].y();
+
+      const Eigen::Vector2d unit_angular_bisector_vec =
+          (actual_unit_line1_vec + actual_unit_line2_vec).normalized();
+
+      // the angle between two lines is 2*theta, sin_theta is no impossible 0
+      const double sin_theta = GetCrossFromTwoVec2d(actual_unit_line1_vec,
+                                                    unit_angular_bisector_vec);
+
+      const double dist_intersection_center = radius / sin_theta;
+
+      // A is intersection, O is center
+      const Eigen::Vector2d AO =
+          dist_intersection_center * unit_angular_bisector_vec;
+      const Eigen::Vector2d center = AO + intersection;
+
+      centers.emplace_back(center);
+
+      std::pair<Eigen::Vector2d, Eigen::Vector2d> tang_pts;
+
+      const double cos_theta =
+          actual_unit_line1_vec.dot(unit_angular_bisector_vec);
+
+      const double dist_intersection_tangpt =
+          dist_intersection_center * cos_theta;
+
+      // P1, P2 is tang pt
+      const Eigen::Vector2d AP1 =
+          dist_intersection_tangpt * actual_unit_line1_vec;
+      const Eigen::Vector2d AP2 =
+          dist_intersection_tangpt * actual_unit_line2_vec;
+      tang_pts.first = AP1 + intersection;
+      tang_pts.second = AP2 + intersection;
+      tangent_ptss.emplace_back(tang_pts);
+    }
+  } else {
+    // ILOG_INFO << "two lines have no intersection, no common tangent
+    // circle\n";
+    return LogErr(__func__, 1);
+  }
+
+  return true;
+}
+
 const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
                                LineSegment &line, Arc &arc, const double radius,
                                const bool is_shifted) {
@@ -2173,6 +2457,29 @@ const bool CheckTwoVecSameOrOppositeDirection(const Eigen::Vector2d &v1,
   return false;
 }
 
+const bool CompleteArcInfomation(Arc &arc) {
+  const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+  const Eigen::Vector2d OB = arc.pB - arc.circle_info.center;
+  // const double rot_angle = GetAngleFromTwoVec(OA, OB);
+  const double rot_angle = FastSignedAngle(OA, OB);
+  if (rot_angle > 0.0) {
+    arc.is_anti_clockwise = true;
+  } else if (rot_angle < 0.0) {
+    arc.is_anti_clockwise = false;
+  } else {
+    return false;
+  }
+
+  const double OA_norm = OA.norm();
+  arc.circle_info.radius = OA_norm;
+
+  arc.headingB = NormalizeAngle(arc.headingA + rot_angle);
+
+  arc.length = std::fabs(rot_angle) * OA_norm;
+
+  return true;
+}
+
 const bool CompleteArcInfo(Arc &arc) {
   using namespace mathlib;
   // arc(A-B) known:pA, headingA, pB, pO(turn center)
@@ -2226,6 +2533,30 @@ const bool CompleteArcInfo(Arc &arc, const double rot_angle) {
   return CompleteArcInfo(arc);
 }
 
+const bool CompleteArcInfomation(Arc &arc, const double rot_angle) {
+  const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+  const double OA_norm = OA.norm();
+  arc.circle_info.radius = OA_norm;
+
+  if (rot_angle > 0.0) {
+    arc.is_anti_clockwise = true;
+  } else if (rot_angle < 0.0) {
+    arc.is_anti_clockwise = false;
+  } else {
+    return false;
+  }
+
+  const Eigen::Matrix2d rot_m = GetRotm2dFromTheta(rot_angle);
+  const Eigen::Vector2d OB = rot_m * OA;
+  arc.pB = arc.circle_info.center + OB;
+
+  arc.headingB = NormalizeAngle(arc.headingA + rot_angle);
+
+  arc.length = std::fabs(rot_angle) * OA_norm;
+
+  return true;
+}
+
 const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer) {
   using namespace mathlib;
   // arc(A->B  O:turn center)
@@ -2248,6 +2579,37 @@ const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer) {
   const double rot_angle = NormalizeAngle(arc.headingB - arc.headingA);
 
   return CompleteArcInfo(arc, rot_angle);
+}
+
+const bool CompleteArcInfomation(Arc &arc, const uint8_t arc_steer) {
+  const Eigen::Vector2d A_tang_vec = arc.headingA_vec;
+  Eigen::Vector2d A_norm_vec;
+  if (arc_steer == SEG_STEER_LEFT) {
+    A_norm_vec << -A_tang_vec.y(), A_tang_vec.x();
+  } else {
+    A_norm_vec << A_tang_vec.y(), -A_tang_vec.x();
+  }
+  arc.circle_info.center = arc.pA + A_norm_vec * arc.circle_info.radius;
+
+  const double rot_angle = NormalizeAngle(arc.headingB - arc.headingA);
+
+  if (rot_angle > 0.0) {
+    arc.is_anti_clockwise = true;
+  } else if (rot_angle < 0.0) {
+    arc.is_anti_clockwise = false;
+  } else {
+    return false;
+  }
+
+  const Eigen::Vector2d OA = arc.pA - arc.circle_info.center;
+
+  const Eigen::Matrix2d rot_m = GetRotm2dFromTheta(rot_angle);
+  const Eigen::Vector2d OB = rot_m * OA;
+  arc.pB = arc.circle_info.center + OB;
+
+  arc.length = std::fabs(rot_angle) * arc.circle_info.radius;
+
+  return true;
 }
 
 const bool CompleteArcInfo(Arc &arc, const double length,
@@ -2429,6 +2791,12 @@ const uint8_t CalArcGear(const Arc &arc) {
   return (v_ab.dot(v_heading_a) > 0.0) ? SEG_GEAR_DRIVE : SEG_GEAR_REVERSE;
 }
 
+const uint8_t CalcArcGear(const Arc &arc) {
+  const Eigen::Vector2d v_ab = arc.pB - arc.pA;
+  const Eigen::Vector2d v_heading_a = arc.headingA_vec;
+  return (v_ab.dot(v_heading_a) > 0.0) ? SEG_GEAR_DRIVE : SEG_GEAR_REVERSE;
+}
+
 const uint8_t CalArcSteer(const Arc &arc) {
   const Eigen::Vector2d v_oa = arc.pA - arc.circle_info.center;
   if (mathlib::IsDoubleEqual(v_oa.norm(), 0.0)) {
@@ -2438,6 +2806,13 @@ const uint8_t CalArcSteer(const Arc &arc) {
   const Eigen::Vector2d v_heading_a(std::cos(arc.headingA),
                                     std::sin(arc.headingA));
 
+  return (GetCrossFromTwoVec2d(v_oa, v_heading_a) > 0.0) ? SEG_STEER_LEFT
+                                                         : SEG_STEER_RIGHT;
+}
+
+const uint8_t CalcArcSteer(const Arc &arc) {
+  const Eigen::Vector2d v_oa = arc.pA - arc.circle_info.center;
+  const Eigen::Vector2d v_heading_a = arc.headingA_vec;
   return (GetCrossFromTwoVec2d(v_oa, v_heading_a) > 0.0) ? SEG_STEER_LEFT
                                                          : SEG_STEER_RIGHT;
 }
@@ -2454,6 +2829,16 @@ const uint8_t CalLineSegGear(const LineSegment &line_seg) {
     return SEG_GEAR_INVALID;
   }
   if (CheckTwoVecSameOrOppositeDirection(v1, v2)) {
+    return SEG_GEAR_DRIVE;
+  }
+  return SEG_GEAR_REVERSE;
+}
+
+const uint8_t CalcLineSegGear(const LineSegment &line_seg) {
+  const Eigen::Vector2d v1 = (line_seg.pB - line_seg.pA).normalized();
+  const Eigen::Vector2d v2 = line_seg.heading_vec;
+  const double cos_theta = v1.dot(v2);
+  if (cos_theta > 0.085) {
     return SEG_GEAR_DRIVE;
   }
   return SEG_GEAR_REVERSE;
@@ -2599,6 +2984,24 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
   return true;
 }
 
+const bool CalcLineUnitNormVecByPos(const Eigen::Vector2d &pos,
+                                    const LineSegment &line,
+                                    Eigen::Vector2d &line_norm_vec) {
+  const double cross = GetCrossFromTwoVec2d(line.pB - line.pA, pos - line.pA);
+  const Eigen::Vector2d line_tang_vec = (line.pB - line.pA).normalized();
+  // line_norm_vec is from pos to line
+  if (cross > 1e-6) {
+    // pos is on left side of the line
+    line_norm_vec << line_tang_vec.y(), -line_tang_vec.x();
+  } else if (cross < -1e-6) {
+    // pos is on right side of the line
+    line_norm_vec << -line_tang_vec.y(), line_tang_vec.x();
+  } else {
+    return false;
+  }
+  return true;
+}
+
 const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
                                     const uint8_t current_seg_gear) {
   // the arc which is tangent with the line
@@ -2664,6 +3067,62 @@ const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
   return true;
 }
 
+const bool CalcOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
+                                     const uint8_t current_seg_gear,
+                                     const double min_radius) {
+  const double heading_diff = NormalizeAngle(arc.headingA - line.heading);
+  if (std::fabs(heading_diff) <= kEqualHeadingEps) {
+    return false;
+  }
+  Eigen::Vector2d line_norm_vec;
+  if (!CalcLineUnitNormVecByPos(arc.pA, line, line_norm_vec)) {
+    return false;
+  }
+
+  uint8_t arc_steer = 0;
+  if ((heading_diff < 0.0 && current_seg_gear == SEG_GEAR_DRIVE) ||
+      (heading_diff > 0.0 && current_seg_gear == SEG_GEAR_REVERSE)) {
+    arc_steer = SEG_STEER_LEFT;
+  } else {
+    arc_steer = SEG_STEER_RIGHT;
+  }
+
+  // pose(C, heading) arc(C->D)
+  Eigen::Vector2d pose_norm_vec;
+  if (arc_steer == SEG_STEER_RIGHT) {
+    pose_norm_vec << arc.headingA_vec.y(), -arc.headingA_vec.x();
+  } else if (arc_steer == SEG_STEER_LEFT) {
+    pose_norm_vec << -arc.headingA_vec.y(), arc.headingA_vec.x();
+  }
+
+  // pose turn center (O), first assume turn radius is r, then assume the
+  // tangent of arc and line is D, and D shoule be on the line,
+  // so AD × AB = 0.0, and the r can be calculated
+  const Eigen::Vector2d AC = arc.pA - line.pA;
+  const Eigen::Vector2d line_tang_vec = (line.pB - line.pA).normalized();
+  const double a =
+      GetCrossFromTwoVec2d(pose_norm_vec + line_norm_vec, line_tang_vec);
+  if (IsTwoNumerEqual(a, 0.0)) {
+    return false;
+  }
+
+  arc.circle_info.radius = -GetCrossFromTwoVec2d(AC, line_tang_vec) / a;
+
+  if (arc.circle_info.radius < min_radius) {
+    return false;
+  }
+
+  // cal arc other info
+  arc.circle_info.center = arc.pA + arc.circle_info.radius * pose_norm_vec;
+  arc.pB = arc.circle_info.center + arc.circle_info.radius * line_norm_vec;
+
+  if (!CompleteArcInfomation(arc)) {
+    return false;
+  }
+
+  return true;
+}
+
 const bool LogErr(const std::string &func_name, uint8_t index,
                   const uint8_t type) {
   std::string err_type(" input ");
@@ -2707,6 +3166,32 @@ const bool CalOneArcWithTargetHeadingAndGear(Arc &arc,
               << "target_heading =" << target_heading * kRad2Deg;
     return LogErr(__func__, 2);
   }
+
+  return true;
+}
+
+const bool CalcOneArcWithTargetHeadingAndGear(Arc &arc,
+                                              const uint8_t current_seg_gear,
+                                              const double target_heading) {
+  arc.headingB = target_heading;
+  const double heading_diff = NormalizeAngle(arc.headingA - arc.headingB);
+  uint8_t arc_steer = 0;
+  if ((heading_diff < 0.0 && current_seg_gear == SEG_GEAR_DRIVE) ||
+      (heading_diff > 0.0 && current_seg_gear == SEG_GEAR_REVERSE)) {
+    arc_steer = SEG_STEER_LEFT;
+  } else {
+    arc_steer = SEG_STEER_RIGHT;
+  }
+
+  if (!CompleteArcInfomation(arc, arc_steer)) {
+    return false;
+  }
+
+  // if (!mathlib::IsDoubleEqual(arc.headingB, target_heading, 1e-4)) {
+  //   ILOG_INFO << "arc.headingB =" << arc.headingB * kRad2Deg << " , "
+  //             << "target_heading =" << target_heading * kRad2Deg;
+  //   return false;
+  // }
 
   return true;
 }
@@ -2807,6 +3292,60 @@ const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
 
   arc2.pA = arc1.pB;
   arc2.headingA = arc1.headingB;
+  arc2.pB = arc2.pA + lat_dist * 0.5 * line1_norm_vec + lon_dist * tmp_tang_vec;
+  arc2.circle_info.center = arc2.pB - line1_norm_vec * arc2.circle_info.radius;
+  arc2.is_anti_clockwise = !arc1.is_anti_clockwise;
+  arc2.length = arc1.length;
+
+  return true;
+}
+
+const bool CalcTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
+                                     const uint8_t seg_gear) {
+  geometry_lib::LineSegment line2;
+  line2.pA = arc2.pB;
+  line2.heading = arc2.headingB;
+  line2.heading_vec = arc2.headingB_vec;
+  line2.length = 1.0;
+  line2.pB = line2.pA + line2.length * line2.heading_vec;
+
+  Eigen::Vector2d line1_norm_vec;
+  if (!CalcLineUnitNormVecByPos(arc1.pA, line2, line1_norm_vec)) {
+    return false;
+  }
+  // line_norm_vec is from arc.pA to line2
+  arc1.circle_info.center = arc1.pA + arc1.circle_info.radius * line1_norm_vec;
+
+  const double lat_dist = CalPoint2LineDist(arc1.pA, line2);
+  // if lat_dist is too big, arc1 and arc2 cannot be tangent
+  if (lat_dist > arc1.circle_info.radius * 2.0 + 1e-2) {
+    return false;
+  }
+  // the C is the tangent of arc1 and arc2
+  // the dist from C to line2 is the half of lat_dist because of the same
+  // radius of arc1 and arc2 the theta is rot_angle of arc1
+  const double cos_theta =
+      (arc1.circle_info.radius - lat_dist * 0.5) / arc1.circle_info.radius;
+
+  const double sin_theta = std::sqrt(1 - std::min(cos_theta * cos_theta, 1.0));
+
+  // lon_dist is the proj length of AC in line2
+  const double lon_dist = arc1.circle_info.radius * sin_theta;
+
+  Eigen::Vector2d tmp_tang_vec = arc1.headingA_vec;
+  if (seg_gear == SEG_GEAR_REVERSE) {
+    tmp_tang_vec *= -1.0;
+  }
+
+  arc1.pB = arc1.pA + lat_dist * 0.5 * line1_norm_vec + lon_dist * tmp_tang_vec;
+
+  if (!CompleteArcInfomation(arc1)) {
+    return LogErr(__func__, 3);
+  }
+
+  arc2.pA = arc1.pB;
+  arc2.headingA = arc1.headingB;
+  arc2.headingA_vec << std::cos(arc2.headingA), std::sin(arc2.headingA);
   arc2.pB = arc2.pA + lat_dist * 0.5 * line1_norm_vec + lon_dist * tmp_tang_vec;
   arc2.circle_info.center = arc2.pB - line1_norm_vec * arc2.circle_info.radius;
   arc2.is_anti_clockwise = !arc1.is_anti_clockwise;

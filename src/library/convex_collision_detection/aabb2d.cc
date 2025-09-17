@@ -34,6 +34,19 @@ void AABB::Reset(const Vector2r &center) {
   return;
 }
 
+void AABB::Set(const Vector2r &center, const real length, const real width,
+               const real heading) {
+  Vector2r unit_l(std::cos(heading), std::sin(heading));
+  Vector2r unit_w(-unit_l.y(), unit_l.x());
+  Vector2r p1 = center + unit_l * length * 0.5 + unit_w * width * 0.5;
+  Vector2r p2 = center - unit_l * length * 0.5 + unit_w * width * 0.5;
+  Vector2r p3 = center - unit_l * length * 0.5 - unit_w * width * 0.5;
+  Vector2r p4 = center + unit_l * length * 0.5 - unit_w * width * 0.5;
+  min_ = p1.cwiseMin(p2).cwiseMin(p3).cwiseMin(p4);
+  max_ = p1.cwiseMax(p2).cwiseMax(p3).cwiseMax(p4);
+  return;
+}
+
 bool AABB::contain(const AABB &other) const {
   if ((min_.array() > other.min_.array()).any()) return false;
   if ((max_.array() < other.max_.array()).any()) return false;
@@ -85,6 +98,18 @@ bool AABB::contain(const planning::Pose2D &p) const {
   return true;
 }
 
+bool AABB::contain(const planning::Pose2f &p) const {
+  if (min_[0] > real(p.x) || min_[1] > real(p.y)) {
+    return false;
+  }
+
+  if (max_[0] < real(p.x) || max_[1] < real(p.y)) {
+    return false;
+  }
+
+  return true;
+}
+
 AABB &AABB::operator+=(const Vector2r &p) {
   min_ = min_.cwiseMin(p);
   max_ = max_.cwiseMax(p);
@@ -115,6 +140,10 @@ real AABB::size() const { return (max_ - min_).squaredNorm(); }
 real AABB::radius() const { return (max_ - min_).norm() * 0.5; }
 
 Vector2r AABB::center() const { return (min_ + max_) * 0.5; }
+
+real AABB::long_side() const { return std::max(width(), height()); }
+
+real AABB::short_side() const { return std::min(width(), height()); }
 
 real AABB::distance(const AABB &other, Vector2r &P, Vector2r &Q) const {
   real result = 0;
@@ -232,12 +261,28 @@ AABB AABB::translate(const AABB &aabb, const Vector2r &t) {
 
 AABB2f::AABB2f()
     : min_(Eigen::Vector2f(std::numeric_limits<float>::max(),
-                    std::numeric_limits<float>::max())),
+                           std::numeric_limits<float>::max())),
       max_(Eigen::Vector2f(std::numeric_limits<float>::lowest(),
-                    std::numeric_limits<float>::lowest())) {}
+                           std::numeric_limits<float>::lowest())) {}
 
 AABB2f::AABB2f(const Eigen::Vector2f &a, const Eigen::Vector2f &b)
     : min_(a.cwiseMin(b)), max_(a.cwiseMax(b)) {}
+
+AABB2f::AABB2f(const std::vector<Eigen::Vector2f> &pt_vec) {
+  if (pt_vec.empty()) {
+    min_ = Eigen::Vector2f(std::numeric_limits<float>::max(),
+                           std::numeric_limits<float>::max());
+    max_ = Eigen::Vector2f(std::numeric_limits<float>::lowest(),
+                           std::numeric_limits<float>::lowest());
+  } else {
+    min_ = pt_vec[0];
+    max_ = pt_vec[0];
+    for (std::size_t i = 1; i < pt_vec.size(); ++i) {
+      min_ = min_.cwiseMin(pt_vec[i]);
+      max_ = max_.cwiseMax(pt_vec[i]);
+    }
+  }
+}
 
 bool AABB2f::contain(const planning::Pose2f &p) const {
   if (min_[0] > p.x || min_[1] > p.y) {
@@ -250,4 +295,42 @@ bool AABB2f::contain(const planning::Pose2f &p) const {
 
   return true;
 }
+
+bool AABB2f::IsContain(const planning::Pose2f &p) const {
+  if (min_[0] > p.x || min_[1] > p.y) {
+    return false;
+  }
+
+  if (max_[0] < p.x || max_[1] < p.y) {
+    return false;
+  }
+
+  return true;
+}
+
+bool AABB2f::IsContain(const Eigen::Vector2f &p) const {
+  if ((min_.array() > p.array()).any()) return false;
+  if ((max_.array() < p.array()).any()) return false;
+  return true;
+}
+
+bool AABB2f::IsContain(const Eigen::Vector2d &p) const {
+  if ((min_.array() > Eigen::Vector2f(p.x(), p.y()).array()).any())
+    return false;
+  if ((max_.array() < Eigen::Vector2f(p.x(), p.y()).array()).any())
+    return false;
+  return true;
+}
+
+bool AABB2f::IsContain(const AABB2f &other) const {
+  if ((min_.array() > other.min_.array()).any()) return false;
+  if ((max_.array() < other.max_.array()).any()) return false;
+  return true;
+}
+
+/** Width of the AABB */
+float AABB2f::GetWidth() const { return max_[0] - min_[0]; }
+
+/** Height of the AABB */
+float AABB2f::GetLength() const { return max_[1] - min_[1]; }
 }  // namespace cdl
