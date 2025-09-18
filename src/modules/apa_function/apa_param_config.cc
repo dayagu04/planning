@@ -153,6 +153,14 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.rear_overhanging, double, "rear_overhanging");
 
+  JSON_READ_VALUE(param.mirror_height, double, "mirror_height");
+  JSON_READ_VALUE(param.front_overhanging_height, double,
+                  "front_overhanging_height");
+  JSON_READ_VALUE(param.rear_overhanging_height, double,
+                  "rear_overhanging_height");
+  JSON_READ_VALUE(param.height_redundancy, double, "height_redundancy");
+  JSON_READ_VALUE(param.runover_height, double, "runover_height");
+
   JSON_READ_VALUE(param.wheel_base, double, "wheel_base");
   JSON_READ_VALUE(param.car_width, double, "car_width");
   JSON_READ_VALUE(param.car_length, double, "car_length");

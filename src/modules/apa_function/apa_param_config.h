@@ -357,6 +357,11 @@ struct ApaParameters {
   double car_length = 4.88;
   double max_car_width = 0.2;
   double fold_mirror_max_car_width = 0.2;
+  double mirror_height = 1.15;
+  double front_overhanging_height = 0.34;
+  double rear_overhanging_height = 0.41;
+  double height_redundancy = 0.12;
+  double runover_height = 0.15;
   double lon_dist_mirror_to_rear_axle = 1.844;
   double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;
