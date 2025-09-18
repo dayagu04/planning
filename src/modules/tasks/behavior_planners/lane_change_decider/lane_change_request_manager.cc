@@ -135,22 +135,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
   if (int_request_.request_type() == NO_CHANGE) {
     if (enable_use_cone_change_request && request_source_ != EMERGENCE_AVOID_REQUEST) {
-      if (dis_to_stopline > default_distance_threshld_to_stop_line &&
-          intersection_state != planning::common::IN_INTERSECTION) {
-        cone_change_request_.Update(lc_status);
-      } else {
-        cone_change_request_.Reset();
-        cone_change_request_.Finish();
-      }
+      cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request && request_source_ != CONE_REQUEST) {
-      if (dis_to_stopline > default_distance_threshld_to_stop_line &&
-          intersection_state != planning::common::IN_INTERSECTION) {
-        emergence_avoid_request_.Update(lc_status);
-      } else {
-        emergence_avoid_request_.Reset();
-        emergence_avoid_request_.Finish();
-      }
+      emergence_avoid_request_.Update(lc_status);
     }
     if (hd_map_valid) {
       map_request_.Update(lc_status, map_request_.tfinish());
@@ -158,15 +146,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
         origin_relative_id_zero_nums == 1 &&
         ego_distance_to_boundary_merge > distance_nearby_merge_point_to_surpress_merge_request) {
-      if (intersection_state != planning::common::IN_INTERSECTION &&
-          dis_to_stopline > default_distance_threshld_to_stop_line) {
-        merge_change_request_.Update(lc_status);
-        is_near_merge_region_ =
-            merge_change_request_.is_merge_lane_change_situation();
-      } else {
-        merge_change_request_.Reset();
-        merge_change_request_.Finish();
-      }
+      merge_change_request_.Update(lc_status);
+      is_near_merge_region_ =
+          merge_change_request_.is_merge_lane_change_situation();
     }
     if (location_valid && use_overtake_lane_change_request) {
       // lcc功能抑制超车变道
