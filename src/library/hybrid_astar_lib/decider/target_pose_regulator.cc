@@ -227,16 +227,13 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2f global_pose;
   global_pose = center_line_target_;
-  constexpr size_t kMaxCandidateNum = 10;  // 最大候选数量
-  // constexpr size_t kNumberRows = 3;        // 行数
+  constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
+  constexpr size_t kNumberRows = 5;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
   constexpr float kXStep = 0.3f;           // X轴步长
   constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
   constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
-
-  const size_t number_rows =
-      request_->space_type == ParkSpaceType::SLANTING ? 5 : 3;
 
   const float base_x = (request->space_type == ParkSpaceType::SLANTING)
                            ? (global_pose.GetX() - kSlantingOffset)
@@ -246,7 +243,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
       request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
       request->direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
   const size_t total_candidates =
-      is_middle_direction ? kMaxCandidateNum : (number_rows * kMaxCandidateNum);
+      is_middle_direction ? kMaxCandidateNum : (kNumberRows * kMaxCandidateNum);
   candidate_info_.reserve(candidate_info_.size() + total_candidates);
 
   Eigen::Vector2d temp_pos(0, 0);
@@ -272,7 +269,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           ? -1
           : 1;
 
-  for (size_t j = 0; j < number_rows; ++j) {
+  for (size_t j = 0; j < kNumberRows; ++j) {
     const Eigen::Vector2d base_pose(base_x + kXStep * j,
                                     center_line_target_.GetY());
 
@@ -310,16 +307,13 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   }
   Pose2f global_pose;
   global_pose = center_line_target_;
-  constexpr size_t kMaxCandidateNum = 10;  // 最大候选数量
-  // constexpr size_t kNumberRows = 3;        // 行数
+  constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
+  constexpr size_t kNumberRows = 5;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
   constexpr float kXStep = 0.3f;           // X轴步长
   constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
   constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
-
-  const size_t number_rows =
-      request_->space_type == ParkSpaceType::SLANTING ? 5 : 3;
 
   const float base_x = (request_->space_type == ParkSpaceType::SLANTING)
                            ? (global_pose.GetX() - kSlantingOffset)
@@ -329,7 +323,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   const size_t totalCandidates =
       (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE)
           ? kMaxCandidateNum
-          : (number_rows * kMaxCandidateNum);
+          : (kNumberRows * kMaxCandidateNum);
   candidate_info_.reserve(candidate_info_.size() + totalCandidates);
 
   // 中间方向特殊处理，只需要1列
@@ -344,7 +338,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     }
   } else {
     // 左右方向处理
-    for (size_t j = 0; j < number_rows; ++j) {
+    for (size_t j = 0; j < kNumberRows; ++j) {
       const Eigen::Vector2d base_pose(base_x + kXStep * j,
                                       center_line_target_.GetY());
 
@@ -432,11 +426,7 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   constexpr size_t kNumSteps = 10;
   constexpr float kYStep = 0.5f;
   // constexpr float kMinSafetyDist = 0.5f;
-  const float min_safety_dist =
-      (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
-       direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE)
-          ? 0.04f
-          : 0.5f;
+  const float min_safety_dist = 0.04f;
   const Eigen::Vector2d base_pos(global_pose.GetX(), global_pose.GetY());
   Eigen::Vector2d temp_pos;
 

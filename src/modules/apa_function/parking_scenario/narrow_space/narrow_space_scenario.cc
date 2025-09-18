@@ -1739,7 +1739,9 @@ const bool NarrowSpaceScenario::NeedBlindZonePlanning(
 
 const bool NarrowSpaceScenario::CheckDynamicUpdate() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
-    return CheckDynamicHeadOut();
+    // return CheckDynamicHeadOut();
+    // todo : this function needs to be rewritten and temporarily closed
+    return false;
   } else {
     return ReplanBySlotRefresh();
   }
@@ -2446,6 +2448,19 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     const double opposite_target_heading_rad =
         planning_math::NormalizeAngle(target_heading_rad + M_PI);
 
+    constexpr double kInitialTargetX = 7.5;
+    constexpr double kSlantInitialTargetX = 7.0;
+    constexpr double kInitialTargetY = 5.0;
+    constexpr double kSlantInitialTargetY = 3.0;
+    constexpr double kTailOutOffsetY = 3.0;
+
+    const double head_out_offset_y = ego_info.slot_type == SlotType::SLANT
+                                         ? kSlantInitialTargetY
+                                         : kInitialTargetY;
+    const double base_x = ego_info.slot_type == SlotType::SLANT
+                              ? kSlantInitialTargetX
+                              : kInitialTargetX;
+
     cur_request.x_axis_direction_coordinate_slant =
         direction_origin_corner_23_normalized_;
 
@@ -2463,17 +2478,19 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
     cur_request.direction_request_stack[5] =
         ParkingVehDirection::TAIL_OUT_TO_RIGHT;
 
-    const Eigen::Vector2d temp_head_pos(7.0, 0.0);
-    const double offset_y = ego_info.slot_type == SlotType::SLANT ? 3.0 : 5.0;
-
+    const Eigen::Vector2d temp_head_pos(base_x, 0.0);
     const Eigen::Vector2d target_pos_head_left =
-        temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
+        temp_head_pos +
+        direction_origin_corner_23_normalized_ * head_out_offset_y;
     const Eigen::Vector2d target_pos_head_right =
-        temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
+        temp_head_pos -
+        direction_origin_corner_23_normalized_ * head_out_offset_y;
     const Eigen::Vector2d target_pos_tail_left =
-        temp_head_pos - direction_origin_corner_23_normalized_ * 3.0;
+        temp_head_pos -
+        direction_origin_corner_23_normalized_ * kTailOutOffsetY;
     const Eigen::Vector2d target_pos_tail_right =
-        temp_head_pos + direction_origin_corner_23_normalized_ * 3.0;
+        temp_head_pos +
+        direction_origin_corner_23_normalized_ * kTailOutOffsetY;
 
     if (ego_info.relative_direction_between_ego_and_slot > 0.0) {
       cur_request.real_goal_stack[0] =
@@ -2594,26 +2611,30 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
   direction_origin_corner_23_normalized_ =
       direction_origin_corner_23.normalized();
 
-  constexpr double kInitialTargetX = 7.0;
+  constexpr double kInitialTargetX = 7.5;
+  constexpr double kSlantInitialTargetX = 7.0;
   constexpr double kInitialTargetY = 5.0;
-  constexpr double kAlternateTargetX = 8.0;
-  constexpr double kAlternateTargetY = 4.0;
-  constexpr double kPositionThresholdX = 7.0;
-  constexpr double kHeadingThresholdRad0 = 60.0 * M_PI / 180.0;
-  constexpr double kHeadingThresholdRad1 = 130.0 * M_PI / 180.0;
+  constexpr double kSlantInitialTargetY = 3.0;
+  constexpr double kTailOutOffsetY = 3.0;
 
-  const double offset_y =
-      ego_info.slot_type == SlotType::SLANT ? 3.0 : kInitialTargetY;
-  const Eigen::Vector2d temp_head_pos(kInitialTargetX, 0.0);
+  const double head_out_offset_y = ego_info.slot_type == SlotType::SLANT
+                                       ? kSlantInitialTargetY
+                                       : kInitialTargetY;
+  const double base_x = ego_info.slot_type == SlotType::SLANT
+                            ? kSlantInitialTargetX
+                            : kInitialTargetX;
+  const Eigen::Vector2d temp_head_pos(base_x, 0.0);
 
   const Eigen::Vector2d target_pos_head_left =
-      temp_head_pos + direction_origin_corner_23_normalized_ * offset_y;
+      temp_head_pos +
+      direction_origin_corner_23_normalized_ * head_out_offset_y;
   const Eigen::Vector2d target_pos_head_right =
-      temp_head_pos - direction_origin_corner_23_normalized_ * offset_y;
+      temp_head_pos -
+      direction_origin_corner_23_normalized_ * head_out_offset_y;
   const Eigen::Vector2d target_pos_tail_left =
-      temp_head_pos - direction_origin_corner_23_normalized_ * 3.0;
+      temp_head_pos - direction_origin_corner_23_normalized_ * kTailOutOffsetY;
   const Eigen::Vector2d target_pos_tail_right =
-      temp_head_pos + direction_origin_corner_23_normalized_ * 3.0;
+      temp_head_pos + direction_origin_corner_23_normalized_ * kTailOutOffsetY;
   const double target_heading_rad_head_out = geometry_lib::GetAngleFromTwoVec(
       ego_info.slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_vec,
       ego_info.slot.GetOriginCornerCoordGlobal().pt_01_vec);
@@ -2689,8 +2710,9 @@ double NarrowSpaceScenario::GeneVirtualLimiter(
             ego_slot.slot.GetWidth() / 2.0 + param.car_vertex_y_vec[2];
       }
 
-      contact_point_len = triangle_len -
-                 contact_point_width / ego_slot.slot.GetWidth() * triangle_len;
+      contact_point_len = triangle_len - contact_point_width /
+                                             ego_slot.slot.GetWidth() *
+                                             triangle_len;
     }
 
     if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
