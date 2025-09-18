@@ -337,18 +337,28 @@ void ObstacleManager::UpdateOccObstacle() {
           occupancy_objects[i].additional_occupancy_info.polygon_points_size;
       auto polygon_points =
           occupancy_objects[i].additional_occupancy_info.polygon_points;
+      iflyauto::Point2f
+          polygon_points_2d[FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_MAX_NUM];
+      for (size_t j = 0;
+          j < std::min(polygon_points_size,
+                        static_cast<size_t>(
+                            FUSION_OCCUPANCY_OBJECTS_POLYGON_POINTS_SET_MAX_NUM));
+          ++j) {
+        polygon_points_2d[j].x = polygon_points[j].x;
+        polygon_points_2d[j].y = polygon_points[j].y;
+      }
       // 防止出现直角墙构成三角形区域
       if (polygon_points_size > 100 &&
           (occupancy_objects[i].common_occupancy_info.type ==
               iflyauto::OBJECT_TYPE_OCC_WALL ||
            occupancy_objects[i].common_occupancy_info.type ==
               iflyauto::OBJECT_TYPE_OCC_EMPTY)) {
-        ProcessOccupancyWall(occupancy_objects[i], polygon_points,
+        ProcessOccupancyWall(occupancy_objects[i], polygon_points_2d,
                              polygon_points_size, frenet_coord,
                              ego_point, index_offset);
 
       } else {
-        ProcessOccupancyObject(occupancy_objects[i], polygon_points,
+        ProcessOccupancyObject(occupancy_objects[i], polygon_points_2d,
                                polygon_points_size, frenet_coord, ego_point);
       }
     }
