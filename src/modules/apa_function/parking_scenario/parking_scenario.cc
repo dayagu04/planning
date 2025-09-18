@@ -398,6 +398,8 @@ void ParkingScenario::SetPlanningPath() {
 
     planning_output_.trajectory.target_reference.polynomial[0] =
         trajectory_.GetTerminalS();
+    planning_output_.trajectory.target_reference.polynomial[1] =
+        std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
   }
 
   // set plan gear cmd

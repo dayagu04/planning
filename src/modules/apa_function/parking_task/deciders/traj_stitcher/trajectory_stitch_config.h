@@ -3,6 +3,11 @@
 namespace planning {
 namespace apa_planner {
 
+struct LonStitchError {
+  double vel_stitch_error;
+  double acc_stitch_error;
+};
+
 struct TrajectoryStitchConfig {
   // If remain traj is not long enough, use history traj to fill the remain
   // traj, to let the remain traj has a minimum distance.
@@ -16,8 +21,11 @@ struct TrajectoryStitchConfig {
   // If traj dist is small, enter open loop control.
   double min_dist_for_open_loop_control;
 
-  double vel_stitch_error_for_closeloop;
-  double acc_stitch_error_for_closeloop;
+  double low_vel_thresh_for_speed_smooth;
+  // ego speed [0, 0.6], different speed use different error for_closeloop.
+  LonStitchError low_stitch_error;
+  // [0.6, +inf]
+  LonStitchError normal_stitch_error;
 
   void Init();
 };

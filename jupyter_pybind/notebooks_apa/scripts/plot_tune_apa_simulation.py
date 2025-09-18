@@ -30,7 +30,7 @@ frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
-plot_speed_graph = False
+plot_speed_graph = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
