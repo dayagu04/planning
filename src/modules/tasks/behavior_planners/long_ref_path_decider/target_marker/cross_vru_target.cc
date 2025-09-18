@@ -19,7 +19,7 @@
 #include "planning_context.h"
 
 namespace planning {
-  
+
 CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
                                framework::Session* session)
     : Target(config, session) {
@@ -75,6 +75,13 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VECTOR("cross_vru_agent_ids", cross_vru_agent_ids_, 0);
 
   GenerateCrossVRUTarget();
+
+  auto mutable_lon_ref_path_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lon_ref_path_decider_output();
+
+  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
+      is_pre_handle_cross_vru_;
 
   AddCrossVRUTargetDataToProto();
 }
@@ -289,9 +296,9 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
-  double s_star =
-      s0 + std::max(0.0, current_vel * headway_time + (current_vel * delta_v) /
-                                                 (2.0 * std::sqrt(a * b_max)));
+  double s_star = s0 + std::max(0.0, current_vel * headway_time +
+                                         (current_vel * delta_v) /
+                                             (2.0 * std::sqrt(a * b_max)));
 
   double s_safe = s0 + current_vel * headway_time;
 
@@ -421,14 +428,6 @@ void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
-
-  auto mutable_lon_ref_path_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lon_ref_path_decider_output();
-
-  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
-      is_pre_handle_cross_vru_;
-
   mutable_cross_vru_target_data->CopyFrom(cross_vru_target_pb_);
 #endif
 }

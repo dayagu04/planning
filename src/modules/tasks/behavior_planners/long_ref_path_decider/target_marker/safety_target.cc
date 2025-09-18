@@ -228,15 +228,16 @@ double SafetyTarget::CalculateSafetyAcceleration(
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
-  double s_star = s0 + std::max(0.0, current_vel * tau +
-                  (current_vel * delta_v) / (2.0 * std::sqrt(a * b_max)));
+  double s_star =
+      s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
+                                                 (2.0 * std::sqrt(a * b_max)));
 
   double s_safe = s0 + current_vel * tau;
 
   double s_desired = std::max(s0, front_s - s_safe);
 
-  double dynamic_v0 = CalcDesiredVelocity(front_s - current_s, s_safe,
-                                          front_vel, current_vel);
+  double dynamic_v0 =
+      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
 
   double desired_v0 = std::min(v0, dynamic_v0);
 
@@ -256,7 +257,8 @@ double SafetyTarget::CalculateSafetyAcceleration(
     double over_vel_ratio = current_vel / std::max(final_v0, 1e-6);
     double position_ratio = 1.0 - s_progress;
     double over_speed_ratio = over_vel_ratio - 1.0;
-    double over_speed_demand = position_ratio - over_speed_ratio * over_speed_factor;
+    double over_speed_demand =
+        position_ratio - over_speed_ratio * over_speed_factor;
     if (over_speed_demand > 0.1) {
       a_free = a * over_speed_factor * over_speed_demand;
     } else {
@@ -319,7 +321,6 @@ double SafetyTarget::CalculateSafetyAcceleration(
   return final_acc;
 }
 
-
 void SafetyTarget::AddSafetyTargetDataToProto() {
 #ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -334,7 +335,6 @@ void SafetyTarget::AddSafetyTargetDataToProto() {
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
-
   mutable_safety_target_data->CopyFrom(safety_target_pb_);
 #endif
 }
