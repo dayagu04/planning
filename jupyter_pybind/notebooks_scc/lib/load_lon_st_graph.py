@@ -384,48 +384,51 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   # provide visual tools to target maker
   ## final target
   t_final_target_vec = []
+  v_final_target_vec = []
   s_final_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.final_target.final_target_s_ref):
     t_final_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.final_target.final_target_s_ref):
     s_final_target_vec.append(item.s)
+    v_final_target_vec.append(item.v)
 
   ## cruise target
   t_cruise_target_vec = []
   s_cruise_target_vec = []
+  v_cruise_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.cruise_target.cruise_target_s_ref):
     t_cruise_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.cruise_target.cruise_target_s_ref):
     s_cruise_target_vec.append(item.s)
+    v_cruise_target_vec.append(item.v)
 
   ## neighbor target
   t_neighbor_target_vec = []
   s_neighbor_target_vec = []
+  v_neighbor_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.neighbor_target.neighbor_target_s_ref):
     t_neighbor_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.neighbor_target.neighbor_target_s_ref):
     s_neighbor_target_vec.append(item.s)
-  print("neighbor_target_s_ref: ", s_neighbor_target_vec)
+    v_neighbor_target_vec.append(item.v)
 
   lon_plan_data['data_target_s_neighbor'].data.update({
     't_neighbor_target': t_neighbor_target_vec,
+    'v_neighbor_target': v_neighbor_target_vec,
     's_neighbor_target': s_neighbor_target_vec,
   })
 
   ## follow target
   t_follow_target_vec = []
   s_follow_target_vec = []
+  v_follow_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.follow_target.follow_target_s_ref):
     t_follow_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.follow_target.follow_target_s_ref):
     s_follow_target_vec.append(item.s)
-
+    v_follow_target_vec.append(item.v)
+    
   ## overtake target
   t_overtake_target_vec = []
   s_overtake_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.overtake_target.overtake_target_s_ref):
     t_overtake_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.overtake_target.overtake_target_s_ref):
     s_overtake_target_vec.append(item.s)
   lon_plan_data['data_target_s_overtake'].data.update({
     't_overtake_target': t_overtake_target_vec,
@@ -436,7 +439,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_caution_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.caution_target.caution_target_s_ref):
     t_caution_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.caution_target.caution_target_s_ref):
     s_caution_target_vec.append(item.s)
   lon_plan_data['data_target_s_caution'].data.update({
     't_caution_target': t_caution_target_vec,
@@ -447,7 +449,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_max_decel_vec = []
   for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
     t_max_decel_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.max_decel_target.max_decel_s_ref):
     s_max_decel_vec.append(item.s)
   lon_plan_data['data_target_s_max_decel'].data.update({
     't_max_decel': t_max_decel_vec,
@@ -456,32 +457,52 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   ## safety target
   t_safety_target_vec = []
   s_safety_target_vec = []
+  v_safety_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.safety_target.safety_target_s_ref):
     t_safety_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.safety_target.safety_target_s_ref):
     s_safety_target_vec.append(item.s)
+    v_safety_target_vec.append(item.v)
+  
+  ## upper bound velocities from safety target
+  t_upper_bound_vec = []
+  v_upper_bound_vec = []
+  agent_id_upper_bound_vec = []
+  for item in (plan_debug_info.lon_target_s_ref.safety_target.upper_bound_velocities):
+    t_upper_bound_vec.append(item.t)
+    v_upper_bound_vec.append(item.v)
+    agent_id_upper_bound_vec.append(item.agent_id)
+  
   lon_plan_data['data_target_s_safety'].data.update({
     't_safety_target': t_safety_target_vec,
-    's_safety_target': s_safety_target_vec})
+    'v_safety_target': v_safety_target_vec,
+    's_safety_target': s_safety_target_vec,
+    't_upper_bound': t_upper_bound_vec,
+    'v_upper_bound': v_upper_bound_vec,
+    'agent_id_upper_bound': agent_id_upper_bound_vec})
+  
   ## cross vru target
   t_cross_vru_target_vec = []
   s_cross_vru_target_vec = []
+  v_cross_vru_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.cross_vru_target.cross_vru_target_s_ref):
     t_cross_vru_target_vec.append(item.t)
-  for item in (plan_debug_info.lon_target_s_ref.cross_vru_target.cross_vru_target_s_ref):
     s_cross_vru_target_vec.append(item.s)
+    v_cross_vru_target_vec.append(item.v)
   lon_plan_data['data_target_s_cross_vru'].data.update({
     't_cross_vru_target': t_cross_vru_target_vec,
+    'v_cross_vru_target': v_cross_vru_target_vec,
     's_cross_vru_target': s_cross_vru_target_vec})
 
   lon_plan_data['data_target'].data.update({
     't_final_target': t_final_target_vec,
     's_final_target': s_final_target_vec,
+    'v_final_target': v_final_target_vec,
     't_follow_target': t_follow_target_vec,
     's_follow_target': s_follow_target_vec,
+    'v_follow_target': v_follow_target_vec,
     't_cruise_target': t_cruise_target_vec,
-    's_cruise_target': s_cruise_target_vec
-    
+    's_cruise_target': s_cruise_target_vec,
+    'v_cruise_target': v_cruise_target_vec
   })
 
   # behavior planning
@@ -499,22 +520,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_ref_vec = []
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
-  # s_soft_upper_bound_vec = []
-  # s_soft_lower_bound_vec = []
-  # try:
-  #   for idx in range(len(plan_debug_info.long_ref_path.soft_bounds)):
-  #     high_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].upper
-  #     low_bound = plan_debug_info.long_ref_path.soft_bounds[idx].bound[0].lower
-  #     try:
-  #       for one_soft_bound in plan_debug_info.long_ref_path.soft_bounds[idx].bound:
-  #          high_bound = min(high_bound, one_soft_bound.upper)
-  #          low_bound = max(low_bound, one_soft_bound.lower)
-  #       s_soft_upper_bound_vec.append(high_bound)
-  #       s_soft_lower_bound_vec.append(low_bound)
-  #     except:
-  #       print("the s_soft_upper_bound_vec size: ",len(s_soft_upper_bound_vec))
-  # except:
-  #       print("there is no long_ref_path.soft_bounds")
 
   obs_low_vec = []
   obs_high_vec = []
@@ -1304,14 +1309,15 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
                                                               'st_path_final_nodes_g_cost' : [],
                                                               'st_path_final_nodes_h_cost' : [],
                                                               })
-  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[],
-                                         't_cruise_target':[], 's_cruise_target':[],
-                                         't_follow_target':[], 's_follow_target':[]})
+  data_target = ColumnDataSource(data = {'t_final_target':[], 's_final_target':[], 'v_final_target':[],
+                                         't_cruise_target':[], 's_cruise_target':[], 'v_cruise_target':[],
+                                         't_follow_target':[], 's_follow_target':[], 'v_follow_target':[]})
   data_target_s_neighbor = ColumnDataSource(data = {'t_neighbor_target':[], 's_neighbor_target':[]})
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
   data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
-  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[]})
+  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[], 'v_safety_target':[],
+                                                  't_upper_bound':[], 'v_upper_bound':[], 'agent_id_upper_bound':[]})
   data_target_s_cross_vru = ColumnDataSource(data = {'t_cross_vru_target':[], 's_cross_vru_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -1572,13 +1578,13 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   fig4.inverted_triangle ('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 's_hard_bound')
 
   # vel
-  f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_ref')
-  fig5.line('time_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
-
-  fig5.line('time_vec', 'vel_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_lb')
-  fig5.triangle ('time_vec', 'vel_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'v_lb')
-  fig5.line('time_vec', 'vel_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'v_ub')
-  fig5.inverted_triangle ('time_vec', 'vel_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'v_ub')
+  f5 = fig5.line('time_vec', 'ref_vel_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'green', line_dash = 'solid', legend_label = 'v_ref')
+  fig5.line('time_vec', 'vel_vec', source = data_lon_motion_plan, line_width = 3, line_color = 'blue', line_dash = 'solid', legend_label = 'v_plan')
+  fig5.line('t_follow_target', 'v_follow_target', source = data_target, line_width = 2, line_color = 'red', line_dash = 'dashed', legend_label = 'v_follow_target')
+  fig5.line('t_cruise_target', 'v_cruise_target', source = data_target, line_width = 2, line_color = 'purple', line_dash = 'dashed', legend_label = 'v_cruise_target')
+  fig5.line('t_safety_target', 'v_safety_target', source = data_target_s_safety, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'v_safety_target')
+  fig5.line('t_upper_bound', 'v_upper_bound', source = data_target_s_safety, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'v_upper_bound')
+  fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_safety, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
 
   # acc
   f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')

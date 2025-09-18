@@ -46,9 +46,15 @@ void NeighborTarget::GenerateNeighborTarget() {
     double s_target_value =
         std::max(neighbor_target_curve_->Evaluate(0, t),
                  neighbor_target_curve_lower_bound_->Evaluate(0, t));
+    double v_target_value =
+        std::min(neighbor_target_curve_->Evaluate(1, t),
+                 neighbor_target_curve_lower_bound_->Evaluate(1, t));
     s_target_value =
         std::min(s_target_value, max_speed_limit_curve_->Evaluate(0, t));
+    v_target_value =
+        std::min(v_target_value, max_speed_limit_curve_->Evaluate(0, t));
     target_value.set_s_target_val(s_target_value);
+    target_value.set_v_target_val(v_target_value);
     target_value.set_target_type(neighbor_target_type_);
   }
 }
@@ -165,6 +171,7 @@ void NeighborTarget::AddNeighborTargetDataToProto() {
     for (const auto& value : target_values_) {
       auto* ptr = neighbor_target_pb_.add_neighbor_target_s_ref();
       ptr->set_s(value.s_target_val());
+      ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }

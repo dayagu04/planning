@@ -162,7 +162,6 @@ common::Status TargetMaker::Run() {
     auto final_target_value =
         Target::TargetMin(final_lower_bound_value, upper_target_value);
 
-  
     target_values_.push_back(std::move(final_target_value));
   }
   RefineStarget();
@@ -216,6 +215,7 @@ void TargetMaker::AddFinalTargetDataToProto() {
     for (const auto& value : target_values_) {
       auto* ptr = final_target_pb_.add_final_target_s_ref();
       ptr->set_s(value.s_target_val());
+      ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
     }
   }

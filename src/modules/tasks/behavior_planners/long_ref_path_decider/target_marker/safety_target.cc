@@ -331,6 +331,7 @@ void SafetyTarget::AddSafetyTargetDataToProto() {
     for (const auto& value : target_values_) {
       auto* ptr = safety_target_pb_.add_safety_target_s_ref();
       ptr->set_s(value.s_target_val());
+      ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
