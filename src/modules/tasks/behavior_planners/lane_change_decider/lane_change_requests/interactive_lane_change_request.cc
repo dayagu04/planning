@@ -304,6 +304,7 @@ void IntRequest::PrintForbidGeneratingReason(
 
 void IntRequest::ProcessBlinkState(
     const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status) {
+  static int32_t cancel_freeze_count = 11;
   bool is_allowed_cancel_state =
       (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
        lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution ||
@@ -331,14 +332,18 @@ void IntRequest::ProcessBlinkState(
       (lane_change_cmd_ == TurnSwitchState::RIGHT_FIRMLY_TOUCH &&
        (ego_blinker == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
         ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH));
-  if (trigger_left_lane_change) {
+  if (trigger_left_lane_change && cancel_freeze_count > 10) {
     lane_change_cmd_ = TurnSwitchState::LEFT_FIRMLY_TOUCH;
-  } else if (trigger_right_lane_change) {
+  } else if (trigger_right_lane_change && cancel_freeze_count > 10) {
     lane_change_cmd_ = TurnSwitchState::RIGHT_FIRMLY_TOUCH;
   }
-
+  cancel_freeze_count++;
+  if (cancel_freeze_count > 11) {
+    cancel_freeze_count = 11;
+  }
   if (trigger_left_lane_change_cancel || trigger_right_lane_change_cancel) {
     lane_change_cmd_ = TurnSwitchState::NONE;
+    cancel_freeze_count = 0;
   }
   last_frame_blinker_ = ego_blinker;
 }
