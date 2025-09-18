@@ -1599,6 +1599,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
 
   JSON_DEBUG_VALUE("lsl_length", lsl_length)
+  route_info_output_.lsl_length = lsl_length;
 
   const bool is_near_split =
       !split_region_info_list.empty() &&
@@ -4537,7 +4538,7 @@ int RouteInfo::EmergencyLaneNum(const iflymapdata::sdpro::FeaturePoint& mlc_fp) 
       emergency_lane_num++;
     }
   }
-  
+
   return emergency_lane_num;
 }
 }  // namespace planning

@@ -240,6 +240,7 @@ struct RouteInfoOutput {
   double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
   double distance_to_toll_station = NL_NMAX;
   double distance_to_exchange_area_end_point = -NL_NMAX;
+  double lsl_length = 0.0;
   double current_segment_passed_distance = 0.0;  // for xykuai
   std::pair<SplitRelativeDirection, double>
       first_split_dir_dis_info;  // for xykuai
@@ -321,6 +322,7 @@ struct RouteInfoOutput {
     mlc_decider_route_info.reset();
     // dis_to_merge_fp = NL_NMAX;
     merge_point_info.reset();
+    lsl_length = 0.0;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

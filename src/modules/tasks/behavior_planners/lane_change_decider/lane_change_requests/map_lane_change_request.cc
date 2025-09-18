@@ -191,6 +191,7 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   }
 
   double lc_end_dis = NL_NMAX;
+  const double lsl_length = route_info_output.lsl_length;
   if (route_info_output.map_vendor ==
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_BAIDU_LD) {
     if (route_info_output.is_on_ramp ||
@@ -207,7 +208,8 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
             ? route_info_output.split_region_info_list[0]
                       .distance_to_split_point -
                   std::abs(route_info_output.split_region_info_list[0]
-                               .start_fp_point.fp_distance_to_split_point)
+                               .start_fp_point.fp_distance_to_split_point) -
+                  lsl_length
             : NL_NMAX;
   }
 
