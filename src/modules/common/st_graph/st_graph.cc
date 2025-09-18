@@ -1172,6 +1172,7 @@ bool STGraph::CalculateNeighborCorridor() {
 }
 
 void STGraph::AddStGraphDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   const auto& path_range = st_graph_input_->path_range();
   const auto& time_range = st_graph_input_->time_range();
@@ -1278,6 +1279,7 @@ void STGraph::AddStGraphDataToProto() {
   }
 
   mutable_st_graph_data->CopyFrom(st_graph_data_pb_);
+#endif
 }
 
 void STGraph::CompleteStBoundaryGap(

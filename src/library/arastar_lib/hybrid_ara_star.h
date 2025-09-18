@@ -68,8 +68,7 @@ class HybridARAStar {
       int id, const std::shared_ptr<planning::FrenetObstacle>& frenet_obstacle,
       const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle);
   void FindClosestUncoveredInterval();
-  void LogNodeDebugInfo(const std::shared_ptr<Node3D>& current_node,
-                        common::HybridARAExpand* hybrid_ara_expand);
+  void LogNodeDebugInfo(const std::shared_ptr<Node3D>& current_node);
   bool DetectBend();
   bool LeftOrRightTurn();
   void CalculateSearchBounds(

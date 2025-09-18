@@ -77,7 +77,8 @@ bool GriddedPathTimeGraph::Search(
     TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-    const bool &last_enable_using_st_plan) {
+    const bool &last_enable_using_st_plan,
+    planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& virtual_lane_mgr =
@@ -144,11 +145,12 @@ bool GriddedPathTimeGraph::Search(
     }
   }
 
-  auto spatio_temporal_union_plan_input = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_spatio_temporal_union_plan_input();
+
+  // auto spatio_temporal_union_plan_input = DebugInfoManager::GetInstance()
+  //                                .GetDebugInfoPb()
+  //                                ->mutable_spatio_temporal_union_plan_input();
   auto ego_init_state =
-      spatio_temporal_union_plan_input->mutable_init_state();
+      spatio_temporal_union_plan_input.mutable_init_state();
   ego_init_state->Clear();
   ego_init_state->set_s(ego_frenet_pose_.x);
   ego_init_state->set_l(ego_frenet_pose_.y);
@@ -159,7 +161,7 @@ bool GriddedPathTimeGraph::Search(
   ego_init_state->set_heading_angle(ego_state_manager->heading_angle());
 
   auto dp_search_paramms =
-      spatio_temporal_union_plan_input->mutable_dp_search_paramms();
+      spatio_temporal_union_plan_input.mutable_dp_search_paramms();
   dp_search_paramms->Clear();
   dp_search_paramms->set_total_length_t(gridded_path_time_graph_config_.total_length_t);
   dp_search_paramms->set_unit_t(gridded_path_time_graph_config_.default_unit_t);
@@ -172,7 +174,7 @@ bool GriddedPathTimeGraph::Search(
   dp_search_paramms->set_max_deceleration(max_deceleration_);
   dp_search_paramms->set_enable_use_parallel_calculate_cost(gridded_path_time_graph_config_.enable_use_parallel_calculate_cost);
 
-  auto lat_path_weight_params = spatio_temporal_union_plan_input->mutable_lat_path_weight_params();
+  auto lat_path_weight_params = spatio_temporal_union_plan_input.mutable_lat_path_weight_params();
   lat_path_weight_params->Clear();
   lat_path_weight_params->set_path_l_cost_param_l0(dp_poly_path_config_.path_l_cost_param_l0);
   lat_path_weight_params->set_path_l_cost_param_k(dp_poly_path_config_.path_l_cost_param_k);
@@ -182,13 +184,13 @@ bool GriddedPathTimeGraph::Search(
   lat_path_weight_params->set_path_ddl_cost(dp_poly_path_config_.path_ddl_cost);
   lat_path_weight_params->set_path_end_l_cost(dp_poly_path_config_.path_end_l_cost);
 
-  auto stitching_cost_params = spatio_temporal_union_plan_input->mutable_stitching_cost_params();
+  auto stitching_cost_params = spatio_temporal_union_plan_input.mutable_stitching_cost_params();
   stitching_cost_params->set_path_l_stitching_cost_param(dp_poly_path_config_.path_l_stitching_cost_param);
   stitching_cost_params->set_stitching_cost_time_decay_factor(dp_poly_path_config_.stitching_cost_time_decay_factor);
   // lat_path_weight_params->set_path_l_stitching_cost_param(dp_poly_path_config_.path_l_stitching_cost_param);
   // lat_path_weight_params->set_stitching_cost_time_decay_factor(dp_poly_path_config_.stitching_cost_time_decay_factor);
 
-  auto dp_dynamic_agent_weight_params = spatio_temporal_union_plan_input->mutable_dp_dynamic_agent_weight_params();
+  auto dp_dynamic_agent_weight_params = spatio_temporal_union_plan_input.mutable_dp_dynamic_agent_weight_params();
   dp_dynamic_agent_weight_params->Clear();
   dp_dynamic_agent_weight_params->set_obstacle_ignore_distance(dp_poly_path_config_.obstacle_ignore_distance);
   dp_dynamic_agent_weight_params->set_obstacle_longit_collision_distance(dp_poly_path_config_.obstacle_longit_collision_distance);
@@ -202,7 +204,7 @@ bool GriddedPathTimeGraph::Search(
   dp_dynamic_agent_weight_params->set_obstacle_collision_cost_without_lateral_overlap(
       dp_poly_path_config_.obstacle_collision_cost_without_lateral_overlap);
 
-  auto long_weight_params = spatio_temporal_union_plan_input->mutable_long_weight_params();
+  auto long_weight_params = spatio_temporal_union_plan_input.mutable_long_weight_params();
   long_weight_params->Clear();
   long_weight_params->set_spatial_potential_penalty(gridded_path_time_graph_config_.spatial_potential_penalty);
   long_weight_params->set_keep_clear_low_speed_penalty(gridded_path_time_graph_config_.keep_clear_low_speed_penalty);
@@ -215,7 +217,7 @@ bool GriddedPathTimeGraph::Search(
   long_weight_params->set_positive_jerk_coeff(gridded_path_time_graph_config_.positive_jerk_coeff);
   long_weight_params->set_negative_jerk_coeff(gridded_path_time_graph_config_.negative_jerk_coeff);
 
-  auto speed_limit_params = spatio_temporal_union_plan_input->mutable_speed_limit_params();
+  auto speed_limit_params = spatio_temporal_union_plan_input.mutable_speed_limit_params();
   speed_limit_params->Clear();
   speed_limit_params->set_straight_ramp_v_limit(speed_limit_config_.straight_ramp_v_limit_low);
   speed_limit_params->set_v_limit_near_ramp_zone(speed_limit_config_.v_limit_near_ramp_zone);
@@ -234,7 +236,7 @@ bool GriddedPathTimeGraph::Search(
   speed_limit_params->set_is_on_ramp(route_info_output.is_on_ramp);
 
   auto ref_points_vec =
-      spatio_temporal_union_plan_input->mutable_ref_points_vec();
+      spatio_temporal_union_plan_input.mutable_ref_points_vec();
   ref_points_vec->Clear();
   for (const auto &point : origin_lane_points) {
     planning::common::Point2d *Point = ref_points_vec->Add();
@@ -243,7 +245,7 @@ bool GriddedPathTimeGraph::Search(
   }
 
   if (!spatio_temporal_union_plan_dp_.Update(
-      traj_points, agent_trajs, *spatio_temporal_union_plan_input, target_s,
+      traj_points, agent_trajs, spatio_temporal_union_plan_input, target_s,
       *current_lane_coord_, half_lateral_sample_nums_, last_enable_using_st_plan)) {
     return false;
   }

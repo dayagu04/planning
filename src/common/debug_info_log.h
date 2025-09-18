@@ -44,6 +44,7 @@ class DebugInfoManager : public planning::common::Arena {
 #define LOG_ARRAY_CACHE 5000
 #endif
 
+#ifdef ENABLE_JSON_LOG
 #define JSON_DEBUG_VALUE(var_name, var_value)                     \
   if (std::isnan(var_value))                                      \
     (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
@@ -54,10 +55,17 @@ class DebugInfoManager : public planning::common::Arena {
   else                                                            \
     (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
         mjson::Json(static_cast<double>(var_value));
+#else
+  #define JSON_DEBUG_VALUE(var_name, var_value) ;
+#endif
 
+#ifdef ENABLE_JSON_LOG
 #define JSON_DEBUG_VECTOR(var_name, var_value, keep_length)     \
   (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
       mjson::Json(Utils::vec_to_char_array(var_value, keep_length));
+#else
+  #define JSON_DEBUG_VECTOR(var_name, var_value, keep_length) ;
+#endif
 
 #define JSON_READ_VALUE(var_name, type, json_name) \
   var_name = config.get<type>(json_name, false, var_name)

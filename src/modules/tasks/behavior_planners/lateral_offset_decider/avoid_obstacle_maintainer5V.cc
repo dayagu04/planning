@@ -1431,6 +1431,7 @@ bool AvoidObstacleMaintainer5V::Process(planning::framework::Session *session) {
 }
 
 void AvoidObstacleMaintainer5V::SaveDebugInfo() {
+#ifdef ENABLE_PROTO_LOG
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
@@ -1442,6 +1443,11 @@ void AvoidObstacleMaintainer5V::SaveDebugInfo() {
       lateral_offset_decider_info->add_avoid_car_ids(item.track_id);
     }
   }
+  lateral_offset_decider_info->mutable_select_avoid_car_ids()->Clear();
+  for (auto &item : avd_obstacles_) {
+    lateral_offset_decider_info->add_select_avoid_car_ids(item.track_id);
+  }
+#endif
 
   if (avd_obstacles_cur_.size() == 0) {
     JSON_DEBUG_VALUE("avoid_car_ids_1", -1000);
@@ -1452,11 +1458,6 @@ void AvoidObstacleMaintainer5V::SaveDebugInfo() {
   } else {
     JSON_DEBUG_VALUE("avoid_car_ids_1", avd_obstacles_cur_[0].track_id);
     JSON_DEBUG_VALUE("avoid_car_ids_2", avd_obstacles_cur_[1].track_id);
-  }
-
-  lateral_offset_decider_info->mutable_select_avoid_car_ids()->Clear();
-  for (auto &item : avd_obstacles_) {
-    lateral_offset_decider_info->add_select_avoid_car_ids(item.track_id);
   }
 
   JSON_DEBUG_VALUE("select_avoid_car_ids_1", avd_obstacles_[0].track_id);

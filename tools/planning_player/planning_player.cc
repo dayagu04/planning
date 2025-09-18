@@ -842,21 +842,21 @@ void PlanningPlayer::PlayOneFrame(
               << " missing /iflytek/camera_perception/traffic_sign_recognition"
               << std::endl;
   }
-  
+
   // BUG: thzhang5 0827 perception_scene()一直是0
   // 现在 perception_scene 使用 TSR 的枚举值，所以会返回 TSR 的时间戳
   uint64_t tsr_timestamp = input_time_list.perception_tsr();  // 实际上是TSR的时间戳
-  
+
   struct_msgs::CameraPerceptionScene::Ptr perception_scene_ros_msg = nullptr;
-  
+
   if (tsr_timestamp > 0) {
     // 使用TSR时间戳去找最接近的perception_scene消息
     perception_scene_ros_msg = find_ros_msg_with_header_time_upper_bound<struct_msgs::CameraPerceptionScene>(
         TOPIC_PERCEPTION_SCENE, tsr_timestamp);
-    
+
          if (!perception_scene_ros_msg) {
        // 如果upper_bound没找到，尝试向前查找
-       for (auto it = msg_cache_[TOPIC_PERCEPTION_SCENE].begin(); 
+       for (auto it = msg_cache_[TOPIC_PERCEPTION_SCENE].begin();
             it != msg_cache_[TOPIC_PERCEPTION_SCENE].end(); ++it) {
          uint64_t scene_timestamp_us = it->first.toNSec() / 1000;  // 转换为微秒
          if (scene_timestamp_us <= tsr_timestamp + 200000) {  // 允许200ms的时间差
@@ -872,7 +872,7 @@ void PlanningPlayer::PlayOneFrame(
       perception_scene_ros_msg = boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(first_msg->second);
     }
   }
-  
+
   if (perception_scene_ros_msg) {
     iflyauto::CameraPerceptionScene perception_scene_msg{};
     convert(perception_scene_msg, *perception_scene_ros_msg,
@@ -1130,39 +1130,53 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
         planning_debug_info->input_topic_timestamp();
     auto early_stop_time_tmp = debug_info_topic_timestamp.localization();
 
-    auto& debug_data_json = planning_debug_info->data_json();
-    auto planning_loop_dt_start = debug_data_json.find("planning_loop_dt");
-    if (planning_loop_dt_start != std::string::npos) {
-      auto planning_loop_dt_end =
-          debug_data_json.find(',', planning_loop_dt_start);
-      auto planning_loop_dt = debug_data_json.substr(
-          planning_loop_dt_start + 20,
-          planning_loop_dt_end - planning_loop_dt_start - 20);
-      SimulationContext::Instance()->set_planning_loop_dt(
-          stod(planning_loop_dt));
-    }
-    auto prediction_relative_time_start =
+    double planning_loop_dt = 0.1;
+    double prediction_relative_time = 0.0;
+    uint64 localizatoin_latency = 0.0;
+    if (planning_debug_info->has_simulation_core_param()) {
+      planning_loop_dt = planning_debug_info->simulation_core_param().planning_loop_dt();
+      prediction_relative_time = planning_debug_info->simulation_core_param().prediction_relative_time();
+      localizatoin_latency = planning_debug_info->simulation_core_param().localizatoin_latency();
+    } else {
+      // 兼容历史bag
+      auto& debug_data_json = planning_debug_info->data_json();
+      auto planning_loop_dt_start = debug_data_json.find("planning_loop_dt");
+      if (planning_loop_dt_start != std::string::npos) {
+        auto planning_loop_dt_end =
+            debug_data_json.find(',', planning_loop_dt_start);
+        planning_loop_dt = stod(debug_data_json.substr(
+            planning_loop_dt_start + 20,
+            planning_loop_dt_end - planning_loop_dt_start - 20));
+      }
+
+      auto prediction_relative_time_start =
         debug_data_json.find("prediction_relative_time");
-    if (prediction_relative_time_start != std::string::npos) {
-      auto prediction_relative_time_end =
-          debug_data_json.find(',', prediction_relative_time_start);
-      auto prediction_relative_time = debug_data_json.substr(
-          prediction_relative_time_start + 28,
-          prediction_relative_time_end - prediction_relative_time_start - 28);
-      SimulationContext::Instance()->set_prediction_relative_time(
-          stod(prediction_relative_time));
+      if (prediction_relative_time_start != std::string::npos) {
+        auto prediction_relative_time_end =
+            debug_data_json.find(',', prediction_relative_time_start);
+        prediction_relative_time = stod(debug_data_json.substr(
+            prediction_relative_time_start + 28,
+            prediction_relative_time_end - prediction_relative_time_start - 28));
+
+      }
+      auto localizatoin_latency_start =
+          debug_data_json.find("localizatoin_latency_inEgoStateManager");
+      if (localizatoin_latency_start != std::string::npos) {
+        auto localizatoin_latency_end =
+            debug_data_json.find(',', localizatoin_latency_start);
+        localizatoin_latency = stod(debug_data_json.substr(
+            localizatoin_latency_start + 42,
+            localizatoin_latency_end - localizatoin_latency_start - 42));
+
+      }
     }
-    auto localizatoin_latency_start =
-        debug_data_json.find("localizatoin_latency_inEgoStateManager");
-    if (localizatoin_latency_start != std::string::npos) {
-      auto localizatoin_latency_end =
-          debug_data_json.find(',', localizatoin_latency_start);
-      auto localizatoin_latency = debug_data_json.substr(
-          localizatoin_latency_start + 42,
-          localizatoin_latency_end - localizatoin_latency_start - 42);
-      SimulationContext::Instance()->set_localizatoin_latency(
-          stod(localizatoin_latency));
-    }
+
+    SimulationContext::Instance()->set_prediction_relative_time(
+          prediction_relative_time);
+    SimulationContext::Instance()->set_localizatoin_latency(
+          localizatoin_latency);
+    SimulationContext::Instance()->set_planning_loop_dt(
+          planning_loop_dt);
 
     planning_dubug_info_header_time_us_ = planning_debug_info->timestamp();
     planning_dubug_info_frame_num_ =

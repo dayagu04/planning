@@ -710,6 +710,7 @@ bool FollowTarget::JudgeSrefValid(
 }
 
 void FollowTarget::AddFollowTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_follow_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_follow_target();
@@ -722,6 +723,7 @@ void FollowTarget::AddFollowTargetDataToProto() {
     }
   }
   mutable_follow_target_data->CopyFrom(follow_target_pb_);
+#endif
 }
 
 }  // namespace planning

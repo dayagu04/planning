@@ -90,8 +90,6 @@ class LateralObstacle {
                       const std::vector<PredictionObject> &predictions,
                       bool isRedLightStop, bool hdmap_valid);
   void update_tracks();
-  void LateralObstacleDecision(
-      const std::vector<std::shared_ptr<FrenetObstacle>> &tracked_objects);
   void update_lead_info();
   void select_lead_cars();
 

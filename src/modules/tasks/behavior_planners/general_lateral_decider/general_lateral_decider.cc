@@ -143,13 +143,13 @@ bool GeneralLateralDecider::Execute() {
           ->mutable_general_lateral_decider_output();
   PostProcessReferenceTrajBySoftBound(frenet_soft_bounds_,
                                       general_lateral_decider_output);
-  GenerateLateralDeciderOutput(frenet_soft_bounds_, frenet_hard_bounds_,
-                               general_lateral_decider_output);
+  GenerateLateralDeciderOutput(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
+                               hard_bounds_info_, general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
   SaveLatDebugInfo(frenet_soft_bounds_, frenet_hard_bounds_, soft_bounds_info_,
-                   hard_bounds_info_, general_lateral_decider_output);
+                   hard_bounds_info_);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("GeneralLateralDeciderCostTime", end_time - start_time);
@@ -558,10 +558,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   // get scene
   bool is_use_spatio_planner_result = false;
   bool enable_using_st_plan =
-      DebugInfoManager::GetInstance()
-          .GetDebugInfoPb()
-          ->spatio_temporal_union_plan()
-          .enable_using_st_plan();
+      session_->planning_context()
+      .spatio_temporal_union_plan_output()
+      .enable_using_st_plan;
   if (config_.enable_use_spatio_temporal_planning &&
       enable_using_st_plan) {
     is_use_spatio_planner_result = true;
@@ -3558,9 +3557,9 @@ void GeneralLateralDecider::PostProcessBound(
 void GeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+#ifdef ENABLE_PROTO_LOG
   lat_debug_info_.Clear();
   lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
   lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
@@ -3572,14 +3571,7 @@ void GeneralLateralDecider::SaveLatDebugInfo(
   lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
 
-  auto &hard_bounds_frenet_output =
-      general_lateral_decider_output.hard_bounds_frenet_point;
-  auto &soft_bounds_frenet_output =
-      general_lateral_decider_output.soft_bounds_frenet_point;
-  auto &hard_bounds_info_output =
-      general_lateral_decider_output.hard_bounds_info;
-  auto &soft_bounds_info_output =
-      general_lateral_decider_output.soft_bounds_info;
+
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
 
@@ -3614,11 +3606,6 @@ void GeneralLateralDecider::SaveLatDebugInfo(
         soft_bounds_info[i].second.id);
     soft_upper_bound_info->mutable_bound_info()->set_type(
         BoundType2String(soft_bounds_info[i].second.type));
-
-    hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
-    soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
-    hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
-    soft_bounds_info_output.emplace_back(soft_bounds_info[i]);
   }
 
   // 障碍物决策是否存在跳动
@@ -3637,6 +3624,7 @@ void GeneralLateralDecider::SaveLatDebugInfo(
       .GetDebugInfoPb()
       ->mutable_lateral_behavior_debug_info()
       ->CopyFrom(lat_debug_info_);
+#endif
 }
 
 void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
@@ -3658,6 +3646,8 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
 void GeneralLateralDecider::GenerateLateralDeciderOutput(
     const std::vector<std::pair<double, double>> &frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   general_lateral_decider_output.soft_bounds = std::move(soft_bounds_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
@@ -3668,6 +3658,22 @@ void GeneralLateralDecider::GenerateLateralDeciderOutput(
   GenerateEnuReferenceTheta(general_lateral_decider_output);
 
   GenerateEnuReferenceTraj(general_lateral_decider_output);
+
+  auto &hard_bounds_frenet_output =
+      general_lateral_decider_output.hard_bounds_frenet_point;
+  auto &soft_bounds_frenet_output =
+      general_lateral_decider_output.soft_bounds_frenet_point;
+  auto &hard_bounds_info_output =
+      general_lateral_decider_output.hard_bounds_info;
+  auto &soft_bounds_info_output =
+      general_lateral_decider_output.soft_bounds_info;
+
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
+    soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
+    hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    soft_bounds_info_output.emplace_back(soft_bounds_info[i]);
+  }
 }
 
 void GeneralLateralDecider::GenerateEnuBoundaryPoints(

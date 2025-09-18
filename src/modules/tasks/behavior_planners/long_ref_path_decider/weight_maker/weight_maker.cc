@@ -327,6 +327,7 @@ void WeightMaker::Reset() {
 }
 
 void WeightMaker::CollectDataToProto(const TargetMaker& target_maker) {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_weight_data =
       debug_info_pb->mutable_weight_maker()->mutable_weight_maker_replay_info();
@@ -341,6 +342,7 @@ void WeightMaker::CollectDataToProto(const TargetMaker& target_maker) {
     ptr->set_s_weight(s_weight_[i]);
   }
   mutable_weight_data->CopyFrom(weight_maker_replay_info_);
+#endif
 }
 
 }  // namespace planning

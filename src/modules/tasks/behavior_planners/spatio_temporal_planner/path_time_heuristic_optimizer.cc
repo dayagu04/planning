@@ -33,9 +33,11 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
     TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-    const bool &last_enable_using_st_plan) {
+    const bool &last_enable_using_st_plan,
+    planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input
+    ) {
 
-  if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan)) {
+  if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan, spatio_temporal_union_plan_input)) {
     ILOG_DEBUG << "failed to search graph with dynamic programming";
     return false;
   }
@@ -46,7 +48,8 @@ bool PathTimeHeuristicOptimizer::Process(
     TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-    const bool &last_enable_using_st_plan) {
+    const bool &last_enable_using_st_plan,
+    planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& virtual_lane_mgr =
@@ -63,7 +66,7 @@ bool PathTimeHeuristicOptimizer::Process(
   base_frenet_coord_ = base_refline->get_frenet_coord();
   st_dp_is_sucess_ = true;
 
-  if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan)) {
+  if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan, spatio_temporal_union_plan_input)) {
     ILOG_DEBUG << "PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!!";
     st_dp_is_sucess_ = false;
     // FallbackFunction(traj_points);

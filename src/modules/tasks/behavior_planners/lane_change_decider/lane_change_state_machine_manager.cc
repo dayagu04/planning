@@ -1460,6 +1460,8 @@ bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
 void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+      
+#ifdef ENABLE_PROTO_LOG
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lat_behavior_common = planning_debug_data->mutable_lat_behavior_common();
@@ -1498,6 +1500,7 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   lat_behavior_common->set_lc_valid_cnt(
       lane_change_decider_output.lc_valid_cnt);
   lat_behavior_common->set_lc_back_cnt(lane_change_decider_output.lc_back_cnt);
+#endif
 
   JSON_DEBUG_VECTOR("front_obj_s_vec", lc_front_objs_ego_lane_vec_, 2);
   JSON_DEBUG_VECTOR("front_obj_s_tar_lane_vec", lc_front_objs_tar_lane_vec_, 2);

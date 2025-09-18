@@ -33,8 +33,8 @@ from google.protobuf.json_format import MessageToJson
 import rosbag
 import rospy
 import time
-
-
+# from pympler import asizeof
+# from google.protobuf import descriptor
 global_var.init()
 
 
@@ -677,7 +677,7 @@ class LoadRosbag:
                           "take_over_request", "request_reason", "front_agent_id", "rear_agent_id",
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD",
-                          "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck", 
+                          "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance",]
 
 
@@ -762,8 +762,16 @@ class LoadRosbag:
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
+        #print(asizeof.asizeof(msg)/1024)
         planning_debug_output = PlanningDebugInfo()
         planning_debug_output.ParseFromString(msg.debug_info)
+        # for field in planning_debug_output.DESCRIPTOR.fields:
+        #   try:
+        #     if planning_debug_output.HasField(field.name):
+        #       field_value = getattr(planning_debug_output, field.name)
+        #       print(field.name, sys.getsizeof(field_value.SerializeToString())/1024)
+        #   except:
+        #       print(field.name, '异常')
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
       plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
       for t, msg in plan_debug_msg_dict.items():

@@ -77,7 +77,7 @@ SLTGridMapAdapter::SLTGridMapAdapter(
   p_ssc_map_ = new SscMap(map_cfg);
 }
 
-void SLTGridMapAdapter::RunOnce() {
+void SLTGridMapAdapter::RunOnce(planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input) {
   auto time_start = IflyTime::Now_ms();
   if (session_ == nullptr) {
     return;
@@ -211,7 +211,7 @@ void SLTGridMapAdapter::RunOnce() {
   }
 
   // auto t_prepare = IflyTime::Now_ms();
-  StateTransformForInputData();
+  StateTransformForInputData(spatio_temporal_union_plan_input);
 
   // auto t_stf = IflyTime::Now_ms();;
 
@@ -228,15 +228,15 @@ void SLTGridMapAdapter::RunOnce() {
   return;
 }
 
-void SLTGridMapAdapter::StateTransformForInputData() {
+void SLTGridMapAdapter::StateTransformForInputData(planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input) {
   std::unordered_map<int, std::vector<State>> agents_global_state_vec;
   std::unordered_map<int, std::vector<planning_math::Vec2d>> agents_frenet_point_vec;
   const int num_v = kDefaultEgoBoxVertices;
   const int num_agent = kDefaultAgentVertices;
   // double target_l = kHalfCoefficient * origin_lane_width_ + kDefaultLaneWidthBuffer;
-  auto spatio_temporal_union_plan_input =
-      DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_spatio_temporal_union_plan_input();
-  auto agent_time_corners = spatio_temporal_union_plan_input->mutable_agent_time_corners();
+  // auto spatio_temporal_union_plan_input =
+  //     DebugInfoManager::GetInstance().GetDebugInfoPb()->mutable_spatio_temporal_union_plan_input();
+  auto agent_time_corners = spatio_temporal_union_plan_input.mutable_agent_time_corners();
   agent_time_corners->Clear();
   // ~ Stage I. Package states and points
 

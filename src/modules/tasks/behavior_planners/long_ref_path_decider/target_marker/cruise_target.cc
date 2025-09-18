@@ -397,6 +397,7 @@ double CruiseTarget::MatchSpeedWithKappaSpeedLimitTable(
 }
 
 void CruiseTarget::AddCruiseTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_cruise_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_cruise_target();
@@ -409,6 +410,7 @@ void CruiseTarget::AddCruiseTargetDataToProto() {
     }
   }
   mutable_cruise_target_data->CopyFrom(cruise_target_pb_);
+#endif
 }
 
 // TODO: This function is confusing!

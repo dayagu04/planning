@@ -24,8 +24,6 @@
 #include "vehicle_status.pb.h"
 
 namespace planning {
-
-static double planning_loop_dt = 0.1;
 static const double curve_factor = 0.30;
 
 EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
@@ -33,7 +31,7 @@ EgoStateManager::EgoStateManager(const EgoPlanningConfigBuilder *config_builder,
     : session_(session) {
   SetConfig(config_builder);
   // init v_cruise_filter: -1.5m/s2, 1.5m/s2, 0-150km/h, 10hz
-  v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt);
+  v_cruise_filter_.Init(-1.5, 1.5, 0.0, 42.0, planning_loop_dt_);
 }
 
 void EgoStateManager::SetConfig(
@@ -243,14 +241,20 @@ bool EgoStateManager::update(
   const auto &last_planning_result =
       session_->planning_context().last_planning_result();
   if (last_planning_result.timestamp > 0) {
-    planning_loop_dt =
+    planning_loop_dt_ =
         (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
   }
-  // printf("planning_loop_dt:%f\n", planning_loop_dt);
-  JSON_DEBUG_VALUE("planning_loop_dt", planning_loop_dt);
+  // printf("planning_loop_dt:%f\n", planning_loop_dt_);
+  JSON_DEBUG_VALUE("planning_loop_dt", planning_loop_dt_);
+
 #ifdef X86
-  planning_loop_dt = SimulationContext::Instance()->planning_loop_dt();
+  planning_loop_dt_ = SimulationContext::Instance()->planning_loop_dt();
 #endif
+
+  auto &debug_info_manager = DebugInfoManager::GetInstance();
+  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  planning_debug_data->mutable_simulation_core_param()->set_planning_loop_dt(planning_loop_dt_);
+
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   steer_ratio_ = vehicle_param.steer_ratio;
@@ -451,7 +455,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
       }
     } else {
       reinit_point = TrajectoryStitcher::ComputeReinitStitchingTrajectory(
-          planning_loop_dt, cur_vehicle_state);
+          planning_loop_dt_, cur_vehicle_state);
       LateralInitStateReset(reinit_point);
       LongitudinalInitStateReset(reinit_point);
     }
@@ -495,7 +499,6 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
       localization_timestamp_us == 0
           ? 0
           : (cur_time_us - localization_timestamp_us) / US_PER_MS;  // ms
-  auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   double localization_latency_s = localization_latency_ms / 1000.0;
 
 #ifdef X86
@@ -503,8 +506,10 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
       SimulationContext::Instance()->localizatoin_latency() / 1000.0;
 #endif
 
-  JSON_DEBUG_VALUE("localizatoin_latency_inEgoStateManager",
-                   localization_latency_ms);
+  auto &debug_info_manager = DebugInfoManager::GetInstance();
+  auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+  planning_debug_data->mutable_simulation_core_param()->set_localizatoin_latency(localization_latency_ms);
+
   JSON_DEBUG_VALUE("new_localization_latency",
                    planning_debug_data->input_topic_latency().localization());
   const auto cur_vehi_acc = cur_vehicle_state_process_.linear_acceleration;
@@ -745,7 +750,7 @@ bool EgoStateManager::LateralStitch() {
 
   if (motion_planner_output.lat_enable_flag) {
     // note that s is only for lateral path rather than frenet
-    // const double s = motion_planner_output.s_t_spline(planning_loop_dt);
+    // const double s = motion_planner_output.s_t_spline(planning_loop_dt_);
 
     // max delta as equivalent steer angle = 120 deg
     double max_delta = 120 / 57.3 / steer_ratio_;
@@ -753,12 +758,12 @@ bool EgoStateManager::LateralStitch() {
       max_delta = max_delta_;
     }
 
-    lat_init_state.set_x(motion_planner_output.x_t_spline(planning_loop_dt));
-    lat_init_state.set_y(motion_planner_output.y_t_spline(planning_loop_dt));
+    lat_init_state.set_x(motion_planner_output.x_t_spline(planning_loop_dt_));
+    lat_init_state.set_y(motion_planner_output.y_t_spline(planning_loop_dt_));
     lat_init_state.set_theta(
-        motion_planner_output.theta_t_spline(planning_loop_dt));
+        motion_planner_output.theta_t_spline(planning_loop_dt_));
     lat_init_state.set_delta(pnc::mathlib::Limit(
-        motion_planner_output.delta_t_spline(planning_loop_dt), max_delta));
+        motion_planner_output.delta_t_spline(planning_loop_dt_), max_delta));
     lat_init_state.set_curv(curve_factor * lat_init_state.delta());
     lat_init_state.set_d_curv(0.0);
 
@@ -778,8 +783,8 @@ bool EgoStateManager::LongitudinalStitch() {
     // so set zero here and set right value in longitudinal planning
     lon_init_state.set_s(0.0);
     lon_init_state.set_v(
-        std::max(motion_planner_output.v_t_spline(planning_loop_dt), 0.0));
-    lon_init_state.set_a(motion_planner_output.a_t_spline(planning_loop_dt));
+        std::max(motion_planner_output.v_t_spline(planning_loop_dt_), 0.0));
+    lon_init_state.set_a(motion_planner_output.a_t_spline(planning_loop_dt_));
     return true;
   } else {
     return false;
@@ -806,12 +811,12 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
 
   if (motion_planner_output.lon_enable_flag) {
     double vel_stitch =
-        std::max(motion_planner_output.v_t_spline(planning_loop_dt), 0.0);
-    double acc_stitch = motion_planner_output.a_t_spline(planning_loop_dt);
+        std::max(motion_planner_output.v_t_spline(planning_loop_dt_), 0.0);
+    double acc_stitch = motion_planner_output.a_t_spline(planning_loop_dt_);
 
     const double vel_err = vel_stitch - vel_ego;
 
-    planning_init_point_.lon_pos_err += vel_err * planning_loop_dt;
+    planning_init_point_.lon_pos_err += vel_err * planning_loop_dt_;
 
     // longitudinal motion replans due to large lon_pos_err
     if (fabs(planning_init_point_.lon_pos_err) > 1.5) {

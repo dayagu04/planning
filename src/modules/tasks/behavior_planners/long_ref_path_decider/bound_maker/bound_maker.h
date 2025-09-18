@@ -105,6 +105,8 @@ class BoundMaker {
                          double reaction_time, double min_brake,
                          double max_brake) const;
   void JudgeDangerAgentByMaxDecelCurve(const TargetMaker& target_maker);
+  void AddMaxDecelCurveDataToProto(
+      const SecondOrderTimeOptimalTrajectory& max_deceleration_curve);
 
   SecondOrderTimeOptimalTrajectory GenerateMaxAccelerationCurve() const;
   SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve() const;

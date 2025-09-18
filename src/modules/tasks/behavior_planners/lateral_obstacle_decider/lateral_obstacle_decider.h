@@ -39,6 +39,7 @@ class LateralObstacleDecider : public Task {
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void UpdateLatDecisionWithARAStar(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
+  void HppLog(const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
   bool CalculateCutInAndCross(FrenetObstacle &frenet_obstacle,
                              std::shared_ptr<ReferencePath> reference_path,

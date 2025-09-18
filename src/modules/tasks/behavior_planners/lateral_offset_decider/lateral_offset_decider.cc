@@ -184,11 +184,14 @@ void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
 void LateralOffsetDecider::Reset() { lateral_offset_ = 0; }
 
 void LateralOffsetDecider::SaveDebugInfo() {
+#ifdef ENABLE_PROTO_LOG
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
   auto lateral_offset_decider_info =
       planning_debug_data->mutable_lateral_offset_decider_info();
   lateral_offset_decider_info->set_smooth_lateral_offset(lateral_offset_);
+#endif
+
   JSON_DEBUG_VALUE("smooth_lateral_offset", lateral_offset_);
 }
 

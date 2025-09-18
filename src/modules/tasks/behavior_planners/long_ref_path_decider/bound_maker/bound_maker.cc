@@ -315,23 +315,13 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   jerk_upper_bound_ = std::vector<double>(plan_points_num_, jerk_upper_bound);
   jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
 
-  // store max decel s curve in proto
-  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
-  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto mutable_follow_target_data =
-      debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
   const auto& st_graph = session_->planning_context().st_graph_helper();
   if (!st_graph) {
     return;
   }
-  for (int32_t i = 0; i < plan_points_num_; i++) {
-    auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
-    const double t = i * dt_;
-    const auto s = max_deceleration_curve.Evaluate(0, t);
-    ptr->set_s(s);
-    ptr->set_t(t);
-  }
-  mutable_follow_target_data->CopyFrom(max_decel_target_pb_);
+
+  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
+  AddMaxDecelCurveDataToProto(max_deceleration_curve);
 
   const auto& agent_mgr = session_->environmental_model().get_agent_manager();
   const auto start_stop_decider_output =
@@ -449,7 +439,7 @@ void BoundMaker::MakeSafetyBound() {
 
     double s_comfort = s_0 + v_ego * tau + v_ego * v_rel / (2.0 * a_comfort);
     double s_max_decel = s_0 + tau * v_ego + v_ego * v_rel / (2.0 * a_max);
-    
+
     double s_safety = 0.0;
     if (s_current > s_comfort) {
       s_safety = s_0 + tau * v_ego;
@@ -775,6 +765,24 @@ void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
   std::vector<double> ids_double(danger_info.agents_id_set.begin(),
                                  danger_info.agents_id_set.end());
   JSON_DEBUG_VECTOR("lon_danger_agent_ids", ids_double, 0)
+}
+
+void BoundMaker::AddMaxDecelCurveDataToProto(
+    const SecondOrderTimeOptimalTrajectory& max_deceleration_curve) {
+  // store max decel s curve in proto
+#ifdef ENABLE_PROTO_LOG
+  auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  auto mutable_max_decel_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_max_decel_target();
+  for (int32_t i = 0; i < plan_points_num_; i++) {
+    auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
+    const double t = i * dt_;
+    const auto s = max_deceleration_curve.Evaluate(0, t);
+    ptr->set_s(s);
+    ptr->set_t(t);
+  }
+  mutable_max_decel_target_data->CopyFrom(max_decel_target_pb_);
+#endif
 }
 
 double BoundMaker::s_lower_bound(const double t) const {

@@ -137,6 +137,7 @@ void OvertakeTarget::MakeOvertakeTarget(const FollowTarget& follow_target) {
 }
 
 void OvertakeTarget::AddOvertakeTargetDataToProto() {
+#ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_overtake_target_data =
       debug_info_pb->mutable_lon_target_s_ref()->mutable_overtake_target();
@@ -149,6 +150,7 @@ void OvertakeTarget::AddOvertakeTargetDataToProto() {
     }
   }
   mutable_overtake_target_data->CopyFrom(overtake_target_pb_);
+#endif
 }
 
 }  // namespace planning

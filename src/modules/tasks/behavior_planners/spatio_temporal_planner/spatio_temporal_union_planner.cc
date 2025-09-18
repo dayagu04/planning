@@ -69,21 +69,27 @@ bool SpatioTemporalPlanner::Execute() {
     ILOG_DEBUG << "SpatioTemporalPlanner::PreCheck failed";
     return false;
   }
-
-  auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_spatio_temporal_union_plan();
+  spatio_temporal_union_plan_.Clear();
+  spatio_temporal_union_plan_input_.Clear();
+  // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
+  //                                .GetDebugInfoPb()
+  //                                ->mutable_spatio_temporal_union_plan();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto& coarse_planning_info =
       lane_change_decider_output.coarse_planning_info;
+  auto &spatio_temporal_union_plan_output =
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
   const auto lc_state = coarse_planning_info.target_state;
   const auto& virtual_lane_manager =
         session_->environmental_model().get_virtual_lane_manager();
   const auto& intersection_state = virtual_lane_manager->GetIntersectionState();
-  spatio_temporal_union_plan->set_st_dp_is_sucess(false);
-  spatio_temporal_union_plan->set_cost_time(0.0);
-  spatio_temporal_union_plan->set_enable_using_st_plan(false);
+  spatio_temporal_union_plan_.set_st_dp_is_sucess(false);
+  spatio_temporal_union_plan_.set_cost_time(0.0);
+  spatio_temporal_union_plan_.set_enable_using_st_plan(false);
+  spatio_temporal_union_plan_output.st_dp_is_sucess = false;
+  spatio_temporal_union_plan_output.cost_time = 0.0;
+  spatio_temporal_union_plan_output.enable_using_st_plan = false;
 
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
@@ -109,7 +115,7 @@ bool SpatioTemporalPlanner::Execute() {
     return true;
   }
 
-  slt_grid_map_.RunOnce();
+  slt_grid_map_.RunOnce(spatio_temporal_union_plan_input_);
 
   auto &traj_points = session_->mutable_planning_context()
                           ->mutable_lane_change_decider_output()
@@ -121,14 +127,16 @@ bool SpatioTemporalPlanner::Execute() {
       slt_grid_map_.VirtualAgentSTInFo();
 
   const double st_pre_time = IflyTime::Now_ms();
-  path_time_heuristic_optimizer_.Process( traj_points, agent_trajs_state, virtual_agents_st_info, last_enable_using_st_plan_);
+  path_time_heuristic_optimizer_.Process( traj_points, agent_trajs_state, virtual_agents_st_info, last_enable_using_st_plan_, spatio_temporal_union_plan_input_);
 
   // 更新障碍物决策
   path_time_heuristic_optimizer_.UpdateLateralObstacleDecision(agent_trajs_state);
   const double st_end_time = IflyTime::Now_ms();
 
-  spatio_temporal_union_plan->set_cost_time(st_end_time - st_pre_time);
-  spatio_temporal_union_plan->set_enable_using_st_plan(true);
+  spatio_temporal_union_plan_.set_cost_time(st_end_time - st_pre_time);
+  spatio_temporal_union_plan_.set_enable_using_st_plan(true);
+  spatio_temporal_union_plan_output.cost_time = st_end_time - st_pre_time;
+  spatio_temporal_union_plan_output.enable_using_st_plan = true;
   last_enable_using_st_plan_ = true;
 
   LogDebugInfo(traj_points, agent_trajs_state);
@@ -139,14 +147,17 @@ bool SpatioTemporalPlanner::Execute() {
 void SpatioTemporalPlanner::LogDebugInfo(
     const TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agents_state) {
+#ifdef ENABLE_PROTO_LOG
   auto& lateral_obstacle_decision = session_->mutable_planning_context()
       ->mutable_lateral_obstacle_decider_output().lat_obstacle_decision;
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::EnvironmentModelInfo *environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
-  auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
-                                 .GetDebugInfoPb()
-                                 ->mutable_spatio_temporal_union_plan();
+  // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
+  //                                .GetDebugInfoPb()
+  //                                ->mutable_spatio_temporal_union_plan();
+  auto &spatio_temporal_union_plan_output =
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
   const auto& ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
 
@@ -176,7 +187,7 @@ void SpatioTemporalPlanner::LogDebugInfo(
   }
 
   auto origin_refline_points =
-      spatio_temporal_union_plan->mutable_origin_refline_points();
+      spatio_temporal_union_plan_.mutable_origin_refline_points();
   origin_refline_points->Clear();
 
   const auto &origin_lane_points = current_lane->lane_points();
@@ -195,11 +206,13 @@ void SpatioTemporalPlanner::LogDebugInfo(
     Point->set_y(origin_point.y);
   }
 
-  spatio_temporal_union_plan->set_st_dp_is_sucess(
+  spatio_temporal_union_plan_.set_st_dp_is_sucess(
         path_time_heuristic_optimizer_.GetStDpIsSuccess());
+  spatio_temporal_union_plan_output.st_dp_is_sucess =
+      path_time_heuristic_optimizer_.GetStDpIsSuccess();
 
   // trajectory points
-  auto mutable_traj_points = spatio_temporal_union_plan->mutable_trajectory_points();
+  auto mutable_traj_points = spatio_temporal_union_plan_.mutable_trajectory_points();
   mutable_traj_points->Clear();
   for (size_t i = 0; i < traj_points.size(); i++) {
     planning::common::TrajectoryPoint *traj_point = mutable_traj_points->Add();
@@ -231,6 +244,15 @@ void SpatioTemporalPlanner::LogDebugInfo(
     }
   }
 
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_spatio_temporal_union_plan_input()
+      ->CopyFrom(spatio_temporal_union_plan_input_);
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_spatio_temporal_union_plan()
+      ->CopyFrom(spatio_temporal_union_plan_);
+#endif
   return;
 }
 

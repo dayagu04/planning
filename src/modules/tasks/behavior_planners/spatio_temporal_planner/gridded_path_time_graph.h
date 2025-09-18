@@ -24,6 +24,7 @@
 #include "tasks/task.h"
 #include "utils_math.h"
 #include "virtual_lane.h"
+#include "spatio_temporal_union_plan.pb.h"
 
 namespace planning {
 
@@ -42,7 +43,8 @@ class GriddedPathTimeGraph {
       TrajectoryPoints &traj_points,
       const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
       const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
-      const bool &last_enable_using_st_plan);
+      const bool &last_enable_using_st_plan,
+      planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input);
 
  private:
   planning::framework::Session *session_;

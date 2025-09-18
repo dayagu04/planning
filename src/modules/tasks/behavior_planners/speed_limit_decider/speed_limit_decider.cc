@@ -406,14 +406,6 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double avg_curv = curv_sum / curv_window_vec.size();
   double road_radius = 1 / std::max(avg_curv, 0.0001);*/
 
-  auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  debug_info_pb->clear_dis_curv_list();
-  for (int j = 0; j < preview_curv_info_vec.size(); j++) {
-    planning::common::DoublePair *one_curv = debug_info_pb->add_dis_curv_list();
-    one_curv->set_first(preview_curv_info_vec[j].s);
-    one_curv->set_second(preview_curv_info_vec[j].curv);
-  }
-
   double v_limit_road = 40.0;
   double road_radius = 10000.0;
   bool is_s_bend = IsSSharpBend(preview_curv_info_vec);

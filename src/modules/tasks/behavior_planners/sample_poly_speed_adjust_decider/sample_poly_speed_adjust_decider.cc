@@ -669,6 +669,7 @@ void SamplePolySpeedAdjustDecider::ClearStitchedPolyPtr() {
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
                                                 const double evaluate_cost_time,
                                                 const double all_cost_time) {
+#ifdef ENABLE_PROTO_LOG
   auto sample_poly_speed_pb_info = DebugInfoManager::GetInstance()
                                        .GetDebugInfoPb()
                                        ->mutable_st_search_decider_info()
@@ -846,5 +847,6 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
       weight_gap_avaliable_);
   sample_poly_speed_pb_info->mutable_sample_param()->set_weight_acc_limit(
       weight_acc_limit_);
+#endif
 }
 }  // namespace planning

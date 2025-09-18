@@ -744,7 +744,7 @@ bool LateralMotionPlanner::Update() {
   motion_planner_output.lateral_t_s_spline.set_points(s_vec_, t_vec_);
   motion_planner_output.s_lat_vec = s_vec_;
   motion_planner_output.lat_init_flag = true;
-
+  motion_planner_output.curv_factor = curv_factor_;
   ilqr_solver::ControlVec u_vec;
   u_vec.resize(N);
 
@@ -886,6 +886,7 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
 
 void LateralMotionPlanner::SaveDebugInfo() {
   // record input and output
+#ifdef ENABLE_PROTO_LOG
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_input()
@@ -894,5 +895,6 @@ void LateralMotionPlanner::SaveDebugInfo() {
       .GetDebugInfoPb()
       ->mutable_lateral_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
+#endif
 }
 }  // namespace planning

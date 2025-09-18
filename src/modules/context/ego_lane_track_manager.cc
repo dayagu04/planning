@@ -632,11 +632,9 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
-  bool enable_using_st_plan =
-      DebugInfoManager::GetInstance()
-          .GetDebugInfoPb()
-          ->spatio_temporal_union_plan()
-          .enable_using_st_plan();
+  bool enable_using_st_plan = session_->planning_context()
+          .spatio_temporal_union_plan_output()
+          .enable_using_st_plan;
   int origin_lane_virtual_id =
       lane_change_decider_output.origin_lane_virtual_id;
   int origin_lane_order_id = -1;

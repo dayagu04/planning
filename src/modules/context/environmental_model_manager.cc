@@ -454,9 +454,6 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   fusion_objs_info.clear();
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
-    auto input_topic_timestamp = DebugInfoManager::GetInstance()
-                                     .GetDebugInfoPb()
-                                     ->mutable_input_topic_timestamp();
     auto timestamp = local_view.localization.meta.timestamp;
     if (!session_->is_hpp_scene()) {
       truncate_prediction_info(local_view.prediction_result,
@@ -502,10 +499,7 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   const auto &vehicle_service_output_info =
       local_view.vehicle_service_output_info;
   const auto &localization = local_view.localization;
-  auto input_topic_timestamp = DebugInfoManager::GetInstance()
-                                   .GetDebugInfoPb()
-                                   ->mutable_input_topic_timestamp();
-  bool new_local = 0 != input_topic_timestamp->localization();
+  bool new_local = true;
   const auto &function_state_machine_info =
       local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
@@ -828,11 +822,16 @@ void EnvironmentalModelManager::truncate_prediction_info(
                  << " init_relative_time " << init_relative_time;
     }
     cur_predicion_obj.delay_time = prediction_relative_time;
-    JSON_DEBUG_VALUE("prediction_relative_time", prediction_relative_time);
+
 #ifdef X86
     cur_predicion_obj.delay_time =
         SimulationContext::Instance()->prediction_relative_time();
 #endif
+
+    auto &debug_info_manager = DebugInfoManager::GetInstance();
+    auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    planning_debug_data->mutable_simulation_core_param()->set_prediction_relative_time(cur_predicion_obj.delay_time);
+
     if (prediction_object.obstacle_intent.type ==
         iflyauto::OBSTACLE_INTENT_COMMON) {
       cur_predicion_obj.intention = ObstacleIntentType::COMMON;

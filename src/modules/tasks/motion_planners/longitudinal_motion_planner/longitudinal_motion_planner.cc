@@ -61,6 +61,7 @@ bool LongitudinalMotionPlanner::Execute() {
   Update();
 
   // record input and output
+#ifdef ENABLE_PROTO_LOG
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_longitudinal_motion_planning_input()
@@ -70,6 +71,7 @@ bool LongitudinalMotionPlanner::Execute() {
       .GetDebugInfoPb()
       ->mutable_longitudinal_motion_planning_output()
       ->CopyFrom(planning_problem_ptr_->GetOutput());
+#endif
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("LongitudinalMotionCostTime", end_time - start_time);
   return true;

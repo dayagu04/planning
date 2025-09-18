@@ -25,6 +25,7 @@
 #include "tasks/task.h"
 #include "utils_math.h"
 #include "virtual_lane.h"
+#include "spatio_temporal_union_plan.pb.h"
 
 namespace planning {
 using namespace planning_math;
@@ -54,6 +55,9 @@ class SpatioTemporalPlanner : public Task {
   bool ego_in_intersection_state_ = false;
   int intersection_count_ = 0;
   bool last_enable_using_st_plan_ = false;
+
+  planning::common::SpatioTemporalUnionPlan spatio_temporal_union_plan_;
+  planning::common::SpationTemporalUnionDpInput spatio_temporal_union_plan_input_;
 
 };
 
