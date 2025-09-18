@@ -613,9 +613,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == LateralMotionScene::SPLIT) {
     jerk_bound = config_.jerk_bound_split;  // 0.6
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
-    std::vector<double> xp_road_radius{250.0, 400.0, 600.0, 750.0};
-    jerk_bound = // 1.0 0.8 0.6 0.5
-      planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
+    jerk_bound = config_.jerk_bound_ramp;
   }
   // if (is_use_spatio_planner_result_) {
   //   jerk_bound = config_.jerk_bound_spatio;
@@ -862,6 +860,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     emergency_jerk_bound = P2_emergency_jerk_bound;
     extra_jerk_buffer =
         std::min(0.025, extra_jerk_buffer);
+    if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
+      extra_jerk_buffer *= 2.0;
+    }
   }
   // jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
   jerk_bound = std::max(last_omega_to_jerk, jerk_bound);
