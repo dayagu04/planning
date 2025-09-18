@@ -7,13 +7,14 @@
 #include "apa_obstacle.h"
 #include "base_collision_detector.h"
 #include "geometry_math.h"
+#include "hybrid_astar_common.h"
 
 namespace planning {
 namespace apa_planner {
 
-#define edt_ogm_resolution (0.05)
-#define edt_ogm_grid_x_max int(20 / edt_ogm_resolution)
-#define edt_ogm_grid_y_max int(36 / edt_ogm_resolution)
+#define edt_ogm_resolution (0.05f)
+#define edt_ogm_grid_x_max int(20.0f / edt_ogm_resolution)
+#define edt_ogm_grid_y_max int(36.0f / edt_ogm_resolution)
 
 // x -> row   y -> column
 // slot coordinate system
@@ -65,9 +66,9 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   void GenOccupancyGridMap(const Eigen::Vector2d &ogm_origin,
                            const double _ogm_resolution);
 
-  const OGMIndex GetIndexFromOGMPose(const Eigen::Vector2d &pt);
+  const OGMIndex GetIndexFromOGMPose(const Eigen::Vector2f &pt);
 
-  const OGMIndex GetIndexFromSlotPose(const Eigen::Vector2d &pt);
+  const OGMIndex GetIndexFromSlotPose(const Eigen::Vector2f &pt);
 
   const bool IsIndexValid(const OGMIndex &id) const;
 
@@ -83,10 +84,10 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   const double GetObsDistByIndex(const OGMIndex &id,
                                  const ApaObsHeightType &height_type);
 
-  void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
-                        const double max_circle_buffer = 0.5,
+  void UpdateSafeBuffer(const float body_lat_buffer, const float lon_buffer,
+                        const float max_circle_buffer = 0.5,
                         const bool special_process_mirror = false,
-                        const double mirror_lat_buffer = 0.08);
+                        const float mirror_lat_buffer = 0.08);
 
   void UpdateCarWithMirrorSafeBuffer();
   void UpdateCarWithOutMirrorSafeBuffer();
@@ -98,8 +99,15 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   // return min dist between obs and car circle
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list,
-                                 double *min_dist, int *circle_id,
-                                 const double safe_dist = 0.5);
+                                 float *min_dist, int *circle_id,
+                                 const float safe_dist = 0.5);
+
+  const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
+                                 CarFootPrintCircleList *car_circle_list);
+
+  const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
+                                 CarFootPrintCircleList *car_circle_list,
+                                 float *min_dist, const float safe_dist = 0.5f);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
                          const double body_lat_buffer, const double lon_buffer,
@@ -113,16 +121,26 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                          const bool need_cal_obs_dist = false,
                          const double max_circle_buffer = 0.5,
                          const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const double mirror_lat_buffer = 0.08,
+                         const AstarPathGear gear = AstarPathGear::PARKING);
+
+  const ColResultF Update(const std::vector<common_math::PathPt<float>> &pts,
+                          const float lon_buffer, const float body_lat_buffer,
+                          const float mirror_lat_buffer,
+                          const AstarPathGear gear = AstarPathGear::PARKING,
+                          const bool need_cal_obs_dist = false,
+                          const float max_circle_buffer = 0.5);
+
+  const geometry_lib::RectangleBound &GetOgmBound() const { return ogm_bound_; }
 
  private:
   // origin and boundary of grid coordinate system
-  Eigen::Vector2d ogm_origin_ = Eigen::Vector2d(0.0, 0.0);
+  Eigen::Vector2f ogm_origin_ = Eigen::Vector2f(0.0f, 0.0f);
   geometry_lib::RectangleBound ogm_bound_;
 
   // todo: x and y can have different resolution?
-  double resolution_ = edt_ogm_resolution;
-  double resolution_inv_ = 1.0 / edt_ogm_resolution;
+  float resolution_ = edt_ogm_resolution;
+  float resolution_inv_ = 1.0f / edt_ogm_resolution;
 
   // If obstacles occupy this grid, true
   bool car_with_mirror_obs_ogm_[edt_ogm_grid_x_max][edt_ogm_grid_y_max] = {};
@@ -141,7 +159,7 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   CarFootPrintCircleList car_without_mirror_circles_list_with_buffer_;
   CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
 
-  double max_circle_buffer_ = 0.5;
+  float max_circle_buffer_ = 0.5f;
 };
 
 }  // namespace apa_planner

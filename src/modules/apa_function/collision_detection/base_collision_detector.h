@@ -4,8 +4,10 @@
 #include <utility>
 #include <vector>
 
+#include "aabb2d.h"
 #include "apa_obstacle.h"
 #include "apa_obstacle_manager.h"
+#include "common_math.h"
 #include "math_lib.h"
 #include "obstacle_clear_zone_decider/obstacle_clear_zone_decider.h"
 
@@ -77,14 +79,14 @@ struct ColResult {
 };
 
 struct CarFootPrintCircle {
-  Eigen::Vector2d center_local = Eigen::Vector2d(0.0, 0.0);
-  Eigen::Vector2d center_global = Eigen::Vector2d(0.0, 0.0);
-  double radius{0.0};
+  common_math::Pos<float> center_local{0.0f, 0.0f};
+  common_math::Pos<float> center_global{0.0f, 0.0f};
+  float radius{0.0f};
 
   void Reset() {
     center_local.setZero();
     center_global.setZero();
-    radius = 0.0;
+    radius = 0.0f;
   }
 
   void LocalToGlobal(const geometry_lib::PathPoint &pt) {
@@ -93,6 +95,10 @@ struct CarFootPrintCircle {
   }
 
   void LocalToGlobal(const geometry_lib::LocalToGlobalTf &l2g_tf) {
+    center_global = l2g_tf.GetPos(center_local);
+  }
+
+  void LocalToGlobal(const common_math::Local2GlobalTrans<float> &l2g_tf) {
     center_global = l2g_tf.GetPos(center_local);
   }
 
@@ -123,7 +129,8 @@ struct CarFootPrintCircleList {
   }
 
   void LocalToGlobal(const geometry_lib::PathPoint &pt) {
-    geometry_lib::LocalToGlobalTf l2g_tf(pt.pos, pt.heading);
+    geometry_lib::LocalToGlobalTf l2g_tf(Eigen::Vector2f(pt.GetX(), pt.GetY()),
+                                         float(pt.GetTheta()));
     max_circle.LocalToGlobal(l2g_tf);
     for (uint8_t i = 0; i < count; ++i) {
       circles[i].LocalToGlobal(l2g_tf);
@@ -131,6 +138,14 @@ struct CarFootPrintCircleList {
   }
 
   void LocalToGlobal(const geometry_lib::LocalToGlobalTf &l2g_tf) {
+    max_circle.LocalToGlobal(l2g_tf);
+    for (uint8_t i = 0; i < count; ++i) {
+      circles[i].LocalToGlobal(l2g_tf);
+    }
+  }
+
+  void LocalToGlobal(const common_math::PathPt<float> &pt) {
+    common_math::Local2GlobalTrans<float> l2g_tf(pt.pos, pt.theta);
     max_circle.LocalToGlobal(l2g_tf);
     for (uint8_t i = 0; i < count; ++i) {
       circles[i].LocalToGlobal(l2g_tf);
@@ -157,7 +172,7 @@ class BaseCollisionDetector {
       const std::shared_ptr<ApaObstacleManager> &obs_manager_ptr) {
     obs_manager_ptr_ = obs_manager_ptr;
   };
-  void SetSampleDs(const double sample_ds) { sample_ds_ = sample_ds; }
+  void SetSampleDs(const float sample_ds) { sample_ds_ = sample_ds; }
   void UpdateSafeBuffer(const double body_lat_buffer, const double lon_buffer,
                         const bool special_process_mirror = false,
                         const double mirror_lat_buffer = 0.08);
@@ -167,6 +182,10 @@ class BaseCollisionDetector {
 
   const geometry_lib::RectangleBound CalCarRectangleBound(
       const geometry_lib::PathPoint &current_pose);
+
+  const bool IsPoseInClearZone(const common_math::PathPt<float> &pose);
+
+  const cdl::AABB2f CalCarAABBBoxF(const common_math::PathPt<float> &pose);
 
   static const bool CheckObsMovementTypeFeasible(
       const ApaObsMovementType obs_type,
@@ -196,6 +215,7 @@ class BaseCollisionDetector {
   // 包含左右后视镜的矩形
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_with_buffer_;
+  std::vector<common_math::Pos<float>> car_with_mirror_rectangle_vertexf_;
   // 后视镜到前悬矩形
   std::vector<Eigen::Vector2d>
       mirror_to_front_overhanging_rectangle_vertex_expand_front_;
@@ -210,11 +230,12 @@ class BaseCollisionDetector {
   CarFootPrintCircleList car_without_mirror_circles_list_;
   CarFootPrintCircleList car_chassis_circles_list_;
 
-  double body_lat_buffer_{0.};
-  double mirror_lat_buffer_{0.};
-  double lon_buffer_{0.};
+  float body_lat_buffer_{0.0f};
+  float mirror_lat_buffer_{0.0f};
+  float lon_buffer_{0.0f};
 
   std::vector<geometry_lib::PathPoint> path_pt_vec_;
+  std::vector<common_math::PathPt<float>> pts_;
 
   std::shared_ptr<ApaObstacleManager> obs_manager_ptr_;
 
@@ -222,7 +243,9 @@ class BaseCollisionDetector {
 
   ColResult col_res_;
 
-  double sample_ds_ = 0.1;
+  ColResultF col_res_f_;
+
+  float sample_ds_ = 0.1f;
 
   bool need_update_buffer_ = false;
 };

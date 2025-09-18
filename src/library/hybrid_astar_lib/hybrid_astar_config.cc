@@ -34,10 +34,16 @@ void PlannerOpenSpaceConfig::InitConfig() {
   traj_steer_penalty = 0.0;
   traj_steer_change_penalty = 4.0;
   zigzag_penalty = 0.1;
+  traj_kappa_penalty = 0.0;
+  traj_kappa_change_penalty = 0.0;
 
   expect_gear_penalty = 7.0;
   expect_dist_penalty = 7.0;
   recommend_box_penalty = 7.0;
+
+  exceed_pre_search_box_penalty = 0.0;
+  exceed_intersting_box_penalty = 0.0;
+  borrow_slot_penalty = 0.0;
 
   enable_euler_cost_for_vertical_park = true;
   enable_dp_cost_for_vertical_park = true;

@@ -87,6 +87,19 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
       << param.wheel_base + param.front_overhanging,
       0.5 * max_car_width;
 
+  car_with_mirror_rectangle_vertexf_.clear();
+  car_with_mirror_rectangle_vertexf_.resize(4);
+  car_with_mirror_rectangle_vertexf_[0] << -param.rear_overhanging,
+      0.5 * max_car_width;
+  car_with_mirror_rectangle_vertexf_[1] << -param.rear_overhanging,
+      -0.5 * max_car_width;
+  car_with_mirror_rectangle_vertexf_[2]
+      << param.wheel_base + param.front_overhanging,
+      -0.5 * max_car_width;
+  car_with_mirror_rectangle_vertexf_[3]
+      << param.wheel_base + param.front_overhanging,
+      0.5 * max_car_width;
+
   // 后视镜到前悬矩形
   mirror_to_front_overhanging_rectangle_vertex_expand_front_.clear();
   mirror_to_front_overhanging_rectangle_vertex_expand_front_.resize(4);
@@ -343,6 +356,22 @@ const geometry_lib::RectangleBound BaseCollisionDetector::CalCarRectangleBound(
   }
   bound.CalcBoundByPtVec(polygon);
   return bound;
+}
+
+const bool BaseCollisionDetector::IsPoseInClearZone(
+    const common_math::PathPt<float>& pose) {
+  return obs_clear_zone_decider_.IsInClearZone(CalCarAABBBoxF(pose));
+}
+
+const cdl::AABB2f BaseCollisionDetector::CalCarAABBBoxF(
+    const common_math::PathPt<float>& pose) {
+  common_math::Local2GlobalTrans<float> l2g_tf(pose.pos, pose.theta);
+  std::vector<common_math::Pos<float>> pos_vec;
+  pos_vec.resize(car_with_mirror_rectangle_vertexf_.size());
+  for (size_t i = 0; i < car_with_mirror_rectangle_vertexf_.size(); ++i) {
+    pos_vec[i] = l2g_tf.GetPos(car_with_mirror_rectangle_vertexf_[i]);
+  }
+  return cdl::AABB2f(pos_vec);
 }
 
 const bool BaseCollisionDetector::CheckObsMovementTypeFeasible(
