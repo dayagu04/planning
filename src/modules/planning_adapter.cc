@@ -104,6 +104,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->prediction_result_recv_time =
         prediction_result_msg_recv_time_;
     is_prediction_result_msg_updated_.store(false);
+    ILOG_INFO << "receive prediction";
   }
 
   // 1.2 receive fusion_road
@@ -112,6 +113,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->road_info = road_info_msg_;
     local_view_ptr_->road_info_recv_time = road_info_msg_recv_time_;
     is_road_info_msg_updated_.store(false);
+    ILOG_INFO << "receive road_info";
   }
 
   // 1.3 receive localization
@@ -120,6 +122,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->localization = localization_msg_;
     local_view_ptr_->localization_recv_time = localization_msg_recv_time_;
     is_localization_msg_updated_.store(false);
+    ILOG_INFO << "receive localization";
   }
 
   // 1.4 receive ground_line
@@ -129,6 +132,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->ground_line_perception_recv_time =
         ground_line_perception_msg_recv_time_;
     is_ground_line_perception_msg_updated_.store(false);
+    ILOG_INFO << "receive round_line";
   }
 
   // 1.5 receive fusion_object
@@ -138,6 +142,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->fusion_objects_info_recv_time =
         fusion_objects_info_msg_recv_time_;
     is_fusion_objects_info_msg_updated_.store(false);
+    ILOG_INFO << "receive fusion_objects";
   }
 
   // 1.6 receive fusion_occupancy_object
@@ -148,6 +153,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->fusion_occupancy_objects_info_recv_time =
         fusion_occupancy_objects_info_msg_recv_time_;
     is_fusion_occupancy_objects_info_msg_updated_.store(false);
+    ILOG_INFO << "receive fusion_occupancy";
   }
 
   // 1.7 receive vehicle_service
@@ -158,6 +164,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->vehicle_service_output_info_recv_time =
         vehicle_service_output_info_msg_recv_time_;
     is_vehicle_service_output_info_msg_updated_.store(false);
+    ILOG_INFO << "receive vehicle_service";
   }
 
   // 1.7 receive control_output
@@ -166,6 +173,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->control_output = control_output_msg_;
     local_view_ptr_->control_output_recv_time = control_output_msg_recv_time_;
     is_control_output_msg_updated_.store(false);
+    ILOG_INFO << "receive control";
   }
 
   // 不再接收hmi消息，统一从状态机获取
@@ -200,6 +208,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->parking_fusion_info_recv_time =
         parking_fusion_info_msg_recv_time_;
     is_parking_fusion_info_msg_updated_.store(false);
+    ILOG_INFO << "receive parking_fusion";
   }
 
   // 1.8 receive function_state_machine
@@ -209,6 +218,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->function_state_machine_info_recv_time =
         func_state_machine_msg_recv_time_;
     is_func_state_machine_msg_updated_.store(false);
+    ILOG_INFO << "receive func_state_machine";
   }
 
   // 1.9 receive uss_wave
@@ -217,6 +227,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->uss_wave_info = uss_wave_info_msg_;
     local_view_ptr_->uss_wave_info_recv_time = uss_wave_info_msg_recv_time_;
     is_uss_wave_info_msg_updated_.store(false);
+    ILOG_INFO << "receive uss_wave";
   }
 
   // 1.10 receive uss_perception
@@ -226,6 +237,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->uss_percept_info_recv_time =
         uss_percept_info_msg_recv_time_;
     is_uss_percept_info_msg_updated_.store(false);
+    ILOG_INFO << "receive uss_percept";
   }
 
   // 1.11 receive static_map
@@ -234,6 +246,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->static_map_info = map_info_msg_;
     local_view_ptr_->static_map_info_recv_time = map_info_msg_recv_time_;
     is_map_info_msg_updated_.store(false);
+    ILOG_INFO << "receive map";
   }
 
   // 1.12 receive sd_map
@@ -243,6 +256,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->sd_map_info = sd_map_info_msg_;
     local_view_ptr_->sd_map_info_recv_time = sd_map_info_msg_recv_time_;
     is_sd_map_info_msg_updated_.store(false);
+    ILOG_INFO << "receive sd_map";
   }
 
   if (is_sdpro_map_info_msg_updated_) {
@@ -250,6 +264,7 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->sdpro_map_info = sdpro_map_info_msg_;
     local_view_ptr_->sdpro_map_info_recv_time = sdpro_map_info_msg_recv_time_;
     is_sdpro_map_info_msg_updated_.store(false);
+    ILOG_INFO << "receive sdpro_map";
   }
 
   JSON_DEBUG_VALUE("FeedDataTimeSD", (IflyTime::Now_us() - start_time_sd) / 1000.0);
@@ -272,8 +287,8 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->perception_tsr_info_recv_time =
         perception_tsr_msg_recv_time_;
     is_perception_tsr_msg_updated_.store(false);
+    ILOG_INFO << "receive perception_tsr";
   }
-
 
   // xlwei5 not done
   if (is_perception_scene_msg_updated_) {
@@ -282,8 +297,8 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->perception_scene_info_recv_time =
         perception_scene_msg_recv_time_;
     is_perception_scene_msg_updated_.store(false);
+    ILOG_INFO << "receive perception_scene";
   }
-
 
   if (is_fusion_speed_bump_msg_updated_) {
     std::lock_guard<std::mutex> lock(fusion_speed_bump_msg_mutex_);
@@ -291,10 +306,12 @@ bool PlanningAdapter::Proc() {
     local_view_ptr_->fusion_speed_bump_info_recv_time =
         fusion_speed_bump_msg_recv_time_;
     is_fusion_speed_bump_msg_updated_.store(false);
+    ILOG_INFO << "receive fusion_speed_bump";
   }
 
-
+  LogTopicLatency();
   JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time_) / 1000.0);
+
   UpdateApaResetFlag();
 
   // 2.planning run
@@ -523,6 +540,124 @@ void PlanningAdapter::UpdateApaResetFlag() {
   return;
 }
 
+void PlanningAdapter::LogTopicLatency() {
+  const uint64_t kMaxPredictionLatency = 100;
+  const uint64_t kMaxLocalizationLatency = 50;
+  const uint64_t kMaxFusionObjectLatency = 50;
+  const uint64_t kMaxFusionOccupancyLatency = 100;
+  const uint64_t kMaxParkingFusionLatency = 100;
+  const uint64_t kMaxUssPerceptionLatency = 100;
+  const uint64_t kMaxFunctionStateMachineLatency = 100;
+  const uint64_t kMaxUssWaveLatency = 100;
+  const uint64_t kMaxMapLatency = 1500;
+  const uint64_t kMaxSdMapLatency = 1500;
+  const uint64_t kMaxSdproMapLatency = 1500;
+  const uint64_t kMaxPerceptionTsrLatency = 150;
+  const uint64_t kMaxPerceptionSceneLatency = 150;
+  const uint64_t kMaxFusionSpeedBumpLatency = 80;
+  const uint64_t kMaxGroundLineLatency = 50;
+
+  input_topic_latency_.set_prediction(get_latency(
+      start_time_, local_view_ptr_->prediction_result.msg_header.stamp));
+
+  input_topic_latency_.set_fusion_road(get_latency(
+    start_time_, local_view_ptr_->road_info.msg_header.stamp));
+
+  input_topic_latency_.set_localization(get_latency(
+    start_time_, local_view_ptr_->localization.msg_header.stamp));
+
+  input_topic_latency_.set_ground_line(get_latency(
+    start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
+
+  input_topic_latency_.set_fusion_object(get_latency(
+    start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
+
+  input_topic_latency_.set_fusion_occupancy_object(get_latency(
+    start_time_, local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp));
+
+  input_topic_latency_.set_vehicle_service(get_latency(
+    start_time_, local_view_ptr_->vehicle_service_output_info.msg_header.stamp));
+
+  input_topic_latency_.set_control_output(get_latency(
+    start_time_, local_view_ptr_->control_output.msg_header.stamp));
+
+  input_topic_latency_.set_parking_fusion(get_latency(
+    start_time_, local_view_ptr_->parking_fusion_info.msg_header.stamp));
+
+  input_topic_latency_.set_uss_perception(get_latency(
+    start_time_, local_view_ptr_->uss_percept_info.msg_header.stamp));
+
+  input_topic_latency_.set_function_state_machine(get_latency(
+    start_time_, local_view_ptr_->function_state_machine_info.msg_header.stamp));
+
+  input_topic_latency_.set_uss_wave(get_latency(
+    start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
+
+  input_topic_latency_.set_map(get_latency(
+    start_time_, local_view_ptr_->static_map_info.header().timestamp()));
+
+  input_topic_latency_.set_sd_map(get_latency(
+    start_time_, local_view_ptr_->sd_map_info.header().timestamp()));
+
+  input_topic_latency_.set_sdpro_map(get_latency(
+    start_time_, local_view_ptr_->sdpro_map_info.header().timestamp()));
+
+  input_topic_latency_.set_perception_tsr(get_latency(
+    start_time_, local_view_ptr_->perception_tsr_info.msg_header.stamp));
+
+  input_topic_latency_.set_perception_scene(get_latency(
+    start_time_, local_view_ptr_->perception_scene_info.msg_header.stamp));
+
+  input_topic_latency_.set_fusion_speed_bump(get_latency(
+    start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
+
+  if (input_topic_latency_.prediction() > kMaxPredictionLatency) {
+    ILOG_WARN << "prediction latency:" << input_topic_latency_.prediction();
+  }
+  if (input_topic_latency_.localization() > kMaxLocalizationLatency) {
+    ILOG_WARN << "localization latency:" << input_topic_latency_.localization();
+  }
+  if (input_topic_latency_.fusion_object() > kMaxFusionObjectLatency) {
+    ILOG_WARN << "fusion_object latency:" << input_topic_latency_.fusion_object();
+  }
+  if (input_topic_latency_.fusion_occupancy_object() > kMaxFusionOccupancyLatency) {
+    ILOG_WARN << "fusion_occupancy_object latency:" << input_topic_latency_.fusion_occupancy_object();
+  }
+  if (input_topic_latency_.parking_fusion() > kMaxParkingFusionLatency) {
+    ILOG_WARN << "parking_fusion latency:" << input_topic_latency_.parking_fusion();
+  }
+  if (input_topic_latency_.uss_perception() > kMaxUssPerceptionLatency) {
+    ILOG_WARN << "uss_perception latency:" << input_topic_latency_.uss_perception();
+  }
+  if (input_topic_latency_.function_state_machine() > kMaxFunctionStateMachineLatency) {
+    ILOG_WARN << "function_state_machine latency:" << input_topic_latency_.function_state_machine();
+  }
+  if (input_topic_latency_.uss_wave() > kMaxUssWaveLatency) {
+    ILOG_WARN << "uss_wave latency:" << input_topic_latency_.uss_wave();
+  }
+  if (input_topic_latency_.map() > kMaxMapLatency) {
+    ILOG_WARN << "map latency:" << input_topic_latency_.map();
+  }
+  if (input_topic_latency_.sd_map() > kMaxSdMapLatency) {
+    ILOG_WARN << "sd_map latency:" << input_topic_latency_.sd_map();
+  }
+  if (input_topic_latency_.sdpro_map() > kMaxSdproMapLatency) {
+    ILOG_WARN << "sdpro_map latency:" << input_topic_latency_.sdpro_map();
+  }
+  if (input_topic_latency_.perception_tsr() > kMaxPerceptionTsrLatency) {
+    ILOG_WARN << "perception_tsr latency:" << input_topic_latency_.perception_tsr();
+  }
+  if (input_topic_latency_.perception_scene() > kMaxPerceptionSceneLatency) {
+    ILOG_WARN << "perception_scene latency:" << input_topic_latency_.perception_scene();
+  }
+  if (input_topic_latency_.fusion_speed_bump() > kMaxFusionSpeedBumpLatency) {
+    ILOG_WARN << "fusion_speed_bump latency:" << input_topic_latency_.fusion_speed_bump();
+  }
+  if (input_topic_latency_.ground_line() > kMaxGroundLineLatency) {
+    ILOG_WARN << "ground_line latency:" << input_topic_latency_.ground_line();
+  }
+}
+
 void PlanningAdapter::Log() {
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
 
@@ -587,61 +722,7 @@ void PlanningAdapter::Log() {
         input_topic_timestamp->set_prediction(
       local_view_ptr_->prediction_result.msg_header.stamp);
 
-  input_topic_latency->set_prediction(get_latency(
-      start_time_, local_view_ptr_->prediction_result.msg_header.stamp));
-
-  input_topic_latency->set_fusion_road(
-      get_latency(start_time_, local_view_ptr_->road_info.msg_header.stamp));
-
-  input_topic_latency->set_localization(
-      get_latency(start_time_, local_view_ptr_->localization.msg_header.stamp));
-
-  input_topic_latency->set_ground_line(get_latency(
-      start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
-
-  input_topic_latency->set_fusion_object(get_latency(
-      start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
-
-  input_topic_latency->set_fusion_occupancy_object(get_latency(
-      start_time_,
-      local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp));
-
-  input_topic_latency->set_vehicle_service(get_latency(
-      start_time_,
-      local_view_ptr_->vehicle_service_output_info.msg_header.stamp));
-
-  input_topic_latency->set_control_output(get_latency(
-      start_time_, local_view_ptr_->control_output.msg_header.stamp));
-
-  input_topic_latency->set_parking_fusion(get_latency(
-      start_time_, local_view_ptr_->parking_fusion_info.msg_header.stamp));
-
-  input_topic_latency->set_uss_perception(get_latency(
-      start_time_, local_view_ptr_->uss_percept_info.msg_header.stamp));
-
-  input_topic_latency->set_function_state_machine(get_latency(
-      start_time_,
-      local_view_ptr_->function_state_machine_info.msg_header.stamp));
-
-  input_topic_latency->set_uss_wave(get_latency(start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
-
-  input_topic_latency->set_map(get_latency(
-      start_time_, local_view_ptr_->static_map_info.header().timestamp()));
-
-  input_topic_latency->set_sd_map(get_latency(
-      start_time_, local_view_ptr_->sd_map_info.header().timestamp()));
-
-  input_topic_latency->set_sdpro_map(get_latency(
-      start_time_, local_view_ptr_->sdpro_map_info.header().timestamp()));
-
-  input_topic_latency->set_perception_tsr(get_latency(
-      start_time_, local_view_ptr_->perception_tsr_info.msg_header.stamp));
-
-  input_topic_latency->set_perception_scene(get_latency(
-      start_time_, local_view_ptr_->perception_scene_info.msg_header.stamp));
-
-  input_topic_latency->set_fusion_speed_bump(get_latency(
-      start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
+  planning_debug_data->mutable_input_topic_latency()->CopyFrom(input_topic_latency_);
 // #endif
 
   planning_debug_data->mutable_frame_info()->set_version(__version_str__);
