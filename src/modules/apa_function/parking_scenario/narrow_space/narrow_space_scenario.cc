@@ -347,6 +347,14 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     // ILOG_INFO << "use history path";
   }
 
+  if (PathPlannerResult::PLAN_UPDATE == path_plan_result) {
+    // calculate remain dist according to plan path
+    frame_.remain_dist_path = CalRemainDistFromPath();
+
+    // calculate remain dist uss according to uss
+    frame_.remain_dist_obs = CalRealTimeBrakeDist();
+  }
+
   // DebugPathString(current_path_point_global_vec_);
 
   return;
