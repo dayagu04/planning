@@ -81,6 +81,8 @@ struct RectangleBound {
   double max_x = -std::numeric_limits<double>::infinity();
   double max_y = -std::numeric_limits<double>::infinity();
 
+  Eigen::Vector2d center = Eigen::Vector2d::Zero();
+
   double length = 0.0;
   double width = 0.0;
 
@@ -106,6 +108,7 @@ struct RectangleBound {
     min_y = std::numeric_limits<double>::infinity();
     max_x = -std::numeric_limits<double>::infinity();
     max_y = -std::numeric_limits<double>::infinity();
+    center.setZero();
     length = 0.0;
     width = 0.0;
   }
@@ -181,9 +184,17 @@ struct GlobalToLocalTf {
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
 
+  Eigen::Vector2f pos_n_orif = Eigen::Vector2f::Zero();
+  Eigen::Matrix2f rot_mf = Eigen::Matrix2f::Identity();
+  float heading_orif = 0.0f;
+
   GlobalToLocalTf() {}
 
   GlobalToLocalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
+
+  GlobalToLocalTf(const Eigen::Vector2f &p_n_ori, const float theta_ori) {
     Init(p_n_ori, theta_ori);
   }
 
@@ -195,18 +206,37 @@ struct GlobalToLocalTf {
     rot_m << cos_theta, sin_theta, -sin_theta, cos_theta;
   }
 
+  void Init(const Eigen::Vector2f &p_n_ori, const float theta_ori) {
+    pos_n_orif = p_n_ori;
+    heading_orif = theta_ori;
+    const float cos_theta = std::cos(theta_ori);
+    const float sin_theta = std::sin(theta_ori);
+    rot_mf << cos_theta, sin_theta, -sin_theta, cos_theta;
+  }
+
   const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
     return rot_m * (p_n - pos_n_ori);
+  }
+
+  const Eigen::Vector2f GetPos(const Eigen::Vector2f &p_n) const {
+    return rot_mf * (p_n - pos_n_orif);
   }
 
   const double GetHeading(const double heading) const {
     return NormalizeAngle(heading - heading_ori);
   }
 
+  // const float GetHeading(const float heading) const {
+  //   return NormalizeAngle(heading - heading_orif);
+  // }
+
   void Reset() {
     pos_n_ori.setZero();
     rot_m.setIdentity();
     heading_ori = 0.0;
+    pos_n_orif = Eigen::Vector2f::Zero();
+    rot_mf.setIdentity();
+    heading_orif = 0.0f;
   }
 };
 struct LocalToGlobalTf {
@@ -214,9 +244,17 @@ struct LocalToGlobalTf {
   Eigen::Matrix2d rot_m = Eigen::Matrix2d::Identity();
   double heading_ori = 0.0;
 
+  Eigen::Vector2f pos_n_orif = Eigen::Vector2f::Zero();
+  Eigen::Matrix2f rot_mf = Eigen::Matrix2f::Identity();
+  float heading_orif = 0.0f;
+
   LocalToGlobalTf() = default;
 
   LocalToGlobalTf(const Eigen::Vector2d &p_n_ori, const double theta_ori) {
+    Init(p_n_ori, theta_ori);
+  }
+
+  LocalToGlobalTf(const Eigen::Vector2f &p_n_ori, const float theta_ori) {
     Init(p_n_ori, theta_ori);
   }
 
@@ -228,18 +266,37 @@ struct LocalToGlobalTf {
     rot_m << cos_theta, -sin_theta, sin_theta, cos_theta;
   }
 
+  void Init(const Eigen::Vector2f &p_n_ori, const float theta_ori) {
+    pos_n_orif = p_n_ori;
+    heading_orif = theta_ori;
+    const float cos_theta = std::cos(theta_ori);
+    const float sin_theta = std::sin(theta_ori);
+    rot_mf << cos_theta, -sin_theta, sin_theta, cos_theta;
+  }
+
   const Eigen::Vector2d GetPos(const Eigen::Vector2d &p_n) const {
     return (rot_m * p_n + pos_n_ori);
+  }
+
+  const Eigen::Vector2f GetPos(const Eigen::Vector2f &p_n) const {
+    return (rot_mf * p_n + pos_n_orif);
   }
 
   const double GetHeading(const double heading) const {
     return NormalizeAngle(heading + heading_ori);
   }
 
+  // const float GetHeading(const float heading) const {
+  //   return NormalizeAngle(heading + heading_orif);
+  // }
+
   void Reset() {
     pos_n_ori.setZero();
     rot_m.setIdentity();
     heading_ori = 0.0;
+    pos_n_orif = Eigen::Vector2f::Zero();
+    rot_mf.setIdentity();
+    heading_orif = 0.0f;
   }
 };
 
@@ -287,8 +344,18 @@ struct PathPoint {
   uint8_t gear = SEG_GEAR_DRIVE;
 
   void PrintInfo(const bool enable_log = true) const {
-    ILOG_INFO_IF(enable_log) << "pos = " << pos.x() << "," << pos.y()
-                             << "  headingA = " << heading * kRad2Deg;
+    ILOG_INFO_IF(enable_log)
+        << "pos = " << pos.transpose() << "  headingA = " << heading * kRad2Deg
+        << "  s = " << s;
+  }
+
+  void SetPos(const Eigen::Vector2d &_pos) { pos = _pos; }
+  void SetTheta(const double _theta) { heading = _theta; }
+  void SetX(const double _x) { pos(0) = _x; }
+  void SetY(const double _y) { pos(1) = _y; }
+  void SetPos(const double _x, const double _y) { pos << _x, _y; }
+  void SetDir(const double _theta) {
+    heading_vec << std::cos(_theta), std::sin(_theta);
   }
 
   const double GetX() const { return pos.x(); }
@@ -500,7 +567,9 @@ struct Arc {
   Eigen::Vector2d pB = Eigen::Vector2d::Zero();
   double length = 0.0;
   double headingA = 0.0;
+  Eigen::Vector2d headingA_vec = Eigen::Vector2d::Zero();
   double headingB = 0.0;
+  Eigen::Vector2d headingB_vec = Eigen::Vector2d::Zero();
   bool is_anti_clockwise = true;
   bool is_ignored = false;
 
@@ -632,6 +701,12 @@ struct PathSegment {
   const PathPoint GetEndPose() const {
     return PathPoint(GetEndPos(), GetEndHeading());
   }
+
+  const Eigen::Vector2d GetCenter() const { return arc_seg.circle_info.center; }
+
+  const double GetRadius() const { return arc_seg.circle_info.radius; }
+
+  const bool GetIsAntiClockwise() const { return arc_seg.is_anti_clockwise; }
 
   void SetStartPos(const Eigen::Vector2d &pos) {
     if (seg_type == SEG_TYPE_LINE) {
@@ -786,6 +861,10 @@ const bool GetIntersectionFromTwoLineSeg(Eigen::Vector2d &intersection,
 const bool GetIntersectionFromTwoLine(Eigen::Vector2d &intersection,
                                       LineSegment &line1, LineSegment &line2);
 
+const bool GetIntersectionFromTwoLines(Eigen::Vector2d &intersection,
+                                       const LineSegment &line1,
+                                       const LineSegment &line2);
+
 const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
                                const Eigen::Vector2d &pC);
 
@@ -922,6 +1001,10 @@ const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
                                    const PathSegment &path_seg,
                                    const double ds);
 
+const bool SamplePointSetInPathSeg(std::vector<PathPoint> &point_set,
+                                   const PathSegment &path_seg, const double ds,
+                                   const double kappa);
+
 const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
                             const Eigen::Vector2d &point);
 
@@ -933,9 +1016,16 @@ const bool MinimumBoundingBox(
 
 const bool CalOneArcWithLine(Arc &arc, LineSegment &line, double r_err = 0.001);
 
+const bool CalcOneArcWithLine(Arc &arc, const LineSegment &line,
+                              const double r_err = 0.001);
+
 const bool CalTwoArcWithLine(const PathPoint &pose, LineSegment &line,
                              const double radius1, const double radius2,
                              std::vector<std::pair<Arc, Arc>> &arc_pair_vec);
+
+const bool CalcTwoArcWithLine(const PathPoint &pose, const LineSegment &line,
+                              const double radius1, const double radius2,
+                              std::vector<std::pair<Arc, Arc>> &arc_pair_vec);
 
 const bool CalTwoArcWithLine(Arc &arc1, Arc &arc2, LineSegment &line,
                              bool is_shifted = true);
@@ -957,6 +1047,11 @@ const bool CalCommonTangentCircleOfTwoLine(
     std::vector<Eigen::Vector2d> &centers,
     std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss);
 
+const bool CalcCommonTangentCircleOfTwoLine(
+    const LineSegment &line1, const LineSegment &line2, const double radius,
+    std::vector<Eigen::Vector2d> &centers,
+    std::vector<std::pair<Eigen::Vector2d, Eigen::Vector2d>> &tangent_ptss);
+
 const bool CalLineArcOfTwoLine(LineSegment &line1, LineSegment &line2,
                                LineSegment &line, Arc &arc, const double radius,
                                const bool is_shifted);
@@ -970,11 +1065,17 @@ const bool CheckTwoVecVertical(const Eigen::Vector2d &v1,
 const bool CheckTwoVecSameOrOppositeDirection(const Eigen::Vector2d &v1,
                                               const Eigen::Vector2d &v2);
 
+const bool CompleteArcInfomation(Arc &arc);
+
 const bool CompleteArcInfo(Arc &arc);
 
 const bool CompleteArcInfo(Arc &arc, const double rot_angle);
 
+const bool CompleteArcInfomation(Arc &arc, const double rot_angle);
+
 const bool CompleteArcInfo(Arc &arc, const uint8_t arc_steer);
+
+const bool CompleteArcInfomation(Arc &arc, const uint8_t arc_steer);
 
 const bool CompleteArcInfo(Arc &arc, const double length,
                            const bool is_anti_clockwise);
@@ -1012,9 +1113,15 @@ const Eigen::Vector2d CalArcCenter(const Eigen::Vector2d &pos,
 
 const uint8_t CalArcGear(const Arc &arc);
 
+const uint8_t CalcArcGear(const Arc &arc);
+
 const uint8_t CalArcSteer(const Arc &arc);
 
+const uint8_t CalcArcSteer(const Arc &arc);
+
 const uint8_t CalLineSegGear(const LineSegment &line_seg);
+
+const uint8_t CalcLineSegGear(const LineSegment &line_seg);
 
 const uint8_t ReverseGear(const uint8_t gear);
 
@@ -1040,9 +1147,17 @@ const bool ReversePathSegVecInfo(std::vector<PathSegment> &path_seg_vec);
 const bool CalOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
                                     const uint8_t current_seg_gear);
 
+const bool CalcOneArcWithLineAndGear(Arc &arc, const LineSegment &line,
+                                     const uint8_t current_seg_gear,
+                                     const double min_radius = 5.0);
+
 const bool CalOneArcWithTargetHeadingAndGear(Arc &arc,
                                              const uint8_t current_seg_gear,
                                              const double target_heading);
+
+const bool CalcOneArcWithTargetHeadingAndGear(Arc &arc,
+                                              const uint8_t current_seg_gear,
+                                              const double target_heading);
 
 const bool CalOneArcWithTargetHeading(Arc &arc, const uint8_t current_seg_gear,
                                       const double target_heading);
@@ -1054,8 +1169,15 @@ const bool CalLineUnitNormVecByPos(const Eigen::Vector2d &pos,
                                    const LineSegment &line,
                                    Eigen::Vector2d &line_norm_vec);
 
+const bool CalcLineUnitNormVecByPos(const Eigen::Vector2d &pos,
+                                    const LineSegment &line,
+                                    Eigen::Vector2d &line_norm_vec);
+
 const bool CalTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
                                     const uint8_t seg_gear);
+
+const bool CalcTwoArcWithSameHeading(Arc &arc1, Arc &arc2,
+                                     const uint8_t seg_gear);
 
 const bool IsDoublePositive(const double x);
 
@@ -1064,7 +1186,7 @@ const double CalPoint2LineSegDist(const Eigen::Vector2d &pO,
 
 const bool CheckTwoPoseIsSame(const PathPoint &pose1, const PathPoint &pose2,
                               const double pos_err = 0.01,
-                              const double heading_err = 0.068 / 57.3);
+                              const double heading_err = 0.068 * kDeg2Rad);
 
 std::vector<double> Linspace(const double start, const double stop,
                              const double ds);
@@ -1137,6 +1259,7 @@ struct GeometryPath {
   std::vector<PathSegment> path_segment_vec;
   std::vector<PathSegment> cur_gear_path_segments_vec;
   std::vector<PathPoint> path_pt_vec;
+  std::vector<std::vector<PathPoint>> path_pt_vec_vec;
   bool collide_flag = false;
 
   GeometryPath() {}
@@ -1225,6 +1348,17 @@ struct GeometryPath {
     }
   }
 
+  void Interpolate(const double ds) {
+    path_pt_vec_vec.clear();
+    path_pt_vec_vec.resize(path_segment_vec.size());
+    for (size_t i = 0; i < path_segment_vec.size(); ++i) {
+      const auto &path_seg = path_segment_vec[i];
+      std::vector<pnc::geometry_lib::PathPoint> pt_set;
+      SamplePointSetInPathSeg(pt_set, path_seg, ds);
+      path_pt_vec_vec[i] = pt_set;
+    }
+  }
+
   void PrintInfo(const bool enable_log = true) const;
 
   void CalcCost();
@@ -1265,6 +1399,18 @@ const PathSegGear GetGearType(const uint8_t gear);
 void SampleInLineSegment(const Eigen::Vector2d &start,
                          const Eigen::Vector2d &end, const double sample_dist,
                          std::vector<Eigen::Vector2d> &points);
+template <class PoseType>
+PathPoint GetPathPointFromPose(const PoseType &pose) {
+  PathPoint pt;
+  pt.pos << pose.x, pose.y;
+  pt.heading = pose.theta;
+  return pt;
+}
+
+template <typename VectorType, typename PoseType>
+VectorType GetVectorFromPose(const PoseType &pose) {
+  return VectorType(pose.x, pose.y);
+}
 
 void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path);
 

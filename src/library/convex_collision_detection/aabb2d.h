@@ -28,7 +28,10 @@ class CDL_EXPORT AABB {
 
   AABB(const Vector2r &a, const Vector2r &b, const Vector2r &c);
 
-  void Reset(const Vector2r &center);
+  void Reset(const Vector2r &center = Vector2r(0.0, 0.0));
+
+  void Set(const Vector2r &center, const real length, const real width,
+           const real heading);
 
   /** Check whether two AABB are overlap */
   bool overlap(const AABB &other) const;
@@ -48,6 +51,8 @@ class CDL_EXPORT AABB {
   bool contain(const planning::Position2D &p) const;
 
   bool contain(const planning::Pose2D &p) const;
+
+  bool contain(const planning::Pose2f &p) const;
 
   void combine(const AABB &a, const AABB &b) {
     GetVectorMin(&min_, a.min_, b.min_);
@@ -133,6 +138,10 @@ class CDL_EXPORT AABB {
   /** Center of the AABB */
   Vector2r center() const;
 
+  real long_side() const;
+
+  real short_side() const;
+
   /**
    * \brief  Distance between two AABB2Ds;
    * \param[in]  other   : the second aabb2D
@@ -177,7 +186,7 @@ class CDL_EXPORT AABB {
     return;
   }
 
-  void DebugString() {
+  void DebugString() const {
     ILOG_INFO << "box, min " << min_[0] << ", " << min_[1] << " , max "
               << max_[0] << ", " << max_[1];
   }
@@ -220,6 +229,29 @@ class CDL_EXPORT AABB2f {
 
     max_[1] = std::max(min_[1], max_[1]);
     return;
+  }
+
+  AABB2f(const std::vector<Eigen::Vector2f> &pt_vec);
+
+  /** Check whether the AABB contains a point */
+  bool IsContain(const Eigen::Vector2f &p) const;
+
+  bool IsContain(const Eigen::Vector2d &p) const;
+
+  /** Check whether the AABB contains another AABB */
+  bool IsContain(const AABB2f &other) const;
+
+  bool IsContain(const planning::Pose2f &p) const;
+
+  /** Width of the AABB */
+  float GetWidth() const;
+
+  /** Height of the AABB */
+  float GetLength() const;
+
+  void DebugString() const {
+    ILOG_INFO << "box, min " << min_[0] << ", " << min_[1] << " , max "
+              << max_[0] << ", " << max_[1];
   }
 };
 
