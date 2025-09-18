@@ -1632,19 +1632,19 @@ bool VirtualLaneManager::IsEgoBothSidesHaveRoadBorder() {
 
 bool VirtualLaneManager::IsPosXOnVirtualLaneType(double x_pos) {
   bool rslt = false;
-  bool lane_is_virtual = false;
-  const auto& lane_types_vec = current_lane_->get_lane_types();
-  for (int ind = 0; ind < lane_types_vec.size(); ind++) {
-    if (lane_types_vec[ind].begin <= x_pos &&
-        x_pos <= lane_types_vec[ind].end) {
-      if (lane_types_vec[ind].type == iflyauto::LANETYPE_VIRTUAL) {
-        lane_is_virtual = true;
-      } else {
-        lane_is_virtual = false;
-      }
-      break;
-    }
-  }
+  bool lane_is_virtual = true;
+  // const auto& lane_types_vec = current_lane_->get_lane_types();
+  // for (int ind = 0; ind < lane_types_vec.size(); ind++) {
+  //   if (lane_types_vec[ind].begin <= x_pos &&
+  //       x_pos <= lane_types_vec[ind].end) {
+  //     if (lane_types_vec[ind].type == iflyauto::LANETYPE_VIRTUAL) {
+  //       lane_is_virtual = true;
+  //     } else {
+  //       lane_is_virtual = false;
+  //     }
+  //     break;
+  //   }
+  // }
 
   const auto& l_boundry = current_lane_->get_left_lane_boundary();
   bool l_boundry_is_virtual = false;

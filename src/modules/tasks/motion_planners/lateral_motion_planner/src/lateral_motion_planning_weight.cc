@@ -397,9 +397,15 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
                std::fabs(curvature_radius_vec_[0]));
   if (max_near_radius >= 400.0 &&
       ((max_near_radius - mid_radius > 150 &&
-        mid_radius < 200.0) ||
+        mid_radius < 250.0) ||
        (max_near_radius - far_radius > 200 &&
         far_radius < 200.0))) {
+    is_sharp_turn_ = true;
+  } else if (max_near_radius < 200.0 &&
+             ((mid_radius - max_near_radius > 150 &&
+               mid_radius > 350.0) ||
+              (far_radius - max_near_radius > 200 &&
+               far_radius > 400.0))) {
     is_sharp_turn_ = true;
   }
   if (max_road_radius < 150.0 ||   // in large bend
@@ -713,7 +719,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   double jerk_bound =  // 0.4 0.4 0.4 0.3
       planning::interp(ref_vel_, xp_v, config_.map_jerk_bound);
   if (lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
-      std::fabs(avoid_dist_) <= 0.01) {
+      std::fabs(avoid_dist_) <= 0.01 &&
+      target_road_radius_ > 750.0) {
     jerk_bound = config_.jerk_bound;
     planning_input.set_q_continuity(config_.q_continuity);
   }
