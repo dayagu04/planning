@@ -3,8 +3,6 @@ cmake_minimum_required(VERSION 3.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(Eigen3 REQUIRED)
-
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_compile_options(-Werror)
 endif()
