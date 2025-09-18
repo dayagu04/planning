@@ -23,6 +23,7 @@ message AgentSTInfo {
   optional int32 agent_type = 2;
   repeated AgentInfo time_and_corners = 3;
   repeated Point2d max_box_corners = 4;
+  optional bool is_static = 5;
 }
 
 message DpSearchParams {

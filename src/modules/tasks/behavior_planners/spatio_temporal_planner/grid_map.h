@@ -37,6 +37,7 @@ struct AgentFrenetSpatioTemporalInFo {
   std::array<AABox2d, 26> agent_box_set;
   std::unordered_map<int, AABox2d> agent_boxs_set;
   AABox2d max_agent_box;
+  bool is_static;
 };
 
 struct VirtualAgentSpatioTemporalInFo {

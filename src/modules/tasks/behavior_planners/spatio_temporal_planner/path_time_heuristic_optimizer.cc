@@ -241,6 +241,9 @@ void PathTimeHeuristicOptimizer::GetVehicleVertices(
 
 void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs) {
+  if (!st_dp_is_sucess_) {
+    return;
+  }
   const int k_ego_traj_points_nums = 16;
   auto& lateral_obstacle_decision =
       session_->mutable_planning_context()

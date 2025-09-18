@@ -899,13 +899,11 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       double distance_c3 = kDefaultMaxDisBetweenObs;
       int agent_id_c3;
       double dynamic_obstacle_cost = 0.0;
-      if (cost_cr.point().t() <= kConsiderDynamicObstacleCostTimeLength) {
-        dynamic_obstacle_cost =
-            CalculateDynamicObstacleCost(
-                pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
-        auto dynamicobstaclecost = IflyTime::Now_us();
-        // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
-      }
+      dynamic_obstacle_cost =
+          CalculateDynamicObstacleCost(
+              pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
+      auto dynamicobstaclecost = IflyTime::Now_us();
+      // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
 
       uint32_t r_prepre = pre_col[r_pre][later_j].pre_point()->index_s();
       const auto& prepre_graph_point = pre_col[r_pre][later_j].pre_point();
@@ -1380,67 +1378,73 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
   double lateral_dis_to_ego = 10.0;
 
   auto t_begin = IflyTime::Now_us();
-  int count = 1;
   double time_gap = kDynamicObstacleCostSampleTime;
   if (cur_point.point().t() > kDynamicObsConsiderTime) {
     time_gap = kDynamicObstacleCostLaterSampleTime;
   }
-
-  for (double cur_t = kDeltaTime; cur_t <= total_t;
-       cur_t += time_gap) {
-    // double cur_s = longit_curve.Evaluate(0, cur_t);
-    cur_s = v0 * cur_t + 0.5 * acc * cur_t * cur_t + pre_point.point().s();
-    cur_l = lateral_curve.Evaluate(0, cur_t);
-    cur_ego_point.set_x(cur_s);
-    cur_ego_point.set_y(cur_l);
-    ds = v0 + acc * cur_t;
-    ds = std::max(ds, 1e-6);
-    dl = lateral_curve.Evaluate(1, cur_t);
-    dl_ds = dl / ds;
-    ego_heading_angle = std::atan(dl_ds);
-    ego_heading_angle = NormalizeAngle(dl_ds);
-    // 获取sl坐标系下自车box的顶点坐标集合
-    cos_theta = cos(ego_heading_angle);
-    sin_theta = sin(ego_heading_angle);
-
-    GetVehicleBoxSLVertices(
-        cur_ego_point, cos_theta, sin_theta, ego_box_vertices);
-    // 构建自车box
-    AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
-    for (const auto& agent_traj : agent_trajs) {
-      if (agent_traj.agent_id == -1) {
+  // 外层循环遍历每个障碍物
+  for (const auto& agent_traj : agent_trajs) {
+    // 过滤无效障碍物
+    if (agent_traj.agent_id == -1) {
         continue;
-      }
-      if (agent_traj.agent_boxs_set.empty()) {
+    }
+    if (agent_traj.agent_boxs_set.empty()) {
         continue;
-      }
+    }
+    if (!agent_traj.is_static && cur_point.point().t()> kConsiderDynamicObstacleCostTimeLength) {
+      continue;
+    }
 
+    // 内层循环遍历时间间隔
+    int count = 0;
+    for (double cur_t = kDeltaTime; cur_t <= total_t; cur_t += time_gap) {
+      // 计算当前时间点的自车状态
+      count += kDefaultIndexInterval;
+      cur_s = v0 * cur_t + 0.5 * acc * cur_t * cur_t + pre_point.point().s();
+      cur_l = lateral_curve.Evaluate(0, cur_t);
+      cur_ego_point.set_x(cur_s);
+      cur_ego_point.set_y(cur_l);
+
+      ds = v0 + acc * cur_t;
+      ds = std::max(ds, 1e-6);
+      dl = lateral_curve.Evaluate(1, cur_t);
+      dl_ds = dl / ds;
+
+      ego_heading_angle = std::atan(dl_ds);
+      ego_heading_angle = NormalizeAngle(dl_ds);  // 注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
+
+      cos_theta = cos(ego_heading_angle);
+      sin_theta = sin(ego_heading_angle);
+
+      // 获取自车box顶点并构建box
+      GetVehicleBoxSLVertices(
+          cur_ego_point, cos_theta, sin_theta, ego_box_vertices);
+      AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
+
+      // 检查障碍物最大box与自车box的距离，超出范围则跳过
       dis_to_agent_max_box = agent_traj.max_agent_box.DistanceTo(cur_ego_box);
-      if(dis_to_agent_max_box >
+      if (dis_to_agent_max_box >
           spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().obstacle_longit_risk_distance()) {
-        continue;
+          continue;
       }
 
-      index = pre_point.index_t() * kDefaultTrajsPointNums + count;
+      // 获取当前时间点对应的障碍物box
+      int index = pre_point.index_t() * kDefaultTrajsPointNums + count;
       auto iter = agent_traj.agent_boxs_set.find(index);
       if (iter != agent_traj.agent_boxs_set.end()) {
-        // AABox2d cur_agent_box;
         const auto& cur_agent_box = iter->second;
         distance = cur_agent_box.DistanceTo(cur_ego_box);
         longit_dis_to_ego = cur_agent_box.LongitDistanceTo(cur_ego_box);
         lateral_dis_to_ego = cur_agent_box.LateralDistanceTo(cur_ego_box);
-        // ILOG_INFO << " index" << index
-        //           << " cur_agent_box.max_x" << cur_agent_box.max_x()
-        //           << " cur_agent_box.max_y" << cur_agent_box.max_y()
-        //           << " cur_agent_box.min_x" << cur_agent_box.min_x()
-        //           << " cur_agent_box.min_y" << cur_agent_box.min_y()
-        //           << " cur_t" << cur_t + pre_point.point().t();
+
+        // 更新最小距离
         if (distance < min_dis) {
           min_dis = distance;
           *distance_to_point = distance;
           *agent_id = agent_traj.agent_id;
         }
 
+        // 检测碰撞距离，满足条件直接返回
         if (distance < kCollisionBetweenObstacleDistanceThreshold) {
           return kObstacleCollisionDistanceCost;
         }
@@ -1451,24 +1455,23 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
           continue;
         }
 
-        // 判断自车box与障碍物agent_box的cost
-        // 计算障碍物与自车之间的纵向cost
+        // 计算纵向成本
         obstacle_cost += GetLongitCostBetweenObsBoxes(
             longit_dis_to_ego, spatio_temporal_union_plan_input);
 
+        // 计算横向成本（根据时间和障碍物类型）
         if (cur_point.point().t() <= kDefaultConsiderObstacleTajsTime) {
           if (agent_traj.agent_type == 6 || agent_traj.agent_type == 7 ||
               agent_traj.agent_type == 8) {
-            obstacle_cost += kSpecialObstacleDistanceCost * GetLateralCostBetweenObsBoxes(
-                lateral_dis_to_ego, spatio_temporal_union_plan_input);
+              obstacle_cost += kSpecialObstacleDistanceCost * GetLateralCostBetweenObsBoxes(
+                  lateral_dis_to_ego, spatio_temporal_union_plan_input);
           } else {
-            obstacle_cost += spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().default_obstacle_cost_weight() *
-                GetLateralCostBetweenObsBoxes(lateral_dis_to_ego, spatio_temporal_union_plan_input);
+              obstacle_cost += spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().default_obstacle_cost_weight() *
+                  GetLateralCostBetweenObsBoxes(lateral_dis_to_ego, spatio_temporal_union_plan_input);
           }
         }
       }
     }
-    count += kDefaultIndexInterval;
   }
   auto t_end = IflyTime::Now_us();
   // ILOG_DEBUG << "CalculateDynamicObstacleCost:" << t_end - t_begin;
