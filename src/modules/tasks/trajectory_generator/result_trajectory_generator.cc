@@ -517,14 +517,14 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   }
 
   // update LaneChangeReason
-  const double dis_to_merge = route_info_output.merge_region_info_list.empty()
-                            ? NL_NMAX
-                            : route_info_output.merge_region_info_list[0]
-                                  .distance_to_split_point;
-  const double dis_to_split = route_info_output.split_region_info_list.empty()
-                            ? NL_NMAX
-                            : route_info_output.split_region_info_list[0]
-                                  .distance_to_split_point;
+  const double dis_to_merge =
+      route_info_output.merge_region_info_list.empty()
+          ? NL_NMAX
+          : route_info_output.merge_region_info_list[0].distance_to_split_point;
+  const double dis_to_split =
+      route_info_output.split_region_info_list.empty()
+          ? NL_NMAX
+          : route_info_output.split_region_info_list[0].distance_to_split_point;
   const auto lc_request_source = lane_change_decider_output.lc_request_source;
 
   if (lc_request_source == NO_REQUEST &&
@@ -536,27 +536,24 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
-    // const double dis_to_merge =
-    // route_info_output.merge_region_info_list.empty()
-    //                           ? NL_NMAX
-    //                           : route_info_output.merge_region_info_list[0]
-    //                                 .distance_to_split_point;
+    const double dis_to_merge =
+        route_info_output.merge_region_info_list.empty()
+            ? NL_NMAX
+            : route_info_output.merge_region_info_list[0]
+                  .distance_to_split_point;
     // if (route_info_output.dis_to_ramp < 100.0 &&
     //     route_info_output.dis_to_ramp < dis_to_merge) {
-    //   ad_info.lane_change_reason =
-    //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    //   ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
-    // if (route_info_output.mlc_decider_route_info.is_process_merge) {
-    //   ad_info.lane_change_reason =
-    //   iflyauto::LaneChangeReason::LC_REASON_MERGE;
-    // } else {
-    ad_info.lane_change_reason =
-        iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
-    // }
+    if (route_info_output.mlc_decider_route_info.is_process_merge) {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    } else {
+      ad_info.lane_change_reason =
+          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+    }
   } else if (lc_request_source == MERGE_REQUEST) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
-
 
   // update route info
   if (!route_info_output.is_on_ramp) {
