@@ -131,6 +131,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
 
       if (is_lane_change_back_ ||
           is_lane_change_hold_) {
+        planning_input.set_q_acc(config_.q_acc);
         MakeLaneChangeBackDynamicWeight(planning_input);
       }
       break;
@@ -1094,9 +1095,9 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
 
 void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
-  std::vector<double> xp_xy{0.2, 0.4, 0.6};
-  std::vector<double> fp_factor1{10.0, 5.0, 1.0};
-  std::vector<double> fp_factor2{0.2, 0.6, 1.0};
+  std::vector<double> xp_xy{0.2, 0.4, 0.6, 1.0, 1.5};
+  std::vector<double> fp_factor1{10.0, 5.0, 1.0, 4.0, 8.0};
+  std::vector<double> fp_factor2{0.2, 0.6, 1.0, 1.2, 1.5};
   double init_lat_dist = std::fabs(init_l_ - lat_offset_);
   double q_ref_xy_factor =
       planning::interp(init_lat_dist, xp_xy, fp_factor1);
