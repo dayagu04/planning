@@ -18,6 +18,8 @@ set(INCLUDE_DIRS
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/perpendicular/tail_out
   ${CMAKE_CURRENT_LIST_DIR}/parking_scenario/narrow_space
   ${CMAKE_CURRENT_LIST_DIR}/parking_task
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/hybrid_astar_path_generator
+  ${CMAKE_CURRENT_LIST_DIR}/parking_task/hybrid_astar_path_generator/hybrid_astar_common
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/deciders
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators
   ${CMAKE_CURRENT_LIST_DIR}/parking_task/geometry_path_generators/perpendicular

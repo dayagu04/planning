@@ -51,7 +51,8 @@ struct PlannerOpenSpaceConfig {
   float xy_grid_resolution;
   float phi_grid_resolution;
 
-  // for now, front and back sampling node number both are 5.
+  // for now, front and back sampling node number both are 5, must be even
+  // number, and next_node_num / 2 must be odd number
   int next_node_num = 10;
   float node_step;
   float perpendicular_slot_node_step;
@@ -71,12 +72,18 @@ struct PlannerOpenSpaceConfig {
   float gear_switch_penalty = 20.0;
   float traj_steer_penalty = 0.0;
   float traj_steer_change_penalty = 0.0;
+  float traj_kappa_penalty = 0.0;
+  float traj_kappa_change_penalty = 0.0;
   float ref_line_heading_penalty = 0.0;
   float zigzag_penalty = 0.0;
 
   float expect_gear_penalty;
   float expect_dist_penalty;
   float recommend_box_penalty;
+
+  float exceed_pre_search_box_penalty;
+  float exceed_intersting_box_penalty;
+  float borrow_slot_penalty;
 
   // check rs path segment min distance
   float rs_path_seg_advised_dist = 0.35;

@@ -74,7 +74,8 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const ApaObstacle& obs,
-                                const GJKColDetRequest gjk_col_det_request);
+                                const GJKColDetRequest gjk_col_det_request,
+                                Eigen::Vector2d& dangerous_pt);
 
   const bool IsObsInCar(const geometry_lib::PathPoint& pose,
                         const double lat_buffer, const Eigen::Vector2d& obs);

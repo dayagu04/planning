@@ -73,6 +73,8 @@ const ColResult GJKCollisionDetector::Update(
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
       obs_manager_ptr_->GetObstacles();
 
+  Eigen::Vector2d dangerous_pt;
+
   for (const geometry_lib::PathPoint& pt : path_pt_vec_) {
     TransformPolygonFootPrintLocalToGlobal(pt);
 
@@ -130,7 +132,8 @@ const ColResult GJKCollisionDetector::Update(
       }
 
       for (size_t i = 0; i < polygon_vec.size(); ++i) {
-        col_flag = IsPolygonCollision(polygon_vec[i], obs, gjk_col_det_request);
+        col_flag = IsPolygonCollision(polygon_vec[i], obs, gjk_col_det_request,
+                                      dangerous_pt);
         if (i == 0) {
           if (!col_flag) {
             // max polygan no col, safe, quit
@@ -142,6 +145,8 @@ const ColResult GJKCollisionDetector::Update(
         } else {
           // other polygon, if col, consider col
           if (col_flag) {
+            col_res_.dangerous_obs_pt = dangerous_pt;
+            col_res_.dangerous_path_pt = pt.pos;
             break;
           }
         }
@@ -177,9 +182,11 @@ const bool GJKCollisionDetector::IsPolygonCollision(
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
       obs_manager_ptr_->GetObstacles();
 
+  Eigen::Vector2d dangerous_pt;
+
   for (const auto& obs_pair : obs_map) {
     const ApaObstacle& obs = obs_pair.second;
-    if (IsPolygonCollision(polygon, obs, gjk_col_det_request)) {
+    if (IsPolygonCollision(polygon, obs, gjk_col_det_request, dangerous_pt)) {
       return true;
     }
   }
@@ -189,7 +196,7 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 
 const bool GJKCollisionDetector::IsPolygonCollision(
     const Polygon2D& polygon, const ApaObstacle& obs,
-    const GJKColDetRequest gjk_col_det_request) {
+    const GJKColDetRequest gjk_col_det_request, Eigen::Vector2d& dangerous_pt) {
   bool col_flag = false;
 
   const Polygon2D* obs_polygon = &obs.GetPolygon2DLocal();
@@ -212,6 +219,7 @@ const bool GJKCollisionDetector::IsPolygonCollision(
       gjk_interface_.PolygonPointCollisionDetect(
           &polygon, Eigen::Vector2d(pt[0], pt[1]), &col_flag);
       if (col_flag) {
+        dangerous_pt = pt;
         return true;
       }
     }

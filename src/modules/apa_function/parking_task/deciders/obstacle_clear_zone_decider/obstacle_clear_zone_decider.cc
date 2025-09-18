@@ -9,29 +9,84 @@ const bool ObstacleClearZoneDecider::GenerateBoundingBox(
     const std::vector<Eigen::Vector2d>& pt_vec,
     const std::shared_ptr<ApaObstacleManager> obstacle_manager_ptr) {
   box_vec_.clear();
+  box_vecf_.clear();
   if (obstacle_manager_ptr == nullptr) {
     return false;
   }
   obstacle_manager_ptr_ = obstacle_manager_ptr;
+  ILOG_INFO << "generate safe box";
+  const float min_width = 6.6, min_length = 3.2;
   for (const Eigen::Vector2d& pt : pt_vec) {
-    box_vec_.emplace_back(GenerateBoundingBox(pt));
+    cdl::AABB box =
+        GenerateBoundingBox(pt, 1.0, 1.0, false, false, false, false);
+    if (box.long_side() > min_width && box.short_side() > min_length) {
+      box_vec_.emplace_back(box);
+
+      const Eigen::Vector2d temp_pt_right((box.min_[0] + box.max_[0]) * 0.5,
+                                          box.min_[1]);
+
+      const Eigen::Vector2d temp_pt_left((box.min_[0] + box.max_[0]) * 0.5,
+                                         box.max_[1]);
+
+      const Eigen::Vector2d temp_pt_down(box.min_[0],
+                                         (box.min_[1] + box.max_[1]) * 0.5);
+
+      const Eigen::Vector2d temp_pt_up(box.max_[0],
+                                       (box.min_[1] + box.max_[1]) * 0.5);
+
+      box = GenerateBoundingBox(temp_pt_right, 1.0, 2.0, false, false, false,
+                                true);
+      if (box.long_side() > min_width && box.short_side() > min_length) {
+        box_vec_.emplace_back(box);
+      }
+
+      box = GenerateBoundingBox(temp_pt_left, 1.0, 2.0, false, false, true,
+                                false);
+      if (box.long_side() > min_width && box.short_side() > min_length) {
+        box_vec_.emplace_back(box);
+      }
+
+      box = GenerateBoundingBox(temp_pt_down, 2.0, 1.0, false, true, false,
+                                false);
+      if (box.long_side() > min_width && box.short_side() > min_length) {
+        box_vec_.emplace_back(box);
+      }
+
+      box =
+          GenerateBoundingBox(temp_pt_up, 2.0, 1.0, true, false, false, false);
+      if (box.long_side() > min_width && box.short_side() > min_length) {
+        box_vec_.emplace_back(box);
+      }
+    }
   }
+
+  cdl::AABB2f boxf;
+  for (const cdl::AABB& box : box_vec_) {
+    boxf.min_ << box.min_[0], box.min_[1];
+    boxf.max_ << box.max_[0], box.max_[1];
+    box_vecf_.emplace_back(boxf);
+  }
+
   return true;
 }
 
 const cdl::AABB ObstacleClearZoneDecider::GenerateBoundingBox(
-    const Eigen::Vector2d& pt) {
+    const Eigen::Vector2d& pt, const float x_gain, const float y_gain,
+    const bool _achieve_x_min, const bool _achieve_x_max,
+    const bool _achieve_y_min, const bool _achieve_y_max) {
   cdl::AABB box;
 
   box.Reset(pt);
+  box.expand(Eigen::Vector2d(0.05, 0.05));
 
-  box.ExtendX(0.5);
-  box.ExtendY(0.8);
+  const float init_extend_x = 0.5;
+  const float init_extend_y = 0.8;
 
-  const float max_x_extend = 10.0;
+  const float max_x_extend = 15.0;
   const float max_y_extend = 15.0;
   const float step = 0.2;
-  const float revert_gain = 2.5;
+  const float revert_gain = 1.2;
+  const float extra_buffer = 0.3;
 
   cdl::AABB max_box;
   max_box.min_[0] = pt.x() - max_x_extend;
@@ -43,44 +98,91 @@ const cdl::AABB ObstacleClearZoneDecider::GenerateBoundingBox(
   const size_t max_y_number = std::ceil(max_y_extend / step);
   const size_t max_numer = std::max(max_x_number, max_y_number) + 1;
 
-  bool achieve_x_max = false, achieve_x_min = false;
-  bool achieve_y_max = false, achieve_y_min = false;
+  bool achieve_x_max = _achieve_x_max, achieve_x_min = _achieve_x_min;
+  bool achieve_y_max = _achieve_y_max, achieve_y_min = _achieve_y_min;
+
+  cdl::AABB temp_box;
 
   for (size_t i = 0; i < max_numer; ++i) {
     // extend along the positive x axis drirection
     if (!achieve_x_max) {
-      box.ExtendXupper(step);
-      if (IsCollisionForBox(box) || box.max_[0] > max_box.max_[0]) {
-        box.ExtendXupper(-step * revert_gain);
+      box.ExtendXupper(i == 0 ? init_extend_x : step * x_gain);
+
+      temp_box = box;
+      temp_box.ExtendXupper(extra_buffer);
+      if (i > 0) {
+        temp_box.ExtendXlower(achieve_x_min ? 0.0 : extra_buffer);
+        temp_box.ExtendYupper(achieve_y_max ? 0.0 : extra_buffer);
+        temp_box.ExtendYlower(achieve_y_min ? 0.0 : extra_buffer);
+      }
+
+      if (IsCollisionForBox(temp_box) || box.max_[0] > max_box.max_[0]) {
+        box.ExtendXupper(i == 0 ? -init_extend_x
+                                : -step * revert_gain * x_gain);
         achieve_x_max = true;
       }
     }
 
     // extend along the negative x axis drirection
     if (!achieve_x_min) {
-      box.ExtendXlower(step);
-      if (IsCollisionForBox(box) || box.min_[0] < max_box.min_[0]) {
-        box.ExtendXlower(-step * revert_gain);
+      box.ExtendXlower(i == 0 ? init_extend_x : step * x_gain);
+
+      temp_box = box;
+      temp_box.ExtendXlower(extra_buffer);
+      if (i > 0) {
+        temp_box.ExtendXupper(achieve_x_max ? 0.0 : extra_buffer);
+        temp_box.ExtendYupper(achieve_y_max ? 0.0 : extra_buffer);
+        temp_box.ExtendYlower(achieve_y_min ? 0.0 : extra_buffer);
+      }
+
+      if (IsCollisionForBox(temp_box) || box.min_[0] < max_box.min_[0]) {
+        box.ExtendXlower(i == 0 ? -init_extend_x
+                                : -step * revert_gain * x_gain);
         achieve_x_min = true;
       }
     }
 
     // extend along the positive y axis drirection
     if (!achieve_y_max) {
-      box.ExtendYupper(step);
-      if (IsCollisionForBox(box) || box.max_[1] > max_box.max_[1]) {
-        box.ExtendYupper(-step * revert_gain);
+      box.ExtendYupper(i == 0 ? init_extend_y : step * y_gain);
+
+      temp_box = box;
+      temp_box.ExtendYupper(extra_buffer);
+      if (i > 0) {
+        temp_box.ExtendXupper(achieve_x_max ? 0.0 : extra_buffer);
+        temp_box.ExtendXlower(achieve_x_min ? 0.0 : extra_buffer);
+        temp_box.ExtendYlower(achieve_y_min ? 0.0 : extra_buffer);
+      }
+
+      if (IsCollisionForBox(temp_box) || box.max_[1] > max_box.max_[1]) {
+        box.ExtendYupper(i == 0 ? -init_extend_y
+                                : -step * revert_gain * y_gain);
         achieve_y_max = true;
       }
     }
 
     // extend along the negative y axis drirection
     if (!achieve_y_min) {
-      box.ExtendYlower(step);
-      if (IsCollisionForBox(box) || box.min_[1] < max_box.min_[1]) {
-        box.ExtendYlower(-step * revert_gain);
+      box.ExtendYlower(i == 0 ? init_extend_y : step * y_gain);
+
+      temp_box = box;
+      temp_box.ExtendYlower(extra_buffer);
+      if (i > 0) {
+        temp_box.ExtendXupper(achieve_x_max ? 0.0 : extra_buffer);
+        temp_box.ExtendXlower(achieve_x_min ? 0.0 : extra_buffer);
+        temp_box.ExtendYupper(achieve_y_max ? 0.0 : extra_buffer);
+      }
+
+      if (IsCollisionForBox(temp_box) || box.min_[1] < max_box.min_[1]) {
+        temp_box.DebugString();
+        box.ExtendYlower(i == 0 ? -init_extend_y
+                                : -step * revert_gain * y_gain);
         achieve_y_min = true;
       }
+    }
+
+    if (achieve_x_max && achieve_x_min && achieve_y_max && achieve_y_min) {
+      break;
     }
   }
 
@@ -101,6 +203,15 @@ const bool ObstacleClearZoneDecider::IsInClearZone(const Eigen::Vector2d& pt) {
 const bool ObstacleClearZoneDecider::IsInClearZone(const cdl::AABB& box) {
   for (const cdl::AABB& temp_box : box_vec_) {
     if (temp_box.contain(box)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const bool ObstacleClearZoneDecider::IsInClearZone(const cdl::AABB2f& box) {
+  for (const cdl::AABB2f& temp_box : box_vecf_) {
+    if (temp_box.IsContain(box)) {
       return true;
     }
   }
