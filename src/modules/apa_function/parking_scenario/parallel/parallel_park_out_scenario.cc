@@ -457,7 +457,8 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ego_info_under_slot.origin_pose_global.pos =
         0.5 * (select_slot_global.pt_1 + select_slot_global.pt_3);
     ILOG_INFO << "origin pos = "
-              << ego_info_under_slot.origin_pose_global.pos.x();
+              << ego_info_under_slot.origin_pose_global.pos.x() << " "
+              << ego_info_under_slot.origin_pose_global.pos.y();
 
     ego_info_under_slot.g2l_tf = pnc::geometry_lib::GlobalToLocalTf(
         ego_info_under_slot.origin_pose_global.pos,
@@ -486,7 +487,8 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   ego_info_under_slot.cur_pose.heading_vec =
       pnc::geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
 
-  ILOG_INFO << "ego_pos_slot = " << ego_info_under_slot.cur_pose.pos.x();
+  ILOG_INFO << "ego_pos_slot = " << ego_info_under_slot.cur_pose.pos.x() << " "
+            << ego_info_under_slot.cur_pose.pos.y();
   ILOG_INFO << "ego_heading_slot (deg)= "
             << ego_info_under_slot.cur_pose.heading * kRad2Deg;
 
@@ -527,8 +529,10 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 
     t_lane_.limiter.end_pt = ego_info_under_slot.g2l_tf.GetPos(limiter.end_pt);
 
-    ILOG_INFO << "limiter start pos = " << t_lane_.limiter.start_pt.x();
-    ILOG_INFO << "limiter end pos = " << t_lane_.limiter.end_pt.x();
+    ILOG_INFO << "limiter start pos = " << t_lane_.limiter.start_pt.x() << " "
+              << t_lane_.limiter.start_pt.y();
+    ILOG_INFO << "limiter end pos = " << t_lane_.limiter.end_pt.x() << " "
+              << t_lane_.limiter.end_pt.y();
 
     const double max_limiter_x =
         std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
@@ -668,7 +672,8 @@ const bool ParallelParkOutScenario::GenTlane() {
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn &&
           is_rigid) {
-        ILOG_INFO << "rigid obs = " << obs_pt_local.x();
+        ILOG_INFO << "rigid obs = " << obs_pt_local.x() << " "
+                  << obs_pt_local.y();
         t_lane_.is_inside_rigid = true;
       }
 
@@ -849,10 +854,14 @@ const bool ParallelParkOutScenario::GenTlane() {
   } else if (pnc::mathlib::IsDoubleEqual(side_sgn, -1.0)) {
     ILOG_INFO << "park out right";
   }
-  ILOG_INFO << "obs_pt_inside = " << t_lane_.obs_pt_inside.x();
-  ILOG_INFO << "obs_pt_outside = " << t_lane_.obs_pt_outside.x();
-  ILOG_INFO << "corner_inside_slot = " << t_lane_.corner_inside_slot.x();
-  ILOG_INFO << "corner_outside_slot = " << t_lane_.corner_outside_slot.x();
+  ILOG_INFO << "obs_pt_inside = " << t_lane_.obs_pt_inside.x() << " "
+            << t_lane_.obs_pt_inside.y();
+  ILOG_INFO << "obs_pt_outside = " << t_lane_.obs_pt_outside.x() << " "
+            << t_lane_.obs_pt_outside.y();
+  ILOG_INFO << "corner_inside_slot = " << t_lane_.corner_inside_slot.x() << " "
+            << t_lane_.corner_inside_slot.y();
+  ILOG_INFO << "corner_outside_slot = " << t_lane_.corner_outside_slot.x()
+            << " " << t_lane_.corner_outside_slot.y();
 
   ILOG_INFO << "pt_outside = " << t_lane_.pt_outside.x();
   ILOG_INFO << "pt_inside = " << t_lane_.pt_inside.x();
