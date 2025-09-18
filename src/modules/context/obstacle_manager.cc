@@ -563,9 +563,17 @@ void ObstacleManager::UpdateGroundLineObstacle() {
         if (groundline_point_size > 50 &&
             groundline.type == iflyauto::GROUND_LINE_TYPE_WALL) {
           std::vector<std::vector<planning_math::Vec2d>> points_vec;
-          split_points(groundline.groundline_point,
-                       groundline_point_size,
-                       frenet_coord,
+          iflyauto::Point2f
+              groundline_point_2d[FUSION_GROUNDLINE_POINT_MAX_NUM];
+          for (size_t j = 0;
+               j <
+               std::min(groundline_point_size,
+                        static_cast<size_t>(FUSION_GROUNDLINE_POINT_MAX_NUM));
+               ++j) {
+            groundline_point_2d[j].x = groundline.groundline_point[j].x;
+            groundline_point_2d[j].y = groundline.groundline_point[j].y;
+          }
+          split_points(groundline_point_2d, groundline_point_size, frenet_coord,
                        points_vec);
           for (auto &object_points : points_vec) {
             if (object_points.size() < 3) {
