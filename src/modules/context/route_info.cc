@@ -2149,7 +2149,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   if (mlc_decider_route_info_.ego_status_on_route ==
           IN_EXCHANGE_AREAR_FRONT ||
       mlc_decider_route_info_.ego_status_on_route == IN_EXCHANGE_AREAR_REAR) {
-    if (mlc_decider_route_info_.is_process_merge) {
+    if (mlc_decider_route_info_.is_process_merge ||
+        mlc_decider_route_info_.is_process_other_merge) {
       feasible_lane_sequence =
           mlc_decider_route_info_.static_merge_region_info
               .recommend_lane_num[1]
