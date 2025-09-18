@@ -10,6 +10,7 @@
 #include "map_data.pb.h"
 #include "planning_scheduler.h"
 #include "camera_perception_occupancy_grid_c.h"
+#include "planning_debug_info.pb.h"
 
 namespace planning {
 
@@ -256,6 +257,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   void UpdateApaResetFlag();
   void Log();
+  void LogTopicLatency();
  private:
   std::mutex fusion_objects_msg_mutex_;
   std::mutex fusion_occupancy_objects_msg_mutex_;
@@ -362,6 +364,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   int64_t perception_scene_msg_recv_time_;
   std::atomic<bool> is_perception_scene_msg_updated_{false};
 
+
   std::function<void(const iflyauto::PlanningOutput&)> planning_writer_ =
       nullptr;
   std::function<void(const iflyauto::PlanningHMIOutputInfoStr&)>
@@ -374,6 +377,8 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
 
   std::unique_ptr<PlanningScheduler> planning_scheduler_ = nullptr;
   iflyauto::PlanningOutput last_planning_output_;
+
+  planning::common::TopicTimeList input_topic_latency_;
 
   bool run_success_ = false;
   uint64_t frame_num_ = 0;
