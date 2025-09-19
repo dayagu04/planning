@@ -625,7 +625,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   // bool is_not_full_in_road = (std::fabs(item.y_rel) > 0.0);
   bool is_not_full_in_road = true;
   bool is_in_range = (d_s_rel < 20.0 && v_s_rel < in_range_v);
-  double ttc_for_obs = 3.6;
+  double ttc_for_obs = config_.start_nudge_ttc;
   // hysteresis
   const auto lat_offset =
       session_->planning_context().lateral_behavior_planner_output().lat_offset;

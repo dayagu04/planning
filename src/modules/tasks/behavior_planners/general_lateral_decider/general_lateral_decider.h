@@ -224,7 +224,8 @@ class GeneralLateralDecider : public Task {
     double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool CheckLateralEmergencyAvoidSpace(bool is_nudge_left,
     const std::shared_ptr<FrenetObstacle> obstacle);
-
+  bool IsObstacleOutsideRoadBoundary(
+    const std::shared_ptr<FrenetObstacle> obstacle);
  private:
   GeneralLateralDeciderConfig config_;
 

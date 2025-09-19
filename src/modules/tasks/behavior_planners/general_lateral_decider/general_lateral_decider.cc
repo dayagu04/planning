@@ -2613,8 +2613,11 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
           ->width();
+  const double half_lane_width = lane_width * 0.5;
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const bool is_in_lane_borrow_status =
       lane_borrow_decider_output.is_in_lane_borrow_status;
   constexpr double kOverlapChangeThreshold = 0.01; //变化的容忍阈值
@@ -2655,6 +2658,21 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
   }
   // 防止buffer减少过多
   lat_buf_dis = std::fmax(lat_buf_dis, last_t_lat_buf_dis);
+  // 高速上限制bound大小
+  if (is_use_recurrence_) {
+    double nudge_buffer2lane_boundary_buffer = config_.nudge_buffer2lane_boundary_buffer;
+    if (is_nudge_left) {
+      double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
+      if (nudge_position < nudge_buffer2lane_boundary_buffer - half_lane_width) {
+        lat_buf_dis = overlap_min_y - vehicle_param.width + half_lane_width - nudge_buffer2lane_boundary_buffer;
+      }
+    } else {
+      double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
+      if (nudge_position > half_lane_width - nudge_buffer2lane_boundary_buffer) {
+        lat_buf_dis = half_lane_width - nudge_buffer2lane_boundary_buffer - vehicle_param.width - overlap_max_y;
+      }
+    }
+  }
   return lat_buf_dis;
 }
 
@@ -4122,6 +4140,25 @@ bool GeneralLateralDecider::IsFarObstacle(
   return true;
 }
 
+
+bool GeneralLateralDecider::IsObstacleOutsideRoadBoundary(
+    const std::shared_ptr<FrenetObstacle> obstacle) {
+  // 过滤道路边缘之外的障碍物避让
+  ReferencePathPoint refpath_pt{};
+  double extra_buffer_for_road = 0.5;
+  if (reference_path_ptr_->get_reference_point_by_lon(obstacle->frenet_s(),
+                                                     refpath_pt)) {
+    if (obstacle->frenet_l() > 0 && (obstacle->frenet_obstacle_boundary().l_start >
+        refpath_pt.distance_to_left_road_border + extra_buffer_for_road)) {
+      return true;
+    } else if (obstacle->frenet_l() < 0 && (obstacle->frenet_obstacle_boundary().l_end <
+        -refpath_pt.distance_to_right_road_border - extra_buffer_for_road)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool GeneralLateralDecider::IsRearObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   return reference_path_ptr_->get_ego_frenet_boundary().s_start >
@@ -4184,6 +4221,11 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
     return false;
   }
 
+  // filter outside road object
+  if (IsObstacleOutsideRoadBoundary(obstacle)) {
+    return false;
+  }
+
   // filter rear object without care
   if (IsRearObstacle(obstacle)) {
     return false;
@@ -4236,6 +4278,11 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   // filter far away object
   if (!IsFarObstacle(obstacle)) {
     ResetIsExceedObstacleHysteresisMap(obstacle->id());
+    return false;
+  }
+
+  // filter outside road object
+  if (IsObstacleOutsideRoadBoundary(obstacle)) {
     return false;
   }
 
