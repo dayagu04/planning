@@ -2012,6 +2012,17 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
 }
 
 void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
+  const auto last_fix_lane_id = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->get_last_fix_lane_id();
+  const auto current_fix_lane_id = session_->planning_context()
+                                 .lane_change_decider_output()
+                                 .fix_lane_virtual_id;
+  if (last_fix_lane_id != current_fix_lane_id) {
+    // 车道切换，不应该滞回
+    return;
+  }
+  
   // 如果上一帧的边界为空，直接保存当前帧的边界
   if (last_first_soft_bounds_.empty()) {
     return;
