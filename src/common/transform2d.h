@@ -3,8 +3,11 @@
 #include <Eigen/Core>
 
 #include "pose2d.h"
+#include "Eigen/src/Core/util/IndexedViewHelper.h"
 
 namespace planning {
+
+  static const Eigen::internal::all_t all2;
 
 // todo:
 // unify all transform related implements for parking and driving, or
