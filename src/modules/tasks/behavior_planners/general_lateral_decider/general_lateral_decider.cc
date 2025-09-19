@@ -2613,6 +2613,7 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
           ->width();
+  const double half_lane_width = lane_width * 0.5;
   const auto &lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   const auto &vehicle_param =
@@ -2662,13 +2663,13 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     double nudge_buffer2lane_boundary_buffer = config_.nudge_buffer2lane_boundary_buffer;
     if (is_nudge_left) {
       double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
-      if (nudge_position < nudge_buffer2lane_boundary_buffer - 0.5 * lane_width) {
-        lat_buf_dis = overlap_min_y - vehicle_param.width + 0.5 * lane_width - nudge_buffer2lane_boundary_buffer;
+      if (nudge_position < nudge_buffer2lane_boundary_buffer - half_lane_width) {
+        lat_buf_dis = overlap_min_y - vehicle_param.width + half_lane_width - nudge_buffer2lane_boundary_buffer;
       }
     } else {
       double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
-      if (nudge_position > 0.5 * lane_width - nudge_buffer2lane_boundary_buffer) {
-        lat_buf_dis = 0.5 * lane_width - nudge_buffer2lane_boundary_buffer - vehicle_param.width - overlap_max_y;
+      if (nudge_position > half_lane_width - nudge_buffer2lane_boundary_buffer) {
+        lat_buf_dis = half_lane_width - nudge_buffer2lane_boundary_buffer - vehicle_param.width - overlap_max_y;
       }
     }
   }
@@ -4140,7 +4141,7 @@ bool GeneralLateralDecider::IsFarObstacle(
 }
 
 
-bool GeneralLateralDecider::IsObstacleOutsideRoadLimits(
+bool GeneralLateralDecider::IsObstacleOutsideRoadBoundary(
     const std::shared_ptr<FrenetObstacle> obstacle) {
   // 过滤道路边缘之外的障碍物避让
   ReferencePathPoint refpath_pt{};
@@ -4154,8 +4155,8 @@ bool GeneralLateralDecider::IsObstacleOutsideRoadLimits(
         -refpath_pt.distance_to_right_road_border - extra_buffer_for_road)) {
       return true;
     }
-    return false;
   }
+  return false;
 }
 
 bool GeneralLateralDecider::IsRearObstacle(
@@ -4221,7 +4222,7 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
   }
 
   // filter outside road object
-  if (IsObstacleOutsideRoadLimits(obstacle)) {
+  if (IsObstacleOutsideRoadBoundary(obstacle)) {
     return false;
   }
 
@@ -4281,7 +4282,7 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
   }
 
   // filter outside road object
-  if (IsObstacleOutsideRoadLimits(obstacle)) {
+  if (IsObstacleOutsideRoadBoundary(obstacle)) {
     return false;
   }
 
