@@ -713,9 +713,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
           ? 0.01
           : kCumuLateralDistanceCostWeight;
   double k_lane_change_order_id_diff_wegiht =
-      (is_lc_change && origin_lane_order_id != -1)
-          ? kLaneChangeOrderidDiffWeight
-          : 0.0;
+      (is_lc_change && origin_lane_order_id != -1 && ego_in_split_region_) ? kLaneChangeOrderidDiffWeight : 0.0;
   int k_lane_change_order_id_diff = 0;
   if (is_lc_change) {
     if (lc_request_direction == LEFT_CHANGE) {
