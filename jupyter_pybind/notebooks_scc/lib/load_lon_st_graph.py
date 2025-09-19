@@ -1322,8 +1322,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
   data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
-  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[], 'v_safety_target':[], 'v_safety_target':[],
-                                                  't_upper_bound':[], 'v_upper_bound':[], 't_upper_bound':[], 'agent_id_upper_bound':[]})
+  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[], 'v_safety_target':[], 'a_safety_target':[],
+                                                  't_upper_bound':[], 'v_upper_bound':[], 'a_upper_bound':[], 'agent_id_upper_bound':[]})
   data_target_s_cross_vru = ColumnDataSource(data = {'t_cross_vru_target':[], 's_cross_vru_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
