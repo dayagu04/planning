@@ -50,7 +50,7 @@ else()
 endif()
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-Eigen3_3
+  Eigen3::Eigen
   ilqr_lib
   rapidjson
   jlt_lib

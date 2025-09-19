@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
+find_package(Eigen3 REQUIRED)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)

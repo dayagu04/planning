@@ -22,7 +22,7 @@ import datetime
 from lib.load_common import *
 
 
-log_path = "/asw/planning/glog/0915.log"
+log_path = "/asw/planning/glog/open_space_replay.log.INFO.20250919-152741.585761"
 
 elem_map = {
             'apa_total_time': [], \
@@ -34,6 +34,7 @@ elem_map = {
             'speed_limit_decider': [], \
             'astar_time': [], \
             'planning_total_time': [], \
+            'osqp_time': [], \
             }
 
 # load log file
@@ -132,6 +133,12 @@ fig1.line('x', 'y', source = planning_total_time, line_width = 2, \
         line_color = 'gray', line_dash = 'solid', line_alpha = 0.5, \
         legend_label = 'planning_total_time')
 
+osqp_time = ColumnDataSource(data={'x': [],
+                                    'y': [] })
+fig1.line('x', 'y', source = osqp_time, line_width = 2, \
+        line_color = 'gray', line_dash = 'solid', line_alpha = 0.5, \
+        legend_label = 'osqp_time')
+
 source = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=10, source=source, color='red',\
              legend_label='measure tool')
@@ -212,6 +219,12 @@ def update_time():
   planning_total_time.data.update({
     'x': x,
     'y': elem_map['planning_total_time'],
+  })
+
+  x = [x for x in range(len(elem_map['osqp_time']))]
+  osqp_time.data.update({
+    'x': x,
+    'y': elem_map['osqp_time'],
   })
 
 class LocalViewSlider:

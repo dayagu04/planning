@@ -6,6 +6,8 @@
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
 #include "log_glog.h"
+#include "time_benchmark.h"
+#include "ifly_time.h"
 
 namespace planning {
 
@@ -104,12 +106,15 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter, const double max_time) {
   settings->time_limit = max_time;
 
   // DebugString();
-
+  double start_time = IflyTime::Now_us();
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
   // osqp_setup(&osqp_work, data, settings);
 
   osqp_solve(osqp_work);
+  double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
+  TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_OSQP,
+                                    planning_cost_time);
 
   // ILOG_INFO << "osqp iter = " << osqp_work->info->iter;
 
