@@ -345,8 +345,8 @@ struct PathPoint {
 
   void PrintInfo(const bool enable_log = true) const {
     ILOG_INFO_IF(enable_log)
-        << "pos = " << pos.transpose() << "  headingA = " << heading * kRad2Deg
-        << "  s = " << s;
+        << "pos = " << pos.x() << " " << pos.y()
+        << "  headingA = " << heading * kRad2Deg << "  s = " << s;
   }
 
   void SetPos(const Eigen::Vector2d &_pos) { pos = _pos; }

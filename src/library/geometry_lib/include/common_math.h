@@ -283,8 +283,8 @@ struct ArcSeg {
         << pB.y() << "  thetaA = " << thetaA * kRad2DegF
         << "  thetaB = " << thetaB * kRad2DegF << "  dirA = " << dirA.x()
         << ", " << dirA.y() << "  dirB = " << dirB.x() << ", " << dirB.y()
-        << "  center = " << center.transpose() << "  radius = " << radius
-        << "  length = " << length
+        << "  center = " << center.x() << " " << center.y()
+        << "  radius = " << radius << "  length = " << length
         << "  is_anticlockwise = " << is_anticlockwise;
   }
 };
