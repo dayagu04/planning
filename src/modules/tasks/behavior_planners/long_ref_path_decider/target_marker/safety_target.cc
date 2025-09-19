@@ -15,6 +15,7 @@
 #include "debug_info_log.h"
 #include "environmental_model.h"
 #include "math/linear_interpolation.h"
+#include "math/math_utils.h"
 #include "planning_context.h"
 #include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "utils/pose2d_utils.h"
@@ -187,10 +188,7 @@ void SafetyTarget::GenerateUpperBoundInfo() {
   }
 
   std::vector<FollowAgentInfo> follow_agent_infos(plan_points_num_);
-  for (const auto& agent_with_source : follow_agents) {
-    const auto& agent = agent_with_source.agent;
-    follow_agent_ids_.push_back(agent->agent_id());
-  }
+  std::unordered_set<int32_t> valid_agent_ids;
 
   if (!follow_agents.empty()) {
     for (size_t i = 0; i < plan_points_num_; i++) {
@@ -213,7 +211,8 @@ void SafetyTarget::GenerateUpperBoundInfo() {
         }
 
         auto matched_point = ego_lane_coord->GetPathPointByS(center_s);
-        double heading_diff = traj_point.theta() - matched_point.theta();
+        double heading_diff = planning_math::NormalizeAngle(
+            traj_point.theta() - matched_point.theta());
         double agent_speed = traj_point.vel() * std::cos(heading_diff);
         double agent_s =
             center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5;
@@ -228,6 +227,7 @@ void SafetyTarget::GenerateUpperBoundInfo() {
 
       if (found_valid_agent) {
         follow_agent_infos[i] = best_agent_info;
+        valid_agent_ids.insert(best_agent_info.agent_id);
       }
     }
   }
@@ -268,6 +268,10 @@ void SafetyTarget::GenerateUpperBoundInfo() {
       }
     }
   }
+  
+  // 只存储实际被使用的有效 agent ID
+  follow_agent_ids_.assign(valid_agent_ids.begin(), valid_agent_ids.end());
+  std::sort(follow_agent_ids_.begin(), follow_agent_ids_.end());
 }
 
 void SafetyTarget::GenerateSafetyTarget() {
