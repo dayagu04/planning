@@ -67,6 +67,9 @@ message LateralPlanningInput {
   repeated double control_vec = 39;
   optional bool complete_follow = 40;
   optional uint32 motion_plan_concerned_index = 41;
+
+  repeated double front_axis_ref_x_vec = 42;
+  repeated double front_axis_ref_y_vec = 43;
 }
 
 message SolverIterationInfo {

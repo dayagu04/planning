@@ -76,6 +76,9 @@ void LateralMotionPlanner::Init() {
 
   planning_input_.mutable_control_vec()->Resize(N, 0.0);
 
+  planning_input_.mutable_front_axis_ref_x_vec()->Resize(N, 0.0);
+  planning_input_.mutable_front_axis_ref_y_vec()->Resize(N, 0.0);
+
   avoid_back_time_ = 0.0;
   enter_split_time_ = 0.0;
   enter_lccnoa_time_ = 0.0;
@@ -177,6 +180,8 @@ bool LateralMotionPlanner::AssembleInput() {
 
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
+  const auto &front_axis_enu_ref_path = general_lateral_decider_output.front_axis_enu_ref_path;
+
   bool complete_follow = general_lateral_decider_output.complete_follow;
   const bool &lane_change_scene =
       general_lateral_decider_output.lane_change_scene;
@@ -217,6 +222,13 @@ bool LateralMotionPlanner::AssembleInput() {
       planning_input_.mutable_ref_x_vec()->Set(i, enu_ref_path[i].first);
       planning_input_.mutable_ref_y_vec()->Set(i, enu_ref_path[i].second);
       ref_theta_vec_[i] = enu_ref_theta[i];
+    }
+
+
+    // set reference trajectory
+    for (size_t i = 0; i < front_axis_enu_ref_path.size(); ++i) {
+      planning_input_.mutable_front_axis_ref_x_vec()->Set(i, front_axis_enu_ref_path[i].first);
+      planning_input_.mutable_front_axis_ref_y_vec()->Set(i, front_axis_enu_ref_path[i].second);
     }
   }
 

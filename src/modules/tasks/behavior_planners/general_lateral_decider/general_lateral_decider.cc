@@ -775,6 +775,7 @@ bool GeneralLateralDecider::HandleRoadCurvature(
 // }
 
 void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
+
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
   const auto &lane_change_decider_output =
@@ -956,7 +957,14 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
   double delta_s = avg_cruise_v * config_.delta_t;
   traj_points.clear();
+
+  std::vector<std::pair<double, double>> front_axis_ref_path(config_.num_step + 1);
   TrajectoryPoint point;
+  TrajectoryPoint front_axle_point;
+
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double front_axle_s_ref = s_ref + vehicle_param.wheel_base;
   for (size_t i = 0; i < config_.num_step + 1; ++i) {
     // cart info
     if (s_ref < s_vec.back() + kEps) {
@@ -974,13 +982,21 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     point.l = frenet_pt.y;
     point.t = static_cast<double>(i) * config_.delta_t;
 
+    if (front_axle_s_ref < s_vec.back() + kEps) {
+      front_axis_ref_path[i].first = x_s_spline(front_axle_s_ref);
+      front_axis_ref_path[i].second= y_s_spline(front_axle_s_ref);
+    }
+
     s_ref += delta_s;
+    front_axle_s_ref += delta_s;
     traj_points.emplace_back(point);
   }
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
-          ->mutable_general_lateral_decider_output();
+              ->mutable_general_lateral_decider_output();
+  general_lateral_decider_output.front_axis_enu_ref_path = std::move(front_axis_ref_path);
+
   // calculate lc ref buffer
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();

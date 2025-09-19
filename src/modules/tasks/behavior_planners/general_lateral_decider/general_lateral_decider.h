@@ -268,6 +268,7 @@ class GeneralLateralDecider : public Task {
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints head_ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
   TrajectoryPoints uniform_plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
