@@ -116,6 +116,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double distance_to_road_merge_ = kMaxMergeDistance;
   double distance_to_road_split_ = kMaxMergeDistance;
   double distance_to_ramp_ = kMaxMergeDistance;
+  double distance_to_merge_point_ = kMaxMergeDistance;
 
   double front_edge_to_rear_axle_ = 4.025;
   double rear_edge_to_rear_axle_ = 0.925;

@@ -13,7 +13,7 @@ enum TrafficDensityStatus { LineClear, Congested };
 
 constexpr double kMaxPenalty = 10000.0;
 constexpr double kMaxMergeDistance = 1000.0;
-constexpr double kDistanceToMapRequestPoint = 120.0;
+constexpr double kDistanceToMapRequestPoint = 150.0;
 constexpr double kFollowSpeedBenchmark = 10.0;
 constexpr double kStopLineRiskPenaltyDis = 30.0;
 constexpr double kStopLineBasicPenaltyDis = 150.0;
