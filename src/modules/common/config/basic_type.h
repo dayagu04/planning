@@ -33,6 +33,12 @@ enum class ErrorType {
   kUnknown = 3
 };
 
+enum MarkingLineChangeType {
+  NO_TYPE_CHANGE = 0,
+  SOLID_TO_DASH = 1,
+  DASH_TO_SOLID = 2,
+};
+
 // 匝道的方向
 enum RampDirection {
   RAMP_NONE = 0,
@@ -95,6 +101,7 @@ struct FPPoint {
   uint64 link_id = -1;
   double fp_distance_to_split_point = 0.0;
   std::vector<uint64> lane_ids;
+  iflymapdata::sdpro::FeaturePoint fp;
 
   void reset () {
     link_id = -1;
@@ -233,6 +240,7 @@ struct RouteInfoOutput {
   double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
   double distance_to_toll_station = NL_NMAX;
   double distance_to_exchange_area_end_point = -NL_NMAX;
+  double lsl_length = 0.0;
   double current_segment_passed_distance = 0.0;  // for xykuai
   std::pair<SplitRelativeDirection, double>
       first_split_dir_dis_info;  // for xykuai
@@ -314,6 +322,7 @@ struct RouteInfoOutput {
     mlc_decider_route_info.reset();
     // dis_to_merge_fp = NL_NMAX;
     merge_point_info.reset();
+    lsl_length = 0.0;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
