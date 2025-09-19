@@ -592,6 +592,7 @@
     "q_ref_x_ramp": 400.0,
     "q_ref_y_ramp": 400.0,
     "q_ref_theta_ramp": 5000.0,
+    "q_front_ref_xy_ramp": 400.0,
     "q_virtual_ref_xy": 100.0,
     "q_virtual_ref_theta": 1000.0,
     "q_acc_ramp": 0.0,

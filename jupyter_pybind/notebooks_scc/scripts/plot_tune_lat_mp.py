@@ -36,7 +36,9 @@ output_notebook(resources=INLINE)
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
+# global_var.set_value('car_type', 'CHERY_E0X')
 steer_ratio = load_steer_ratio(global_var.get_value('car_type'))
+wheel_base = load_wheel_base(global_var.get_value('car_type'))
 fig1, local_view_data = load_local_view_figure()
 fig1.height = 1500
 # init pybind
@@ -157,6 +159,7 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.1, max=max_time, value=0.1, step=frame_dt)
     self.q_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_xy",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_ref_x, step=0.1)
     self.q_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_ref_theta",min=0.1, max=100000.0, value=lat_motion_plan_input0.q_ref_theta, step=0.1)
+    self.q_front_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_front_xy",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_ref_x, step=0.1)
     self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_acc, step=0.01)
     self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.01, max=1000.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.q_continuity_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_continuity",min=0.0, max=10.0, value=lat_motion_plan_input0.q_continuity, step=0.01)
@@ -206,6 +209,7 @@ class LocalViewSlider:
                                          use_new_param = self.use_new_param,
                                          q_ref_xy = self.q_ref_xy_slider,
                                          q_ref_theta = self.q_ref_theta_slider,
+                                         q_front_ref_xy = self.q_front_ref_xy_slider,
                                          q_acc = self.q_acc_slider,
                                          q_jerk = self.q_jerk_slider,
                                          q_continuity = self.q_continuity_slider,
@@ -245,7 +249,7 @@ class LocalViewSlider:
 
 
 ### sliders callback
-def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
+def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_front_ref_xy, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
                     complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3,
                     q_virtual_ref_xy, q_virtual_ref_theta, max_iter):
@@ -383,7 +387,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
                                               motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.5), expected_acc,
-                                              start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter,
+                                              start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter, wheel_base, q_front_ref_xy,
                                               q_virtual_ref_xy, q_virtual_ref_theta, virtual_ref_x, virtual_ref_y, virtual_ref_theta)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()

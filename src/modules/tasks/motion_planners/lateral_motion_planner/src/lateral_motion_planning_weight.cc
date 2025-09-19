@@ -910,6 +910,8 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   }
   jerk_bound = std::min(jerk_bound, max_jerk_);
   std::fill(weight_.q_acc.begin(), weight_.q_acc.end(), 0.1);
+  std::fill(weight_.q_front_ref_x.begin(), weight_.q_front_ref_x.end(), 0.0);
+  std::fill(weight_.q_front_ref_y.begin(), weight_.q_front_ref_y.end(), 0.0);
   std::fill(weight_.q_virtual_ref_x.begin(), weight_.q_virtual_ref_x.end(), 0.0);
   std::fill(weight_.q_virtual_ref_y.begin(), weight_.q_virtual_ref_y.end(), 0.0);
   std::fill(weight_.q_virtual_ref_theta.begin(), weight_.q_virtual_ref_theta.end(), 0.0);
@@ -927,6 +929,8 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
       if (i > weight_.proximal_index) {
         weight_.q_acc[i] = config_.q_acc_ramp;
       }
+      weight_.q_front_ref_x[i] = config_.q_front_ref_xy_ramp;
+      weight_.q_front_ref_y[i] = config_.q_front_ref_xy_ramp;
       weight_.q_virtual_ref_x[i] = config_.q_virtual_ref_xy;
       weight_.q_virtual_ref_y[i] = config_.q_virtual_ref_xy;
       weight_.q_virtual_ref_theta[i] = config_.q_virtual_ref_theta;

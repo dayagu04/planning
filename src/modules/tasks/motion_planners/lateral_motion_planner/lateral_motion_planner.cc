@@ -673,6 +673,8 @@ bool LateralMotionPlanner::AssembleInput() {
 }
 
 bool LateralMotionPlanner::Update() {
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double concerned_start_q_jerk =
       planning_weight_ptr_->GetConcernedStartQJerk();
   JSON_DEBUG_VALUE("concerned_start_q_jerk", concerned_start_q_jerk);
@@ -683,7 +685,8 @@ bool LateralMotionPlanner::Update() {
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
       end_ratio_for_qrefxy, end_ratio_for_qreftheta,
-      config_.end_ratio_for_qjerk, concerned_start_q_jerk,
+      config_.end_ratio_for_qjerk,
+      concerned_start_q_jerk, vehicle_param.wheel_base,
       virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_,
       planning_weight_ptr_, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);

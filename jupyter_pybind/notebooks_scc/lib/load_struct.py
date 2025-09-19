@@ -115,6 +115,18 @@ def load_steer_ratio(car_type = 'CHERY_E0X'):
     steer_ratio = 15.88
   return steer_ratio
 
+def load_wheel_base(car_type = 'CHERY_E0X'):
+  wheel_base = 3.0
+  if car_type == 'JAC_S811':
+    wheel_base = 2.7
+  elif car_type == 'CHERY_T26':
+    wheel_base = 2.796
+  elif car_type == 'CHERY_E0X':
+    wheel_base = 3.0
+  elif car_type == 'CHERY_M32T':
+    wheel_base = 2.8
+  return wheel_base
+
 def load_car_uss_patch():
   apa_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357]
   apa_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956, -0.887956, -0.706505, -0.334845,  0.334845,  0.706505,  0.887956]

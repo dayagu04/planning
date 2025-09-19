@@ -53,6 +53,8 @@ void LateralMotionPlanningProblem::Init() {
       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<PathHardCorridorCostTerm>());  // path hard corridor cost
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<FrontReferenceCostTerm>());  // path hard corridor cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -73,7 +75,7 @@ uint8_t LateralMotionPlanningProblem::Update(
     const double end_ratio_for_qxy,
     const double end_ratio_for_qtheta,
     const double end_ratio_for_qjerk,
-    const double concerned_start_q_jerk,
+    const double concerned_start_q_jerk, const double wheel_base,
     const std::vector<double>& virtual_ref_x,
     const std::vector<double>& virtual_ref_y,
     const std::vector<double>& virtual_ref_theta,
@@ -122,6 +124,10 @@ uint8_t LateralMotionPlanningProblem::Update(
 
     cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
 
+    cost_config_vec.at(i)[FRONT_REF_X] = planning_input.front_axis_ref_x_vec(i);
+    cost_config_vec.at(i)[FRONT_REF_Y] = planning_input.front_axis_ref_y_vec(i);
+    cost_config_vec.at(i)[WHEEL_BASE] = wheel_base;
+
     // bounds
     cost_config_vec.at(i)[DELTA_UPPER_BOUND] = delta_upper_bound;
     cost_config_vec.at(i)[DELTA_LOWER_BOUND] = delta_lower_bound;
@@ -169,6 +175,9 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
 
+    cost_config_vec.at(i)[W_FRONT_REF_X] = path_weights.q_front_ref_x[i];
+    cost_config_vec.at(i)[W_FRONT_REF_Y] = path_weights.q_front_ref_y[i];
+
     if (is_virtual_empty) {
       cost_config_vec.at(i)[W_VIRTUAL_REF_X] = 0.0;
       cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = 0.0;
@@ -214,6 +223,10 @@ uint8_t LateralMotionPlanningProblem::Update(
             cost_config_vec.at(i - 1)[W_SOFT_CORRIDOR] * 0.3;
         cost_config_vec.at(i)[W_HARD_CORRIDOR] =
             cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.3;
+        cost_config_vec.at(i)[W_FRONT_REF_X] =
+            end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_X];
+        cost_config_vec.at(i)[W_FRONT_REF_Y] =
+             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_Y];
       }
     }
 
@@ -340,6 +353,7 @@ uint8_t LateralMotionPlanningProblem::Update(
     double end_ratio_for_qjerk, double max_iter,
     const size_t motion_plan_concerned_start_index,
     const double concerned_start_q_jerk, const double ego_vel,
+    const double wheel_base, const double q_front_xy,
     double q_virtual_ref_xy, double q_virtual_ref_theta,
     std::vector<double>& virtual_ref_x,
     std::vector<double>& virtual_ref_y,
@@ -386,6 +400,10 @@ uint8_t LateralMotionPlanningProblem::Update(
     }
 
     cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
+
+    cost_config_vec.at(i)[FRONT_REF_X] = planning_input.front_axis_ref_x_vec(i);
+    cost_config_vec.at(i)[FRONT_REF_Y] = planning_input.front_axis_ref_y_vec(i);
+    cost_config_vec.at(i)[WHEEL_BASE] = wheel_base;
 
     // bounds
     cost_config_vec.at(i)[DELTA_UPPER_BOUND] = delta_bound;
@@ -434,6 +452,9 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
 
+    cost_config_vec.at(i)[W_FRONT_REF_X] = q_front_xy;
+    cost_config_vec.at(i)[W_FRONT_REF_Y] = q_front_xy;
+
     if (is_virtual_empty) {
       cost_config_vec.at(i)[W_VIRTUAL_REF_X] = 0.0;
       cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = 0.0;
@@ -479,6 +500,10 @@ uint8_t LateralMotionPlanningProblem::Update(
         cost_config_vec.at(i)[W_HARD_CORRIDOR] =
             cost_config_vec.at(i - 1)[W_HARD_CORRIDOR] * 0.3;
         cost_config_vec.at(i)[W_ACC] = end_acc;
+        cost_config_vec.at(i)[W_FRONT_REF_X] =
+            end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_X];
+        cost_config_vec.at(i)[W_FRONT_REF_Y] =
+             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_FRONT_REF_Y];
       }
     }
 

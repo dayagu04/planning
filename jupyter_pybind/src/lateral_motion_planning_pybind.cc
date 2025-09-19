@@ -55,6 +55,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                    double curv_factor,
                    double start_w_jerk, double ego_v, double expected_acc, double start_acc, double end_acc,
                    double end_ratio1, double end_ratio2, double end_ratio3, double max_iter,
+                   double wheel_base, double q_front_ref_xy,
                    double q_virtual_ref_xy, double q_virtual_ref_theta,
                    std::vector<double> virtual_ref_x, std::vector<double> virtual_ref_y, std::vector<double> virtual_ref_theta) {
   planning::common::LateralPlanningInput planning_input =
@@ -303,6 +304,7 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                 end_ratio1, end_ratio2, end_ratio3,
                 max_iter, motion_plan_concerned_start_index,
                 start_w_jerk, ego_v,
+                wheel_base, q_front_ref_xy,
                 q_virtual_ref_xy, q_virtual_ref_theta,
                 virtual_ref_x, virtual_ref_y, virtual_ref_theta,
                 planning_input);

@@ -2333,6 +2333,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_y_ramp, "lat_motion_ilqr", "q_ref_y_ramp");
     ReadItem<double>(json, q_ref_theta_ramp, "lat_motion_ilqr",
                      "q_ref_theta_ramp");
+    ReadItem<double>(json, q_front_ref_xy_ramp, "lat_motion_ilqr", "q_front_ref_xy_ramp");
     ReadItem<double>(json, q_virtual_ref_xy, "lat_motion_ilqr", "q_virtual_ref_xy");
     ReadItem<double>(json, q_virtual_ref_theta, "lat_motion_ilqr",
                      "q_virtual_ref_theta");
@@ -2467,6 +2468,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_x_ramp = 400.0;
   double q_ref_y_ramp = 400.0;
   double q_ref_theta_ramp = 5000.0;
+  double q_front_ref_xy_ramp = 400.0;
   double q_virtual_ref_xy = 400.0;
   double q_virtual_ref_theta = 5000.0;
   double q_acc_ramp = 0.02;

@@ -985,6 +985,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     if (front_axle_s_ref < s_vec.back() + kEps) {
       front_axis_ref_path[i].first = x_s_spline(front_axle_s_ref);
       front_axis_ref_path[i].second= y_s_spline(front_axle_s_ref);
+    } else {
+      front_axis_ref_path[i].first =
+          point.x + vehicle_param.wheel_base * std::cos(point.heading_angle);
+      front_axis_ref_path[i].second=
+          point.y + vehicle_param.wheel_base * std::sin(point.heading_angle);
     }
 
     s_ref += delta_s;

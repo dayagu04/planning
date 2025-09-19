@@ -43,6 +43,8 @@ struct PathWeight {  // temp
   std::vector<double> q_ref_y;
   std::vector<double> q_ref_theta;
   std::vector<double> q_continuity;
+  std::vector<double> q_front_ref_x;
+  std::vector<double> q_front_ref_y;
   std::vector<double> q_virtual_ref_x;
   std::vector<double> q_virtual_ref_y;
   std::vector<double> q_virtual_ref_theta;
@@ -67,6 +69,8 @@ struct PathWeight {  // temp
     q_ref_y.resize(point_num, 0);
     q_ref_theta.resize(point_num, 0);
     q_continuity.resize(point_num, 0);
+    q_front_ref_x.resize(point_num, 0);;
+    q_front_ref_y.resize(point_num, 0);;
     q_virtual_ref_x.resize(point_num, 0);
     q_virtual_ref_y.resize(point_num, 0);
     q_virtual_ref_theta.resize(point_num, 0);
@@ -88,6 +92,8 @@ struct PathWeight {  // temp
     q_ref_y.clear();
     q_ref_theta.clear();
     q_continuity.clear();
+    q_front_ref_x.clear();
+    q_front_ref_y.clear();
     q_virtual_ref_x.clear();
     q_virtual_ref_y.clear();
     q_virtual_ref_theta.clear();
