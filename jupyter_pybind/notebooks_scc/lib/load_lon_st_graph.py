@@ -458,26 +458,32 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   t_safety_target_vec = []
   s_safety_target_vec = []
   v_safety_target_vec = []
+  a_safety_target_vec = []
   for item in (plan_debug_info.lon_target_s_ref.safety_target.safety_target_s_ref):
     t_safety_target_vec.append(item.t)
     s_safety_target_vec.append(item.s)
     v_safety_target_vec.append(item.v)
-  
+    a_safety_target_vec.append(item.a)
+
   ## upper bound velocities from safety target
   t_upper_bound_vec = []
   v_upper_bound_vec = []
+  a_upper_bound_vec = []
   agent_id_upper_bound_vec = []
   for item in (plan_debug_info.lon_target_s_ref.safety_target.upper_bound_velocities):
     t_upper_bound_vec.append(item.t)
     v_upper_bound_vec.append(item.v)
+    a_upper_bound_vec.append(item.a)
     agent_id_upper_bound_vec.append(item.agent_id)
   
   lon_plan_data['data_target_s_safety'].data.update({
     't_safety_target': t_safety_target_vec,
     'v_safety_target': v_safety_target_vec,
     's_safety_target': s_safety_target_vec,
+    'a_safety_target': a_safety_target_vec,
     't_upper_bound': t_upper_bound_vec,
     'v_upper_bound': v_upper_bound_vec,
+    'a_upper_bound': a_upper_bound_vec,
     'agent_id_upper_bound': agent_id_upper_bound_vec})
   
   ## cross vru target
@@ -1316,8 +1322,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
   data_target_s_overtake = ColumnDataSource(data = {'t_overtake_target':[], 's_overtake_target':[]})
   data_target_s_caution = ColumnDataSource(data = {'t_caution_target':[], 's_caution_target':[]})
   data_target_s_max_decel = ColumnDataSource(data = {'t_max_decel':[], 's_max_decel':[]})
-  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[], 'v_safety_target':[],
-                                                  't_upper_bound':[], 'v_upper_bound':[], 'agent_id_upper_bound':[]})
+  data_target_s_safety = ColumnDataSource(data = {'t_safety_target':[], 's_safety_target':[], 'v_safety_target':[], 'v_safety_target':[],
+                                                  't_upper_bound':[], 'v_upper_bound':[], 't_upper_bound':[], 'agent_id_upper_bound':[]})
   data_target_s_cross_vru = ColumnDataSource(data = {'t_cross_vru_target':[], 's_cross_vru_target':[]})
   #obstacles st data, key is id, value is time and s list
   data_obs_st = {}
@@ -1588,6 +1594,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, lead_fig, cost_time_fig, c
 
   # acc
   f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
+  fig6.line('t_safety_target', 'a_safety_target', source = data_target_s_safety, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'a_safety_target')
+  fig6.line('t_upper_bound', 'a_upper_bound', source = data_target_s_safety, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'a_upper_bound')
+  fig6.circle('t_upper_bound', 'a_upper_bound', source = data_target_s_safety, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'a_upper_bound')
   fig6.line('time_vec', 'acc_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_lb')
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
