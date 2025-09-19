@@ -13,7 +13,7 @@ constexpr double kInvalid = -1.0;
 struct CrossVRUProfileParams {
   double v0 = 33.5;
   double s0 = 5.0;
-  double T = 1.0;
+  double T = 1.2;
   double a = 1.5;
   double b = 1.0;
   double b_max = 2.0;

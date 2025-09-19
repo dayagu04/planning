@@ -100,7 +100,11 @@ void FollowTarget::GenerateUpperBoundInfo() {
             session_->environmental_model().get_agent_manager()->GetAgent(
                 cipv_info_.agent_id);
         if (agent != nullptr) {
-          cipv_info_.is_large_vehicle = cipv_decider_output.is_large();
+          cipv_info_.is_large_vehicle =
+              agent->type() == agent::AgentType::BUS ||
+              agent->type() == agent::AgentType::TRUCK ||
+              agent->type() == agent::AgentType::TRAILER ||
+              cipv_decider_output.is_large();
           cipv_info_.type = agent->type();
           cipv_info_.is_tfl_virtual_obs = agent->is_tfl_virtual_obs();
           cipv_info_.is_lane_borrow_obs = agent->is_lane_borrow_virtual_obs();
@@ -261,6 +265,7 @@ void FollowTarget::GenerateFollowTarget() {
     double s_target_value = std::min(upper_bound_s, target_s);
 
     target_value.set_s_target_val(s_target_value);
+    target_value.set_v_target_val(vel);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
 
     const auto* agent = agent_mgr->GetAgent(agent_id);
@@ -351,6 +356,7 @@ void FollowTarget::GenerateRadsFollowTarget() {
     }
 
     target_value.set_s_target_val(s_target_value);
+    target_value.set_v_target_val(vel);
     target_value.set_target_type(upper_bound_infos_[i].target_type);
   }
 }
@@ -718,6 +724,7 @@ void FollowTarget::AddFollowTargetDataToProto() {
     for (const auto& value : target_values_) {
       auto* ptr = follow_target_pb_.add_follow_target_s_ref();
       ptr->set_s(value.s_target_val());
+      ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }

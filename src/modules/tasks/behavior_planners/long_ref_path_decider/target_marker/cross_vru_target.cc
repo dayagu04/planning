@@ -20,10 +20,6 @@
 
 namespace planning {
 
-namespace {
-constexpr double kSafetyDistance = 3.5;
-}  // namespace
-
 CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
                                framework::Session* session)
     : Target(config, session) {
@@ -61,7 +57,7 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
 
   params_.v0 = desired_speed;
   params_.s0 = 5.0;
-  params_.T = 1.0;
+  params_.T = 1.2;
   params_.a = 1.5;
   params_.b = 1.0;
   params_.b_max = 2.0;
@@ -79,6 +75,13 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VECTOR("cross_vru_agent_ids", cross_vru_agent_ids_, 0);
 
   GenerateCrossVRUTarget();
+
+  auto mutable_lon_ref_path_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lon_ref_path_decider_output();
+
+  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
+      is_pre_handle_cross_vru_;
 
   AddCrossVRUTargetDataToProto();
 }
@@ -289,6 +292,7 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
   double s0 = params_.s0;
   double cool_factor = params_.cool_factor;
   double over_speed_factor = params_.over_speed_factor;
+
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
@@ -332,7 +336,7 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
     a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_alpha;
+  double z = s_star / s_desired;
 
   double a_idm;
   if (current_vel <= final_v0) {
@@ -356,18 +360,18 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
   double ds_star = s_alpha - s_star;
   double ds_safe = s_alpha - s_safe;
   double a_cah;
-  if (ds_safe > 0.0 && ds_star < 0.0 || ds_safe < 0.0 && ds_star < 0.0) {
+  if (ds_safe < 0.0 && ds_star < 0.0) {
     a_cah = b_hard * ds_star / s_star;
   } else if (ds_safe > 0.0 && ds_star < 0.0) {
     a_cah = b * ds_star / s_star;
   } else {
-    a_cah = a_free;
+    a_cah = a_idm;
   }
 
   double final_acc;
   if (a_idm >= a_cah) {
     double distance_ratio = std::min(current_s / s_desired, 1.0);
-    final_acc = a_idm * distance_ratio + a_cah * (1.0 - distance_ratio);
+    final_acc = a_idm * (1.0 - distance_ratio) + a_cah * distance_ratio;
   } else {
     final_acc = (1.0 - cool_factor) * a_idm +
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
@@ -424,16 +428,8 @@ void CrossVRUTarget::AddCrossVRUTargetDataToProto() {
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
-
-  auto mutable_lon_ref_path_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lon_ref_path_decider_output();
-
-  mutable_lon_ref_path_decider_output->is_cross_vru_target_pre_handle =
-      is_pre_handle_cross_vru_;
-
   mutable_cross_vru_target_data->CopyFrom(cross_vru_target_pb_);
 #endif
 }
 
-}
+}  // namespace planning

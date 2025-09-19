@@ -77,6 +77,8 @@ SafetyTarget::SafetyTarget(const SpeedPlannerConfig& config,
 
   GenerateUpperBoundInfo();
 
+  acc_values_ = std::vector<double>(plan_points_num_, 0.0);
+
   GenerateSafetyTarget();
 
   AddSafetyTargetDataToProto();
@@ -100,6 +102,7 @@ void SafetyTarget::GenerateUpperBoundInfo() {
         upper_bound_infos_[i].target_type = TargetType::kSafety;
         upper_bound_infos_[i].agent_id = upper_bound.agent_id();
         upper_bound_infos_[i].st_boundary_id = upper_bound.boundary_id();
+        upper_bound_infos_[i].a = upper_bound.acceleration();
         continue;
       }
     }
@@ -110,6 +113,7 @@ void SafetyTarget::GenerateUpperBoundInfo() {
     upper_bound_infos_[i].target_type = TargetType::kSafety;
     upper_bound_infos_[i].agent_id = 799999;
     upper_bound_infos_[i].st_boundary_id = 799999;
+    upper_bound_infos_[i].a = 0.0;
   }
 }
 
@@ -134,6 +138,7 @@ void SafetyTarget::GenerateSafetyTarget() {
   target_values_[0].set_s_target_val(current_s);
   target_values_[0].set_v_target_val(current_v);
   target_values_[0].set_target_type(TargetType::kSafety);
+  acc_values_[0] = current_a;
 
   for (int32_t i = 1; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -163,6 +168,8 @@ void SafetyTarget::GenerateSafetyTarget() {
     double safety_acc = CalculateSafetyAcceleration(
         current_a, current_v, current_s, front_vel, front_s, tau);
 
+    acc_values_[i] = safety_acc;
+
     double next_s = current_s + current_v * dt_ + 0.5 * safety_acc * dt_ * dt_;
     double next_v = current_v + safety_acc * dt_;
 
@@ -173,7 +180,7 @@ void SafetyTarget::GenerateSafetyTarget() {
     target_value.set_s_target_val(next_s);
     target_value.set_v_target_val(next_v);
     target_value.set_target_type(TargetType::kSafety);
-
+    
     current_s = next_s;
     current_v = next_v;
     current_a = safety_acc;
@@ -228,15 +235,16 @@ double SafetyTarget::CalculateSafetyAcceleration(
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
-  double s_star = s0 + std::max(0.0, current_vel * tau +
-                  (current_vel * delta_v) / (2.0 * std::sqrt(a * b_max)));
+  double s_star =
+      s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
+                                                 (2.0 * std::sqrt(a * b_max)));
 
   double s_safe = s0 + current_vel * tau;
 
   double s_desired = std::max(s0, front_s - s_safe);
 
-  double dynamic_v0 = CalcDesiredVelocity(front_s - current_s, s_safe,
-                                          front_vel, current_vel);
+  double dynamic_v0 =
+      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
 
   double desired_v0 = std::min(v0, dynamic_v0);
 
@@ -256,7 +264,8 @@ double SafetyTarget::CalculateSafetyAcceleration(
     double over_vel_ratio = current_vel / std::max(final_v0, 1e-6);
     double position_ratio = 1.0 - s_progress;
     double over_speed_ratio = over_vel_ratio - 1.0;
-    double over_speed_demand = position_ratio - over_speed_ratio * over_speed_factor;
+    double over_speed_demand =
+        position_ratio - over_speed_ratio * over_speed_factor;
     if (over_speed_demand > 0.1) {
       a_free = a * over_speed_factor * over_speed_demand;
     } else {
@@ -266,7 +275,7 @@ double SafetyTarget::CalculateSafetyAcceleration(
     a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_alpha;
+  double z = s_star / s_desired;
 
   double a_idm;
   if (current_vel <= final_v0) {
@@ -290,18 +299,18 @@ double SafetyTarget::CalculateSafetyAcceleration(
   double ds_star = s_alpha - s_star;
   double ds_safe = s_alpha - s_safe;
   double a_cah;
-  if (ds_safe > 0.0 && ds_star < 0.0 || ds_safe < 0.0 && ds_star < 0.0) {
+  if (ds_safe < 0.0 && ds_star < 0.0) {
     a_cah = b_hard * ds_star / s_star;
   } else if (ds_safe > 0.0 && ds_star < 0.0) {
     a_cah = b * ds_star / s_star;
   } else {
-    a_cah = a_free;
+    a_cah = a_idm;
   }
 
   double final_acc;
   if (a_idm >= a_cah) {
     double distance_ratio = std::min(current_s / s_desired, 1.0);
-    final_acc = a_idm * distance_ratio + a_cah * (1.0 - distance_ratio);
+    final_acc = a_idm * (1.0 - distance_ratio) + a_cah * distance_ratio;
   } else {
     final_acc = (1.0 - cool_factor) * a_idm +
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
@@ -319,7 +328,6 @@ double SafetyTarget::CalculateSafetyAcceleration(
   return final_acc;
 }
 
-
 void SafetyTarget::AddSafetyTargetDataToProto() {
 #ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
@@ -327,14 +335,24 @@ void SafetyTarget::AddSafetyTargetDataToProto() {
       debug_info_pb->mutable_lon_target_s_ref()->mutable_safety_target();
 
   if (!target_values_.empty()) {
-    for (const auto& value : target_values_) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      const auto& value = target_values_[i];
       auto* ptr = safety_target_pb_.add_safety_target_s_ref();
       ptr->set_s(value.s_target_val());
+      ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
+      ptr->set_a(acc_values_[i]);
       ptr->set_target_type(static_cast<int32_t>(value.target_type()));
     }
   }
 
+  for (const auto& upper_bound : upper_bound_infos_) {
+    auto* ptr = safety_target_pb_.add_upper_bound_velocities();
+    ptr->set_t(upper_bound.t);
+    ptr->set_v(upper_bound.v);
+    ptr->set_a(upper_bound.a);
+    ptr->set_agent_id(upper_bound.agent_id);
+  }
   mutable_safety_target_data->CopyFrom(safety_target_pb_);
 #endif
 }

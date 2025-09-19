@@ -7,6 +7,8 @@ message TargetPoint {
   optional double t = 2;
   optional int32 target_type = 3;
   optional double s_weight = 4;
+  optional double v = 5;
+  optional double a = 6;
 }
 
 message TargetMaker {
@@ -55,6 +57,14 @@ message MaxDecelTarget {
 
 message SafetyTarget {
   repeated TargetPoint safety_target_s_ref = 1;
+  repeated UpperBoundVelocity upper_bound_velocities = 2;
+}
+
+message UpperBoundVelocity {
+  optional double t = 1;
+  optional double v = 2;
+  optional double a = 3;
+  optional int32 agent_id = 4;
 }
 
 message WeightMakerReplayInfo {

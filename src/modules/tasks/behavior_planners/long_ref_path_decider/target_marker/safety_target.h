@@ -21,6 +21,7 @@ class SafetyTarget : public Target {
     TargetType target_type = TargetType::kNotSet;
     int32_t agent_id = -1;
     int64_t st_boundary_id = -1;
+    double a = 0;
   };
 
  public:
@@ -28,7 +29,7 @@ class SafetyTarget : public Target {
   ~SafetyTarget() = default;
 
   struct IdmParameters {
-    double v0 = 30.0;
+    double v0 = 33.5;
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;
@@ -66,6 +67,8 @@ class SafetyTarget : public Target {
   std::vector<UpperBoundInfo> upper_bound_infos_;
 
   common::SafetyTarget safety_target_pb_;
+
+  std::vector<double> acc_values_;
 };
 
 }  // namespace planning
