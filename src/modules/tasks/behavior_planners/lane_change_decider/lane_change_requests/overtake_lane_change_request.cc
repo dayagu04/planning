@@ -310,7 +310,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           left_lane_nums = iter->left_lane_num;
           right_lane_nums = iter->right_lane_num;
         } else {
-          return;
+          left_lane_nums = llane ? 1 : 0;
+          right_lane_nums = rlane ? 1 : 0;
         }
       }
     } else {
