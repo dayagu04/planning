@@ -50,6 +50,15 @@ const double SpeedLimitDeciderOutput::map_speed_limit_value() const {
   return v_limit_map_ramp_;
 }
 
+void SpeedLimitDeciderOutput::set_avoid_speed_limit_info(
+    const SpeedLimitAgent speed_limit_agent_info) {
+  v_limit_avoid_agent_info_ = speed_limit_agent_info;
+}
+
+const SpeedLimitAgent SpeedLimitDeciderOutput::avoid_speed_limit_info() const {
+  return v_limit_avoid_agent_info_;
+}
+
 std::string SpeedLimitDeciderOutput::ChangeSpeedLimitType(
     const SpeedLimitType type) {
   std::string ret;

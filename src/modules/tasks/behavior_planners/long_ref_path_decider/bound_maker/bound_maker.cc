@@ -23,10 +23,12 @@ constexpr double kSpeedBoundFactor = 1.1;
 constexpr double kPerSecondPlanLenth = 50.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
-constexpr double kBrakeDelayTimeBuffer = 0.5;
+constexpr double kBrakeDelayTimeBuffer = 0.3;
 
-constexpr double kAccMaxLowerBound = -4.0;
+constexpr double kAccMaxLowerBound = -5.0;
+constexpr double kAccMaxLowerBoundLatFollow = -2.0;
 constexpr double kJerkMaxLowerBound = -4.0;
+constexpr double kJerkMaxLowerBoundLatFollow = -2.0;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -144,6 +146,13 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
+    }
+  }
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -188,13 +197,6 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         common::StartStopInfo::START) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
-  }
-
-  const auto& lon_ref_path_decider_output =
-      session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
-    acc_lower_bound_ =
-        std::vector<double>(plan_points_num_, kAccMaxLowerBound);
   }
 }
 
@@ -345,8 +347,8 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     if (agent != nullptr) {
       agent_acc = agent->accel_fusion();
     }
-    // const double vel = virtual_acc_curve->Evaluate(1, t);
-    const double brake_buffer = init_lon_state_[1] * kBrakeDelayTimeBuffer;
+    const double vel = virtual_acc_curve->Evaluate(1, t);
+    const double brake_buffer = vel * kBrakeDelayTimeBuffer;
     auto target_value = target_maker.target_value(t);
     if (target_value.target_type() == TargetType::kFollow ||
         target_value.target_type() == TargetType::kNeighborYield ||
@@ -547,6 +549,28 @@ void BoundMaker::GenerateUpperBoundInfo() {
       upper_bound_infos_[i].a = upper_bound.acceleration();
       upper_bound_infos_[i].agent_id = agent_id;
       const auto* agent = agent_manager->GetAgent(agent_id);
+      if (agent != nullptr) {
+        upper_bound_infos_[i].d_path = agent->d_path();
+        upper_bound_infos_[i].d_rel = agent->d_rel();
+      }
+    }
+  }
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.is_safety_target_lat_follow ||
+      lon_ref_path_decider_output.is_safety_target_lon_cutin) {
+    for (size_t i = 0;
+         i < plan_points_num_ &&
+         i < lon_ref_path_decider_output.safe_target_upper_bound_infos.size();
+         i++) {
+      const auto& safe_upper_bound_info =
+          lon_ref_path_decider_output.safe_target_upper_bound_infos[i];
+      upper_bound_infos_[i].s = safe_upper_bound_info.s;
+      upper_bound_infos_[i].t = safe_upper_bound_info.t;
+      upper_bound_infos_[i].v = safe_upper_bound_info.v;
+      upper_bound_infos_[i].agent_id = safe_upper_bound_info.agent_id;
+      const auto* agent =
+          agent_manager->GetAgent(safe_upper_bound_info.agent_id);
       if (agent != nullptr) {
         upper_bound_infos_[i].d_path = agent->d_path();
         upper_bound_infos_[i].d_rel = agent->d_rel();

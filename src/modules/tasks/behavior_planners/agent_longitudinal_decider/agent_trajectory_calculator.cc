@@ -4,7 +4,9 @@
 #include <cmath>
 #include <cstddef>
 #include <memory>
+#include <vector>
 
+#include "agent/agent.h"
 #include "environmental_model.h"
 #include "planning_context.h"
 #include "session.h"
@@ -30,6 +32,10 @@ AgentTrajectoryCalculator::AgentTrajectoryCalculator(
     : session_(session){};
 
 bool AgentTrajectoryCalculator::Process() {
+  auto agent_longitudinal_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_agent_longitudinal_decider_output();
+  agent_longitudinal_decider_output->cutin_agent_ids.clear();
   // Get agent_manager and current agents
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -58,10 +64,12 @@ bool AgentTrajectoryCalculator::Process() {
       session_->environmental_model().get_ego_state_manager();
   const double v_ego = ego_state_mgr->ego_v();
   const double road_curvature_radius = CalculateRoadCurvature(v_ego);
+  bool is_in_large_curv = false;
   if (road_curvature_radius < kLargeCurvRadius) {
-    return false;
+    is_in_large_curv = true;
   }
 
+  std::vector<int32_t> cutin_agent_ids;
   for (const auto ptr_agent : agents) {
     if (ptr_agent == nullptr) {
       continue;
@@ -71,10 +79,15 @@ bool AgentTrajectoryCalculator::Process() {
     const bool is_large_agent = ptr_agent->type() == agent::AgentType::TRUCK ||
                                 ptr_agent->type() == agent::AgentType::BUS ||
                                 ptr_agent->length() >= kLargeAgentLength;
-    if (is_cutin_agent && !is_reverse_agent && is_large_agent) {
-      CalculateCutinAgentTrajectory(is_in_lane_change_execution, ptr_agent);
+    if (is_cutin_agent && !is_reverse_agent) {
+      if (is_large_agent && !is_in_large_curv) {
+        CalculateCutinAgentTrajectory(is_in_lane_change_execution, ptr_agent);
+      }
+      cutin_agent_ids.emplace_back(ptr_agent->agent_id());
     }
   }
+  agent_longitudinal_decider_output->cutin_agent_ids =
+      std::move(cutin_agent_ids);
   return true;
 }
 

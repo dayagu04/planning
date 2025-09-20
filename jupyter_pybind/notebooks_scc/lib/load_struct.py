@@ -1453,6 +1453,14 @@ def load_obstacle_params(fus_msg, is_enu_to_car = False, loc_msg = None, environ
             lat_decision = "RIGHT"
           elif (2 == obstacle.lat_decision):
             lat_decision = "IGNORE"
+          elif (3 == obstacle.lat_decision):
+            lat_decision = "FOLLOW"
+          elif (4 == obstacle.lat_decision):
+            lat_decision = "PRE_FOLLOW_WITHIN_LANE"
+          elif (5 == obstacle.lat_decision):
+            lat_decision = "PRE_NUDGE"
+          elif (6 == obstacle.lat_decision):
+            lat_decision = "NOT_SET"
           if obstacle.is_static:
             is_static = "Static"
           break
@@ -1880,6 +1888,14 @@ def load_prediction_obstacle(prediction_msg, environment_model_info = None):
             lat_decision = "RIGHT"
           elif (2 == obstacle.lat_decision):
             lat_decision = "IGNORE"
+          elif (3 == obstacle.lat_decision):
+            lat_decision = "FOLLOW"
+          elif (4 == obstacle.lat_decision):
+            lat_decision = "PRE_FOLLOW_WITHIN_LANE"
+          elif (5 == obstacle.lat_decision):
+            lat_decision = "PRE_NUDGE"
+          elif (6 == obstacle.lat_decision):
+            lat_decision = "NOT_SET"
           if obstacle.is_static:
             is_static = "Static"
           break

@@ -62,7 +62,7 @@ def update_lat_behavior_data(local_view_data):
         'v_relative_left_lane','is_faster_left_lane','faster_left_lane_cnt','v_relative_right_lane',\
           'is_faster_right_lane','faster_right_lane_cnt','is_forbid_left_alc_car','is_forbid_right_alc_car',\
             'is_side_borrow_bicycle_lane','is_side_borrow_lane','has_origin_lane',\
-              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', 'emergency_avoid_obstacle_ids', 'lon_overtake_avoid', 'potential_dangerous_agent_id']
+              'has_target_lane','enable_left_lc','enable_right_lc','lc_back_reason', 'emergency_avoid_obstacle_ids', 'lon_overtake_avoid', 'potential_dangerous_agent_id','pre_follow_within_lane_ids']
   # 'near_car_ids_origin','near_car_ids_target', 'left_alc_car_ids','right_alc_car_ids', ,'avoid_car_ids','avoid_car_allow_max_opposite_offset'
   names  = []
   datas = []
@@ -89,6 +89,13 @@ def update_lat_behavior_data(local_view_data):
         pass
 
     if name == 'potential_dangerous_agent_id':
+      try:
+        datas.append(planning_json[name])
+        names.append(name)
+      except:
+        pass
+
+    if name == 'pre_follow_within_lane_ids':
       try:
         datas.append(planning_json[name])
         names.append(name)

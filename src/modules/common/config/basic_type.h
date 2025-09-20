@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <tuple>
 #include <unordered_map>
@@ -959,5 +960,9 @@ struct LateralMotionPlanningOutput {
   std::vector<double> jerk_vec;
   // const ilqr_solver::iLqr::iLqrSolverInfo *solver_info_ptr;
   // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
+};
+
+struct AgentLongitudinalDeciderOutput {
+  std::vector<int32_t> cutin_agent_ids;
 };
 }  // namespace planning

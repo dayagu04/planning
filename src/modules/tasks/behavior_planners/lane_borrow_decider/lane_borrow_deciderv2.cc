@@ -494,7 +494,8 @@ bool LaneBorrowDecider::CheckIfBackOriginLaneToLaneBorrowDriving() {
         ego_frenet_boundary_.s_end) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
-          lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+          (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+           lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {
         continue;
       }
     }
@@ -885,7 +886,8 @@ bool LaneBorrowDecider::SelectStaticBlockingObstcales() {
     if (frenet_obstacle_sl.s_start > ego_frenet_boundary_.s_end + 2.0) {
       const auto lat_obs_iter = lat_obstacle_decision.find(id);
       if (lat_obs_iter != lat_obstacle_decision.end() &&
-          lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+          (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+           lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {
         continue;
       }
     } else {  // lon overlap
@@ -1761,7 +1763,8 @@ bool LaneBorrowDecider::IfChangeTargetLane() {
     }
     const auto lat_obs_iter = lat_obstacle_decision.find(idx);
     if (lat_obs_iter != lat_obstacle_decision.end() &&
-        lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+        (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+         lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {
       continue;
     }
     obs_distribution.push_back({idx, frenet_obstacle_sl.s_start});
@@ -1799,7 +1802,8 @@ bool LaneBorrowDecider::CheckLeadObs() {
                                           .lat_obstacle_decision;
   const auto lat_obs_iter = lat_obstacle_decision.find(front_id_);
   if (lat_obs_iter != lat_obstacle_decision.end() &&
-      lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+      (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+       lat_obs_iter->second != LatObstacleDecisionType::FOLLOW)) {
     return true;
   }
   if (static_blocked_obj_id_vec_[0] == front_id_) {

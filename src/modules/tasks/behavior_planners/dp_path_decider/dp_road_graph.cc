@@ -134,7 +134,8 @@ bool DPRoadGraph::ProcessEnvInfos(
     }
     //   const auto lat_obs_iter = lat_obstacle_decision.find(id);
     // if (lat_obs_iter != lat_obstacle_decision.end() &&
-    //     lat_obs_iter->second != LatObstacleDecisionType::IGNORE) {
+    //     (lat_obs_iter->second != LatObstacleDecisionType::IGNORE &&
+    //      lat_obs_iter->second != LatObstacleDecisionType::FOLLOW) {
     //   continue;
     // }
     // static and dynamic sl current time

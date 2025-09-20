@@ -400,6 +400,15 @@ class PlanningContext {
     return &longitudinal_decision_decider_output_;
   }
 
+  const AgentLongitudinalDeciderOutput &agent_longitudinal_decider_output()
+      const {
+    return agent_longitudinal_decider_output_;
+  }
+
+  AgentLongitudinalDeciderOutput *mutable_agent_longitudinal_decider_output() {
+    return &agent_longitudinal_decider_output_;
+  }
+
   const std::shared_ptr<AdaptiveCruiseControl> &
   adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
@@ -525,6 +534,7 @@ class PlanningContext {
   CipvLostProhibitAccelerationDeciderOutput
       cipv_lost_prohibit_acceleration_decider_output_;
   LongitudinalDecisionDeciderOutput longitudinal_decision_decider_output_;
+  AgentLongitudinalDeciderOutput agent_longitudinal_decider_output_;
   TrafficLightDeciderOutput traffic_light_decider_output_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
 

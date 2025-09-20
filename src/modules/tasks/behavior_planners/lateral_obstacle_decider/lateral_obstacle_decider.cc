@@ -50,7 +50,10 @@ LateralObstacleDecider::LateralObstacleDecider(
                   .lat_obstacle_decision),
       obstacle_intrusion_distance_thr_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
-                  .obstacle_intrusion_distance_thr) {
+                  .obstacle_intrusion_distance_thr),
+      follow_obstacle_info_(session_->mutable_planning_context()
+                  ->mutable_lateral_obstacle_decider_output()
+                  .follow_obstacle_info) {
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
@@ -65,6 +68,7 @@ LateralObstacleDecider::LateralObstacleDecider(
 bool LateralObstacleDecider::Execute() {
   if (!PreCheck()) {
     output_.clear();
+    follow_obstacle_info_.clear();
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
@@ -202,8 +206,14 @@ bool LateralObstacleDecider::Execute() {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
+      FollowObstacleInfo &follow_info =
+          follow_obstacle_info_[obs->id()];
       history.is_behind_ego = false;
-
+      if (history.can_not_avoid) {
+        history.is_not_set = false;
+      } else {
+        history.is_not_set = true;
+      }
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
           !frenet_obs->b_frenet_valid() || frenet_obs->b_frenet_polygon_sequence_invalid() ||
@@ -211,6 +221,8 @@ bool LateralObstacleDecider::Execute() {
         history.is_avd_car = false;
         history.ncar_count = 0;
         history.ncar_count_in = false;
+        follow_info.is_need_folow = false;
+        follow_info.follow_confidence = 0;
         continue;
       }
 
@@ -243,10 +255,10 @@ bool LateralObstacleDecider::Execute() {
         history.rear_car = true;
       }
       if (CalculateCutInAndCross(*frenet_obs, reference_path_ptr, lane_width)) {
-        history.is_avd_car = false;
-        history.ncar_count = 0;
-        history.ncar_count_in = false;
-        continue;
+        // history.is_avd_car = false;
+        // history.ncar_count = 0;
+        // history.ncar_count_in = false;
+        // continue;
       }
       if (frenet_obs->d_s_rel() <= 0) {
         history.is_avd_car = false;
@@ -254,11 +266,14 @@ bool LateralObstacleDecider::Execute() {
           history.ncar_count = 0;
           history.ncar_count_in = false;
         }
+        follow_info.is_need_folow = false;
+        follow_info.follow_confidence = 0;
         continue;
       }
       history.is_avd_car = IsPotentialAvoidingCar(
           *frenet_obs, lane_width, rightest_lane, farthest_distance,
           left_borrow_, right_borrow_);
+      IsPotentialFollowingObstacle(*frenet_obs, lane_width);
       history.last_recv_time = obs->timestamp();
     }
 
@@ -274,10 +289,15 @@ bool LateralObstacleDecider::Execute() {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
+      FollowObstacleInfo &follow_info =
+          follow_obstacle_info_[obs->id()];
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
           !frenet_obs->b_frenet_valid() ||
           frenet_obs->b_frenet_polygon_sequence_invalid()) {
+        follow_info.is_need_folow = false;
+        follow_info.follow_confidence = 0;
+        output_[obs->id()] = LatObstacleDecisionType::NOT_SET;
         continue;
       }
       LateralObstacleDecision(*frenet_obs, lane_width, reference_path_ptr);
@@ -403,7 +423,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
           bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
             ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
           // 横向是否ignore
-          bool is_lateral_ignore = output_[obstacle.id()] == LatObstacleDecisionType::IGNORE;
+          bool is_lateral_ignore = (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+              output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
           bool lon_overtake_avoid = is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
           history.lon_overtake_avoid = lon_overtake_avoid;
         } else {
@@ -431,7 +452,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
             cossing_map_iter->second);
         // bool is_cross_lane = false;
         // 横向是否ignore
-        bool is_lateral_ignore = output_[obstacle.id()] == LatObstacleDecisionType::IGNORE;
+        bool is_lateral_ignore = (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+            output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
         // 纵向以一定的制动力减速还来不及的障碍物
         bool is_lon_over_obstacle = CheckEgoOvertakeObstacle(frenet_obstacle, reference_path);
         bool is_emergency_avoid = is_lon_ttc_critical && is_in_lateral_range &&
@@ -470,7 +492,8 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   bool maintain_avoid =
-      (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE &&
+      ((output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+        output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW ) &&
        !history.rear_car && v_s_rel < 0 &&
        ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_lower) ||
         ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_upper &&
@@ -552,7 +575,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   bool is_LC_RCHANGE =
       ((state == kLaneChangeExecution) || (state == kLaneChangeComplete)) &&
       (lc_request_direction == RIGHT_CHANGE);
-
+  const auto lead_one =
+      session_->environmental_model().get_lateral_obstacle()->leadone();
   // calculate info of obstacle
   int id = obstacle.id();
   iflyauto::ObjectType type = obstacle.type();
@@ -769,6 +793,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
                 // (rightest_lane && d_max_cpath < 0 &&
                 //  std::fabs(d_max_cpath) < dist_limit && v_s < 0.5) ||
                 cross_solid_line;
+      history.is_not_set = false;
     }
   }
   int max_can_avoid_count = 6;
@@ -844,6 +869,44 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
         ego_head_l_ - d_max_cpath - ego_width_ / 2 < lat_dis_thr));
   bool in_lon_near_area = (d_s_rel + v_s * 5) < farthest_distance;
 
+  // for lead one
+  // if (lead_one != nullptr) {
+  //   JSON_DEBUG_VALUE("latral_lead_one_id", lead_one->id());
+  // }
+
+  if (lead_one != nullptr && id == lead_one->id() &&
+      (is_in_range || is_about_to_enter_range)) {
+    double dist_intersect = 1000;
+    double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width -
+    ego_width_);
+    double far_end_pos = 0.5 * lane_width + 0.2;
+
+    bool is_in_avoid_range_by_nearest_point =
+        lead_one->d_path() >= near_end_pos && lead_one->d_path() < far_end_pos;
+
+    bool is_in_avoid_range_by_nearest_line_in_left =
+        lead_one->d_min_cpath() >= near_end_pos &&
+        lead_one->d_min_cpath() < far_end_pos &&
+        lead_one->d_max_cpath() >= near_end_pos;
+
+    bool is_in_avoid_range_by_nearest_line_in_right =
+        lead_one->d_max_cpath() > -far_end_pos &&
+        lead_one->d_max_cpath() <= -near_end_pos &&
+        lead_one->d_min_cpath() <= -near_end_pos;
+
+    if (!((history.is_avd_car) &&
+          (is_in_avoid_range_by_nearest_point ||
+           is_in_avoid_range_by_nearest_line_in_left ||
+           is_in_avoid_range_by_nearest_line_in_right || borrow_bicycle_lane
+           || rightest_lane ||
+           (dist_intersect - lead_one->d_s_rel() < 50 &&
+            dist_intersect - lead_one->d_s_rel() >= -5 &&
+            lead_one->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
+      history.ncar_count =
+          std::max(history.ncar_count - 10 * count * planning_cycle_time, 0.0);
+    }
+  }
+
   // cut in/out factor
   std::array<double, 4> x_cut_factor{0.2, 0.4, 0.6, 0.8};
   std::array<double, 4> f_cut_factor{10, 20, 30, 40};
@@ -882,10 +945,14 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       return true;
     }
   } else {
-    if (!in_lon_near_area || !in_lat_near_area) {
-      history.ncar_count =
-          std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
-    }
+    // 这里衰减计数不合理，需要优化
+    // 存在紧急避让，先取消这部分
+    history.ncar_count =
+        std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    // if (!in_lon_near_area || !in_lat_near_area) {
+    //   history.ncar_count =
+    //       std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    // }
 
     if (v_s_rel > 1.5) {
       history.ncar_count =
@@ -926,6 +993,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
+  FollowObstacleInfo &follow_info =
+      follow_obstacle_info_[obstacle.id()];
   const auto &coarse_planning_info = session_->planning_context()
                                           .lane_change_decider_output()
                                           .coarse_planning_info;
@@ -957,6 +1026,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
       fabs(ego_head_l_ - l) < (ego_width_ + obstacle.width()) / 2;
   // 前方车辆
   if (history.is_avd_car) {
+    // 已经被判定为is_avd_car的车，由于其他原因导致的ignore,
+    // 赋予PRE_FOLLOW_WITHIN_LANE,需要特别注意，借道可以借FOLLOW_WITHIN_LANE
     if (d_max_cpath > 0 && d_min_cpath < 0) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     } else if (d_max_cpath < 0) {
@@ -966,7 +1037,12 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
     // cut_in 或 横穿
     if (history.cut_in_or_cross) {
+      // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
+    }
+    if (follow_info.is_need_folow && d_min_cpath * d_max_cpath > 0) {
+      history.is_avd_car = false;
+      output_[id] = LatObstacleDecisionType::FOLLOW;
     }
   } else if (d_s_rel > history.front_expand_len) {
     if (history.can_avoid) {
@@ -993,7 +1069,17 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
     // cut_in 或 横穿
     if (history.cut_in_or_cross) {
+      // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
+    }
+
+    // if (history.is_not_set) {
+    //   output_[id] = LatObstacleDecisionType::NOT_SET;
+    // }
+
+    if (follow_info.is_need_folow && d_min_cpath * d_max_cpath > 0) {
+      history.is_avd_car = false;
+      output_[id] = LatObstacleDecisionType::FOLLOW;
     }
     // 平行车辆
   } else if (d_s_rel <= history.front_expand_len &&
@@ -1082,6 +1168,14 @@ void LateralObstacleDecider::LateralObstacleDecision(
       }
     }
   }
+
+
+  // cut_in 或 横穿
+  if (history.cut_in_or_cross) {
+    history.is_avd_car = false;
+    history.ncar_count = 0;
+    history.ncar_count_in = false;
+  }
 }
 
 bool LateralObstacleDecider::CalculateCutInAndCross(
@@ -1090,6 +1184,7 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
   const int obstacle_id = frenet_obstacle.id();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle_id];
+  double oversize_veh_addition_buffer = config_.oversize_veh_addition_buffer;
   const auto &obstacle = *frenet_obstacle.obstacle();
   if (!frenet_obstacle.obstacle()->is_static() &&
       !(frenet_obstacle.d_s_rel() <= 0 && in_intersection_) &&
@@ -1105,6 +1200,11 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     double decre_buffer_for_lane_width =
         interp(lane_width, x_lat_buffer, f_lat_buffer);
     lat_safety_buffer -= decre_buffer_for_lane_width;
+
+  // addition buffer for oversize vehicle
+  if (obstacle.is_oversize_vehicle()) {
+    lat_safety_buffer += oversize_veh_addition_buffer;
+  }
 
     // 减去大车后视镜
     if (frenet_obstacle.obstacle()->is_oversize_vehicle()) {
@@ -1182,9 +1282,17 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
       history.cut_in_or_cross = false;
       return false;
     }
+  } else {
+    history.cut_in_or_cross_count -= 1;
+    history.cut_in_or_cross_count = std::max(history.cut_in_or_cross_count, 0);
+    if (history.cut_in_or_cross_count > 2) {
+      history.cut_in_or_cross = true;
+      return true;
+    } else {
+      history.cut_in_or_cross = false;
+      return false;
+    }
   }
-  history.cut_in_or_cross = false;
-  return false;
 }
 
 void LateralObstacleDecider::ConstructPlanHistoryTraj(
@@ -1755,6 +1863,83 @@ bool LateralObstacleDecider::IsTruck(
   return (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
           frenet_obstacle.length() > 6));
+}
+
+void LateralObstacleDecider::IsPotentialFollowingObstacle(
+    FrenetObstacle &frenet_obstacle, double lane_width) {
+  // 根据侵入距离，计算潜在的跟车目标
+  const Obstacle &obstacle = *frenet_obstacle.obstacle();
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[obstacle.id()];
+  FollowObstacleInfo &follow_info =
+      follow_obstacle_info_[obstacle.id()];
+  if (obstacle.is_static()) {
+    // 先过滤静态障碍物，因为静态障碍物的不确定性较低
+    follow_info.follow_confidence = 0;
+    follow_info.is_need_folow = false;
+    return;
+  }
+  // calculate info of obstacle
+  int id = obstacle.id();
+  iflyauto::ObjectType type = obstacle.type();
+  double s = frenet_obstacle.frenet_s();
+  double l = frenet_obstacle.frenet_l();
+  double v_s = frenet_obstacle.frenet_velocity_s();
+  double v_l = frenet_obstacle.frenet_velocity_l();
+  double v_lat = frenet_obstacle.frenet_velocity_lateral(); // 根据历史差分
+  double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
+  double d_s_rel = frenet_obstacle.d_s_rel();
+  double d_min_cpath = frenet_obstacle.d_min_cpath();
+  double d_max_cpath = frenet_obstacle.d_max_cpath();
+  double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
+  double gap = (history.last_recv_time == 0.0)
+                   ? planning_cycle_time
+                   : (obstacle.timestamp() - history.last_recv_time);
+  int count = (int)((gap + 0.01) / planning_cycle_time);
+  // 计算侵入距离
+  double intrusion_distance = DBL_MAX;
+  if (d_max_cpath < 0) {
+    intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
+  } else if (d_min_cpath > 0) {
+    intrusion_distance =  lane_width * 0.5 - d_min_cpath;
+  }
+  double base_safe_intrusoin_for_dynamic = config_.base_safe_intrusoin_for_dynamic;
+  double base_safe_intrusoin_for_static = config_.base_safe_intrusoin_for_static;
+  double extra_buffer_for_truck = config_.extra_buffer_for_truck;
+  double extra_buffer_for_vru = config_.extra_buffer_for_vru;
+  double follow_hysteresis = config_.follow_hysteresis;
+  double follow_confidence_cnt = 10 * planning_cycle_time;
+  double follow_confidence_thr = 0.1;
+  double lead_d_path_thr = base_safe_intrusoin_for_dynamic;
+  // if (obstacle.is_static()) {
+  //   lead_d_path_thr = base_safe_intrusoin_for_static;
+  // }
+  // 障碍物类型
+  if (IsTruck(frenet_obstacle)) {
+    lead_d_path_thr += extra_buffer_for_truck;
+  } else if (obstacle.is_VRU()) {
+    lead_d_path_thr += extra_buffer_for_vru;
+  }
+  // hysteresis
+  if (follow_info.is_need_folow) {
+    lead_d_path_thr = lead_d_path_thr * follow_hysteresis;
+  }
+  // 车道宽的影响,同样倾入距离的情况下，窄车道更容易跟车
+  double lane_width_actor =
+      interp(lane_width, config_.lane_width_bp, config_.lane_width_factor);
+  lead_d_path_thr = lead_d_path_thr * lane_width_actor;
+
+  // 距离自车越远，置信度越高
+  follow_confidence_thr = interp(d_s_rel, config_.distacle_to_ego_bp, config_.distacle_to_ego_bp_factor);
+
+  // 自车速度的相关因素，自车速度越高，先减速然后跟车
+
+  if (intrusion_distance >= lead_d_path_thr) {
+    follow_info.follow_confidence = std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
+  } else {
+    follow_info.follow_confidence = std::fmax(follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
+  }
+  follow_info.is_need_folow = follow_info.follow_confidence >= follow_confidence_thr;
 }
 
 }  // namespace planning
