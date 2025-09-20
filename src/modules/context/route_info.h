@@ -249,7 +249,9 @@ class RouteInfo {
 
   bool IsEmergencyLane(const uint64 lane_id,
                        const ad_common::sdpromap::SDProMap& sdpro_map) const;
-
+  bool IsClosingIntersectionEntrance(const iflymapdata::sdpro::LinkInfo_Link* link,
+                                              const ad_common::sdpromap::SDProMap& sdpro_map,
+                                              double distance_on_link);
   double CalculateAngle(const Point2D& o, const Point2D& p) {
     double dx = p.x - o.x;
     double dy = p.y - o.y;
