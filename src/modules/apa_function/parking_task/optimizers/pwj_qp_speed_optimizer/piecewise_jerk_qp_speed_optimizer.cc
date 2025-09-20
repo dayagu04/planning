@@ -29,7 +29,7 @@ const bool PiecewiseJerkSpeedQPOptimizer::Init() {
 }
 
 void PiecewiseJerkSpeedQPOptimizer::GenerateInitState(
-    const SVPoint& init_point, std::array<double, 3>& init_state) {
+    const SVPoint& init_point, std::array<c_float, 3>& init_state) {
   init_state[0] = init_point.s;
   init_state[1] = init_point.v;
   init_state[2] = init_point.acc;
@@ -100,7 +100,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   double opt_start_time = IflyTime::Now_ms();
   ILOG_INFO << "speed qp optimizer";
 
-  std::array<double, 3> init_state;
+  std::array<c_float, 3> init_state;
   GenerateInitState(init_point, init_state);
 
   // init_point.DebugString("stitch start point");
@@ -169,19 +169,19 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
                                         speed_config.jerk_upper);
 
   // update ref v, ref_s.
-  std::vector<double> x_ref;
-  std::vector<double> dx_ref;
-  std::vector<double> t_ref;
-  std::vector<std::pair<double, double>> ds_bounds;
+  std::vector<c_float> x_ref;
+  std::vector<c_float> dx_ref;
+  std::vector<c_float> t_ref;
+  std::vector<std::pair<c_float, c_float>> ds_bounds;
   x_ref.reserve(num_of_knots_);
   dx_ref.reserve(num_of_knots_);
   t_ref.reserve(num_of_knots_);
   ds_bounds.reserve(num_of_knots_);
 
   SpeedPoint speed_point;
-  const double v_lower_bound = 0.0;
-  double v_upper_bound;
-  double curr_time = 0.0;
+  const c_float v_lower_bound = 0.0;
+  c_float v_upper_bound;
+  c_float curr_time = 0.0;
 
   for (int i = 0; i < num_of_knots_; ++i) {
     // get path
@@ -200,7 +200,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     ds_bounds.emplace_back(v_lower_bound, v_upper_bound);
 
     curr_time += delta_time_;
-    curr_time = std::min(curr_time, total_time);
+    curr_time = std::min(curr_time, static_cast<c_float>(total_time));
   }
   if (x_ref.empty() || dx_ref.empty()) {
     ILOG_INFO << "size is null";
@@ -222,11 +222,12 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
 
   // set end state
   if (dp_speed_data.back().t > qp_config_.time_horizon) {
-    std::array<double, 3> weight_end_state = {{0.1, 5.0, 0.0}};
-    std::array<double, 3> end_state_ref = {{x_ref.back(), dx_ref.back(), 0.0}};
+    std::array<c_float, 3> weight_end_state = {{0.1f, 5.0f, 0.0f}};
+    std::array<c_float, 3> end_state_ref = {{x_ref.back(), dx_ref.back(), 0.0}};
     piecewise_jerk_problem.set_end_state_ref(weight_end_state, end_state_ref);
   } else {
-    std::array<double, 3> end_state_ref = {{total_length, 0.0, 0.0}};
+    std::array<c_float, 3> end_state_ref = {
+        {static_cast<c_float>(total_length), 0.0f, 0.0f}};
     piecewise_jerk_problem.set_end_state_constriants(end_state_ref);
   }
 
@@ -244,9 +245,9 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   }
 
   // Extract output
-  const std::vector<double>& s = piecewise_jerk_problem.opt_x();
-  const std::vector<double>& ds = piecewise_jerk_problem.opt_dx();
-  const std::vector<double>& dds = piecewise_jerk_problem.opt_ddx();
+  const std::vector<c_float>& s = piecewise_jerk_problem.opt_x();
+  const std::vector<c_float>& ds = piecewise_jerk_problem.opt_dx();
+  const std::vector<c_float>& dds = piecewise_jerk_problem.opt_ddx();
 
 #if DECIDER_DEBUG
   DebugPiecewiseJerkProblem(piecewise_jerk_problem);
@@ -276,16 +277,16 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
 
   double opt_time_ms = IflyTime::Now_ms() - opt_start_time;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_QP_TIME,
-                                        opt_time_ms);
+                                    opt_time_ms);
 
   return;
 }
 
 void PiecewiseJerkSpeedQPOptimizer::DebugPiecewiseJerkProblem(
     const PiecewiseJerkSpeedProblem& pwj) {
-  const std::vector<double>& s = pwj.opt_x();
-  const std::vector<double>& ds = pwj.opt_dx();
-  const std::vector<double>& dds = pwj.opt_ddx();
+  const std::vector<c_float>& s = pwj.opt_x();
+  const std::vector<c_float>& ds = pwj.opt_dx();
+  const std::vector<c_float>& dds = pwj.opt_ddx();
 
   ILOG_INFO << "debug pwj speed point";
   for (int i = 0; i < num_of_knots_; ++i) {
@@ -304,8 +305,8 @@ void PiecewiseJerkSpeedQPOptimizer::ClearDebugInfo() {
 }
 
 void PiecewiseJerkSpeedQPOptimizer::RecordDebugInfo(
-    const std::vector<double>& x_ref,
-    const std::vector<std::pair<double, double>>& s_dot_bounds) {
+    const std::vector<c_float>& x_ref,
+    const std::vector<std::pair<c_float, c_float>>& s_dot_bounds) {
   auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
   common::SVGraphSpeedConstraint* qp_speed_constraint_debug =
@@ -369,8 +370,8 @@ void PiecewiseJerkSpeedQPOptimizer::DebugLinearConstraints(
   return;
 }
 
-double PiecewiseJerkSpeedQPOptimizer::ComputeFastBrakeProfile(
-    const std::array<double, 3>& init, const double time) {
+c_float PiecewiseJerkSpeedQPOptimizer::ComputeFastBrakeProfile(
+    const std::array<c_float, 3>& init, const double time) {
   double jerk = 0.0;
   double dec = -0.3;
   double speed_error = 0.1;

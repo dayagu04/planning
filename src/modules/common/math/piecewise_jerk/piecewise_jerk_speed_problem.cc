@@ -7,15 +7,15 @@
 
 namespace planning {
 PiecewiseJerkSpeedProblem::PiecewiseJerkSpeedProblem(
-    const size_t num_of_knots, const double delta_s,
-    const std::array<double, 3>& x_init)
+    const size_t num_of_knots, const c_float delta_s,
+    const std::array<c_float, 3>& x_init)
     : PiecewiseJerkProblem(num_of_knots, delta_s, x_init) {
   penalty_dx_.resize(num_of_knots_, 0.0);
 }
 
 void PiecewiseJerkSpeedProblem::Init(const size_t num_of_knots,
-                                    const double delta_s,
-                                    const std::array<double, 3>& x_init) {
+                                     const c_float delta_s,
+                                     const std::array<c_float, 3>& x_init) {
   Init(num_of_knots, delta_s, x_init);
 
   penalty_dx_.resize(num_of_knots_, 0.0);
@@ -24,13 +24,13 @@ void PiecewiseJerkSpeedProblem::Init(const size_t num_of_knots,
 }
 
 void PiecewiseJerkSpeedProblem::set_init_state(
-    const std::array<double, 3>& x_init) {
+    const std::array<c_float, 3>& x_init) {
   x_init_ = x_init;
   return;
 }
 
-void PiecewiseJerkSpeedProblem::set_dx_ref(const double weight_dx_ref,
-                                           std::vector<double>& dx_ref) {
+void PiecewiseJerkSpeedProblem::set_dx_ref(const c_float weight_dx_ref,
+                                           std::vector<c_float>& dx_ref) {
   weight_dx_ref_ = weight_dx_ref;
   dx_ref_ = dx_ref;
   has_dx_ref_ = true;
@@ -38,7 +38,8 @@ void PiecewiseJerkSpeedProblem::set_dx_ref(const double weight_dx_ref,
   return;
 }
 
-void PiecewiseJerkSpeedProblem::set_penalty_dx(std::vector<double> penalty_dx) {
+void PiecewiseJerkSpeedProblem::set_penalty_dx(
+    std::vector<c_float> penalty_dx) {
   CHECK_EQ(penalty_dx.size(), num_of_knots_);
   penalty_dx_ = std::move(penalty_dx);
 
@@ -87,7 +88,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
   ++value_index;
 
   auto delta_s_square = delta_s_ * delta_s_;
-  double scale_square = scale_factor_[2] * scale_factor_[2];
+  c_float scale_square = scale_factor_[2] * scale_factor_[2];
 
   // x(i)''^2 * (w_ddx + w_dddx / delta_s^2), n = 0
   columns[2 * n].emplace_back(

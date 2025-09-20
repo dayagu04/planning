@@ -31,48 +31,51 @@ namespace planning {
 // point size must bigger than 1.
 class PiecewiseJerkProblem {
  public:
-  PiecewiseJerkProblem(const size_t num_of_knots, const double delta_s,
-                       const std::array<double, 3>& x_init);
+  PiecewiseJerkProblem(const size_t num_of_knots, const c_float delta_s,
+                       const std::array<c_float, 3>& x_init);
 
-  void Init(const size_t num_of_knots, const double delta_s,
-            const std::array<double, 3>& x_init);
+  void Init(const size_t num_of_knots, const c_float delta_s,
+            const std::array<c_float, 3>& x_init);
 
   virtual ~PiecewiseJerkProblem() = default;
 
-  void set_x_bounds(std::vector<std::pair<double, double>> x_bounds);
+  void set_x_bounds(std::vector<std::pair<c_float, c_float>> x_bounds);
 
-  void set_x_bounds(const double x_lower_bound, const double x_upper_bound);
+  void set_x_bounds(const c_float x_lower_bound, const c_float x_upper_bound);
 
-  void set_dx_bounds(std::vector<std::pair<double, double>> dx_bounds);
+  void set_dx_bounds(std::vector<std::pair<c_float, c_float>> dx_bounds);
 
-  void set_dx_bounds(const double dx_lower_bound, const double dx_upper_bound);
+  void set_dx_bounds(const c_float dx_lower_bound,
+                     const c_float dx_upper_bound);
 
-  void set_ddx_bounds(std::vector<std::pair<double, double>> ddx_bounds);
+  void set_ddx_bounds(std::vector<std::pair<c_float, c_float>> ddx_bounds);
 
   // deceleration:(-inf, 0]
   // acceleration:[0, inf)
-  void set_ddx_bounds(const double ddx_lower_bound,
-                      const double ddx_upper_bound);
+  void set_ddx_bounds(const c_float ddx_lower_bound,
+                      const c_float ddx_upper_bound);
 
-  void set_dddx_bound(const double dddx_bound) {
+  void set_dddx_bound(const c_float dddx_bound) {
     set_dddx_bound(-dddx_bound, dddx_bound);
   }
 
-  void set_dddx_bound(const double dddx_lower_bound,
-                      const double dddx_upper_bound) {
+  void set_dddx_bound(const c_float dddx_lower_bound,
+                      const c_float dddx_upper_bound) {
     dddx_bound_.first = dddx_lower_bound;
     dddx_bound_.second = dddx_upper_bound;
   }
 
-  void set_weight_x(const double weight_x) { weight_x_ = weight_x; }
+  void set_weight_x(const c_float weight_x) { weight_x_ = weight_x; }
 
-  void set_weight_dx(const double weight_dx) { weight_dx_ = weight_dx; }
+  void set_weight_dx(const c_float weight_dx) { weight_dx_ = weight_dx; }
 
-  void set_weight_ddx(const double weight_ddx) { weight_ddx_ = weight_ddx; }
+  void set_weight_ddx(const c_float weight_ddx) { weight_ddx_ = weight_ddx; }
 
-  void set_weight_dddx(const double weight_dddx) { weight_dddx_ = weight_dddx; }
+  void set_weight_dddx(const c_float weight_dddx) {
+    weight_dddx_ = weight_dddx;
+  }
 
-  void set_scale_factor(const std::array<double, 3>& scale_factor) {
+  void set_scale_factor(const std::array<c_float, 3>& scale_factor) {
     scale_factor_ = scale_factor;
   }
 
@@ -82,22 +85,22 @@ class PiecewiseJerkProblem {
    * @param weight_x_ref: uniform weighting for x_ref
    * @param x_ref: objective value of x
    */
-  void set_x_ref(const double weight_x_ref, std::vector<double> x_ref);
+  void set_x_ref(const c_float weight_x_ref, std::vector<c_float> x_ref);
 
-  void set_end_state_ref(const std::array<double, 3>& weight_end_state,
-                         const std::array<double, 3>& end_state_ref);
+  void set_end_state_ref(const std::array<c_float, 3>& weight_end_state,
+                         const std::array<c_float, 3>& end_state_ref);
 
-  virtual bool Optimize(const int max_iter, const double max_time);
+  virtual bool Optimize(const int max_iter, const c_float max_time);
 
-  const std::vector<double>& opt_x() const { return x_; }
+  const std::vector<c_float>& opt_x() const { return x_; }
 
-  const std::vector<double>& opt_dx() const { return dx_; }
+  const std::vector<c_float>& opt_dx() const { return dx_; }
 
-  const std::vector<double>& opt_ddx() const { return ddx_; }
+  const std::vector<c_float>& opt_ddx() const { return ddx_; }
 
   void DebugString();
 
-  void set_end_state_constriants(const std::array<double, 3>& end_state_ref);
+  void set_end_state_constriants(const std::array<c_float, 3>& end_state_ref);
 
  protected:
   // naming convention follows osqp solver.
@@ -132,34 +135,34 @@ class PiecewiseJerkProblem {
   size_t num_of_knots_ = 0;
 
   // output
-  std::vector<double> x_;
-  std::vector<double> dx_;
-  std::vector<double> ddx_;
+  std::vector<c_float> x_;
+  std::vector<c_float> dx_;
+  std::vector<c_float> ddx_;
 
-  std::array<double, 3> x_init_;
-  std::array<double, 3> scale_factor_ = {{1.0, 1.0, 1.0}};
+  std::array<c_float, 3> x_init_;
+  std::array<c_float, 3> scale_factor_ = {{1.0, 1.0, 1.0}};
 
-  std::vector<std::pair<double, double>> x_bounds_;
-  std::vector<std::pair<double, double>> dx_bounds_;
-  std::vector<std::pair<double, double>> ddx_bounds_;
-  std::pair<double, double> dddx_bound_;
+  std::vector<std::pair<c_float, c_float>> x_bounds_;
+  std::vector<std::pair<c_float, c_float>> dx_bounds_;
+  std::vector<std::pair<c_float, c_float>> ddx_bounds_;
+  std::pair<c_float, c_float> dddx_bound_;
 
-  double weight_x_ = 0.0;
-  double weight_dx_ = 0.0;
-  double weight_ddx_ = 0.0;
-  double weight_dddx_ = 0.0;
+  c_float weight_x_ = 0.0;
+  c_float weight_dx_ = 0.0;
+  c_float weight_ddx_ = 0.0;
+  c_float weight_dddx_ = 0.0;
 
   // For lon optimization, delta_s is time;
   // For lateral optimization, delta_s is distance;
-  double delta_s_ = 1.0;
+  c_float delta_s_ = 1.0;
 
   bool has_x_ref_ = false;
-  double weight_x_ref_ = 0.0;
-  std::vector<double> x_ref_;
+  c_float weight_x_ref_ = 0.0;
+  std::vector<c_float> x_ref_;
 
   bool has_end_state_ref_ = false;
-  std::array<double, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};
-  std::array<double, 3> end_state_;
+  std::array<c_float, 3> weight_end_state_ = {{0.0, 0.0, 0.0}};
+  std::array<c_float, 3> end_state_;
 
   bool has_end_state_constriants_ = false;
 };

@@ -11,19 +11,19 @@ namespace planning {
 // point size must bigger than 1.
 class PiecewiseJerkSpeedProblem : public PiecewiseJerkProblem {
  public:
-  PiecewiseJerkSpeedProblem(const size_t num_of_knots, const double delta_s,
-                            const std::array<double, 3>& x_init);
+  PiecewiseJerkSpeedProblem(const size_t num_of_knots, const c_float delta_s,
+                            const std::array<c_float, 3>& x_init);
 
-  void Init(const size_t num_of_knots, const double delta_s,
-            const std::array<double, 3>& x_init);
+  void Init(const size_t num_of_knots, const c_float delta_s,
+            const std::array<c_float, 3>& x_init);
 
-  void set_init_state(const std::array<double, 3>& x_init);
+  void set_init_state(const std::array<c_float, 3>& x_init);
 
   virtual ~PiecewiseJerkSpeedProblem() = default;
 
-  void set_dx_ref(const double weight_dx_ref, std::vector<double>& dx_ref);
+  void set_dx_ref(const c_float weight_dx_ref, std::vector<c_float>& dx_ref);
 
-  void set_penalty_dx(std::vector<double> penalty_dx);
+  void set_penalty_dx(std::vector<c_float> penalty_dx);
 
  protected:
   // naming convention follows osqp solver.
@@ -37,11 +37,11 @@ class PiecewiseJerkSpeedProblem : public PiecewiseJerkProblem {
 
   bool has_dx_ref_ = false;
   // 速度系数为0
-  double weight_dx_ref_ = 0.0;
-  std::vector<double> dx_ref_;
+  c_float weight_dx_ref_ = 0.0;
+  std::vector<c_float> dx_ref_;
 
   // v cost, not (v-v_ref) cost. Normally, these weights are zero.
-  std::vector<double> penalty_dx_;
+  std::vector<c_float> penalty_dx_;
 };
 
 }  // namespace planning

@@ -5,17 +5,17 @@
 
 #include "glog/logging.h"
 #include "glog/raw_logging.h"
+#include "ifly_time.h"
 #include "log_glog.h"
 #include "time_benchmark.h"
-#include "ifly_time.h"
 
 namespace planning {
 
-constexpr double kMaxVariableRange = 1.0e10;
+constexpr c_float kMaxVariableRange = 1.0e10;
 
 PiecewiseJerkProblem::PiecewiseJerkProblem(
-    const size_t num_of_knots, const double delta_s,
-    const std::array<double, 3>& x_init) {
+    const size_t num_of_knots, const c_float delta_s,
+    const std::array<c_float, 3>& x_init) {
   num_of_knots_ = num_of_knots;
   x_init_ = x_init;
   delta_s_ = delta_s;
@@ -28,12 +28,11 @@ PiecewiseJerkProblem::PiecewiseJerkProblem(
 
   ddx_bounds_.resize(num_of_knots_,
                      std::make_pair(-kMaxVariableRange, kMaxVariableRange));
-
 }
 
-void PiecewiseJerkProblem::Init(
-    const size_t num_of_knots, const double delta_s,
-    const std::array<double, 3>& x_init) {
+void PiecewiseJerkProblem::Init(const size_t num_of_knots,
+                                const c_float delta_s,
+                                const std::array<c_float, 3>& x_init) {
   if (num_of_knots < 2) {
     return;
   }
@@ -93,7 +92,8 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   return data;
 }
 
-bool PiecewiseJerkProblem::Optimize(const int max_iter, const double max_time) {
+bool PiecewiseJerkProblem::Optimize(const int max_iter,
+                                    const c_float max_time) {
   OSQPData* data = FormulateProblem();
 
   OSQPSettings* settings = SolverDefaultSettings();
@@ -272,7 +272,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   upper_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
   ++constraint_index;
 
-  double ddx_slack_bound = 0.08;
+  c_float ddx_slack_bound = 0.08;
   variables[2 * n].emplace_back(constraint_index, 1.0);
   lower_bounds->at(constraint_index) =
       x_init_[2] * scale_factor_[2] - ddx_slack_bound;
@@ -282,7 +282,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
   // constraints on end state
   if (has_end_state_constriants_) {
-    double s_slack_bound = 0.03;
+    c_float s_slack_bound = 0.03;
     variables[n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[0] * scale_factor_[0] - s_slack_bound;
@@ -290,7 +290,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
         end_state_[0] * scale_factor_[0] + s_slack_bound;
     ++constraint_index;
 
-    double dx_slack_bound = 0.03;
+    c_float dx_slack_bound = 0.03;
     variables[2 * n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[1] * scale_factor_[1] - dx_slack_bound;
@@ -298,7 +298,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
         end_state_[1] * scale_factor_[1] + dx_slack_bound;
     ++constraint_index;
 
-    double ddx_slack_bound = 0.15;
+    c_float ddx_slack_bound = 0.15;
     variables[3 * n - 1].emplace_back(constraint_index, 1.0);
     lower_bounds->at(constraint_index) =
         end_state_[2] * scale_factor_[2] - ddx_slack_bound;
@@ -340,7 +340,7 @@ OSQPSettings* PiecewiseJerkProblem::SolverDefaultSettings() {
 }
 
 void PiecewiseJerkProblem::set_x_bounds(
-    std::vector<std::pair<double, double>> x_bounds) {
+    std::vector<std::pair<c_float, c_float>> x_bounds) {
   CHECK_EQ(x_bounds.size(), num_of_knots_);
   x_bounds_ = std::move(x_bounds);
 
@@ -348,7 +348,7 @@ void PiecewiseJerkProblem::set_x_bounds(
 }
 
 void PiecewiseJerkProblem::set_dx_bounds(
-    std::vector<std::pair<double, double>> dx_bounds) {
+    std::vector<std::pair<c_float, c_float>> dx_bounds) {
   CHECK_EQ(dx_bounds.size(), num_of_knots_);
   dx_bounds_ = std::move(dx_bounds);
 
@@ -356,15 +356,15 @@ void PiecewiseJerkProblem::set_dx_bounds(
 }
 
 void PiecewiseJerkProblem::set_ddx_bounds(
-    std::vector<std::pair<double, double>> ddx_bounds) {
+    std::vector<std::pair<c_float, c_float>> ddx_bounds) {
   CHECK_EQ(ddx_bounds.size(), num_of_knots_);
   ddx_bounds_ = std::move(ddx_bounds);
 
   return;
 }
 
-void PiecewiseJerkProblem::set_x_bounds(const double x_lower_bound,
-                                        const double x_upper_bound) {
+void PiecewiseJerkProblem::set_x_bounds(const c_float x_lower_bound,
+                                        const c_float x_upper_bound) {
   for (auto& x : x_bounds_) {
     x.first = x_lower_bound;
     x.second = x_upper_bound;
@@ -373,8 +373,8 @@ void PiecewiseJerkProblem::set_x_bounds(const double x_lower_bound,
   return;
 }
 
-void PiecewiseJerkProblem::set_dx_bounds(const double dx_lower_bound,
-                                         const double dx_upper_bound) {
+void PiecewiseJerkProblem::set_dx_bounds(const c_float dx_lower_bound,
+                                         const c_float dx_upper_bound) {
   for (auto& x : dx_bounds_) {
     x.first = dx_lower_bound;
     x.second = dx_upper_bound;
@@ -383,8 +383,8 @@ void PiecewiseJerkProblem::set_dx_bounds(const double dx_lower_bound,
   return;
 }
 
-void PiecewiseJerkProblem::set_ddx_bounds(const double ddx_lower_bound,
-                                          const double ddx_upper_bound) {
+void PiecewiseJerkProblem::set_ddx_bounds(const c_float ddx_lower_bound,
+                                          const c_float ddx_upper_bound) {
   for (auto& x : ddx_bounds_) {
     x.first = ddx_lower_bound;
     x.second = ddx_upper_bound;
@@ -393,8 +393,8 @@ void PiecewiseJerkProblem::set_ddx_bounds(const double ddx_lower_bound,
   return;
 }
 
-void PiecewiseJerkProblem::set_x_ref(const double weight_x_ref,
-                                     std::vector<double> x_ref) {
+void PiecewiseJerkProblem::set_x_ref(const c_float weight_x_ref,
+                                     std::vector<c_float> x_ref) {
   CHECK_EQ(x_ref.size(), num_of_knots_);
   weight_x_ref_ = weight_x_ref;
   x_ref_ = std::move(x_ref);
@@ -404,8 +404,8 @@ void PiecewiseJerkProblem::set_x_ref(const double weight_x_ref,
 }
 
 void PiecewiseJerkProblem::set_end_state_ref(
-    const std::array<double, 3>& weight_end_state,
-    const std::array<double, 3>& end_state_ref) {
+    const std::array<c_float, 3>& weight_end_state,
+    const std::array<c_float, 3>& end_state_ref) {
   weight_end_state_ = weight_end_state;
   end_state_ = end_state_ref;
   has_end_state_ref_ = true;
@@ -414,7 +414,7 @@ void PiecewiseJerkProblem::set_end_state_ref(
 }
 
 void PiecewiseJerkProblem::set_end_state_constriants(
-    const std::array<double, 3>& end_state_ref) {
+    const std::array<c_float, 3>& end_state_ref) {
   end_state_ = end_state_ref;
   has_end_state_constriants_ = true;
 

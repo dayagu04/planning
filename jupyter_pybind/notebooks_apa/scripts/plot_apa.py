@@ -16,7 +16,7 @@ from lib.load_common import *
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_81748/trigger/20250918/20250918-15-38-31/park_in_data_collection_CHERY_M32T_81748_EVENT_FILTER_2025-09-18-15-38-31_no_camera.bag.1758263906.default_open_loop.apa.plan.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52929/trigger/20250919/20250919-21-02-47/park_in_data_collection_CHERY_M32T_52929_EVENT_FILTER_2025-09-19-21-02-47_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -178,7 +178,7 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
   if bag_loader.soc_state_msg['enable'] == True:
     soc_state_msg = bag_loader.soc_state_msg['data'][index_map['soc_state_msg_idx']]
     # print("plan_msg = ", plan_msg.trajectory.trajectory_points)
-    # print("soc_state_msg = ", soc_state_msg.parking_req)
+    print("soc_state_msg = ", soc_state_msg.parking_req.apa_parking_direction)
 
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_json = bag_loader.plan_debug_msg['json'][index_map['plan_debug_msg_idx']]
@@ -310,6 +310,8 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
           'x': stop_sign_lines_x,
           'y': stop_sign_lines_y,
       })
+
+    print("total time", planning_proto.frame_info.frame_duration_ms)
 
     # try:
     #   for i in range(len(planning_proto.apa_path_debug.path_time.astar_time.search_time)):

@@ -6,8 +6,8 @@
 
 #include "task_basic_types.h"
 
-typedef long long c_int;
-typedef double c_float;
+// typedef long long c_int;
+// typedef double c_float;
 
 extern "C" {
 #include "math/piecewise_jerk/osqp_interface.h"

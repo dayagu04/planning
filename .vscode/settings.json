@@ -80,7 +80,8 @@
     "slist": "cpp",
     "codecvt": "cpp",
     "sparse": "cpp",
-    "core": "cpp"
+    "core": "cpp",
+    "dense": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "editor.quickSuggestions": {

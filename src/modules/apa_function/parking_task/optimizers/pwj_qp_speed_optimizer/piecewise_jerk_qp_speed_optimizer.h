@@ -43,17 +43,17 @@ class PiecewiseJerkSpeedQPOptimizer : public ParkingTask {
       const std::vector<std::pair<double, double>>& s_dot_bounds);
 
   void RecordDebugInfo(
-      const std::vector<double>& x_ref,
-      const std::vector<std::pair<double, double>>& s_dot_bounds);
+      const std::vector<c_float>& x_ref,
+      const std::vector<std::pair<c_float, c_float>>& s_dot_bounds);
 
   void ClearDebugInfo();
 
   // 限速不能超过制动能力
-  double ComputeFastBrakeProfile(const std::array<double, 3>& init,
-                                 const double time);
+  c_float ComputeFastBrakeProfile(const std::array<c_float, 3>& init,
+                                  const double time);
 
   void GenerateInitState(const SVPoint& init_point,
-                         std::array<double, 3>& init_state);
+                         std::array<c_float, 3>& init_state);
 
  private:
   PiecewiseJerkSpeedQPConfig qp_config_;
