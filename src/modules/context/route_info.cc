@@ -124,6 +124,13 @@ void RouteInfo::UpdateRouteInfoForNOA(
     std::cout << "update ego link info failed!!!" << std::endl;
     return;
   }
+
+  if (IsClosingIntersectionEntrance(
+          link, sdpro_map,
+          route_info_output_.current_segment_passed_distance)) {
+    route_info_output_.reset();
+    return;
+  }
   const iflymapdata::sdpro::LinkInfo_Link& current_link = *link;
   const auto& local_view = session_->environmental_model().get_local_view();
   const auto& sdpro_map_info = local_view.sdpro_map_info;
@@ -4061,6 +4068,63 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() const{
     }
   }
   return task_num;
+}
+
+//搜寻当前link上有没有REGULAR_INTERSECTION_ENTRANCE（普通路口进入点）
+bool RouteInfo::IsClosingIntersectionEntrance(
+    const iflymapdata::sdpro::LinkInfo_Link* link,
+    const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link) {
+  const iflymapdata::sdpro::LinkInfo_Link* current_link = link;
+  double search_distance = 0.0 - distance_on_link;
+  const double max_search_distance = 250.0;  // 搜索250米
+
+  while (current_link != nullptr) {
+    if (search_distance > max_search_distance) {
+      return false;
+    }
+
+    const double current_link_length =
+        static_cast<double>(current_link->length());
+
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+    for (const auto& fp : current_link->feature_points()) {
+      fp_vec.emplace_back(fp);
+    }
+
+    // 2、按照距离排序后，由近向远判断当前link上的fp是否有REGULAR_INTERSECTION_ENTRANCE
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+
+    const int fp_point_size = fp_vec.size();
+    for (int i = 0; i < fp_point_size; i++) {
+      const auto& fp_point = fp_vec[i];
+
+      const double distance_to_this_point =
+          search_distance +
+          current_link_length * fp_point.projection_percent() * 0.01;
+
+      if (distance_to_this_point > max_search_distance) {
+        return false;
+      } else if (distance_to_this_point < 0.0) {
+        // 说明当前fp点在自车之前，直接跳过
+        continue;
+      }
+
+      for (const auto fp_point_type : fp_point.type()) {
+        if (fp_point_type == iflymapdata::sdpro::FeaturePointType::
+                                 REGULAR_INTERSECTION_ENTRANCE) {
+          return true;
+        }
+      }
+    }
+    search_distance += current_link_length * 0.01;
+    current_link = sdpro_map.GetNextLinkOnRoute(current_link->id());
+  }
+
+  return false;
 }
 
 bool RouteInfo::IsTriggerContinueLCInPerceptionSplitRegion(
