@@ -552,7 +552,13 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
-    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    if (route_info_output.mlc_decider_route_info.is_process_merge) {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    } else {
+      ad_info.lane_change_reason =
+          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+    }
+    // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
 
   // update route info
