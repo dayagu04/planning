@@ -1133,7 +1133,7 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
     double planning_loop_dt = 0.1;
     double prediction_relative_time = 0.0;
     uint64 localizatoin_latency = 0.0;
-    if (planning_debug_info->has_simulation_core_param()) {
+    if (planning_debug_info->has_simulation_core_param() and planning_debug_info->simulation_core_param().planning_loop_dt() != 0) {
       planning_loop_dt = planning_debug_info->simulation_core_param().planning_loop_dt();
       prediction_relative_time = planning_debug_info->simulation_core_param().prediction_relative_time();
       localizatoin_latency = planning_debug_info->simulation_core_param().localizatoin_latency();
