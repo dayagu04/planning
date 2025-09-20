@@ -3,16 +3,13 @@ sys.path.append("..")
 sys.path.append("../lib/")
 # from lib.load_cyberbag import *
 from lib.load_local_view import *
-from bokeh.events import Tap
 from lib.load_ros_bag import LoadRosbag
 sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-# bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50815/trigger/20250812/20250812-13-34-29/data_collection_CHERY_M32T_50815_EVENT_DOWNGRADE_2025-08-12-13-34-29_no_camera.bag.1755071599.open-loop.noa.plan"
-# bag_path = "/data_cold/abu_zone/user/thzhang5/data_collection_CHERY_M32T_74566_EVENT_FUNEXIT_2025-08-22-16-37-00_no_camera.bag" # 超速不报警
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250913/20250913-18-55-52/data_collection_CHERY_M32T_74563_EVENT_FUNEXIT_2025-09-13-18-55-52_no_camera.bag.1758024992.open-loop.noa.plan" # 显示5
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/fcw_trigger/20250918/20250918-09-49-52/fcw_in_data_collection_CHERY_M32T_74572_EVENT_FILTER_2025-09-18-09-49-52_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -63,7 +60,7 @@ counter = 0
 # +
 tsr_json_value_list = [
                          #tsr debug info
-                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_", "current_map_speed_limit_", "current_map_speed_limit_valid_", "speed_limit_suppression_flag_",
+                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_", "tsr_speed_limit_", "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "speed_limit_suppression_flag_",
                          "end_of_speed_sign_display_flag_", "perception_speed_limit_valid_","tsr_warning_image_","tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_",
                          "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_",
                          "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_",
@@ -192,7 +189,7 @@ fig_path_info = bkp.figure(x_axis_label='time', y_axis_label='path info',x_range
 fig_path_info.yaxis.axis_label_text_font_style = 'bold'
 
 # 状态机
-f_machine = fig_machine.line('time', 'tsr_state_', source = tsr_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'tsr_state')
+f_machine = fig_machine.line('time', 'tsr_state_', source = tsr_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'tsr_state U,O,S,A,F')
 fig_machine.line('time', 'tsr_main_switch_', source = tsr_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'tsr_main_switch')
 fig_machine.line('time', 'tsr_enable_code_', source = tsr_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'tsr_enable_code')
 fig_machine.line('time', 'tsr_disable_code_', source = tsr_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tsr_disable_code')
@@ -202,6 +199,7 @@ fig_machine.line('time', 'tsr_fault_code_', source = tsr_json_list_dict, line_wi
 f_speed_info = fig_speed_info.line('time', 'state_dispaly_vehicle_speed', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'display_vehicle_speed')
 f_tsr_speed_limit = fig_speed_info.line('time', 'tsr_speed_limit_', source = tsr_json_list_dict, line_width = 2, line_color = 'red', line_dash = 'solid', legend_label = 'speed_limit')
 f_map_speed_limit = fig_speed_info.line('time', 'current_map_speed_limit_', source = tsr_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'current_map_speed_limit')
+f_map_type = fig_speed_info.line('time', 'current_map_type_', source = tsr_json_list_dict, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'map_type(0:none,1:sd,2:sdpro)')
 fig_speed_info.line('time', 'tsr_speed_limit_exist_in_view_', source = tsr_json_list_dict, line_width = 1, line_color = 'navy', line_dash = 'solid', legend_label = 'speed_limit_exist_in_view')
 
 # 车机显示信息
@@ -211,7 +209,7 @@ fig_display_info.line('time', 'tsr_warning_image_', source = tsr_json_list_dict,
 fig_display_info.line('time', 'tsr_warning_voice_', source = tsr_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'warning_voice')
 
 # 动态状态
-f_dynamic_state = fig_dynamic_state.line('time', 'perception_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'tsr_speed_limit_valid')
+f_dynamic_state = fig_dynamic_state.line('time', 'perception_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'perception_speed_limit_valid')
 fig_dynamic_state.line('time', 'current_map_speed_limit_valid_', source = tsr_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'current_map_speed_limit_valid')
 fig_dynamic_state.line('time', 'speed_limit_suppression_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'yellow', line_dash = 'solid', legend_label = 'speed_limit_suppression_flag')
 fig_dynamic_state.line('time', 'end_of_speed_sign_display_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'pink', line_dash = 'solid', legend_label = 'end_of_speed_sign_display_flag')
@@ -225,7 +223,7 @@ fig_path_info.line('time', 'tsr_overspeed_duration_time_', source = tsr_json_lis
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('tsr_state_', '@tsr_state_'),('tsr_main_switch_', '@tsr_main_switch_'), ('tsr_enable_code_', '@tsr_enable_code_'),
                                                        ('tsr_disable_code_', '@tsr_disable_code_'), ('tsr_fault_code_', '@tsr_fault_code_')], mode='vline')
 hover_speed_info_vehicle = HoverTool(renderers=[f_speed_info], tooltips=[('time', '@time'), ('state_dispaly_vehicle_speed', '@state_dispaly_vehicle_speed')], mode='vline')
-hover_speed_info_tsr = HoverTool(renderers=[f_tsr_speed_limit, f_map_speed_limit], tooltips=[('time', '@time'), ('tsr_speed_limit_', '@tsr_speed_limit_'), ('current_map_speed_limit_', '@current_map_speed_limit_'), ('tsr_speed_limit_exist_in_view_', '@tsr_speed_limit_exist_in_view_')], mode='vline')
+hover_speed_info_tsr = HoverTool(renderers=[f_tsr_speed_limit, f_map_speed_limit, f_map_type], tooltips=[('time', '@time'), ('tsr_speed_limit_', '@tsr_speed_limit_'), ('current_map_speed_limit_', '@current_map_speed_limit_'), ('current_map_type_', '@current_map_type_'), ('tsr_speed_limit_exist_in_view_', '@tsr_speed_limit_exist_in_view_')], mode='vline')
 hover_display_info = HoverTool(renderers=[f_display_info], tooltips=[('time', '@time'), ('tsr_output_supp_sign_info_', '@tsr_output_supp_sign_info_'),
                                                                      ('tsr_overspeed_status_', '@tsr_overspeed_status_'), ('tsr_warning_image_', '@tsr_warning_image_'),
                                                                      ('tsr_warning_voice_', '@tsr_warning_voice_')], mode='vline')

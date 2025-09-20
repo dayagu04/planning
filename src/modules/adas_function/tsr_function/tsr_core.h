@@ -78,6 +78,7 @@ class TsrCore {
   std::vector<adas_function::context::SpeedSignInfo> end_of_speed_sign_info_vector_;
 
   double current_map_speed_limit_ = 0.0;
+  uint16 current_map_type_ = 0;  // 地图类型: 0-无地图, 1-sd_map, 2-sd_pro_map
   void UpdateMapSpeedLimit(void);
   // 更新限速标识牌信息
   void UpdateTsrSpeedLimit(void);

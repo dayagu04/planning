@@ -42,7 +42,7 @@ struct IHCSysState {
   uint16 ihc_low_beam_code = 0;
   uint16 ihc_fault_code = 0;
   uint16 ihc_active_code = 0;  // IHC激活码: 0: 使能, 其他: 禁用
-  iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active
+  iflyauto::IHCFunctionFSMWorkState ihc_state;  // IHC功能状态 0:Unavailable 1:Off 2:Standby 3:Active 4:Fault
   bool ihc_request_status;  // IHC请求状态 0:No Request 1:Request
   bool ihc_request;         // IHC请求 0:LowBeam 1:HighBeam
 

@@ -699,7 +699,7 @@ class LoadRosbag:
                          "elk_left_has_risk","elk_right_has_risk","elk_fl_risk_code","elk_ml_risk_code","elk_rl_risk_code","elk_fr_risk_code","elk_mr_risk_code","elk_rr_risk_code",
                          "left_has_risk_code","right_has_risk_code","elk_obj_fl_tlc_","elk_obj_ml_tlc_","elk_obj_rl_tlc_","elk_obj_fr_tlc_","elk_obj_mr_tlc_","elk_obj_rr_tlc_",
                          #tsr debug info
-                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_speed_limit_","current_map_speed_limit_", "current_map_speed_limit_valid_", "perception_speed_limit_valid_","tsr_warning_image_",
+                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_speed_limit_","current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "perception_speed_limit_valid_","tsr_warning_image_",
                          "tsr_warning_voice_","tsr_overspeed_status_","tsr_overspeed_duration_time_","tsr_state_",
                          "tsr_speed_limit_change_flag_","tsr_speed_limit_exist_in_view_flag_","tsr_speed_limit_exist_in_view_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_",
                          "speed_limit_suppression_flag_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_display_flag_",
