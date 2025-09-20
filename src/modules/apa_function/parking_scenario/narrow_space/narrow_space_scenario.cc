@@ -758,8 +758,12 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
                                          path_pt.phi, path_pt.kappa);
     point.s = path_pt.accumulated_s;
     point.gear = GetGear(path_pt.gear);
+    const bool is_stright =
+        (GetDirection() == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+         GetDirection() == ParkingVehDirection::TAIL_OUT_TO_MIDDLE);
 
-    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus()) {
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
+        !is_stright) {
       const float heading_error = fabs(target_heading_rad - point.heading);
       if (heading_error >= kHeadingDiffThresh) {
         local_path.emplace_back(point);
