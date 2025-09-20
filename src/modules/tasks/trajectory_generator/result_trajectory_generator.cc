@@ -448,7 +448,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_LEFT;
           ad_info.lane_change_status =
-              iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
           ad_info.lane_change_reason =
               iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
@@ -456,7 +456,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
           ad_info.lane_change_status =
-              iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+              iflyauto::LaneChangeStatus::LC_STATE_STARTING;
           ad_info.lane_change_reason =
               iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         }
