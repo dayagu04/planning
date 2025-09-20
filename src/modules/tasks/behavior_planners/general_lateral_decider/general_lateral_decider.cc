@@ -1296,6 +1296,7 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   }
 
   const double kDefaultDistanceToRoad = 10.0;
+  // const double kMaxTime = 3.5;
   min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   soft_bounds_.resize(ref_traj_points_.size());
@@ -1315,9 +1316,9 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
-    if (map_obstacle_decision.tp.s -
+    if ((map_obstacle_decision.tp.s -
             ego_frenet_state_.planning_init_point().frenet_state.s <
-        config_.care_lon_area_road_border) {
+        config_.care_lon_area_road_border) && map_obstacle_decision.tp.t < config_.max_care_time_for_roadborder) {
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
