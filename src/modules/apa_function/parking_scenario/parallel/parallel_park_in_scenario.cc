@@ -59,6 +59,7 @@ static double kEnterMultiPlanSlotRatio = 0.1;
 static double kEps = 1e-5;
 static double kFrontShortChannelMin = 0.5;
 static double kFrontShortChannelMax = 7.5;
+static double kWidthCurbOffset = 0.4;
 
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
@@ -102,6 +103,77 @@ bool ParallelParkInScenario::CheckReplanParallel() {
   return false;
 }
 
+void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild() {
+  ILOG_INFO << "Enter CheckEgoPoseWhenPlanFaild!";
+
+  const EgoInfoUnderSlot& ego_slot_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double finish_parallel_heading = 10.0;
+  const bool heading_condition =
+      std::fabs(ego_slot_info.terminal_err.heading) <=
+      finish_parallel_heading * kDeg2Rad;
+
+  ILOG_INFO << "terminal heading error = "
+            << ego_slot_info.terminal_err.heading * kRad2Deg;
+  ILOG_INFO << "heading_condition = " << heading_condition;
+
+  ILOG_INFO << "lat error = " << ego_slot_info.terminal_err.pos.y();
+  const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
+                               apa_param.GetParam().finish_parallel_lat_rac_err;
+
+  // lat condition 2, keep both outer wheels in slot
+  const double side_sgn =
+      t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT ? 1.0 : -1.0;
+
+  pnc::geometry_lib::LocalToGlobalTf ego2slot;
+  ego2slot.Init(ego_slot_info.cur_pose.pos, ego_slot_info.cur_pose.heading);
+
+  const auto& front_out_wheel = ego2slot.GetPos(
+      Eigen::Vector2d(apa_param.GetParam().wheel_base,
+                      0.5 * apa_param.GetParam().car_width * side_sgn));
+
+  const auto& rear_out_wheel = ego2slot.GetPos(
+      Eigen::Vector2d(0.0, 0.5 * apa_param.GetParam().car_width * side_sgn));
+
+  const double slot_outer_pt_y =
+      0.5 * ego_slot_info.slot.slot_width_ * side_sgn;
+  bool lat_condition_2 = false;
+  if (side_sgn > 0.0) {
+    const double wheel_limit_y =
+        slot_outer_pt_y - apa_param.GetParam().finish_parallel_lat_err;
+    lat_condition_2 = (rear_out_wheel.y() <= wheel_limit_y) &&
+                      (front_out_wheel.y() <= wheel_limit_y);
+  } else {
+    const double wheel_limit_y =
+        slot_outer_pt_y + apa_param.GetParam().finish_parallel_lat_err;
+    lat_condition_2 = (rear_out_wheel.y() >= wheel_limit_y) &&
+                      (front_out_wheel.y() >= wheel_limit_y);
+  }
+  const bool lat_condition = lat_condition_1 || lat_condition_2;
+
+  ILOG_INFO << "terminal y error = " << ego_slot_info.terminal_err.pos.y();
+  ILOG_INFO << "lat condition  = " << lat_condition;
+  if (lat_condition) {
+    if (lat_condition_1) {
+      ILOG_INFO << "lat y err = " << ego_slot_info.terminal_err.pos.y() << " < "
+                << apa_param.GetParam().finish_parallel_lat_rac_err;
+    } else {
+      ILOG_INFO << "ego outer wheel are both in slot!";
+    }
+  }
+
+  if (lat_condition && heading_condition) {
+    ILOG_INFO << "parallel parking finish!";
+    SetParkingStatus(PARKING_FINISHED);
+  } else {
+    ILOG_INFO << "parallel parking failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+  }
+  return;
+}
+
 void ParallelParkInScenario::ExcutePathPlanningTask() {
   ILOG_INFO << "Enter parallel parking planner!-----------------------";
   // init simulation
@@ -128,6 +200,13 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     return;
   }
 
+  // generate t-lane
+  if (!GenTlane()) {
+    SetParkingStatus(PARKING_FAILED);
+    ILOG_INFO << "GenTlane failed!";
+    frame_.plan_fail_reason = NO_TARGET_POSE;
+    return;
+  }
 
   // check finish
   if (CheckFinished()) {
@@ -161,13 +240,6 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   ILOG_INFO << "replan is required!";
-  // generate t-lane
-  if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    ILOG_INFO << "GenTlane failed!";
-    frame_.plan_fail_reason = NO_TARGET_POSE;
-    return;
-  }
   previous_output_path_.Reset();
   previous_output_path_ = parallel_path_planner_.GetOutput();
 
@@ -183,8 +255,9 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_GEARCHANGE);
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      // SetParkingStatus(PARKING_FAILED);
+      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenPlanFaild();
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -192,13 +265,15 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_PLANNING);
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      // SetParkingStatus(PARKING_FAILED);
+      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenPlanFaild();
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    // SetParkingStatus(PARKING_FAILED);
+    // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    CheckEgoPoseWhenPlanFaild();
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
@@ -944,11 +1019,16 @@ const bool ParallelParkInScenario::GenTlane() {
             << " target_y_with_curb = " << target_y_with_curb;
 
   if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
+    bool is_width_curb =
+        -side_sgn * curb_y_limit > (half_slot_width + kWidthCurbOffset) ? true
+                                                                        : false;
+    const double terminal_parallel_y_offset =
+        is_width_curb ? 0.0 : apa_param.GetParam().terminal_parallel_y_offset;
     ego_info_under_slot.target_pose.pos.y() =
         (side_sgn > 0.0
-            ? std::max(-apa_param.GetParam().terminal_parallel_y_offset,
+            ? std::max(-terminal_parallel_y_offset,
                         target_y_with_curb)
-            : std::min(apa_param.GetParam().terminal_parallel_y_offset,
+            : std::min(terminal_parallel_y_offset,
                         target_y_with_curb));
   } else {
     ego_info_under_slot.target_pose.pos.y() = 0.0;

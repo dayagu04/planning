@@ -53,6 +53,7 @@ class ParallelParkInScenario : public ParkingScenario {
 
   bool CheckReplanParallel();
   const GeometryPathOutput& SuitablePathReplan();
+  void CheckEgoPoseWhenPlanFaild();
 
   Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
