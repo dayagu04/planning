@@ -23,7 +23,7 @@ else()
   message("UNENABLE_IFLYTEK_LOG_SRC_CMAKE")
 endif()
 
-set(MDC_AP_LOG_FLAG True)
+set(MDC_AP_LOG_FLAG False)
 if (PLATFORM STREQUAL "X86")
   add_definitions(-DIFLY_GLOG_PATH)
   message("cyber config")

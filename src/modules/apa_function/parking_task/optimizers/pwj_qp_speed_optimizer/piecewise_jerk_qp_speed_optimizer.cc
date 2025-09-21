@@ -139,6 +139,8 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     delta_time_ = total_time / num_of_knots_;
   }
 
+  ILOG_INFO << "num_of_knots_ = " << num_of_knots_;
+
   // model
   // f = 1/2 * x^T * H * x + Q * x
   // Ax<=U
