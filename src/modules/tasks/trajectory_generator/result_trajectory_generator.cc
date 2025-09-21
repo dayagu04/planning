@@ -114,8 +114,7 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
       traj_points[i].y = cart_pt.y;
 
       ILOG_DEBUG << "result traj_point s=" << traj_points[i].s
-                 << ", l=" << traj_points[i].l
-                 << ", x=" << traj_points[i].x
+                 << ", l=" << traj_points[i].l << ", x=" << traj_points[i].x
                  << ", y=" << traj_points[i].y;
     }
     t_vec_[i] = traj_points[i].t;
@@ -153,18 +152,14 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   ddkappa_t_spline.set_points(t_vec_, ddkappa_vec_);
   double lat_jerk_thr = config_.lat_jerk_thr;
   const bool &ramp_scene =
-    session_->planning_context()
-            .general_lateral_decider_output()
-            .ramp_scene;
+      session_->planning_context().general_lateral_decider_output().ramp_scene;
   if (ramp_scene) {
     lat_jerk_thr = config_.ramp_lat_jerk_thr;
   }
-
   // judge condition
-  auto &ad_info =
-      session_->mutable_planning_context()
-              ->mutable_planning_hmi_info()
-              ->ad_info;
+  auto &ad_info = session_->mutable_planning_context()
+                      ->mutable_planning_hmi_info()
+                      ->ad_info;
   if ((traj_max_lat_acc > config_.lat_acc_thr) ||
       (traj_max_lat_jerk > lat_jerk_thr) ||
       (traj_max_lon_acc > config_.lon_acc_thr) ||
@@ -390,7 +385,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                       ->ad_info;
   const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  //ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
+  // ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
   ad_info.lane_change_direction =
       (iflyauto::LaneChangeDirection)lane_change_decider_output.lc_request;
   // update LaneChangeStatus
@@ -399,12 +394,13 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                                     .lane_change_decider_output()
                                     .coarse_planning_info.source_state;
   static double lc_complete_to_lk_time = 0.0;
+  const auto dir_turn_signal_road_to_ramp =
+      lane_change_decider_output.dir_turn_signal_road_to_ramp;
   if (curr_state == kLaneKeeping) {
     if (lasr_frame_state == kLaneChangeComplete) {
       lc_complete_to_lk_time = IflyTime::Now_ms();
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
-      lc_state_complete_frame_nums_ = 1;
     } else {
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
@@ -425,25 +421,30 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
       } else {
         // for NOA turn signal road to ramp
         // 自车在滑入匝道时，需要更新ad_info.lane_change_reason，已供hmi模块使用
-        const auto dir_turn_signal_road_to_ramp =
-            lane_change_decider_output.dir_turn_signal_road_to_ramp;
+
         if (dir_turn_signal_road_to_ramp == RAMP_NONE) {
           if (last_frame_dir_turn_signal_road_to_ramp_ != RAMP_NONE) {
             ad_info.lane_change_status =
                 iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+            ad_info.lane_change_reason =
+                iflyauto::LaneChangeReason::LC_REASON_SPLIT;
             lc_state_complete_frame_nums_ = 1;
-          } else {
-            // 需要给hmi模块连续发3s的complete状态
-            if (lc_state_complete_frame_nums_ <= 30) {
-              ad_info.lane_change_status =
-                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
-              lc_state_complete_frame_nums_++;
-            } else {
-              ad_info.lane_change_status =
-                  iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-            }
           }
+          // 需要给hmi模块连续发3s的complete状态
+          if (lc_state_complete_frame_nums_ <= 30) {
+            ad_info.lane_change_status =
+                iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+            ad_info.lane_change_reason =
+                iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+            lc_state_complete_frame_nums_++;
+          } else {
+            ad_info.lane_change_status =
+                iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+            lc_state_complete_frame_nums_ = 31;
+          }
+
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_LEFT) {
+          lc_state_complete_frame_nums_ = 31;
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_LEFT;
           ad_info.lane_change_status =
@@ -451,6 +452,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_reason =
               iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         } else if (dir_turn_signal_road_to_ramp == RAMP_ON_RIGHT) {
+          lc_state_complete_frame_nums_ = 31;
           ad_info.lane_change_direction =
               iflyauto::LaneChangeDirection::LC_DIR_RIGHT;
           ad_info.lane_change_status =
@@ -458,7 +460,6 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
           ad_info.lane_change_reason =
               iflyauto::LaneChangeReason::LC_REASON_SPLIT;
         }
-        last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;
       }
     }
   } else if (curr_state == kLaneChangePropose) {
@@ -470,6 +471,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   } else if (curr_state == kLaneChangeCancel || curr_state == kLaneChangeHold) {
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_CANCELLED;
   }
+  last_frame_dir_turn_signal_road_to_ramp_ = dir_turn_signal_road_to_ramp;
 
   // update StatusUpdateReason
   const auto int_request_cancel_reason =
@@ -484,7 +486,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
     ad_info.lane_change_direction =
         (iflyauto::LaneChangeDirection)
-            lane_change_decider_output.ilc_virtual_req;
+            lane_change_decider_output.lc_request;  // LC_DIR_LEFT/RIGHT
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
   } else if (int_request_cancel_reason == MANUAL_CANCEL) {
     ad_info.status_update_reason =
@@ -500,24 +502,31 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
     ad_info.obstacle_info_size = 1;
-  } else if (lc_back_reason == "dash line length not satisfy") {
+  } else if (lc_back_reason == "dash line length not satisfy" ||
+             lane_change_decider_output.lc_invalid_reason ==
+                 "dash not enough") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (lane_change_decider_output.lc_invalid_reason ==
+             "propose time out") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
   }
 
   // update LaneChangeReason
-  const double dis_to_merge = route_info_output.merge_region_info_list.empty()
-                            ? NL_NMAX
-                            : route_info_output.merge_region_info_list[0]
-                                  .distance_to_split_point;
-  const double dis_to_split = route_info_output.split_region_info_list.empty()
-                            ? NL_NMAX
-                            : route_info_output.split_region_info_list[0]
-                                  .distance_to_split_point;
+  const double dis_to_merge =
+      route_info_output.merge_region_info_list.empty()
+          ? NL_NMAX
+          : route_info_output.merge_region_info_list[0].distance_to_split_point;
+  const double dis_to_split =
+      route_info_output.split_region_info_list.empty()
+          ? NL_NMAX
+          : route_info_output.split_region_info_list[0].distance_to_split_point;
   const auto lc_request_source = lane_change_decider_output.lc_request_source;
+
   if (lc_request_source == NO_REQUEST &&
       lane_change_decider_output.dir_turn_signal_road_to_ramp == RAMP_NONE) {
     ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_NONE;
@@ -527,18 +536,31 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     ad_info.lane_change_reason =
         iflyauto::LaneChangeReason::LC_REASON_SLOWING_VEH;
   } else if (lc_request_source == MAP_REQUEST) {
-    if (route_info_output.dis_to_ramp < 100.0 &&
-        route_info_output.dis_to_ramp < dis_to_merge) {
-      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
-    } else if (route_info_output.mlc_decider_route_info.is_process_merge) {
+    const double dis_to_merge =
+        route_info_output.merge_region_info_list.empty()
+            ? NL_NMAX
+            : route_info_output.merge_region_info_list[0]
+                  .distance_to_split_point;
+    // if (route_info_output.dis_to_ramp < 100.0 &&
+    //     route_info_output.dis_to_ramp < dis_to_merge) {
+    //   ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    // } else
+    if (route_info_output.mlc_decider_route_info.is_process_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
     } else {
       ad_info.lane_change_reason =
           iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
     }
   } else if (lc_request_source == MERGE_REQUEST) {
-    ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    if (route_info_output.mlc_decider_route_info.is_process_merge) {
+      ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
+    } else {
+      ad_info.lane_change_reason =
+          iflyauto::LaneChangeReason::LC_REASON_NAVIGATION;
+    }
+    // ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;
   }
+
   // update route info
   if (!route_info_output.is_on_ramp) {
     ad_info.distance_to_ramp = route_info_output.dis_to_ramp;
@@ -653,7 +675,7 @@ iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
   auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   double ego_v = std::fmax(1.0, ego_state_manager->ego_v_cruise() * 0.2);
-  double l_min = 0.15;
+  double l_min = 0.08;
   if (is_lane_keeping) {
     target_reference = session_->environmental_model()
                            .get_reference_path_manager()
