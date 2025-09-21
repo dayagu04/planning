@@ -97,7 +97,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     return;
   }
 
-  double opt_start_time = IflyTime::Now_ms();
+  double opt_start_time = IflyTime::Now_us();
   ILOG_INFO << "speed qp optimizer";
 
   std::array<c_float, 3> init_state;
@@ -275,7 +275,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   RecordDebugInfo(x_ref, ds_bounds);
   state_ = TaskExcuteState::SUCCESS;
 
-  double opt_time_ms = IflyTime::Now_ms() - opt_start_time;
+  double opt_time_ms = (IflyTime::Now_us() - opt_start_time) / 1000.0;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_QP_TIME,
                                     opt_time_ms);
 

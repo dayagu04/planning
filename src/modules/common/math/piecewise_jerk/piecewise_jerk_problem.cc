@@ -55,22 +55,31 @@ void PiecewiseJerkProblem::Init(const size_t num_of_knots,
 
 OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   // calculate kernel
-  std::vector<c_float> P_data;
-  std::vector<c_int> P_indices;
-  std::vector<c_int> P_indptr;
+  static std::vector<c_float> P_data;
+  static std::vector<c_int> P_indices;
+  static std::vector<c_int> P_indptr;
+  P_data.clear();
+  P_indices.clear();
+  P_indptr.clear();
   CalculateKernel(&P_data, &P_indices, &P_indptr);
 
   // calculate affine constraints
-  std::vector<c_float> A_data;
-  std::vector<c_int> A_indices;
-  std::vector<c_int> A_indptr;
-  std::vector<c_float> lower_bounds;
-  std::vector<c_float> upper_bounds;
+  static std::vector<c_float> A_data;
+  static std::vector<c_int> A_indices;
+  static std::vector<c_int> A_indptr;
+  A_data.clear();
+  A_indices.clear();
+  A_indptr.clear();
+  static std::vector<c_float> lower_bounds;
+  static std::vector<c_float> upper_bounds;
+  lower_bounds.clear();
+  upper_bounds.clear();
   CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, &lower_bounds,
                             &upper_bounds);
 
   // calculate offset
-  std::vector<c_float> q;
+  static std::vector<c_float> q;
+  q.clear();
   CalculateOffset(&q);
 
   OSQPData* data = reinterpret_cast<OSQPData*>(c_malloc(sizeof(OSQPData)));
@@ -98,8 +107,8 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
 
   OSQPSettings* settings = SolverDefaultSettings();
   settings->max_iter = max_iter;
-  settings->eps_abs = 1e-5;
-  settings->eps_rel = 1e-5;
+  settings->eps_abs = 1e-3;
+  settings->eps_rel = 1e-3;
   // settings->eps_dual_inf = 1e-3;
   // settings->eps_prim_inf = 1e-3;
   // second
@@ -309,21 +318,24 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
 
   CHECK_EQ(constraint_index, num_of_constraints);
 
+  A_data->reserve(num_of_variables * 5);
+  A_indices->reserve(num_of_variables * 5);
+  A_indptr->reserve(num_of_variables + 1);
   int ind_p = 0;
   for (int i = 0; i < num_of_variables; ++i) {
-    A_indptr->push_back(ind_p);
+    A_indptr->emplace_back(ind_p);
     for (const auto& variable_nz : variables[i]) {
       // coefficient
-      A_data->push_back(variable_nz.second);
+      A_data->emplace_back(variable_nz.second);
 
       // constraint index
-      A_indices->push_back(variable_nz.first);
+      A_indices->emplace_back(variable_nz.first);
       ++ind_p;
     }
   }
   // We indeed need this line because of
   // https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
-  A_indptr->push_back(ind_p);
+  A_indptr->emplace_back(ind_p);
 
   return;
 }
