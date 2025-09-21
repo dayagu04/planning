@@ -184,9 +184,10 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   lower_bounds->resize(num_of_constraints);
   upper_bounds->resize(num_of_constraints);
 
-  // variables: record A matrix
+  // variables: record A matrix columns
   std::vector<std::vector<std::pair<c_int, c_float>>> variables(
       num_of_variables);
+  int csc_matrix_valid_num = 0;
 
   int constraint_index = 0;
   // set x, x', x'' bounds
@@ -216,6 +217,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
           ddx_bounds_[i - 2 * n].second * scale_factor_[2];
     }
     ++constraint_index;
+    csc_matrix_valid_num++;
   }
   CHECK_EQ(constraint_index, num_of_variables);
 
@@ -230,6 +232,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     upper_bounds->at(constraint_index) =
         dddx_bound_.second * delta_s_ * scale_factor_[2];
     ++constraint_index;
+    csc_matrix_valid_num += 2;
   }
 
   // continuous constraints
@@ -245,6 +248,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     lower_bounds->at(constraint_index) = 0.0;
     upper_bounds->at(constraint_index) = 0.0;
     ++constraint_index;
+    csc_matrix_valid_num += 4;
   }
 
   // continous constraints
@@ -268,6 +272,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     lower_bounds->at(constraint_index) = 0.0;
     upper_bounds->at(constraint_index) = 0.0;
     ++constraint_index;
+    csc_matrix_valid_num += 5;
   }
 
   // constrain on x_init
@@ -275,11 +280,13 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   lower_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
   upper_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
   ++constraint_index;
+  csc_matrix_valid_num++;
 
   variables[n].emplace_back(constraint_index, 1.0);
   lower_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
   upper_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
   ++constraint_index;
+  csc_matrix_valid_num++;
 
   c_float ddx_slack_bound = 0.08;
   variables[2 * n].emplace_back(constraint_index, 1.0);
@@ -288,6 +295,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   upper_bounds->at(constraint_index) =
       x_init_[2] * scale_factor_[2] + ddx_slack_bound;
   ++constraint_index;
+  csc_matrix_valid_num++;
 
   // constraints on end state
   if (has_end_state_constriants_) {
@@ -314,12 +322,13 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
     upper_bounds->at(constraint_index) =
         end_state_[2] * scale_factor_[2] + ddx_slack_bound;
     ++constraint_index;
+    csc_matrix_valid_num += 3;
   }
 
   CHECK_EQ(constraint_index, num_of_constraints);
 
-  A_data->reserve(num_of_variables * 5);
-  A_indices->reserve(num_of_variables * 5);
+  A_data->reserve(csc_matrix_valid_num);
+  A_indices->reserve(csc_matrix_valid_num);
   A_indptr->reserve(num_of_variables + 1);
   int ind_p = 0;
   for (int i = 0; i < num_of_variables; ++i) {
