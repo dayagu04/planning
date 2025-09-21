@@ -496,7 +496,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
-  if (trigger_left_overtake  && current_time - tfinish_ >= 3.0) {
+  if (trigger_left_overtake  && current_time - tfinish_ >= 3.0 && (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
     if (request_type_ != LEFT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
@@ -522,7 +522,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       overtake_vehicle_speed_ = leading_vehicle_speed;
       ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
-  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres && current_time - tfinish_ >= 3.0) {
+  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres && current_time - tfinish_ >= 3.0 &&
+      (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake)) {
     if (request_type_ != RIGHT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
@@ -552,10 +553,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
               lane_change_lane_mgr_->is_ego_on(olane))) {
     if (request_type_ == LEFT_CHANGE) {
       if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent, true)) {
+        last_request_type_ = request_type_;
         return;
       }
     } else if (request_type_ == RIGHT_CHANGE) {
       if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent, false)) {
+        last_request_type_ = request_type_;
         return;
       }
     }
@@ -563,6 +566,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     set_target_lane_virtual_id(current_lane_virtual_id);
     ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, !trigger_left_overtake and !trigger_right_overtake";
   }
+  last_request_type_ = request_type_;
+  return;
 }
 
 bool OvertakeRequest::isSatisfyOvertakeCountUpdateCondition(
@@ -1877,6 +1882,7 @@ void OvertakeRequest::Reset() {
   overtake_vehicle_speed_ = 0.0;
   overtake_count_ = 0;
   target_lane_exist_slow_front_veh_frame_num_ = 0;
+  last_request_type_ = NO_CHANGE;
   leading_speed_filter_.Reset();
   left_traffic_speed_filter_.Reset();
   right_traffic_speed_filter_.Reset();
