@@ -256,7 +256,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       ego_lane_road_right_decider_output.cur_lane_is_continue;
   use_map_is_merge_situation_ = false;
 
-  merge_lane_change_direction_ = NO_CHANGE;
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
   bool target_left_boundary_exist_virtual_type = false;
@@ -307,7 +306,10 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         return;
       }
     }
+  } else {
+    merge_lane_change_direction_ = NO_CHANGE;
   }
+
   if (base_lane != nullptr) {
     double left_lane_line_length = 0.0;
     int left_current_segment_count = 0;
