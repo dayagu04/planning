@@ -4078,6 +4078,8 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
              "thw_target_low_value_lane_change");
     ReadItem<double>(json, thw_low_rate_lane_change_to_lane_keep, "speed_planning", "agent_headway_decider",
              "thw_low_rate_lane_change_to_lane_keep");
+    ReadItem<double>(json, thw_scale_up_factor, "speed_planning", "agent_headway_decider",
+             "thw_scale_up_factor");
   }
   double plan_time = 5.0;
   double dt = 0.2;
@@ -4126,6 +4128,7 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double large_vehicle_min_follow_distance_gap = 4.5;
   double cone_min_follow_distance_gap = 4.5;
   double traffic_light_min_follow_distance_gap = 2.0;
+  double thw_scale_up_factor = 1.2;
 };
 
 struct StartStopDeciderConfig : public EgoPlanningConfig {

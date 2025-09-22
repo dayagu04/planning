@@ -196,6 +196,12 @@ void EgoStateManager::set_time_headway_level(
       std::round(vehicle_status.time_headway_level().value_num());
 }
 
+void EgoStateManager::set_has_time_headway_scale_up_request(
+    const planning::common::VehicleStatus &vehicle_status) {
+  has_time_headway_scale_up_request_ =
+      vehicle_status.has_time_headway_scale_up_request();
+}
+
 void EgoStateManager::update_transform() {
   Eigen::Vector4d q;
   q.x() = location_enu_.orientation.x;
@@ -237,6 +243,7 @@ bool EgoStateManager::update(
   set_ego_gear(vehicle_status);
   set_ego_jerk();
   set_time_headway_level(vehicle_status);
+  set_has_time_headway_scale_up_request(vehicle_status);
   const auto &planning_result = session_->planning_context().planning_result();
   const auto &last_planning_result =
       session_->planning_context().last_planning_result();
@@ -266,11 +273,9 @@ bool EgoStateManager::update(
         (ego_yaw_rate_ * vehicle_param.wheel_base) / ego_v_;
     std::vector<double> xp_ego_vel{1.0, 2.778};
     std::vector<double> fp_delta_coeff{0.0, 1.0};
-    double delta_coeff =
-        planning::interp(ego_v_, xp_ego_vel, fp_delta_coeff);
+    double delta_coeff = planning::interp(ego_v_, xp_ego_vel, fp_delta_coeff);
     ego_delta_ =
-        delta_coeff * ego_yaw_rate_to_delta +
-        (1.0 - delta_coeff) * ego_delta_;
+        delta_coeff * ego_yaw_rate_to_delta + (1.0 - delta_coeff) * ego_delta_;
   }
   JSON_DEBUG_VALUE("ego_delta", ego_delta_);
   planning_math::Vec2d center(
@@ -281,7 +286,8 @@ bool EgoStateManager::update(
   planning_math::Box2d ego_box(center, ego_pose_.theta, vehicle_param.length,
                                vehicle_param.width);
   polygon_ = planning_math::Polygon2d(ego_box);
-  ILOG_DEBUG << "ego center's x: [" << center.x() << "], y: [" << center.y() << "]";
+  ILOG_DEBUG << "ego center's x: [" << center.x() << "], y: [" << center.y()
+             << "]";
 
   update_transform();
 
