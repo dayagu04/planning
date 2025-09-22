@@ -31,6 +31,7 @@ constexpr double kLowSpeedIgnreAgentSpeedThrMps = 0.8;
 constexpr double kStaticAgentSpeedThrMps = 0.2;
 constexpr double kVRUHeadingRelieveJerkMinThreshold = 45 / 57.3;
 constexpr double kVRUHeadingRelieveJerkMaxThreshold = 135 / 57.3;
+constexpr double kPerceptionLaneRangeM = 120.0;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -1329,16 +1330,32 @@ bool StGraphUtils::LinearExtendTrajectory(
 // If agent's trajectory point is out of ddlane,then ignore the lateral buffer.
 double StGraphUtils::AdjustLateralBufferByT(
     const trajectory::TrajectoryPoint& agent_point, const double default_buffer,
-    const std::shared_ptr<VirtualLane>& ptr_agent_lane) {
+    const std::shared_ptr<VirtualLane>& ptr_agent_lane,
+    const std::shared_ptr<planning_math::KDPath>& planned_kd_path) {
   if (nullptr == ptr_agent_lane) {
     return default_buffer;
   }
   const auto agent_lane_coord = ptr_agent_lane->get_lane_frenet_coord();
   double s = 0.0;
   double l = 0.0;
-  agent_lane_coord->XYToSL(agent_point.x(), agent_point.y(), &s, &l);
-  const bool is_in_lane_range = s > 0.0 && s < agent_lane_coord->Length();
-  return is_in_lane_range ? default_buffer : 0.0;
+  if (!agent_lane_coord->XYToSL(agent_point.x(), agent_point.y(), &s, &l)) {
+    return default_buffer;
+  }
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!agent_lane_coord->XYToSL(agent_point.x(), agent_point.y(), &ego_s,
+                                &ego_l)) {
+    return default_buffer;
+  }
+  const double lateral_path_length = planned_kd_path->Length();
+  const double lane_range_length =
+      std::fmin(kPerceptionLaneRangeM + ego_s, lateral_path_length);
+  const bool is_in_lane_range =
+      s > 0.0 && s < std::fmin(lane_range_length, agent_lane_coord->Length());
+  if (is_in_lane_range) {
+    return default_buffer;
+  }
+  return 0.0;
 }
 
 bool IsNeighborAgentNearBoundary(
