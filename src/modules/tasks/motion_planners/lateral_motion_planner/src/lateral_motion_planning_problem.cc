@@ -37,6 +37,8 @@ void LateralMotionPlanningProblem::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<ContinuityCostTerm>());  // continuity cost
   ilqr_core_ptr_->AddCost(
+      std::make_shared<VirtualReferenceCostTerm>());  // virtual reference cost
+  ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccCostTerm>());  // lateral acc cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatJerkCostTerm>());  // lateral jerk cost
@@ -68,10 +70,14 @@ void LateralMotionPlanningProblem::Init() {
 }
 
 uint8_t LateralMotionPlanningProblem::Update(
-    const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
-    const double end_ratio_for_qjerk, const double concerned_start_q_jerk,
-    const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
-        &planning_weight,
+    const double end_ratio_for_qxy,
+    const double end_ratio_for_qtheta,
+    const double end_ratio_for_qjerk,
+    const double concerned_start_q_jerk,
+    const std::vector<double>& virtual_ref_x,
+    const std::vector<double>& virtual_ref_y,
+    const std::vector<double>& virtual_ref_theta,
+    const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
     planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
@@ -82,6 +88,10 @@ uint8_t LateralMotionPlanningProblem::Update(
   const double ref_vel = planning_input.ref_vel();
   const double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
 
+  bool is_virtual_empty =
+      virtual_ref_x.size() != N ||
+      virtual_ref_y.size() != N ||
+      virtual_ref_theta.size() != N;
   for (size_t i = 0; i < N; ++i) {
     double expected_delta = path_weights.expected_acc[i] / kv2;
     // calculate delta_bound and omega_bound
@@ -99,6 +109,16 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[CONTINUITY_X] = planning_input.last_x_vec(i);
     cost_config_vec.at(i)[CONTINUITY_Y] = planning_input.last_y_vec(i);
     cost_config_vec.at(i)[CONTINUITY_THETA] = planning_input.last_theta_vec(i);
+
+    if (is_virtual_empty) {
+      cost_config_vec.at(i)[VIRTUAL_REF_X] = planning_input.ref_x_vec(i);
+      cost_config_vec.at(i)[VIRTUAL_REF_Y] = planning_input.ref_y_vec(i);
+      cost_config_vec.at(i)[VIRTUAL_REF_THETA] = planning_input.ref_theta_vec(i);
+    } else {
+      cost_config_vec.at(i)[VIRTUAL_REF_X] = virtual_ref_x[i];
+      cost_config_vec.at(i)[VIRTUAL_REF_Y] = virtual_ref_y[i];
+      cost_config_vec.at(i)[VIRTUAL_REF_THETA] = virtual_ref_theta[i];
+    }
 
     cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
 
@@ -147,8 +167,17 @@ uint8_t LateralMotionPlanningProblem::Update(
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
-
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
+
+    if (is_virtual_empty) {
+      cost_config_vec.at(i)[W_VIRTUAL_REF_X] = 0.0;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = 0.0;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_THETA] = 0.0;
+    } else {
+      cost_config_vec.at(i)[W_VIRTUAL_REF_X] = path_weights.q_virtual_ref_x[i];
+      cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = path_weights.q_virtual_ref_y[i];
+      cost_config_vec.at(i)[W_VIRTUAL_REF_THETA] = path_weights.q_virtual_ref_theta[i];
+    }
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
@@ -311,6 +340,10 @@ uint8_t LateralMotionPlanningProblem::Update(
     double end_ratio_for_qjerk, double max_iter,
     const size_t motion_plan_concerned_start_index,
     const double concerned_start_q_jerk, const double ego_vel,
+    double q_virtual_ref_xy, double q_virtual_ref_theta,
+    std::vector<double>& virtual_ref_x,
+    std::vector<double>& virtual_ref_y,
+    std::vector<double>& virtual_ref_theta,
     planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   ilqr_core_ptr_->GetSolverConfigPtr()->max_iter = max_iter;
@@ -320,6 +353,11 @@ uint8_t LateralMotionPlanningProblem::Update(
 
   const double ref_vel = planning_input.ref_vel();
   const double kv2 = planning_input.curv_factor() * ref_vel * ref_vel;
+
+  bool is_virtual_empty =
+      virtual_ref_x.size() != N ||
+      virtual_ref_y.size() != N ||
+      virtual_ref_theta.size() != N;
 
   for (size_t i = 0; i < N; ++i) {
     double expected_delta = expected_acc / kv2;
@@ -336,6 +374,16 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[CONTINUITY_X] = planning_input.last_x_vec(i);
     cost_config_vec.at(i)[CONTINUITY_Y] = planning_input.last_y_vec(i);
     cost_config_vec.at(i)[CONTINUITY_THETA] = planning_input.last_theta_vec(i);
+
+    if (is_virtual_empty) {
+      cost_config_vec.at(i)[VIRTUAL_REF_X] = planning_input.ref_x_vec(i);
+      cost_config_vec.at(i)[VIRTUAL_REF_Y] = planning_input.ref_y_vec(i);
+      cost_config_vec.at(i)[VIRTUAL_REF_THETA] = planning_input.ref_theta_vec(i);
+    } else {
+      cost_config_vec.at(i)[VIRTUAL_REF_X] = virtual_ref_x[i];
+      cost_config_vec.at(i)[VIRTUAL_REF_Y] = virtual_ref_y[i];
+      cost_config_vec.at(i)[VIRTUAL_REF_THETA] = virtual_ref_theta[i];
+    }
 
     cost_config_vec.at(i)[EXPECTEDE_DELTA] = expected_delta;
 
@@ -384,8 +432,17 @@ uint8_t LateralMotionPlanningProblem::Update(
     // weights
     cost_config_vec.at(i)[W_REF_X] = planning_input.q_ref_x();
     cost_config_vec.at(i)[W_REF_Y] = planning_input.q_ref_y();
-
     cost_config_vec.at(i)[W_REF_THETA] = planning_input.q_ref_theta();
+
+    if (is_virtual_empty) {
+      cost_config_vec.at(i)[W_VIRTUAL_REF_X] = 0.0;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = 0.0;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_THETA] = 0.0;
+    } else {
+      cost_config_vec.at(i)[W_VIRTUAL_REF_X] = q_virtual_ref_xy;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_Y] = q_virtual_ref_xy;
+      cost_config_vec.at(i)[W_VIRTUAL_REF_THETA] = q_virtual_ref_theta;
+    }
 
     cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
     cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();

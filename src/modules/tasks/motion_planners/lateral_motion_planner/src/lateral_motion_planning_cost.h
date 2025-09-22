@@ -16,6 +16,9 @@ enum iLqrCostconfigId {
   CONTINUITY_X,
   CONTINUITY_Y,
   CONTINUITY_THETA,
+  VIRTUAL_REF_X,
+  VIRTUAL_REF_Y,
+  VIRTUAL_REF_THETA,
   EXPECTEDE_DELTA,
   DELTA_UPPER_BOUND,
   DELTA_LOWER_BOUND,
@@ -43,6 +46,9 @@ enum iLqrCostconfigId {
   W_CONTINUITY_X,
   W_CONTINUITY_Y,
   W_CONTINUITY_THETA,
+  W_VIRTUAL_REF_X,
+  W_VIRTUAL_REF_Y,
+  W_VIRTUAL_REF_THETA,
   W_ACC,
   W_JERK,
   W_ACC_BOUND,
@@ -56,6 +62,7 @@ enum iLqrCostconfigId {
 enum iLqrCostId {
   REFERENCE_COST,
   CONTINUITY_COST,
+  VIRTUAL_REFERENCE_COST,
   LAT_ACC_COST,
   LAT_JERK_COST,
   LAT_ACC_BOUND_COST,
@@ -95,6 +102,20 @@ class ContinuityCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return CONTINUITY_COST; }
+};
+
+class VirtualReferenceCostTerm : public ilqr_solver::BaseCostTerm {
+ public:
+  VirtualReferenceCostTerm() = default;
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control & /*u*/,
+                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
+                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return VIRTUAL_REFERENCE_COST; }
 };
 
 class LatAccCostTerm : public ilqr_solver::BaseCostTerm {

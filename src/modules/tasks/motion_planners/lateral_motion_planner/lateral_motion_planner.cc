@@ -94,6 +94,10 @@ void LateralMotionPlanner::Init() {
 
   expected_steer_vec_.resize(N, 0.0);
   ref_theta_vec_.resize(N, 0.0);
+  history_steer_vec_.reserve(N);
+  virtual_ref_x_.reserve(N);
+  virtual_ref_y_.reserve(N);
+  virtual_ref_theta_.reserve(N);
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -138,6 +142,10 @@ bool LateralMotionPlanner::AssembleInput() {
   std::fill(s_vec_.begin(), s_vec_.end(), 0.0);
   std::fill(t_vec_.begin(), t_vec_.end(), 0.0);
   std::fill(expected_steer_vec_.begin(), expected_steer_vec_.end(), 0.0);
+  history_steer_vec_.clear();
+  virtual_ref_x_.clear();
+  virtual_ref_y_.clear();
+  virtual_ref_theta_.clear();
 
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -381,6 +389,7 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetEgoVel(ego_v);
   planning_weight_ptr_->SetEgoL(ego_l);
   planning_weight_ptr_->SetRefVel(ref_vel);
+  planning_weight_ptr_->SetInitS(planning_init_point.frenet_state.s);
   planning_weight_ptr_->SetInitL(planning_init_point.frenet_state.r);
   planning_weight_ptr_->CalculateLastPathDistToRef(reference_path_ptr,
                                                    planning_input_);
@@ -410,8 +419,9 @@ bool LateralMotionPlanner::AssembleInput() {
                                          .coarse_planning_info;
 
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
-      planning_init_point.frenet_state.s, ref_vel, vehicle_param.wheel_base,
-      steer_ratio, curv_factor_, coarse_planning_info, reference_path_ptr,
+      planning_init_point.frenet_state.s, ref_vel,
+      vehicle_param.wheel_base, steer_ratio, curv_factor_,
+      general_lateral_decider_output.curve_s_spline,
       expected_steer_vec_);
   JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec_, 2)
   const auto &soft_bounds_frenet_point =
@@ -566,27 +576,26 @@ bool LateralMotionPlanner::AssembleInput() {
   } else if (lane_borrow_scene) {
     complete_follow = true;
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LateralMotionScene::LANE_BORROW,
-        planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_BORROW, planning_input_);
   } else if (split_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::SPLIT, planning_input_);
-  } else if ((ramp_scene) && (config_.ramp_valid) &&
-             (!is_use_spatio_planner_result)) {
+  } else if ((ramp_scene) && (config_.ramp_valid)) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::RAMP, planning_input_);
-    // } else if (general_lateral_decider_output.bound_avoid ||
-    //            (!is_use_spatio_planner_result &&
-    //            (lateral_offset_decider_output.is_valid ||
-    //             (avoid_back_status &&
-    //              ((ref_vel > config_.avoid_high_vel) ||
-    //                is_in_intersection))))) {
-    //   planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
-    //                                                planning_input_);
+  // } else if (general_lateral_decider_output.bound_avoid ||
+  //            (!is_use_spatio_planner_result &&
+  //            (lateral_offset_decider_output.is_valid ||
+  //             (avoid_back_status &&
+  //              ((ref_vel > config_.avoid_high_vel) ||
+  //                is_in_intersection))))) {
+  //   planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
+  //                                                planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::LANE_KEEP, planning_input_);
   }
+
   // handle big shaking for steer
   const bool is_high_priority_back =
       lane_change_decider_output.is_high_priority_back;
@@ -604,14 +613,29 @@ bool LateralMotionPlanner::AssembleInput() {
   } else {
     enter_lccnoa_time_ = 0;
   }
-
+  // save history path
+  planning_weight_ptr_->CalculateLatAccAndSteerAngleByHistoryPath(
+      is_in_function, motion_planner_output.lat_init_flag,
+      vehicle_param.wheel_base, steer_ratio, curv_factor_,
+      planning_init_point.lat_init_state.x(),
+      planning_init_point.lat_init_state.y(),
+      history_steer_vec_);
+  JSON_DEBUG_VECTOR("history_steer_vec", history_steer_vec_, 2)
   planning_weight_ptr_->CalculateJerkBoundByLastJerk(
       is_high_priority_back, is_in_function, enter_lccnoa_time_,
       reference_path_ptr, planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
-      complete_follow, is_divide_lane_into_two_, reference_path_ptr,
-      planning_input_);
+      complete_follow, is_divide_lane_into_two_,
+      reference_path_ptr, planning_input_);
+  // construct virtual ref
+  planning_weight_ptr_->ConstructVirtualRef(
+      vehicle_param.wheel_base, curv_factor_,
+      reference_path_ptr, planning_input_,
+      virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_);
+  JSON_DEBUG_VECTOR("virtual_ref_x", virtual_ref_x_, 3)
+  JSON_DEBUG_VECTOR("virtual_ref_y", virtual_ref_y_, 3)
+  JSON_DEBUG_VECTOR("virtual_ref_theta", virtual_ref_theta_, 6)
   // set continuity protection
   if (!motion_planner_output.lat_init_flag) {
     planning_input_.set_q_continuity(0.0);
@@ -647,8 +671,9 @@ bool LateralMotionPlanner::Update() {
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
       end_ratio_for_qrefxy, end_ratio_for_qreftheta,
-      config_.end_ratio_for_qjerk, concerned_start_q_jerk, planning_weight_ptr_,
-      planning_input_);
+      config_.end_ratio_for_qjerk, concerned_start_q_jerk,
+      virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_,
+      planning_weight_ptr_, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);

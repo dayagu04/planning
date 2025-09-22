@@ -43,6 +43,9 @@ struct PathWeight {  // temp
   std::vector<double> q_ref_y;
   std::vector<double> q_ref_theta;
   std::vector<double> q_continuity;
+  std::vector<double> q_virtual_ref_x;
+  std::vector<double> q_virtual_ref_y;
+  std::vector<double> q_virtual_ref_theta;
   std::vector<double> q_acc;
   std::vector<double> q_jerk;
   std::vector<double> q_acc_bound;
@@ -64,6 +67,9 @@ struct PathWeight {  // temp
     q_ref_y.resize(point_num, 0);
     q_ref_theta.resize(point_num, 0);
     q_continuity.resize(point_num, 0);
+    q_virtual_ref_x.resize(point_num, 0);
+    q_virtual_ref_y.resize(point_num, 0);
+    q_virtual_ref_theta.resize(point_num, 0);
     q_acc.resize(point_num, 0);
     q_jerk.resize(point_num, 0);
     q_acc_bound.resize(point_num, 0);
@@ -82,6 +88,9 @@ struct PathWeight {  // temp
     q_ref_y.clear();
     q_ref_theta.clear();
     q_continuity.clear();
+    q_virtual_ref_x.clear();
+    q_virtual_ref_y.clear();
+    q_virtual_ref_theta.clear();
     q_acc.clear();
     q_jerk.clear();
     q_acc_bound.clear();
@@ -115,12 +124,25 @@ class LateralMotionPlanningWeight {
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
           &hard_bounds_info);
 
+  // void CalculateExpectedLatAccAndSteerAngle(
+  //     double init_s, double ref_vel, double wheel_base,
+  //     double steer_ratio, double curv_factor,
+  //     const planning::CoarsePlanningInfo &coarse_planning_info,
+  //     const std::shared_ptr<planning::ReferencePath> &reference_path,
+  //     std::vector<double>& expected_steer_vec);
+
   void CalculateExpectedLatAccAndSteerAngle(
-      double init_s, double ref_vel, double wheel_base, double steer_ratio,
-      double curv_factor,
-      const planning::CoarsePlanningInfo &coarse_planning_info,
-      const std::shared_ptr<planning::ReferencePath> &reference_path,
-      std::vector<double> &expected_steer_vec);
+      double init_s, double ref_vel, double wheel_base,
+      double steer_ratio, double curv_factor,
+      const pnc::mathlib::spline &k_s_spline,
+      std::vector<double>& expected_steer_vec);
+
+  void CalculateLatAccAndSteerAngleByHistoryPath(
+      const bool is_in_function, const bool is_no_replan,
+      const double wheel_base, const double steer_ratio,
+      const double curv_factor,
+      const double init_x, const double init_y,
+      std::vector<double>& history_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
       const bool is_high_priority_back, const bool is_in_function,
@@ -132,6 +154,14 @@ class LateralMotionPlanningWeight {
   void CalculateLastPathDistToRef(
       const std::shared_ptr<planning::ReferencePath> &reference_path,
       planning::common::LateralPlanningInput &planning_input);
+
+  void ConstructVirtualRef(
+      const double wheel_base, const double curv_factor,
+      const std::shared_ptr<planning::ReferencePath> &reference_path,
+      planning::common::LateralPlanningInput &planning_input,
+      std::vector<double> &virtual_ref_x,
+      std::vector<double> &virtual_ref_y,
+      std::vector<double> &virtual_ref_theta);
 
   void SetLateralMotionWeight(
       const LateralMotionScene scene,
@@ -150,6 +180,8 @@ class LateralMotionPlanningWeight {
   void SetEgoL(const double ego_l) { ego_l_ = ego_l; }
 
   void SetRefVel(const double ref_vel) { ref_vel_ = ref_vel; }
+
+  void SetInitS(const double init_s) { init_s_ = init_s; }
 
   void SetInitL(const double init_l) { init_l_ = init_l; }
 
@@ -214,6 +246,10 @@ class LateralMotionPlanningWeight {
 
   const EmergencyLevel &GetEmergencyLevel() const { return emergency_level_; }
 
+  const std::vector<planning::planning_math::PathPoint>& GetVirtualRef() const {
+    return virtual_ref_;
+  }
+
  private:
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
@@ -257,6 +293,7 @@ class LateralMotionPlanningWeight {
   double ego_vel_;
   double ego_l_;
   double ref_vel_;
+  double init_s_;
   double init_l_;
   double end_ratio_for_qrefxy_;
   double end_ratio_for_qreftheta_;
@@ -265,6 +302,7 @@ class LateralMotionPlanningWeight {
   double max_jerk_;
   double max_jerk_lc_;
   double max_jerk_low_speed_;
+  double history_average_acc_;
   double last_expected_average_acc_;
   double expected_average_acc_;
   double expected_max_acc_;
@@ -289,6 +327,8 @@ class LateralMotionPlanningWeight {
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
+  std::vector<planning::planning_math::PathPoint> virtual_ref_;
+  std::deque<std::pair<double, double>> history_path_points_;
   pnc::mathlib::spline soft_lbound_l_s_spline_;
   pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;

@@ -25,6 +25,41 @@ namespace planning {
 
 using namespace planning_math;
 
+struct RoadCurvatureInfo {
+  // 弯道类型
+  enum class CurveType {
+    STRAIGHT = 0,      // 直道
+    NORMAL_CURVE = 1,  // 弯道
+    BIG_CURVE = 2,     // 大曲率弯道
+    S_CURVE = 3,       // S弯
+    SHARP_CURVE = 4,   // 急弯
+  };
+
+  CurveType curve_type = CurveType::STRAIGHT;
+  bool is_left = false;                 // 是否大曲率左弯
+  bool is_right = false;                // 是否大曲率右弯
+  double start_s = 0.0;                 // 大曲率起始纵向位置
+  double end_s = 0.0;                   // 大曲率结束纵向位置
+  double min_radius = 1e4;              // 最小曲率半径
+  double max_curve = 1e-4;              // 最大曲率值
+  double max_curve_s = 0.0;             // 最大曲率对应的纵向位置
+  std::vector<double> curve_vec;        // 曲率序列
+  std::vector<double> s_vec;            // 对应的纵向距离序列
+
+  void Clear() {
+    curve_type = CurveType::STRAIGHT;
+    is_left = false;
+    is_right = false;
+    start_s = 0.0;
+    end_s = 0.0;
+    min_radius = 1e4;
+    max_curve = 1e-4;
+    max_curve_s = 0.0;
+    curve_vec.clear();
+    s_vec.clear();
+  }
+};
+
 class GeneralLateralDecider : public Task {
  public:
   explicit GeneralLateralDecider(const EgoPlanningConfigBuilder *config_builder,
@@ -43,6 +78,9 @@ class GeneralLateralDecider : public Task {
   bool CalCruiseVelByCurvature(const double ego_v,
                                const CoarsePlanningInfo &coars_planning_info,
                                double &cruise_v);
+
+  bool HandleRoadCurvature(const double ego_v,
+                           const CoarsePlanningInfo& coars_planning_info);
 
   void ConstructTrajPoints(TrajectoryPoints &traj_points);
 
@@ -253,7 +291,6 @@ class GeneralLateralDecider : public Task {
   std::shared_ptr<EgoStateManager> ego_cart_state_manager_;
   std::shared_ptr<ReferencePath> reference_path_ptr_;
   double min_road_radius_ = 10000.0;
-  std::vector<double> kappa_map_;
   double last_overlap_min_y_ = 0.0;
   double last_overlap_max_y_ = 0.0;
   double cruise_vel_ = 0.0;
@@ -273,6 +310,8 @@ class GeneralLateralDecider : public Task {
   bool enable_emergency_avoid_ = false;
   HysteresisDecision has_enough_speed_bound_recurrence_hysteresis_;
   bool is_use_recurrence_ = false;
+
+  RoadCurvatureInfo ref_curve_info_;
 };
 
 }  // namespace planning

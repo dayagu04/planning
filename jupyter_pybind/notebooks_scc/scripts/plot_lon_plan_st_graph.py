@@ -42,7 +42,7 @@ class LocalViewSlider:
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='100%'), description= "bag_time",min=0.0, max=max_time, value=0.1, step=frame_dt)
     self.prediction_obstacle_id = ipywidgets.Text(description='predict_id:')
     self.obstacle_polygon_id = ipywidgets.Text(description='polygon_id:')
-  
+
     self.interactive_widget = ipywidgets.interact(slider_callback, bag_time = self.time_slider,
                                          prediction_obstacle_id = self.prediction_obstacle_id,
                                          obstacle_polygon_id = self.obstacle_polygon_id)

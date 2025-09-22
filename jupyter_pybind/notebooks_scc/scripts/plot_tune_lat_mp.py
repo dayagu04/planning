@@ -16,7 +16,16 @@ from jupyter_pybind import lateral_motion_planning_py
 from bokeh.resources import INLINE
 # bag path and frame dt
 bag_path = "/share//data_cold/abu_zone/hpp/1219bag/memory1219_12.00000"
-bag_path = "/share//data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250724/20250724-23-11-50/data_collection_CHERY_M32T_40737_EVENT_MANUAL_2025-07-24-23-11-50_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758024572.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758028762.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758258645.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758263693.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758271167.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758345307.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20250909/20250909-18-05-13/data_collection_CHERY_M32T_40737_EVENT_KEY_2025-09-09-18-05-13_no_camera.bag.1758367706.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250904/20250904-16-41-39/data_collection_CHERY_M32T_50813_EVENT_KEY_2025-09-04-16-41-39_no_camera.bag.1758512506.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50815/trigger/20250904/20250904-15-19-39/data_collection_CHERY_M32T_50815_EVENT_KEY_2025-09-04-15-19-39_no_camera.bag.1758512781.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250920/20250920-14-51-01/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-09-20-14-51-01_no_camera.bag"
 
 frame_dt = 0.1 # sec
 
@@ -151,6 +160,8 @@ class LocalViewSlider:
     self.q_acc_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc",min=0.1, max=1000.0, value=lat_motion_plan_input0.q_acc, step=0.01)
     self.q_jerk_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk",min=0.01, max=1000.0, value=lat_motion_plan_input0.q_jerk, step=0.01)
     self.q_continuity_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_continuity",min=0.0, max=10.0, value=lat_motion_plan_input0.q_continuity, step=0.01)
+    self.q_virtual_ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_virtual_xy",min=0.1, max=1000.0, value=0.0, step=0.1)
+    self.q_virtual_ref_theta_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_virtual_theta",min=0.1, max=100000.0, value=0.0, step=0.1)
 
     self.q_acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_acc_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_acc_bound, step=0.1)
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=1000000.0, value=lat_motion_plan_input0.q_jerk_bound, step=0.1)
@@ -228,13 +239,16 @@ class LocalViewSlider:
                                          end_ratio1 = self.end_ratio1_slider,
                                          end_ratio2 = self.end_ratio2_slider,
                                          end_ratio3 = self.end_ratio3_slider,
+                                         q_virtual_ref_xy = self.q_virtual_ref_xy_slider,
+                                         q_virtual_ref_theta = self.q_virtual_ref_theta_slider,
                                          max_iter = self.max_iter_slider)
 
 
 ### sliders callback
 def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
                     upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
-                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter):
+                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3,
+                    q_virtual_ref_xy, q_virtual_ref_theta, max_iter):
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
@@ -253,6 +267,8 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
   print("init curv: ",lat_motion_plan_input.init_state.curv)
   print("road curv: ",planning_json["road_radius"])
   print("far_kappa_radius", planning_json["far_kappa_radius"])
+  print("min_curve_radius: ", planning_json["min_curve_radius"])
+  print("curve_type: ", planning_json["curve_type"])
   print("left_turn_light_state_available: ",vs_msg.left_turn_light_state_available)
   print("left_turn_light_state: ",vs_msg.left_turn_light_state)
   print("right_turn_light_state_available: ",vs_msg.right_turn_light_state_available)
@@ -351,6 +367,14 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
       'new param': new_param_vec,
     })
 
+    virtual_ref_x, virtual_ref_y, virtual_ref_theta = [], [], []
+    try:
+      virtual_ref_x = plan_debug_json_msg['virtual_ref_x']
+      virtual_ref_y = plan_debug_json_msg['virtual_ref_y']
+      virtual_ref_theta = plan_debug_json_msg['virtual_ref_theta']
+    except:
+      print("no virtual ref!")
+
     ref_s = ref_vel * 25.0 * 0.2
     print("ref_s:", ref_s)
     input_string = lat_motion_plan_input.SerializeToString()
@@ -359,7 +383,8 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_ac
                                               ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
                                               safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
                                               motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.5), expected_acc,
-                                              start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter)
+                                              start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter,
+                                              q_virtual_ref_xy, q_virtual_ref_theta, virtual_ref_x, virtual_ref_y, virtual_ref_theta)
     end_time = time.time()
     planning_output = lateral_motion_planner_pb2.LateralPlanningOutput()
     output_string_tmp = lateral_motion_planning_py.GetOutputBytes()
