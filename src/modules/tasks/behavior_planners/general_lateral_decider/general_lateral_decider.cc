@@ -2052,8 +2052,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     smoothed_bounds.reserve(current_bounds.size());
     for (const auto& current_bound : current_bounds) {
       if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
-          current_bound.bound_info.type == BoundType :: EGO_POSITION) {
-        // 道路边缘bound不处理
+          current_bound.bound_info.type == BoundType :: EGO_POSITION ||
+          current_bound.bound_info.type == BoundType :: LANE) {
         continue;
       }
       // 寻找上一帧中对应的边界（基于bound_info的id和type）
@@ -2066,8 +2066,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
       WeightedBound smoothed_bound = current_bound;
       if (last_bound_it != last_bounds.end()) {
         if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
-            last_bound_it->bound_info.type == BoundType :: EGO_POSITION) {
-          // 道路边缘bound不处理
+            last_bound_it->bound_info.type == BoundType :: EGO_POSITION ||
+            last_bound_it->bound_info.type == BoundType :: LANE) {
           continue;
         }
         // 当前后帧障碍物避让方向相反时，清空历史避让值和方向，采用当前帧的避让
