@@ -155,22 +155,22 @@ uint8_t LateralMotionPlanningProblem::Update(
         planning_input.first_soft_lower_bound_y1_vec(i);
 
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_X0] =
-        planning_input.soft_upper_bound_x0_vec(i);
+        planning_input.second_soft_upper_bound_x0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_Y0] =
-        planning_input.soft_upper_bound_y0_vec(i);
+        planning_input.second_soft_upper_bound_y0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_X1] =
-        planning_input.soft_upper_bound_x1_vec(i);
+        planning_input.second_soft_upper_bound_x1_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_Y1] =
-        planning_input.soft_upper_bound_y1_vec(i);
+        planning_input.second_soft_upper_bound_y1_vec(i);
 
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_X0] =
-        planning_input.soft_lower_bound_x0_vec(i);
+        planning_input.second_soft_lower_bound_x0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_Y0] =
-        planning_input.soft_lower_bound_y0_vec(i);
+        planning_input.second_soft_lower_bound_y0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_X1] =
-        planning_input.soft_lower_bound_x1_vec(i);
+        planning_input.second_soft_lower_bound_x1_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_Y1] =
-        planning_input.soft_lower_bound_y1_vec(i);
+        planning_input.second_soft_lower_bound_y1_vec(i);
 
     cost_config_vec.at(i)[HARD_UPPER_BOUND_X0] =
         planning_input.hard_upper_bound_x0_vec(i);
@@ -434,23 +434,41 @@ uint8_t LateralMotionPlanningProblem::Update(
     cost_config_vec.at(i)[OMEGA_UPPER_BOUND] = omega_bound;
     cost_config_vec.at(i)[OMEGA_LOWER_BOUND] = -omega_bound;
 
+    cost_config_vec.at(i)[FIRST_SOFT_UPPER_BOUND_X0] =
+        planning_input.first_soft_upper_bound_x0_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_UPPER_BOUND_Y0] =
+        planning_input.first_soft_upper_bound_y0_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_UPPER_BOUND_X1] =
+        planning_input.first_soft_upper_bound_x1_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_UPPER_BOUND_Y1] =
+        planning_input.first_soft_upper_bound_y1_vec(i);
+
+    cost_config_vec.at(i)[FIRST_SOFT_LOWER_BOUND_X0] =
+        planning_input.first_soft_lower_bound_x0_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_LOWER_BOUND_Y0] =
+        planning_input.first_soft_lower_bound_y0_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_LOWER_BOUND_X1] =
+        planning_input.first_soft_lower_bound_x1_vec(i);
+    cost_config_vec.at(i)[FIRST_SOFT_LOWER_BOUND_Y1] =
+        planning_input.first_soft_lower_bound_y1_vec(i);
+        
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_X0] =
-        planning_input.soft_upper_bound_x0_vec(i);
+        planning_input.second_soft_upper_bound_x0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_Y0] =
-        planning_input.soft_upper_bound_y0_vec(i);
+        planning_input.second_soft_upper_bound_y0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_X1] =
-        planning_input.soft_upper_bound_x1_vec(i);
+        planning_input.second_soft_upper_bound_x1_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_UPPER_BOUND_Y1] =
-        planning_input.soft_upper_bound_y1_vec(i);
+        planning_input.second_soft_upper_bound_y1_vec(i);
 
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_X0] =
-        planning_input.soft_lower_bound_x0_vec(i);
+        planning_input.second_soft_lower_bound_x0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_Y0] =
-        planning_input.soft_lower_bound_y0_vec(i);
+        planning_input.second_soft_lower_bound_y0_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_X1] =
-        planning_input.soft_lower_bound_x1_vec(i);
+        planning_input.second_soft_lower_bound_x1_vec(i);
     cost_config_vec.at(i)[SECOND_SOFT_LOWER_BOUND_Y1] =
-        planning_input.soft_lower_bound_y1_vec(i);
+        planning_input.second_soft_lower_bound_y1_vec(i);
 
     cost_config_vec.at(i)[HARD_UPPER_BOUND_X0] =
         planning_input.hard_upper_bound_x0_vec(i);

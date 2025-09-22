@@ -307,17 +307,17 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         lat_motion_plan_input.soft_lower_bound_y1_vec)
 
       if second_soft_upper_bound_x0_vec == []:
-        second_soft_upper_bound_x0_vec, second_soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x0_vec, \
-          lat_motion_plan_input.soft_upper_bound_y0_vec)
+        second_soft_upper_bound_x0_vec, second_soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.second_soft_upper_bound_x0_vec, \
+          lat_motion_plan_input.second_soft_upper_bound_y0_vec)
 
-        second_soft_lower_bound_x0_vec, second_soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x0_vec, \
-          lat_motion_plan_input.soft_lower_bound_y0_vec)
+        second_soft_lower_bound_x0_vec, second_soft_lower_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.second_soft_lower_bound_x0_vec, \
+          lat_motion_plan_input.second_soft_lower_bound_y0_vec)
 
-        second_soft_upper_bound_x1_vec, second_soft_upper_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_upper_bound_x1_vec, \
-          lat_motion_plan_input.soft_upper_bound_y1_vec)
+        second_soft_upper_bound_x1_vec, second_soft_upper_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.second_soft_upper_bound_x1_vec, \
+          lat_motion_plan_input.second_soft_upper_bound_y1_vec)
 
-        second_soft_lower_bound_x1_vec, second_soft_lower_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.soft_lower_bound_x1_vec, \
-          lat_motion_plan_input.soft_lower_bound_y1_vec)
+        second_soft_lower_bound_x1_vec, second_soft_lower_bound_y1_vec = coord_tf.global_to_local(lat_motion_plan_input.second_soft_lower_bound_x1_vec, \
+          lat_motion_plan_input.second_soft_lower_bound_y1_vec)
 
       first_soft_upper_bound_x0_vec, first_soft_upper_bound_y0_vec = coord_tf.global_to_local(lat_motion_plan_input.first_soft_upper_bound_x0_vec, \
         lat_motion_plan_input.first_soft_upper_bound_y0_vec)
