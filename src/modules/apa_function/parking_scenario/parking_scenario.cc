@@ -1083,6 +1083,13 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
     return false;
   }
 
+  // check next path
+  std::vector<pnc::geometry_lib::PathPoint> second_path;
+  GetSecondGearPath(complete_path_point_global_vec_, second_path);
+  if (IsPathCollision(second_path)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -1208,6 +1215,37 @@ void ParkingScenario::UpdatePlanFailTime() {
   }
 
   return;
+}
+
+const bool ParkingScenario::IsPathCollision(
+    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const double static_lon_buffer, const double static_body_lat_buffer,
+    const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
+    const double dynamic_body_lat_buffer,
+    const double dynamic_mirror_lat_buffer,
+    const bool only_check_mirror) const {
+  const ApaParameters& param = apa_param.GetParam();
+  // check static obs, it can be radical
+  GJKColDetRequest request(false, param.uss_config.use_uss_pt_cloud,
+                           CarBodyType::NORMAL, ApaObsMovementType::STATIC);
+  const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
+      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
+  ColResult col_res =
+      gjk_col_det_ptr->Update(path, static_body_lat_buffer, 0.0, request, true,
+                              static_mirror_lat_buffer);
+  if (col_res.col_flag) {
+    return true;
+  }
+
+  // check dynamic obs, it should be conservative
+  request.movement_type = ApaObsMovementType::MOTION;
+  col_res = gjk_col_det_ptr->Update(path, dynamic_body_lat_buffer, 0.0, request,
+                                    true, dynamic_mirror_lat_buffer);
+  if (col_res.col_flag) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner
