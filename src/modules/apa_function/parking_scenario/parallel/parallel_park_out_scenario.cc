@@ -26,7 +26,7 @@ static double kFrontObsLineYMagIdentification = 0.6;
 static double kRearObsLineYMagIdentification = 0.6;
 static double kCurbInitialOffset = 0.46;
 static double kCurbYMagIdentification = 0.0;
-static double kMinChannelYMagIdentification = 3.3;
+static double kMinChannelYMagIdentification = 3.5;
 static double kDeletedObsDistOutSlot = 0.3;
 static double kDeletedObsDistInSlot = 0.25;
 

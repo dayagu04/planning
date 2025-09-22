@@ -2472,13 +2472,9 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
       && max_heading_id != min_x_idx) {
       selected_path_vec.emplace_back(sorted_path_vec[max_heading_id]);
     }
+  } else {
+    selected_path_vec = {sorted_path_vec.front()};
   }
-  // std::cout << std::endl;
-  // std::cout << "gear    = ";
-  // for (const auto& path : sorted_path_vec) {
-  //   std::cout << std::setw(10) << path.gear_change_count;
-  // }
-  // std::cout << std::endl;
 
   debug_info_.debug_inslot_path_vec = selected_path_vec;
   sorted_path_vec = selected_path_vec;
