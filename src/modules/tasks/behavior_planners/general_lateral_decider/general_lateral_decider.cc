@@ -2051,7 +2051,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     WeightedBounds smoothed_bounds;
     smoothed_bounds.reserve(current_bounds.size());
     for (const auto& current_bound : current_bounds) {
-      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER) {
+      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
+          current_bound.bound_info.type == BoundType :: EGO_POSITION) {
         // 道路边缘bound不处理
         continue;
       }
@@ -2064,7 +2065,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
 
       WeightedBound smoothed_bound = current_bound;
       if (last_bound_it != last_bounds.end()) {
-        if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER) {
+        if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
+            last_bound_it->bound_info.type == BoundType :: EGO_POSITION) {
           // 道路边缘bound不处理
           continue;
         }
