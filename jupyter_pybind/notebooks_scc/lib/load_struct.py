@@ -1851,7 +1851,7 @@ def load_obstacle_me(camera_msg,is_rdg):
 
   return obs_info_all
 
-def load_prediction_obstacle(prediction_msg, environment_model_info = None):
+def load_prediction_obstacle(prediction_msg, is_enu_to_car = False, loc_msg = None, environment_model_info = None):
   obs_info_all = dict()
   obstacle_list = prediction_msg.prediction_obstacle_list
   obs_num = len(obstacle_list)
@@ -1880,7 +1880,7 @@ def load_prediction_obstacle(prediction_msg, environment_model_info = None):
       lat_decision = "None"
       is_static = ""
       for obstacle in environment_model_info.obstacle:
-        if obstacle.id == obstacle_list[i].fusion_obstacle.common_info.id:
+        if obstacle.id == obstacle_list[i].fusion_obstacle.additional_info.track_id:
           frenet_vs, frenet_vl = obstacle.vs_lon_relative, obstacle.vs_lat_relative
           if (0 == obstacle.lat_decision):
             lat_decision = "LEFT"
@@ -1950,21 +1950,39 @@ def load_prediction_obstacle(prediction_msg, environment_model_info = None):
               lat_pos - dy1 + dy2,
               lat_pos + dy1 + dy2]
 
+    if is_enu_to_car:
+      coord_tf = coord_transformer()
+      if loc_msg != None: # 长时轨迹
+        cur_pos_xn = loc_msg.position.position_boot.x
+        cur_pos_yn = loc_msg.position.position_boot.y
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+        obstacles_x_rel, obstacles_y_rel = coord_tf.global_to_local(obs_x, obs_y)
+        pos_x_rel, pos_y_rel = coord_tf.global_to_local([long_pos], [lat_pos])
+      else:
+        obstacles_x_rel, obstacles_y_rel = obs_x_rel, obs_y_rel
+        pos_x_rel, pos_y_rel = long_pos_rel, lat_pos_rel
+      obs_info_all[source]['obstacles_x_rel'].append(obstacles_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obstacles_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(pos_x_rel)
+      obs_info_all[source]['pos_y_rel'].append(pos_y_rel)
+    else:
+      obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
+      obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
+      obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
+      obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
+
     num = num + 1
-    obs_info_all[source]['obstacles_x_rel'].append(obs_x_rel)
-    obs_info_all[source]['obstacles_y_rel'].append(obs_y_rel)
-    obs_info_all[source]['pos_x_rel'].append(long_pos_rel)
-    obs_info_all[source]['pos_y_rel'].append(lat_pos_rel)
     obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
     if frenet_vs == 255 and frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
           + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
           + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
           + lat_decision + '\n' + is_static)
     else:
-      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.common_info.id) + ')=' \
+      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
           + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
           + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
           +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
