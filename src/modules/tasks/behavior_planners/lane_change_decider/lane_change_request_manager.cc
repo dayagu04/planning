@@ -66,6 +66,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const auto& intersection_state = virtual_lane_manager->GetIntersectionState();
   auto mrc_condition = session_->mutable_planning_context()->mrc_condition();
   const bool location_valid = session_->environmental_model().location_valid();
+  const double k_default_lane_change_cooling_duration = 3.0;
   bool const enable_mrc_pull_over = mrc_condition->enable_mrc_pull_over();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
@@ -124,6 +125,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
 
   int state = lane_change_decider_output.curr_state;
+  double curr_time = IflyTime::Now_s();
 
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
@@ -134,18 +136,19 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   }
 
   if (int_request_.request_type() == NO_CHANGE) {
-    if (enable_use_cone_change_request && request_source_ != EMERGENCE_AVOID_REQUEST) {
+    if (enable_use_cone_change_request && request_source_ != EMERGENCE_AVOID_REQUEST &&
+        (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       cone_change_request_.Update(lc_status);
     }
-    if (enable_use_emergency_avoidence_lc_request && request_source_ != CONE_REQUEST) {
+    if (enable_use_emergency_avoidence_lc_request && request_source_ != CONE_REQUEST &&
+        (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       emergence_avoid_request_.Update(lc_status);
     }
-    if (hd_map_valid) {
+    if (hd_map_valid && (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       map_request_.Update(lc_status, map_request_.tfinish());
     }
     if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
-        origin_relative_id_zero_nums == 1 &&
-        ego_distance_to_boundary_merge > distance_nearby_merge_point_to_surpress_merge_request) {
+        origin_relative_id_zero_nums == 1 && (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();
@@ -177,6 +180,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         ILOG_INFO << "cann't generate overtake lane change since ego speed is less than min speed threshold";
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
+      }
+      if (curr_time < int_request_.tfinish() + k_default_lane_change_cooling_duration) {
+        overtake_request_.Reset();
+        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;        
       }
 
       // TODO:添加至操作时间域的距离小于一定值时将overtake_count_=0
