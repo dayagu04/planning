@@ -11,6 +11,8 @@
 namespace planning {
 namespace apa_planner {
 
+const int kSlotFreeId = 0;
+
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   Reset();
   if (local_view_ptr == nullptr) {
@@ -48,8 +50,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
               .is_free_slot_selected ==
           iflyauto::FreeSlotSelectedStatus::
               FREE_SLOT_SELECTED_STATUS_FINISHED) {
-        if (!parking_fusion_info
-                 .parking_fusion_slot_lists[parking_fusion_info.select_slot_id]
+        if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
                  .is_turn_corner) {
           state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
         } else {
@@ -105,9 +106,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
                 .is_free_slot_selected ==
             iflyauto::FreeSlotSelectedStatus::
                 FREE_SLOT_SELECTED_STATUS_FINISHED) {
-          if (!parking_fusion_info
-                   .parking_fusion_slot_lists[parking_fusion_info
-                                                  .select_slot_id]
+          if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
                    .is_turn_corner) {
             state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
           } else {
