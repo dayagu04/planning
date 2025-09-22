@@ -259,13 +259,20 @@ void ParkingScenarioManager::ScenarioTry() {
         std::shared_ptr<ParkingScenario> temp_narrow_scenario =
             scenario_list_[ParkingScenarioType::SCENARIO_NARROW_SPACE];
 
+        std::shared_ptr<ParkingScenario> temp_perpendicular_scenario =
+            scenario_list_[ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
+
+        std::shared_ptr<ParkingScenario> temp_slant_scenario =
+            scenario_list_[ParkingScenarioType::SCENARIO_SLANT_TAIL_IN];
+
         if (apa_param.GetParam().path_generator_type ==
             ParkPathGenerationType::GEOMETRY_BASED) {
           // 先用几何尝试
-          std::shared_ptr<ParkingScenario> temp_geometry_scenario =
-              scenario_list_
-                  [ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN];
-          temp_geometry_scenario->ScenarioTry();
+          if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+            temp_perpendicular_scenario->ScenarioTry();
+          } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
+            temp_slant_scenario->ScenarioTry();
+          }
         }
 
         if (ego_info_under_slot.slot.release_info_
