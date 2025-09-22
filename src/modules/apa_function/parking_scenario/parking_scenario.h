@@ -520,6 +520,16 @@ class ParkingScenario {
 
   void UpdatePlanFailTime();
 
+  const bool IsPathCollision(
+      const std::vector<pnc::geometry_lib::PathPoint> &path,
+      const double static_lon_buffer = 0.3,
+      const double static_body_lat_buffer = 0.1,
+      const double static_mirror_lat_buffer = 0.1,
+      const double dynamic_lon_buffer = 1.168,
+      const double dynamic_body_lat_buffer = 1.168,
+      const double dynamic_mirror_lat_buffer = 1.168,
+      const bool only_check_mirror = false) const;
+
  protected:
   // TODO:
   // 1.

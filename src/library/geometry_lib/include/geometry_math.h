@@ -1417,6 +1417,9 @@ void DebugPathString(const std::vector<pnc::geometry_lib::PathPoint> &path);
 const double GetSecondGearPathLength(
     const std::vector<pnc::geometry_lib::PathPoint> &path);
 
+void GetSecondGearPath(const std::vector<pnc::geometry_lib::PathPoint> &path,
+                       std::vector<pnc::geometry_lib::PathPoint> &second_path);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

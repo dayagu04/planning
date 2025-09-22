@@ -4207,5 +4207,49 @@ const double GetSecondGearPathLength(
   return gear_switch_path_s - first_path_len;
 }
 
+void GetSecondGearPath(const std::vector<pnc::geometry_lib::PathPoint> &path,
+                       std::vector<pnc::geometry_lib::PathPoint> &second_path) {
+  second_path.clear();
+  if (path.empty()) {
+    return;
+  }
+
+  uint8_t current_gear = path[0].gear;
+  bool found_gear_switch_path = false;
+  double gear_switch_path_s = 0.0;
+  double first_path_len = 0.0;
+  size_t start_id = path.size();
+  size_t end_id = path.size();
+  for (size_t i = 1; i < path.size(); i++) {
+    // check first path s
+    if (path[i].gear == current_gear) {
+      if (!found_gear_switch_path) {
+        first_path_len = path[i].s;
+        start_id = i + 1;
+      } else {
+        break;
+      }
+    }
+
+    // check next path s
+    if (path[i].gear != current_gear) {
+      found_gear_switch_path = true;
+      gear_switch_path_s = path[i].s;
+      end_id = i;
+    }
+  }
+
+  if (start_id >= end_id || start_id >= path.size() || end_id >= path.size()) {
+    return;
+  }
+
+  second_path.reserve(end_id - start_id + 1);
+  for (size_t i = start_id; i <= end_id; i++) {
+    second_path.emplace_back(path[i]);
+  }
+
+  return;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc
