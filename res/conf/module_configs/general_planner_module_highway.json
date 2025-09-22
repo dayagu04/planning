@@ -172,7 +172,6 @@
   "emergency_avoid_count_thr": 3,
   "is_use_last_lon_information": false,
   "extra_truck_lat_buffer": 0.1,
-  "start_nudge_ttc": 5,
   "side_2_front_count_thr": 10,
   "side_2_front_max_count": 20,
   "open_side_lat_offset_nudge": false,

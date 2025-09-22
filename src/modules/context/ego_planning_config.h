@@ -1495,8 +1495,6 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "is_use_last_lon_information", is_use_last_lon_information);
     extra_truck_lat_buffer = read_json_key<double>(
         json, "extra_truck_lat_buffer", extra_truck_lat_buffer);
-    start_nudge_ttc =
-        read_json_key<double>(json, "start_nudge_ttc", start_nudge_ttc);
     ReadItem<double>(json, base_safe_intrusoin_for_dynamic,
                      "potential_follow_obstacle",
                      "base_safe_intrusoin_for_dynamic");
@@ -1570,7 +1568,6 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   int emergency_avoid_count_thr = 0;
   bool is_use_last_lon_information = true;
   double extra_truck_lat_buffer = 0.0;
-  double start_nudge_ttc = 3.6;
   double base_safe_intrusoin_for_dynamic = 0.3;
   double base_safe_intrusoin_for_static = 0.5;
   double extra_buffer_for_truck = 0.0;

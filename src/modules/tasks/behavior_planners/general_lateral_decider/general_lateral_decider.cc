@@ -103,6 +103,7 @@ bool GeneralLateralDecider::InitInfo() {
       ego_cart_state_manager_->ego_v() * 3.6);
   is_use_recurrence_ = has_enough_speed_bound_recurrence_hysteresis_.IsValid();
   ref_curve_info_.Clear();
+  current_desire_final_nudge_l_map_.clear();
   return true;
 }
 
@@ -116,16 +117,18 @@ bool GeneralLateralDecider::Execute() {
   if (!PreCheck()) {
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
-    ILOG_DEBUG << "PreCheck failed";
-    desire_final_nudge_l_map_.clear();
+    last_desire_final_nudge_l_map_.clear();
     ResetIsExceedObstacleHysteresisMap();
+    ILOG_DEBUG << "PreCheck failed";
     return false;
   }
 
   auto start_time = IflyTime::Now_ms();
 
   if (!InitInfo()) {
-    desire_final_nudge_l_map_.clear();
+    last_desire_final_nudge_l_map_.clear();
+    extra_lane_width_decrease_buffer_ = 0.0;
+    is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
     return false;
   };
@@ -1939,14 +1942,16 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   }
 
   if (!lateral_offset_decider_output.enable_bound) {
-    desire_final_nudge_l_map_.clear();
+    last_desire_final_nudge_l_map_.clear();
+    is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
     ILOG_DEBUG << "Enable_bound is invalid!";
     return;
   }
 
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
-    desire_final_nudge_l_map_.clear();
+    last_desire_final_nudge_l_map_.clear();
+    is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
     ILOG_INFO << "Ref traj points or ref path points is null!";
     return;
@@ -1983,6 +1988,7 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   GenerateStaticObstaclesBoundary(static_obstacles, static_obstacle_decisions_);
   GenerateDynamicObstaclesBoundary(dynamic_obstacles,
                                    dynamic_obstacle_decisions_);
+  last_desire_final_nudge_l_map_ = current_desire_final_nudge_l_map_;
 }
 
 void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
@@ -1991,7 +1997,7 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForStaticObstacle(obstacle)) {
-      desire_final_nudge_l_map_.erase(obstacle->id());
+      last_desire_final_nudge_l_map_.erase(obstacle->id());
       continue;
     }
 
@@ -2576,7 +2582,7 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
   ObstaclePotentialDecisions obstacle_potential_decisions;
   for (auto &obstacle : obs_vec) {
     if (!IsFilterForDynamicObstacle(obstacle)) {
-      desire_final_nudge_l_map_.erase(obstacle->id());
+      last_desire_final_nudge_l_map_.erase(obstacle->id());
       continue;
     }
 
@@ -3644,13 +3650,13 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     bound_info.id = id;
     if (is_avoid_side_ignore_obj && !is_update_hard_bound) {
       // 渐进式增大避让幅度
-      if (desire_final_nudge_l_map_.find(id) != desire_final_nudge_l_map_.end()) {
-        limit_nudge_max_l = std::fmin(desire_final_nudge_l_map_[id] +
+      if (last_desire_final_nudge_l_map_.find(id) != last_desire_final_nudge_l_map_.end()) {
+        limit_nudge_max_l = std::fmin(last_desire_final_nudge_l_map_[id] +
             limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
-        if (desire_final_nudge_l_map_[id] != 0) {
-          limit_nudge_min_l = desire_final_nudge_l_map_[id] - limit_nudge_change_rate;
+        if (last_desire_final_nudge_l_map_[id] != 0) {
+          limit_nudge_min_l = last_desire_final_nudge_l_map_[id] - limit_nudge_change_rate;
         }
-        limit_nudge_max_l = std::fmax(limit_nudge_max_l, desire_final_nudge_l_map_[id]);
+        limit_nudge_max_l = std::fmax(limit_nudge_max_l, last_desire_final_nudge_l_map_[id]);
       } else {
         limit_nudge_max_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
       }
@@ -3658,12 +3664,11 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       limit_nudge_min_l = std::fmin(limit_nudge_max_l, limit_nudge_min_l);
       bound.lower = clip(bound.lower, limit_nudge_max_l, limit_nudge_min_l);
     }
-
     if (!is_update_hard_bound) {
-      if (desire_final_nudge_l_map_.find(id) != desire_final_nudge_l_map_.end()) {
-        desire_final_nudge_l_map_[id] = std::fmax(bound.lower, desire_final_nudge_l_map_[id]);
+      if (current_desire_final_nudge_l_map_.find(id) != current_desire_final_nudge_l_map_.end()) {
+        current_desire_final_nudge_l_map_[id] = std::fmax(bound.lower, current_desire_final_nudge_l_map_[id]);
       } else {
-        desire_final_nudge_l_map_[id] = std::fmax(bound.lower, 0);
+        current_desire_final_nudge_l_map_[id] = std::fmax(bound.lower, 0);
       }
     }
   } else if (lat_decision == LatObstacleDecisionType::RIGHT) {
@@ -3676,13 +3681,13 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     bound_info.id = id;
     if (is_avoid_side_ignore_obj && !is_update_hard_bound) {
       // 渐进式增大避让幅度
-      if (desire_final_nudge_l_map_.find(id) != desire_final_nudge_l_map_.end()) {
-        limit_nudge_min_l = std::fmax(desire_final_nudge_l_map_[id] -
+      if (last_desire_final_nudge_l_map_.find(id) != last_desire_final_nudge_l_map_.end()) {
+        limit_nudge_min_l = std::fmax(last_desire_final_nudge_l_map_[id] -
             limit_nudge_change_rate, -config_.max_nudge_buffer2side_car);
-        if (desire_final_nudge_l_map_[id] != 0) {
-          limit_nudge_max_l = desire_final_nudge_l_map_[id] + limit_nudge_change_rate;
+        if (last_desire_final_nudge_l_map_[id] != 0) {
+          limit_nudge_max_l = last_desire_final_nudge_l_map_[id] + limit_nudge_change_rate;
         }
-        limit_nudge_min_l = std::fmin(limit_nudge_min_l, desire_final_nudge_l_map_[id]);
+        limit_nudge_min_l = std::fmin(limit_nudge_min_l, last_desire_final_nudge_l_map_[id]);
       } else {
         limit_nudge_min_l = std::fmax(-limit_nudge_change_rate, -config_.max_nudge_buffer2side_car);
       }
@@ -3691,10 +3696,10 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       bound.upper = clip(bound.upper, limit_nudge_max_l, limit_nudge_min_l);
     }
     if (!is_update_hard_bound) {
-      if (desire_final_nudge_l_map_.find(id) != desire_final_nudge_l_map_.end()) {
-        desire_final_nudge_l_map_[id] = std::fmin(bound.upper, desire_final_nudge_l_map_[id]);
+      if (current_desire_final_nudge_l_map_.find(id) != current_desire_final_nudge_l_map_.end()) {
+        current_desire_final_nudge_l_map_[id] = std::fmin(bound.upper, current_desire_final_nudge_l_map_[id]);
       } else {
-        desire_final_nudge_l_map_[id] = std::fmin(bound.upper, 0);
+        current_desire_final_nudge_l_map_[id] = std::fmin(bound.upper, 0);
       }
     }
   } else {
