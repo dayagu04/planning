@@ -167,7 +167,10 @@ void OccupancyGridMap::TransformToMatrix(cv::Mat *mat) const {
   return;
 }
 
-void OccupancyGridMap::Init() { return; }
+void OccupancyGridMap::Init() {
+  cv::setNumThreads(1);
+  return;
+}
 
 void OccupancyGridMap::AddParkingObs(const ParkObstacleList &obs) {
   AddSlotCoordinatePoints(obs.virtual_obs);
