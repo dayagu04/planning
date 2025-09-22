@@ -294,7 +294,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
     if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
         distance_to_merge_point_ < distance_to_first_road_split &&
-        distance_to_merge_point_ < dis_to_first_merge) {
+        distance_to_merge_point_ < dis_to_first_merge &&
+        distance_to_merge_point_ > 20.0) {
       // 依赖sdpro提供的前方最左侧车道/最右侧车道的LaneChangeType
       if (is_left_edge_side_lane && lane_merge_direction_ == LEFT_MERGE) {
         merge_lane_change_direction_ = RIGHT_CHANGE;
