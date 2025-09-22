@@ -1278,6 +1278,15 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   size_t origin_traj_size = current_path_point_global_vec_.size();
 
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      ego_info_under_slot.cur_pose.GetX() -
+              ego_info_under_slot.origin_target_pose.GetX() >
+          0.068) {
+    ILOG_INFO << "mirror has folded, try to change path according limiter";
+    ego_info_under_slot.fix_limiter = false;
+  }
+
   if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
           !frame_.is_last_path ||
       ego_info_under_slot.fix_limiter || !frame_.spline_success ||
@@ -1637,7 +1646,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       const double lon_dist =
           std::min(vel * (smart_fold_mirror_params.consume_time +
                           smart_fold_mirror_params.reaction_time),
-                   frame_.remain_dist_path + 0.0168);
+                   ego_info_under_slot.origin_pose_local.GetX() -
+                       ego_info_under_slot.cur_pose.GetX() + 0.068);
 
       bool try_fold_mirror = true;
       if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
