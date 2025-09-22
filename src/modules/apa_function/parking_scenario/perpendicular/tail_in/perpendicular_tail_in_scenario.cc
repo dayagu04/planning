@@ -506,6 +506,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
       }
     }
     bool find_target_pose = false;
+    const double start_time = IflyTime::Now_ms();
     for (const bool& fold_mirror_flag : fold_mirror_flag_vec) {
       apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
       TargetPoseDecider target_pose_decider(
@@ -575,6 +576,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
       break;
     }
+    ILOG_INFO << "find target pose time cost = "
+              << (IflyTime::Now_ms() - start_time);
 
     if (!find_target_pose) {
       ILOG_ERROR << "can not find target pose";
@@ -1513,6 +1516,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 }
 
 const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
+  const double start_time = IflyTime::Now_ms();
   apa_world_ptr_->GetColDetInterfacePtr()->Init(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag());
 
@@ -1614,6 +1618,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       frame_.mirror_command == MirrorCommand::NONE &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
       frame_.is_last_path) {
     const geometry_lib::PathPoint& termial_err =
         ego_info_under_slot.terminal_err;
@@ -1706,6 +1711,9 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             << "  lon_buffer = " << lon_buffer
             << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
             << "  increase_lat_err_flag = " << increase_lat_err_flag;
+
+  ILOG_INFO << "real time brake time cost = "
+            << (IflyTime::Now_ms() - start_time);
 
   return safe_remain_dist;
 }

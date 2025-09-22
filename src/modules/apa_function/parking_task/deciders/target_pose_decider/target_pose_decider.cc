@@ -200,11 +200,22 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
             << "  max_lat_move_dist = " << max_lat_move_dist;
 
   // calc lat_move_step and lon_move_step
-  double lat_move_step{0.01};
-  double lon_move_step{0.025};
+  double lat_move_step{0.02};
+  double lon_move_step{0.05};
   if (is_searching_stage_) {
     lat_move_step = 0.05;
     lon_move_step = 0.1;
+  }
+
+  // 车位内的核心区域不能有障碍物  有就直接失败
+  Polygon2D polygon;
+  polygon.FillTangentCircleParams(slot_.GetCustomSlotPolygon(
+      2.68, -slot_.slot_length_ * 0.4, -0.4, -0.4, true));
+  if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
+          polygon, GJKColDetRequest(true))) {
+    ILOG_INFO << "slot min parking area is occupied";
+    result_.target_pose_type = TargetPoseType::FAIL;
+    return result_;
   }
 
   // 生成纵向移动距离数组
