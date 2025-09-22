@@ -1079,6 +1079,29 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         //   HandleRefPathOffset(traj_points,
         //       lane_change_decider_output.lateral_close_boundary_offset);
         // } else {
+        if (ref_curve_info_.curve_type == RoadCurvatureInfo::CurveType::BIG_CURVE) {
+          const std::vector<double> curv_bp{50, 400};
+          const std::vector<double> lat_compensation_buffer{0.2, 0.1};
+
+          double compensation_buffer = interp(ref_curve_info_.max_curve, config_.curv_bp,
+                config_.lat_compensation_buffer);
+          const double change_rate = 0.05;
+          if (ref_curve_info_.is_left) {
+            if (last_compensation_buffer_ < 0) {
+              last_compensation_buffer_ = 0.0;
+            }
+            compensation_buffer =
+              clip(compensation_buffer, last_compensation_buffer_ + change_rate, last_compensation_buffer_ - change_rate);
+          } else if (ref_curve_info_.is_right) {
+            if (last_compensation_buffer_ > 0) {
+              last_compensation_buffer_ = 0.0;
+            }
+            compensation_buffer =
+              clip(-compensation_buffer, last_compensation_buffer_ + change_rate, last_compensation_buffer_ - change_rate);
+          }
+          ref_lat_offset += compensation_buffer;
+          last_compensation_buffer_ = compensation_buffer;
+        }
         HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
         // }
       }

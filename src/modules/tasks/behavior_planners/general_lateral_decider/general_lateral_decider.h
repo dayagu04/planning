@@ -313,6 +313,7 @@ class GeneralLateralDecider : public Task {
   bool is_use_recurrence_ = false;
 
   RoadCurvatureInfo ref_curve_info_;
+  double last_compensation_buffer_;
 };
 
 }  // namespace planning

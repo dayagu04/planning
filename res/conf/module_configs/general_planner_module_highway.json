@@ -290,7 +290,9 @@
     "dynamic_vru_nudge_lateral_buffer": 0.9,
     "bound_recurrence_v_limit_max": 80,
     "nudge_buffer2lane_boundary_buffer": 0.1,
-    "max_care_time_for_roadborder":3.5
+    "max_care_time_for_roadborder":3.5,
+    "curv_bp":[50, 200, 400],
+    "lat_compensation_buffer":[0.2, 0.15, 0.1]
   },
   "lateral_offset_decider": {
     "avd_vrel_bp_1": 1,
