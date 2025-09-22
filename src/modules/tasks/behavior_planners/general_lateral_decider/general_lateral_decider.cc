@@ -997,19 +997,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     traj_points.emplace_back(point);
   }
 
-  auto &general_lateral_decider_output =
-      session_->mutable_planning_context()
-              ->mutable_general_lateral_decider_output();
-  general_lateral_decider_output.front_axis_enu_ref_path = std::move(front_axis_ref_path);
-
   // calculate lc ref buffer
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  bool lat_offset_is_valid = lateral_offset_decider_output.is_valid;
+  auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+              ->mutable_general_lateral_decider_output();
+
+  bool lat_offset_is_valid =
+      lateral_offset_decider_output.is_valid;
   double ref_lat_offset = 0.0;
   if (lat_offset_is_valid) {
     ref_lat_offset = lateral_offset_decider_output.lateral_offset;
   }
+  ref_lat_offset = 0;
   double lc_target_l = 0.0;
   if (is_LC_CHANGE) {
     lc_target_l = config_.lc_ref_offset;
@@ -1046,6 +1047,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   last_lc_ref_offset_ = lc_target_l;
   ref_lat_offset += lc_target_l;
 
+  // ref_lat_offset = -0.1;
   general_lateral_decider_output.is_use_spatio_planner_result =
       is_use_spatio_planner_result;
   general_lateral_decider_output.ramp_scene =
@@ -1057,9 +1059,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     general_lateral_decider_output.complete_follow = true;
     general_lateral_decider_output.lane_change_scene = true;
     if (is_LC_CHANGE) {
-      HandleRefPathOffset(traj_points, ref_lat_offset);
+      HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
     } else if (is_LC_HOLD) {
-      HandleRefPathOffset(traj_points, lc_hold_offset);
+      HandleRefPathOffset(traj_points, front_axis_ref_path, lc_hold_offset);
     }
   } else {
     // fusion is unsteady, lane keep weight need decay in end of ref
@@ -1077,16 +1079,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         //   HandleRefPathOffset(traj_points,
         //       lane_change_decider_output.lateral_close_boundary_offset);
         // } else {
-        HandleRefPathOffset(traj_points, ref_lat_offset);
+        HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
         // }
       }
     }
   }
+
+
+  general_lateral_decider_output.front_axis_enu_ref_path = std::move(front_axis_ref_path);
 }
 
-void GeneralLateralDecider::HandleRefPathOffset(TrajectoryPoints &traj_points,
-                                                double dynamic_ref_buffer) {
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+void GeneralLateralDecider::HandleRefPathOffset(
+    TrajectoryPoints &traj_points, double dynamic_ref_buffer) {
+  const auto &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
   if (std::fabs(dynamic_ref_buffer) > 1e-6) {
     Point2D first_offset_xy_point;
     if (frenet_coord->SLToXY(Point2D(traj_points[0].s, dynamic_ref_buffer),
@@ -1101,6 +1107,11 @@ void GeneralLateralDecider::HandleRefPathOffset(TrajectoryPoints &traj_points,
         traj_point.x += diff_x;
         traj_point.y += diff_y;
         traj_point.l += dynamic_ref_buffer;
+      }
+
+      for (auto &front_axis_point : front_axis_ref_path) {
+        front_axis_point.first += diff_x;
+        front_axis_point.second += diff_y;
       }
     } else {
       std::cout << "HandleAvoidScene frenet error!" << std::endl;

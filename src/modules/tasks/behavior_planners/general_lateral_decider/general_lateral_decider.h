@@ -197,7 +197,7 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-  void HandleRefPathOffset(TrajectoryPoints &traj_points,
+  void HandleRefPathOffset(TrajectoryPoints &traj_points, std::vector<std::pair<double, double>> &front_axis_ref_path,
                            double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
