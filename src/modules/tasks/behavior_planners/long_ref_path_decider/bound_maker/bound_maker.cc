@@ -68,8 +68,8 @@ common::Status BoundMaker::Run(const TargetMaker& target_maker) {
   // 5. Judge danger agent by max decel curve
   JudgeDangerAgentByMaxDecelCurve(target_maker);
 
-  // 6. Safety bound (IDM + CAH)
-  MakeSafetyBound();
+  // 6. comfort bound (IDM + CAH)
+  MakeComfortBound();
 
   return common::Status::OK();
 }
@@ -332,7 +332,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
       session_->planning_context().start_stop_decider_output();
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
 
-  // Hack: add jerk bound if s_target is safety
+  // Hack: add jerk bound if s_target is comfort
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   bool is_need_comfortable_decel = true;
   bool is_cipv_has_sharp_decel = false;
@@ -352,7 +352,8 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     auto target_value = target_maker.target_value(t);
     if (target_value.target_type() == TargetType::kFollow ||
         target_value.target_type() == TargetType::kNeighborYield ||
-        target_value.target_type() == TargetType::kCautionYield) {
+        target_value.target_type() == TargetType::kCautionYield ||
+        target_value.target_type() == TargetType::kComfort) {
       // check s_target by s_safe
       if (agent_s - brake_buffer < s_safe) {
         is_need_comfortable_decel = false;
@@ -382,7 +383,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
   }
 }
 
-void BoundMaker::MakeSafetyBound() {
+void BoundMaker::MakeComfortBound() {
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const double v_ego = ego_state_mgr->ego_v();
@@ -390,7 +391,7 @@ void BoundMaker::MakeSafetyBound() {
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
 
-  std::vector<double> safety_upper_bound(plan_points_num_, 200.0);
+  std::vector<double> comfort_upper_bound(plan_points_num_, 200.0);
 
   constexpr double s0 = 3.5;
   constexpr double max_tau = 1.35;
@@ -402,7 +403,7 @@ void BoundMaker::MakeSafetyBound() {
     const auto& upper_bound_info = upper_bound_infos_[i];
 
     if (upper_bound_info.agent_id == -1) {
-      safety_upper_bound[i] = s_upper_bound_[i];
+      comfort_upper_bound[i] = s_upper_bound_[i];
       continue;
     }
 
@@ -421,7 +422,7 @@ void BoundMaker::MakeSafetyBound() {
         s0 + std::max(0.0, v_ego * tau +
                                v_ego * v_rel / (2.0 * std::sqrt(a * b_max)));
 
-    double s_safety;
+    double s_safety = 0.0;
     if (s_current > s_comfort && s_current > s_desired) {
       s_safety = s0 + tau * v_ego;
     } else if (s_current < s_desired && s_current < s_comfort) {
@@ -432,15 +433,12 @@ void BoundMaker::MakeSafetyBound() {
     } else {
       s_safety = s0 + std::max(0.0, tau * v_ego + v_ego * v_rel / (2.0 * b_max));
     }
-
-    const double soft_safety_distance = std::max(s_safety, s0);
-    safety_upper_bound[i] =
-        std::max(0.0, s_upper_bound_[i] - soft_safety_distance);
+    comfort_upper_bound[i] = std::max(0.0, s_upper_bound_[i] - s_safety);
   }
 
-  safety_upper_bound_ = safety_upper_bound;
-  JSON_DEBUG_VALUE("soft_safety_distance",
-                   s_upper_bound_[0] - safety_upper_bound_[0]);
+  comfort_upper_bound_ = comfort_upper_bound;
+  JSON_DEBUG_VALUE("soft_bound_distance",
+                   s_upper_bound_[0] - comfort_upper_bound_[0]);
 }
 
 SecondOrderTimeOptimalTrajectory BoundMaker::GenerateMaxAccelerationCurve()
@@ -557,20 +555,20 @@ void BoundMaker::GenerateUpperBoundInfo() {
   }
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_safety_target_lat_follow ||
-      lon_ref_path_decider_output.is_safety_target_lon_cutin) {
+  if (lon_ref_path_decider_output.is_comfort_target_lat_follow ||
+      lon_ref_path_decider_output.is_comfort_target_lon_cutin) {
     for (size_t i = 0;
          i < plan_points_num_ &&
-         i < lon_ref_path_decider_output.safe_target_upper_bound_infos.size();
+         i < lon_ref_path_decider_output.comfort_target_upper_bound_infos.size();
          i++) {
-      const auto& safe_upper_bound_info =
-          lon_ref_path_decider_output.safe_target_upper_bound_infos[i];
-      upper_bound_infos_[i].s = safe_upper_bound_info.s;
-      upper_bound_infos_[i].t = safe_upper_bound_info.t;
-      upper_bound_infos_[i].v = safe_upper_bound_info.v;
-      upper_bound_infos_[i].agent_id = safe_upper_bound_info.agent_id;
+      const auto& comfort_upper_bound_info =
+          lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];
+      upper_bound_infos_[i].s = comfort_upper_bound_info.s;
+      upper_bound_infos_[i].t = comfort_upper_bound_info.t;
+      upper_bound_infos_[i].v = comfort_upper_bound_info.v;
+      upper_bound_infos_[i].agent_id = comfort_upper_bound_info.agent_id;
       const auto* agent =
-          agent_manager->GetAgent(safe_upper_bound_info.agent_id);
+          agent_manager->GetAgent(comfort_upper_bound_info.agent_id);
       if (agent != nullptr) {
         upper_bound_infos_[i].d_path = agent->d_path();
         upper_bound_infos_[i].d_rel = agent->d_rel();
@@ -629,7 +627,7 @@ double BoundMaker::CalcPositiveAccLimit(const double v_ego, const double v_rel,
 double BoundMaker::CalcCriticalDecel(const double d_lead, const double v_rel,
                                      const double d_offset,
                                      const double v_offset) {
-  // this function computes the required decel to avoid crashing, given safety
+  // this function computes the required decel to avoid crashing, given comfort
   // offsets
   double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
                       std::max(2 * (d_lead - d_offset), 0.5);
@@ -727,7 +725,8 @@ void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
     auto target_value = target_maker.target_value(t);
     if (target_value.target_type() == TargetType::kFollow ||
         target_value.target_type() == TargetType::kNeighborYield ||
-        target_value.target_type() == TargetType::kCautionYield) {
+        target_value.target_type() == TargetType::kCautionYield ||
+        target_value.target_type() == TargetType::kComfort) {
       // check s_target by s_safe
       if (agent_s - brake_buffer < s_safe) {
         if (danger_info.agents_id_set.find(corridor_upper_point.agent_id()) ==
@@ -799,9 +798,9 @@ double BoundMaker::jerk_upper_bound(const double t) const {
   return jerk_upper_bound_[index];
 }
 
-double BoundMaker::safety_bound(const double t) const {
+double BoundMaker::comfort_bound(const double t) const {
   int32_t index = static_cast<int32_t>(std::round(t / dt_));
-  return safety_upper_bound_[index];
+  return comfort_upper_bound_[index];
 }
 
 }  // namespace planning

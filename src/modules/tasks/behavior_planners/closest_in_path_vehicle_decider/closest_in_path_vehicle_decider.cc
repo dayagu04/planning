@@ -187,7 +187,10 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   *v_fusion_frenet = agent->speed_fusion() * std::cos(heading_diff);
   *acc = agent->accel();
   *acc_fusion = agent->accel_fusion();
-  *is_large = agent->length() > kLargeAgentLengthM;
+  *is_large = agent->length() > kLargeAgentLengthM ||
+              agent->type() == agent::AgentType::BUS ||
+              agent->type() == agent::AgentType::TRUCK ||
+              agent->type() == agent::AgentType::TRAILER;
   if (ego_v - *v_frenet > KSpeedDiffThr) {
     *cipv_ttc = *relative_s / (ego_v - *v_frenet);
   } else {

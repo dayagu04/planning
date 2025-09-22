@@ -2,6 +2,7 @@
 
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "caution_target.h"
+#include "comfort_target.h"
 #include "common/math/common_utils.h"
 #include "cross_vru_target.h"
 #include "cruise_target.h"
@@ -10,7 +11,6 @@
 #include "neighbor_target.h"
 #include "overtake_target.h"
 #include "planning_context.h"
-#include "safety_target.h"
 
 namespace planning {
 
@@ -27,8 +27,8 @@ common::Status TargetMaker::Run() {
   // 1. cruise target @建伟
   CruiseTarget cruise_target(speed_planning_config_, session_);
 
-  // 2. safety target @华文
-  SafetyTarget safety_target(speed_planning_config_, session_);
+  // 2. comfort target @华文
+  ComfortTarget comfort_target(speed_planning_config_, session_);
 
   // 3. follow target @翼闻
   FollowTarget follow_target(speed_planning_config_, session_);
@@ -60,7 +60,7 @@ common::Status TargetMaker::Run() {
     TargetValue neighbor_target_value =
         neighbor_target.target_value(relative_t);
     TargetValue caution_target_value = caution_target.target_value(relative_t);
-    TargetValue safety_target_value = safety_target.target_value(relative_t);
+    TargetValue comfort_target_value = comfort_target.target_value(relative_t);
     TargetValue cross_vru_target_value =
         cross_vru_target.target_value(relative_t);
 
@@ -102,11 +102,11 @@ common::Status TargetMaker::Run() {
           Target::TargetMin(caution_target_value, upper_target_value);
     }
 
-    // TBD: 华文合入safety_target
-    // 3.update upper value by safety target
-    if (safety_target_value.has_target()) {
+    // TBD: 华文合入comfort_target
+    // 3.update upper value by comfort target
+    if (comfort_target_value.has_target()) {
       upper_target_value =
-          Target::TargetMin(safety_target_value, upper_target_value);
+          Target::TargetMin(comfort_target_value, upper_target_value);
     }
 
     // TBD: 华文合入cross_vru_target

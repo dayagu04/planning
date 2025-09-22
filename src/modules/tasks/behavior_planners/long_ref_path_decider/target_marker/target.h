@@ -17,7 +17,7 @@ enum class TargetType {
   kNotSet,
   kFollowCurve,
   kCautionYield,
-  kSafety,
+  kComfort,
   kCrossVRU,
 };
 
@@ -107,8 +107,8 @@ class Target {
       return "kNeighborYield";
     } else if (type == TargetType::kNeighborOvertake) {
       return "kNeighborOvertake";
-    } else if (type == TargetType::kSafety) {
-      return "kSafety";
+    } else if (type == TargetType::kComfort) {
+      return "kComfort";
     } else if (type == TargetType::kCrossVRU) {
       return "kCrossVRU";
     } else {

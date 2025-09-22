@@ -1,4 +1,5 @@
-#include "safety_target.h"
+#include "comfort_target.h"
+#include "comfort_target.h"
 
 #include <algorithm>
 #include <cmath>
@@ -7,9 +8,9 @@
 #include <limits>
 #include <memory>
 
+#include "behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
-#include "behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "common/config/basic_type.h"
 #include "common/st_graph/st_graph_utils.h"
 #include "debug_info_log.h"
@@ -22,10 +23,10 @@
 
 namespace planning {
 
-SafetyTarget::SafetyTarget(const SpeedPlannerConfig& config,
-                           framework::Session* session)
+ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
+                             framework::Session* session)
     : Target(config, session) {
-  safety_target_pb_.Clear();
+  comfort_target_pb_.Clear();
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -61,6 +62,18 @@ SafetyTarget::SafetyTarget(const SpeedPlannerConfig& config,
 
   JSON_DEBUG_VALUE("limit_speed", desired_speed);
 
+  upper_bound_infos_ =
+      std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
+
+  follow_agent_ids_.clear();
+
+  GenerateUpperBoundInfo();
+
+  std::vector<double> follow_agent_ids_double(follow_agent_ids_.begin(),
+                                              follow_agent_ids_.end());
+
+  JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
+
   idm_params_.v0 = desired_speed;
   idm_params_.s0 = 3.5;
   idm_params_.T = 1.0;
@@ -81,26 +94,43 @@ SafetyTarget::SafetyTarget(const SpeedPlannerConfig& config,
   idm_params_.follow_consider_distance = 10.0;
   idm_params_.follow_consider_time_headway = 1.5;
 
-  upper_bound_infos_ =
-      std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
-
-  follow_agent_ids_.clear();
-
-  GenerateUpperBoundInfo();
-
   acc_values_ = std::vector<double>(plan_points_num_, 0.0);
-  std::vector<double> follow_agent_ids_double(follow_agent_ids_.begin(), follow_agent_ids_.end());
-  JSON_DEBUG_VECTOR("safety_follow_agent_ids", follow_agent_ids_double, 0);
 
-  GenerateSafetyTarget();
+  GenerateComfortTarget();
 
-  AddSafetyTargetDataToProto();
+  auto mutable_lon_ref_path_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_lon_ref_path_decider_output();
+
+  mutable_lon_ref_path_decider_output->is_comfort_target_lat_follow =
+      is_lat_follow_;
+  mutable_lon_ref_path_decider_output->is_comfort_target_lon_cutin =
+      is_lon_cutin_;
+  mutable_lon_ref_path_decider_output->follow_agent_ids = follow_agent_ids_;
+  mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.clear();
+  mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.reserve(
+      upper_bound_infos_.size());
+  for (const auto& info : upper_bound_infos_) {
+    ComfortTargetUpperBoundInfo output_info;
+    output_info.s = info.s;
+    output_info.t = info.t;
+    output_info.v = info.v;
+    output_info.agent_id = info.agent_id;
+    output_info.st_boundary_id = info.st_boundary_id;
+    mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos
+        .push_back(output_info);
+  }
+
+  AddComfortTargetDataToProto();
 }
 
-void SafetyTarget::GenerateUpperBoundInfo() {
+void ComfortTarget::GenerateUpperBoundInfo() {
   const auto* st_graph = session_->planning_context().st_graph_helper();
   const double virtual_front_s = idm_params_.virtual_front_s;
   const double virtual_front_vel = idm_params_.v0;
+  const int32_t virtual_front_agent_id = 799999;
+  const int32_t virtual_front_st_boundary_id = 799999;
+  const double virtual_front_acc = 0.0;
   const auto& ego_vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_rear_axle =
@@ -137,7 +167,6 @@ void SafetyTarget::GenerateUpperBoundInfo() {
   std::unordered_set<int32_t> forbidden_ids(blocked_obs_id.begin(),
                                             blocked_obs_id.end());
 
-  // 从 lat_obstacle_decision 中收集 FOLLOW 类型的 agents
   for (const auto& [agent_id, decision] : lat_obstacle_decision) {
     if (decision == LatObstacleDecisionType::FOLLOW) {
       if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
@@ -160,7 +189,6 @@ void SafetyTarget::GenerateUpperBoundInfo() {
       session_->planning_context().agent_longitudinal_decider_output();
   const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
 
-  // 从 cutin_agent_ids 中收集符合条件的 agents
   for (const int32_t cutin_id : cutin_ids) {
     if (forbidden_ids.find(cutin_id) != forbidden_ids.end() ||
         added_agent_ids.find(cutin_id) != added_agent_ids.end()) {
@@ -194,7 +222,7 @@ void SafetyTarget::GenerateUpperBoundInfo() {
     for (size_t i = 0; i < plan_points_num_; i++) {
       double min_agent_s = std::numeric_limits<double>::max();
       FollowAgentInfo best_agent_info = {
-          0, 0.0, 0.0, FollowAgentSource::kLatObstacleDecision};
+          -1, 0.0, 0.0, 0.0, 899999, FollowAgentSource::kLatObstacleDecision};
       bool found_valid_agent = false;
 
       for (const auto& agent_with_source : follow_agents) {
@@ -214,13 +242,15 @@ void SafetyTarget::GenerateUpperBoundInfo() {
         double heading_diff = planning_math::NormalizeAngle(
             traj_point.theta() - matched_point.theta());
         double agent_speed = traj_point.vel() * std::cos(heading_diff);
+        double agent_acc = traj_point.acc() * std::cos(heading_diff);
         double agent_s =
             center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5;
 
         if (agent_s < min_agent_s) {
           min_agent_s = agent_s;
-          best_agent_info = {agent->agent_id(), agent_s, agent_speed,
-                             agent_with_source.source};
+          best_agent_info = {
+              agent->agent_id(), agent_s, agent_speed,
+              agent_acc,         899999,  agent_with_source.source};
           found_valid_agent = true;
         }
       }
@@ -240,13 +270,15 @@ void SafetyTarget::GenerateUpperBoundInfo() {
       if (upper_bound.agent_id() != speed::kNoAgentId) {
         upper_bound_infos_[i] = {
             upper_bound.s(),           t,
-            upper_bound.velocity(),    TargetType::kSafety,
+            upper_bound.velocity(),    TargetType::kComfort,
             upper_bound.agent_id(),    upper_bound.boundary_id(),
             upper_bound.acceleration()};
       } else {
         upper_bound_infos_[i] = {
-            virtual_front_s, t,  virtual_front_vel, TargetType::kSafety, 799999,
-            799999,          0.0};
+            virtual_front_s,        t,
+            virtual_front_vel,      TargetType::kComfort,
+            virtual_front_agent_id, virtual_front_st_boundary_id,
+            virtual_front_acc};
       }
 
       if (!follow_agents.empty() && follow_agent_infos[i].s < upper_bound.s()) {
@@ -261,20 +293,19 @@ void SafetyTarget::GenerateUpperBoundInfo() {
         upper_bound_infos_[i] = {follow_agent_infos[i].s,
                                  t,
                                  follow_agent_infos[i].v,
-                                 TargetType::kSafety,
+                                 TargetType::kComfort,
                                  follow_agent_infos[i].agent_id,
-                                 899999,
-                                 0.0};
+                                 follow_agent_infos[i].st_boundary_id,
+                                 follow_agent_infos[i].a};
       }
     }
   }
-  
-  // 只存储实际被使用的有效 agent ID
+
   follow_agent_ids_.assign(valid_agent_ids.begin(), valid_agent_ids.end());
   std::sort(follow_agent_ids_.begin(), follow_agent_ids_.end());
 }
 
-void SafetyTarget::GenerateSafetyTarget() {
+void ComfortTarget::GenerateComfortTarget() {
   const double default_t = 0.0;
   const bool default_has_target = false;
   const double default_s_target = 0.0;
@@ -294,7 +325,7 @@ void SafetyTarget::GenerateSafetyTarget() {
   target_values_[0].set_has_target(true);
   target_values_[0].set_s_target_val(current_s);
   target_values_[0].set_v_target_val(current_v);
-  target_values_[0].set_target_type(TargetType::kSafety);
+  target_values_[0].set_target_type(TargetType::kComfort);
   acc_values_[0] = current_a;
 
   for (int32_t i = 1; i < plan_points_num_; i++) {
@@ -322,13 +353,11 @@ void SafetyTarget::GenerateSafetyTarget() {
       }
     }
 
-    double safety_acc = CalculateSafetyAcceleration(
+    double comfort_acc = CalculateComfortAcceleration(
         current_a, current_v, current_s, front_vel, front_s, tau);
-
-    acc_values_[i] = safety_acc;
-
-    double next_s = current_s + current_v * dt_ + 0.5 * safety_acc * dt_ * dt_;
-    double next_v = current_v + safety_acc * dt_;
+    acc_values_[i] = comfort_acc;
+    double next_s = current_s + current_v * dt_ + 0.5 * comfort_acc * dt_ * dt_;
+    double next_v = current_v + comfort_acc * dt_;
 
     next_s = std::max(current_s, next_s);
     next_v = std::max(0.0, next_v);
@@ -336,17 +365,19 @@ void SafetyTarget::GenerateSafetyTarget() {
     target_value.set_has_target(true);
     target_value.set_s_target_val(next_s);
     target_value.set_v_target_val(next_v);
-    target_value.set_target_type(TargetType::kSafety);
-    
+    target_value.set_target_type(TargetType::kComfort);
+    target_value.set_target_type(TargetType::kComfort);
+
     current_s = next_s;
     current_v = next_v;
-    current_a = safety_acc;
+    current_a = comfort_acc;
   }
 }
 
-double SafetyTarget::CalcDesiredVelocity(const double d_rel, const double d_des,
-                                         const double v_lead,
-                                         const double v_ego) const {
+double ComfortTarget::CalcDesiredVelocity(const double d_rel,
+                                          const double d_des,
+                                          const double v_lead,
+                                          const double v_ego) const {
   double v_lead_clip = std::max(v_lead, 0.0);
   const double max_runaway_speed = -2.0;
   double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
@@ -376,9 +407,11 @@ double SafetyTarget::CalcDesiredVelocity(const double d_rel, const double d_des,
   return v_target;
 }
 
-double SafetyTarget::CalculateSafetyAcceleration(
+double ComfortTarget::CalculateComfortAcceleration(
+double ComfortTarget::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
     const double front_vel, const double front_s, const double tau) const {
+  double s0 = idm_params_.s0;
   double v0 = idm_params_.v0;
   double a = idm_params_.a;
   double b = idm_params_.b;
@@ -494,16 +527,16 @@ double SafetyTarget::CalculateSafetyAcceleration(
   return final_acc;
 }
 
-void SafetyTarget::AddSafetyTargetDataToProto() {
+void ComfortTarget::AddComfortTargetDataToProto() {
 #ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  auto mutable_safety_target_data =
-      debug_info_pb->mutable_lon_target_s_ref()->mutable_safety_target();
+  auto mutable_comfort_target_data =
+      debug_info_pb->mutable_lon_target_s_ref()->mutable_comfort_target();
 
   if (!target_values_.empty()) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       const auto& value = target_values_[i];
-      auto* ptr = safety_target_pb_.add_safety_target_s_ref();
+      auto* ptr = comfort_target_pb_.add_comfort_target_s_ref();
       ptr->set_s(value.s_target_val());
       ptr->set_v(value.v_target_val());
       ptr->set_t(value.relative_t());
@@ -513,38 +546,17 @@ void SafetyTarget::AddSafetyTargetDataToProto() {
   }
 
   for (const auto& upper_bound : upper_bound_infos_) {
-    auto* ptr = safety_target_pb_.add_upper_bound_velocities();
+    auto* ptr = comfort_target_pb_.add_upper_bound_infos();
+    ptr->set_s(upper_bound.s);
     ptr->set_t(upper_bound.t);
     ptr->set_v(upper_bound.v);
     ptr->set_a(upper_bound.a);
     ptr->set_agent_id(upper_bound.agent_id);
+    ptr->set_st_boundary_id(upper_bound.st_boundary_id);
   }
 
-  mutable_safety_target_data->CopyFrom(safety_target_pb_);
+  mutable_comfort_target_data->CopyFrom(comfort_target_pb_);
 #endif
-
-  auto mutable_lon_ref_path_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_lon_ref_path_decider_output();
-
-  mutable_lon_ref_path_decider_output->is_safety_target_lat_follow =
-      is_lat_follow_;
-  mutable_lon_ref_path_decider_output->is_safety_target_lon_cutin =
-      is_lon_cutin_;
-  mutable_lon_ref_path_decider_output->follow_agent_ids = follow_agent_ids_;
-  mutable_lon_ref_path_decider_output->safe_target_upper_bound_infos.clear();
-  mutable_lon_ref_path_decider_output->safe_target_upper_bound_infos.reserve(
-      upper_bound_infos_.size());
-  for (const auto& info : upper_bound_infos_) {
-    SafetyTargetUpperBoundInfo output_info;
-    output_info.s = info.s;
-    output_info.t = info.t;
-    output_info.v = info.v;
-    output_info.agent_id = info.agent_id;
-    output_info.st_boundary_id = info.st_boundary_id;
-    mutable_lon_ref_path_decider_output->safe_target_upper_bound_infos
-        .push_back(output_info);
-  }
 }
 
 }  // namespace planning
