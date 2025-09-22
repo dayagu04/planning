@@ -1137,30 +1137,41 @@ void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
 }
 
 void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
+    const bool is_divide_lane_into_two,
     planning::common::LateralPlanningInput &planning_input) {
-  end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
-  std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
-  double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                   config_.map_qjerk_lc_high_vel_old);
-  concerned_start_q_jerk_ = q_jerk;
-  planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
-  std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
-  double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                     config_.map_qrefxy_lc_high_vel);
-  planning_input.set_q_ref_x(q_ref_xy);
-  planning_input.set_q_ref_y(q_ref_xy);
+  if (is_divide_lane_into_two) {
+    std::vector<double> xp_vel{8.333, 16.667, 25.0};
+    std::vector<double> fp_jerk_ratio{4.0, 2.0, 1.0};
+    double q_jerk_ratio = planning::interp(ref_vel_, xp_vel, fp_jerk_ratio);
+    double q_jerk = q_jerk_ratio * config_.q_jerk_split;
+    planning_input.set_q_jerk(q_jerk);
+    concerned_start_q_jerk_ = config_.q_jerk_lane_change;
+    weight_.complete_follow = true;
+  } else {
+    end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
+    std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
+    double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
+                                    config_.map_qjerk_lc_high_vel_old);
+    concerned_start_q_jerk_ = q_jerk;
+    planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
+    std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
+    double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
+                                      config_.map_qrefxy_lc_high_vel);
+    planning_input.set_q_ref_x(q_ref_xy);
+    planning_input.set_q_ref_y(q_ref_xy);
 
-  std::vector<double> xp_xy3{0.15, 0.5, 1.5};
-  std::vector<double> fp_qtheta{config_.q_ref_theta_lane_change_high_vel3,
-                                config_.q_ref_theta_lane_change_high_vel2,
-                                config_.q_ref_theta_lane_change_high_vel1};
-  std::vector<double> xp_vel{5, 10, 15, 20};
-  std::vector<double> fp_dr{0.125, 0.25, 0.5, 1.0};
-  double decay_ratio =
-      planning::interp(ref_vel_, xp_vel, fp_dr);
-  double q_ref_theta =
-      planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta) * 5.0 * decay_ratio;
-  planning_input.set_q_ref_theta(q_ref_theta);
+    std::vector<double> xp_xy3{0.15, 0.5, 1.5};
+    std::vector<double> fp_qtheta{config_.q_ref_theta_lane_change_high_vel3,
+                                  config_.q_ref_theta_lane_change_high_vel2,
+                                  config_.q_ref_theta_lane_change_high_vel1};
+    std::vector<double> xp_vel{5, 10, 15, 20};
+    std::vector<double> fp_dr{0.125, 0.25, 0.5, 1.0};
+    double decay_ratio =
+        planning::interp(ref_vel_, xp_vel, fp_dr);
+    double q_ref_theta =
+        planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta) * 5.0 * decay_ratio;
+    planning_input.set_q_ref_theta(q_ref_theta);
+  }
 }
 
 void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
@@ -1305,11 +1316,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     } else {
       weight_.remotely_index = 17;
     }
-    if (!is_divide_lane_into_two) {
-      MakeSplitDynamicWeight(planning_input);
-    } else {
-      weight_.complete_follow = true;
-    }
+    MakeSplitDynamicWeight(is_divide_lane_into_two, planning_input);
   } else if (is_sharp_turn_) {
     weight_.complete_follow = true;
   }

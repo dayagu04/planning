@@ -250,6 +250,7 @@ class LateralMotionPlanningWeight {
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeSplitDynamicWeight(
+      const bool is_divide_lane_into_two,
       planning::common::LateralPlanningInput &planning_input);
 
   void MakeDynamicPosBoundWeight(
