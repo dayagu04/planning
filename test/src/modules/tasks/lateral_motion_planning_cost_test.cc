@@ -83,17 +83,17 @@ void Init() {
   cost_config[DELTA_BOUND] = 0.1;
   cost_config[OMEGA_BOUND] = 0.1;
 
-  cost_config[SOFT_UPPER_BOUND_X0] = 0.0;
-  cost_config[SOFT_UPPER_BOUND_Y0] = 1.0;
+  cost_config[SECOND_SOFT_UPPER_BOUND_X0] = 0.0;
+  cost_config[SECOND_SOFT_UPPER_BOUND_Y0] = 1.0;
 
-  cost_config[SOFT_UPPER_BOUND_X1] = 1.0;
-  cost_config[SOFT_UPPER_BOUND_Y1] = 1.0;
+  cost_config[SECOND_SOFT_UPPER_BOUND_X1] = 1.0;
+  cost_config[SECOND_SOFT_UPPER_BOUND_Y1] = 1.0;
 
-  cost_config[SOFT_LOWER_BOUND_X0] = 0.0;
-  cost_config[SOFT_LOWER_BOUND_Y0] = 0.0;
+  cost_config[SECOND_SOFT_LOWER_BOUND_X0] = 0.0;
+  cost_config[SECOND_SOFT_LOWER_BOUND_Y0] = 0.0;
 
-  cost_config[SOFT_LOWER_BOUND_X1] = 1.0;
-  cost_config[SOFT_LOWER_BOUND_Y1] = 0.0;
+  cost_config[SECOND_SOFT_LOWER_BOUND_X1] = 1.0;
+  cost_config[SECOND_SOFT_LOWER_BOUND_Y1] = 0.0;
 
   cost_config[W_REF_X] = 2.0;
   cost_config[W_REF_Y] = 2.0;

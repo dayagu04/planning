@@ -13,5 +13,7 @@ message LateralBehaviorDebugInfo {
   repeated int32 obstacle_ids = 6;
   repeated WeightedBound first_soft_upper_bound_info_vec = 7;
   repeated WeightedBound first_soft_lower_bound_info_vec = 8;
+  repeated WeightedBound second_soft_upper_bound_info_vec = 9;
+  repeated WeightedBound second_soft_lower_bound_info_vec = 10;
 }
 

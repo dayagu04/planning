@@ -744,12 +744,12 @@ void LateralMotionPlanningWeight::CalculateLatAvoidDistance(
 }
 
 void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
-    const std::vector<std::pair<double, double>> &soft_bounds,
+    const std::vector<std::pair<double, double>> &second_soft_bounds,
     const std::vector<std::pair<double, double>> &hard_bounds,
     const std::vector<planning::WeightedBounds> soft_bounds_vec,
     const std::vector<planning::WeightedBounds> hard_bounds_vec,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
-        &soft_bounds_info,
+        &second_soft_bounds_info,
     const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
         &hard_bounds_info) {
   std::vector<double> bound_s_vector;
@@ -758,7 +758,7 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
   std::vector<double> hard_lbound_l_vector;
   std::vector<double> hard_ubound_l_vector;
   size_t bounds_size =
-      std::min(soft_bounds_info.size(), hard_bounds_info.size());
+      std::min(second_soft_bounds_info.size(), hard_bounds_info.size());
   if (bounds_size < weight_.point_num || ref_vel_ <= 1e-2) {
     std::fill(soft_bound_qratio_vec_.begin(), soft_bound_qratio_vec_.end(),
               1.0);
@@ -783,24 +783,24 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
   double q_hard_bound_ratio = 1.6;
   soft_bound_qratio_vec_[0] = 1.0;
   hard_bound_qratio_vec_[0] = 1.0;
-  int last_soft_lbound_id = soft_bounds_info[1].first.id;
-  int last_soft_ubound_id = soft_bounds_info[1].second.id;
+  int last_soft_lbound_id = second_soft_bounds_info[1].first.id;
+  int last_soft_ubound_id = second_soft_bounds_info[1].second.id;
   int last_hard_lbound_id = hard_bounds_info[1].first.id;
   int last_hard_ubound_id = hard_bounds_info[1].second.id;
   double init_s = 0.0;
   double ds = ref_vel_ * weight_.dt;
   bound_s_vector.emplace_back(init_s);
-  soft_lbound_l_vector.emplace_back(soft_bounds[0].first);
-  soft_ubound_l_vector.emplace_back(soft_bounds[0].second);
+  soft_lbound_l_vector.emplace_back(second_soft_bounds[0].first);
+  soft_ubound_l_vector.emplace_back(second_soft_bounds[0].second);
   hard_lbound_l_vector.emplace_back(hard_bounds[0].first);
   hard_ubound_l_vector.emplace_back(hard_bounds[0].second);
-  for (size_t i = 1; i < soft_bounds_info.size(); ++i) {
-    int soft_lbound_id = soft_bounds_info[i].first.id;
-    int soft_ubound_id = soft_bounds_info[i].second.id;
+  for (size_t i = 1; i < second_soft_bounds_info.size(); ++i) {
+    int soft_lbound_id = second_soft_bounds_info[i].first.id;
+    int soft_ubound_id = second_soft_bounds_info[i].second.id;
     int hard_lbound_id = hard_bounds_info[i].first.id;
     int hard_ubound_id = hard_bounds_info[i].second.id;
-    auto soft_lbound_type = soft_bounds_info[i].first.type;
-    auto soft_ubound_type = soft_bounds_info[i].second.type;
+    auto soft_lbound_type = second_soft_bounds_info[i].first.type;
+    auto soft_ubound_type = second_soft_bounds_info[i].second.type;
     auto hard_lbound_type = hard_bounds_info[i].first.type;
     auto hard_ubound_type = hard_bounds_info[i].second.type;
     if (soft_lbound_id != last_soft_lbound_id) {

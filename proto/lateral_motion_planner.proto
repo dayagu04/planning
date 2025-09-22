@@ -80,6 +80,16 @@ message LateralPlanningInput {
   repeated double first_soft_lower_bound_y0_vec = 49;
   repeated double first_soft_lower_bound_x1_vec = 50;
   repeated double first_soft_lower_bound_y1_vec = 51;
+
+  repeated double second_soft_upper_bound_x0_vec = 52;
+  repeated double second_soft_upper_bound_y0_vec = 53;
+  repeated double second_soft_upper_bound_x1_vec = 54;
+  repeated double second_soft_upper_bound_y1_vec = 55;
+
+  repeated double second_soft_lower_bound_x0_vec = 56;
+  repeated double second_soft_lower_bound_y0_vec = 57;
+  repeated double second_soft_lower_bound_x1_vec = 58;
+  repeated double second_soft_lower_bound_y1_vec = 59;
 }
 
 message SolverIterationInfo {
