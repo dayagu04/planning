@@ -144,15 +144,17 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       emergence_avoid_request_.Update(lc_status);
     }
-    if (hd_map_valid && (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
-      map_request_.Update(lc_status, map_request_.tfinish());
-    }
-    if (enable_use_merge_lc_request && request_source_ != MAP_REQUEST &&
-        origin_relative_id_zero_nums == 1 && (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
+    if (enable_use_merge_lc_request && origin_relative_id_zero_nums == 1 &&
+        (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();
     }
+
+    if (hd_map_valid && request_source_ != MERGE_REQUEST) {
+      map_request_.Update(lc_status, map_request_.tfinish());
+    }
+
     if (location_valid && use_overtake_lane_change_request) {
       // lcc功能抑制超车变道
       if (function_info.function_mode() != common::DrivingFunctionInfo::NOA) {
@@ -183,7 +185,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       }
       if (curr_time < int_request_.tfinish() + k_default_lane_change_cooling_duration) {
         overtake_request_.Reset();
-        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;        
+        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
 
       // TODO:添加至操作时间域的距离小于一定值时将overtake_count_=0
@@ -281,19 +283,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_ = emergence_avoid_request_.request_type();
     request_source_ = EMERGENCE_AVOID_REQUEST;
     target_lane_virtual_id_ = emergence_avoid_request_.target_lane_virtual_id();
-  } else if (map_request_.request_type() != NO_CHANGE) {
-    if (merge_change_request_.request_type() != NO_CHANGE) {
-      merge_change_request_.Finish();
-      merge_change_request_.Reset();
-    }
-    if (overtake_request_.request_type() != NO_CHANGE) {
-      overtake_request_.Finish();
-      overtake_request_.Reset();
-    }
-    request_ = map_request_.request_type();
-    request_source_ = MAP_REQUEST;
-    target_lane_virtual_id_ = map_request_.target_lane_virtual_id();
   } else if (merge_change_request_.request_type() != NO_CHANGE) {
+    if (map_request_.request_type() != NO_CHANGE) {
+      map_request_.Finish();
+    }
     if (overtake_request_.request_type() != NO_CHANGE) {
       overtake_request_.Finish();
       overtake_request_.Reset();
@@ -301,6 +294,14 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_ = merge_change_request_.request_type();
     request_source_ = MERGE_REQUEST;
     target_lane_virtual_id_ = merge_change_request_.target_lane_virtual_id();
+  } else if (map_request_.request_type() != NO_CHANGE) {
+    if (overtake_request_.request_type() != NO_CHANGE) {
+      overtake_request_.Finish();
+      overtake_request_.Reset();
+    }
+    request_ = map_request_.request_type();
+    request_source_ = MAP_REQUEST;
+    target_lane_virtual_id_ = map_request_.target_lane_virtual_id();
   } else {
     // ILOG_DEBUG << "overtake_request_.request_type():" << overtake_request_.request_type();
     request_ = overtake_request_.request_type();
