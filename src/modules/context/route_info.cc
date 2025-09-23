@@ -2137,10 +2137,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.last_frame_dis_to_split = cur_dis_to_split;
 
-  JSON_DEBUG_VALUE(
-      "ego_status_on_route",
-      static_cast<int>(mlc_decider_route_info_.ego_status_on_route));
-
   bool is_exist_merge_fp = false;
 
   //计算feasible_lane_sequence
@@ -2297,16 +2293,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
     }
 
+    route_info_output_.left_lane_num = left_lane_num;
+    route_info_output_.right_lane_num = right_lane_num;
+    route_info_output_.emergency_lane_num = emergency_lane_num;
+    route_info_output_.minVal_seq = minVal_seq;
+    route_info_output_.maxVal_seq = maxVal_seq;
+
     // 3、判断感知车道数和地图车道数是否吻合
     const int perception_lane_num =
         left_lane_num + right_lane_num + 1 - emergency_lane_num;
     const int map_lane_num = total_lane_num - emergency_lane_num;
-
-    JSON_DEBUG_VALUE("left_lane_num", left_lane_num);
-    JSON_DEBUG_VALUE("right_lane_num", right_lane_num);
-    JSON_DEBUG_VALUE("emergency_lane_num", emergency_lane_num);
-    JSON_DEBUG_VALUE("minVal_seq", minVal_seq);
-    JSON_DEBUG_VALUE("maxVal_seq", maxVal_seq);
 
     const bool is_triggle_continue_lc =
         IsTriggerContinueLCInPerceptionSplitRegion(
@@ -2807,6 +2803,18 @@ void RouteInfo::UpdateVisionInfo() const {
                    (int)route_info_output_.first_split_direction);
   JSON_DEBUG_VALUE("first_merge_direction",
                    (int)route_info_output_.first_merge_direction);
+  JSON_DEBUG_VALUE("is_in_sdmaproad",
+                   (int)route_info_output_.is_in_sdmaproad);
+  JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
+
+  JSON_DEBUG_VALUE("left_lane_num", route_info_output_.left_lane_num);
+  JSON_DEBUG_VALUE("right_lane_num", route_info_output_.right_lane_num);
+  JSON_DEBUG_VALUE("emergency_lane_num", route_info_output_.emergency_lane_num);
+  JSON_DEBUG_VALUE("minVal_seq", route_info_output_.minVal_seq);
+  JSON_DEBUG_VALUE("maxVal_seq", route_info_output_.maxVal_seq);
+  JSON_DEBUG_VALUE(
+      "ego_status_on_route",
+      static_cast<int>(route_info_output_.mlc_decider_route_info.ego_status_on_route));
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
