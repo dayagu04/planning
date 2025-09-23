@@ -12,7 +12,8 @@ class MatchGapCost : public CurveCost {
                const double poly_end_v,
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
-               const double ego_current_vel);
+               const double ego_current_vel,
+               const bool is_merge_change);
   void SetWeightMatchS(const double weight_s) { weight_match_s_ = weight_s; }
   void SetWeightMatchVel(const double weight_vel) {
     weight_match_v_ = weight_vel;
@@ -46,6 +47,9 @@ class MatchGapCost : public CurveCost {
   double clip_dis_penalty_factor_coef_ = 2.5;
   double rel_vel_penalty_factor_coef_ = 3.0;
   double narrow_gap_penalty_factor_coef_ = 1.8;
+
+  double acc_speed_weight_ = 1.5;
+  double dec_speed_weight_ = 2;
 };
 
 class FollowVelCost : public CurveCost {
