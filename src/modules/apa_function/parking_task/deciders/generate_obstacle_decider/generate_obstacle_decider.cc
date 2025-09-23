@@ -226,9 +226,13 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
                         .pt_01_mid.x() +
                     0.68});
 
-  virtual_tlane_.channel_length = std::max(
-      {virtual_tlane_.channel_length, 12.0 / slot.sin_angle_,
-       std::max(std::fabs(bound.min_y), std::fabs(bound.max_y) + 1.68)});
+  const double ego_y =
+      std::max(std::fabs(bound.min_y), std::fabs(bound.max_y)) + 1.08 -
+      param.virtual_obs_left_y_pos - slot.slot_width_ / slot.sin_angle_ * 0.5;
+
+  virtual_tlane_.channel_length =
+      std::max({virtual_tlane_.channel_length,
+                param.channel_length / slot.sin_angle_, ego_y});
 
   const double area_length = virtual_tlane_.channel_length;
   const double area_width =

@@ -350,6 +350,10 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
     history_prepare_plan_traj_ = planning_output_.trajectory;
   }
 
+  ILOG_INFO << "pre traj pt size = "
+            << static_cast<int>(
+                   planning_output_.trajectory.trajectory_points_size);
+
   // fill prepare plan state
   switch (apa_world_->GetSlotManagerPtr()->GetSlotReleaseState()) {
     case SlotReleaseState::NOT_RELEASE:

@@ -506,6 +506,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
       }
     }
     bool find_target_pose = false;
+    const double start_time = IflyTime::Now_ms();
     for (const bool& fold_mirror_flag : fold_mirror_flag_vec) {
       apa_world_ptr_->GetColDetInterfacePtr()->Init(fold_mirror_flag);
       TargetPoseDecider target_pose_decider(
@@ -575,6 +576,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
       break;
     }
+    ILOG_INFO << "find target pose time cost = "
+              << (IflyTime::Now_ms() - start_time);
 
     if (!find_target_pose) {
       ILOG_ERROR << "can not find target pose";
@@ -1278,6 +1281,15 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   size_t origin_traj_size = current_path_point_global_vec_.size();
 
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      ego_info_under_slot.cur_pose.GetX() -
+              ego_info_under_slot.origin_target_pose.GetX() >
+          0.068) {
+    ILOG_INFO << "mirror has folded, try to change path according limiter";
+    ego_info_under_slot.fix_limiter = false;
+  }
+
   if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
           !frame_.is_last_path ||
       ego_info_under_slot.fix_limiter || !frame_.spline_success ||
@@ -1504,6 +1516,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 }
 
 const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
+  const double start_time = IflyTime::Now_ms();
   apa_world_ptr_->GetColDetInterfacePtr()->Init(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag());
 
@@ -1605,6 +1618,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       frame_.mirror_command == MirrorCommand::NONE &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetBrakeFlag() &&
       !apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag() &&
+      !apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
       frame_.is_last_path) {
     const geometry_lib::PathPoint& termial_err =
         ego_info_under_slot.terminal_err;
@@ -1637,7 +1651,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
       const double lon_dist =
           std::min(vel * (smart_fold_mirror_params.consume_time +
                           smart_fold_mirror_params.reaction_time),
-                   frame_.remain_dist_path + 0.0168);
+                   ego_info_under_slot.origin_pose_local.GetX() -
+                       ego_info_under_slot.cur_pose.GetX() + 0.068);
 
       bool try_fold_mirror = true;
       if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
@@ -1696,6 +1711,9 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
             << "  lon_buffer = " << lon_buffer
             << "  lat_buffer = " << real_time_brake_info_vec[0].body_lat_buffer
             << "  increase_lat_err_flag = " << increase_lat_err_flag;
+
+  ILOG_INFO << "real time brake time cost = "
+            << (IflyTime::Now_ms() - start_time);
 
   return safe_remain_dist;
 }
