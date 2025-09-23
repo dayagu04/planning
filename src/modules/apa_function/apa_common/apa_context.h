@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include "Eigen/Core"
 
 namespace planning {
 namespace apa_planner {
@@ -123,6 +124,67 @@ enum class MirrorCommand : uint8_t {
   NONE,
   FOLD,
   EXPAND,
+};
+
+#define LOCALIZATION_PATH_MAX_NUM (400)
+struct LocalizationPath {
+  Eigen::Vector3d path[LOCALIZATION_PATH_MAX_NUM];
+  int32_t size;
+
+  void Clear() {
+    size = 0;
+    return;
+  }
+
+  const bool CheckResolution(const Eigen::Vector3d &point) {
+    if (size <= 0) {
+      return true;
+    }
+
+    if (size >= LOCALIZATION_PATH_MAX_NUM) {
+      return false;
+    }
+
+    Eigen::Vector3d dist = point - path[size - 1];
+    // record resolution is 0.25
+    if (dist.norm() < 0.25) {
+      return false;
+    }
+
+    return true;
+  }
+
+  void Add(const Eigen::Vector3d &point) {
+    if (size < 0) {
+      return;
+    }
+
+    if (size >= LOCALIZATION_PATH_MAX_NUM) {
+      SetEndPoint(point);
+      return;
+    }
+
+    if (!CheckResolution(point)) {
+      return;
+    }
+
+    path[size] = point;
+    size++;
+    return;
+  }
+
+  void SetFirstPoint(const Eigen::Vector3d &point) {
+    path[0] = point;
+    size = 1;
+    return;
+  }
+
+  void SetEndPoint(const Eigen::Vector3d &point) {
+    path[LOCALIZATION_PATH_MAX_NUM - 1] = point;
+    return;
+  }
+
+  const int32_t Size() const { return size; }
 };
 
 void PrintApaScenarioStatus(const ParkingScenarioStatus scenario_status);

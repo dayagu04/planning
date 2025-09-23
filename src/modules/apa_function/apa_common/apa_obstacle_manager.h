@@ -72,6 +72,8 @@ class ApaObstacleManager final {
 
   const size_t GetObstacleSize() const { return obstacles_.size(); }
 
+  void GenerateUss(const LocalView *local_view);
+
  private:
   // not allow any ptr variable
   size_t obs_id_generate_{0};
@@ -79,6 +81,9 @@ class ApaObstacleManager final {
   std::vector<double> uss_dis_vec_;
 
   ApaStateMachineManager state_machine_manager_;
+
+  // record localization pose in activate state
+  LocalizationPath localization_path_;
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;

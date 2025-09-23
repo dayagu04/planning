@@ -56,4 +56,5 @@ const bool IsDynamicOD(const double v, const iflyauto::ObjectType type);
 
 const bool IsMovableStaticOD(const double v, const iflyauto::ObjectType type);
 
+bool IsActiveApaState(const iflyauto::FunctionalState& fsm);
 }  // namespace  planning
