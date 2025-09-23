@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # conda initialize -------------------------------
-# !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/root/miniconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+# !! Contents within this block are managed by "conda init" !!
+__conda_setup="$("/root/miniconda3/bin/conda" "shell.bash" "hook" 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
@@ -15,4 +15,5 @@ fi
 unset __conda_setup
 
 # ros env
-bash -c "source /opt/ros/melodic/setup.sh && /root/miniconda3/bin/python /root/planning/simulation/simulation_open.py"
+source /opt/ros/melodic/setup.sh
+/root/miniconda3/bin/python /root/planning/simulation/simulation_open.py "$@"

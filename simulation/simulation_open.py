@@ -25,9 +25,9 @@ def simulation_open(file_path):
                  return item_path
     print(f"out pp path no found")    # return None
     return None
-if __name__ == '__main__':
+if __name__ == "__main__":
     if len(sys.argv) > 1:
         file_path = sys.argv[1]
     else:
-        file_path = '/share/data_cold/abu_zone/autoparse/chery_m32t_72216/trigger/20250905/20250905-15-47-25/data_collection_CHERY_M32T_72216_EVENT_KEY_2025-09-05-15-47-25_no_camera.bag'
+        file_path = "/share/data_cold/abu_zone/autoparse/chery_m32t_72216/trigger/20250905/20250905-15-47-25/data_collection_CHERY_M32T_72216_EVENT_KEY_2025-09-05-15-47-25_no_camera.bag"
     simulation_open(file_path)
