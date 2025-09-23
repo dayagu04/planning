@@ -154,6 +154,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
 
         bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
             transition_info_.lane_change_direction,
+            transition_info_.lane_change_type,
             lc_lane_mgr_->origin_lane_virtual_id(),
             transition_info_.lane_change_status);
         if (!is_dash_enough) {
@@ -191,6 +192,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // 在hold状态下最多维持8s，不满足变道条件那么就返回原车道
         bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
             transition_info_.lane_change_direction,
+            transition_info_.lane_change_type,
             lc_lane_mgr_->origin_lane_virtual_id(),
             transition_info_.lane_change_status);
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
@@ -614,7 +616,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   // check single frame lc gap if feasible
   lane_change_stage_info_ = CheckLCGapFeasible(direction);
   bool is_dash_enough = lc_request_.IsDashEnoughForRepeatSegments(
-      direction, lc_lane_mgr_->origin_lane_virtual_id(),
+      direction, transition_info_.lane_change_type, lc_lane_mgr_->origin_lane_virtual_id(),
       transition_info_.lane_change_status);
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
@@ -1466,7 +1468,7 @@ bool LaneChangeStateMachineManager::TimeOut(const bool &trigger,
 void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-      
+
 #ifdef ENABLE_PROTO_LOG
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();

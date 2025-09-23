@@ -275,7 +275,7 @@ bool LaneChangeRequest::ComputeLcValid(RequestType direction) {
   return true;
 }
 bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
-    const RequestType& lc_request, const int origin_lane_id,
+    const RequestType& lc_request, const RequestSource& lc_request_source, int origin_lane_id,
     const StateMachineLaneChangeStatus &lc_status) const {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -400,7 +400,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                           mlc_decider_route_info.is_process_split_split ||
                           mlc_decider_route_info.is_process_other_merge_split;
 
-  if (is_process_split &&
+  if (is_process_split && lc_request_source == MAP_REQUEST &&
       route_info_output.distance_to_first_road_split < 100) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =

@@ -109,10 +109,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
       is_no_care_dash_length = true;
     }
   }
-
+  const RequestSource lc_request_source = MAP_REQUEST;
   if (!is_no_care_dash_length) {
     bool is_dash_enough = IsDashEnoughForRepeatSegments(
-        target_direction, current_lane->get_virtual_id(),
+        target_direction, lc_request_source, current_lane->get_virtual_id(),
       static_cast<StateMachineLaneChangeStatus>(lc_status));
     if (!is_dash_enough) {
       return false;
