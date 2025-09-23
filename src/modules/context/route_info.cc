@@ -3589,6 +3589,13 @@ bool RouteInfo::CalculateFeasibleLane(
           before_excr_feasible_lane.emplace_back(i + 1);
         }
       }
+    } else {
+      // 交换区后面的车道数大于交换区内车道数，由于是走左边，因此取最小车道数
+      int valid_lane_num = std::min(before_exclnum, on_exclnum);
+      for (int i = 0; i < valid_lane_num; i++) {
+        on_excr_feasible_lane.emplace_back(i + 1);
+        before_excr_feasible_lane.emplace_back(i + 1);
+      }
     }
 
     if (is_merge_split_same_dir && merge_before_exclnum > 0) {
