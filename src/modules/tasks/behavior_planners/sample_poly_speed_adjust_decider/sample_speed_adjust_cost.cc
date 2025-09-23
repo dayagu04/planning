@@ -243,7 +243,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
     }
     else{
       cost_ = std::exp((2 * (half_object_vehicle_length + half_ego_length) -
-          (ego_center_point - compare_point) * dec_speed_weight_)/3);
+          (compare_point - ego_center_point) * dec_speed_weight_)/3);
     }
   }
   else{
@@ -287,14 +287,14 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
     if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
       cost_ = 0.0;
     } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
-      cost_ = std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+      cost_ =mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/150);
     } else if (poly_end_dis_to_virtual_stop_line > 0) {
-      cost_ = std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+      cost_ = mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/120);
     } else {
-      cost_ = std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+      cost_ =mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/100);
     }
   }
   else{

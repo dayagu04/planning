@@ -119,7 +119,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     anchor_points_match_gap_cost_vec_[i].GetCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
-        safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,lane_change_source_ == MERGE_REQUEST);
+        safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,is_merge_request);
 
     if (i == anchor_points_match_gap_cost_vec_.size() - 1) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
