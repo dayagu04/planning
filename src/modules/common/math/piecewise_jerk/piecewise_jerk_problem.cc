@@ -62,10 +62,10 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   P_indices.clear();
   P_indptr.clear();
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
   CalculateKernel(&P_data, &P_indices, &P_indptr);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   // calculate affine constraints
   static std::vector<c_float> A_data;
@@ -78,17 +78,17 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   static std::vector<c_float> upper_bounds;
   lower_bounds.clear();
   upper_bounds.clear();
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
   CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, &lower_bounds,
                             &upper_bounds);
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   // calculate offset
   static std::vector<c_float> q;
   q.clear();
   CalculateOffset(&q);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   OSQPData* data = reinterpret_cast<OSQPData*>(c_malloc(sizeof(OSQPData)));
   CHECK_EQ(lower_bounds.size(), upper_bounds.size());
@@ -107,7 +107,7 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   data->l = CopyData(lower_bounds);
   data->u = CopyData(upper_bounds);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
   return data;
 }
 
@@ -115,7 +115,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
                                     const c_float max_time) {
   OSQPData* data = FormulateProblem();
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   OSQPSettings* settings = SolverDefaultSettings();
   settings->max_iter = max_iter;
@@ -132,11 +132,11 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
   osqp_work = osqp_setup(data, settings);
   // osqp_setup(&osqp_work, data, settings);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   osqp_solve(osqp_work);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_OSQP,
                                     planning_cost_time);
@@ -168,14 +168,14 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
         osqp_work->solution->x[i + 2 * num_of_knots_] / scale_factor_[2];
   }
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
 
   // Cleanup
   osqp_cleanup(osqp_work);
   FreeData(data);
   c_free(settings);
 
-  ILOG_INFO << "osqp";
+  // ILOG_INFO << "osqp";
   return true;
 }
 
