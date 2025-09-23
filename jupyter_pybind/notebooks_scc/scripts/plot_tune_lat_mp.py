@@ -272,6 +272,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
   print("road curv: ",planning_json["road_radius"])
   print("far_kappa_radius", planning_json["far_kappa_radius"])
   print("min_curve_radius: ", planning_json["min_curve_radius"])
+  # print("max_curve: ", 1.0 / planning_json["max_curve"])
   print("curve_type: ", planning_json["curve_type"])
   print("left_turn_light_state_available: ",vs_msg.left_turn_light_state_available)
   print("left_turn_light_state: ",vs_msg.left_turn_light_state)

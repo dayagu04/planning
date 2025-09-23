@@ -1879,8 +1879,8 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double bound_recurrence_v_limit_max = 60;
   double nudge_buffer2lane_boundary_buffer = 0.0;
   double max_care_time_for_roadborder = 3;
-  std::vector<double> curv_bp{50, 150, 400};
-  std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0};
+  std::vector<double> curv_bp{50, 150, 400, 600};
+  std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {

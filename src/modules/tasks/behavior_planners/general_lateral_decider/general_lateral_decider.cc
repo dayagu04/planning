@@ -475,7 +475,8 @@ bool GeneralLateralDecider::HandleRoadCurvature(
   double sampling_step = 2.0;
   double sampling_gap = 5.0;
   double sampling_range = init_s + 81.0;
-  // double preview_range = init_s + 81.0;
+  double preview_range =
+      std::min(std::max(init_s + ego_v * 5.0 + 20.0, init_s + 31.0), sampling_range);
   double min_continuous_length = 21.0;
   double segment_start = init_s;
   double left_curve_length = 0.0;
@@ -506,37 +507,51 @@ bool GeneralLateralDecider::HandleRoadCurvature(
       curv_sum += curv_window_vec[ind];
     }
     double avg_curv = curv_sum / curv_window_vec.size();
-    if (std::fabs(avg_curv) > straight_curv_thr) {
-      // sign
-      if (avg_curv > 1e-6) {
-        left_curve_length += sampling_gap;
-        right_curve_length = 0.0;
-      } else {
-        left_curve_length = 0.0;
-        right_curve_length += sampling_gap;
-      }
-      if (left_curve_length > min_continuous_length) {
-        ref_curve_info_.is_left = true;
-      } else if (right_curve_length > min_continuous_length) {
-        ref_curve_info_.is_right = true;
-      }
-      // big
-      if (std::fabs(avg_curv) > big_curve_thr) {
-        if (!is_big_curve) {
-          segment_start = sampling_s;
-          if (!ref_curve_info_.curve_vec.empty()) {
-            if (std::fabs(ref_curve_info_.curve_vec.back()) > straight_curv_thr) {
-              segment_start -= (sampling_gap * 0.5);
+    if (sampling_s < preview_range) {
+      if (std::fabs(avg_curv) > straight_curv_thr) {
+        // sign
+        if (avg_curv > 1e-6) {
+          left_curve_length += sampling_gap;
+          right_curve_length = 0.0;
+        } else {
+          left_curve_length = 0.0;
+          right_curve_length += sampling_gap;
+        }
+        if (left_curve_length > min_continuous_length) {
+          ref_curve_info_.is_left = true;
+        } else if (right_curve_length > min_continuous_length) {
+          ref_curve_info_.is_right = true;
+        }
+        // big
+        if (std::fabs(avg_curv) > big_curve_thr) {
+          if (!is_big_curve) {
+            segment_start = sampling_s;
+            if (!ref_curve_info_.curve_vec.empty()) {
+              if (std::fabs(ref_curve_info_.curve_vec.back()) > straight_curv_thr) {
+                segment_start -= (sampling_gap * 0.5);
+              }
             }
+            is_big_curve = true;
           }
-          is_big_curve = true;
+        } else {
+          if (is_big_curve) {
+            double curve_seg_length = sampling_s - segment_start - (sampling_gap * 0.5);
+            if (curve_seg_length > min_mid_curve_length ||
+                (curve_seg_length > min_curve_length &&
+                segment_start - init_s < min_curve_length)) {
+              large_curvature_segments.emplace_back(segment_start, sampling_s - sampling_gap);
+            }
+            is_big_curve = false;
+          }
         }
       } else {
+        left_curve_length = 0.0;
+        right_curve_length = 0.0;
         if (is_big_curve) {
           double curve_seg_length = sampling_s - segment_start - (sampling_gap * 0.5);
           if (curve_seg_length > min_mid_curve_length ||
               (curve_seg_length > min_curve_length &&
-               segment_start - init_s < min_curve_length)) {
+                segment_start - init_s < min_curve_length)) {
             large_curvature_segments.emplace_back(segment_start, sampling_s - sampling_gap);
           }
           is_big_curve = false;
@@ -1010,7 +1025,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   if (lat_offset_is_valid) {
     ref_lat_offset = lateral_offset_decider_output.lateral_offset;
   }
-  ref_lat_offset = 0;
+  // ref_lat_offset = 0;
   double lc_target_l = 0.0;
   if (is_LC_CHANGE) {
     lc_target_l = config_.lc_ref_offset;
@@ -1063,6 +1078,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     } else if (is_LC_HOLD) {
       HandleRefPathOffset(traj_points, front_axis_ref_path, lc_hold_offset);
     }
+    last_compensation_buffer_ = 0.0;
   } else {
     // fusion is unsteady, lane keep weight need decay in end of ref
     general_lateral_decider_output.lane_change_scene = false;
@@ -1072,6 +1088,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       } else {
         general_lateral_decider_output.complete_follow = true;
       }
+      last_compensation_buffer_ = 0.0;
     } else {
       general_lateral_decider_output.complete_follow = false;
       if (!lane_borrow_decider_output.is_in_lane_borrow_status) {
@@ -1083,7 +1100,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           const std::vector<double> curv_bp{50, 400};
           const std::vector<double> lat_compensation_buffer{0.2, 0.1};
 
-          double compensation_buffer = interp(ref_curve_info_.max_curve, config_.curv_bp,
+          double compensation_buffer = interp(ref_curve_info_.min_radius, config_.curv_bp,
                 config_.lat_compensation_buffer);
           const double change_rate = 0.05;
           if (ref_curve_info_.is_left) {
@@ -1101,9 +1118,13 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
           }
           ref_lat_offset += compensation_buffer;
           last_compensation_buffer_ = compensation_buffer;
+        } else {
+          last_compensation_buffer_ = 0.0;
         }
         HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
         // }
+      } else {
+        last_compensation_buffer_ = 0.0;
       }
     }
   }
