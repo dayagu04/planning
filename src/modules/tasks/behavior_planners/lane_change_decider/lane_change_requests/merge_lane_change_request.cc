@@ -185,13 +185,9 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       ILOG_DEBUG << "[MergeRequest::update] Ask for merge changing lane to left ";
-      if (left_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          request_type_ != NO_CHANGE &&
-          (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-           (lc_status == kLaneChangeCancel &&
-            (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane))))) {
+      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
+          (lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         ILOG_DEBUG << "[MergeRequest::update] " << "__FUNCTION__" << ":" << __LINE__ << " finish request, dash not enough";
@@ -206,13 +202,9 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       ILOG_DEBUG << "[MergeRequest::update] Ask for merge changing lane to right";
-      if (right_boundary_type ==
-              iflyauto::LaneBoundaryType::LaneBoundaryType_MARKING_SOLID &&
-          request_type_ != NO_CHANGE &&
-          (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
-           (lc_status == kLaneChangeCancel &&
-            (lane_change_lane_mgr_->has_origin_lane() &&
-             lane_change_lane_mgr_->is_ego_on(olane))))) {
+      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
+          (lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         ILOG_DEBUG << "[MergeRequest::update] " << "__FUNCTION__" << ":" << __LINE__ << " finish request, dash not enough";
