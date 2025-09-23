@@ -2017,6 +2017,13 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   const auto current_fix_lane_id = session_->planning_context()
                                  .lane_change_decider_output()
                                  .fix_lane_virtual_id;
+  const auto &lat_obstacle_position = session_->planning_context()
+                                    .lateral_obstacle_decider_output()
+                                      .lateral_obstacle_history_info;
+  const auto &frenet_coord =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_coord();
   if (last_fix_lane_id != current_fix_lane_id) {
     // 车道切换，不应该滞回
     return;
@@ -2076,38 +2083,46 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
              std::fabs(last_bound_it->lower + l_offset_limit) < kEps) ||
              (std::fabs(current_bound.upper - l_offset_limit) < kEps &&
              std::fabs(last_bound_it->upper - l_offset_limit) < kEps)) {
-          // 找到对应的上一帧边界，进行滞回处理
-          const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
-          const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
-          // 对lower边界进行滞回处理
-          double lower_diff = current_bound.lower - last_bound_it->lower;
-          if (lower_diff > 0) {
-            // 避让值变大
-            if (lower_diff > hysteresis_threshold_up) {
-              smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
-            }
+          const auto lat_obs_position_iter = lat_obstacle_position.find(last_bound_it->bound_info.id);
+          if (lat_obs_position_iter != lat_obstacle_position.end() &&
+              lat_obs_position_iter->second.side_car) {
+              // 侧方障碍物增加稳定性，直接沿用上一帧bound
+            smoothed_bound.lower = last_bound_it->lower;
+            smoothed_bound.upper = last_bound_it->upper;
           } else {
-            // 避让值变小
-            if (std::abs(lower_diff) > hysteresis_threshold_down) {
-              smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+            // 找到对应的上一帧边界，进行滞回处理
+            const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
+            const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
+            // 对lower边界进行滞回处理
+            double lower_diff = current_bound.lower - last_bound_it->lower;
+            if (lower_diff > 0) {
+              // 避让值变大
+              if (lower_diff > hysteresis_threshold_up) {
+                smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
+              }
+            } else {
+              // 避让值变小
+              if (std::abs(lower_diff) > hysteresis_threshold_down) {
+                smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+              }
+            }
+            // 对upper边界进行滞回处理
+            double upper_diff = current_bound.upper - last_bound_it->upper;
+            if (upper_diff > 0) {
+              // 避让值变小
+              if (upper_diff > hysteresis_threshold_up) {
+                smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
+              }
+            } else {
+              // 避让值变大
+              if (std::abs(upper_diff) > hysteresis_threshold_down) {
+                smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
+              }
             }
           }
-          // 对upper边界进行滞回处理
-          double upper_diff = current_bound.upper - last_bound_it->upper;
-          if (upper_diff > 0) {
-            // 避让值变小
-            if (upper_diff > hysteresis_threshold_up) {
-              smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
-            }
-          } else {
-            // 避让值变大
-            if (std::abs(upper_diff) > hysteresis_threshold_down) {
-              smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
-            }
-          }
-          smoothed_bounds.push_back(smoothed_bound);
-          is_smooth = true;
         }
+        smoothed_bounds.push_back(smoothed_bound);
+        is_smooth = true;
       }
     }
     if (is_smooth) {
