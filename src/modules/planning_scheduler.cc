@@ -162,7 +162,8 @@ bool PlanningScheduler::RunOnce(
   planning_output->successful_slot_info_list_size = 0;
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
   planning_output->planning_status.hpp_planning_status = iflyauto::HPP_UNKNOWN;
-  planning_output->msg_meta.start_time = planning_result.timestamp * 1000.0; // 临时使用该字段
+  planning_output->msg_meta.start_time =
+      planning_result.timestamp * 1000.0;  // 临时使用该字段
   // reset
   if (function_type == common::PARKING_APA || function_type == common::HPP) {
     const auto &state_machine = local_view_->function_state_machine_info;
@@ -478,8 +479,8 @@ void PlanningScheduler::FillPlanningTrajectory(
     planning_status->standstill = std::fabs(ego_state->ego_v()) < 0.1;
   }
   // 启停状态机
-  planning_status->ready_to_go = planning_context.start_stop_result().state() !=
-                                 common::StartStopInfo::STOP;
+  planning_status->ready_to_go = planning_context.start_stop_result().state() ==
+                                 common::StartStopInfo::START;
   planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
@@ -504,13 +505,13 @@ void PlanningScheduler::FillPlanningTrajectory(
   }
 
   // planning request
-    //绕行接管
-  if(lane_borrow_decider_output.takeover_prompt){
+  // 绕行接管
+  if (lane_borrow_decider_output.takeover_prompt) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         iflyauto::REQUEST_REASON_BORROW_FAILED;
-  }else{
+  } else {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;
     planning_output->planning_request.request_reason =
