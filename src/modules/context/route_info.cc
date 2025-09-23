@@ -2947,13 +2947,28 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   split_region_info.end_fp_point.fp_distance_to_split_point = fp_end_length;
 
   // 1、计算第一区域的车道总数
+  // 计算该split的方向
+  SplitSegInfo split_seg_info;
+  split_seg_info = MakesureSplitDirection(split_segment, sdpro_map);
+
   int temp_lane_num1 = 0;
   iflymapdata::sdpro::FeaturePoint last_fp;
-  if (CalculateLastFp(&last_fp, split_region_info.start_fp_point.link_id,
+  iflymapdata::sdpro::LinkInfo_Link last_fp_link;
+  if (CalculateLastFp(&last_fp, &last_fp_link, split_region_info.start_fp_point.link_id,
                       start_fp)) {
     for (const auto& id : last_fp.lane_ids()) {
       if (!IsEmergencyLane(id, sdpro_map)) {
         temp_lane_num1++;
+      }
+    }
+
+    //车道数对不上时，取大（小）值
+    const int last_fp_link_lane_num = last_fp_link.lane_num();
+    if (temp_lane_num1 != last_fp_link_lane_num) {
+      if (split_seg_info.split_direction == RAMP_ON_LEFT) {
+        temp_lane_num1 = std::min(temp_lane_num1, last_fp_link_lane_num);
+      } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
+        temp_lane_num1 = std::max(temp_lane_num1, last_fp_link_lane_num);
       }
     }
   }
@@ -2968,11 +2983,43 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   // 在交换区内部，可能存在车道数变化，因此交换区的车道数以交换区终点的前一个fp的车道数为准
   int temp_lane_num2 = 0;
   iflymapdata::sdpro::FeaturePoint end_last_fp;
-  if (CalculateLastFp(&end_last_fp, split_region_info.end_fp_point.link_id,
+  iflymapdata::sdpro::LinkInfo_Link end_last_fp_link;
+  if (CalculateLastFp(&end_last_fp, &end_last_fp_link, split_region_info.end_fp_point.link_id,
                       end_fp)) {
     for (const auto& id : end_last_fp.lane_ids()) {
       if (!IsEmergencyLane(id, sdpro_map)) {
         temp_lane_num2++;
+      }
+    }
+
+    // 先比较交换区终点前一个点的车道数是否能对上
+    const int end_last_fp_link_lane_num = end_last_fp_link.lane_num();
+    if (temp_lane_num2 != end_last_fp_link_lane_num) {
+      if (split_seg_info.split_direction == RAMP_ON_LEFT) {
+        temp_lane_num2 = std::min(temp_lane_num1, end_last_fp_link_lane_num);
+      } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
+        temp_lane_num2 = std::max(temp_lane_num1, end_last_fp_link_lane_num);
+      }
+    }
+
+    // 再与交换区起点的地图车道数比较
+    const auto start_fp_link =
+        sdpro_map.GetLinkOnRoute(split_region_info.start_fp_point.link_id);
+    if (start_fp_link) {
+      int start_fp_lane_num = split_region_info.start_fp_point.lane_ids.size();
+      const int start_fp_link_lane_num = start_fp_link->lane_num();
+      if (start_fp_lane_num != start_fp_link_lane_num) {
+        if (split_seg_info.split_direction == RAMP_ON_LEFT) {
+          start_fp_lane_num = std::min(start_fp_lane_num , start_fp_link_lane_num);
+        } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
+          start_fp_lane_num = std::max(start_fp_lane_num , start_fp_link_lane_num);
+        }
+      }
+
+      if (split_seg_info.split_direction == RAMP_ON_LEFT) {
+        temp_lane_num2 = std::min(temp_lane_num2 , start_fp_lane_num);
+      } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
+        temp_lane_num2 = std::max(temp_lane_num2 , start_fp_lane_num);
       }
     }
   }
@@ -3171,7 +3218,8 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
   // 1、计算第一区域的车道总数
   int temp_lane_num1 = 0;
   iflymapdata::sdpro::FeaturePoint last_fp;
-  if (CalculateLastFp(&last_fp, merge_region_info.start_fp_point.link_id,
+  iflymapdata::sdpro::LinkInfo_Link last_fp_link;
+  if (CalculateLastFp(&last_fp, &last_fp_link, merge_region_info.start_fp_point.link_id,
                       start_fp)) {
     for (const auto& id : last_fp.lane_ids()) {
       if (!IsEmergencyLane(id, sdpro_map)) {
@@ -3917,10 +3965,10 @@ bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
 }
 
 bool RouteInfo::CalculateLastFp(
-    iflymapdata::sdpro::FeaturePoint* last_fp, const uint64 fp_link_id,
+    iflymapdata::sdpro::FeaturePoint* last_fp, iflymapdata::sdpro::LinkInfo_Link* last_fp_link, const uint64 fp_link_id,
     const iflymapdata::sdpro::FeaturePoint& find_fp) {
   const auto& fp_link = sdpro_map_.GetLinkOnRoute(fp_link_id);
-  if (last_fp == nullptr || fp_link == nullptr ||
+  if (last_fp == nullptr || fp_link == nullptr || last_fp_link == nullptr ||
       fp_link->feature_points().empty()) {
     return false;
   }
@@ -3976,6 +4024,7 @@ bool RouteInfo::CalculateLastFp(
     }
 
     *last_fp = *fp_pre_link->feature_points().rbegin();
+    *last_fp_link = *fp_pre_link;
     return true;
   } else {
     if (fp_index - 1 >= fp_vec.size()) {
@@ -3983,6 +4032,7 @@ bool RouteInfo::CalculateLastFp(
     }
 
     *last_fp = fp_vec[fp_index - 1];
+    *last_fp_link = *fp_link;
     return true;
   }
   return false;
@@ -4372,7 +4422,8 @@ bool RouteInfo::IsDashSolidLineTypeChnage(
   }
 
   iflymapdata::sdpro::FeaturePoint last_fp;
-  if (CalculateLastFp(&last_fp, mlc_link_id, mlc_fp)) {
+  iflymapdata::sdpro::LinkInfo_Link last_fp_link;
+  if (CalculateLastFp(&last_fp, &last_fp_link, mlc_link_id, mlc_fp)) {
     const int emergency_lane_num = EmergencyLaneNum(last_fp);
     for (const auto& lane_id : last_fp.lane_ids()) {
       if (IsSolidBoundary(lane_id)) {
