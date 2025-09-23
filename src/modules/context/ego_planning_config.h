@@ -4129,13 +4129,15 @@ struct AgentHeadwayConfig : public EgoPlanningConfig {
   double cut_in_velocity_lower_bound = 3.33;
   double cut_in_headway_upper_bound = 0.2;
   // follow_distance_gap
-  double lower_speed_min_follow_distance_gap = 3.0;
-  double high_speed_min_follow_distance_gap = 4.5;
-  double low_speed_threshold_kmph = 18;
-  double high_speed_threshold_kmph = 30;
-  double large_vehicle_min_follow_distance_gap = 4.5;
-  double cone_min_follow_distance_gap = 4.5;
-  double traffic_light_min_follow_distance_gap = 2.0;
+  double lower_speed_min_follow_distance_gap = 2.5;
+  double lower_speed_large_vehicle_min_follow_distance_gap = 3.5;
+  double high_speed_min_follow_distance_gap = 4.0;
+  double low_speed_threshold_kmph = 0.0;
+  double high_speed_threshold_kmph = 20.0;
+  double large_vehicle_length = 8.0;
+  double large_vehicle_min_follow_distance_gap = 6.0;
+  double cone_min_follow_distance_gap = 5.0;
+  double traffic_light_min_follow_distance_gap = 2.5;
   double thw_scale_up_factor = 1.2;
 };
 
@@ -4143,54 +4145,64 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
     /* read config from json */
+    ReadItem<double>(json, large_vehicle_length, "speed_planning",
+                     "start_stop_decider", "large_vehicle_length");
+    ReadItem<double>(json, lower_speed_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "lower_speed_min_follow_distance_gap");
+    ReadItem<double>(json, lower_speed_large_vehicle_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "lower_speed_large_vehicle_min_follow_distance_gap");
+    ReadItem<double>(json, high_speed_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "high_speed_min_follow_distance_gap");
+    ReadItem<double>(json, low_speed_threshold_kmph, "speed_planning",
+                     "start_stop_decider", "low_speed_threshold_kmph");
+    ReadItem<double>(json, high_speed_threshold_kmph, "speed_planning",
+                     "start_stop_decider", "high_speed_threshold_kmph");
+    ReadItem<double>(json, large_vehicle_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "large_vehicle_min_follow_distance_gap");
+    ReadItem<double>(json, cone_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "cone_min_follow_distance_gap");
+    ReadItem<double>(json, traffic_light_min_follow_distance_gap, "speed_planning",
+                     "start_stop_decider", "traffic_light_min_follow_distance_gap");
+    ReadItem<double>(json, cipv_static_vel_threshold, "speed_planning",
+                      "start_stop_decider", "cipv_static_vel_threshold");
+    ReadItem<double>(json, cipv_vel_begin_start_threshold, "speed_planning",
+                      "start_stop_decider", "cipv_vel_begin_start_threshold");
     ReadItem<double>(json, ego_vel_begin_stop_threshold, "speed_planning",
                      "start_stop_decider", "ego_vel_begin_stop_threshold");
-    ReadItem<double>(json, ego_vel_start_mode_threshold, "speed_planning",
-                     "start_stop_decider", "ego_vel_start_mode_threshold");
-    ReadItem<double>(json, cipv_vel_begin_start_threshold, "speed_planning",
-                     "start_stop_decider", "cipv_vel_begin_start_threshold");
-    ReadItem<double>(json, cipv_relative_s_begin_start_threshold,
+    ReadItem<double>(json, distance_start_between_ego_and_large_cipv_threshold,
                      "speed_planning", "start_stop_decider",
-                     "cipv_relative_s_begin_start_threshold");
-    ReadItem<double>(json, distance_stop_buffer_between_ego_and_cipv_threshold,
-
-                     "speed_planning", "start_stop_decider",
-                     "distance_stop_buffer_between_ego_and_cipv_threshold");
+                     "distance_start_between_ego_and_large_cipv_threshold");
     ReadItem<double>(json, distance_start_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_start_between_ego_and_cipv_threshold");
-    ReadItem<double>(json, distance_to_stop_line_ego_threshold,
+    ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
-                     "distance_to_stop_line_ego_threshold");
-    ReadItem<double>(json,
-                     desired_stopped_distance_between_ego_and_cipv_threshold,
-                     "speed_planning", "start_stop_decider",
-                     "desired_stopped_distance_between_ego_and_cipv_threshold");
-    ReadItem<double>(json, desired_stopped_distance_between_ego_and_large_cipv_threshold,
-             "speed_planning", "start_stop_decider",
-             "desired_stopped_distance_between_ego_and_large_cipv_threshold");
+                     "distance_stop_between_ego_and_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
-    ReadItem<double>(json, ego_vel_start_mode_threshold_rads, "speed_planning",
-                     "start_stop_decider", "ego_vel_start_mode_threshold_rads");
-    ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
-                     "speed_planning", "start_stop_decider",
-                     "distance_to_go_threshold_behind_of_large_vehicle");
+    ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle, "speed_planning",
+                     "start_stop_decider", "distance_to_go_threshold_behind_of_large_vehicle");
+    ReadItem<double>(json, start_to_cruise_vel_threshold, "speed_planning",
+                     "start_stop_decider", "start_to_cruise_vel_threshold");
   }
-
-  double ego_vel_begin_stop_threshold = 0.5;
-  double ego_vel_start_mode_threshold = 5.5;
-  double ego_vel_start_mode_threshold_rads = 0.2;
-  double cipv_vel_begin_start_threshold = 0.5;
-  double cipv_relative_s_begin_start_threshold = 3.5;
-  double distance_stop_buffer_between_ego_and_cipv_threshold = 2.0;
-  double distance_start_between_ego_and_cipv_threshold = 0.3;
-  double distance_to_stop_line_ego_threshold = 5.5;
-  double desired_stopped_distance_between_ego_and_cipv_threshold = 3.0;
-  double desired_stopped_distance_between_ego_and_large_cipv_threshold = 5.0;
-  double distance_to_go_threshold = 5.5;
-  double distance_to_go_threshold_behind_of_large_vehicle = 7.7;
-  double stop_destination_to_ego_distance = 6.0;
+  double large_vehicle_length = 8.0;
+  double lower_speed_min_follow_distance_gap = 2.5;
+  double lower_speed_large_vehicle_min_follow_distance_gap = 3.5;
+  double high_speed_min_follow_distance_gap = 4.0;
+  double low_speed_threshold_kmph = 0.0;
+  double high_speed_threshold_kmph = 20.0;
+  double large_vehicle_min_follow_distance_gap = 6.0;
+  double cone_min_follow_distance_gap = 5.0;
+  double traffic_light_min_follow_distance_gap = 2.5;
+  double cipv_static_vel_threshold = 0.1;
+  double cipv_vel_begin_start_threshold = 0.4;
+  double ego_vel_begin_stop_threshold = 0.1;
+  double distance_start_between_ego_and_large_cipv_threshold = 0.5;
+  double distance_start_between_ego_and_cipv_threshold = 0.4;
+  double distance_stop_between_ego_and_cipv_threshold = 3.0;
+  double distance_to_go_threshold = 6.2;
+  double distance_to_go_threshold_behind_of_large_vehicle = 7.2;
+  double start_to_cruise_vel_threshold = 5.5;
 };
 
 struct EgoMotionPreplannerConfig : public EgoPlanningConfig {

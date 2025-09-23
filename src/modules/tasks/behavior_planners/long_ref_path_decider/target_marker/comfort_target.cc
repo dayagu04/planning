@@ -1,5 +1,4 @@
 #include "comfort_target.h"
-#include "comfort_target.h"
 
 #include <algorithm>
 #include <cmath>
@@ -408,7 +407,6 @@ double ComfortTarget::CalcDesiredVelocity(const double d_rel,
 }
 
 double ComfortTarget::CalculateComfortAcceleration(
-double ComfortTarget::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
     const double front_vel, const double front_s, const double tau) const {
   double s0 = idm_params_.s0;
@@ -418,7 +416,6 @@ double ComfortTarget::CalculateComfortAcceleration(
   double b_max = idm_params_.b_max;
   double b_hard = idm_params_.b_hard;
   double delta = idm_params_.delta;
-  double s0 = idm_params_.s0;
   double cool_factor = idm_params_.cool_factor;
   double over_speed_factor = idm_params_.over_speed_factor;
 

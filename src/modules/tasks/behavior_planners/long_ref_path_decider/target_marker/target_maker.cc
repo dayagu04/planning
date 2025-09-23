@@ -47,10 +47,6 @@ common::Status TargetMaker::Run() {
   CrossVRUTarget cross_vru_target(speed_planning_config_, session_);
 
   // 8. decider final target values
-  const auto& start_stop_decider_output =
-      session_->planning_context().start_stop_decider_output();
-  const auto& stop_speed_decision_info =
-      start_stop_decider_output.stop_speed_decision_info();
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
@@ -145,16 +141,17 @@ common::Status TargetMaker::Run() {
       }
     }
 
-    if (stop_speed_decision_info.is_valid()) {
-      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
-      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
-      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
-      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
+    const auto& start_stop_decider_output =
+        session_->planning_context().start_stop_decider_output();
+    const auto& ego_start_stop_info =
+        start_stop_decider_output.ego_start_stop_info();
+    if (ego_start_stop_info.state() == common::StartStopInfo::STOP) {
+      upper_target_value.set_s_target_val(0.0);
+      upper_target_value.set_v_target_val(0.0);
+      lower_target_value.set_s_target_val(0.0);
+      lower_target_value.set_v_target_val(0.0);
     }
 
-    // hack: 先用默认值
-    // auto final_lower_bound_value = lower_target_value;
-    // final_lower_bound_value = cruise_target_value;
     auto final_lower_bound_value =
         Target::TargetMax(lower_target_value, cruise_target_value);
 

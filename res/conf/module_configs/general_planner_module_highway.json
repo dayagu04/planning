@@ -930,17 +930,24 @@
     },
 
     "start_stop_decider" : {
-      "ego_vel_begin_stop_threshold" : 0.5,
-      "ego_vel_start_mode_threshold": 5.5,
-      "cipv_vel_begin_start_threshold": 0.5,
-      "cipv_relative_s_begin_start_threshold": 0.3,
-      "distance_stop_buffer_between_ego_and_cipv_threshold": 2.0,
-      "distance_start_between_ego_and_cipv_threshold": 0.3,
-      "distance_to_stop_line_ego_threshold": 7.5,
-      "desired_stopped_distance_between_ego_and_cipv_threshold": 3.0,
-      "desired_stopped_distance_between_ego_and_large_cipv_threshold" : 5.5,
-      "distance_to_go_threshold": 5.7,
-      "distance_to_go_threshold_behind_of_large_vehicle": 7.7
+      "large_vehicle_length" : 8.0,
+      "lower_speed_min_follow_distance_gap" : 2.5,
+      "lower_speed_large_vehicle_min_follow_distance_gap" : 3.5,
+      "high_speed_min_follow_distance_gap" : 4.0,
+      "low_speed_threshold_kmph" : 0.0,
+      "high_speed_threshold_kmph" : 20.0,
+      "large_vehicle_min_follow_distance_gap" : 6.0,
+      "cone_min_follow_distance_gap" : 5.0,
+      "traffic_light_min_follow_distance_gap" : 2.5,
+      "cipv_static_vel_threshold" : 0.1,
+      "cipv_vel_begin_start_threshold" : 0.4,
+      "ego_vel_begin_stop_threshold" : 0.1,
+      "distance_start_between_ego_and_large_cipv_threshold": 0.5,
+      "distance_start_between_ego_and_cipv_threshold": 0.4,
+      "distance_stop_between_ego_and_cipv_threshold": 3.0,
+      "distance_to_go_threshold": 6.2,
+      "distance_to_go_threshold_behind_of_large_vehicle": 7.2,
+      "start_to_cruise_vel_threshold": 5.5
     },
 
     "cruise_target": {
