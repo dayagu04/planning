@@ -91,6 +91,17 @@ class Transform2d {
   void GlobalPointToULFLocal(const Position2D &global_pos,
                              Position2D *local_pos) const;
 
+  void SetBasePose(const Eigen::Vector3d &base_pose) {
+    sin_theta_ = std::sin(base_pose[2]);
+    cos_theta_ = std::cos(base_pose[2]);
+
+    base_pose_.x = base_pose[0];
+    base_pose_.y = base_pose[1];
+    base_pose_.theta = base_pose[2];
+
+    return;
+}
+
  private:
   Pose2D base_pose_;
   double sin_theta_;

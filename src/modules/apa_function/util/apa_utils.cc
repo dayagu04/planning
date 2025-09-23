@@ -263,4 +263,14 @@ const bool IsMovableStaticOD(const double v, const iflyauto::ObjectType type) {
   return false;
 }
 
+bool IsActiveApaState(const iflyauto::FunctionalState& fsm) {
+  if (fsm == iflyauto::FunctionalState_PARK_GUIDANCE ||
+      fsm == iflyauto::FunctionalState_PARK_SUSPEND ||
+      fsm == iflyauto::FunctionalState_PARK_PRE_ACTIVE ||
+      IsHppParkingStage(fsm)) {
+    return true;
+  }
+  return false;
+}
+
 }  // namespace  planning
