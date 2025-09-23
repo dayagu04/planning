@@ -63,7 +63,9 @@ class StopLineCost : public CurveCost {
  public:
   StopLineCost() = default;
   void GetCost(const double stop_line_dis_to_ego,
-               const double poly_end_s_dis_to_ego, const double v_curve_final);
+               const double poly_end_s_dis_to_ego,
+               const double v_curve_final,
+               const bool is_merge_request);
 
  private:
   double mid_stop_dis_penalty_coef_ = 3.0;

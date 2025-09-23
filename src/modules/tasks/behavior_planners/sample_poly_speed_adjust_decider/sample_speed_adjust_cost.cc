@@ -265,7 +265,8 @@ void FollowVelCost::GetCost(const double poly_end_v, const double cruise_v,
 
 void StopLineCost::GetCost(const double stop_line_dis_to_ego,
                            const double poly_end_s_dis_to_ego,
-                           const double v_curve_final) {
+                           const double v_curve_final,
+                           const bool is_merge_request) {
   const double half_lane_chnage_duration = 3.0;
   const double half_lane_change_length =
       half_lane_chnage_duration * v_curve_final;
@@ -277,19 +278,38 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
 
   double adaptive_penalty = std::log(kStopLineBasicPenaltyDis);
   double distance_penalty_factor =
-      poly_end_dis_to_virtual_stop_line / adaptive_penalty;
-
-  if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
-    cost_ = 0.0;
-  } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
-    cost_ = weight_ * (1 + mid_stop_dis_penalty_coef_ *
-                               pow(distance_penalty_factor, 2.5));
-  } else if (poly_end_dis_to_virtual_stop_line > 0) {
-    cost_ = weight_ * (1 + near_stop_dis_penalty_coef_ *
-                               pow(distance_penalty_factor, 2.5));
-  } else {
-    cost_ = weight_ * std::exp(-poly_end_dis_to_virtual_stop_line /
-                               kStopLineNormalPenaltyDis);
+      poly_end_dis_to_virtual_stop_line / kStopLineBasicPenaltyDis;
+  constexpr double eps_floor = 1e-15;
+  distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
+//   constexpr double eps_floor = 1e-15;
+//   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
+  if(is_merge_request){
+    if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
+      cost_ = 0.0;
+    } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
+      cost_ = std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+    } else if (poly_end_dis_to_virtual_stop_line > 0) {
+      cost_ = std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+    } else {
+      cost_ = std::exp(mid_stop_dis_penalty_coef_*
+                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/kStopLineBasicPenaltyDis);
+    }
+  }
+  else{
+    if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
+      cost_ = 0.0;
+    } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
+      cost_ = weight_ * (1 + mid_stop_dis_penalty_coef_ *
+                                 pow(distance_penalty_factor, 2.5));
+    } else if (poly_end_dis_to_virtual_stop_line > 0) {
+      cost_ = weight_ * (1 + near_stop_dis_penalty_coef_ *
+                                 pow(distance_penalty_factor, 2.5));
+    } else {
+      cost_ = weight_ * std::exp(-poly_end_dis_to_virtual_stop_line /
+                                 kStopLineNormalPenaltyDis);
+    }
   }
 }
 

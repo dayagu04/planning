@@ -194,7 +194,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       auto& sample_traj = sample_traj_at_v[j];
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
-                           leading_veh_v, leading_veh_.id);
+                           leading_veh_v, leading_veh_.id,lane_change_source_ == MERGE_REQUEST);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;

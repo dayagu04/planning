@@ -87,7 +87,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
-    int32_t leading_veh_id) {
+    int32_t leading_veh_id,bool is_merge_request) {
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
@@ -131,7 +131,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_);
+  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,is_merge_request);
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_, leading_veh_s,
