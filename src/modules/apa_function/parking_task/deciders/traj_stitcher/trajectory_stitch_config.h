@@ -8,6 +8,11 @@ struct LonStitchError {
   double acc_stitch_error;
 };
 
+enum class LonStitchType {
+  PLANNING_TRAJ,
+  VEHICLE_STATE,
+};
+
 struct TrajectoryStitchConfig {
   // If remain traj is not long enough, use history traj to fill the remain
   // traj, to let the remain traj has a minimum distance.
@@ -26,6 +31,8 @@ struct TrajectoryStitchConfig {
   LonStitchError low_stitch_error;
   // [0.6, +inf]
   LonStitchError normal_stitch_error;
+
+  LonStitchType lon_stitch_type;
 
   void Init();
 };

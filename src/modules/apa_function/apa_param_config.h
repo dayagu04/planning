@@ -131,6 +131,8 @@ struct ParkingSpeedConfig {
   double optimizer_time_limit = 0.4;
   bool use_remain_dist;
 
+  int lon_stitch_type;
+
   const SpeedModeParams &GetSpeedParams(
       const ParkingSpeedMode &park_speed_mode) const;
 };

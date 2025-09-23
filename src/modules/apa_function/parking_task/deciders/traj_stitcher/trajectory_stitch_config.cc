@@ -1,4 +1,5 @@
 #include "trajectory_stitch_config.h"
+#include "apa_param_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -8,12 +9,18 @@ void TrajectoryStitchConfig::Init() {
   enable_openloop_control = true;
   min_dist_for_open_loop_control = 0.1;
 
-  low_vel_thresh_for_speed_smooth = 0.5;
-  low_stitch_error.vel_stitch_error = 0.05;
+  low_vel_thresh_for_speed_smooth = 0.6;
+  low_stitch_error.vel_stitch_error = 0.02;
   low_stitch_error.acc_stitch_error = 0.1;
 
   normal_stitch_error.vel_stitch_error = 0.25;
   normal_stitch_error.acc_stitch_error = 0.2;
+
+  if (apa_param.GetParam().speed_config.lon_stitch_type == 0) {
+    lon_stitch_type = LonStitchType::PLANNING_TRAJ;
+  } else {
+    lon_stitch_type = LonStitchType::VEHICLE_STATE;
+  }
 
   return;
 };

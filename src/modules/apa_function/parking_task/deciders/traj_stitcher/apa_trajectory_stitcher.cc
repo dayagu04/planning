@@ -64,32 +64,36 @@ void ApaTrajectoryStitcher::Execute(
     }
 
     // evaluate speed
-    bool same_traj_gear = false;
-    if (history_trajectory.GetGear() == 1 &&
-        traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
-      same_traj_gear = true;
-    } else if (history_trajectory.GetGear() == 2 &&
-               traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
-      same_traj_gear = true;
-    }
+    if (config_.lon_stitch_type == LonStitchType::PLANNING_TRAJ) {
+      bool same_traj_gear = false;
+      if (history_trajectory.GetGear() == 1 &&
+          traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_REVERSE) {
+        same_traj_gear = true;
+      } else if (history_trajectory.GetGear() == 2 &&
+                 traj_gear_ == pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE) {
+        same_traj_gear = true;
+      }
 
-    bool lon_stitch_success = false;
-    if (same_traj_gear) {
-      lon_stitch_success = history_trajectory.QueryNearestPointWithBuffer(
-          planning_math::Vec2d(predict_pose.x, predict_pose.y), 0.0,
-          &lon_stitch_point_);
-    }
+      bool lon_stitch_success = false;
+      if (same_traj_gear) {
+        lon_stitch_success = history_trajectory.QueryNearestPointWithBuffer(
+            planning_math::Vec2d(predict_pose.x, predict_pose.y), 0.0,
+            &lon_stitch_point_);
+      }
 
-    if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
-        lon_stitch_point_.vel() <= 0.01) {
-      // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
-      //           << " lon stitch v = " << lon_stitch_point_.vel()
-      //           << ", a = " << lon_stitch_point_.acc()
-      //           << ", s = " << lon_stitch_point_.s();
+      if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
+          lon_stitch_point_.vel() <= 0.01) {
+        // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
+        //           << " lon stitch v = " << lon_stitch_point_.vel()
+        //           << ", a = " << lon_stitch_point_.acc()
+        //           << ", s = " << lon_stitch_point_.s();
+        GeneSpeedPointFromVehicleState(ego_lon_state_);
+      }
+
+      SmoothLonDelay();
+    } else {
       GeneSpeedPointFromVehicleState(ego_lon_state_);
     }
-
-    SmoothLonDelay();
   } else {
     const pnc::geometry_lib::PathPoint& front = lateral_path.front();
     Pose2D pose = Pose2D(front.pos[0], front.pos[1], front.heading);
