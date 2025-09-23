@@ -242,6 +242,7 @@ struct RouteInfoOutput {
   bool is_continuous_ramp = false;  // for jwliu23
   bool is_nearing_ramp = false;
   bool is_ego_on_split_region = false;
+  bool is_find_exc_fp = false;
   double dis_to_ramp = NL_NMAX;
   double distance_to_first_road_merge = NL_NMAX;
   double distance_to_first_road_split = NL_NMAX;
@@ -343,6 +344,7 @@ struct RouteInfoOutput {
     emergency_lane_num = 0;
     minVal_seq = 0;
     maxVal_seq = 0;
+    is_find_exc_fp = false;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

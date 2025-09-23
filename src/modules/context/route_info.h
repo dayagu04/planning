@@ -182,11 +182,17 @@ class RouteInfo {
 
   NOASplitRegionInfo CalculateSplitRegionLaneTupoInfo(
     const iflymapdata::sdpro::LinkInfo_Link& split_segment,
-      const ad_common::sdpromap::SDProMap& sdpro_map);
+      const ad_common::sdpromap::SDProMap& sdpro_map,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& split_info_vec,
+      const double ego_dis_to_split);
 
   NOASplitRegionInfo CalculateMergeRegionLaneTupoInfo(
     const iflymapdata::sdpro::LinkInfo_Link& split_segment,
-      const ad_common::sdpromap::SDProMap& sdpro_map);
+      const ad_common::sdpromap::SDProMap& sdpro_map,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& merge_info_vec,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& split_info_vec,
+      const double ego_dis_to_merge);
+
   bool CalculateMergeLaneInfo(std::vector<int>& merge_lane_sequence);
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, iflymapdata::sdpro::LinkInfo_Link* last_fp_link, const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
@@ -242,6 +248,10 @@ class RouteInfo {
                               const double first_distance_to_split_point);
 
   std::vector<int> CalculateMLCTaskNoLaneNum() const;
+
+  bool CalculateDistanceToLastSplitPoint(double* dis, const double s) const;
+
+  bool CalculateDistanceToLastMergePoint(double* dis, const double s) const;
 
   std::vector<int> CommonElements(const std::vector<int>& A,
                                   const std::vector<int>& B) {
