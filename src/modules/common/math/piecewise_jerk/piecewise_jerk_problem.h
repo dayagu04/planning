@@ -124,13 +124,6 @@ class PiecewiseJerkProblem {
 
   void FreeData(OSQPData* data);
 
-  template <typename T>
-  T* CopyData(const std::vector<T>& vec) {
-    T* data = new T[vec.size()];
-    memcpy(data, vec.data(), sizeof(T) * vec.size());
-    return data;
-  }
-
  protected:
   size_t num_of_knots_ = 0;
 
