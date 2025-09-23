@@ -199,7 +199,7 @@ void EgoStateManager::set_time_headway_level(
 void EgoStateManager::set_has_time_headway_scale_up_request(
     const planning::common::VehicleStatus &vehicle_status) {
   has_time_headway_scale_up_request_ =
-      vehicle_status.has_time_headway_scale_up_request();
+      vehicle_status.time_headway_scale_up_request().has_scale_up_request();
 }
 
 void EgoStateManager::update_transform() {
@@ -260,7 +260,8 @@ bool EgoStateManager::update(
 
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  planning_debug_data->mutable_simulation_core_param()->set_planning_loop_dt(planning_loop_dt_);
+  planning_debug_data->mutable_simulation_core_param()->set_planning_loop_dt(
+      planning_loop_dt_);
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -514,7 +515,8 @@ void EgoStateManager::CompensateEgoStateForLocalizationLatency() {
 
   auto &debug_info_manager = DebugInfoManager::GetInstance();
   auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-  planning_debug_data->mutable_simulation_core_param()->set_localizatoin_latency(localization_latency_ms);
+  planning_debug_data->mutable_simulation_core_param()
+      ->set_localizatoin_latency(localization_latency_ms);
 
   JSON_DEBUG_VALUE("new_localization_latency",
                    planning_debug_data->input_topic_latency().localization());
