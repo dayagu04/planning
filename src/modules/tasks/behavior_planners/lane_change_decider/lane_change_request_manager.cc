@@ -17,6 +17,7 @@ namespace planning {
 namespace {
 constexpr double kMaxSpeedTriggerInteractiveLaneChangeRequest = 33.333;
 constexpr double kMinSpeedTriggerInteractiveLaneChangeRequest = 11.111;
+constexpr double kCoolingDownPeriodForIntCancel = 3.0;
 
 }  // namespace
 // class: LaneChangeRequestManager
@@ -127,9 +128,31 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   int state = lane_change_decider_output.curr_state;
   double curr_time = IflyTime::Now_s();
 
+  const auto& ego_blinker = session_->mutable_environmental_model()
+                                ->get_ego_state_manager()
+                                ->ego_blinker();
+  ProcessBlinkState(
+      ego_blinker, static_cast<StateMachineLaneChangeStatus>(lc_status),
+      static_cast<RequestType>(lane_change_decider_output.lc_request));
+  // todo(ldh): 使用工厂模式管理变道请求。
+  int_request_.SetLaneChangeCmd(lane_change_cmd_);
+  int_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
+  map_request_.SetLaneChangeCmd(lane_change_cmd_);
+  map_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
+  overtake_request_.SetLaneChangeCmd(lane_change_cmd_);
+  overtake_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
+  emergence_avoid_request_.SetLaneChangeCmd(lane_change_cmd_);
+  emergence_avoid_request_.SetLaneChangeCancelFromTrigger(
+      trigger_lane_change_cancel_);
+  cone_change_request_.SetLaneChangeCmd(lane_change_cmd_);
+  cone_change_request_.SetLaneChangeCancelFromTrigger(
+      trigger_lane_change_cancel_);
+  merge_change_request_.SetLaneChangeCmd(lane_change_cmd_);
+  merge_change_request_.SetLaneChangeCancelFromTrigger(
+      trigger_lane_change_cancel_);
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
-    int_request_cancel_reason_ = int_request_.request_cancel_reason();
+    int_request_cancel_reason_ = int_request_.lc_request_cancel_reason();
     ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
     int_request_.reset_int_cnt();
@@ -412,6 +435,66 @@ double LaneChangeRequestManager::GetReqFinishTime(int source) const {
     return merge_change_request_.tfinish();
   }
   return DBL_MAX;
+}
+
+void LaneChangeRequestManager::ProcessBlinkState(
+    const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status,
+    const RequestType& cur_req) {
+  static int32_t cancel_freeze_count = 11;
+  bool is_allowed_cancel_state =
+      (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeHold ||
+       lc_status == StateMachineLaneChangeStatus::kLaneChangeCancel);
+  bool trigger_left_lane_change =
+      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping &&
+       cur_req == RequestType::NO_CHANGE) &&
+      ((last_frame_blinker_ == LaneChangeRequest::TurnSwitchState::NONE ||
+        last_frame_blinker_ == LaneChangeRequest::LaneChangeRequest::
+                                   TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        last_frame_blinker_ ==
+            LaneChangeRequest::TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
+       ego_blinker == LaneChangeRequest::TurnSwitchState::LEFT_FIRMLY_TOUCH);
+  bool trigger_right_lane_change =
+      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping &&
+       cur_req == RequestType::NO_CHANGE) &&
+      ((last_frame_blinker_ == LaneChangeRequest::TurnSwitchState::NONE ||
+        last_frame_blinker_ ==
+            LaneChangeRequest::TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        last_frame_blinker_ ==
+            LaneChangeRequest::TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
+       ego_blinker == LaneChangeRequest::TurnSwitchState::RIGHT_FIRMLY_TOUCH);
+  bool trigger_left_lane_change_cancel =
+      is_allowed_cancel_state &&
+      (cur_req == RequestType::LEFT_CHANGE &&
+       (ego_blinker ==
+            LaneChangeRequest::TurnSwitchState::RIGHT_LIGHTLY_TOUCH ||
+        ego_blinker == LaneChangeRequest::TurnSwitchState::RIGHT_FIRMLY_TOUCH));
+  bool trigger_right_lane_change_cancel =
+      is_allowed_cancel_state &&
+      (cur_req == RequestType::RIGHT_CHANGE &&
+       (ego_blinker == LaneChangeRequest::TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
+        ego_blinker == LaneChangeRequest::TurnSwitchState::LEFT_FIRMLY_TOUCH));
+  if (trigger_left_lane_change && cancel_freeze_count > 10) {
+    trigger_lane_change_cancel_ = false;
+    lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::LEFT_FIRMLY_TOUCH;
+  } else if (trigger_right_lane_change && cancel_freeze_count > 10) {
+    trigger_lane_change_cancel_ = false;
+    lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::RIGHT_FIRMLY_TOUCH;
+  }
+  cancel_freeze_count++;
+  if (cancel_freeze_count > 11) {
+    trigger_lane_change_cancel_ = false;
+    cancel_freeze_count = 11;
+  } else {
+    trigger_lane_change_cancel_ = true;
+  }
+  if (trigger_left_lane_change_cancel || trigger_right_lane_change_cancel) {
+    lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
+    trigger_lane_change_cancel_ = true;
+    cancel_freeze_count = 0;
+  }
+  last_frame_blinker_ = ego_blinker;
 }
 
 }  // namespace planning

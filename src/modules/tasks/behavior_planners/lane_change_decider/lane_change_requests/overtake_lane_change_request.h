@@ -25,6 +25,15 @@ class OvertakeRequest : public LaneChangeRequest {
   int GetOvertakeCount() { return overtake_count_; }
 
   int GetOvertakeVehicleId() { return overtake_vehicle_id_; }
+  virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
+    lane_change_cmd_ = lane_change_cmd;
+  }
+  virtual void SetLaneChangeCancelFromTrigger(bool trigger_lane_change_cancel) {
+    trigger_lane_change_cancel_ = trigger_lane_change_cancel;
+  }
+  virtual IntCancelReasonType lc_request_cancel_reason() {
+    return lc_request_cancel_reason_;
+  }
 
  private:
   void setLaneChangeRequestByFrontSlowVehcile(int lc_status);

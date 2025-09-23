@@ -80,6 +80,8 @@ class LaneChangeRequestManager {
   void GenerateHMIInfo();
 
   const bool is_near_merge_region() { return is_near_merge_region_; };
+  void ProcessBlinkState(const uint ego_blinker,
+                         const StateMachineLaneChangeStatus& lc_status, const RequestType& cur_req);
 
  private:
   EgoPlanningConfig config_;
@@ -99,6 +101,9 @@ class LaneChangeRequestManager {
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr_;
   framework::Session* session_;
   RequestType ilc_virtual_request_ = NO_CHANGE;
+  uint last_frame_blinker_ = 0;
+  std::uint8_t lane_change_cmd_ = 0;
+  bool trigger_lane_change_cancel_ = false;
 };
 
 }  // namespace planning

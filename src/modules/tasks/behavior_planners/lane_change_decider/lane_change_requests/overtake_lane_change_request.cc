@@ -119,7 +119,7 @@ OvertakeRequest::OvertakeRequest(
 void OvertakeRequest::Update(int lc_status) {
   std::cout << "OvertakeRequest::Update::coming overtake lane change request"
             << std::endl;
-
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
