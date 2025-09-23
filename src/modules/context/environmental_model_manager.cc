@@ -1058,8 +1058,9 @@ void EnvironmentalModelManager::truncate_prediction_info(
     }
     // synchronize time
     for (traj_index = 0; traj_index < TRAJ_POINT_NUM_USED + 1; traj_index++) {
-      auto trajectory_point =
-          GetPointAtTime(trajectory_points, 0.2 * traj_index);
+      double target_time =
+          cur_predicion_obj.delay_time + 0.2 * traj_index;  // 考虑延迟
+      auto trajectory_point = GetPointAtTime(trajectory_points, target_time);
       cur_prediction_trajectory.trajectory.emplace_back(trajectory_point);
     }
 
