@@ -2050,6 +2050,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     // 对每个边界进行滞回处理
     WeightedBounds smoothed_bounds;
     smoothed_bounds.reserve(current_bounds.size());
+    bool is_smooth = false;
     for (const auto& current_bound : current_bounds) {
       if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
           current_bound.bound_info.type == BoundType :: EGO_POSITION ||
@@ -2104,11 +2105,14 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
               smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
             }
           }
+          smoothed_bounds.push_back(smoothed_bound);
+          is_smooth = true;
         }
       }
-      smoothed_bounds.push_back(smoothed_bound);
     }
-    first_soft_bounds_[i] = std::move(smoothed_bounds);
+    if (is_smooth) {
+      first_soft_bounds_[i] = std::move(smoothed_bounds);
+    }
   }
 }
 
