@@ -2037,7 +2037,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     return;
   }
 
-  const double l_offset_limit = 10.0;
+  const double l_offset_limit = config_.first_soft_min_distance2center;
   constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
@@ -2112,6 +2112,23 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     }
     if (is_smooth) {
       first_soft_bounds_[i] = std::move(smoothed_bounds);
+    }
+  }
+
+  // ROAD_BORDER、LANE、EGO_POSITION默认没有双层bound
+  // 添加一个开关，表示是否使用双层Bound
+  for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
+    auto& current_bounds = first_soft_bounds_[i];
+    for (auto& current_bound : current_bounds) {
+      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
+          current_bound.bound_info.type == BoundType :: EGO_POSITION ||
+          current_bound.bound_info.type == BoundType :: LANE ||
+          !config_.use_first_soft_bound) {
+        current_bound.upper = std::fmax(current_bound.upper, config_.first_soft_min_distance2center);
+        current_bound.lower = std::fmin(current_bound.lower, -config_.first_soft_min_distance2center);
+        current_bound.bound_info.type = BoundType :: DEFAULT;
+        current_bound.bound_info.id = -100;
+      }
     }
   }
 }
@@ -3752,7 +3769,10 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision,
     ObstacleDecision &obstacle_decision, BoundHierarchy bound_hierarchy,
     bool is_avoid_side_ignore_obj, bool is_high_dangerous) {
-  const double l_offset_limit = 10.0;
+  double l_offset_limit = 10.0;
+  if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
+    l_offset_limit = config_.first_soft_min_distance2center;
+  }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
@@ -3979,7 +3999,7 @@ void GeneralLateralDecider::ExtractBoundary(
   }
 
   for (int i = 0; i < first_soft_bounds_.size(); i++) {
-    std::pair<double, double> first_soft_bound{-10., 10.};  // <lower ,upper>
+    std::pair<double, double> first_soft_bound{-20., 20.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> first_soft_bound_info;  // <lower ,upper>
     PostProcessBound(planning_init_point_l, first_soft_bounds_[i], first_soft_bound,
                      first_soft_bound_info);
@@ -3987,20 +4007,30 @@ void GeneralLateralDecider::ExtractBoundary(
       ProtectBoundByInitPoint(first_soft_bound, first_soft_bound_info);
     }
     // second_soft in first_soft
-    if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
-      first_soft_bound.first = second_frenet_soft_bounds[i].second;
-    } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
-      first_soft_bound.first = second_frenet_soft_bounds[i].first;
+    // 满足特定场景的case，不进行比大小，例如默认关闭first_soft_bound
+    if (!(second_soft_bounds_info[i].first.type == BoundType :: ROAD_BORDER ||
+        second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION ||
+        second_soft_bounds_info[i].first.type == BoundType :: LANE ||
+        !config_.use_first_soft_bound)) {
+      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+        first_soft_bound.first = second_frenet_soft_bounds[i].second;
+      } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+        first_soft_bound.first = second_frenet_soft_bounds[i].first;
+      }
     }
-    if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
-      first_soft_bound.second = second_frenet_soft_bounds[i].second;
-    } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
-      first_soft_bound.second = second_frenet_soft_bounds[i].first;
+    if (!(second_soft_bounds_info[i].second.type == BoundType :: ROAD_BORDER ||
+        second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION ||
+        second_soft_bounds_info[i].second.type == BoundType :: LANE ||
+        !config_.use_first_soft_bound)) {
+      if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
+        first_soft_bound.second = second_frenet_soft_bounds[i].second;
+      } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+        first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      }
     }
     first_frenet_soft_bounds[i] = first_soft_bound;
     first_soft_bounds_info[i] = first_soft_bound_info;
   }
-
   assert(frenet_hard_bounds.size() == ref_traj_points_.size());
   assert(first_frenet_soft_bounds.size() == ref_traj_points_.size());
   assert(second_frenet_soft_bounds.size() == ref_traj_points_.size());
