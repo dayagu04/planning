@@ -62,7 +62,7 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   P_indices.clear();
   P_indptr.clear();
 
-  CalculateKernel(&P_data, &P_indices, &P_indptr);
+  CalculateKernel2(&P_data, &P_indices, &P_indptr);
 
   // calculate affine constraints
   static std::vector<c_float> A_data;
@@ -544,7 +544,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
 
   // continous constraints
   // x(i+1) - x(i) - delta_s * x(i)'
-  // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''
+  // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)'' = 0
   auto delta_s_sq_ = delta_s_ * delta_s_;
   for (int i = 0; i + 1 < n; ++i) {
     matrix(matrix_row_index, i) = -1.0;
@@ -606,6 +606,8 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
   A_indices->reserve(csc_matrix_valid_num);
   A_indptr->reserve(num_of_variables + 1);
   int ind_p = 0;
+
+  // columns
   for (int i = 0; i < num_of_variables; ++i) {
     A_indptr->emplace_back(ind_p);
     for (int r = 0; r < matrix.rows(); ++r) {
@@ -615,7 +617,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
       // coefficient
       A_data->emplace_back(matrix(r, i));
 
-      // constraint index
+      // row
       A_indices->emplace_back(r);
       ++ind_p;
     }

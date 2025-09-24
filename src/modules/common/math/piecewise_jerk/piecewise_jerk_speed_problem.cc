@@ -53,9 +53,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
   // N*3, for x =[x, x', x'']
   const int kNumParam = 3 * n;
 
-  // size for all target items.
-  const int kNumValue = 4 * n - 1;
-
+  // P matrix is a sparse matrix, and it's max valid rows is 2.
   // std::pair<c_int, c_float>: rows, weight
   std::vector<std::vector<std::pair<c_int, c_float>>> columns;
   columns.resize(kNumParam);
@@ -104,6 +102,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
   ++value_index;
 
   // - 2 w_dddx / delta_s^2 * x(i)'' * x(i + 1)''
+  // 对角线的下一行
   for (int i = 0; i < n - 1; ++i) {
     columns[2 * n + i].emplace_back(2 * n + i + 1,
                                     -2.0 * weight_dddx_ / delta_s_square);
@@ -171,6 +170,123 @@ OSQPSettings* PiecewiseJerkSpeedProblem::SolverDefaultSettings() {
   settings->scaled_termination = true;
 
   return settings;
+}
+
+
+void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
+                                                std::vector<c_int>* P_indices,
+                                                std::vector<c_int>* P_indptr) {
+  const int n = static_cast<int>(num_of_knots_);
+  // N*3, for x =[x, x', x'']
+  const int kNumParam = 3 * n;
+
+  // P matrix is a sparse matrix, and it's max valid rows is 2.
+  // std::pair<c_int, c_float>: rows, weight
+  std::vector<SparseMatrixColumn> columns;
+  columns.resize(kNumParam, SparseMatrixColumn(-1, 0.0f, -1, 0.0f));
+  int value_index = 0;
+
+  // x(i)^2 * w_x_ref
+  for (int i = 0; i < n - 1; ++i) {
+    // columns[i].emplace_back(i, weight_x_ref_);
+    columns[i].diagonal_element.rows = i;
+    columns[i].diagonal_element.value = weight_x_ref_;
+    ++value_index;
+  }
+
+  // x(n-1)^2 * (w_x_ref + w_end_x)
+  columns[n - 1].diagonal_element.rows = n - 1;
+  columns[n - 1].diagonal_element.value = weight_x_ref_ + weight_end_state_[0];
+  ++value_index;
+
+  // x(i)'^2 * (w_dx_ref + penalty_dx)
+  for (int i = 0; i < n - 1; ++i) {
+    // columns[n + i].emplace_back(n + i, (weight_dx_ref_ + penalty_dx_[i]));
+
+    columns[n + i].diagonal_element.rows = n + i;
+    columns[n + i].diagonal_element.value = weight_dx_ref_ + penalty_dx_[i];
+    ++value_index;
+  }
+
+  // x(n-1)'^2 * (w_dx_ref + penalty_dx + w_end_dx)
+  // columns[2 * n - 1].emplace_back(
+  //     2 * n - 1, (weight_dx_ref_ + penalty_dx_[n - 1] +
+  //     weight_end_state_[1]));
+  columns[2 * n - 1].diagonal_element.rows = 2 * n - 1;
+  columns[2 * n - 1].diagonal_element.value =
+      weight_dx_ref_ + penalty_dx_[n - 1] + weight_end_state_[1];
+  ++value_index;
+
+  auto delta_s_square = delta_s_ * delta_s_;
+  c_float scale_square = 1.0f;
+
+  // x(i)''^2 * (w_ddx + w_dddx / delta_s^2), n = 0
+  // columns[2 * n].emplace_back(2 * n,
+  //                             (weight_ddx_ + weight_dddx_ / delta_s_square));
+  columns[2 * n].diagonal_element.rows = 2 * n;
+  columns[2 * n].diagonal_element.value =
+      weight_ddx_ + weight_dddx_ / delta_s_square;
+  ++value_index;
+
+  // x(i)''^2 * (w_ddx + 2 * w_dddx / delta_s^2)
+  for (int i = 1; i < n - 1; ++i) {
+    // columns[2 * n + i].emplace_back(
+    //     2 * n + i, (weight_ddx_ + 2.0 * weight_dddx_ / delta_s_square));
+    columns[2 * n + i].diagonal_element.rows = 2 * n + i;
+    columns[2 * n + i].diagonal_element.value =
+        weight_ddx_ + 2.0 * weight_dddx_ / delta_s_square;
+    ++value_index;
+  }
+
+  // acc, point n-1
+  // columns[3 * n - 1].emplace_back(
+  //     3 * n - 1,
+  //     (weight_ddx_ + weight_dddx_ / delta_s_square + weight_end_state_[2]));
+  columns[3 * n - 1].diagonal_element.rows = 3 * n - 1;
+  columns[3 * n - 1].diagonal_element.value =
+      weight_ddx_ + weight_dddx_ / delta_s_square + weight_end_state_[2];
+  ++value_index;
+
+  // - 2 w_dddx / delta_s^2 * x(i)'' * x(i + 1)''
+  // 对角线的下一行
+  for (int i = 0; i < n - 1; ++i) {
+    // columns[2 * n + i].emplace_back(2 * n + i + 1,
+    //                                 -2.0 * weight_dddx_ / delta_s_square);
+    columns[2 * n + i].next_row_element.rows = 2 * n + i + 1;
+    columns[2 * n + i].next_row_element.value =
+        -2.0 * weight_dddx_ / delta_s_square;
+    ++value_index;
+  }
+
+  // // - w_dddx / delta_s^2 * x(i+1)'' * x(i)''
+  // for (int i = 0; i < n - 1; ++i) {
+  //   columns[2 * n + i + 1].emplace_back(
+  //       2 * n + i, -weight_dddx_ / delta_s_square / scale_square);
+  //   ++value_index;
+  // }
+
+  P_data->reserve(value_index);
+  P_indptr->reserve(kNumParam + 1);
+  P_indices->reserve(value_index);
+  int ind_p = 0;
+  for (int i = 0; i < kNumParam; ++i) {
+    P_indptr->emplace_back(ind_p);
+
+    if (columns[i].diagonal_element.IsValid()) {
+      P_data->emplace_back(columns[i].diagonal_element.value * 2.0f);
+      P_indices->emplace_back(columns[i].diagonal_element.rows);
+      ++ind_p;
+    }
+
+    if (columns[i].next_row_element.IsValid()) {
+      P_data->emplace_back(columns[i].next_row_element.value * 2.0f);
+      P_indices->emplace_back(columns[i].next_row_element.rows);
+      ++ind_p;
+    }
+  }
+  P_indptr->emplace_back(ind_p);
+
+  return;
 }
 
 }  // namespace planning

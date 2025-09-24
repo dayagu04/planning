@@ -110,6 +110,10 @@ class PiecewiseJerkProblem {
                                std::vector<c_int>* P_indices,
                                std::vector<c_int>* P_indptr) = 0;
 
+  virtual void CalculateKernel2(std::vector<c_float>* P_data,
+                                std::vector<c_int>* P_indices,
+                                std::vector<c_int>* P_indptr) = 0;
+
   // linear cost
   virtual void CalculateOffset(std::vector<c_float>* q) = 0;
 
