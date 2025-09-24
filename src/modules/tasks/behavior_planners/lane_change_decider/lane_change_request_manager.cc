@@ -52,6 +52,8 @@ void LaneChangeRequestManager::FinishRequest() {
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
   gen_turn_signal_ = NO_CHANGE;
+  lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
+  trigger_lane_change_cancel_ = false;
 }
 
 bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {

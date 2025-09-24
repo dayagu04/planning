@@ -277,6 +277,7 @@ void IntRequest::Update(int lc_status) {
     set_target_lane_virtual_id(current_lane_virtual_id);
     counter_left_ = 0;
     counter_right_ = 0;
+    lane_change_cmd_ = TurnSwitchState::NONE;
     // }
   } else if (lane_change_cmd_ == TurnSwitchState::NONE) {
     Finish();
