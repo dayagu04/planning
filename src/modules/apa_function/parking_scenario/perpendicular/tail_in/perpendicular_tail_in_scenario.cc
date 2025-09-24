@@ -18,7 +18,7 @@
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
 #include "ifly_time.h"
-#include "inital_action_decider/initial_action_decider.h"
+#include "initial_action_decider/initial_action_decider.h"
 #include "log_glog.h"
 #include "math_lib.h"
 #include "parking_scenario.h"
