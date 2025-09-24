@@ -160,9 +160,11 @@ void SampleQuarticPolynomialCurve::CalcCost(
   stop_penalty_cost_.GetCost(arrived_v_);
 
   int speed_differ_gain = 1;
-  if(end_point_lower_st_point.agent_id() != kNoAgentId){
-    if(arrived_s_ - end_point_lower_st_point.s() < 20.0 && arrived_v_ > end_point_lower_st_point.velocity()){
-      speed_differ_gain = std::pow(arrived_v_ - end_point_lower_st_point.velocity(),2) + 1;
+  if(enable_merge_decelaration){
+    if(end_point_lower_st_point.agent_id() != kNoAgentId){
+      if(arrived_s_ - end_point_lower_st_point.s() < 20.0 && arrived_v_ > end_point_lower_st_point.velocity()){
+        speed_differ_gain = std::pow(arrived_v_ - end_point_lower_st_point.velocity(),2) + 1;
+      }
     }
   }
 
