@@ -1288,14 +1288,21 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     return false;
   }
 
+  double gain = 1.0;
+
+  if (frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    gain = 1.8;
+  }
+
   const double finish_lon_err = finish_params.lon_err;
 
   const double finish_lat_err =
       (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
-                                          : finish_params.lat_err_strict);
+                                          : finish_params.lat_err_strict) * gain;
   const double finish_heading_err =
       (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
-                                          : finish_params.heading_err_strict);
+                                          : finish_params.heading_err_strict) * gain;
 
   const bool lon_condition = lon_err < finish_lon_err;
 
