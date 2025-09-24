@@ -51,7 +51,7 @@ void ApaPlanInterface::Reset(const bool is_simulation) {
 
   SyncParkingParameters(is_simulation);
 
-  // reset apa world
+  // reset apa world and scenario manager
   apa_world_ptr_->Reset();
   scenario_manager_.Reset();
   scenario_manager_.ClearHybridResponse();

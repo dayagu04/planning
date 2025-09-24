@@ -18,6 +18,7 @@
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
 #include "ifly_time.h"
+#include "inital_action_decider/initial_action_decider.h"
 #include "log_glog.h"
 #include "math_lib.h"
 #include "parking_scenario.h"
@@ -62,17 +63,35 @@ void PerpendicularTailInScenario::ScenarioTry() {
     return;
   }
 
-  if (PathPlanOnce() == PathPlannerResult::PLAN_UPDATE) {
-    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::RELEASE;
-  } else {
-    release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
+  uint8_t path_plan_res = PathPlannerResult::PLAN_FAILED;
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    path_plan_res = PathPlanOnce();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR) {
+    path_plan_res = PathPlanOnceHybridAstar();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    path_plan_res = PathPlanOnceHybridAstarThread();
   }
 
   TansformPreparePlanningTraj();
-
   Clear();
+
+  switch (path_plan_res) {
+    case PathPlannerResult::PLAN_UPDATE:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
+      break;
+    case PathPlannerResult::WAIT_PATH:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::COMPUTING;
+      break;
+    case PathPlannerResult::PLAN_FAILED:
+    default:
+      release_info.release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      break;
+  }
 
   return;
 }
@@ -945,7 +964,11 @@ void PerpendicularTailInScenario::PathPlan() {
   }
 
   // when dynamic plan, the pathplan_result is always PLAN_UPDATE
-  frame_.pathplan_result = PathPlanOnce();
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    frame_.pathplan_result = PathPlanOnce();
+  } else {
+    frame_.pathplan_result = PathPlanOnceHybridAstar();
+  }
 
   ILOG_INFO << "try generate path, and replan_consume_time = "
             << IflyTime::Now_ms() - start_time << " ms, replan count = "
@@ -1045,6 +1068,489 @@ void PerpendicularTailInScenario::PathPlan() {
   }
 
   return;
+}
+
+void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
+    PlannerOpenSpaceConfig& config, HybridAStarRequest& request) {
+  const ApaParameters& param = apa_param.GetParam();
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  // gen config
+  config.InitConfig();
+  // targeted customization parameters
+  config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
+  config.exceed_pre_search_box_penalty = 68.0;
+  config.exceed_intersting_box_penalty = 11.0;
+  config.borrow_slot_penalty = 3.68;
+
+  // gen request
+  if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
+    request.mirror_has_folded_flag = true;
+  } else {
+    apa_world_ptr_->GetColDetInterfacePtr()->Init(false);
+    if (ego_info_under_slot.tar_pose_result.target_pose_type ==
+        TargetPoseType::FOLD_MIRROR) {
+      ILOG_INFO << "try path plan with fold mirror";
+      request.enable_smart_fold_mirror = true;
+    }
+  }
+  request.process_obs_method = frame_.process_obs_method;
+  request.sample_ds = config.node_path_dist_resolution;
+  request.replan_reason = frame_.replan_reason;
+  request.every_gear_length = 0.3;
+  request.swap_start_goal = false;
+  request.scenario_type = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+  request.analytic_expansion_type = param.analytic_expansion_type;
+  request.ego_info_under_slot = ego_info_under_slot;
+  request.inital_action_request.ref_length = config.node_step + 0.01;
+  request.inital_action_request.ref_gear =
+      GetAstarGearFromSegGear(frame_.current_gear);
+  if (apa_world_ptr_->GetSimuParam().ref_gear != 0) {
+    request.inital_action_request.ref_gear =
+        GetAstarGearFromSegGear(apa_world_ptr_->GetSimuParam().ref_gear);
+  }
+
+  request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
+  request.decide_cul_de_sac = apa_world_ptr_->GetSimuParam().decide_cul_de_sac;
+
+  request.is_searching_stage =
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
+
+  if (request.is_searching_stage) {
+    request.max_gear_shift_number = param.max_plan_gear_shift_number_searching;
+  } else {
+    request.max_gear_shift_number =
+        std::max(0, std::min(param.max_plan_gear_shift_number_parking,
+                             param.max_real_gear_shift_number_parking -
+                                 frame_.gear_change_count));
+  }
+
+  // now, when dynamic plan, the path should not shift gear, and the gear must
+  // be reverse
+  if (frame_.replan_reason == DYNAMIC) {
+    request.inital_action_request.ref_gear = AstarPathGear::REVERSE;
+    request.max_gear_shift_number = 0;
+  }
+
+  request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
+
+  // 如果是处于库内向库外搜索
+  if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
+    if (ego_info_under_slot.slot.IsPointInCustomSlot(
+            ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
+        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
+      request.adjust_pose = true;
+    }
+  }
+
+  InitalActionDecider inital_action_decider(
+      apa_world_ptr_->GetColDetInterfacePtr());
+  inital_action_decider.Process(request.inital_action_request,
+                                ego_info_under_slot.cur_pose,
+                                ego_info_under_slot.tar_line, config.node_step,
+                                config.node_path_dist_resolution, 3.0);
+
+  ILOG_INFO << "hybrid_ref_gear = "
+            << PathGearDebugString(request.inital_action_request.ref_gear)
+            << " ref length = " << request.inital_action_request.ref_length
+            << "  max_gear_shift_number = " << request.max_gear_shift_number
+            << "  adjust_pose = " << request.adjust_pose
+            << "  ref_solve_number = " << request.ref_solve_number;
+}
+
+const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
+  HybridAStarRequest request;
+  PlannerOpenSpaceConfig config;
+  GenHybridAstarConfigAndRequest(config, request);
+
+  const ApaParameters& param = apa_param.GetParam();
+  CalcProjPtForDynamicPlan(request.ego_info_under_slot.cur_pose,
+                           request.splicing_pt_vec);
+
+  const std::shared_ptr<HybridAstarPathGeneratorInterface>&
+      hybrid_astar_path_generator_ptr =
+          apa_world_ptr_->GetParkingTaskInterfacePtr()
+              ->GetHybridAstarPathGeneratorInterfacePtr();
+
+  HybridAStarResult hybrid_astar_result;
+  hybrid_astar_path_generator_ptr->SetRequest(request);
+  hybrid_astar_path_generator_ptr->UpdateConfig(config);
+  hybrid_astar_path_generator_ptr->Update();
+  hybrid_astar_path_generator_ptr->GetResult(hybrid_astar_result);
+
+  const bool path_plan_success = hybrid_astar_result.path_plan_success;
+  ILOG_INFO << "hybrid astar plan success = " << path_plan_success << "  "
+            << "  path_plan_consume_time_ms = "
+            << hybrid_astar_result.search_consume_time_ms;
+
+  JSON_DEBUG_VALUE("search_consume_time",
+                   hybrid_astar_result.search_consume_time_ms)
+
+  JSON_DEBUG_VALUE("solve_number", hybrid_astar_result.solve_number)
+  JSON_DEBUG_VALUE("search_node_num", hybrid_astar_result.search_node_num)
+
+  if (request.is_searching_stage) {
+    if (!path_plan_success) {
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    // if (path_plan_success) {
+    //   return PathPlannerResult::PLAN_UPDATE;
+    // }
+  }
+
+  HybridAstarResponse response;
+  response.result = hybrid_astar_result;
+  response.request = request;
+
+  if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+    // dynamic replan
+    if (!path_plan_success) {
+      frame_.dynamic_plan_fail_flag = true;
+      ILOG_INFO << "path dynamic plan fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+
+    frame_.dynamic_plan_fail_flag = false;
+    ILOG_INFO << "path dynamic plan success";
+    if (!CheckDynamicPlanPathOptimalByHybridAstarPath(response)) {
+      frame_.dynamic_plan_path_superior = false;
+      frame_.plan_fail_reason = ParkingFailReason::DYNAMIC_PATH_NOT_SUPERIOR;
+      ILOG_INFO << "path dynamic plan is not superior, should not replace "
+                   "last path";
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+
+    frame_.dynamic_plan_path_superior = true;
+    ILOG_INFO << "path dynamic plan is superior, should replace last path";
+  } else {
+    // static replan
+    if (!path_plan_success) {
+      ILOG_INFO << "path static plan fail";
+      frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+      return PathPlannerResult::PLAN_FAILED;
+    }
+    ILOG_INFO << "path static plan success";
+  }
+
+  if (frame_.is_replan_first) {
+    frame_.is_replan_first = false;
+  }
+
+  FillPathPointGlobalFromHybridPath(response);
+
+  return PathPlannerResult::PLAN_UPDATE;
+}
+
+const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
+  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
+
+  const EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  frame_.has_response = UpdateThreadPath();
+
+  // gen request every frame, but not set every frame
+  PathGenThreadRequest request;
+  request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+  GenHybridAstarConfigAndRequest(request.config, request.hybrid_astar_request);
+
+  HybridAstarResponse response;
+  if (frame_.has_response) {
+    ILOG_INFO << "path gen thread has response, update responsse";
+    path_generator_thread_ptr->PublishResponseData(hybrid_astar_response_);
+  }
+  response = hybrid_astar_response_;
+
+  if (!CheckResponseReasonable(request.hybrid_astar_request,
+                               hybrid_astar_response_)) {
+    ILOG_INFO << "response not reasonable";
+    hybrid_astar_response_.Clear();
+  }
+
+  FillPathPointGlobalFromHybridPath(response);
+
+  if (frame_.path_gen_request_response_state ==
+      PathGenRequestResponseState::HAS_RESPONSE) {
+    if (!hybrid_astar_response_.result.path_plan_success) {
+      return PathPlannerResult::PLAN_FAILED;
+    } else {
+      return PathPlannerResult::PLAN_UPDATE;
+    }
+  }
+
+  if (frame_.path_gen_request_response_state !=
+      PathGenRequestResponseState::HAS_REQUEST) {
+    ILOG_INFO << "path generator thread has not request, can set request";
+    path_generator_thread_ptr->SetRequest(request);
+  }
+
+  const SlotReleaseState last_release_state =
+      apa_world_ptr_->GetSlotManagerPtr()
+          ->GetEgoInfoUnderSlot()
+          .slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
+
+  if (last_release_state == SlotReleaseState::RELEASE) {
+    ILOG_INFO << "last result is release, the frame set release";
+    return PathPlannerResult::PLAN_UPDATE;
+  } else if (last_release_state == SlotReleaseState::NOT_RELEASE) {
+    ILOG_INFO << "last result is not release, the frame set not release";
+    return PathPlannerResult::PLAN_FAILED;
+  } else if (last_release_state == SlotReleaseState::UNKNOWN) {
+    ILOG_INFO << "last result is unkown, the frame set computing";
+    return PathPlannerResult::WAIT_PATH;
+  } else if (last_release_state == SlotReleaseState::COMPUTING) {
+    ILOG_INFO << "last result is computing, the frame set computing";
+    return PathPlannerResult::WAIT_PATH;
+  }
+
+  return PathPlannerResult::PLAN_FAILED;
+}
+
+void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
+  CheckReplanParams replan_params;
+  frame_.replan_flag = CheckReplan(replan_params);
+  frame_.has_response = UpdateThreadPath();
+  frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
+  frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
+  const ApaParameters& param = apa_param.GetParam();
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  if (!CheckCanDelObsInSlot()) {
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+  }
+
+  if (apa_world_ptr_->GetSimuParam().is_simulation &&
+      apa_world_ptr_->GetSimuParam().process_obs_method != -1) {
+    frame_.process_obs_method = static_cast<ProcessObsMethod>(
+        apa_world_ptr_->GetSimuParam().process_obs_method);
+  }
+
+  if (frame_.is_replan_first) {
+    current_path_point_global_vec_.clear();
+    complete_path_point_global_vec_.clear();
+  }
+
+  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
+
+  switch (frame_.path_gen_request_response_state) {
+    case PathGenRequestResponseState::HAS_REQUEST:
+      ILOG_INFO << "thread request response state is has_request, should wait "
+                   "for response, no need to trigger plan";
+      frame_.replan_flag = false;
+      break;
+    case PathGenRequestResponseState::HAS_RESPONSE:
+      ILOG_INFO << "thread request response state is has_response, should get "
+                   "path from thread, no need to trigger plan";
+      frame_.replan_flag = false;
+      break;
+    case PathGenRequestResponseState::HAS_PUBLISHED_RESPONSE:
+      // 如果是HAS_PUBLISHED_RESPONSE状态，说明已经从线程里获取路径，可以正常触发重规划
+      ILOG_INFO << "thread request response state is has_published_response, "
+                   "use last path and can trigger plan";
+      break;
+    default:
+      ILOG_INFO << "thread request response state is NONE, can trigger plan";
+      break;
+  }
+
+  SetParkingStatus(PARKING_RUNNING);
+
+  const bool exist_target_pose = GenTlane();
+
+  if (!frame_.replan_flag) {
+    frame_.replan_reason = NOT_REPLAN;
+  }
+
+  HybridAstarResponse response;
+  if (frame_.path_gen_request_response_state ==
+      PathGenRequestResponseState::HAS_RESPONSE) {
+    // 从线程里拿取路径规划结果  success or fail
+    path_generator_thread_ptr->PublishResponseData(response);
+    const HybridAStarRequest& last_request = response.request;
+    if (last_request.is_searching_stage) {
+      ILOG_INFO << "this respose path is search path, need loss and replan";
+      frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+      return;
+    }
+
+    const EgoInfoUnderSlot& last_ego_info_under_slot =
+        last_request.ego_info_under_slot;
+
+    ILOG_INFO << "hybrid astar plan success = "
+              << response.result.path_plan_success << "  "
+              << "  path_plan_consume_time_ms = "
+              << response.result.search_consume_time_ms;
+
+    JSON_DEBUG_VALUE("process_obs_method",
+                     static_cast<int>(last_request.process_obs_method))
+
+    JSON_DEBUG_VALUE("search_consume_time",
+                     response.result.search_consume_time_ms)
+
+    JSON_DEBUG_VALUE("solve_number", response.result.solve_number)
+    JSON_DEBUG_VALUE("search_node_num", response.result.search_node_num)
+
+    JSON_DEBUG_VALUE("last_replan_reason", last_request.replan_reason)
+
+    bool success = false;
+    do {
+      if (!response.result.path_plan_success) {
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
+        ILOG_INFO << "this respose path plan fail";
+        break;
+      }
+      if (last_ego_info_under_slot.id != ego_info_under_slot.id) {
+        frame_.plan_fail_reason = SLOT_ID_CHANGED;
+        ILOG_INFO << "this respose slot id has changed, cur id = "
+                  << response.request.ego_info_under_slot.id
+                  << "  history id = " << ego_info_under_slot.id;
+        break;
+      }
+      if (last_ego_info_under_slot.slot_type != ego_info_under_slot.slot_type) {
+        frame_.plan_fail_reason = SLOT_TYPE_CHANGED;
+        ILOG_INFO << "this respose slot type has changed, history type = "
+                  << GetSlotTypeString(
+                         last_request.ego_info_under_slot.slot_type)
+                  << "  cur type = "
+                  << GetSlotTypeString(ego_info_under_slot.slot_type);
+        break;
+      }
+      success = true;
+    } while (false);
+
+    // dynamic fail
+    while (last_request.replan_reason == DYNAMIC) {
+      if (!success) {
+        frame_.plan_fail_reason = PATH_PLAN_FAILED;
+        ILOG_INFO << "dynamic replan failed";
+      } else if (!CheckDynamicPlanPathOptimalByHybridAstarPath(response)) {
+        frame_.plan_fail_reason = DYNAMIC_PATH_NOT_SUPERIOR;
+        success = false;
+        ILOG_INFO << "dynamic replan path is not superior";
+      } else {
+        ILOG_INFO
+            << "dynamic replan success and path is superior, use this path";
+        break;
+      }
+
+      ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+      ego_info_under_slot.target_pose.pos.y() +=
+          last_ego_info_under_slot.lat_move_dist_replan_success;
+      ego_info_under_slot.target_pose.pos.x() +=
+          last_ego_info_under_slot.lon_move_dist_replan_success;
+      ego_info_under_slot.terminal_err.Set(
+          ego_info_under_slot.cur_pose.pos -
+              ego_info_under_slot.target_pose.pos,
+          geometry_lib::NormalizeAngle(
+              ego_info_under_slot.cur_pose.heading -
+              ego_info_under_slot.target_pose.heading));
+
+      break;
+    }
+
+    // static plan fail
+    if (!success && last_request.replan_reason != DYNAMIC &&
+        last_request.replan_reason != PATH_DANGEROUS) {
+      ILOG_ERROR << "static replan fail";
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      if (frame_.replan_fail_time >
+          apa_param.GetParam().max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      SwitchProcessObsMethod();
+      if (last_request.replan_reason == FIRST_PLAN) {
+        frame_.is_replan_first = true;
+      }
+      return;
+    }
+
+    // static or dynamic plan fail
+    if (!success) {
+      ILOG_INFO << "this respose is not vaild";
+      path_generator_thread_ptr->Reset();
+      return;
+    }
+
+    ego_info_under_slot.lat_move_dist_replan_success =
+        last_ego_info_under_slot.lat_move_dist_every_replan;
+
+    ego_info_under_slot.lon_move_dist_replan_success =
+        last_ego_info_under_slot.lon_move_dist_every_replan;
+
+    ego_info_under_slot.replan_success_origin_target_pose =
+        last_ego_info_under_slot.origin_target_pose;
+
+    ego_info_under_slot.replan_success_origin_target_pose.LocalToGlobal(
+        last_ego_info_under_slot.l2g_tf);
+
+    if (frame_.replan_reason == ReplanReason::DYNAMIC) {
+      ILOG_INFO << "dynamic replan success and path is superior, update path";
+      frame_.dynamic_replan_fail_count = 0;
+    } else if (frame_.replan_reason != ReplanReason::PATH_DANGEROUS) {
+      ILOG_INFO << "static replan success, update path";
+      ego_info_under_slot.fix_limiter = false;
+    }
+
+    ILOG_INFO << "this respose is vaild, and use new path";
+    frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+    FillPathPointGlobalFromHybridPath(response);
+
+    if (PostProcessPath()) {
+      ILOG_INFO << "postprocess path success!";
+    } else {
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      if (frame_.replan_fail_time > param.max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      ILOG_INFO << "postprocess path failed!";
+    }
+    return;
+  }
+
+  if (frame_.replan_flag) {
+    SetParkingStatus(PARKING_PLANNING);
+
+    // 终点不存在 直接返回
+    if (!exist_target_pose) {
+      frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
+      frame_.plan_fail_reason = ParkingFailReason::NO_TARGET_POSE;
+      if (frame_.replan_fail_time >
+          apa_param.GetParam().max_replan_failed_time) {
+        SetParkingStatus(PARKING_FAILED);
+      }
+      SwitchProcessObsMethod();
+      return;
+    }
+    // 触发重规划 通知路径规划线程开始规划路径 但是并不检查规划结果
+    // 也不获取规划路径 只是设置请求 通知线程干活
+    ILOG_INFO << "replan is required, set request to path generate thread!";
+    PathGenThreadRequest request;
+    request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
+
+    GenHybridAstarConfigAndRequest(request.config,
+                                   request.hybrid_astar_request);
+
+    CalcProjPtForDynamicPlan(
+        request.hybrid_astar_request.ego_info_under_slot.cur_pose,
+        request.hybrid_astar_request.splicing_pt_vec);
+
+    // request.hybrid_astar_request.last_complete_pt_vec =
+    //     complete_path_point_global_vec_;
+
+    path_generator_thread_ptr->SetRequest(request);
+
+    if (frame_.is_replan_first) {
+      frame_.is_replan_first = false;
+    }
+  }
 }
 
 void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
@@ -1299,10 +1805,12 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   const double finish_lat_err =
       (ship == CarSlotRelationship::IDEAL ? finish_params.lat_err
-                                          : finish_params.lat_err_strict) * gain;
+                                          : finish_params.lat_err_strict) *
+      gain;
   const double finish_heading_err =
       (ship == CarSlotRelationship::IDEAL ? finish_params.heading_err
-                                          : finish_params.heading_err_strict) * gain;
+                                          : finish_params.heading_err_strict) *
+      gain;
 
   const bool lon_condition = lon_err < finish_lon_err;
 
