@@ -158,10 +158,19 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
+  int speed_differ_gain = 1;
+  if(end_point_lower_st_point.agent_id() != kNoAgentId){
+    if(end_point_lower_st_point.agent_id() != front_agent->second->id){
+      if(arrived_s_ - end_point_lower_st_point.s() < 20){
+        speed_differ_gain = std::pow(arrived_v_ - end_point_lower_st_point.velocity(),2) + 1;
+      }
+    }
+  }
+
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  cost_sum_ += follow_vel_cost_.cost() + stop_line_cost_.cost() +
+  cost_sum_ += follow_vel_cost_.cost() + stop_line_cost_.cost() * speed_differ_gain +
                leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
                acc_limit_cost_.cost();
