@@ -147,6 +147,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
 
+  std::pair<double, double> acc_target_with_upper_bound{acc_target.first, acc_target.second};
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
@@ -161,8 +162,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         continue;
       }
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] =
-          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+      acc_upper_bound_[i] = acc_target.second;
+      
       continue;
     }
 
@@ -178,24 +179,30 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double desire_distance = std::max(
         vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
     const double desire_velocity = CalcDesiredVelocity(
-        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, v_ego);
-    const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
-    CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
-                  upper_bound_a, &acc_target);
-    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-    acc_upper_bound_[i] =
-        std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
-    // only allow acc upper bound over 1.0 in start state
-    if (start_stop_decider_output.ego_start_stop_info().state() !=
+        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, vel);
+    const double upper_bound_a = std::fmin(upper_bound_info.a + 0.3, 0.0);
+
+    CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, vel,
+                  upper_bound_a, &acc_target_with_upper_bound);
+    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target_with_upper_bound.first);
+    //acc_upper_bound is not relative with upper bound and use acc_target calced by v interpolate
+    /* if (start_stop_decider_output.ego_start_stop_info().state() ==
         common::StartStopInfo::START) {
-      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
-    }
+      acc_upper_bound_[i] = std::fmax(acc_target.second, acc_target_with_upper_bound.second);
+    } */
+    acc_upper_bound_[i] = acc_target.second;
+
   }
   if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
     }
   }
+  double min_acc_bound_val = 10.0;
+  auto min_it = std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
+  min_acc_bound_val = *min_it;
+  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(), min_acc_bound_val);
+
 }
 
 void BoundMaker::MakeSBound() {

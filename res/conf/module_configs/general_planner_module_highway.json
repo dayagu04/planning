@@ -675,7 +675,7 @@
     "q_hard_pos_bound": 1000.0,
     "q_sv_bound": 0.0,
     "q_vel_bound": 100.0,
-    "q_acc_bound": 1600.0,
+    "q_acc_bound": 2000.0,
     "q_acc_bound_v3": 3200.0,
     "q_jerk_bound": 800.0,
     "q_stop_s": 2000.0,
@@ -1113,10 +1113,10 @@
       "lane_keeping_non_cipv_start_acc_bound": 1.5,
       "cruise_acc_bound_table": {
         "vel_table": [
-          0.0, 5.0, 10.0, 20.0, 40.0
+          0.0, 5.56, 11.11, 16.67, 22.22, 27.78, 36.11
         ],
         "acc_table": [
-          1.0, 0.85, 0.6, 0.5, 0.3
+          1.35, 1.25, 1.0, 0.8, 0.6, 0.4, 0.3
         ]
       },
       "cruise_dec_bound_table": {
