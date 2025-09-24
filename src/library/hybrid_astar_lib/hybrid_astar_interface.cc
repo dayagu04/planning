@@ -720,7 +720,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
   // judge target regulator goal if collide
   std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = regulator.GetCandidatePose(0.15f);
+  target_regulator_result =
+      regulator.GetCandidatePose(GenLatBufferForCandidatePose());
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
       target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
 
@@ -729,8 +730,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
             << ", lat buffer inside = " << advised_lat_buffer_inside;
 
   // If target slot is not wide enough, return.
-  if (target_regulator_result.second < advised_lat_buffer_inside &&
-      !IsParkingOutRequest(request_.direction_request)) {
+  if (target_regulator_result.second < advised_lat_buffer_inside) {
     search_state_ = AstarSearchState::FAILURE;
     return;
   }
@@ -1047,7 +1047,7 @@ void HybridAStarInterface::ParkingDirectionAttempt(
 
     std::pair<Pose2f, float> target_regulator_result;
     target_regulator_result =
-        target_pose_regulator.GetCandidatePose(advised_lat_buffer_inside);
+        target_pose_regulator.GetCandidatePose(GenLatBufferForCandidatePose());
     if (target_regulator_result.second < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
       ILOG_INFO << "target_regulator_goal_ will collide";
@@ -1085,6 +1085,23 @@ void HybridAStarInterface::ParkingDirectionAttempt(
     //   gear_switch_number_scenario_try_ = best_traj_->gear_change_num;
     // }
   }
+}
+
+const float HybridAStarInterface::GenLatBufferForCandidatePose() {
+  float lat_buffer = 0.0f;
+  switch (request_.direction_request) {
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      lat_buffer = 0.50f;
+      break;
+    default:
+      lat_buffer = 0.15f;
+      break;
+  }
+
+  return lat_buffer;
 }
 
 }  // namespace planning

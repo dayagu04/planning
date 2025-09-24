@@ -2176,6 +2176,10 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
     const ParkObstacleList& obs) {
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
   response_.Clear();
+  std::fill(response_.feasible_directions.begin(),
+            response_.feasible_directions.end(),
+            false);  // todo：before saving the pre planned path for park out,
+                     // temporarily initialize it here;
 
   // check result
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {

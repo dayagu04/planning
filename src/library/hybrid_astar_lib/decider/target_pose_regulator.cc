@@ -269,16 +269,15 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           ? -1
           : 1;
 
-  for (size_t j = 0; j < kNumberRows; ++j) {
-    const Eigen::Vector2d base_pose(base_x + kXStep * j,
-                                    center_line_target_.GetY());
+  const Eigen::Vector2d base_pose(base_x, center_line_target_.GetY());
 
-    for (size_t i = 0; i < kMaxCandidateNum; ++i) {
-      const Eigen::Vector2d temp_pos =
-          base_pose +
-          request->x_axis_direction_coordinate_slant * i * direction_factor;
+  for (size_t j = 0; j < kMaxCandidateNum; ++j) {
+    const Eigen::Vector2d temp_pos =
+        base_pose +
+        request->x_axis_direction_coordinate_slant * j * direction_factor;
 
-      global_pose.x = temp_pos.x();
+    for (size_t i = 0; i < kNumberRows; ++i) {
+      global_pose.x = temp_pos.x() + kXStep * i;
       global_pose.y = temp_pos.y();
 
       candidate.dist_to_obs =
@@ -313,7 +312,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
   constexpr float kXStep = 0.3f;           // X轴步长
   constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
-  constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
+  constexpr float kNormalBaseX = 7.0f;     // 正常停车位基准X坐标
 
   const float base_x = (request_->space_type == ParkSpaceType::SLANTING)
                            ? (global_pose.GetX() - kSlantingOffset)
@@ -492,18 +491,11 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
   }
 
   float dist;
-  float extra_buffer =
-      (request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-       request_->direction_request == ParkingVehDirection::HEAD_OUT_TO_RIGHT ||
-       request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_LEFT ||
-       request_->direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
-          ? 0.5f
-          : 0.0f;
   const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
 
   for (auto &obj : candidate_info_) {
     // If pose is big buffer, return
-    dist = obj.dist_to_obs - lat_buffer - extra_buffer;
+    dist = obj.dist_to_obs - lat_buffer;
     if (dist > 0.0f) {
       ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
                 << ",obs dist = " << obj.dist_to_obs;

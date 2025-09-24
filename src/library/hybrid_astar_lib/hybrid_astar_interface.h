@@ -149,6 +149,7 @@ class HybridAStarInterface {
 
   void GenerateRefLine();
   void ParkingDirectionAttempt(const float& advised_lat_buffer_inside);
+  const float GenLatBufferForCandidatePose();
 
  private:
   // read vehicle param from file
