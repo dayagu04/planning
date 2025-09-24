@@ -104,11 +104,15 @@ const bool ParallelOutPathGenerator::Update() {
                                           pnc::geometry_lib::SEG_GEAR_DRIVE);
     }
   } else {
-    // success = InversedTrialsByGivenGear(inversed_path_seg_vec,
-    //                                     input_.ego_info_under_slot.cur_pose,
-    //                                     input_.ref_gear);
-    success = AdvancedInversedTrialsInSlot(inversed_path_seg_vec,
-                                           input_.ego_info_under_slot.cur_pose);
+    success = InversedTrialsByGivenGear(inversed_path_seg_vec,
+                                        input_.ego_info_under_slot.cur_pose,
+                                        input_.ref_gear);
+    if (!success || std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
+                        (input_.tlane.slot_width * 0.5)) {
+      inversed_path_seg_vec.clear();
+      success = AdvancedInversedTrialsInSlot(
+          inversed_path_seg_vec, input_.ego_info_under_slot.cur_pose);
+    }
   }
 
   if (!success || inversed_path_seg_vec.size() == 0) {
