@@ -254,8 +254,18 @@ bool EnvironmentalModelManager::Run() {
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
   bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
                    fsm_state == iflyauto::FunctionalState_RADS_SUSPEND;
-
-  bool mrc_mode = fsm_state == iflyauto::FunctionalState_MRC;
+  static bool is_mrc_mode_hold = false;
+  if (fsm_state == iflyauto::FunctionalState_MRC) {
+    is_mrc_mode_hold = true;
+  }
+  if (is_mrc_mode_hold) {
+    const auto &vehicle_service_output = local_view.vehicle_service_output_info;
+    if (false == vehicle_service_output.right_turn_light_state &&
+        false == vehicle_service_output.left_turn_light_state) {
+      is_mrc_mode_hold = false;
+    }
+  }
+  bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
                     rads_mode || mrc_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
@@ -848,7 +858,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
 
     auto &debug_info_manager = DebugInfoManager::GetInstance();
     auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
-    planning_debug_data->mutable_simulation_core_param()->set_prediction_relative_time(cur_predicion_obj.delay_time);
+    planning_debug_data->mutable_simulation_core_param()
+        ->set_prediction_relative_time(cur_predicion_obj.delay_time);
 
     if (prediction_object.obstacle_intent.type ==
         iflyauto::OBSTACLE_INTENT_COMMON) {
@@ -1578,10 +1589,12 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 //           history_lc_source_[1] == INT_REQUEST &&
 //           last_frame_turn_sinagl_ == common::TurnSignalType::RIGHT &&
 //           is_ilc_right_change) {
-//         // 表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
+//         //
+//         表示在右变道过程中，向左重拨杆，那么首先归零，ilc_req=0，状态机会跳转至back
 //         current_turn_signal_ = common::TurnSignalType::NONE;
 //       } else if (is_ilc_right_change || is_cancel) {
-//         // 由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
+//         //
+//         由于该信号会连续发50帧，所以来的这一帧有可能还是重拨信号，这时是在change过程中,说明已经过了能取消变道的阈值了，那么依然置0
 //         current_turn_signal_ = common::TurnSignalType::NONE;
 //       } else {
 //         current_turn_signal_ = common::TurnSignalType::LEFT;
