@@ -2439,8 +2439,8 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     for (size_t i = 1; i < sorted_path_vec.size(); ++i) {
       const double curr_x =
           sorted_path_vec[i].path_segment_vec.back().GetStartPos().x();
-      const double curr_y =
-          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
+      const double curr_y = std::fabs(
+          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y());
       if (curr_x < min_x && curr_y < (input_.tlane.slot_width * 0.5)) {
         min_x = curr_x;
         min_x_idx = i;
@@ -2452,8 +2452,8 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     double base_heading = sorted_path_vec.front().park_out_heading_deg;
     for (int i = 1; i < sorted_path_vec.size(); ++i) {
       double cur_heading = sorted_path_vec[i].park_out_heading_deg;
-      const double curr_y =
-          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
+      const double curr_y = std::fabs(
+          sorted_path_vec[i].path_segment_vec.back().GetStartPos().y());
       if (cur_heading > base_heading && cur_heading < kMaxHeadingDeg &&
           curr_y < (input_.tlane.slot_width * 0.5)) {
         base_heading = cur_heading;
@@ -2478,13 +2478,21 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
   debug_info_.debug_inslot_path_vec = selected_path_vec;
   sorted_path_vec = selected_path_vec;
-  for (const auto& path : selected_path_vec) {
-    ILOG_INFO << "2 heading deg:" << path.park_out_heading_deg << " radian : "
-              << path.path_segment_vec.back().GetStartPose().heading
-              << " pos: " << path.path_segment_vec.back().GetStartPos().x()
-              << " " << path.path_segment_vec.back().GetStartPos().y();
+  for (int i = 0; i < sorted_path_vec.size(); ++i) {
+    ILOG_INFO
+        << "sorted heading deg:" << sorted_path_vec[i].park_out_heading_deg
+        << " radian : "
+        << sorted_path_vec[i].path_segment_vec.back().GetStartPose().heading
+        << " pos: "
+        << sorted_path_vec[i].path_segment_vec.back().GetStartPos().x() << " "
+        << sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
+    const double curr_y =
+        std::fabs(sorted_path_vec[i].path_segment_vec.back().GetStartPos().y());
+    if (curr_y > (input_.tlane.slot_width * 0.5)) {
+      sorted_path_vec.erase(sorted_path_vec.begin() + i);
+    }
   }
-  return true;
+  return sorted_path_vec.empty() ? false : true;
 }
 
 const bool ParallelPathGenerator::AdvancedInversedTrialsInSlot(
