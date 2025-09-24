@@ -87,7 +87,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
-    int32_t leading_veh_id,bool is_merge_request) {
+    int32_t leading_veh_id, bool enable_merge_decelaration) {
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
@@ -119,7 +119,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
     anchor_points_match_gap_cost_vec_[i].GetCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
-        safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,is_merge_request);
+        safe_distance_to_gap_front_obj,
+        safe_distance_to_gap_back_obj, ego_v, enable_merge_decelaration);
 
     if (i == anchor_points_match_gap_cost_vec_.size() - 1) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
@@ -131,7 +132,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,is_merge_request);
+  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, enable_merge_decelaration);
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_, leading_veh_s,

@@ -177,6 +177,9 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
 };
 
 bool SamplePolySpeedAdjustDecider::Evaluate() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const bool enable_merge_decelaration =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA && lane_change_source_ == MERGE_REQUEST);
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -194,7 +197,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       auto& sample_traj = sample_traj_at_v[j];
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
-                           leading_veh_v, leading_veh_.id,lane_change_source_ == MERGE_REQUEST);
+                           leading_veh_v, leading_veh_.id, enable_merge_decelaration);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
