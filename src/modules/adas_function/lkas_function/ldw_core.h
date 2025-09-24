@@ -70,7 +70,9 @@ class LdwCore {
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool left_suppress_repeat_warning_flag_ = false;
   // LDW报警冷却时间阈值 单位:s
-  double LDW_CoolingTime_duration_ = 0.0;
+  double ldw_right_coolingtime_duration_ = 0.0;
+  double ldw_left_coolingtime_duration_ = 0.0;
+  
   // LDW变道报警抑制条件阈值 单位:s 默认10，避免开始就抑制两秒
   double LDW_LaneChange_duration_ = 10.0;
   uint32 ldw_left_suppression_code_ = 255;

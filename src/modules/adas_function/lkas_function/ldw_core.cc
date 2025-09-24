@@ -633,16 +633,16 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDW_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDW_CoolingTime_duration_ > 60.0) {
-      LDW_CoolingTime_duration_ = 60.0;
+    ldw_left_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (ldw_left_coolingtime_duration_ > 60.0) {
+      ldw_left_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDW_CoolingTime_duration_ = 0.0;
+    ldw_left_coolingtime_duration_ = 0.0;
   }
-  if (LDW_CoolingTime_duration_ < 3.0) {
+  if (ldw_left_coolingtime_duration_ < 3.0) {
     ldw_left_suppression_code += uint16_bit[3];
   } else {
     /*do nothing*/
@@ -906,16 +906,16 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDW_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDW_CoolingTime_duration_ > 60.0) {
-      LDW_CoolingTime_duration_ = 60.0;
+    ldw_right_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (ldw_right_coolingtime_duration_ > 60.0) {
+      ldw_right_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDW_CoolingTime_duration_ = 0.0;
+    ldw_right_coolingtime_duration_ = 0.0;
   }
-  if (LDW_CoolingTime_duration_ < 3.0) {
+  if (ldw_right_coolingtime_duration_ < 3.0) {
     ldw_right_suppression_code += uint16_bit[3];
   } else {
     /*do nothing*/

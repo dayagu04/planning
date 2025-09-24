@@ -168,6 +168,9 @@ struct Parameters {
   double elk_enable_accel_pedal_pos_rate_dur = 1.0;
   double ldp_enable_accel_pedal_pos_rate_dur = 1.0;
   double ldw_enable_accel_pedal_pos_rate_dur = 1.0;
+  double kickdown_warning_time = 5.0;  // 打断条件单次最大报警时长，单位：s
+  double kickdown_warning_distance_thr = 0.8;  // 打断条件的最晚报警线，单位：m
+
   // test value
   int meb_request_status_const = 0;
   // IHC远光灯码

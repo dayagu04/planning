@@ -748,16 +748,16 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDP_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDP_CoolingTime_duration_ > 60.0) {
-      LDP_CoolingTime_duration_ = 60.0;
+    elk_left_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (elk_left_coolingtime_duration_ > 60.0) {
+      elk_left_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDP_CoolingTime_duration_ = 0.0;
+    elk_left_coolingtime_duration_ = 0.0;
   }
-  if ((LDP_CoolingTime_duration_ < 3.0) &&
+  if ((elk_left_coolingtime_duration_ < 3.0) &&
       fabs(GetContext.get_state_info()->driver_hand_trq) >
           GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
     elk_left_suppression_code += uint16_bit[5];
@@ -781,8 +781,9 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
 
   // bit 7
   // 纠偏侧为虚拟道线
-  if (GetContext.get_road_info()->current_lane.left_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.left_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.left_roadedge.valid == false)) {
     elk_left_suppression_code += uint16_bit[7];
   } else {
     /*do nothing*/
@@ -980,6 +981,15 @@ uint16 ElkCore::UpdateElkLeftKickDownCode(void) {
     /*do nothing*/
   }
 
+  // bit 8
+  if (elk_left_warning_time_ > GetContext.get_param()->kickdown_warning_time &&
+      (GetContext.get_road_info()->current_lane.left_line.valid) &&
+      fabs(GetContext.get_state_info()->fl_wheel_distance_to_line) >
+          GetContext.get_param()->kickdown_warning_distance_thr) {
+    elk_left_kickdown_code += uint16_bit[8];
+  } else {
+    /*do nothing*/
+  }
   return elk_left_kickdown_code &
          GetContext.get_param()->elk_left_kickdown_code_maskcode;
 }
@@ -1095,16 +1105,16 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDP_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDP_CoolingTime_duration_ > 60.0) {
-      LDP_CoolingTime_duration_ = 60.0;
+    elk_right_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (elk_right_coolingtime_duration_ > 60.0) {
+      elk_right_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDP_CoolingTime_duration_ = 0.0;
+    elk_right_coolingtime_duration_ = 0.0;
   }
-  if ((LDP_CoolingTime_duration_ < 3.0) &&
+  if ((elk_right_coolingtime_duration_ < 3.0) &&
       fabs(GetContext.get_state_info()->driver_hand_trq) >
           GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
     elk_right_suppression_code += uint16_bit[5];
@@ -1128,8 +1138,10 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
 
   // bit 7
   // 触发侧为虚拟道线
-  if (GetContext.get_road_info()->current_lane.right_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.right_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+       false)) {
     elk_right_suppression_code += uint16_bit[7];
   } else {
     /*do nothing*/
@@ -1323,6 +1335,15 @@ uint16 ElkCore::UpdateElkRightKickDownCode(void) {
     /*do nothing*/
   }
 
+  // bit 8
+  if (elk_right_warning_time_ > GetContext.get_param()->kickdown_warning_time &&
+      (GetContext.get_road_info()->current_lane.right_line.valid) &&
+      fabs(GetContext.get_state_info()->fr_wheel_distance_to_line) >
+          GetContext.get_param()->kickdown_warning_distance_thr) {
+    elk_right_kickdown_code += uint16_bit[8];
+  } else {
+    /*do nothing*/
+  }
   return elk_right_kickdown_code &
          GetContext.get_param()->elk_right_kickdown_code_maskcode;
 }

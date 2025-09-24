@@ -73,7 +73,8 @@ class ElkCore {
   // LDP手力矩作用时间阈值 单位:s
   double driver_hand_trq_supp_duration_ = 0.0;
   // LDP纠偏冷却时间阈值 单位:s
-  double LDP_CoolingTime_duration_ = 0.0;
+  double elk_right_coolingtime_duration_ = 0.0;
+  double elk_left_coolingtime_duration_ = 0.0;
   uint16 elk_left_suppression_code_ = 255;
   uint16 UpdateElkLeftSuppressionCode(void);
 
