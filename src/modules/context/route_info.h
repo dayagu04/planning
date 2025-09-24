@@ -283,6 +283,10 @@ class RouteInfo {
     }
   }
 
+  bool SortFPBaseProjection(
+      std::vector<iflymapdata::sdpro::FeaturePoint>& sorted_fp,
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
   // for HPP function
   void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);
   bool UpdateStaticMap(const LocalView& local_view);

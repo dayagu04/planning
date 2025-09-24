@@ -3974,15 +3974,9 @@ bool RouteInfo::CalculateLastFp(
   }
 
   std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
-  for (const auto& fp : fp_link->feature_points()) {
-    fp_vec.emplace_back(fp);
+  if (!SortFPBaseProjection(fp_vec, fp_link)) {
+    return false;
   }
-
-  std::sort(fp_vec.begin(), fp_vec.end(),
-            [](const iflymapdata::sdpro::FeaturePoint& fp_a,
-               const iflymapdata::sdpro::FeaturePoint& fp_b) {
-              return fp_a.projection_percent() < fp_b.projection_percent();
-            });
 
   int fp_index = -1;
   for (int i = 0; i < fp_vec.size(); i++) {
@@ -4023,7 +4017,13 @@ bool RouteInfo::CalculateLastFp(
       return false;
     }
 
-    *last_fp = *fp_pre_link->feature_points().rbegin();
+    
+    std::vector<iflymapdata::sdpro::FeaturePoint> temp_fp_vec;
+    if (!SortFPBaseProjection(temp_fp_vec, fp_pre_link)) {
+      return false;
+    }
+
+    *last_fp = temp_fp_vec.back();
     *last_fp_link = *fp_pre_link;
     return true;
   } else {
@@ -4622,5 +4622,28 @@ int RouteInfo::EmergencyLaneNum(const iflymapdata::sdpro::FeaturePoint& mlc_fp) 
   }
 
   return emergency_lane_num;
+}
+
+bool RouteInfo::SortFPBaseProjection(
+    std::vector<iflymapdata::sdpro::FeaturePoint>& sorted_fp,
+    const iflymapdata::sdpro::LinkInfo_Link* link) const {
+  if (link == nullptr) {
+    return false;
+  }
+
+  std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+  for (const auto& fp : link->feature_points()) {
+    fp_vec.emplace_back(fp);
+  }
+
+  std::sort(fp_vec.begin(), fp_vec.end(),
+            [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+              const iflymapdata::sdpro::FeaturePoint& fp_b) {
+              return fp_a.projection_percent() < fp_b.projection_percent();
+            });
+
+  sorted_fp = std::move(fp_vec);
+
+  return true;
 }
 }  // namespace planning
