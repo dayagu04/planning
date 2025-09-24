@@ -22,6 +22,7 @@ class ParkingScenarioManager final {
   // slot cruise state: reset.
   void Reset();
 
+  void ClearHybridResponse();
   void ClearHistoryPreparePlanTraj() {
     history_prepare_plan_traj_.trajectory_points_size = 0;
     history_prepare_plan_traj_.available = false;

@@ -92,7 +92,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const int HybridAstarDebugInfoClear();
 
-  const bool UpdateThreadPath();
+  virtual const bool UpdateThreadPath() override;
 
   const bool UpdateEgoSlotInfo() override;
 

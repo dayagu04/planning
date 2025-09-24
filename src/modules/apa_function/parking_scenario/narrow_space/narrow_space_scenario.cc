@@ -659,6 +659,7 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
 
     gl_pt.pos << global_position.x, global_position.y;
     gl_pt.heading = global_position.theta;
+    gl_pt.type = static_cast<int>(result.type[i]);
     gl_pt.lat_buffer = 0.0;
     gl_pt.kappa = result.kappa[i];
     gl_pt.s = result.accumulated_s[i];

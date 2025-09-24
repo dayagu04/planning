@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+#include "apa_context.h"
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -193,6 +194,12 @@ void ParkingScenarioManager::Reset() {
   return;
 }
 
+void ParkingScenarioManager::ClearHybridResponse() {
+  for (const auto &scene : scenario_list_) {
+    scene.second->ClearHybridResponse();
+  }
+}
+
 std::shared_ptr<ParkingScenario> ParkingScenarioManager::GetScenarioByType(
     const ParkingScenarioType type) {
   auto it = scenario_list_.find(type);
@@ -375,11 +382,7 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
   // fill prepare plan recommend park direction
   apa_hmi_data_.planning_park_dir =
       current_scenario_->GetAPAHmi().planning_park_dir;
-  // apa_hmi_data_.planning_recommend_park_dir =
-  //     current_scenario_->GetAPAHmi().planning_recommend_park_dir;
-  // ILOG_INFO << "release park dir = " << apa_hmi_data_.planning_park_dir
-  //           << ", recommend park dir = " <<
-  //           apa_hmi_data_.planning_recommend_park_dir;
+  ILOG_INFO << "recommend park dir = " << apa_hmi_data_.planning_park_dir;
 }
 
 void ParkingScenarioManager::PubPreparePlanState() {

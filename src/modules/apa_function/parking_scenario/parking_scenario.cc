@@ -25,6 +25,7 @@
 #include "park_speed_limit_decider.h"
 #include "parking_stop_decider.h"
 #include "parking_task/parking_task.h"
+#include "path_generator_thread.h"
 #include "planning_plan_c.h"
 #include "pose2d.h"
 #include "pwj_qp_speed_optimizer/piecewise_jerk_qp_speed_optimizer.h"
@@ -199,6 +200,7 @@ void ParkingScenario::PublishPlanningTraj() {
     SetIdlePlanningOutput(planning_output_, current_ego_pose);
   }
 
+  // should del
   if (frame_.plan_stm.planning_status == PARKING_IDLE ||
       frame_.plan_stm.planning_status == PARKING_FAILED ||
       frame_.plan_stm.planning_status == PARKING_FINISHED) {
@@ -425,6 +427,11 @@ const bool ParkingScenario::CheckStuckFailed() {
   } else {
     return frame_.stuck_time > param.stuck_failed_time;
   }
+}
+
+const bool ParkingScenario::CheckGearChangeCountTooMuch(
+    const int max_gear_change_count) {
+  return frame_.gear_change_count > max_gear_change_count;
 }
 
 const bool ParkingScenario::CheckEgoPoseInBelieveObsArea(
@@ -858,8 +865,37 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
   return;
 }
 
+void ParkingScenario::GenHybridAstarConfigAndRequest(
+    PlannerOpenSpaceConfig& config, HybridAStarRequest& request) {
+  return;
+}
+
+const bool ParkingScenario::UpdateThreadPath() {
+  const std::shared_ptr<PathGeneratorThread>& path_generator_thread_ptr =
+      apa_world_ptr_->GetParkingTaskInterfacePtr()->GetPathGeneratorThreadPtr();
+
+  frame_.path_gen_request_response_state =
+      path_generator_thread_ptr->GetRequestResponseState();
+
+  frame_.path_gen_thread_state = path_generator_thread_ptr->GetThreadState();
+
+  JSON_DEBUG_VALUE("path_gen_thread_state",
+                   static_cast<int>(frame_.path_gen_thread_state))
+
+  JSON_DEBUG_VALUE("path_gen_request_response_state",
+                   static_cast<int>(frame_.path_gen_request_response_state))
+
+  return frame_.path_gen_request_response_state ==
+         PathGenRequestResponseState::HAS_RESPONSE;
+}
+
 const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
-  frame_.replan_reason = ReplanReason::NOT_REPLAN;
+  frame_.replan_reason = NOT_REPLAN;
+
+  if (frame_.mirror_command == MirrorCommand::FOLD) {
+    ILOG_INFO << "mirror command is fold, should not replan";
+    return false;
+  }
 
   if (frame_.mirror_command == MirrorCommand::FOLD) {
     ILOG_INFO << "mirror command is fold, should not replan";
@@ -1026,6 +1062,42 @@ const ParkingScenario::CarSlotRelationship
 ParkingScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   return CarSlotRelationship::TOUCHING;
+}
+
+const bool ParkingScenario::CheckResponseReasonable(
+    const HybridAStarRequest& cur_request,
+    const HybridAstarResponse& cur_response) {
+  const HybridAStarRequest& last_request = cur_response.request;
+  if (cur_response.request.ego_info_under_slot.id == 0 ||
+      cur_response.request.ego_info_under_slot.slot_type == SlotType::INVALID) {
+    ILOG_INFO << "last request is none, directly use response";
+    return true;
+  }
+
+  if (cur_request.ego_info_under_slot.id !=
+      last_request.ego_info_under_slot.id) {
+    ILOG_INFO << "the sel slot id is changed, cur request sel slot id = "
+              << cur_request.ego_info_under_slot.id
+              << " last_request sel slot id = "
+              << last_request.ego_info_under_slot.id;
+    return false;
+  }
+
+  if (cur_request.ego_info_under_slot.slot_type !=
+      last_request.ego_info_under_slot.slot_type) {
+    ILOG_INFO << "the sel slot type is changed, cur request sel slot type = "
+              << GetSlotTypeString(cur_request.ego_info_under_slot.slot_type)
+              << " last_request sel slot type = "
+              << GetSlotTypeString(last_request.ego_info_under_slot.slot_type);
+    return false;
+  }
+
+  if (!cur_response.result.path_plan_success) {
+    ILOG_INFO << "cur response path plan fail";
+    return false;
+  }
+
+  return true;
 }
 
 const bool ParkingScenario::CheckDynamicGearSwitch() {

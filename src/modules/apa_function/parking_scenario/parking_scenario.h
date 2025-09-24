@@ -14,9 +14,12 @@
 #include "apa_world.h"
 #include "collision_detection/collision_detection.h"
 #include "geometry_math.h"
+#include "hybrid_astar_config.h"
+#include "hybrid_astar_context.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "parking_task/parking_task.h"
+#include "path_generator_thread.h"
 #include "planning_hmi_c.h"
 #include "planning_plan_c.h"
 #include "speed/speed_data.h"
@@ -252,10 +255,25 @@ class ParkingScenario {
       slot_jump_heading_err = 0.0;
       slot_jump_big_flag = false;
 
+      path_gen_thread_state = PathGenThreadState::INITTED;
+
+      path_gen_request_response_state = PathGenRequestResponseState::NONE;
+
+      has_response = false;
+
+      gear_change_count = 0;
+
       mirror_command = MirrorCommand::NONE;
     }
 
     MirrorCommand mirror_command = MirrorCommand::NONE;
+
+    bool has_response = false;
+
+    PathGenThreadState path_gen_thread_state = PathGenThreadState::INITTED;
+
+    PathGenRequestResponseState path_gen_request_response_state =
+        PathGenRequestResponseState::NONE;
 
     ProcessObsMethod process_obs_method = ProcessObsMethod::DO_NOTHING;
 
@@ -334,6 +352,8 @@ class ParkingScenario {
     double slot_jump_lon_err = 0.0;
     double slot_jump_heading_err = 0.0;
     bool slot_jump_big_flag = false;
+
+    int gear_change_count = 0;
   };
 
   enum ParkingStatus {
@@ -421,6 +441,8 @@ class ParkingScenario {
     return perferred_geometry_path_vec_;
   }
 
+  void ClearHybridResponse() { hybrid_astar_response_.Clear(); }
+
   void RecordDebugPath();
 
   const bool IsStopByDynamicObs() const;
@@ -435,10 +457,19 @@ class ParkingScenario {
 
   virtual void ExcuteSpeedPlanningTask();
 
+  virtual void GenHybridAstarConfigAndRequest(PlannerOpenSpaceConfig &config,
+                                              HybridAStarRequest &request);
+
+  virtual const bool UpdateThreadPath();
   virtual const bool GenTlane() = 0;
   virtual const bool GenObstacles() = 0;
   virtual const bool UpdateEgoSlotInfo() = 0;
   virtual const uint8_t PathPlanOnce() = 0;
+  virtual const uint8_t PathPlanOnceHybridAstar() { return PATH_PLAN_FAILED; }
+  virtual const uint8_t PathPlanOnceHybridAstarThread() {
+    return PATH_PLAN_FAILED;
+  }
+  virtual void PathPlanByHybridAstarThread() { return; }
 
   virtual void InitSimulation();
   virtual void UpdateStuckTime();
@@ -492,6 +523,9 @@ class ParkingScenario {
   virtual const bool CheckStuckFailed();
 
   virtual const bool CheckPathDangerous();
+  virtual const bool CheckGearChangeCountTooMuch(
+      const int max_gear_change_count =
+          apa_param.GetParam().max_real_gear_shift_number_parking);
 
   virtual const bool CheckEgoPoseInBelieveObsArea(
       const double lat_expand, const double lon_expand,
@@ -515,6 +549,8 @@ class ParkingScenario {
   geometry_lib::PathPoint GetCurrentPathTerminal(const bool is_slot_coordinate);
 
   void ClearTimeBySuspendStatus();
+  const bool CheckResponseReasonable(const HybridAStarRequest &cur_request,
+                                     const HybridAstarResponse &cur_response);
 
   void SetFeasibleDirectionFlag();
 
@@ -552,6 +588,8 @@ class ParkingScenario {
   std::vector<pnc::geometry_lib::GeometryPath> perferred_geometry_path_vec_;
 
   trajectory::Trajectory trajectory_;
+
+  HybridAstarResponse hybrid_astar_response_;
 };
 
 }  // namespace apa_planner

@@ -47,6 +47,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   const bool PostProcessPathAccordingRemainDist(const double remain_dist);
   const bool CheckShouldStopWhenSlotJumpsMuch();
   const bool CheckDynamicPlanPathOptimal();
+  const bool CheckDynamicPlanPathOptimalByHybridAstarPath(
+      const HybridAstarResponse& response);
   const bool LateralPathOptimize(
       std::vector<geometry_lib::PathPoint>& optimal_path_vec);
   const SlotObsType CalSlotObsType(const Eigen::Vector2d& obs_slot);
@@ -63,6 +65,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   void CalSlotJumpErr();
 
   const double CalRemainDistBySlotJump();
+
+  void FillPathPointGlobalFromHybridPath(const HybridAstarResponse& response);
 
   virtual const bool PostProcessPathAccordingLimiter() override;
 

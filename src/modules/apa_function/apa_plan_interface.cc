@@ -54,6 +54,7 @@ void ApaPlanInterface::Reset(const bool is_simulation) {
   // reset apa world
   apa_world_ptr_->Reset();
   scenario_manager_.Reset();
+  scenario_manager_.ClearHybridResponse();
   scenario_manager_.ClearHistoryPreparePlanTraj();
 
   ILOG_INFO << "reset apa plan interface";
