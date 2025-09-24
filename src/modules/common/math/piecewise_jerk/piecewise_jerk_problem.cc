@@ -75,8 +75,8 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   static std::vector<c_float> upper_bounds;
   lower_bounds.clear();
   upper_bounds.clear();
-  CalculateAffineConstraint(&A_data, &A_indices, &A_indptr, &lower_bounds,
-                            &upper_bounds);
+  CalculateAffineConstraint2(&A_data, &A_indices, &A_indptr, &lower_bounds,
+                             &upper_bounds);
 
   // calculate offset
   static std::vector<c_float> q;
@@ -116,11 +116,11 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
   settings->time_limit = max_time;
 
   // DebugString();
-  double start_time = IflyTime::Now_us();
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
   // osqp_setup(&osqp_work, data, settings);
 
+  double start_time = IflyTime::Now_us();
   osqp_solve(osqp_work);
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
@@ -136,9 +136,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
     ILOG_ERROR << "failed optimization status: " << status << ", "
                << osqp_work->info->status;
 
-    osqp_cleanup(osqp_work);
-    FreeData(data);
-    c_free(settings);
+    FreeData(data, osqp_work, settings);
 
     return false;
   }
@@ -148,16 +146,13 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
   dx_.resize(num_of_knots_);
   ddx_.resize(num_of_knots_);
   for (size_t i = 0; i < num_of_knots_; ++i) {
-    x_.at(i) = osqp_work->solution->x[i] / scale_factor_[0];
-    dx_.at(i) = osqp_work->solution->x[i + num_of_knots_] / scale_factor_[1];
-    ddx_.at(i) =
-        osqp_work->solution->x[i + 2 * num_of_knots_] / scale_factor_[2];
+    x_.at(i) = osqp_work->solution->x[i];
+    dx_.at(i) = osqp_work->solution->x[i + num_of_knots_];
+    ddx_.at(i) = osqp_work->solution->x[i + 2 * num_of_knots_];
   }
 
   // Cleanup
-  osqp_cleanup(osqp_work);
-  FreeData(data);
-  c_free(settings);
+  FreeData(data, osqp_work, settings);
 
   return true;
 }
@@ -190,67 +185,60 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   // variables: record A matrix columns
   std::vector<std::vector<std::pair<c_int, c_float>>> variables(
       num_of_variables);
+
+  // Eigen::MatrixXf matrix =
+  //     Eigen::MatrixXf::Zero(num_of_constraints, num_of_variables);
   int csc_matrix_valid_num = 0;
 
-  int constraint_index = 0;
+  int matrix_row_index = 0;
   // set x, x', x'' bounds
   for (int i = 0; i < num_of_variables; ++i) {
     if (i < n) {
       // x
-      variables[i].emplace_back(constraint_index, 1.0);
-      lower_bounds->at(constraint_index) =
-          x_bounds_[i].first * scale_factor_[0];
-      upper_bounds->at(constraint_index) =
-          x_bounds_[i].second * scale_factor_[0];
+      variables[i].emplace_back(matrix_row_index, 1.0);
+      lower_bounds->at(matrix_row_index) = x_bounds_[i].first;
+      upper_bounds->at(matrix_row_index) = x_bounds_[i].second;
     } else if (i < 2 * n) {
       // x'
-      variables[i].emplace_back(constraint_index, 1.0);
+      variables[i].emplace_back(matrix_row_index, 1.0);
 
-      lower_bounds->at(constraint_index) =
-          dx_bounds_[i - n].first * scale_factor_[1];
-      upper_bounds->at(constraint_index) =
-          dx_bounds_[i - n].second * scale_factor_[1];
+      lower_bounds->at(matrix_row_index) = dx_bounds_[i - n].first;
+      upper_bounds->at(matrix_row_index) = dx_bounds_[i - n].second;
     } else {
       // x''
-      variables[i].emplace_back(constraint_index, 1.0);
+      variables[i].emplace_back(matrix_row_index, 1.0);
 
-      lower_bounds->at(constraint_index) =
-          ddx_bounds_[i - 2 * n].first * scale_factor_[2];
-      upper_bounds->at(constraint_index) =
-          ddx_bounds_[i - 2 * n].second * scale_factor_[2];
+      lower_bounds->at(matrix_row_index) = ddx_bounds_[i - 2 * n].first;
+      upper_bounds->at(matrix_row_index) = ddx_bounds_[i - 2 * n].second;
     }
-    ++constraint_index;
+    ++matrix_row_index;
     csc_matrix_valid_num++;
   }
-  CHECK_EQ(constraint_index, num_of_variables);
+  CHECK_EQ(matrix_row_index, num_of_variables);
 
   // continous constraints
   // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s
   for (int i = 0; i + 1 < n; ++i) {
-    variables[2 * n + i].emplace_back(constraint_index, -1.0);
-    variables[2 * n + i + 1].emplace_back(constraint_index, 1.0);
+    variables[2 * n + i].emplace_back(matrix_row_index, -1.0);
+    variables[2 * n + i + 1].emplace_back(matrix_row_index, 1.0);
 
-    lower_bounds->at(constraint_index) =
-        dddx_bound_.first * delta_s_ * scale_factor_[2];
-    upper_bounds->at(constraint_index) =
-        dddx_bound_.second * delta_s_ * scale_factor_[2];
-    ++constraint_index;
+    lower_bounds->at(matrix_row_index) = dddx_bound_.first * delta_s_;
+    upper_bounds->at(matrix_row_index) = dddx_bound_.second * delta_s_;
+    ++matrix_row_index;
     csc_matrix_valid_num += 2;
   }
 
   // continuous constraints
   // x(i+1)' - x(i)' - 0.5 * delta_s * x(i)'' - 0.5 * delta_s * x(i+1)'' = 0
   for (int i = 0; i + 1 < n; ++i) {
-    variables[n + i].emplace_back(constraint_index, -1.0 * scale_factor_[2]);
-    variables[n + i + 1].emplace_back(constraint_index, 1.0 * scale_factor_[2]);
-    variables[2 * n + i].emplace_back(constraint_index,
-                                      -0.5 * delta_s_ * scale_factor_[1]);
-    variables[2 * n + i + 1].emplace_back(constraint_index,
-                                          -0.5 * delta_s_ * scale_factor_[1]);
+    variables[n + i].emplace_back(matrix_row_index, -1.0);
+    variables[n + i + 1].emplace_back(matrix_row_index, 1.0);
+    variables[2 * n + i].emplace_back(matrix_row_index, -0.5 * delta_s_);
+    variables[2 * n + i + 1].emplace_back(matrix_row_index, -0.5 * delta_s_);
 
-    lower_bounds->at(constraint_index) = 0.0;
-    upper_bounds->at(constraint_index) = 0.0;
-    ++constraint_index;
+    lower_bounds->at(matrix_row_index) = 0.0;
+    upper_bounds->at(matrix_row_index) = 0.0;
+    ++matrix_row_index;
     csc_matrix_valid_num += 4;
   }
 
@@ -259,76 +247,61 @@ void PiecewiseJerkProblem::CalculateAffineConstraint(
   // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''
   auto delta_s_sq_ = delta_s_ * delta_s_;
   for (int i = 0; i + 1 < n; ++i) {
-    variables[i].emplace_back(constraint_index,
-                              -1.0 * scale_factor_[1] * scale_factor_[2]);
-    variables[i + 1].emplace_back(constraint_index,
-                                  1.0 * scale_factor_[1] * scale_factor_[2]);
-    variables[n + i].emplace_back(
-        constraint_index, -delta_s_ * scale_factor_[0] * scale_factor_[2]);
-    variables[2 * n + i].emplace_back(
-        constraint_index,
-        -delta_s_sq_ / 3.0 * scale_factor_[0] * scale_factor_[1]);
-    variables[2 * n + i + 1].emplace_back(
-        constraint_index,
-        -delta_s_sq_ / 6.0 * scale_factor_[0] * scale_factor_[1]);
+    variables[i].emplace_back(matrix_row_index, -1.0);
+    variables[i + 1].emplace_back(matrix_row_index, 1.0);
+    variables[n + i].emplace_back(matrix_row_index, -delta_s_);
+    variables[2 * n + i].emplace_back(matrix_row_index, -delta_s_sq_ / 3.0);
+    variables[2 * n + i + 1].emplace_back(matrix_row_index, -delta_s_sq_ / 6.0);
 
-    lower_bounds->at(constraint_index) = 0.0;
-    upper_bounds->at(constraint_index) = 0.0;
-    ++constraint_index;
+    lower_bounds->at(matrix_row_index) = 0.0;
+    upper_bounds->at(matrix_row_index) = 0.0;
+    ++matrix_row_index;
     csc_matrix_valid_num += 5;
   }
 
   // constrain on x_init
-  variables[0].emplace_back(constraint_index, 1.0);
-  lower_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
-  upper_bounds->at(constraint_index) = x_init_[0] * scale_factor_[0];
-  ++constraint_index;
+  variables[0].emplace_back(matrix_row_index, 1.0);
+  lower_bounds->at(matrix_row_index) = x_init_[0];
+  upper_bounds->at(matrix_row_index) = x_init_[0];
+  ++matrix_row_index;
   csc_matrix_valid_num++;
 
-  variables[n].emplace_back(constraint_index, 1.0);
-  lower_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
-  upper_bounds->at(constraint_index) = x_init_[1] * scale_factor_[1];
-  ++constraint_index;
+  variables[n].emplace_back(matrix_row_index, 1.0);
+  lower_bounds->at(matrix_row_index) = x_init_[1];
+  upper_bounds->at(matrix_row_index) = x_init_[1];
+  ++matrix_row_index;
   csc_matrix_valid_num++;
 
   c_float ddx_slack_bound = 0.08;
-  variables[2 * n].emplace_back(constraint_index, 1.0);
-  lower_bounds->at(constraint_index) =
-      x_init_[2] * scale_factor_[2] - ddx_slack_bound;
-  upper_bounds->at(constraint_index) =
-      x_init_[2] * scale_factor_[2] + ddx_slack_bound;
-  ++constraint_index;
+  variables[2 * n].emplace_back(matrix_row_index, 1.0);
+  lower_bounds->at(matrix_row_index) = x_init_[2] - ddx_slack_bound;
+  upper_bounds->at(matrix_row_index) = x_init_[2] + ddx_slack_bound;
+  ++matrix_row_index;
   csc_matrix_valid_num++;
 
   // constraints on end state
   if (has_end_state_constriants_) {
     c_float s_slack_bound = 0.03;
-    variables[n - 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) =
-        end_state_[0] * scale_factor_[0] - s_slack_bound;
-    upper_bounds->at(constraint_index) =
-        end_state_[0] * scale_factor_[0] + s_slack_bound;
-    ++constraint_index;
+    variables[n - 1].emplace_back(matrix_row_index, 1.0);
+    lower_bounds->at(matrix_row_index) = end_state_[0] - s_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[0] + s_slack_bound;
+    ++matrix_row_index;
 
     c_float dx_slack_bound = 0.03;
-    variables[2 * n - 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) =
-        end_state_[1] * scale_factor_[1] - dx_slack_bound;
-    upper_bounds->at(constraint_index) =
-        end_state_[1] * scale_factor_[1] + dx_slack_bound;
-    ++constraint_index;
+    variables[2 * n - 1].emplace_back(matrix_row_index, 1.0);
+    lower_bounds->at(matrix_row_index) = end_state_[1] - dx_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[1] + dx_slack_bound;
+    ++matrix_row_index;
 
     c_float ddx_slack_bound = 0.15;
-    variables[3 * n - 1].emplace_back(constraint_index, 1.0);
-    lower_bounds->at(constraint_index) =
-        end_state_[2] * scale_factor_[2] - ddx_slack_bound;
-    upper_bounds->at(constraint_index) =
-        end_state_[2] * scale_factor_[2] + ddx_slack_bound;
-    ++constraint_index;
+    variables[3 * n - 1].emplace_back(matrix_row_index, 1.0);
+    lower_bounds->at(matrix_row_index) = end_state_[2] - ddx_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[2] + ddx_slack_bound;
+    ++matrix_row_index;
     csc_matrix_valid_num += 3;
   }
 
-  CHECK_EQ(constraint_index, num_of_constraints);
+  CHECK_EQ(matrix_row_index, num_of_constraints);
 
   A_data->reserve(csc_matrix_valid_num);
   A_indices->reserve(csc_matrix_valid_num);
@@ -445,18 +418,11 @@ void PiecewiseJerkProblem::set_end_state_constriants(
   return;
 }
 
-void PiecewiseJerkProblem::FreeData(OSQPData* data) {
-  delete[] data->q;
-  delete[] data->l;
-  delete[] data->u;
-
-  delete[] data->P->i;
-  delete[] data->P->p;
-  delete[] data->P->x;
-
-  delete[] data->A->i;
-  delete[] data->A->p;
-  delete[] data->A->x;
+void PiecewiseJerkProblem::FreeData(OSQPData* data, OSQPWorkspace* work,
+                                    OSQPSettings* setting) {
+  osqp_cleanup(work);
+  c_free(data);
+  c_free(setting);
 
   return;
 }
@@ -490,6 +456,173 @@ void PiecewiseJerkProblem::DebugString() {
   ILOG_INFO << "dddx bound";
   ILOG_INFO << "lower, upper = " << dddx_bound_.first << ", "
             << dddx_bound_.second;
+
+  return;
+}
+
+void PiecewiseJerkProblem::CalculateAffineConstraint2(
+    std::vector<c_float>* A_data, std::vector<c_int>* A_indices,
+    std::vector<c_int>* A_indptr, std::vector<c_float>* lower_bounds,
+    std::vector<c_float>* upper_bounds) {
+  // 3N params bounds on x, x', x''
+  // 3N boundary constraints on x, x', x''
+  // 3 init constraints on x_init_
+  // 3(N-1) continous constraints on x, x', x''
+  // 3 end state constraints
+  const int n = static_cast<int>(num_of_knots_);
+  const int num_of_variables = 3 * n;
+
+  // check end state constraints
+  int end_state_constraint_num = 0;
+  if (has_end_state_constriants_) {
+    end_state_constraint_num = 3;
+  }
+
+  int num_of_constraints =
+      num_of_variables + 3 * (n - 1) + 3 + end_state_constraint_num;
+
+  // L<Ax<U; lower bounds record L
+  lower_bounds->resize(num_of_constraints);
+  upper_bounds->resize(num_of_constraints);
+
+  // variables: record A matrix columns
+  Eigen::MatrixXf matrix =
+      Eigen::MatrixXf::Zero(num_of_constraints, num_of_variables);
+  int csc_matrix_valid_num = 0;
+
+  int matrix_row_index = 0;
+  // set x, x', x'' bounds
+  for (int i = 0; i < num_of_variables; ++i) {
+    if (i < n) {
+      // x
+      matrix(matrix_row_index, i) = 1.0;
+      lower_bounds->at(matrix_row_index) = x_bounds_[i].first;
+      upper_bounds->at(matrix_row_index) = x_bounds_[i].second;
+    } else if (i < 2 * n) {
+      // x'
+      matrix(matrix_row_index, i) = 1.0;
+
+      lower_bounds->at(matrix_row_index) = dx_bounds_[i - n].first;
+      upper_bounds->at(matrix_row_index) = dx_bounds_[i - n].second;
+    } else {
+      // x''
+      matrix(matrix_row_index, i) = 1.0;
+
+      lower_bounds->at(matrix_row_index) = ddx_bounds_[i - 2 * n].first;
+      upper_bounds->at(matrix_row_index) = ddx_bounds_[i - 2 * n].second;
+    }
+    ++matrix_row_index;
+    csc_matrix_valid_num++;
+  }
+  // CHECK_EQ(matrix_row_index, num_of_variables);
+
+  // continous constraints
+  // x(i->i+1)''' = (x(i+1)'' - x(i)'') / delta_s
+  for (int i = 0; i + 1 < n; ++i) {
+    matrix(matrix_row_index, 2 * n + i) = -1.0;
+    matrix(matrix_row_index, 2 * n + i + 1) = 1.0;
+
+    lower_bounds->at(matrix_row_index) = dddx_bound_.first * delta_s_;
+    upper_bounds->at(matrix_row_index) = dddx_bound_.second * delta_s_;
+    ++matrix_row_index;
+    csc_matrix_valid_num += 2;
+  }
+
+  // continuous constraints
+  // x(i+1)' - x(i)' - 0.5 * delta_s * x(i)'' - 0.5 * delta_s * x(i+1)'' = 0
+  for (int i = 0; i + 1 < n; ++i) {
+    matrix(matrix_row_index, n + i) = -1.0;
+    matrix(matrix_row_index, n + i + 1) = 1.0;
+    matrix(matrix_row_index, 2 * n + i) = -0.5 * delta_s_;
+    matrix(matrix_row_index, 2 * n + i + 1) = -0.5 * delta_s_;
+
+    lower_bounds->at(matrix_row_index) = 0.0;
+    upper_bounds->at(matrix_row_index) = 0.0;
+    ++matrix_row_index;
+    csc_matrix_valid_num += 4;
+  }
+
+  // continous constraints
+  // x(i+1) - x(i) - delta_s * x(i)'
+  // - 1/3 * delta_s^2 * x(i)'' - 1/6 * delta_s^2 * x(i+1)''
+  auto delta_s_sq_ = delta_s_ * delta_s_;
+  for (int i = 0; i + 1 < n; ++i) {
+    matrix(matrix_row_index, i) = -1.0;
+    matrix(matrix_row_index, i + 1) = 1.0;
+    matrix(matrix_row_index, n + i) = -delta_s_;
+    matrix(matrix_row_index, 2 * n + i) = -delta_s_sq_ / 3.0;
+    matrix(matrix_row_index, 2 * n + i + 1) = -delta_s_sq_ / 6.0;
+    lower_bounds->at(matrix_row_index) = 0.0;
+    upper_bounds->at(matrix_row_index) = 0.0;
+    ++matrix_row_index;
+    csc_matrix_valid_num += 5;
+  }
+
+  // constrain on x_init
+  matrix(matrix_row_index, 0) = 1.0;
+  lower_bounds->at(matrix_row_index) = x_init_[0];
+  upper_bounds->at(matrix_row_index) = x_init_[0];
+  ++matrix_row_index;
+  csc_matrix_valid_num++;
+
+  matrix(matrix_row_index, n) = 1.0;
+  lower_bounds->at(matrix_row_index) = x_init_[1];
+  upper_bounds->at(matrix_row_index) = x_init_[1];
+  ++matrix_row_index;
+  csc_matrix_valid_num++;
+
+  c_float ddx_slack_bound = 0.08;
+  matrix(matrix_row_index, 2 * n) = 1.0;
+  lower_bounds->at(matrix_row_index) = x_init_[2] - ddx_slack_bound;
+  upper_bounds->at(matrix_row_index) = x_init_[2] + ddx_slack_bound;
+  ++matrix_row_index;
+  csc_matrix_valid_num++;
+
+  // constraints on end state
+  if (has_end_state_constriants_) {
+    c_float s_slack_bound = 0.03;
+    matrix(matrix_row_index, n - 1) = 1.0;
+    lower_bounds->at(matrix_row_index) = end_state_[0] - s_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[0] + s_slack_bound;
+    ++matrix_row_index;
+
+    c_float dx_slack_bound = 0.03;
+    matrix(matrix_row_index, 2 * n - 1) = 1.0;
+    lower_bounds->at(matrix_row_index) = end_state_[1] - dx_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[1] + dx_slack_bound;
+    ++matrix_row_index;
+
+    c_float ddx_slack_bound = 0.15;
+    matrix(matrix_row_index, 3 * n - 1) = 1.0;
+    lower_bounds->at(matrix_row_index) = end_state_[2] - ddx_slack_bound;
+    upper_bounds->at(matrix_row_index) = end_state_[2] + ddx_slack_bound;
+    ++matrix_row_index;
+    csc_matrix_valid_num += 3;
+  }
+
+  // CHECK_EQ(matrix_row_index, num_of_constraints);
+
+  A_data->reserve(csc_matrix_valid_num);
+  A_indices->reserve(csc_matrix_valid_num);
+  A_indptr->reserve(num_of_variables + 1);
+  int ind_p = 0;
+  for (int i = 0; i < num_of_variables; ++i) {
+    A_indptr->emplace_back(ind_p);
+    for (int r = 0; r < matrix.rows(); ++r) {
+      if (std::fabs(matrix(r, i)) < 0.0001f) {
+        continue;
+      }
+      // coefficient
+      A_data->emplace_back(matrix(r, i));
+
+      // constraint index
+      A_indices->emplace_back(r);
+      ++ind_p;
+    }
+  }
+  // We indeed need this line because of
+  // https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
+  A_indptr->emplace_back(ind_p);
 
   return;
 }

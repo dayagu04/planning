@@ -9,6 +9,7 @@
 
 #include "log_glog.h"
 #include "osqp.h"
+#include "Eigen/Core"
 
 namespace planning {
 /*
@@ -122,7 +123,13 @@ class PiecewiseJerkProblem {
 
   OSQPData* FormulateProblem();
 
-  void FreeData(OSQPData* data);
+  void FreeData(OSQPData* data, OSQPWorkspace* work, OSQPSettings* setting);
+
+  void CalculateAffineConstraint2(std::vector<c_float>* A_data,
+                                  std::vector<c_int>* A_indices,
+                                  std::vector<c_int>* A_indptr,
+                                  std::vector<c_float>* lower_bounds,
+                                  std::vector<c_float>* upper_bounds);
 
  protected:
   size_t num_of_knots_ = 0;
