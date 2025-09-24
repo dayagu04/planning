@@ -86,6 +86,14 @@ enum EgoStatusOnRoute {
   IN_EXCHANGE_AREAR_REAR = 4,
 };
 
+//导航变道请求类型
+enum EgoMLCRequestType {
+  None_MLC = 0,
+  AVOIDE_MERGE = 1,
+  AVOIDE_DIVERGE = 2,
+  OTHER_TYPE_MLC = 3,
+};
+
 struct LaneChangeGapInfo {
   int front_node_id = -1;
   int rear_node_id = -1;
@@ -263,6 +271,7 @@ struct RouteInfoOutput {
   MLCDeciderRouteInfo mlc_decider_route_info;
   // double dis_to_merge_fp = NL_NMAX;
   MergePointInfo merge_point_info;
+  EgoMLCRequestType mlc_request_type_route_info;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -330,6 +339,7 @@ struct RouteInfoOutput {
     sum_distance_driving = -1;
     distance_to_target_slot = NL_NMAX;
     distance_to_next_speed_bump = NL_NMAX;
+    mlc_request_type_route_info = None_MLC;
   }
 };
 

@@ -17,7 +17,15 @@ struct SplitSegInfo {
   int split_next_seg_forward_lane_nums;
 };
 
+struct AvoideMergeDiverge {
+  EgoMLCRequestType mlc_request_type;
+  int avoide_lane;
 
+  void reset(){
+    mlc_request_type = None_MLC;
+    avoide_lane = NL_NMAX;
+  }
+};
 class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
@@ -55,7 +63,7 @@ class RouteInfo {
   const planning::framework::Session* session_ = nullptr;
   EgoPlanningConfig config_;
   MLCDeciderConfig mlc_decider_config_;
-
+  AvoideMergeDiverge mlc_request_info_;
   RouteInfoOutput route_info_output_;
 
   // for NOA variables
