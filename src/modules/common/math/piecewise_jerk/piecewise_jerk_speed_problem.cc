@@ -124,7 +124,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel(std::vector<c_float>* P_data,
   for (int i = 0; i < kNumParam; ++i) {
     P_indptr->emplace_back(ind_p);
     for (const auto& row_data_pair : columns[i]) {
-      P_data->emplace_back(row_data_pair.second * 2.0);
+      P_data->emplace_back(row_data_pair.second * 2.0f);
       P_indices->emplace_back(row_data_pair.first);
       ++ind_p;
     }
