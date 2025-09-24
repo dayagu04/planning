@@ -2336,6 +2336,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       }
     }
+    JSON_DEBUG_VALUE("mlc_request_type", static_cast<int>(route_info_output_.mlc_request_type_route_info));
     relative_id_lane->set_current_tasks(lc_num_task);
   }
 
