@@ -1037,6 +1037,74 @@ double StGraphSearcher::ComputeLengthCost(const StSearchInput& input_info,
   return cost_length;
 }
 
+double StGraphSearcher::ComputeLaneChangeHeuristicCost(
+    const StSearchNode& node) const {
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  if (!(lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeCancel ||
+        lane_change_state == kLaneChangeHold ||
+        lane_change_state == kLaneChangeComplete)) {
+    return 0.0;
+  }
+
+  const auto& ego_trajs_future = lane_change_decider_output.ego_trajs_future;
+  if (ego_trajs_future.empty()) {
+    return 0.0;
+  }
+
+  double target_s = 0.0;
+  bool found_target = false;
+
+  for (size_t i = 0; i < ego_trajs_future.size(); ++i) {
+    const auto& current_point = ego_trajs_future[i];
+
+    if (std::fabs(current_point.t - node.t()) < 1e-6) {
+      target_s = current_point.s;
+      found_target = true;
+      break;
+    }
+
+    // If node.t is between current and next point, do interpolation
+    if (i < ego_trajs_future.size() - 1) {
+      const auto& next_point = ego_trajs_future[i + 1];
+      if (current_point.t <= node.t() && node.t() <= next_point.t) {
+        // Linear interpolation: s = s1 + (s2-s1) * (t-t1) / (t2-t1)
+        double t1 = current_point.t;
+        double t2 = next_point.t;
+        double s1 = current_point.s;
+        double s2 = next_point.s;
+
+        if (std::fabs(t2 - t1) > 1e-6) {
+          target_s = s1 + (s2 - s1) * (node.t() - t1) / (t2 - t1);
+          found_target = true;
+          break;
+        }
+      }
+    }
+  }
+
+  if (!found_target) {
+    if (node.t() < ego_trajs_future.front().t) {
+      target_s = ego_trajs_future.front().s;
+      found_target = true;
+    } else if (node.t() > ego_trajs_future.back().t) {
+      target_s = ego_trajs_future.back().s;
+      found_target = true;
+    }
+  }
+
+  if (!found_target) {
+    return 0.0;
+  }
+
+  double s_diff = std::fabs(node.s() - target_s);
+  double lane_change_cost = s_diff / std::fmax(target_s, 1.0);
+
+  return lane_change_cost;
+}
+
 double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
                                              const StSearchNode& node) const {
   double time_cost = std::fabs(input_info.planning_time_horizon() - node.t()) *
@@ -1049,8 +1117,14 @@ double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
 
   double cost_h = time_cost * weight_t + s_cost * weight_s;
 
+  // Add lane change specific heuristic cost based on ego_trajs_future
+  double lane_change_cost = ComputeLaneChangeHeuristicCost(node);
+  const double weight_lane_change = config_.weight_hcost_lane_change;
+  cost_h += lane_change_cost * weight_lane_change;
+
   // std::cout << "\t\t\t\th_time_cost:     " << time_cost << std::endl;
   // std::cout << "\t\t\t\th_s_cost:        " << s_cost << std::endl;
+  // std::cout << "\t\t\t\th_lane_change_cost: " << lane_change_cost << std::endl;
   // std::cout << "\t\t\t\tcost_h:          " << cost_h << std::endl;
 
   return cost_h;

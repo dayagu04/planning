@@ -3953,6 +3953,10 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
              "cost_ego_overtake_has_collision_with_lower_bound");
     ReadItem(json, cutin_time_st_graph_threshold, "speed_planning",
              "st_graph_searcher", "cutin_time_st_graph_threshold");
+    
+    // Lane change heuristic cost parameters
+    ReadItem(json, weight_hcost_lane_change, "speed_planning",
+             "st_graph_searcher", "weight_hcost_lane_change");
   }
   double planning_time_horizon = 5.0;
   double upper_collision_dist = 1.0;
@@ -3986,6 +3990,7 @@ struct StGraphSearcherConfig : public EgoPlanningConfig {
 
   double weight_hcost_s = 2.0;
   double weight_hcost_t = 20.0;
+  double weight_hcost_lane_change = 10.0;
 
   double upper_truncation_time_buffer = 0.5;
   double lower_truncation_time_buffer = 0.5;
