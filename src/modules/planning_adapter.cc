@@ -309,8 +309,7 @@ bool PlanningAdapter::Proc() {
     ILOG_INFO << "receive fusion_speed_bump";
   }
 
-  JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time) / 1000.0);
-  
+
   if (is_degraded_driving_function_msg_updated_) {
     std::lock_guard<std::mutex> lock(degraded_driving_function_msg_mutex_);
     local_view_ptr_->degraded_driving_function_info = degraded_driving_function_msg_;
@@ -318,10 +317,8 @@ bool PlanningAdapter::Proc() {
         degraded_driving_function_msg_recv_time_;
     is_degraded_driving_function_msg_updated_.store(false);
   }
-  input_topic_timestamp->set_degraded_driving_function(
-      local_view_ptr_->degraded_driving_function_info.msg_header.stamp);
-  input_topic_latency->set_degraded_driving_function(get_latency(
-      start_time, local_view_ptr_->degraded_driving_function_info.msg_header.stamp));
+
+  JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time_) / 1000.0);
 
   UpdateApaResetFlag();
 
@@ -627,6 +624,9 @@ void PlanningAdapter::LogTopicLatency() {
   input_topic_latency_.set_fusion_speed_bump(get_latency(
     start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
 
+  input_topic_latency_.set_degraded_driving_function(get_latency(
+      start_time_,
+      local_view_ptr_->degraded_driving_function_info.msg_header.stamp));
   if (input_topic_latency_.prediction() > kMaxPredictionLatency) {
     ILOG_WARN << "prediction latency:" << input_topic_latency_.prediction();
   }
@@ -733,7 +733,9 @@ void PlanningAdapter::Log() {
   input_topic_timestamp->set_fusion_speed_bump(
       local_view_ptr_->fusion_speed_bump_info.msg_header.stamp);
 
-// #ifdef ENABLE_PROTO_LOG
+  input_topic_timestamp->set_degraded_driving_function(
+      local_view_ptr_->degraded_driving_function_info.msg_header.stamp);
+  // #ifdef ENABLE_PROTO_LOG
   auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
         input_topic_timestamp->set_prediction(
       local_view_ptr_->prediction_result.msg_header.stamp);
