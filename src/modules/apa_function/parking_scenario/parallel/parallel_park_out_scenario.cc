@@ -266,27 +266,27 @@ void ParallelParkOutScenario::ScenarioTry() {
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_);
   generator.SetReleaseDirectionFlag(apa_hmi_, ParityBit);
-  // generator.ClearRecommendationDirectionFlag(apa_hmi_);
-  // generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+  generator.ClearRecommendationDirectionFlag(apa_hmi_);
+  generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
   if (multi_parkout_direction[ApaParkOutDirection::RIGHT_FRONT]) {
     generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontRight);
-    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontRight);
     complete_path_point_global_vec_ =
         multi_parkout_path_vec[ApaParkOutDirection::RIGHT_FRONT];
   }
   if (multi_parkout_direction[ApaParkOutDirection::LEFT_FRONT]) {
     generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
-    // generator.ClearRecommendationDirectionFlag(apa_hmi_);
-    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
-    // generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
+    generator.ClearRecommendationDirectionFlag(apa_hmi_);
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParityBit);
+    generator.SetRecommendationDirectionFlag(apa_hmi_, ParallelFrontLeft);
     complete_path_point_global_vec_ =
         multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
   }
   TansformPreparePlanningTraj();
-  // ILOG_INFO << "relaese direction = "
-  //           << apa_hmi_.planning_park_dir
-  //           << ", recommendation direction = "
-  //           << apa_hmi_.planning_recommend_park_dir;
+  ILOG_INFO << "relaese direction = "
+            << apa_hmi_.planning_park_dir
+            << ", recommendation direction = "
+            << apa_hmi_.planning_recommend_park_dir;
   parkout_direction_ = ApaParkOutDirection::INVALID;
 }
 
