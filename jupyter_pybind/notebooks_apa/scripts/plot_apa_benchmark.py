@@ -22,7 +22,7 @@ import datetime
 from lib.load_common import *
 
 
-log_path = "/asw/planning/glog/open_space_replay.log.INFO.20250924-212503.1566052"
+log_path = "/asw/planning/glog/open_space_replay.log.INFO.20250923-221846.93661"
 
 elem_map = {
             'apa_total_time': [], \

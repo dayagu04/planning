@@ -176,18 +176,20 @@ OSQPSettings* PiecewiseJerkSpeedProblem::SolverDefaultSettings() {
 void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
                                                 std::vector<c_int>* P_indices,
                                                 std::vector<c_int>* P_indptr) {
-  const int n = static_cast<int>(num_of_knots_);
+  const c_int n = static_cast<c_int>(num_of_knots_);
   // N*3, for x =[x, x', x'']
-  const int kNumParam = 3 * n;
+  const c_int kNumParam = 3 * n;
 
   // P matrix is a sparse matrix, and it's max valid rows is 2.
   // std::pair<c_int, c_float>: rows, weight
   std::vector<SparseMatrixColumn> columns;
   columns.resize(kNumParam, SparseMatrixColumn(-1, 0.0f, -1, 0.0f));
-  int value_index = 0;
+  c_int value_index = 0;
+
+  ILOG_INFO << "value_index " << static_cast<int>(value_index);
 
   // x(i)^2 * w_x_ref
-  for (int i = 0; i < n - 1; ++i) {
+  for (c_int i = 0; i < n - 1; ++i) {
     // columns[i].emplace_back(i, weight_x_ref_);
     columns[i].diagonal_element.rows = i;
     columns[i].diagonal_element.value = weight_x_ref_;
@@ -200,7 +202,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   ++value_index;
 
   // x(i)'^2 * (w_dx_ref + penalty_dx)
-  for (int i = 0; i < n - 1; ++i) {
+  for (c_int i = 0; i < n - 1; ++i) {
     // columns[n + i].emplace_back(n + i, (weight_dx_ref_ + penalty_dx_[i]));
 
     columns[n + i].diagonal_element.rows = n + i;
@@ -229,7 +231,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   ++value_index;
 
   // x(i)''^2 * (w_ddx + 2 * w_dddx / delta_s^2)
-  for (int i = 1; i < n - 1; ++i) {
+  for (c_int i = 1; i < n - 1; ++i) {
     // columns[2 * n + i].emplace_back(
     //     2 * n + i, (weight_ddx_ + 2.0 * weight_dddx_ / delta_s_square));
     columns[2 * n + i].diagonal_element.rows = 2 * n + i;
@@ -249,7 +251,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
 
   // - 2 w_dddx / delta_s^2 * x(i)'' * x(i + 1)''
   // 对角线的下一行
-  for (int i = 0; i < n - 1; ++i) {
+  for (c_int i = 0; i < n - 1; ++i) {
     // columns[2 * n + i].emplace_back(2 * n + i + 1,
     //                                 -2.0 * weight_dddx_ / delta_s_square);
     columns[2 * n + i].next_row_element.rows = 2 * n + i + 1;
@@ -265,11 +267,13 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   //   ++value_index;
   // }
 
+  ILOG_INFO << "value_index " << static_cast<int>(value_index);
+
   P_data->reserve(value_index);
   P_indptr->reserve(kNumParam + 1);
   P_indices->reserve(value_index);
-  int ind_p = 0;
-  for (int i = 0; i < kNumParam; ++i) {
+  c_int ind_p = 0;
+  for (c_int i = 0; i < kNumParam; ++i) {
     P_indptr->emplace_back(ind_p);
 
     if (columns[i].diagonal_element.IsValid()) {
@@ -285,6 +289,8 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
     }
   }
   P_indptr->emplace_back(ind_p);
+
+  ILOG_INFO << "ind_p " << static_cast<int>(ind_p);
 
   return;
 }
