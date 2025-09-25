@@ -927,7 +927,7 @@
       "search_weight" : {
         "weight_accel_sign_overtake" : 5.0
       },
-      "cutin_time_st_graph_threshold" : 3.0
+      "cutin_time_st_graph_threshold" : 2.0
     },
 
     "start_stop_decider" : {
