@@ -173,6 +173,24 @@ void UpdateHeuristicTargetSInLaneChange(framework::Session* session,
   }
 }
 
+void UpdateHeuristicTargetSInLaneChange(framework::Session* session,
+                                        double* const heuristic_s) {
+  const auto& lane_change_decider_output =
+      session->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  if (!(lane_change_state == kLaneChangeExecution ||
+        lane_change_state == kLaneChangeCancel ||
+        lane_change_state == kLaneChangeHold ||
+        lane_change_state == kLaneChangeComplete)) {
+    return;
+  }
+  const auto ego_trajs_future = lane_change_decider_output.ego_trajs_future;
+  if (ego_trajs_future.empty()) {
+    return;
+  }
+  *heuristic_s = ego_trajs_future.back().s;
+}
+
 bool HasCollisionRisk(const StSearchNode& current_node,
                       const StSearchNode& succ_node) {
   // Check if share same current_decision_table.
@@ -313,10 +331,7 @@ bool StGraphSearcher::SearchStPath(
   SetSearchConfigBySearchStyle(search_style);
 
   double planning_distance = planned_kd_path->Length();
-  /* Note: is no different in st graph when in lane change, don't need to update
-   heuristic s*/
-  //  UpdateHeuristicTargetSInLaneChange(
-  //      session_, search_config_.planning_time_horizon, &planning_distance);
+  UpdateHeuristicTargetSInLaneChange(session_, &planning_distance);
   StSearchInput st_search_input_info(
       planning_init_point, planning_distance,
       search_config_.planning_time_horizon, v_cruise,
