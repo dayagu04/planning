@@ -3685,7 +3685,7 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
 }
 
 bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
-    NOASplitRegionInfo* split_region_info) const {
+    NOASplitRegionInfo* split_region_info) {
   if (split_region_info == nullptr) {
     return false;
   }
@@ -3714,6 +3714,8 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
         on_excr_feasible_lane.emplace_back(i + 1);
         before_excr_feasible_lane.emplace_back(i + 1);
       }
+      mlc_request_info_.mlc_request_type = AVOIDE_MERGE;
+      mlc_request_info_.avoide_lane = min_lane;
     }
   }
 
