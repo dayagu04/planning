@@ -56,6 +56,7 @@ static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
 static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO = "/iflytek/camera_perception/lane_lines_debug_info";
 static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO = "/iflytek/camera_perception/lane_topo_debug_info";
 static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
+static constexpr auto TOPIC_DEGRADED_DRIVING_FUNCTION = "/iflytek/degrade_function/fm_a_service";
 
 // apa topics
 static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
@@ -908,7 +909,7 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing /iflytek/fusion/uss_perception_info" << std::endl;
   }
 
-  // TODO: thzhang5 0828 功能降级
+  // TODO: thzhang5 0828 功能降级 struct_msgs未适配
   // auto degraded_driving_function_ros_msg =
   //     find_ros_msg_with_header_time<struct_msgs::DegradedDrivingFunction>(
   //         TOPIC_DEGRADED_DRIVING_FUNCTION, input_time_list.degraded_driving_function());

@@ -309,6 +309,8 @@ bool PlanningAdapter::Proc() {
     ILOG_INFO << "receive fusion_speed_bump";
   }
 
+  JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time) / 1000.0);
+  
   if (is_degraded_driving_function_msg_updated_) {
     std::lock_guard<std::mutex> lock(degraded_driving_function_msg_mutex_);
     local_view_ptr_->degraded_driving_function_info = degraded_driving_function_msg_;
