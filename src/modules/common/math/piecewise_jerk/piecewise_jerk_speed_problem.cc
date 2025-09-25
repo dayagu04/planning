@@ -186,7 +186,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   columns.resize(kNumParam, SparseMatrixColumn(-1, 0.0f, -1, 0.0f));
   c_int value_index = 0;
 
-  ILOG_INFO << "value_index " << static_cast<int>(value_index);
+  // ILOG_INFO << "value_index " << static_cast<int>(value_index);
 
   // x(i)^2 * w_x_ref
   for (c_int i = 0; i < n - 1; ++i) {
@@ -267,7 +267,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   //   ++value_index;
   // }
 
-  ILOG_INFO << "value_index " << static_cast<int>(value_index);
+  // ILOG_INFO << "value_index " << static_cast<int>(value_index);
 
   P_data->reserve(value_index);
   P_indptr->reserve(kNumParam + 1);
@@ -290,7 +290,7 @@ void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
   }
   P_indptr->emplace_back(ind_p);
 
-  ILOG_INFO << "ind_p " << static_cast<int>(ind_p);
+  // ILOG_INFO << "ind_p " << static_cast<int>(ind_p);
 
   return;
 }

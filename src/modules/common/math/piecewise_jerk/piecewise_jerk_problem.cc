@@ -72,14 +72,14 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   A_indices.clear();
   A_indptr.clear();
 
-  ILOG_INFO << "A_indptr ";
+  // ILOG_INFO << "A_indptr ";
 
   static std::vector<c_float> lower_bounds;
   static std::vector<c_float> upper_bounds;
   lower_bounds.clear();
   upper_bounds.clear();
 
-  ILOG_INFO << "upper_bounds ";
+  // ILOG_INFO << "upper_bounds ";
   CalculateAffineConstraint2(&A_data, &A_indices, &A_indptr, &lower_bounds,
                              &upper_bounds);
 
@@ -87,7 +87,7 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   static std::vector<c_float> q;
   q.clear();
   CalculateOffset(&q);
-  ILOG_INFO << "CalculateOffset ";
+  // ILOG_INFO << "CalculateOffset ";
 
   OSQPData* data = reinterpret_cast<OSQPData*>(c_malloc(sizeof(OSQPData)));
   // CHECK_EQ(lower_bounds.size(), upper_bounds.size());
@@ -107,7 +107,7 @@ OSQPData* PiecewiseJerkProblem::FormulateProblem() {
   data->l = lower_bounds.data();
   data->u = upper_bounds.data();
 
-  ILOG_INFO << "OSQPData ";
+  // ILOG_INFO << "OSQPData ";
 
   return data;
 }
@@ -129,11 +129,11 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
   OSQPWorkspace* osqp_work = nullptr;
   osqp_work = osqp_setup(data, settings);
   // osqp_setup(&osqp_work, data, settings);
-  ILOG_INFO << "osqp_setup ";
+  // ILOG_INFO << "osqp_setup ";
 
   double start_time = IflyTime::Now_us();
   osqp_solve(osqp_work);
-  ILOG_INFO << "osqp_solve ";
+  // ILOG_INFO << "osqp_solve ";
 
   double planning_cost_time = (IflyTime::Now_us() - start_time) / 1000;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_OSQP,
@@ -165,7 +165,7 @@ bool PiecewiseJerkProblem::Optimize(const int max_iter,
 
   // Cleanup
   FreeData(data, osqp_work, settings);
-  ILOG_INFO << "FreeData ";
+  // ILOG_INFO << "FreeData ";
 
   return true;
 }
@@ -496,14 +496,14 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
   lower_bounds->resize(num_of_constraints);
   upper_bounds->resize(num_of_constraints);
 
-  ILOG_INFO << "size " << static_cast<int>(num_of_constraints);
+  // ILOG_INFO << "size " << static_cast<int>(num_of_constraints);
 
   // variables: record A matrix columns
   Eigen::MatrixXf matrix =
       Eigen::MatrixXf::Zero(num_of_constraints, num_of_variables);
   int csc_matrix_valid_num = 0;
 
-  ILOG_INFO << "num_of_variables " << static_cast<int>(num_of_variables);
+  // ILOG_INFO << "num_of_variables " << static_cast<int>(num_of_variables);
 
   int matrix_row_index = 0;
   // set x, x', x'' bounds
@@ -617,7 +617,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
 
   // CHECK_EQ(matrix_row_index, num_of_constraints);
 
-  ILOG_INFO << "matrix_row_index " << static_cast<int>(matrix_row_index);
+  // ILOG_INFO << "matrix_row_index " << static_cast<int>(matrix_row_index);
 
   A_data->reserve(csc_matrix_valid_num);
   A_indices->reserve(csc_matrix_valid_num);
@@ -643,7 +643,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
   // https://github.com/oxfordcontrol/osqp/blob/master/src/cs.c#L255
   A_indptr->emplace_back(ind_p);
 
-  ILOG_INFO << "ind_p " << static_cast<int>(ind_p);
+  // ILOG_INFO << "ind_p " << static_cast<int>(ind_p);
 
   return;
 }

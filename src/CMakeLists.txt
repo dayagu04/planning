@@ -1,16 +1,9 @@
 cmake_minimum_required(VERSION 3.0)
 # no project name in src
 
-# # eigen
-# set(THIRD_LIB_DIR ${CMAKE_HOME_DIRECTORY}/install)
-# include_directories(${THIRD_LIB_DIR}/include/eigen3)
-# link_directories(${THIRD_LIB_DIR}/share/eigen3/cmake)
-# set(eigen_dir ${THIRD_LIB_DIR}/share/eigen3/cmake)
-# include_directories(${EIGEN3_INCLUDE_DIRS})
-# message("eigen: ${EIGEN3_INCLUDE_DIRS}")
-find_package(Eigen3 REQUIRED)
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+find_package(Eigen3 REQUIRED)
 
 if (PP_ENABLE OR PYBIND_TOOL_ENABLE)
   add_compile_options(-Werror)
@@ -23,7 +16,7 @@ else()
   message("UNENABLE_IFLYTEK_LOG_SRC_CMAKE")
 endif()
 
-set(MDC_AP_LOG_FLAG False)
+set(MDC_AP_LOG_FLAG True)
 if (PLATFORM STREQUAL "X86")
   add_definitions(-DIFLY_GLOG_PATH)
   message("cyber config")
