@@ -45,7 +45,8 @@ class PiecewiseJerkSpeedProblem : public PiecewiseJerkProblem {
 
   virtual ~PiecewiseJerkSpeedProblem() = default;
 
-  void set_dx_ref(const c_float weight_dx_ref, std::vector<c_float>& dx_ref);
+  void set_dx_ref(const c_float weight_dx_ref,
+                  const std::vector<c_float>& dx_ref);
 
   void set_penalty_dx(std::vector<c_float> penalty_dx);
 

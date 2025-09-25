@@ -11,7 +11,7 @@
 
 namespace planning {
 
-constexpr c_float kMaxVariableRange = 1.0e10;
+constexpr c_float kMaxVariableRange = 10000.0;
 
 PiecewiseJerkProblem::PiecewiseJerkProblem(
     const size_t num_of_knots, const c_float delta_s,
@@ -358,9 +358,8 @@ void PiecewiseJerkProblem::set_x_bounds(
 }
 
 void PiecewiseJerkProblem::set_dx_bounds(
-    std::vector<std::pair<c_float, c_float>> dx_bounds) {
-  CHECK_EQ(dx_bounds.size(), num_of_knots_);
-  dx_bounds_ = std::move(dx_bounds);
+    const std::vector<std::pair<c_float, c_float>>& dx_bounds) {
+  dx_bounds_ = dx_bounds;
 
   return;
 }
@@ -404,10 +403,9 @@ void PiecewiseJerkProblem::set_ddx_bounds(const c_float ddx_lower_bound,
 }
 
 void PiecewiseJerkProblem::set_x_ref(const c_float weight_x_ref,
-                                     std::vector<c_float> x_ref) {
-  CHECK_EQ(x_ref.size(), num_of_knots_);
+                                     const std::vector<c_float>& x_ref) {
   weight_x_ref_ = weight_x_ref;
-  x_ref_ = std::move(x_ref);
+  x_ref_ = x_ref;
   has_x_ref_ = true;
 
   return;

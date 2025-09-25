@@ -30,7 +30,7 @@ void PiecewiseJerkSpeedProblem::set_init_state(
 }
 
 void PiecewiseJerkSpeedProblem::set_dx_ref(const c_float weight_dx_ref,
-                                           std::vector<c_float>& dx_ref) {
+                                           const std::vector<c_float>& dx_ref) {
   weight_dx_ref_ = weight_dx_ref;
   dx_ref_ = dx_ref;
   has_dx_ref_ = true;

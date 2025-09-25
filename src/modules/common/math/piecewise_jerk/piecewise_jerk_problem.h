@@ -44,7 +44,7 @@ class PiecewiseJerkProblem {
 
   void set_x_bounds(const c_float x_lower_bound, const c_float x_upper_bound);
 
-  void set_dx_bounds(std::vector<std::pair<c_float, c_float>> dx_bounds);
+  void set_dx_bounds(const std::vector<std::pair<c_float, c_float>>& dx_bounds);
 
   void set_dx_bounds(const c_float dx_lower_bound,
                      const c_float dx_upper_bound);
@@ -86,7 +86,7 @@ class PiecewiseJerkProblem {
    * @param weight_x_ref: uniform weighting for x_ref
    * @param x_ref: objective value of x
    */
-  void set_x_ref(const c_float weight_x_ref, std::vector<c_float> x_ref);
+  void set_x_ref(const c_float weight_x_ref, const std::vector<c_float>& x_ref);
 
   void set_end_state_ref(const std::array<c_float, 3>& weight_end_state,
                          const std::array<c_float, 3>& end_state_ref);
