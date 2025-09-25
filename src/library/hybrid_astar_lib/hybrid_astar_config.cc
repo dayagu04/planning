@@ -95,7 +95,8 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.scenario_try_lat_buffer_inside = 0.08;
   safe_buffer.scenario_try_lon_buffer = 0.3;
 
-  turn_radius_buffer = 0.01;
+  node_turn_radius_buffer = 0.01;
+  rs_radius_buffer = 0.4f;
   enable_clear_zone = false;
 
   return;

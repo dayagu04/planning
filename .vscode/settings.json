@@ -78,7 +78,10 @@
     "stack": "cpp",
     "tensor": "cpp",
     "slist": "cpp",
-    "codecvt": "cpp"
+    "codecvt": "cpp",
+    "sparse": "cpp",
+    "core": "cpp",
+    "dense": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "editor.quickSuggestions": {

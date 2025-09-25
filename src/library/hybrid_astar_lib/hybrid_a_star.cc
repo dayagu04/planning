@@ -111,7 +111,8 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-  const float rs_radius = vehicle_param_.min_turn_radius + 0.2;
+  const float rs_radius =
+      vehicle_param_.min_turn_radius + config_.rs_radius_buffer;
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
   if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {

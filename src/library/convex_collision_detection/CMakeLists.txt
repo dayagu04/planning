@@ -19,7 +19,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
      ${CMAKE_CURRENT_SOURCE_DIR}/../../
      )
 target_link_libraries(${PROJECT_NAME}
-  Eigen3::Eigen
   ad_common
   common
   )
@@ -30,7 +29,6 @@ target_link_libraries(gjk_main_test
   gtest_main
   ${PROJECT_NAME}
   common
-  Eigen3::Eigen
   pthread
   )
 
@@ -40,7 +38,6 @@ target_link_libraries(gjk_interface_test
   gtest_main
   ${PROJECT_NAME}
   common
-  Eigen3::Eigen
   pthread
   )
 
@@ -50,7 +47,6 @@ target_link_libraries(polygon_test
     gtest_main
     ${PROJECT_NAME}
     common
-    Eigen3::Eigen
     pthread
 )
 

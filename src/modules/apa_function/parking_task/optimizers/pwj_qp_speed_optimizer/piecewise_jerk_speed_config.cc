@@ -18,7 +18,7 @@ void PiecewiseJerkSpeedQPConfig::Init(const ParkingSpeedMode& park_speed_mode) {
 
   optimizer_time_limit = speed_config.optimizer_time_limit;
   time_resolution = 0.1;
-  time_horizon = 6.0;
+  time_horizon = 4.0;
 
   return;
 }

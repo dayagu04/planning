@@ -108,7 +108,8 @@ struct PlannerOpenSpaceConfig {
 
   // Control module has some tracking errors, so add a buffer for minimum turn
   // radius.
-  float turn_radius_buffer;
+  float node_turn_radius_buffer;
+  float rs_radius_buffer;
 
   // if search node in aabb, no need to check collision;
   bool enable_clear_zone;
