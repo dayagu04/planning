@@ -2328,11 +2328,12 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
               std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel())),
           smart_fold_mirror_params.min_vel);
 
-      const double lon_dist =
+      const double lon_dist = std::max(
           std::min(vel * (smart_fold_mirror_params.consume_time +
                           smart_fold_mirror_params.reaction_time),
-                   ego_info_under_slot.origin_pose_local.GetX() -
-                       ego_info_under_slot.cur_pose.GetX() + 0.068);
+                   ego_info_under_slot.cur_pose.GetX() -
+                       ego_info_under_slot.origin_pose_local.GetX() + 0.068),
+          0.068);
 
       bool try_fold_mirror = true;
       if (smart_fold_mirror_params.min_lat_buffer > 1e-3) {
