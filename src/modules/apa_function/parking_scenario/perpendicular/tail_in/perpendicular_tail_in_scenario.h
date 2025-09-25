@@ -43,6 +43,11 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const bool CheckFinished() override;
 
   void PathPlan();
+  virtual void GenHybridAstarConfigAndRequest(
+      PlannerOpenSpaceConfig& config, HybridAStarRequest& request) override;
+  virtual const uint8_t PathPlanOnceHybridAstar() override;
+  virtual const uint8_t PathPlanOnceHybridAstarThread() override;
+  void PathPlanByHybridAstarThread() override;
 
   const bool PostProcessPathAccordingRemainDist(const double remain_dist);
   const bool CheckShouldStopWhenSlotJumpsMuch();

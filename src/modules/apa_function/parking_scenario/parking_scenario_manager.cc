@@ -81,35 +81,38 @@ void ParkingScenarioManager::UpdateScenarioType() {
 
   const ApaParameters &param = apa_param.GetParam();
 
+  const SlotType slot_type = ego_info_under_slot.slot_type;
+
   if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
       cur_state == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR) {
+    if (slot_type == SlotType::PERPENDICULAR || slot_type == SlotType::SLANT) {
       if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
-        // only run PERPENDICULAR_TAIL_IN
-        scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
-      }
-
-      else {
+        if (slot_type == SlotType::PERPENDICULAR) {
+          scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+        } else if (slot_type == SlotType::SLANT) {
+          scenario_type_ = ParkingScenarioType::SCENARIO_SLANT_TAIL_IN;
+        }
+      } else {
         if (param.path_generator_type ==
             ParkPathGenerationType::GEOMETRY_BASED) {
           // check is narrow space or not
           if (IsSlotReleaseByHybridAstar()) {
             scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
           } else {
-            scenario_type_ =
-                ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+            if (slot_type == SlotType::PERPENDICULAR) {
+              scenario_type_ =
+                  ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+            } else if (slot_type == SlotType::SLANT) {
+              scenario_type_ = ParkingScenarioType::SCENARIO_SLANT_TAIL_IN;
+            }
           }
         } else {
           // only use astar
           scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
         }
       }
-
-    } else if (ego_info_under_slot.slot_type == SlotType::SLANT) {
-      scenario_type_ = ParkingScenarioType::SCENARIO_SLANT_TAIL_IN;
-    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
+    } else if (slot_type == SlotType::PARALLEL) {
+      if (param.path_generator_type == ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_IN;
       } else {
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
@@ -117,12 +120,10 @@ void ParkingScenarioManager::UpdateScenarioType() {
     }
   } else if (cur_state == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT ||
              cur_state == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
-        ego_info_under_slot.slot_type == SlotType::SLANT) {
+    if (slot_type == SlotType::PERPENDICULAR || slot_type == SlotType::SLANT) {
       scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
-    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
+    } else if (slot_type == SlotType::PARALLEL) {
+      if (param.path_generator_type == ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_IN;
       } else {
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
@@ -133,18 +134,16 @@ void ParkingScenarioManager::UpdateScenarioType() {
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
              cur_state == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
              cur_state == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
-    if (ego_info_under_slot.slot_type == SlotType::PERPENDICULAR ||
-        ego_info_under_slot.slot_type == SlotType::SLANT) {
-      if (apa_param.GetParam().use_geometry_path_head_out) {
+    if (slot_type == SlotType::PERPENDICULAR || slot_type == SlotType::SLANT) {
+      if (param.use_geometry_path_head_out) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_OUT;
       } else {
         // 垂直泊出功能不使用几何规划时，设置 path_generator_type 为
         // SEARCH_BASED ，进行 hybrid a*；
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
       }
-    } else if (ego_info_under_slot.slot_type == SlotType::PARALLEL) {
-      if (apa_param.GetParam().path_generator_type ==
-          ParkPathGenerationType::GEOMETRY_BASED) {
+    } else if (slot_type == SlotType::PARALLEL) {
+      if (param.path_generator_type == ParkPathGenerationType::GEOMETRY_BASED) {
         scenario_type_ = ParkingScenarioType::SCENARIO_PARALLEL_OUT;
       } else {
         scenario_type_ = ParkingScenarioType::SCENARIO_NARROW_SPACE;
