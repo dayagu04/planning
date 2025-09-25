@@ -106,10 +106,12 @@ class PiecewiseJerkProblem {
  protected:
   // naming convention follows osqp solver.
   // square cost, hessian matrix
+  // dense matrix version.
   virtual void CalculateKernel(std::vector<c_float>* P_data,
                                std::vector<c_int>* P_indices,
                                std::vector<c_int>* P_indptr) = 0;
 
+  // sparse matrix version.
   virtual void CalculateKernel2(std::vector<c_float>* P_data,
                                 std::vector<c_int>* P_indices,
                                 std::vector<c_int>* P_indptr) = 0;
@@ -117,6 +119,7 @@ class PiecewiseJerkProblem {
   // linear cost
   virtual void CalculateOffset(std::vector<c_float>* q) = 0;
 
+  // dense matrix version.
   virtual void CalculateAffineConstraint(std::vector<c_float>* A_data,
                                          std::vector<c_int>* A_indices,
                                          std::vector<c_int>* A_indptr,
@@ -129,6 +132,7 @@ class PiecewiseJerkProblem {
 
   void FreeData(OSQPData* data, OSQPWorkspace* work, OSQPSettings* setting);
 
+  // sparse matrix version.
   void CalculateAffineConstraint2(std::vector<c_float>* A_data,
                                   std::vector<c_int>* A_indices,
                                   std::vector<c_int>* A_indptr,
