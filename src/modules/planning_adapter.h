@@ -290,7 +290,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::mutex parking_map_info_msg_mutex_;
   std::mutex sdpro_map_info_msg_mutex_;
 
-  std::mutex msg_mutex_;
   std::mutex degraded_driving_function_msg_mutex_;
   iflyauto::PredictionResult prediction_result_msg_;
   int64_t prediction_result_msg_recv_time_;
