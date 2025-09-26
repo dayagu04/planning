@@ -714,7 +714,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       std::fabs(avoid_dist_) <= 0.01 &&
       std::fabs(lat_offset_) <= 0.01 &&
       target_road_radius_ > 750.0) {
-    jerk_bound = config_.jerk_bound;
+    // jerk_bound = config_.jerk_bound;
     // planning_input.set_q_continuity(config_.q_continuity);
     double q_continuity_lk =
       planning::interp(std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
