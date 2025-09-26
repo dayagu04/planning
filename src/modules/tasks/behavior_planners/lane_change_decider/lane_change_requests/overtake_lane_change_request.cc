@@ -496,6 +496,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
+  const RequestSource lc_request_source = OVERTAKE_REQUEST;
   if (trigger_left_overtake  && current_time - tfinish_ >= 3.0 && (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
     if (request_type_ != LEFT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
@@ -506,7 +507,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "\n");
     }
     if (!IsDashEnoughForRepeatSegments(
-            LEFT_CHANGE, origin_lane_virtual_id_,
+            LEFT_CHANGE, lc_request_source, origin_lane_virtual_id_,
             static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
         request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||
@@ -533,7 +534,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           "\n");
     }
     if (!IsDashEnoughForRepeatSegments(
-            RIGHT_CHANGE, origin_lane_virtual_id_,
+            RIGHT_CHANGE, lc_request_source, origin_lane_virtual_id_,
             static_cast<StateMachineLaneChangeStatus>(lc_status)) &&
         request_type_ != NO_CHANGE &&
         (lc_status == kLaneKeeping || lc_status == kLaneChangePropose ||

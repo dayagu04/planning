@@ -1823,6 +1823,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
 
       if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
+        mlc_request_info_.reset();
         if (mlc_decider_route_info_.is_process_split ||
             mlc_decider_route_info_.is_process_other_merge_split) {
           // 处理前方只有1个split的场景
@@ -2328,7 +2329,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         lc_num_task.emplace_back(1);
       }
     }
-
+    if (!lc_num_task.empty()){
+      if (ego_seq == mlc_request_info_.avoide_lane){
+        route_info_output_.mlc_request_type_route_info = mlc_request_info_.mlc_request_type;
+      } else {
+        route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
+      }
+    }
+    JSON_DEBUG_VALUE("mlc_request_type", static_cast<int>(route_info_output_.mlc_request_type_route_info));
     relative_id_lane->set_current_tasks(lc_num_task);
   }
 
@@ -3501,6 +3509,8 @@ bool RouteInfo::CalculateFeasibleLane(
         if (is_other_split_ramp && !is_continue_lane) {
           RemoveElement(before_excr_feasible_lane, 1);
           RemoveElement(on_excr_feasible_lane, 1);
+          mlc_request_info_.mlc_request_type = AVOIDE_DIVERGE;
+          mlc_request_info_.avoide_lane = 1;
         }
 
       } else {
@@ -3512,6 +3522,8 @@ bool RouteInfo::CalculateFeasibleLane(
     if (is_merge_split_same_dir) {
       RemoveElement(before_excr_feasible_lane, 1);
       RemoveElement(on_excr_feasible_lane, 1);
+      mlc_request_info_.mlc_request_type = AVOIDE_MERGE;
+      mlc_request_info_.avoide_lane = 1;
     }
   } else if (is_split_left) {
     // 默认左边都是主路的，后续需要对是否是主路的属性做判断
@@ -3556,6 +3568,8 @@ bool RouteInfo::CalculateFeasibleLane(
         if (is_other_split_ramp && !is_continue_lane) {
           RemoveElement(before_excr_feasible_lane, successor_exclnum);
           RemoveElement(on_excr_feasible_lane, successor_exclnum);
+          mlc_request_info_.mlc_request_type = AVOIDE_DIVERGE;
+          mlc_request_info_.avoide_lane = successor_exclnum;
         }
 
       } else if (successor_exclnum <= before_exclnum) {
@@ -3574,6 +3588,8 @@ bool RouteInfo::CalculateFeasibleLane(
     if (is_merge_split_same_dir && merge_before_exclnum > 0) {
       RemoveElement(before_excr_feasible_lane, merge_before_exclnum);
       RemoveElement(on_excr_feasible_lane, merge_before_exclnum);
+      mlc_request_info_.mlc_request_type = AVOIDE_MERGE;
+      mlc_request_info_.avoide_lane = merge_before_exclnum;
     }
   }
 
@@ -3669,7 +3685,7 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
 }
 
 bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
-    NOASplitRegionInfo* split_region_info) const {
+    NOASplitRegionInfo* split_region_info) {
   if (split_region_info == nullptr) {
     return false;
   }
@@ -3698,6 +3714,8 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
         on_excr_feasible_lane.emplace_back(i + 1);
         before_excr_feasible_lane.emplace_back(i + 1);
       }
+      mlc_request_info_.mlc_request_type = AVOIDE_MERGE;
+      mlc_request_info_.avoide_lane = min_lane;
     }
   }
 
