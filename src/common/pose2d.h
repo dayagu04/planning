@@ -118,6 +118,8 @@ struct Pose2f {
   Pose2f(const float x_, const float y_, const float theta_)
       : x(x_), y(y_), theta(theta_) {}
 
+  Pose2f(const Pose2f &other) : x(other.x), y(other.y), theta(other.theta) {}
+
   void SetPose(const float x_, const float y_, const float theta_) {
     x = x_;
     y = y_;

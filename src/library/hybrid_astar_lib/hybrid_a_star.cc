@@ -332,7 +332,8 @@ bool HybridAStar::RsLastSegmentSatisfyRequest(
   const AstarPathGear last_gear =
       reeds_shepp_to_end->paths[rs_path_seg_size - 1].gear;
 
-  if (request_.space_type == ParkSpaceType::VERTICAL) {
+  if (request_.space_type == ParkSpaceType::VERTICAL ||
+      request_.space_type == ParkSpaceType::SLANTING) {
     if (request_.direction_request == ParkingVehDirection::TAIL_IN &&
         request_.rs_request == RSPathRequestType::LAST_PATH_FORBID_FORWARD) {
       if (last_gear == AstarPathGear::DRIVE) {
@@ -385,7 +386,8 @@ bool HybridAStar::CheckRSPathGear(const RSPath* reeds_shepp_to_end,
   for (int i = 0; i < rs_path_seg_size; i++) {
     gear = reeds_shepp_to_end->paths[i].gear;
 
-    if (request_.space_type == ParkSpaceType::VERTICAL) {
+    if (request_.space_type == ParkSpaceType::VERTICAL ||
+        request_.space_type == ParkSpaceType::SLANTING) {
       if (request_.rs_request == RSPathRequestType::ALL_PATH_FORBID_FORWARD &&
           gear == AstarPathGear::DRIVE) {
         // ILOG_INFO << " rs path seg need single shot by reverse gear ";

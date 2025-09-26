@@ -31,7 +31,8 @@ const Pose2f &RSExpansionDecider::GetRSEndPose() { return rs_end_pose_; }
 
 bool RSExpansionDecider::IsNeedRsExpansion(const Node3d *node,
                                            const AstarRequest *request) const {
-  if (request->space_type == ParkSpaceType::VERTICAL) {
+  if (request->space_type == ParkSpaceType::VERTICAL ||
+      request->space_type == ParkSpaceType::SLANTING) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       if (!NeedRsLinkByNodeHeadingForTailIn(node)) {
         return false;
@@ -63,7 +64,8 @@ void RSExpansionDecider::Process(const Pose2f &start, const Pose2f &end) {
 void RSExpansionDecider::UpdateRSPathRequest(AstarRequest *request) {
   // check rs last path gear
   request->rs_request = RSPathRequestType::NONE;
-  if (request->space_type == ParkSpaceType::VERTICAL) {
+  if (request->space_type == ParkSpaceType::VERTICAL ||
+      request->space_type == ParkSpaceType::SLANTING) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       request->rs_request = RSPathRequestType::LAST_PATH_FORBID_FORWARD;
       ILOG_INFO << "last rs path forbid forward";

@@ -16,34 +16,42 @@ namespace planning {
 
 #define DEBUG_DECIDER (0)
 
-bool TargetPoseRegulator::IsDefaultPoseSafeEnough() {
-  if (candidate_info_.size() > 0 &&
-      candidate_info_[0].dist_to_obs > max_lat_buffer_) {
-    return true;
+bool TargetPoseRegulator::IsReferenceLineSafeEnough() {
+  if (!IsParkingIn(request_)) {
+    if (candidate_info_.size() > 0 &&
+        candidate_info_[0].dist_to_obs > max_lat_buffer_) {
+      return true;
+    }
+  } else {
+    if (paths_.size() > 0) {
+      if (paths_[0].IsPathAllPointsSafe(max_lat_buffer_)) {
+        return true;
+      }
+    }
   }
 
   return false;
 }
 
-void TargetPoseRegulator::UpdateDefaultPoseInfo(
-    const AstarRequest *request, const VehicleParam &veh_param,
-    const ParkingVehDirection &direction_request, EulerDistanceTransform *edt) {
-  // For vertical slot, need to check safe in path, not only a terminal point.
-  if (request->space_type == ParkSpaceType::VERTICAL) {
+void TargetPoseRegulator::GenerateXboundary(const AstarRequest *request,
+                                            const VehicleParam &veh_param) {
+  // x boundary
+  if (request->space_type == ParkSpaceType::VERTICAL ||
+      request->space_type == ParkSpaceType::SLANTING) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_front_edge_to_slot = 2.3f;
       float veh_x_upper = veh_front_edge_to_slot + request->slot_length -
                           veh_param.front_edge_to_rear_axle;
-      x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
+      x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
     } else {
       // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
       float veh_back_edge_to_slot = 4.0f;
       float veh_x_upper = request->slot_length + veh_back_edge_to_slot -
                           veh_param.rear_edge_to_rear_axle;
-      x_check_bounday_.upper = std::max(center_line_target_.x, veh_x_upper);
+      x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
     }
 
-    x_check_bounday_.lower = center_line_target_.x;
+    x_check_bounday_.lower = target_.x;
     x_check_bounday_.step = 0.2f;
   } else {
     x_check_bounday_.upper =
@@ -55,51 +63,80 @@ void TargetPoseRegulator::UpdateDefaultPoseInfo(
       std::ceil((x_check_bounday_.upper - x_check_bounday_.lower) /
                 x_check_bounday_.step);
   x_check_bounday_.number = std::max(1, x_check_bounday_.number);
+  x_check_bounday_.number =
+      std::min(INITIAL_GUESS_PATH_MAX_POINT, x_check_bounday_.number);
 
-  float dist = 10.0f;
+  return;
+}
+
+void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
+                                            const VehicleParam &veh_param) {
+  float y_upper = request->slot_width / 2 + cross_the_slot_line_max_dist_ -
+                  veh_param.width / 2;
+  y_upper = std::max(0.0f, y_upper);
+  float y_lower = -y_upper;
+  y_lower = std::min(0.0f, y_lower);
+
+  y_check_bounday_.upper = y_upper;
+  y_check_bounday_.lower = y_lower;
+  y_check_bounday_.step = 0.03f;
+  y_check_bounday_.number =
+      std::ceil((y_upper - y_lower) / y_check_bounday_.step) * 2;
+  y_check_bounday_.number = std::max(1, y_check_bounday_.number);
+
+  return;
+}
+
+void TargetPoseRegulator::UpdateReferenceLinePath(
+    const AstarRequest *request, const VehicleParam &veh_param,
+    const ParkingVehDirection &direction_request, EulerDistanceTransform *edt) {
+  // x boundary
+  GenerateXboundary(request, veh_param);
+
+  // y boundary
+  GenerateYboundary(request, veh_param);
+
+  paths_.reserve(y_check_bounday_.number);
+  paths_.clear();
+
+  // update center line dist
+  float dist = 0.0f;
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
   if (IsParkingOutRequest(request->direction_request)) {
     // todo ： 车头泊出目前只对终点位置进行碰撞检查，沿途路径没有做碰撞检查；
-    dist = GetDistToObsHeadOut(center_line_target_, direction_request, edt);
-    ILOG_INFO << "center_line_target_ dist : " << dist;
-  } else if (request->space_type == ParkSpaceType::VERTICAL) {
-    dist = GetMinDistByXRange(center_line_target_, edt);
-  } else {
-    tf.SetBasePose(center_line_target_);
-    edt->DistanceCheckForPoint(&dist, &tf, gear);
-  }
+    dist = GetDistToObsHeadOut(target_, direction_request, edt);
 
-  PoseRegulateCandidate candidate;
-  candidate.lat_offset = 0.0f;
-  candidate.dist_to_obs = dist;
-  candidate.pose = center_line_target_;
-  candidate_info_.emplace_back(candidate);
+    PoseRegulateCandidate candidate;
+    candidate.lat_offset = 0.0f;
+    candidate.dist_to_obs = dist;
+    candidate.pose = target_;
+    candidate_info_.emplace_back(candidate);
+    ILOG_INFO << "target_ dist : " << dist;
+  } else if (request->space_type == ParkSpaceType::VERTICAL ||
+             request->space_type == ParkSpaceType::SLANTING) {
+    GetCandidatePathByXRange(target_, edt);
+  }
 
   // update ego dist
   tf.SetBasePose(request->start_pose);
   edt->DistanceCheckForPoint(&dist, &tf, gear);
   ego_dist_to_obs_ = dist;
 
-#if DEBUG_DECIDER
-  DebugString();
-#endif
-
   return;
 }
 
 void TargetPoseRegulator::Process(
     EulerDistanceTransform *edt, const AstarRequest *request,
-    const Pose2f &ego_pose, const Pose2f &center_line_target,
-    const VehicleParam &veh_param,
+    const Pose2f &ego_pose, const Pose2f &target, const VehicleParam &veh_param,
     const ParkingVehDirection &direction_request) {
   Clear();
-  center_line_target_ = center_line_target;
+  target_ = target;
   request_ = request;
   cross_the_slot_line_max_dist_ = 0.0;
   max_lat_buffer_ = 0.3;
-  edt->UpdateSafeBuffer(0.0, 0.2, 0.0);
-  UpdateDefaultPoseInfo(request, veh_param, direction_request, edt);
+  edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
+  UpdateReferenceLinePath(request, veh_param, direction_request, edt);
 
   if (IsSamplingBasedPlanning(request->path_generate_method)) {
     return;
@@ -119,15 +156,12 @@ void TargetPoseRegulator::Process(
     return;
   }
 
-  if (IsDefaultPoseSafeEnough()) {
+  if (IsReferenceLineSafeEnough()) {
     return;
   }
 
-  if (request->space_type == ParkSpaceType::VERTICAL) {
-    GenerateCandidatesForVerticalSlot(edt, request, veh_param);
-  } else {
-    GenerateCandidatesForParallelSlot(edt, request, veh_param);
-  }
+  // todo: parallel slot.
+  GenerateCandidatesForVerticalSlot(edt, request, veh_param);
 
   return;
 }
@@ -151,41 +185,27 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const VehicleParam &veh_param) {
   Pose2f global_pose;
-  global_pose = center_line_target_;
+  global_pose = target_;
 
-  float y_upper = request->slot_width / 2 + cross_the_slot_line_max_dist_ -
-                  veh_param.width / 2;
-  y_upper = std::max(0.0f, y_upper);
-  float y_lower = -request->slot_width / 2 - cross_the_slot_line_max_dist_ +
-                  veh_param.width / 2;
-  y_lower = std::min(0.0f, y_lower);
-
-  float y_step = 0.03;
-  int y_sampling_num = std::ceil((y_upper - y_lower) / y_step) * 2;
   float y_offset = 0.0;
   float left_y_offset = 0.0;
   float right_y_offset = 0.0;
-
   float dist;
-  PoseRegulateCandidate candidate;
-  bool check_left = true;
 
-  for (int i = 0; i < y_sampling_num; i++) {
+  for (int i = 0; i < y_check_bounday_.number; i++) {
     // left
-    if (check_left) {
-      check_left = false;
-      if (left_y_offset < y_upper) {
-        left_y_offset += y_step;
-        left_y_offset = std::min(left_y_offset, y_upper);
+    if (i % 2 == 0) {
+      if (left_y_offset < y_check_bounday_.upper - 0.001f) {
+        left_y_offset += y_check_bounday_.step;
+        left_y_offset = std::min(left_y_offset, y_check_bounday_.upper);
         y_offset = left_y_offset;
       } else {
         continue;
       }
     } else {
-      check_left = true;
-      if (right_y_offset > y_lower) {
-        right_y_offset -= y_step;
-        right_y_offset = std::max(right_y_offset, y_lower);
+      if (right_y_offset > y_check_bounday_.lower + 0.001f) {
+        right_y_offset -= y_check_bounday_.step;
+        right_y_offset = std::max(right_y_offset, y_check_bounday_.lower);
         y_offset = right_y_offset;
       } else {
         continue;
@@ -193,20 +213,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
     }
 
     global_pose.y = y_offset;
-    dist = GetMinDistByXRange(global_pose, edt);
-    if (dist > 0.06) {
-      PoseRegulateCandidate candidate;
-      candidate.lat_offset = y_offset;
-      candidate.dist_to_obs = dist;
-      candidate.pose = center_line_target_;
-      candidate.pose.y = y_offset;
-      candidate_info_.emplace_back(candidate);
-    }
-
-#if DEBUG_DECIDER
-    ILOG_INFO << "offset = " << y_offset << ", dist = " << dist;
-#endif
-
+    dist = GetCandidatePathByXRange(global_pose, edt);
     if (dist > max_lat_buffer_) {
       break;
     }
@@ -216,7 +223,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
   DebugString();
 #endif
 
-  // Todo: adjust x offset
   return;
 }
 
@@ -226,7 +232,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2f global_pose;
-  global_pose = center_line_target_;
+  global_pose = target_;
   constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
   constexpr size_t kNumberRows = 5;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
@@ -269,7 +275,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           ? -1
           : 1;
 
-  const Eigen::Vector2d base_pose(base_x, center_line_target_.GetY());
+  const Eigen::Vector2d base_pose(base_x, target_.GetY());
 
   for (size_t j = 0; j < kMaxCandidateNum; ++j) {
     const Eigen::Vector2d temp_pos =
@@ -300,12 +306,12 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
-  if (center_line_target_.GetX() < 0.0) {
+  if (target_.GetX() < 0.0) {
     // todo :: 现在的虚拟墙不支持 目标点小于0 的搜索，先跳过；
     return;
   }
   Pose2f global_pose;
-  global_pose = center_line_target_;
+  global_pose = target_;
   constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
   constexpr size_t kNumberRows = 5;        // 行数
   constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
@@ -338,8 +344,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   } else {
     // 左右方向处理
     for (size_t j = 0; j < kNumberRows; ++j) {
-      const Eigen::Vector2d base_pose(base_x + kXStep * j,
-                                      center_line_target_.GetY());
+      const Eigen::Vector2d base_pose(base_x + kXStep * j, target_.GetY());
 
       for (size_t i = 0; i < kMaxCandidateNum; ++i) {
         Eigen::Vector2d temp_pos;
@@ -378,37 +383,37 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
 
 void TargetPoseRegulator::Clear() {
   candidate_info_.clear();
+  paths_.clear();
   return;
 }
 
-const float TargetPoseRegulator::GetMinDistByXRange(
+const float TargetPoseRegulator::GetCandidatePathByXRange(
     const Pose2f &global_pose, EulerDistanceTransform *edt) {
   Transform2f tf;
   AstarPathGear gear = AstarPathGear::NONE;
-  if (request_->space_type == ParkSpaceType::VERTICAL) {
-    if (request_->direction_request == ParkingVehDirection::TAIL_IN) {
-      gear = AstarPathGear::REVERSE;
-    } else {
-      gear = AstarPathGear::DRIVE;
-    }
-  }
-
   float dist;
-  float min_dist = 10.0;
+  float max_dist = 0.0f;
+  float min_dist = 10.0f;
   Pose2f pose = global_pose;
   pose.x = x_check_bounday_.lower;
+  InitialGuessPath path;
+  path.Clear();
 
   for (int j = 0; j < x_check_bounday_.number; j++) {
     tf.SetBasePose(pose);
 
     edt->DistanceCheckForPoint(&dist, &tf, gear);
+    path.AddPoint(pose, dist);
+
+    max_dist = std::max(max_dist, dist);
     min_dist = std::min(min_dist, dist);
 
-    if (min_dist < 0.04) {
-      break;
-    }
     pose.x += x_check_bounday_.step;
     pose.x = std::min(pose.x, x_check_bounday_.upper);
+  }
+
+  if (max_dist > 0.08f) {
+    paths_.emplace_back(path);
   }
 
   return min_dist;
@@ -469,25 +474,10 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   return min_dist;
 }
 
-const bool TargetPoseRegulator::IsCandidatePoseSafe(
+const PoseRegulateCandidate TargetPoseRegulator::GetCandidatePose(
     const float lat_buffer) const {
   if (candidate_info_.size() <= 0) {
-    return false;
-  }
-
-  for (auto &obj : candidate_info_) {
-    if (obj.dist_to_obs > lat_buffer) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
-    const float lat_buffer) const {
-  if (candidate_info_.size() <= 0) {
-    return std::make_pair(center_line_target_, 0.0);
+    return PoseRegulateCandidate(target_, 0.0f, 0.0f);
   }
 
   float dist;
@@ -497,9 +487,10 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
     // If pose is big buffer, return
     dist = obj.dist_to_obs - lat_buffer;
     if (dist > 0.0f) {
-      ILOG_INFO << "big buffer, lat offset = " << obj.lat_offset
-                << ",obs dist = " << obj.dist_to_obs;
-      return std::make_pair(obj.pose, obj.dist_to_obs);
+      ILOG_INFO << "offset: " << obj.lat_offset
+                << ",obs dist: " << obj.dist_to_obs;
+      best_candidate = &obj;
+      break;
     }
 
     // get relative safe pose.
@@ -508,7 +499,11 @@ const std::pair<Pose2f, float> TargetPoseRegulator::GetCandidatePose(
     }
   }
 
-  return std::make_pair(best_candidate->pose, best_candidate->dist_to_obs);
+  // for easy control, and easy planning, use a straight line to real end.
+  PoseRegulateCandidate res(*best_candidate);
+  res.pose.x = std::max(res.pose.x, request_->goal.x);
+
+  return res;
 }
 
 void TargetPoseRegulator::DebugString() {
@@ -522,70 +517,12 @@ void TargetPoseRegulator::DebugString() {
     candidate_info_[i].pose.DebugString();
   }
 
+  ILOG_INFO << "path size = " << paths_.size();
   ILOG_INFO << "x bound, upper " << x_check_bounday_.upper << ", lower "
             << x_check_bounday_.lower << ", num " << x_check_bounday_.number;
+  ILOG_INFO << "y bound, upper " << y_check_bounday_.upper << ", lower "
+            << y_check_bounday_.lower << ", num " << y_check_bounday_.number;
 
-  return;
-}
-
-void TargetPoseRegulator::GenerateCandidatesForParallelSlot(
-    EulerDistanceTransform *edt, const AstarRequest *request,
-    const VehicleParam &veh_param) {
-  Pose2f global_pose;
-  AstarPathGear gear = AstarPathGear::NONE;
-  global_pose = center_line_target_;
-
-  TerminalCheckBoundary y_bounday;
-  y_bounday.upper = request->slot_width / 2 - veh_param.width / 2 +
-                    cross_the_slot_line_max_dist_;
-  y_bounday.upper = std::max(0.0f, y_bounday.upper);
-  y_bounday.lower = -request->slot_width / 2 + veh_param.width / 2 -
-                    cross_the_slot_line_max_dist_;
-  y_bounday.lower = std::min(0.0f, y_bounday.lower);
-  y_bounday.step = 0.03;
-  y_bounday.number =
-      std::ceil((y_bounday.upper - y_bounday.lower) / y_bounday.step) * 2;
-
-  float y_offset = 0.0;
-  float left_y_offset = 0.0;
-  float right_y_offset = 0.0;
-
-  float dist;
-  PoseRegulateCandidate candidate;
-
-  for (int i = 0; i < y_bounday.number; i++) {
-    // left
-    if (i % 2 == 0) {
-      left_y_offset += y_bounday.step;
-      left_y_offset = std::min(left_y_offset, y_bounday.upper);
-      y_offset = left_y_offset;
-    } else {
-      right_y_offset -= y_bounday.step;
-      right_y_offset = std::max(right_y_offset, y_bounday.lower);
-      y_offset = right_y_offset;
-    }
-
-    global_pose.y = y_offset;
-    dist = GetMinDistByXRange(global_pose, edt);
-    if (dist > 0.06f) {
-      PoseRegulateCandidate candidate;
-      candidate.lat_offset = y_offset;
-      candidate.dist_to_obs = dist;
-      candidate.pose = center_line_target_;
-      candidate.pose.y = y_offset;
-      candidate_info_.emplace_back(candidate);
-    }
-
-    if (dist > 0.25) {
-      break;
-    }
-  }
-
-#if DEBUG_DECIDER
-  DebugString();
-#endif
-
-  // Todo: adjust x offset
   return;
 }
 
