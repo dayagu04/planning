@@ -526,4 +526,38 @@ void TargetPoseRegulator::DebugString() {
   return;
 }
 
+const PoseRegulateCandidate TargetPoseRegulator::GetCandidatePose(
+    const float lat_buffer) const {
+  if (paths_.size() <= 0) {
+    return PoseRegulateCandidate(request_->goal, 0.0f, 0.0f);
+  }
+
+  float dist;
+  const PoseRegulateCandidate *best_candidate = &candidate_info_[0];
+
+  
+
+  for (auto &obj : candidate_info_) {
+    // If pose is big buffer, return
+    dist = obj.dist_to_obs - lat_buffer;
+    if (dist > 0.0f) {
+      ILOG_INFO << "offset: " << obj.lat_offset
+                << ",obs dist: " << obj.dist_to_obs;
+      best_candidate = &obj;
+      break;
+    }
+
+    // get relative safe pose.
+    if (obj.dist_to_obs > best_candidate->dist_to_obs) {
+      best_candidate = &obj;
+    }
+  }
+
+  // for easy control, and easy planning, use a straight line to real end.
+  PoseRegulateCandidate res(*best_candidate);
+  res.pose.x = std::max(res.pose.x, request_->goal.x);
+
+  return res;
+}
+
 }  // namespace planning

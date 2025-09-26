@@ -155,6 +155,8 @@ class TargetPoseRegulator : public AstarDecider {
   void GenerateYboundary(const AstarRequest *request,
                          const VehicleParam &veh_param);
 
+  void GetMaxDeepthPoint(const InitialGuessPath &path, const float buffer);
+
  private:
   Pose2f target_;
   // used by park out
