@@ -31,6 +31,7 @@ struct GeneralLateralDeciderOutput {
   bool enable_ara_ref = false;
   bool bound_avoid = false;
   bool is_use_spatio_planner_result = false;
+  double recommended_bound_avoid_jerk = 0.4;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
@@ -38,6 +39,7 @@ struct GeneralLateralDeciderOutput {
     enable_ara_ref = false;
     bound_avoid = false;
     is_use_spatio_planner_result = false;
+    recommended_bound_avoid_jerk = 0.4;
     init_state.Clear();
     enu_ref_path.clear();
     last_enu_ref_path.clear();

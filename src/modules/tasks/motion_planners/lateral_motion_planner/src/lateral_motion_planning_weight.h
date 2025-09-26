@@ -14,7 +14,6 @@ enum class LateralMotionScene {
   LANE_KEEP = 0,
   AVOID,
   LANE_CHANGE,
-  STATIC_AVOID,
   SPLIT,
   RAMP,
   LANE_BORROW
@@ -202,6 +201,14 @@ class LateralMotionPlanningWeight {
     lc_style_ = lc_style;
   }
 
+  void SetIsBoundAvoid(const bool is_bound_avoid) {
+    is_bound_avoid_ = is_bound_avoid;
+  }
+
+  void SetExpectedAvoidJerk(const double expected_avoid_jerk) {
+    expected_avoid_jerk_ = expected_avoid_jerk;
+  }
+
   double GetInitDisToRef() const { return init_dis_to_ref_; }
 
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
@@ -275,11 +282,13 @@ class LateralMotionPlanningWeight {
   double expected_min_acc_;
   double target_road_radius_;
   double min_q_jerk_;
+  double expected_avoid_jerk_;
   double last_path_max_dist2ref_;
   double last_jerk_bound_limit_;
   double last_max_omega_;
   double last_lc_end_ratio_for_qrefxy_buffer_;
   size_t last_remotely_index_;
+  size_t avoid_end_index_;
   bool is_lane_change_hold_;
   bool is_lane_change_back_;
   bool is_in_intersection_;
@@ -287,6 +296,7 @@ class LateralMotionPlanningWeight {
   bool is_s_bend_;
   bool is_use_spatio_planner_result_;
   bool is_sharp_turn_;
+  bool is_bound_avoid_;
   std::vector<double> soft_bound_qratio_vec_;
   std::vector<double> hard_bound_qratio_vec_;
   std::vector<double> curvature_radius_vec_;
