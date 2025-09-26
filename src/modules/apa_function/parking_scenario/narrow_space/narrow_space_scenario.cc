@@ -2103,10 +2103,8 @@ double NarrowSpaceScenario::GetStraightLength(const ParkingVehDirection dir,
     if (slot_type == ParkSpaceType::PARALLEL) {
       end_straight_len =
           apa_param.GetParam().astar_config.parallel_slot_end_straight_dist;
-    } else if (slot_type == ParkSpaceType::SLANTING) {
-      end_straight_len =
-          apa_param.GetParam().astar_config.vertical_tail_in_end_straight_dist;
-    } else {
+    } else if (slot_type == ParkSpaceType::SLANTING ||
+               slot_type == ParkSpaceType::VERTICAL) {
       if (dir == ParkingVehDirection::TAIL_IN) {
         end_straight_len = apa_param.GetParam()
                                .astar_config.vertical_tail_in_end_straight_dist;
