@@ -50,6 +50,11 @@ void EmergenceAvoidRequest::Update(int lc_status) {
     ILOG_DEBUG << "EmergenceAvoidRequest::Update: ego not in lane keeping!";
     return;
   }
+  // intersection surpression
+  if (EgoInIntersection()) {
+    Reset();
+    Finish();
+  }
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();

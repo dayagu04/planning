@@ -26,6 +26,7 @@ constexpr double kLaneChangeMinDistance = 9;
 constexpr double kIgnoreLineTypeThreshold = 0.33333333333;
 constexpr double kStandardLaneWidth = 3.8;
 constexpr double kEps = 1e-6;
+constexpr int kEgoInIntersectionCount = 3;
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
@@ -710,4 +711,30 @@ double LaneChangeRequest::CalculateDynamicTTCtime(
 
   return ttc_time;
 }
+
+bool LaneChangeRequest::EgoInIntersection() {
+  const auto &tfl_decider = session_->mutable_planning_context()
+                          ->mutable_traffic_light_decider_output();
+  const auto intersection_state = session_->environmental_model()
+                              .get_virtual_lane_manager()
+                              ->GetIntersectionState();
+  const double distance_to_stopline = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToStopline();
+  const double distance_to_crosswalk = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToCrosswalk();
+  bool current_intersection_state =
+      intersection_state == common::IntersectionState::IN_INTERSECTION ||
+      distance_to_stopline <= 5.0;
+  if (current_intersection_state) {
+    intersection_count_ = kEgoInIntersectionCount;
+  } else {
+    intersection_count_ = std::max(intersection_count_ - 1, 0);
+  }
+
+  bool ego_in_intersection_state = intersection_count_ > 0;
+  return ego_in_intersection_state;
+}
+
 }  // namespace planning

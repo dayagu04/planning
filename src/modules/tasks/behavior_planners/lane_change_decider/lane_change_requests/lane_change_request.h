@@ -57,6 +57,7 @@ class LaneChangeRequest {
   double CalculatePressLineRatio(const int origin_lane_id,
                                  const RequestType& lc_request) const;
   double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
+  bool EgoInIntersection();
 
  protected:
   TrackInfo lc_invalid_track_;
@@ -65,6 +66,7 @@ class LaneChangeRequest {
   int origin_lane_virtual_id_ = -1000;
   int origin_lane_order_id_ = -1000;
   RequestType turn_signal_ = NO_CHANGE;
+  int intersection_count_ = 0;
   double tstart_ = 0.0;
   double tfinish_ = 0.0;
   framework::Session* session_;

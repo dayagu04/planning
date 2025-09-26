@@ -46,6 +46,12 @@ void MergeRequest::Update(int lc_status) {
     return;
   }
 
+  // intersection surpression
+  if (EgoInIntersection()) {
+    Reset();
+    Finish();
+  }
+  
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   planning_init_point_ = ego_state->planning_init_point();
