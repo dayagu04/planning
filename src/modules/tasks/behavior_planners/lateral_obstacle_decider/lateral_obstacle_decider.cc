@@ -587,6 +587,16 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       (lc_request_direction == RIGHT_CHANGE);
   const auto lead_one =
       session_->environmental_model().get_lateral_obstacle()->leadone();
+  const auto &lane_change_decider_output = session_->planning_context()
+                                              .lane_change_decider_output();
+  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+  const auto gap_front_node_id =
+      lane_change_decider_output.lc_gap_info.front_node_id;
+  int32_t gap_front_agent_id = -1;
+  if (dynamic_world->GetNode(gap_front_node_id)) {
+    gap_front_agent_id =
+        dynamic_world->GetNode(gap_front_node_id)->node_agent_id();
+  }
   // calculate info of obstacle
   int id = obstacle.id();
   iflyauto::ObjectType type = obstacle.type();
@@ -770,17 +780,13 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
             (d_max_cpath_updated <
              lane_width / 2 - (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision))));
 
-      if (is_in_lane_change_scene) {
+      if (is_in_lane_change_scene &&
+          frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
         // 在变道状态，依据gap计算
-        if (frenet_obstacle.frenet_obstacle_boundary().s_start >= gap_front_node_id_s) {
-          can_avoid = false;
-          lateral_obstacle_decision_can_avoid = false;
-        } else {
-          can_avoid = true;
-          lateral_obstacle_decision_can_avoid = true;
-          history.cut_in_or_cross = false;
-          history.cut_in_or_cross_count = 0;
-        }
+        can_avoid = true;
+        lateral_obstacle_decision_can_avoid = true;
+        history.cut_in_or_cross = false;
+        history.cut_in_or_cross_count = 0;
       }
 
       if (is_need_avoid && !can_avoid) {
@@ -901,13 +907,10 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   // if (lead_one != nullptr) {
   //   JSON_DEBUG_VALUE("latral_lead_one_id", lead_one->id());
   // }
-  const auto &lane_change_decider_output = session_->planning_context()
-                                              .lane_change_decider_output();
-  const auto gap_front_node_id =
-      lane_change_decider_output.lc_gap_info.front_node_id;
+
   if (lead_one != nullptr && ((id == lead_one->id() &&
       !is_in_lane_change_scene) || (is_in_lane_change_scene &&
-      id == lead_one->id() && id == gap_front_node_id)) &&
+      id == lead_one->id() && id == gap_front_agent_id)) &&
       (is_in_range || is_about_to_enter_range)) {
     double dist_intersect = 1000;
     double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width -
@@ -1203,17 +1206,15 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
   }
 
-  if (is_in_lane_change_scene) {
+  if (is_in_lane_change_scene && d_s_rel > history.front_expand_len &&
+      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
     // 在变道状态，依据gap计算
-    if (frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s &&
-        d_s_rel > history.front_expand_len) {
-      if (d_max_cpath > 0 && d_min_cpath < 0) {
-        output_[id] = LatObstacleDecisionType::IGNORE;
-      } else if (d_max_cpath < 0) {
-        output_[id] = LatObstacleDecisionType::LEFT;
-      } else if (d_min_cpath > 0) {
-        output_[id] = LatObstacleDecisionType::RIGHT;
-      }
+    if (d_max_cpath > 0 && d_min_cpath < 0) {
+      output_[id] = LatObstacleDecisionType::IGNORE;
+    } else if (d_max_cpath < 0) {
+      output_[id] = LatObstacleDecisionType::LEFT;
+    } else if (d_min_cpath > 0) {
+      output_[id] = LatObstacleDecisionType::RIGHT;
     }
   }
   // cut_in 或 横穿
@@ -1944,16 +1945,11 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
     follow_info.is_need_folow = false;
     return;
   }
-  if (is_in_lane_change_scene) {
+  if (is_in_lane_change_scene &&
+      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
     // 在变道状态，依据gap计算follow
-    if (frenet_obstacle.frenet_obstacle_boundary().s_start >= gap_front_node_id_s) {
-      follow_info.follow_confidence = 0.3;
-      follow_info.is_need_folow = true;
-      // gap前方的障碍物直接截断，全给follow
-    } else {
-      follow_info.follow_confidence = 0;
-      follow_info.is_need_folow = false;
-    }
+    follow_info.follow_confidence = 0;
+    follow_info.is_need_folow = false;
   } else {
     // 计算侵入距离
     double intrusion_distance = DBL_MAX;
@@ -2009,6 +2005,8 @@ void LateralObstacleDecider::CalLaneChangeGapInfo(
   const auto &target_state = session_->planning_context()
                                           .lane_change_decider_output()
                                           .coarse_planning_info.target_state;
+  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+
   is_in_lane_change_scene = (target_state == kLaneChangeExecution ||
       target_state == kLaneChangeHold ||
       target_state == kLaneChangeCancel);
@@ -2019,8 +2017,19 @@ void LateralObstacleDecider::CalLaneChangeGapInfo(
       lane_change_decider_output.lc_gap_info.front_node_id;
   const auto gap_rear_node_id =
       lane_change_decider_output.lc_gap_info.rear_node_id;
-  auto gap_front_obj = obstacle_map.find(gap_front_node_id);
-  auto gap_rear_obj = obstacle_map.find(gap_rear_node_id);
+  int32_t gap_front_agent_id = -1;
+  if (dynamic_world->GetNode(gap_front_node_id)) {
+    gap_front_agent_id =
+        dynamic_world->GetNode(gap_front_node_id)->node_agent_id();
+  }
+  int32_t gap_rear_agent_id = -1;
+  if (dynamic_world->GetNode(gap_rear_node_id)) {
+    gap_rear_agent_id =
+        dynamic_world->GetNode(gap_rear_node_id)->node_agent_id();
+  }
+  auto gap_front_obj = obstacle_map.find(gap_front_agent_id);
+  auto gap_rear_obj = obstacle_map.find(gap_rear_agent_id);
+
   if (gap_front_obj != obstacle_map.end() && is_in_lane_change_scene) {
     gap_front_node_id_s = gap_front_obj->second->frenet_obstacle_boundary().s_start;
   }
