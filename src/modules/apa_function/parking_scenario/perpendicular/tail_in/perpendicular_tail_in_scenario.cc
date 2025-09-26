@@ -136,7 +136,23 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  PathPlan();
+  if (CheckGearChangeCountTooMuch()) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
+  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type);
+  PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY ||
+      apa_param.GetParam().park_path_plan_type ==
+          ParkPathPlanType::HYBRID_ASTAR) {
+    PathPlan();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    PathPlanByHybridAstarThread();
+  }
 
   // check finish
   if (CheckFinished()) {
