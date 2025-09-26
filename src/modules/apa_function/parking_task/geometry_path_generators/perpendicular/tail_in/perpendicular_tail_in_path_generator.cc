@@ -982,7 +982,10 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
             << "  try_dubins_success_number = " << try_dubins_success_number;
 
   if (calc_params_.is_searching_stage) {
-    return pair_geometry_path_vec.size() >= min_path_count_searching;
+    return pair_geometry_path_vec.size() >= min_path_count_searching ||
+           (pair_geometry_path_vec.size() > 0 &&
+            std::fabs(cur_pose.GetY()) < 0.186 &&
+            std::fabs(cur_pose.GetTheta()) * kRad2Deg < 12.68);
   }
 
   for (auto& pair_geometry_path : pair_geometry_path_vec) {
