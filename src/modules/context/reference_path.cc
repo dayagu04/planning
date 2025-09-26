@@ -472,7 +472,7 @@ bool ReferencePath::get_polygon_at_time(const int id,
       carte_point.x = pt.x();
       carte_point.y = pt.y();
       if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-        ILOG_ERROR << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!";
+        ILOG_INFO << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!";
         continue;
       }
       frenet_points.push_back(planning_math::Vec2d(
@@ -500,7 +500,7 @@ bool ReferencePath::get_polygon_at_time(const int id,
       carte_point.x = pt.x();
       carte_point.y = pt.y();
       if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-        ILOG_ERROR << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!!!";
+        ILOG_INFO << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!!!";
         continue;
       }
       frenet_points.push_back(

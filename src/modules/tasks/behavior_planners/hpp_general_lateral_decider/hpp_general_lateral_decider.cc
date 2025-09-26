@@ -1439,7 +1439,7 @@ void HppGeneralLateralDecider::GetLateralTTCToRoad(
 void HppGeneralLateralDecider::GenerateObstaclesBoundary() {
   if (ref_traj_points_.empty() || ref_path_points_.empty()) {
     // add logs
-    ILOG_ERROR << "Ref traj points or ref path points is null!";
+    ILOG_INFO << "Ref traj points or ref path points is null!";
     return;
   }
   const auto &obs_vec = reference_path_ptr_->get_obstacles();

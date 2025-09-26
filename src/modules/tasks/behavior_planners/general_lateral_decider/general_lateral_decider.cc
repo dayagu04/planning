@@ -1396,7 +1396,7 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   if (plan_history_traj_.empty() || ref_path_points_.empty()) {
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
-    ILOG_ERROR << "Ref traj points or ref path points is null!";
+    ILOG_INFO << "Ref traj points or ref path points is null!";
     return;
   }
 

@@ -608,7 +608,7 @@ bool FrenetObstacle::get_polygon_at_time(
     carte_point.x = pt.x();
     carte_point.y = pt.y();
     if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
-      ILOG_ERROR << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!";
+      ILOG_INFO << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!";
       continue;
     }
     frenet_points.push_back(
@@ -636,7 +636,7 @@ bool FrenetObstacle::get_polygon_at_time_tmp(
     carte_point.x = pt.x();
     carte_point.y = pt.y();
     if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
-      ILOG_ERROR << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!!";
+      ILOG_INFO << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!!";
       continue;
     }
     frenet_points.push_back(planning_math::Vec2d(
