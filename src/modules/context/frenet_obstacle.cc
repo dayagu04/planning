@@ -71,30 +71,36 @@ void FrenetObstacle::compute_frenet_obstacle(
     obs_relative_heading = obstacle_ptr_->relative_heading_angle() -
                            frenet_coord->GetPathCurveHeading(frenet_s_);
   }
+
+  const double cos_relative_heading = std::cos(obs_relative_heading);
+  const double sin_relative_heading = std::sin(obs_relative_heading);
+  double half_width = width_ * 0.5;
+  double half_length = length_ * 0.5;
+
   frenet_obstacle_corners_.s_front_left =
-      frenet_s_ + length_ / 2.0 * std::cos(obs_relative_heading) -
-      width_ / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ + half_length * cos_relative_heading -
+      half_width * sin_relative_heading;
   frenet_obstacle_corners_.l_front_left =
-      frenet_l_ + length_ / 2.0 * std::sin(obs_relative_heading) +
-      width_ / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ + half_length * sin_relative_heading +
+      half_width * cos_relative_heading;
   frenet_obstacle_corners_.s_front_right =
-      frenet_s_ + length_ / 2.0 * std::cos(obs_relative_heading) +
-      width_ / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ + half_length * cos_relative_heading +
+      half_width * sin_relative_heading;
   frenet_obstacle_corners_.l_front_right =
-      frenet_l_ + length_ / 2.0 * std::sin(obs_relative_heading) -
-      width_ / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ + half_length * sin_relative_heading -
+      half_width * cos_relative_heading;
   frenet_obstacle_corners_.s_rear_left =
-      frenet_s_ - length_ / 2.0 * std::cos(obs_relative_heading) -
-      width_ / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ - half_length * cos_relative_heading -
+      half_width * sin_relative_heading;
   frenet_obstacle_corners_.l_rear_left =
-      frenet_l_ - length_ / 2.0 * std::sin(obs_relative_heading) +
-      width_ / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ - half_length * sin_relative_heading +
+      half_width * cos_relative_heading;
   frenet_obstacle_corners_.s_rear_right =
-      frenet_s_ - length_ / 2.0 * std::cos(obs_relative_heading) +
-      width_ / 2.0 * std::sin(obs_relative_heading);
+      frenet_s_ - half_length * cos_relative_heading +
+      half_width * sin_relative_heading;
   frenet_obstacle_corners_.l_rear_right =
-      frenet_l_ - length_ / 2.0 * std::sin(obs_relative_heading) -
-      width_ / 2.0 * std::cos(obs_relative_heading);
+      frenet_l_ - half_length * sin_relative_heading -
+      half_width * cos_relative_heading;
 
   double curve_heading = frenet_coord->GetPathCurveHeading(frenet_s_);
   frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
@@ -173,8 +179,6 @@ void FrenetObstacle::compute_frenet_obstacle(
       (frenet_l_ > 0) ? frenet_velocity_l_ : -frenet_velocity_l_;
 
   // calculate d_rel, d_min_cpath, d_max_cpath
-  double half_length = length_ * 0.5;
-  double half_width = width_ * 0.5;
   // 对车辆障碍物half_width限定在1-2m以内
   // 其余障碍物使用其默认的half_width
   iflyauto::ObjectType type = obstacle_ptr_->type();
@@ -214,12 +218,12 @@ void FrenetObstacle::compute_frenet_obstacle(
         for (int sgn_width : sgn_list) {
           double _s =
               frenet_s_ +
-              sgn_length * std::cos(obs_relative_heading) * half_length -
-              sgn_width * std::sin(obs_relative_heading) * half_width;
+              sgn_length * cos_relative_heading  * half_length -
+              sgn_width * sin_relative_heading  * half_width;
           double _l =
               frenet_l_ +
-              sgn_length * std::sin(obs_relative_heading) * half_length +
-              sgn_width * std::cos(obs_relative_heading) * half_width;
+              sgn_length * sin_relative_heading * half_length +
+              sgn_width * cos_relative_heading * half_width;
           obstacle_box[box_s].push_back(_s);
           obstacle_box[box_l].push_back(_l);
           if (_s >= ego_s) {
