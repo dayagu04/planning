@@ -606,6 +606,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
                   "enable_multi_height_col_det");
 
+  JSON_DEBUG_VALUE("enable_multi_height_col_det",
+                   param.enable_multi_height_col_det)
+
   JSON_READ_VALUE(param.car_lat_inflation_strict, double,
                   "car_lat_inflation_strict");
 
