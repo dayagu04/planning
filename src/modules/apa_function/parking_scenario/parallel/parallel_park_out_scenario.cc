@@ -183,73 +183,19 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
   // init simulation
   InitSimulation();
 
-  // check planning status
-  if (CheckPlanSkip()) {
-    return false;
-  }
-
-  UpdateStuckTime();
-
   if (CheckPaused()) {
     return false;
   }
-
-  // calculate remain dist according to plan path
-  frame_.remain_dist_path = CalRemainDistFromPath();
-
-  double lat_buffer = 0.0;
-  double safe_uss_remain_dist = 0.0;
-  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
-  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
-  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
-
-  double dynaminc_lat_buffer = 0.0;
-  double dynamic_lon_buffer = 0.0;
-  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
-
-  apa_world_ptr_->GetColDetInterfacePtr()->Init(true);
-  // calculate remain dist uss according to uss
-  frame_.remain_dist_obs = CalRemainDistFromObs(
-      safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
-      dynaminc_lat_buffer, dynaminc_lat_buffer);
-  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     ILOG_INFO << "update ego slot info failed!";
     return false;
   }
-  ILOG_INFO << "update ego slot info success!";
 
   // generate t-lane
   if (!GenTlane()) {
     ILOG_INFO << "GenTlane failed!";
-    return false;
-  }
-
-  // check finish
-  if (CheckFinished()) {
-    ILOG_INFO << "check apa finished!";
-    return false;
-  }
-
-  // check failed
-  if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
-    return false;
-  }
-
-  const double max_replan_path_dist = 0.15;
-  const double stuck_replan_wait_time = 1.5;
-
-  CheckReplanParams replan_params(
-      max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
-      stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
-      0.168, apa_param.GetParam().stuck_replan_time);
-
-  // check replan
-  if (!CheckReplan(replan_params)) {
-    ILOG_INFO << "replan is not required!";
     return false;
   }
 
@@ -289,7 +235,9 @@ bool ParallelParkOutScenario::ParkOutDirectionTry() {
 }
 
 void ParallelParkOutScenario::ScenarioTry() {
-  // ApaParkOutDirection::RIGHT_FRONT
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    return;
+  }
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.slot.release_info_
