@@ -14,7 +14,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250912/20250912-14-52-46/data_collection_CHERY_M32T_50813_EVENT_DOWNGRADE_2025-09-12-14-52-46_no_camera.bag.1758698216.close-loop.noa.plan"
+bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_m32t_72216/trigger/20250911/20250911-17-44-31/data_collection_CHERY_M32T_72216_EVENT_KEY_2025-09-11-17-44-31_no_camera.bag.1757956159.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

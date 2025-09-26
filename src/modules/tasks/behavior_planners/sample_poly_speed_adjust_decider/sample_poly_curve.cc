@@ -159,15 +159,25 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
-  int speed_differ_gain = 1;
+  double speed_differ_gain = 1;
   if(enable_merge_decelaration){
-    if(end_point_lower_st_point.agent_id() != kNoAgentId){
-      if(arrived_s_ - end_point_lower_st_point.s() < 20.0 && arrived_v_ > end_point_lower_st_point.velocity()){
-        speed_differ_gain = std::pow(arrived_v_ - end_point_lower_st_point.velocity(),2) + 1;
+    double ego_s = poly_.CalculatePoint(0);
+    STPoint prediction_matched_upper_st_point;
+    STPoint prediction_matched_lower_st_point;
+    sample_space_base.GetBorderByAvailable(ego_s, 0,
+                                           &prediction_matched_lower_st_point,
+                                           &prediction_matched_upper_st_point);
+    if(prediction_matched_lower_st_point.agent_id() != kNoAgentId){
+      if(ego_s - prediction_matched_lower_st_point.s() < 20.0 &&
+        ego_v < prediction_matched_lower_st_point.velocity()*1.2){
+        speed_differ_gain = std::pow(ego_v - prediction_matched_lower_st_point.velocity(),2) + 3;
+      } else if(ego_s - prediction_matched_upper_st_point.s() > 20.0 &&
+                ego_v > prediction_matched_upper_st_point.velocity()*1.2 &&
+                prediction_matched_upper_st_point.agent_id() == kNoAgentId){
+        speed_differ_gain = 1/(std::pow(ego_v - prediction_matched_upper_st_point.velocity(),2) + 3);
       }
     }
   }
-
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
