@@ -1154,7 +1154,7 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     ILOG_INFO << "min_lat_buffer = " << min_lat_buffer;
 
     collision_detector_ptr_->SetParam(
-        CollisionDetector::Paramters(min_lat_buffer, false));
+        CollisionDetector::Paramters(min_lat_buffer, true));
     pnc::geometry_lib::PrintPose("input_.ego_info_under_slot.cur_pose",
                                  input_.ego_info_under_slot.cur_pose);
     std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
@@ -4532,22 +4532,20 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
           DubinsPlan(tmp_path_vec, ego_pose, preparation_pose, radius,
                      lon_buffer, pnc::geometry_lib::SEG_STEER_INVALID, true);
       if (success) {
-        // ILOG_INFO << "DubinsPlan success!";
+        ILOG_INFO << "DubinsPlan success!";
       } else {
         // ILOG_INFO << "DubinsPlan failed!";
       }
     } else {
-      // ILOG_INFO << "TwoArcPath success!";
+      ILOG_INFO << "TwoArcPath success!";
     }
   } else {
-    ILOG_INFO << "ego last step is arc!";
+    // ILOG_INFO << "ego last step is arc!";
 
     const auto ref_steer = ego_pose.kappa > 0.0
                                ? pnc::geometry_lib::SEG_STEER_RIGHT
                                : pnc::geometry_lib::SEG_STEER_LEFT;
     const auto ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
-    pnc::geometry_lib::PrintSteer("this time steer", ref_steer);
-    pnc::geometry_lib::PrintGear("this time gear", ref_gear);
 
     success = LineArcPlan(tmp_path_vec, ego_pose, prepare_line, ref_gear,
                           ref_steer, radius, lon_buffer);
@@ -4557,12 +4555,16 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
       success = TwoArcPath(tmp_path_vec, ego_pose, prepare_line, ref_gear,
                            radius, lon_buffer, ref_steer);
       if (success) {
-        // ILOG_INFO << "TwoArcPath success!";
+        pnc::geometry_lib::PrintSteer("this time steer", ref_steer);
+        pnc::geometry_lib::PrintGear("this time gear", ref_gear);
+        ILOG_INFO << "TwoArcPath success!";
       } else {
         // ILOG_INFO << "TwoArcPath failed!";
       }
     } else {
-      // ILOG_INFO << "LineArcPlan success!";
+      pnc::geometry_lib::PrintSteer("this time steer", ref_steer);
+      pnc::geometry_lib::PrintGear("this time gear", ref_gear);
+      ILOG_INFO << "LineArcPlan success!";
     }
 
     if (!success) {
@@ -4571,7 +4573,7 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
       success = DubinsPlan(tmp_path_vec, ego_pose, preparation_pose, radius,
                            lon_buffer, ref_steer, true);
       if (success) {
-        // ILOG_INFO << "DubinsPlan success!";
+        ILOG_INFO << "DubinsPlan success!";
       } else {
         // ILOG_INFO << "DubinsPlan failed!";
       }
@@ -4601,7 +4603,7 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
     std::vector<pnc::geometry_lib::PathSegment> search_start_path_vec;
     std::reverse(reversed_id_vec.begin(), reversed_id_vec.end());
 
-    ILOG_INFO << "\nid from path size";
+    ILOG_INFO << "id from path size";
     for (const auto& id : reversed_id_vec) {
       ILOG_INFO << "id = " << id;
     }
@@ -4624,15 +4626,15 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
                   << "heading (deg)= " << pB.heading * kRad2Deg
                   << "gear = " << static_cast<int>(gear);
       } else {
-        ILOG_INFO << "\narc!";
+        ILOG_INFO << "arc!";
 
         const uint8_t gear = pB.is_drive ? pnc::geometry_lib::SEG_GEAR_DRIVE
                                          : pnc::geometry_lib::SEG_GEAR_REVERSE;
         const uint8_t steer = pB.kappa > 0.0
                                   ? pnc::geometry_lib::SEG_STEER_LEFT
                                   : pnc::geometry_lib::SEG_STEER_RIGHT;
-        pnc::geometry_lib::PrintGear("gear", gear);
-        pnc::geometry_lib::PrintSteer("steer", steer);
+        // pnc::geometry_lib::PrintGear("gear", gear);
+        // pnc::geometry_lib::PrintSteer("steer", steer);
 
         pnc::geometry_lib::Arc arc;
         arc.pA = pA.pos;
@@ -4655,9 +4657,6 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
     ILOG_INFO << "backtracking search_start_path_vec size = "
               << search_start_path_vec.size();
 
-    ILOG_INFO << "\n";
-    ILOG_INFO << "\n";
-    ILOG_INFO << "\n";
     ILOG_INFO << "successed transit pose to preparation line path size = "
               << tmp_path_vec.size();
 

@@ -238,6 +238,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       return;
     }
   }
+  // check finish
+  if (CheckFinished()) {
+    ILOG_INFO << "check apa finished!";
+    SetParkingStatus(PARKING_FINISHED);
+    return;
+  }
 
   ILOG_INFO << "replan is required!";
   previous_output_path_.Reset();
