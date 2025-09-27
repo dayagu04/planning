@@ -111,9 +111,9 @@ void RouteInfo::UpdateRouteInfoForNOA(
     const ad_common::sdpromap::SDProMap& sdpro_map) {
   if (!sdpro_map.isRouteValid()) {
     route_info_output_.reset();
-    return; 
+    return;
   }
-  
+
   double nearest_s;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
@@ -4025,7 +4025,7 @@ bool RouteInfo::CalculateLastFp(
       return false;
     }
 
-    
+
     std::vector<iflymapdata::sdpro::FeaturePoint> temp_fp_vec;
     if (!SortFPBaseProjection(temp_fp_vec, fp_pre_link)) {
       return false;
@@ -4638,19 +4638,17 @@ bool RouteInfo::SortFPBaseProjection(
   if (link == nullptr) {
     return false;
   }
+  sorted_fp.clear();
 
-  std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
   for (const auto& fp : link->feature_points()) {
-    fp_vec.emplace_back(fp);
+    sorted_fp.emplace_back(fp);
   }
 
-  std::sort(fp_vec.begin(), fp_vec.end(),
+  std::sort(sorted_fp.begin(), sorted_fp.end(),
             [](const iflymapdata::sdpro::FeaturePoint& fp_a,
               const iflymapdata::sdpro::FeaturePoint& fp_b) {
               return fp_a.projection_percent() < fp_b.projection_percent();
             });
-
-  sorted_fp = std::move(fp_vec);
 
   return true;
 }
