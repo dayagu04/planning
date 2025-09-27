@@ -59,7 +59,8 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   void CalcCost(STSampleSpaceBase& sample_space_base, const double ego_v,
                 const double ego_a, const double suggested_v,
                 const double stop_line_s, const double leading_veh_s,
-                const double leading_veh_v, int32_t leading_veh_id);
+                const double leading_veh_v, int32_t leading_veh_id,
+                bool enable_merge_decelaration);
   double CalcVelIntegral(const double t) const;
 
   // interface:

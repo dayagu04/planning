@@ -177,6 +177,10 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
 };
 
 bool SamplePolySpeedAdjustDecider::Evaluate() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const bool enable_merge_decelaration =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MERGE_REQUEST);
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -194,7 +198,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       auto& sample_traj = sample_traj_at_v[j];
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
-                           leading_veh_v, leading_veh_.id);
+                           leading_veh_v, leading_veh_.id,
+                           enable_merge_decelaration);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
@@ -390,25 +395,51 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
 
   is_nearing_ramp_ =
       session_->planning_context().lane_change_decider_output().is_nearing_ramp;
-  distance_to_road_merge_ =
-      virtual_lane_mgr->get_distance_to_first_road_merge();
-  distance_to_road_split_ =
-      virtual_lane_mgr->get_distance_to_first_road_split();
+  // distance_to_road_merge_ =
+  //     virtual_lane_mgr->get_distance_to_first_road_merge();
+  // distance_to_road_split_ =
+  //     virtual_lane_mgr->get_distance_to_first_road_split();
   distance_to_ramp_ = route_info_output.dis_to_ramp;
+  const auto& merge_point_info = route_info_output.merge_point_info;
+  const auto& function_info = session_->environmental_model().function_info();
+  distance_to_merge_point_ = NL_NMAX;
+  distance_to_road_split_ = NL_NMAX;
+  distance_to_road_merge_ = NL_NMAX;
+  const auto& llane = virtual_lane_mgr->get_left_lane();
+  const auto& rlane = virtual_lane_mgr->get_right_lane();
+  bool is_left_edge_side_lane = llane == nullptr;
+  bool is_right_edge_side_lane = rlane == nullptr;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+    const auto& split_region_info_list =
+        route_info_output.split_region_info_list;
+    const auto& merge_region_info_list =
+        route_info_output.merge_region_info_list;
+    if (!split_region_info_list.empty()) {
+      if (split_region_info_list[0].is_valid) {
+        distance_to_road_split_ =
+            split_region_info_list[0].distance_to_split_point;
+      }
+    }
+    if (!merge_region_info_list.empty()) {
+      if (merge_region_info_list[0].is_valid) {
+        distance_to_road_merge_ =
+            merge_region_info_list[0].distance_to_split_point;
+      }
+    }
+  }
 
   if (is_nearing_ramp_ && distance_to_ramp_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_ramp_;
     return true;
   } else if (virtual_lane_mgr->get_current_lane()->is_nearing_ramp_mlc_task() &&
-             route_info_output.dis_to_ramp < kDistanceToMapRequestPoint) {
-    merge_stop_line_distance_ = route_info_output.dis_to_ramp;
+             distance_to_ramp_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_ramp_;
     return true;
   } else if (virtual_lane_mgr->get_current_lane()
                  ->is_nearing_split_mlc_task() &&
-             route_info_output.distance_to_first_road_split <
-                 kDistanceToMapRequestPoint) {
-    merge_stop_line_distance_ = route_info_output.distance_to_first_road_split;
-
+             distance_to_road_split_ < kDistanceToMapRequestPoint) {
+    merge_stop_line_distance_ = distance_to_road_split_;
     return true;
   } else if (lane_change_source_ == MAP_REQUEST ||
              lane_change_source_ == MERGE_REQUEST) {
@@ -427,6 +458,15 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
           is_in_merge_region_) {
         merge_stop_line_distance_ =
             std::fmin(distance_to_road_merge_, distance_to_road_split_);
+        return true;
+      } else if (distance_to_merge_point_ < distance_to_road_merge_ &&
+                 distance_to_merge_point_ < distance_to_road_split_ &&
+                 distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+                 ((is_left_edge_side_lane &&
+                   merge_point_info.merge_type == LEFT_MERGE) ||
+                  (is_right_edge_side_lane &&
+                   merge_point_info.merge_type == RIGHT_MERGE))) {
+        merge_stop_line_distance_ = distance_to_merge_point_;
         return true;
       }
     }

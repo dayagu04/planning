@@ -37,6 +37,7 @@ class MergeRequest : public LaneChangeRequest {
   bool is_merge_lane_change_situation_ = false;
   bool both_lane_line_exist_virtual_or_not_ = false;
   RequestType merge_lane_change_direction_ = NO_CHANGE;
+  bool use_map_is_merge_situation_ = false;
   int merge_alc_trigger_counter_ = 0;
   bool is_exist_left_merge_direction_ = false;
   bool is_exist_right_merge_direction_ = false;

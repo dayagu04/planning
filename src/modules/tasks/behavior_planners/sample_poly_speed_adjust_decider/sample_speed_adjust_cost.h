@@ -12,7 +12,7 @@ class MatchGapCost : public CurveCost {
                const double poly_end_v,
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
-               const double ego_current_vel);
+               const double ego_current_vel, const bool is_merge_change);
   void SetWeightMatchS(const double weight_s) { weight_match_s_ = weight_s; }
   void SetWeightMatchVel(const double weight_vel) {
     weight_match_v_ = weight_vel;
@@ -25,7 +25,7 @@ class MatchGapCost : public CurveCost {
   }
 
   void SetAnchorT(const double& anchor_t) { anchor_t_ = anchor_t; }
-  const double anchor_t(){return anchor_t_;};
+  const double anchor_t() { return anchor_t_; };
   const double match_s_cost() const { return match_s_cost_; }
   const double match_v_cost() const { return match_v_cost_; }
   const double match_gap_center_cost() const { return match_gap_center_cost_; }
@@ -46,6 +46,9 @@ class MatchGapCost : public CurveCost {
   double clip_dis_penalty_factor_coef_ = 2.5;
   double rel_vel_penalty_factor_coef_ = 3.0;
   double narrow_gap_penalty_factor_coef_ = 1.8;
+
+  double acc_speed_weight_ = 1.5;
+  double dec_speed_weight_ = 2;
 };
 
 class FollowVelCost : public CurveCost {
@@ -59,7 +62,8 @@ class StopLineCost : public CurveCost {
  public:
   StopLineCost() = default;
   void GetCost(const double stop_line_dis_to_ego,
-               const double poly_end_s_dis_to_ego, const double v_curve_final);
+               const double poly_end_s_dis_to_ego, const double v_curve_final,
+               const bool is_merge_request);
 
  private:
   double mid_stop_dis_penalty_coef_ = 3.0;
