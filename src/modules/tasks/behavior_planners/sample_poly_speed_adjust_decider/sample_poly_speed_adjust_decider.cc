@@ -179,7 +179,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
 bool SamplePolySpeedAdjustDecider::Evaluate() {
   const auto& function_info = session_->environmental_model().function_info();
   const bool enable_merge_decelaration =
-      (function_info.function_mode() == common::DrivingFunctionInfo::NOA && lane_change_source_ == MERGE_REQUEST);
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MERGE_REQUEST);
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -197,7 +198,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       auto& sample_traj = sample_traj_at_v[j];
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
-                           leading_veh_v, leading_veh_.id, enable_merge_decelaration);
+                           leading_veh_v, leading_veh_.id,
+                           enable_merge_decelaration);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
@@ -409,16 +411,20 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   bool is_right_edge_side_lane = rlane == nullptr;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
-    const auto& split_region_info_list = route_info_output.split_region_info_list;
-    const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+    const auto& split_region_info_list =
+        route_info_output.split_region_info_list;
+    const auto& merge_region_info_list =
+        route_info_output.merge_region_info_list;
     if (!split_region_info_list.empty()) {
       if (split_region_info_list[0].is_valid) {
-        distance_to_road_split_ = split_region_info_list[0].distance_to_split_point;
+        distance_to_road_split_ =
+            split_region_info_list[0].distance_to_split_point;
       }
     }
     if (!merge_region_info_list.empty()) {
       if (merge_region_info_list[0].is_valid) {
-        distance_to_road_merge_ = merge_region_info_list[0].distance_to_split_point;
+        distance_to_road_merge_ =
+            merge_region_info_list[0].distance_to_split_point;
       }
     }
   }
@@ -432,8 +438,7 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     return true;
   } else if (virtual_lane_mgr->get_current_lane()
                  ->is_nearing_split_mlc_task() &&
-             distance_to_road_split_ <
-                 kDistanceToMapRequestPoint) {
+             distance_to_road_split_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_road_split_;
     return true;
   } else if (lane_change_source_ == MAP_REQUEST ||
@@ -454,9 +459,13 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
         merge_stop_line_distance_ =
             std::fmin(distance_to_road_merge_, distance_to_road_split_);
         return true;
-      } else if (distance_to_merge_point_ < distance_to_road_merge_ && distance_to_merge_point_ < distance_to_road_split_ &&
-        distance_to_merge_point_ < kDistanceToMapRequestPoint && ((is_left_edge_side_lane && merge_point_info.merge_type == LEFT_MERGE) ||
-        (is_right_edge_side_lane && merge_point_info.merge_type == RIGHT_MERGE))) {
+      } else if (distance_to_merge_point_ < distance_to_road_merge_ &&
+                 distance_to_merge_point_ < distance_to_road_split_ &&
+                 distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+                 ((is_left_edge_side_lane &&
+                   merge_point_info.merge_type == LEFT_MERGE) ||
+                  (is_right_edge_side_lane &&
+                   merge_point_info.merge_type == RIGHT_MERGE))) {
         merge_stop_line_distance_ = distance_to_merge_point_;
         return true;
       }

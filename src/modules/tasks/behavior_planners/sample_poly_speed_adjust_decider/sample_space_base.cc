@@ -263,7 +263,7 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
       lower_st_point->set_info(interval.first.s(), t, interval.first.velocity(),
                                interval.first.agent_id(), -1);
       return false;
-    } else if (ego_lon_area.first> interval.second.s()) {
+    } else if (ego_lon_area.first > interval.second.s()) {
       lower_st_point->set_info(interval.second.s(), t,
                                interval.second.velocity(),
                                interval.second.agent_id(), -1);

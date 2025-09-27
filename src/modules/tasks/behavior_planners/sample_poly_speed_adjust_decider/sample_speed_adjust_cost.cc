@@ -79,12 +79,12 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                                        (attract_border_distance -
                                         clip_border_distance) /
                                        attract_border_distance)
-               : dist_to_gap_center > clip_border_distance
-                   ? weight *
-                         std::exp(narrow_gap_attract_factor_coef *
-                                  (dist_to_gap_center - clip_border_distance) /
-                                  attract_border_distance)
-                   : 0.0;
+                   : dist_to_gap_center > clip_border_distance
+                         ? weight * std::exp(narrow_gap_attract_factor_coef *
+                                             (dist_to_gap_center -
+                                              clip_border_distance) /
+                                             attract_border_distance)
+                         : 0.0;
       };
 
   auto linear_expand_extra_gap_distance_by_ego_vel =
@@ -168,7 +168,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         upper_st_point.s() - (poly_end_s + front_edge_to_rear_axle_);
 
     double dist_cost = 0.0;
-    if(is_merge_change){
+    if (is_merge_change) {
       dist_cost = std::fmax(dist_to_lower_border, dist_to_upper_border);
       double dist_to_lower_cost = calculate_gap_distance_match_cost(
           dist_to_lower_border, safe_border_distance_to_gap_back_obj,
@@ -185,16 +185,15 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
             std::fabs((upper_st_point.s() + lower_st_point.s()) * 0.5 -
                       poly_end_s),
-            kBasicSafeDistance, kMinSafeDistance, narrow_gap_penalty_factor_coef_,
-            weight_match_s_);
+            kBasicSafeDistance, kMinSafeDistance,
+            narrow_gap_penalty_factor_coef_, weight_match_s_);
       }
       match_v_cost_ = calculate_gap_vel_match_cost(
           upper_st_point.velocity(), lower_st_point.velocity(),
           dist_to_upper_border, dist_to_lower_border, poly_end_v,
           kMatchGapVelPenaltyThreshold, rel_vel_penalty_factor_coef_,
           weight_match_v_);
-    }
-    else{
+    } else {
       dist_cost = std::fmax(dist_to_lower_border, dist_to_upper_border);
       double dist_to_lower_cost = calculate_gap_distance_match_cost(
           dist_to_lower_border, safe_border_distance_to_gap_back_obj,
@@ -212,8 +211,8 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
             std::fabs((upper_st_point.s() + lower_st_point.s()) * 0.5 -
                       poly_end_s),
-            kBasicSafeDistance, kMinSafeDistance, narrow_gap_penalty_factor_coef_,
-            weight_match_s_);
+            kBasicSafeDistance, kMinSafeDistance,
+            narrow_gap_penalty_factor_coef_, weight_match_s_);
       }
       match_v_cost_ = calculate_gap_vel_match_cost(
           upper_st_point.velocity(), lower_st_point.velocity(),
@@ -228,8 +227,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
 
   // Default penalty when no valid agent data
   // match_s_cost_ = kMaxPenalty;
-  if (is_merge_change)
-  {
+  if (is_merge_change) {
     auto half_object_vehicle_length =
         (upper_st_point.s() - lower_st_point.s()) * 0.5;
     auto compare_point = (upper_st_point.s() + lower_st_point.s()) * 0.5;
@@ -237,20 +235,23 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         (front_edge_to_rear_axle_ - rear_edge_to_rear_axle_) * 0.5 + poly_end_s;
     auto half_ego_length =
         (front_edge_to_rear_axle_ + rear_edge_to_rear_axle_) * 0.5;
-    if(ego_center_point >= compare_point){
-      cost_ = std::exp((2 * (half_object_vehicle_length + half_ego_length) -
-          (ego_center_point - compare_point) * acc_speed_weight_)/3);
+    if (ego_center_point >= compare_point) {
+      cost_ =
+          std::exp((2 * (half_object_vehicle_length + half_ego_length) -
+                    (ego_center_point - compare_point) * acc_speed_weight_) /
+                   3);
+      git
+    } else {
+      cost_ =
+          std::exp((2 * (half_object_vehicle_length + half_ego_length) -
+                    (compare_point - ego_center_point) * dec_speed_weight_) /
+                   3);
     }
-    else{
-      cost_ = std::exp((2 * (half_object_vehicle_length + half_ego_length) -
-          (compare_point - ego_center_point) * dec_speed_weight_)/3);
-    }
-  }
-  else{
+  } else {
     match_s_cost_ = calculate_gap_distance_match_cost(
-        kMinSafeDistance, safe_border_distance_to_gap_front_obj, kMinSafeDistance,
-        safe_dis_penalty_factor_coef_, clip_dis_penalty_factor_coef_,
-        weight_match_s_);
+        kMinSafeDistance, safe_border_distance_to_gap_front_obj,
+        kMinSafeDistance, safe_dis_penalty_factor_coef_,
+        clip_dis_penalty_factor_coef_, weight_match_s_);
     match_v_cost_ = 0.0;
     match_gap_center_cost_ = 0.0;
     cost_ = match_s_cost_ + match_v_cost_ + match_gap_center_cost_;
@@ -281,23 +282,31 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
       poly_end_dis_to_virtual_stop_line / kStopLineBasicPenaltyDis;
   constexpr double eps_floor = 1e-15;
   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
-//   constexpr double eps_floor = 1e-15;
-//   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
-  if(is_merge_request){
+  //   constexpr double eps_floor = 1e-15;
+  //   distance_penalty_factor = std::max(distance_penalty_factor, eps_floor);
+  if (is_merge_request) {
     if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
       cost_ = 0.0;
     } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
-      cost_ =mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/150);
+      cost_ = mid_stop_dis_penalty_coef_ *
+              std::exp(mid_stop_dis_penalty_coef_ *
+                       (kStopLineBasicPenaltyDis -
+                        poly_end_dis_to_virtual_stop_line) /
+                       150);
     } else if (poly_end_dis_to_virtual_stop_line > 0) {
-      cost_ = mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/120);
+      cost_ = mid_stop_dis_penalty_coef_ *
+              std::exp(mid_stop_dis_penalty_coef_ *
+                       (kStopLineBasicPenaltyDis -
+                        poly_end_dis_to_virtual_stop_line) /
+                       120);
     } else {
-      cost_ =mid_stop_dis_penalty_coef_ * std::exp(mid_stop_dis_penalty_coef_*
-                                 (kStopLineBasicPenaltyDis-poly_end_dis_to_virtual_stop_line)/100);
+      cost_ = mid_stop_dis_penalty_coef_ *
+              std::exp(mid_stop_dis_penalty_coef_ *
+                       (kStopLineBasicPenaltyDis -
+                        poly_end_dis_to_virtual_stop_line) /
+                       100);
     }
-  }
-  else{
+  } else {
     if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
       cost_ = 0.0;
     } else if (poly_end_dis_to_virtual_stop_line > kStopLineNormalPenaltyDis) {
@@ -338,17 +347,20 @@ void SpeedVariableCost::GetCost(const double vel_integral) {
 void GapAvaliableCost::GetCost(const double future_gap_length,
                                const double gap_length) {
   double future_gap_cost =
-      weight_ * (future_gap_length > 2 * kBasicSafeDistance ? 0.0
-                 : future_gap_length > kBasicSafeDistance
-                     ? std::exp(1 - (future_gap_length - kBasicSafeDistance) /
-                                        kBasicSafeDistance)
-                     : std::exp(1));
+      weight_ *
+      (future_gap_length > 2 * kBasicSafeDistance
+           ? 0.0
+           : future_gap_length > kBasicSafeDistance
+                 ? std::exp(1 - (future_gap_length - kBasicSafeDistance) /
+                                    kBasicSafeDistance)
+                 : std::exp(1));
   double gap_cost =
-      weight_ * (gap_length > 2 * kBasicSafeDistance ? 0.0
-                 : gap_length > kBasicSafeDistance
-                     ? std::exp(1 - (gap_length - kBasicSafeDistance) /
-                                        kBasicSafeDistance)
-                     : std::exp(1));
+      weight_ * (gap_length > 2 * kBasicSafeDistance
+                     ? 0.0
+                     : gap_length > kBasicSafeDistance
+                           ? std::exp(1 - (gap_length - kBasicSafeDistance) /
+                                              kBasicSafeDistance)
+                           : std::exp(1));
   cost_ = std::fmax(future_gap_cost, gap_cost);
 }
 

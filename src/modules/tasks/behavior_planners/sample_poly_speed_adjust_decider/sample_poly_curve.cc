@@ -119,8 +119,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
     anchor_points_match_gap_cost_vec_[i].GetCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
-        safe_distance_to_gap_front_obj,
-        safe_distance_to_gap_back_obj, ego_v, enable_merge_decelaration);
+        safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
+        enable_merge_decelaration);
 
     if (i == anchor_points_match_gap_cost_vec_.size() - 1) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
@@ -132,7 +132,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, enable_merge_decelaration);
+  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,
+                          enable_merge_decelaration);
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_, leading_veh_s,
@@ -160,28 +161,34 @@ void SampleQuarticPolynomialCurve::CalcCost(
   stop_penalty_cost_.GetCost(arrived_v_);
 
   double speed_differ_gain = 1;
-  if(enable_merge_decelaration){
+  if (enable_merge_decelaration) {
     double ego_s = poly_.CalculatePoint(0);
     STPoint prediction_matched_upper_st_point;
     STPoint prediction_matched_lower_st_point;
     sample_space_base.GetBorderByAvailable(ego_s, 0,
                                            &prediction_matched_lower_st_point,
                                            &prediction_matched_upper_st_point);
-    if(prediction_matched_lower_st_point.agent_id() != kNoAgentId){
-      if(ego_s - prediction_matched_lower_st_point.s() < 20.0 &&
-        ego_v < prediction_matched_lower_st_point.velocity()*1.2){
-        speed_differ_gain = std::pow(ego_v - prediction_matched_lower_st_point.velocity(),2) + 3;
-      } else if(ego_s - prediction_matched_upper_st_point.s() > 20.0 &&
-                ego_v > prediction_matched_upper_st_point.velocity()*1.2 &&
-                prediction_matched_upper_st_point.agent_id() == kNoAgentId){
-        speed_differ_gain = 1/(std::pow(ego_v - prediction_matched_upper_st_point.velocity(),2) + 3);
+    if (prediction_matched_lower_st_point.agent_id() != kNoAgentId) {
+      if (ego_s - prediction_matched_lower_st_point.s() < 20.0 &&
+          ego_v < prediction_matched_lower_st_point.velocity() * 1.2) {
+        speed_differ_gain =
+            std::pow(ego_v - prediction_matched_lower_st_point.velocity(), 2) +
+            3;
+      } else if (ego_s - prediction_matched_upper_st_point.s() > 20.0 &&
+                 ego_v > prediction_matched_upper_st_point.velocity() * 1.2 &&
+                 prediction_matched_upper_st_point.agent_id() == kNoAgentId) {
+        speed_differ_gain =
+            1 /
+            (std::pow(ego_v - prediction_matched_upper_st_point.velocity(), 2) +
+             3);
       }
     }
   }
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  cost_sum_ += follow_vel_cost_.cost() + stop_line_cost_.cost() * speed_differ_gain +
+  cost_sum_ += follow_vel_cost_.cost() +
+               stop_line_cost_.cost() * speed_differ_gain +
                leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
                acc_limit_cost_.cost();
