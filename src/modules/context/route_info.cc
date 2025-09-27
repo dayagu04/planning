@@ -4031,6 +4031,10 @@ bool RouteInfo::CalculateLastFp(
       return false;
     }
 
+    if (temp_fp_vec.empty()){
+      return false;
+    }
+    
     *last_fp = temp_fp_vec.back();
     *last_fp_link = *fp_pre_link;
     return true;
