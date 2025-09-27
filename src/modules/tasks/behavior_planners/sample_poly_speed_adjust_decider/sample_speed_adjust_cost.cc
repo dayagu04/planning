@@ -240,7 +240,6 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
           std::exp((2 * (half_object_vehicle_length + half_ego_length) -
                     (ego_center_point - compare_point) * acc_speed_weight_) /
                    3);
-      git
     } else {
       cost_ =
           std::exp((2 * (half_object_vehicle_length + half_ego_length) -
