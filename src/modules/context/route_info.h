@@ -188,7 +188,7 @@ class RouteInfo {
     const iflymapdata::sdpro::LinkInfo_Link& split_segment,
       const ad_common::sdpromap::SDProMap& sdpro_map);
   bool CalculateMergeLaneInfo(std::vector<int>& merge_lane_sequence);
-  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, const uint64 fp_link_id,
+  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, iflymapdata::sdpro::LinkInfo_Link* last_fp_link, const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
 
   bool CalculateMergeFP(MergeType* merge_type,
@@ -282,6 +282,10 @@ class RouteInfo {
         vec.erase(it);
     }
   }
+
+  bool SortFPBaseProjection(
+      std::vector<iflymapdata::sdpro::FeaturePoint>& sorted_fp,
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
 
   // for HPP function
   void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);

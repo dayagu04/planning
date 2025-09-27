@@ -221,6 +221,11 @@ struct RouteInfoOutput {
   int lane_num_except_emergency = 0;
   int merge_seg_forward_lane_nums = 0;
   int merge_last_seg_forward_lane_nums = 0;
+  int left_lane_num = 0;
+  int right_lane_num = 0;
+  int emergency_lane_num = 0;
+  int minVal_seq = 0;
+  int maxVal_seq = 0;
   bool is_update_segment_success = false;
   bool is_on_ramp = false;
   bool is_in_sdmaproad = false;
@@ -333,6 +338,11 @@ struct RouteInfoOutput {
     // dis_to_merge_fp = NL_NMAX;
     merge_point_info.reset();
     lsl_length = 0.0;
+    left_lane_num = 0;
+    right_lane_num = 0;
+    emergency_lane_num = 0;
+    minVal_seq = 0;
+    maxVal_seq = 0;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;
