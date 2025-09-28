@@ -457,7 +457,7 @@ uint16 IhcCore::UpdateIhcFaultCode() {
   if ((degraded_driving_function_info_ptr->ihc.degraded == iflyauto::INHIBIT ||
        degraded_driving_function_info_ptr->ihc.degraded ==
            iflyauto::ERROR_DEGRADED)) {
-    // fault_code += uint16_bit[8];
+    fault_code += uint16_bit[8];
   } else {
     /*do nothing*/
   }

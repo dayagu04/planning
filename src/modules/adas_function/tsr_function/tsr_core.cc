@@ -135,7 +135,7 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
   if ((degraded_driving_function_info_ptr->tsr.degraded == iflyauto::INHIBIT ||
        degraded_driving_function_info_ptr->tsr.degraded ==
            iflyauto::ERROR_DEGRADED)) {
-    // fault_code += uint16_bit[6];
+    fault_code += uint16_bit[6];
   } else {
     /*do nothing*/
   }
