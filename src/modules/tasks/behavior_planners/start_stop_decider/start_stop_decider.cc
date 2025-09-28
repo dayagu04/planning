@@ -129,9 +129,9 @@ double StartStopDecider::CalculateStopDistance() {
     return base_min_follow_distance;
   }
 
-  double low_speed_min_follow_distance_gap = cipv_is_large_ ?
-      config_.lower_speed_large_vehicle_min_follow_distance_gap :
-      config_.lower_speed_min_follow_distance_gap;
+  double low_speed_min_follow_distance_gap =
+      cipv_is_large_ ? config_.lower_speed_large_vehicle_min_follow_distance_gap
+                     : config_.lower_speed_min_follow_distance_gap;
 
   double high_speed_min_follow_distance_gap =
       config_.high_speed_min_follow_distance_gap;
@@ -173,9 +173,12 @@ bool StartStopDecider::CanTransitionFromStopToStart() {
        stop_distance_ + distance_start_between_ego_and_cipv_threshold) &&
       cipv_moved_enough;
 
-  const bool cipv_is_static = std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
+  const bool cipv_is_static =
+      std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
 
-  double distance_to_go_threshold = cipv_is_large_ ? config_.distance_to_go_threshold_behind_of_large_vehicle : config_.distance_to_go_threshold;
+  double distance_to_go_threshold =
+      cipv_is_large_ ? config_.distance_to_go_threshold_behind_of_large_vehicle
+                     : config_.distance_to_go_threshold;
 
   const bool is_distance_enough = cipv_relative_s_ > distance_to_go_threshold;
 

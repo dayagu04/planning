@@ -15,14 +15,11 @@ class StartStopDeciderOutPut {
     return ego_start_stop_info_;
   }
 
-
   const bool& rads_scene_is_completed() const {
     return rads_scene_is_completed_;
   }
 
-  bool& mutable_rads_scene_is_completed() {
-    return rads_scene_is_completed_;
-  }
+  bool& mutable_rads_scene_is_completed() { return rads_scene_is_completed_; }
 
  private:
   common::StartStopInfo ego_start_stop_info_;
