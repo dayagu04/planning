@@ -19,7 +19,7 @@ message TargetMaker {
   optional OvertakeTarget overtake_target = 5;
   optional CautionTarget caution_target = 6;
   optional MaxDecelTarget max_decel_target = 7;
-  optional SafetyTarget safety_target = 8;
+  optional ComfortTarget comfort_target = 8;
   optional CrossVRUTarget cross_vru_target = 9;
 }
 
@@ -55,16 +55,18 @@ message MaxDecelTarget {
   repeated TargetPoint max_decel_s_ref = 1;
 }
 
-message SafetyTarget {
-  repeated TargetPoint safety_target_s_ref = 1;
-  repeated UpperBoundVelocity upper_bound_velocities = 2;
+message ComfortTarget {
+  repeated TargetPoint comfort_target_s_ref = 1;
+  repeated UpperBoundInfo upper_bound_infos = 2;
 }
 
-message UpperBoundVelocity {
-  optional double t = 1;
-  optional double v = 2;
-  optional double a = 3;
-  optional int32 agent_id = 4;
+message UpperBoundInfo {
+  optional double s = 1;
+  optional double t = 2;
+  optional double v = 3;
+  optional double a = 4;
+  optional int32 agent_id = 5;
+  optional int32 st_boundary_id = 6;
 }
 
 message WeightMakerReplayInfo {

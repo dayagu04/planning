@@ -37,7 +37,7 @@ class BoundMaker {
 
   double jerk_upper_bound(const double t) const;
 
-  double safety_bound(const double t) const;
+  double comfort_bound(const double t) const;
 
   struct UpperBoundInfo {
     double s = 0.0;
@@ -60,9 +60,7 @@ class BoundMaker {
 
   void MakeJerkBound(const TargetMaker& target_maker);
 
-  void MakeSafetyBound();
-
-  void MakeSafetyBoundOptimized();
+  void MakeComfortBound();
 
   double GetCalibratedDistance(const double v_lead, const double v_ego,
                                const std::string& lc_request);
@@ -107,7 +105,7 @@ class BoundMaker {
   std::vector<double> acc_lower_bound_;
   std::vector<double> jerk_upper_bound_;
   std::vector<double> jerk_lower_bound_;
-  std::vector<double> safety_upper_bound_;
+  std::vector<double> comfort_upper_bound_;
 
   double acc_upper_bound_with_speed_ = 0.0;
 

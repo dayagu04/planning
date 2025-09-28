@@ -1173,7 +1173,7 @@ def load_rdg_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_di
         lane_info['type'] = ['solid']
 
       if (lane.type == 2):
-        print('lane_info curb')
+        # print('lane_info curb')
         lane_info['type'] = ['curb']
       line_info_list.append(lane_info)
     else:

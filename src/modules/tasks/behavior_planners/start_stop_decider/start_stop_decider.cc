@@ -1,8 +1,11 @@
 #include "start_stop_decider.h"
 
+#include <cmath>
+
 #include "agent/agent.h"
 #include "basic_types.pb.h"
 #include "behavior_planners/start_stop_decider/start_stop_decider_output.h"
+#include "debug_info_log.h"
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "planning_context.h"
@@ -13,9 +16,9 @@ StartStopDecider::StartStopDecider(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session),
       config_(config_builder->cast<StartStopDeciderConfig>()),
-      start_stop_status_manager_(config_),
-      stop_speed_decision_info_() {
+      cipv_relative_s_prev_(0.0) {
   name_ = "StartStopDecider";
+  cipv_relative_s_ = 0.0;
 }
 
 bool StartStopDecider::Execute() {
@@ -23,101 +26,191 @@ bool StartStopDecider::Execute() {
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
-  Reset();
+  rads_scene_is_completed_ = false;
   UpdateInput();
-  start_stop_status_manager_.Update();
-  StopSpeedDecisionProcess();
-  // judge whether rads scene is completed or not
+  stop_distance_ = CalculateStopDistance();
+  UpdateStartStopStatus();
+
   const auto& agent_manager =
       session_->environmental_model().get_agent_manager();
-  const auto& cipv =
-      agent_manager->GetAgent(start_stop_status_manager_.cipv_id());
+  const auto& cipv = agent_manager->GetAgent(cipv_id_);
 
   const auto cipv_is_destination_target =
       cipv && cipv->type() == agent::AgentType::VIRTUAL &&
       cipv->agent_id() ==
           agent::AgentDefaultInfo::kRadsStopDestinationVirtualAgentId;
+
   if (session_->get_scene_type() == common::SceneType::RADS &&
-      start_stop_status_manager_.ego_start_stop_info().state() ==
-          common::StartStopInfo::STOP &&
+      ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
       cipv_is_destination_target &&
-      start_stop_status_manager_.cipv_relative_s() <
-          config_.stop_destination_to_ego_distance) {
+      cipv_relative_s_ <
+          config_.distance_start_between_ego_and_cipv_threshold) {
     rads_scene_is_completed_ = true;
   }
+
   SaveToSession();
   return true;
 }
 
 void StartStopDecider::UpdateInput() {
-  const bool current_traffic_light_can_pass =
-      session_->planning_context().traffic_light_decider_output().can_pass;
-  auto virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
-  const auto current_distance_ego_to_stopline =
-      virtual_lane_manager->GetEgoDistanceToStopline();
-  const auto current_intersection_state =
-      virtual_lane_manager->GetIntersectionState();
   const auto& environmental_model = session_->environmental_model();
   const auto& cipv_decider_output =
       session_->planning_context().cipv_decider_output();
 
+  if (ego_start_stop_info_.state() != common::StartStopInfo::STOP) {
+    cipv_relative_s_prev_ = cipv_relative_s_;
+  }
+
   // cipv info
-  start_stop_status_manager_.mutable_cipv_id() = cipv_decider_output.cipv_id();
-  start_stop_status_manager_.mutable_cipv_relative_s() =
-      cipv_decider_output.relative_s();
-  start_stop_status_manager_.mutable_cipv_vel_frenet() =
-      cipv_decider_output.v_frenet();
-  start_stop_status_manager_.mutable_cipv_is_large() =
-      cipv_decider_output.is_large();
-  // intersection info
-  start_stop_status_manager_.mutable_current_distance_ego_to_stopline() =
-      current_distance_ego_to_stopline;
-  start_stop_status_manager_.mutable_current_traffic_light_can_pass() =
-      current_traffic_light_can_pass;
-  start_stop_status_manager_.mutable_current_intersection_state_ego() =
-      current_intersection_state;
-  // dbw status info
-  start_stop_status_manager_.mutable_dbw_status() =
-      environmental_model.GetVehicleDbwStatus();
+  cipv_id_ = cipv_decider_output.cipv_id();
+  cipv_relative_s_ = cipv_decider_output.relative_s();
+  cipv_vel_frenet_ = cipv_decider_output.v_frenet();
+  cipv_is_large_ = cipv_decider_output.is_large();
+
   // ego state info
-  start_stop_status_manager_.mutable_planning_init_state_velocity() =
-      environmental_model.get_ego_state_manager()
-          ->planning_init_point()
-          .lon_init_state.v();
-  auto& ego_start_stop_info =
-      start_stop_status_manager_.mutable_ego_start_stop_info();
+  planning_init_state_vel_ = environmental_model.get_ego_state_manager()
+                                 ->planning_init_point()
+                                 .lon_init_state.v();
   const auto& cur_start_stop_result =
       session_->planning_context().start_stop_result();
-  ego_start_stop_info.CopyFrom(cur_start_stop_result);
+  ego_start_stop_info_.CopyFrom(cur_start_stop_result);
   // is ego reverse
-  start_stop_status_manager_.mutable_is_ego_reverse() =
-      session_->is_rads_scene();
+  is_ego_reverse_ = session_->is_rads_scene();
 }
 
-void StartStopDecider::StopSpeedDecisionProcess() {
-  if (start_stop_status_manager_.ego_start_stop_info().state() ==
-      common::StartStopInfo::STOP) {
-    stop_speed_decision_info_.mutable_is_valid() = true;
-    stop_speed_decision_info_.mutable_s() = 0.0;
-    stop_speed_decision_info_.mutable_v() = 0.0;
-    stop_speed_decision_info_.mutable_a() = 0.0;
-  } else {
-    stop_speed_decision_info_.mutable_is_valid() = false;
+void StartStopDecider::UpdateStartStopStatus() {
+  auto current_state = ego_start_stop_info_.state();
+
+  switch (current_state) {
+    case common::StartStopInfo::STOP:
+      if (CanTransitionFromStopToStart()) {
+        ego_start_stop_info_.set_state(common::StartStopInfo::START);
+      }
+      break;
+
+    case common::StartStopInfo::START:
+      if (CanTransitionFromStartToCruise()) {
+        ego_start_stop_info_.set_state(common::StartStopInfo::CRUISE);
+      } else if (CanTransitionToStop()) {
+        ego_start_stop_info_.set_state(common::StartStopInfo::STOP);
+        cipv_relative_s_prev_ = cipv_relative_s_;
+      }
+      break;
+
+    case common::StartStopInfo::CRUISE:
+      if (CanTransitionToStop()) {
+        ego_start_stop_info_.set_state(common::StartStopInfo::STOP);
+        cipv_relative_s_prev_ = cipv_relative_s_;
+      }
+      break;
+
+    default:
+      break;
   }
+
+  JSON_DEBUG_VALUE("start_stop_status",
+                   static_cast<int>(ego_start_stop_info_.state()))
+  JSON_DEBUG_VALUE("cipv_relative_s", cipv_relative_s_)
+  JSON_DEBUG_VALUE("cipv_relative_s_prev", cipv_relative_s_prev_)
+  JSON_DEBUG_VALUE("cipv_vel_frenet", cipv_vel_frenet_)
+  JSON_DEBUG_VALUE("cipv_stop_distance", stop_distance_)
 }
 
-void StartStopDecider::Reset() { rads_scene_is_completed_ = false; }
+double StartStopDecider::CalculateStopDistance() {
+  double base_min_follow_distance = 3.5;
+  if (cipv_id_ == -1) {
+    return base_min_follow_distance;
+  }
+
+  const auto agent_manager =
+      session_->environmental_model().get_agent_manager();
+  const auto* agent = agent_manager->GetAgent(cipv_id_);
+  if (!agent) {
+    return base_min_follow_distance;
+  }
+
+  double low_speed_min_follow_distance_gap =
+      cipv_is_large_ ? config_.lower_speed_large_vehicle_min_follow_distance_gap
+                     : config_.lower_speed_min_follow_distance_gap;
+
+  double high_speed_min_follow_distance_gap =
+      config_.high_speed_min_follow_distance_gap;
+
+  if (agent->type() == agent::AgentType::TRAFFIC_CONE) {
+    high_speed_min_follow_distance_gap = config_.cone_min_follow_distance_gap;
+  }
+
+  if (agent->is_tfl_virtual_obs()) {
+    high_speed_min_follow_distance_gap =
+        config_.traffic_light_min_follow_distance_gap;
+  }
+
+  const double low_speed_threshold = config_.low_speed_threshold_kmph / 3.6;
+  const double high_speed_threshold = config_.high_speed_threshold_kmph / 3.6;
+
+  double final_distance = planning_math::LerpWithLimit(
+      low_speed_min_follow_distance_gap, low_speed_threshold,
+      high_speed_min_follow_distance_gap, high_speed_threshold,
+      planning_init_state_vel_);
+
+  return final_distance;
+}
+
+bool StartStopDecider::CanTransitionFromStopToStart() {
+  const double cipv_movement_distance =
+      cipv_relative_s_ - cipv_relative_s_prev_;
+  const double distance_start_between_ego_and_cipv_threshold =
+      cipv_is_large_
+          ? config_.distance_start_between_ego_and_large_cipv_threshold
+          : config_.distance_start_between_ego_and_cipv_threshold;
+
+  const bool cipv_moved_enough =
+      cipv_movement_distance > distance_start_between_ego_and_cipv_threshold;
+
+  const bool cipv_start_condition =
+      cipv_vel_frenet_ > config_.cipv_vel_begin_start_threshold &&
+      (cipv_relative_s_ >
+       stop_distance_ + distance_start_between_ego_and_cipv_threshold) &&
+      cipv_moved_enough;
+
+  const bool cipv_is_static =
+      std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
+
+  double distance_to_go_threshold =
+      cipv_is_large_ ? config_.distance_to_go_threshold_behind_of_large_vehicle
+                     : config_.distance_to_go_threshold;
+
+  const bool is_distance_enough = cipv_relative_s_ > distance_to_go_threshold;
+
+  const bool cipv_distance_condition = cipv_is_static && is_distance_enough;
+
+  return cipv_start_condition || cipv_distance_condition;
+}
+
+bool StartStopDecider::CanTransitionFromStartToCruise() {
+  return planning_init_state_vel_ > config_.start_to_cruise_vel_threshold;
+}
+
+bool StartStopDecider::CanTransitionToStop() {
+  const bool ego_stop_condition =
+      planning_init_state_vel_ < config_.ego_vel_begin_stop_threshold;
+  const bool cipv_static_condition =
+      std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
+  const bool cipv_distance_condition =
+      cipv_relative_s_ <
+      stop_distance_ + config_.distance_stop_between_ego_and_cipv_threshold;
+
+  return ego_stop_condition && cipv_static_condition && cipv_distance_condition;
+}
 
 void StartStopDecider::SaveToSession() {
   auto& start_stop_decider_output =
       session_->mutable_planning_context()->mutable_start_stop_decider_output();
   start_stop_decider_output.mutable_ego_start_stop_info() =
-      start_stop_status_manager_.ego_start_stop_info();
-  start_stop_decider_output.mutable_stop_speed_decision_info() =
-      stop_speed_decision_info_;
+      ego_start_stop_info_;
   start_stop_decider_output.mutable_rads_scene_is_completed() =
       rads_scene_is_completed_;
+
   if (session_->get_scene_type() == common::SceneType::RADS) {
     auto& mutable_planning_completed =
         session_->mutable_planning_context()->mutable_planning_completed();
@@ -126,8 +219,7 @@ void StartStopDecider::SaveToSession() {
 
   auto& start_stop_state_result =
       session_->mutable_planning_context()->mutable_start_stop_result();
-  start_stop_state_result.CopyFrom(
-      start_stop_status_manager_.ego_start_stop_info());
+  start_stop_state_result.CopyFrom(ego_start_stop_info_);
 }
 
 }  // namespace planning

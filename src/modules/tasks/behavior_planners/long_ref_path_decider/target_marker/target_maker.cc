@@ -2,6 +2,7 @@
 
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "caution_target.h"
+#include "comfort_target.h"
 #include "common/math/common_utils.h"
 #include "cross_vru_target.h"
 #include "cruise_target.h"
@@ -10,7 +11,6 @@
 #include "neighbor_target.h"
 #include "overtake_target.h"
 #include "planning_context.h"
-#include "safety_target.h"
 
 namespace planning {
 
@@ -27,8 +27,8 @@ common::Status TargetMaker::Run() {
   // 1. cruise target @建伟
   CruiseTarget cruise_target(speed_planning_config_, session_);
 
-  // 2. safety target @华文
-  SafetyTarget safety_target(speed_planning_config_, session_);
+  // 2. comfort target @华文
+  ComfortTarget comfort_target(speed_planning_config_, session_);
 
   // 3. follow target @翼闻
   FollowTarget follow_target(speed_planning_config_, session_);
@@ -47,10 +47,6 @@ common::Status TargetMaker::Run() {
   CrossVRUTarget cross_vru_target(speed_planning_config_, session_);
 
   // 8. decider final target values
-  const auto& start_stop_decider_output =
-      session_->planning_context().start_stop_decider_output();
-  const auto& stop_speed_decision_info =
-      start_stop_decider_output.stop_speed_decision_info();
   for (size_t i = 0; i < plan_points_num_; ++i) {
     double relative_t = i * dt_;
     TargetValue cruise_target_value = cruise_target.target_value(relative_t);
@@ -60,7 +56,7 @@ common::Status TargetMaker::Run() {
     TargetValue neighbor_target_value =
         neighbor_target.target_value(relative_t);
     TargetValue caution_target_value = caution_target.target_value(relative_t);
-    TargetValue safety_target_value = safety_target.target_value(relative_t);
+    TargetValue comfort_target_value = comfort_target.target_value(relative_t);
     TargetValue cross_vru_target_value =
         cross_vru_target.target_value(relative_t);
 
@@ -102,11 +98,11 @@ common::Status TargetMaker::Run() {
           Target::TargetMin(caution_target_value, upper_target_value);
     }
 
-    // TBD: 华文合入safety_target
-    // 3.update upper value by safety target
-    if (safety_target_value.has_target()) {
+    // TBD: 华文合入comfort_target
+    // 3.update upper value by comfort target
+    if (comfort_target_value.has_target()) {
       upper_target_value =
-          Target::TargetMin(safety_target_value, upper_target_value);
+          Target::TargetMin(comfort_target_value, upper_target_value);
     }
 
     // TBD: 华文合入cross_vru_target
@@ -145,16 +141,17 @@ common::Status TargetMaker::Run() {
       }
     }
 
-    if (stop_speed_decision_info.is_valid()) {
-      upper_target_value.set_s_target_val(stop_speed_decision_info.s());
-      upper_target_value.set_v_target_val(stop_speed_decision_info.v());
-      lower_target_value.set_s_target_val(stop_speed_decision_info.s());
-      lower_target_value.set_v_target_val(stop_speed_decision_info.v());
+    const auto& start_stop_decider_output =
+        session_->planning_context().start_stop_decider_output();
+    const auto& ego_start_stop_info =
+        start_stop_decider_output.ego_start_stop_info();
+    if (ego_start_stop_info.state() == common::StartStopInfo::STOP) {
+      upper_target_value.set_s_target_val(0.0);
+      upper_target_value.set_v_target_val(0.0);
+      lower_target_value.set_s_target_val(0.0);
+      lower_target_value.set_v_target_val(0.0);
     }
 
-    // hack: 先用默认值
-    // auto final_lower_bound_value = lower_target_value;
-    // final_lower_bound_value = cruise_target_value;
     auto final_lower_bound_value =
         Target::TargetMax(lower_target_value, cruise_target_value);
 

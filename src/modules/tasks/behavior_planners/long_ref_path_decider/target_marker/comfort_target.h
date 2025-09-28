@@ -1,15 +1,15 @@
 #pragma once
 
 #include <bits/stdint-intn.h>
+
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "common/trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "lon_target_maker.pb.h"
-#include "session.h"
 #include "target.h"
 
 namespace planning {
 
-class SafetyTarget : public Target {
+class ComfortTarget : public Target {
   enum class FollowAgentSource { kLatObstacleDecision = 0, kCutinAgentIds = 1 };
   struct UpperBoundInfo {
     double s = 0.0;
@@ -26,8 +26,8 @@ class SafetyTarget : public Target {
   };
 
  public:
-  SafetyTarget(const SpeedPlannerConfig& config, framework::Session* session);
-  ~SafetyTarget() = default;
+  ComfortTarget(const SpeedPlannerConfig& config, framework::Session* session);
+  ~ComfortTarget() = default;
 
   struct IdmParameters {
     double v0 = 33.5;
@@ -58,25 +58,27 @@ class SafetyTarget : public Target {
     int32_t agent_id = 899999;
     double s = 210.0;
     double v = 33.5;
+    double a = 0.0;
+    int64_t st_boundary_id = 899999;
     FollowAgentSource source = FollowAgentSource::kLatObstacleDecision;
   };
 
  private:
   void GenerateUpperBoundInfo();
 
-  void GenerateSafetyTarget();
+  void GenerateComfortTarget();
 
-  double CalculateSafetyAcceleration(const double current_acc,
-                                     const double current_vel,
-                                     const double current_s,
-                                     const double front_vel,
-                                     const double front_s,
-                                     const double tau) const;
+  double CalculateComfortAcceleration(const double current_acc,
+                                      const double current_vel,
+                                      const double current_s,
+                                      const double front_vel,
+                                      const double front_s, const double tau) const;
 
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
 
-  void AddSafetyTargetDataToProto();
+
+  void AddComfortTargetDataToProto();
 
  private:
   bool is_lat_follow_ = false;
@@ -85,7 +87,7 @@ class SafetyTarget : public Target {
 
   std::vector<UpperBoundInfo> upper_bound_infos_;
 
-  common::SafetyTarget safety_target_pb_;
+  common::ComfortTarget comfort_target_pb_;
 
   std::vector<double> acc_values_;
   std::vector<int32_t> follow_agent_ids_;
