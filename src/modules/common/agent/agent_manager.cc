@@ -276,7 +276,10 @@ void AgentManager::RecalculateDecelTrajectories(
     return;
   }
 
-  if (!agent->is_vehicle_type()) {
+  if (!(agent->is_vehicle_type() || agent->type() == AgentType::MOTORCYCLE ||
+        agent->type() == AgentType::MOTORCYCLE_RIDING ||
+        agent->type() == AgentType::TRICYCLE ||
+        agent->type() == AgentType::TRICYCLE_RIDING)) {
     return;
   }
 
