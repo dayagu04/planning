@@ -17,15 +17,6 @@ struct SplitSegInfo {
   int split_next_seg_forward_lane_nums;
 };
 
-struct AvoideMergeDiverge {
-  EgoMLCRequestType mlc_request_type;
-  int avoide_lane;
-
-  void reset() {
-    mlc_request_type = None_MLC;
-    avoide_lane = NL_NMAX;
-  }
-};
 class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
@@ -63,7 +54,7 @@ class RouteInfo {
   const planning::framework::Session* session_ = nullptr;
   EgoPlanningConfig config_;
   MLCDeciderConfig mlc_decider_config_;
-  AvoideMergeDiverge mlc_request_info_;
+  std::map<int, EgoMLCRequestType> mlc_request_info_;
   RouteInfoOutput route_info_output_;
 
   // for NOA variables
@@ -210,7 +201,7 @@ class RouteInfo {
       const ad_common::sdpromap::SDProMap& sdpro_map) const;
   bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info);
   bool CalculateMergeRegionFeasibleLane(
-      NOASplitRegionInfo* split_region_info) const;
+      NOASplitRegionInfo* split_region_info);
   bool CalculateOtherMergeRoadFeasibleLane(
       NOASplitRegionInfo* split_region_info);
   bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type,
@@ -255,7 +246,7 @@ class RouteInfo {
                               const iflymapdata::sdpro::FeaturePoint cur_fp,
                               const double first_distance_to_split_point);
 
-  std::vector<int> CalculateMLCTaskNoLaneNum() const;
+  std::vector<int> CalculateMLCTaskNoLaneNum() ;
 
   bool CalculateDistanceToLastSplitPoint(double* dis, const double s) const;
 

@@ -91,7 +91,9 @@ enum EgoMLCRequestType {
   None_MLC = 0,
   AVOIDE_MERGE = 1,
   AVOIDE_DIVERGE = 2,
-  OTHER_TYPE_MLC = 3,
+  RAMP_TO_MAIN = 3,
+  MAIN_TO_RAMP = 4,
+  OTHER_TYPE_MLC = 5,
 };
 
 struct LaneChangeGapInfo {
