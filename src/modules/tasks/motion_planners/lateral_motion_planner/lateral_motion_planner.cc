@@ -444,9 +444,6 @@ bool LateralMotionPlanner::AssembleInput() {
   bool is_use_spatio_planner_result =
       general_lateral_decider_output.is_use_spatio_planner_result;
   planning_weight_ptr_->SetIsUseSpatioPlannerResult(is_use_spatio_planner_result);
-  // split
-  bool split_scene = IsLocatedInSplitArea();
-
   // intersection
   auto intersection_state = session_->environmental_model()
                                 .get_virtual_lane_manager()
@@ -467,7 +464,16 @@ bool LateralMotionPlanner::AssembleInput() {
   } else {
     planning_weight_ptr_->SetIsInIntersection(false);
   }
-
+  // split
+  bool split_scene = IsLocatedInSplitArea();
+  if (is_use_spatio_planner_result ||
+      (is_approach_intersection ||
+       is_in_intersection ||
+       is_off_intersection)) {
+    split_scene = false;
+    enter_split_time_ = 0.0;
+    is_divide_lane_into_two_ = false;
+  }
   // avoid
   bool avoid_back_status = false;
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
@@ -841,10 +847,15 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
       virtual_lane_manager->get_is_exist_intersection_split();
   // split
   bool is_arrived_split_point = false;
+  bool is_left_in_current = false;
+  bool is_right_in_current = false;
   if (is_exist_ramp_on_road || is_exist_split_on_ramp || is_exist_intersection_split) {
     const auto& current_lane = virtual_lane_manager->get_current_lane();
     if (current_lane != nullptr) {
-      double end_s = planning_input_.ref_vel() * 5.0;
+      const auto &planning_init_point =
+          current_lane->get_reference_path()->get_frenet_ego_state().planning_init_point();
+      double end_s =
+          planning_init_point.frenet_state.s + planning_input_.ref_vel() * 5.0;
       ReferencePathPoint end_point;
       if (current_lane->get_reference_path()
                       ->get_reference_point_by_lon(end_s, end_point)) {
@@ -855,8 +866,8 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
           const auto& left_frenet_coord =
               left_lane->get_reference_path()->get_frenet_coord();
           if (left_frenet_coord->XYToSL(end_cart, end_frenet)) {
-            if (end_frenet.y <= 0.1) {
-              return is_arrived_split_point;
+            if (std::fabs(end_frenet.y) <= 0.1) {
+              is_left_in_current = true;
             }
           }
         }
@@ -865,12 +876,15 @@ bool LateralMotionPlanner::IsLocatedInSplitArea() {
           const auto& right_frenet_coord =
               right_lane->get_reference_path()->get_frenet_coord();
           if (right_frenet_coord->XYToSL(end_cart, end_frenet)) {
-            if (end_frenet.y <= 0.1) {
-              return is_arrived_split_point;
+            if (std::fabs(end_frenet.y) <= 0.1) {
+              is_right_in_current = true;
             }
           }
         }
       }
+    }
+    if (is_left_in_current || is_right_in_current) {
+      return is_arrived_split_point;
     }
     is_arrived_split_point = true;
     enter_split_time_ = 1.0;

@@ -703,7 +703,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     y_s_spline = cart_ref_info.y_s_spline;
   }
   const double max_ref_length =
-      std::max(std::min(cart_ref_info.s_vec.back(),
+      std::max(std::min(s_vec.back(),
                 frenet_coord->Length()) - s_ref - 0.01, 0.0);
   double avg_cruise_v =
       std::max(std::min(s, max_ref_length) / span_t, 0.0);
