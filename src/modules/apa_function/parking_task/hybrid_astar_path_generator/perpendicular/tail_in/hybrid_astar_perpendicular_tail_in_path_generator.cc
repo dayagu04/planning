@@ -618,12 +618,12 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       find_success_curve_min_count = 0;
       find_success_curve_max_time = 68;
       config_.max_search_time_ms = 9800;
-    } else if (request_.replan_reason == ParkingScenario::DYNAMIC) {
+    } else if (request_.replan_reason == ReplanReason::DYNAMIC) {
       // dynamic plan
       find_success_curve_min_count = 18;
       find_success_curve_max_time = 68;
       config_.max_search_time_ms = 100;
-    } else if (request_.replan_reason == ParkingScenario::PATH_DANGEROUS) {
+    } else if (request_.replan_reason == ReplanReason::PATH_DANGEROUS) {
       find_success_curve_min_count = 68;
       find_success_curve_max_time = param.max_dynamic_plan_proj_dt * 1000 * 0.8;
       config_.max_search_time_ms = param.max_dynamic_plan_proj_dt * 1000;

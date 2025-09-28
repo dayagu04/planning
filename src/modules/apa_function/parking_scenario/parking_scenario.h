@@ -39,26 +39,6 @@ namespace apa_planner {
 // Task.
 class ParkingScenario {
  public:
-  enum ReplanReason {
-    NOT_REPLAN,
-    FIRST_PLAN,
-    SEG_COMPLETED_PATH,
-    SEG_COMPLETED_OBS,
-    STUCKED,
-    DYNAMIC,
-    SEG_COMPLETED_COL_DET,
-    FORCE_PLAN,
-    SEG_COMPLETED_SLOT_JUMP,
-    PATH_DANGEROUS,
-    SLOT_CRUISING,
-    DYNAMIC_GEAR_SWITCH,
-  };
-
-  enum class CarSlotRelationship : uint8_t {
-    TOUCHING,
-    MARGINAL,
-    IDEAL,
-  };
 
   struct CheckReplanParams {
     double replan_dist_path = apa_param.GetParam().max_replan_remain_dist;

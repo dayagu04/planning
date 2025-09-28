@@ -3488,8 +3488,7 @@ const bool PerpendicularTailInScenario::CheckPathDangerous() {
   return true;
 }
 
-const PerpendicularTailInScenario::CarSlotRelationship
-PerpendicularTailInScenario::CalCarSlotRelationship(
+const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   const ApaParameters& params = apa_param.GetParam();
   const CheckFinishParams& finish_params = params.check_finish_params;
