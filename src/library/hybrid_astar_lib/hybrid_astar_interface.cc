@@ -261,8 +261,8 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
 
   DebugAstarRequestString(request_);
 
-  PoseRegulateCandidate target_regulator_result;
-  target_regulator_result = target_pose_regulator.GetCandidatePose();
+  const TerminalCandidatePoint target_regulator_result =
+      target_pose_regulator.GetCandidatePose();
 
   // todo : head out no need target_pose_regulator;
   if (request_.direction_request == ParkingVehDirection::TAIL_IN ||
@@ -714,7 +714,7 @@ const bool HybridAStarInterface::IsEgoOverlapWithSlot() {
 }
 
 void HybridAStarInterface::PathSearchForScenarioRunning(
-    const TargetPoseRegulator& regulator, const float ego_obs_dist,
+    TargetPoseRegulator& regulator, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
   float lat_buffer_outside;
   float lat_buffer_inside;
@@ -722,9 +722,8 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
   float lon_buffer;
 
   // judge target regulator goal if collide
-  PoseRegulateCandidate target_regulator_result;
-  target_regulator_result =
-      regulator.GetCandidatePose(GenLatBufferForCandidatePose());
+  const TerminalCandidatePoint target_regulator_result =
+      regulator.GetCandidatePose(GenLatBufferForCandidatePose(), 0.08f);
   advised_lat_buffer_inside =
       GetLatBufferForInsideSlot(target_regulator_result.dist_to_obs,
                                 ego_obs_dist, is_ego_overlap_with_slot);
@@ -818,7 +817,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 }
 
 void HybridAStarInterface::PathSearchForScenarioTry(
-    const TargetPoseRegulator& regulator) {
+    TargetPoseRegulator& regulator) {
   float lat_buffer_outside;
   float advised_lat_buffer_inside;
   float lon_buffer;
@@ -839,8 +838,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   if (request_.direction_request_size > 1) {
     ParkingDirectionAttempt(advised_lat_buffer_inside);
   } else {
-    PoseRegulateCandidate target_regulator_result;
-    target_regulator_result = regulator.GetCandidatePose(0.15f);
+    const TerminalCandidatePoint target_regulator_result =
+        regulator.GetCandidatePose(0.15f);
     if (target_regulator_result.dist_to_obs < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = "
                 << target_regulator_result.dist_to_obs;
@@ -1050,9 +1049,9 @@ void HybridAStarInterface::ParkingDirectionAttempt(
                                   request_.direction_request_stack[i]);
     float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
-    PoseRegulateCandidate target_regulator_result;
-    target_regulator_result =
-        target_pose_regulator.GetCandidatePose(GenLatBufferForCandidatePose());
+    const TerminalCandidatePoint target_regulator_result =
+        target_pose_regulator.GetCandidatePose(GenLatBufferForCandidatePose(),
+                                               0.08f);
     if (target_regulator_result.dist_to_obs < advised_lat_buffer_inside) {
       ILOG_INFO << "dist_goal_collide = "
                 << target_regulator_result.dist_to_obs;
