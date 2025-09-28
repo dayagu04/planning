@@ -10,6 +10,7 @@
 #include "local_view.h"
 #include "map_data.pb.h"
 #include "planning_debug_info.pb.h"
+#include "ifly_phm_c.h"
 #include "planning_scheduler.h"
 
 namespace planning {
@@ -257,6 +258,12 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
     fm_info_writer_ = fm_info_writer;
   }
 
+  void RegWriter_IflytekPlanningPhmReport(
+      const std::function<void(const iflyauto::IflyPhmReport&)>& phm_report_writer)
+      override {
+    phm_report_writer_ = phm_report_writer;
+  }
+
  private:
   void ReportFmIfno(uint64 alarmId, uint64 alarmObj, bool fault_exist);
 
@@ -265,7 +272,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void UpdateApaResetFlag();
   void Log();
   void LogTopicLatency();
-
+  void SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint);
  private:
   std::mutex fusion_objects_msg_mutex_;
   std::mutex fusion_occupancy_objects_msg_mutex_;
@@ -384,6 +391,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   std::function<void(const iflyauto::StructContainer&)> planning_debug_writer_ =
       nullptr;
   std::function<void(const iflyauto::FmInfo&)> fm_info_writer_ = nullptr;
+  std::function<void(const iflyauto::IflyPhmReport&)> phm_report_writer_ = nullptr;
 
   std::shared_ptr<LocalView> local_view_ptr_;
 

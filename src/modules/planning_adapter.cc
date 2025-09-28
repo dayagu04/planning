@@ -96,8 +96,9 @@ void PlanningAdapter::ReportFmIfno(uint64 alarmId, uint64 alarmObj,
 bool PlanningAdapter::Proc() {
   ILOG_INFO << "PlanningAdapter::Proc()";
   start_time_ = IflyTime::Now_us();
-
-  // 1.1 receive prediction
+  
+  SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_start);
+  // 1.1 receive prediction 
   if (is_prediction_result_msg_updated_) {
     std::lock_guard<std::mutex> lock(prediction_result_msg_mutex_);
     local_view_ptr_->prediction_result = prediction_result_msg_;
@@ -376,7 +377,8 @@ bool PlanningAdapter::Proc() {
     iflyauto::strcpy_array(hmi_msg_meta.version, __version_str__);
     planning_hmi_info_writer_(planning_hmi_info);
   }
-
+  
+ 
   // Trigger: write fault info where error occured
   if (planning_scheduler_->FaultCode() >= 39000 &&
       planning_scheduler_->FaultCode() <= 39999) {
@@ -388,9 +390,12 @@ bool PlanningAdapter::Proc() {
     }
   }
 
+  SendHeartBeatToPhm(iflyauto::MainFlowDotpoint::main_flow_end);
+
   double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_PLANNING_TOTAL,
                                     planning_cost_time);
+                                
   return true;
 }
 
@@ -777,5 +782,17 @@ void PlanningAdapter::Log() {
   const auto frame_duration = (output_time_us_ - start_time_) * 1e-3;
   frame_info->set_frame_duration_ms(frame_duration);
   frame_info->set_planning_succ(run_success_);
+}
+
+
+void PlanningAdapter::SendHeartBeatToPhm(iflyauto::MainFlowDotpoint reportPoint) {
+  if (phm_report_writer_) {
+    auto ifly_phm_report = std::make_shared<iflyauto::IflyPhmReport>();
+    ifly_phm_report->app_name = iflyauto::AppNameEnum::asw_planning;
+    ifly_phm_report->check_point_id = 1020;
+    ifly_phm_report->report_point = reportPoint;
+    ifly_phm_report->report_time_stamp = IflyTime::Now_ms();
+    phm_report_writer_(*ifly_phm_report);
+  }
 }
 }  // namespace planning
