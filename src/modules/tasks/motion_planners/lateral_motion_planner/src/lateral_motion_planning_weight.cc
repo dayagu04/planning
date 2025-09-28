@@ -1530,12 +1530,12 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double risk_factor = 1.0;
   if (risk_level_ == planning::RiskLevel::LOW_RISK &&
-      emergency_level_ < P2) {
-    emergency_level_ = P2;
+      emergency_level_ < EmergencyLevel::P2) {
+    emergency_level_ = EmergencyLevel::P2;
     risk_factor = 1.5;
   } else if (risk_level_ == planning::RiskLevel::HIGH_RISK &&
-             emergency_level_ < P1) {
-    emergency_level_ = P1;
+             emergency_level_ < EmergencyLevel::P1) {
+    emergency_level_ = EmergencyLevel::P1;
     risk_factor = 2.0;
   }
   if (std::fabs(avoid_dist_) > 0.1 &&
