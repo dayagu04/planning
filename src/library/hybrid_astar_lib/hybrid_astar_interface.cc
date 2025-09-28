@@ -161,8 +161,9 @@ void HybridAStarInterface::UpdateOutput() {
   bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
 
   TargetPoseRegulator target_pose_regulator;
-  target_pose_regulator.Process(&edt_, &request_, ego_state_, goal_state_,
-                                vehicle_param_, request_.direction_request);
+  target_pose_regulator.Process(&edt_, &request_, ego_state_,
+                                request_.real_goal, vehicle_param_,
+                                request_.direction_request);
   float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
   if (request_.path_generate_method == AstarPathGenerateType::TRY_SEARCHING ||
@@ -240,43 +241,46 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
                               config_.node_step, &edt_, request_);
 
   TargetPoseRegulator target_pose_regulator;
-  target_pose_regulator.Process(&edt_, &request_, ego_state_, goal_state_,
-                                vehicle_param_, request_.direction_request);
+  target_pose_regulator.Process(&edt_, &request_, ego_state_,
+                                request_.real_goal, vehicle_param_,
+                                request_.direction_request);
   hybrid_astar_->SetRequest(request_);
 
   float lat_buffer = 0.1;
   float lon_buffer = 0.2;
+  float lat_buffer_inside_slot = 0.2;
   if (request_.space_type == ParkSpaceType::PARALLEL) {
     lat_buffer = 0.1;
     lon_buffer = 0.2;
-    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   } else {
     lat_buffer = 0.2;
     lon_buffer = 0.4;
-    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer, lon_buffer);
   }
-  hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
+
 
   DebugAstarRequestString(request_);
 
-  std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result = target_pose_regulator.GetCandidatePose();
+  bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
+  float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
+  const TerminalCandidatePoint target_pose =
+      target_pose_regulator.GetCandidatePose();
+  // judge target regulator goal if collide
+  lat_buffer_inside_slot = GetLatBufferForInsideSlot(
+      target_pose.dist_to_obs, ego_obs_dist, is_ego_overlap_with_slot);
 
-  // todo : head out no need target_pose_regulator;
-  if (request_.direction_request == ParkingVehDirection::TAIL_IN ||
-      request_.direction_request == ParkingVehDirection::HEAD_IN) {
-    if (target_regulator_result.second < lat_buffer) {
-      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second
-                << ", lat_buffer " << lat_buffer << ", best_candidate->pose "
-                << target_regulator_result.first.GetX() << ", "
-                << target_regulator_result.first.GetY();
-      ILOG_INFO << "target_regulator_goal_ will collide";
-      search_state_ = AstarSearchState::FAILURE;
-      return;
-    }
+  target_regulator_goal_ = target_pose.pose;
+  ILOG_INFO << "dist to obs = " << target_pose.dist_to_obs
+            << ", lat buffer inside = " << lat_buffer_inside_slot;
+
+  // If target slot is not wide enough, return.
+  if (target_pose.dist_to_obs < lat_buffer_inside_slot) {
+    search_state_ = AstarSearchState::FAILURE;
+    return;
   }
 
-  target_regulator_goal_ = target_regulator_result.first;
+  hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer_inside_slot,
+                                          lon_buffer);
+  hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
 
   dp_heuristic_generator_->GenerateDpMap(GetGoalPoint().x, GetGoalPoint().y,
                                          map_bounds_, &obs_);
@@ -712,7 +716,7 @@ const bool HybridAStarInterface::IsEgoOverlapWithSlot() {
 }
 
 void HybridAStarInterface::PathSearchForScenarioRunning(
-    const TargetPoseRegulator& regulator, const float ego_obs_dist,
+    TargetPoseRegulator& regulator, const float ego_obs_dist,
     const bool is_ego_overlap_with_slot) {
   float lat_buffer_outside;
   float lat_buffer_inside;
@@ -720,18 +724,17 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
   float lon_buffer;
 
   // judge target regulator goal if collide
-  std::pair<Pose2f, float> target_regulator_result;
-  target_regulator_result =
-      regulator.GetCandidatePose(GenLatBufferForCandidatePose());
+  const TerminalCandidatePoint target_pose =
+      regulator.GetCandidatePose(GenLatBufferForCandidatePose(), 0.08f);
   advised_lat_buffer_inside = GetLatBufferForInsideSlot(
-      target_regulator_result.second, ego_obs_dist, is_ego_overlap_with_slot);
+      target_pose.dist_to_obs, ego_obs_dist, is_ego_overlap_with_slot);
 
-  target_regulator_goal_ = target_regulator_result.first;
-  ILOG_INFO << "dist to obs = " << target_regulator_result.second
+  target_regulator_goal_ = target_pose.pose;
+  ILOG_INFO << "dist to obs = " << target_pose.dist_to_obs
             << ", lat buffer inside = " << advised_lat_buffer_inside;
 
   // If target slot is not wide enough, return.
-  if (target_regulator_result.second < advised_lat_buffer_inside) {
+  if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
     search_state_ = AstarSearchState::FAILURE;
     return;
   }
@@ -753,7 +756,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     // search single shot path.
-    if (target_regulator_result.second >
+    if (target_pose.dist_to_obs >
             config_.single_shot_path_width_thresh ||
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
@@ -815,7 +818,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 }
 
 void HybridAStarInterface::PathSearchForScenarioTry(
-    const TargetPoseRegulator& regulator) {
+    TargetPoseRegulator& regulator) {
   float lat_buffer_outside;
   float advised_lat_buffer_inside;
   float lon_buffer;
@@ -836,14 +839,14 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   if (request_.direction_request_size > 1) {
     ParkingDirectionAttempt(advised_lat_buffer_inside);
   } else {
-    std::pair<Pose2f, float> target_regulator_result;
-    target_regulator_result = regulator.GetCandidatePose(0.15f);
-    if (target_regulator_result.second < advised_lat_buffer_inside) {
-      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
-      ILOG_INFO << "target_regulator_goal_ will collide";
+    const TerminalCandidatePoint target_pose =
+        regulator.GetCandidatePose(0.15f);
+    if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
+      ILOG_INFO << "goal_point dist to obs = "
+                << target_pose.dist_to_obs;
     }
 
-    target_regulator_goal_ = target_regulator_result.first;
+    target_regulator_goal_ = target_pose.pose;
 
     hybrid_astar_->AstarSearch(GetStartPoint(), GetGoalPoint(), map_bounds_,
                                &traj_candidates_[0]);
@@ -1046,11 +1049,12 @@ void HybridAStarInterface::ParkingDirectionAttempt(
                                   request_.direction_request_stack[i]);
     float ego_obs_dist = target_pose_regulator.GetEgoObsDist();
 
-    std::pair<Pose2f, float> target_regulator_result;
-    target_regulator_result =
-        target_pose_regulator.GetCandidatePose(GenLatBufferForCandidatePose());
-    if (target_regulator_result.second < advised_lat_buffer_inside) {
-      ILOG_INFO << "dist_goal_collide = " << target_regulator_result.second;
+    const TerminalCandidatePoint target_regulator_result =
+        target_pose_regulator.GetCandidatePose(GenLatBufferForCandidatePose(),
+                                               0.08f);
+    if (target_regulator_result.dist_to_obs < advised_lat_buffer_inside) {
+      ILOG_INFO << "dist_goal_collide = "
+                << target_regulator_result.dist_to_obs;
       ILOG_INFO << "target_regulator_goal_ will collide";
       continue;
     }
@@ -1062,17 +1066,17 @@ void HybridAStarInterface::ParkingDirectionAttempt(
             ParkingVehDirection::HEAD_OUT_TO_LEFT ||
         request_.direction_request_stack[i] ==
             ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-      if (fabs(target_regulator_result.first.GetY()) < 1.0 &&
+      if (fabs(target_regulator_result.pose.y) < 1.0 &&
           request_.space_type == ParkSpaceType::VERTICAL) {
         ILOG_INFO << "target_regulator_goal_ = "
-                  << target_regulator_result.first.GetX() << ", "
-                  << target_regulator_result.first.GetY();
+                  << target_regulator_result.pose.x << ", "
+                  << target_regulator_result.pose.y;
         ILOG_INFO << "insufficient space on both sides";
         continue;
       }
     }
 
-    target_regulator_goal_ = target_regulator_result.first;
+    target_regulator_goal_ = target_regulator_result.pose;
 
     hybrid_astar_->AstarSearch(request_.start_pose, GetGoalPoint(), map_bounds_,
                                &traj_candidates_[0]);

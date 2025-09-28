@@ -129,10 +129,10 @@ class HybridAStarInterface {
   // 基于采样的揉库API, will be retired.
   void PathSamplingForScenarioRunning();
 
-  void PathSearchForScenarioTry(const TargetPoseRegulator& regulator);
+  void PathSearchForScenarioTry(TargetPoseRegulator& regulator);
 
   // 基于搜索的路径生成API
-  void PathSearchForScenarioRunning(const TargetPoseRegulator& regulator,
+  void PathSearchForScenarioRunning(TargetPoseRegulator& regulator,
                                     const float ego_obs_dist,
                                     const bool is_ego_overlap_with_slot);
 

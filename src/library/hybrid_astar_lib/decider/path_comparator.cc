@@ -50,7 +50,8 @@ bool PathComparator::Compare(const AstarRequest *request,
 
   request_ = request;
   // 换档次数一致，继续比较
-  if (request->space_type == ParkSpaceType::VERTICAL) {
+  if (request->space_type == ParkSpaceType::VERTICAL ||
+      request->space_type == ParkSpaceType::SLANTING) {
     switch (request->direction_request) {
       case ParkingVehDirection::TAIL_IN:
         if (CheckVerticalSlotTailIn(best_node, node_challenger)) {
