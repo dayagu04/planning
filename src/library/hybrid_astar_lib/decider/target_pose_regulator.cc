@@ -14,7 +14,7 @@
 
 namespace planning {
 
-#define DEBUG_DECIDER (0)
+#define DEBUG_DECIDER (1)
 
 const bool TerminalGuessPath::IsPathAllPointsSafe(const float dist) {
   for (int32_t i = 0; i < size; i++) {
@@ -115,7 +115,7 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
   y_check_bounday_.lower = y_lower;
   y_check_bounday_.step = 0.03f;
   y_check_bounday_.number =
-      std::ceil((y_upper - y_lower) / y_check_bounday_.step) * 2;
+      std::ceil((y_upper - y_lower) / y_check_bounday_.step);
   y_check_bounday_.number = std::max(1, y_check_bounday_.number);
 
   return;
@@ -131,7 +131,6 @@ void TargetPoseRegulator::UpdateReferenceLinePath(
   GenerateYboundary(request, veh_param);
 
   paths_.reserve(y_check_bounday_.number);
-  paths_.clear();
 
   // update center line dist
   float dist = 0.0f;
@@ -154,8 +153,7 @@ void TargetPoseRegulator::UpdateReferenceLinePath(
 
   // update ego dist
   tf.SetBasePose(request->start_pose);
-  edt->DistanceCheckForPoint(&dist, &tf, gear);
-  ego_dist_to_obs_ = dist;
+  edt->DistanceCheckForPoint(&ego_dist_to_obs_, &tf, gear);
 
   return;
 }
@@ -164,18 +162,21 @@ void TargetPoseRegulator::Process(
     EulerDistanceTransform *edt, const AstarRequest *request,
     const Pose2f &ego_pose, const Pose2f &target, const VehicleParam &veh_param,
     const ParkingVehDirection &direction_request) {
+  // init
   Clear();
   target_ = target;
   request_ = request;
   cross_the_slot_line_max_dist_ = 0.0;
-  max_lat_buffer_ = 0.3;
+  max_lat_buffer_ = 0.3f;
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
+
   UpdateReferenceLinePath(request, veh_param, direction_request, edt);
 
   if (IsSamplingBasedPlanning(request->path_generate_method)) {
     return;
   }
 
+  // park out
   if (request_->direction_request_size > 1) {
     // todo:
     // 仅垂直泊车预规划使用，尾泊出还需测试，后续与GenerateCandidatesForVerticalHeadOut(edt,
@@ -185,6 +186,7 @@ void TargetPoseRegulator::Process(
     return;
   }
 
+  // park out
   if (!IsParkingIn(request)) {
     GenerateCandidatesForVerticalHeadOut(edt, request, veh_param);
     return;
@@ -194,8 +196,9 @@ void TargetPoseRegulator::Process(
     return;
   }
 
+  // park in
   // todo: parallel slot.
-  GenerateCandidatesForVerticalSlot(edt, request, veh_param);
+  GenerateCandidates(edt, request, veh_param);
 
   return;
 }
@@ -215,9 +218,9 @@ const bool TargetPoseRegulator::IsParkingIn(const AstarRequest *request) {
   return false;
 }
 
-void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
-    EulerDistanceTransform *edt, const AstarRequest *request,
-    const VehicleParam &veh_param) {
+void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
+                                             const AstarRequest *request,
+                                             const VehicleParam &veh_param) {
   Pose2f global_pose;
   global_pose = target_;
 
@@ -252,10 +255,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalSlot(
       break;
     }
   }
-
-#if DEBUG_DECIDER
-  DebugString();
-#endif
 
   return;
 }
@@ -539,7 +538,7 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkOut(
 }
 
 void TargetPoseRegulator::DebugString() {
-  ILOG_INFO << "candidate size = " << candidate_info_.size();
+  ILOG_INFO << "candidate point size = " << candidate_info_.size();
 
   for (size_t i = 0; i < candidate_info_.size(); i++) {
     ILOG_INFO << "i = " << i
@@ -549,11 +548,15 @@ void TargetPoseRegulator::DebugString() {
     candidate_info_[i].pose.DebugString();
   }
 
-  ILOG_INFO << "path size = " << paths_.size();
   ILOG_INFO << "x bound, upper " << x_check_bounday_.upper << ", lower "
             << x_check_bounday_.lower << ", num " << x_check_bounday_.number;
   ILOG_INFO << "y bound, upper " << y_check_bounday_.upper << ", lower "
             << y_check_bounday_.lower << ", num " << y_check_bounday_.number;
+
+  ILOG_INFO << "path size = " << paths_.size();
+  for (size_t i = 0; i < paths_.size(); i++) {
+    DebugPath(paths_[i]);
+  }
 
   return;
 }
@@ -561,28 +564,35 @@ void TargetPoseRegulator::DebugString() {
 const void TargetPoseRegulator::GetSafeIntegralForPath(
     TerminalGuessPath &path, const float buffer,
     const float min_lateral_buffer) {
+  path.safe_width_integral = 0.0f;
+  path.min_dist_to_obs = 0.0f;
   if (path.size <= 0) {
-    path.safe_width_integral = 0.0;
     return;
   }
 
   float width = 0.0f;
   float integral = 0.0f;
   float min_width = 10.0f;
+  bool find_valid_point = false;
+
+  // if path point is not safe, break.
   for (int32_t i = path.size - 1; i >= 0; i--) {
     width = path.points[i].dist_to_obs;
     if (width < min_lateral_buffer) {
       break;
     }
 
-    // Normalize to [0, 0.15]
     min_width = std::min(min_width, width);
+    // Normalize to [0, buffer]
     width = std::min(buffer, width);
     integral += width * x_check_bounday_.step;
+    find_valid_point = true;
   }
 
-  path.safe_width_integral = integral;
-  path.min_dist_to_obs = min_width;
+  if (find_valid_point) {
+    path.safe_width_integral = integral;
+    path.min_dist_to_obs = min_width;
+  }
 
   return;
 }
@@ -597,28 +607,31 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
   float max_integral =
       lat_buffer * x_check_bounday_.step * x_check_bounday_.number;
 
-  TerminalGuessPath *best_candidate = &paths_[0];
+  TerminalGuessPath *best_path = &paths_[0];
   for (size_t i = 0; i < paths_.size(); i++) {
     GetSafeIntegralForPath(paths_[i], lat_buffer, min_lateral_buffer);
 
     if (paths_[i].safe_width_integral > max_integral - 0.02f) {
-      best_candidate = &paths_[i];
+      best_path = &paths_[i];
       break;
     }
 
     // get relative safe path, and path length is long.
-    if (paths_[i].safe_width_integral > best_candidate->safe_width_integral) {
-      best_candidate = &paths_[i];
+    if (paths_[i].safe_width_integral > best_path->safe_width_integral) {
+      best_path = &paths_[i];
     }
   }
 
   // for easy control, and easy planning, use a straight line to real end.
   TerminalCandidatePoint res;
-  res.pose = best_candidate->points[0];
+  res.pose = best_path->points[0];
   res.pose.x = std::max(res.pose.x, request_->goal.x);
   res.lat_offset = res.pose.y;
-  res.dist_to_obs = best_candidate->min_dist_to_obs;
+  res.dist_to_obs = best_path->min_dist_to_obs;
 
+#if DEBUG_DECIDER
+  DebugString();
+#endif
   return res;
 }
 
@@ -629,6 +642,18 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePose(
   }
 
   return GetCandidatePoseForParkOut(lat_buffer, min_lateral_buffer);
+}
+
+void TargetPoseRegulator::DebugPath(const TerminalGuessPath &path) const {
+  ILOG_INFO << "point size " << path.size << ", min dist "
+            << path.min_dist_to_obs << ", score " << path.safe_width_integral
+            << ",lat offset = " << path.points[0].y;
+
+  for (size_t i = 0; i < path.size; i++) {
+    path.points[i].DebugString();
+  }
+
+  return;
 }
 
 }  // namespace planning

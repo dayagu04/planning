@@ -87,9 +87,9 @@ class TargetPoseRegulator : public AstarDecider {
  private:
   const bool IsParkingIn(const AstarRequest *request);
 
-  void GenerateCandidatesForVerticalSlot(EulerDistanceTransform *edt,
-                                         const AstarRequest *request,
-                                         const VehicleParam &veh_param);
+  void GenerateCandidates(EulerDistanceTransform *edt,
+                          const AstarRequest *request,
+                          const VehicleParam &veh_param);
 
   void GenerateCandidatesForVerticalHeadOut(EulerDistanceTransform *edt,
                                             const AstarRequest *request,
@@ -134,6 +134,8 @@ class TargetPoseRegulator : public AstarDecider {
   const TerminalCandidatePoint GetCandidatePoseForParkIn(
       const float lat_buffer = 0.15f,
       const float min_lateral_buffer = 0.08f);
+
+  void DebugPath(const TerminalGuessPath &path) const;
 
  private:
   Pose2f target_;
