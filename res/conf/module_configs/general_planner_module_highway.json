@@ -230,7 +230,7 @@
     "soft_min_distance_road2center": -20,
     "hard_min_distance_road2center": -20,
     "hard_buffer2lane": -10,
-    "soft_buffer2lane": -10,
+    "soft_buffer2lane": 0.1,
     "care_dynamic_object_t_threshold": 3.5,
     "care_static_object_t_threshold": 4,
     "trust_prediction_t_threshold": 2.5,
