@@ -2171,10 +2171,72 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               .feasible_lane_sequence;
     }
   } else if (mlc_decider_route_info_.ego_status_on_route == NEARING_SPLIT) {
+    const auto& first_static_split_region_info = mlc_decider_route_info_.first_static_split_region_info;
     feasible_lane_sequence =
-        mlc_decider_route_info_.first_static_split_region_info
+        first_static_split_region_info
             .recommend_lane_num[0]
             .feasible_lane_sequence;
+
+    //feasible_lane_sequence里面包括左、右的
+    const auto& temp_split_infos = route_info_output_.split_region_info_list;
+    const uint64 static_split_link_id =
+        first_static_split_region_info.split_link_id;
+
+
+    //根据需要的变道次数和距离优化feasible lane
+    if (!temp_split_infos.empty() &&
+        static_split_link_id == temp_split_infos[0].split_link_id &&
+        !feasible_lane_sequence.empty()) {
+      const int total_lane_num =
+          first_static_split_region_info
+              .recommend_lane_num[0]
+              .total_lane_num;
+
+      const double ego_dis_to_split = temp_split_infos[0].distance_to_split_point;
+      const double v_limit =
+          session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+      const double kResponseOffset = 300.;
+
+      std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+      std::array<double, 3> fp{300.0, 600.0, 1000.0};
+      const double adaptor_interval = interp(v_limit, xp, fp);
+
+      std::vector <int> temp_feasible_lane_seq;
+
+      if (first_static_split_region_info.split_direction == SPLIT_RIGHT) {
+        for (int i = 1; i < feasible_lane_sequence[0]; i++) {
+          //因为split在右边，所以存在都是右边的车道，seq都比左边的大
+          const int lc_num = feasible_lane_sequence[0] - i;
+          const double lc_need_dis =
+              kResponseOffset + adaptor_interval * std::fabs(lc_num);
+          if (ego_dis_to_split > lc_need_dis) {
+            temp_feasible_lane_seq.emplace_back(i);
+          }
+        }
+
+        if (!temp_feasible_lane_seq.empty()) {
+          feasible_lane_sequence.insert(feasible_lane_sequence.begin(),
+                                        temp_feasible_lane_seq.begin(),
+                                        temp_feasible_lane_seq.end());
+        }
+      } else if (first_static_split_region_info.split_direction == SPLIT_LEFT) {
+        for (int i = total_lane_num; i > feasible_lane_sequence.back(); i--) {
+          const int lc_num = i - feasible_lane_sequence.back();
+          const double lc_need_dis =
+              kResponseOffset + adaptor_interval * std::fabs(lc_num);
+          if (ego_dis_to_split > lc_need_dis) {
+            temp_feasible_lane_seq.insert(temp_feasible_lane_seq.begin(), i);
+          }
+        }
+
+        if (!temp_feasible_lane_seq.empty()) {
+          feasible_lane_sequence.insert(feasible_lane_sequence.end(),
+                              temp_feasible_lane_seq.begin(),
+                              temp_feasible_lane_seq.end());
+        }
+      }
+    }
+
   } else if (mlc_decider_route_info_.ego_status_on_route == NEARING_MERGE) {
     feasible_lane_sequence =
         mlc_decider_route_info_.static_merge_region_info.recommend_lane_num[0]
