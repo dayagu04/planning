@@ -14,7 +14,7 @@
 
 namespace planning {
 
-#define DEBUG_DECIDER (1)
+#define DEBUG_DECIDER (0)
 
 const bool TerminalGuessPath::IsPathAllPointsSafe(const float dist) {
   for (int32_t i = 0; i < size; i++) {
@@ -115,7 +115,8 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
   y_check_bounday_.lower = y_lower;
   y_check_bounday_.step = 0.03f;
   y_check_bounday_.number =
-      std::ceil((y_upper - y_lower) / y_check_bounday_.step);
+      std::ceil(y_upper / y_check_bounday_.step) +
+      std::ceil(std::fabs(y_lower) / y_check_bounday_.step);
   y_check_bounday_.number = std::max(1, y_check_bounday_.number);
 
   return;
@@ -634,6 +635,10 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
 
 #if DEBUG_DECIDER
   DebugString();
+
+  ILOG_INFO << "lateral " << res.lat_offset << ", dist " << res.dist_to_obs
+            << ", lon x " << res.pose.x << ", init guess lon x "
+            << request_->goal.x;
 #endif
   return res;
 }
@@ -654,6 +659,7 @@ void TargetPoseRegulator::DebugPath(const TerminalGuessPath &path) const {
 
   for (size_t i = 0; i < path.size; i++) {
     path.points[i].DebugString();
+    ILOG_INFO << "dist = " << path.points[i].dist_to_obs;
   }
 
   return;
