@@ -1,7 +1,7 @@
 {
   "car_type": "chery_m32t",
   "mark_date": "20241114",
-  "lkas_version":"20250923",
+  "lkas_version":"20250928",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -129,7 +129,7 @@
   "ldp_roadedge_distance_limit": 3.0,
   "ldp_c0_right_offset": 0.0,
   "ldp_ttlc_right_hack": 1.1,
-  "ldp_center_line_offset": 0.8,
+  "ldp_center_line_offset": 0.6,
   "ldp_center_roadedge_offset": 0.7,
   "ldw_main_switch": false,
   "ldp_main_switch": false,
@@ -180,8 +180,8 @@
   "enable_accel_pedal_pos_rate" : 40.0,
   "enable_accel_pedal_pos_rate_dur" : 1.0,
   "disable_accel_pedal_pos_rate" : 70.0,
-  "kickdown_warning_time":4.0,
-  "kickdown_warning_distance_thr":0.7,
+  "kickdown_warning_time":3.0,
+  "kickdown_warning_distance_thr":0.4,
   "ihc_set_main_switch": false,
   "ihc_use_json_code": false,
   "ihc_high_beam_code": 0,
