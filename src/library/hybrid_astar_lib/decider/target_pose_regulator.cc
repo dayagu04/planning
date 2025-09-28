@@ -252,6 +252,7 @@ void TargetPoseRegulator::GenerateCandidates(EulerDistanceTransform *edt,
     global_pose.y = y_offset;
     dist = GetCandidatePathByXRange(global_pose, edt);
     if (dist > max_lat_buffer_) {
+      // ILOG_INFO << "i " << i << ", dist " << dist << ", offset " << y_offset;
       break;
     }
   }
@@ -603,7 +604,7 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
     return TerminalCandidatePoint(request_->goal, 0.0f, 0.0f);
   }
 
-  // use integral strategy to compare path
+  // use integral strategy to compare path, and get the lateral position.
   float max_integral =
       lat_buffer * x_check_bounday_.step * x_check_bounday_.number;
 
@@ -611,7 +612,7 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
   for (size_t i = 0; i < paths_.size(); i++) {
     GetSafeIntegralForPath(paths_[i], lat_buffer, min_lateral_buffer);
 
-    if (paths_[i].safe_width_integral > max_integral - 0.02f) {
+    if (paths_[i].safe_width_integral > max_integral - 0.001f) {
       best_path = &paths_[i];
       break;
     }
@@ -623,11 +624,13 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
   }
 
   // for easy control, and easy planning, use a straight line to real end.
+  // you have got lateral postion, then you need get lon position.
   TerminalCandidatePoint res;
   res.pose = best_path->points[0];
-  res.pose.x = std::max(res.pose.x, request_->goal.x);
   res.lat_offset = res.pose.y;
   res.dist_to_obs = best_path->min_dist_to_obs;
+  res.pose.x = GetLonPosition(best_path, request_->real_goal.x + 0.5f,
+                              request_->goal.x, lat_buffer);
 
 #if DEBUG_DECIDER
   DebugString();
@@ -654,6 +657,39 @@ void TargetPoseRegulator::DebugPath(const TerminalGuessPath &path) const {
   }
 
   return;
+}
+
+float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
+                                          const float lon_lower,
+                                          const float lon_upper,
+                                          const float lat_buffer) {
+  if (path->size <= 0) {
+    return lon_upper;
+  }
+
+  // search best lon position by obstacle distance.
+  float best_lon = lon_upper;
+  float max_dist = 0.0f;
+
+  for (int32_t i = path->size - 1; i < path->size; i--) {
+    if (path->points[i].x > lon_upper) {
+      continue;
+    }
+    if (path->points[i].x < lon_lower) {
+      continue;
+    }
+    if (path->points[i].dist_to_obs > lat_buffer - 0.001f) {
+      best_lon = path->points[i].x;
+      break;
+    }
+
+    if (path->points[i].dist_to_obs > max_dist) {
+      max_dist = path->points[i].dist_to_obs;
+      best_lon = path->points[i].x;
+    }
+  }
+
+  return best_lon;
 }
 
 }  // namespace planning

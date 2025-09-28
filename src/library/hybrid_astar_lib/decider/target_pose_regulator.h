@@ -137,9 +137,13 @@ class TargetPoseRegulator : public AstarDecider {
 
   void DebugPath(const TerminalGuessPath &path) const;
 
+  float GetLonPosition(const TerminalGuessPath *path, const float lon_lower,
+                       const float lon_upper, const float lat_buffer);
+
  private:
+  // real target, decided by limiter.
   Pose2f target_;
-  // used by park out
+  // used by park out, will be retired
   std::vector<TerminalCandidatePoint> candidate_info_;
   const AstarRequest *request_;
 
@@ -148,6 +152,8 @@ class TargetPoseRegulator : public AstarDecider {
   TerminalCheckBoundary y_check_bounday_;
 
   // max dist to cross over slot inside line
+  // positve: distance to inside line, not cross line.
+  // negative: distance to inside line, vehicle cross line.
   float cross_the_slot_line_max_dist_;
 
   float ego_dist_to_obs_;
