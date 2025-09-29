@@ -1150,6 +1150,10 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
   }
 
+  const double slot_side_y =
+      slot_side_sgn > 0.0
+          ? std::max(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y())
+          : std::min(t_lane_.obs_pt_outside.y(), t_lane_.obs_pt_inside.y());
   ILOG_INFO << "1 channel_y =" << t_lane_.channel_y;
   for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
     // add obs near channel
@@ -1166,8 +1170,13 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
         pnc::mathlib::IsInBound(obstacle_point_slot.y(),
                                 kMinChannelYMagIdentification * slot_side_sgn,
                                 channel_point_1.y());
+    // add channel obs beside slot
+    const bool channel_slot_condition =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), B.x(), E.x()) &&
+        pnc::mathlib::IsInBound(obstacle_point_slot.y(), slot_side_y,
+                                kMinChannelYMagIdentification * slot_side_sgn);
 
-    if (channel_y_condition || channel_x_condition) {
+    if (channel_y_condition || channel_x_condition || channel_slot_condition) {
       filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
     }
     if (channel_x_condition) {
