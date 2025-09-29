@@ -349,7 +349,6 @@ bool EnvironmentalModelManager::Run() {
   }
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "virtual_lane_manager update cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("virtual_lane_manager_update_cost", time_end - time_start);
 
   // update traffic lights info
@@ -366,7 +365,6 @@ bool EnvironmentalModelManager::Run() {
   }
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "obstacle_prediction update cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("obstacle_prediction_update_cost", time_end - time_start);
 
   if (session_->is_hpp_scene()) {
@@ -378,7 +376,6 @@ bool EnvironmentalModelManager::Run() {
     }
     time_end = IflyTime::Now_ms();
     ILOG_DEBUG << "parking_slot_manager update cost:" << time_end - time_start;
-    ;
     JSON_DEBUG_VALUE("parking_slot_manager_cost", time_end - time_start);
   }
 
@@ -386,14 +383,12 @@ bool EnvironmentalModelManager::Run() {
   obstacle_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "obstacle_manager cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("obstacle_manager_cost", time_end - time_start);
 
   time_start = IflyTime::Now_ms();
   agent_manager_ptr_->Update(current_time_s);
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "agent manager cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
 
   // Step 6) update reference path
@@ -404,7 +399,6 @@ bool EnvironmentalModelManager::Run() {
   }
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "reference_path_manager update cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("reference_path_manager_update_cost", time_end - time_start);
 
   if (!session_->is_hpp_scene()) {
@@ -412,7 +406,6 @@ bool EnvironmentalModelManager::Run() {
     lateral_obstacle_ptr_->update();
     time_end = IflyTime::Now_ms();
     ILOG_INFO << "lateral_obstacle update cost:" << time_end - time_start;
-    ;
     JSON_DEBUG_VALUE("lateral_obstacle_update_cost", time_end - time_start);
 
     lane_tracks_mgr_ptr_->update_lane_tracks();
@@ -421,7 +414,6 @@ bool EnvironmentalModelManager::Run() {
     agent_node_mgr_ptr_->init();
     time_end = IflyTime::Now_ms();
     ILOG_INFO << "agent_node_manager init cost:" << time_end - time_start;
-    ;
     JSON_DEBUG_VALUE("agent_node_manager_init_cost", time_end - time_start);
     // std::cout<< "agent_node_mgr time is : " << time_end - time_start
     // <<std::endl;
@@ -435,20 +427,17 @@ bool EnvironmentalModelManager::Run() {
   time_end = IflyTime::Now_ms();
   // dynamic_world_->DebugEgoNearByAgentNodesTrajectory();
   ILOG_INFO << "dynamic world update cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("dynamic_world_cost", time_end - time_start)
 
   time_start = IflyTime::Now_ms();
   edt_manager_ptr_->update();
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "edt_manager cost:" << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("edt_manager_cost", time_end - time_start);
 
   auto end_time = IflyTime::Now_ms();
   ILOG_INFO << "EnvironmentalModelManager::Run cost time"
             << time_end - time_start;
-  ;
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
   // std::string status_msg;
   // if (!InputReady(current_time, status_msg)) {
@@ -606,6 +595,8 @@ void EnvironmentalModelManager::vehicle_status_adaptor(
   vehicle_status.mutable_time_headway_scale_up_request()
       ->set_has_scale_up_request(
           function_state_machine_info.pilot_req.has_obstacle_ahead);
+  vehicle_status.mutable_stand_wait_request()->set_has_stand_wait_request(
+      function_state_machine_info.pilot_req.stand_wait);
 
   if (vehicle_service_output_info.yaw_rate_available) {
     vehicle_status.mutable_angular_velocity()->set_available(true);
