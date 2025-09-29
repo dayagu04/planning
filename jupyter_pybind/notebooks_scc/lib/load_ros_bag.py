@@ -664,7 +664,7 @@ class LoadRosbag:
                          "cipv_vel_frenet","cipv_vel_fusion",'cipv_id_hmi',"traffic_light_can_pass","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id","lane_change_status","ignore_gap_rear_agent","rear_agent_ttc_to_ego",
                          "lon_decision_to_invade",'invade_neighbor_front_agent_id','ego_ttc_to_front_invade_agent',"lane_borrow_agent_id", "lane_borrow_agent_v_limit",'coarse_planning_info_ref_line_s',"coarse_planning_info_ref_pnts_size","raw_virtual_lane_s","raw_virtual_lane_pnts_size",
                          "ramp_pass_sts","first_split_direction", "first_merge_direction","stop_destination_virtual_agent_pos_x","stop_destination_virtual_agent_pos_y","stop_destination_virtual_agent_theta","stop_destination_virtual_agent_id",
-                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length", "gear_command", "THW", "can_left_borrow",
+                          "stop_destination_virtual_agent_width", "stop_destination_virtual_agent_length", "gear_command", "THW", "can_left_borrow","stand_wait",
                           "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
                           "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
                           "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",

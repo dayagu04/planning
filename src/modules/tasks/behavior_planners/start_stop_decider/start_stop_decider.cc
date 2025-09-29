@@ -76,6 +76,9 @@ void StartStopDecider::UpdateInput() {
   ego_start_stop_info_.CopyFrom(cur_start_stop_result);
   // is ego reverse
   is_ego_reverse_ = session_->is_rads_scene();
+
+  stand_wait_ =
+      environmental_model.get_ego_state_manager()->has_stand_wait_request();
 }
 
 void StartStopDecider::UpdateStartStopStatus() {
@@ -114,6 +117,7 @@ void StartStopDecider::UpdateStartStopStatus() {
   JSON_DEBUG_VALUE("cipv_relative_s_prev", cipv_relative_s_prev_)
   JSON_DEBUG_VALUE("cipv_vel_frenet", cipv_vel_frenet_)
   JSON_DEBUG_VALUE("cipv_stop_distance", stop_distance_)
+  JSON_DEBUG_VALUE("stand_wait", stand_wait_)
 }
 
 double StartStopDecider::CalculateStopDistance() {
@@ -184,7 +188,7 @@ bool StartStopDecider::CanTransitionFromStopToStart() {
 
   const bool cipv_distance_condition = cipv_is_static && is_distance_enough;
 
-  return cipv_start_condition || cipv_distance_condition;
+  return (cipv_start_condition || cipv_distance_condition) && !stand_wait_;
 }
 
 bool StartStopDecider::CanTransitionFromStartToCruise() {

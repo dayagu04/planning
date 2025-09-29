@@ -245,7 +245,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ['start_stop_status', 'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet", "comfort_follow_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+  st_search_value_list = ['start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet", "comfort_follow_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance",
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -483,7 +483,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     a_upper_bound_vec.append(item.a)
     s_upper_bound_vec.append(item.s)
     agent_id_upper_bound_vec.append(item.agent_id)
-  
+
   lon_plan_data['data_target_s_comfort'].data.update({
     't_comfort_target': t_comfort_target_vec,
     'v_comfort_target': v_comfort_target_vec,

@@ -44,6 +44,9 @@ class StartStopDecider : public Task {
   // rads scene info
   bool rads_scene_is_completed_ = false;
   bool is_ego_reverse_ = false;
+
+  // fsm request info
+  bool stand_wait_ = false;
 };
 
 }  // namespace planning
