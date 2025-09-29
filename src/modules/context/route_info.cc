@@ -2261,6 +2261,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           }
         }
       }
+      for (int element : merge_lane) {
+        mlc_request_info_[element] = RAMP_TO_MAIN;
+      }
     }
 
   } else if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
@@ -2295,6 +2298,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           feasible_lane_sequence.erase(it);
           is_exist_merge_fp = true;
         }
+        mlc_request_info_[element] = RAMP_TO_MAIN;
       }
     }
   }
