@@ -58,6 +58,8 @@ struct LaneChangeDeciderOutput {
   double lc_hold_state_lat_offset = 0;
   bool is_high_priority_back = false;
   bool is_dash_not_enough_for_lc = false;
+  // idm guess
+  TrajectoryPoints ego_trajs_future;
 };
 
 }  // namespace planning

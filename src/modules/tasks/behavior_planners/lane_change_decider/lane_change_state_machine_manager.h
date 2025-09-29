@@ -227,6 +227,7 @@ class LaneChangeStateMachineManager {
                     const LaneChangePathGenerateManager::LCPathResult& lc_path_result,
                     const std::shared_ptr<ReferencePath> ref_path);
   void CheckTargetFrontNode(int64_t target_lane_front_node_id);
+  void  CheckTargetRearNode(int64_t target_lane_rear_node_id);
   FrenetObstacleBoundary  GetSLboundaryFromAgent(
     const std::shared_ptr<ReferencePath>ref_path, const planning_math::Box2d& obs_box);
   bool PassInLane(double lane_width,
@@ -240,6 +241,19 @@ class LaneChangeStateMachineManager {
                         std::pair<double, double> l2, double v2,
                         double max_time = 4.0, double dt = 0.5);
   void CheckOtherAgents(LaneChangeStageInfo *const lc_state_info);
+  bool GetDecelerationTraj(double a0,
+    const TrajectoryPoints &agent_traj,
+    TrajectoryPoints &agent_deceleration_traj,
+    const double deceleration);
+  bool IfFrenetCollision2D(
+    std::pair<double,double> s1, double vs1,
+    std::pair<double,double> s2, double vs2,
+    std::pair<double,double> l1, double vl1,
+    std::pair<double,double> l2, double vl2,
+    double max_time, double dt);
+  void AddRearAgentMerging();
+  void CheckMergingRearAgent(LaneChangeStageInfo *const lc_state_info);
+  bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
  private:
 //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
@@ -278,6 +292,9 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
+  int last_target_rear_agent_id_  = -1;
+  int last_merging_rear_agent_id_  = -1;
+  int merging_rear_agent_id_  = -1;
   bool is_large_car_in_side_ = false;
   bool is_ego_on_leftmost_lane_ = false;
   bool is_ego_on_rightmost_lane_ = false;

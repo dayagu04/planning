@@ -60,6 +60,7 @@ class DynamicAgentNode {
   double node_theta() const;
   double node_speed() const;
   double node_accel() const;
+  double node_accel_fusion() const;
   double node_s() const;
   std::pair<double, double> node_l_min_max() const;
   double node_t() const;

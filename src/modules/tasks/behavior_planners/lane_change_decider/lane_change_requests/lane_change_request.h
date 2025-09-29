@@ -56,6 +56,13 @@ class LaneChangeRequest {
 
   double CalculatePressLineRatio(const int origin_lane_id,
                                  const RequestType& lc_request) const;
+  double CalculatePressLineRatioByOrigin(const int origin_lane_id,
+                                 const RequestType& lc_request) const;
+  double CalculatePressLineRatioByTarget(int origin_lane_id,
+                                const RequestType& lc_request) const;
+  double CalculatePressLineRatioByTwoLanes(const int origin_lane_id,
+                                 const int target_lane_id,
+                                 const RequestType& lc_request) const;
   double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
   bool EgoInIntersection();
 

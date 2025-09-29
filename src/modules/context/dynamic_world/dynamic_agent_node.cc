@@ -345,6 +345,12 @@ double DynamicAgentNode::node_accel() const {
   }
   return agent_->accel();
 }
+double DynamicAgentNode::node_accel_fusion() const {
+  if (agent_ == nullptr) {
+    return 0.0;
+  }
+  return agent_->accel_fusion();
+}
 
 double DynamicAgentNode::node_s() const { return node_s_; }
 std::pair<double, double> DynamicAgentNode::node_l_min_max() const {

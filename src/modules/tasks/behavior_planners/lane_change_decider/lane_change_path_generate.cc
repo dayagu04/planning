@@ -216,9 +216,16 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(const double lat
   front_node_future_trajectory_.clear();
   bool is_exist_front_agent = front_agent_node != nullptr;
   if(is_exist_front_agent){
+    const auto& front_agent_trajs = front_agent_node->node_trajectories_used_by_st_graph();
+    if(front_agent_trajs.empty()){
+      return false;
+    }
     const auto &front_agent_prediction_trajectory =
       front_agent_node->node_trajectories_used_by_st_graph()[0];
     const auto& ref_frenet_coord = ref_path_->get_frenet_coord();
+    if(front_agent_prediction_trajectory.empty()){
+      return false;
+    }
     if (!ref_frenet_coord) {
       return false;
     }
@@ -230,11 +237,17 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(const double lat
       point.y = agent_point.y();
       point.heading_angle = agent_point.theta();
       point.v = agent_point.vel();
-      Point2D cart_point(point.x, point.y);
-      Point2D frenet_point;
-      if (!ref_frenet_coord->XYToSL(cart_point, frenet_point)) {
-        continue;
+      // Point2D cart_point(point.x, point.y);
+      // Point2D frenet_point;
+      // if (!ref_frenet_coord->XYToSL(cart_point, frenet_point)) {
+      //   continue;
+      // }
+      double s = 0.0;
+      double l = 0.0;
+      if (!ref_frenet_coord->XYToSL(point.x, point.y, &s, &l)) {
+          continue;//更换xytosl
       }
+      Point2D frenet_point(s, l);
       point.s = frenet_point.x - front_agent_node->node_length() * 0.5; // back edge
       front_node_future_trajectory_.push_back(point);
     }
@@ -359,7 +372,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(const double lat
     // lon simulation
     double desire_acc;
     idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state, &desire_acc);
-    desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 1.5);
+    desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
     temp_state.v = idm_model_state.vel + desire_acc * dt;
 
     //update ego next state using vehicle simulation model
@@ -384,11 +397,17 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(const double lat
     lc_path_result_.t.push_back(dt * index);
     lc_path_result_.v.push_back(temp_state.v);
 
-    Point2D cart_new_xy(new_state.x_, new_state.y_);
-    Point2D sl_point;
-    if (!ref_frenet_coor->XYToSL(cart_new_xy, sl_point)) {
-      return false;
+    // Point2D cart_new_xy(new_state.x_, new_state.y_);
+    // Point2D sl_point;
+    // if (!ref_frenet_coor->XYToSL(cart_new_xy, sl_point)) {
+    //   return false;
+    // }
+    double s = 0.0;
+    double l = 0.0;
+    if (!ref_frenet_coor->XYToSL(new_state.x_, new_state.y_, &s, &l)) {
+        return false;//更换xytosl
     }
+    Point2D sl_point(s, l);
     TrajectoryPoint ego_traj_point;
     ego_traj_point.s = sl_point.x;
     ego_traj_point.l = sl_point.y;
@@ -498,10 +517,15 @@ LaneChangePathGenerateManager::State_Sim LaneChangePathGenerateManager::UpdateDy
 bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
     AgentPredictionTrajectoryPoints* agent_prediction_traj_points,
     const planning_data::DynamicAgentNode* front_agent) {
-
+  const auto front_agent_trajs = front_agent->node_trajectories_used_by_st_graph();
+  if(front_agent_trajs.empty()){
+    return false;
+  }
   const auto &front_agent_prediction_trajectory =
       front_agent->node_trajectories_used_by_st_graph()[0];
-
+  if(front_agent_prediction_trajectory.empty()){
+      return false;
+  }
   const auto& ref_frenet_coord = ref_path_->get_frenet_coord();
   if (!ref_frenet_coord) {
     return false;
@@ -511,12 +535,17 @@ bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   for (const auto agent_point: front_agent_prediction_trajectory) {
-    Point2D cart_point(agent_point.x(), agent_point.y());
-    Point2D frenet_point;
-    if (!ref_frenet_coord->XYToSL(cart_point, frenet_point)) {
-      break;
+    // Point2D cart_point(agent_point.x(), agent_point.y());
+    // Point2D frenet_point;
+    // if (!ref_frenet_coord->XYToSL(cart_point, frenet_point)) {
+    //   break;
+    // }
+    double s = 0.0;
+    double l = 0.0;
+    if (!ref_frenet_coord->XYToSL(agent_point.x(), agent_point.y(), &s, &l)) {
+        continue;//更换 xytosl
     }
-
+    Point2D frenet_point(s, l);
     double s_front_agent =
         frenet_point.x - ref_path_->get_frenet_ego_state().s() -
         front_agent->node_length() / 2 - vehicle_param.front_edge_to_rear_axle;

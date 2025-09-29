@@ -22,7 +22,7 @@ class BasicIntelligentDriverModel {
     double kVehicleLength = 5.0;                   // l_alpha-1
     double kMinimumSpacing = 2.0;                  // s0
     double kDesiredHeadwayTime = 1.0;              // T
-    double kAcceleration = 2.0;                    // a
+    double kAcceleration = 0.7;                    // a
     double kComfortableBrakingDeceleration = 0.8;  // b
     double kHardBrakingDeceleration = 1.0;
     int kExponent = 4;  // delta

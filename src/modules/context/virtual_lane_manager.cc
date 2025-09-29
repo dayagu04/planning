@@ -1897,9 +1897,17 @@ std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
     Point2D frenet_point;
     double point_s = 0.0;
     double point_l = 0.0;
-    if (!frenet_coord->XYToSL(point, frenet_point)) {
+    double cart_x = point.x;
+    double cart_y = point.y;
+    double frenet_s = 0;
+    double frenet_l = 0;
+    if (!frenet_coord->XYToSL(cart_x, cart_y, &frenet_s, &frenet_l)) {
       continue;
+    // if (!frenet_coord->XYToSL(point, frenet_point)) {
+    //   continue;
     } else {
+      frenet_point.x = frenet_s;
+      frenet_point.y = frenet_l;
       point_l = fabs(frenet_point.y);
     }
     if (point_l < default_lateral_offset) {
