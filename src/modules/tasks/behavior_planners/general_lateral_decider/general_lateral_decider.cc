@@ -1628,13 +1628,21 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_side_obstacle = false;
   const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   const bool is_find_lat_obs_position_iter = lat_obs_position_iter != lat_obstacle_position.end();
+  
+  BoundType bound_type = BoundType::AGENT;
+  if (is_find_lat_obs_position_iter &&
+      lat_obs_position_iter->second.side_car &&
+      lat_obstacle_decision.at(obstacle->id()) ==
+      LatObstacleDecisionType::IGNORE) {
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    bound_type = BoundType::ADJACENT_AGENT;
+  }
 
   if (is_find_lat_obs_position_iter) {
     is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
                        (!lat_obs_position_iter->second.front_car);
   }
 
-  BoundType bound_type = BoundType::AGENT;
   // judge maintain_avoid_direction
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.maintain_avoid) {
