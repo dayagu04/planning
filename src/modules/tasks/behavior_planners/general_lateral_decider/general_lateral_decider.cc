@@ -2057,11 +2057,12 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     // 对每个边界进行滞回处理
     WeightedBounds smoothed_bounds;
     smoothed_bounds.reserve(current_bounds.size());
-    bool is_smooth = false;
     for (const auto& current_bound : current_bounds) {
+      WeightedBound smoothed_bound = current_bound;
       if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
           current_bound.bound_info.type == BoundType :: EGO_POSITION ||
           current_bound.bound_info.type == BoundType :: LANE) {
+        smoothed_bounds.push_back(smoothed_bound);
         continue;
       }
       // 寻找上一帧中对应的边界（基于bound_info的id和type）
@@ -2071,11 +2072,11 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
                    last_bound.bound_info.type == current_bound.bound_info.type;
           });
 
-      WeightedBound smoothed_bound = current_bound;
       if (last_bound_it != last_bounds.end()) {
         if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
             last_bound_it->bound_info.type == BoundType :: EGO_POSITION ||
             last_bound_it->bound_info.type == BoundType :: LANE) {
+          smoothed_bounds.push_back(smoothed_bound);
           continue;
         }
         // 当前后帧障碍物避让方向相反时，清空历史避让值和方向，采用当前帧的避让
@@ -2121,13 +2122,10 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
             }
           }
         }
-        smoothed_bounds.push_back(smoothed_bound);
-        is_smooth = true;
       }
+      smoothed_bounds.push_back(smoothed_bound);
     }
-    if (is_smooth) {
-      first_soft_bounds_[i] = std::move(smoothed_bounds);
-    }
+    first_soft_bounds_[i] = std::move(smoothed_bounds);
   }
 
   // ROAD_BORDER、LANE、EGO_POSITION默认没有双层bound
@@ -3786,7 +3784,7 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     bool is_avoid_side_ignore_obj, bool is_high_dangerous) {
   double l_offset_limit = 10.0;
   if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
-    l_offset_limit = config_.first_soft_min_distance2center;
+    l_offset_limit = config_.first_soft_min_distance2center + 1;
   }
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
