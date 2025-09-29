@@ -120,6 +120,8 @@ class StGraphSearcher : public Task {
   double ComputeHeuristicCost(const StSearchInput& input_info,
                               const StSearchNode& node) const;
 
+  double ComputeLaneChangeHeuristicCost(const StSearchNode& node) const;
+
   void SetStSearchFailSafeDecisionTable(
       const std::unordered_map<int64_t, std::unique_ptr<speed::STBoundary>>&
           boundary_id_st_boundaries_map,

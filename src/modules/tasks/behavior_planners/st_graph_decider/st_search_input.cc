@@ -43,7 +43,7 @@ void StSearchInput::ComputeAccelStep() {
   for (size_t i = 0; i < accel_sample_num_; ++i) {
     accel_step_.emplace_back(min_accel_limit_ +
                              i * (max_accel_limit_ - min_accel_limit_) /
-                                 accel_sample_num_);
+                                 (accel_sample_num_ - 1));
   }
 }
 

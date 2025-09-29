@@ -103,6 +103,16 @@ common::Status TargetMaker::Run() {
     if (comfort_target_value.has_target()) {
       upper_target_value =
           Target::TargetMin(comfort_target_value, upper_target_value);
+      if (overtake_target_value.has_target()) {
+        if (overtake_target_value.s_target_val() >
+            comfort_target_value.s_target_val()) {
+          target_values_.push_back(std::move(overtake_target_value));
+          continue;
+        } else {
+          upper_target_value = comfort_target_value;
+          lower_target_value = overtake_target_value;
+        }
+      }
     }
 
     // TBD: 华文合入cross_vru_target

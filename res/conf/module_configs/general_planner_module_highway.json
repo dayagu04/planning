@@ -913,8 +913,8 @@
       "t_step" : 0.5,
       "vel_step" : 0.4,
       "radical_search_style" : {
-        "max_accel_limit_radical_style": 2.5,
-        "min_accel_limit_radical_style": -9.0,
+        "max_accel_limit_radical_style": 5.0,
+        "min_accel_limit_radical_style": -6.0,
         "max_jerk_limit_radical_style": 10.0,
         "min_jerk_limit_radical_style": -10.0,
         "accel_sample_num_radical_style": 10.0,
@@ -927,7 +927,8 @@
       "search_weight" : {
         "weight_accel_sign_overtake" : 5.0
       },
-      "cutin_time_st_graph_threshold" : 3.0
+      "cutin_time_st_graph_threshold" : 2.0,
+      "weight_hcost_lane_change": 10.0
     },
 
     "start_stop_decider" : {
