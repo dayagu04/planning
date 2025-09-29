@@ -60,6 +60,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       }
       if (fun_state_machine_info.parking_req.apa_free_slot_info
               .free_slot_activate) {
+        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
         break;
       }
       if (parking_fusion_info.select_slot_id == 0) {
