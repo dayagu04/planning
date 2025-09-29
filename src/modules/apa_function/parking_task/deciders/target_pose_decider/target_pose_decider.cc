@@ -22,6 +22,7 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
   base_on_slot_ = request.base_on_slot;
   slot_lat_pos_preference_ = request.slot_lat_pos_preference;
   is_searching_stage_ = request.is_searching_stage;
+  ego_pose_local_ = request.ego_pose_local;
 
   if (request.scenario_type ==
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
@@ -185,8 +186,15 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     front_exceed_line_dx /= std::max(slot_.sin_angle_, 0.1);
   }
 
-  if (!is_searching_stage_) {
-    front_exceed_line_dx += 0.68;
+  if (!is_searching_stage_ && base_on_slot_) {
+    if ((slot_.IsPointInCustomSlot(
+             ego_pose_local_.pos, param.believe_obs_ego_area,
+             param.believe_obs_ego_area, 0.2, 0.2, true) &&
+         std::fabs(ego_pose_local_.heading) * kRad2Deg < 60.0)) {
+      front_exceed_line_dx += 0.168;
+    } else {
+      front_exceed_line_dx += 0.68;
+    }
   }
 
   if (slot_.slot_source_type_ == SlotSourceType::SELF_DEFINE) {

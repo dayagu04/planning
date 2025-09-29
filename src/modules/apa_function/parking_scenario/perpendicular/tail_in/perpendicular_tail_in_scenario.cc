@@ -594,7 +594,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
           lat_buffer_vec, lon_buffer,
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true,
           apa_world_ptr_->GetStateMachineManagerPtr()
-              ->GetSlotLatPosPreference());
+              ->GetSlotLatPosPreference(),
+          false, ego_info_under_slot.cur_pose);
 
       const TargetPoseDeciderResult res =
           apa_world_ptr_->GetParkingTaskInterfacePtr()

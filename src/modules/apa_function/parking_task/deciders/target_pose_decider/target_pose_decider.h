@@ -17,6 +17,8 @@ struct TargetPoseDeciderRequest {
   ApaSlotLatPosPreference slot_lat_pos_preference =
       ApaSlotLatPosPreference::MID;
   bool is_searching_stage = false;
+  geometry_lib::PathPoint ego_pose_local =
+      geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0);
 
   TargetPoseDeciderRequest() {}
   TargetPoseDeciderRequest(
@@ -25,14 +27,17 @@ struct TargetPoseDeciderRequest {
       const bool _base_on_slot = false,
       const ApaSlotLatPosPreference _slot_lat_pos_preference =
           ApaSlotLatPosPreference::MID,
-      const bool _is_searching_stage = false)
+      const bool _is_searching_stage = false,
+      const geometry_lib::PathPoint ego_pose_local =
+          geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0))
       : lat_buffer_vec(_lat_buffer_vec),
         lon_buffer(_lon_buffer),
         scenario_type(_scenario_type),
         consider_obs(_consider_obs),
         base_on_slot(_base_on_slot),
         slot_lat_pos_preference(_slot_lat_pos_preference),
-        is_searching_stage(_is_searching_stage) {}
+        is_searching_stage(_is_searching_stage),
+        ego_pose_local(ego_pose_local) {}
   ~TargetPoseDeciderRequest() {}
 };
 enum class TargetPoseType {
@@ -97,6 +102,7 @@ class TargetPoseDecider final : public ParkingTask {
   bool consider_obs_ = false;
   bool base_on_slot_ = false;
   bool is_searching_stage_ = false;
+  geometry_lib::PathPoint ego_pose_local_;
   TargetPoseDeciderResult result_;
 };
 }  // namespace apa_planner
