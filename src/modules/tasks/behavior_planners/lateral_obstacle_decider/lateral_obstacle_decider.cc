@@ -175,6 +175,12 @@ bool LateralObstacleDecider::Execute() {
       rightest_lane = false;
     }
 
+    double gap_front_node_id_s = 300;
+    double gap_rear_node_id_s = -100; // 貌似没有作用，仅需要gap_front_node_id_s就可以了
+    bool is_in_lane_change_scene = false;
+    CalLaneChangeGapInfo(reference_path_ptr, gap_front_node_id_s,
+        gap_rear_node_id_s, is_in_lane_change_scene);
+
     // farthest_distance
     auto &last_traj_points =
         session_->planning_context().last_planning_result().traj_points;
@@ -272,8 +278,10 @@ bool LateralObstacleDecider::Execute() {
       }
       history.is_avd_car = IsPotentialAvoidingCar(
           *frenet_obs, lane_width, rightest_lane, farthest_distance,
-          left_borrow_, right_borrow_);
-      IsPotentialFollowingObstacle(*frenet_obs, lane_width);
+          left_borrow_, right_borrow_, gap_front_node_id_s, gap_rear_node_id_s,
+          is_in_lane_change_scene);
+      IsPotentialFollowingObstacle(*frenet_obs, lane_width, gap_front_node_id_s,
+          gap_rear_node_id_s, is_in_lane_change_scene);
       history.last_recv_time = obs->timestamp();
     }
 
@@ -300,7 +308,8 @@ bool LateralObstacleDecider::Execute() {
         output_[obs->id()] = LatObstacleDecisionType::NOT_SET;
         continue;
       }
-      LateralObstacleDecision(*frenet_obs, lane_width, reference_path_ptr);
+      LateralObstacleDecision(*frenet_obs, lane_width, reference_path_ptr,
+                              gap_front_node_id_s, gap_rear_node_id_s, is_in_lane_change_scene);
       if (history.last_is_avd_car && !history.is_avd_car) {
         HoldLatOffset(*frenet_obs);
       }
@@ -539,7 +548,8 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
 
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
     FrenetObstacle &frenet_obstacle, double lane_width, bool rightest_lane,
-    double farthest_distance, bool can_left_borrow, bool can_right_borrow) {
+    double farthest_distance, bool can_left_borrow, bool can_right_borrow,
+    double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene) {
   ILOG_DEBUG << "----is_potential_avoiding_car-----";
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -577,6 +587,16 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       (lc_request_direction == RIGHT_CHANGE);
   const auto lead_one =
       session_->environmental_model().get_lateral_obstacle()->leadone();
+  const auto &lane_change_decider_output = session_->planning_context()
+                                              .lane_change_decider_output();
+  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+  const auto gap_front_node_id =
+      lane_change_decider_output.lc_gap_info.front_node_id;
+  int32_t gap_front_agent_id = -1;
+  if (dynamic_world->GetNode(gap_front_node_id)) {
+    gap_front_agent_id =
+        dynamic_world->GetNode(gap_front_node_id)->node_agent_id();
+  }
   // calculate info of obstacle
   int id = obstacle.id();
   iflyauto::ObjectType type = obstacle.type();
@@ -760,6 +780,15 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
             (d_max_cpath_updated <
              lane_width / 2 - (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision))));
 
+      if (is_in_lane_change_scene &&
+          frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+        // 在变道状态，依据gap计算
+        can_avoid = true;
+        lateral_obstacle_decision_can_avoid = true;
+        history.cut_in_or_cross = false;
+        history.cut_in_or_cross_count = 0;
+      }
+
       if (is_need_avoid && !can_avoid) {
         history.can_not_avoid = true;
       }
@@ -879,7 +908,9 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   //   JSON_DEBUG_VALUE("latral_lead_one_id", lead_one->id());
   // }
 
-  if (lead_one != nullptr && id == lead_one->id() &&
+  if (lead_one != nullptr && ((id == lead_one->id() &&
+      !is_in_lane_change_scene) || (is_in_lane_change_scene &&
+      id == lead_one->id() && id == gap_front_agent_id)) &&
       (is_in_range || is_about_to_enter_range)) {
     double dist_intersect = 1000;
     double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width -
@@ -994,7 +1025,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
 
 void LateralObstacleDecider::LateralObstacleDecision(
     FrenetObstacle &frenet_obstacle, double lane_width,
-    const std::shared_ptr<ReferencePath> reference_path_ptr) {
+    const std::shared_ptr<ReferencePath> reference_path_ptr,
+    double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
@@ -1174,7 +1206,17 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
   }
 
-
+  if (is_in_lane_change_scene && d_s_rel > history.front_expand_len &&
+      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+    // 在变道状态，依据gap计算
+    if (d_max_cpath > 0 && d_min_cpath < 0) {
+      output_[id] = LatObstacleDecisionType::IGNORE;
+    } else if (d_max_cpath < 0) {
+      output_[id] = LatObstacleDecisionType::LEFT;
+    } else if (d_min_cpath > 0) {
+      output_[id] = LatObstacleDecisionType::RIGHT;
+    }
+  }
   // cut_in 或 横穿
   if (history.cut_in_or_cross) {
     history.is_avd_car = false;
@@ -1871,19 +1913,15 @@ bool LateralObstacleDecider::IsTruck(
 }
 
 void LateralObstacleDecider::IsPotentialFollowingObstacle(
-    FrenetObstacle &frenet_obstacle, double lane_width) {
+    FrenetObstacle &frenet_obstacle, double lane_width,
+    double gap_front_node_id_s, double gap_rear_node_id_s,
+    bool is_in_lane_change_scene) {
   // 根据侵入距离，计算潜在的跟车目标
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
   FollowObstacleInfo &follow_info =
       follow_obstacle_info_[obstacle.id()];
-  if (obstacle.is_static()) {
-    // 先过滤静态障碍物，因为静态障碍物的不确定性较低
-    follow_info.follow_confidence = 0;
-    follow_info.is_need_folow = false;
-    return;
-  }
   // calculate info of obstacle
   int id = obstacle.id();
   iflyauto::ObjectType type = obstacle.type();
@@ -1901,50 +1939,104 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
                    ? planning_cycle_time
                    : (obstacle.timestamp() - history.last_recv_time);
   int count = (int)((gap + 0.01) / planning_cycle_time);
-  // 计算侵入距离
-  double intrusion_distance = DBL_MAX;
-  if (d_max_cpath < 0) {
-    intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
-  } else if (d_min_cpath > 0) {
-    intrusion_distance =  lane_width * 0.5 - d_min_cpath;
+  if (obstacle.is_static()) {
+    // 先过滤静态障碍物，因为静态障碍物的不确定性较低
+    follow_info.follow_confidence = 0;
+    follow_info.is_need_folow = false;
+    return;
   }
-  double base_safe_intrusoin_for_dynamic = config_.base_safe_intrusoin_for_dynamic;
-  double base_safe_intrusoin_for_static = config_.base_safe_intrusoin_for_static;
-  double extra_buffer_for_truck = config_.extra_buffer_for_truck;
-  double extra_buffer_for_vru = config_.extra_buffer_for_vru;
-  double follow_hysteresis = config_.follow_hysteresis;
-  double follow_confidence_cnt = 10 * planning_cycle_time;
-  double follow_confidence_thr = 0.1;
-  double lead_d_path_thr = base_safe_intrusoin_for_dynamic;
-  // if (obstacle.is_static()) {
-  //   lead_d_path_thr = base_safe_intrusoin_for_static;
-  // }
-  // 障碍物类型
-  if (IsTruck(frenet_obstacle)) {
-    lead_d_path_thr += extra_buffer_for_truck;
-  } else if (obstacle.is_VRU()) {
-    lead_d_path_thr += extra_buffer_for_vru;
-  }
-  // hysteresis
-  if (follow_info.is_need_folow) {
-    lead_d_path_thr = lead_d_path_thr * follow_hysteresis;
-  }
-  // 车道宽的影响,同样倾入距离的情况下，窄车道更容易跟车
-  double lane_width_actor =
-      interp(lane_width, config_.lane_width_bp, config_.lane_width_factor);
-  lead_d_path_thr = lead_d_path_thr * lane_width_actor;
-
-  // 距离自车越远，置信度越高
-  follow_confidence_thr = interp(d_s_rel, config_.distacle_to_ego_bp, config_.distacle_to_ego_bp_factor);
-
-  // 自车速度的相关因素，自车速度越高，先减速然后跟车
-
-  if (intrusion_distance >= lead_d_path_thr) {
-    follow_info.follow_confidence = std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
+  if (is_in_lane_change_scene &&
+      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+    // 在变道状态，依据gap计算follow
+    follow_info.follow_confidence = 0;
+    follow_info.is_need_folow = false;
   } else {
-    follow_info.follow_confidence = std::fmax(follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
+    // 计算侵入距离
+    double intrusion_distance = DBL_MAX;
+    if (d_max_cpath < 0) {
+      intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
+    } else if (d_min_cpath > 0) {
+      intrusion_distance =  lane_width * 0.5 - d_min_cpath;
+    }
+    double base_safe_intrusoin_for_dynamic = config_.base_safe_intrusoin_for_dynamic;
+    double base_safe_intrusoin_for_static = config_.base_safe_intrusoin_for_static;
+    double extra_buffer_for_truck = config_.extra_buffer_for_truck;
+    double extra_buffer_for_vru = config_.extra_buffer_for_vru;
+    double follow_hysteresis = config_.follow_hysteresis;
+    double follow_confidence_cnt = 10 * planning_cycle_time;
+    double follow_confidence_thr = 0.1;
+    double lead_d_path_thr = base_safe_intrusoin_for_dynamic;
+    // if (obstacle.is_static()) {
+    //   lead_d_path_thr = base_safe_intrusoin_for_static;
+    // }
+    // 障碍物类型
+    if (IsTruck(frenet_obstacle)) {
+      lead_d_path_thr += extra_buffer_for_truck;
+    } else if (obstacle.is_VRU()) {
+      lead_d_path_thr += extra_buffer_for_vru;
+    }
+    // hysteresis
+    if (follow_info.is_need_folow) {
+      lead_d_path_thr = lead_d_path_thr * follow_hysteresis;
+    }
+    // 车道宽的影响,同样倾入距离的情况下，窄车道更容易跟车
+    double lane_width_actor =
+        interp(lane_width, config_.lane_width_bp, config_.lane_width_factor);
+    lead_d_path_thr = lead_d_path_thr * lane_width_actor;
+
+    // 距离自车越远，置信度越高
+    follow_confidence_thr = interp(d_s_rel, config_.distacle_to_ego_bp, config_.distacle_to_ego_bp_factor);
+
+    // 自车速度的相关因素，自车速度越高，先减速然后跟车
+
+    if (intrusion_distance >= lead_d_path_thr) {
+      follow_info.follow_confidence = std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
+    } else {
+      follow_info.follow_confidence = std::fmax(follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
+    }
+    follow_info.is_need_folow = follow_info.follow_confidence >= follow_confidence_thr;
   }
-  follow_info.is_need_folow = follow_info.follow_confidence >= follow_confidence_thr;
+}
+
+void LateralObstacleDecider::CalLaneChangeGapInfo(
+    const std::shared_ptr<ReferencePath> reference_path_ptr,
+    double &gap_front_node_id_s, double &gap_rear_node_id_s,
+    bool &is_in_lane_change_scene) {
+  const auto &target_state = session_->planning_context()
+                                          .lane_change_decider_output()
+                                          .coarse_planning_info.target_state;
+  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+
+  is_in_lane_change_scene = (target_state == kLaneChangeExecution ||
+      target_state == kLaneChangeHold ||
+      target_state == kLaneChangeCancel);
+  const auto &obstacle_map = reference_path_ptr->get_obstacles_map();
+  const auto &lane_change_decider_output = session_->planning_context()
+                                              .lane_change_decider_output();
+  const auto gap_front_node_id =
+      lane_change_decider_output.lc_gap_info.front_node_id;
+  const auto gap_rear_node_id =
+      lane_change_decider_output.lc_gap_info.rear_node_id;
+  int32_t gap_front_agent_id = -1;
+  if (dynamic_world->GetNode(gap_front_node_id)) {
+    gap_front_agent_id =
+        dynamic_world->GetNode(gap_front_node_id)->node_agent_id();
+  }
+  int32_t gap_rear_agent_id = -1;
+  if (dynamic_world->GetNode(gap_rear_node_id)) {
+    gap_rear_agent_id =
+        dynamic_world->GetNode(gap_rear_node_id)->node_agent_id();
+  }
+  auto gap_front_obj = obstacle_map.find(gap_front_agent_id);
+  auto gap_rear_obj = obstacle_map.find(gap_rear_agent_id);
+
+  if (gap_front_obj != obstacle_map.end() && is_in_lane_change_scene) {
+    gap_front_node_id_s = gap_front_obj->second->frenet_obstacle_boundary().s_start;
+  }
+  if (gap_rear_obj != obstacle_map.end() && is_in_lane_change_scene) {
+    gap_rear_node_id_s = gap_rear_obj->second->frenet_obstacle_boundary().s_start;
+  }
+
 }
 
 }  // namespace planning

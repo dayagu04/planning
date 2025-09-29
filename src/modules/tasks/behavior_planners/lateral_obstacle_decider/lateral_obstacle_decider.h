@@ -27,10 +27,12 @@ class LateralObstacleDecider : public Task {
   bool IsPotentialAvoidingCar(FrenetObstacle &frenet_obstacle,
                               double lane_width, bool rightest_lane,
                               double farthest_distance, bool can_left_borrow,
-                              bool can_right_borrow);
+                              bool can_right_borrow, double gap_front_node_id_s,
+                              double gap_rear_node_id_s, bool is_in_lane_change_scene);
   void LateralObstacleDecision(
       FrenetObstacle &frenet_obstacle, double lane_width,
-      const std::shared_ptr<ReferencePath> reference_path_ptr);
+      const std::shared_ptr<ReferencePath> reference_path_ptr,
+      double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -61,7 +63,13 @@ class LateralObstacleDecider : public Task {
       const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
   void IsPotentialFollowingObstacle(
-    FrenetObstacle &frenet_obstacle, double lane_width);
+    FrenetObstacle &frenet_obstacle, double lane_width,
+    double gap_front_node_id_s, double gap_rear_node_id_s,
+    bool is_in_lane_change_scene);
+  void CalLaneChangeGapInfo(
+    const std::shared_ptr<ReferencePath> reference_path_ptr,
+    double &gap_front_node_id_s, double &gap_rear_node_id_s,
+    bool &is_in_lane_change_scene);
 
  private:
   planning::framework::Session *session_;
