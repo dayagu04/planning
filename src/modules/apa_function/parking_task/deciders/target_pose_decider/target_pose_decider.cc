@@ -193,6 +193,11 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     front_exceed_line_dx = 0.0;
   }
 
+  if (param.smart_fold_mirror_params.has_smart_fold_mirror &&
+      !col_det_interface_ptr_->GetFoldMirrorFlag()) {
+    front_exceed_line_dx = std::min(front_exceed_line_dx, 0.068);
+  }
+
   max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
   max_lon_move_dist = std::max(max_lon_move_dist, 0.0001);
 
