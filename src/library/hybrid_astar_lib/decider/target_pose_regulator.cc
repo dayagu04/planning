@@ -359,15 +359,18 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
                            ? (global_pose.GetX() - kSlantingOffset)
                            : kNormalBaseX;
 
-  TerminalCandidatePoint candidate;
-  const size_t totalCandidates =
-      (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE)
-          ? kMaxCandidateNum
-          : (kNumberRows * kMaxCandidateNum);
-  candidate_info_.reserve(candidate_info_.size() + totalCandidates);
+  const bool is_middle_direction =
+      direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
+      direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
+  const size_t total_candidates =
+      is_middle_direction ? kMaxCandidateNum : (kNumberRows * kMaxCandidateNum);
+  candidate_info_.reserve(candidate_info_.size() + total_candidates);
 
-  // 中间方向特殊处理，只需要1列
-  if (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+  Eigen::Vector2d temp_pos(0, 0);
+
+  TerminalCandidatePoint candidate;
+  // 处理中间方向（只需要1列）
+  if (is_middle_direction) {
     for (size_t i = 0; i < kMaxCandidateNum; ++i) {
       global_pose.y = kYLowerMid + i * kYStepMiddle;
 
@@ -376,35 +379,31 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     }
-  } else {
-    // 左右方向处理
-    for (size_t j = 0; j < kNumberRows; ++j) {
-      const Eigen::Vector2d base_pose(base_x + kXStep * j, target_.GetY());
+    return;
+  }
 
-      for (size_t i = 0; i < kMaxCandidateNum; ++i) {
-        Eigen::Vector2d temp_pos;
-        switch (direction_request) {
-          case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-            temp_pos =
-                base_pose - request_->x_axis_direction_coordinate_slant * i;
-            break;
-          case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-            temp_pos =
-                base_pose + request_->x_axis_direction_coordinate_slant * i;
-            break;
-          default:
-            // todo: 后续调整车尾泊出的candidate，当前仅调试了车头泊出的.
-            continue;
-        }
+  // 处理左右方向（需要多行）
+  const int8_t direction_factor =
+      (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
+       direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
+          ? -1
+          : 1;
 
-        global_pose.x = temp_pos.x();
-        global_pose.y = temp_pos.y();
+  const Eigen::Vector2d base_pose(base_x, target_.GetY());
 
-        candidate.dist_to_obs =
-            GetDistToObsHeadOut(global_pose, direction_request, edt);
-        candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-        candidate_info_.emplace_back(candidate);
-      }
+  for (size_t j = 0; j < kMaxCandidateNum; ++j) {
+    const Eigen::Vector2d temp_pos =
+        base_pose +
+        request_->x_axis_direction_coordinate_slant * j * direction_factor;
+
+    for (size_t i = 0; i < kNumberRows; ++i) {
+      global_pose.x = temp_pos.x() + kXStep * i;
+      global_pose.y = temp_pos.y();
+
+      candidate.dist_to_obs =
+          GetDistToObsHeadOut(global_pose, direction_request, edt);
+      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
+      candidate_info_.emplace_back(candidate);
     }
   }
 
