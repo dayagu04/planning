@@ -210,6 +210,50 @@ bool PlanningScheduler::RunOnce(
 uint64_t PlanningScheduler::FaultCode() {
   return environmental_model_manager_.getFaultcode();
 }
+
+void PlanningScheduler::SetFaultCode(uint64_t faultcode) {
+  return environmental_model_manager_.setFaultcode(faultcode);
+}
+
+const std::vector<planner::FaultCounter>& PlanningScheduler::GetFaultCounterInfos() {
+  return environmental_model_manager_.GetFaultCounterInfos();
+}
+
+bool PlanningScheduler::FaultCanRecover() {
+  auto fault_counter_vec = GetFaultCounterInfos();
+  uint64_t fault_code = FaultCode();
+  bool can_recover = false;
+  switch (fault_code) {
+    case 39000:
+      if (fault_counter_vec[FEED_FUSION_LANES_INFO].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39001:
+      if (fault_counter_vec[FEED_EGO_ENU].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39002:
+      if (fault_counter_vec[FEED_PREDICTION_INFO].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39003:
+      if (fault_counter_vec[FEED_EGO_STEER_ANGLE].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39004:
+      if (fault_counter_vec[FEED_VEHICLE_DBW_STATUS].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    default: break;
+  }
+  return can_recover;
+}
+
 void PlanningScheduler::FillPlanningTrajectory(
     double start_time, iflyauto::PlanningOutput *const planning_output) {
   // 获取LDP&&ELK功能干预状态

@@ -34,6 +34,12 @@ class PlanningScheduler {
 
   uint64_t FaultCode();
 
+  void SetFaultCode(uint64_t faultcode);
+
+  const std::vector<planner::FaultCounter>& GetFaultCounterInfos();
+
+  bool FaultCanRecover();
+
  private:
   // 解析障碍物
   void FillPredictionTrajectoryPoint(
