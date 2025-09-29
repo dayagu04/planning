@@ -282,6 +282,8 @@ class ApaSlotManager final {
 
   // temp use
   bool is_ego_col_vertical_ = false;
+  double ego_col_safe_lat_buffer_ = 0.268;
+  double ego_col_safe_lon_buffer_ = 0.15;
   bool is_ego_col_parallel_ = false;
   bool free_slot_activate_ = false;
   iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;

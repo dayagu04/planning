@@ -294,7 +294,22 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
   // const bool is_ego_collision = IsEgoCloseToObs();
 
-  is_ego_col_vertical_ = IsEgoCloseToObs();
+  is_ego_col_vertical_ = true;
+  ego_col_safe_lat_buffer_ = 0.268;
+  ego_col_safe_lon_buffer_ = 0.15;
+  std::vector<double> lat_buffer_vec{0.22, 0.1};
+  std::vector<double> lon_buffer_vec{0.14, 0.06};
+  for (const double& lon_buffer : lon_buffer_vec) {
+    for (const double& lat_buffer : lat_buffer_vec) {
+      if (!IsEgoCloseToObs(lat_buffer, lat_buffer, lon_buffer)) {
+        ego_col_safe_lon_buffer_ = lon_buffer;
+        ego_col_safe_lat_buffer_ = lat_buffer;
+        is_ego_col_vertical_ = false;
+        break;
+      }
+    }
+  }
+
   is_ego_col_parallel_ = IsEgoCloseToObs(0.1, 0.01, 0.1);
 
   uint8_t release_slot_count = 0;
@@ -482,7 +497,11 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
             << "  lat_buffer = " << res.safe_lat_buffer;
 
   SlotReleaseVoterType release_voter_type;
-  if (res.exceed_allow_max_dx > 0.02) {
+  if (ego_col_safe_lon_buffer_ < 0.12) {
+    release_voter_type = SlotReleaseVoterType::SUBTRACT;
+  } else if (ego_col_safe_lat_buffer_ < 0.20) {
+    release_voter_type = SlotReleaseVoterType::SUBTRACT;
+  } else if (res.exceed_allow_max_dx > 0.02) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   } else if (geometry_lib::IsTwoNumerEqual(
                  slot_release_buffer.maximum_lat_buffer, res.safe_lat_buffer)) {
