@@ -332,9 +332,12 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
 const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
   return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
-         ((frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
-          !CheckEgoPoseInBelieveObsArea(
-              0.2, apa_param.GetParam().believe_obs_ego_area));
+         !CheckEgoPoseInBelieveObsArea(
+             0.2, apa_param.GetParam().believe_obs_ego_area);
+  // return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+  //        ((frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
+  //         !CheckEgoPoseInBelieveObsArea(
+  //             0.2, apa_param.GetParam().believe_obs_ego_area));
 }
 
 const bool PerpendicularTailInScenario::CalcPtInside() {
