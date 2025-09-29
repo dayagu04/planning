@@ -3608,6 +3608,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
     read_json_vec<double>(json, "hpp_replan_lon_err_threshold_value",
                           hpp_replan_lon_err_threshold_value);
     ReadItem<bool>(json, use_yaw_rate_to_delta, "use_yaw_rate_to_delta");
+    ReadItem<double>(json, kEpsilon_vel_stop, "kEpsilon_vel_stop");
   }
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
@@ -3630,6 +3631,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double hpp_max_replan_dist_err = 0.8;
 
   double kEpsilon_v = 0.0;
+  double kEpsilon_vel_stop = 0.01;
   double kEpsilon_a = 0.0;
 
   bool enable_constanct_velocity_in_predicted_vehicle_state = false;
