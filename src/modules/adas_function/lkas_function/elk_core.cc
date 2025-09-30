@@ -1613,7 +1613,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_STANDBY;
     } else {
-      // do nothing
+      elk_state = elk_state_;
     }
   } else if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
                                ELK_FUNCTION_FSM_WORK_STATE_OFF) {

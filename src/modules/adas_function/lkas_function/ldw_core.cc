@@ -1305,7 +1305,7 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
           LDW_FUNCTION_FSM_WORK_STATE_STANDBY;
     } else {
-      // do nothing
+      ldw_state = ldw_state_;
     }
   } else if (ldw_state_ == iflyauto::LDWFunctionFSMWorkState::
                                LDW_FUNCTION_FSM_WORK_STATE_OFF) {

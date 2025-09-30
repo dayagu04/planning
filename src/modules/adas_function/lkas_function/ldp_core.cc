@@ -1669,7 +1669,7 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
           LDP_FUNCTION_FSM_WORK_STATE_STANDBY;
     } else {
-      // do nothing
+      ldp_state = ldp_state_;
     }
   } else if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
                                LDP_FUNCTION_FSM_WORK_STATE_OFF) {
