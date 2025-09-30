@@ -14,7 +14,8 @@
 #include "math/math_utils.h"
 #include "math_lib.h"
 #include "planning_context.h"
-
+#include "environmental_model.h"
+#include "ego_state_manager.h"
 namespace planning {
 
 using namespace std;
@@ -39,6 +40,8 @@ void ResultTrajectoryGenerator::Init() {
   ddkappa_vec_.resize(N + 1);
   lat_acc_vec_.resize(N + 1);
   lat_jerk_vec_.resize(N + 1);
+
+  fault_counter_vec_.resize(static_cast<int>(FaultType::NUM));
 }
 
 bool ResultTrajectoryGenerator::Execute() {
@@ -727,6 +730,86 @@ iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
     landing_point.heading = landing_point_theta_local;
   }
   return landing_point;
+}
+
+void ResultTrajectoryGenerator::CheckTrajectory() {
+  const auto &traj_points =
+      session_->planning_context().planning_result().traj_points;
+  const auto &motion_planner_output =
+      session_->planning_context().motion_planner_output();
+  motion_planner_output.x_s_spline;
+  const auto ego_state_mgr = session_->environmental_model().get_ego_state_manager();
+  const auto &ego_pose = ego_state_mgr->ego_pose();
+  Eigen::Vector2d cur_pos(ego_pose.x, ego_pose.y);
+  for (FaultType type = FaultType::TRAJ_LENGTH_RANGE; type != FaultType::NUM; type = static_cast<FaultType>(static_cast<int>(type) + 1)) {
+    int i = static_cast<int>(type);
+    
+    switch (type)
+    {
+    case FaultType::TRAJ_LENGTH_RANGE:{
+      const double traj_length = traj_points.back().s - traj_points.front().s;
+      if (traj_length > 250) {
+        fault_counter_vec_[i].fault_recovery_counter = 0;
+        fault_counter_vec_[i].fault_trigger_counter ++;
+      } else {
+        fault_counter_vec_[i].fault_trigger_counter = 0;
+        fault_counter_vec_[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+    case FaultType::TRAJ_LENGTH_CONTINUITY: 
+      break;
+    
+    case FaultType::TRAJ_CURVATURE_RANGE: {
+      if (std::any_of(curvature_vec_.begin(), curvature_vec_.end(), [](double x) { return std::fabs(x) < 0.2; })) {
+        fault_counter_vec_[i].fault_recovery_counter = 0;
+        fault_counter_vec_[i].fault_trigger_counter ++;
+      } else {
+        fault_counter_vec_[i].fault_trigger_counter = 0;
+        fault_counter_vec_[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+      
+    case FaultType::TRAJ_CURVATURE_CONTINUITY: 
+      break;
+    
+    case FaultType::TRAJ_LAT_POS_CONSISTENCY: {
+      pnc::spline::Projection projection_spline;
+      projection_spline.CalProjectionPoint(
+          motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+          motion_planner_output.s_lat_vec.front(),
+          motion_planner_output.s_lat_vec.back(), cur_pos);
+      const auto &lat_err = projection_spline.GetOutput().dist_proj;
+      if (fabs(lat_err) > 0.8) {
+        fault_counter_vec_[i].fault_recovery_counter = 0;
+        fault_counter_vec_[i].fault_trigger_counter ++;
+      } else {
+        fault_counter_vec_[i].fault_trigger_counter = 0;
+        fault_counter_vec_[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+    case FaultType::TRAJ_LAT_ACC_CONSISTENCY: {
+      // double cos_theta = std::cos(ego_pose.theta);
+      // double sin_theta = std::sin(ego_pose.theta);
+
+      // // 计算车身坐标系下的速度分量
+      // v_body.vx = v_world.vx * cos_theta + v_world.vy * sin_theta;
+      break;
+    }
+      
+
+    case FaultType::TRAJ_YAW_CONSISTENCY: {
+      break;
+    }
+      
+
+    default:
+      break;
+    }
+  }
+  
 }
 
 }  // namespace planning

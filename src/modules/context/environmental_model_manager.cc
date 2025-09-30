@@ -1403,6 +1403,7 @@ bool EnvironmentalModelManager::IsStatic(
 
 bool EnvironmentalModelManager::InputReady(double current_time,
                                            std::string &error_msg) {
+  using namespace framework;                                          
   auto to_string = [](FeedType feed_type) -> const char * {
     switch (feed_type) {
       case FEED_VEHICLE_DBW_STATUS:
@@ -1489,19 +1490,19 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     int fault_counter_vec_idx = -1;
     switch (feed_type) {
       case FEED_EGO_ENU:
-        fault_counter_vec_idx = planning::framework::LOCALIZATION_TIME_OUT_EXCEPTION;
+        fault_counter_vec_idx = static_cast<int>(FaultType::LOCALIZATION_TIME_OUT);
         break;
       case FEED_PREDICTION_INFO:
-        fault_counter_vec_idx = planning::framework::PERCEPTION_TIME_OUT_EXCEPTION;
+        fault_counter_vec_idx = static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
         break;
       case FEED_FUSION_LANES_INFO:
-        fault_counter_vec_idx = planning::framework::PERCEPTION_TIME_OUT_EXCEPTION;
+        fault_counter_vec_idx = static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
         break;
       case FEED_EGO_STEER_ANGLE:
-        fault_counter_vec_idx = planning::framework::VEHICLE_SERVICE_TIME_OUT_EXCEPTION;
+        fault_counter_vec_idx = static_cast<int>(FaultType::VEHICLE_SERVICE_TIME_OUT);
         break;
       case FEED_VEHICLE_DBW_STATUS:
-        fault_counter_vec_idx = planning::framework::FSM_TIME_OUT_EXCEPTION;
+        fault_counter_vec_idx = static_cast<int>(FaultType::FSM_TIME_OUT);
         break;
       default: break;
     }

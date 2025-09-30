@@ -216,32 +216,33 @@ void PlanningScheduler::SetFaultCode(uint64_t faultcode) {
 }
 
 bool PlanningScheduler::FaultCanRecover() {
+  using namespace framework;
   const auto&  fault_counter_vec = session_.fault_counter_info();
   uint64_t fault_code = FaultCode();
   bool can_recover = false;
   switch (fault_code) {
     case 39000:
-      if (fault_counter_vec[planning::framework::PERCEPTION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[static_cast<int>(FaultType::PERCEPTION_TIME_OUT)].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39001:
-      if (fault_counter_vec[planning::framework::LOCALIZATION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[static_cast<int>(FaultType::LOCALIZATION_TIME_OUT)].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39002:
-      if (fault_counter_vec[planning::framework::PREDICTION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[static_cast<int>(FaultType::PREDICTION_TIME_OUT)].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39003:
-      if (fault_counter_vec[planning::framework::VEHICLE_SERVICE_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[static_cast<int>(FaultType::VEHICLE_SERVICE_TIME_OUT)].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39004:
-      if (fault_counter_vec[planning::framework::FSM_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[static_cast<int>(FaultType::FSM_TIME_OUT)].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
@@ -1197,4 +1198,86 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   return true;
 }
 
+void PlanningScheduler::CheckTrajectory() {
+  using namespace framework;
+  const auto &traj_points =
+      session_.planning_context().planning_result().traj_points;
+  const auto &motion_planner_output =
+      session_.planning_context().motion_planner_output();
+  motion_planner_output.x_s_spline;
+  const auto ego_state_mgr = session_.environmental_model().get_ego_state_manager();
+  const auto &ego_pose = ego_state_mgr->ego_pose();
+  Eigen::Vector2d cur_pos(ego_pose.x, ego_pose.y);
+
+  auto* fault_counter_info_ptr = session_.mutable_fault_counter_info();
+  for (FaultType type = FaultType::TRAJ_LENGTH_RANGE; type != static_cast<FaultType>(static_cast<int>(FaultType::TRAJ_ROLL_CONSISTENCY) + 1); type = static_cast<FaultType>(static_cast<int>(type) + 1)) {
+    int i = static_cast<int>(type);
+    switch (type)
+    {
+    case FaultType::TRAJ_LENGTH_RANGE:{
+      const double traj_length = traj_points.back().s - traj_points.front().s;
+      if (traj_length > 250) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+    case FaultType::TRAJ_LENGTH_CONTINUITY:
+
+      break;
+    
+    case FaultType::TRAJ_CURVATURE_RANGE: {
+      if (std::any_of(traj_points.begin(), traj_points.end(), [](const TrajectoryPoint& traj_point) { return std::fabs(traj_point.curvature) < 0.2; })) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+      
+    case FaultType::TRAJ_CURVATURE_CONTINUITY: 
+      break;
+    
+    case FaultType::TRAJ_LAT_POS_CONSISTENCY: {
+      pnc::spline::Projection projection_spline;
+      projection_spline.CalProjectionPoint(
+          motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+          motion_planner_output.s_lat_vec.front(),
+          motion_planner_output.s_lat_vec.back(), cur_pos);
+      const auto &lat_err = projection_spline.GetOutput().dist_proj;
+      if (fabs(lat_err) > 0.8) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+      }
+      break;
+    }
+    case FaultType::TRAJ_LAT_ACC_CONSISTENCY: {
+      // double cos_theta = std::cos(ego_pose.theta);
+      // double sin_theta = std::sin(ego_pose.theta);
+
+      // // 计算车身坐标系下的速度分量
+      // v_body.vx = v_world.vx * cos_theta + v_world.vy * sin_theta;
+      break;
+    }
+      
+
+    case FaultType::TRAJ_YAW_CONSISTENCY: {
+      break;
+    }
+      
+
+    default:
+      break;
+    }
+  }
+  
+}
 }  // namespace planning

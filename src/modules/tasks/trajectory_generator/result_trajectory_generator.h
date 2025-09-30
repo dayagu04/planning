@@ -9,6 +9,27 @@
 #include "tasks/task.h"
 #include "tasks/task_interface/lane_change_decider_output.h"
 namespace planning {
+enum class FaultType : int {
+  TRAJ_LENGTH_RANGE,
+  TRAJ_LENGTH_CONTINUITY,
+  TRAJ_CURVATURE_RANGE,
+  TRAJ_CURVATURE_CONTINUITY,
+  TRAJ_LON_POS_CONSISTENCY,
+  TRAJ_LON_VEL_CONSISTENCY,
+  TRAJ_LON_ACC_CONSISTENCY,
+  TRAJ_LON_DEC_CONSISTENCY,
+  TRAJ_LAT_POS_CONSISTENCY,
+  TRAJ_LAT_VEL_CONSISTENCY,
+  TRAJ_LAT_ACC_CONSISTENCY,
+  TRAJ_YAW_CONSISTENCY,
+  TRAJ_ROLL_CONSISTENCY,
+  NUM
+};
+
+struct FaultCounter {
+  int fault_trigger_counter;
+  int fault_recovery_counter;
+};
 class ResultTrajectoryGenerator : public Task {
  public:
   explicit ResultTrajectoryGenerator(
@@ -29,6 +50,7 @@ class ResultTrajectoryGenerator : public Task {
     return (std::isnan(number) == 1) || (std::isinf(number) != 0);
   }
 
+  void CheckTrajectory();
  private:
   std::vector<double> t_vec_;
   std::vector<double> s_vec_;
@@ -47,6 +69,9 @@ class ResultTrajectoryGenerator : public Task {
 
  private:
   ResultTrajectoryGeneratorConfig config_;
+
+  std::vector<FaultCounter> fault_counter_vec_;
+  uint64_t faultcode_ = 666;
 };
 
 }  // namespace planning

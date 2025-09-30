@@ -120,7 +120,7 @@ class PlanningScheduler {
       const common::SceneType function_type, const double start_timestamp,
       iflyauto::PlanningOutput *const planning_output,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
-
+  void CheckTrajectory();
  private:
   enum FeedType {
     FEED_VEHICLE_DBW_STATUS = 0,
