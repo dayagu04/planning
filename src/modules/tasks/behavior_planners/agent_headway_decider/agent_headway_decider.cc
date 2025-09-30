@@ -606,7 +606,7 @@ double AgentHeadwayDecider::CalculateCutinHeadway(
     const double current_headway) {
   constexpr double kCutinMinHeadway = 0.5;
   constexpr double kCutinMaxHeadway = 1.2;
-  constexpr double kCutinHeadwayStep = 0.05;
+  constexpr double kCutinHeadwayStep = 0.1;
   constexpr double kHighSpeedCutinFactor = 0.8;
   constexpr double kHighSpeedThreshold = 80.0 / 3.6;
 
