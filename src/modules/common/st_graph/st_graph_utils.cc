@@ -1329,6 +1329,7 @@ bool StGraphUtils::LinearExtendTrajectory(
 
 // If agent's trajectory point is out of ddlane,then ignore the lateral buffer.
 double StGraphUtils::AdjustLateralBufferByT(
+    const trajectory::TrajectoryPoint& init_point,
     const trajectory::TrajectoryPoint& agent_point, const double default_buffer,
     const std::shared_ptr<VirtualLane>& ptr_agent_lane,
     const std::shared_ptr<planning_math::KDPath>& planned_kd_path) {
@@ -1343,7 +1344,7 @@ double StGraphUtils::AdjustLateralBufferByT(
   }
   double ego_s = 0.0;
   double ego_l = 0.0;
-  if (!agent_lane_coord->XYToSL(agent_point.x(), agent_point.y(), &ego_s,
+  if (!agent_lane_coord->XYToSL(init_point.x(), init_point.y(), &ego_s,
                                 &ego_l)) {
     return default_buffer;
   }
