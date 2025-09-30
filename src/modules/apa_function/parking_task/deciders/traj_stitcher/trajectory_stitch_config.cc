@@ -13,8 +13,8 @@ void TrajectoryStitchConfig::Init() {
   low_stitch_error.vel_stitch_error = 0.02;
   low_stitch_error.acc_stitch_error = 0.1;
 
-  normal_stitch_error.vel_stitch_error = 0.25;
-  normal_stitch_error.acc_stitch_error = 0.2;
+  normal_stitch_error.vel_stitch_error = 0.1;
+  normal_stitch_error.acc_stitch_error = 0.15;
 
   if (apa_param.GetParam().speed_config.lon_stitch_type == 0) {
     lon_stitch_type = LonStitchType::PLANNING_TRAJ;

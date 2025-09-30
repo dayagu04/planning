@@ -411,7 +411,7 @@
   "slow_cruise_speed" : 0.84,
   "long_path_acc_upper" : 0.61,
   "short_path_acc_upper" : 0.51,
-  "lon_stitch_type": 1,
+  "lon_stitch_type": 0,
 
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,
