@@ -182,6 +182,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
       if (trigger_lane_change_cancel_) {
         lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
         Finish();
+        Reset();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       }
     } else {
@@ -205,6 +206,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
       if (trigger_lane_change_cancel_) {
         lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
         Finish();
+        Reset();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       }
     }

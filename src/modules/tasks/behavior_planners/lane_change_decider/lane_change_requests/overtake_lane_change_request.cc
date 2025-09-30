@@ -567,6 +567,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     set_target_lane_virtual_id(current_lane_virtual_id);
     ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, !trigger_left_overtake and !trigger_right_overtake";
   }
+  if (trigger_lane_change_cancel_) {
+    Finish();
+    Reset();
+    set_target_lane_virtual_id(current_lane_virtual_id);
+    lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+  }
   last_request_type_ = request_type_;
   return;
 }

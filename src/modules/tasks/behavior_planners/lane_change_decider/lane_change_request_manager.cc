@@ -17,7 +17,7 @@ namespace planning {
 namespace {
 constexpr double kMaxSpeedTriggerInteractiveLaneChangeRequest = 33.333;
 constexpr double kMinSpeedTriggerInteractiveLaneChangeRequest = 11.111;
-constexpr double kCoolingDownPeriodForIntCancel = 3.0;
+constexpr double kCoolingDownPeriodForIntCancel = 4.0;
 
 }  // namespace
 // class: LaneChangeRequestManager
@@ -136,6 +136,16 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   ProcessBlinkState(
       ego_blinker, static_cast<StateMachineLaneChangeStatus>(lc_status),
       static_cast<RequestType>(lane_change_decider_output.lc_request));
+  bool cancel_lane_change_freeze = false;
+  static int lane_change_cancel_freeze_cnt = 40;
+  if (trigger_lane_change_cancel_ || lane_change_cancel_freeze_cnt < 40) {
+    lane_change_cancel_freeze_cnt = 0;
+    cancel_lane_change_freeze = true;
+    ++lane_change_cancel_freeze_cnt;
+  } else {
+    lane_change_cancel_freeze_cnt = 40;
+    cancel_lane_change_freeze = false;
+  }
   // todo(ldh): 使用工厂模式管理变道请求。
   int_request_.SetLaneChangeCmd(lane_change_cmd_);
   int_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);

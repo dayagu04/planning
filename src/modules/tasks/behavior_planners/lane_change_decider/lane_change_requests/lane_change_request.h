@@ -73,8 +73,7 @@ class LaneChangeRequest {
                                  const RequestType& lc_request) const;
   double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
   bool EgoInIntersection();
-  double CalculateDynamicTTCtime(const int origin_lane_id,
-                                 const RequestType& lc_request) const;
+
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
   }
