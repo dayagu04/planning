@@ -128,8 +128,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     if (!st_graph_helper->GetStBoundary(agent_st_boundary_id, &st_boundary)) {
       continue;
     }
-    if (st_boundary.min_t() > 3.0 &&
-        (st_boundary.max_t() - st_boundary.min_t()) < 0.4) {
+    if (st_boundary.min_t() > 3.5 &&
+        (st_boundary.max_t() - st_boundary.min_t()) < 0.7) {
       continue;
     }
 
@@ -165,10 +165,24 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     const double agent_init_headway =
         std::fmin(std::fmax(init_headway_by_ego, cutin_headway), gear_headway);
 
+    constexpr double kHighRelativeVelThreshold = 2.0;
+    constexpr double kLowRelativeVelThreshold = -0.5;
+    constexpr double kVeryLowRelativeVelThreshold = -3.0;
+    constexpr double kHighRelativeVelStepFactor = 0.3;
+    constexpr double kMediumRelativeVelStepFactor = 0.5;
+    constexpr double kLowRelativeVelStepFactor = 1.2;
+    constexpr double kDefaultStepFactor = 1.0;
+
     const double v_relative = agent->speed() - v_ego;
-    if (v_relative > kHighSpeedDiffThd) {
-      headway_step = 0.5 * config_.headway_step;
+    double step_factor = kDefaultStepFactor;
+    if (v_relative > kHighRelativeVelThreshold) {
+      step_factor = kHighRelativeVelStepFactor;
+    } else if (v_relative > kLowRelativeVelThreshold) {
+      step_factor = kMediumRelativeVelStepFactor;
+    } else if (v_relative < kVeryLowRelativeVelThreshold) {
+      step_factor = kLowRelativeVelStepFactor;
     }
+    headway_step = step_factor * config_.headway_step;
 
     if (is_vru_crossing_virtual_agent) {
       agents_headway_map_[st_agent_id].current_headway = 0.0;
@@ -199,18 +213,13 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
     double current_headway = agents_headway_map_[st_agent_id].current_headway;
 
-    // if (agent_is_cutin) {
-    //   const double delta_headway = planning_math::LerpWithLimit(
-    //       config_.cut_in_headway_upper_bound,
-    //       config_.cut_in_velocity_lower_bound,
-    //       config_.cut_in_headway_lower_bound,
-    //       config_.cut_in_velocity_upper_bound, ego_state_manager->ego_v());
-    //   const double matched_cut_in_headway =
-    //       std::fmin((cutin_headway - delta_headway), current_headway);
-    //   agents_headway_map_[st_agent_id].current_headway =
-    //       std::fmin(matched_cut_in_headway + headway_step, gear_headway);
-    //   continue;
-    // }
+    if (agent_is_cutin) {
+      const double cutin_target_headway =
+          CalculateCutinHeadway(agent, v_ego, current_headway);
+      agents_headway_map_[st_agent_id].current_headway = cutin_target_headway;
+      continue;
+    }
+
     if (is_lane_borrow_virtual_agent) {
       agents_headway_map_[st_agent_id].current_headway = 0.0;
       continue;
@@ -590,6 +599,58 @@ double AgentHeadwayDecider::CalcAgentInitHeadway(
                                config_.lower_speed_min_follow_distance_gap) /
                               std::fmax(ego_vel, ego_vel_min_thd);
   return init_headway;
+}
+
+double AgentHeadwayDecider::CalculateCutinHeadway(
+    const agent::Agent* agent, const double ego_velocity,
+    const double current_headway) {
+  constexpr double kCutinMinHeadway = 0.5;
+  constexpr double kCutinMaxHeadway = 1.2;
+  constexpr double kCutinHeadwayStep = 0.1;
+  constexpr double kHighSpeedCutinFactor = 0.8;
+  constexpr double kHighSpeedThreshold = 80.0 / 3.6;
+
+  double cutin_target_headway = kCutinMaxHeadway;
+  if (ego_velocity > kHighSpeedThreshold) {
+    cutin_target_headway = kCutinMaxHeadway * kHighSpeedCutinFactor;
+  }
+
+  constexpr double kCutinHighRelativeVelThreshold = 2.0;
+  constexpr double kCutinLowRelativeVelThreshold = -5.0;
+  constexpr double kCutinHighVelFactor = 0.7;
+  constexpr double kCutinLowVelFactor = 1.3;
+  constexpr double kCutinDefaultVelFactor = 1.0;
+  constexpr double kCutinVelFactorRange = 7.0;  // (2.0 + 5.0)
+
+  const double relative_velocity = agent->speed() - ego_velocity;
+  double velocity_factor = kCutinDefaultVelFactor;
+  if (relative_velocity >= kCutinHighRelativeVelThreshold) {
+    velocity_factor = kCutinHighVelFactor;
+  } else if (relative_velocity <= kCutinLowRelativeVelThreshold) {
+    velocity_factor = kCutinLowVelFactor;
+  } else {
+    velocity_factor = kCutinLowVelFactor +
+                      (relative_velocity - kCutinLowRelativeVelThreshold) *
+                          (kCutinHighVelFactor - kCutinLowVelFactor) /
+                          kCutinVelFactorRange;
+  }
+  cutin_target_headway *= velocity_factor;
+
+  double final_headway;
+  if (current_headway < cutin_target_headway) {
+    final_headway =
+        std::fmin(current_headway + kCutinHeadwayStep, cutin_target_headway);
+  } else {
+    constexpr double kCutinHeadwayDecreaseRatio = 0.5;
+    final_headway = std::fmax(
+        current_headway - kCutinHeadwayStep * kCutinHeadwayDecreaseRatio,
+        cutin_target_headway);
+  }
+
+  final_headway =
+      std::fmax(kCutinMinHeadway, std::fmin(final_headway, kCutinMaxHeadway));
+
+  return final_headway;
 }
 
 }  // namespace planning

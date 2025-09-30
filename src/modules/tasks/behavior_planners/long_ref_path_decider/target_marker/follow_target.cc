@@ -14,7 +14,7 @@ namespace planning {
 namespace {
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double default_headway = 1.5;
-constexpr double min_follow_distance_gap_cut_in = 1.0;
+constexpr double min_follow_distance_gap_cut_in = 0.5;
 constexpr int32_t check_time_idx = 8;
 
 // stable jlt

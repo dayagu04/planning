@@ -817,8 +817,7 @@ void StGraphInput::MakePathBorderQuerier(
   const double back_edge_to_center = vehicle_param_.rear_edge_to_rear_axle;
   const double vehicle_length = vehicle_param_.length;
   const double vehicle_width = vehicle_param_.width;
-  const double back_axle_to_center_dist =
-      0.5 * (front_edge_to_center - back_edge_to_center);
+  const double rear_axle_to_center = vehicle_param_.rear_axle_to_center;
 
   const int32_t start_idx =
       std::max(0, int32_t(path_range_.first / kPathSampleInterval));
@@ -830,13 +829,13 @@ void StGraphInput::MakePathBorderQuerier(
   for (int32_t i = start_idx; i < end_idx; ++i) {
     double desired_s = i * kPathSampleInterval;
     auto point = planned_path->GetPathPointByS(desired_s);
-    Vec2d center = point + Vec2d::CreateUnitVec2d(point.theta()) *
-                               back_axle_to_center_dist;
+    Vec2d center =
+        point + Vec2d::CreateUnitVec2d(point.theta()) * rear_axle_to_center;
     double start_s = desired_s - back_edge_to_center;
     double end_s = desired_s + front_edge_to_center;
     if (session_->is_rads_scene()) {
-      center = point + Vec2d::CreateUnitVec2d(-point.theta()) *
-                           back_axle_to_center_dist;
+      center =
+          point + Vec2d::CreateUnitVec2d(-point.theta()) * rear_axle_to_center;
       start_s = desired_s - front_edge_to_center;
       end_s = desired_s + back_edge_to_center;
     }

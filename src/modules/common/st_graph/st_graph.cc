@@ -456,7 +456,8 @@ void STGraph::MakeDynamicAgentStBoundary(
       }
       double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(
-                                             point, lat_buffer, ptr_obj_lane)
+                                             init_point, point, lat_buffer,
+                                             ptr_obj_lane, planned_kd_path)
                                        : lat_buffer;
 
       specific_lat_buffer =
@@ -773,10 +774,11 @@ void STGraph::BackwardExtendSingleStBoundary(
       StGraphUtils::LinearExtendTrajectory(
           trajectory, start_absolute_time + relative_time, &point);
     }
-    double specific_lat_buffer = need_adjust_buffer_by_t
-                                     ? StGraphUtils::AdjustLateralBufferByT(
-                                           point, lat_buffer, ptr_obj_lane)
-                                     : lat_buffer;
+    double specific_lat_buffer =
+        need_adjust_buffer_by_t
+            ? StGraphUtils::AdjustLateralBufferByT(
+                  init_point, point, lat_buffer, ptr_obj_lane, planned_kd_path)
+            : lat_buffer;
     Box2d obs_box({point.x(), point.y()}, point.theta(),
                   agent.length() + 2.0 * lon_buffer,
                   agent.width() + 2.0 * specific_lat_buffer);

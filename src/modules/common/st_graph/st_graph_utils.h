@@ -174,9 +174,11 @@ class StGraphUtils {
                                      trajectory::TrajectoryPoint* point);
 
   static double AdjustLateralBufferByT(
+      const trajectory::TrajectoryPoint& init_point,
       const trajectory::TrajectoryPoint& agent_point,
       const double default_buffer,
-      const std::shared_ptr<VirtualLane>& ptr_agent_lane);
+      const std::shared_ptr<VirtualLane>& ptr_agent_lane,
+      const std::shared_ptr<planning_math::KDPath>& planned_kd_path);
 
   static bool CheckLonFarPositionSTBoundary(
       const agent::Agent& agent,
