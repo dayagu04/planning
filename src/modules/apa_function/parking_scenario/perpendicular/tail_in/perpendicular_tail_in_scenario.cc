@@ -136,7 +136,23 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
     return;
   }
 
-  PathPlan();
+  if (CheckGearChangeCountTooMuch()) {
+    ILOG_INFO << "check gear change count too much!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = GEAR_CHANGE_COUNT_TOO_MUCH;
+    return;
+  }
+
+  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type);
+  PrintAnalyticExpansionType(apa_param.GetParam().analytic_expansion_type);
+  if (apa_param.GetParam().park_path_plan_type == ParkPathPlanType::GEOMETRY ||
+      apa_param.GetParam().park_path_plan_type ==
+          ParkPathPlanType::HYBRID_ASTAR) {
+    PathPlan();
+  } else if (apa_param.GetParam().park_path_plan_type ==
+             ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+    PathPlanByHybridAstarThread();
+  }
 
   // check finish
   if (CheckFinished()) {
@@ -315,9 +331,13 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 }
 
 const bool PerpendicularTailInScenario::CheckCanDelObsInSlot() {
-  return (frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
+  return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
          !CheckEgoPoseInBelieveObsArea(
              0.2, apa_param.GetParam().believe_obs_ego_area);
+  // return apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+  //        ((frame_.current_gear != geometry_lib::SEG_GEAR_REVERSE) ||
+  //         !CheckEgoPoseInBelieveObsArea(
+  //             0.2, apa_param.GetParam().believe_obs_ego_area));
 }
 
 const bool PerpendicularTailInScenario::CalcPtInside() {
@@ -574,7 +594,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
           lat_buffer_vec, lon_buffer,
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true,
           apa_world_ptr_->GetStateMachineManagerPtr()
-              ->GetSlotLatPosPreference());
+              ->GetSlotLatPosPreference(),
+          false, ego_info_under_slot.cur_pose);
 
       const TargetPoseDeciderResult res =
           apa_world_ptr_->GetParkingTaskInterfacePtr()
@@ -3472,8 +3493,7 @@ const bool PerpendicularTailInScenario::CheckPathDangerous() {
   return true;
 }
 
-const PerpendicularTailInScenario::CarSlotRelationship
-PerpendicularTailInScenario::CalCarSlotRelationship(
+const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   const ApaParameters& params = apa_param.GetParam();
   const CheckFinishParams& finish_params = params.check_finish_params;

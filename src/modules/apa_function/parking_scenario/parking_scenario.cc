@@ -1058,8 +1058,7 @@ void ParkingScenario::RecordDebugObstacle(
 }
 const bool ParkingScenario::CheckPathDangerous() { return false; }
 
-const ParkingScenario::CarSlotRelationship
-ParkingScenario::CalCarSlotRelationship(
+const CarSlotRelationship ParkingScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   return CarSlotRelationship::TOUCHING;
 }

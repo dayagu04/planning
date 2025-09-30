@@ -126,6 +126,27 @@ enum class MirrorCommand : uint8_t {
   EXPAND,
 };
 
+enum ReplanReason {
+  NOT_REPLAN,
+  FIRST_PLAN,
+  SEG_COMPLETED_PATH,
+  SEG_COMPLETED_OBS,
+  STUCKED,
+  DYNAMIC,
+  SEG_COMPLETED_COL_DET,
+  FORCE_PLAN,
+  SEG_COMPLETED_SLOT_JUMP,
+  PATH_DANGEROUS,
+  SLOT_CRUISING,
+  DYNAMIC_GEAR_SWITCH,
+};
+
+enum class CarSlotRelationship : uint8_t {
+  TOUCHING,
+  MARGINAL,
+  IDEAL,
+};
+
 #define LOCALIZATION_PATH_MAX_NUM (400)
 struct LocalizationPath {
   Eigen::Vector3d path[LOCALIZATION_PATH_MAX_NUM];

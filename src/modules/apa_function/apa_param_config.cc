@@ -606,6 +606,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
                   "enable_multi_height_col_det");
 
+  JSON_DEBUG_VALUE("enable_multi_height_col_det",
+                   param.enable_multi_height_col_det)
+
   JSON_READ_VALUE(param.car_lat_inflation_strict, double,
                   "car_lat_inflation_strict");
 
@@ -1181,24 +1184,24 @@ void SyncParkingParameters(const bool is_simulation) {
       param.park_path_plan_type = ParkPathPlanType::GEOMETRY;
       break;
   }
-  if (apa_param.GetParam().park_path_plan_type ==
-      ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+  if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
     param.enable_narrow_space_vertical_tail_in = false;
   } else {
     param.enable_narrow_space_vertical_tail_in = true;
   }
-  PrintParkPathPlanType(apa_param.GetParam().park_path_plan_type, true);
+  PrintParkPathPlanType(param.park_path_plan_type, true);
 
-  if (apa_param.GetParam().park_path_plan_type ==
-          ParkPathPlanType::HYBRID_ASTAR ||
-      apa_param.GetParam().park_path_plan_type ==
-          ParkPathPlanType::HYBRID_ASTAR_THREAD) {
+  if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR ||
+      param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
     param.virtual_obs_left_y_pos += 1.0;
     param.virtual_obs_left_x_pos += 1.4;
     param.virtual_obs_right_y_pos += 1.0;
     param.virtual_obs_right_x_pos += 1.4;
     // param.channel_length -= 4.0;
     param.channel_width += 2.0;
+  } else {
+    param.smart_fold_mirror_params.min_lat_buffer =
+        param.stop_lat_inflation + 0.01;
   }
 
   int analytic_expansion_type = 1;
