@@ -50,6 +50,7 @@ void MergeRequest::Update(int lc_status) {
   if (EgoInIntersection()) {
     Reset();
     Finish();
+    return;
   }
   
   const auto& ego_state =

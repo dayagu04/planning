@@ -54,6 +54,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   if (EgoInIntersection()) {
     Reset();
     Finish();
+    return;
   }
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
