@@ -36,8 +36,6 @@ class PlanningScheduler {
 
   void SetFaultCode(uint64_t faultcode);
 
-  const std::vector<planner::FaultCounter>& GetFaultCounterInfos();
-
   bool FaultCanRecover();
 
  private:

@@ -208,44 +208,40 @@ bool PlanningScheduler::RunOnce(
 }
 
 uint64_t PlanningScheduler::FaultCode() {
-  return environmental_model_manager_.getFaultcode();
+  return session_.get_fault_code();
 }
 
 void PlanningScheduler::SetFaultCode(uint64_t faultcode) {
-  return environmental_model_manager_.setFaultcode(faultcode);
-}
-
-const std::vector<planner::FaultCounter>& PlanningScheduler::GetFaultCounterInfos() {
-  return environmental_model_manager_.GetFaultCounterInfos();
+  return session_.set_fault_code(faultcode);
 }
 
 bool PlanningScheduler::FaultCanRecover() {
-  auto fault_counter_vec = GetFaultCounterInfos();
+  const auto&  fault_counter_vec = session_.fault_counter_info();
   uint64_t fault_code = FaultCode();
   bool can_recover = false;
   switch (fault_code) {
     case 39000:
-      if (fault_counter_vec[FEED_FUSION_LANES_INFO].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[planning::framework::PERCEPTION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39001:
-      if (fault_counter_vec[FEED_EGO_ENU].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[planning::framework::LOCALIZATION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39002:
-      if (fault_counter_vec[FEED_PREDICTION_INFO].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[planning::framework::PREDICTION_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39003:
-      if (fault_counter_vec[FEED_EGO_STEER_ANGLE].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[planning::framework::VEHICLE_SERVICE_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;
     case 39004:
-      if (fault_counter_vec[FEED_VEHICLE_DBW_STATUS].fault_recovery_counter >= 3) {
+      if (fault_counter_vec[planning::framework::FSM_TIME_OUT_EXCEPTION].fault_recovery_counter >= 3) {
         can_recover = true;
       }
       break;

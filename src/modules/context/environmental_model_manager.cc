@@ -167,12 +167,6 @@ void EnvironmentalModelManager::InitContext() {
       std::make_shared<planning::EdtManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_edt_manager(edt_manager_ptr_);
 
-  fault_counter_vec_.resize(FEED_TYPE_MAX);
-  for(int i = 0; i < FEED_TYPE_MAX; i++) {
-    fault_counter_vec_[i].fault_trigger_counter = 0;
-    fault_counter_vec_[i].fault_recovery_counter = 0;
-  }
-
 }
 
 void EnvironmentalModelManager::SetConfig(
@@ -1407,10 +1401,6 @@ bool EnvironmentalModelManager::IsStatic(
   return is_static;
 }
 
-const std::vector<FaultCounter>& EnvironmentalModelManager::GetFaultCounterInfos() {
-  return fault_counter_vec_;
-}
-
 bool EnvironmentalModelManager::InputReady(double current_time,
                                            std::string &error_msg) {
   auto to_string = [](FeedType feed_type) -> const char * {
@@ -1489,18 +1479,41 @@ bool EnvironmentalModelManager::InputReady(double current_time,
           : (session_->environmental_model().location_valid()
                  ? input_longtime_without_hdmap
                  : input_realtime_without_hdmap);
+  auto* fault_counter_info_ptr = session_->mutable_fault_counter_info();
   for (int i : input_list) {
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
     ILOG_DEBUG << "(" << __FUNCTION__ << ")"
                 << " topic latency: " << feed_type_str << ", "
                 << current_time - last_feed_time_[i] << "ms";
+    int fault_counter_vec_idx = -1;
+    switch (feed_type) {
+      case FEED_EGO_ENU:
+        fault_counter_vec_idx = planning::framework::LOCALIZATION_TIME_OUT_EXCEPTION;
+        break;
+      case FEED_PREDICTION_INFO:
+        fault_counter_vec_idx = planning::framework::PERCEPTION_TIME_OUT_EXCEPTION;
+        break;
+      case FEED_FUSION_LANES_INFO:
+        fault_counter_vec_idx = planning::framework::PERCEPTION_TIME_OUT_EXCEPTION;
+        break;
+      case FEED_EGO_STEER_ANGLE:
+        fault_counter_vec_idx = planning::framework::VEHICLE_SERVICE_TIME_OUT_EXCEPTION;
+        break;
+      case FEED_VEHICLE_DBW_STATUS:
+        fault_counter_vec_idx = planning::framework::FSM_TIME_OUT_EXCEPTION;
+        break;
+      default: break;
+    }
+    if (fault_counter_vec_idx < 0) {
+      continue;
+    }
     if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
       ILOG_DEBUG << "(" << __FUNCTION__ << ")"
                   << "input_delay:" << i << ", " << feed_type_str;
-      fault_counter_vec_[i].fault_trigger_counter++;
-      fault_counter_vec_[i].fault_recovery_counter = 0;
-      if (fault_counter_vec_[i].fault_trigger_counter >= 5 &&
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter++;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter = 0;
+      if ((*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter >= 5 &&
         getFaultcode() < 39000) {
         switch (feed_type) {
           //location
@@ -1527,36 +1540,36 @@ bool EnvironmentalModelManager::InputReady(double current_time,
         }
       }
     } else {
-      fault_counter_vec_[i].fault_trigger_counter = 0;
+      (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
       switch (feed_type) {
         //location
         case FEED_EGO_ENU:
           if (getFaultcode() == 39001) {
-            fault_counter_vec_[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
           }
           break;
         //prediction
         case FEED_PREDICTION_INFO:
           if (getFaultcode() == 39002) {
-            fault_counter_vec_[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
           }
           break;
         //static fusion
         case FEED_FUSION_LANES_INFO:
           if (getFaultcode() == 39000) {
-            fault_counter_vec_[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
           }
           break;
         //vehicle service
         case FEED_EGO_STEER_ANGLE:
           if (getFaultcode() == 39003) {
-            fault_counter_vec_[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
           }
           break;
         //functional state machine
         case FEED_VEHICLE_DBW_STATUS:
           if (getFaultcode() == 39004) {
-            fault_counter_vec_[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
           }
           break;
         default: break;
@@ -1677,14 +1690,10 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 // }
 
 void EnvironmentalModelManager::setFaultcode(uint64_t faultcode) {
-  if (faultcode >= 39000 && faultcode <= 39999) {
-    faultcode_ = std::max(faultcode_, faultcode);
-  } else {
-    faultcode_ = 666;
-  }
+  session_->set_fault_code(faultcode);
 }
 
-uint64_t EnvironmentalModelManager::getFaultcode() { return faultcode_; }
+uint64_t EnvironmentalModelManager::getFaultcode() { return session_->get_fault_code(); }
 
 bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
   if (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||

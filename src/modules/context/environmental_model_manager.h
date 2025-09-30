@@ -35,11 +35,6 @@ enum FeedType {
   FEED_TYPE_MAX,
 };
 
-struct FaultCounter {
-  int fault_trigger_counter;
-  int fault_recovery_counter;
-};
-
 // enum TurnSwitchState {
 //   NONE = 0,
 //   LEFT_FIRMLY_TOUCH = 1,
@@ -59,7 +54,6 @@ class EnvironmentalModelManager {
   void setFaultcode(uint64_t faultcode);
   uint64_t getFaultcode();
   void SetConfig(const planning::common::SceneType scene_type);
-  const std::vector<FaultCounter>& GetFaultCounterInfos();
 
   //  private:
   //   void SetPlanningPesult(const PlanningResult &ego_prediction_result,
@@ -122,7 +116,6 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::RouteInfo> route_info_ptr_ = nullptr;
   std::shared_ptr<planning::EdtManager> edt_manager_ptr_ = nullptr;
   double last_feed_time_[FEED_TYPE_MAX]{};
-  std::vector<FaultCounter> fault_counter_vec_;
   EgoPlanningConfig ego_config_;
   int current_turn_signal_ = 0;
   int last_frame_turn_sinagl_ = 0;
@@ -131,7 +124,6 @@ class EnvironmentalModelManager {
   // bool is_right_firmly_touch_ = false;
   // int num_right_firmly_touch_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
-  uint64_t faultcode_ = 666;
 };
 
 }  // namespace planner
