@@ -1,5 +1,6 @@
 #include "path_time_heuristic_optimizer.h"
 #include <cmath>
+#include <vector>
 #include "define/geometry.h"
 #include "environmental_model.h"
 #include "debug_info_log.h"
@@ -60,9 +61,7 @@ bool PathTimeHeuristicOptimizer::Process(
   planning_init_point_ =
       ego_state_manager->planning_init_point();
   std::shared_ptr<ReferencePath> base_refline =
-      session_->mutable_environmental_model()
-          ->get_reference_path_manager()
-          ->get_reference_path_by_lane(virtual_lane_mgr->current_lane_virtual_id(), false);
+      session_->planning_context().lane_change_decider_output().coarse_planning_info.reference_path;
   base_frenet_coord_ = base_refline->get_frenet_coord();
   st_dp_is_sucess_ = true;
 
@@ -203,33 +202,48 @@ void PathTimeHeuristicOptimizer::GetVehicleVertices(
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double angle = traj_point.heading_angle;
-
+  std::array<Point2D, 4> ego_points;
   double cos_theta = cos(angle);
   double sin_theta = sin(angle);
-
-  double c_x = traj_point.s + vehicle_param.rear_axle_to_center * cos_theta;
-  double c_y = traj_point.l + vehicle_param.rear_axle_to_center * sin_theta;
-
+  double c_x = traj_point.x + vehicle_param.rear_axle_to_center * cos_theta;
+  double c_y = traj_point.y + vehicle_param.rear_axle_to_center * sin_theta;
   double d_wx = vehicle_param.width * 0.5 * sin_theta;
   double d_wy = vehicle_param.width * 0.5 * cos_theta;
   double d_lx = vehicle_param.length * 0.5 * cos_theta;
   double d_ly = vehicle_param.length * 0.5 * sin_theta;
+  ego_points[0] = Point2D(c_x - d_wx + d_lx, c_y + d_wy + d_ly);
+  ego_points[1] = Point2D(c_x - d_wx - d_lx, c_y - d_ly + d_wy);
+  ego_points[2] = Point2D(c_x + d_wx - d_lx, c_y - d_wy - d_ly);
+  ego_points[3] = Point2D(c_x + d_wx + d_lx, c_y + d_ly - d_wy);
 
-  // Counterclockwise from left-front vertex
-  vertices.emplace_back(Vec2d(c_x - d_wx + d_lx, c_y + d_wy + d_ly));
-    // vertices.emplace_back(Vec2d(c_x - d_wx, c_y + d_wy));
-  vertices.emplace_back(Vec2d(c_x - d_wx - d_lx, c_y - d_ly + d_wy));
-    // vertices.emplace_back(Vec2d(c_x - d_lx, c_y - d_ly));
-  vertices.emplace_back(Vec2d(c_x + d_wx - d_lx, c_y - d_wy - d_ly));
-    // vertices.emplace_back(Vec2d(c_x + d_wx, c_y - d_wy));
-  vertices.emplace_back(Vec2d(c_x + d_wx + d_lx, c_y + d_ly - d_wy));
-    // vertices.emplace_back(Vec2d(c_x + d_lx, c_y + d_ly));
+  Vec2d ego_vertice_frenet(traj_point.x, traj_point.y);
+  Point2D ego_point_frenet(traj_point.s, traj_point.l);
+  for (int i = 0; i < ego_points.size(); ++i) {
+    if (base_frenet_coord_->XYToSL(ego_points[i], ego_point_frenet)) {
+      ego_vertice_frenet.set_x(ego_point_frenet.x);
+      ego_vertice_frenet.set_y(ego_point_frenet.y);
+    }
+    vertices.emplace_back(ego_vertice_frenet);
+  }
+
+  // // Counterclockwise from left-front vertex
+  // // vertices.emplace_back(Vec2d(c_x - d_wx + d_lx, c_y + d_wy + d_ly));
+  //   // vertices.emplace_back(Vec2d(c_x - d_wx, c_y + d_wy));
+  // vertices.emplace_back(Vec2d(c_x - d_wx - d_lx, c_y - d_ly + d_wy));
+  //   // vertices.emplace_back(Vec2d(c_x - d_lx, c_y - d_ly));
+  // vertices.emplace_back(Vec2d(c_x + d_wx - d_lx, c_y - d_wy - d_ly));
+  //   // vertices.emplace_back(Vec2d(c_x + d_wx, c_y - d_wy));
+  // vertices.emplace_back(Vec2d(c_x + d_wx + d_lx, c_y + d_ly - d_wy));
+  //   // vertices.emplace_back(Vec2d(c_x + d_lx, c_y + d_ly));
 
   return;
 }
 
 void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs) {
+  if (!st_dp_is_sucess_) {
+    return;
+  }
   const int k_ego_traj_points_nums = 16;
   auto& lateral_obstacle_decision =
       session_->mutable_planning_context()

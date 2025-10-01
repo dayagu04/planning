@@ -155,6 +155,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
     AgentFrenetSpatioTemporalInFo agent_state;
     agent_state.agent_id = agent_id;
     agent_state.agent_type = agent_type;
+    agent_state.is_static = agent_iter.is_static();
 
     const auto& times_and_corners = agent_iter.time_and_corners();
     const auto& max_box_corners = agent_iter.max_box_corners();

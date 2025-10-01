@@ -318,6 +318,7 @@ void SLTGridMapAdapter::StateTransformForInputData(planning::common::SpationTemp
     AgentFrenetSpatioTemporalInFo agent_state;
     agent_state.agent_id = agent_id;
     agent_state.agent_type = (int)agent_iter->type();
+    agent_state.is_static = agent_iter->is_static();
     auto state_iter = agents_global_state_vec.find(agent_id);
     auto fs_iter = agents_frenet_point_vec.find(agent_id);
 
@@ -336,6 +337,7 @@ void SLTGridMapAdapter::StateTransformForInputData(planning::common::SpationTemp
     auto agent_time_corner = agent_time_corners->Add();
     agent_time_corner->set_agent_id(agent_id);
     agent_time_corner->set_agent_type((int)agent_iter->type());
+    agent_time_corner->set_is_static(agent_iter->is_static());
     const auto& fs_point = fs_iter->second;
     int index = 0;
     for (int i = 0; i < state_iter->second.size(); ++i) {
