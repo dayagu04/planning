@@ -30,7 +30,7 @@ class SVGraphNode {
   void SetPrePoint(const SVGraphNode* pre_point);
 
   void SetAcc(const double acc) { sv_point_.acc = acc; }
-  void SetJerk(const double jerk) { sv_point_.jerk= jerk; }
+  void SetJerk(const double jerk) { sv_point_.jerk = jerk; }
 
   void SetTime(const double time) { sv_point_.t = time; }
 

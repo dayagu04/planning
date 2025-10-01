@@ -9,14 +9,14 @@
 
 #include "../../common/planning_gflags.h"
 #include "debug_info_log.h"
+#include "edt_manager.h"
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "math/math_utils.h"
-#include "planning_context.h"
-#include "edt_manager.h"
-#include "task_interface/lateral_obstacle_decider_output.h"
 #include "obstacle_manager.h"
+#include "planning_context.h"
 #include "src/modules/tasks/behavior_planners/general_lateral_decider/general_lateral_decider_utils.h"
+#include "task_interface/lateral_obstacle_decider_output.h"
 
 namespace planning {
 
@@ -26,34 +26,34 @@ LateralObstacleDecider::LateralObstacleDecider(
       session_(session),
       config_(config_builder->cast<LateralObstacleDeciderConfig>()),
       search_result_(session_->mutable_planning_context()
-                               ->mutable_lateral_obstacle_decider_output()
-                               .search_result),
+                         ->mutable_lateral_obstacle_decider_output()
+                         .search_result),
       left_borrow_(session_->mutable_planning_context()
-              ->mutable_lateral_obstacle_decider_output()
-              .left_borrow),
+                       ->mutable_lateral_obstacle_decider_output()
+                       .left_borrow),
       right_borrow_(session_->mutable_planning_context()
-              ->mutable_lateral_obstacle_decider_output()
-              .right_borrow),
+                        ->mutable_lateral_obstacle_decider_output()
+                        .right_borrow),
       in_intersection_(session_->mutable_planning_context()
-              ->mutable_lateral_obstacle_decider_output()
-              .in_intersection),
+                           ->mutable_lateral_obstacle_decider_output()
+                           .in_intersection),
       lateral_obstacle_history_info_(
           session_->mutable_planning_context()
               ->mutable_lateral_obstacle_decider_output()
               .lateral_obstacle_history_info),
-      obstacles_id_behind_ego_(
-          session_->mutable_planning_context()
-              ->mutable_lateral_obstacle_decider_output()
-              .obstacles_id_behind_ego),
+      obstacles_id_behind_ego_(session_->mutable_planning_context()
+                                   ->mutable_lateral_obstacle_decider_output()
+                                   .obstacles_id_behind_ego),
       output_(session_->mutable_planning_context()
                   ->mutable_lateral_obstacle_decider_output()
                   .lat_obstacle_decision),
-      obstacle_intrusion_distance_thr_(session_->mutable_planning_context()
-                  ->mutable_lateral_obstacle_decider_output()
-                  .obstacle_intrusion_distance_thr),
+      obstacle_intrusion_distance_thr_(
+          session_->mutable_planning_context()
+              ->mutable_lateral_obstacle_decider_output()
+              .obstacle_intrusion_distance_thr),
       follow_obstacle_info_(session_->mutable_planning_context()
-                  ->mutable_lateral_obstacle_decider_output()
-                  .follow_obstacle_info) {
+                                ->mutable_lateral_obstacle_decider_output()
+                                .follow_obstacle_info) {
   VehicleParam vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   ego_rear_axis_to_front_edge_ = vehicle_param.front_edge_to_rear_axle;
@@ -73,27 +73,31 @@ bool LateralObstacleDecider::Execute() {
     return false;
   }
   auto &plan_history_traj = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .plan_history_traj;
-  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_plan_history_traj_valid;
-  auto &is_emergency_avoid_release = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_emergency_avoid_release;
-  auto &uniform_plan_history_traj = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .uniform_plan_history_traj;
-  auto &is_uniform_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_uniform_plan_history_traj_valid;
+                                ->mutable_lateral_obstacle_decider_output()
+                                .plan_history_traj;
+  auto &is_plan_history_traj_valid =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_plan_history_traj_valid;
+  auto &is_emergency_avoid_release =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_emergency_avoid_release;
+  auto &uniform_plan_history_traj =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .uniform_plan_history_traj;
+  auto &is_uniform_plan_history_traj_valid =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_uniform_plan_history_traj_valid;
   obstacle_intrusion_distance_thr_.clear();
   obstacles_id_behind_ego_.clear();
   plan_history_traj.clear();
   is_plan_history_traj_valid = false;
   is_emergency_avoid_release.clear();
   uniform_plan_history_traj.clear();
-  is_uniform_plan_history_traj_valid= false;
+  is_uniform_plan_history_traj_valid = false;
   // UpdateLaneBorrowDirection();
 
   UpdateIntersection();
@@ -176,10 +180,11 @@ bool LateralObstacleDecider::Execute() {
     }
 
     double gap_front_node_id_s = 300;
-    double gap_rear_node_id_s = -100; // 貌似没有作用，仅需要gap_front_node_id_s就可以了
+    double gap_rear_node_id_s =
+        -100;  // 貌似没有作用，仅需要gap_front_node_id_s就可以了
     bool is_in_lane_change_scene = false;
     CalLaneChangeGapInfo(reference_path_ptr, gap_front_node_id_s,
-        gap_rear_node_id_s, is_in_lane_change_scene);
+                         gap_rear_node_id_s, is_in_lane_change_scene);
 
     // farthest_distance
     auto &last_traj_points =
@@ -212,8 +217,7 @@ bool LateralObstacleDecider::Execute() {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
-      FollowObstacleInfo &follow_info =
-          follow_obstacle_info_[obs->id()];
+      FollowObstacleInfo &follow_info = follow_obstacle_info_[obs->id()];
       history.is_behind_ego = false;
       if (history.can_not_avoid) {
         history.is_not_set = false;
@@ -222,7 +226,8 @@ bool LateralObstacleDecider::Execute() {
       }
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
-          !frenet_obs->b_frenet_valid() || frenet_obs->b_frenet_polygon_sequence_invalid() ||
+          !frenet_obs->b_frenet_valid() ||
+          frenet_obs->b_frenet_polygon_sequence_invalid() ||
           last_fix_lane_id != current_fix_lane_id) {
         history.is_avd_car = false;
         history.ncar_count = 0;
@@ -236,8 +241,8 @@ bool LateralObstacleDecider::Execute() {
       history.front_expand_len = 0.0;
       history.rear_expand_len = 0.0;
       if (history.side_car &&
-            frenet_obs->frenet_relative_velocity_s() < expand_vel) {
-          history.front_expand_len = 1.5;
+          frenet_obs->frenet_relative_velocity_s() < expand_vel) {
+        history.front_expand_len = 1.5;
       }
       if (in_intersection_ && history.side_car &&
           frenet_obs->frenet_relative_velocity_s() > -2) {
@@ -248,7 +253,7 @@ bool LateralObstacleDecider::Execute() {
         history.side_car = false;
         history.rear_car = false;
       } else if (frenet_obs->d_s_rel() >=
-                   -(ego_length_ + history.rear_expand_len) &&
+                     -(ego_length_ + history.rear_expand_len) &&
                  frenet_obs->d_s_rel() <= history.front_expand_len) {
         if (CheckSideObstacle(reference_path_ptr, *frenet_obs)) {
           history.side_car = true;
@@ -281,7 +286,7 @@ bool LateralObstacleDecider::Execute() {
           left_borrow_, right_borrow_, gap_front_node_id_s, gap_rear_node_id_s,
           is_in_lane_change_scene);
       IsPotentialFollowingObstacle(*frenet_obs, lane_width, gap_front_node_id_s,
-          gap_rear_node_id_s, is_in_lane_change_scene);
+                                   gap_rear_node_id_s, is_in_lane_change_scene);
       history.last_recv_time = obs->timestamp();
     }
 
@@ -297,8 +302,7 @@ bool LateralObstacleDecider::Execute() {
       const Obstacle *obs = frenet_obs->obstacle();
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
-      FollowObstacleInfo &follow_info =
-          follow_obstacle_info_[obs->id()];
+      FollowObstacleInfo &follow_info = follow_obstacle_info_[obs->id()];
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
           !frenet_obs->b_frenet_valid() ||
@@ -309,7 +313,8 @@ bool LateralObstacleDecider::Execute() {
         continue;
       }
       LateralObstacleDecision(*frenet_obs, lane_width, reference_path_ptr,
-                              gap_front_node_id_s, gap_rear_node_id_s, is_in_lane_change_scene);
+                              gap_front_node_id_s, gap_rear_node_id_s,
+                              is_in_lane_change_scene);
       if (history.last_is_avd_car && !history.is_avd_car) {
         HoldLatOffset(*frenet_obs);
       }
@@ -320,7 +325,8 @@ bool LateralObstacleDecider::Execute() {
       if (history.maintain_avoid) {
         maintain_avoid.emplace_back(obs->id());
       }
-      CheckLateralEmergencyAvoidObstacle(*frenet_obs, lane_width, reference_path_ptr);
+      CheckLateralEmergencyAvoidObstacle(*frenet_obs, lane_width,
+                                         reference_path_ptr);
       if (history.emergency_avoid) {
         emergency_avoid.emplace_back(obs->id());
       }
@@ -341,17 +347,18 @@ bool LateralObstacleDecider::Execute() {
   return true;
 }
 
-void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &frenet_obstacle, double lane_width,
+void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
+    FrenetObstacle &frenet_obstacle, double lane_width,
     const std::shared_ptr<ReferencePath> reference_path) {
-  auto &is_emergency_avoid_release = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_emergency_avoid_release;
+  auto &is_emergency_avoid_release =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_emergency_avoid_release;
   const auto &is_crossing_map = session_->planning_context()
-                          .crossing_agent_decider_output()
-                          .is_crossing_map;
+                                    .crossing_agent_decider_output()
+                                    .is_crossing_map;
   const auto lon_ref_path_decider_output =
-      session_->planning_context()
-               .lon_ref_path_decider_output();
+      session_->planning_context().lon_ref_path_decider_output();
   auto &frenet_coord = reference_path->get_frenet_coord();
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -372,34 +379,48 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
 
   if (config_.is_use_last_lon_information) {
     // 上一帧纵向释放的紧急障碍物id
-    const auto last_lon_emergency_avoid_obstacle_id = lon_ref_path_decider_output.danger_agent_info.agents_id_set;
+    const auto last_lon_emergency_avoid_obstacle_id =
+        lon_ref_path_decider_output.danger_agent_info.agents_id_set;
     if (last_lon_emergency_avoid_obstacle_id.count(obstacle.id())) {
       if (!history.emergency_avoid) {
         // 前方障碍物
         if (history.front_car || history.side_car) {
           // ttc条件
           // 因为这是纵向制动减速的障碍物，按照匀速递推的ttc会更加考虑该障碍物
-          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
-          bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel))
+                                : std::numeric_limits<double>::max();
+          bool is_lon_ttc_critical =
+              (lon_ttc < config_.emegency_avoid_ttc_lower) ||
               (lon_ttc < config_.emegency_avoid_ttc_upper &&
-              d_s_rel < config_.emegency_avoid_front_area);
+               d_s_rel < config_.emegency_avoid_front_area);
           // 横向距离条件
-          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
-            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
+          bool is_in_lateral_range =
+              ((d_min_cpath > 0) &&
+               (d_min_cpath <
+                config_.emegency_avoid_lareral_area + half_lane_width)) ||
+              ((d_max_cpath < 0) &&
+               (d_max_cpath >
+                -config_.emegency_avoid_lareral_area - half_lane_width));
           // 是否为正前方障碍物（如果纵向跟停的时候不会释放，可以先注释）
           bool is_straight_ahead = d_max_cpath > 0 && d_min_cpath < 0;
           // 过滤横穿的障碍物（VRU预测轨迹不准需要进一步优化）
           const auto cossing_map_iter = is_crossing_map.find(obstacle.id());
           bool is_cross_lane = (cossing_map_iter != is_crossing_map.end() &&
-              cossing_map_iter->second);
-          bool is_emergency_avoid = is_lon_ttc_critical && is_in_lateral_range && !is_straight_ahead && !is_cross_lane;
+                                cossing_map_iter->second);
+          bool is_emergency_avoid = is_lon_ttc_critical &&
+                                    is_in_lateral_range && !is_straight_ahead &&
+                                    !is_cross_lane;
           if (is_emergency_avoid) {
-            history.emergency_avoid_count = std::min(history.emergency_avoid_count + 1, max_emergency_avoid_count);
-          } else{
-            history.emergency_avoid_count = std::max(history.emergency_avoid_count - 1, 0);
+            history.emergency_avoid_count = std::min(
+                history.emergency_avoid_count + 1, max_emergency_avoid_count);
+          } else {
+            history.emergency_avoid_count =
+                std::max(history.emergency_avoid_count - 1, 0);
           }
-          history.emergency_avoid = history.emergency_avoid_count > emergency_avoid_count_thr;
-          is_emergency_avoid_release[obstacle.id()] = history.emergency_avoid ? true : false;
+          history.emergency_avoid =
+              history.emergency_avoid_count > emergency_avoid_count_thr;
+          is_emergency_avoid_release[obstacle.id()] =
+              history.emergency_avoid ? true : false;
         } else {
           // 后方障碍物，纵向因为后方障碍物导致的急刹需要与纵向侧后方障碍物过滤保持一致先不添加
         }
@@ -411,30 +432,42 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
         bool is_near_static = std::fabs(ego_v_) < 0.1;
         // 自车速度是否低于障碍物速度：
         bool is_slow_obstacle = ego_v_ < v_s;
-        history.emergency_avoid = !(is_overtake_emergency_obstacle || is_near_static || is_slow_obstacle);
-        is_emergency_avoid_release[obstacle.id()] = history.emergency_avoid ? true : false;
+        history.emergency_avoid = !(is_overtake_emergency_obstacle ||
+                                    is_near_static || is_slow_obstacle);
+        is_emergency_avoid_release[obstacle.id()] =
+            history.emergency_avoid ? true : false;
       }
     }
 
     // 纵向overtake、忽略的障碍物id
-    // const auto last_lon_overtake_obstacle_id = mutable_lon_ref_path_decider_output.danger_agent_info.agents_id_set;
+    // const auto last_lon_overtake_obstacle_id =
+    // mutable_lon_ref_path_decider_output.danger_agent_info.agents_id_set;
     std::unordered_set<int32_t> last_lon_overtake_obstacle_id;
     if (last_lon_overtake_obstacle_id.count(obstacle.id())) {
       if (!history.lon_overtake_avoid) {
         // 前方障碍物
         if (history.front_car || history.side_car) {
           // ttc条件
-          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
-          bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel))
+                                : std::numeric_limits<double>::max();
+          bool is_lon_ttc_critical =
+              (lon_ttc < config_.emegency_avoid_ttc_lower) ||
               (lon_ttc < config_.emegency_avoid_ttc_upper &&
-              d_s_rel < config_.emegency_avoid_front_area);
+               d_s_rel < config_.emegency_avoid_front_area);
           // 横向距离条件
-          bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
-            ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
+          bool is_in_lateral_range =
+              ((d_min_cpath > 0) &&
+               (d_min_cpath <
+                config_.emegency_avoid_lareral_area + half_lane_width)) ||
+              ((d_max_cpath < 0) &&
+               (d_max_cpath >
+                -config_.emegency_avoid_lareral_area - half_lane_width));
           // 横向是否ignore
-          bool is_lateral_ignore = (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
-              output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
-          bool lon_overtake_avoid = is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
+          bool is_lateral_ignore =
+              (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+               output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
+          bool lon_overtake_avoid =
+              is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
           history.lon_overtake_avoid = lon_overtake_avoid;
         } else {
           // 后方障碍物，纵向正常overtake,横向先不管
@@ -449,30 +482,43 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
     if (!history.emergency_avoid) {
       if (history.front_car && !history.side_car && !history.rear_car) {
         // 根据纵向ttc和制动力筛选避让障碍物
-        lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel)) : std::numeric_limits<double>::max();
-        bool is_lon_ttc_critical  = (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+        lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel))
+                              : std::numeric_limits<double>::max();
+        bool is_lon_ttc_critical =
+            (lon_ttc < config_.emegency_avoid_ttc_lower) ||
             (lon_ttc < config_.emegency_avoid_ttc_upper &&
-            d_s_rel < config_.emegency_avoid_front_area);
+             d_s_rel < config_.emegency_avoid_front_area);
         // 横向距离条件
-        bool is_in_lateral_range = ((d_min_cpath > 0) && (d_min_cpath < config_.emegency_avoid_lareral_area + half_lane_width)) ||
-          ((d_max_cpath < 0) && (d_max_cpath > -config_.emegency_avoid_lareral_area - half_lane_width));
+        bool is_in_lateral_range =
+            ((d_min_cpath > 0) &&
+             (d_min_cpath <
+              config_.emegency_avoid_lareral_area + half_lane_width)) ||
+            ((d_max_cpath < 0) &&
+             (d_max_cpath >
+              -config_.emegency_avoid_lareral_area - half_lane_width));
         const auto cossing_map_iter = is_crossing_map.find(obstacle.id());
         bool is_cross_lane = (cossing_map_iter != is_crossing_map.end() &&
-            cossing_map_iter->second);
+                              cossing_map_iter->second);
         // bool is_cross_lane = false;
         // 横向是否ignore
-        bool is_lateral_ignore = (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
-            output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
+        bool is_lateral_ignore =
+            (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+             output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
         // 纵向以一定的制动力减速还来不及的障碍物
-        bool is_lon_over_obstacle = CheckEgoOvertakeObstacle(frenet_obstacle, reference_path);
+        bool is_lon_over_obstacle =
+            CheckEgoOvertakeObstacle(frenet_obstacle, reference_path);
         bool is_emergency_avoid = is_lon_ttc_critical && is_in_lateral_range &&
-            is_lateral_ignore && is_lon_over_obstacle && !is_cross_lane;
+                                  is_lateral_ignore && is_lon_over_obstacle &&
+                                  !is_cross_lane;
         if (is_emergency_avoid) {
-          history.emergency_avoid_count = std::min(history.emergency_avoid_count + 1, max_emergency_avoid_count);
-        } else{
-          history.emergency_avoid_count = std::max(history.emergency_avoid_count - 1, 0);
+          history.emergency_avoid_count = std::min(
+              history.emergency_avoid_count + 1, max_emergency_avoid_count);
+        } else {
+          history.emergency_avoid_count =
+              std::max(history.emergency_avoid_count - 1, 0);
         }
-        history.emergency_avoid = history.emergency_avoid_count > emergency_avoid_count_thr;
+        history.emergency_avoid =
+            history.emergency_avoid_count > emergency_avoid_count_thr;
       } else {
         // 过滤侧、后方障碍物
       }
@@ -484,7 +530,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(FrenetObstacle &
       bool is_near_static = std::fabs(ego_v_) < 0.1;
       // 自车速度是否低于障碍物速度
       bool is_slow_obstacle = ego_v_ < v_s;
-      history.emergency_avoid = !(is_overtake_emergency_obstacle || is_near_static || is_slow_obstacle);
+      history.emergency_avoid = !(is_overtake_emergency_obstacle ||
+                                  is_near_static || is_slow_obstacle);
     }
   }
 }
@@ -493,16 +540,15 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
-  const auto lat_obs_decision_iter =
-      output_.find(obstacle.id());
-  if (lat_obs_decision_iter == output_.end()){
+  const auto lat_obs_decision_iter = output_.find(obstacle.id());
+  if (lat_obs_decision_iter == output_.end()) {
     return;
   }
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   bool maintain_avoid =
       ((output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
-        output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW ) &&
+        output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW) &&
        !history.rear_car && v_s_rel < 0 &&
        ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_lower) ||
         ((d_s_rel / (-v_s_rel) < config_.emegency_cutin_ttc_upper &&
@@ -515,7 +561,8 @@ void LateralObstacleDecider::HoldLatOffset(FrenetObstacle &frenet_obstacle) {
   }
 }
 
-bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
+bool LateralObstacleDecider::CheckEgoOvertakeObstacle(
+    FrenetObstacle &frenet_obstacle,
     const std::shared_ptr<ReferencePath> reference_path) {
   const int obstacle_id = frenet_obstacle.id();
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
@@ -529,7 +576,8 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
   bool ok = false;
   for (auto &i : timestamps) {
     Polygon2d obstacle_sl_polygon;
-    ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10), obstacle_sl_polygon);
+    ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10),
+                                             obstacle_sl_polygon);
     if (ok) {
       obstacke_start_s = obstacle_sl_polygon.min_x();
     }
@@ -538,7 +586,9 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
     } else {
       ego_end_s = std::fabs(ego_v_) * i - 0.5 * break_a * i * i;
     }
-    is_lon_over_obstacle = (ego_head_s_ + ego_end_s) > obstacke_start_s - desired_stopped_distance_to_obstacle;
+    is_lon_over_obstacle =
+        (ego_head_s_ + ego_end_s) >
+        obstacke_start_s - desired_stopped_distance_to_obstacle;
     if (is_lon_over_obstacle) {
       break;
     }
@@ -549,7 +599,8 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obs
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
     FrenetObstacle &frenet_obstacle, double lane_width, bool rightest_lane,
     double farthest_distance, bool can_left_borrow, bool can_right_borrow,
-    double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene) {
+    double gap_front_node_id_s, double gap_rear_node_id_s,
+    bool is_in_lane_change_scene) {
   ILOG_DEBUG << "----is_potential_avoiding_car-----";
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -587,9 +638,10 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
       (lc_request_direction == RIGHT_CHANGE);
   const auto lead_one =
       session_->environmental_model().get_lateral_obstacle()->leadone();
-  const auto &lane_change_decider_output = session_->planning_context()
-                                              .lane_change_decider_output();
-  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
   const auto gap_front_node_id =
       lane_change_decider_output.lc_gap_info.front_node_id;
   int32_t gap_front_agent_id = -1;
@@ -604,7 +656,7 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   double l = frenet_obstacle.frenet_l();
   double v_s = frenet_obstacle.frenet_velocity_s();
   double v_l = frenet_obstacle.frenet_velocity_l();
-  double v_lat = frenet_obstacle.frenet_velocity_lateral(); // 根据历史差分
+  double v_lat = frenet_obstacle.frenet_velocity_lateral();  // 根据历史差分
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   double d_min_cpath = frenet_obstacle.d_min_cpath();
@@ -619,10 +671,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
   double near_car_d_lane_thr = interp(d_s_rel, xp, fp);
   // lower buffer for car
-  if (!obstacle.is_static() && (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_BUS)) {
+  if (!obstacle.is_static() &&
+      (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
+       type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+       type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
+       type == iflyauto::ObjectType::OBJECT_TYPE_BUS)) {
     // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
     near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
   }
@@ -700,9 +753,11 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   lat_safety_buffer -= decre_buffer_for_lane_width;
 
   if (obstacle.is_static()) {
-    obstacle_intrusion_distance_thr_[id] = std::max(lane_width - ego_width_ - static_obs_buffer, 0.0);
+    obstacle_intrusion_distance_thr_[id] =
+        std::max(lane_width - ego_width_ - static_obs_buffer, 0.0);
   } else {
-    obstacle_intrusion_distance_thr_[id] = std::max(lane_width - ego_width_ - lat_safety_buffer, 0.0);
+    obstacle_intrusion_distance_thr_[id] =
+        std::max(lane_width - ego_width_ - lat_safety_buffer, 0.0);
   }
 
   double lat_safety_buffer_for_lateral_obstacle_decision = 0;
@@ -746,42 +801,52 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
            v_s < 0.5);
 
       double d_max_cpath_updated = d_max_cpath;
-      double d_min_cpath_updated= d_min_cpath;
+      double d_min_cpath_updated = d_min_cpath;
       std::array<double, 3> x_v_lat{-0.6, -0.4, -0.2};
       std::array<double, 3> f_times{10, 5, 1};
       double times = interp(v_lat, x_v_lat, f_times);
       if (d_max_cpath < 0) {
         d_max_cpath_updated = d_max_cpath - v_lat * 0.1 * times;
       } else if (d_min_cpath > 0) {
-        d_min_cpath_updated= d_min_cpath + v_lat * 0.1 * times;
+        d_min_cpath_updated = d_min_cpath + v_lat * 0.1 * times;
       }
 
       // can avoid flag
       bool can_avoid =
-          (d_min_cpath_updated>
+          (d_min_cpath_updated >
            std::min((ego_width_ + lat_safety_buffer) - lane_width / 2, 1.8)) ||
           (d_max_cpath_updated <
            std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer), -1.8)) ||
           ((obstacle.is_static()) &&
-           ((d_min_cpath_updated>
+           ((d_min_cpath_updated >
              (ego_width_ + static_obs_buffer) - lane_width / 2) ||
             (d_max_cpath_updated <
              lane_width / 2 - (ego_width_ + static_obs_buffer))));
 
       // can avoid flag for LateralObstacleDecision
       lateral_obstacle_decision_can_avoid =
-          (d_min_cpath_updated>
-           std::min((ego_width_ + lat_safety_buffer_for_lateral_obstacle_decision) - lane_width / 2, 1.8)) ||
+          (d_min_cpath_updated >
+           std::min(
+               (ego_width_ + lat_safety_buffer_for_lateral_obstacle_decision) -
+                   lane_width / 2,
+               1.8)) ||
           (d_max_cpath_updated <
-           std::max(lane_width / 2 - (ego_width_ + lat_safety_buffer_for_lateral_obstacle_decision), -1.8)) ||
+           std::max(lane_width / 2 -
+                        (ego_width_ +
+                         lat_safety_buffer_for_lateral_obstacle_decision),
+                    -1.8)) ||
           ((obstacle.is_static()) &&
-           ((d_min_cpath_updated>
-             (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision) - lane_width / 2) ||
+           ((d_min_cpath_updated >
+             (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision) -
+                 lane_width / 2) ||
             (d_max_cpath_updated <
-             lane_width / 2 - (ego_width_ + static_obs_buffer_for_lateral_obstacle_decision))));
+             lane_width / 2 -
+                 (ego_width_ +
+                  static_obs_buffer_for_lateral_obstacle_decision))));
 
       if (is_in_lane_change_scene &&
-          frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+          frenet_obstacle.frenet_obstacle_boundary().s_start <
+              gap_front_node_id_s) {
         // 在变道状态，依据gap计算
         can_avoid = true;
         lateral_obstacle_decision_can_avoid = true;
@@ -836,15 +901,16 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     // 根据侵入的距离，动态调整计数
     double intrusion_distance = DBL_MAX;
     if (d_max_cpath < 0) {
-      intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
+      intrusion_distance = lane_width * 0.5 - std::fabs(d_max_cpath);
     } else if (d_min_cpath > 0) {
-      intrusion_distance =  lane_width * 0.5 - d_min_cpath;
+      intrusion_distance = lane_width * 0.5 - d_min_cpath;
     }
     std::array<double, 3> intrusion_distance_xp{0.1, 0.2, 0.3};
     std::array<double, 3> can_avoid_count_fp{3.1, 2.1, 1.1};
-    int can_avoid_count =
-      static_cast<int>(interp(intrusion_distance, intrusion_distance_xp, can_avoid_count_fp));
-    history.can_avoid_count = std::min(history.can_avoid_count + can_avoid_count, max_can_avoid_count);
+    int can_avoid_count = static_cast<int>(
+        interp(intrusion_distance, intrusion_distance_xp, can_avoid_count_fp));
+    history.can_avoid_count = std::min(
+        history.can_avoid_count + can_avoid_count, max_can_avoid_count);
   } else {
     // 如果当前帧不能避让，则不避让
     history.can_avoid_count = 0;
@@ -908,13 +974,13 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   //   JSON_DEBUG_VALUE("latral_lead_one_id", lead_one->id());
   // }
 
-  if (lead_one != nullptr && ((id == lead_one->id() &&
-      !is_in_lane_change_scene) || (is_in_lane_change_scene &&
-      id == lead_one->id() && id == gap_front_agent_id)) &&
+  if (lead_one != nullptr &&
+      ((id == lead_one->id() && !is_in_lane_change_scene) ||
+       (is_in_lane_change_scene && id == lead_one->id() &&
+        id == gap_front_agent_id)) &&
       (is_in_range || is_about_to_enter_range)) {
     double dist_intersect = 1000;
-    double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width -
-    ego_width_);
+    double near_end_pos = 0.5 * lane_width - 0.7 * (lane_width - ego_width_);
     double far_end_pos = 0.5 * lane_width + 0.2;
 
     bool is_in_avoid_range_by_nearest_point =
@@ -933,11 +999,12 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
     if (!((history.is_avd_car) &&
           (is_in_avoid_range_by_nearest_point ||
            is_in_avoid_range_by_nearest_line_in_left ||
-           is_in_avoid_range_by_nearest_line_in_right || borrow_bicycle_lane
-           || rightest_lane ||
+           is_in_avoid_range_by_nearest_line_in_right || borrow_bicycle_lane ||
+           rightest_lane ||
            (dist_intersect - lead_one->d_s_rel() < 50 &&
             dist_intersect - lead_one->d_s_rel() >= -5 &&
-            lead_one->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
+            lead_one->type() ==
+                iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
       history.ncar_count =
           std::max(history.ncar_count - 10 * count * planning_cycle_time, 0.0);
     }
@@ -987,7 +1054,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
         std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
     // if (!in_lon_near_area || !in_lat_near_area) {
     //   history.ncar_count =
-    //       std::max(history.ncar_count - 2 * count * planning_cycle_time, 0.0);
+    //       std::max(history.ncar_count - 2 * count * planning_cycle_time,
+    //       0.0);
     // }
 
     if (v_s_rel > 1.5) {
@@ -1026,20 +1094,20 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
 void LateralObstacleDecider::LateralObstacleDecision(
     FrenetObstacle &frenet_obstacle, double lane_width,
     const std::shared_ptr<ReferencePath> reference_path_ptr,
-    double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene) {
+    double gap_front_node_id_s, double gap_rear_node_id_s,
+    bool is_in_lane_change_scene) {
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
-  FollowObstacleInfo &follow_info =
-      follow_obstacle_info_[obstacle.id()];
+  FollowObstacleInfo &follow_info = follow_obstacle_info_[obstacle.id()];
   const auto &coarse_planning_info = session_->planning_context()
-                                          .lane_change_decider_output()
-                                          .coarse_planning_info;
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
   const auto &gap_selector_decider_output =
       session_->planning_context().gap_selector_decider_output();
   bool is_LC_CHANGE =
       ((coarse_planning_info.target_state == kLaneChangeExecution) ||
-        (coarse_planning_info.target_state == kLaneChangeComplete));
+       (coarse_planning_info.target_state == kLaneChangeComplete));
   bool is_LC_HOLD = coarse_planning_info.target_state == kLaneChangeHold;
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   bool lane_change_scene = false;
@@ -1086,7 +1154,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
       const bool last_was_avoid =
           last_output_.find(id) != last_output_.end() &&
           (last_output_[id] == LatObstacleDecisionType::LEFT ||
-          last_output_[id] == LatObstacleDecisionType::RIGHT);
+           last_output_[id] == LatObstacleDecisionType::RIGHT);
       if (last_was_avoid) {
         avoid_front_buffer = config_.avoid_persistence_front_buffer;
       }
@@ -1172,19 +1240,26 @@ void LateralObstacleDecider::LateralObstacleDecision(
       const double heading_thr = 0.017;
       const double v_l_thr = 0.3;
       const double ego_l = reference_path_ptr->get_frenet_ego_state().l();
-      const double ego_v_l = reference_path_ptr->get_frenet_ego_state().velocity_l();
-      const double ego_heading = reference_path_ptr->get_frenet_ego_state().heading_angle();
-      if (std::fabs(ego_l) >= l_offset_thr || std::fabs(ego_heading) >= heading_thr ||
+      const double ego_v_l =
+          reference_path_ptr->get_frenet_ego_state().velocity_l();
+      const double ego_heading =
+          reference_path_ptr->get_frenet_ego_state().heading_angle();
+      if (std::fabs(ego_l) >= l_offset_thr ||
+          std::fabs(ego_heading) >= heading_thr ||
           std::fabs(ego_v_l) >= v_l_thr) {
-        const double ego_l_start = reference_path_ptr->get_frenet_ego_state().polygon().min_y();
-        const double ego_l_end = reference_path_ptr->get_frenet_ego_state().polygon().max_y();
+        const double ego_l_start =
+            reference_path_ptr->get_frenet_ego_state().polygon().min_y();
+        const double ego_l_end =
+            reference_path_ptr->get_frenet_ego_state().polygon().max_y();
         // const double obstacle_l_start =
         //     frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
         // const double obstacle_l_end =
         //     frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
 
-        const double obstacle_l_start = frenet_obstacle.frenet_obstacle_boundary().l_start;
-        const double obstacle_l_end = frenet_obstacle.frenet_obstacle_boundary().l_end;
+        const double obstacle_l_start =
+            frenet_obstacle.frenet_obstacle_boundary().l_start;
+        const double obstacle_l_end =
+            frenet_obstacle.frenet_obstacle_boundary().l_end;
         double start_l = std::max(ego_l_start, obstacle_l_start);
         double end_l = std::min(ego_l_end, obstacle_l_end);
         constexpr double kLatOverlapBuffer = 0.5;
@@ -1207,7 +1282,8 @@ void LateralObstacleDecider::LateralObstacleDecision(
   }
 
   if (is_in_lane_change_scene && d_s_rel > history.front_expand_len &&
-      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+      frenet_obstacle.frenet_obstacle_boundary().s_start <
+          gap_front_node_id_s) {
     // 在变道状态，依据gap计算
     if (d_max_cpath > 0 && d_min_cpath < 0) {
       output_[id] = LatObstacleDecisionType::IGNORE;
@@ -1248,10 +1324,10 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
         interp(lane_width, x_lat_buffer, f_lat_buffer);
     lat_safety_buffer -= decre_buffer_for_lane_width;
 
-  // addition buffer for oversize vehicle
-  if (obstacle.is_oversize_vehicle()) {
-    lat_safety_buffer += oversize_veh_addition_buffer;
-  }
+    // addition buffer for oversize vehicle
+    if (obstacle.is_oversize_vehicle()) {
+      lat_safety_buffer += oversize_veh_addition_buffer;
+    }
 
     // 减去大车后视镜
     if (frenet_obstacle.obstacle()->is_oversize_vehicle()) {
@@ -1283,7 +1359,8 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
     bool ok = false;
     for (auto &i : timestamps) {
       Polygon2d obstacle_sl_polygon;
-      ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10), obstacle_sl_polygon);
+      ok = reference_path->get_polygon_at_time(obstacle_id, false, int(i * 10),
+                                               obstacle_sl_polygon);
       if (ok) {
         for (auto &pt : obstacle_sl_polygon.points()) {
           if (obstacle.is_reverse()) {
@@ -1292,7 +1369,8 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
             // 使用历史轨迹
             // size_t index = static_cast<size_t>(i / config_.delta_t);
             // if (index < plan_history_traj_.size()) {
-            //   ego_front_s = plan_history_traj_[index].s + ego_rear_axis_to_front_edge_;
+            //   ego_front_s = plan_history_traj_[index].s +
+            //   ego_rear_axis_to_front_edge_;
             // }
             if (pt.x() <= ego_front_s) {
               break;
@@ -1316,10 +1394,12 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
                ((frenet_obstacle.frenet_l() > 0 && extreme_l < kLThreshold) ||
                 (frenet_obstacle.frenet_l() < 0 && extreme_l > -kLThreshold))) {
       history.cut_in_or_cross_count += 1;
-      history.cut_in_or_cross_count = std::min(history.cut_in_or_cross_count, 5);
+      history.cut_in_or_cross_count =
+          std::min(history.cut_in_or_cross_count, 5);
     } else {
       history.cut_in_or_cross_count -= 1;
-      history.cut_in_or_cross_count = std::max(history.cut_in_or_cross_count, 0);
+      history.cut_in_or_cross_count =
+          std::max(history.cut_in_or_cross_count, 0);
     }
 
     if (history.cut_in_or_cross_count > 2) {
@@ -1345,13 +1425,13 @@ bool LateralObstacleDecider::CalculateCutInAndCross(
 void LateralObstacleDecider::ConstructPlanHistoryTraj(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
   auto &plan_history_traj = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .plan_history_traj;
-  auto &is_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_plan_history_traj_valid;
-  const auto &frenet_coord =
-      reference_path_ptr->get_frenet_coord();
+                                ->mutable_lateral_obstacle_decider_output()
+                                .plan_history_traj;
+  auto &is_plan_history_traj_valid =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_plan_history_traj_valid;
+  const auto &frenet_coord = reference_path_ptr->get_frenet_coord();
   auto &last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
                                .raw_traj_points;
@@ -1372,7 +1452,9 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
     is_plan_history_traj_valid = false;
     return;
   }
-  auto ego_s = reference_path_ptr->get_frenet_ego_state().planning_init_point().frenet_state.s;
+  auto ego_s = reference_path_ptr->get_frenet_ego_state()
+                   .planning_init_point()
+                   .frenet_state.s;
   // auto ego_s = ego_frenet_state_.s();
   if (ego_s <= plan_history_traj_tmp.front().s) {
     for (double t = 0; t <= plan_history_traj_tmp.back().t;
@@ -1426,27 +1508,31 @@ void LateralObstacleDecider::ConstructPlanHistoryTraj(
 void LateralObstacleDecider::ConstructUniformPlanHistoryTraj(
     const std::shared_ptr<ReferencePath> &reference_path_ptr) {
   const auto plan_history_traj = session_->mutable_planning_context()
-                          ->lateral_obstacle_decider_output()
-                          .plan_history_traj;
-  const auto is_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->lateral_obstacle_decider_output()
-                          .is_plan_history_traj_valid;
-  auto &uniform_plan_history_traj = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .uniform_plan_history_traj;
-  auto &is_uniform_plan_history_traj_valid = session_->mutable_planning_context()
-                          ->mutable_lateral_obstacle_decider_output()
-                          .is_uniform_plan_history_traj_valid;
+                                     ->lateral_obstacle_decider_output()
+                                     .plan_history_traj;
+  const auto is_plan_history_traj_valid =
+      session_->mutable_planning_context()
+          ->lateral_obstacle_decider_output()
+          .is_plan_history_traj_valid;
+  auto &uniform_plan_history_traj =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .uniform_plan_history_traj;
+  auto &is_uniform_plan_history_traj_valid =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .is_uniform_plan_history_traj_valid;
   if (is_plan_history_traj_valid) {
     // 把s信息变成匀速
     if (!plan_history_traj.empty()) {
       is_uniform_plan_history_traj_valid = true;
-      const double delta_s = (plan_history_traj.back().s - plan_history_traj.front().s) /
+      const double delta_s =
+          (plan_history_traj.back().s - plan_history_traj.front().s) /
           (plan_history_traj.back().t - plan_history_traj.front().t);
       for (size_t i = 0; i < plan_history_traj.size(); i++) {
         TrajectoryPoint pt = plan_history_traj[i];
-        pt.s = plan_history_traj[0].s +
-            delta_s * (pt.t - plan_history_traj[0].t);
+        pt.s =
+            plan_history_traj[0].s + delta_s * (pt.t - plan_history_traj[0].t);
         uniform_plan_history_traj.emplace_back(std::move(pt));
       }
     } else {
@@ -1459,16 +1545,16 @@ void LateralObstacleDecider::ConstructUniformPlanHistoryTraj(
 
 void LateralObstacleDecider::UpdateIntersection() {
   const auto intersection_state = session_->environmental_model()
-                              .get_virtual_lane_manager()
-                              ->GetIntersectionState();
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
   const double distance_to_stopline = session_->environmental_model()
-                                    .get_virtual_lane_manager()
-                                    ->GetEgoDistanceToStopline();
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
   bool current_intersection_state =
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
       intersection_state == common::IntersectionState::OFF_INTERSECTION ||
       (intersection_state == common::IntersectionState::APPROACH_INTERSECTION &&
-      (distance_to_stopline > 500 || distance_to_stopline < 0));
+       (distance_to_stopline > 500 || distance_to_stopline < 0));
   if (current_intersection_state) {
     intersection_count_ = 2;
   } else {
@@ -1480,25 +1566,25 @@ void LateralObstacleDecider::UpdateIntersection() {
 void LateralObstacleDecider::UpdateLaneBorrowDirection() {
   left_borrow_ = true;
   right_borrow_ = true;
-  const auto& virtual_lane_manager =
+  const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto current_lane_ptr = virtual_lane_manager->get_current_lane();
   const auto left_lane_ptr = virtual_lane_manager->get_left_lane();
   const auto right_lane_ptr = virtual_lane_manager->get_right_lane();
   double lane_line_length = 0.0;
-  const auto& left_lane_boundarys = current_lane_ptr->get_left_lane_boundary();
-  const auto& right_lane_boundarys =
+  const auto &left_lane_boundarys = current_lane_ptr->get_left_lane_boundary();
+  const auto &right_lane_boundarys =
       current_lane_ptr->get_right_lane_boundary();
   const auto ego_frenet_boundary = session_->environmental_model()
-                             .get_reference_path_manager()
-                             ->get_reference_path_by_current_lane()
-                             ->get_ego_frenet_boundary();
+                                       .get_reference_path_manager()
+                                       ->get_reference_path_by_current_lane()
+                                       ->get_ego_frenet_boundary();
   iflyauto::LaneBoundaryType left_lane_boundary_type;
   iflyauto::LaneBoundaryType right_lane_boundary_type;
   // # Accumulate lane segment lengths.
   // Record current segment type and break loop when exceeding vehicle
   // wheelbase.
-  const auto& lane_points = current_lane_ptr->lane_points();
+  const auto &lane_points = current_lane_ptr->lane_points();
   for (int i = 0; i < lane_points.size(); i++) {
     lane_line_length = lane_points[i].s;
     if (lane_line_length > ego_frenet_boundary.s_end) {
@@ -1510,7 +1596,8 @@ void LateralObstacleDecider::UpdateLaneBorrowDirection() {
   // If the lane marking is not left dashed/right solid or double dashed, return
   // False.
   if (left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-      left_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
+      left_lane_boundary_type !=
+          iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
       left_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED &&
       left_lane_boundary_type !=
@@ -1523,7 +1610,8 @@ void LateralObstacleDecider::UpdateLaneBorrowDirection() {
 
   // todo: if left lane is reverse, then left_boorow is false
   if (right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DASHED &&
-      right_lane_boundary_type != iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
+      right_lane_boundary_type !=
+          iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED &&
       right_lane_boundary_type !=
           iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED) {
     right_borrow_ = false;
@@ -1771,14 +1859,19 @@ void LateralObstacleDecider::UpdateLatDecisionWithARAStar(
   }
 }
 void LateralObstacleDecider::CheckObstaclesIsReverse() {
-  const auto& reference_path_ptr = session_->planning_context().
-                      lane_change_decider_output().coarse_planning_info.reference_path;
-  auto obstacle_manager = session_->mutable_environmental_model()->mutable_obstacle_manager();
+  const auto &reference_path_ptr = session_->planning_context()
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
+  auto obstacle_manager =
+      session_->mutable_environmental_model()->mutable_obstacle_manager();
   const double kMaxHeadingDiff = 2.3;
   auto frenet_obstacles = reference_path_ptr->get_obstacles();
   for (auto &frenet_obstacle : frenet_obstacles) {
-    bool is_reverse = std::fabs(NormalizeAngle(frenet_obstacle->obstacle()->velocity_angle() -
-      reference_path_ptr->get_frenet_coord()->GetPathPointByS(frenet_obstacle->frenet_s()).theta())) > kMaxHeadingDiff;
+    bool is_reverse = std::fabs(NormalizeAngle(
+                          frenet_obstacle->obstacle()->velocity_angle() -
+                          reference_path_ptr->get_frenet_coord()
+                              ->GetPathPointByS(frenet_obstacle->frenet_s())
+                              .theta())) > kMaxHeadingDiff;
     auto obstacle = obstacle_manager->find_obstacle(frenet_obstacle->id());
     if (obstacle != nullptr) {
       obstacle->set_is_reverse(is_reverse);
@@ -1831,12 +1924,12 @@ void LateralObstacleDecider::Log(
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->clear_obstacle();
   const auto &obstacle_map = reference_path_ptr->get_obstacles_map();
-  for (const auto& [obstacle_id, decision] : output_) {
+  for (const auto & [ obstacle_id, decision ] : output_) {
     auto it = obstacle_map.find(obstacle_id);
     if (it == obstacle_map.end()) {
       continue;
     }
-    const auto& frenet_obstacle = it->second;
+    const auto &frenet_obstacle = it->second;
     planning::common::Obstacle *obstacle_log =
         environment_model_debug_info->add_obstacle();
     obstacle_log->set_id(frenet_obstacle->id());
@@ -1850,8 +1943,10 @@ void LateralObstacleDecider::Log(
     // obstacle_log->set_s_with_max_l(frenet_obstacle->s_max);
     // obstacle_log->set_nearest_l_to_desire_path(frenet_obstacle->d_path);
     // obstacle_log->set_nearest_l_to_ego(frenet_obstacle->d_path_self);
-    obstacle_log->set_vs_lat_relative(frenet_obstacle->frenet_relative_velocity_l());
-    obstacle_log->set_vs_lon_relative(frenet_obstacle->frenet_relative_velocity_s());
+    obstacle_log->set_vs_lat_relative(
+        frenet_obstacle->frenet_relative_velocity_l());
+    obstacle_log->set_vs_lon_relative(
+        frenet_obstacle->frenet_relative_velocity_s());
     obstacle_log->set_vs_lon(frenet_obstacle->frenet_velocity_s());
     // obstacle_log->set_nearest_y_to_desired_path(frenet_obstacle->y_rel());
     // obstacle_log->set_is_accident_car(frenet_obstacle->is_accident_car());
@@ -1869,30 +1964,35 @@ void LateralObstacleDecider::Log(
 bool LateralObstacleDecider::CheckSideObstacle(
     const std::shared_ptr<ReferencePath> &reference_path_ptr,
     FrenetObstacle &frenet_obstacle) {
-  auto obstacle_manager = session_->mutable_environmental_model()->mutable_obstacle_manager();
+  auto obstacle_manager =
+      session_->mutable_environmental_model()->mutable_obstacle_manager();
   const double KOverlapSThrt = 0.3;
   const double KOverlapLThrt = 0.5;
   const auto ego_frenet_state = reference_path_ptr->get_frenet_ego_state();
   const auto ego_s_start = ego_frenet_state.boundary().s_start;
   const auto ego_s_end = ego_frenet_state.boundary().s_start;
-  const auto obstacle_boundary_s_start = frenet_obstacle.frenet_obstacle_boundary().s_start;
-  const auto obstacle_boundary_s_end = frenet_obstacle.frenet_obstacle_boundary().s_end;
+  const auto obstacle_boundary_s_start =
+      frenet_obstacle.frenet_obstacle_boundary().s_start;
+  const auto obstacle_boundary_s_end =
+      frenet_obstacle.frenet_obstacle_boundary().s_end;
   const int obstacle_id = frenet_obstacle.id();
   if ((obstacle_boundary_s_end - ego_s_start > 0 &&
-      obstacle_boundary_s_start - ego_s_start < 0)) {
+       obstacle_boundary_s_start - ego_s_start < 0)) {
     // 障碍物在自车前方先不考虑
     // (ego_s_end - obstacle_boundary_s_start > 0 &&
     // ego_s_end - obstacle_boundary_s_start <= KOverlapSThrt)
     Polygon2d obstacle_sl_polygon;
-    const auto ok = reference_path_ptr->get_polygon_at_time(obstacle_id, false, 0, obstacle_sl_polygon);
+    const auto ok = reference_path_ptr->get_polygon_at_time(
+        obstacle_id, false, 0, obstacle_sl_polygon);
     const auto ego_sl_polygon = ego_frenet_state.polygon();
     if (ok && ego_sl_polygon.is_convex()) {
       Polygon2d care_overlap_polygon;
       bool b_overlap_with_care = false;
-      b_overlap_with_care =
-          obstacle_sl_polygon.ComputeOverlap(ego_sl_polygon, &care_overlap_polygon);
+      b_overlap_with_care = obstacle_sl_polygon.ComputeOverlap(
+          ego_sl_polygon, &care_overlap_polygon);
       if (b_overlap_with_care) {
-        if (care_overlap_polygon.max_y() - care_overlap_polygon.min_y() > KOverlapLThrt) {
+        if (care_overlap_polygon.max_y() - care_overlap_polygon.min_y() >
+            KOverlapLThrt) {
           auto obstacle = obstacle_manager->find_obstacle(frenet_obstacle.id());
           if (obstacle != nullptr) {
             obstacle->set_is_normal(false);
@@ -1905,11 +2005,10 @@ bool LateralObstacleDecider::CheckSideObstacle(
   return true;
 }
 
-bool LateralObstacleDecider::IsTruck(
-    const FrenetObstacle &frenet_obstacle) {
+bool LateralObstacleDecider::IsTruck(const FrenetObstacle &frenet_obstacle) {
   return (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           (frenet_obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
-          frenet_obstacle.length() > 6));
+           frenet_obstacle.length() > 6));
 }
 
 void LateralObstacleDecider::IsPotentialFollowingObstacle(
@@ -1920,8 +2019,7 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[obstacle.id()];
-  FollowObstacleInfo &follow_info =
-      follow_obstacle_info_[obstacle.id()];
+  FollowObstacleInfo &follow_info = follow_obstacle_info_[obstacle.id()];
   // calculate info of obstacle
   int id = obstacle.id();
   iflyauto::ObjectType type = obstacle.type();
@@ -1929,7 +2027,7 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
   double l = frenet_obstacle.frenet_l();
   double v_s = frenet_obstacle.frenet_velocity_s();
   double v_l = frenet_obstacle.frenet_velocity_l();
-  double v_lat = frenet_obstacle.frenet_velocity_lateral(); // 根据历史差分
+  double v_lat = frenet_obstacle.frenet_velocity_lateral();  // 根据历史差分
   double v_s_rel = frenet_obstacle.frenet_relative_velocity_s();
   double d_s_rel = frenet_obstacle.d_s_rel();
   double d_min_cpath = frenet_obstacle.d_min_cpath();
@@ -1946,7 +2044,8 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
     return;
   }
   if (is_in_lane_change_scene &&
-      frenet_obstacle.frenet_obstacle_boundary().s_start < gap_front_node_id_s) {
+      frenet_obstacle.frenet_obstacle_boundary().s_start <
+          gap_front_node_id_s) {
     // 在变道状态，依据gap计算follow
     follow_info.follow_confidence = 0;
     follow_info.is_need_folow = false;
@@ -1954,12 +2053,14 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
     // 计算侵入距离
     double intrusion_distance = DBL_MAX;
     if (d_max_cpath < 0) {
-      intrusion_distance =  lane_width * 0.5 - std::fabs(d_max_cpath);
+      intrusion_distance = lane_width * 0.5 - std::fabs(d_max_cpath);
     } else if (d_min_cpath > 0) {
-      intrusion_distance =  lane_width * 0.5 - d_min_cpath;
+      intrusion_distance = lane_width * 0.5 - d_min_cpath;
     }
-    double base_safe_intrusoin_for_dynamic = config_.base_safe_intrusoin_for_dynamic;
-    double base_safe_intrusoin_for_static = config_.base_safe_intrusoin_for_static;
+    double base_safe_intrusoin_for_dynamic =
+        config_.base_safe_intrusoin_for_dynamic;
+    double base_safe_intrusoin_for_static =
+        config_.base_safe_intrusoin_for_static;
     double extra_buffer_for_truck = config_.extra_buffer_for_truck;
     double extra_buffer_for_vru = config_.extra_buffer_for_vru;
     double follow_hysteresis = config_.follow_hysteresis;
@@ -1985,16 +2086,20 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
     lead_d_path_thr = lead_d_path_thr * lane_width_actor;
 
     // 距离自车越远，置信度越高
-    follow_confidence_thr = interp(d_s_rel, config_.distacle_to_ego_bp, config_.distacle_to_ego_bp_factor);
+    follow_confidence_thr = interp(d_s_rel, config_.distacle_to_ego_bp,
+                                   config_.distacle_to_ego_bp_factor);
 
     // 自车速度的相关因素，自车速度越高，先减速然后跟车
 
     if (intrusion_distance >= lead_d_path_thr) {
-      follow_info.follow_confidence = std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
+      follow_info.follow_confidence =
+          std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
     } else {
-      follow_info.follow_confidence = std::fmax(follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
+      follow_info.follow_confidence = std::fmax(
+          follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
     }
-    follow_info.is_need_folow = follow_info.follow_confidence >= follow_confidence_thr;
+    follow_info.is_need_folow =
+        follow_info.follow_confidence >= follow_confidence_thr;
   }
 }
 
@@ -2003,16 +2108,17 @@ void LateralObstacleDecider::CalLaneChangeGapInfo(
     double &gap_front_node_id_s, double &gap_rear_node_id_s,
     bool &is_in_lane_change_scene) {
   const auto &target_state = session_->planning_context()
-                                          .lane_change_decider_output()
-                                          .coarse_planning_info.target_state;
-  const auto &dynamic_world = session_->environmental_model().get_dynamic_world();
+                                 .lane_change_decider_output()
+                                 .coarse_planning_info.target_state;
+  const auto &dynamic_world =
+      session_->environmental_model().get_dynamic_world();
 
-  is_in_lane_change_scene = (target_state == kLaneChangeExecution ||
-      target_state == kLaneChangeHold ||
-      target_state == kLaneChangeCancel);
+  is_in_lane_change_scene =
+      (target_state == kLaneChangeExecution ||
+       target_state == kLaneChangeHold || target_state == kLaneChangeCancel);
   const auto &obstacle_map = reference_path_ptr->get_obstacles_map();
-  const auto &lane_change_decider_output = session_->planning_context()
-                                              .lane_change_decider_output();
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
   const auto gap_front_node_id =
       lane_change_decider_output.lc_gap_info.front_node_id;
   const auto gap_rear_node_id =
@@ -2031,12 +2137,13 @@ void LateralObstacleDecider::CalLaneChangeGapInfo(
   auto gap_rear_obj = obstacle_map.find(gap_rear_agent_id);
 
   if (gap_front_obj != obstacle_map.end() && is_in_lane_change_scene) {
-    gap_front_node_id_s = gap_front_obj->second->frenet_obstacle_boundary().s_start;
+    gap_front_node_id_s =
+        gap_front_obj->second->frenet_obstacle_boundary().s_start;
   }
   if (gap_rear_obj != obstacle_map.end() && is_in_lane_change_scene) {
-    gap_rear_node_id_s = gap_rear_obj->second->frenet_obstacle_boundary().s_start;
+    gap_rear_node_id_s =
+        gap_rear_obj->second->frenet_obstacle_boundary().s_start;
   }
-
 }
 
 }  // namespace planning

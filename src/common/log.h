@@ -27,14 +27,14 @@ class Log {
     return instance;
   };
   void setConfig(const char* modulename, const char* filename,
-                 LogLevel loglevel) {};
+                 LogLevel loglevel){};
   inline const char* getModuleName() { return m_moduleName.c_str(); }
   void sync();
 
-  ~Log() {};
+  ~Log(){};
 
  private:
-  Log() {};
+  Log(){};
 
  private:
   std::string m_moduleName;
@@ -71,7 +71,7 @@ class Log {
 #define NANO_LOG_CONCAT(x) "%s " x
 #define LOG_BST_RELEASE(severity, format, ...)                        \
   do {                                                                \
-    NANO_LOG(severity, NANO_LOG_CONCAT(format),                                \
+    NANO_LOG(severity, NANO_LOG_CONCAT(format),                       \
              bst::Log::getInstance().getModuleName(), ##__VA_ARGS__); \
   } while (0)
 
@@ -106,25 +106,25 @@ class Log {
 #define LOG_FATAL(format, ...) FLOGF(format, ##__VA_ARGS__)
 
 #else
-#define LOG_DEBUG(format, ...)              \
-  do {                                       \
-    printf(format, ##__VA_ARGS__);           \
+#define LOG_DEBUG(format, ...)     \
+  do {                             \
+    printf(format, ##__VA_ARGS__); \
   } while (0)
-#define LOG_NOTICE(format, ...)               \
-  do {                                        \
-    printf(format, ##__VA_ARGS__);            \
+#define LOG_NOTICE(format, ...)    \
+  do {                             \
+    printf(format, ##__VA_ARGS__); \
   } while (0)
-#define LOG_WARNING(format, ...)              \
-  do {                                        \
-    printf(format, ##__VA_ARGS__);            \
+#define LOG_WARNING(format, ...)   \
+  do {                             \
+    printf(format, ##__VA_ARGS__); \
   } while (0)
-#define LOG_ERROR(format, ...)                \
-  do {                                        \
-    printf(format, ##__VA_ARGS__);            \
+#define LOG_ERROR(format, ...)     \
+  do {                             \
+    printf(format, ##__VA_ARGS__); \
   } while (0)
-#define LOG_FATAL(format, ...)                \
-  do {                                        \
-    printf(format, ##__VA_ARGS__);            \
+#define LOG_FATAL(format, ...)     \
+  do {                             \
+    printf(format, ##__VA_ARGS__); \
   } while (0)
 #endif
 

@@ -39,7 +39,7 @@ class ClosestInPathVehicleDecider : public Task {
   //   <distance to ego at cur time,
   //        <is virtual, agent id>>
   std::map<double, std::pair<bool, int32_t>> agents_distance_id_map_;
-  //used by filtering out crossing cipv display for hmi
+  // used by filtering out crossing cipv display for hmi
   int32_t filtered_out_crossing_cipv_id_ = -1;
 };
 

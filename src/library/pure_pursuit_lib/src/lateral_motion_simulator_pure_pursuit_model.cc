@@ -75,24 +75,25 @@
 //   for (size_t i = 1; i < ref_points.size(); ++i) {
 //     distance2_to_proj_point =
 //         pow(ref_points[i].path_point.x() - ref_points.front().path_point.x(),
-//             ref_points[i].path_point.y() - ref_points.front().path_point.y());
+//             ref_points[i].path_point.y() -
+//             ref_points.front().path_point.y());
 //     if (distance2_to_proj_point > ld2) {
 //       pre_goal_point_index = i;
 //       break;
 //     }
 //   }
 //   --pre_goal_point_index;
-//   const auto front_goal_point = ref_points[pre_goal_point_index + 1].path_point;
-//   const auto behind_goal_point = ref_points[pre_goal_point_index].path_point;
-//   Eigen::Vector2d front_goal_pnt(front_goal_point.x(), front_goal_point.y());
-//   Eigen::Vector2d behind_goal_pnt(behind_goal_point.x(), behind_goal_point.y());
-//   double ld_interp = 0.0;
-//   Eigen::Vector2d scope_goal_point_candidate;
-//   for (size_t i = 1; i <= scope_goal_points_num; ++i) {
+//   const auto front_goal_point = ref_points[pre_goal_point_index +
+//   1].path_point; const auto behind_goal_point =
+//   ref_points[pre_goal_point_index].path_point; Eigen::Vector2d
+//   front_goal_pnt(front_goal_point.x(), front_goal_point.y()); Eigen::Vector2d
+//   behind_goal_pnt(behind_goal_point.x(), behind_goal_point.y()); double
+//   ld_interp = 0.0; Eigen::Vector2d scope_goal_point_candidate; for (size_t i
+//   = 1; i <= scope_goal_points_num; ++i) {
 //     double t = static_cast<double>(i) / (scope_goal_points_num + 1);
-//     scope_goal_point_candidate = (1 - t) * behind_goal_pnt + t * front_goal_pnt;
-//     ld_interp = (scope_goal_point_candidate - ego_init_pos).norm();
-//     if (ld_interp > model_param_.ld) {
+//     scope_goal_point_candidate = (1 - t) * behind_goal_pnt + t *
+//     front_goal_pnt; ld_interp = (scope_goal_point_candidate -
+//     ego_init_pos).norm(); if (ld_interp > model_param_.ld) {
 //       goal_poinit_ = scope_goal_point_candidate;
 //       break;
 //     }
@@ -104,9 +105,8 @@
 
 //   double cross_product_ld_to_init_theta_vec =
 //       init_theta_vec.x() * ld_vec.y() - init_theta_vec.y() * ld_vec.x();
-//   int rotation_direction = (cross_product_ld_to_init_theta_vec >= 0) ? 1 : -1;
-//   alpha_ *= rotation_direction;
-//   return ErrorType::kSuccess;
+//   int rotation_direction = (cross_product_ld_to_init_theta_vec >= 0) ? 1 :
+//   -1; alpha_ *= rotation_direction; return ErrorType::kSuccess;
 // }
 
 // }  // namespace simulator

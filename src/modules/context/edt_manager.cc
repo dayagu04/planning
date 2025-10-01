@@ -96,10 +96,9 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
 
   // 根据最短搜索范围，重新计算边界
   // 规划起始点
-  const PlanningInitPoint &planning_init_point =
-      session_->environmental_model()
-          .get_ego_state_manager()
-          ->planning_init_point();
+  const PlanningInitPoint &planning_init_point = session_->environmental_model()
+                                                     .get_ego_state_manager()
+                                                     ->planning_init_point();
   if (session_->is_hpp_scene()) {
     const auto &reference_path = session_->planning_context()
                                      .lane_change_decider_output()
@@ -109,12 +108,14 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
       if (frenet_coord != nullptr) {
         Point2D end_point;
         if (frenet_coord->SLToXY(
-                Point2D(reference_path->get_frenet_ego_state().s() + config_.hpp_min_search_range + 7, 0),
+                Point2D(reference_path->get_frenet_ego_state().s() +
+                            config_.hpp_min_search_range + 7,
+                        0),
                 end_point) &&
             !std::isnan(end_point.x) && !std::isnan(end_point.y)) {
           Pose2D local;
           ego_base.GlobalPointToULFLocal(&local,
-                                          Pose2D(end_point.x, end_point.y, 0));
+                                         Pose2D(end_point.x, end_point.y, 0));
           front_x = std::max(front_x, local.x);
           back_x = std::min(back_x, local.x);
           left_y = std::max(left_y, local.y);

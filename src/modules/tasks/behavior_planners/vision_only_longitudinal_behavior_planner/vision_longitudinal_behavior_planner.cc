@@ -13,8 +13,8 @@
 // namespace planning {
 
 // VisionLongitudinalBehaviorPlanner::VisionLongitudinalBehaviorPlanner(
-//     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
-//     : Task(config_builder, session) {
+//     const EgoPlanningConfigBuilder *config_builder, framework::Session
+//     *session) : Task(config_builder, session) {
 //   config_ = config_builder->cast<VisionLongitudinalBehaviorPlannerConfig>();
 //   name_ = "VisionLongitudinalBehaviorPlanner";
 
@@ -54,8 +54,9 @@
 // bool VisionLongitudinalBehaviorPlanner::update() {
 //   auto current_time = IflyTime::Now_ms();
 //   LOG_DEBUG("=======VisionLongitudinalBehaviorPlanner======= \n");
-//   auto &ego_state_mgr = session_->environmental_model().get_ego_state_manager();
-//   auto &lateral_obstacle =
+//   auto &ego_state_mgr =
+//   session_->environmental_model().get_ego_state_manager(); auto
+//   &lateral_obstacle =
 //       session_->environmental_model().get_lateral_obstacle();
 //   const auto &lateral_output =
 //       session_->planning_context().lateral_behavior_planner_output();
@@ -98,8 +99,8 @@
 //                                  lateral_obstacle->side_tracks(),
 //                                  lateral_output.lc_status, v_ego);
 //   calc_speed_with_leads(lateral_obstacle->leadone(),
-//                         lateral_obstacle->leadtwo(), lateral_output.lc_request,
-//                         v_ego);
+//                         lateral_obstacle->leadtwo(),
+//                         lateral_output.lc_request, v_ego);
 //   calc_speed_with_temp_leads(
 //       lateral_obstacle->tleadone(), lateral_obstacle->tleadtwo(), v_ego,
 //       lateral_output.close_to_accident, lateral_output.lc_request,
@@ -108,7 +109,8 @@
 //   //                      map_info_mgr.get_map_info().lc_end_dis(),
 //   //                      map_info_mgr.get_map_info().v_cruise(),
 //   //                      map_info_mgr.get_map_info().current_lane_type(),
-//   //                      lateral_output.lc_status, v_limit_in_turns_, v_ego);
+//   //                      lateral_output.lc_status, v_limit_in_turns_,
+//   v_ego);
 
 //   calc_speed_for_ramp(v_ego);
 //   calc_speed_with_potential_cutin_car(lateral_obstacle->front_tracks(),
@@ -203,7 +205,8 @@
 //     const double v_ego, const double angle_steers,
 //     const std::vector<double> &d_poly,
 //     const std::vector<ReferencePathPoint> &ref_points) {
-//   // *** this function returns a limited long acceleration allowed, depending on
+//   // *** this function returns a limited long acceleration allowed, depending
+//   on
 //   // the existing lateral acceleration
 //   //  this should avoid accelerating when losing the target in turns
 //   LOG_DEBUG("----limit_accel_velocity_in_turns--- \n");
@@ -215,30 +218,32 @@
 
 //   double steer_ratio = vehicle_param.steer_ratio;
 //   double wheel_base = vehicle_param.wheel_base;
-//   double a_y = std::pow(v_ego, 2) * angle_steers / (steer_ratio * wheel_base);
-//   double a_x_allowed =
+//   double a_y = std::pow(v_ego, 2) * angle_steers / (steer_ratio *
+//   wheel_base); double a_x_allowed =
 //       std::sqrt(std::max(std::pow(a_total_max, 2) - std::pow(a_y, 2), 0.0));
 
 //   // And limit the logitudinal velocity for a safe turn
 //   double a_y_max =
 //       interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
 //   double v_limit_steering = std::sqrt((a_y_max * steer_ratio * wheel_base) /
-//                                       std::max(std::abs(angle_steers), 0.001));
+//                                       std::max(std::abs(angle_steers),
+//                                       0.001));
 //   double v_limit_in_turns = v_limit_steering;
 //   // calculate the velocity limit according to the road curvature
 //   if (d_poly.size() == 4) {
 //     double preview_x = config_.dis_curv + config_.t_curv * v_ego;
 //     double curv =
 //         std::fabs(2 * d_poly[0] * preview_x + d_poly[1]) /
-//         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) + 1, 1.5);
+//         std::pow(std::pow(2 * d_poly[0] * preview_x + d_poly[1], 2) +
+//         1, 1.5);
 //     double road_radius = 1 / std::max(curv, 0.0001);
 //     if (road_radius < 750) {
 //       a_y_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
 //     }
 //     double v_limit_road = std::sqrt(a_y_max * road_radius) * 0.9;
 //     v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
-//     LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius, a_y_max);
-//     LOG_DEBUG(
+//     LOG_DEBUG("road_radius is : [%f], a_y_max: [%f]\n", road_radius,
+//     a_y_max); LOG_DEBUG(
 //         "angle_steers: [%f], angle_steers_deg: [%f], v_limit_road: [%f]\n",
 //         angle_steers, angle_steers_deg, v_limit_road);
 //     JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
@@ -296,8 +301,8 @@
 
 // bool VisionLongitudinalBehaviorPlanner::limit_accel_velocity_for_cutin(
 //     const std::vector<TrackedObject> &front_tracks,
-//     const std::vector<TrackedObject> &side_tracks, const std::string &lc_status,
-//     const double v_ego) {
+//     const std::vector<TrackedObject> &side_tracks, const std::string
+//     &lc_status, const double v_ego) {
 //   const double safety_distance = 2.0 + v_ego * 0.2;
 //   const double p1min_speed = 2.0;
 //   const double p2min_speed = 3.0;
@@ -367,7 +372,8 @@
 //     }
 
 //     double car_length =
-//         near_cars_sorted[i]->location_head - near_cars_sorted[i]->location_tail;
+//         near_cars_sorted[i]->location_head -
+//         near_cars_sorted[i]->location_tail;
 //     double d_x_offset = std::max(car_length - 5.0, 0.0);
 
 //     // calculate y_rel for ttc
@@ -481,7 +487,8 @@
 //     // calculate ttc
 //     vy_rel = near_cars_sorted[i]->y_min > 0 ? vy_rel : -vy_rel;
 //     double ttc =
-//         std::max(y_rel / std::max(std::abs(std::min(vy_rel, 0.0)), 0.01), 0.2);
+//         std::max(y_rel / std::max(std::abs(std::min(vy_rel, 0.0)), 0.01),
+//         0.2);
 //     double ttc_org = ttc;
 //     bool lead_car = std::abs(near_cars_sorted[i]->y_min) < 0.8;
 
@@ -492,7 +499,8 @@
 //         near_cars_sorted[i]->location_tail > -3.0 &&
 //         near_cars_sorted[i]->v_rel > 2.0) {
 //       double predict_d_x =
-//           near_cars_sorted[i]->v_rel * ttc + near_cars_sorted[i]->location_tail;
+//           near_cars_sorted[i]->v_rel * ttc +
+//           near_cars_sorted[i]->location_tail;
 //       if (predict_d_x > d_thres) {
 //         ttc = std::max(std::abs(near_cars_sorted[i]->y_min) /
 //                            std::max(std::abs(std::min(vy_rel, 0.0)), 0.01),
@@ -551,7 +559,8 @@
 //       if (std::abs(near_cars_sorted[i]->y_min) < 1.7 ||
 //           std::abs(vy_rel) > 0.7) {
 //         v_limit_cutin[i] = std::max(
-//             {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3, p1min_speed});
+//             {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3,
+//             p1min_speed});
 //         a_limit_cutin[i] = -1.0;
 //         cutin_condition[i] = "potential_cutin_car_1, stage 1.5";
 //       }
@@ -569,7 +578,8 @@
 //       cutin_condition[i] = "potential_cutin_car_2, stage 1";
 //       if (std::abs(near_cars_sorted[i]->y_min) < 1.7) {
 //         v_limit_cutin[i] = std::max(
-//             {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3, p2min_speed});
+//             {std::min(v_ego + v_rel - 1, v_ego - 1), v_ego - 3,
+//             p2min_speed});
 //         a_limit_cutin[i] = -1.0;
 //         cutin_condition[i] = "potential_cutin_car_2, stage 1.5";
 //       }
@@ -595,7 +605,8 @@
 //       v_limit_cutin[i] = v_ego + v_rel - 1;
 //       a_limit_cutin[i] =
 //           -0.5 + calc_critical_decel(near_cars_sorted[i]->location_tail,
-//                                      -near_cars_sorted[i]->v_rel, d_offset, 0);
+//                                      -near_cars_sorted[i]->v_rel, d_offset,
+//                                      0);
 //       cutin_condition[i] = "lead_car";
 //     } else {
 //       v_limit_cutin[i] = clip(v_limit_cutin[i] + 0.2, v_ego, 40.0);
@@ -623,9 +634,9 @@
 //       if (cutin_msg_.a_limit_cutin < a_limit_cutin[i]) {
 //         cutin_msg_.a_limit_cutin += 0.1;
 //       }
-//       a_limit_cutin[i] = std::min(a_limit_cutin[i], cutin_msg_.a_limit_cutin);
-//       cutin_msg_.a_limit_cutin = clip(a_limit_cutin[i], -4.0, 0.0);
-//       if (not_avoid) {
+//       a_limit_cutin[i] = std::min(a_limit_cutin[i],
+//       cutin_msg_.a_limit_cutin); cutin_msg_.a_limit_cutin =
+//       clip(a_limit_cutin[i], -4.0, 0.0); if (not_avoid) {
 //         check_cutin = false;
 //       } else {
 //         check_cutin = true;
@@ -699,11 +710,13 @@
 //   vision_longitudinal_behavior_planner_output.a_limit_cutin = a_limit_cutin;
 //   vision_longitudinal_behavior_planner_output.nearest_car_track_id =
 //       nearest_car_track_id;
-//   vision_longitudinal_behavior_planner_output.cutin_condition = cutin_condition;
+//   vision_longitudinal_behavior_planner_output.cutin_condition =
+//   cutin_condition;
 //   vision_longitudinal_behavior_planner_output.a_limit_cutin_history =
 //       a_limit_cutin_history_;
 
-//   LOG_DEBUG("nearest_car_track_id : [%d],[%d],[%d] \n", nearest_car_track_id[0],
+//   LOG_DEBUG("nearest_car_track_id : [%d],[%d],[%d] \n",
+//   nearest_car_track_id[0],
 //             nearest_car_track_id[1], nearest_car_track_id[2]);
 //   LOG_DEBUG("v_limit_cutin : [%f], v_target : [%f] \n",
 //             v_limit_cutin[v_min_index], v_target_);
@@ -728,7 +741,8 @@
 //   LOG_DEBUG("----compute_speed_with_leads--- \n");
 //   // leadone
 //   if (lead_one != nullptr && lead_one->type != 0) {
-//     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n",
+//     LOG_DEBUG("target_lead_one's id : [%i], d_rel is : [%f], v_lead is:
+//     [%f]\n",
 //               lead_one->track_id, lead_one->d_rel, lead_one->v_lead);
 //     // process noisy a_lead signal from radar processing
 //     a_lead_p = process_a_lead(lead_one->a_lead_k);
@@ -807,12 +821,14 @@
 
 //   // debug info
 //   // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_one", v_target_lead);
-//   // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two", v_target_lead_2);
+//   // JSON_DEBUG_VALUE("VisionLonBehavior_v_target_lead_two",
+//   v_target_lead_2);
 
 //   auto &vision_longitudinal_behavior_planner_output =
 //       session_->mutable_planning_context()
 //           ->mutable_vision_longitudinal_behavior_planner_output();
-//   vision_longitudinal_behavior_planner_output.v_target_lead_one = v_target_lead;
+//   vision_longitudinal_behavior_planner_output.v_target_lead_one =
+//   v_target_lead;
 //   vision_longitudinal_behavior_planner_output.v_target_lead_two =
 //       v_target_lead_2;
 //   vision_longitudinal_behavior_planner_output.a_target_lead = a_target;
@@ -841,7 +857,8 @@
 //       (temp_lead_one->d_path_self + std::min(temp_lead_one->v_lat, 0.3)) <
 //           1.0 &&
 //       temp_lead_one->type != 0) {
-//     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
+//     LOG_DEBUG("temp_lead_one's id : [%i], d_rel is : [%f], v_lead is: [%f]\n
+//     ",
 //               temp_lead_one->track_id, temp_lead_one->d_rel,
 //               temp_lead_one->v_lead);
 //     // process noisy a_lead signal from radar processing
@@ -853,7 +870,8 @@
 //     // compute desired speed
 //     // remove v_coast
 //     v_target_temp_lead =
-//         calc_desired_speed(temp_lead_one->d_rel, d_des, temp_lead_one->v_lead);
+//         calc_desired_speed(temp_lead_one->d_rel, d_des,
+//         temp_lead_one->v_lead);
 //     calc_acc_accel_limits(
 //         temp_lead_one->d_rel, d_des, v_ego, temp_lead_one->v_lead,
 //         temp_lead_one->v_rel, a_lead_p, v_target_temp_lead, a_target_temp,
@@ -880,9 +898,11 @@
 //     is_camera_and_lidar =
 //         temp_lead_two->fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA;
 //   }
-//   if (is_camera_and_lidar && temp_lead_two != nullptr && lc_status == "none" &&
+//   if (is_camera_and_lidar && temp_lead_two != nullptr && lc_status == "none"
+//   &&
 //       temp_lead_two->type != 0) {
-//     LOG_DEBUG("temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n ",
+//     LOG_DEBUG("temp_lead_two's id : [%i], d_rel is : [%f], v_lead is: [%f]\n
+//     ",
 //               temp_lead_two->track_id, temp_lead_two->d_rel,
 //               temp_lead_two->v_lead);
 //     a_lead_p_2 = process_a_lead(temp_lead_two->a_lead_k);
@@ -895,8 +915,9 @@
 
 //     calc_acc_accel_limits(
 //         temp_lead_two->d_rel, d_des_2, v_ego, temp_lead_two->v_lead,
-//         temp_lead_two->v_rel, a_lead_p_2, v_target_temp_lead_2, a_target_temp2,
-//         std::min(std::abs(temp_lead_two->y_rel), temp_lead_two->d_path));
+//         temp_lead_two->v_rel, a_lead_p_2, v_target_temp_lead_2,
+//         a_target_temp2, std::min(std::abs(temp_lead_two->y_rel),
+//         temp_lead_two->d_path));
 
 //     a_target_.first =
 //         std::min(a_target_.first, std::max(a_target_temp2.first, -0.6));
@@ -975,8 +996,8 @@
 //   }
 //   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
 //   v_target_ramp = std::pow(
-//       std::pow(v_limit_ramp_, 2.0) - 2 * pre_brake_dis_to_ramp * dece_to_ramp,
-//       0.5);
+//       std::pow(v_limit_ramp_, 2.0) - 2 * pre_brake_dis_to_ramp *
+//       dece_to_ramp, 0.5);
 //   is_pre_deceleration = (v_target_ramp < v_target_) ? true : false;
 //   v_target_ = std::min(v_target_ramp, v_target_);
 
@@ -1010,21 +1031,24 @@
 // //       p_slope_terminus / std::pow(l_slope_terminus, 2);
 // //   const double x_linear_to_parabola_ramp =
 // //       p_slope_ramp / std::pow(l_slope_ramp, 2);
-// //   // parabola offset to have the parabola being tangent to the linear curve
+// //   // parabola offset to have the parabola being tangent to the linear
+// curve
 // //   const double x_parabola_offset_terminus =
 // //       p_slope_terminus / (2 * std::pow(l_slope_terminus, 2));
 // //   const double x_parabola_offset_ramp =
 // //       p_slope_ramp / (2 * std::pow(l_slope_ramp, 2));
 
 // //   if (lc_map_decision != 0) {
-// //     if (lc_map_decision == 2 && current_lane_type == MSD_LANE_TYPE_NORMAL) {
+// //     if (lc_map_decision == 2 && current_lane_type == MSD_LANE_TYPE_NORMAL)
+// {
 // //       if (lc_end_dis - 80 - 200 < 0) {
 // //         v_target_terminus = (lc_end_dis - 80) * l_slope_ramp / 3.0;
 // //       } else if (lc_end_dis - 80 - 200 < x_linear_to_parabola_ramp) {
 // //         v_target_terminus = (lc_end_dis - 80) * l_slope_ramp;
 // //       } else {
 // //         v_target_terminus =
-// //             std::sqrt(2 * ((lc_end_dis - 40 - 200) - x_parabola_offset_ramp)
+// //             std::sqrt(2 * ((lc_end_dis - 40 - 200) -
+// x_parabola_offset_ramp)
 // //             *
 // //                       p_slope_ramp);
 // //       }
@@ -1054,7 +1078,8 @@
 // //         v_target_terminus = (lc_end_dis - 20) * l_slope_terminus;
 // //       } else {
 // //         v_target_terminus =
-// //             std::sqrt(2 * ((lc_end_dis - 0) - x_parabola_offset_terminus) *
+// //             std::sqrt(2 * ((lc_end_dis - 0) - x_parabola_offset_terminus)
+// *
 // //                       p_slope_terminus);
 // //       }
 // //       v_target_terminus = std::max(v_target_terminus, 0.0);
@@ -1068,7 +1093,8 @@
 // //         v_target_terminus = (lc_end_dis - 20) * l_slope_terminus;
 // //       } else {
 // //         v_target_terminus =
-// //             std::sqrt(2 * ((lc_end_dis - 0) - x_parabola_offset_terminus) *
+// //             std::sqrt(2 * ((lc_end_dis - 0) - x_parabola_offset_terminus)
+// *
 // //                       p_slope_terminus);
 // //       }
 // //       v_target_terminus = std::max(v_target_terminus, 0.0);
@@ -1103,7 +1129,8 @@
 // //       a_target_ramp = 0.0;
 // //     } else if (v_limit_ramp_ + 5 <= v_target_in_turns) {
 // //       v_limit_ramp_ = std::min(
-// //           std::max({v_limit_ramp_ + 0.1, 50 / 3.6, v_ego + 1.0}), 80 / 3.6);
+// //           std::max({v_limit_ramp_ + 0.1, 50 / 3.6, v_ego + 1.0}), 80
+// / 3.6);
 // //       a_target_ramp = 0.0;
 // //     }
 // //   } else if (current_lane_type == MSD_LANE_TYPE_DECELERATE) {
@@ -1154,7 +1181,8 @@
 
 // bool VisionLongitudinalBehaviorPlanner::calc_speed_with_potential_cutin_car(
 //     const std::vector<TrackedObject> &front_tracks,
-//     const std::string &lc_request, const double v_cruise, const double v_ego) {
+//     const std::string &lc_request, const double v_cruise, const double v_ego)
+//     {
 //   double v_target_potental_cutin = 40.0;
 //   double a_target_potential_min = 0.0;
 //   double v_limit = std::min({v_cruise, v_target_ramp_, v_ego});
@@ -1180,8 +1208,9 @@
 
 //       double a_lead_p = process_a_lead(track.a_lead_k);
 //       double d_des = calc_desired_distance(track.v_lead, v_ego, lc_request);
-//       double v_target_car = calc_desired_speed(drel_pre, d_des, track.v_lead);
-//       calc_acc_accel_limits(drel_pre_for_a, d_des, v_ego, track.v_lead,
+//       double v_target_car = calc_desired_speed(drel_pre, d_des,
+//       track.v_lead); calc_acc_accel_limits(drel_pre_for_a, d_des, v_ego,
+//       track.v_lead,
 //                             track.v_rel, a_lead_p, v_target_car, a_target,
 //                             std::min(std::abs(track.y_rel), track.d_path));
 
@@ -1280,7 +1309,8 @@
 //           session_->environmental_model().get_lane_tracks_manager();
 //       std::vector<TrackedObject> *front_target_tracks =
 //           lane_tracks_mgr->get_lane_tracks(
-//               lane_change_decider_output.target_lane_virtual_id, FRONT_TRACK);
+//               lane_change_decider_output.target_lane_virtual_id,
+//               FRONT_TRACK);
 //       if (front_target_tracks != nullptr) {
 //         for (auto &track : *front_target_tracks) {
 //           // ignore obj without camera source
@@ -1310,8 +1340,8 @@
 //     lane_changing_params.cost_minus = 10.0;
 //     lane_changing_params.v_rel_bufer = 1.0;
 //     lane_changing_decider_->feed_config_and_target_cars(
-//         false, lane_changing_params, lc_end_dis, lane_changing_cars, lead_one,
-//         v_ego);
+//         false, lane_changing_params, lc_end_dis, lane_changing_cars,
+//         lead_one, v_ego);
 
 //     session_->mutable_planning_context()->set_v_limit(
 //         std::min(v_target, v_cruise));
@@ -1340,7 +1370,8 @@
 //         a_target_lc = 0.0;
 //       } else {
 //         v_limit_lc = gap.base_car_vrel +
-//                      clip((safety_dist + 5.0 + gap.base_car_drel) / safety_dist,
+//                      clip((safety_dist + 5.0 + gap.base_car_drel) /
+//                      safety_dist,
 //                           0.0, 2.0) +
 //                      1.0;
 //         if (v_limit_lc < 0) {
@@ -1362,12 +1393,13 @@
 //       }
 //     } else {
 //       // decelerate to check next interval
-//       auto nearest_rear_car = lane_changing_decider_->nearest_rear_car_track();
+//       auto nearest_rear_car =
+//       lane_changing_decider_->nearest_rear_car_track();
 //       lane_changing_nearest_rear_car_track_id = nearest_rear_car.id;
 //       v_limit_lc =
 //           nearest_rear_car.v_rel -
-//           clip((safety_dist - nearest_rear_car.d_rel) / safety_dist, 0.0, 2.0) -
-//           v_ego / 10.0;
+//           clip((safety_dist - nearest_rear_car.d_rel) / safety_dist,
+//           0.0, 2.0) - v_ego / 10.0;
 //       v_limit_lc = std::max({v_ego - 3.2, v_ego + v_limit_lc,
 //                              6.0 + 4.0 * std::max(lc_map_decision - 2, 0)});
 //       a_target_lc = 0.0;
@@ -1385,7 +1417,8 @@
 //   auto &vision_longitudinal_behavior_planner_output =
 //       session_->mutable_planning_context()
 //           ->mutable_vision_longitudinal_behavior_planner_output();
-//   vision_longitudinal_behavior_planner_output.v_target_lane_change = v_limit_lc;
+//   vision_longitudinal_behavior_planner_output.v_target_lane_change =
+//   v_limit_lc;
 //   vision_longitudinal_behavior_planner_output.a_target_lane_change =
 //       a_target_lc;
 //   vision_longitudinal_behavior_planner_output.lane_changing_cars.clear();
@@ -1427,7 +1460,8 @@
 //   return fp[N];
 // }
 
-// double VisionLongitudinalBehaviorPlanner::process_a_lead(const double a_lead) {
+// double VisionLongitudinalBehaviorPlanner::process_a_lead(const double a_lead)
+// {
 //   // soft threshold of 0.5m/s^2 applied to a_lead to reject noise, also not
 //   // considered positive a_lead
 //   double a_lead_threshold = 0.5;
@@ -1502,7 +1536,8 @@
 //     v_rel_des = (d_lead - d_des) * l_slope;
 //     v_rel_des = std::max(v_rel_des, max_runaway_speed);
 //   } else {
-//     v_rel_des = std::sqrt(2 * (d_lead - d_des - x_parabola_offset) * p_slope);
+//     v_rel_des = std::sqrt(2 * (d_lead - d_des - x_parabola_offset) *
+//     p_slope);
 //   }
 //   // compute desired speed
 //   double v_target = v_rel_des + v_lead;
@@ -1542,7 +1577,8 @@
 //     double critical_decel =
 //         calc_critical_decel(d_lead, v_rel, d_offset, v_offset);
 //     a_target.first =
-//         std::min(decel_offset + critical_decel + a_lead_contr, a_target.first);
+//         std::min(decel_offset + critical_decel + a_lead_contr,
+//         a_target.first);
 //   }
 //   // a_min can't be higher than a_max
 //   a_target.first = std::min(a_target.first, a_target.second);
@@ -1590,14 +1626,16 @@
 // double VisionLongitudinalBehaviorPlanner::calc_critical_decel(
 //     const double d_lead, const double v_rel, const double d_offset,
 //     const double v_offset) {
-//   // this function computes the required decel to avoid crashing, given safety
+//   // this function computes the required decel to avoid crashing, given
+//   safety
 //   // offsets
 //   double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
 //                       std::max(2 * (d_lead - d_offset), 0.5);
 //   return a_critical;
 // }
 
-// double VisionLongitudinalBehaviorPlanner::clip(const double x, const double lo,
+// double VisionLongitudinalBehaviorPlanner::clip(const double x, const double
+// lo,
 //                                                const double hi) {
 //   return std::max(lo, std::min(hi, x));
 // }
@@ -1629,7 +1667,8 @@
 //     bool cruise_condition = v_ego > v_start;
 //     bool lead_one_start =
 //         (lead_one->v_lead > obstacle_v_start &&
-//          (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone()) >
+//          (lead_one->d_rel - start_stop_state_info.stop_distance_of_leadone())
+//          >
 //              distance_start);
 //     // lead_one change: obj stopped adc by cut_in, then leaved
 //     bool lead_one_change =
@@ -1645,11 +1684,13 @@
 //       start_stop_state_info.set_stop_distance_of_leadone(lead_one->d_rel);
 //       LOG_DEBUG("The distance error of STOP is [%f]m \n",
 //                 lead_one->d_rel - desire_distance);
-//     } else if (start_stop_state_info.state() == common::StartStopInfo::STOP &&
+//     } else if (start_stop_state_info.state() == common::StartStopInfo::STOP
+//     &&
 //                start_condition) {
 //       // STOP --> START
 //       start_stop_state_info.set_state(common::StartStopInfo::START);
-//     } else if (start_stop_state_info.state() == common::StartStopInfo::START &&
+//     } else if (start_stop_state_info.state() == common::StartStopInfo::START
+//     &&
 //                cruise_condition) {
 //       // START --> CRUISE
 //       start_stop_state_info.set_state(common::StartStopInfo::CRUISE);
@@ -1667,7 +1708,8 @@
 //       session_->mutable_planning_context()->mutable_planning_hmi_info();
 
 //   int error_id = -1;
-//   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
+//   if ((lc_status != "left_lane_change") && (lc_status !=
+//   "right_lane_change")) {
 //     if (lateral_obstacle->leadone() != nullptr &&
 //         lateral_obstacle->leadone()->type != 0) {
 //       hmi_info->cipv_info.has_cipv = true;

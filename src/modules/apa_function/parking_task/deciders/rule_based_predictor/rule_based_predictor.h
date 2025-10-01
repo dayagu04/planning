@@ -2,11 +2,11 @@
 
 #include <cstddef>
 
+#include "apa_obstacle_manager.h"
 #include "geometry_math.h"
 #include "pose2d.h"
 #include "speed/speed_data.h"
 #include "trajectory/trajectory.h"
-#include "apa_obstacle_manager.h"
 
 namespace planning {
 namespace apa_planner {

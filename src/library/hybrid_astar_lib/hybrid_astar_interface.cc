@@ -257,7 +257,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     lon_buffer = 0.4;
   }
 
-
   DebugAstarRequestString(request_);
 
   bool is_ego_overlap_with_slot = IsEgoOverlapWithSlot();
@@ -756,8 +755,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     // search single shot path.
-    if (target_pose.dist_to_obs >
-            config_.single_shot_path_width_thresh ||
+    if (target_pose.dist_to_obs > config_.single_shot_path_width_thresh ||
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
         request_.path_generate_method ==
@@ -842,8 +840,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
     const TerminalCandidatePoint target_pose =
         regulator.GetCandidatePose(0.15f);
     if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
-      ILOG_INFO << "goal_point dist to obs = "
-                << target_pose.dist_to_obs;
+      ILOG_INFO << "goal_point dist to obs = " << target_pose.dist_to_obs;
     }
 
     target_regulator_goal_ = target_pose.pose;

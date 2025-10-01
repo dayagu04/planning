@@ -29,12 +29,14 @@ STBoundary::STBoundary(
   }
   min_t_ = lower_points_.front().t();
   max_t_ = lower_points_.back().t();
-  min_s_ = std::min_element(lower_points_.begin(), lower_points_.end(), [](const STPoint& a, const STPoint& b) {
-    return a.s() < b.s();
-  })->s();
-  max_s_ = std::max_element(upper_points_.begin(), upper_points_.end(), [](const STPoint& a, const STPoint& b) {
-    return a.s() < b.s();
-  })->s();
+  min_s_ = std::min_element(
+               lower_points_.begin(), lower_points_.end(),
+               [](const STPoint& a, const STPoint& b) { return a.s() < b.s(); })
+               ->s();
+  max_s_ = std::max_element(
+               upper_points_.begin(), upper_points_.end(),
+               [](const STPoint& a, const STPoint& b) { return a.s() < b.s(); })
+               ->s();
 }
 
 STBoundary STBoundary::CreateInstance(

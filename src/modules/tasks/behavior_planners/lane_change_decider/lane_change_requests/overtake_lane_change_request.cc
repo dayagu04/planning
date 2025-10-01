@@ -51,8 +51,9 @@ constexpr double kOvertakeLeadingVehicleHighSpeedThreshold = 22.22;  // 80km/h
 constexpr double kOvertakeLeadingVehicleLowSpeedThreshold = 16.67;   // 60km/h
 constexpr double kOvertakeLeadingVehicleHighSpeedDiffThreshold = 1.94;  // 7km/h
 constexpr double kOvertakeLeadingVehicleLowSpeedDiffThreshold = 3.89;  // 14km/h
-constexpr double kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold = 2.78;  // 10km/h
-constexpr double kOvertakeRightTurnExtraSpeedThreshold = 1.39;         // 5km/h
+constexpr double kOvertakeLeadingVehicleRadicalLowSpeedDiffThreshold =
+    2.78;                                                       // 10km/h
+constexpr double kOvertakeRightTurnExtraSpeedThreshold = 1.39;  // 5km/h
 constexpr int kOvertakeInhibitExtraSpeedTotalLaneNum = 3;
 constexpr double kOvertakeMinSpeedDiffThreshold = 0.01;
 constexpr double kLaneChangeSafetyDistanceBuffer = 2.0;
@@ -124,7 +125,6 @@ void OvertakeRequest::Update(int lc_status) {
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
 
-
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   planning_init_point_ = ego_state->planning_init_point();
@@ -145,7 +145,8 @@ void OvertakeRequest::Update(int lc_status) {
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
-    ILOG_DEBUG << "OvertakeRequest::Update: for left_lane: update:" << llane->get_virtual_id();
+    ILOG_DEBUG << "OvertakeRequest::Update: for left_lane: update:"
+               << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
     left_traffic_speed_filter_.Reset();
@@ -154,15 +155,18 @@ void OvertakeRequest::Update(int lc_status) {
   if (rlane != nullptr) {
     right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         rlane->get_virtual_id(), false);
-    ILOG_DEBUG << "OvertakeRequest::Update: for right_lane: update " << rlane->get_virtual_id();
+    ILOG_DEBUG << "OvertakeRequest::Update: for right_lane: update "
+               << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
     right_traffic_speed_filter_.Reset();
   }
 
   double current_timestamp = IflyTime::Now_s();
-  enable_l_ = llane && left_reference_path_ && llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
-  enable_r_ = rlane && right_reference_path_ && rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_l_ = llane && left_reference_path_ &&
+              llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_r_ = rlane && right_reference_path_ &&
+              rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
   const bool is_lane_changing =
       lc_status == kLaneChangeExecution || lc_status == kLaneChangeComplete;
 
@@ -203,13 +207,15 @@ void OvertakeRequest::Update(int lc_status) {
   // JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
   // JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
   setLaneChangeRequestByFrontSlowVehcile(lc_status);
-  ILOG_DEBUG << "request_type_:" << request_type_ << "turn_signal:" << turn_signal_;
+  ILOG_DEBUG << "request_type_:" << request_type_
+             << "turn_signal:" << turn_signal_;
 }
 
 void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  const auto& feasible_lane_sequence = route_info_output.mlc_decider_route_info.feasible_lane_sequence;
+  const auto& feasible_lane_sequence =
+      route_info_output.mlc_decider_route_info.feasible_lane_sequence;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const int current_lane_virtual_id =
@@ -220,7 +226,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // const double max_pass_merge_distance_to_surpress_overtake_lane_change =
   //     virtual_lane_mgr_->dis_threshold_to_last_merge_point();
   double distance_to_first_road_split = NL_NMAX;
-  const double minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu = 2000.0;
+  const double minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu =
+      2000.0;
   SplitDirection first_split_direction = SplitDirection::SPLIT_NONE;
   double dis_to_first_merge = NL_NMAX;
   SplitDirection first_merge_direction = SplitDirection::SPLIT_NONE;
@@ -230,12 +237,16 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       virtual_lane_mgr_->dis_threshold_to_merged_point();
   const auto& split_region_info_list = route_info_output.split_region_info_list;
   const auto& merge_region_info_list = route_info_output.merge_region_info_list;
-  if (route_info_output.map_vendor == iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+  if (route_info_output.map_vendor ==
+      iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
     if (!split_region_info_list.empty()) {
       if (split_region_info_list[0].is_valid) {
-        distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+        distance_to_first_road_split =
+            split_region_info_list[0].distance_to_split_point;
         first_split_direction = split_region_info_list[0].split_direction;
-        if (distance_to_first_road_split <= config_.minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
+        if (distance_to_first_road_split <=
+                config_
+                    .minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
             split_region_info_list[0].is_ramp_split) {
           return;
         }
@@ -254,8 +265,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       dis_to_first_merge = NL_NMAX;
       first_merge_direction = SplitDirection::SPLIT_NONE;
     }
-  } else if (route_info_output.map_vendor ==iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
-    if (route_info_output.dis_to_ramp < minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu) {
+  } else if (route_info_output.map_vendor ==
+             iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+    if (route_info_output.dis_to_ramp <
+        minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu) {
       return;
     }
   }
@@ -289,9 +302,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
               {ego_state->ego_pose().x, ego_state->ego_pose().y}, ego_frenet)) {
         auto iter =
             std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
-                        [&ego_frenet](const iflyauto::LaneNumMsg& lane_num) {
-                          return lane_num.begin <= ego_frenet.x && lane_num.end > ego_frenet.x;
-                        });
+                         [&ego_frenet](const iflyauto::LaneNumMsg& lane_num) {
+                           return lane_num.begin <= ego_frenet.x &&
+                                  lane_num.end > ego_frenet.x;
+                         });
         if (iter != lane_nums_msg.end()) {
           left_lane_nums = iter->left_lane_num;
           right_lane_nums = iter->right_lane_num;
@@ -389,8 +403,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   double right_route_traffic_speed = 0.0;
   left_lane_exist_truck_ = false;
   right_lane_exist_truck_ = false;
-  updateRouteTrafficSpeed(true, &left_route_traffic_speed, left_traffic_speed_filter_);
-  updateRouteTrafficSpeed(false, &right_route_traffic_speed, right_traffic_speed_filter_);
+  updateRouteTrafficSpeed(true, &left_route_traffic_speed,
+                          left_traffic_speed_filter_);
+  updateRouteTrafficSpeed(false, &right_route_traffic_speed,
+                          right_traffic_speed_filter_);
   double leading_vehicle_speed = agent->speed_fusion();
   leading_vehicle_speed = leading_speed_filter_.Update(leading_vehicle_speed);
 
@@ -401,17 +417,15 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
 
   const bool is_left_overtake =
-      enable_l_
-          ? isCouldOvertakeByRoute(
-                origin_refline, llane, left_route_traffic_speed,
-                agent, left_lane_nums, right_lane_nums, true)
-          : false;
+      enable_l_ ? isCouldOvertakeByRoute(origin_refline, llane,
+                                         left_route_traffic_speed, agent,
+                                         left_lane_nums, right_lane_nums, true)
+                : false;
   const bool is_right_overtake =
-      enable_r_
-          ? isCouldOvertakeByRoute(
-                origin_refline, rlane, right_route_traffic_speed,
-                agent, left_lane_nums, right_lane_nums, false)
-          : false;
+      enable_r_ ? isCouldOvertakeByRoute(origin_refline, rlane,
+                                         right_route_traffic_speed, agent,
+                                         left_lane_nums, right_lane_nums, false)
+                : false;
   JSON_DEBUG_VALUE("is_left_overtake", is_left_overtake);
   JSON_DEBUG_VALUE("is_right_overtake", is_right_overtake);
 
@@ -437,7 +451,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (feasible_lane_sequence.size() > 0) {
     int current_lane_order_num = left_lane_nums + 1;
     int target_lane_order_num = current_lane_order_num - 1;
-    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+                  target_lane_order_num) == feasible_lane_sequence.end()) {
       left_lane_is_on_navigation_route = false;
     }
   }
@@ -446,7 +461,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   if (feasible_lane_sequence.size() > 0) {
     int current_lane_order_num = left_lane_nums + 1;
     int target_lane_order_num = current_lane_order_num + 1;
-    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+                  target_lane_order_num) == feasible_lane_sequence.end()) {
       right_lane_is_on_navigation_route = false;
     }
   }
@@ -454,7 +470,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 #ifdef X86
   bool trigger_left_overtake = false;
   bool trigger_right_overtake = false;
-  // const bool is_trigger_left = (is_left_overtake && is_left_lane_change_safe_);
+  // const bool is_trigger_left = (is_left_overtake &&
+  // is_left_lane_change_safe_);
   const bool is_trigger_left =
       is_left_overtake && left_lane_is_on_navigation_route;
 
@@ -491,13 +508,16 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       &right_overtake_valid_timestamp_);
 #endif
 
-  JSON_DEBUG_VALUE("left_lane_is_on_navigation_route", left_lane_is_on_navigation_route);
-  JSON_DEBUG_VALUE("right_lane_is_on_navigation_route", right_lane_is_on_navigation_route);
+  JSON_DEBUG_VALUE("left_lane_is_on_navigation_route",
+                   left_lane_is_on_navigation_route);
+  JSON_DEBUG_VALUE("right_lane_is_on_navigation_route",
+                   right_lane_is_on_navigation_route);
 
   JSON_DEBUG_VALUE("trigger_left_overtake", trigger_left_overtake);
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   const RequestSource lc_request_source = OVERTAKE_REQUEST;
-  if (trigger_left_overtake  && current_time - tfinish_ >= 3.0 && (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
+  if (trigger_left_overtake && current_time - tfinish_ >= 3.0 &&
+      (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
     if (request_type_ != LEFT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
@@ -516,15 +536,17 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
-      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__
-                 << " finish request, dash not enough";
+      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__ << " finish request, dash not enough";
     } else {
       overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
-      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
+      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_
+                 << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
-  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres && current_time - tfinish_ >= 3.0 &&
-      (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake)) {
+  } else if (trigger_right_overtake && overtake_count_ >= right_count_thres &&
+             current_time - tfinish_ >= 3.0 &&
+             (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake)) {
     if (request_type_ != RIGHT_CHANGE) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
@@ -543,29 +565,36 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
            lane_change_lane_mgr_->is_ego_on(olane))))) {
       Finish();
       set_target_lane_virtual_id(current_lane_virtual_id);
-      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
+      ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__ << " finish request, dash not enough";
     } else {
       overtake_vehicle_id_ = agent->agent_id();
       overtake_vehicle_speed_ = leading_vehicle_speed;
-      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_ << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
+      ILOG_DEBUG << "overtake_vehicle_id_: " << overtake_vehicle_id_
+                 << "overtake_vehicle_speed_: " << overtake_vehicle_speed_;
     }
   } else if (request_type_ != NO_CHANGE &&
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
     if (request_type_ == LEFT_CHANGE) {
-      if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent, true)) {
+      if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent,
+                                         true)) {
         last_request_type_ = request_type_;
         return;
       }
     } else if (request_type_ == RIGHT_CHANGE) {
-      if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent, false)) {
+      if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent,
+                                         false)) {
         last_request_type_ = request_type_;
         return;
       }
     }
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
-    ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, !trigger_left_overtake and !trigger_right_overtake";
+    ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":"
+               << __LINE__
+               << " finish request, !trigger_left_overtake and "
+                  "!trigger_right_overtake";
   }
   last_request_type_ = request_type_;
   return;
@@ -632,7 +661,8 @@ bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
     return false;
   }
   double speed_threshold_percentage = 1.0;
-  if (leading_agent->type() == agent::AgentType::TRUCK || leading_agent->type() == agent::AgentType::BUS ||
+  if (leading_agent->type() == agent::AgentType::TRUCK ||
+      leading_agent->type() == agent::AgentType::BUS ||
       leading_agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
@@ -645,12 +675,14 @@ bool OvertakeRequest::isSatisfyOvertakeCountMaintainCondition(
     return false;
   }
 
-  if (speed_diff > kOvertakeMaintainCountSpeedDiffThreshold * speed_threshold_percentage) {
+  if (speed_diff >
+      kOvertakeMaintainCountSpeedDiffThreshold * speed_threshold_percentage) {
     return true;
   }
   const double speed_ratio =
       (0.0 != reference_speed) ? (speed_diff / reference_speed) : 0.0;
-  if (speed_ratio > kOvertakeMaintainCountRatioThreshold * speed_threshold_percentage) {
+  if (speed_ratio >
+      kOvertakeMaintainCountRatioThreshold * speed_threshold_percentage) {
     return true;
   }
   return false;
@@ -671,9 +703,9 @@ void OvertakeRequest::updateOvertakeCount(const agent::Agent* leading_agent,
   overtake_count_ = std::min(overtake_count_, max_count_thres);
 }
 
-void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
-                                              double* route_traffic_speed,
-                                              planning::planning_math::MeanFilter &traffic_speed_filter) {
+void OvertakeRequest::updateRouteTrafficSpeed(
+    const bool is_left, double* route_traffic_speed,
+    planning::planning_math::MeanFilter& traffic_speed_filter) {
   if (!route_traffic_speed) {
     return;
   }
@@ -681,10 +713,8 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       session_->environmental_model().get_ego_state_manager();
 
   *route_traffic_speed = 0.0;
-  const auto& front_tracks_l =
-      lane_tracks_manager_->front_tracks_l();
-  const auto& front_tracks_r =
-      lane_tracks_manager_->front_tracks_r();
+  const auto& front_tracks_l = lane_tracks_manager_->front_tracks_l();
+  const auto& front_tracks_r = lane_tracks_manager_->front_tracks_r();
 
   std::vector<std::shared_ptr<FrenetObstacle>> side_front_obstacle_array;
   if (is_left) {
@@ -695,7 +725,8 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
       }
-      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK || tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+          tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
         left_lane_exist_truck_ = true;
       }
@@ -709,7 +740,8 @@ void OvertakeRequest::updateRouteTrafficSpeed(const bool is_left,
       if (tr->d_s_rel() > kDefaultTargetLaneAgentConsiderRange) {
         continue;
       }
-      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK || tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
+      if (tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
+          tr->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           tr->type() == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
         right_lane_exist_truck_ = true;
       }
@@ -756,29 +788,41 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   const double leading_vehicle_speed = agent->speed();
   double target_lane_exist_truck_speed_threshold_percentage = 1.0;
   double speed_threshold_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK || agent->type() == agent::AgentType::BUS ||
+  if (agent->type() == agent::AgentType::TRUCK ||
+      agent->type() == agent::AgentType::BUS ||
       agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
   if (is_left && left_lane_exist_truck_) {
-    target_lane_exist_truck_speed_threshold_percentage = kTargetLaneExistTruckSpeedDiffThresholdPercentage;
+    target_lane_exist_truck_speed_threshold_percentage =
+        kTargetLaneExistTruckSpeedDiffThresholdPercentage;
   } else if (!is_left && right_lane_exist_truck_) {
-    target_lane_exist_truck_speed_threshold_percentage = kTargetLaneExistTruckSpeedDiffThresholdPercentage;
+    target_lane_exist_truck_speed_threshold_percentage =
+        kTargetLaneExistTruckSpeedDiffThresholdPercentage;
   }
 
-  const auto &lane_change_style = session_->environmental_model()
-                                  .get_local_view()
-                                  .function_state_machine_info.pilot_req.lane_change_style;
-  double speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold * speed_threshold_percentage;
+  const auto& lane_change_style =
+      session_->environmental_model()
+          .get_local_view()
+          .function_state_machine_info.pilot_req.lane_change_style;
+  double speed_threshold =
+      config_.overtake_standard_left_lane_change_speed_threshold *
+      speed_threshold_percentage;
   if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_ASSISTIVE) {
-    speed_threshold = config_.overtake_soft_lane_change_speed_threshold * speed_threshold_percentage;
+    speed_threshold = config_.overtake_soft_lane_change_speed_threshold *
+                      speed_threshold_percentage;
   } else if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_AGILE) {
-    speed_threshold = config_.overtake_radical_lane_change_speed_threshold * speed_threshold_percentage;
+    speed_threshold = config_.overtake_radical_lane_change_speed_threshold *
+                      speed_threshold_percentage;
   } else {
     if (is_left) {
-      speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold * speed_threshold_percentage;
+      speed_threshold =
+          config_.overtake_standard_left_lane_change_speed_threshold *
+          speed_threshold_percentage;
     } else {
-      speed_threshold = config_.overtake_standard_right_lane_change_speed_threshold * speed_threshold_percentage;
+      speed_threshold =
+          config_.overtake_standard_right_lane_change_speed_threshold *
+          speed_threshold_percentage;
     }
   }
   // if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
@@ -815,23 +859,27 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
 }
 
 bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
-    const double lane_traffic_speed, const agent::Agent* agent, const bool is_left) {
+    const double lane_traffic_speed, const agent::Agent* agent,
+    const bool is_left) {
   const double leading_vehicle_speed = agent->speed();
   double speed_threshold_percentage = 1.0;
   double target_lane_exist_truck_maintain_percentage = 1.0;
-  if (agent->type() == agent::AgentType::TRUCK || agent->type() == agent::AgentType::BUS ||
+  if (agent->type() == agent::AgentType::TRUCK ||
+      agent->type() == agent::AgentType::BUS ||
       agent->type() == agent::AgentType::TRAILER) {
     speed_threshold_percentage = 0.8;
   }
-  const auto &lane_change_style = session_->environmental_model()
-                                  .get_local_view()
-                                  .function_state_machine_info.pilot_req.lane_change_style;
-  double speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
+  const auto& lane_change_style =
+      session_->environmental_model()
+          .get_local_view()
+          .function_state_machine_info.pilot_req.lane_change_style;
+  double speed_threshold =
+      config_.overtake_standard_left_lane_change_speed_threshold;
   if (lane_change_style == iflyauto::LANE_CHANGE_STYLE_ASSISTIVE) {
     if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
       speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
     } else if (leading_vehicle_speed <=
-              kOvertakeLeadingVehicleLowSpeedThreshold) {
+               kOvertakeLeadingVehicleLowSpeedThreshold) {
       speed_threshold = config_.overtake_soft_lane_change_speed_threshold;
     } else {
       speed_threshold = planning_math::lerp(
@@ -844,7 +892,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
     if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
       speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
     } else if (leading_vehicle_speed <=
-              kOvertakeLeadingVehicleLowSpeedThreshold) {
+               kOvertakeLeadingVehicleLowSpeedThreshold) {
       speed_threshold = config_.overtake_radical_lane_change_speed_threshold;
     } else {
       speed_threshold = planning_math::lerp(
@@ -858,8 +906,9 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
       if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
         speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
       } else if (leading_vehicle_speed <=
-                kOvertakeLeadingVehicleLowSpeedThreshold) {
-        speed_threshold = config_.overtake_standard_left_lane_change_speed_threshold;
+                 kOvertakeLeadingVehicleLowSpeedThreshold) {
+        speed_threshold =
+            config_.overtake_standard_left_lane_change_speed_threshold;
       } else {
         speed_threshold = planning_math::lerp(
             config_.overtake_standard_left_lane_change_speed_threshold,
@@ -871,8 +920,9 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
       if (leading_vehicle_speed >= kOvertakeLeadingVehicleHighSpeedThreshold) {
         speed_threshold = kOvertakeLeadingVehicleHighSpeedDiffThreshold;
       } else if (leading_vehicle_speed <=
-                kOvertakeLeadingVehicleLowSpeedThreshold) {
-        speed_threshold = config_.overtake_standard_right_lane_change_speed_threshold;
+                 kOvertakeLeadingVehicleLowSpeedThreshold) {
+        speed_threshold =
+            config_.overtake_standard_right_lane_change_speed_threshold;
       } else {
         speed_threshold = planning_math::lerp(
             config_.overtake_standard_right_lane_change_speed_threshold,
@@ -884,7 +934,8 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   }
 
   speed_threshold *= speed_threshold_percentage;
-  speed_threshold = speed_threshold * kCouldOvertakeMaintainSpeedDiffThresholdPercentage;
+  speed_threshold =
+      speed_threshold * kCouldOvertakeMaintainSpeedDiffThresholdPercentage;
   const double speed_diff = lane_traffic_speed - leading_vehicle_speed;
   const bool is_overtake_maintain = (speed_diff > speed_threshold);
   return is_overtake_maintain;
@@ -984,7 +1035,8 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
     if (iter != tracks_map.end()) {
       if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
           tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
-          tracks_map.at(id)->frenet_l() > potensial_max_l || tracks_map.at(id)->frenet_l() < 0.0) {
+          tracks_map.at(id)->frenet_l() > potensial_max_l ||
+          tracks_map.at(id)->frenet_l() < 0.0) {
         continue;
       }
       ++potensial_counter;
@@ -997,9 +1049,12 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
   std::vector<std::shared_ptr<FrenetObstacle>> left_front_target_tracks;
   std::vector<std::shared_ptr<FrenetObstacle>> ego_front_target_tracks;
   std::vector<std::shared_ptr<FrenetObstacle>> left_lane_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> current_lane_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> left_boundary_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> left_boundary_cone_distribution_ordered_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      current_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      left_boundary_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      left_boundary_cone_distribution_ordered_set;
 
   for (auto& obstacle : front_tracks) {
     if (std::count(left_potensial_objects.begin(), left_potensial_objects.end(),
@@ -1018,7 +1073,8 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
         current_lane_cone_distribution_set.emplace_back(obj);
       }
       if ((obj->frenet_l() > kLaneConeRangeThres) &&
-          std::fabs(obj->frenet_l() - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+          std::fabs(obj->frenet_l() - lane_width * 0.5) <
+              kLaneBoundaryConeRangeThres) {
         left_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
@@ -1029,7 +1085,8 @@ bool OvertakeRequest::checkLeftLaneChangeValidByObjects(
         left_lane_cone_distribution_set.emplace_back(obj);
       }
       if ((obj->frenet_l() < lane_width - kLaneConeRangeThres) &&
-          std::fabs(obj->frenet_l() - lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+          std::fabs(obj->frenet_l() - lane_width * 0.5) <
+              kLaneBoundaryConeRangeThres) {
         left_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
@@ -1113,7 +1170,8 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
     if (iter != tracks_map.end()) {
       if (tracks_map.at(id)->d_s_rel() < -kPotensialObjectLonRange ||
           tracks_map.at(id)->d_s_rel() > kPotensialObjectLonRange ||
-          tracks_map.at(id)->frenet_l() < potensial_min_l || tracks_map.at(id)->frenet_l() > 0.0) {
+          tracks_map.at(id)->frenet_l() < potensial_min_l ||
+          tracks_map.at(id)->frenet_l() > 0.0) {
         continue;
       }
       ++potensial_counter;
@@ -1126,9 +1184,12 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
   std::vector<std::shared_ptr<FrenetObstacle>> right_front_target_tracks;
   std::vector<std::shared_ptr<FrenetObstacle>> ego_front_target_tracks;
   std::vector<std::shared_ptr<FrenetObstacle>> right_lane_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> current_lane_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> right_boundary_cone_distribution_set;
-  std::vector<std::shared_ptr<FrenetObstacle>> right_boundary_cone_distribution_ordered_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      current_lane_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      right_boundary_cone_distribution_set;
+  std::vector<std::shared_ptr<FrenetObstacle>>
+      right_boundary_cone_distribution_ordered_set;
 
   const std::vector<std::shared_ptr<planning::FrenetObstacle>>& front_tracks =
       lateral_obstacle_->front_tracks();
@@ -1150,7 +1211,8 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
         current_lane_cone_distribution_set.emplace_back(obj);
       }
       if ((obj->frenet_l() < -kLaneConeRangeThres) &&
-          std::fabs(obj->frenet_l() + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+          std::fabs(obj->frenet_l() + lane_width * 0.5) <
+              kLaneBoundaryConeRangeThres) {
         right_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
@@ -1161,7 +1223,8 @@ bool OvertakeRequest::checkRightLaneChangeValidByObjects(
         right_lane_cone_distribution_set.emplace_back(obj);
       }
       if ((obj->frenet_l() > -lane_width + kLaneConeRangeThres) &&
-          std::fabs(obj->frenet_l() + lane_width * 0.5) < kLaneBoundaryConeRangeThres) {
+          std::fabs(obj->frenet_l() + lane_width * 0.5) <
+              kLaneBoundaryConeRangeThres) {
         right_boundary_cone_distribution_set.emplace_back(obj);
       }
     }
@@ -1234,7 +1297,8 @@ bool OvertakeRequest::checkLaneChangeValidBySuprsSignal(const bool is_left) {
       continue;
     }
     const double dis =
-        std::hypot(tracks_map.at(id)->obstacle()->x_center() - ego_pose.x, tracks_map.at(id)->obstacle()->y_center() - ego_pose.y);
+        std::hypot(tracks_map.at(id)->obstacle()->x_center() - ego_pose.x,
+                   tracks_map.at(id)->obstacle()->y_center() - ego_pose.y);
     // 障碍物type为卡车或者轿车的需要抑制变道
     if (tracks_map.at(id)->velocity() > kStaticVehicleThreshold &&
         dis < kSuppressionDistanceThres &&
@@ -1318,10 +1382,12 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
   int not_safety_agent_id = -1;
   if (has_front_obs && has_rear_obs) {
-    const double front_to_ego_dis = std::hypot(
-        front_track_iter->second->obstacle()->x_center(), front_track_iter->second->obstacle()->y_center());
-    const double rear_to_ego_dis = std::hypot(rear_track_iter->second->obstacle()->x_center(),
-                                              rear_track_iter->second->obstacle()->y_center());
+    const double front_to_ego_dis =
+        std::hypot(front_track_iter->second->obstacle()->x_center(),
+                   front_track_iter->second->obstacle()->y_center());
+    const double rear_to_ego_dis =
+        std::hypot(rear_track_iter->second->obstacle()->x_center(),
+                   rear_track_iter->second->obstacle()->y_center());
     not_safety_agent_id = front_to_ego_dis < rear_to_ego_dis
                               ? front_track_iter->first
                               : rear_track_iter->first;
@@ -1338,12 +1404,14 @@ bool OvertakeRequest::checkLaneChangeSafety(
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
     const double long_dis = front_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x = ego_cart_point.x +
-                       front_track_iter->second->obstacle()->x_center() * ego_fx -
-                       front_track_iter->second->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y = ego_cart_point.y +
-                       front_track_iter->second->obstacle()->x_center() * ego_fy +
-                       front_track_iter->second->obstacle()->x_center() * ego_fx;
+    obs_cart_point.x =
+        ego_cart_point.x +
+        front_track_iter->second->obstacle()->x_center() * ego_fx -
+        front_track_iter->second->obstacle()->y_center() * ego_fy;
+    obs_cart_point.y =
+        ego_cart_point.y +
+        front_track_iter->second->obstacle()->x_center() * ego_fy +
+        front_track_iter->second->obstacle()->x_center() * ego_fx;
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1359,22 +1427,26 @@ bool OvertakeRequest::checkLaneChangeSafety(
         extra_front_distance_buffer;
     const bool front_safety_at_present = checkFrontSafetyAtPresent(
         long_dis, ego_state->ego_v(), front_track_iter->second->velocity(),
-        kDecInCheckLaneChangeSafety, front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
+        kDecInCheckLaneChangeSafety,
+        front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
         0.5 * front_track_iter->second->length(), front_safety_distance,
         lon_safety_ratio, &front_safety_threshold_at_present);
     if (!front_safety_at_present) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at present!";
+      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at "
+                    "present!";
       return false;
     }
     const double front_safety_at_future = checkFrontSafetyAtFuture(
         long_dis, ego_state->ego_v(), front_track_iter->second->velocity(),
-        kDecInCheckLaneChangeSafety, front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
+        kDecInCheckLaneChangeSafety,
+        front_track_iter->second->obstacle()->acceleration(), ego_front_edge,
         0.5 * front_track_iter->second->length(), front_safety_distance,
         lon_safety_ratio, kConsiderTimestampInCheckLaneChangeSafety);
     if (!front_safety_at_future) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
+      ILOG_DEBUG
+          << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
       return false;
     }
     *front_required_space = front_safety_threshold_at_present;
@@ -1387,12 +1459,14 @@ bool OvertakeRequest::checkLaneChangeSafety(
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
     const double long_dis = rear_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x = ego_cart_point.x +
-                       rear_track_iter->second->obstacle()->x_center() * ego_fx -
-                       rear_track_iter->second->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y = ego_cart_point.y +
-                       rear_track_iter->second->obstacle()->x_center() * ego_fy +
-                       rear_track_iter->second->obstacle()->y_center() * ego_fx;
+    obs_cart_point.x =
+        ego_cart_point.x +
+        rear_track_iter->second->obstacle()->x_center() * ego_fx -
+        rear_track_iter->second->obstacle()->y_center() * ego_fy;
+    obs_cart_point.y =
+        ego_cart_point.y +
+        rear_track_iter->second->obstacle()->x_center() * ego_fy +
+        rear_track_iter->second->obstacle()->y_center() * ego_fx;
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1409,24 +1483,28 @@ bool OvertakeRequest::checkLaneChangeSafety(
         extra_rear_distance_buffer;
     const bool rear_safety_at_present = checkRearSafetyAtPresent(
         long_dis, ego_state->ego_v(), rear_track_iter->second->velocity(),
-        kDecInCheckLaneChangeSafety, rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
+        kDecInCheckLaneChangeSafety,
+        rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
         0.5 * rear_track_iter->second->length(), rear_safety_distance,
         safety_backward_time, lon_safety_ratio,
         &rear_safety_threshold_at_present);
     if (!rear_safety_at_present) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for rear vehicle at present!";
+      ILOG_DEBUG
+          << "checkLaneChangeSafety(): Not safety for rear vehicle at present!";
       return false;
     }
     const double rear_safety_at_future = checkRearSafetyAtFuture(
         long_dis, ego_state->ego_v(), rear_track_iter->second->velocity(),
-        kDecInCheckLaneChangeSafety, rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
+        kDecInCheckLaneChangeSafety,
+        rear_track_iter->second->obstacle()->acceleration(), ego_rear_edge,
         0.5 * rear_track_iter->second->length(), rear_safety_distance,
         lon_safety_ratio,
         kConsiderTimestampInCheckLaneChangeSafety * lon_safety_ratio);
     if (!rear_safety_at_future) {
       not_safe_agent_ids->emplace_back(not_safety_agent_id);
-      ILOG_DEBUG << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
+      ILOG_DEBUG
+          << "checkLaneChangeSafety(): Not safety for front vehicle at future!";
       return false;
     }
     *rear_required_space = rear_safety_threshold_at_present;
@@ -1478,7 +1556,8 @@ void OvertakeRequest::selectTargetObstacleIds(
 
   auto isTruck = [&](const std::shared_ptr<FrenetObstacle>& veh) -> bool {
     return veh->type() == iflyauto::OBJECT_TYPE_TRUCK &&
-           veh->length() > kMinLengthForTruck && veh->width() > kMinWidthForTruck;
+           veh->length() > kMinLengthForTruck &&
+           veh->width() > kMinWidthForTruck;
   };
 
   auto getHalfWidthOnLane = [&](const std::shared_ptr<FrenetObstacle>& veh,
@@ -1487,10 +1566,10 @@ void OvertakeRequest::selectTargetObstacleIds(
       return false;
     }
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x =
-        ego_cart_point.x + veh->obstacle()->x_center() * ego_fx - veh->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y =
-        ego_cart_point.y + veh->obstacle()->x_center() * ego_fy + veh->obstacle()->y_center() * ego_fx;
+    obs_cart_point.x = ego_cart_point.x + veh->obstacle()->x_center() * ego_fx -
+                       veh->obstacle()->y_center() * ego_fy;
+    obs_cart_point.y = ego_cart_point.y + veh->obstacle()->x_center() * ego_fy +
+                       veh->obstacle()->y_center() * ego_fx;
 
     Point2D new_frenet_point;
     double new_lane_theta = 0.0;
@@ -1500,7 +1579,8 @@ void OvertakeRequest::selectTargetObstacleIds(
     }
 
     new_lane_theta = ref_line->GetPathCurveHeading(new_frenet_point.x);
-    double veh_theta = veh->obstacle()->heading_angle() - ego_state->ego_pose().theta;
+    double veh_theta =
+        veh->obstacle()->heading_angle() - ego_state->ego_pose().theta;
     const double delta_angle =
         std::abs(NormalizeAngle(new_lane_theta) - NormalizeAngle(veh_theta));
     *half_width = std::abs(std::cos(delta_angle)) * 0.5 * veh->width() +
@@ -1524,15 +1604,16 @@ void OvertakeRequest::selectTargetObstacleIds(
     const bool is_truck = isTruck(obs_info);
     const double buffer = std::min(
         max_l_buffer, is_truck ? l_buffer + kExtraLatBufferForTruck : l_buffer);
-    const bool is_select =
-        selectObsByLateralDistance(obs_info->frenet_l(), veh_half_width, buffer) &&
-        is_truck;
+    const bool is_select = selectObsByLateralDistance(obs_info->frenet_l(),
+                                                      veh_half_width, buffer) &&
+                           is_truck;
 
     if (!is_select) {
       continue;
     }
 
-    const double distance = std::hypot(obs_info->obstacle()->x_center(), obs_info->obstacle()->y_center());
+    const double distance = std::hypot(obs_info->obstacle()->x_center(),
+                                       obs_info->obstacle()->y_center());
     if (distance < search_range) {
       target_tracks_ids->emplace_back(id);
     }
@@ -1578,8 +1659,7 @@ bool OvertakeRequest::checkFrontSafetyAtPresent(
   if (front_required_space) {
     *front_required_space = safety_threshold;
   }
-  ILOG_DEBUG << "ego v:" << ego_v
-             << "front v:" << veh_v
+  ILOG_DEBUG << "ego v:" << ego_v << "front v:" << veh_v
              << "base dis buff:" << base_distance_buffer
              << "safety_threshold:" << safety_threshold
              << "long_diff:" << long_diff;
@@ -1686,10 +1766,13 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
     double front_leading_vehivle_long_distance = kDefaultFrontObstacleDistance;
     const auto lane_tracks_manager =
         session_->environmental_model().get_lane_tracks_manager();
-    std::vector<std::shared_ptr<planning::FrenetObstacle>> ego_front_vehicle_id_array;
+    std::vector<std::shared_ptr<planning::FrenetObstacle>>
+        ego_front_vehicle_id_array;
     ego_front_vehicle_id_array = lane_tracks_manager->front_tracks_c();
-    double leading_vehicle_lateral_speed = leading_vehicle_iter->second->frenet_velocity_l();
-    double leading_vehicle_lateral_dis = leading_vehicle_iter->second->frenet_l();
+    double leading_vehicle_lateral_speed =
+        leading_vehicle_iter->second->frenet_velocity_l();
+    double leading_vehicle_lateral_dis =
+        leading_vehicle_iter->second->frenet_l();
 
     if (ego_front_vehicle_id_array.size() >= 1) {
       int ego_front_vehicle_id = ego_front_vehicle_id_array.at(0)->id();
@@ -1707,7 +1790,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         if (front_leading_vehicle_iter != tracks_map.end()) {
           front_leading_vehivle_long_distance =
               front_leading_vehicle_iter->second->d_s_rel();
-          ILOG_DEBUG << "ego vehicle front_leading_vehicle id:" << front_leading_vehicle_iter->second->id();
+          ILOG_DEBUG << "ego vehicle front_leading_vehicle id:"
+                     << front_leading_vehicle_iter->second->id();
         }
       }
     }
@@ -1743,10 +1827,11 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
            !false)))) {
       // HACK：待前轮是否跨线接口ready来替代上述false
       ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
-             << "LaneChangeProgress:" << lc_state
-             << "OverTake Vehicle LatSpd:" << leading_vehicle_lateral_speed
-             << "Ego Lat Distance:" << lateral_distance
-             << "Front Leading Vehicle Distance:" << front_leading_vehivle_long_distance;
+                 << "LaneChangeProgress:" << lc_state
+                 << "OverTake Vehicle LatSpd:" << leading_vehicle_lateral_speed
+                 << "Ego Lat Distance:" << lateral_distance
+                 << "Front Leading Vehicle Distance:"
+                 << front_leading_vehivle_long_distance;
       return true;
     }
 
@@ -1758,11 +1843,12 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         kCancelOverTakeLnChgTargetLaneVehDftSpd;
     double ego_right_front_leading_vehivle_long_distance =
         kDefaultFrontObstacleDistance;
-    const auto &ego_left_front_vehicle_array = lane_tracks_manager_->front_tracks_l();
-    const auto &ego_right_front_vehicle_array = lane_tracks_manager_->front_tracks_r();
+    const auto& ego_left_front_vehicle_array =
+        lane_tracks_manager_->front_tracks_l();
+    const auto& ego_right_front_vehicle_array =
+        lane_tracks_manager_->front_tracks_r();
     if (ego_left_front_vehicle_array.size() >= 1) {
-      int ego_left_front_vehicle_id =
-          ego_left_front_vehicle_array.at(0)->id();
+      int ego_left_front_vehicle_id = ego_left_front_vehicle_array.at(0)->id();
       auto left_front_leading_vehicle_iter =
           tracks_map.find(ego_left_front_vehicle_array.at(0)->id());
       if (overtake_vehicle_id_ == ego_left_front_vehicle_id) {
@@ -1778,7 +1864,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
             left_front_leading_vehicle_iter->second->velocity();
         ego_left_front_leading_vehivle_long_distance =
             left_front_leading_vehicle_iter->second->d_s_rel();
-        ILOG_DEBUG << "ego_left_front_leading_vehivle_long_distance:" << ego_left_front_leading_vehivle_long_distance;
+        ILOG_DEBUG << "ego_left_front_leading_vehivle_long_distance:"
+                   << ego_left_front_leading_vehivle_long_distance;
       }
     }
     if (request_type_ == LEFT_CHANGE) {
@@ -1787,15 +1874,17 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
           kCancelOverTakeLnChgTargetLaneVehHighDst) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
       } else if (ego_left_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel())) {
+                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+                          leading_vehicle_iter->second->d_s_rel())) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
       } else {
-        speed_threshold =
-            planning_math::lerp(kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel()),
-                                kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-                                kCancelOverTakeLnChgTargetLaneVehHighDst,
-                                ego_left_front_leading_vehivle_long_distance);
+        speed_threshold = planning_math::lerp(
+            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+                     leading_vehicle_iter->second->d_s_rel()),
+            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+            kCancelOverTakeLnChgTargetLaneVehHighDst,
+            ego_left_front_leading_vehivle_long_distance);
       }
       if ((ego_left_front_leading_vehicle_min_speed <
            overtake_lane_change_vehicle_speed + speed_threshold) &&
@@ -1810,11 +1899,14 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
         target_lane_exist_slow_front_veh_frame_num_ >= 5) {
       // HACK：false待前轮压线接口ready后替代
       ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
-             << "LaneChangeProgress:" << lc_state
-             << "OverTake Vehicle LonSpd:" << overtake_lane_change_vehicle_speed
-             << "Left Lane Target Speed:" << ego_left_front_leading_vehicle_min_speed
-             << "Ego Lat Distance:" << lateral_distance
-             << "left lane exist slow front veh frame num:" << target_lane_exist_slow_front_veh_frame_num_;
+                 << "LaneChangeProgress:" << lc_state
+                 << "OverTake Vehicle LonSpd:"
+                 << overtake_lane_change_vehicle_speed
+                 << "Left Lane Target Speed:"
+                 << ego_left_front_leading_vehicle_min_speed
+                 << "Ego Lat Distance:" << lateral_distance
+                 << "left lane exist slow front veh frame num:"
+                 << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
 
@@ -1836,7 +1928,8 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
             right_front_leading_vehicle_iter->second->velocity();
         ego_right_front_leading_vehivle_long_distance =
             right_front_leading_vehicle_iter->second->d_s_rel();
-        ILOG_DEBUG << "right front leading vehicle long distance:" << ego_right_front_leading_vehivle_long_distance;
+        ILOG_DEBUG << "right front leading vehicle long distance:"
+                   << ego_right_front_leading_vehivle_long_distance;
       }
     }
     if (request_type_ == RIGHT_CHANGE) {
@@ -1845,15 +1938,17 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
           kCancelOverTakeLnChgTargetLaneVehHighDst) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehLowSpdDiff;
       } else if (ego_right_front_leading_vehivle_long_distance <=
-                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel())) {
+                 std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+                          leading_vehicle_iter->second->d_s_rel())) {
         speed_threshold = kCancelOverTakeLnChgTargetLaneVehHighSpdDiff;
       } else {
-        speed_threshold =
-            planning_math::lerp(kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
-                                std::max(kCancelOverTakeLnChgTargetLaneVehLowDst, leading_vehicle_iter->second->d_s_rel()),
-                                kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
-                                kCancelOverTakeLnChgTargetLaneVehHighDst,
-                                ego_right_front_leading_vehivle_long_distance);
+        speed_threshold = planning_math::lerp(
+            kCancelOverTakeLnChgTargetLaneVehHighSpdDiff,
+            std::max(kCancelOverTakeLnChgTargetLaneVehLowDst,
+                     leading_vehicle_iter->second->d_s_rel()),
+            kCancelOverTakeLnChgTargetLaneVehLowSpdDiff,
+            kCancelOverTakeLnChgTargetLaneVehHighDst,
+            ego_right_front_leading_vehivle_long_distance);
       }
       if ((ego_right_front_leading_vehicle_min_speed <
            overtake_lane_change_vehicle_speed + speed_threshold) &&
@@ -1867,11 +1962,14 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
     if (request_type_ == RIGHT_CHANGE &&
         (target_lane_exist_slow_front_veh_frame_num_ >= 5)) {
       ILOG_DEBUG << "Cancel OverTakeLaneChange Dir: " << request_type_
-             << "LaneChangeProgress:" << lc_state
-             << "OverTake Vehicle LonSpd:" << overtake_lane_change_vehicle_speed
-             << "Left Lane Target Speed:" << ego_left_front_leading_vehicle_min_speed
-             << "Ego Lat Distance:" << lateral_distance
-             << "left lane exist slow front veh frame num:" << target_lane_exist_slow_front_veh_frame_num_;
+                 << "LaneChangeProgress:" << lc_state
+                 << "OverTake Vehicle LonSpd:"
+                 << overtake_lane_change_vehicle_speed
+                 << "Left Lane Target Speed:"
+                 << ego_left_front_leading_vehicle_min_speed
+                 << "Ego Lat Distance:" << lateral_distance
+                 << "left lane exist slow front veh frame num:"
+                 << target_lane_exist_slow_front_veh_frame_num_;
       return true;
     }
   }

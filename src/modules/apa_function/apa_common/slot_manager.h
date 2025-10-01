@@ -534,7 +534,6 @@ class SlotManager {
 
   void Log();
 
-
   void CopySlotReleaseInfo();
 
   const bool IsHPPMAPSlot(const iflyauto::ParkingFusionSlot& fusion_slot);

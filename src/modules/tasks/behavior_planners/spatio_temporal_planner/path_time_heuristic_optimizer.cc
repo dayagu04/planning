@@ -1,20 +1,20 @@
 #include "path_time_heuristic_optimizer.h"
 #include <cmath>
 #include <vector>
-#include "define/geometry.h"
-#include "environmental_model.h"
 #include "debug_info_log.h"
+#include "define/geometry.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
+#include "environmental_model.h"
 #include "frenet_ego_state.h"
 #include "history_obstacle_manager.h"
 #include "lateral_obstacle.h"
 #include "obstacle_manager.h"
+#include "planning_context.h"
 #include "reference_path_manager.h"
 #include "traffic_light_decision_manager.h"
 #include "trajectory/trajectory_stitcher.h"
 #include "virtual_lane_manager.h"
-#include "planning_context.h"
 
 #include "log.h"
 
@@ -22,12 +22,9 @@ namespace planning {
 using namespace planning_math;
 
 PathTimeHeuristicOptimizer::PathTimeHeuristicOptimizer(
-    const EgoPlanningConfigBuilder *config_builder,
-    framework::Session *session)
-    : slt_graph_(config_builder, session),
-      session_(session) {
+    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    : slt_graph_(config_builder, session), session_(session) {
   config_ = config_builder->cast<DpStSpeedOptimizerConfig>();
-
 }
 
 bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
@@ -35,10 +32,11 @@ bool PathTimeHeuristicOptimizer::SearchPathTimeGraph(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
     const bool &last_enable_using_st_plan,
-    planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input
-    ) {
-
-  if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan, spatio_temporal_union_plan_input)) {
+    planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
+  if (!slt_graph_.Search(traj_points, agent_trajs, virtual_agents_info,
+                         last_enable_using_st_plan,
+                         spatio_temporal_union_plan_input)) {
     ILOG_DEBUG << "failed to search graph with dynamic programming";
     return false;
   }
@@ -50,23 +48,28 @@ bool PathTimeHeuristicOptimizer::Process(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
     const bool &last_enable_using_st_plan,
-    planning::common::SpationTemporalUnionDpInput& spatio_temporal_union_plan_input) {
-  const auto& ego_state_manager =
+    planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
+  const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  const auto& virtual_lane_mgr =
+  const auto &virtual_lane_mgr =
       // session_->mutable_planning_context()->virtual_lane_manager();
       session_->mutable_environmental_model()->get_virtual_lane_manager();
 
-  const auto& current_lane = virtual_lane_mgr->get_current_lane();
-  planning_init_point_ =
-      ego_state_manager->planning_init_point();
+  const auto &current_lane = virtual_lane_mgr->get_current_lane();
+  planning_init_point_ = ego_state_manager->planning_init_point();
   std::shared_ptr<ReferencePath> base_refline =
-      session_->planning_context().lane_change_decider_output().coarse_planning_info.reference_path;
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path;
   base_frenet_coord_ = base_refline->get_frenet_coord();
   st_dp_is_sucess_ = true;
 
-  if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info, last_enable_using_st_plan, spatio_temporal_union_plan_input)) {
-    ILOG_DEBUG << "PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!!";
+  if (!SearchPathTimeGraph(traj_points, agent_trajs, virtual_agents_info,
+                           last_enable_using_st_plan,
+                           spatio_temporal_union_plan_input)) {
+    ILOG_DEBUG
+        << "PathTimeHeuristicOptimizer::Process() SearchPathTimeGraph failed!!";
     st_dp_is_sucess_ = false;
     // FallbackFunction(traj_points);
   }
@@ -76,10 +79,11 @@ bool PathTimeHeuristicOptimizer::Process(
   return true;
 }
 
-void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points) {
-  const auto& ego_state_manager =
+void PathTimeHeuristicOptimizer::FallbackFunction(
+    TrajectoryPoints &traj_points) {
+  const auto &ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
-  double ego_v= ego_state_manager->ego_v();
+  double ego_v = ego_state_manager->ego_v();
   const double k_max_deceleration = -3.5;
   const double acc_coeff = 0.5;
   const double ego_min_vs = 0.1;
@@ -89,15 +93,15 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    ILOG_ERROR << "PathTimeHeuristicOptimizer::FallbackFunction: Cart Point -> Frenet Point Failed!!!";
+    ILOG_ERROR << "PathTimeHeuristicOptimizer::FallbackFunction: Cart Point -> "
+                  "Frenet Point Failed!!!";
   } else {
     ego_s = ego_frenet_point.x;
     ego_l = ego_frenet_point.y;
   }
 
   const double ego_v_angle = ego_state_manager->ego_v_angle();
-  const double ref_theta =
-      base_frenet_coord_->GetPathCurveHeading(ego_s);
+  const double ref_theta = base_frenet_coord_->GetPathCurveHeading(ego_s);
   const double theta_diff = NormalizeAngle(ref_theta - ego_v_angle);
   double v_s = ego_v * std::cos(std::fabs(theta_diff));
   const double ego_deceleration_time = 0.0;
@@ -125,14 +129,17 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
     } else {
       double delta_time = traj_points[i].t - traj_points[0].t;
       if (delta_time <= ego_deceleration_time) {
-        double dis_to_init_point = v_s * delta_time + acc_coeff * k_max_deceleration * delta_time * delta_time;
+        double dis_to_init_point =
+            v_s * delta_time +
+            acc_coeff * k_max_deceleration * delta_time * delta_time;
         Point2D cur_frenet_point;
         cur_frenet_point.x = ego_s + dis_to_init_point;
         cur_frenet_point.y = ego_l;
 
         // point.x = sample_point.x();
         // point.y = sample_point.y();
-        // point.heading_angle = lane_change_quintic_path.heading(traj_points[i].t);
+        // point.heading_angle =
+        // lane_change_quintic_path.heading(traj_points[i].t);
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
@@ -153,12 +160,14 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
       } else {
         double constant_speed_time = delta_time - ego_deceleration_time;
         Point2D cur_frenet_point;
-        cur_frenet_point.x = traj_points[target_count].s + constant_speed_time * v_s;
+        cur_frenet_point.x =
+            traj_points[target_count].s + constant_speed_time * v_s;
         cur_frenet_point.y = ego_l;
 
         // point.x = sample_point.x();
         // point.y = sample_point.y();
-        // point.heading_angle = lane_change_quintic_path.heading(traj_points[i].t);
+        // point.heading_angle =
+        // lane_change_quintic_path.heading(traj_points[i].t);
 
         Point2D cart_point;
         if (!base_frenet_coord_->SLToXY(cur_frenet_point, cart_point)) {
@@ -182,7 +191,8 @@ void PathTimeHeuristicOptimizer::FallbackFunction(TrajectoryPoints &traj_points)
   return;
 }
 
-void PathTimeHeuristicOptimizer::GenerateEgoBoxSet(TrajectoryPoints &traj_points) {
+void PathTimeHeuristicOptimizer::GenerateEgoBoxSet(
+    TrajectoryPoints &traj_points) {
   if (!traj_points.empty()) {
     TrajectoryPoint traj_point;
     std::vector<planning_math::Vec2d> vertices;
@@ -198,8 +208,8 @@ void PathTimeHeuristicOptimizer::GenerateEgoBoxSet(TrajectoryPoints &traj_points
 
 void PathTimeHeuristicOptimizer::GetVehicleVertices(
     const TrajectoryPoint &traj_point,
-    std::vector<planning_math::Vec2d>& vertices) {
-  const auto& vehicle_param =
+    std::vector<planning_math::Vec2d> &vertices) {
+  const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double angle = traj_point.heading_angle;
   std::array<Point2D, 4> ego_points;
@@ -245,16 +255,18 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
     return;
   }
   const int k_ego_traj_points_nums = 16;
-  auto& lateral_obstacle_decision =
+  auto &lateral_obstacle_decision =
       session_->mutable_planning_context()
-      ->mutable_lateral_obstacle_decider_output().lat_obstacle_decision;
-  const auto& lateral_obstacle_history_info =
+          ->mutable_lateral_obstacle_decider_output()
+          .lat_obstacle_decision;
+  const auto &lateral_obstacle_history_info =
       session_->mutable_planning_context()
-      ->mutable_lateral_obstacle_decider_output().lateral_obstacle_history_info;
+          ->mutable_lateral_obstacle_decider_output()
+          .lateral_obstacle_history_info;
   const double longit_overlap_Threshold = 0.1;
   double longit_dis = 100.0;
   AABox2d agent_box;
-  for (const auto& agent : agent_trajs) {
+  for (const auto &agent : agent_trajs) {
     auto iter = lateral_obstacle_decision.find(agent.agent_id);
     auto iter_history = lateral_obstacle_history_info.find(agent.agent_id);
     if (iter_history == lateral_obstacle_history_info.end() ||
@@ -269,15 +281,19 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
           longit_dis = agent_box.LongitDistanceTo(ego_box_set_[i]);
           if (longit_dis < longit_overlap_Threshold) {
             if (ego_box_set_[i].center_y() < agent_box.min_y()) {
-              lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::RIGHT;
+              lateral_obstacle_decision[agent.agent_id] =
+                  LatObstacleDecisionType::RIGHT;
             } else if (ego_box_set_[i].center_y() > agent_box.max_y()) {
-              lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::LEFT;
+              lateral_obstacle_decision[agent.agent_id] =
+                  LatObstacleDecisionType::LEFT;
             } else {
-              lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::IGNORE;
+              lateral_obstacle_decision[agent.agent_id] =
+                  LatObstacleDecisionType::IGNORE;
             }
             break;
           } else {
-            lateral_obstacle_decision[agent.agent_id] = LatObstacleDecisionType::IGNORE;
+            lateral_obstacle_decision[agent.agent_id] =
+                LatObstacleDecisionType::IGNORE;
           }
         }
       }
@@ -287,4 +303,4 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   return;
 }
 
-}
+}  // namespace planning

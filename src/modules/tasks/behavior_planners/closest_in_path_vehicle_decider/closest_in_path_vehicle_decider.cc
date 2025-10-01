@@ -245,7 +245,7 @@ void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
     ILOG_DEBUG << "agent_manager is nullptr";
     return;
   }
-  for (const auto &[agent_cur_distance_to_ego, isvirtual_agentid] :
+  for (const auto & [ agent_cur_distance_to_ego, isvirtual_agentid ] :
        agents_distance_id_map_) {
     if (isvirtual_agentid.first) {  // if virtual, skip
       continue;

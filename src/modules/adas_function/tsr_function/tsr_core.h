@@ -53,7 +53,7 @@ class TsrCore {
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
-  bool tsr_speed_limit_valid_ = false; // 视觉感知限速信息标志位
+  bool tsr_speed_limit_valid_ = false;  // 视觉感知限速信息标志位
 
   // 限速标识牌信息 (视觉信息)
   uint32 tsr_speed_limit_ = 0;  // 限速值 单位:kph
@@ -62,9 +62,9 @@ class TsrCore {
   uint32 speed_limit_exist_in_view_ = 0;
   double accumulated_path_length_ = 0.0;
   // 解除限速标识牌信息 (视觉信息)
-  uint32 end_of_speed_sign_value_ = 0; // 解除限速牌值
-  double end_of_speed_sign_display_time_ = 0.0; // 解除限速牌显示时间 单位:s
-  bool end_of_speed_sign_display_flag_ = false; // 解除限速牌显示标志位
+  uint32 end_of_speed_sign_value_ = 0;           // 解除限速牌值
+  double end_of_speed_sign_display_time_ = 0.0;  // 解除限速牌显示时间 单位:s
+  bool end_of_speed_sign_display_flag_ = false;  // 解除限速牌显示标志位
   // 当前道路限速信息 (道路信息)
   bool current_map_speed_limit_valid_ = false;
 
@@ -73,9 +73,11 @@ class TsrCore {
   // 视觉限速抑制标志位
   bool speed_limit_suppression_flag_ = false;
   // 限速标识牌列表
-  std::vector<adas_function::context::SpeedSignInfo> speed_limit_sign_info_vector_;
+  std::vector<adas_function::context::SpeedSignInfo>
+      speed_limit_sign_info_vector_;
   // 解除限速列表
-  std::vector<adas_function::context::SpeedSignInfo> end_of_speed_sign_info_vector_;
+  std::vector<adas_function::context::SpeedSignInfo>
+      end_of_speed_sign_info_vector_;
 
   double current_map_speed_limit_ = 0.0;
   void UpdateMapSpeedLimit(void);
@@ -84,14 +86,16 @@ class TsrCore {
 
   // 新版更新限速信息
   void UpdateTsrSpeedLimitNew(void);
-  
+
   // 只使用地图限速的更新函数
   void UpdateTsrSpeedLimitOnlyByMap(void);
 
   // 实时辅助标识牌, 不一定输出
-  iflyauto::SuppSignType realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+  iflyauto::SuppSignType realtime_supp_sign_info_ =
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
   // 输出辅助标识牌
-  iflyauto::SuppSignType output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+  iflyauto::SuppSignType output_supp_sign_info_ =
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
   // 辅助标识牌有效标志位
   bool supp_sign_valid_flag_ = false;
   // 辅助标识变化标志位
@@ -107,7 +111,7 @@ class TsrCore {
   uint16_t supp_sign_code_ = 0;
   // 获取限速标识牌中的最高限速值
   uint32 GetHighestSpeedLimit(void);
-  
+
   bool tsr_warning_image_ = false;  // 视觉提醒
   bool tsr_warning_voice_ = false;  // 声音提醒
   bool overspeed_status_ = false;  // false:未处于超速状态 true:处于超速状态

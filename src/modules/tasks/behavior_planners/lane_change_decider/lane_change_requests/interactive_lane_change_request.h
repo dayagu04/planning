@@ -24,9 +24,7 @@ class IntRequest : public LaneChangeRequest {
 
   void Update(int lc_status);
 
-  IntCancelReasonType request_cancel_reason() {
-    return request_cancel_reason_;
-  }
+  IntCancelReasonType request_cancel_reason() { return request_cancel_reason_; }
 
   void set_request_cancel_reason(IntCancelReasonType request_cancel_reason) {
     request_cancel_reason_ = request_cancel_reason;
@@ -62,7 +60,8 @@ class IntRequest : public LaneChangeRequest {
   void PrintForbidGeneratingReason(
       const std::vector<std::string> forbid_generating_reason);
 
-  void ProcessBlinkState(const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status);
+  void ProcessBlinkState(const uint ego_blinker,
+                         const StateMachineLaneChangeStatus& lc_status);
 
   // void check_lc_forbid_reason(
   //     std::vector<std::string>& forbid_generating_left_reason,

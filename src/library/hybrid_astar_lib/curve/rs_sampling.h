@@ -20,9 +20,9 @@ class RSSampling : public CurveSampling {
   ~RSSampling() = default;
 
   // use rs path sampling to link start point and end point.
-  bool PlanByRSPathSampling(
-      HybridAStarResult* result, const Pose2f& start, const Pose2f& end,
-      const float lon_min_sampling_length);
+  bool PlanByRSPathSampling(HybridAStarResult* result, const Pose2f& start,
+                            const Pose2f& end,
+                            const float lon_min_sampling_length);
 
   bool SamplingByRSPath(Node3d* current_node, Node3d* polynomial_node);
 

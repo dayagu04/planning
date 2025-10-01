@@ -185,14 +185,15 @@ bool IsCameraObstacle(const std::shared_ptr<FrenetObstacle> tr);
 bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle);
 bool IsInConsiderLateralRange();
 bool IsFrontObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
-    const AvoidInfo &avoid_info,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
+    bool is_left, const AvoidInfo &avoid_info,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
         &hysteresis_maps);
 bool IsSideObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
+    bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>

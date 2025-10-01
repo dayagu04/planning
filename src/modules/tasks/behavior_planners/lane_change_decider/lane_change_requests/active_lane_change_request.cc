@@ -11,7 +11,8 @@
 //     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
 //     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
 //     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {
-//   auto config_builder = session_->mutable_environmental_model()->config_builder(
+//   auto config_builder =
+//   session_->mutable_environmental_model()->config_builder(
 //       planning::common::SceneType::HIGHWAY);
 //   act_request_config_ = config_builder->cast<ActRequestConfig>();
 // }
@@ -57,8 +58,9 @@
 //   const auto &route_info_output =
 //       session_->environmental_model().get_route_info()->get_route_info_output();
 
-//   auto current_lane_virtual_id = virtual_lane_mgr_->current_lane_virtual_id();
-//   if (lane_change_lane_mgr_->has_origin_lane()) {
+//   auto current_lane_virtual_id =
+//   virtual_lane_mgr_->current_lane_virtual_id(); if
+//   (lane_change_lane_mgr_->has_origin_lane()) {
 //     auto origin_lane = lane_change_lane_mgr_->olane();
 //     origin_lane_virtual_id_ = origin_lane->get_virtual_id();
 //   } else {
@@ -110,28 +112,32 @@
 //       current_lane->get_lane_type() == iflyauto::LANETYPE_NORMAL;
 
 //   auto distance_to_merge_point =
-//       current_lane->get_lane_merge_split_point().merge_split_point_data_size > 0
+//       current_lane->get_lane_merge_split_point().merge_split_point_data_size
+//       > 0
 //           ? current_lane->get_lane_merge_split_point()
 //                 .merge_split_point_data[0]
 //                 .distance
 //           : 5000.;  // hack
 //   // WB hack: distance_to_y_point计算需要更新
 //   auto distance_to_y_point =
-//       current_lane->get_lane_merge_split_point().merge_split_point_data_size > 0
+//       current_lane->get_lane_merge_split_point().merge_split_point_data_size
+//       > 0
 //           ? current_lane->get_lane_merge_split_point()
 //                 .merge_split_point_data[0]
 //                 .distance
 //           : 5000.;  // hack
 //   // 判断分汇流情况目前不完善，TBD
 //   bool is_nearby_right_merge_point =
-//       current_lane->get_lane_merge_split_point().merge_split_point_data_size >
+//       current_lane->get_lane_merge_split_point().merge_split_point_data_size
+//       >
 //           0 &&
 //       current_lane->get_lane_merge_split_point()
 //               .merge_split_point_data[0]
 //               .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT &&
 //       distance_to_merge_point > 0 &&
 //       distance_to_merge_point < kDistanceBuffer &&
-//       distance_to_merge_point + kDistanceBuffer < route_info_output.dis_to_ramp;
+//       distance_to_merge_point + kDistanceBuffer <
+//       route_info_output.dis_to_ramp;
 
 //   bool is_nearby_right_merge_point_lc_valid =
 //       (virtual_lane_mgr_->lc_map_decision(current_lane) >= 0 &&
@@ -141,7 +147,8 @@
 
 //   // WB TBD： 汇流判断目前为hack，需要更新逻辑
 //   bool is_nearby_right_y_point =
-//       current_lane->get_lane_merge_split_point().merge_split_point_data_size >
+//       current_lane->get_lane_merge_split_point().merge_split_point_data_size
+//       >
 //           0 &&
 //       current_lane->get_lane_merge_split_point()
 //               .merge_split_point_data[0]
@@ -157,9 +164,11 @@
 //   bool lc_condition_nearby_merge =
 //       enable_act_request && v_limit_map >= act_request_speed_limit &&
 //       is_on_highway && is_not_on_ramp &&
-//       ((is_nearby_right_merge_point && is_nearby_right_merge_point_lc_valid &&
+//       ((is_nearby_right_merge_point && is_nearby_right_merge_point_lc_valid
+//       &&
 //         front_tracks_r_cnt > 0) ||
-//        (is_nearby_right_y_point && is_from_right_y_point_lc_decision_valid)) &&
+//        (is_nearby_right_y_point && is_from_right_y_point_lc_decision_valid))
+//        &&
 //       is_not_on_most_left_lane && is_normal_lane;
 
 //   if (lc_condition_nearby_merge) {
@@ -172,7 +181,8 @@
 //            (v_rel_f <= -2.5 && v_rel_l + v_ego > 30. / 3.6)) &&
 //           (v_rel_r < 15.0 ||
 //            current_lane_index == virtual_lane_mgr_->get_lane_num() - 1) &&
-//           v_ego > 30 / 3.6 && (v_rel_f <= 6. || distance_to_y_point < 1000)) {
+//           v_ego > 30 / 3.6 && (v_rel_f <= 6. || distance_to_y_point < 1000))
+//           {
 //         pos_cnt_l_ += 1;
 //         neg_cnt_l_ = 0;
 //         if (pos_cnt_l_ > 20) {
@@ -183,8 +193,8 @@
 //         }
 //       } else {
 //         LOG_DEBUG(
-//             "[ActRequest::update] %s:%d v_rel not satisified for avoid merge/y "
-//             "point",
+//             "[ActRequest::update] %s:%d v_rel not satisified for avoid
+//             merge/y " "point",
 //             __FUNCTION__, __LINE__);
 //         neg_cnt_l_ += 1;
 //         if (neg_cnt_l_ > 20) {
@@ -196,25 +206,27 @@
 //         }
 //       }
 //     } else if (enable_l_ && request_type_ == LEFT_CHANGE &&
-//                (lc_status == kLaneKeeping || lc_status == kLaneChangePropose) &&
+//                (lc_status == kLaneKeeping || lc_status == kLaneChangePropose)
+//                &&
 //                ((v_rel_l < -3. && v_rel_l + v_ego <= 50. / 3.6) ||
 //                 v_rel_l + v_ego < 20. / 3.6 || v_ego < 20. / 3.6 ||
 //                 (v_rel_f > 6.0 && !(distance_to_y_point < 1000)))) {
 //       LOG_DEBUG(
-//           "[ActRequest::update] v_rel not satisified for avoid merge/y point "
-//           "when request generated");
+//           "[ActRequest::update] v_rel not satisified for avoid merge/y point
+//           " "when request generated");
 //       neg_cnt_l_ += 1;
 //       if (neg_cnt_l_ > 20) {
 //         pos_cnt_l_ = 0;
 //         left_faster_ = false;
 //         enable_l_ = false;
-//         LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared", __FUNCTION__,
+//         LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared",
+//         __FUNCTION__,
 //                   __LINE__);
 //         Finish();
 //         Reset();
 //         LOG_DEBUG(
-//             "[ActRequest::update] %s:%d finish request, v_rel not satisified "
-//             "not satistied for merge/Y",
+//             "[ActRequest::update] %s:%d finish request, v_rel not satisified
+//             " "not satistied for merge/Y",
 //             __FUNCTION__, __LINE__);
 //       }
 //     }
@@ -224,7 +236,8 @@
 //         Finish();
 //         Reset();
 //         LOG_DEBUG(
-//             "[ActRequest::update] %s:%d finish request, merge/Y not satistied "
+//             "[ActRequest::update] %s:%d finish request, merge/Y not satistied
+//             "
 //             "\n",
 //             __FUNCTION__, __LINE__);
 //       }
@@ -232,7 +245,8 @@
 //       neg_cnt_l_ = 0;
 //       left_faster_ = false;
 //       enable_l_ = false;
-//       LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared \n", __FUNCTION__,
+//       LOG_DEBUG("[ActRequest::update] %s:%d enable_l_ cleared \n",
+//       __FUNCTION__,
 //                 __LINE__);
 //     }
 //   }
@@ -243,14 +257,17 @@
 //       diff_int > default_int_delay) {
 //     if (request_type_ != LEFT_CHANGE) {
 //       GenerateRequest(LEFT_CHANGE);
-//       LOG_DEBUG("[ActRequest::update] Ask for active changing lane to left \n");
-//       // if (map_info.lanes_y_point_type() == MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
+//       LOG_DEBUG("[ActRequest::update] Ask for active changing lane to left
+//       \n");
+//       // if (map_info.lanes_y_point_type() ==
+//       MSD_MERGE_TYPE_MERGE_FROM_RIGHT) {
 //       // 需要区分 merge_split_point, y_point的差异和类型
 //       if (current_lane->get_lane_merge_split_point()
 //                   .merge_split_point_data_size > 0 &&
 //           current_lane->get_lane_merge_split_point()
 //                   .merge_split_point_data[0]
-//                   .orientation == iflyauto::LaneOrientation_ORIENTATION_RIGHT) {
+//                   .orientation ==
+//                   iflyauto::LaneOrientation_ORIENTATION_RIGHT) {
 //         act_request_source_ = "avd_y_from_right";
 //       }
 //       // else if (map_info.lanes_merge_type() ==
@@ -266,7 +283,8 @@
 //            lane_change_lane_mgr_->is_ego_on(olane))))) {
 //       Finish();
 //       Reset();
-//       LOG_DEBUG("[ActRequest::update] %s:%d finish request, dash not enough \n",
+//       LOG_DEBUG("[ActRequest::update] %s:%d finish request, dash not enough
+//       \n",
 //                 __FUNCTION__, __LINE__);
 //     }
 //   } else if (!enforced_l_) {
@@ -287,8 +305,8 @@
 //         //       map_info.distance_to_lanes_merge(left_lane_index) < 1200) ||
 //         //      (map_info.lanes_y_point_type(left_lane_index) ==
 //         //           MSD_MERGE_TYPE_MERGE_FROM_LEFT &&
-//         //       map_info.distance_to_lanes_y_point(left_lane_index) < 1200))) {
-//         target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+//         //       map_info.distance_to_lanes_y_point(left_lane_index) <
+//         1200))) { target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
 //         if (is_on_highway &&
 //             (is_nearby_right_merge_point || is_nearby_right_y_point)) {
 //         } else {
@@ -296,7 +314,8 @@
 //           set_target_lane_virtual_id(target_lane_virtual_id_tmp);
 //           act_request_source_ = "act";
 //           LOG_DEBUG(
-//               "[ActRequest::update] Ask for active changing lane to left \n");
+//               "[ActRequest::update] Ask for active changing lane to left
+//               \n");
 //         }
 //       }
 //       if (!IsDashedLineEnough(LEFT_CHANGE, v_ego, virtual_lane_mgr_) &&
@@ -319,10 +338,12 @@
 //         // if (is_on_highway &&
 //         //     ((map_info.lanes_merge_type(right_lane_index) ==
 //         //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
-//         //       map_info.distance_to_lanes_merge(right_lane_index) < 1200) ||
+//         //       map_info.distance_to_lanes_merge(right_lane_index) < 1200)
+//         ||
 //         //      (map_info.lanes_y_point_type(right_lane_index) ==
 //         //           MSD_MERGE_TYPE_MERGE_FROM_RIGHT &&
-//         //       map_info.distance_to_lanes_y_point(right_lane_index) < 1200)))
+//         //       map_info.distance_to_lanes_y_point(right_lane_index) <
+//         1200)))
 //         //       {
 //         target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
 //         if (is_on_highway &&
@@ -332,14 +353,16 @@
 //           set_target_lane_virtual_id(target_lane_virtual_id_tmp);
 //           act_request_source_ = "act";
 //           LOG_DEBUG(
-//               "[ActRequest::update] Ask for active changing lane to right \n");
+//               "[ActRequest::update] Ask for active changing lane to right
+//               \n");
 //         }
 //       }
 //       const auto &lane_change_decider_output =
 //           session_->planning_context().lane_change_decider_output();
 //       const auto state = lane_change_decider_output.curr_state;
-//       const auto lc_request_direction = lane_change_decider_output.lc_request;
-//       bool is_LC_RWAIT = (state == kLaneChangePropose) &&
+//       const auto lc_request_direction =
+//       lane_change_decider_output.lc_request; bool is_LC_RWAIT = (state ==
+//       kLaneChangePropose) &&
 //                          (lc_request_direction == RIGHT_CHANGE);
 //       bool is_LC_RBACK = (state == kLaneChangeCancel) &&
 //                          (lc_request_direction == RIGHT_CHANGE);
@@ -380,7 +403,8 @@
 //         set_target_lane_virtual_id(current_lane_virtual_id);
 //         act_request_source_ = "none";
 //         LOG_DEBUG(
-//             "[ActRequest::update] %s:%d finish request, neg_right_alc_car \n",
+//             "[ActRequest::update] %s:%d finish request, neg_right_alc_car
+//             \n",
 //             __FUNCTION__, __LINE__);
 //       }
 //     }

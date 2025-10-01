@@ -23,8 +23,8 @@ NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
 
 const bool NodeCollisionDetect::IsPointBeyondBound(const float x,
                                                    const float y) const {
-  if (x > grid_map_bound_->x_max || x < grid_map_bound_->x_min || y > grid_map_bound_->y_max ||
-      y < grid_map_bound_->y_min) {
+  if (x > grid_map_bound_->x_max || x < grid_map_bound_->x_min ||
+      y > grid_map_bound_->y_max || y < grid_map_bound_->y_min) {
     return true;
   }
   return false;
@@ -208,7 +208,7 @@ bool NodeCollisionDetect::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
     return false;
   }
 
-  // collision check
+    // collision check
 #if LOG_TIME_PROFILE
   double check_start_time = IflyTime::Now_ms();
 #endif

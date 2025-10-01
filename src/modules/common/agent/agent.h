@@ -228,8 +228,7 @@ class Agent {
   void set_is_stop_destination_virtual_obs(
       bool is_stop_destination_virtual_obs);
   const bool is_lane_borrow_virtual_obs() const;
-  void set_is_lane_borrow_virtual_obs(
-      bool is_lane_borrow_virtual_obs);
+  void set_is_lane_borrow_virtual_obs(bool is_lane_borrow_virtual_obs);
   const bool is_vru_crossing_virtual_obs() const;
   void set_is_vru_crossing_virtual_obs(bool is_vru_crossing_virtual_obs);
   const double d_path() const;

@@ -23,7 +23,8 @@
 //   }
 // }
 
-// ObjectSelector::ObjectSelector(const EgoPlanningConfigBuilder *config_builder,
+// ObjectSelector::ObjectSelector(const EgoPlanningConfigBuilder
+// *config_builder,
 //                                planning::framework::Session *session)
 //     : session_(session) {
 //   config_ = config_builder->cast<EgoPlanningObjectSelectorManagerConfig>();
@@ -65,9 +66,10 @@
 //       lane_change_decider_output.target_lane_virtual_id;
 //   std::shared_ptr<ReferencePathManager> reference_path_mgr =
 //       session_->mutable_environmental_model()->get_reference_path_manager();
-//   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
-//   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-//   auto tlane =
+//   auto flane =
+//   virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id); auto olane
+//   = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id); auto tlane
+//   =
 //       virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
 //   auto clane = virtual_lane_mgr->get_current_lane();
 //   auto llane = virtual_lane_mgr->get_left_lane();
@@ -89,7 +91,8 @@
 //                            std::max(30., lead_cars.lead_one->v_lead * 5.);
 //     } else if (lead_cars.temp_lead_one != nullptr) {
 //       fvf_drel_confident = lead_cars.temp_lead_one->d_rel +
-//                            std::max(30., lead_cars.temp_lead_one->v_lead * 5.);
+//                            std::max(30., lead_cars.temp_lead_one->v_lead
+//                            * 5.);
 //     }
 //   } else {
 //     fvf_drel_confident = 30;
@@ -115,8 +118,8 @@
 //   }
 
 //   if (front_tracks.size() == 0) {
-//     LOG_ERROR("[LaneTracksManager::get_vrel_close] %d tracks is null \n", side);
-//     return v_rel_close;
+//     LOG_ERROR("[LaneTracksManager::get_vrel_close] %d tracks is null \n",
+//     side); return v_rel_close;
 //   }
 
 //   for (auto &tr : front_tracks) {
@@ -143,9 +146,10 @@
 //   auto fix_reference_path =
 //       reference_path_mgr->get_reference_path_by_lane(fix_lane_virtual_id);
 //   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
-//   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
-//   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-//   auto tlane =
+//   auto flane =
+//   virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id); auto olane
+//   = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id); auto tlane
+//   =
 //       virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
 
 //   double olane_width = flane->width();
@@ -166,13 +170,15 @@
 //   return (status == kLaneKeeping || is_LC_LWAIT || is_LC_RWAIT ||
 //           (is_LC_LBACK && lane_change_decider_output.lc_back_reason != "" &&
 //            (lane_change_decider_output.lc_back_reason == "front view back" ||
-//             lane_change_decider_output.lc_back_reason == "side view back")) ||
+//             lane_change_decider_output.lc_back_reason == "side view back"))
+//             ||
 //           (is_LC_RBACK && lane_change_decider_output.lc_back_reason != "" &&
 //            (lane_change_decider_output.lc_back_reason == "front view back" ||
 //             lane_change_decider_output.lc_back_reason == "side view back")));
 // }
 
-// bool ObjectSelector::check_map_alc_enable(int direction, bool accident_ahead) {
+// bool ObjectSelector::check_map_alc_enable(int direction, bool accident_ahead)
+// {
 //   // TODO(Rui):wait for map
 //   return true;
 // }
@@ -181,7 +187,8 @@
 //                             bool accident_ahead, double perception_range,
 //                             bool disable_l, bool disable_r,
 //                             bool upstream_enable_l, bool upstream_enable_r,
-//                             bool upstream_enable_lb, int upstream_enable_id) {
+//                             bool upstream_enable_lb, int upstream_enable_id)
+//                             {
 //   double d_offset = 3.5;
 //   bool l_enable = true;
 //   bool r_enable = true;
@@ -219,9 +226,10 @@
 //     return false;
 //   }
 //   auto frenet_ego_state = fix_reference_path->get_frenet_ego_state();
-//   auto flane = virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id);
-//   auto olane = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id);
-//   auto tlane =
+//   auto flane =
+//   virtual_lane_mgr->get_lane_with_virtual_id(fix_lane_virtual_id); auto olane
+//   = virtual_lane_mgr->get_lane_with_virtual_id(olane_virtual_id); auto tlane
+//   =
 //       virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
 //   auto clane = virtual_lane_mgr->get_current_lane();
 //   auto llane = virtual_lane_mgr->get_left_lane();
@@ -278,13 +286,13 @@
 //   auto &left_boundary_info = clane->get_left_lane_boundary();
 //   auto &right_boundary_info = clane->get_right_lane_boundary();
 //   auto &lane_merge_split_point = clane->get_lane_merge_split_point();
-//   // auto traffic_light_direction = virtual_lane_mgr->traffic_light_direction();
-//   auto intersection_info = virtual_lane_mgr->get_intersection_info();
-//   auto dist_to_last_intsect = intersection_info.dist_to_last_intsect();
-//   auto dist_to_intsect = intersection_info.dist_to_intsect();
-//   bool is_in_intersection = intersection_info.is_in_intersection();
-//   double dis_to_ramp = route_info_output.dis_to_ramp;
-//   double distance_to_first_road_split =
+//   // auto traffic_light_direction =
+//   virtual_lane_mgr->traffic_light_direction(); auto intersection_info =
+//   virtual_lane_mgr->get_intersection_info(); auto dist_to_last_intsect =
+//   intersection_info.dist_to_last_intsect(); auto dist_to_intsect =
+//   intersection_info.dist_to_intsect(); bool is_in_intersection =
+//   intersection_info.is_in_intersection(); double dis_to_ramp =
+//   route_info_output.dis_to_ramp; double distance_to_first_road_split =
 //       route_info_output.distance_to_first_road_split;
 //   double intersect_length = intersection_info.intsect_length();
 //   bool is_on_ramp = false;  // hack map_info.is_on_ramp()
@@ -313,7 +321,8 @@
 //   bool is_LC_LWAIT =
 //       (state == kLaneChangePropose) && (lc_request_direction == LEFT_CHANGE);
 //   bool is_LC_RWAIT =
-//       (state == kLaneChangePropose) && (lc_request_direction == RIGHT_CHANGE);
+//       (state == kLaneChangePropose) && (lc_request_direction ==
+//       RIGHT_CHANGE);
 //   bool is_LC_LBACK =
 //       (state == kLaneChangeCancel) && (lc_request_direction == LEFT_CHANGE);
 //   bool is_LC_RBACK =
@@ -448,7 +457,8 @@
 //         left_boundary_info.type_segments[0].type ==
 //             iflyauto::LaneBoundaryType_MARKING_DASHED &&
 //         dist_to_intsect > 0 &&
-//         (left_boundary_info.type_segments[0].length - dist_to_intsect > -10 ||
+//         (left_boundary_info.type_segments[0].length - dist_to_intsect > -10
+//         ||
 //          (LCHANGE) || (RCHANGE))) ||
 //        dist_to_intsect < -5 || accident_ahead) &&
 //       lateral_obstacle->sensors_okay()) {
@@ -552,7 +562,8 @@
 //                       (left_boundary_info.type_segments_size > 0 &&
 //                        left_boundary_info.type_segments[0].type ==
 //                            iflyauto::LaneBoundaryType_MARKING_DASHED &&
-//                        left_boundary_info.type_segments[0].length - tr.d_rel >
+//                        left_boundary_info.type_segments[0].length - tr.d_rel
+//                        >
 //                            60))) ||
 //                     (!curr_direct_exist &&
 //                      (left_direct_exist ||
@@ -569,13 +580,15 @@
 //       }
 //     }
 
-//     if (!check_map_alc_enable(LEFT_CHANGE, accident_ahead) && is_on_highway &&
+//     if (!check_map_alc_enable(LEFT_CHANGE, accident_ahead) && is_on_highway
+//     &&
 //         l_enable && !LCHANGE) {
 //       l_enable = false;
 //       enable_l_ = false;
 //       LOG_ERROR("check_map_alc_enable] left alc disable");
 //     }
-//     if (!check_map_alc_enable(RIGHT_CHANGE, accident_ahead) && is_on_highway &&
+//     if (!check_map_alc_enable(RIGHT_CHANGE, accident_ahead) && is_on_highway
+//     &&
 //         r_enable && !RCHANGE) {
 //       r_enable = false;
 //       enable_r_ = false;
@@ -638,7 +651,8 @@
 //                   left_boundary_info.type_segments[0].type ==
 //                       iflyauto::LaneBoundaryType_MARKING_DASHED &&
 //                   dist_to_intsect > 0 &&
-//                   left_boundary_info.type_segments[0].length - dist_to_intsect >
+//                   left_boundary_info.type_segments[0].length -
+//                   dist_to_intsect >
 //                       -10) ||
 //                  dist_to_intsect < -5)) {
 //               if (dist_to_intsect > 0 || dist_to_intsect < -5) {
@@ -647,7 +661,8 @@
 //                      left_boundary_info.type_segments[0].type ==
 //                          iflyauto::LaneBoundaryType_MARKING_DASHED &&
 //                      ((!left_direct_exist &&
-//                        ((left_boundary_info.type_segments[0].length - tr.d_rel >
+//                        ((left_boundary_info.type_segments[0].length -
+//                        tr.d_rel >
 //                              80 &&
 //                          !right_direct_exist &&
 //                          (olane == nullptr ||
@@ -686,20 +701,24 @@
 //                   if (((lead_two != nullptr && (!LCHANGE && !RCHANGE) &&
 //                         lead_two->d_rel - lead_one->d_rel < 20 &&
 //                         lead_two->d_rel - lead_one->d_rel > 5 &&
-//                         lead_two->type != 20001 && lead_one->type != 20001) ||
+//                         lead_two->type != 20001 && lead_one->type != 20001)
+//                         ||
 //                        ((temp_leadtwo != nullptr &&
 //                          temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
 //                          temp_leadtwo->d_rel - temp_leadone->d_rel > 5 &&
 //                          temp_leadtwo->type != 20001 &&
 //                          temp_leadone->type != 20001) ||
 //                         (right_close_objs_.size() > 2 && tlane != nullptr &&
-//                          tlane->get_virtual_id() == clane->get_virtual_id()) ||
-//                         (current_close_objs_.size() > 2 && olane != nullptr &&
+//                          tlane->get_virtual_id() == clane->get_virtual_id())
+//                          ||
+//                         (current_close_objs_.size() > 2 && olane != nullptr
+//                         &&
 //                          olane->get_virtual_id() ==
 //                              clane->get_virtual_id()))) &&
 //                       (((olane == nullptr ||
 //                          (olane != nullptr && olane->get_virtual_id() ==
-//                                                   clane->get_virtual_id())) &&
+//                                                   clane->get_virtual_id()))
+//                                                   &&
 //                         !left_direct_exist) ||
 //                        is_in_intersection ||
 //                        (tlane != nullptr &&
@@ -751,19 +770,22 @@
 //               std::array<double, 4> xp_pos_l{0, 5, 10, 20};
 //               std::array<double, 4> xp_pos_lb{0, 5, 10, 20};
 //               std::array<double, 4> fp_pos_l{150 * coefficient,
-//                                              80 * coefficient, 40 * coefficient,
-//                                              10 * coefficient};
+//                                              80 * coefficient, 40 *
+//                                              coefficient, 10 * coefficient};
 //               std::array<double, 4> fp_pos_lb{
 //                   100 * coefficient, 50 * coefficient, 15 * coefficient,
 //                   10 * coefficient};
 //               std::array<double, 3> xp_neg{-22, -10, 0};
-//               std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient,
+//               std::array<double, 3> fp_neg{20 * coefficient, 35 *
+//               coefficient,
 //                                            80 * coefficient};
 
 //               int temp =
-//                   int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
+//                   int(interp(tr.d_rel, lead_confidence_bp,
+//                   lead_confidence_v));
 //               int pos_thr_l = std::max(
-//                   int(interp(v_target - v_front_lb, xp_pos_l, fp_pos_l)), temp);
+//                   int(interp(v_target - v_front_lb, xp_pos_l, fp_pos_l)),
+//                   temp);
 //               int pos_thr_lb_l = std::max(
 //                   int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)),
 //                   temp);
@@ -819,7 +841,8 @@
 //                   } else {
 //                     for (auto &tr : front_tracks) {
 //                       auto iter = std::find(left_alc_car_.begin(),
-//                                             left_alc_car_.end(), tr.track_id);
+//                                             left_alc_car_.end(),
+//                                             tr.track_id);
 //                       if (iter != left_alc_car_.end()) {
 //                         if (tr.v_rel > 2.5) {
 //                           left_lb_car_.clear();
@@ -853,7 +876,8 @@
 //                           iflyauto::LaneBoundaryType_MARKING_DASHED) {
 //                     if (!is_on_highway) {
 //                       if (lane_merge_split_point.existence == 0 ||
-//                           (lane_merge_split_point.merge_split_point_data_size >
+//                           (lane_merge_split_point.merge_split_point_data_size
+//                           >
 //                                0 &&
 //                            lane_merge_split_point.merge_split_point_data[0]
 //                                    .distance < 0 &&
@@ -863,14 +887,16 @@
 //                                        .merge_split_point_data[0]
 //                                        .length <
 //                                0) ||
-//                           (lane_merge_split_point.merge_split_point_data_size >
+//                           (lane_merge_split_point.merge_split_point_data_size
+//                           >
 //                                0 &&
 //                            lane_merge_split_point.merge_split_point_data[0]
 //                                .is_split &&
 //                            !lane_merge_split_point.merge_split_point_data[0]
 //                                 .is_continue)) {
 //                         if (left_boundary_info.type_segments_size > 0) {
-//                           d_stop = left_boundary_info.type_segments[0].length;
+//                           d_stop =
+//                           left_boundary_info.type_segments[0].length;
 //                         }
 
 //                       } else if (lane_merge_split_point
@@ -889,7 +915,8 @@
 //                     } else {
 //                       if (left_boundary_info.type_segments_size > 0) {
 //                         d_stop = std::min(
-//                             (double)left_boundary_info.type_segments[0].length >
+//                             (double)left_boundary_info.type_segments[0].length
+//                             >
 //                                     kInputBoundaryLenLimit
 //                                 ? kDefaultBoundaryLen
 //                                 : left_boundary_info.type_segments[0].length,
@@ -923,11 +950,12 @@
 //                     double acc = interp(v_target, xp3, fp3);
 //                     if (v_ego < (std::min(v_left_front, v_target) - 4.) &&
 //                         v_left_front - v_ego > 5) {
-//                       acc_t = (std::min(v_left_front, v_target) - v_ego) / acc;
-//                       acc_delta_x = acc_t * acc_t / 2 * acc +
+//                       acc_t = (std::min(v_left_front, v_target) - v_ego) /
+//                       acc; acc_delta_x = acc_t * acc_t / 2 * acc +
 //                                     (v_ego - v_front_lb) * acc_t;
 //                       if (acc_delta_x > d_lb_car) {
-//                         t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 +
+//                         t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25
+//                         +
 //                                       3 * d_lb_car) -
 //                             (v_ego - v_front_lb) * 1.5;
 //                         v_aver = v_ego + acc * t / 2;
@@ -937,7 +965,8 @@
 //                                 std::max((std::min(v_left_front, v_target) -
 //                                           v_front_lb),
 //                                          0.001);
-//                         v_aver = (std::min(v_left_front, v_target) + v_ego) / 2;
+//                         v_aver = (std::min(v_left_front, v_target) + v_ego) /
+//                         2;
 //                       }
 //                     }
 //                   } else if (v_ego >= 1) {
@@ -957,10 +986,12 @@
 //                   left_lb_car_cnt_[tr.track_id].neg = 0;
 //                   left_alc_car_cnt_[tr.track_id].neg = 0;
 
-//                   if (left_lane_tasks_id == 1 && current_lane_tasks_id == 0 &&
+//                   if (left_lane_tasks_id == 1 && current_lane_tasks_id == 0
+//                   &&
 //                       (dis_to_ramp >= 1500. || !is_on_highway)) {
 //                     std::array<double, 4> xp{0, 30, 100, 200};
-//                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
+//                     std::array<double, 4> fp{40 * coefficient, 20 *
+//                     coefficient,
 //                                              -10 * coefficient,
 //                                              -20 * coefficient};
 //                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
@@ -971,7 +1002,8 @@
 //                     pos_thr_lb_l = std::max(
 //                         (int)(10 * coefficient),
 //                         (int)(pos_thr_lb_l *
-//                               interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)) +
+//                               interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat))
+//                               +
 //                             (int)interp(d_stop, xp, fp));
 //                     LOG_DEBUG("objselector pos_thr_l[%d], pos_thr_lb_l[%d]",
 //                               pos_thr_l, pos_thr_lb_l);
@@ -1026,7 +1058,8 @@
 //                                       premovel_ = true;
 //                                       premove_dist_ =
 //                                           std::max((flane->width() / 2 -
-//                                                     car_width / 2 + press_thr),
+//                                                     car_width / 2 +
+//                                                     press_thr),
 //                                                    0.0);
 //                                     }
 //                                   }
@@ -1034,7 +1067,8 @@
 //                                       std::fabs(
 //                                           premove_dist_ -
 //                                           std::max((flane->width() / 2 -
-//                                                     car_width / 2 + press_thr),
+//                                                     car_width / 2 +
+//                                                     press_thr),
 //                                                    0.0)) > 0.2) {
 //                                     premove_dist_ =
 //                                         std::max((flane->width() / 2 -
@@ -1048,12 +1082,14 @@
 //                                     neg_thr_lb_l + 1;
 //                                 neg_left_lb_car_ = true;
 //                                 lb_leadone_disable = true;
-//                                 // if ((current_lane_index == lanes_num - 1 ||
-//                                 //      (current_lane_index + 1 < lanes_num &&
-//                                 //       (map_info.lane_type(current_lane_index
+//                                 // if ((current_lane_index == lanes_num - 1
+//                                 ||
+//                                 //      (current_lane_index + 1 < lanes_num
+//                                 &&
+//                                 // (map_info.lane_type(current_lane_index
 //                                 //       + 1) ==
 //                                 //             MSD_LANE_TYPE_PARKING ||
-//                                 //        map_info.lane_type(current_lane_index
+//                                 // map_info.lane_type(current_lane_index
 //                                 //        + 1) ==
 //                                 //             MSD_LANE_TYPE_NON_MOTOR))) &&
 //                                 //     (map_info.lane_marks_size(
@@ -1121,7 +1157,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1138,7 +1175,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1155,8 +1193,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -1167,18 +1206,23 @@
 //                                   lb_leadone_disable = true;
 //                                   // if (traffic_light_direction ==
 //                                   //         MSD_DIRECTION_TURN_RIGHT &&
-//                                   //     (current_lane_index == lanes_num - 1 ||
-//                                   //      (current_lane_index + 1 < lanes_num &&
-//                                   //       (map_info.lane_type(current_lane_index
+//                                   //     (current_lane_index == lanes_num - 1
+//                                   ||
+//                                   //      (current_lane_index + 1 < lanes_num
+//                                   &&
+//                                   // (map_info.lane_type(current_lane_index
 //                                   //       + 1) ==
 //                                   //             MSD_LANE_TYPE_PARKING ||
-//                                   //        map_info.lane_type(current_lane_index
+//                                   // map_info.lane_type(current_lane_index
 //                                   //        + 1) ==
-//                                   //             MSD_LANE_TYPE_NON_MOTOR)))) {
-//                                   //   left_alc_car_cnt_[tr.track_id].pos += 1;
+//                                   //             MSD_LANE_TYPE_NON_MOTOR))))
+//                                   {
+//                                   //   left_alc_car_cnt_[tr.track_id].pos +=
+//                                   1;
 //                                   // }
 //                                 } else {
-//                                   if (tr.d_max_cpath < lb_width_l || need_lb) {
+//                                   if (tr.d_max_cpath < lb_width_l || need_lb)
+//                                   {
 //                                     left_lb_car_cnt_[tr.track_id].pos += 1;
 //                                   } else {
 //                                     left_alc_car_cnt_[tr.track_id].pos += 1;
@@ -1196,9 +1240,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 left_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 left_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_l + 1;
 
 //                                 neg_left_lb_car_ = true;
@@ -1243,7 +1289,8 @@
 //                                 neg_left_lb_car_ = true;
 //                                 lb_leadone_disable = true;
 //                               }
-//                             } else if (tr.d_max_cpath < lb_width_l || need_lb) {
+//                             } else if (tr.d_max_cpath < lb_width_l ||
+//                             need_lb) {
 //                               if (perception_range > lead_one->d_rel &&
 //                                   perception_range <
 //                                       lead_one->d_rel + max_visible_gap &&
@@ -1255,7 +1302,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1272,7 +1320,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1286,8 +1335,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -1312,16 +1362,19 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 left_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 left_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_l + 1;
 
 //                                 neg_left_lb_car_ = true;
 //                                 lb_leadone_disable = true;
 //                               }
 //                             }
-//                           } else if (tr.d_max_cpath < lb_width_l || need_lb) {
+//                           } else if (tr.d_max_cpath < lb_width_l || need_lb)
+//                           {
 //                             left_lb_car_cnt_[tr.track_id].pos += 1;
 //                           }
 //                         }
@@ -1365,9 +1418,11 @@
 //                   } else if ((left_lane_tasks_id == 0 &&
 //                               current_lane_tasks_id == 0) ||
 //                              (is_on_highway && ((left_lane_tasks_id == 0 &&
-//                                                  current_lane_tasks_id == -1) ||
+//                                                  current_lane_tasks_id == -1)
+//                                                  ||
 //                                                 (left_lane_tasks_id == -1 &&
-//                                                  current_lane_tasks_id == -2) ||
+//                                                  current_lane_tasks_id == -2)
+//                                                  ||
 //                                                 (dis_to_ramp > 4500.)))) {
 //                     std::array<double, 4> xp_pos_l{4, 7, 10, 20};
 //                     std::array<double, 4> xp_pos_lb{4, 7, 10, 20};
@@ -1390,7 +1445,8 @@
 //                         (int)(pos_thr_lb_l *
 //                               interp(v_left_front - v_front_lb, xp_pos_lb,
 //                                      fp_pos_lb) *
-//                               interp(l_ego - tr.d_max_cpath, xp_lat, fp_lat)));
+//                               interp(l_ego - tr.d_max_cpath, xp_lat,
+//                               fp_lat)));
 
 //                     if (!is_on_highway) {
 //                       pos_thr_l = std::max(
@@ -1399,7 +1455,8 @@
 
 //                       pos_thr_lb_l = std::max(
 //                           (int)(10 * coefficient),
-//                           pos_thr_lb_l + (int)interp(d_stop, xp_pos, fp_pos));
+//                           pos_thr_lb_l + (int)interp(d_stop, xp_pos,
+//                           fp_pos));
 //                     }
 
 //                     if ((d_stop > v_aver * (t + 2) && v_ego >= 1) ||
@@ -1410,7 +1467,8 @@
 //                       if (lead_one != nullptr) {
 //                         if (tr.track_id == lead_one->track_id) {
 //                           if (lead_two != nullptr) {
-//                             calc_desired_gap(v_ego, *lead_two, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_two, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1467,7 +1525,8 @@
 //                           if (std::fabs(tr.d_center_cpath -
 //                                         lead_one->d_center_cpath) < 1.0 &&
 //                               tr.d_rel > lead_one->d_rel &&
-//                               diff_dn_car < std::max(desired_gap, diff_thre)) {
+//                               diff_dn_car < std::max(desired_gap, diff_thre))
+//                               {
 //                             left_lb_car_cnt_[lead_one->track_id].pos = 0;
 //                             left_lb_car_cnt_[lead_one->track_id].neg =
 //                                 neg_thr_lb_l + 1;
@@ -1513,12 +1572,14 @@
 //                                              diff_dn_car, desired_gap);
 
 //                             if (std::fabs(tr.d_center_cpath -
-//                                           temp_leadone->d_center_cpath) < 1.0 &&
+//                                           temp_leadone->d_center_cpath) < 1.0
+//                                           &&
 //                                 tr.d_rel > temp_leadone->d_rel &&
 //                                 diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
-//                               left_lb_car_cnt_[temp_leadone->track_id].pos = 0;
-//                               left_lb_car_cnt_[temp_leadone->track_id].neg =
+//                               left_lb_car_cnt_[temp_leadone->track_id].pos =
+//                               0; left_lb_car_cnt_[temp_leadone->track_id].neg
+//                               =
 //                                   neg_thr_lb_l + 1;
 
 //                               neg_left_lb_car_ = true;
@@ -1545,7 +1606,8 @@
 //                              current_lane_tasks_id >= 1 &&
 //                              dis_to_ramp > 2000.) {
 //                     std::array<double, 4> xp{0, 50, 100, 200};
-//                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
+//                     std::array<double, 4> fp{40 * coefficient, 20 *
+//                     coefficient,
 //                                              0, -20 * coefficient};
 //                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
 //                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
@@ -1563,7 +1625,8 @@
 //                     double d_map = d_stop;
 
 //                     if (d_stop > d_lb_car + 30) {
-//                       if ((d_stop_r > v_aver * (t + 5 * left_lane_tasks_id) &&
+//                       if ((d_stop_r > v_aver * (t + 5 * left_lane_tasks_id)
+//                       &&
 //                            d_map > v_aver * (t + 5) &&
 //                            d_stop > v_aver * (t + 5) && v_ego >= 1) ||
 //                           (v_ego < 1 &&
@@ -1636,7 +1699,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1653,7 +1717,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1670,8 +1735,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -1700,9 +1766,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 left_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 left_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_l + 1;
 
 //                                 neg_left_lb_car_ = true;
@@ -1718,13 +1786,15 @@
 //                           }
 //                         }
 //                       } else if ((d_stop_r >
-//                                       v_aver * (t + 4 * left_lane_tasks_id) &&
+//                                       v_aver * (t + 4 * left_lane_tasks_id)
+//                                       &&
 //                                   d_map > v_aver * (t + 2) &&
 //                                   d_stop > v_aver * (t + 2) && v_ego >= 1) ||
 //                                  (v_ego < 1 &&
-//                                   d_stop_r > std::max(v_ego, 0.1) * (t + 10) &&
-//                                   d_map > std::max(v_ego, 0.1) * (t + 2) &&
-//                                   d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+//                                   d_stop_r > std::max(v_ego, 0.1) * (t + 10)
+//                                   && d_map > std::max(v_ego, 0.1) * (t + 2)
+//                                   && d_stop > std::max(v_ego, 0.1) * (t +
+//                                   2))) {
 //                         left_alc_car_cnt_[tr.track_id].pos = 0;
 //                         remove_car(left_alc_car_, tr.track_id);
 
@@ -1765,7 +1835,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1782,7 +1853,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -1796,8 +1868,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -1822,9 +1895,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 left_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 left_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 left_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_l + 1;
 
 //                                 neg_left_lb_car_ = true;
@@ -1877,7 +1952,8 @@
 //                                       left_alc_car_.end(), tr.track_id);
 
 //                 if (left_alc_car_cnt_[tr.track_id].pos >
-//                         pos_thr_l + active_lane_change_min_duration_threshold &&
+//                         pos_thr_l + active_lane_change_min_duration_threshold
+//                         &&
 //                     iter == left_alc_car_.end() &&
 //                     left_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_l) {
 //                   left_alc_car_.push_back(tr.track_id);
@@ -1922,7 +1998,8 @@
 //                             use_lateral_distance_to_judge_cutout_in_active_lane_change
 //                         ? tr.l > half_car_width
 //                         : std::fabs(tr.v_lat) > 0.3 ||
-//                               ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+//                               ((!LCHANGE && !RCHANGE) && lead_one != nullptr
+//                               &&
 //                                lead_two != nullptr &&
 //                                lead_two->d_rel - lead_one->d_rel <
 //                                    std::min(v_left_front, v_target) * 2 &&
@@ -1936,8 +2013,9 @@
 
 //                   int lb_pos = left_lb_car_cnt_[tr.track_id].pos;
 //                   int alc_pos = left_alc_car_cnt_[tr.track_id].pos;
-//                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
-//                   left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
+//                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3,
+//                   0); left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos -
+//                   3, 0);
 
 //                   if (premovel_ &&
 //                       left_alc_car_cnt_[tr.track_id].pos < pos_thr_l * 0.1) {
@@ -1996,11 +2074,13 @@
 //                 }
 //               }
 //             } else if (LCHANGE &&
-//                        (left_alc_car_.size() > 0 || left_lb_car_.size() > 0 ||
+//                        (left_alc_car_.size() > 0 || left_lb_car_.size() > 0
+//                        ||
 //                         v_ego >= 1.0) &&
 //                        tr.d_max_cpath <= -lane_width / 2 + car_width / 5 &&
 //                        tr.d_max_cpath >
-//                            -(lane_width + car_width / 2 + lane_width * 0.05) &&
+//                            -(lane_width + car_width / 2 + lane_width * 0.05)
+//                            &&
 //                        dist_to_intsect < 170) {
 //               v_rel_l_ = get_vrel_close(-1, status);
 //               double v_left_front = v_rel_l_ + v_ego;
@@ -2029,12 +2109,14 @@
 //                              (lead_two->v_rel < 5. &&
 //                               std::fabs(lead_two->v_lat) < 0.3 &&
 //                               lead_two->d_min_cpath < 1.1 &&
-//                               lead_two->d_min_cpath + lead_two->width > 1.1))) {
+//                               lead_two->d_min_cpath + lead_two->width
+//                               > 1.1))) {
 //                 if (left_lb_car_cnt_.find(tr.track_id) !=
 //                     left_lb_car_cnt_.end()) {
 //                   left_lb_car_cnt_[tr.track_id].neg += 1;
 //                   int lb_pos = left_lb_car_cnt_[tr.track_id].pos;
-//                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
+//                   left_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3,
+//                   0);
 
 //                   if (left_lb_car_cnt_[tr.track_id].neg > neg_thr_lb_l ||
 //                       ((lead_one != nullptr && lead_two != nullptr &&
@@ -2069,7 +2151,8 @@
 //                     left_alc_car_cnt_.end()) {
 //                   left_alc_car_cnt_[tr.track_id].neg += 1;
 //                   int alc_pos = left_alc_car_cnt_[tr.track_id].pos;
-//                   left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3, 0);
+//                   left_alc_car_cnt_[tr.track_id].pos = std::max(alc_pos - 3,
+//                   0);
 
 //                   if (left_alc_car_cnt_[tr.track_id].neg > neg_thr_l ||
 //                       ((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
@@ -2117,12 +2200,14 @@
 //                      right_boundary_info.type_segments[0].type ==
 //                          iflyauto::LaneBoundaryType_MARKING_DASHED &&
 //                      ((!right_direct_exist &&
-//                        right_boundary_info.type_segments[0].length - tr.d_rel >
+//                        right_boundary_info.type_segments[0].length - tr.d_rel
+//                        >
 //                            80 &&
 //                        !left_direct_exist &&
 //                        (olane == nullptr ||
 //                         (olane != nullptr && olane->get_virtual_id() ==
-//                                                  clane->get_virtual_id()))) ||
+//                                                  clane->get_virtual_id())))
+//                                                  ||
 //                       (right_direct_exist &&
 //                        right_boundary_info.type_segments[0].length >
 //                            tr.d_rel))) ||
@@ -2156,20 +2241,24 @@
 //                   if (((lead_two != nullptr && (!LCHANGE && !RCHANGE) &&
 //                         lead_two->d_rel - lead_one->d_rel < 20 &&
 //                         lead_two->d_rel - lead_one->d_rel > 5 &&
-//                         lead_two->type != 20001 && lead_one->type != 20001) ||
+//                         lead_two->type != 20001 && lead_one->type != 20001)
+//                         ||
 //                        ((temp_leadtwo != nullptr &&
 //                          temp_leadtwo->d_rel - temp_leadone->d_rel < 20 &&
 //                          temp_leadtwo->d_rel - temp_leadone->d_rel > 5 &&
 //                          temp_leadtwo->type != 20001 &&
 //                          temp_leadone->type != 20001) ||
 //                         (left_close_objs_.size() > 2 && tlane != nullptr &&
-//                          tlane->get_virtual_id() == clane->get_virtual_id()) ||
-//                         (current_close_objs_.size() > 2 && olane != nullptr &&
+//                          tlane->get_virtual_id() == clane->get_virtual_id())
+//                          ||
+//                         (current_close_objs_.size() > 2 && olane != nullptr
+//                         &&
 //                          olane->get_virtual_id() ==
 //                              clane->get_virtual_id()))) &&
 //                       (((olane == nullptr ||
 //                          (olane != nullptr && olane->get_virtual_id() ==
-//                                                   clane->get_virtual_id())) &&
+//                                                   clane->get_virtual_id()))
+//                                                   &&
 //                         !right_direct_exist) ||
 //                        is_in_intersection ||
 //                        (tlane != nullptr &&
@@ -2223,19 +2312,22 @@
 //               std::array<double, 4> xp_pos_r{0, 5, 10, 20};
 //               std::array<double, 4> xp_pos_lb{0, 5, 10, 20};
 //               std::array<double, 4> fp_pos_r{150 * coefficient,
-//                                              80 * coefficient, 40 * coefficient,
-//                                              10 * coefficient};
+//                                              80 * coefficient, 40 *
+//                                              coefficient, 10 * coefficient};
 //               std::array<double, 4> fp_pos_lb{
 //                   100 * coefficient, 50 * coefficient, 15 * coefficient,
 //                   10 * coefficient};
 //               std::array<double, 3> xp_neg{-22, -10, 0};
-//               std::array<double, 3> fp_neg{20 * coefficient, 35 * coefficient,
+//               std::array<double, 3> fp_neg{20 * coefficient, 35 *
+//               coefficient,
 //                                            80 * coefficient};
 
 //               int temp =
-//                   int(interp(tr.d_rel, lead_confidence_bp, lead_confidence_v));
+//                   int(interp(tr.d_rel, lead_confidence_bp,
+//                   lead_confidence_v));
 //               int pos_thr_r = std::max(
-//                   int(interp(v_target - v_front_lb, xp_pos_r, fp_pos_r)), temp);
+//                   int(interp(v_target - v_front_lb, xp_pos_r, fp_pos_r)),
+//                   temp);
 //               int pos_thr_lb_r = std::max(
 //                   int(interp(v_target - v_front_lb, xp_pos_lb, fp_pos_lb)),
 //                   temp);
@@ -2293,7 +2385,8 @@
 //                   } else {
 //                     for (auto &tr : front_tracks) {
 //                       auto iter = std::find(right_alc_car_.begin(),
-//                                             right_alc_car_.end(), tr.track_id);
+//                                             right_alc_car_.end(),
+//                                             tr.track_id);
 //                       if (iter != right_alc_car_.end()) {
 //                         if (tr.v_rel > 2.5) {
 //                           right_lb_car_.clear();
@@ -2328,7 +2421,8 @@
 //                           iflyauto::LaneBoundaryType_MARKING_DASHED) {
 //                     if (!is_on_highway) {
 //                       if (lane_merge_split_point.existence == 0 ||
-//                           (lane_merge_split_point.merge_split_point_data_size >
+//                           (lane_merge_split_point.merge_split_point_data_size
+//                           >
 //                                0 &&
 //                            lane_merge_split_point.merge_split_point_data[0]
 //                                    .distance < 0 &&
@@ -2338,17 +2432,20 @@
 //                                        .merge_split_point_data[0]
 //                                        .length <
 //                                0) ||
-//                           (lane_merge_split_point.merge_split_point_data_size >
+//                           (lane_merge_split_point.merge_split_point_data_size
+//                           >
 //                                0 &&
 //                            lane_merge_split_point.merge_split_point_data[0]
 //                                .is_split &&
 //                            !lane_merge_split_point.merge_split_point_data[0]
 //                                 .is_continue)) {
 //                         if (right_boundary_info.type_segments_size > 0) {
-//                           d_stop = right_boundary_info.type_segments[0].length;
+//                           d_stop =
+//                           right_boundary_info.type_segments[0].length;
 //                         }
 
-//                       } else if (right_boundary_info.type_segments_size > 0 &&
+//                       } else if (right_boundary_info.type_segments_size > 0
+//                       &&
 //                                  lane_merge_split_point
 //                                          .merge_split_point_data_size > 0 &&
 //                                  lane_merge_split_point
@@ -2367,21 +2464,25 @@
 //                             (double)right_boundary_info.type_segments[0]
 //                                         .length > kInputBoundaryLenLimit
 //                                 ? kDefaultBoundaryLen
-//                                 : right_boundary_info.type_segments[0].length,
+//                                 :
+//                                 right_boundary_info.type_segments[0].length,
 //                             dis_to_ramp - 200.);
 //                       }
 //                       if (right_lane_tasks_id == -1) {
 //                         d_stop = std::min(d_stop,
-//                                           distance_to_first_road_split - 200.);
+//                                           distance_to_first_road_split -
+//                                           200.);
 //                       }
 //                       if (!is_on_ramp &&
-//                           lane_merge_split_point.merge_split_point_data_size >
+//                           lane_merge_split_point.merge_split_point_data_size
+//                           >
 //                               0 &&
 //                           !lane_merge_split_point.merge_split_point_data[0]
 //                                .is_split &&
 //                           lane_merge_split_point.merge_split_point_data[0]
 //                               .is_continue) {
-//                         d_stop = std::min(d_stop, (double)lane_merge_split_point
+//                         d_stop = std::min(d_stop,
+//                         (double)lane_merge_split_point
 //                                                       .merge_split_point_data[0]
 //                                                       .distance);
 //                       }
@@ -2412,7 +2513,8 @@
 //                   if (tr.v_rel != 0) {
 //                     t = d_lb_car /
 //                         std::max(
-//                             ((std::min(v_right_front, v_target) + v_ego) / 2 -
+//                             ((std::min(v_right_front, v_target) + v_ego) / 2
+//                             -
 //                              v_front_lb),
 //                             0.1);
 //                     v_aver = (std::min(v_right_front, v_target) + v_ego) / 2;
@@ -2422,11 +2524,12 @@
 
 //                     if (v_ego < std::min(v_right_front, v_target) - 4. &&
 //                         v_right_front - v_ego > 5) {
-//                       acc_t = (std::min(v_right_front, v_target) - v_ego) / acc;
-//                       acc_delta_x = acc_t * acc_t / 2 * acc +
+//                       acc_t = (std::min(v_right_front, v_target) - v_ego) /
+//                       acc; acc_delta_x = acc_t * acc_t / 2 * acc +
 //                                     (v_ego - v_front_lb) * acc_t;
 //                       if (acc_delta_x > d_lb_car) {
-//                         t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25 +
+//                         t = std::sqrt(std::pow(v_ego - v_front_lb, 2) * 2.25
+//                         +
 //                                       3 * d_lb_car) -
 //                             (v_ego - v_front_lb) * 1.5;
 //                         v_aver = v_ego + acc * t / 2;
@@ -2458,10 +2561,12 @@
 //                   right_lb_car_cnt_[tr.track_id].neg = 0;
 //                   right_alc_car_cnt_[tr.track_id].neg = 0;
 
-//                   if (right_lane_tasks_id == -1 && current_lane_tasks_id == 0 &&
+//                   if (right_lane_tasks_id == -1 && current_lane_tasks_id == 0
+//                   &&
 //                       current_lane_index < 2) {
 //                     std::array<double, 4> xp{0, 50, 100, 200};
-//                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
+//                     std::array<double, 4> fp{40 * coefficient, 20 *
+//                     coefficient,
 //                                              -10 * coefficient,
 //                                              -20 * coefficient};
 //                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
@@ -2472,7 +2577,8 @@
 //                     pos_thr_lb_r = std::max(
 //                         (int)(10 * coefficient),
 //                         (int)(pos_thr_lb_r *
-//                               interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)) +
+//                               interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat))
+//                               +
 //                             (int)interp(d_stop, xp, fp));
 
 //                     if (d_stop > d_lb_car + 20) {
@@ -2517,15 +2623,16 @@
 //                                           pos_thr_r * 0.4) {
 //                                     if (!premover_ &&
 //                                         (tr.track_id == neg_premoved_id_)) {
-//                                       right_alc_car_cnt_[tr.track_id].pos = 0;
-//                                       neg_premoved_id_ = -1000;
+//                                       right_alc_car_cnt_[tr.track_id].pos =
+//                                       0; neg_premoved_id_ = -1000;
 //                                     } else if (premoved_id_ != tr.track_id &&
 //                                                v_ego < 30 / 3.6) {
 //                                       premoved_id_ = tr.track_id;
 //                                       premover_ = true;
 //                                       premove_dist_ =
 //                                           std::min(-(flane->width() / 2 -
-//                                                      car_width / 2 + press_thr),
+//                                                      car_width / 2 +
+//                                                      press_thr),
 //                                                    0.0);
 //                                     }
 //                                   }
@@ -2533,7 +2640,8 @@
 //                                       std::fabs(
 //                                           premove_dist_ -
 //                                           std::min(-(flane->width() / 2 -
-//                                                      car_width / 2 + press_thr),
+//                                                      car_width / 2 +
+//                                                      press_thr),
 //                                                    0.0)) > 0.2) {
 //                                     premove_dist_ =
 //                                         std::min((flane->width() / 2 -
@@ -2584,7 +2692,8 @@
 //                                     premover_ = true;
 //                                     premove_dist_ =
 //                                         std::min(-(flane->width() / 2 -
-//                                                    car_width / 2 + press_thr),
+//                                                    car_width / 2 +
+//                                                    press_thr),
 //                                                  0.0);
 //                                   }
 //                                 }
@@ -2592,7 +2701,8 @@
 //                                     std::fabs(
 //                                         premove_dist_ -
 //                                         std::min(-(flane->width() / 2 -
-//                                                    car_width / 2 + press_thr),
+//                                                    car_width / 2 +
+//                                                    press_thr),
 //                                                  0.0)) > 0.2) {
 //                                   premove_dist_ =
 //                                       std::min((flane->width() / 2 -
@@ -2602,7 +2712,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -2619,7 +2730,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -2636,8 +2748,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -2666,9 +2779,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 right_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 right_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_r + 1;
 
 //                                 neg_right_lb_car_ = true;
@@ -2726,7 +2841,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -2743,7 +2859,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -2757,8 +2874,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -2783,9 +2901,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 right_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 right_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_r + 1;
 
 //                                 neg_right_lb_car_ = true;
@@ -2838,7 +2958,8 @@
 //                   } else if ((right_lane_tasks_id == 0 &&
 //                               current_lane_tasks_id == 0 &&
 //                               current_lane_index < 2 &&
-//                               right_lane_type == iflyauto::LANETYPE_NORMAL) ||
+//                               right_lane_type == iflyauto::LANETYPE_NORMAL)
+//                               ||
 //                              (is_on_highway && right_lane_tasks_id >= 1 &&
 //                               current_lane_tasks_id >= 2)) {
 //                     std::array<double, 4> xp_pos_r{4, 7, 10, 20};
@@ -2862,7 +2983,8 @@
 //                         (int)(pos_thr_lb_r *
 //                               interp(v_right_front - v_front_lb, xp_pos_lb,
 //                                      fp_pos_lb) *
-//                               interp(tr.d_min_cpath - l_ego, xp_lat, fp_lat)));
+//                               interp(tr.d_min_cpath - l_ego, xp_lat,
+//                               fp_lat)));
 
 //                     if (!is_on_highway) {
 //                       pos_thr_r = std::max(
@@ -2871,7 +2993,8 @@
 
 //                       pos_thr_lb_r = std::max(
 //                           (int)(10 * coefficient),
-//                           pos_thr_lb_r + (int)interp(d_stop, xp_pos, fp_pos));
+//                           pos_thr_lb_r + (int)interp(d_stop, xp_pos,
+//                           fp_pos));
 //                     }
 
 //                     if ((d_stop > v_aver * (t + 2) && v_ego >= 1) ||
@@ -2881,8 +3004,10 @@
 
 //                       if (lead_one != nullptr) {
 //                         if (tr.track_id == lead_one->track_id) {
-//                           if (lead_two != nullptr && lead_two->v_lead > -0.5) {
-//                             calc_desired_gap(v_ego, *lead_two, tr, t, d_offset,
+//                           if (lead_two != nullptr && lead_two->v_lead > -0.5)
+//                           {
+//                             calc_desired_gap(v_ego, *lead_two, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -2939,7 +3064,8 @@
 //                           if (std::fabs(tr.d_center_cpath -
 //                                         lead_one->d_center_cpath) < 1.0 &&
 //                               tr.d_rel > lead_one->d_rel &&
-//                               diff_dn_car < std::max(desired_gap, diff_thre)) {
+//                               diff_dn_car < std::max(desired_gap, diff_thre))
+//                               {
 //                             right_lb_car_cnt_[lead_one->track_id].pos = 0;
 //                             right_lb_car_cnt_[lead_one->track_id].neg =
 //                                 neg_thr_lb_r + 1;
@@ -2985,11 +3111,13 @@
 //                                              diff_dn_car, desired_gap);
 
 //                             if (std::fabs(tr.d_center_cpath -
-//                                           temp_leadone->d_center_cpath) < 1.0 &&
+//                                           temp_leadone->d_center_cpath) < 1.0
+//                                           &&
 //                                 tr.d_rel > temp_leadone->d_rel &&
 //                                 diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
-//                               right_lb_car_cnt_[temp_leadone->track_id].pos = 0;
+//                               right_lb_car_cnt_[temp_leadone->track_id].pos =
+//                               0;
 //                               right_lb_car_cnt_[temp_leadone->track_id].neg =
 //                                   neg_thr_lb_r + 1;
 
@@ -3016,9 +3144,11 @@
 //                   } else if ((is_on_highway && !is_on_ramp &&
 //                               right_lane_tasks_id == 0 &&
 //                               current_lane_tasks_id == 1 &&
-//                               right_lane_type == iflyauto::LANETYPE_NORMAL)) {
+//                               right_lane_type == iflyauto::LANETYPE_NORMAL))
+//                               {
 //                     std::array<double, 4> xp{0, 50, 100, 200};
-//                     std::array<double, 4> fp{40 * coefficient, 20 * coefficient,
+//                     std::array<double, 4> fp{40 * coefficient, 20 *
+//                     coefficient,
 //                                              0, -20 * coefficient};
 //                     std::array<double, 4> xp_lat{-1.0, -0.5, 0.5, 1.5};
 //                     std::array<double, 4> fp_lat{1.0, 0.7, 0.2, 0.1};
@@ -3112,7 +3242,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -3129,7 +3260,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -3146,8 +3278,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -3176,9 +3309,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 right_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 right_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_r + 1;
 
 //                                 neg_right_lb_car_ = true;
@@ -3197,9 +3332,10 @@
 //                                   d_map > v_aver * (t + 2) &&
 //                                   d_stop > v_aver * (t + 2) && v_ego >= 1) ||
 //                                  (v_ego < 1 &&
-//                                   d_stop_l > std::max(v_ego, 0.1) * (t + 10) &&
-//                                   d_map > std::max(v_ego, 0.1) * (t + 2) &&
-//                                   d_stop > std::max(v_ego, 0.1) * (t + 2))) {
+//                                   d_stop_l > std::max(v_ego, 0.1) * (t + 10)
+//                                   && d_map > std::max(v_ego, 0.1) * (t + 2)
+//                                   && d_stop > std::max(v_ego, 0.1) * (t +
+//                                   2))) {
 //                         right_alc_car_cnt_[tr.track_id].pos = 0;
 //                         remove_car(right_alc_car_, tr.track_id);
 
@@ -3238,7 +3374,8 @@
 //                               }
 //                             }
 //                           } else {
-//                             calc_desired_gap(v_ego, tr, *lead_one, t, d_offset,
+//                             calc_desired_gap(v_ego, tr, *lead_one, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -3255,7 +3392,8 @@
 //                               lb_leadone_disable = true;
 //                             }
 
-//                             calc_desired_gap(v_ego, *lead_one, tr, t, d_offset,
+//                             calc_desired_gap(v_ego, *lead_one, tr, t,
+//                             d_offset,
 //                                              t_gap, safety_dist, diff_dn_car,
 //                                              desired_gap);
 
@@ -3269,8 +3407,9 @@
 //                             if (tr.track_id == temp_leadone->track_id) {
 //                               if (temp_leadtwo != nullptr) {
 //                                 calc_desired_gap(v_ego, *temp_leadtwo, tr, t,
-//                                                  d_offset, t_gap, safety_dist,
-//                                                  diff_dn_car, desired_gap);
+//                                                  d_offset, t_gap,
+//                                                  safety_dist, diff_dn_car,
+//                                                  desired_gap);
 
 //                                 if (diff_dn_car <
 //                                     std::max(desired_gap, diff_thre)) {
@@ -3295,9 +3434,11 @@
 //                                   tr.d_rel > temp_leadone->d_rel &&
 //                                   diff_dn_car <
 //                                       std::max(desired_gap, diff_thre)) {
-//                                 right_lb_car_cnt_[temp_leadone->track_id].pos =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].pos
+//                                 =
 //                                     0;
-//                                 right_lb_car_cnt_[temp_leadone->track_id].neg =
+//                                 right_lb_car_cnt_[temp_leadone->track_id].neg
+//                                 =
 //                                     neg_thr_lb_r + 1;
 
 //                                 neg_right_lb_car_ = true;
@@ -3335,7 +3476,8 @@
 //                     neg_right_alc_car_ = false;
 //                   }
 
-//                   iter = std::find(right_lb_car_.begin(), right_lb_car_.end(),
+//                   iter = std::find(right_lb_car_.begin(),
+//                   right_lb_car_.end(),
 //                                    tr.track_id);
 
 //                   if (right_lb_car_cnt_[tr.track_id].pos > pos_thr_lb_r &&
@@ -3360,7 +3502,8 @@
 //                 // }
 
 //                 if (right_alc_car_cnt_[tr.track_id].pos >
-//                         pos_thr_r + active_lane_change_min_duration_threshold &&
+//                         pos_thr_r + active_lane_change_min_duration_threshold
+//                         &&
 //                     iter == right_alc_car_.end() &&
 //                     right_lb_car_cnt_[tr.track_id].pos < pos_thr_lb_r) {
 //                   right_alc_car_.push_back(tr.track_id);
@@ -3408,7 +3551,8 @@
 //                             use_lateral_distance_to_judge_cutout_in_active_lane_change
 //                         ? tr.l < -half_car_width
 //                         : std::fabs(tr.v_lat) > 0.3 ||
-//                               (((!LCHANGE && !RCHANGE) && lead_one != nullptr &&
+//                               (((!LCHANGE && !RCHANGE) && lead_one != nullptr
+//                               &&
 //                                 lead_two != nullptr &&
 //                                 lead_two->v_lead > -0.5 &&
 //                                 lead_two->d_rel - lead_one->d_rel <
@@ -3431,12 +3575,13 @@
 //                   int lb_pos = right_lb_car_cnt_[tr.track_id].pos;
 //                   int alc_pos = right_alc_car_cnt_[tr.track_id].pos;
 
-//                   right_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3, 0);
-//                   right_alc_car_cnt_[tr.track_id].pos =
+//                   right_lb_car_cnt_[tr.track_id].pos = std::max(lb_pos - 3,
+//                   0); right_alc_car_cnt_[tr.track_id].pos =
 //                       std::max(alc_pos - 3, 0);
 
 //                   if (premover_ &&
-//                       right_alc_car_cnt_[tr.track_id].pos < pos_thr_r * 0.1) {
+//                       right_alc_car_cnt_[tr.track_id].pos < pos_thr_r * 0.1)
+//                       {
 //                     premover_ = false;
 //                   }
 
@@ -3450,7 +3595,8 @@
 //                          lead_two->d_min_cpath < 1.1 &&
 //                          lead_two->d_min_cpath + lead_two->width > 1.1)))) {
 //                     if (right_alc_car_.size() > 0 &&
-//                         std::find(right_alc_car_.begin(), right_alc_car_.end(),
+//                         std::find(right_alc_car_.begin(),
+//                         right_alc_car_.end(),
 //                                   tr.track_id) != right_alc_car_.end()) {
 //                       neg_premoved_id_ = tr.track_id;
 //                       premoved_id_ = -1000;
@@ -3489,7 +3635,8 @@
 //                 }
 //               }
 //             } else if (RCHANGE &&
-//                        (right_alc_car_.size() > 0 || right_lb_car_.size() > 0 ||
+//                        (right_alc_car_.size() > 0 || right_lb_car_.size() > 0
+//                        ||
 //                         v_ego >= 1.0) &&
 //                        tr.d_min_cpath >= lane_width / 2 - car_width / 5 &&
 //                        tr.d_min_cpath <
@@ -3578,7 +3725,8 @@
 //                          lead_two->d_min_cpath < 1.1 &&
 //                          lead_two->d_min_cpath + lead_two->width > 1.1)))) {
 //                     if (right_alc_car_.size() > 0 &&
-//                         std::find(right_alc_car_.begin(), right_alc_car_.end(),
+//                         std::find(right_alc_car_.begin(),
+//                         right_alc_car_.end(),
 //                                   tr.track_id) != right_alc_car_.end()) {
 //                       neg_premoved_id_ = tr.track_id;
 //                       premoved_id_ = -1000;
@@ -3599,7 +3747,8 @@
 //             right_alc_car_.clear();
 //             premover_ = false;
 
-//             if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end()) {
+//             if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end())
+//             {
 //               left_lb_car_cnt_[tr.track_id].pos = 0;
 //             }
 
@@ -3616,7 +3765,8 @@
 //             left_lb_car_.clear();
 //             right_lb_car_.clear();
 
-//             if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end()) {
+//             if (left_lb_car_cnt_.find(tr.track_id) != left_lb_car_cnt_.end())
+//             {
 //               left_lb_car_cnt_[tr.track_id].pos = 0;
 //             }
 
@@ -3626,7 +3776,8 @@
 //             }
 //           }
 //           // fengwang31:新状态机中没有这几个状态，暂时注掉这部分代码
-//           //   else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW ||
+//           //   else if (left_lb_car_.size() > 0 || status == ROAD_LB_LBORROW
+//           ||
 //           //              status == ROAD_LB_LRETURN || status ==
 //           //              ROAD_LB_LSUSPEND) {
 //           //     right_lb_car_.clear();
@@ -3701,7 +3852,8 @@
 //       }
 
 //       if (left_alc_car_.size() > 0 &&
-//           (front_tracks_ids.find(left_alc_car_[0]) == front_tracks_ids.end() ||
+//           (front_tracks_ids.find(left_alc_car_[0]) == front_tracks_ids.end()
+//           ||
 //            front_tracks_c_ids.find(left_alc_car_[0]) ==
 //                front_tracks_c_ids.end()) &&
 //           !LCHANGE) {
@@ -3747,7 +3899,8 @@
 //             break;
 //           }
 //         }
-//         if (front_tracks_ids.find(left_lb_car_[0]) == front_tracks_ids.end() ||
+//         if (front_tracks_ids.find(left_lb_car_[0]) == front_tracks_ids.end()
+//         ||
 //             lat_dist_l > lane_width * 1.5 + car_width / 8 ||
 //             lat_dist_l < -lane_width) {
 //           left_lb_car_.clear();
@@ -3764,7 +3917,8 @@
 //             break;
 //           }
 //         }
-//         if (front_tracks_ids.find(right_lb_car_[0]) == front_tracks_ids.end() ||
+//         if (front_tracks_ids.find(right_lb_car_[0]) == front_tracks_ids.end()
+//         ||
 //             lat_dist_r < -(lane_width * 1.5 + car_width / 8) ||
 //             lat_dist_r > lane_width) {
 //           right_lb_car_.clear();

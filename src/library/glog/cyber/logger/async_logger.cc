@@ -129,6 +129,6 @@ void AsyncLogger::FlushBuffer(const std::unique_ptr<std::deque<Msg>>& buffer) {
   Flush();
 }
 
-}  // namespace logger
+}  // namespace ilog
 }  // namespace cyber
 }  // namespace planning

@@ -81,10 +81,10 @@ ErrorType BasicIntelligentDriverModel::GetAccDesiredAcceleration(
   // ~ Here we simply use a constant dec, ego comfortable dec, as the acc of
   // ~ leading vehicle.
   double ds = std::max(0.0, cur_state.s_front - cur_state.s);
-  double acc_cah =
-      (cur_state.vel_front * cur_state.vel_front -
-      (cur_state.vel * cur_state.vel * -param.kComfortableBrakingDeceleration) /
-       2 * ds * -param.kComfortableBrakingDeceleration);
+  double acc_cah = (cur_state.vel_front * cur_state.vel_front -
+                    (cur_state.vel * cur_state.vel *
+                     -param.kComfortableBrakingDeceleration) /
+                        2 * ds * -param.kComfortableBrakingDeceleration);
 
   double coolness = 0.99;
 

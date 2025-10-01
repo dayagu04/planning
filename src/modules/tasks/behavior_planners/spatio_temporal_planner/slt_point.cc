@@ -1,10 +1,10 @@
 
+#include "slt_point.h"
 #include <assert.h>
 #include "config/basic_type.h"
 #include "define/geometry.h"
 #include "session.h"
 #include "task_basic_types.h"
-#include "slt_point.h"
 
 namespace planning {
 using namespace planning_math;

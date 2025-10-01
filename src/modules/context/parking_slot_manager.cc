@@ -87,16 +87,17 @@ bool ParkingSlotManager::Update(
   limiters_.clear();
   is_exist_target_slot_ = false;
   is_reached_target_slot_ = false;
-  const double distance_to_target_slot =
-      session_->environmental_model()
-              .get_route_info()
-              ->get_route_info_output()
-              .distance_to_target_slot;
+  const double distance_to_target_slot = session_->environmental_model()
+                                             .get_route_info()
+                                             ->get_route_info_output()
+                                             .distance_to_target_slot;
   if (distance_to_target_slot > 20.0) {
     return false;
   }
-  const size_t parking_slot_lists_size = parking_fusion_info.parking_fusion_slot_lists_size;
-  const auto& parking_slot_lists = parking_fusion_info.parking_fusion_slot_lists;
+  const size_t parking_slot_lists_size =
+      parking_fusion_info.parking_fusion_slot_lists_size;
+  const auto& parking_slot_lists =
+      parking_fusion_info.parking_fusion_slot_lists;
   target_slot_id_ = parking_fusion_info.select_slot_id;
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
     ParkingSlotPoints slot_point;
@@ -129,12 +130,11 @@ bool ParkingSlotManager::Update(
 }
 
 bool ParkingSlotManager::CalculateDistanceToTargetSlot(
-    const std::shared_ptr<ReferencePath> &reference_path) {
-  const double distance_to_target_slot =
-      session_->environmental_model()
-              .get_route_info()
-              ->get_route_info_output()
-              .distance_to_target_slot;
+    const std::shared_ptr<ReferencePath>& reference_path) {
+  const double distance_to_target_slot = session_->environmental_model()
+                                             .get_route_info()
+                                             ->get_route_info_output()
+                                             .distance_to_target_slot;
   distance_to_target_slot_ = distance_to_target_slot;
   if (reference_path != nullptr) {
     const double ego_s = reference_path->get_frenet_ego_state().s();
@@ -143,20 +143,19 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
     if (distance_to_target_slot_ < 10.0) {
       distance_to_target_slot_ =
           std::min(std::fabs(points.back().path_point.s() - ego_s),
-                  distance_to_target_slot_);
+                   distance_to_target_slot_);
     }
-    if ((target_slot_.empty()) ||
-        (frenet_coord == nullptr)) {
+    if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
       return false;
     }
     double slot_dist_to_ego = -NL_NMAX;
     if (target_slot_polygon_.is_convex()) {
-      planning_math::Box2d target_slot_box = target_slot_polygon_.MinAreaBoundingBox();
+      planning_math::Box2d target_slot_box =
+          target_slot_polygon_.MinAreaBoundingBox();
       Point2D cart_pt(target_slot_box.center_x(), target_slot_box.center_y());
       Point2D frenet_pt{0.0, 0.0};
-      if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-        slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
-                                    slot_dist_to_ego);
+      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+        slot_dist_to_ego = std::max(frenet_pt.x - ego_s, slot_dist_to_ego);
         if (slot_dist_to_ego < 2.0) {
           is_reached_target_slot_ = true;
         }
@@ -167,9 +166,8 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
       for (const auto& slot_point : target_slot_) {
         Point2D cart_pt(slot_point.x(), slot_point.y());
         Point2D frenet_pt{0.0, 0.0};
-        if(frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-          slot_dist_to_ego = std::max(frenet_pt.x - ego_s,
-                                      slot_dist_to_ego);
+        if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
+          slot_dist_to_ego = std::max(frenet_pt.x - ego_s, slot_dist_to_ego);
           if (slot_dist_to_ego < 2.0) {
             is_reached_target_slot_ = true;
           }
@@ -180,28 +178,26 @@ bool ParkingSlotManager::CalculateDistanceToTargetSlot(
       }
     }
     distance_to_target_slot_ = std::fabs(slot_dist_to_ego);
-    // distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego), distance_to_target_slot_);
+    // distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego),
+    // distance_to_target_slot_);
   }
   return true;
 }
 
 bool ParkingSlotManager::CalculateDistanceToNearestSlot(
-    const std::shared_ptr<ReferencePath> &reference_path) {
+    const std::shared_ptr<ReferencePath>& reference_path) {
   const size_t successful_slot_info_list_size =
       session_->planning_context()
-              .planning_output()
-              .successful_slot_info_list_size;
-  const auto &successful_slot_info_list =
-      session_->planning_context()
-              .planning_output()
-              .successful_slot_info_list;
-  const auto &parking_slots =
-      session_->environmental_model()
-              .get_obstacle_manager()
-              ->get_parking_space();
-  const auto &planning_init_point =
+          .planning_output()
+          .successful_slot_info_list_size;
+  const auto& successful_slot_info_list =
+      session_->planning_context().planning_output().successful_slot_info_list;
+  const auto& parking_slots = session_->environmental_model()
+                                  .get_obstacle_manager()
+                                  ->get_parking_space();
+  const auto& planning_init_point =
       reference_path->get_frenet_ego_state().planning_init_point();
-  const auto &frenet_coord = reference_path->get_frenet_coord();
+  const auto& frenet_coord = reference_path->get_frenet_coord();
   if (successful_slot_info_list_size > 0) {
     double dist_to_nearest_slot = NL_NMAX;
     double nearest_slot_width = 3.0;
@@ -209,8 +205,7 @@ bool ParkingSlotManager::CalculateDistanceToNearestSlot(
     if (planning_init_point.v < 0.1) {
       dist_buffer = 0;
     }
-    size_t last_nearest_slot_id =
-        is_exist_nearest_slot_ ? nearest_slot_id_ : 0;
+    size_t last_nearest_slot_id = is_exist_nearest_slot_ ? nearest_slot_id_ : 0;
     for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
       auto iter =
           parking_slots.Find((successful_slot_info_list[i].id + 6000000));
@@ -220,8 +215,7 @@ bool ParkingSlotManager::CalculateDistanceToNearestSlot(
         cart_point.y = iter->y_center();
         if (frenet_coord != nullptr) {
           if (frenet_coord->XYToSL(cart_point, frenet_point)) {
-            double s_diff =
-                frenet_point.x - planning_init_point.frenet_state.s;
+            double s_diff = frenet_point.x - planning_init_point.frenet_state.s;
             if (iter->id() == last_nearest_slot_id) {
               is_exist_nearest_slot_ = true;
               nearest_slot_id_ = iter->id();

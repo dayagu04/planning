@@ -1,9 +1,9 @@
 
 #include "hybrid_astar_common.h"
 #include <cmath>
+#include "geometry_math.h"
 #include "point_cloud_obstacle.h"
 #include "vecf32.h"
-#include "geometry_math.h"
 
 namespace planning {
 
@@ -321,7 +321,7 @@ void ExtendPathToRealParkSpacePoint(HybridAStarResult* result,
 
   AstarPathGear gear;
   planning::Vec2f to_end(real_end.x - astar_end_point[0],
-               real_end.y - astar_end_point[1]);
+                         real_end.y - astar_end_point[1]);
   float theta_diff = to_end.Angle() - IflyUnifyTheta(real_end.theta, M_PIf32);
   theta_diff = IflyUnifyTheta(theta_diff, M_PIf32);
   if (std::fabs(theta_diff) > M_PI_2f32) {
@@ -419,7 +419,7 @@ void DebugMapBoundString(const MapBound& box) {
 }
 
 const cdl::AABB2f TransformMapBound(const MapBound& box) {
-  cdl::AABB2f  bound;
+  cdl::AABB2f bound;
   bound.min_[0] = box.x_min;
   bound.min_[1] = box.y_min;
   bound.max_[0] = box.x_max;

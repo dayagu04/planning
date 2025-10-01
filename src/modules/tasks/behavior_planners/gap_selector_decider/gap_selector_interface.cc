@@ -241,19 +241,19 @@ void GapSelectorInterface::Store(
 
   auto origin_lane_objs =
       gap_selector_input->mutable_origin_lane_obstacles_ids();
-//   const auto map_origin_lane_obstacles =
-//       session->environmental_model()
-//           .get_reference_path_manager()
-//           ->get_reference_path_by_lane(session->environmental_model()
-//                                            .get_virtual_lane_manager()
-//                                            ->get_current_lane()
-//                                            ->get_virtual_id(),
-//                                        false)
-//           ->mutable_obstacles_in_lane_map();
-//   origin_lane_objs->Resize(map_origin_lane_obstacles.size(), -1);
-//   for (auto i = 0; i < map_origin_lane_obstacles.size(); i++) {
-//     origin_lane_objs->Set(i, map_origin_lane_obstacles[i]);
-//   }
+  //   const auto map_origin_lane_obstacles =
+  //       session->environmental_model()
+  //           .get_reference_path_manager()
+  //           ->get_reference_path_by_lane(session->environmental_model()
+  //                                            .get_virtual_lane_manager()
+  //                                            ->get_current_lane()
+  //                                            ->get_virtual_id(),
+  //                                        false)
+  //           ->mutable_obstacles_in_lane_map();
+  //   origin_lane_objs->Resize(map_origin_lane_obstacles.size(), -1);
+  //   for (auto i = 0; i < map_origin_lane_obstacles.size(); i++) {
+  //     origin_lane_objs->Set(i, map_origin_lane_obstacles[i]);
+  //   }
 
   if (target_lane != nullptr) {
     auto target_lane_objs =
@@ -262,7 +262,8 @@ void GapSelectorInterface::Store(
     // const auto map_target_lane_obstacles =
     //     session->environmental_model()
     //         .get_reference_path_manager()
-    //         ->get_reference_path_by_lane(target_lane->get_virtual_id(), false)
+    //         ->get_reference_path_by_lane(target_lane->get_virtual_id(),
+    //         false)
     //         ->mutable_obstacles_in_lane_map();
 
     // target_lane_objs->Resize(map_target_lane_obstacles.size(), -1);

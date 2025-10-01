@@ -52,7 +52,7 @@ void MergeRequest::Update(int lc_status) {
     Finish();
     return;
   }
-  
+
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   planning_init_point_ = ego_state->planning_init_point();
@@ -74,19 +74,23 @@ void MergeRequest::Update(int lc_status) {
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
-    ILOG_DEBUG << "MergeRequest::Update: for left_lane: update " << llane->get_virtual_id();
+    ILOG_DEBUG << "MergeRequest::Update: for left_lane: update "
+               << llane->get_virtual_id();
   } else {
     left_reference_path_ = nullptr;
   }
   if (rlane != nullptr) {
     right_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         rlane->get_virtual_id(), false);
-    ILOG_DEBUG << "MergeRequest::Update: for right_lane: update " << rlane->get_virtual_id();
+    ILOG_DEBUG << "MergeRequest::Update: for right_lane: update "
+               << rlane->get_virtual_id();
   } else {
     right_reference_path_ = nullptr;
   }
-  enable_l_ = llane && left_reference_path_ && llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
-  enable_r_ = rlane && right_reference_path_ && rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_l_ = llane && left_reference_path_ &&
+              llane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
+  enable_r_ = rlane && right_reference_path_ &&
+              rlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE;
 
   if (lane_change_lane_mgr_->has_origin_lane()) {
     auto origin_lane = lane_change_lane_mgr_->olane();
@@ -100,12 +104,14 @@ void MergeRequest::Update(int lc_status) {
   // is_exist_right_merge_direction_ = false;
 
   MakesureLaneMergeDirection(origin_lane_virtual_id_);
-  ILOG_DEBUG << "MergeRequest::Update: both_lane_line_exist_virtual_or_not_ " << both_lane_line_exist_virtual_or_not_;
+  ILOG_DEBUG << "MergeRequest::Update: both_lane_line_exist_virtual_or_not_ "
+             << both_lane_line_exist_virtual_or_not_;
   JSON_DEBUG_VALUE("both_lane_line_exist_virtual_or_not_",
                    both_lane_line_exist_virtual_or_not_);
 
   UpdateLaneMergeSituation(lc_status);
-  ILOG_DEBUG << "MergeRequest::Update: is_merge_lane_change_situation_ " << is_merge_lane_change_situation_;
+  ILOG_DEBUG << "MergeRequest::Update: is_merge_lane_change_situation_ "
+             << is_merge_lane_change_situation_;
   JSON_DEBUG_VALUE("is_merge_lane_change_situation_",
                    is_merge_lane_change_situation_);
   JSON_DEBUG_VALUE("merge_alc_trigger_counter_", merge_alc_trigger_counter_);
@@ -117,13 +123,15 @@ void MergeRequest::Update(int lc_status) {
       Finish();
       Reset();
       set_target_lane_virtual_id(origin_lane_virtual_id_);
-      ILOG_DEBUG << "[MergeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << "finish request, !trigger_left_clc and !trigger_right_clc";
+      ILOG_DEBUG << "[MergeRequest::update] " << __FUNCTION__ << ":" << __LINE__
+                 << "finish request, !trigger_left_clc and !trigger_right_clc";
     }
     return;
   }
 
   setLaneChangeRequestByMerge(lc_status);
-  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: [" << turn_signal_ << "\n";
+  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: ["
+             << turn_signal_ << "\n";
 }
 
 void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
@@ -185,13 +193,17 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      ILOG_DEBUG << "[MergeRequest::update] Ask for merge changing lane to left ";
-      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
-          (lane_change_lane_mgr_->has_origin_lane() &&
-          lane_change_lane_mgr_->is_ego_on(olane)))) {
+      ILOG_DEBUG
+          << "[MergeRequest::update] Ask for merge changing lane to left ";
+      if (request_type_ != NO_CHANGE &&
+          (lc_status == kLaneChangeCancel &&
+           (lane_change_lane_mgr_->has_origin_lane() &&
+            lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[MergeRequest::update] " << "__FUNCTION__" << ":" << __LINE__ << " finish request, dash not enough";
+        ILOG_DEBUG << "[MergeRequest::update] "
+                   << "__FUNCTION__"
+                   << ":" << __LINE__ << " finish request, dash not enough";
       }
     }
   } else if (merge_lane_change_direction_ == RIGHT_CHANGE && enable_r_) {
@@ -202,13 +214,17 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      ILOG_DEBUG << "[MergeRequest::update] Ask for merge changing lane to right";
-      if (request_type_ != NO_CHANGE && (lc_status == kLaneChangeCancel &&
-          (lane_change_lane_mgr_->has_origin_lane() &&
-          lane_change_lane_mgr_->is_ego_on(olane)))) {
+      ILOG_DEBUG
+          << "[MergeRequest::update] Ask for merge changing lane to right";
+      if (request_type_ != NO_CHANGE &&
+          (lc_status == kLaneChangeCancel &&
+           (lane_change_lane_mgr_->has_origin_lane() &&
+            lane_change_lane_mgr_->is_ego_on(olane)))) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-        ILOG_DEBUG << "[MergeRequest::update] " << "__FUNCTION__" << ":" << __LINE__ << " finish request, dash not enough";
+        ILOG_DEBUG << "[MergeRequest::update] "
+                   << "__FUNCTION__"
+                   << ":" << __LINE__ << " finish request, dash not enough";
       }
     }
   } else if (merge_lane_change_direction_ == NO_CHANGE &&
@@ -217,7 +233,10 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
               lane_change_lane_mgr_->is_ego_on(olane))) {
     Finish();
     set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-    ILOG_DEBUG << "[MergeRequest::update] " << "__FUNCTION__" << ":" << __LINE__ << " finish request, merge_lane_change_direction == NO_CHANGE";
+    ILOG_DEBUG << "[MergeRequest::update] "
+               << "__FUNCTION__"
+               << ":" << __LINE__
+               << " finish request, merge_lane_change_direction == NO_CHANGE";
   } else if (merge_lane_change_direction_ == NO_CHANGE) {
     // do nothing
     return;
@@ -272,17 +291,20 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     lane_merge_direction_ = merge_point_info.merge_type;
     double distance_to_first_road_split = NL_NMAX;
     double dis_to_first_merge = NL_NMAX;
-    const auto& split_region_info_list = route_info_output.split_region_info_list;
-    const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+    const auto& split_region_info_list =
+        route_info_output.split_region_info_list;
+    const auto& merge_region_info_list =
+        route_info_output.merge_region_info_list;
     if (!split_region_info_list.empty()) {
       if (split_region_info_list[0].is_valid) {
-        distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+        distance_to_first_road_split =
+            split_region_info_list[0].distance_to_split_point;
       }
     }
     if (!merge_region_info_list.empty()) {
       if (merge_region_info_list[0].is_valid) {
         dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
-              }
+      }
     }
     if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
         distance_to_merge_point_ < distance_to_first_road_split &&
@@ -293,7 +315,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
         merge_lane_change_direction_ = RIGHT_CHANGE;
         use_map_is_merge_situation_ = true;
         return;
-      } else if (is_right_edge_side_lane && lane_merge_direction_ == RIGHT_MERGE) {
+      } else if (is_right_edge_side_lane &&
+                 lane_merge_direction_ == RIGHT_MERGE) {
         merge_lane_change_direction_ = LEFT_CHANGE;
         use_map_is_merge_situation_ = true;
         return;

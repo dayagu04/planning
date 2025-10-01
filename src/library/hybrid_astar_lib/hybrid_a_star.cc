@@ -195,7 +195,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
     return false;
   }
 
-  // interpolation
+    // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -863,7 +863,7 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
     }
   }
 
-  // safe dist cost
+    // safe dist cost
 #if ENABLE_OBS_DIST_G_COST
   float safe_punish = 0.0;
   safe_punish = CalcSafeDistCost(next_node);
@@ -1417,7 +1417,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif
@@ -1880,7 +1880,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
         continue;
       }
 
-      // collision check
+        // collision check
 #if LOG_TIME_PROFILE
       check_start_time = IflyTime::Now_ms();
 #endif

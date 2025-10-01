@@ -97,7 +97,6 @@ class LogFileObject : public google::base::Logger {
   bool CreateLogfile(const string& time_pid_string);
 };
 
-}  // namespace logger
+}  // namespace ilog
 }  // namespace cyber
 }  // namespace planning
-

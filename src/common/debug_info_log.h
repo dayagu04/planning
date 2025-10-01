@@ -56,7 +56,7 @@ class DebugInfoManager : public planning::common::Arena {
     (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
         mjson::Json(static_cast<double>(var_value));
 #else
-  #define JSON_DEBUG_VALUE(var_name, var_value) ;
+#define JSON_DEBUG_VALUE(var_name, var_value) ;
 #endif
 
 #ifdef ENABLE_JSON_LOG
@@ -64,7 +64,7 @@ class DebugInfoManager : public planning::common::Arena {
   (*DebugInfoManager::GetInstance().GetDebugJson())[var_name] = \
       mjson::Json(Utils::vec_to_char_array(var_value, keep_length));
 #else
-  #define JSON_DEBUG_VECTOR(var_name, var_value, keep_length) ;
+#define JSON_DEBUG_VECTOR(var_name, var_value, keep_length) ;
 #endif
 
 #define JSON_READ_VALUE(var_name, type, json_name) \

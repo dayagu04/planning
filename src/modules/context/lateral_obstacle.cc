@@ -5,10 +5,10 @@
 #include "environment_model_debug_info.pb.h"
 #include "environmental_model.h"
 #include "ifly_time.h"
+#include "obstacle_manager.h"
 #include "planning_context.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
-#include "obstacle_manager.h"
 
 namespace planning {
 
@@ -27,7 +27,7 @@ LateralObstacle::LateralObstacle(const EgoPlanningConfigBuilder *config_builder,
   warning_timer_[4] = curr_time;
 }
 
-LateralObstacle::~LateralObstacle() { }
+LateralObstacle::~LateralObstacle() {}
 
 void LateralObstacle::SetConfig(
     const EgoPlanningConfigBuilder *config_builder) {
@@ -79,12 +79,14 @@ bool LateralObstacle::update_sensors(
 
     double abs_time = IflyTime::Now_ms();
     if (abs_time - warning_timer_[2] > 5.0) {
-      ILOG_ERROR << "[LateralObstacle::update_sensors] frontview fusion unavailable";
+      ILOG_ERROR
+          << "[LateralObstacle::update_sensors] frontview fusion unavailable";
       warning_timer_[2] = abs_time;
     }
 
     if (abs_time - warning_timer_[1] > 5.0) {
-      ILOG_ERROR << "[LateralObstacle::update_sensors] sideview fusion unavailable";
+      ILOG_ERROR
+          << "[LateralObstacle::update_sensors] sideview fusion unavailable";
       warning_timer_[1] = abs_time;
     }
   }
@@ -95,14 +97,18 @@ void LateralObstacle::update_lead_info() {
   double planning_cycle_time = 1.0 / FLAGS_planning_loop_rate;
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
-  const auto &obstacle_manager = session_->environmental_model().get_obstacle_manager();
+  const auto &obstacle_manager =
+      session_->environmental_model().get_obstacle_manager();
   const auto &current_lane = virtual_lane_manager->get_current_lane();
-  const auto &frenet_obstacles_map = current_lane->get_reference_path()->get_obstacles_map();
-  const double v_ego = session_->environmental_model().get_ego_state_manager()->ego_v();
+  const auto &frenet_obstacles_map =
+      current_lane->get_reference_path()->get_obstacles_map();
+  const double v_ego =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
 
   auto extra_obstacle_info_map = extra_obstacle_info_map_;
-  for (const auto& extra_obstacle_info : extra_obstacle_info_map) {
-    if (frenet_obstacles_map.find(extra_obstacle_info.first) == frenet_obstacles_map.end() ||
+  for (const auto &extra_obstacle_info : extra_obstacle_info_map) {
+    if (frenet_obstacles_map.find(extra_obstacle_info.first) ==
+            frenet_obstacles_map.end() ||
         !frenet_obstacles_map.at(extra_obstacle_info.first)->b_frenet_valid()) {
       extra_obstacle_info_map_.erase(extra_obstacle_info.first);
     }
@@ -110,7 +116,8 @@ void LateralObstacle::update_lead_info() {
 
   for (auto &item : front_tracks_) {
     ExtraObstacleInfo extra_obstacle_info;
-    if (extra_obstacle_info_map_.find(item->id()) == extra_obstacle_info_map_.end()) {
+    if (extra_obstacle_info_map_.find(item->id()) ==
+        extra_obstacle_info_map_.end()) {
       extra_obstacle_info.oncoming = item->frenet_velocity_s() < -3.0;
       extra_obstacle_info_map_[item->id()] = extra_obstacle_info;
     } else {
@@ -123,8 +130,9 @@ void LateralObstacle::update_lead_info() {
 
     LOG_DEBUG("----is_potential_lead_one-----\n");
     double gap = (extra_obstacle_info.last_recv_time == 0.0)
-                    ? planning_cycle_time
-                    : std::max((extra_obstacle_info.timestamp - extra_obstacle_info.last_recv_time),
+                     ? planning_cycle_time
+                     : std::max((extra_obstacle_info.timestamp -
+                                 extra_obstacle_info.last_recv_time),
                                 planning_cycle_time);
     LOG_DEBUG("the gap is : [%f]ms \n", gap);
     std::array<double, 5> xp1{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
@@ -135,14 +143,18 @@ void LateralObstacle::update_lead_info() {
     std::array<double, 3> fp2{-0.85, -0.9, -0.85};
     double max_d_offset = interp(item->d_s_rel(), xp2, fp2);
 
-    if (std::fabs(item->d_path_pos()) < 3.0 && item->frenet_velocity_l() < -0.2) {
-      extra_obstacle_info.lat_coeff = std::min(extra_obstacle_info.lat_coeff * 1.035, 1.5);
+    if (std::fabs(item->d_path_pos()) < 3.0 &&
+        item->frenet_velocity_l() < -0.2) {
+      extra_obstacle_info.lat_coeff =
+          std::min(extra_obstacle_info.lat_coeff * 1.035, 1.5);
     } else {
-      extra_obstacle_info.lat_coeff = std::max(extra_obstacle_info.lat_coeff * 0.9, 1.0);
+      extra_obstacle_info.lat_coeff =
+          std::max(extra_obstacle_info.lat_coeff * 0.9, 1.0);
     }
 
     double lat_corr =
-        std::max(max_d_offset, std::min(0.0, t_lookahead * item->frenet_velocity_l())) *
+        std::max(max_d_offset,
+                 std::min(0.0, t_lookahead * item->frenet_velocity_l())) *
         extra_obstacle_info.lat_coeff;
     LOG_DEBUG("max_d_offset is: [%f], t_lookahead: [%f], lat_corr is: [%f]\n",
               max_d_offset, t_lookahead, lat_corr);
@@ -185,12 +197,15 @@ void LateralObstacle::update_lead_info() {
 
     if (d_path < lead_d_path_thr && item->d_s_rel() > 0.0) {
       extra_obstacle_info.leadone_confidence_cnt =
-          std::min(extra_obstacle_info.leadone_confidence_cnt + gap, 10 * planning_cycle_time);
+          std::min(extra_obstacle_info.leadone_confidence_cnt + gap,
+                   10 * planning_cycle_time);
     } else {
       LOG_DEBUG("gap is : [%f] \n", gap);
       int count = (int)((gap + 0.01) / planning_cycle_time);
-      extra_obstacle_info.leadone_confidence_cnt = std::max(
-          extra_obstacle_info.leadone_confidence_cnt - 2 * count * planning_cycle_time, 0.0);
+      extra_obstacle_info.leadone_confidence_cnt =
+          std::max(extra_obstacle_info.leadone_confidence_cnt -
+                       2 * count * planning_cycle_time,
+                   0.0);
       LOG_DEBUG("leadone_confidence_cnt is : [%f] \n",
                 extra_obstacle_info.leadone_confidence_cnt);
     }
@@ -210,13 +225,13 @@ void LateralObstacle::update_lead_info() {
     }
     LOG_DEBUG("lead_confidence_thrshld is : [%f]\n", lead_confidence_thrshld);
     extra_obstacle_info.is_lead = extra_obstacle_info.leadone_confidence_cnt >=
-                  lead_confidence_thrshld * planning_cycle_time;
+                                  lead_confidence_thrshld * planning_cycle_time;
     LOG_DEBUG("item.is_lead: [%d]\n", extra_obstacle_info.is_lead);
-
 
     {
       LOG_DEBUG("----fill_possibility_of_cutin-----\n");
-      double ttc = std::max(item->d_path() - 1.5, 0.0) / std::max(-item->frenet_velocity_l(), 0.01);
+      double ttc = std::max(item->d_path() - 1.5, 0.0) /
+                   std::max(-item->frenet_velocity_l(), 0.01);
       ttc = std::min(15.0, ttc);
 
       double new_ttc;
@@ -225,13 +240,16 @@ void LateralObstacle::update_lead_info() {
         extra_obstacle_info.last_ttc = ttc;
       } else {
         double ttc_decay_rate = 0.5;
-        new_ttc = ttc * (1.0 - ttc_decay_rate) + extra_obstacle_info.last_ttc * ttc_decay_rate;
+        new_ttc = ttc * (1.0 - ttc_decay_rate) +
+                  extra_obstacle_info.last_ttc * ttc_decay_rate;
       }
-      double lower_dist_threshold = (item->frenet_velocity_s() > -1.0) ? -10.0 : -5.0;
+      double lower_dist_threshold =
+          (item->frenet_velocity_s() > -1.0) ? -10.0 : -5.0;
       double upper_dist_threshold =
           20 + 2 * std::pow(std::min(item->rel_v(), 0.0), 2);
 
-      double is_need_consider = (item->frenet_velocity_l() < -0.2) && (new_ttc < 10.0);
+      double is_need_consider =
+          (item->frenet_velocity_l() < -0.2) && (new_ttc < 10.0);
       double temp = item->d_s_rel() + new_ttc * item->rel_v();
       double is_in_range =
           (temp > lower_dist_threshold && temp < upper_dist_threshold);
@@ -239,8 +257,10 @@ void LateralObstacle::update_lead_info() {
       std::array<double, 5> xp5{1.5, 5.0, 10.0, 40.0, 60.0 + v_ego / 1.2};
       std::array<double, 5> fp5{0.8, 1.0, 0.8, 0.7, 0.0};
       t_lookahead = interp(item->d_s_rel(), xp5, fp5);
-      lat_corr = std::max(max_d_offset, std::min(0.0, t_lookahead * item->frenet_velocity_l())) *
-                extra_obstacle_info.lat_coeff;
+      lat_corr =
+          std::max(max_d_offset,
+                   std::min(0.0, t_lookahead * item->frenet_velocity_l())) *
+          extra_obstacle_info.lat_coeff;
       if (extra_obstacle_info.oncoming && item->d_s_rel() >= 0) {
         lat_corr = 0.0;
       }
@@ -248,11 +268,14 @@ void LateralObstacle::update_lead_info() {
       d_path = std::max(item->d_path_pos() + lat_corr, 0.0);
       if (d_path < lead_d_path_thr && item->d_s_rel() > 0.0) {
         extra_obstacle_info.cutin_confidence_cnt =
-            std::min(extra_obstacle_info.cutin_confidence_cnt + gap, 50 * planning_cycle_time);
+            std::min(extra_obstacle_info.cutin_confidence_cnt + gap,
+                     50 * planning_cycle_time);
       } else {
         int count = (int)((gap + 0.01) / planning_cycle_time);
-        extra_obstacle_info.cutin_confidence_cnt = std::max(
-            extra_obstacle_info.cutin_confidence_cnt - 10 * count * planning_cycle_time, 0.0);
+        extra_obstacle_info.cutin_confidence_cnt =
+            std::max(extra_obstacle_info.cutin_confidence_cnt -
+                         10 * count * planning_cycle_time,
+                     0.0);
         LOG_DEBUG("!!!!!!!cutin_confidence_cnt is : [%f] \n",
                   extra_obstacle_info.cutin_confidence_cnt);
       }
@@ -270,21 +293,27 @@ void LateralObstacle::update_lead_info() {
       if (is_need_consider && is_in_range) {
         if (extra_obstacle_info.cutin_confidence_cnt >=
             cutin_confidence_cnt * planning_cycle_time) {
-          extra_obstacle_info.cutinp =
-              std::max(0.6, extra_obstacle_info.cutinp - gap * std::max(item->frenet_velocity_l(), -1.0) /
-                                              std::max(item->d_path(), 0.01));
+          extra_obstacle_info.cutinp = std::max(
+              0.6, extra_obstacle_info.cutinp -
+                       gap * std::max(item->frenet_velocity_l(), -1.0) /
+                           std::max(item->d_path(), 0.01));
         } else {
-          extra_obstacle_info.cutinp = extra_obstacle_info.cutinp - std::max(0.1, item->frenet_velocity_l() / 3);
+          extra_obstacle_info.cutinp =
+              extra_obstacle_info.cutinp -
+              std::max(0.1, item->frenet_velocity_l() / 3);
         }
       } else {
-        extra_obstacle_info.cutinp = extra_obstacle_info.cutinp - std::max(0.1, item->frenet_velocity_l() / 3);
+        extra_obstacle_info.cutinp =
+            extra_obstacle_info.cutinp -
+            std::max(0.1, item->frenet_velocity_l() / 3);
       }
       extra_obstacle_info.last_ttc = new_ttc;
-      extra_obstacle_info.cutinp = std::max(0.0, std::min(1.0, extra_obstacle_info.cutinp));
+      extra_obstacle_info.cutinp =
+          std::max(0.0, std::min(1.0, extra_obstacle_info.cutinp));
       if (extra_obstacle_info.oncoming) {
         extra_obstacle_info.cutinp = 0.0;
       }
-      Obstacle *obstacle= obstacle_manager->find_obstacle(item->id());
+      Obstacle *obstacle = obstacle_manager->find_obstacle(item->id());
       if (obstacle != nullptr) {
         obstacle->set_cutin_prob(extra_obstacle_info.cutinp);
       }
@@ -298,8 +327,8 @@ void LateralObstacle::select_lead_cars() {
   std::shared_ptr<FrenetObstacle> lead_one = nullptr;
 
   for (auto item : tracks_map_) {
-
-    if (extra_obstacle_info_map_.find(item.first) == extra_obstacle_info_map_.end()) {
+    if (extra_obstacle_info_map_.find(item.first) ==
+        extra_obstacle_info_map_.end()) {
       continue;
     }
     if (extra_obstacle_info_map_.at(item.first).is_lead == false) {
@@ -333,8 +362,10 @@ void LateralObstacle::update_tracks() {
     return;
   }
 
-  const double ego_l = current_lane->get_reference_path()->get_frenet_ego_state().l();
-  const auto &frenet_obstacles_map = current_lane->get_reference_path()->get_obstacles_map();
+  const double ego_l =
+      current_lane->get_reference_path()->get_frenet_ego_state().l();
+  const auto &frenet_obstacles_map =
+      current_lane->get_reference_path()->get_obstacles_map();
 
   for (const auto item : frenet_obstacles_map) {
     if (not item.second->b_frenet_valid()) {
@@ -344,7 +375,8 @@ void LateralObstacle::update_tracks() {
     tracks_map_[item.first] = frenet_obstacle;
     if (frenet_obstacle->d_s_rel() > 0.0) {
       auto it = front_tracks_.begin();
-      while (it != front_tracks_.end() && (*it)->d_s_rel() < frenet_obstacle->d_s_rel()) {
+      while (it != front_tracks_.end() &&
+             (*it)->d_s_rel() < frenet_obstacle->d_s_rel()) {
         ++it;
       }
 
@@ -355,7 +387,8 @@ void LateralObstacle::update_tracks() {
       }
     } else {
       auto it = side_tracks_.begin();
-      while (it != side_tracks_.end() && (*it)->d_s_rel() > frenet_obstacle->d_s_rel()) {
+      while (it != side_tracks_.end() &&
+             (*it)->d_s_rel() > frenet_obstacle->d_s_rel()) {
         ++it;
       }
 
@@ -386,7 +419,8 @@ void LateralObstacle::update_tracks() {
   }
 }
 
-bool LateralObstacle::find_track(int track_id, std::shared_ptr<FrenetObstacle> &dest) {
+bool LateralObstacle::find_track(int track_id,
+                                 std::shared_ptr<FrenetObstacle> &dest) {
   for (auto &tr : front_tracks_) {
     if (tr->id() == track_id) {
       dest = tr;
@@ -411,8 +445,8 @@ LaneTracksManager::LaneTracksManager(LateralObstacle &lateral_obstacle,
       virtual_lane_mgr_(virtual_lane_mgr),
       session_(session) {}
 
-std::vector<std::shared_ptr<FrenetObstacle>> *LaneTracksManager::get_lane_tracks(
-    int virtual_id, TrackType track_type) {
+std::vector<std::shared_ptr<FrenetObstacle>>
+    *LaneTracksManager::get_lane_tracks(int virtual_id, TrackType track_type) {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto &current_lane = virtual_lane_manager->get_current_lane();
@@ -465,7 +499,8 @@ void LaneTracksManager::update_lane_tracks() {
     return;
   }
 
-  const auto frenet_obstacles_map = current_lane->get_reference_path()->get_obstacles_map();
+  const auto frenet_obstacles_map =
+      current_lane->get_reference_path()->get_obstacles_map();
 
   auto obstacles_id =
       current_lane->get_reference_path()->get_lane_obstacles_ids();
@@ -482,22 +517,22 @@ void LaneTracksManager::update_lane_tracks() {
       }
     }
   }
-    // for (const auto & frenet_obstacle : frenet_obstacles) {
-    //   if (frenet_obstacle->b_frenet_valid()) {
-    //     if (frenet_obstacle->d_s_rel() > 0) {
-    //       front_tracks_clane_.emplace_back(frenet_obstacle);
-    //     } else {
-    //       side_tracks_clane_.emplace_back(frenet_obstacle);
-    //     }
-    //   }
-    // }
-
+  // for (const auto & frenet_obstacle : frenet_obstacles) {
+  //   if (frenet_obstacle->b_frenet_valid()) {
+  //     if (frenet_obstacle->d_s_rel() > 0) {
+  //       front_tracks_clane_.emplace_back(frenet_obstacle);
+  //     } else {
+  //       side_tracks_clane_.emplace_back(frenet_obstacle);
+  //     }
+  //   }
+  // }
 
   if (left_lane != nullptr) {
     auto obstacles_id =
         left_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
-      if (frenet_obstacles_map.find(obstacle_id) != frenet_obstacles_map.end()) {
+      if (frenet_obstacles_map.find(obstacle_id) !=
+          frenet_obstacles_map.end()) {
         const auto frenet_obstacle = frenet_obstacles_map.at(obstacle_id);
         if (frenet_obstacle->b_frenet_valid()) {
           if (frenet_obstacle->d_s_rel() > 0) {
@@ -514,7 +549,8 @@ void LaneTracksManager::update_lane_tracks() {
     auto obstacles_id =
         right_lane->get_reference_path()->get_lane_obstacles_ids();
     for (auto obstacle_id : obstacles_id) {
-      if (frenet_obstacles_map.find(obstacle_id) != frenet_obstacles_map.end()) {
+      if (frenet_obstacles_map.find(obstacle_id) !=
+          frenet_obstacles_map.end()) {
         const auto frenet_obstacle = frenet_obstacles_map.at(obstacle_id);
         if (frenet_obstacle->b_frenet_valid()) {
           if (frenet_obstacle->d_s_rel() > 0) {

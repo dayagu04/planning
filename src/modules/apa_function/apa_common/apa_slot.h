@@ -206,11 +206,11 @@ class ApaSlot final {
       const bool base_on_slot) const;
 
   const bool IsPointInCustomSlot(const Eigen::Vector2d& pt,
-                           const double slot_entrance_dist,
-                           const double slot_bottom_dist,
-                           const double left_move_dist,
-                           const double right_move_dist,
-                           const bool base_on_slot) const;
+                                 const double slot_entrance_dist,
+                                 const double slot_bottom_dist,
+                                 const double left_move_dist,
+                                 const double right_move_dist,
+                                 const bool base_on_slot) const;
 
   void TransformCoordFromGlobalToLocal(
       const geometry_lib::GlobalToLocalTf& g2l_tf);

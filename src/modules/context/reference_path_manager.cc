@@ -59,14 +59,16 @@ bool ReferencePathManager::update() {
     return false;
   }
   double time_end = IflyTime::Now_ms();
-  ILOG_DEBUG << "ReferencePathManager update cost 1.1:" << time_end - time_start;
+  ILOG_DEBUG << "ReferencePathManager update cost 1.1:"
+             << time_end - time_start;
   // if fix_lane is empty, set current_lane to fix_lane
   if (fix_lane == nullptr) {
     ILOG_WARN << "fix lane is empty";
     virtual_lane_manager->update_last_fix_lane_id(lane_virtual_id);
   }
   time_end = IflyTime::Now_ms();
-  ILOG_DEBUG << "ReferencePathManager update cost 1.2:" << time_end - time_start;
+  ILOG_DEBUG << "ReferencePathManager update cost 1.2:"
+             << time_end - time_start;
   ILOG_DEBUG << "--------- for lane_virtual_id: update" << lane_virtual_id;
   if (left_lane != nullptr) {
     lane_virtual_id = left_lane->get_virtual_id();
@@ -74,14 +76,16 @@ bool ReferencePathManager::update() {
     ILOG_DEBUG << "--------- for left_lane: update" << lane_virtual_id;
   }
   time_end = IflyTime::Now_ms();
-  ILOG_DEBUG << "ReferencePathManager update cost 1.3:" << time_end - time_start;
+  ILOG_DEBUG << "ReferencePathManager update cost 1.3:"
+             << time_end - time_start;
   if (right_lane != nullptr) {
     lane_virtual_id = right_lane->get_virtual_id();
     get_reference_path_by_lane(lane_virtual_id, true);
     ILOG_DEBUG << "--------- for right_lane: update" << lane_virtual_id;
   }
   time_end = IflyTime::Now_ms();
-  ILOG_DEBUG << "ReferencePathManager update cost 1.4:" << time_end - time_start;
+  ILOG_DEBUG << "ReferencePathManager update cost 1.4:"
+             << time_end - time_start;
   time_start = IflyTime::Now_ms();
   // step2 check reference_paths_'s history, and update data
   for (auto it = reference_paths_.begin(); it != reference_paths_.end();) {

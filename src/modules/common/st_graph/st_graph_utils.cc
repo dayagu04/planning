@@ -308,7 +308,8 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     const auto& veh_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
     const auto ego_half_width = veh_param.width * 0.5;
-    auto vru_pred_last_point = agent->trajectories_used_by_st_graph().front().back();
+    auto vru_pred_last_point =
+        agent->trajectories_used_by_st_graph().front().back();
     double vru_current_s, vru_current_l;
     double vru_pred_last_point_s, vru_pred_last_point_l;
     if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &vru_current_s,

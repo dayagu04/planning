@@ -16,7 +16,8 @@ namespace control {
 ErrorType BasicPurePursuitModel::ProcessReferencePath(
     const std::shared_ptr<ReferencePath>& reference_path) {
   if (reference_path == nullptr) {
-    ILOG_ERROR << "BasicPurePursuitModel::ProcessReferencePath: reference path is null";
+    ILOG_ERROR << "BasicPurePursuitModel::ProcessReferencePath: reference path "
+                  "is null";
     return ErrorType::kIllegalInput;
   }
   const auto& ref_points = reference_path->get_points();

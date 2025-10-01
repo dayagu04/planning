@@ -92,7 +92,8 @@ bool PolynomialCurveSampling::SamplingByQunticPolynomial(
   node_path.points[0].y = path.back().y;
   node_path.points[0].theta = IflyUnifyTheta(path.back().phi, M_PIf32);
 
-  polynomial_node->Set(node_path, *grid_map_bound_, *config_, node_path.path_dist);
+  polynomial_node->Set(node_path, *grid_map_bound_, *config_,
+                       node_path.path_dist);
   polynomial_node->SetPathType(AstarPathType::QUNTIC_POLYNOMIAL);
   polynomial_node->SetGearType(path.back().gear);
   polynomial_node->SetPre(current_node);

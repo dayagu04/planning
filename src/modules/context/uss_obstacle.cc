@@ -341,8 +341,8 @@ const bool UssObstacle::GetTwoArcIntersection(Eigen::Vector2d &intersection,
 }
 
 const bool UssObstacle::GetArcLineSegIntersection(Eigen::Vector2d &intersection,
-                                               const Arc &arc1,
-                                               const Arc &line2) const {
+                                                  const Arc &arc1,
+                                                  const Arc &line2) const {
   // use pA and pB of arc to fake line
   const auto &circle_info = arc1.circle_info;
 
@@ -408,7 +408,7 @@ void UssObstacle::CalRemainDist() {
       Eigen::Vector2d intersection;
       if (car_point_mode_ == LINE_MODE) {
         if (GetArcLineSegIntersection(intersection, uss_arc_vec_[j],
-                                   car_arc_vec_[i])) {
+                                      car_arc_vec_[i])) {
           dist = (car_arc_vec_[i].pA - intersection).norm();
         }
       } else {

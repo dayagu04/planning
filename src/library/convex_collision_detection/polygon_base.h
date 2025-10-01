@@ -157,7 +157,7 @@ int InitPolygon(Polygon2D *polygon);
 int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly);
 
 void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
-                       bool use_center_pose, bool radius_known, double radius);
+                        bool use_center_pose, bool radius_known, double radius);
 
 int GenerateRectPolygon(Polygon2D *polygon, double min_x, double min_y,
                         double max_x, double max_y);
@@ -184,8 +184,8 @@ int RULocalPolygonToGlobal(Polygon2D *poly_global, const Polygon2D *poly_local,
                            const Pose2D *global_pose);
 
 void RULocalPolygonToGlobalFast(Polygon2D *poly_global,
-                               const Polygon2D *poly_local,
-                               const Transform2d &tf);
+                                const Polygon2D *poly_local,
+                                const Transform2d &tf);
 
 int GlobalPolygonToRULocal(Polygon2D *poly_local, const Polygon2D *poly_global,
                            const Pose2D *global_pose);

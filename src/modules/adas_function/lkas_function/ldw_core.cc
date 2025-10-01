@@ -1108,13 +1108,13 @@ double LdwCore::UpdateTlcThreshold(void) {
     if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
         iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_LOW) {
       tlc_calculate_base = ldw_tlc_near_;
-    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
-               iflyauto::SensitivityLevel::
-                   SENSITIVITY_LEVEL_MIDDLE) {
+    } else if (function_state_machine_info_ptr->switch_sts
+                   .ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_MIDDLE) {
       tlc_calculate_base = ldw_tlc_medium_;
-    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
-               iflyauto::SensitivityLevel::
-                   SENSITIVITY_LEVEL_HIGH) {
+    } else if (function_state_machine_info_ptr->switch_sts
+                   .ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_HIGH) {
       tlc_calculate_base = ldw_tlc_far_;
     } else {
       tlc_calculate_base = ldw_tlc_medium_;

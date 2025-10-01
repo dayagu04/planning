@@ -20,7 +20,8 @@ LaneReferencePath::LaneReferencePath(int target_lane_virtual_id)
     : ReferencePath() {
   lane_virtual_id_ = target_lane_virtual_id;
   // update();
-  ILOG_DEBUG << "construct lane_reference_path: target_lane_virtual_id:" << target_lane_virtual_id;
+  ILOG_DEBUG << "construct lane_reference_path: target_lane_virtual_id:"
+             << target_lane_virtual_id;
 }
 
 void LaneReferencePath::update(planning::framework::Session *session) {
@@ -213,7 +214,8 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
   return ref_path_points.size() >= 3;
 }
 
-bool LaneReferencePath::get_ref_points_hpp(ReferencePathPoints &ref_path_points) {
+bool LaneReferencePath::get_ref_points_hpp(
+    ReferencePathPoints &ref_path_points) {
   auto virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   auto virtual_lane =
@@ -279,45 +281,47 @@ bool LaneReferencePath::get_ref_points_hpp(ReferencePathPoints &ref_path_points)
   }
   origin_reference_path_length_ = origin_reference_path_total_length;
   if (ref_path_points.size() >= 2) {
-    double extend_buff =
-      session_->environmental_model().get_route_info()->get_virtual_extend_buff();
+    double extend_buff = session_->environmental_model()
+                             .get_route_info()
+                             ->get_virtual_extend_buff();
     ego_projection_length_in_reference_path_ =
         CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
-    double target_slot_projection_length_in_reference_path = origin_reference_path_length_;
-    const auto &parking_slot_manager = session_->environmental_model().get_parking_slot_manager();
+    double target_slot_projection_length_in_reference_path =
+        origin_reference_path_length_;
+    const auto &parking_slot_manager =
+        session_->environmental_model().get_parking_slot_manager();
     if (parking_slot_manager->IsExistTargetSlot()) {
-      const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
-      const auto &target_slot_polygon = parking_slot_manager->GetTargetSlotPolygon();
+      const auto &target_slot_points =
+          parking_slot_manager->GetTargetSlotPoints();
+      const auto &target_slot_polygon =
+          parking_slot_manager->GetTargetSlotPolygon();
       if (target_slot_polygon.is_convex()) {
-        planning_math::Box2d target_slot_box = target_slot_polygon.MinAreaBoundingBox();
+        planning_math::Box2d target_slot_box =
+            target_slot_polygon.MinAreaBoundingBox();
         target_slot_projection_length_in_reference_path =
-          CalculatePointProjectionDistanceInReferencePath(
-            target_slot_box.center_x(),
-            target_slot_box.center_y(),
-            ref_path_points);
+            CalculatePointProjectionDistanceInReferencePath(
+                target_slot_box.center_x(), target_slot_box.center_y(),
+                ref_path_points);
       } else {
         planning_math::LineSegment2d axis(
-        planning_math::Vec2d(target_slot_points.front().x(),
-                             target_slot_points.front().y()),
-        planning_math::Vec2d(target_slot_points.back().x(),
-                             target_slot_points.back().y()));
+            planning_math::Vec2d(target_slot_points.front().x(),
+                                 target_slot_points.front().y()),
+            planning_math::Vec2d(target_slot_points.back().x(),
+                                 target_slot_points.back().y()));
         target_slot_projection_length_in_reference_path =
-          CalculatePointProjectionDistanceInReferencePath(
-            axis.center().x(),
-            axis.center().y(),
-            ref_path_points);
+            CalculatePointProjectionDistanceInReferencePath(
+                axis.center().x(), axis.center().y(), ref_path_points);
       }
       if ((target_slot_projection_length_in_reference_path + extend_buff) >
           origin_reference_path_total_length) {
         if (ego_projection_length_in_reference_path_ >
-          (target_slot_projection_length_in_reference_path + extend_buff)) {
-          extend_buff =
-            ego_projection_length_in_reference_path_ - target_slot_projection_length_in_reference_path;
+            (target_slot_projection_length_in_reference_path + extend_buff)) {
+          extend_buff = ego_projection_length_in_reference_path_ -
+                        target_slot_projection_length_in_reference_path;
         }
         const double extend_length =
-          target_slot_projection_length_in_reference_path +
-          extend_buff -
-          origin_reference_path_total_length;
+            target_slot_projection_length_in_reference_path + extend_buff -
+            origin_reference_path_total_length;
         ReferencePathPoint extend_point;
         const int point_nums = ref_path_points.size();
         extend_point = CalculateExtendedReferencePathPoint(
@@ -577,8 +581,7 @@ double LaneReferencePath::CalculatePointProjectionDistanceInReferencePath(
     dx = point_x - cur_point.x();
     dy = point_y - cur_point.y();
     double temp_min_distance_square_to_point = dx * dx + dy * dy;
-    if (temp_min_distance_square_to_point <
-        min_distance_square_to_point) {
+    if (temp_min_distance_square_to_point < min_distance_square_to_point) {
       nearest_point_index = i;
       accumulate_distance_for_nearest_point =
           accumulate_distance_reference_path;

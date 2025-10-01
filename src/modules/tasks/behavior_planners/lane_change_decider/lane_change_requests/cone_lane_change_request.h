@@ -3,7 +3,6 @@
 #include "config/basic_type.h"
 #include "lane_change_request.h"
 
-
 namespace planning {
 
 /// @brief 避障换道请求
