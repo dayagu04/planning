@@ -562,7 +562,7 @@ bool LaneChangeStateMachineManager::CheckIfInPerfectLaneKeeping() const {
         std::max(0.5 * cur_pos_path_point.lane_width, dist_threshold);
   }
 
-  std::vector<double> angle_thre_v{0.1047, 0.0873, 0.0698, 0.0524, 0.0349};
+  std::vector<double> angle_thre_v{0.1047, 0.1047, 0.0698, 0.0524, 0.0349};
   std::vector<double> angle_thre_bp{1.0, 4.167, 8.333, 12.5, 16.667};
   double angle_threshold = interp(v_ego, angle_thre_bp, angle_thre_v);
 

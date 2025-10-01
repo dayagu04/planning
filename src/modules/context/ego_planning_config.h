@@ -2313,6 +2313,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
                      "path_backward_appended_length");
     ReadItem<double>(json, max_steer_angle_dot, "lat_motion_ilqr",
                      "max_steer_angle_dot");
+    ReadItem<double>(json, max_steer_angle_dot_lc, "lat_motion_ilqr",
+                     "max_steer_angle_dot_lc");
     ReadItem<double>(json, max_steer_angle_dot_low_speed, "lat_motion_ilqr",
                      "max_steer_angle_dot_low_speed");
     ReadItem<int>(json, lc_style, "lat_motion_ilqr",
@@ -2327,6 +2329,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double min_ego_vel = 5.0;
   double min_v_cruise = 2.0;
   double max_steer_angle_dot = 200.0;
+  double max_steer_angle_dot_lc = 200.0;
   double max_steer_angle_dot_low_speed = 10.0;
 
   double acc_bound = 1.5;

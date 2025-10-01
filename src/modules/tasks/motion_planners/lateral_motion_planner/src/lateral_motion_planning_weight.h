@@ -172,6 +172,8 @@ class LateralMotionPlanningWeight {
 
   void SetMaxJerk(const double max_jerk) { max_jerk_ = max_jerk; }
 
+  void SetMaxJerkLC(const double max_jerk_lc) { max_jerk_lc_ = max_jerk_lc; }
+
   void SetLCBackFlag(const bool is_lane_change_back) {
     is_lane_change_back_ = is_lane_change_back;
   }
@@ -276,6 +278,7 @@ class LateralMotionPlanningWeight {
   double end_ratio_for_qjerk_;
   double max_acc_;
   double max_jerk_;
+  double max_jerk_lc_;
   double max_jerk_low_speed_;
   double last_expected_average_acc_;
   double expected_average_acc_;

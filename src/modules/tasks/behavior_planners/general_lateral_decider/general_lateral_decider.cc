@@ -651,9 +651,19 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       s += (span_t - t) * cruise_v;
     }
   }
+  double ref_length_change = 0.5;
+  if (ego_v <= 5.556 &&
+      (is_LC_CHANGE ||
+       is_LC_BACK ||
+       is_LC_HOLD)) {
+    std::vector<double> xp_ego_v{2.0, 4.167, 5.556};
+    std::vector<double> fp_length_diff{0.1, 0.3, 0.5};
+    ref_length_change =
+      planning::interp(ego_v, xp_ego_v, fp_length_diff);
+  }
   if (last_ref_length_ >= 10.0 &&
       session_->environmental_model().GetVehicleDbwStatus()) {
-    s = std::min(s, last_ref_length_ + 0.5);
+    s = std::min(s, last_ref_length_ + ref_length_change);
   }
   auto cart_ref_info = coarse_planning_info.cart_ref_info;
   double s_ref = planning_init_point.frenet_state.s;
@@ -751,10 +761,27 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     if (lc_request_direction == LEFT_CHANGE) {
       lc_target_l *= -1.0;
     }
+    if (lc_request_direction == LEFT_CHANGE &&
+        planning_init_point.frenet_state.r - last_lc_ref_offset_ > 1e-3) {
+      lc_target_l = 0.0;
+    } else if (lc_request_direction == RIGHT_CHANGE &&
+               planning_init_point.frenet_state.r - last_lc_ref_offset_ < -1e-3) {
+      lc_target_l = 0.0;
+    }
   } else {
     if (std::fabs(ego_frenet_state_.heading_angle() * 57.3) >= 0.5 ||
         (std::fabs(planning_init_point.frenet_state.r) - std::fabs(last_lc_ref_offset_)) >= 0.15) {
       lc_target_l = last_lc_ref_offset_;
+    }
+    if (ego_frenet_state_.heading_angle() * 57.3 > 1e-3 &&
+        planning_init_point.frenet_state.r - last_lc_ref_offset_ > 1e-3) {
+      lc_target_l = 0.0;
+    } else if (ego_frenet_state_.heading_angle() * 57.3 < -1e-3 &&
+               planning_init_point.frenet_state.r - last_lc_ref_offset_ < -1e-3) {
+      lc_target_l = 0.0;
+    }
+    if (is_LC_BACK || is_LC_HOLD) {
+      lc_target_l = 0.0;
     }
   }
   last_lc_ref_offset_ = lc_target_l;

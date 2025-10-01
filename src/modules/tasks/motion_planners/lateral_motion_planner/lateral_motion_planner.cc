@@ -385,18 +385,24 @@ bool LateralMotionPlanner::AssembleInput() {
   double max_steer_angle = vehicle_param.max_steer_angle;  // rad
   double max_steer_angle_rate =
       std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot / 57.3);
+  double max_steer_angle_rate_lc =
+      std::min(vehicle_param.max_steer_angle_rate, config_.max_steer_angle_dot_lc / 57.3);
   double max_wheel_angle =
       max_steer_angle / steer_ratio;
   double max_wheel_angle_rate =
       max_steer_angle_rate / steer_ratio;
+  double max_wheel_angle_rate_lc =
+      max_steer_angle_rate_lc / steer_ratio;
   double max_acc = std::min(max_wheel_angle * kv2, 5.0);
   double limit_jerk = max_wheel_angle_rate * kv2;
+  double limit_jerk_lc = max_wheel_angle_rate_lc * kv2;
   std::vector<double> xp_v{4.167, 8.333, 15.0, 25.0};
   std::vector<double> fp_max_jerk{limit_jerk, 1.8, 1.5, 1.4};
   double max_jerk = planning::interp(ref_vel, xp_v, fp_max_jerk);
   max_jerk = std::min(limit_jerk, max_jerk);
   planning_weight_ptr_->SetMaxAcc(max_acc);
   planning_weight_ptr_->SetMaxJerk(max_jerk);
+  planning_weight_ptr_->SetMaxJerkLC(limit_jerk_lc);
   const auto &coarse_planning_info =
       session_->planning_context()
               .lane_change_decider_output()
@@ -496,13 +502,51 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetIsBoundAvoid(general_lateral_decider_output.bound_avoid);
   planning_weight_ptr_->SetExpectedAvoidJerk(general_lateral_decider_output.recommended_bound_avoid_jerk);
 
-  // lane change back
+  // lane change state
   const auto target_state =
       lane_change_decider_output.coarse_planning_info.target_state;
   bool lane_change_back = target_state == kLaneChangeCancel;
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
   bool lane_change_hold = target_state == kLaneChangeHold;
   planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
+  bool is_merge_lc =
+      lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
+      lane_change_decider_output.lc_request_source == MAP_REQUEST;
+  bool merge_point_valid =
+      session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point_valid;
+  const auto& merge_point =
+      session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point;
+  double dist_to_merge_point = 10000.0;
+  if (merge_point_valid) {
+    dist_to_merge_point =
+      std::min(std::hypot(planning_init_point.lat_init_state.x() - merge_point.x,
+                          planning_init_point.lat_init_state.y() - merge_point.y),
+               dist_to_merge_point);
+  }
+  double distance_to_first_road_merge =
+      session_->environmental_model()
+              .get_route_info()
+              ->get_route_info_output()
+              .distance_to_first_road_merge;
+  dist_to_merge_point =
+    std::min(dist_to_merge_point, distance_to_first_road_merge);
+  bool is_prevent_solid_line_lc =
+      lane_change_decider_output.is_dash_not_enough_for_lc;
+  bool is_emergency_lc = false;
+      // lane_change_decider_output.is_emergency_avoidance_situation;
+  if (is_emergency_lc) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
+  } else if (is_prevent_solid_line_lc ||
+             (is_merge_lc && std::fabs(dist_to_merge_point) < ref_vel * 5.0)) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
+  }
+  if (target_state == kLaneKeeping) {
+    planning_weight_ptr_->SetLaneChangeStyle(pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
+  }
 
   // lane borrow
   const auto &lane_borrow_decider_output =
