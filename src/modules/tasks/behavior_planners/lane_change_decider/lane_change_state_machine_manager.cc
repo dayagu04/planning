@@ -2448,7 +2448,7 @@ void LaneChangeStateMachineManager::GetSideRiskAgents() {
   const auto &ego_sl_state = target_reference_path->get_frenet_ego_state();
   const auto &obstacles = target_reference_path->get_obstacles();
 
-  double concerned_s_start = ego_sl_bd.s_start - 5.0;
+  double concerned_s_start = ego_sl_bd.s_start;
   double concerned_s_end = ego_sl_bd.s_end + 5.0;  // longitudinal safety
   std::pair<double, double> ego_longi{concerned_s_start, concerned_s_end};
   double ego_vel = ego_sl_state.velocity_s();
@@ -2473,6 +2473,9 @@ void LaneChangeStateMachineManager::GetSideRiskAgents() {
     }
     if(obstacle_sl.s_start > target_front_s){
       continue;
+    }
+    if(obstacle_sl.s_end < ego_sl_bd.s_start - 5.0){
+      continue; //后方远距离不考虑13变2
     }
     if(!ego_trajs_future_.empty()){
       double s_end = ego_trajs_future_.back().s;
