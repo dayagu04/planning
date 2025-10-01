@@ -4,11 +4,13 @@
 // #include "debug_info_log.h"
 // #include "environmental_model.h"
 // #include "planning_context.h"
-// #include "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
+// #include
+// "tasks/behavior_planners/scc_lon_behavior_planner/scc_lon_behavior_types.h"
 // namespace planning {
 // namespace scc {
 
-// SvGraphGenerator::SvGraphGenerator(const SccLonBehaviorPlannerConfig &plan_cfg)
+// SvGraphGenerator::SvGraphGenerator(const SccLonBehaviorPlannerConfig
+// &plan_cfg)
 //     : config_(plan_cfg) {}
 
 // void SvGraphGenerator::Update(
@@ -60,7 +62,8 @@
 //   for (int i = 0; i <= config_.lon_num_step; i++) {
 //     double s = base_dis + i * config_.delta_time * v_cruise;
 //     double curv = std::fabs(2 * d_poly[0] * s + d_poly[1]) /
-//                   std::pow(std::pow(2 * d_poly[0] * s + d_poly[1], 2) + 1, 1.5);
+//                   std::pow(std::pow(2 * d_poly[0] * s + d_poly[1], 2) +
+//                   1, 1.5);
 //     double road_radius = 1 / std::max(curv, 0.0001);
 //     double a_y_max =
 //         interp(std::abs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);

@@ -50,7 +50,8 @@ bool ParkingSwitchDecider::Execute() {
       (current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
     // 多车位
     for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
-      if ((target_slot_id == successful_slot_info_list[i].id) && (target_slot_id > 0)) {
+      if ((target_slot_id == successful_slot_info_list[i].id) &&
+          (target_slot_id > 0)) {
         parking_switch_info_.is_selected_slot_allowed_to_park = true;
         break;
       }
@@ -61,16 +62,16 @@ bool ParkingSwitchDecider::Execute() {
     }
     parking_switch_info_.has_parking_slot_in_hpp_searching = true;
   } else if ((is_reached_target_slot ||
-             (distance_to_target_slot < config_.dist_to_parking_space_thr)) &&
+              (distance_to_target_slot < config_.dist_to_parking_space_thr)) &&
              (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
     for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
-      if ((target_slot_id == successful_slot_info_list[i].id) && (target_slot_id > 0)) {
+      if ((target_slot_id == successful_slot_info_list[i].id) &&
+          (target_slot_id > 0)) {
         parking_switch_info_.is_memory_slot_allowed_to_park = true;
         break;
       }
     }
-    if ((ego_v <= 1e-2) ||
-        (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
+    if ((ego_v <= 1e-2) || (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
       parking_switch_info_.is_memory_slot_occupied = true;
     }
   } else if (is_reached_target_slot &&
@@ -84,7 +85,8 @@ bool ParkingSwitchDecider::Execute() {
   auto &parking_switch_decider_output =
       session_->mutable_planning_context()
           ->mutable_parking_switch_decider_output();
-  if ((parking_switch_decider_output.parking_switch_info.is_memory_slot_occupied) &&
+  if ((parking_switch_decider_output.parking_switch_info
+           .is_memory_slot_occupied) &&
       (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
     parking_switch_info_.is_memory_slot_occupied = true;
   }

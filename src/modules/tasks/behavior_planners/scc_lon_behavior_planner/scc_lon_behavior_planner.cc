@@ -9,7 +9,8 @@
 // #include "debug_info_log.h"
 // #include "ifly_time.h"
 // #include "planning_context.h"
-// #include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
+// #include
+// "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
 // #include "task_basic_types.h"
 // #include "trajectory1d/trajectory1d.h"
 
@@ -43,8 +44,8 @@
 // namespace planning {
 
 // SccLonBehaviorPlanner::SccLonBehaviorPlanner(
-//     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
-//     : Task(config_builder, session) {
+//     const EgoPlanningConfigBuilder *config_builder, framework::Session
+//     *session) : Task(config_builder, session) {
 //   config_ = config_builder->cast<SccLonBehaviorPlannerConfig>();
 //   name_ = "SccLonBehaviorPlanner";
 
@@ -67,9 +68,10 @@
 // }
 
 // void SccLonBehaviorPlanner::Init() {
-//   lon_behav_plan_input_ = std::make_shared<common::RealTimeLonBehaviorInput>();
-//   st_graph_ = std::make_shared<scc::StGraphGenerator>(config_, session_);
-//   sv_graph_ = std::make_shared<scc::SvGraphGenerator>(config_);
+//   lon_behav_plan_input_ =
+//   std::make_shared<common::RealTimeLonBehaviorInput>(); st_graph_ =
+//   std::make_shared<scc::StGraphGenerator>(config_, session_); sv_graph_ =
+//   std::make_shared<scc::SvGraphGenerator>(config_);
 // }
 
 // bool SccLonBehaviorPlanner::Calculate() {
@@ -181,8 +183,9 @@
 //   auto &function_info = session_->environmental_model().function_info();
 //   const auto &planning_init_point = ego_state_mgr->planning_init_point();
 
-//   const auto &lane_status = session_->mutable_planning_context()->lane_status();
-//   const auto &agent_manager =
+//   const auto &lane_status =
+//   session_->mutable_planning_context()->lane_status(); const auto
+//   &agent_manager =
 //       session_->environmental_model().get_agent_manager();
 
 //   // 0. set dbw (Drive-by-Wire)
@@ -520,7 +523,8 @@
 //   bool is_on_ramp = route_info_output.is_on_ramp;
 //   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
 //   double dis_to_stopline = virtual_lane_manager->GetEgoDistanceToStopline();
-//   double dis_to_crosswalk = virtual_lane_manager->GetEgoDistanceToCrosswalk();
+//   double dis_to_crosswalk =
+//   virtual_lane_manager->GetEgoDistanceToCrosswalk();
 //   planning::common::IntersectionState intersection_state =
 //       virtual_lane_manager->GetIntersectionState();
 
@@ -578,9 +582,9 @@
 
 // void SccLonBehaviorPlanner::UpdateLonRefPath(
 //     const std::vector<double> &s_refs, const std::vector<double> &v_refs,
-//     const scc::STboundaries &st_boundaries, const SVBoundaries &sv_boundaries,
-//     const std::pair<double, double> &a_bounds,
-//     const std::pair<double, double> &j_bounds) {
+//     const scc::STboundaries &st_boundaries, const SVBoundaries
+//     &sv_boundaries, const std::pair<double, double> &a_bounds, const
+//     std::pair<double, double> &j_bounds) {
 //   auto v_cruise = lon_behav_plan_input_->ego_info().ego_cruise();
 //   auto init_state_a = lon_init_state_[2];
 //   lon_behav_output_.t_list.resize(config_.lon_num_step + 1);
@@ -705,7 +709,8 @@
 //   if (lane_change_info.s_search_status && config_.enable_speed_adjust) {
 //     if (lane_change_info.st_search_vec.size() == config_.lon_num_step + 1) {
 //       for (size_t i = 0; i <= config_.lon_num_step; i++) {
-//         lon_behav_output_.s_refs[i].first = lane_change_info.st_search_vec[i];
+//         lon_behav_output_.s_refs[i].first =
+//         lane_change_info.st_search_vec[i];
 //       }
 //       std::cout << "use search path in lc wait!" << std::endl;
 //     } else {
@@ -845,7 +850,8 @@
 
 //   // 1. update CIPV
 //   int CIPV_id = -1;
-//   if ((lc_status != "left_lane_change") && (lc_status != "right_lane_change")) {
+//   if ((lc_status != "left_lane_change") && (lc_status !=
+//   "right_lane_change")) {
 //     if (is_lead_one_vehicle) {
 //       hmi_info->cipv_info.has_cipv = true;
 //       hmi_info->cipv_info.cipv_id = lateral_obstacle.lead_one().track_id();
@@ -862,12 +868,14 @@
 //   } else {
 //     if (is_temp_lead_one_vehicle) {
 //       hmi_info->cipv_info.has_cipv = true;
-//       hmi_info->cipv_info.cipv_id = lateral_obstacle.temp_lead_one().track_id();
-//       CIPV_id = lateral_obstacle.temp_lead_one().track_id();
+//       hmi_info->cipv_info.cipv_id =
+//       lateral_obstacle.temp_lead_one().track_id(); CIPV_id =
+//       lateral_obstacle.temp_lead_one().track_id();
 //     } else if (!is_temp_lead_one_vehicle && is_temp_lead_two_vehicle) {
 //       hmi_info->cipv_info.has_cipv = true;
-//       hmi_info->cipv_info.cipv_id = lateral_obstacle.temp_lead_two().track_id();
-//       CIPV_id = lateral_obstacle.temp_lead_two().track_id();
+//       hmi_info->cipv_info.cipv_id =
+//       lateral_obstacle.temp_lead_two().track_id(); CIPV_id =
+//       lateral_obstacle.temp_lead_two().track_id();
 //     } else {
 //       hmi_info->cipv_info.has_cipv = false;
 //       hmi_info->cipv_info.cipv_id = -1;
@@ -967,7 +975,8 @@
 
 //   // using jlt to generate s v curve
 //   double acc_min = planning_math::LerpWithLimit(
-//       kAccMinLower, kSpeedLower, kAccMinUpper, kSpeedUpper, lon_init_state_[1]);
+//       kAccMinLower, kSpeedLower, kAccMinUpper, kSpeedUpper,
+//       lon_init_state_[1]);
 
 //   constexpr double AccMinThreshold = -3.0;
 

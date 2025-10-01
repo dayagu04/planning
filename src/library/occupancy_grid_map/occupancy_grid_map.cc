@@ -48,8 +48,7 @@ void OccupancyGridMap::AddSlotPoint(const T &point) {
   return;
 }
 
-void OccupancyGridMap::AddSlotCoordinatePoint(
-    const Position2f &point) {
+void OccupancyGridMap::AddSlotCoordinatePoint(const Position2f &point) {
   Pose2f local;
 
   local.x = point.x - bound_.min_x;

@@ -110,8 +110,8 @@ static int calculate_tauOmega(float *tau, float *omega, float u, float v,
 
 /* formula 8.1 */
 // CSC
-static bool LpSpLp(float *t, float *u, float *v, float x, float y,
-                   float phi, float sin_phi, float cos_phi) {
+static bool LpSpLp(float *t, float *u, float *v, float x, float y, float phi,
+                   float sin_phi, float cos_phi) {
   float t1;
 
   CartesianToPolar(u, &t1, x - sin_phi, y - 1 + cos_phi);
@@ -131,8 +131,8 @@ static bool LpSpLp(float *t, float *u, float *v, float x, float y,
 
 /* formula 8.2 */
 // CSC
-static bool LpSpRp(float *t, float *u, float *v, float x, float y,
-                   float phi, float sin_phi, float cos_phi) {
+static bool LpSpRp(float *t, float *u, float *v, float x, float y, float phi,
+                   float sin_phi, float cos_phi) {
   float t1, u1, theta;
 
   CartesianToPolar(&u1, &t1, x + sin_phi, y - 1 - cos_phi);
@@ -316,8 +316,8 @@ static int CSC(RSPathParam *path, float *Lmin, RSEndPoint *end) {
 }
 
 /* formula 8.3, 8.4 */
-static bool LpRmL(float *t, float *u, float *v, float x, float y,
-                  float phi, float sin_phi, float cos_phi) {
+static bool LpRmL(float *t, float *u, float *v, float x, float y, float phi,
+                  float sin_phi, float cos_phi) {
   float xi, eta, t1, u1, theta;
 
   xi = x - sin_phi, eta = y - 1 + cos_phi;
@@ -561,8 +561,8 @@ static int CCCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
 }
 
 /* formula 8.9 */
-static bool LpRmSmLm(float *t, float *u, float *v, float x, float y,
-                     float phi, float sin_phi, float cos_phi) {
+static bool LpRmSmLm(float *t, float *u, float *v, float x, float y, float phi,
+                     float sin_phi, float cos_phi) {
   float xi, eta, rho, theta, r, t1;
 
   xi = x - sin_phi;
@@ -586,8 +586,8 @@ static bool LpRmSmLm(float *t, float *u, float *v, float x, float y,
 }
 
 /* formula 8.10 */
-static bool LpRmSmRm(float *t, float *u, float *v, float x, float y,
-                     float phi, float sin_phi, float cos_phi) {
+static bool LpRmSmRm(float *t, float *u, float *v, float x, float y, float phi,
+                     float sin_phi, float cos_phi) {
   float xi, eta, rho, theta;
 
   xi = x + sin_phi;
@@ -766,8 +766,8 @@ static int CCSC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
 }
 
 /* formula 8.11 */
-static bool LpRmSLmRp(float *t, float *u, float *v, float x, float y,
-                      float phi, float sin_phi, float cos_phi) {
+static bool LpRmSLmRp(float *t, float *u, float *v, float x, float y, float phi,
+                      float sin_phi, float cos_phi) {
   float xi, eta, rho, theta, u1;
 
   xi = x + sin_phi;

@@ -142,7 +142,8 @@ ErrorType BasicPurePursuitModel::CalculateAlpha(const double lat_offset) {
   return ErrorType::kSuccess;
 }
 
-ErrorType BasicPurePursuitModel::CalculateDesiredDelta(const double lat_offset) {
+ErrorType BasicPurePursuitModel::CalculateDesiredDelta(
+    const double lat_offset) {
   delta_ = 0;
   alpha_ = 0;
   goal_point_(0, 0);

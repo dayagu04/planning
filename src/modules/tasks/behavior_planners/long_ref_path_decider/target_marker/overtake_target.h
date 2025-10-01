@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ego_planning_config.h"
-#include "lon_target_maker.pb.h"
 #include "follow_target.h"
+#include "lon_target_maker.pb.h"
 #include "target.h"
 
 namespace planning {

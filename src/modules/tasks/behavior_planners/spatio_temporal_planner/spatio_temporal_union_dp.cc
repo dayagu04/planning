@@ -1,34 +1,33 @@
 #include "spatio_temporal_union_dp.h"
 #include <math.h>
+#include <omp.h>
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <cstddef>
+#include <vector>
 #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "behavior_planners/spatio_temporal_planner/slt_graph_point.h"
 #include "behavior_planners/spatio_temporal_planner/slt_point.h"
 #include "behavior_planners/spatio_temporal_planner/speed_data.h"
 #include "config/basic_type.h"
 #include "define/geometry.h"
+#include "log.h"
 #include "math/box2d.h"
 #include "spatio_temporal_union_dp_input.pb.h"
-#include "src/modules/common/math/line_segment2d.h"
-#include "src/modules/common/math/curve1d/cubic_polynomial_curve1d.h"
-#include "src/modules/common/math/math_utils.h"
-#include "src/modules/tasks/task_interface/lane_change_decider_output.h"
-#include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
-#include "src/modules/common/trajectory1d/trajectory1d.h"
 #include "src/library/advanced_ctrl_lib/include/spline.h"
-#include "src/modules/common/math/linear_interpolation.h"
 #include "src/modules/common/agent/agent.h"
-#include <algorithm>
-#include <array>
-#include <cmath>
-#include <cstddef>
-#include <vector>
-#include "log.h"
+#include "src/modules/common/math/curve1d/cubic_polynomial_curve1d.h"
+#include "src/modules/common/math/line_segment2d.h"
+#include "src/modules/common/math/linear_interpolation.h"
+#include "src/modules/common/math/math_utils.h"
+#include "src/modules/common/trajectory1d/trajectory1d.h"
+#include "src/modules/common/trajectory1d/variable_coordinate_time_optimal_trajectory.h"
+#include "src/modules/tasks/task_interface/lane_change_decider_output.h"
 #include "vec2d.h"
-#include <omp.h>
 
 namespace planning {
 using namespace planning_math;
-
 
 namespace {
 constexpr double kDoubleEpsilon = 1.0e-6;
@@ -66,18 +65,16 @@ constexpr double kLateralMaxDeceleration = -1.44;
 constexpr double kDefaultMaxDisBetweenObs = 100.0;
 constexpr double kDefaultMaxDeceleration = -4.4;
 constexpr double kDefaultMaxAcceleration = 2.5;
-constexpr double kDefaultRearObsGenerateCostDistance= 3.0;
-constexpr double kDefaultHalfSamplingRange= 0.90;
+constexpr double kDefaultRearObsGenerateCostDistance = 3.0;
+constexpr double kDefaultHalfSamplingRange = 0.90;
 constexpr int kDefaultTrajectoryPointSize = 26;
 constexpr double kConsiderDynamicObstacleCostTimeLength = 3.0;
 constexpr double kSigmoidChangeRateCoefficient = 0.5;
 
-
-}
+}  // namespace
 // namespace
 
-void SpatioTemporalUnionDp::Init() {
-}
+void SpatioTemporalUnionDp::Init() {}
 
 void SpatioTemporalUnionDp::Reset() {
   trajectory_points_.Clear();
@@ -87,22 +84,22 @@ void SpatioTemporalUnionDp::Reset() {
 bool SpatioTemporalUnionDp::Update(
     TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input,
-    const double &target_s,
-    planning_math::KDPath &current_lane_coord,
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input,
+    const double &target_s, planning_math::KDPath &current_lane_coord,
     const int &half_lateral_sample_nums,
     const bool &last_enable_using_st_plan) {
   dp_st_cost_.Init(spatio_temporal_union_plan_input.long_weight_params());
   enable_use_ego_cart_point_ = true;
   current_lane_coord_ = current_lane_coord;
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
   Point2D ego_frenet_point(ego_init_state.s(), ego_init_state.l());
-  if(!current_lane_coord_.SLToXY(ego_frenet_point,
-                              ego_cart_point_)) {
+  if (!current_lane_coord_.SLToXY(ego_frenet_point, ego_cart_point_)) {
     enable_use_ego_cart_point_ = false;
   }
 
-  if (!InitCostTable(spatio_temporal_union_plan_input, half_lateral_sample_nums, target_s)) {
+  if (!InitCostTable(spatio_temporal_union_plan_input, half_lateral_sample_nums,
+                     target_s)) {
     ILOG_DEBUG << "Initialize cost table failed";
     return false;
   }
@@ -113,16 +110,19 @@ bool SpatioTemporalUnionDp::Update(
   }
 
   auto time_start = IflyTime::Now_ms();
-  if (!CalculateTotalCost(agent_trajs, target_s, spatio_temporal_union_plan_input)) {
+  if (!CalculateTotalCost(agent_trajs, target_s,
+                          spatio_temporal_union_plan_input)) {
     ILOG_DEBUG << "Calculate total cost failed";
     return false;
   }
   auto time_end = IflyTime::Now_ms();
-  ILOG_DEBUG << "SpatioTemporalUnionDp::Update() CalculateTotalCost cost:" << time_end - time_start;
+  ILOG_DEBUG << "SpatioTemporalUnionDp::Update() CalculateTotalCost cost:"
+             << time_end - time_start;
 
   if (!RetrieveSpeedProfile(traj_points, spatio_temporal_union_plan_input)) {
     ILOG_DEBUG << "Retrieve best speed profile failed";
-    FallbackFunction(spatio_temporal_union_plan_input, traj_points, last_enable_using_st_plan);
+    FallbackFunction(spatio_temporal_union_plan_input, traj_points,
+                     last_enable_using_st_plan);
     return false;
   }
 
@@ -130,19 +130,22 @@ bool SpatioTemporalUnionDp::Update(
 }
 
 bool SpatioTemporalUnionDp::InitCostTable(
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input,
-    const int &half_lateral_sample_nums,
-    const double &target_s) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input,
+    const int &half_lateral_sample_nums, const double &target_s) {
   // Time dimension is homogeneous while Spatial dimension has two resolutions,
   // dense and sparse with dense resolution coming first in the spatial horizon
 
   // Sanity check for numerical stability
-  const auto& dp_search_paramms = spatio_temporal_union_plan_input.dp_search_paramms();
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &dp_search_paramms =
+      spatio_temporal_union_plan_input.dp_search_paramms();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
 
-  // total_length_s_ = std::max(ego_init_state.v0(), ego_init_state.v_cruise()) * 5.0;
-  // total_length_s_ = std::max(total_length_s_, kConsiderLaneLineMinLength);
-  total_length_s_ = std::min(target_s, current_lane_coord_.Length() - ego_init_state.s());
+  // total_length_s_ = std::max(ego_init_state.v0(), ego_init_state.v_cruise())
+  // * 5.0; total_length_s_ = std::max(total_length_s_,
+  // kConsiderLaneLineMinLength);
+  total_length_s_ =
+      std::min(target_s, current_lane_coord_.Length() - ego_init_state.s());
 
   unit_t_ = dp_search_paramms.unit_t();
   inv_unit_t_ = 1.0 / unit_t_;
@@ -192,17 +195,19 @@ bool SpatioTemporalUnionDp::InitCostTable(
 
   cost_table_ = std::vector<std::vector<std::vector<SLTGraphPoint>>>(
       dimension_t_, std::vector<std::vector<SLTGraphPoint>>(
-        dimension_s_, std::vector<SLTGraphPoint>(dimension_l_, SLTGraphPoint())));
+                        dimension_s_, std::vector<SLTGraphPoint>(
+                                          dimension_l_, SLTGraphPoint())));
 
   double curr_t = 0.0;
   for (uint32_t i = 0; i < cost_table_.size(); ++i, curr_t += unit_t_) {
-    auto& cost_table_i = cost_table_[i];
+    auto &cost_table_i = cost_table_[i];
     // double curr_s = 0.0;
     double curr_s = ego_init_state.s();
     for (uint32_t j = 0; j < dense_dimension_s_; ++j, curr_s += dense_unit_s_) {
       double curr_l = ego_init_state.l() - kDefaultHalfSamplingRange;
-      for (uint32_t k = 0; k < dimension_l_; ++k, curr_l += lateral_sampling_length_interval_[k-1]) {
-        cost_table_i[j][k].Init(i, j, k,  SLTPoint(curr_s,curr_l, curr_t));
+      for (uint32_t k = 0; k < dimension_l_;
+           ++k, curr_l += lateral_sampling_length_interval_[k - 1]) {
+        cost_table_i[j][k].Init(i, j, k, SLTPoint(curr_s, curr_l, curr_t));
       }
     }
     curr_s = static_cast<double>(dense_dimension_s_ - 1) * dense_unit_s_ +
@@ -210,17 +215,18 @@ bool SpatioTemporalUnionDp::InitCostTable(
     for (uint32_t j = dense_dimension_s_; j < cost_table_i.size();
          ++j, curr_s += sparse_unit_s_) {
       double curr_l = ego_init_state.l() - kDefaultHalfSamplingRange;
-      for (uint32_t k = 0; k < dimension_l_; ++k, curr_l += lateral_sampling_length_interval_[k-1]) {
-        cost_table_i[j][k].Init(i, j, k,  SLTPoint(curr_s,curr_l, curr_t));
+      for (uint32_t k = 0; k < dimension_l_;
+           ++k, curr_l += lateral_sampling_length_interval_[k - 1]) {
+        cost_table_i[j][k].Init(i, j, k, SLTPoint(curr_s, curr_l, curr_t));
       }
     }
   }
-  auto& cost_init = cost_table_[0][0][0];
+  auto &cost_init = cost_table_[0][0][0];
   SLTPoint init_point(ego_init_state.s(), ego_init_state.l(), 0.0);
   cost_init.Init(0, 0, 0, init_point);
 
-  const auto& cost_table_0 = cost_table_[0];
-  const auto& cost_table_0_0 = cost_table_[0][0];
+  const auto &cost_table_0 = cost_table_[0];
+  const auto &cost_table_0_0 = cost_table_[0][0];
   spatial_distance_by_index_ = std::vector<double>(cost_table_0.size(), 0.0);
   lateral_distance_by_index_ = std::vector<double>(cost_table_0_0.size(), 0.0);
   for (uint32_t i = 0; i < cost_table_0.size(); ++i) {
@@ -231,25 +237,30 @@ bool SpatioTemporalUnionDp::InitCostTable(
     lateral_distance_by_index_[i] = min_l;
     min_l += lateral_sampling_length_interval_[i];
   }
-  l0_ = spatio_temporal_union_plan_input.lat_path_weight_params().path_l_cost_param_l0();
-  b_ = spatio_temporal_union_plan_input.lat_path_weight_params().path_l_cost_param_b();
-  k_ = spatio_temporal_union_plan_input.lat_path_weight_params().path_l_cost_param_k();
+  l0_ = spatio_temporal_union_plan_input.lat_path_weight_params()
+            .path_l_cost_param_l0();
+  b_ = spatio_temporal_union_plan_input.lat_path_weight_params()
+           .path_l_cost_param_b();
+  k_ = spatio_temporal_union_plan_input.lat_path_weight_params()
+           .path_l_cost_param_k();
   return true;
 }
 
 bool SpatioTemporalUnionDp::InitSpeedLimitLookUp(
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
   speed_limit_by_index_.clear();
   inv_speed_limit_table_.clear();
 
   speed_limit_by_index_.resize(dimension_s_);
-  for (size_t i = 0;i < speed_limit_by_index_.size(); i++) {
+  for (size_t i = 0; i < speed_limit_by_index_.size(); i++) {
     speed_limit_by_index_[i] = ego_init_state.v_cruise();
-    CaculateCurvatureLimitSpeed(
-        spatial_distance_by_index_[i], speed_limit_by_index_[i], spatio_temporal_union_plan_input);
-    CalculateMapSpeedLimit(
-        speed_limit_by_index_[i], spatio_temporal_union_plan_input);
+    CaculateCurvatureLimitSpeed(spatial_distance_by_index_[i],
+                                speed_limit_by_index_[i],
+                                spatio_temporal_union_plan_input);
+    CalculateMapSpeedLimit(speed_limit_by_index_[i],
+                           spatio_temporal_union_plan_input);
   }
   // 依赖纵向提供地图限速、曲率限速信息
   // const auto& speed_limit = st_graph_data_.speed_limit();
@@ -266,7 +277,8 @@ bool SpatioTemporalUnionDp::InitSpeedLimitLookUp(
 bool SpatioTemporalUnionDp::CalculateTotalCost(
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const double &target_s,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   // x y and z are for SLTGraph
   // l corresponding to y
   // s corresponding to x
@@ -279,21 +291,22 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
   int next_lowest_l = 0;
   const int consider_dynamic_obs_time_thd_index = 3;
   const double init_v = spatio_temporal_union_plan_input.init_state().v0();
-  const double v_cruise = spatio_temporal_union_plan_input.init_state().v_cruise();
+  const double v_cruise =
+      spatio_temporal_union_plan_input.init_state().v_cruise();
 
-  #ifdef OPENMP_DEBUG
-  // 添加线程数量探测
-  #pragma omp parallel
+#ifdef OPENMP_DEBUG
+// 添加线程数量探测
+#pragma omp parallel
   {
-    #pragma omp single
+#pragma omp single
     ILOG_DEBUG << "[OpenMP] Using %d threads:" << omp_get_num_threads();
   }
-  #endif
+#endif
 
-  // 保留串行结果
-  #ifdef VALIDATE_PARALLEL
+// 保留串行结果
+#ifdef VALIDATE_PARALLEL
   serial_cost_table_ = cost_table_;  // 深拷贝当前状态
-  #endif
+#endif
 
   double total_parallel_time = 0.0;
   double total_serial_time = 0.0;
@@ -308,44 +321,38 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
 
     auto time_start = IflyTime::Now_us();
     if (count > 0) {
-      if (spatio_temporal_union_plan_input.dp_search_paramms().enable_use_parallel_calculate_cost()) {
-        // 添加OpenMP并行
-        #pragma omp parallel for collapse(2) schedule(dynamic)
+      if (spatio_temporal_union_plan_input.dp_search_paramms()
+              .enable_use_parallel_calculate_cost()) {
+// 添加OpenMP并行
+#pragma omp parallel for collapse(2) schedule(dynamic)
         for (int r = next_lowest_row; r <= next_highest_row; ++r) {
           for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-            #ifdef OPENMP_DEBUG
+#ifdef OPENMP_DEBUG
             // 打印线程分配信息（控制频率）
             if (r % 10 == 0 && k == lowest_l) {
-              #pragma omp critical
-              ILOG_DEBUG << "[OpenMP] c=" << c
-                         << " r=" << r
-                         << " k=" << k
+#pragma omp critical
+              ILOG_DEBUG << "[OpenMP] c=" << c << " r=" << r << " k=" << k
                          << " -> Thread " << omp_get_thread_num();
             }
-            #endif
+#endif
 
             // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
             SLTGraphMessage msg(c, r, k);
-            ILOG_DEBUG << "cost_cr c=" << c
-                       << " r=" << r
-                       << " k=" << k;
-            CalculateCostAt(
-                &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
+            ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
+            CalculateCostAt(&msg, agent_trajs, target_s,
+                            spatio_temporal_union_plan_input);
           }
         }
       } else {
         for (int r = next_lowest_row; r <= next_highest_row; ++r) {
           for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-
             // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
             SLTGraphMessage msg(c, r, k);
-            ILOG_DEBUG << "cost_cr c=" << c
-                       << " r=" << r
-                       << " k=" << k;
+            ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
 
             auto t1 = IflyTime::Now_us();
-            CalculateCostAt(
-                &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
+            CalculateCostAt(&msg, agent_trajs, target_s,
+                            spatio_temporal_union_plan_input);
             auto t2 = IflyTime::Now_us();
             ILOG_DEBUG << "one time CalculateCostAt:" << t2 - t1;
           }
@@ -354,34 +361,34 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     }
     auto time_end = IflyTime::Now_us();
     total_parallel_time += (time_end - time_start);
-    ILOG_DEBUG << "CalculateTotalCost: time dimension cost:" << time_end - time_start;
+    ILOG_DEBUG << "CalculateTotalCost: time dimension cost:"
+               << time_end - time_start;
 
-    // 保留串行版本用于对比
-    #ifdef SERIAL_MODE
+// 保留串行版本用于对比
+#ifdef SERIAL_MODE
     auto serial_start = IflyTime::Now_us();
     if (count > 0) {
       for (int r = next_lowest_row; r <= next_highest_row; ++r) {
         for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-
           // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
           SLTGraphMessage msg(c, r, k);
-          ILOG_DEBUG << "cost_cr c=" << c
-                       << " r=" << r
-                       << " k=" << k;
-          CalculateCostAt(
-              &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
+          ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
+          CalculateCostAt(&msg, agent_trajs, target_s,
+                          spatio_temporal_union_plan_input);
         }
       }
     }
     auto serial_end = IflyTime::Now_us();
     total_serial_time += (serial_end - serial_start);
-    #endif
+#endif
 
     for (int r = next_lowest_row; r <= next_highest_row; ++r) {
       for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-        const auto& cost_cr = cost_table_[c][r][k];
-        if ((cost_cr.index_t() <= consider_dynamic_obs_time_thd_index && cost_cr.total_cost() < kObstacleCollisionDistanceCost) ||
-            (cost_cr.index_t() > consider_dynamic_obs_time_thd_index && !std::isinf(cost_cr.total_cost()))) {
+        const auto &cost_cr = cost_table_[c][r][k];
+        if ((cost_cr.index_t() <= consider_dynamic_obs_time_thd_index &&
+             cost_cr.total_cost() < kObstacleCollisionDistanceCost) ||
+            (cost_cr.index_t() > consider_dynamic_obs_time_thd_index &&
+             !std::isinf(cost_cr.total_cost()))) {
           int h_r = 0;
           int l_r = 0;
           int h_l = 0;
@@ -402,9 +409,10 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     next_lowest_l = lowest_l;
   }
 
-  #ifdef VALIDATE_PARALLEL
+#ifdef VALIDATE_PARALLEL
   // 执行串行计算
-  std::vector<std::vector<std::vector<SLTGraphPoint>>> parallel_result = cost_table_;
+  std::vector<std::vector<std::vector<SLTGraphPoint>>> parallel_result =
+      cost_table_;
   cost_table_ = serial_cost_table_;  // 恢复原始状态
   next_highest_row = 0;
   next_lowest_row = 0;
@@ -422,21 +430,18 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     if (count > 0) {
       for (int r = next_lowest_row; r <= next_highest_row; ++r) {
         for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-
           // auto msg = std::make_shared<SLTGraphMessage>(c, r, k);
           SLTGraphMessage msg(c, r, k);
-          ILOG_DEBUG << "cost_cr c=" << c
-                       << " r=" << r
-                       << " k=" << k;
-          CalculateCostAt(
-              &msg, agent_trajs, target_s, spatio_temporal_union_plan_input);
+          ILOG_DEBUG << "cost_cr c=" << c << " r=" << r << " k=" << k;
+          CalculateCostAt(&msg, agent_trajs, target_s,
+                          spatio_temporal_union_plan_input);
         }
       }
     }
 
     for (int r = next_lowest_row; r <= next_highest_row; ++r) {
       for (int k = next_lowest_l; k <= next_highest_l; ++k) {
-        const auto& cost_cr = cost_table_[c][r][k];
+        const auto &cost_cr = cost_table_[c][r][k];
         if (cost_cr.total_cost() < std::numeric_limits<double>::infinity()) {
           int h_r = 0;
           int l_r = 0;
@@ -462,32 +467,32 @@ bool SpatioTemporalUnionDp::CalculateTotalCost(
     for (size_t r = 0; r < cost_table_[c].size(); ++r) {
       for (size_t k = 0; k < cost_table_[c][r].size(); ++k) {
         if (std::abs(parallel_result[c][r][k].total_cost() -
-                    cost_table_[c][r][k].total_cost()) > 1e-6) {
-          ILOG_ERROR << "Validation failed at c=" << c
-          " r=" << r
-          " k=" << k;
+                     cost_table_[c][r][k].total_cost()) > 1e-6) {
+          ILOG_ERROR << "Validation failed at c=" << c " r=" << r " k=" << k;
           is_consistent = false;
         }
       }
     }
   }
   ILOG_DEBUG << "Result consistency: " << is_consistent ? "PASS" : "FAIL";
-  #endif
+#endif
 
-  #if defined(OPENMP_DEBUG) && defined(SERIAL_MODE)
-  ILOG_DEBUG << "[Performance] Parallel:" << total_parallel_time/1000.0 << " ms"
-             << ", Serial: " << total_serial_time/1000.0 << " ms"
-             << ", Speedup:  " << total_serial_time/total_parallel_time << "x";
-  #endif
+#if defined(OPENMP_DEBUG) && defined(SERIAL_MODE)
+  ILOG_DEBUG << "[Performance] Parallel:" << total_parallel_time / 1000.0
+             << " ms"
+             << ", Serial: " << total_serial_time / 1000.0 << " ms"
+             << ", Speedup:  " << total_serial_time / total_parallel_time
+             << "x";
+#endif
 
   return true;
 }
 
-void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint& point,
-                                       int* next_highest_row,
-                                       int* next_lowest_row,
-                                       const double &init_v,
-                                       const double &v_cruise) {
+void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint &point,
+                                        int *next_highest_row,
+                                        int *next_lowest_row,
+                                        const double &init_v,
+                                        const double &v_cruise) {
   double v0 = 0.0;
   // TODO(all): Record speed information in StGraphPoint and deprecate this.
   // A scaling parameter for DP range search due to the lack of accurate
@@ -512,7 +517,8 @@ void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint& point,
       acc_t = std::fabs(v_cruise - v0) / max_acceleration_;
     }
     s_upper_bound = point.point().s() + v0 * acc_t +
-                    acc_coeff * max_acceleration_ * acc_t * acc_t + v_cruise * (unit_t_ - acc_t);
+                    acc_coeff * max_acceleration_ * acc_t * acc_t +
+                    v_cruise * (unit_t_ - acc_t);
   } else {
     s_upper_bound = point.point().s() + v0 * unit_t_;
   }
@@ -528,10 +534,11 @@ void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint& point,
   }
 
   double dece_t = std::fabs(v0 / max_deceleration_);
-  double dece_s = dece_t > unit_t_ ? v0 * unit_t_ + acc_coeff * max_deceleration_ * t_squared_
-                                   : -1.0 * acc_coeff * max_deceleration_ * dece_t * dece_t;
-  const double s_lower_bound =
-      std::fmax(0.0, dece_s) + point.point().s();
+  double dece_s =
+      dece_t > unit_t_
+          ? v0 * unit_t_ + acc_coeff * max_deceleration_ * t_squared_
+          : -1.0 * acc_coeff * max_deceleration_ * dece_t * dece_t;
+  const double s_lower_bound = std::fmax(0.0, dece_s) + point.point().s();
   const auto next_lowest_itr =
       std::lower_bound(spatial_distance_by_index_.begin(),
                        spatial_distance_by_index_.end(), s_lower_bound);
@@ -543,9 +550,9 @@ void SpatioTemporalUnionDp::GetRowRange(const SLTGraphPoint& point,
   }
 }
 
-void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint& point,
-                                       int* next_highest_l,
-                                       int* next_lowest_l) {
+void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint &point,
+                                           int *next_highest_l,
+                                           int *next_lowest_l) {
   double lateral_v0 = 0.0;
   // TODO(all): Record speed information in StGraphPoint and deprecate this.
   // A scaling parameter for DP range search due to the lack of accurate
@@ -554,8 +561,8 @@ void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint& point,
   double acc_coeff = 0.25;
 
   const auto max_l_size = dimension_l_ - 1;
-  const double l_upper_bound = acc_coeff * kLateralMaxAcceleration * t_squared_ +
-                               point.point().l();
+  const double l_upper_bound =
+      acc_coeff * kLateralMaxAcceleration * t_squared_ + point.point().l();
   const auto next_highest_itr =
       std::lower_bound(lateral_distance_by_index_.begin(),
                        lateral_distance_by_index_.end(), l_upper_bound);
@@ -566,8 +573,8 @@ void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint& point,
         std::distance(lateral_distance_by_index_.begin(), next_highest_itr);
   }
 
-  const double l_lower_bound = acc_coeff * kLateralMaxDeceleration * t_squared_ +
-      point.point().l();
+  const double l_lower_bound =
+      acc_coeff * kLateralMaxDeceleration * t_squared_ + point.point().l();
   const auto next_lowest_itr =
       std::lower_bound(lateral_distance_by_index_.begin(),
                        lateral_distance_by_index_.end(), l_lower_bound);
@@ -580,16 +587,17 @@ void SpatioTemporalUnionDp::GetColumnRange(const SLTGraphPoint& point,
 }
 
 void SpatioTemporalUnionDp::CalculateCostAt(
-    const SLTGraphMessage* msg,
+    const SLTGraphMessage *msg,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
     const double &target_s,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   const uint32_t c = msg->c;
   const uint32_t r = msg->r;
   const uint32_t k = msg->k;
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
   double ego_v = ego_init_state.v0();
-  auto& cost_cr = cost_table_[c][r][k];
+  auto &cost_cr = cost_table_[c][r][k];
 
   // 依靠target_s 进行纵向剪枝
   if (cost_cr.point().s() > target_s) {
@@ -597,7 +605,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   }
   // cost_cr.SetSpatialPotentialCost(dp_st_cost_.GetSpatialPotentialCost(cost_cr));
 
-  const auto& cost_init = cost_table_[0][0][0];
+  const auto &cost_init = cost_table_[0][0][0];
   if (c == 0) {
     cost_cr.SetTotalCost(0.0);
     cost_cr.SetOptimalSpeed(ego_init_state.v0());
@@ -619,28 +627,28 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     if (std::fabs(v0) < 2.0e-1) {
       v0 = 0.0;
     }
-    const double acc =
-        2 * (delta_s * inv_unit_t_ - v0) * inv_unit_t_;
+    const double acc = 2 * (delta_s * inv_unit_t_ - v0) * inv_unit_t_;
     if (acc < kDefaultMaxDeceleration || acc > kDefaultMaxAcceleration) {
       return;
     }
     const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
-    if (lateral_acc < kLateralMaxDeceleration || lateral_acc > kLateralMaxAcceleration) {
+    if (lateral_acc < kLateralMaxDeceleration ||
+        lateral_acc > kLateralMaxAcceleration) {
       return;
     }
     double s_upper_bound = v0 * unit_t_ +
-                                0.5 * kDefaultMaxAcceleration * t_squared_ +
-                                cost_init.point().s();
+                           0.5 * kDefaultMaxAcceleration * t_squared_ +
+                           cost_init.point().s();
     double s_lower_bound = v0 * unit_t_ +
-                                0.5 * kDefaultMaxDeceleration * t_squared_ +
-                                cost_init.point().s();
-    double t_decel = - v0 / kDefaultMaxDeceleration;
-    if(t_decel < unit_t_) {
-      s_lower_bound = 0.5 * v0 * t_decel +
-                                cost_init.point().s();
+                           0.5 * kDefaultMaxDeceleration * t_squared_ +
+                           cost_init.point().s();
+    double t_decel = -v0 / kDefaultMaxDeceleration;
+    if (t_decel < unit_t_) {
+      s_lower_bound = 0.5 * v0 * t_decel + cost_init.point().s();
     }
 
-    if (cost_cr.point().s() < s_lower_bound || cost_cr.point().s() > s_upper_bound) {
+    if (cost_cr.point().s() < s_lower_bound ||
+        cost_cr.point().s() > s_upper_bound) {
       return;
     }
     // if (init_state.v() + acc * unit_t_ < -kDoubleEpsilon &&
@@ -652,8 +660,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     std::array<double, 2> later_start_state{cost_init.point().l(), 0.0};
     std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
     double remain_time = cost_cr.point().t() - cost_init.point().t();
-    CubicPolynomialCurve1d lateral_cubic_curve_c1(
-        later_start_state, later_end_state, remain_time);
+    CubicPolynomialCurve1d lateral_cubic_curve_c1(later_start_state,
+                                                  later_end_state, remain_time);
 
     // auto c1 = IflyTime::Now_us();
     // frenet系下检测是否发生碰撞
@@ -665,7 +673,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
 
     // 计算相邻两节点之间路径的cost
     double path_cost_c1 =
-        CalculatePathCost(cost_init, cost_cr, lateral_cubic_curve_c1, acc, spatio_temporal_union_plan_input);
+        CalculatePathCost(cost_init, cost_cr, lateral_cubic_curve_c1, acc,
+                          spatio_temporal_union_plan_input);
     cost_cr.SetPathCost(path_cost_c1);
     auto pathcost = IflyTime::Now_us();
     // ILOG_DEBUG << "c1 CalculatePathCost:" << pathcost - overlap;
@@ -673,19 +682,20 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     // 计算自车与动态障碍物之间的cost
     double dis = kDefaultMaxDisBetweenObs;
     int agent_id = -1;
-    double dynamic_obstacle_cost_c1 =
-        CalculateDynamicObstacleCost(
-            cost_init, cost_cr, lateral_cubic_curve_c1, acc, agent_trajs, spatio_temporal_union_plan_input, &dis, &agent_id);
+    double dynamic_obstacle_cost_c1 = CalculateDynamicObstacleCost(
+        cost_init, cost_cr, lateral_cubic_curve_c1, acc, agent_trajs,
+        spatio_temporal_union_plan_input, &dis, &agent_id);
     auto dynamicobstaclecost = IflyTime::Now_us();
-    // ILOG_DEBUG << "c1 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
-    double long_cost_c1 = CalculateEdgeCostForSecondCol(r, k, speed_limit, cruise_speed, ego_init_state);
+    // ILOG_DEBUG << "c1 CalculateDynamicObstacleCost:" << dynamicobstaclecost -
+    // pathcost;
+    double long_cost_c1 = CalculateEdgeCostForSecondCol(
+        r, k, speed_limit, cruise_speed, ego_init_state);
 
-    cost_cr.SetTotalCost(
-        path_cost_c1 + dynamic_obstacle_cost_c1 +
-        cost_init.total_cost() +
-        long_cost_c1);
+    cost_cr.SetTotalCost(path_cost_c1 + dynamic_obstacle_cost_c1 +
+                         cost_init.total_cost() + long_cost_c1);
     // auto edgecost = IflyTime::Now_us();
-    // ILOG_DEBUG << "c1 CalculateEdgeCostForSecondCol: " << edgecost - dynamicobstaclecost;
+    // ILOG_DEBUG << "c1 CalculateEdgeCostForSecondCol: " << edgecost -
+    // dynamicobstaclecost;
 
     cost_cr.SetDynamicObstacleCost(dynamic_obstacle_cost_c1);
     cost_cr.SetMinObsDistance(dis);
@@ -703,8 +713,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
   }
 
   double pre_lowest_s =
-      cost_cr.point().s() -
-      std::max(kPlanningUpperSpeedLimit, ego_v) * (1 + kSpeedRangeBuffer) * unit_t_;
+      cost_cr.point().s() - std::max(kPlanningUpperSpeedLimit, ego_v) *
+                                (1 + kSpeedRangeBuffer) * unit_t_;
   pre_lowest_s = std::max(pre_lowest_s, cost_init.point().s());
   const auto pre_lowest_itr =
       std::lower_bound(spatial_distance_by_index_.begin(),
@@ -717,7 +727,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         std::distance(spatial_distance_by_index_.begin(), pre_lowest_itr));
   }
   const uint32_t r_pre_size = r - r_low + 1;
-  const auto& pre_col = cost_table_[c - 1];
+  const auto &pre_col = cost_table_[c - 1];
   double curr_speed_limit = speed_limit;
 
   if (c == 2) {
@@ -729,38 +739,47 @@ void SpatioTemporalUnionDp::CalculateCostAt(
     for (uint32_t i = 0; i < r_pre_size; ++i) {
       uint32_t r_pre = r - i;
       for (int later_j = 0; later_j < dimension_l_; ++later_j) {
-        if ((pre_col[r_pre][later_j].total_cost() > kObstacleCollisionDistanceCost) ||
+        if ((pre_col[r_pre][later_j].total_cost() >
+             kObstacleCollisionDistanceCost) ||
             pre_col[r_pre][later_j].pre_point() == nullptr) {
           continue;
         }
 
         const double delta_s =
             cost_cr.point().s() - pre_col[r_pre][later_j].point().s();
-        const double delta_l = cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
-        const double curr_a =
-            2 *
-            (delta_s * inv_unit_t_ -
-            pre_col[r_pre][later_j].GetOptimalSpeed()) * inv_unit_t_;
-        if (curr_a < kDefaultMaxDeceleration || curr_a > kDefaultMaxAcceleration) {
+        const double delta_l =
+            cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
+        const double curr_a = 2 *
+                              (delta_s * inv_unit_t_ -
+                               pre_col[r_pre][later_j].GetOptimalSpeed()) *
+                              inv_unit_t_;
+        if (curr_a < kDefaultMaxDeceleration ||
+            curr_a > kDefaultMaxAcceleration) {
           continue;
         }
 
         const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
-        if (lateral_acc < kLateralMaxDeceleration || lateral_acc > kLateralMaxAcceleration) {
+        if (lateral_acc < kLateralMaxDeceleration ||
+            lateral_acc > kLateralMaxAcceleration) {
           continue;
         }
-        double s_upper_bound = pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
-                                    0.5 * kDefaultMaxAcceleration * t_squared_ +
-                                    pre_col[r_pre][later_j].point().s();
-        double s_lower_bound = pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
-                                    0.5 * kDefaultMaxDeceleration * t_squared_ +
-                                    pre_col[r_pre][later_j].point().s();
-        double t_decel = - pre_col[r_pre][later_j].GetOptimalSpeed() / kDefaultMaxDeceleration;
-        if(t_decel < unit_t_) {
-          s_lower_bound = 0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
-                                    pre_col[r_pre][later_j].point().s();
+        double s_upper_bound =
+            pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+            0.5 * kDefaultMaxAcceleration * t_squared_ +
+            pre_col[r_pre][later_j].point().s();
+        double s_lower_bound =
+            pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+            0.5 * kDefaultMaxDeceleration * t_squared_ +
+            pre_col[r_pre][later_j].point().s();
+        double t_decel = -pre_col[r_pre][later_j].GetOptimalSpeed() /
+                         kDefaultMaxDeceleration;
+        if (t_decel < unit_t_) {
+          s_lower_bound =
+              0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
+              pre_col[r_pre][later_j].point().s();
         }
-        if (cost_cr.point().s() < s_lower_bound || cost_cr.point().s() > s_upper_bound) {
+        if (cost_cr.point().s() < s_lower_bound ||
+            cost_cr.point().s() > s_upper_bound) {
           continue;
         }
 
@@ -769,7 +788,7 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         //   continue;
         // }
 
-        const auto& pre_cost = pre_col[r_pre][later_j];
+        const auto &pre_cost = pre_col[r_pre][later_j];
         // 生成L方向三次多项式
         std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
         std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
@@ -780,36 +799,42 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         // 计算相邻两节点之间路径的cost
         auto overlap_2 = IflyTime::Now_us();
         double path_cost_c2 =
-            CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, spatio_temporal_union_plan_input);
+            CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a,
+                              spatio_temporal_union_plan_input);
         auto pathcost = IflyTime::Now_us();
         // ILOG_DEBUG << "c2 CalculatePathCost:" << pathcost - overlap_2;
 
         // 计算自车与动态障碍物之间的cost
         double distance_c2 = kDefaultMaxDisBetweenObs;
         int agent_id_c2;
-        double dynamic_obstacle_cost_c2 =
-            CalculateDynamicObstacleCost(pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c2, &agent_id_c2);
+        double dynamic_obstacle_cost_c2 = CalculateDynamicObstacleCost(
+            pre_cost, cost_cr, lateral_cubic_curve_c2, curr_a, agent_trajs,
+            spatio_temporal_union_plan_input, &distance_c2, &agent_id_c2);
         auto dynamicobstaclecost = IflyTime::Now_us();
-        // ILOG_DEBUG << "c2 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
+        // ILOG_DEBUG << "c2 CalculateDynamicObstacleCost:" <<
+        // dynamicobstaclecost - pathcost;
         curr_speed_limit =
             std::fmin(curr_speed_limit, speed_limit_by_index_[r_pre]);
         curr_speed_limit = std::max(curr_speed_limit, 1e-2);
-        double long_cost_c2 = CalculateEdgeCostForThirdCol(
-                                r, k, r_pre, later_j, curr_speed_limit, cruise_speed, ego_init_state);
+        double long_cost_c2 =
+            CalculateEdgeCostForThirdCol(r, k, r_pre, later_j, curr_speed_limit,
+                                         cruise_speed, ego_init_state);
         auto edgecost = IflyTime::Now_us();
-        // ILOG_DEBUG << "c2 CalculateEdgeCostForThirdCol:" << edgecost - dynamicobstaclecost;
+        // ILOG_DEBUG << "c2 CalculateEdgeCostForThirdCol:" << edgecost -
+        // dynamicobstaclecost;
 
-        const double cost = path_cost_c2 +
-                            dynamic_obstacle_cost_c2 +
+        const double cost = path_cost_c2 + dynamic_obstacle_cost_c2 +
                             pre_col[r_pre][later_j].total_cost() + long_cost_c2;
 
         // ILOG_DEBUG << "pre_cost: c: " << c-1
         //            << ", r:" << r_pre
         //            << ", k:" << later_j
-        //            << ", total_cost:" << pre_col[r_pre][later_j].total_cost();
+        //            << ", total_cost:" <<
+        //            pre_col[r_pre][later_j].total_cost();
 
         // ILOG_DEBUG << "path_cost_c2: " << path_cost_c2
-        //            << ", dynamic_obstacle_cost_c2:" << dynamic_obstacle_cost_c2
+        //            << ", dynamic_obstacle_cost_c2:" <<
+        //            dynamic_obstacle_cost_c2
         //            << ", long_cost_c2:" << long_cost_c2
         //            << ", total_cost:" << cost;
         if (cost < cost_cr.total_cost()) {
@@ -821,9 +846,9 @@ void SpatioTemporalUnionDp::CalculateCostAt(
           cost_cr.SetTotalCost(cost);
           cost_cr.SetPathCost(path_cost_c2);
           cost_cr.SetPrePoint(pre_col[r_pre][later_j]);
-          cost_cr.SetOptimalSpeed(
-              std::max(pre_col[r_pre][later_j].GetOptimalSpeed() +
-                                  curr_a * unit_t_, 0.0));
+          cost_cr.SetOptimalSpeed(std::max(
+              pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_,
+              0.0));
           cost_cr.SetAcc(curr_a);
           // ILOG_DEBUG << "c is" << c;
         }
@@ -849,49 +874,59 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       // = (point.s + prepre_point.s - 2 * pre_point.s) / (unit_t * unit_t)
       const double delta_s =
           cost_cr.point().s() - pre_col[r_pre][later_j].point().s();
-      const double delta_l = cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
+      const double delta_l =
+          cost_cr.point().l() - pre_col[r_pre][later_j].point().l();
       const double curr_a =
           2 *
-          (delta_s * inv_unit_t_ -
-          pre_col[r_pre][later_j].GetOptimalSpeed()) * inv_unit_t_;
-      if (curr_a > kDefaultMaxAcceleration || curr_a < kDefaultMaxDeceleration) {
+          (delta_s * inv_unit_t_ - pre_col[r_pre][later_j].GetOptimalSpeed()) *
+          inv_unit_t_;
+      if (curr_a > kDefaultMaxAcceleration ||
+          curr_a < kDefaultMaxDeceleration) {
         continue;
       }
       const double lateral_acc = 4.0 * delta_l * inv_unit_t_ * inv_unit_t_;
-      if (lateral_acc < kLateralMaxDeceleration || lateral_acc > kLateralMaxAcceleration) {
+      if (lateral_acc < kLateralMaxDeceleration ||
+          lateral_acc > kLateralMaxAcceleration) {
         continue;
       }
-      double s_upper_bound = pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
-                                  0.5 * kDefaultMaxAcceleration * t_squared_ +
-                                  pre_col[r_pre][later_j].point().s();
-      double s_lower_bound = pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
-                                  0.5 * kDefaultMaxDeceleration * t_squared_ +
-                                  pre_col[r_pre][later_j].point().s();
-      double t_decel = - pre_col[r_pre][later_j].GetOptimalSpeed() / kDefaultMaxDeceleration;
-      if(t_decel < unit_t_) {
-        s_lower_bound = 0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
-                                  pre_col[r_pre][later_j].point().s();
+      double s_upper_bound =
+          pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+          0.5 * kDefaultMaxAcceleration * t_squared_ +
+          pre_col[r_pre][later_j].point().s();
+      double s_lower_bound =
+          pre_col[r_pre][later_j].GetOptimalSpeed() * unit_t_ +
+          0.5 * kDefaultMaxDeceleration * t_squared_ +
+          pre_col[r_pre][later_j].point().s();
+      double t_decel =
+          -pre_col[r_pre][later_j].GetOptimalSpeed() / kDefaultMaxDeceleration;
+      if (t_decel < unit_t_) {
+        s_lower_bound =
+            0.5 * pre_col[r_pre][later_j].GetOptimalSpeed() * t_decel +
+            pre_col[r_pre][later_j].point().s();
       }
-      if (cost_cr.point().s() < s_lower_bound || cost_cr.point().s() > s_upper_bound) {
+      if (cost_cr.point().s() < s_lower_bound ||
+          cost_cr.point().s() > s_upper_bound) {
         continue;
       }
 
-      // if (pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_ < -kDoubleEpsilon &&
+      // if (pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_ <
+      // -kDoubleEpsilon &&
       //     delta_s > min_s_consider_speed) {
       //   continue;
       // }
 
-      const auto& pre_cost = pre_col[r_pre][later_j];
+      const auto &pre_cost = pre_col[r_pre][later_j];
       // 生成L方向三次多项式
       std::array<double, 2> later_start_state{pre_cost.point().l(), 0.0};
       std::array<double, 2> later_end_state{cost_cr.point().l(), 0.0};
       double remain_time = cost_cr.point().t() - pre_cost.point().t();
-      CubicPolynomialCurve1d lateral_cubic_curve(
-          later_start_state, later_end_state, remain_time);
+      CubicPolynomialCurve1d lateral_cubic_curve(later_start_state,
+                                                 later_end_state, remain_time);
 
       // 计算相邻两节点之间路径的cost
       double path_cost_c =
-          CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve, curr_a, spatio_temporal_union_plan_input);
+          CalculatePathCost(pre_cost, cost_cr, lateral_cubic_curve, curr_a,
+                            spatio_temporal_union_plan_input);
       auto pathcost = IflyTime::Now_us();
       // ILOG_DEBUG << "c3 CalculatePathCost:" << pathcost - overlap;
 
@@ -899,14 +934,15 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       double distance_c3 = kDefaultMaxDisBetweenObs;
       int agent_id_c3;
       double dynamic_obstacle_cost = 0.0;
-      dynamic_obstacle_cost =
-          CalculateDynamicObstacleCost(
-              pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs, spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
+      dynamic_obstacle_cost = CalculateDynamicObstacleCost(
+          pre_cost, cost_cr, lateral_cubic_curve, curr_a, agent_trajs,
+          spatio_temporal_union_plan_input, &distance_c3, &agent_id_c3);
       auto dynamicobstaclecost = IflyTime::Now_us();
-      // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost - pathcost;
+      // ILOG_DEBUG << "c3 CalculateDynamicObstacleCost:" << dynamicobstaclecost
+      // - pathcost;
 
       uint32_t r_prepre = pre_col[r_pre][later_j].pre_point()->index_s();
-      const auto& prepre_graph_point = pre_col[r_pre][later_j].pre_point();
+      const auto &prepre_graph_point = pre_col[r_pre][later_j].pre_point();
       if (prepre_graph_point->total_cost() > kObstacleCollisionDistanceCost) {
         continue;
       }
@@ -914,21 +950,22 @@ void SpatioTemporalUnionDp::CalculateCostAt(
       if (!prepre_graph_point->pre_point()) {
         continue;
       }
-      const auto& triple_pre_point = prepre_graph_point->pre_point();
-      const auto& prepre_point = prepre_graph_point;
-      const auto& pre_point = pre_col[r_pre][later_j];
-      const auto& curr_point = cost_cr;
+      const auto &triple_pre_point = prepre_graph_point->pre_point();
+      const auto &prepre_point = prepre_graph_point;
+      const auto &pre_point = pre_col[r_pre][later_j];
+      const auto &curr_point = cost_cr;
       curr_speed_limit =
           std::fmin(curr_speed_limit, speed_limit_by_index_[r_pre]);
       curr_speed_limit = std::max(curr_speed_limit, 1e-2);
-      double long_cost = CalculateEdgeCost(*triple_pre_point, *prepre_point, pre_point,
-                                      curr_point, curr_speed_limit, cruise_speed);
+      double long_cost =
+          CalculateEdgeCost(*triple_pre_point, *prepre_point, pre_point,
+                            curr_point, curr_speed_limit, cruise_speed);
       double cost = path_cost_c + dynamic_obstacle_cost +
                     pre_col[r_pre][later_j].total_cost() + long_cost;
 
       // auto edgecost = IflyTime::Now_us();
-      // ILOG_DEBUG << "c3 CalculateEdgeCost:" << edgecost - dynamicobstaclecost;
-      // ILOG_DEBUG << "pre_cost: c:" << c-1
+      // ILOG_DEBUG << "c3 CalculateEdgeCost:" << edgecost -
+      // dynamicobstaclecost; ILOG_DEBUG << "pre_cost: c:" << c-1
       //          << ", r:" << r_pre
       //          << ", k:" << later_j
       //          << ", total_cost:" << pre_col[r_pre][later_j].total_cost();
@@ -947,9 +984,8 @@ void SpatioTemporalUnionDp::CalculateCostAt(
         cost_cr.SetTotalCost(cost);
         cost_cr.SetPathCost(path_cost_c);
         cost_cr.SetPrePoint(pre_col[r_pre][later_j]);
-        cost_cr.SetOptimalSpeed(
-            std::max(pre_col[r_pre][later_j].GetOptimalSpeed() +
-                                curr_a * unit_t_, 0.0));
+        cost_cr.SetOptimalSpeed(std::max(
+            pre_col[r_pre][later_j].GetOptimalSpeed() + curr_a * unit_t_, 0.0));
         cost_cr.SetAcc(curr_a);
         // ILOG_DEBUG << "c is" << c;
       }
@@ -961,14 +997,15 @@ void SpatioTemporalUnionDp::CalculateCostAt(
 
 bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
     TrajectoryPoints &traj_points,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   double min_cost = std::numeric_limits<double>::infinity();
-  const SLTGraphPoint* best_end_point = nullptr;
+  const SLTGraphPoint *best_end_point = nullptr;
   int c = dimension_t_ - 1;
   double s_end = total_length_s_;
-  for (const auto& cur_points_set : cost_table_.back()) {
+  for (const auto &cur_points_set : cost_table_.back()) {
     // std::vector<std::vector<SLTGraphPoint>> cur_points_set = iter;
-    for (const auto& cur_point : cur_points_set) {
+    for (const auto &cur_point : cur_points_set) {
       if (!std::isinf(cur_point.total_cost()) &&
           cur_point.total_cost() < min_cost) {
         best_end_point = &cur_point;
@@ -990,12 +1027,13 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   // }
 
   if (best_end_point == nullptr) {
-    ILOG_DEBUG << "Fail to find the best feasible trajectory: best_end_point = nullptr!";
+    ILOG_DEBUG << "Fail to find the best feasible trajectory: best_end_point = "
+                  "nullptr!";
     return false;
   }
 
   std::vector<SpeedInfo> speed_profile;
-  const SLTGraphPoint* cur_point = best_end_point;
+  const SLTGraphPoint *cur_point = best_end_point;
   pnc::mathlib::spline s_t_spline_;
   pnc::mathlib::spline s_l_spline_;
   std::vector<double> s_vec;
@@ -1019,19 +1057,17 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
               << "  long_cost = " << cur_point->longitinal_cost()
               << "  obstacle_min_distance = " << cur_point->min_obs_distance()
               << "  obstacle_id = " << cur_point->min_distance_agent_id()
-              << "  total_cost = " << cur_point->total_cost()
-              << " \n";
+              << "  total_cost = " << cur_point->total_cost() << " \n";
 #endif
     SpeedInfo speed_point;
     speed_point.s = cur_point->point().s();
     speed_point.l = cur_point->point().l();
     speed_point.v = cur_point->GetOptimalSpeed();
     speed_point.t = cur_point->point().t();
-    Point2D reference_frenet_point(
-        cur_point->point().s(), cur_point->point().l());
+    Point2D reference_frenet_point(cur_point->point().s(),
+                                   cur_point->point().l());
     Point2D global_reference_point;
-    current_lane_coord_.SLToXY(reference_frenet_point,
-                               global_reference_point);
+    current_lane_coord_.SLToXY(reference_frenet_point, global_reference_point);
 
     speed_profile.emplace_back(speed_point);
     cur_point = cur_point->pre_point();
@@ -1044,24 +1080,27 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   std::reverse(l_vec.begin(), l_vec.end());
   std::reverse(t_vec.begin(), t_vec.end());
   s_t_spline_.set_points(t_vec, s_vec);
-  // s_t_spline_.set_boundary(pnc::mathlib::spline::first_deriv, speed_profile[0].v, pnc::mathlib::spline::first_deriv, speed_profile.back().v);
+  // s_t_spline_.set_boundary(pnc::mathlib::spline::first_deriv,
+  // speed_profile[0].v, pnc::mathlib::spline::first_deriv,
+  // speed_profile.back().v);
   s_vec_is_monotonic_increasing_ = false;
   if (JudgeSVecisMonotonicIncreasing(s_vec)) {
     s_l_spline_.set_points(s_vec, l_vec);
     s_vec_is_monotonic_increasing_ = true;
   }
 
-  const double init_delta_s = speed_profile.front().s - cost_table_[0][0][0].point().s();
+  const double init_delta_s =
+      speed_profile.front().s - cost_table_[0][0][0].point().s();
   const double total_s = speed_profile.back().s - speed_profile.front().s;
-  if (speed_profile.front().t > kEpsilon ||
-      init_delta_s > kEpsilon) {
+  if (speed_profile.front().t > kEpsilon || init_delta_s > kEpsilon) {
     ILOG_DEBUG << "Fail to retrieve speed profile : init_delta_s > kEpsilon !";
     return false;
   }
 
   dp_speed_profile_.clear();
 
-  if(s_vec_is_monotonic_increasing_ && total_s > kDefaultlLinearInterpolationDistance) {
+  if (s_vec_is_monotonic_increasing_ &&
+      total_s > kDefaultlLinearInterpolationDistance) {
     for (int i = 0; i < speed_profile.size() - 1; ++i) {
       for (int j = 0; j < 5; ++j) {
         SpeedInfo point;
@@ -1080,15 +1119,19 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
       dp_speed_profile_.push_back(speed_profile.back());
     }
   } else {
-    double avg_v = std::fabs((speed_profile.back().s - speed_profile.front().s)) / kDefaultTrajsTimeLength;
+    double avg_v =
+        std::fabs((speed_profile.back().s - speed_profile.front().s)) /
+        kDefaultTrajsTimeLength;
     for (size_t i = 0; i < traj_points.size(); ++i) {
       SpeedInfo point;
       double relative_time = i * kDeltaTime;
       point.t = relative_time;
-      point.s =
-          planning_math::LerpWithLimit(speed_profile.front().s, speed_profile.front().t, speed_profile.back().s, speed_profile.back().t, point.t);
-      point.l =
-          planning_math::LerpWithLimit(speed_profile.front().l, speed_profile.front().s, speed_profile.back().l, speed_profile.back().s, point.s);
+      point.s = planning_math::LerpWithLimit(
+          speed_profile.front().s, speed_profile.front().t,
+          speed_profile.back().s, speed_profile.back().t, point.t);
+      point.l = planning_math::LerpWithLimit(
+          speed_profile.front().l, speed_profile.front().s,
+          speed_profile.back().l, speed_profile.back().s, point.s);
       point.v = avg_v;
       point.a = 0.0;
       point.da = 0.0;
@@ -1104,11 +1147,11 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   for (size_t j = 0; j < traj_points.size(); ++j) {
     TrajectoryPoint trajectory_point;
     if (j == 0) {
-      Point2D reference_frenet_point(
-          dp_speed_profile_[j].s, dp_speed_profile_[j].l);
+      Point2D reference_frenet_point(dp_speed_profile_[j].s,
+                                     dp_speed_profile_[j].l);
       Point2D global_reference_point;
       current_lane_coord_.SLToXY(reference_frenet_point,
-                                global_reference_point);
+                                 global_reference_point);
       trajectory_point.s = dp_speed_profile_[0].s;
       trajectory_point.l = dp_speed_profile_[0].l;
       trajectory_point.t = dp_speed_profile_[0].t;
@@ -1128,14 +1171,15 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
       iter->set_x(trajectory_point.x);
       iter->set_y(trajectory_point.y);
     } else if (j + 1 < dp_speed_profile_.size()) {
-      const double v = (dp_speed_profile_[j + 1].s - dp_speed_profile_[j].s) /
-                       (dp_speed_profile_[j + 1].t - dp_speed_profile_[j].t + 1e-3);
+      const double v =
+          (dp_speed_profile_[j + 1].s - dp_speed_profile_[j].s) /
+          (dp_speed_profile_[j + 1].t - dp_speed_profile_[j].t + 1e-3);
       dp_speed_profile_[j].v = v;
-      Point2D reference_frenet_point(
-          dp_speed_profile_[j].s, dp_speed_profile_[j].l);
+      Point2D reference_frenet_point(dp_speed_profile_[j].s,
+                                     dp_speed_profile_[j].l);
       Point2D global_reference_point;
       current_lane_coord_.SLToXY(reference_frenet_point,
-                                global_reference_point);
+                                 global_reference_point);
       trajectory_point.s = dp_speed_profile_[j].s;
       trajectory_point.l = dp_speed_profile_[j].l;
       trajectory_point.t = dp_speed_profile_[j].t;
@@ -1144,7 +1188,7 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
       trajectory_point.y = global_reference_point.y;
       trajectory_point.heading_angle =
           std::atan2(trajectory_point.y - pre_trajectory_point.y,
-                              trajectory_point.x - pre_trajectory_point.x);
+                     trajectory_point.x - pre_trajectory_point.x);
       traj_points[j] = trajectory_point;
       pre_trajectory_point = trajectory_point;
 
@@ -1157,11 +1201,10 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
       iter->set_y(trajectory_point.y);
     } else {
       double cur_s = dp_speed_profile_[j].s;
-      Point2D reference_frenet_point(
-          cur_s, dp_speed_profile_[j].l);
+      Point2D reference_frenet_point(cur_s, dp_speed_profile_[j].l);
       Point2D global_reference_point;
       current_lane_coord_.SLToXY(reference_frenet_point,
-                                global_reference_point);
+                                 global_reference_point);
       trajectory_point.s = cur_s;
       trajectory_point.l = dp_speed_profile_[j].l;
       trajectory_point.t = traj_points[j].t;
@@ -1180,10 +1223,9 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
       iter->set_x(trajectory_point.x);
       iter->set_y(trajectory_point.y);
     }
-    auto pt =
-        planning_math::PathPoint(trajectory_point.x, trajectory_point.y);
+    auto pt = planning_math::PathPoint(trajectory_point.x, trajectory_point.y);
     if (!path_points.empty()) {
-      auto& last_pt = path_points.back();
+      auto &last_pt = path_points.back();
       if (planning_math::Vec2d(last_pt.x() - pt.x(), last_pt.y() - pt.y())
               .Length() < 1e-2) {
         continue;
@@ -1202,12 +1244,13 @@ bool SpatioTemporalUnionDp::RetrieveSpeedProfile(
   return true;
 }
 
-
 double SpatioTemporalUnionDp::CalculateStitchingCost(
     const Point2D &current, const double &current_time,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   double stitching_cost = 0.0;
-  const auto& stitching_cost_params = spatio_temporal_union_plan_input.stitching_cost_params();
+  const auto &stitching_cost_params =
+      spatio_temporal_union_plan_input.stitching_cost_params();
   Point2D current_point;
   Point2D current_frenet_point;
   if (!current_lane_coord_.SLToXY(current, current_point)) {
@@ -1216,13 +1259,20 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   }
 
   if (last_planning_result_coord_) {
-    if (!last_planning_result_coord_->XYToSL(current_point, current_frenet_point)) {
-      // ILOG_DEBUG << "CalculateStitchingCost find xy to last_planning_result_coord failed!";
+    if (!last_planning_result_coord_->XYToSL(current_point,
+                                             current_frenet_point)) {
+      // ILOG_DEBUG << "CalculateStitchingCost find xy to
+      // last_planning_result_coord failed!";
       return stitching_cost;
     }
 
-    stitching_cost = std::fabs(current_frenet_point.y) * stitching_cost_params.path_l_stitching_cost_param() *
-        (1.0 - (current_time * stitching_cost_params.stitching_cost_time_decay_factor()) * (current_time * stitching_cost_params.stitching_cost_time_decay_factor()));
+    stitching_cost =
+        std::fabs(current_frenet_point.y) *
+        stitching_cost_params.path_l_stitching_cost_param() *
+        (1.0 - (current_time *
+                stitching_cost_params.stitching_cost_time_decay_factor()) *
+                   (current_time *
+                    stitching_cost_params.stitching_cost_time_decay_factor()));
   } else {
     return stitching_cost;
   }
@@ -1232,10 +1282,12 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   //   int index = static_cast<int>(std::ceil(current_time / kDeltaTime));
   //   if (index < trajectory_points_.point_size()) {
   //     square_adjacent_frame_distance =
-  //         (trajectory_points_.point(index).x() - current_point.x) * (trajectory_points_.point(index).y() - current_point.y);
+  //         (trajectory_points_.point(index).x() - current_point.x) *
+  //         (trajectory_points_.point(index).y() - current_point.y);
 
   //     // if (last_planning_result_coord_) {
-  //     //   if (!last_planning_result_coord_->XYToSL(current_point, current_last_planning_point)) {
+  //     //   if (!last_planning_result_coord_->XYToSL(current_point,
+  //     current_last_planning_point)) {
   //     //     return stitching_cost;
   //     //   }
   //     // } else {
@@ -1243,31 +1295,40 @@ double SpatioTemporalUnionDp::CalculateStitchingCost(
   //     // }
   //   }
 
-
-  //   stitching_cost = square_adjacent_frame_distance * stitching_cost_params.path_l_stitching_cost_param() *
-  //       (1.0 - (current_time * stitching_cost_params.stitching_cost_time_decay_factor()) * (current_time * stitching_cost_params.stitching_cost_time_decay_factor()));
+  //   stitching_cost = square_adjacent_frame_distance *
+  //   stitching_cost_params.path_l_stitching_cost_param() *
+  //       (1.0 - (current_time *
+  //       stitching_cost_params.stitching_cost_time_decay_factor()) *
+  //       (current_time *
+  //       stitching_cost_params.stitching_cost_time_decay_factor()));
   // }
 
   return stitching_cost;
 }
 
-double SpatioTemporalUnionDp::CalculateEdgeCost(
-    const SLTGraphPoint& first, const SLTGraphPoint& second, const SLTGraphPoint& third,
-    const SLTGraphPoint& forth, const double &speed_limit, const double &cruise_speed) {
-  return dp_st_cost_.GetSpeedCost(third, forth, speed_limit, inv_speed_limit_table_[forth.index_s()], cruise_speed) +
+double SpatioTemporalUnionDp::CalculateEdgeCost(const SLTGraphPoint &first,
+                                                const SLTGraphPoint &second,
+                                                const SLTGraphPoint &third,
+                                                const SLTGraphPoint &forth,
+                                                const double &speed_limit,
+                                                const double &cruise_speed) {
+  return dp_st_cost_.GetSpeedCost(third, forth, speed_limit,
+                                  inv_speed_limit_table_[forth.index_s()],
+                                  cruise_speed) +
          dp_st_cost_.GetAccelCostByThreePoints(second, third, forth) +
          dp_st_cost_.GetJerkCostByFourPoints(first, second, third, forth);
 }
 
 double SpatioTemporalUnionDp::CalculateEdgeCostForSecondCol(
-    const uint32_t row, const uint32_t col, const double &speed_limit, const double &cruise_speed,
+    const uint32_t row, const uint32_t col, const double &speed_limit,
+    const double &cruise_speed,
     const planning::common::EgoInitInfo &init_state) {
   double init_speed = init_state.v0();
   double init_acc = init_state.a();
-  const auto& pre_point = cost_table_[0][0][0];
-  const auto& curr_point = cost_table_[1][row][col];
-  return dp_st_cost_.GetSpeedCost(pre_point, curr_point, speed_limit, inv_speed_limit_table_[row],
-                                  cruise_speed) +
+  const auto &pre_point = cost_table_[0][0][0];
+  const auto &curr_point = cost_table_[1][row][col];
+  return dp_st_cost_.GetSpeedCost(pre_point, curr_point, speed_limit,
+                                  inv_speed_limit_table_[row], cruise_speed) +
          dp_st_cost_.GetAccelCostByTwoPoints(init_speed, pre_point,
                                              curr_point) +
          dp_st_cost_.GetJerkCostByTwoPoints(init_speed, init_acc, pre_point,
@@ -1275,25 +1336,26 @@ double SpatioTemporalUnionDp::CalculateEdgeCostForSecondCol(
 }
 
 double SpatioTemporalUnionDp::CalculateEdgeCostForThirdCol(
-    const uint32_t curr_row, const uint32_t curr_col,
-    const uint32_t pre_row, const uint32_t pre_col,
-    const double &speed_limit,
+    const uint32_t curr_row, const uint32_t curr_col, const uint32_t pre_row,
+    const uint32_t pre_col, const double &speed_limit,
     const double &cruise_speed,
     const planning::common::EgoInitInfo &init_state) {
   double init_speed = init_state.v0();
-  const auto& first = cost_table_[0][0][0];
-  const auto& second = cost_table_[1][pre_row][pre_col];
-  const auto& third = cost_table_[2][curr_row][curr_col];
-  return dp_st_cost_.GetSpeedCost(second, third, speed_limit, inv_speed_limit_table_[curr_row], cruise_speed) +
+  const auto &first = cost_table_[0][0][0];
+  const auto &second = cost_table_[1][pre_row][pre_col];
+  const auto &third = cost_table_[2][curr_row][curr_col];
+  return dp_st_cost_.GetSpeedCost(second, third, speed_limit,
+                                  inv_speed_limit_table_[curr_row],
+                                  cruise_speed) +
          dp_st_cost_.GetAccelCostByThreePoints(first, second, third) +
          dp_st_cost_.GetJerkCostByThreePoints(init_speed, first, second, third);
 }
 
 double SpatioTemporalUnionDp::CalculatePathCost(
     const SLTGraphPoint &start, const SLTGraphPoint &end,
-    const CubicPolynomialCurve1d &lateral_curve,
-    const double &acc,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const CubicPolynomialCurve1d &lateral_curve, const double &acc,
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   double path_cost = 0.0;
   double v0 = start.GetOptimalSpeed();
 
@@ -1303,22 +1365,28 @@ double SpatioTemporalUnionDp::CalculatePathCost(
   lateral_curve_coef[2] = lateral_curve.Coef(2);
   lateral_curve_coef[3] = lateral_curve.Coef(3);
 
-  const auto& lat_path_weight_params = spatio_temporal_union_plan_input.lat_path_weight_params();
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &lat_path_weight_params =
+      spatio_temporal_union_plan_input.lat_path_weight_params();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
 
-  // std::function<double(const double)> quasi_softmax = [this](const double x) {
-  //   return (b_ + std::exp(-k_ * (x - l0_))) / (1.0 + std::exp(-k_ * (x - l0_)));
+  // std::function<double(const double)> quasi_softmax = [this](const double x)
+  // {
+  //   return (b_ + std::exp(-k_ * (x - l0_))) / (1.0 + std::exp(-k_ * (x -
+  //   l0_)));
   // };
 
   Point2D current_point;
   double current_t = start.point().t();
-  for (double curve_t = kPathCostComputeSampleTime; curve_t <= (end.point().t() - start.point().t());
+  for (double curve_t = kPathCostComputeSampleTime;
+       curve_t <= (end.point().t() - start.point().t());
        curve_t += kPathCostComputeSampleTime) {
     current_t = start.point().t() + curve_t;
-    current_point.x = v0 * curve_t + 0.5 * acc * curve_t * curve_t + start.point().s();
+    current_point.x =
+        v0 * curve_t + 0.5 * acc * curve_t * curve_t + start.point().s();
     current_point.y = lateral_curve.Evaluate(0, curve_t);
     // Vec2d curve_point(cur_s, cur_l);
-    path_cost += current_point.y * current_point.y * lat_path_weight_params.path_l_cost();
+    path_cost += current_point.y * current_point.y *
+                 lat_path_weight_params.path_l_cost();
     double ds = v0 + acc * curve_t;
     ds = std::max(ds, 1e-6);
     double dl = lateral_curve.Evaluate(1, curve_t);
@@ -1328,11 +1396,13 @@ double SpatioTemporalUnionDp::CalculatePathCost(
     const double ddl =
         ComputeSecondDerivative(lateral_curve_coef, acc, v0, curve_t);
     path_cost += ddl * ddl * lat_path_weight_params.path_ddl_cost();
-    path_cost += CalculateStitchingCost(current_point, current_t, spatio_temporal_union_plan_input);
+    path_cost += CalculateStitchingCost(current_point, current_t,
+                                        spatio_temporal_union_plan_input);
   }
   path_cost *= kPathCostComputeSampleTime;
 
-  // if (end.point().t() == total_length_t_ || end.point().s() == total_length_s_) {
+  // if (end.point().t() == total_length_t_ || end.point().s() ==
+  // total_length_s_) {
   //   double remain_t = end.point().t() - start.point().t();
   //   const double end_l = lateral_curve.Evaluate(0, remain_t);
   //   path_cost +=
@@ -1344,11 +1414,11 @@ double SpatioTemporalUnionDp::CalculatePathCost(
 
 double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
     const SLTGraphPoint &pre_point, const SLTGraphPoint &cur_point,
-    const CubicPolynomialCurve1d &lateral_curve,
-    const double &acc,
+    const CubicPolynomialCurve1d &lateral_curve, const double &acc,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agent_trajs,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input,
-    double* distance_to_point, int* agent_id) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input,
+    double *distance_to_point, int *agent_id) {
   double obstacle_cost = 0.0;
   double v0 = pre_point.GetOptimalSpeed();
   const double total_t = cur_point.point().t() - pre_point.point().t();
@@ -1383,15 +1453,16 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
     time_gap = kDynamicObstacleCostLaterSampleTime;
   }
   // 外层循环遍历每个障碍物
-  for (const auto& agent_traj : agent_trajs) {
+  for (const auto &agent_traj : agent_trajs) {
     // 过滤无效障碍物
     if (agent_traj.agent_id == -1) {
-        continue;
+      continue;
     }
     if (agent_traj.agent_boxs_set.empty()) {
-        continue;
+      continue;
     }
-    if (!agent_traj.is_static && cur_point.point().t()> kConsiderDynamicObstacleCostTimeLength) {
+    if (!agent_traj.is_static &&
+        cur_point.point().t() > kConsiderDynamicObstacleCostTimeLength) {
       continue;
     }
 
@@ -1411,28 +1482,30 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
       dl_ds = dl / ds;
 
       ego_heading_angle = std::atan(dl_ds);
-      ego_heading_angle = NormalizeAngle(dl_ds);  // 注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
+      ego_heading_angle = NormalizeAngle(
+          dl_ds);  // 注：此处可能存在笔误，建议检查是否应为NormalizeAngle(ego_heading_angle)
 
       cos_theta = cos(ego_heading_angle);
       sin_theta = sin(ego_heading_angle);
 
       // 获取自车box顶点并构建box
-      GetVehicleBoxSLVertices(
-          cur_ego_point, cos_theta, sin_theta, ego_box_vertices);
+      GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta,
+                              ego_box_vertices);
       AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
 
       // 检查障碍物最大box与自车box的距离，超出范围则跳过
       dis_to_agent_max_box = agent_traj.max_agent_box.DistanceTo(cur_ego_box);
       if (dis_to_agent_max_box >
-          spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().obstacle_longit_risk_distance()) {
-          continue;
+          spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params()
+              .obstacle_longit_risk_distance()) {
+        continue;
       }
 
       // 获取当前时间点对应的障碍物box
       int index = pre_point.index_t() * kDefaultTrajsPointNums + count;
       auto iter = agent_traj.agent_boxs_set.find(index);
       if (iter != agent_traj.agent_boxs_set.end()) {
-        const auto& cur_agent_box = iter->second;
+        const auto &cur_agent_box = iter->second;
         distance = cur_agent_box.DistanceTo(cur_ego_box);
         longit_dis_to_ego = cur_agent_box.LongitDistanceTo(cur_ego_box);
         lateral_dis_to_ego = cur_agent_box.LateralDistanceTo(cur_ego_box);
@@ -1450,8 +1523,12 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
         }
 
         // 过滤范围外障碍物
-        if (longit_dis_to_ego > spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().obstacle_longit_risk_distance() ||
-            lateral_dis_to_ego > spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().obstacle_lateral_risk_distance()) {
+        if (longit_dis_to_ego > spatio_temporal_union_plan_input
+                                    .dp_dynamic_agent_weight_params()
+                                    .obstacle_longit_risk_distance() ||
+            lateral_dis_to_ego > spatio_temporal_union_plan_input
+                                     .dp_dynamic_agent_weight_params()
+                                     .obstacle_lateral_risk_distance()) {
           continue;
         }
 
@@ -1463,11 +1540,17 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
         if (cur_point.point().t() <= kDefaultConsiderObstacleTajsTime) {
           if (agent_traj.agent_type == 6 || agent_traj.agent_type == 7 ||
               agent_traj.agent_type == 8) {
-              obstacle_cost += kSpecialObstacleDistanceCost * GetLateralCostBetweenObsBoxes(
-                  lateral_dis_to_ego, spatio_temporal_union_plan_input);
+            obstacle_cost +=
+                kSpecialObstacleDistanceCost *
+                GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
+                                              spatio_temporal_union_plan_input);
           } else {
-              obstacle_cost += spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().default_obstacle_cost_weight() *
-                  GetLateralCostBetweenObsBoxes(lateral_dis_to_ego, spatio_temporal_union_plan_input);
+            obstacle_cost +=
+                spatio_temporal_union_plan_input
+                    .dp_dynamic_agent_weight_params()
+                    .default_obstacle_cost_weight() *
+                GetLateralCostBetweenObsBoxes(lateral_dis_to_ego,
+                                              spatio_temporal_union_plan_input);
           }
         }
       }
@@ -1476,24 +1559,28 @@ double SpatioTemporalUnionDp::CalculateDynamicObstacleCost(
   auto t_end = IflyTime::Now_us();
   // ILOG_DEBUG << "CalculateDynamicObstacleCost:" << t_end - t_begin;
 
-  obstacle_cost *=
-      (time_gap * spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params().dynamic_obstacle_weight());
+  obstacle_cost *= (time_gap * spatio_temporal_union_plan_input
+                                   .dp_dynamic_agent_weight_params()
+                                   .dynamic_obstacle_weight());
   return obstacle_cost;
 }
 
 // Simple version: calculate obstacle cost by distance
 double SpatioTemporalUnionDp::GetLongitCostBetweenObsBoxes(
     const double &longit_dis_to_ego,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
-  const auto& dp_dynamic_agent_weight_params =
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
+  const auto &dp_dynamic_agent_weight_params =
       spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params();
   double obstacle_cost = 0.0;
   // double inv_collision_distance =
-  //     1.0 / dp_dynamic_agent_weight_params.obstacle_longit_collision_distance();
+  //     1.0 /
+  //     dp_dynamic_agent_weight_params.obstacle_longit_collision_distance();
   // double inv_risk_distance =
   //     1.0 / dp_dynamic_agent_weight_params.obstacle_longit_risk_distance();
 
-  if (longit_dis_to_ego > dp_dynamic_agent_weight_params.obstacle_longit_risk_distance()) {
+  if (longit_dis_to_ego >
+      dp_dynamic_agent_weight_params.obstacle_longit_risk_distance()) {
     return obstacle_cost;
   }
   // if (distance < 1e-2) {
@@ -1502,32 +1589,39 @@ double SpatioTemporalUnionDp::GetLongitCostBetweenObsBoxes(
 
   obstacle_cost +=
       dp_dynamic_agent_weight_params.obstacle_collision_cost() *
-      Sigmoid(dp_dynamic_agent_weight_params.obstacle_longit_collision_distance() - longit_dis_to_ego);
+      Sigmoid(
+          dp_dynamic_agent_weight_params.obstacle_longit_collision_distance() -
+          longit_dis_to_ego);
 
   return obstacle_cost;
 }
 
 double SpatioTemporalUnionDp::GetLateralCostBetweenObsBoxes(
     const double &lateral_dis_to_ego,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
-  const auto& dp_dynamic_agent_weight_params =
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
+  const auto &dp_dynamic_agent_weight_params =
       spatio_temporal_union_plan_input.dp_dynamic_agent_weight_params();
   double obstacle_cost = 0.0;
 
-  if (lateral_dis_to_ego > dp_dynamic_agent_weight_params.obstacle_lateral_risk_distance()) {
+  if (lateral_dis_to_ego >
+      dp_dynamic_agent_weight_params.obstacle_lateral_risk_distance()) {
     return obstacle_cost;
   }
 
   obstacle_cost +=
-      dp_dynamic_agent_weight_params.obstacle_collision_cost_without_lateral_overlap() *
-      Sigmoid(dp_dynamic_agent_weight_params.obstacle_lateral_collision_distance() - kSigmoidChangeRateCoefficient * lateral_dis_to_ego);
+      dp_dynamic_agent_weight_params
+          .obstacle_collision_cost_without_lateral_overlap() *
+      Sigmoid(
+          dp_dynamic_agent_weight_params.obstacle_lateral_collision_distance() -
+          kSigmoidChangeRateCoefficient * lateral_dis_to_ego);
 
   return obstacle_cost;
 }
 
 bool SpatioTemporalUnionDp::IsOffRoad(const double ref_s, const double l,
-                                     const double dl,
-                                     const bool is_change_lane_path) {
+                                      const double dl,
+                                      const bool is_change_lane_path) {
   static constexpr double kIgnoreDistance = 5.0;
   if (ref_s - planning_init_point_.frenet_state.s < kIgnoreDistance) {
     return false;
@@ -1544,10 +1638,12 @@ bool SpatioTemporalUnionDp::IsOffRoad(const double ref_s, const double l,
 
   Vec2d rear_center(0.0, l);
 
-  const auto &param  =
+  const auto &param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  double front_edge_to_center = param.front_edge_to_rear_axle - param.rear_axle_to_center;
-  double back_edge_to_center = param.rear_axle_to_center + param.rear_edge_to_rear_axle;
+  double front_edge_to_center =
+      param.front_edge_to_rear_axle - param.rear_axle_to_center;
+  double back_edge_to_center =
+      param.rear_axle_to_center + param.rear_edge_to_rear_axle;
   double left_edge_to_center = 0.5 * param.width;
   double right_edge_to_center = 0.5 * param.width;
 
@@ -1560,18 +1656,17 @@ bool SpatioTemporalUnionDp::IsOffRoad(const double ref_s, const double l,
   Vec2d front_center = center + rear_center_to_center;
 
   const double buffer = 0.1;  // in meters
-  const double r_w =
-      (left_edge_to_center + right_edge_to_center) / 2.0;
+  const double r_w = (left_edge_to_center + right_edge_to_center) / 2.0;
   const double r_l = back_edge_to_center;
   const double r = std::sqrt(r_w * r_w + r_l * r_l);
 
   double lane_width = 0.0;
   lane_width = QueryLaneWidth(ref_s, current_lane_s_width_);
 
-  double left_bound =
-      std::max(planning_init_point_.frenet_state.r + r + buffer, 0.5 * lane_width);
-  double right_bound =
-      std::min(planning_init_point_.frenet_state.r - r - buffer, -0.5 * lane_width);
+  double left_bound = std::max(planning_init_point_.frenet_state.r + r + buffer,
+                               0.5 * lane_width);
+  double right_bound = std::min(
+      planning_init_point_.frenet_state.r - r - buffer, -0.5 * lane_width);
   if (rear_center.y() + r + buffer / 2.0 > left_bound ||
       rear_center.y() - r - buffer / 2.0 < right_bound) {
     return true;
@@ -1590,8 +1685,9 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
   // 生成L方向三次多项式
   // std::array<double, 2> later_start_state{pre_cost_point.point().l(), 0.0};
   // std::array<double, 2> later_end_state{cur_cost_point.point().l(), 0.0};
-  // double remain_time = cur_cost_point.point().t() - pre_cost_point.point().t();
-  // CubicPolynomialCurve1d lateral_cubic_polynomial_curve(
+  // double remain_time = cur_cost_point.point().t() -
+  // pre_cost_point.point().t(); CubicPolynomialCurve1d
+  // lateral_cubic_polynomial_curve(
   //     later_start_state, later_end_state, remain_time);
 
   // const double target_t = cur_cost_point.point().t();
@@ -1602,17 +1698,19 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
   // double dl_ds = dl_dot / ds_dot;
   double cos_theta = 1.0;
   double sin_theta = 0.0;
-  planning_math::Vec2d cur_ego_point(cur_cost_point.point().s(), cur_cost_point.point().l());
+  planning_math::Vec2d cur_ego_point(cur_cost_point.point().s(),
+                                     cur_cost_point.point().l());
   std::array<planning_math::Vec2d, 8> ego_box_vertices;
 
   // 获取sl坐标系下自车box的顶点坐标集合
-  GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta, ego_box_vertices);
+  GetVehicleBoxSLVertices(cur_ego_point, cos_theta, sin_theta,
+                          ego_box_vertices);
   // 构建自车box
   AABox2d cur_ego_box(ego_box_vertices, kDefaultValidBoxNums);
   int index = cur_cost_point.index_t() * kDefaultTrajsPointNums;
 
   // 遍历所有障碍物集合 判断是否存在overlap
-  for (const auto& agent_traj : agent_trajs) {
+  for (const auto &agent_traj : agent_trajs) {
     if (agent_traj.agent_id == -1) {
       continue;
     }
@@ -1623,7 +1721,7 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
     auto it = agent_traj.agent_boxs_set.find(index);
 
     if (it != agent_traj.agent_boxs_set.end()) {
-      const auto& cur_agent_box = it->second;
+      const auto &cur_agent_box = it->second;
 
       // 判断自车box与障碍物agent_box是否存在overlap
       if (cur_agent_box.HasOverlap(cur_ego_box)) {
@@ -1636,18 +1734,16 @@ bool SpatioTemporalUnionDp::CheckOverlapOnDpSltGraph(
 }
 
 void SpatioTemporalUnionDp::GetVehicleBoxSLVertices(
-    const planning_math::Vec2d &ego_point,
-    const double &cos_theta,
-    const double &sin_theta,
-    std::array<planning_math::Vec2d, 8> &vertices) {
-  const auto& vehicle_param =
+    const planning_math::Vec2d &ego_point, const double &cos_theta,
+    const double &sin_theta, std::array<planning_math::Vec2d, 8> &vertices) {
+  const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   double c_x = ego_point.x() + vehicle_param.rear_axle_to_center * cos_theta;
   double c_y = ego_point.y() + vehicle_param.rear_axle_to_center * sin_theta;
 
   double d_wx = vehicle_param.width * 0.5 * sin_theta;
-  double d_wy = vehicle_param.width * 0.5  * cos_theta;
+  double d_wy = vehicle_param.width * 0.5 * cos_theta;
   double d_lx = vehicle_param.length * 0.5 * cos_theta;
   double d_ly = vehicle_param.length * 0.5 * sin_theta;
 
@@ -1673,10 +1769,11 @@ void SpatioTemporalUnionDp::GetVehicleBoxSLVertices(
 
 double SpatioTemporalUnionDp::ComputeFirstDerivative(
     const std::array<double, 4> &lateral_curve_coef,
-    const std::array<double, 4> &longit_curve_coef,
-    const double param) {
-  double a0 = longit_curve_coef[0], a1 = longit_curve_coef[1], a2 = longit_curve_coef[2], a3 = longit_curve_coef[3];
-  double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1], b2 = lateral_curve_coef[2], b3 = lateral_curve_coef[3];
+    const std::array<double, 4> &longit_curve_coef, const double param) {
+  double a0 = longit_curve_coef[0], a1 = longit_curve_coef[1],
+         a2 = longit_curve_coef[2], a3 = longit_curve_coef[3];
+  double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1],
+         b2 = lateral_curve_coef[2], b3 = lateral_curve_coef[3];
 
   double dlds = 0.0;
   // Derivative of s with respect to t
@@ -1691,12 +1788,12 @@ double SpatioTemporalUnionDp::ComputeFirstDerivative(
 }
 
 double SpatioTemporalUnionDp::ComputeSecondDerivative(
-    const std::array<double, 4> &lateral_curve_coef,
-    const double &acc,
-    const double &v0,
-    const double &param) {
-  // double a0 = longit_curve_coef[0], a1 = longit_curve_coef[1], a2 = longit_curve_coef[2], a3 = longit_curve_coef[3];
-  double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1], b2 = lateral_curve_coef[2], b3 = lateral_curve_coef[3];
+    const std::array<double, 4> &lateral_curve_coef, const double &acc,
+    const double &v0, const double &param) {
+  // double a0 = longit_curve_coef[0], a1 = longit_curve_coef[1], a2 =
+  // longit_curve_coef[2], a3 = longit_curve_coef[3];
+  double b0 = lateral_curve_coef[0], b1 = lateral_curve_coef[1],
+         b2 = lateral_curve_coef[2], b3 = lateral_curve_coef[3];
 
   // Derivative of s with respect to t
   double dsdt = v0 + acc * param;
@@ -1707,8 +1804,8 @@ double SpatioTemporalUnionDp::ComputeSecondDerivative(
   double dlds = dldt / dsdt;
 
   // Second derivative of l with respect to s using the product rule
-  double d2lds2 =
-      ((6.0 * b3 * param + 2.0 * b2) * dsdt - acc * dldt) / (dsdt * dsdt * dsdt);
+  double d2lds2 = ((6.0 * b3 * param + 2.0 * b2) * dsdt - acc * dldt) /
+                  (dsdt * dsdt * dsdt);
 
   return d2lds2;
 }
@@ -1747,13 +1844,15 @@ double SpatioTemporalUnionDp::QueryLaneWidth(
 
 void SpatioTemporalUnionDp::CaculateCurvatureLimitSpeed(
     double target_s, double &speed_limit,
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double steer_ratio = vehicle_param.steer_ratio;
   double wheel_base = vehicle_param.wheel_base;
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
-  const auto& speed_limit_params = spatio_temporal_union_plan_input.speed_limit_params();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &speed_limit_params =
+      spatio_temporal_union_plan_input.speed_limit_params();
 
   double angle_steers = ego_init_state.steer_angle();
   double angle_steers_deg = angle_steers * DEG_PER_RAD;
@@ -1782,7 +1881,8 @@ void SpatioTemporalUnionDp::CaculateCurvatureLimitSpeed(
   std::vector<double> curv_window_vec;
   for (int idx = -3; idx <= 3; ++idx) {
     double curv;
-    if (current_lane_coord_.GetKappaByS(target_s + preview_x + idx * 2.0, &curv)) {
+    if (current_lane_coord_.GetKappaByS(target_s + preview_x + idx * 2.0,
+                                        &curv)) {
       curv = std::fabs(curv);
     } else {
       curv = 0.0001;
@@ -1808,9 +1908,10 @@ void SpatioTemporalUnionDp::CaculateCurvatureLimitSpeed(
 }
 
 void SpatioTemporalUnionDp::CalculateMapSpeedLimit(
-      double &speed_limit,
-      const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input) {
-  const auto& speed_limit_params = spatio_temporal_union_plan_input.speed_limit_params();
+    double &speed_limit, const planning::common::SpationTemporalUnionDpInput
+                             &spatio_temporal_union_plan_input) {
+  const auto &speed_limit_params =
+      spatio_temporal_union_plan_input.speed_limit_params();
   double dis_to_ramp = speed_limit_params.dis_to_ramp();
   double dis_to_merge = speed_limit_params.dis_to_merge();
   bool is_on_ramp = speed_limit_params.is_on_ramp();
@@ -1857,13 +1958,12 @@ void SpatioTemporalUnionDp::CalculateMapSpeedLimit(
 
 void SpatioTemporalUnionDp::GenerateExpandedTrajectoryPoint(
     const SpeedInfo &init_point, const SpeedInfo &next_point) {
-
   // 生成L方向三次多项式
   std::array<double, 2> later_start_state{init_point.l, 0.0};
   std::array<double, 2> later_end_state{next_point.l, 0.0};
   double remain_time = next_point.t - init_point.t;
-  CubicPolynomialCurve1d lateral_cubic_curve(
-      later_start_state, later_end_state, remain_time);
+  CubicPolynomialCurve1d lateral_cubic_curve(later_start_state, later_end_state,
+                                             remain_time);
 
   // 计算必须满足的约束条件
   const double delta_s = next_point.s - init_point.s;
@@ -1882,16 +1982,14 @@ void SpatioTemporalUnionDp::GenerateExpandedTrajectoryPoint(
     adjusted_v1 = tau * beta * avg_speed;
   }
   // 生成S方向三次多项式（强制单调递增）
-  std::array<double, 2> longit_start_state{
-      init_point.s, adjusted_v0};
-  std::array<double, 2> longit_end_state{
-      next_point.s, adjusted_v1};
-  CubicPolynomialCurve1d longit_cubic_curve(
-      longit_start_state, longit_end_state, remain_time);
+  std::array<double, 2> longit_start_state{init_point.s, adjusted_v0};
+  std::array<double, 2> longit_end_state{next_point.s, adjusted_v1};
+  CubicPolynomialCurve1d longit_cubic_curve(longit_start_state,
+                                            longit_end_state, remain_time);
 
   // 生成插值点（排除终点，避免重复）
   constexpr double delta_time = 0.2;
-  for (int i = 0; i < 5; ++i) { // 0.0, 0.2, 0.4, 0.6, 0.8
+  for (int i = 0; i < 5; ++i) {  // 0.0, 0.2, 0.4, 0.6, 0.8
     const double relative_time = i * delta_time;
 
     SpeedInfo point;
@@ -1903,10 +2001,9 @@ void SpatioTemporalUnionDp::GenerateExpandedTrajectoryPoint(
     point.da = 0.0;
 
     // 验证单调性
-    if (!dp_speed_profile_.empty() &&
-        point.s <= dp_speed_profile_.back().s) {
+    if (!dp_speed_profile_.empty() && point.s <= dp_speed_profile_.back().s) {
       point.s = dp_speed_profile_.back().s +
-               (next_point.s - init_point.s) * delta_time / remain_time;
+                (next_point.s - init_point.s) * delta_time / remain_time;
     }
 
     dp_speed_profile_.emplace_back(point);
@@ -1915,30 +2012,31 @@ void SpatioTemporalUnionDp::GenerateExpandedTrajectoryPoint(
   return;
 }
 
-bool SpatioTemporalUnionDp::JudgeSVecisMonotonicIncreasing(const std::vector<double> &vec) {
+bool SpatioTemporalUnionDp::JudgeSVecisMonotonicIncreasing(
+    const std::vector<double> &vec) {
   if (vec.empty()) {
     return false;
   }
   for (size_t i = 1; i < vec.size(); ++i) {
-    if (vec[i] - kDoubleEpsilon <= vec[i-1]) {
+    if (vec[i] - kDoubleEpsilon <= vec[i - 1]) {
       return false;
     }
   }
 
   return true;
-
 }
 
 void SpatioTemporalUnionDp::PrecomputeInvSpeedLimit() {
-  for (auto& limit : speed_limit_by_index_) {
+  for (auto &limit : speed_limit_by_index_) {
     inv_speed_limit_table_.push_back(1.0 / std::max(limit, 1e-2));
   }
 }
 
 void SpatioTemporalUnionDp::FallbackFunction(
-    const planning::common::SpationTemporalUnionDpInput &spatio_temporal_union_plan_input,
+    const planning::common::SpationTemporalUnionDpInput
+        &spatio_temporal_union_plan_input,
     TrajectoryPoints &traj_points, const bool &last_enable_using_st_plan) {
-  const auto& ego_init_state = spatio_temporal_union_plan_input.init_state();
+  const auto &ego_init_state = spatio_temporal_union_plan_input.init_state();
   double ego_v = ego_init_state.v0();
   const double acc_coeff = 0.5;
   bool enable_use_fallback = true;
@@ -1947,16 +2045,21 @@ void SpatioTemporalUnionDp::FallbackFunction(
       last_planning_result_coord_ && ego_v > kEgoStaticThreshold &&
       enable_use_ego_cart_point_ && last_enable_using_st_plan) {
     Point2D ego_frenet_in_last_result;
-    if (!last_planning_result_coord_->XYToSL(ego_cart_point_, ego_frenet_in_last_result)) {
+    if (!last_planning_result_coord_->XYToSL(ego_cart_point_,
+                                             ego_frenet_in_last_result)) {
       ego_frenet_in_last_result.x = 0.0;
       ego_frenet_in_last_result.y = 0.0;
     }
-    const double ref_theta =
-        last_planning_result_coord_->GetPathCurveHeading(ego_frenet_in_last_result.x);
-    const double theta_diff = NormalizeAngle(ref_theta - ego_init_state.heading_angle());
+    const double ref_theta = last_planning_result_coord_->GetPathCurveHeading(
+        ego_frenet_in_last_result.x);
+    const double theta_diff =
+        NormalizeAngle(ref_theta - ego_init_state.heading_angle());
     double v_s = ego_v * std::cos(std::fabs(theta_diff));
-    double v_end =
-        2.0 * (last_planning_result_coord_->Length() - ego_frenet_in_last_result.x) / 5.0 - v_s;
+    double v_end = 2.0 *
+                       (last_planning_result_coord_->Length() -
+                        ego_frenet_in_last_result.x) /
+                       5.0 -
+                   v_s;
     double acc = (v_end - v_s) / 5.0;
     TrajectoryPoint point;
     for (int i = 0; i < kDefaultTrajectoryPointSize; ++i) {
@@ -1970,10 +2073,14 @@ void SpatioTemporalUnionDp::FallbackFunction(
         traj_points[i] = point;
       } else {
         double time = kDeltaTime * i;
-        double last_frame_frenet_point_s = v_s * time + acc_coeff * acc * time * time + ego_frenet_in_last_result.x;
-        last_frame_frenet_point_s = std::min(last_frame_frenet_point_s, last_planning_result_coord_->Length());
+        double last_frame_frenet_point_s = v_s * time +
+                                           acc_coeff * acc * time * time +
+                                           ego_frenet_in_last_result.x;
+        last_frame_frenet_point_s = std::min(
+            last_frame_frenet_point_s, last_planning_result_coord_->Length());
         double last_frame_frenet_point_l = 0.0;
-        point.heading_angle = last_planning_result_coord_->GetPathCurveHeading(last_frame_frenet_point_s);
+        point.heading_angle = last_planning_result_coord_->GetPathCurveHeading(
+            last_frame_frenet_point_s);
         point.t = time;
         Point2D last_frame_frenet_point(last_frame_frenet_point_s, 0.0);
         Point2D cur_point;
@@ -1984,7 +2091,7 @@ void SpatioTemporalUnionDp::FallbackFunction(
         point.y = cur_point.y;
         point.s = cur_frenet_point.x;
         point.l = cur_frenet_point.y;
-        if (point.s <= traj_points[i-1].s) {
+        if (point.s <= traj_points[i - 1].s) {
           enable_use_fallback = false;
           break;
         }
@@ -2011,30 +2118,33 @@ void SpatioTemporalUnionDp::FallbackFunction(
       target_count = i;
     } else {
       double delta_time = traj_points[i].t - traj_points[0].t;
-        double constant_speed_time = delta_time;
-        Point2D cur_frenet_point;
-        cur_frenet_point.x = traj_points[target_count].s + constant_speed_time * ego_v;
-        cur_frenet_point.y = ego_init_state.l();
+      double constant_speed_time = delta_time;
+      Point2D cur_frenet_point;
+      cur_frenet_point.x =
+          traj_points[target_count].s + constant_speed_time * ego_v;
+      cur_frenet_point.y = ego_init_state.l();
 
-        // point.x = sample_point.x();
-        // point.y = sample_point.y();
-        // point.heading_angle = lane_change_quintic_path.heading(traj_points[i].t);
+      // point.x = sample_point.x();
+      // point.y = sample_point.y();
+      // point.heading_angle =
+      // lane_change_quintic_path.heading(traj_points[i].t);
 
-        Point2D cart_point;
-        if (!current_lane_coord_.SLToXY(cur_frenet_point, cart_point)) {
-          ILOG_ERROR << "FallbackFunction()::ERROR! Frenet Point -> Cart Point Failed!!!";
-        }
-        point.s = cur_frenet_point.x;
-        point.l = cur_frenet_point.y;
-        point.t = traj_points[i].t;
-        point.x = cart_point.x;
-        point.y = cart_point.y;
-        planning_math::PathPoint cur_s_nearest_point =
-            current_lane_coord_.GetPathPointByS(cur_frenet_point.x);
-        point.heading_angle =
-            current_lane_coord_.GetPathCurveHeading(cur_s_nearest_point.s());
+      Point2D cart_point;
+      if (!current_lane_coord_.SLToXY(cur_frenet_point, cart_point)) {
+        ILOG_ERROR << "FallbackFunction()::ERROR! Frenet Point -> Cart Point "
+                      "Failed!!!";
+      }
+      point.s = cur_frenet_point.x;
+      point.l = cur_frenet_point.y;
+      point.t = traj_points[i].t;
+      point.x = cart_point.x;
+      point.y = cart_point.y;
+      planning_math::PathPoint cur_s_nearest_point =
+          current_lane_coord_.GetPathPointByS(cur_frenet_point.x);
+      point.heading_angle =
+          current_lane_coord_.GetPathCurveHeading(cur_s_nearest_point.s());
 
-        traj_points[i] = point;
+      traj_points[i] = point;
     }
   }
 

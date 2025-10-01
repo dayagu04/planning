@@ -99,9 +99,9 @@ void RSPathInterface::GeneShortestRSPath(
 }
 
 void RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
-                                 const Pose2f *start, const Pose2f *end,
-                                 const float min_radius,
-                                 const RSPathRequestType request_type) {
+                                  const Pose2f *start, const Pose2f *end,
+                                  const float min_radius,
+                                  const RSPathRequestType request_type) {
   // init
   rs_path->size = 0;
   rs_path->total_length = 0.0;
@@ -175,7 +175,7 @@ void RSPathInterface::GeneSCSPath(RSPath *rs_path, bool *is_connected_to_goal,
 }
 
 void RSPathInterface::RSPathInterpolate(RSPath *rs_path, const Pose2f *start,
-                                       const float min_radius) {
+                                        const float min_radius) {
   // update anchor
   rs_interpolate_.UpdateAnchorPoint(&rs_anchor_points_, start, rs_path);
   // attention:

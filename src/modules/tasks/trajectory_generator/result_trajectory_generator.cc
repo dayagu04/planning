@@ -543,7 +543,8 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                   .distance_to_split_point;
     // if (route_info_output.dis_to_ramp < 100.0 &&
     //     route_info_output.dis_to_ramp < dis_to_merge) {
-    //   ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    //   ad_info.lane_change_reason =
+    //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
     if (route_info_output.mlc_decider_route_info.is_process_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;

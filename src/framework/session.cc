@@ -32,7 +32,8 @@ bool Session::Init() {
   auto module_config_file_dir = engine_config.module_cfg_dir;
   if (!common::ConfigurationContext::Instance()->load_params_from_json(
           engine_config.vehicle_cfg_dir)) {
-    ILOG_ERROR << "ConfigurationContext load_params_from_json :" << "ERROR";
+    ILOG_ERROR << "ConfigurationContext load_params_from_json :"
+               << "ERROR";
     return false;
   }
 

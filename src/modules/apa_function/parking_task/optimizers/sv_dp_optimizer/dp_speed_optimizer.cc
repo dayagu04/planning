@@ -82,7 +82,7 @@ void DpSpeedOptimizer::Excute(
   RecordDebugInfo(path);
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_DP_TIME,
-                                        IflyTime::Now_ms() - opt_start_time);
+                                    IflyTime::Now_ms() - opt_start_time);
   return;
 }
 
@@ -364,7 +364,7 @@ void DpSpeedOptimizer::CalculateTotalCost() {
   // No need to search end point.
   int32_t s_id;
   for (s_id = 0; s_id < dimension_s_ - 1; s_id++) {
-    // search current layer
+  // search current layer
 #if DEBUG_SEARCH
     ILOG_INFO << "-------debug search------";
 #endif

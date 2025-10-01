@@ -6,12 +6,12 @@
 #include "adas_function_struct.h"
 #include "base_function.h"
 #include "base_task_pipeline.h"
+#include "ihc_function/ihc_core.h"
 #include "lkas_function/elk_core.h"
 #include "lkas_function/ldp_core.h"
 #include "lkas_function/ldw_core.h"
 #include "session.h"
 #include "tsr_function/tsr_core.h"
-#include "ihc_function/ihc_core.h"
 
 namespace planning {
 

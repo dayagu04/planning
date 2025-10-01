@@ -37,12 +37,10 @@ double MeanFilter::Update(const double measurement) {
   Insert(measurement);
   if (values_.size() > 2) {
     mean_value_ =
-        (sum_ - GetMin() - GetMax()) /
-        static_cast<double>(values_.size() - 2);
+        (sum_ - GetMin() - GetMax()) / static_cast<double>(values_.size() - 2);
     return mean_value_;
   } else {
-    mean_value_ =
-        sum_ / static_cast<double>(values_.size());
+    mean_value_ = sum_ / static_cast<double>(values_.size());
     return mean_value_;
   }
 }

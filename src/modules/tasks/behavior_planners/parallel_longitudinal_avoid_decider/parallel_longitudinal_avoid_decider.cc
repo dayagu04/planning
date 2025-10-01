@@ -68,7 +68,7 @@ constexpr double kStopLateralConflictRatio =
     0.30;  // 超车和前车让行退出横向冲突比例
 constexpr double kCloseDistanceTimeHeadwayS = 1.5;  // 近距离考虑时距
 constexpr double kDefaultCipvDistanceM = 200.0;  // 默认前车距离（米）
-constexpr double kLargeAgentLengthM = 8.0;  // 大车长度（米）
+constexpr double kLargeAgentLengthM = 8.0;       // 大车长度（米）
 }  // namespace
 
 ParallelLongitudinalAvoidDecider::ParallelLongitudinalAvoidDecider(
@@ -437,7 +437,8 @@ bool ParallelLongitudinalAvoidDecider::IsDynamicTruckOrBus(
     const agent::Agent* agent) {
   return agent &&
          (agent->type() == agent::AgentType::TRUCK ||
-          agent->type() == agent::AgentType::BUS || agent->length() > kLargeAgentLengthM) &&
+          agent->type() == agent::AgentType::BUS ||
+          agent->length() > kLargeAgentLengthM) &&
          !agent->is_static();
 }
 

@@ -46,7 +46,8 @@ bool AvoidObstacleMaintainer5V::UpdateLFrontAvdsInfo(
     if (tr->d_s_rel() < 8 &&
         ((tr->d_min_cpath() > 1.0 && tr->d_min_cpath() < lane_width_ - 1.1) ||
          (tr->d_path() > 1.0 && tr->d_path() < 1.4)) &&
-        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 && vs_lon_relative < -1)) {
+        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 &&
+          vs_lon_relative < -1)) {
       avd_obstacle1.flag = AvoidObstacleFlag::SIDE;
       avd_obstacle1.update_flag = AvoidObstacleUpdateFlag::Update;
       avd_obstacle1.curr_time = curr_time;
@@ -58,7 +59,8 @@ bool AvoidObstacleMaintainer5V::UpdateLFrontAvdsInfo(
       avd_obstacle1.vs = tr->frenet_velocity_s();
       avd_obstacle1.length = tr->length();
 
-      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 && tr->d_s_rel() <= 0) {
+      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 &&
+          tr->d_s_rel() <= 0) {
       } else {
         if (std::fabs(avd_obstacle1.min_l_to_ref - tr->d_min_cpath()) > 0.1) {
           avd_obstacle1.intersection_index = 0;
@@ -98,9 +100,11 @@ bool AvoidObstacleMaintainer5V::UpdateRFrontAvdsInfo(
     }
     double vs_lon_relative = tr->frenet_velocity_s() - v_ego;
     if (tr->d_s_rel() < 8 &&
-        ((tr->d_max_cpath() > -(lane_width_ - 1.1) && tr->d_max_cpath() < -1.0) ||
+        ((tr->d_max_cpath() > -(lane_width_ - 1.1) &&
+          tr->d_max_cpath() < -1.0) ||
          (tr->d_path() > 1.0 && tr->d_path() < 1.4)) &&
-        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 && vs_lon_relative < -1)) {
+        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 &&
+          vs_lon_relative < -1)) {
       avd_obstacle1.flag = AvoidObstacleFlag::SIDE;
       avd_obstacle1.update_flag = AvoidObstacleUpdateFlag::Update;
       avd_obstacle1.curr_time = curr_time;
@@ -112,7 +116,8 @@ bool AvoidObstacleMaintainer5V::UpdateRFrontAvdsInfo(
       avd_obstacle1.vs = tr->frenet_velocity_s();
       avd_obstacle1.length = tr->length();
 
-      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 && tr->d_s_rel() <= 0) {
+      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 &&
+          tr->d_s_rel() <= 0) {
       } else {
         if (std::fabs(avd_obstacle1.min_l_to_ref - tr->d_min_cpath()) > 0.1) {
           avd_obstacle1.intersection_index = 0;
@@ -153,7 +158,8 @@ bool AvoidObstacleMaintainer5V::UpdateLSideAvdsInfo(
     if (tr->d_s_rel() + ego_length_ > -safety_dist_level_2 &&
         ((tr->d_min_cpath() > 1.0 && tr->d_min_cpath() < lane_width_ - 1.1) ||
          (tr->d_path() > 1.0 && tr->d_path() < 1.7)) &&
-        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 && vs_lon_relative < -1)) {
+        !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 &&
+          vs_lon_relative < -1)) {
       avd_obstacle1.flag = AvoidObstacleFlag::SIDE;
       avd_obstacle1.update_flag = AvoidObstacleUpdateFlag::Update;
       avd_obstacle1.curr_time = curr_time;
@@ -164,7 +170,8 @@ bool AvoidObstacleMaintainer5V::UpdateLSideAvdsInfo(
       avd_obstacle1.predict_vs_lon_relative = vs_lon_relative;
       avd_obstacle1.vs = tr->frenet_velocity_s();
       avd_obstacle1.length = tr->length();
-      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 && tr->d_s_rel() <= 0) {
+      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 &&
+          tr->d_s_rel() <= 0) {
       } else {
         if (std::fabs(avd_obstacle1.min_l_to_ref - tr->d_min_cpath()) > 0.1 &&
             avd_obstacle1.s_to_ego + ego_length_ >
@@ -204,7 +211,8 @@ bool AvoidObstacleMaintainer5V::UpdateRSideAvdsInfo(
     }
     double vs_lon_relative = tr->frenet_velocity_s() - v_ego;
     if (tr->d_s_rel() + ego_length_ > -safety_dist_level_2 &&
-        ((tr->d_max_cpath() > -(lane_width_ - 1.1) && tr->d_max_cpath() < -1.0) ||
+        ((tr->d_max_cpath() > -(lane_width_ - 1.1) &&
+          tr->d_max_cpath() < -1.0) ||
          (tr->d_path() > 1.0 && tr->d_path() < 1.7)) &&
         !(tr->d_s_rel() + ego_length_ < safety_dist_level_1 &&
           vs_lon_relative < -1)) {  // 如果是角雷达的话，考虑速度
@@ -220,7 +228,8 @@ bool AvoidObstacleMaintainer5V::UpdateRSideAvdsInfo(
       avd_obstacle1.vs = tr->frenet_velocity_s();
       avd_obstacle1.length = tr->length();
 
-      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 && tr->d_s_rel() <= 0) {
+      if (v_ego > 60 / 3.6 && fabs(vs_lon_relative) > 1.5 &&
+          tr->d_s_rel() <= 0) {
       } else {
         if (std::fabs(avd_obstacle1.min_l_to_ref - tr->d_min_cpath()) > 0.1 &&
             avd_obstacle1.s_to_ego + ego_length_ > -safety_dist_level_1) {
@@ -291,12 +300,12 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
     std::shared_ptr<FrenetObstacle> tr;
     bool is_found =
         lateral_obstacle->find_track(avd_obstacles_[0].track_id, tr);
-    if (is_found && ((tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA) &&
-                     tr->d_s_rel() > 0)) {  // TODO filter
+    if (is_found &&
+        ((tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA) &&
+         tr->d_s_rel() > 0)) {  // TODO filter
       double diff_time = curr_time - avd_obstacles_[0].curr_time;
       bool is_avd_car = false;
-      auto lateral_obstacle_iter =
-          lateral_obstacle_history_info.find(tr->id());
+      auto lateral_obstacle_iter = lateral_obstacle_history_info.find(tr->id());
       if (lateral_obstacle_iter != lateral_obstacle_history_info.end()) {
         is_avd_car = lateral_obstacle_iter->second.is_avd_car;
       }
@@ -314,7 +323,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacle(
     if (avd_obstacles_[1].flag != AvoidObstacleFlag::INVALID) {
       is_found = lateral_obstacle->find_track(avd_obstacles_[0].track_id, tr);
       if (is_found &&
-          ((tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA) && tr->d_s_rel() > 0)) {
+          ((tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA) &&
+           tr->d_s_rel() > 0)) {
         double diff_time = curr_time - avd_obstacles_[1].curr_time;
         bool is_avd_car = false;
         auto lateral_obstacle_iter =
@@ -360,8 +370,7 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
         continue;
       }
       bool is_avd_car = false;
-      auto lateral_obstacle_iter =
-          lateral_obstacle_history_info.find(tr->id());
+      auto lateral_obstacle_iter = lateral_obstacle_history_info.find(tr->id());
       double vs_lon_relative = tr->frenet_velocity_s() - v_ego;
       if (lateral_obstacle_iter != lateral_obstacle_history_info.end()) {
         is_avd_car = lateral_obstacle_iter->second.is_avd_car;
@@ -379,34 +388,42 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
             if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
               // length 后续调整
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
-                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(), vs_lon_relative, vs_lon_relative,
-                  tr->d_s_rel() - 3, tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
-                  tr->d_min_cpath() - 0.3, tr->d_max_cpath() - 0.3, tr->d_s_rel(),
-                  curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr->id(),
-                  tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
+                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
+                  vs_lon_relative, vs_lon_relative, tr->d_s_rel() - 3,
+                  tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
+                  tr->d_min_cpath() - 0.3, tr->d_max_cpath() - 0.3,
+                  tr->d_s_rel(), curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_,
+                  tr->id(), tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0,
+                  false));
             } else {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
-                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(), vs_lon_relative, vs_lon_relative,
-                  tr->d_s_rel() - 3, tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
-                  tr->d_min_cpath() + 0.2, tr->d_max_cpath() + 0.2, tr->d_s_rel(),
-                  curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr->id(),
-                  tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
+                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
+                  vs_lon_relative, vs_lon_relative, tr->d_s_rel() - 3,
+                  tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
+                  tr->d_min_cpath() + 0.2, tr->d_max_cpath() + 0.2,
+                  tr->d_s_rel(), curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_,
+                  tr->id(), tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0,
+                  false));
             }
           } else {
             if (tr->type() != iflyauto::OBJECT_TYPE_TRAFFIC_CONE) {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
-                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(), vs_lon_relative, vs_lon_relative,
-                  tr->d_s_rel() - 3, tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
-                  tr->d_min_cpath() + 0.3, tr->d_max_cpath() + 0.3, tr->d_s_rel(),
-                  curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr->id(),
-                  tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0, false));
+                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
+                  vs_lon_relative, vs_lon_relative, tr->d_s_rel() - 3,
+                  tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
+                  tr->d_min_cpath() + 0.3, tr->d_max_cpath() + 0.3,
+                  tr->d_s_rel(), curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_,
+                  tr->id(), tr->type(), AvoidObstacleUpdateFlag::Update, 5.0, 0,
+                  false));
             } else {
               avd_temp_cars.emplace_back(AvoidObstacleInfo(
-                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(), vs_lon_relative, vs_lon_relative,
-                  tr->d_s_rel() - 3, tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
-                  tr->d_min_cpath() - 0.2, tr->d_max_cpath() - 0.2, tr->d_s_rel(),
-                  curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr->id(),
-                  tr->type(), AvoidObstacleUpdateFlag::Update, 0.3, 0, false));
+                  AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
+                  vs_lon_relative, vs_lon_relative, tr->d_s_rel() - 3,
+                  tr->tail_s_rel() - 3, tr->frenet_velocity_lateral(),
+                  tr->d_min_cpath() - 0.2, tr->d_max_cpath() - 0.2,
+                  tr->d_s_rel(), curr_time, MAX_T_EXCEED_AVD_CAR, final_y_rel_,
+                  tr->id(), tr->type(), AvoidObstacleUpdateFlag::Update, 0.3, 0,
+                  false));
             }
           }
 
@@ -486,9 +503,10 @@ void AvoidObstacleMaintainer5V::SelectCurAvoidObstacles(
         } else {
           if (avd_obstacles.size() < 2) {
             avd_obstacles.emplace_back(AvoidObstacleInfo(
-                AvoidObstacleFlag::NORMAL, 0,
-                tr->frenet_velocity_s(), vs_lon_relative, vs_lon_relative, tr->d_s_rel(), tr->tail_s_rel(),
-                tr->frenet_velocity_lateral(), tr->d_min_cpath(), tr->d_max_cpath(), tr->d_s_rel(), curr_time,
+                AvoidObstacleFlag::NORMAL, 0, tr->frenet_velocity_s(),
+                vs_lon_relative, vs_lon_relative, tr->d_s_rel(),
+                tr->tail_s_rel(), tr->frenet_velocity_lateral(),
+                tr->d_min_cpath(), tr->d_max_cpath(), tr->d_s_rel(), curr_time,
                 MAX_T_EXCEED_AVD_CAR, final_y_rel_, tr->id(), tr->type(),
                 AvoidObstacleUpdateFlag::Update, tr->length(), 0, false));
           }
@@ -1059,8 +1077,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo2(
     std::shared_ptr<FrenetObstacle> tr;
     bool is_found =
         lateral_obstacle->find_track(avd_obstacles_[0].track_id, tr);
-    if (is_found &&
-        (tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {  // TODO filter
+    if (is_found && (tr->obstacle()->fusion_source() &
+                     OBSTACLE_SOURCE_CAMERA)) {  // TODO filter
       // update avd_obstacle accord to real data
       double vs_lon_relative = tr->frenet_velocity_s() - v_ego;
       avd_obstacles_[0].tail_s_to_ego = tr->tail_s_rel();
@@ -1117,8 +1135,8 @@ void AvoidObstacleMaintainer5V::UpdateAvoidObstacleInfo2(
     std::shared_ptr<FrenetObstacle> tr;
     bool is_found =
         lateral_obstacle->find_track(avd_obstacles_[1].track_id, tr);
-    if (is_found &&
-        (tr->obstacle()->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {  // TODO filter
+    if (is_found && (tr->obstacle()->fusion_source() &
+                     OBSTACLE_SOURCE_CAMERA)) {  // TODO filter
       double vs_lon_relative = tr->frenet_velocity_s() - v_ego;
       avd_obstacles_[1].tail_s_to_ego = tr->tail_s_rel();
       avd_obstacles_[1].s_to_ego = tr->d_s_rel();

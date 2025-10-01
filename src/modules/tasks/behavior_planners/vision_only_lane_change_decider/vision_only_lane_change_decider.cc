@@ -1,4 +1,5 @@
-// #include "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+// #include
+// "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
 // #include "planning_context.h"
 // #include "virtual_lane_manager.h"
 
@@ -39,7 +40,8 @@
 //   // cur_lane_.clear();
 //   // target_lane_.clear();
 
-//   const auto &lane_status = session_->mutable_planning_context()->lane_status();
+//   const auto &lane_status =
+//   session_->mutable_planning_context()->lane_status();
 
 //   const auto current_v_lane = session_->environmental_model()
 //                                   .get_virtual_lane_manager()
@@ -77,9 +79,9 @@
 //   std::sort(obstacle_on_target_.begin(), obstacle_on_target_.end(),
 //             compare_distance_asc);
 
-//   double preview_distance = 20 + std::max((v_ego_ - 10.0) / 15.0 * 20.0, 0.0);
-//   nearest_rear_car_track_ = obstacle_on_target_[0];
-//   for (int i = 0; i < obstacle_on_target_.size() - 1; i++) {
+//   double preview_distance = 20 + std::max((v_ego_ - 10.0) / 15.0 * 20.0,
+//   0.0); nearest_rear_car_track_ = obstacle_on_target_[0]; for (int i = 0; i <
+//   obstacle_on_target_.size() - 1; i++) {
 //     double d_lead = 100.0;
 //     if (lead_car_.id > 0) {
 //       d_lead = lead_car_.d_rel;
@@ -105,11 +107,14 @@
 //                                        obstacle_on_target_.at(i + 1));
 //     std::cout << "TBDEBUG Gap Info: valid: " << gap_info.valid
 //               << " front_id:" << gap_info.front_id
-//               << " rear_id: " << gap_info.rear_id << " cost: " << gap_info.cost
+//               << " rear_id: " << gap_info.rear_id << " cost: " <<
+//               gap_info.cost
 //               << std::endl;
 //     if (gap_info.valid) {
-//       if (gap_info.front_id == lane_status.change_lane.target_gap_obs.first &&
-//           gap_info.rear_id == lane_status.change_lane.target_gap_obs.second) {
+//       if (gap_info.front_id == lane_status.change_lane.target_gap_obs.first
+//       &&
+//           gap_info.rear_id == lane_status.change_lane.target_gap_obs.second)
+//           {
 //         gap_info.cost -= params_.cost_minus;
 //       }
 //       gap_list_.emplace_back(gap_info);
@@ -121,7 +126,8 @@
 //         std::make_pair(gap_list_.at(0).front_id, gap_list_.at(0).rear_id);
 //     target_gap_cost_ = gap_list_.at(0).cost;
 //   }
-//   LOG_DEBUG("Target gap: [%d], [%d]\n", target_gap_.first, target_gap_.second);
+//   LOG_DEBUG("Target gap: [%d], [%d]\n", target_gap_.first,
+//   target_gap_.second);
 
 //   session_->mutable_planning_context()
 //       ->mutable_lane_status()
@@ -205,7 +211,8 @@
 //            safety_distance;
 //   }
 //   double acc_time = calc_time_for_lane_change(
-//       base_car, front_car, gap_info, safety_distance, v_limit_ - v_ego_ - 0.5);
+//       base_car, front_car, gap_info, safety_distance, v_limit_ - v_ego_ -
+//       0.5);
 //   gap_info.acc_time = acc_time;
 //   // ROS_INFO("TBDEBUG: acc_time %f", acc_time);
 //   double v_target_p = 100.0;
@@ -213,7 +220,8 @@
 //   if (lead_car_.id > 0) {
 //     double d_des = calc_desired_distance(lead_car_.v_rel + v_ego_, v_ego_p);
 //     double gap_p = (acc_time + 2.0) *
-//                        (lead_car_.v_rel + v_ego_ - (v_ego_ + rear_car.v_rel)) +
+//                        (lead_car_.v_rel + v_ego_ - (v_ego_ + rear_car.v_rel))
+//                        +
 //                    lead_car_.d_rel - rear_car.d_rel - car_length;
 //     d_p = gap_p - safety_distance;
 //     v_target_p = calc_desired_speed(d_p, d_des, lead_car_.v_rel + v_ego_);
@@ -221,7 +229,8 @@
 
 //   if (v_ego_p_rel < rear_car.v_rel + params_.v_rel_bufer &&
 //       rear_car.d_rel >
-//           -std::max(mssr + ego_car_length, safety_distance + ego_car_length)) {
+//           -std::max(mssr + ego_car_length, safety_distance + ego_car_length))
+//           {
 //     d_p = -1;
 //   }
 
@@ -263,7 +272,8 @@
 //     double gap_cost =
 //         ((10.0 > rear_car.d_rel && rear_car.d_rel > -20.0) or
 //          (20.0 > front_car.d_rel && front_car.d_rel > -10.0))
-//             ? -std::min(std::max(front_car.d_rel - rear_car.d_rel - 20.0, 0.0),
+//             ? -std::min(std::max(front_car.d_rel - rear_car.d_rel - 20.0,
+//             0.0),
 //                         20.0)
 //             : 0.0;
 //     double cost =
@@ -277,12 +287,13 @@
 //       }
 //     }
 //     if (is_merging_) {
-//       double cost_minus = ((-40.0 < rear_car.d_rel) && (rear_car.d_rel) < 20.0)
+//       double cost_minus = ((-40.0 < rear_car.d_rel) && (rear_car.d_rel)
+//       < 20.0)
 //                               ? -std::min(std::max(gap - 20.0, 0.0), 20.0)
 //                               : 0.0;
 //       cost = std::pow(v_ego_p_rel, 2) +
-//              std::abs(base_car.d_rel + base_car.v_rel * 1.0) * 1.5 + acc_time +
-//              abs(v_limit_ - v_ego_p) + cost_minus;
+//              std::abs(base_car.d_rel + base_car.v_rel * 1.0) * 1.5 + acc_time
+//              + abs(v_limit_ - v_ego_p) + cost_minus;
 //     }
 //     gap_info.cost = cost;
 //   } else {
@@ -326,8 +337,8 @@
 //     return acc_time;
 //   }
 //   if (vrel > v_diff_max) {
-//     double d_dec_max = (std::pow(vrel, 2) - std::pow(v_diff_end, 2)) / (2 * a);
-//     if (d > d_dec_max) {
+//     double d_dec_max = (std::pow(vrel, 2) - std::pow(v_diff_end, 2)) / (2 *
+//     a); if (d > d_dec_max) {
 //       acc_time = (d - d_dec_max) / v_diff_max + (vrel - v_diff_end) / a;
 //     } else {
 //       acc_time = (vrel - std::sqrt(std::pow(vrel, 2) - 2 * d * a)) / a;
@@ -336,7 +347,8 @@
 //     d += std::pow(std::min(vrel, 0.0), 2) / (2 * a);
 //     double d_dec = std::pow(v_diff_max - v_diff_end, 2) / (2 * a);
 //     if (d <
-//         d_dec + (std::pow(v_diff_max, 2) - std::pow(std::max(vrel, 0.0), 2)) /
+//         d_dec + (std::pow(v_diff_max, 2) - std::pow(std::max(vrel, 0.0), 2))
+//         /
 //                     (2 * a)) {
 //       double v_m = std::sqrt(d + std::pow(std::max(vrel, 0.0), 2) / (2 * a) +
 //                              std::pow(v_diff_end, 2) / (2 * a));
@@ -348,7 +360,8 @@
 //         acc_time = (std::sqrt(std::pow(vrel, 2) + 2 * d * a) - vrel) / a;
 //       }
 //     } else {
-//       acc_time = (d + std::pow(v_diff_max - std::max(vrel, 0.0), 2) / (2 * a) +
+//       acc_time = (d + std::pow(v_diff_max - std::max(vrel, 0.0), 2) / (2 * a)
+//       +
 //                   d_dec) /
 //                      v_diff_max +
 //                  std::abs(std::min(vrel / a, 0.0));
@@ -386,8 +399,10 @@
 //   return clip(lane_width, 3.0, 4.0);
 // }
 
-// double VisionOnlyLaneChangeDecider::calc_desired_distance(const double v_lead,
-//                                                           const double v_ego) {
+// double VisionOnlyLaneChangeDecider::calc_desired_distance(const double
+// v_lead,
+//                                                           const double v_ego)
+//                                                           {
 //   double t_gap = interp(v_ego, _T_GAP_VEGO_BP, _T_GAP_VEGO_V);
 //   // if (lc_request != "none") {
 //   //   t_gap = t_gap * (0.6 + v_ego * 0.01);
@@ -439,7 +454,8 @@
 //     v_rel_des = (d_lead - d_des) * l_slope;
 //     v_rel_des = std::max(v_rel_des, max_runaway_speed);
 //   } else {
-//     v_rel_des = std::sqrt(2 * (d_lead - d_des - x_parabola_offset) * p_slope);
+//     v_rel_des = std::sqrt(2 * (d_lead - d_des - x_parabola_offset) *
+//     p_slope);
 //   }
 //   // compute desired speed
 //   double v_target = v_rel_des + v_lead;

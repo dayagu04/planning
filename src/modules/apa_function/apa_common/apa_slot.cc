@@ -119,7 +119,7 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   }
 
   mid_line_.SetPoints(origin_corner_coord_global_.pt_01_mid,
-                       origin_corner_coord_global_.pt_23_mid);
+                      origin_corner_coord_global_.pt_23_mid);
 }
 
 void ApaSlot::TransformCoordFromGlobalToLocal(

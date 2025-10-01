@@ -38,10 +38,13 @@ LaneChangeRequest::LaneChangeRequest(
 
 void LaneChangeRequest::GenerateRequest(RequestType direction) {
   if (direction != LEFT_CHANGE && direction != RIGHT_CHANGE) {
-    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] Illgeal direction[" << direction << "]";
+    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] Illgeal direction["
+               << direction << "]";
   }
   if (request_type_ == direction) {
-    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] duplicated request, direction :" << direction;
+    ILOG_DEBUG << "[LaneChangeRequest::GenerateRequest] duplicated request, "
+                  "direction :"
+               << direction;
     return;
   }
   request_type_ = direction;
@@ -133,19 +136,21 @@ double LaneChangeRequest::CalculatePressLineRatio(
   }
   return press_line_ratio;
 }
-double LaneChangeRequest::CalculatePressLineRatioByTwoLanes(const int origin_lane_id,
-                                                  const int target_lane_id,
-                                                  const RequestType &lc_request) const {
+double LaneChangeRequest::CalculatePressLineRatioByTwoLanes(
+    const int origin_lane_id, const int target_lane_id,
+    const RequestType &lc_request) const {
   double press_line_ratio = 0.0;
   auto origin_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
   auto target_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
-  if(origin_lane != nullptr){
-    press_line_ratio = CalculatePressLineRatioByOrigin(origin_lane_id, lc_request);
-  }else if(target_lane != nullptr){
-    press_line_ratio = CalculatePressLineRatioByTarget(target_lane_id, lc_request);
-  }else{
+  if (origin_lane != nullptr) {
+    press_line_ratio =
+        CalculatePressLineRatioByOrigin(origin_lane_id, lc_request);
+  } else if (target_lane != nullptr) {
+    press_line_ratio =
+        CalculatePressLineRatioByTarget(target_lane_id, lc_request);
+  } else {
     press_line_ratio = 0.0;
   }
   return press_line_ratio;
@@ -222,9 +227,9 @@ double LaneChangeRequest::CalculatePressLineRatioByTarget(
   double lane_width = target_lane->width_by_s(ego_center_s);
   double half_lane_width = lane_width * 0.5;
   if (lc_request == LEFT_CHANGE) {
-    if (ego_frenent_boundary.l_end < - half_lane_width) {
+    if (ego_frenent_boundary.l_end < -half_lane_width) {
       press_line_ratio = 0.0;
-    } else if (ego_frenent_boundary.l_end > - half_lane_width) {
+    } else if (ego_frenent_boundary.l_end > -half_lane_width) {
       press_line_ratio =
           (ego_frenent_boundary.l_end + half_lane_width) / frenent_ego_width;
     } else {
@@ -387,8 +392,8 @@ bool LaneChangeRequest::ComputeLcValid(RequestType direction) {
   return true;
 }
 bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
-    const RequestType& lc_request, const RequestSource& lc_request_source, int origin_lane_id,
-    const StateMachineLaneChangeStatus &lc_status) const {
+    const RequestType &lc_request, const RequestSource &lc_request_source,
+    int origin_lane_id, const StateMachineLaneChangeStatus &lc_status) const {
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   const double ego_v = ego_state->ego_v();
@@ -492,8 +497,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     dash_length = std::max(0.0, dash_length);
   }
 
-  const double lc_response_dist =
-      std::max(ego_v * kLaneChangeSolidLineTTC, kLaneChangeMinDistance);  // hack
+  const double lc_response_dist = std::max(ego_v * kLaneChangeSolidLineTTC,
+                                           kLaneChangeMinDistance);  // hack
   JSON_DEBUG_VALUE("dash_line_len", dash_length);
   std::cout << "dash_length:" << dash_length
             << ",lc_response_dist:" << lc_response_dist << std::endl;
@@ -511,9 +516,11 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   bool is_process_split = mlc_decider_route_info.is_process_split ||
                           mlc_decider_route_info.is_process_split_split ||
                           mlc_decider_route_info.is_process_other_merge_split;
-  bool is_mlc_avoidance = route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE ||
-                          route_info_output.mlc_request_type_route_info == AVOIDE_MERGE;
-  if (is_process_split && lc_request_source == MAP_REQUEST && !is_mlc_avoidance &&
+  bool is_mlc_avoidance =
+      route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE ||
+      route_info_output.mlc_request_type_route_info == AVOIDE_MERGE;
+  if (is_process_split && lc_request_source == MAP_REQUEST &&
+      !is_mlc_avoidance &&
       route_info_output.distance_to_first_road_split < 100) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
@@ -643,7 +650,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on base lane";
+    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on "
+                  "base lane";
     return true;
   }
   if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x,
@@ -708,7 +716,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
 
   if (!reference_path_ptr) {
-    ILOG_ERROR << "IsRoadBorderSurpressDuringLaneChange: invalid reference path";
+    ILOG_ERROR
+        << "IsRoadBorderSurpressDuringLaneChange: invalid reference path";
     return true;
   }
   if (!target_lane) {
@@ -729,7 +738,8 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on base lane";
+    ILOG_DEBUG << "IsRoadBorderSurpressLaneChange::fail to get ego position on "
+                  "base lane";
     return true;
   }
   if (!reference_path_ptr->get_reference_point_by_lon(ego_frenet_point.x,
@@ -794,8 +804,10 @@ double LaneChangeRequest::CalculateDynamicTTCtime(
     return ttc_time;
   }
 
-  const double origin_lane_half_width = origin_lane->width_by_s(
-      origin_reference_path->get_frenet_ego_state().s()) * 0.5;
+  const double origin_lane_half_width =
+      origin_lane->width_by_s(
+          origin_reference_path->get_frenet_ego_state().s()) *
+      0.5;
 
   // 车辆参数
   const auto &vehicle_param =
@@ -818,23 +830,23 @@ double LaneChangeRequest::CalculateDynamicTTCtime(
     return 0.0;
   }
 
-  ttc_time =  kLaneChangeSolidLineTTC * lat_offset / base_lat_offset;
+  ttc_time = kLaneChangeSolidLineTTC * lat_offset / base_lat_offset;
 
   return ttc_time;
 }
 
 bool LaneChangeRequest::EgoInIntersection() {
   const auto &tfl_decider = session_->mutable_planning_context()
-                          ->mutable_traffic_light_decider_output();
+                                ->mutable_traffic_light_decider_output();
   const auto intersection_state = session_->environmental_model()
-                              .get_virtual_lane_manager()
-                              ->GetIntersectionState();
+                                      .get_virtual_lane_manager()
+                                      ->GetIntersectionState();
   const double distance_to_stopline = session_->environmental_model()
-                                    .get_virtual_lane_manager()
-                                    ->GetEgoDistanceToStopline();
+                                          .get_virtual_lane_manager()
+                                          ->GetEgoDistanceToStopline();
   const double distance_to_crosswalk = session_->environmental_model()
-                                    .get_virtual_lane_manager()
-                                    ->GetEgoDistanceToCrosswalk();
+                                           .get_virtual_lane_manager()
+                                           ->GetEgoDistanceToCrosswalk();
   bool current_intersection_state =
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
       distance_to_stopline <= 5.0;

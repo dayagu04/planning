@@ -145,8 +145,7 @@ bool NodeShrinkDecider::IsShrinkByParent(const Node3d *parent,
   return false;
 }
 
-bool NodeShrinkDecider::IsShrinkByStartNode(const int start_id,
-                                            Node3d *child) {
+bool NodeShrinkDecider::IsShrinkByStartNode(const int start_id, Node3d *child) {
   if (child->GetGlobalID() == start_id) {
     return true;
   }

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "arena.h"
+#include "log_glog.h"
 #include "macro.h"
 #include "planning_def.h"
 #include "scene_type_config.pb.h"
 #include "simulation_context.h"
-#include "log_glog.h"
 namespace planning {
 
 class PlanningContext;

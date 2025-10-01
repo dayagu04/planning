@@ -243,16 +243,16 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
       if (s[i] < s_lower - 2.0 || s[i] > s_upper + 2.0) {
       }
       if (a[i] > kMaxAcc || a[i] < kMinDec) {
-//         ILOG_ERROR << "";
-// (("NP_DEBUG: Error! Invalid acc %f ! \n", a[i]);
-//         if (option.enable_log) {
-//           planning_result.extra_json["lon_motion_error_info"] =
-//               "speed_dynamic_check_failed_for_invalid_acc";
-//         }
+        //         ILOG_ERROR << "";
+        // (("NP_DEBUG: Error! Invalid acc %f ! \n", a[i]);
+        //         if (option.enable_log) {
+        //           planning_result.extra_json["lon_motion_error_info"] =
+        //               "speed_dynamic_check_failed_for_invalid_acc";
+        //         }
       }
       if (std::abs(jerk[i]) > kMaxJerk) {
-      //   ILOG_ERROR << "";
-      // (("NP_DEBUG: Error! Invalid jerk %f! \n", jerk[i]);
+        //   ILOG_ERROR << "";
+        // (("NP_DEBUG: Error! Invalid jerk %f! \n", jerk[i]);
         if (option.enable_log) {
           planning_result.extra_json["lon_motion_error_info"] =
               "speed_dynamic_check_failed_for_invalid_jerk";
@@ -274,7 +274,8 @@ bool LongitudinalOptimizerV3::optimize(const LongitudinalSolverOption &option) {
     for (size_t i = 0; i < num_t; i++) {
       if (std::isnan(s[i]) || std::isnan(v[i]) || std::isnan(a[i])) {
         status_info.error_info = "invalid_lonopt_solution";
-        ILOG_ERROR << "LongitudinalOptimizerV3::optimize invalid_lonopt_solution";
+        ILOG_ERROR
+            << "LongitudinalOptimizerV3::optimize invalid_lonopt_solution";
         return false;
       } else if (v[i] < -1e-8 || (i > 0 && s[i] < s[i - 1])) {
         s[i] = i > 0 ? s[i - 1] - v[i - 1] * v[i - 1] / 2.0 / config_.acc_stop

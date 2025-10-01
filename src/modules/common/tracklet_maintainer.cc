@@ -1166,7 +1166,7 @@ void TrackletMaintainer::calc_intersection_with_refline(
   if (ego_x.size() > 0) {
     double half_car_width =
         std::max(1.1, 0.5 * item.width * std::fabs(cos(item.theta)) +
-                     0.5 * item.length * sin(std::fabs(item.theta)));
+                          0.5 * item.length * sin(std::fabs(item.theta)));
     double half_lane_width = 0.;
     if (enable_intersection_planner) {
       half_lane_width = -0.45;
@@ -2056,18 +2056,18 @@ bool TrackletMaintainer::is_potential_avoiding_car(
              item.d_min_cpath < 0 && item.v_lead < 0.5);
 
         double d_max_cpath_updated = item.d_max_cpath;
-        double d_min_cpath_updated= item.d_min_cpath;
+        double d_min_cpath_updated = item.d_min_cpath;
         std::array<double, 3> x_v_lat{-0.6, -0.4, -0.2};
         std::array<double, 3> f_times{10, 5, 1};
         double times = interp(item.v_lat, x_v_lat, f_times);
         if (item.d_max_cpath < 0) {
           d_max_cpath_updated = item.d_max_cpath - item.v_lat * 0.1 * times;
         } else if (item.d_min_cpath > 0) {
-          d_min_cpath_updated= item.d_min_cpath + item.v_lat * 0.1 * times;
+          d_min_cpath_updated = item.d_min_cpath + item.v_lat * 0.1 * times;
         }
 
         bool can_avoid =
-            (d_min_cpath_updated>
+            (d_min_cpath_updated >
              std::min(((ego_car_width + lat_safety_buffer) - lane_width / 2),
                       1.8)) ||
             (d_max_cpath_updated <
@@ -2077,7 +2077,7 @@ bool TrackletMaintainer::is_potential_avoiding_car(
              //  ((lane_width / 2 + item.d_min_cpath + dist_rblane >= 2.2 &&
              //    borrow_bicycle_lane && item.v_lead < 0.2) ||
              item.is_static &&
-             ((d_min_cpath_updated>
+             ((d_min_cpath_updated >
                (ego_car_width + static_obs_buffer) - lane_width / 2) ||
               (d_max_cpath_updated <
                lane_width / 2 - (ego_car_width + static_obs_buffer))));

@@ -34,6 +34,7 @@ class FrenetEgoState {
   }
   const AgentSLInfo &ego_init_sl_info() const { return ego_init_sl_info_; }
   bool is_valid() const { return is_valid_; }
+
  private:
   double s_;
   double l_;

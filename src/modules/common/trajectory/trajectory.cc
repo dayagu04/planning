@@ -62,8 +62,7 @@ size_t Trajectory::QueryLowerBoundPointByS(const double s) const {
   return std::distance(begin(), it_lower);
 }
 
-int Trajectory::QueryNearestPoint(
-    const planning_math::Vec2d& position) const {
+int Trajectory::QueryNearestPoint(const planning_math::Vec2d& position) const {
   if (empty()) {
     return -1;
   }

@@ -103,9 +103,7 @@ class VirtualLane {
     ego_lateral_offset_ = ego_lateral_offset;
   };
 
-  void set_ego_longit_s(double ego_longit_s) {
-    ego_longit_s_ = ego_longit_s;
-  };
+  void set_ego_longit_s(double ego_longit_s) { ego_longit_s_ = ego_longit_s; };
 
   double get_ego_lateral_offset() const { return ego_lateral_offset_; };
 
@@ -129,7 +127,9 @@ class VirtualLane {
                ? lane_marks_[0].lane_mark
                : iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
   };
-  const std::vector<iflyauto::LaneMarkMsg>& lane_marks() const { return lane_marks_; }
+  const std::vector<iflyauto::LaneMarkMsg> &lane_marks() const {
+    return lane_marks_;
+  }
   iflyauto::LaneSource get_lane_source() const {
     return lane_sources_.size() > 0 ? lane_sources_[0].source
                                     : iflyauto::LaneSource_SOURCE_UNKNOWN;
@@ -161,7 +161,9 @@ class VirtualLane {
   const std::vector<int> &get_current_tasks() const { return current_tasks_; };
   // 到最远变道点距离，即：为了不出route，在该车道最远可以继续行驶的距离
 
-  void set_current_tasks(const std::vector<int> &current_tasks)  {  current_tasks_ = current_tasks; };
+  void set_current_tasks(const std::vector<int> &current_tasks) {
+    current_tasks_ = current_tasks;
+  };
 
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
@@ -175,11 +177,17 @@ class VirtualLane {
   void ProcessEgoOnRoadMLC(const RouteInfoOutput &route_info_output);
   void ProcessEgoOnRampMLC(const RouteInfoOutput &route_info_output);
 
-  const std::vector<iflyauto::LaneNumMsg>& get_lane_nums() const { return lane_nums_; }
+  const std::vector<iflyauto::LaneNumMsg> &get_lane_nums() const {
+    return lane_nums_;
+  }
 
-  const double get_max_virtual_seg_ahead_x() const { return max_virtual_seg_ahead_x_; };
+  const double get_max_virtual_seg_ahead_x() const {
+    return max_virtual_seg_ahead_x_;
+  };
 
-  const double get_max_virtual_seg_ahead_length() const { return max_virtual_seg_ahead_length_; };
+  const double get_max_virtual_seg_ahead_length() const {
+    return max_virtual_seg_ahead_length_;
+  };
 
  private:
   planning::framework::Session *session_ = nullptr;

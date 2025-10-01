@@ -18,12 +18,12 @@
 namespace planning {
 
 enum class SourceType {
-    NONE,
-    OD,
-    GroundLine,
-    OCC,
-    ParkingSlot,
-    MAP,
+  NONE,
+  OD,
+  GroundLine,
+  OCC,
+  ParkingSlot,
+  MAP,
 };
 
 class Obstacle {
@@ -88,13 +88,9 @@ class Obstacle {
   SourceType source_type() const { return source_type_; }
   bool is_vaild() const { return valid_; }
   bool is_reverse() const { return is_reverse_; }
-  void set_is_reverse(bool is_reverse) {
-    is_reverse_ = is_reverse;
-  }
+  void set_is_reverse(bool is_reverse) { is_reverse_ = is_reverse; }
   bool is_normal() const { return is_normal_; }
-  void set_is_normal(bool is_normal) {
-    is_normal_ = is_normal;
-  }
+  void set_is_normal(bool is_normal) { is_normal_ = is_normal; }
   bool abnormal_data_dectection(const PredictionObject &prediction_object);
   bool is_oversize_vehicle() const { return is_oversize_vehicle_; }
   bool is_VRU() const { return is_VRU_; }
@@ -102,7 +98,7 @@ class Obstacle {
   bool is_car() const { return is_car_; }
   bool trajectory_valid() const { return trajectory_valid_; }
   double set_cutin_prob(double cutin_prob) { cutin_prob_ = cutin_prob; }
-  double cutin_prob() const { return cutin_prob_; } // hack:clren,暂时不要用
+  double cutin_prob() const { return cutin_prob_; }  // hack:clren,暂时不要用
   const std::vector<PncTrajectoryPoint> &trajectory() const {
     return trajectory_;
   }
@@ -121,6 +117,7 @@ class Obstacle {
 
   planning_math::Polygon2d get_polygon_at_point(
       const PncTrajectoryPoint &point) const;
+
  private:
   void extract_point_at_specified_resolution(
       std::vector<planning_math::Vec2d> &points) const;

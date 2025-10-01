@@ -2468,8 +2468,8 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
       selected_path_vec = {sorted_path_vec.front()};
     }
     if (std::fabs(sorted_path_vec[max_heading_id].park_out_heading_deg -
-      sorted_path_vec.front().park_out_heading_deg) > 1.0
-      && max_heading_id != min_x_idx) {
+                  sorted_path_vec.front().park_out_heading_deg) > 1.0 &&
+        max_heading_id != min_x_idx) {
       selected_path_vec.emplace_back(sorted_path_vec[max_heading_id]);
     }
   } else {
@@ -4621,8 +4621,7 @@ const bool ParallelPathGenerator::SearchToTargetLineV2(
         search_start_path_vec.emplace_back(
             pnc::geometry_lib::PathSegment(gear, line));
 
-        ILOG_INFO << "pa = " << line.pA.x()
-                  << ", pB = " << line.pB.x()
+        ILOG_INFO << "pa = " << line.pA.x() << ", pB = " << line.pB.x()
                   << "heading (deg)= " << pB.heading * kRad2Deg
                   << "gear = " << static_cast<int>(gear);
       } else {

@@ -105,10 +105,12 @@ class PlanningScheduler {
   // hpp searching state: need apa search slot.
   bool IsHppSlotSearchingByDistance();
 
-  planning::common::SceneType DetermineSceneType(const iflyauto::FuncStateMachine &func_state_machine);
+  planning::common::SceneType DetermineSceneType(
+      const iflyauto::FuncStateMachine &func_state_machine);
 
   // parking function: APA, RPA, HPP, AVP
-  const bool ExcuteParkingFunction(const common::SceneType function_type,
+  const bool ExcuteParkingFunction(
+      const common::SceneType function_type,
       iflyauto::PlanningOutput *const planning_output);
 
   // Navigation function: NOA, SCC, LCC, HPP

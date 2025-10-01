@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "pose2d.h"
 #include "aabb2d.h"
+#include "pose2d.h"
 
 namespace planning {
 

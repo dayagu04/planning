@@ -10,8 +10,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/library/convex_collision_detection/gjk2d_interface.h"
-#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 #include "ad_common/math/line_segment2d.h"
 #include "hybrid_astar_config.h"
 #include "log_glog.h"
@@ -19,6 +17,8 @@
 #include "node3d.h"
 #include "polygon_base.h"
 #include "pose2d.h"
+#include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "src/library/occupancy_grid_map/point_cloud_obstacle.h"
 
 namespace planning {
 
@@ -72,7 +72,7 @@ class GridSearch {
 
  private:
   float EuclidDistance(const float x1, const float y1, const float x2,
-                        const float y2);
+                       const float y2);
 
   void GenerateNextNodes(Node2dChildSet* next_nodes, Node2d* node);
 

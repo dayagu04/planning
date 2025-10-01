@@ -39,7 +39,6 @@ namespace apa_planner {
 // Task.
 class ParkingScenario {
  public:
-
   struct CheckReplanParams {
     double replan_dist_path = apa_param.GetParam().max_replan_remain_dist;
     double wait_time_path = 0.068;

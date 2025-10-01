@@ -4,13 +4,13 @@
 #include <functional>
 #include <memory>
 
+#include "camera_perception_occupancy_grid_c.h"
 #include "fm_info_c.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "map_data.pb.h"
-#include "planning_scheduler.h"
-#include "camera_perception_occupancy_grid_c.h"
 #include "planning_debug_info.pb.h"
+#include "planning_scheduler.h"
 
 namespace planning {
 
@@ -61,14 +61,12 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   }
 
   void Feed_IflytekCameraPerceptionOccGrid(
-      const iflyauto::CameraPerceptionOccGridInfo&
-          occupancy_grid_info_msg) override {
-  }
+      const iflyauto::CameraPerceptionOccGridInfo& occupancy_grid_info_msg)
+      override {}
 
   void Feed_IflytekCameraPerceptionDrivableSpaceGrid(
-    const iflyauto::CameraPerceptionDrivableSpaceGridInfo&
-        occupancy_grid_info_msg) override {
-  }
+      const iflyauto::CameraPerceptionDrivableSpaceGridInfo&
+          occupancy_grid_info_msg) override {}
 
   void Feed_IflytekFusionRoadFusion(
       const iflyauto::RoadInfo& road_info_msg) override {
@@ -190,7 +188,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   }
 
   void Feed_IflytekEhrSdpromapInfo(
-      const iflyauto::StructContainer &sdpro_map_info_msg) override {
+      const iflyauto::StructContainer& sdpro_map_info_msg) override {
     std::lock_guard<std::mutex> lock(sdpro_map_info_msg_mutex_);
     auto sdpro_mapdata = std::make_shared<iflymapdata::sdpro::MapData>();
     sdpro_mapdata->ParseFromString(sdpro_map_info_msg.payload());
@@ -258,6 +256,7 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   void UpdateApaResetFlag();
   void Log();
   void LogTopicLatency();
+
  private:
   std::mutex fusion_objects_msg_mutex_;
   std::mutex fusion_occupancy_objects_msg_mutex_;
@@ -363,7 +362,6 @@ class PlanningAdapter : public iflyauto::interface::PlanningInterface {
   iflyauto::CameraPerceptionScene perception_scene_msg_;
   int64_t perception_scene_msg_recv_time_;
   std::atomic<bool> is_perception_scene_msg_updated_{false};
-
 
   std::function<void(const iflyauto::PlanningOutput&)> planning_writer_ =
       nullptr;

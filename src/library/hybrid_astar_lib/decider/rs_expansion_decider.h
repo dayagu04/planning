@@ -37,8 +37,8 @@ class RSExpansionDecider : public AstarDecider {
 
   const bool NeedRsLinkByOffset(const Node3d *node) const;
 
-  const bool NeedRsLinkByRequestDist(
-    const Node3d *node, const AstarRequest *request) const;
+  const bool NeedRsLinkByRequestDist(const Node3d *node,
+                                     const AstarRequest *request) const;
 
   Pose2f rs_end_pose_;
 };

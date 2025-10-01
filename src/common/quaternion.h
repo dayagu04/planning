@@ -4,8 +4,8 @@
 
 #include "Eigen/Dense"
 
-#include "euler_angles_zxy.h"
 #include "ad_common/math/math_utils.h"
+#include "euler_angles_zxy.h"
 
 /**
  * @namespace apollo::common::math

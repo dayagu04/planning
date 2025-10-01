@@ -1,14 +1,13 @@
 #include "traffic_congestion_decider.h"
 #include <limits>
-#include "obstacle.h"
 #include "environmental_model.h"
+#include "obstacle.h"
 
 namespace planning {
 
 CongestionDetector::CongestionDetector(
     const CongestionDetectionConfig* config_builder,
-    framework::Session *session,
-    const int fix_lane_id) {
+    framework::Session* session, const int fix_lane_id) {
   // 初始化参考路径
   session_ = session;
   congestion_config_ = *config_builder;
@@ -17,15 +16,15 @@ CongestionDetector::CongestionDetector(
 }
 
 void CongestionDetector::Init() {
-  const auto &dynamic_world =
+  const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& nodes = dynamic_world->GetNodesByLaneId(fix_lane_id_);
-  if(nodes.empty()) {
+  if (nodes.empty()) {
     return;
   }
 
   agent_node_.clear();
-  for(const auto& node : nodes) {
+  for (const auto& node : nodes) {
     // 检查是否找到
     agent_node_.push_back(node);
   }
@@ -44,8 +43,8 @@ CongestionResult CongestionDetector::DetectLaneCongestion() {
 
   // 检查车道是否有效
   if (agent_node_.empty()) {
-      result.level = CongestionLevel::FREE_FLOW;
-      return result;
+    result.level = CongestionLevel::FREE_FLOW;
+    return result;
   }
 
   // 1. 计算车辆密度
@@ -55,7 +54,7 @@ CongestionResult CongestionDetector::DetectLaneCongestion() {
   result.avg_speed = CalculateAverageSpeed();
 
   // 3. 计算速度标准差
-  result.speed_deviation = CalculateSpeedDeviation( result.avg_speed);
+  result.speed_deviation = CalculateSpeedDeviation(result.avg_speed);
 
   // 5. 确定拥堵等级
   result.level =
@@ -66,49 +65,42 @@ CongestionResult CongestionDetector::DetectLaneCongestion() {
 }
 
 double CongestionDetector::CalculateDensity() const {
+  // 计算车道内车辆密度（辆/公里）
+  double effective_length =
+      agent_node_.back()->node_s() - agent_node_.front()->node_s();
 
-    // 计算车道内车辆密度（辆/公里）
-    double effective_length =
-        agent_node_.back()->node_s() - agent_node_.front()->node_s();
-
-    return (agent_node_.size() / effective_length) * 1000.0; // 转换为辆/公里
+  return (agent_node_.size() / effective_length) * 1000.0;  // 转换为辆/公里
 }
 
 double CongestionDetector::CalculateAverageSpeed() const {
-    double sum_speed = 0.0;
+  double sum_speed = 0.0;
 
-    for (const auto& obstacle : agent_node_) {
-        sum_speed += obstacle->node_speed();
-    }
+  for (const auto& obstacle : agent_node_) {
+    sum_speed += obstacle->node_speed();
+  }
 
-    return sum_speed / agent_node_.size();
+  return sum_speed / agent_node_.size();
 }
 
-double CongestionDetector::CalculateSpeedDeviation(
-    double avg_speed) const {
+double CongestionDetector::CalculateSpeedDeviation(double avg_speed) const {
+  double sum_squared_diff = 0.0;
+  for (const auto& obstacle : agent_node_) {
+    double diff = obstacle->node_speed() - avg_speed;
+    sum_squared_diff += diff * diff;
+  }
 
-    double sum_squared_diff = 0.0;
-    for (const auto& obstacle : agent_node_) {
-        double diff = obstacle->node_speed() - avg_speed;
-        sum_squared_diff += diff * diff;
-    }
-
-    return std::sqrt(sum_squared_diff / (agent_node_.size() - 1));
+  return std::sqrt(sum_squared_diff / (agent_node_.size() - 1));
 }
 
 CongestionLevel CongestionDetector::CalculateCongestionScore(
-    double density,
-    double avg_speed,
-    double speed_deviation,
+    double density, double avg_speed, double speed_deviation,
     const CongestionDetectionConfig& config) {
+  if (density > config.heavy_density && avg_speed < config.jam_speed &&
+      speed_deviation < config.speed_deviation) {
+    return CongestionLevel::CONGESTION;
+  }
 
-    if (density > config.heavy_density &&
-        avg_speed < config.jam_speed &&
-        speed_deviation < config.speed_deviation) {
-        return CongestionLevel::CONGESTION;
-    }
-
-    return CongestionLevel::FREE_FLOW;
+  return CongestionLevel::FREE_FLOW;
 }
 
 double CongestionDetector::CalculateAverageTimeHeadway() const {
@@ -117,7 +109,7 @@ double CongestionDetector::CalculateAverageTimeHeadway() const {
 
   for (size_t i = 1; i < agent_node_.size(); ++i) {
     const auto& front = agent_node_[i];
-    const auto& rear = agent_node_[i-1];
+    const auto& rear = agent_node_[i - 1];
 
     // 计算两车间距
     double distance = front->node_s() - rear->node_s() -
@@ -135,16 +127,16 @@ double CongestionDetector::CalculateAverageTimeHeadway() const {
 }
 
 double CongestionDetector::CalculateAverageSpaceHeadway() const {
-
   double total_space = 0.0;
 
   for (size_t i = 1; i < agent_node_.size(); ++i) {
     const auto& front = agent_node_[i];
-    const auto& rear = agent_node_[i-1];
+    const auto& rear = agent_node_[i - 1];
 
     // 车间距 = 两车距离 - 前车长度/2 - 后车长度/2
     double distance = front->node_s() - rear->node_s();
-    double space = distance - front->node_length() / 2 - rear->node_length() / 2;
+    double space =
+        distance - front->node_length() / 2 - rear->node_length() / 2;
 
     total_space += space;
   }
@@ -152,4 +144,4 @@ double CongestionDetector::CalculateAverageSpaceHeadway() const {
   return total_space / (agent_node_.size() - 1);
 }
 
-} // namespace autopilot
+}  // namespace planning
