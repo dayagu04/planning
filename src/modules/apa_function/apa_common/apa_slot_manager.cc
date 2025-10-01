@@ -297,18 +297,26 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
   is_ego_col_vertical_ = true;
   ego_col_safe_lat_buffer_ = 0.268;
   ego_col_safe_lon_buffer_ = 0.15;
-  std::vector<double> lat_buffer_vec{0.22, 0.1};
-  std::vector<double> lon_buffer_vec{0.14, 0.06};
-  for (const double& lon_buffer : lon_buffer_vec) {
-    for (const double& lat_buffer : lat_buffer_vec) {
-      if (!IsEgoCloseToObs(lat_buffer, lat_buffer, lon_buffer)) {
+  const std::vector<double> lat_buffer_vec{0.22, 0.1};
+  const std::vector<double> lon_buffer_vec{0.14, 0.06};
+  for (const double lon_buffer : lon_buffer_vec) {
+    for (const double lat_buffer : lat_buffer_vec) {
+      is_ego_col_vertical_ =
+          IsEgoCloseToObs(lat_buffer, lat_buffer, lon_buffer);
+      if (!is_ego_col_vertical_) {
         ego_col_safe_lon_buffer_ = lon_buffer;
         ego_col_safe_lat_buffer_ = lat_buffer;
-        is_ego_col_vertical_ = false;
         break;
       }
     }
+    if (!is_ego_col_vertical_) {
+      break;
+    }
   }
+
+  ILOG_INFO << "is_ego_col_vertical_ = " << is_ego_col_vertical_
+            << "  ego_col_safe_lat_buffer_ = " << ego_col_safe_lat_buffer_
+            << "  ego_col_safe_lon_buffer_ = " << ego_col_safe_lon_buffer_;
 
   is_ego_col_parallel_ = IsEgoCloseToObs(0.1, 0.01, 0.1);
 
