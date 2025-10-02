@@ -300,11 +300,9 @@ bool KDPath::GetKappaByS(const double s, double* const kappa) const {
 double KDPath::GetPathCurveHeading(double s) const {
   // assert(s <= length_ && s >= 0);
   if (s >= length_) {
-    ILOG_DEBUG << "s is not within the valid range, theta is taken from the "
-                  "last point";
+    ILOG_DEBUG << "s is not within the valid range, theta is taken from the last point";
   } else if (s < 0) {
-    ILOG_DEBUG << "s is not within the valid range, theta is taken from the "
-                  "first point";
+    ILOG_DEBUG << "s is not within the valid range, theta is taken from the first point";
   }
   return GetPathPointByS(s).theta();
 }

@@ -82,4 +82,5 @@ class LonMotionSimulatorIntelligentDriverModel
   SimulationResult simulation_result_;
 };
 
+
 }  // namespace planning

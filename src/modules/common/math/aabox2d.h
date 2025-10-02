@@ -1,9 +1,9 @@
 #ifndef MODULES_PLANNING_MATH_AABOX2D_H_
 #define MODULES_PLANNING_MATH_AABOX2D_H_
 
-#include <array>
 #include <string>
 #include <vector>
+#include <array>
 
 #include "vec2d.h"
 
@@ -44,8 +44,7 @@ class AABox2d {
    */
   explicit AABox2d(const std::vector<Vec2d> &points);
 
-  explicit AABox2d(const std::array<planning_math::Vec2d, 8> &points,
-                   const int &valid_count);
+  explicit AABox2d(const std::array<planning_math::Vec2d, 8> &points, const int &valid_count);
 
   /**
    * @brief Getter of center_

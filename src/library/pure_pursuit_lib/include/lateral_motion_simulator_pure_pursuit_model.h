@@ -21,8 +21,7 @@
 //                                      const State &init_state)
 //       : model_param_(model_param), init_state_(init_state) {}
 
-//   ErrorType CalculateAlpha(const std::shared_ptr<ReferencePath>
-//   &reference_path,
+//   ErrorType CalculateAlpha(const std::shared_ptr<ReferencePath> &reference_path,
 //                            bool need_calculate_init_projection = false);
 
 //  private:

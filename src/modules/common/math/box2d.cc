@@ -60,8 +60,8 @@ Box2d::Box2d(const LineSegment2d &axis, const double width)
   InitCorners();
 }
 
-void Box2d::set_box(const Vec2d &center, const double heading,
-                    const double length, const double width) {
+void Box2d::set_box(const Vec2d& center, const double heading, const double length,
+                    const double width) {
   center_ = center;
   length_ = length;
   width_ = width;
@@ -75,7 +75,9 @@ void Box2d::set_box(const Vec2d &center, const double heading,
   InitCorners();
 }
 
-Box2d::Box2d(const std::vector<Vec2d> &corners) { SetAllCorners(corners); }
+Box2d::Box2d(const std::vector<Vec2d> &corners){
+  SetAllCorners(corners);
+}
 
 void Box2d::SetAllCorners(const std::vector<Vec2d> &corners) {
   const double dx1 = cos_heading_ * half_length_;
@@ -83,7 +85,7 @@ void Box2d::SetAllCorners(const std::vector<Vec2d> &corners) {
   const double dx2 = sin_heading_ * half_width_;
   const double dy2 = -cos_heading_ * half_width_;
   corners_.clear();
-  for (const auto &corner : corners) {
+  for (const auto& corner : corners) {
     corners_.emplace_back(corner);
   }
 

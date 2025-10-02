@@ -474,19 +474,18 @@ const bool CheckPointLiesOnArc(const pnc::geometry_lib::Arc &arc,
   return (cos_AOC > cos_AOB && cos_BOC > cos_AOB);
 }
 
-const bool CalTangentLineFromHeadingAndArc(
-    const double line_heading, const pnc::geometry_lib::Arc &arc,
-    std::vector<Eigen::Vector2d> &tangent_points) {
+const bool CalTangentLineFromHeadingAndArc(const double line_heading,
+                                           const pnc::geometry_lib::Arc& arc,
+                                           std::vector<Eigen::Vector2d>& tangent_points) {
   tangent_points.clear();
 
   // 获取圆心和半径
-  const Eigen::Vector2d &center = arc.circle_info.center;
+  const Eigen::Vector2d& center = arc.circle_info.center;
   const double radius = arc.circle_info.radius;
 
   // 计算直线的单位方向向量
   Eigen::Vector2d line_direction = GenHeadingVec(line_heading);
-  // Eigen::Vector2d line_direction(std::cos(line_heading),
-  // std::sin(line_heading));
+  // Eigen::Vector2d line_direction(std::cos(line_heading), std::sin(line_heading));
 
   // 构造垂直于方向向量的法向量（两种可能的方向）
   Eigen::Vector2d normal1(-line_direction.y(), line_direction.x());
@@ -3530,7 +3529,7 @@ void PrintSegmentsVecInfo(
 
       ILOG_INFO << "start_pos: " << line_seg.pA.x() << " " << line_seg.pA.y();
       ILOG_INFO << "start_heading deg: " << line_seg.heading * kRad2Deg;
-      ILOG_INFO << "end_pos: " << line_seg.pB.x() << " " << line_seg.pB.y();
+      ILOG_INFO << "end_pos: " << line_seg.pB.x() <<" "<<line_seg.pB.y();
     } else {
       const auto &arc_seg = current_seg.arc_seg;
 
@@ -3719,7 +3718,7 @@ const std::vector<PathPoint> SamplePathSegVec(
       pt_set.pop_back();
     }
 
-    for (auto &point : pt_set) {
+    for (auto &point: pt_set) {
       point.gear = path_seg.seg_gear;
     }
     path_pt_vec.insert(path_pt_vec.end(), pt_set.begin(), pt_set.end());

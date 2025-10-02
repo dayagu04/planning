@@ -39,8 +39,7 @@
 //                      0.9) &&
 //         (avd_car_past_[1].size() == 0 ||
 //          avd_car_past_[1][5] >
-//              std::min(((ego_car_width + lat_safety_buffer) - lane_width_ /
-//              2),
+//              std::min(((ego_car_width + lat_safety_buffer) - lane_width_ / 2),
 //                       0.9))) {
 //       if (front_tracks_copy.size() > 0) {
 //         for (auto &tr : front_tracks_copy) {
@@ -66,8 +65,7 @@
 //       if (side_tracks_r.size() > 0) {
 //         for (auto &tr : side_tracks_r) {
 //           if (tr.d_max_cpath < -1 && tr.d_max_cpath > -strict_side_car &&
-//               tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel <
-//               2) {
+//               tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel < 2) {
 //             strict_side_car = -tr.d_max_cpath;
 //             if (tr.type == 20001) {
 //               strict_side_car -= 0.7;
@@ -134,8 +132,7 @@
 //       if (avd_car_past_[0][6] < 0 && side_tracks_l.size() > 0) {
 //         for (auto &tr : side_tracks_l) {
 //           if (tr.d_min_cpath > 1 && tr.d_min_cpath < strict_side_car &&
-//               tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel <
-//               2) {
+//               tr.d_rel > std::min(-10.0 - tr.v_rel * 2, -5.0) && tr.d_rel < 2) {
 //             strict_side_car = tr.d_min_cpath;
 //             if (tr.type == 20001) {
 //               strict_side_car += 0.7;
@@ -309,8 +306,7 @@
 //   return no_near_car;
 // }
 
-// bool AvoidObstacleMaintainer::Process(planning::framework::Session *session)
-// {
+// bool AvoidObstacleMaintainer::Process(planning::framework::Session *session) {
 //   int enter0 = 0;
 //   int enter1 = 0;
 //   int enter2 = 0;
@@ -367,28 +363,24 @@
 //             if (tr.d_min_cpath > 0) {
 //               if (tr.type != 20001) {
 //                 avd_temp_cars.push_back(
-//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3,
-//                     tr.v_lat,
+//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3, tr.v_lat,
 //                      tr.d_min_cpath - 0.3, tr.d_max_cpath - 0.3,
 //                      double(tr.type), curr_time, final_y_rel_});
 //               } else {
 //                 avd_temp_cars.push_back(
-//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3,
-//                     tr.v_lat,
+//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3, tr.v_lat,
 //                      tr.d_min_cpath + 0.2, tr.d_max_cpath + 0.2,
 //                      double(tr.type), curr_time, final_y_rel_});
 //               }
 //             } else {
 //               if (tr.type != 20001) {
 //                 avd_temp_cars.push_back(
-//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3,
-//                     tr.v_lat,
+//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3, tr.v_lat,
 //                      tr.d_min_cpath + 0.3, tr.d_max_cpath + 0.3,
 //                      double(tr.type), curr_time, final_y_rel_});
 //               } else {
 //                 avd_temp_cars.push_back(
-//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3,
-//                     tr.v_lat,
+//                     {(double)tr.track_id, 0, tr.v_rel, tr.d_rel - 3, tr.v_lat,
 //                      tr.d_min_cpath - 0.2, tr.d_max_cpath - 0.2,
 //                      double(tr.type), curr_time, final_y_rel_});
 //               }
@@ -399,14 +391,12 @@
 //                   3 * v_ego) {
 //                 if (((avd_temp_cars[0][5] >
 //                           std::min(2.4 - lane_width_ / 2, 0.) &&
-//                       avd_temp_cars[1][5] > std::min(lane_width_ - 2.4, 0.))
-//                       ||
+//                       avd_temp_cars[1][5] > std::min(lane_width_ - 2.4, 0.)) ||
 //                      (avd_temp_cars[0][6] <
 //                           std::max(lane_width_ / 2 - 2.4, 0.) &&
 //                       avd_temp_cars[1][6] <
 //                           std::max(lane_width_ / 2 - 2.4, 0.))) &&
-//                     true) {  // TODO(Rui):map_info.is_in_intersection() ==
-//                     false
+//                     true) {  // TODO(Rui):map_info.is_in_intersection() == false
 //                   if (std::fabs(avd_temp_cars[0][5]) >
 //                       std::fabs(avd_temp_cars[1][5])) {
 //                     avd_temp_cars[0][5] = avd_temp_cars[1][5];
@@ -415,8 +405,7 @@
 
 //                   avd_temp_cars.pop_back();
 //                   ncar_cnt -= 1;
-//                 } else if (avd_temp_cars[0][5] > 0 && avd_temp_cars[1][5] <
-//                 0) {
+//                 } else if (avd_temp_cars[0][5] > 0 && avd_temp_cars[1][5] < 0) {
 //                   if (avd_temp_cars.size() > 2 &&
 //                       std::fabs(avd_temp_cars[2][3] - avd_temp_cars[1][3]) <
 //                           3 * v_ego) {
@@ -434,8 +423,7 @@
 //                   }
 
 //                   ncar_cnt -= 1;
-//                 } else if (avd_temp_cars[0][5] < 0 && avd_temp_cars[1][5] >
-//                 0) {
+//                 } else if (avd_temp_cars[0][5] < 0 && avd_temp_cars[1][5] > 0) {
 //                   if (avd_temp_cars.size() > 2 &&
 //                       std::fabs(avd_temp_cars[2][3] - avd_temp_cars[1][3]) <
 //                           3 * v_ego) {
@@ -460,9 +448,8 @@
 //             if (avd_cars.size() < 2) {
 //               avd_cars.push_back(
 //                   {(double)tr.track_id, (double)tr.trajectory.intersection,
-//                    tr.v_rel, tr.d_rel, tr.v_lat, tr.d_min_cpath,
-//                    tr.d_max_cpath, double(tr.d_rel), curr_time,
-//                    final_y_rel_});
+//                    tr.v_rel, tr.d_rel, tr.v_lat, tr.d_min_cpath, tr.d_max_cpath,
+//                    double(tr.d_rel), curr_time, final_y_rel_});
 //             }
 //           }
 
@@ -482,8 +469,7 @@
 //                    avd_temp_cars[0][6] > 0)) {
 //                 if (std::fabs(avd_temp_cars[0][3] - avd_cars[1][3]) <
 //                     5 * v_ego) {
-//                   if (std::fabs(avd_cars[0][5]) > std::fabs(avd_cars[1][5]))
-//                   {
+//                   if (std::fabs(avd_cars[0][5]) > std::fabs(avd_cars[1][5])) {
 //                     avd_cars[0][5] = avd_cars[1][5];
 //                     avd_cars[0][6] = avd_cars[1][6];
 //                     avd_cars[1] = avd_temp_cars[0];
@@ -548,18 +534,15 @@
 //               avd_cars.push_back(avd_temp_cars[1]);
 //             }
 //           } else if (avd_temp_cars.size() == 2 && avd_cars.size() == 2) {
-//             if (!enter0 && !enter1 && avd_temp_cars[0][3] >= avd_cars[1][3])
-//             {
+//             if (!enter0 && !enter1 && avd_temp_cars[0][3] >= avd_cars[1][3]) {
 //               if ((avd_cars[0][5] > 0 && avd_cars[1][5] > 0 &&
 //                    avd_temp_cars[0][5] < 0) ||
 //                   (avd_cars[0][6] < 0 && avd_cars[1][6] < 0 &&
 //                    avd_temp_cars[0][6] > 0)) {
 //                 if (std::fabs(avd_temp_cars[0][3] - avd_cars[1][3]) <
 //                     5 * v_ego) {
-//                   if (std::fabs(avd_cars[0][5]) > std::fabs(avd_cars[1][5])
-//                   &&
-//                       std::fabs(avd_cars[1][3] - avd_cars[0][3]) < 3 * v_ego)
-//                       {
+//                   if (std::fabs(avd_cars[0][5]) > std::fabs(avd_cars[1][5]) &&
+//                       std::fabs(avd_cars[1][3] - avd_cars[0][3]) < 3 * v_ego) {
 //                     avd_cars[0][5] = avd_cars[1][5];
 //                     avd_cars[0][6] = avd_cars[1][6];
 //                     avd_cars[1] = avd_temp_cars[0];
@@ -575,28 +558,23 @@
 //                              3 * v_ego &&
 //                          std::fabs(avd_temp_cars[0][3] - avd_cars[1][3]) <
 //                              5 * v_ego &&
-//                          std::fabs(avd_temp_cars[1][3] - avd_temp_cars[1][3])
-//                          <
+//                          std::fabs(avd_temp_cars[1][3] - avd_temp_cars[1][3]) <
 //                              5 * v_ego) {
 //                 if (avd_cars[0][5] > 0) {
 //                   avd_cars[0][5] =
 //                       std::min(avd_cars[0][5],
-//                                std::min(avd_cars[1][5],
-//                                avd_temp_cars[0][5]));
+//                                std::min(avd_cars[1][5], avd_temp_cars[0][5]));
 //                   avd_cars[0][6] =
 //                       std::min(avd_cars[0][6],
-//                                std::min(avd_cars[1][6],
-//                                avd_temp_cars[0][6]));
+//                                std::min(avd_cars[1][6], avd_temp_cars[0][6]));
 //                   avd_cars[1] = avd_temp_cars[1];
 //                 } else if (avd_cars[0][6] < 0) {
 //                   avd_cars[0][5] =
 //                       std::max(avd_cars[0][5],
-//                                std::max(avd_cars[1][5],
-//                                avd_temp_cars[0][5]));
+//                                std::max(avd_cars[1][5], avd_temp_cars[0][5]));
 //                   avd_cars[0][6] =
 //                       std::max(avd_cars[0][6],
-//                                std::max(avd_cars[1][6],
-//                                avd_temp_cars[0][6]));
+//                                std::max(avd_cars[1][6], avd_temp_cars[0][6]));
 //                   avd_cars[1] = avd_temp_cars[1];
 //                 }
 //               } else if (avd_cars[0][5] > 0 && avd_cars[1][6] < 0 &&
@@ -634,8 +612,7 @@
 //               if (avd_cars[0][6] < 0 && avd_cars[1][5] > 0 &&
 //                   avd_temp_cars[1][5] > 0 &&
 //                   avd_temp_cars[1][5] < avd_cars[1][5] &&
-//                   std::fabs(avd_temp_cars[1][3] - avd_cars[1][3]) < 5 *
-//                   v_ego) {
+//                   std::fabs(avd_temp_cars[1][3] - avd_cars[1][3]) < 5 * v_ego) {
 //                 avd_cars[1][5] = avd_temp_cars[1][5];
 //                 avd_cars[1][6] = avd_temp_cars[1][6];
 //               } else if (avd_cars[0][6] < 0 && avd_cars[1][6] < 0 &&
@@ -661,8 +638,7 @@
 //               if (avd_cars[0][6] < 0 && avd_cars[1][5] > 0 &&
 //                   avd_temp_cars[1][5] > 0 &&
 //                   avd_temp_cars[1][5] < avd_cars[1][5] &&
-//                   std::fabs(avd_temp_cars[1][3] - avd_cars[1][3]) < 5 *
-//                   v_ego) {
+//                   std::fabs(avd_temp_cars[1][3] - avd_cars[1][3]) < 5 * v_ego) {
 //                 avd_cars[1][5] = avd_temp_cars[1][5];
 //                 avd_cars[1][6] = avd_temp_cars[1][6];
 //               } else if (avd_cars[0][6] < 0 && avd_cars[1][6] < 0 &&
@@ -833,8 +809,7 @@
 //         if (avd_car_past_[1].size() > 0 && (int)avd_car_past_[1][0] == -1 &&
 //             curr_time - avd_car_past_[1][8] > 2.5) {
 //           avd_car_past_[1].clear();
-//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[1].size() > 0
-//         &&
+//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[1].size() > 0 &&
 //                    (int)avd_car_past_[0][0] == -1 &&
 //                    curr_time - avd_car_past_[0][8] > 2.5) {
 //           avd_car_past_[0] = avd_car_past_[1];
@@ -937,8 +912,7 @@
 //             for (auto &item : lateral_obstacle->front_tracks_copy()) {
 //               if (item.track_id == lead_one->track_id) {
 //                 avd_car_past_[0].assign(
-//                     {-1, (double)item.trajectory.intersection,
-//                     lead_one->v_rel,
+//                     {-1, (double)item.trajectory.intersection, lead_one->v_rel,
 //                      lead_one->d_rel, lead_one->v_lat, lead_one->d_min_cpath,
 //                      lead_one->d_max_cpath, lead_one->d_rel, curr_time,
 //                      final_y_rel_});
@@ -1027,8 +1001,7 @@
 //               }
 //             }
 //           }
-//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[0][3] < 5.0
-//         &&
+//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[0][3] < 5.0 &&
 //                    avd_car_past_[0][5] < 0) {
 //           bool no_near_car = true;
 //           no_near_car = UpdateRSideAvdsInfo(no_near_car);
@@ -1085,8 +1058,7 @@
 //               }
 //             }
 //           }
-//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[0][3] >= 5.0
-//         &&
+//         } else if (avd_car_past_[0].size() > 0 && avd_car_past_[0][3] >= 5.0 &&
 //                    curr_time - avd_car_past_[0][8] > 2.5) {
 //           avd_car_past_[0].clear();
 //           avd_car_past_[1].clear();
@@ -1171,8 +1143,7 @@
 //         if (lead_one != nullptr) {
 //           if (lead_one->is_avd_car == true && lead_one->type < 10000) {
 //             if (avd_leadone_ == 0 ||
-//                 (avd_leadone_ == 50 && pre_leadone_id_ !=
-//                 lead_one->track_id)) {
+//                 (avd_leadone_ == 50 && pre_leadone_id_ != lead_one->track_id)) {
 //               pre_leadone_id_ = lead_one->track_id;
 //               avd_leadone_ = 0;
 //             }

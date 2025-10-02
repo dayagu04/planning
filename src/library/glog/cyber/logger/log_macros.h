@@ -34,3 +34,4 @@ inline void glog_cpu_relax() {
   asm volatile("rep; nop" ::: "memory");
 #endif
 }
+

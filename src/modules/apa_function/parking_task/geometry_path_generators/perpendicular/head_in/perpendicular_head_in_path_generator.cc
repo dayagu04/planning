@@ -338,8 +338,8 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanArcFirstTry(
 
   arc.is_anti_clockwise = calc_params_.is_left_side ? true : false;
   pnc::geometry_lib::CompleteArcInfo(arc, arc.length, arc.is_anti_clockwise);
-  pnc::geometry_lib::PathSegment arc_seg(input_.ref_arc_steer, input_.ref_gear,
-                                         arc);
+  pnc::geometry_lib::PathSegment arc_seg(input_.ref_arc_steer,
+                                         input_.ref_gear, arc);
   // collision detection
   CollisionDetector::Paramters param;
   param.lat_inflation = apa_param.GetParam().car_lat_inflation_strict;
@@ -642,8 +642,7 @@ const bool PerpendicularPathHeadingInPlanner::CalMultiSafeCircle() {
   // ILOG_INFO << "multi safe circle info: center = " <<
   // multi_safe_circle.center
   //           << "  radius = " << multi_safe_circle.radius);
-  // ILOG_INFO << "multi safe circle info: center = " <<
-  // multi_safe_circle.center
+  // ILOG_INFO << "multi safe circle info: center = " << multi_safe_circle.center
   //           << "  radius = " << multi_safe_circle.radius;
 
   return true;
@@ -691,7 +690,8 @@ const bool PerpendicularPathHeadingInPlanner::ComputePreparePointSecond(
       first_prepare_point.pos.y() +=
           calc_params_.turn_radius * std::sin(theta_delta);
 
-      first_prepare_point.heading = input_.ego_info_under_slot.cur_pose.heading;
+      first_prepare_point.heading =
+          input_.ego_info_under_slot.cur_pose.heading;
     }
   } else if (calc_params_.prepare_point_condition == 1) {
     first_prepare_point = input_.ego_info_under_slot.cur_pose;
@@ -855,8 +855,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
       //           << " arc.pa = " << arc.pA.transpose()
       //           << " arc.headingA = " << arc.headingA * kRad2Deg
       //           << " arc.pb = " << arc.pB.transpose()
-      //           << " arc.headingb = " << arc.headingB * kRad2Deg <<
-      //           std::endl;
+      //           << " arc.headingb = " << arc.headingB * kRad2Deg << std::endl;
       // const double remain_car_dist = col_res.remain_car_dist;
       // const double remain_obs_dist = col_res.remain_obstacle_dist;
       // const double safe_remain_dist =
@@ -899,6 +898,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     // inside is vacant or outside is vacant
     if (!calc_params_.is_inside_occupied || !calc_params_.is_outside_occupied) {
       if (MonoPreparePlan(target_pose.pos)) {
+
         calc_params_.cal_tang_pt_success = true;
         calc_params_.safe_circle_tang_pt = target_pose;
         // TODO: to find a suitable current pose by dubins
@@ -931,6 +931,7 @@ const bool PerpendicularPathHeadingInPlanner::PreparePlanOnce(
     // inside and outside are occupied
     // if mono prepare fail, use multi prepare to find target point
     if (MultiPreparePlan(target_pose.pos)) {
+
       calc_params_.cal_tang_pt_success = true;
       calc_params_.safe_circle_tang_pt = target_pose;
       // TODO: to find a suitable current pose by dubins
@@ -1595,8 +1596,8 @@ const bool PerpendicularPathHeadingInPlanner::MultiPlan() {
   uint8_t current_arc_steer = input_.ref_arc_steer;
 
   // check pose and slot_occupied_ratio, if error is small, exit multiplan
-  if (!CheckMultiPlanSuitable(current_pose,
-                              input_.ego_info_under_slot.slot_occupied_ratio)) {
+  if (!CheckMultiPlanSuitable(
+          current_pose, input_.ego_info_under_slot.slot_occupied_ratio)) {
     return false;
   }
 

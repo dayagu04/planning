@@ -46,6 +46,6 @@ bool PidHasChanged() {
   return true;
 }
 
-}  // namespace ilog
+}  // namespace logger
 }  // namespace cyber
 }  // namespace planning

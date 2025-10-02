@@ -27,8 +27,8 @@
 // rosmsg
 #include "proto_msgs/StaticMap.h"
 #include "sensor_interface/DebugInfo.h"
-#include "struct_msgs/CameraPerceptionScene.h"
 #include "struct_msgs/CameraPerceptionTsrInfo.h"
+#include "struct_msgs/CameraPerceptionScene.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionDecelerInfo.h"
@@ -49,15 +49,15 @@
 #include "struct_msgs/PredictionResult.h"
 #include "struct_msgs/RoadInfo.h"
 #include "struct_msgs/SystemVersion.h"
-#include "struct_msgs/UssPdcIccSendDataType.h"
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 
 // struct schema
 #include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"
-#include "interface/type_convert/struct_convert/camera_perception_scene_c.h"
 #include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_scene_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"

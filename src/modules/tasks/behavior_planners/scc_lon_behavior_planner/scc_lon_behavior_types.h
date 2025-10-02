@@ -67,8 +67,8 @@
 //   };
 //   struct MergeSplitPointInfo {
 //     double merge_split_point_distance_to_ego_rear_axle{0.0};
-//     PointType is_split_or_merge{SPLIT};  // 0: merge, 1: split(from
-//     perception) MergeSplitOrientation split_merge_orientation{
+//     PointType is_split_or_merge{SPLIT};  // 0: merge, 1: split(from perception)
+//     MergeSplitOrientation split_merge_orientation{
 //         UNKNOWN};  // 1:left, 2:right(from perception)
 //     iflyauto::Point3d split_merge_point{0.0, 0.0, 0.0};
 //   };

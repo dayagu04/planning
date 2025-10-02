@@ -80,8 +80,7 @@ class ParallelLongitudinalAvoidDecider {
   bool IsSpeedInRange(const agent::Agent* agent, const double min_speed_kmh,
                       const double max_speed_kmh);
 
-  int64_t FindMatchingNodeId(const agent::Agent* agent,
-                             const double target_agent_s);
+  int64_t FindMatchingNodeId(const agent::Agent* agent, const double target_agent_s);
 
  private:
   DeciderState current_state_ = DeciderState::IDLE;

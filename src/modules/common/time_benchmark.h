@@ -62,7 +62,8 @@ class TimeBenchmark {
         "slot manager time";
     times[TimeBenchmarkType::TB_APA_QP_TIME].name_ = "speed qp time";
     times[TimeBenchmarkType::TB_APA_JLT_TIME].name_ = "jlt optimizer time";
-    times[TimeBenchmarkType::TB_APA_TOTAL_TIME].name_ = "apa_total_time";
+    times[TimeBenchmarkType::TB_APA_TOTAL_TIME].name_ =
+        "apa_total_time";
     times[TimeBenchmarkType::TB_APA_STOP_DECIDER].name_ = "apa_stop_decider";
     times[TimeBenchmarkType::TB_APA_SPEED_LIMIT_DECIDER].name_ =
         "speed_limit_decider";

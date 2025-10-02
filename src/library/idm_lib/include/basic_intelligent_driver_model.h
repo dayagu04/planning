@@ -34,8 +34,7 @@ class BasicIntelligentDriverModel {
   ErrorType GetIdmDesiredAcceleration(const ModelParam &param,
                                       const ModelState &cur_state, double *acc);
   ErrorType GetIIdmDesiredAcceleration(const ModelParam &param,
-                                       const ModelState &cur_state,
-                                       double *acc);
+                                       const ModelState &cur_state, double *acc);
   ErrorType GetAccDesiredAcceleration(const ModelParam &param,
                                       const ModelState &cur_state, double *acc);
 };

@@ -28,13 +28,11 @@ class LateralObstacleDecider : public Task {
                               double lane_width, bool rightest_lane,
                               double farthest_distance, bool can_left_borrow,
                               bool can_right_borrow, double gap_front_node_id_s,
-                              double gap_rear_node_id_s,
-                              bool is_in_lane_change_scene);
+                              double gap_rear_node_id_s, bool is_in_lane_change_scene);
   void LateralObstacleDecision(
       FrenetObstacle &frenet_obstacle, double lane_width,
       const std::shared_ptr<ReferencePath> reference_path_ptr,
-      double gap_front_node_id_s, double gap_rear_node_id_s,
-      bool is_in_lane_change_scene);
+      double gap_front_node_id_s, double gap_rear_node_id_s, bool is_in_lane_change_scene);
   bool CheckEnableSearch(
       const std::shared_ptr<ReferencePath> &reference_path_ptr,
       SearchResult search_result);
@@ -46,42 +44,40 @@ class LateralObstacleDecider : public Task {
   void HppLog(const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void Log(const std::shared_ptr<ReferencePath> &reference_path_ptr);
   bool CalculateCutInAndCross(FrenetObstacle &frenet_obstacle,
-                              std::shared_ptr<ReferencePath> reference_path,
-                              double lane_width);
+                             std::shared_ptr<ReferencePath> reference_path,
+                             double lane_width);
   void UpdateLaneBorrowDirection();
   void UpdateIntersection();
   void HoldLatOffset(FrenetObstacle &frenet_obstacle);
   bool CheckSideObstacle(
-      const std::shared_ptr<ReferencePath> &reference_path_ptr,
-      FrenetObstacle &frenet_obstacle);
+        const std::shared_ptr<ReferencePath> &reference_path_ptr,
+        FrenetObstacle &frenet_obstacle);
   void CheckObstaclesIsReverse();
   void ConstructPlanHistoryTraj(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
   void ConstructUniformPlanHistoryTraj(
       const std::shared_ptr<ReferencePath> &reference_path_ptr);
-  void CheckLateralEmergencyAvoidObstacle(
-      FrenetObstacle &frenet_obstacle, double lane_width,
+  void CheckLateralEmergencyAvoidObstacle(FrenetObstacle &frenet_obstacle, double lane_width,
       const std::shared_ptr<ReferencePath> reference_path_ptr);
-  bool CheckEgoOvertakeObstacle(
-      FrenetObstacle &frenet_obstacle,
+  bool CheckEgoOvertakeObstacle(FrenetObstacle &frenet_obstacle,
       const std::shared_ptr<ReferencePath> reference_path_ptr);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
-  void IsPotentialFollowingObstacle(FrenetObstacle &frenet_obstacle,
-                                    double lane_width,
-                                    double gap_front_node_id_s,
-                                    double gap_rear_node_id_s,
-                                    bool is_in_lane_change_scene);
+  void IsPotentialFollowingObstacle(
+    FrenetObstacle &frenet_obstacle, double lane_width,
+    double gap_front_node_id_s, double gap_rear_node_id_s,
+    bool is_in_lane_change_scene);
   void CalLaneChangeGapInfo(
-      const std::shared_ptr<ReferencePath> reference_path_ptr,
-      double &gap_front_node_id_s, double &gap_rear_node_id_s,
-      bool &is_in_lane_change_scene);
+    const std::shared_ptr<ReferencePath> reference_path_ptr,
+    double &gap_front_node_id_s, double &gap_rear_node_id_s,
+    bool &is_in_lane_change_scene);
 
  private:
   planning::framework::Session *session_;
   LateralObstacleDeciderConfig config_;
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       &lateral_obstacle_history_info_;
-  std::unordered_map<uint32_t, FollowObstacleInfo> &follow_obstacle_info_;
+  std::unordered_map<uint32_t, FollowObstacleInfo>
+      &follow_obstacle_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> &output_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::unique_ptr<HybridARAStar> hybrid_ara_star_ = nullptr;

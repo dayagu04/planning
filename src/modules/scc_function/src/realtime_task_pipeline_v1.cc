@@ -8,8 +8,7 @@ RealtimeSccTaskPipeline::RealtimeSccTaskPipeline(
   // lane_change_decider_ =
   //     std::make_unique<LaneChangeDecider>(config_builder, session);
   // vision_lateral_behavior_planner_ =
-  //     std::make_unique<VisionLateralBehaviorPlanner>(config_builder,
-  //     session);
+  //     std::make_unique<VisionLateralBehaviorPlanner>(config_builder, session);
   // vision_lateral_motion_planner_ =
   //     std::make_unique<VisionLateralMotionPlanner>(config_builder, session);
   // vision_longitudinal_behavior_planner_ =

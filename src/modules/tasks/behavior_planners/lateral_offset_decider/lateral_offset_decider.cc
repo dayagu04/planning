@@ -33,9 +33,7 @@ bool LateralOffsetDecider::Execute() {
   const bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
   if (last_fix_lane_id != current_fix_lane_id || !dbw_status) {
     avoid_obstacle_maintainer5v_.Reset();
-    lateral_offset_calculatorv2_
-        .ResetOffsetHysteresisMaps();  // 变道和非自动的时候，HysteresisType
-                                       // 四个Map都清空
+    lateral_offset_calculatorv2_.ResetOffsetHysteresisMaps(); // 变道和非自动的时候，HysteresisType 四个Map都清空
     Reset();
   }
 
@@ -66,13 +64,13 @@ void LateralOffsetDecider::CheckAvoidObstaclesDecision() {
     if (index >= avoid_obstacle_maintainer5v_.avd_obstacles().size()) {
       return;
     }
-    const auto &obs = avoid_obstacle_maintainer5v_.avd_obstacles()[index];
+    const auto& obs = avoid_obstacle_maintainer5v_.avd_obstacles()[index];
     auto iter = lat_obstacle_decision.find(obs.track_id);
     if (iter == lat_obstacle_decision.end()) {
       return;
     }
     int track_id = obs.track_id;
-    const auto &decision = iter->second;
+    const auto& decision = iter->second;
     if (track_id == last_first_obstacle_id_) {
       if (IsObstacleDecisionSwitch(last_first_obstacle_decision_, decision)) {
         Reset();
@@ -96,9 +94,9 @@ bool LateralOffsetDecider::IsObstacleDecisionSwitch(
     LatObstacleDecisionType last_decision,
     LatObstacleDecisionType current_decision) {
   return (last_decision == LatObstacleDecisionType::RIGHT &&
-          current_decision == LatObstacleDecisionType::LEFT) ||
+         current_decision == LatObstacleDecisionType::LEFT) ||
          (last_decision == LatObstacleDecisionType::LEFT &&
-          current_decision == LatObstacleDecisionType::RIGHT);
+         current_decision == LatObstacleDecisionType::RIGHT);
 }
 
 void LateralOffsetDecider::SmoothLateralOffset(double in_lat_offset) {
@@ -209,7 +207,7 @@ void LateralOffsetDecider::GenerateOutput() {
   lateral_offset_decider_output.avoid_ids.clear();
 
   // for hmi
-  switch (current_state_) {
+  switch(current_state_) {
     case HMIAvoidState::IDLE:
       if (IsStartRunning()) {
         current_state_ = HMIAvoidState::RUNNING;
@@ -232,7 +230,7 @@ void LateralOffsetDecider::GenerateOutput() {
 
     case HMIAvoidState::COOLDOWN:
       if (hmi_avoid_param_.cooldown_count <= kCoolDownCount) {
-        hmi_avoid_param_.cooldown_count++;
+        hmi_avoid_param_.cooldown_count ++;
       } else {
         current_state_ = HMIAvoidState::IDLE;
         hmi_avoid_param_.cooldown_count = 0;
@@ -242,8 +240,7 @@ void LateralOffsetDecider::GenerateOutput() {
   }
 
   lateral_offset_decider_output.avoid_id = hmi_avoid_param_.avoid_id;
-  lateral_offset_decider_output.avoid_direction =
-      hmi_avoid_param_.avoid_direction;
+  lateral_offset_decider_output.avoid_direction = hmi_avoid_param_.avoid_direction;
 }
 
 bool LateralOffsetDecider::IsStartRunning() {
@@ -251,8 +248,7 @@ bool LateralOffsetDecider::IsStartRunning() {
       avoid_obstacle_maintainer5v_.avd_obstacles();
   // lateral_offset_decider_output.avoid_id = -1;
   // lateral_offset_decider_output.avoid_direction = 0;
-  const auto ego_v =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
+  const auto ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
   if (ego_v < 5 / 3.6) {
     return false;
   }
@@ -265,8 +261,7 @@ bool LateralOffsetDecider::IsStartRunning() {
         return true;
       } else {
         if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
-            avd_obstacles[1].max_l_to_ref < 0 &&
-            avd_obstacles[1].s_to_ego > 0) {
+            avd_obstacles[1].max_l_to_ref < 0 && avd_obstacles[1].s_to_ego > 0) {
           hmi_avoid_param_.avoid_id = avd_obstacles[1].track_id;
           hmi_avoid_param_.avoid_direction = 1;
           return true;
@@ -279,8 +274,7 @@ bool LateralOffsetDecider::IsStartRunning() {
         return true;
       } else {
         if (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
-            avd_obstacles[1].min_l_to_ref > 0 &&
-            avd_obstacles[1].s_to_ego > 0) {
+            avd_obstacles[1].min_l_to_ref > 0 && avd_obstacles[1].s_to_ego > 0) {
           hmi_avoid_param_.avoid_id = avd_obstacles[1].track_id;
           hmi_avoid_param_.avoid_direction = 2;
           return true;
@@ -298,8 +292,7 @@ bool LateralOffsetDecider::IsStopRunning() {
   const std::array<AvoidObstacleInfo, 2> avd_obstacles =
       avoid_obstacle_maintainer5v_.avd_obstacles();
 
-  const auto ego_v =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
+  const auto ego_v = session_->environmental_model().get_ego_state_manager()->ego_v();
   if (ego_v < 3 / 3.6) {
     return true;
   }
@@ -308,12 +301,10 @@ bool LateralOffsetDecider::IsStopRunning() {
     return true;
   }
 
-  if (not((avd_obstacles[0].flag != AvoidObstacleFlag::INVALID &&
-           avd_obstacles[0].track_id ==
-               lateral_offset_decider_output.avoid_id) ||
-          (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
-           avd_obstacles[1].track_id ==
-               lateral_offset_decider_output.avoid_id))) {
+  if (not ((avd_obstacles[0].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[0].track_id == lateral_offset_decider_output.avoid_id) ||
+           (avd_obstacles[1].flag != AvoidObstacleFlag::INVALID &&
+            avd_obstacles[1].track_id == lateral_offset_decider_output.avoid_id))) {
     return true;
   }
 

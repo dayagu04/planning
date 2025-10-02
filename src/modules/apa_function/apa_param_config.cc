@@ -571,8 +571,7 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.use_object_detect, bool, "use_object_detect");
 
-  JSON_READ_VALUE(param.use_object_detect_specificationer, bool,
-                  "use_object_detect_specificationer");
+  JSON_READ_VALUE(param.use_object_detect_specificationer, bool, "use_object_detect_specificationer");
 
   JSON_READ_VALUE(param.enable_side_pass_limiter, bool,
                   "enable_side_pass_limiter");
@@ -1003,59 +1002,71 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.speed_config.enable_apa_speed_plan, bool,
                   "enable_apa_speed_plan");
-  JSON_READ_VALUE(param.speed_config.slow_mode.default_cruise_speed, double,
-                  "slow_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.middle_mode.default_cruise_speed, double,
-                  "middle_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.fast_mode.default_cruise_speed, double,
-                  "fast_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.slow_mode.default_cruise_speed,
+                  double, "slow_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.middle_mode.default_cruise_speed,
+                  double, "middle_cruise_speed");
+  JSON_READ_VALUE(param.speed_config.fast_mode.default_cruise_speed,
+                  double, "fast_cruise_speed");
   JSON_READ_VALUE(param.speed_config.min_cruise_speed, double,
                   "min_cruise_speed");
 
-  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_obs_dist.lower,
-                  double, "slow_speed_limit_lower_by_obs_dist");
-  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_obs_dist.upper,
-                  double, "slow_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_obs_dist.lower,
-                  double, "mid_speed_limit_lower_by_obs_dist");
-  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_obs_dist.upper,
-                  double, "middle_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_obs_dist.lower,
-                  double, "fast_speed_limit_lower_by_obs_dist");
-  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_obs_dist.upper,
-                  double, "fast_cruise_speed");
-
-  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_kappa.lower,
-                  double, "slow_speed_limit_lower_by_kappa");
-  JSON_READ_VALUE(param.speed_config.slow_mode.speed_limit_by_kappa.upper,
-                  double, "slow_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_kappa.lower,
-                  double, "mid_speed_limit_lower_by_kappa");
-  JSON_READ_VALUE(param.speed_config.middle_mode.speed_limit_by_kappa.upper,
-                  double, "middle_cruise_speed");
-  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_kappa.lower,
-                  double, "fast_speed_limit_lower_by_kappa");
-  JSON_READ_VALUE(param.speed_config.fast_mode.speed_limit_by_kappa.upper,
-                  double, "fast_cruise_speed");
-
   JSON_READ_VALUE(
-      param.speed_config.slow_mode.speed_limit_by_kappa_switch.lower, double,
-      "slow_speed_limit_by_kappa_switch");
+      param.speed_config.slow_mode.speed_limit_by_obs_dist.lower, double,
+      "slow_speed_limit_lower_by_obs_dist");
   JSON_READ_VALUE(
-      param.speed_config.slow_mode.speed_limit_by_kappa_switch.upper, double,
+      param.speed_config.slow_mode.speed_limit_by_obs_dist.upper, double,
       "slow_cruise_speed");
   JSON_READ_VALUE(
-      param.speed_config.middle_mode.speed_limit_by_kappa_switch.lower, double,
-      "mid_speed_limit_by_kappa_switch");
+      param.speed_config.middle_mode.speed_limit_by_obs_dist.lower,
+      double, "mid_speed_limit_lower_by_obs_dist");
   JSON_READ_VALUE(
-      param.speed_config.middle_mode.speed_limit_by_kappa_switch.upper, double,
+      param.speed_config.middle_mode.speed_limit_by_obs_dist.upper,
+      double, "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_obs_dist.lower, double,
+      "fast_speed_limit_lower_by_obs_dist");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_obs_dist.upper, double,
+      "fast_cruise_speed");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa.lower, double,
+      "slow_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa.upper, double,
+      "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa.lower, double,
+      "mid_speed_limit_lower_by_kappa");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa.upper, double,
       "middle_cruise_speed");
   JSON_READ_VALUE(
-      param.speed_config.fast_mode.speed_limit_by_kappa_switch.lower, double,
-      "fast_speed_limit_by_kappa_switch");
+      param.speed_config.fast_mode.speed_limit_by_kappa.lower, double,
+      "fast_speed_limit_lower_by_kappa");
   JSON_READ_VALUE(
-      param.speed_config.fast_mode.speed_limit_by_kappa_switch.upper, double,
+      param.speed_config.fast_mode.speed_limit_by_kappa.upper, double,
       "fast_cruise_speed");
+
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.lower,
+      double, "slow_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.slow_mode.speed_limit_by_kappa_switch.upper,
+      double, "slow_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.lower,
+      double, "mid_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.middle_mode.speed_limit_by_kappa_switch.upper,
+      double, "middle_cruise_speed");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.lower,
+      double, "fast_speed_limit_by_kappa_switch");
+  JSON_READ_VALUE(
+      param.speed_config.fast_mode.speed_limit_by_kappa_switch.upper,
+      double, "fast_cruise_speed");
 
   JSON_READ_VALUE(param.speed_config.min_path_dist_for_speed_optimizer, double,
                   "min_path_dist_for_speed_optimizer");

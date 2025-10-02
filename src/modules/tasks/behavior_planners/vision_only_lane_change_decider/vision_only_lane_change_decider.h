@@ -29,11 +29,9 @@
 //   void feed_config_and_target_cars(bool is_merging_, LaneChangeParams params,
 //                                    double dis_to_change_point,
 //                                    std::vector<TrackedObject *> &target_cars,
-//                                    const TrackedObject *lead_one, double
-//                                    v_ego);
+//                                    const TrackedObject *lead_one, double v_ego);
 
-//   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_;
-//   };
+//   TargetObstacle nearest_rear_car_track() { return nearest_rear_car_track_; };
 
 //   bool process();
 
@@ -47,8 +45,8 @@
 //                          const std::vector<RefPointFrenet> &ref_line);
 //   double clip(const double x, const double lo, const double hi);
 //   double calc_time_for_lane_change(TargetObstacle base_car,
-//                                    TargetObstacle front_car, GapInfo
-//                                    gap_info, const double safety_distance,
+//                                    TargetObstacle front_car, GapInfo gap_info,
+//                                    const double safety_distance,
 //                                    const double max_v);
 //   double calc_desired_distance(const double v_lead, const double v_ego);
 //   double calc_desired_speed(const double d_rel, const double d_des,

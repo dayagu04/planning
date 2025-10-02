@@ -48,12 +48,15 @@ class MeanFilter {
     window_size_ = window_size;
   }
 
-  const double GetMeanValue() const { return mean_value_; }
+  const double GetMeanValue() const {
+    return mean_value_;
+  }
 
-  const size_t GetValuesSize() const { return values_.size(); }
+  const size_t GetValuesSize() const {
+    return values_.size();
+  }
 
   bool Reset();
-
  private:
   void RemoveEarliest();
   void Insert(const double value);

@@ -10,9 +10,10 @@
 #include "ifly_time.h"
 #include "interface/src/c/common_c.h"
 #include "lane_change_lane_manager.h"
-#include "lateral_obstacle.h"
 #include "session.h"
 #include "virtual_lane_manager.h"
+#include "interface/src/c/common_c.h"
+#include "lateral_obstacle.h"
 
 namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等
@@ -41,8 +42,8 @@ class LaneChangeRequest {
   double tfinish() const { return tfinish_; }
   bool ComputeLcValid(RequestType direction);
   bool IsDashEnoughForRepeatSegments(
-      const RequestType& lc_request, const RequestSource& lc_request_source,
-      int origin_lane_id, const StateMachineLaneChangeStatus& lc_status) const;
+      const RequestType& lc_request, const RequestSource& lc_request_source, int origin_lane_id,
+      const StateMachineLaneChangeStatus& lc_status) const;
   iflyauto::LaneBoundaryType MakesureCurrentBoundaryType(
       const RequestType lc_request, const int origin_lane_id) const;
   bool IsRoadBorderSurpressLaneChange(const RequestType lc_request,
@@ -56,14 +57,13 @@ class LaneChangeRequest {
   double CalculatePressLineRatio(const int origin_lane_id,
                                  const RequestType& lc_request) const;
   double CalculatePressLineRatioByOrigin(const int origin_lane_id,
-                                         const RequestType& lc_request) const;
-  double CalculatePressLineRatioByTarget(int origin_lane_id,
-                                         const RequestType& lc_request) const;
-  double CalculatePressLineRatioByTwoLanes(const int origin_lane_id,
-                                           const int target_lane_id,
-                                           const RequestType& lc_request) const;
-  double CalculateDynamicTTCtime(const int origin_lane_id,
                                  const RequestType& lc_request) const;
+  double CalculatePressLineRatioByTarget(int origin_lane_id,
+                                const RequestType& lc_request) const;
+  double CalculatePressLineRatioByTwoLanes(const int origin_lane_id,
+                                 const int target_lane_id,
+                                 const RequestType& lc_request) const;
+  double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
   bool EgoInIntersection();
 
  protected:

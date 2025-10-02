@@ -1,11 +1,11 @@
 #pragma once
 
-#include "apa_slot.h"
 #include "parking_task.h"
 #include "pose2d.h"
 #include "src/library/convex_collision_detection/gjk2d_interface.h"
 #include "src/library/geometry_lib/include/geometry_math.h"
 #include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "apa_slot.h"
 
 namespace planning {
 namespace apa_planner {

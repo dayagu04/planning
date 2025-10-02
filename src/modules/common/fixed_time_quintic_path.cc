@@ -7,8 +7,9 @@
 
 namespace planning {
 
-QuinticPathPlanner::QuinticPathPlanner(const GapSelectorConfig& config,
-                                       framework::Session* session)
+QuinticPathPlanner::QuinticPathPlanner(
+    const GapSelectorConfig& config,
+    framework::Session* session)
     : config_(config), session_(session) {
   ego_state_mgr_ =
       session_->mutable_environmental_model()->get_ego_state_manager();
@@ -24,8 +25,7 @@ bool QuinticPathPlanner::Plan(const double lat_avoid_offset,
                               TrajectoryPoints& traj_points) {
   // 检查剩余时间是否过短
   if (remain_lc_duration < 1.0) {
-    ILOG_WARN << "Remaining lane change duration is too short:"
-              << remain_lc_duration;
+    ILOG_WARN << "Remaining lane change duration is too short:" << remain_lc_duration;
     return false;
   }
 

@@ -58,12 +58,13 @@ class ApaStateMachineManager final {
   }
 
   const ApaSlotLatPosPreference GetSlotLatPosPreference() const {
-    return slot_lat_pos_preference_;
-  }
+    return slot_lat_pos_preference_;}
   const ParkingSpeedMode GetParkingSpeedMode() const {
     return parking_speed_mode_;
   }
-  const bool GetFreeSlotActivate() const { return free_slot_activate_; }
+  const bool GetFreeSlotActivate() const {
+    return free_slot_activate_;
+  }
 
   const iflyauto::FreeSlotSelectedStatus GetFreeSlotSelectedStatus() const {
     return is_free_slot_selected_;

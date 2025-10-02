@@ -78,8 +78,7 @@ bool concat(double dis1, double dis2, const std::vector<Pose2D> &pose_array1,
 TODO: interpolation for both vector and scalor.
 orignaly it is for both vector and scalor,
 but not that convinient for C++, function overloading is required*/
-double interp(double x, const std::vector<double> &xp,
-              const std::vector<double> &fp);
+double interp(double x, const std::vector<double> &xp, const std::vector<double> &fp);
 double interp(double x1, double x2, const std::vector<double> &xp1,
               const std::vector<double> &xp2, const std::vector<double> &fp);
 

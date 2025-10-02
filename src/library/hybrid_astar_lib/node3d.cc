@@ -434,7 +434,8 @@ const bool Node3d::IsScurveWithParent() const {
   return IsSteerOppositeWithParent();
 }
 
-const bool Node3d::IsScurve(const AstarPathGear type, const float steer) const {
+const bool Node3d::IsScurve(const AstarPathGear type,
+                            const float steer) const {
   if (IsPathGearChange(type)) {
     return false;
   }

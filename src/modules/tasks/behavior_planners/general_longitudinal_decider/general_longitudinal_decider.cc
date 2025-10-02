@@ -459,14 +459,14 @@ bool GeneralLongitudinalDecider::Execute() {
     // set destination bound
     double distance_to_destination = get_distance_to_destination();
     distance_to_destination =
-        reference_path_ptr_->get_points().back().path_point.s() -
-        planning_init_point.frenet_state.s;
-    const double ref_virtual_extend_buff = session_->environmental_model()
-                                               .get_route_info()
-                                               ->get_virtual_extend_buff();
+      reference_path_ptr_->get_points().back().path_point.s() -
+      planning_init_point.frenet_state.s;
+    const double ref_virtual_extend_buff =
+      session_->environmental_model().get_route_info()->get_virtual_extend_buff();
     const auto &parking_slot_manager =
-        session_->environmental_model().get_parking_slot_manager();
-    size_t target_slot_id = parking_slot_manager->GetTargetSlotId();
+      session_->environmental_model().get_parking_slot_manager();
+    size_t target_slot_id =
+      parking_slot_manager->GetTargetSlotId();
     const size_t successful_slot_info_list_size =
         session_->planning_context()
             .planning_output()
@@ -482,27 +482,26 @@ bool GeneralLongitudinalDecider::Execute() {
     double stop_distance_to_destination = config_.stop_distance_to_destination;
     if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
       if (parking_slot_manager->IsExistTargetSlot()) {
-        const auto &target_slot_points =
-            parking_slot_manager->GetTargetSlotPoints();
+        const auto &target_slot_points = parking_slot_manager->GetTargetSlotPoints();
         planning_math::LineSegment2d axis(
-            planning_math::Vec2d(target_slot_points.front().x(),
-                                 target_slot_points.front().y()),
-            planning_math::Vec2d(target_slot_points.back().x(),
-                                 target_slot_points.back().y()));
+        planning_math::Vec2d(target_slot_points.front().x(),
+                             target_slot_points.front().y()),
+        planning_math::Vec2d(target_slot_points.back().x(),
+                             target_slot_points.back().y()));
         Point2D frenet_point;
         if (frenet_coord != nullptr) {
           if (frenet_coord->XYToSL(
-                  Point2D(axis.center().x(), axis.center().y()),
-                  frenet_point)) {
-            distance_to_destination = frenet_point.x + ref_virtual_extend_buff -
-                                      planning_init_point.frenet_state.s;
+            Point2D(axis.center().x(), axis.center().y()),
+            frenet_point)) {
+            distance_to_destination =
+              frenet_point.x + ref_virtual_extend_buff -
+              planning_init_point.frenet_state.s;
           }
         }
       }
-    } else if (current_state ==
-               iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
-      bool find_slot = parking_slot_manager->CalculateDistanceToNearestSlot(
-          reference_path_ptr_);
+    } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
+      bool find_slot =
+          parking_slot_manager->CalculateDistanceToNearestSlot(reference_path_ptr_);
       if (find_slot) {
         stop_distance_to_destination = 0.0;
         distance_to_destination =
@@ -931,17 +930,14 @@ bool GeneralLongitudinalDecider::check_longitudinal_ignore_obstacle(
 
   // LPNP: obstacle's frenet is wrong when it out of route
   if (distance_to_destination < 10.0 && (obstacle->b_frenet_valid() == false)) {
-    ILOG_ERROR << "The obstacle's frenet is invalid but it is needed to be "
-                  "cared by LPNP "
-               << "whose id :" << obstacle->id();
+    ILOG_ERROR << "The obstacle's frenet is invalid but it is needed to be cared by LPNP " << "whose id :" << obstacle->id();
     return false;
   }
 
   if ((obstacle->obstacle()->fusion_source() != OBSTACLE_SOURCE_CAMERA) &&
       (obstacle->obstacle()->fusion_source() !=
        OBSTACLE_SOURCE_F_RADAR_CAMERA)) {
-    ILOG_ERROR << "The obstacle's fusion source is no camera whose id :"
-               << obstacle->id();
+    ILOG_ERROR << "The obstacle's fusion source is no camera whose id :" << obstacle->id();
     return true;
   }
 
@@ -2079,8 +2075,7 @@ double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
       general_lateral_decider_output.soft_bounds_info;
   // calc passable area info
   // std::vector<PassableAreaInfo> passable_area_info;
-  std::pair<BoundInfo, BoundInfo>
-      min_width_bound_info;  // <hard bound, soft bound>
+  std::pair<BoundInfo, BoundInfo> min_width_bound_info; // <hard bound, soft bound>
   double width_minimum = std::numeric_limits<double>::max();
   for (unsigned int i = 0; i <= config_.lon_num_step; i++) {
     const auto &hard_bounds = lateral_hard_bounds[i];
@@ -2118,8 +2113,9 @@ double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
   // if (width_minimum < narrow_space_width_stop_thrshld &&
   //     closest_distance < narrow_space_distance_stop_thrshld) {
   //   LOG_DEBUG(
-  //       "Dangerous! The vehilce can't get through the area whose minimum path
-  //       " "width is = : %f", width_minimum);
+  //       "Dangerous! The vehilce can't get through the area whose minimum path "
+  //       "width is = : %f",
+  //       width_minimum);
   //   suggest_velocity_limit = 0.0;
   // }
   return suggest_velocity_limit;

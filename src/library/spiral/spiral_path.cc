@@ -87,8 +87,8 @@ const bool CubicKnotsToCoefficients(coefficient_cubic_t *coefficients,
   return true;
 }
 
-const bool FThetaCubicByS(float *theta, const coefficient_cubic_t *coefficients,
-                          float s) {
+const bool FThetaCubicByS(float *theta,
+                          const coefficient_cubic_t *coefficients, float s) {
   float s2, s3, s4;
 
   if (coefficients == NULL || theta == NULL) {
@@ -159,8 +159,8 @@ const bool FKappaCubicS(float *kappa, const coefficient_cubic_t *coefficients,
 //   total_point_number = (int32_t)(ceil(coeffs->sf / step_length)) + 1;
 //   ILOG_INFO << "coeffs->sf " << coeffs->sf;
 //   ILOG_INFO << "total_point_number " << total_point_number;
-//   max_point_num = (MAX_SPIRAL_PATH_POINT_NUM - 1) * UOS_MAX_STEER_MOTION_NUM
-//   + 1;
+//   max_point_num = (MAX_SPIRAL_PATH_POINT_NUM - 1) * UOS_MAX_STEER_MOTION_NUM +
+//   1;
 
 //   if (total_point_number > max_point_num) {
 //     ILOG_ERROR << "The sample number is greater than the motion size!";
@@ -414,8 +414,8 @@ const bool SampleCubicSpiralStatesBySol(
   return true;
 }
 
-const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c, float *d,
-                                      float shift_distance,
+const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c,
+                                      float *d, float shift_distance,
                                       const coefficient_cubic_t *coeffs) {
   if (coeffs == NULL || a == NULL || b == NULL || c == NULL || d == NULL) {
     ILOG_ERROR << "a, b, c, d and coeffs can not be NULL!";

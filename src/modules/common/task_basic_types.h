@@ -9,15 +9,7 @@
 
 namespace planning {
 
-enum class LatObstacleDecisionType {
-  LEFT,
-  RIGHT,
-  IGNORE,
-  FOLLOW,
-  PRE_FOLLOW_WITHIN_LANE,
-  PRE_NUDGE,
-  NOT_SET
-};
+enum class LatObstacleDecisionType { LEFT, RIGHT, IGNORE, FOLLOW, PRE_FOLLOW_WITHIN_LANE, PRE_NUDGE, NOT_SET};
 
 enum class LonObstacleDecisionType { OVERTAKE, YIELD, IGNORE };
 

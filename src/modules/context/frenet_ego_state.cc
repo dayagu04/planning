@@ -15,8 +15,7 @@ void FrenetEgoState::update(
   Point2D frenet_point, cart_point;
   cart_point.x = ego_state.ego_carte().x;
   cart_point.y = ego_state.ego_carte().y;
-  if (frenet_coord->XYToSL(cart_point.x, cart_point.y, &frenet_point.x,
-                           &frenet_point.y)) {
+  if (frenet_coord->XYToSL(cart_point.x, cart_point.y, &frenet_point.x, &frenet_point.y)) {
     s_ = frenet_point.x;
     l_ = frenet_point.y;
   } else {
@@ -105,17 +104,20 @@ void FrenetEgoState::update(
   cstate.curvature = planning_init_point_.curvature;
   auto ok = frenet_coord->CartStateToFrenetState(
       cstate, planning_init_point_.frenet_state);
-  ILOG_DEBUG << "planning_init_point: rel_t:"
-             << planning_init_point_.relative_time << "x:" << cstate.x
-             << "y:" << cstate.y << "yaw:" << cstate.yaw
-             << "v:" << planning_init_point_.v << "a:" << planning_init_point_.a
-             << "s:" << planning_init_point_.frenet_state.s
-             << "r:" << planning_init_point_.frenet_state.r
-             << "dr_ds:" << planning_init_point_.frenet_state.dr_ds
-             << "ddr_dsds:" << planning_init_point_.frenet_state.ddr_dsds
-             << "ego_pose: x:" << ego_state.ego_carte().x
-             << "ego_pose: y:" << ego_state.ego_carte().y << "s:" << s_
-             << "l:" << l_;
+  ILOG_DEBUG << "planning_init_point: rel_t:" << planning_init_point_.relative_time
+            << "x:" << cstate.x
+            << "y:" << cstate.y
+            << "yaw:" << cstate.yaw
+            << "v:" << planning_init_point_.v
+            << "a:" << planning_init_point_.a
+            << "s:" << planning_init_point_.frenet_state.s
+            << "r:" << planning_init_point_.frenet_state.r
+            << "dr_ds:" << planning_init_point_.frenet_state.dr_ds
+            << "ddr_dsds:" << planning_init_point_.frenet_state.ddr_dsds
+            << "ego_pose: x:" << ego_state.ego_carte().x
+            << "ego_pose: y:" << ego_state.ego_carte().y
+            << "s:" << s_
+            << "l:" << l_;
   ILOG_DEBUG << "planning_init_point_valid:" << ok;
   planning_init_point_valid_ = ok;
 

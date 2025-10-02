@@ -51,13 +51,10 @@ static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
 static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
 static constexpr auto TOPIC_TRAFFIC_SIGN =
     "/iflytek/camera_perception/traffic_sign_recognition";
-static constexpr auto TOPIC_PERCEPTION_SCENE =
-    "/iflytek/camera_perception/scene";
+static constexpr auto TOPIC_PERCEPTION_SCENE = "/iflytek/camera_perception/scene";
 static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
-static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO =
-    "/iflytek/camera_perception/lane_lines_debug_info";
-static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO =
-    "/iflytek/camera_perception/lane_topo_debug_info";
+static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO = "/iflytek/camera_perception/lane_lines_debug_info";
+static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO = "/iflytek/camera_perception/lane_topo_debug_info";
 static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
 
 // apa topics
@@ -604,7 +601,8 @@ void PlanningPlayer::StoreRosBag() {
                                                         TOPIC_SD_MAP, bag);
       } else if (it_msg.first == TOPIC_SDPro_MAP) {
         write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
-                                                        TOPIC_SDPro_MAP, bag);
+                                                        TOPIC_SDPro_MAP,
+                                                        bag);
         // } else if (it_msg.first == TOPIC_EHR_PARKING_MAP) {
         //   write_ros_msg<sensor_interface::DebugInfo::Ptr>(it_msg.second,
         //                                                   TOPIC_EHR_PARKING_MAP,
@@ -745,9 +743,8 @@ void PlanningPlayer::PlayOneFrame(
   //     struct_msgs_legacy_v2_4_6::LocalizationEstimate>(
   //     TOPIC_LOCALIZATION_ESTIMATE, input_time_localization_estimate);
   // if (localization_estimate_ros_msg) {
-  //   iflyauto::interface_2_4_6::LocalizationEstimate
-  //   localization_estimate_msg{}; convert(localization_estimate_msg,
-  //   *localization_estimate_ros_msg,
+  //   iflyauto::interface_2_4_6::LocalizationEstimate localization_estimate_msg{};
+  //   convert(localization_estimate_msg, *localization_estimate_ros_msg,
   //           ConvertTypeInfo::TO_STRUCT);
   //   planning_adapter_->FeedLocalizationEstimateOutput(
   //       localization_estimate_msg);
@@ -848,38 +845,31 @@ void PlanningPlayer::PlayOneFrame(
 
   // BUG: thzhang5 0827 perception_scene()一直是0
   // 现在 perception_scene 使用 TSR 的枚举值，所以会返回 TSR 的时间戳
-  uint64_t tsr_timestamp =
-      input_time_list.perception_tsr();  // 实际上是TSR的时间戳
+  uint64_t tsr_timestamp = input_time_list.perception_tsr();  // 实际上是TSR的时间戳
 
   struct_msgs::CameraPerceptionScene::Ptr perception_scene_ros_msg = nullptr;
 
   if (tsr_timestamp > 0) {
     // 使用TSR时间戳去找最接近的perception_scene消息
-    perception_scene_ros_msg = find_ros_msg_with_header_time_upper_bound<
-        struct_msgs::CameraPerceptionScene>(TOPIC_PERCEPTION_SCENE,
-                                            tsr_timestamp);
+    perception_scene_ros_msg = find_ros_msg_with_header_time_upper_bound<struct_msgs::CameraPerceptionScene>(
+        TOPIC_PERCEPTION_SCENE, tsr_timestamp);
 
-    if (!perception_scene_ros_msg) {
-      // 如果upper_bound没找到，尝试向前查找
-      for (auto it = msg_cache_[TOPIC_PERCEPTION_SCENE].begin();
-           it != msg_cache_[TOPIC_PERCEPTION_SCENE].end(); ++it) {
-        uint64_t scene_timestamp_us = it->first.toNSec() / 1000;  // 转换为微秒
-        if (scene_timestamp_us <=
-            tsr_timestamp + 200000) {  // 允许200ms的时间差
-          perception_scene_ros_msg =
-              boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(
-                  it->second);
-          break;
-        }
-      }
-    }
+         if (!perception_scene_ros_msg) {
+       // 如果upper_bound没找到，尝试向前查找
+       for (auto it = msg_cache_[TOPIC_PERCEPTION_SCENE].begin();
+            it != msg_cache_[TOPIC_PERCEPTION_SCENE].end(); ++it) {
+         uint64_t scene_timestamp_us = it->first.toNSec() / 1000;  // 转换为微秒
+         if (scene_timestamp_us <= tsr_timestamp + 200000) {  // 允许200ms的时间差
+           perception_scene_ros_msg = boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(it->second);
+           break;
+         }
+       }
+     }
   } else {
     // 如果TSR时间戳还是0，使用第一个可用消息
     if (!msg_cache_[TOPIC_PERCEPTION_SCENE].empty()) {
       auto first_msg = msg_cache_[TOPIC_PERCEPTION_SCENE].begin();
-      perception_scene_ros_msg =
-          boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(
-              first_msg->second);
+      perception_scene_ros_msg = boost::any_cast<struct_msgs::CameraPerceptionScene::Ptr>(first_msg->second);
     }
   }
 
@@ -968,11 +958,10 @@ void PlanningPlayer::PlayOneFrame(
       auto sdpro_map_msg_i =
           boost::any_cast<sensor_interface::DebugInfo::Ptr>(it->second);
       std::string sdpro_map_str(sdpro_map_msg_i->debug_info.begin(),
-                                sdpro_map_msg_i->debug_info.end());
+                             sdpro_map_msg_i->debug_info.end());
       const auto struct_ptr = std::make_shared<iflyauto::StructContainer>();
       auto sdpro_map = std::make_shared<iflymapdata::sdpro::MapData>();
-      struct_ptr->mutable_payload()->assign(sdpro_map_str.c_str(),
-                                            sdpro_map_str.size());
+      struct_ptr->mutable_payload()->assign(sdpro_map_str.c_str(), sdpro_map_str.size());
       sdpro_map->ParseFromString(sdpro_map_str);
       if (sdpro_map->header().timestamp() == input_time_list_sdpro_map_) {
         planning_adapter_->Feed_IflytekEhrSdpromapInfo(*struct_ptr);
@@ -1144,14 +1133,10 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
     double planning_loop_dt = 0.1;
     double prediction_relative_time = 0.0;
     uint64 localizatoin_latency = 0.0;
-    if (planning_debug_info->has_simulation_core_param() and
-        planning_debug_info->simulation_core_param().planning_loop_dt() != 0) {
-      planning_loop_dt =
-          planning_debug_info->simulation_core_param().planning_loop_dt();
-      prediction_relative_time = planning_debug_info->simulation_core_param()
-                                     .prediction_relative_time();
-      localizatoin_latency =
-          planning_debug_info->simulation_core_param().localizatoin_latency();
+    if (planning_debug_info->has_simulation_core_param() and planning_debug_info->simulation_core_param().planning_loop_dt() != 0) {
+      planning_loop_dt = planning_debug_info->simulation_core_param().planning_loop_dt();
+      prediction_relative_time = planning_debug_info->simulation_core_param().prediction_relative_time();
+      localizatoin_latency = planning_debug_info->simulation_core_param().localizatoin_latency();
     } else {
       // 兼容历史bag
       auto& debug_data_json = planning_debug_info->data_json();
@@ -1165,14 +1150,14 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
       }
 
       auto prediction_relative_time_start =
-          debug_data_json.find("prediction_relative_time");
+        debug_data_json.find("prediction_relative_time");
       if (prediction_relative_time_start != std::string::npos) {
         auto prediction_relative_time_end =
             debug_data_json.find(',', prediction_relative_time_start);
-        prediction_relative_time = stod(
-            debug_data_json.substr(prediction_relative_time_start + 28,
-                                   prediction_relative_time_end -
-                                       prediction_relative_time_start - 28));
+        prediction_relative_time = stod(debug_data_json.substr(
+            prediction_relative_time_start + 28,
+            prediction_relative_time_end - prediction_relative_time_start - 28));
+
       }
       auto localizatoin_latency_start =
           debug_data_json.find("localizatoin_latency_inEgoStateManager");
@@ -1182,14 +1167,16 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
         localizatoin_latency = stod(debug_data_json.substr(
             localizatoin_latency_start + 42,
             localizatoin_latency_end - localizatoin_latency_start - 42));
+
       }
     }
 
     SimulationContext::Instance()->set_prediction_relative_time(
-        prediction_relative_time);
+          prediction_relative_time);
     SimulationContext::Instance()->set_localizatoin_latency(
-        localizatoin_latency);
-    SimulationContext::Instance()->set_planning_loop_dt(planning_loop_dt);
+          localizatoin_latency);
+    SimulationContext::Instance()->set_planning_loop_dt(
+          planning_loop_dt);
 
     planning_dubug_info_header_time_us_ = planning_debug_info->timestamp();
     planning_dubug_info_frame_num_ =
@@ -1270,8 +1257,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i =
-            loc_msg_i->meta.timestamp;  // 2.10.0 localization adapt
+        auto loc_header_time_i = loc_msg_i->meta.timestamp; // 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -1321,8 +1307,7 @@ void PlanningPlayer::RunCloseLoop(
            it != msg_cache_[TOPIC_LOCALIZATION].end(); it++) {
         auto loc_msg_i =
             boost::any_cast<struct_msgs::IFLYLocalization::Ptr>(it->second);
-        auto loc_header_time_i =
-            loc_msg_i->meta.timestamp;  // 2.10.0 localization adapt
+        auto loc_header_time_i = loc_msg_i->meta.timestamp;// 2.10.0 localization adapt
         if (loc_header_time_i > loc_header_time_us_) {
           if (loc_header_time_i <= next_loc_header_time_us_) {
             auto delta_t = loc_header_time_i - loc_header_time_us_;
@@ -1362,8 +1347,7 @@ void PlanningPlayer::RunCloseLoop(
 
 void PlanningPlayer::PerpareTrajectory(
     const struct_msgs::PlanningOutput& plan_msg) {
-  if (plan_msg.planning_request.take_over_req_level >
-      iflyauto::REQUEST_LEVEL_NO_REQ) {
+  if (plan_msg.planning_request.take_over_req_level > iflyauto::REQUEST_LEVEL_NO_REQ) {
     return;
   }
   const auto& trajectory = plan_msg.trajectory;

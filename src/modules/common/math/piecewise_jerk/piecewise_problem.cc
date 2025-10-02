@@ -282,8 +282,10 @@ bool PiecewiseProblem::optimize(const int max_iter, int &status) {
 
       if (var < bound.lower - epsilon or var > bound.upper + epsilon) {
         ILOG_DEBUG << "solver constraint failure on x: " << bound.idx
-                   << ", order: " << bound.order << ", lower: " << bound.lower
-                   << ", upper: " << bound.upper << ", value: " << var;
+                   << ", order: " << bound.order
+                   << ", lower: " << bound.lower
+                   << ", upper: " << bound.upper
+                   << ", value: " << var;
         success = false;
       }
     }

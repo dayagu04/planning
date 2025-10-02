@@ -318,9 +318,7 @@ void Agent::set_is_reverse_in_large_curv(const bool is_reverse_in_large_curv) {
   is_reverse_in_large_curv_ = is_reverse_in_large_curv;
 }
 
-const bool Agent::is_reverse_relieve_agent() const {
-  return is_reverse_relieve_agent_;
-}
+const bool Agent::is_reverse_relieve_agent() const { return is_reverse_relieve_agent_; }
 
 void Agent::set_is_reverse_relieve_agent(const bool is_reverse) {
   is_reverse_relieve_agent_ = is_reverse;
@@ -382,9 +380,7 @@ void Agent::set_is_lane_borrow_virtual_obs(
   is_lane_borrow_virtual_obs_ = is_lane_borrow_virtual_obs;
 }
 
-const bool Agent::is_vru_crossing_virtual_obs() const {
-  return is_vru_crossing_virtual_obs_;
-}
+const bool Agent::is_vru_crossing_virtual_obs() const { return is_vru_crossing_virtual_obs_; }
 
 void Agent::set_is_vru_crossing_virtual_obs(bool is_vru_crossing_virtual_obs) {
   is_vru_crossing_virtual_obs_ = is_vru_crossing_virtual_obs;

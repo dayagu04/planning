@@ -137,7 +137,8 @@ class ObstacleManager {
   bool FilterGroundLineByDistance(
       const std::vector<planning_math::Vec2d> &points,
       const std::shared_ptr<planning_math::KDPath> &frenet_coord,
-      const Point2D &ego_point, const iflyauto::GroundLineType type,
+      const Point2D &ego_point,
+      const iflyauto::GroundLineType type,
       const iflyauto::StaticFusionResourceType resource_type);
 
  private:

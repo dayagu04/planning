@@ -13,6 +13,7 @@
 #include "st_graph/st_graph_helper.h"
 #include "st_graph/st_graph_input.h"
 #include "st_graph/st_graph_utils.h"
+#include "tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_planner.h"
 #include "tasks/behavior_planners/agent_headway_decider/agent_headway_decider.h"
 #include "tasks/behavior_planners/agent_longitudinal_decider/agent_longitudinal_decider.h"
 #include "tasks/behavior_planners/cipv_lost_prohibit_acceleration_decider/cipv_lost_prohibit_acceleration_decider.h"
@@ -29,19 +30,18 @@
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
-#include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
-#include "tasks/behavior_planners/parallel_longitudinal_avoid_decider/parallel_longitudinal_avoid_decider.h"
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
-#include "tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_planner.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
 #include "tasks/behavior_planners/st_graph_decider/st_graph_searcher.h"
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
+#include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
-#include "tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner.h"
+#include "tasks/behavior_planners/parallel_longitudinal_avoid_decider/parallel_longitudinal_avoid_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
+#include "tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner.h"
 
 namespace planning {
 class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
@@ -91,7 +91,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<LongRefPathDecider> long_ref_path_decider_;
 
   // V3后续要取消这个,单独s ref生成
-  //   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
+//   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
 
   // Motion Planners
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;

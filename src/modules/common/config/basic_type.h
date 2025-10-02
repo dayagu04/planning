@@ -56,19 +56,19 @@ enum SplitDirection {
 
 // 拥堵等级枚举
 enum CongestionLevel {
-  FREE_FLOW = 0,   // 自由流（畅通）
-  CONGESTION = 1,  // 拥堵
-  JAM = 2,         // 堵塞
+    FREE_FLOW = 0,          // 自由流（畅通）
+    CONGESTION = 1,         // 拥堵
+    JAM = 2,                 // 堵塞
 };
 
 // 拥堵状态检测结果
 struct CongestionResult {
-  CongestionLevel level;     // 拥堵等级
-  double density;            // 密度（辆/公里）
-  double avg_speed;          // 平均速度（m/s）
-  double speed_deviation;    // 速度标准差（m/s）
-  double avg_time_headway;   // 平均车头时距（秒）
-  double avg_space_headway;  // 不安全车头时距比例
+    CongestionLevel level;         // 拥堵等级
+    double density;                // 密度（辆/公里）
+    double avg_speed;              // 平均速度（m/s）
+    double speed_deviation;        // 速度标准差（m/s）
+    double avg_time_headway;       // 平均车头时距（秒）
+    double avg_space_headway;      // 不安全车头时距比例
 };
 
 //分流的相对方向
@@ -79,7 +79,7 @@ enum SplitRelativeDirection {
 };
 
 enum EgoStatusOnRoute {
-  ON_MAIN = 0,
+  ON_MAIN  = 0,
   NEARING_SPLIT = 1,
   NEARING_MERGE = 2,
   IN_EXCHANGE_AREAR_FRONT = 3,
@@ -112,7 +112,7 @@ struct FPPoint {
   std::vector<uint64> lane_ids;
   iflymapdata::sdpro::FeaturePoint fp;
 
-  void reset() {
+  void reset () {
     link_id = -1;
     fp_distance_to_split_point = 0.0;
     lane_ids.clear();
@@ -137,7 +137,7 @@ struct MergePointInfo {
   double dis_to_merge_fp = NL_NMAX;
   MergeType merge_type = MergeType::NO_MERGE;
 
-  void reset() {
+  void reset () {
     dis_to_merge_fp = NL_NMAX;
     merge_type = MergeType::NO_MERGE;
   }
@@ -145,9 +145,9 @@ struct MergePointInfo {
 
 struct NOASplitRegionInfo {
   bool is_valid = false;
-  bool is_ramp_split = false;                  // split场景专用
-  bool is_other_merge_to_road = false;         // merge场景专用
-  MergeType merge_type = MergeType::NO_MERGE;  // merge场景专用
+  bool is_ramp_split = false;//split场景专用
+  bool is_other_merge_to_road = false; //merge场景专用
+  MergeType merge_type = MergeType::NO_MERGE; //merge场景专用
   uint64 split_link_id = -1;
   double distance_to_split_point = NL_NMAX;
   FPPoint end_fp_point;
@@ -168,7 +168,7 @@ struct NOASplitRegionInfo {
     recommend_lane_num.clear();
   }
   //车道数从左开始数
-  // recommond_lane_num{交换区起点前的车道数，交换区内的车道数，交换区终点后route上的车道数，其他方向的车道数}
+  //recommond_lane_num{交换区起点前的车道数，交换区内的车道数，交换区终点后route上的车道数，其他方向的车道数}
 };
 
 // struct EgoStatusOnRoute {
@@ -192,7 +192,7 @@ struct MLCDeciderRouteInfo {
   NOASplitRegionInfo first_static_split_region_info;
   std::vector<int> feasible_lane_sequence;
 
-  void reset() {
+  void reset () {
     ego_status_on_route = ON_MAIN;
     is_process_split = false;
     is_process_split_split = false;
@@ -209,6 +209,7 @@ struct MLCDeciderRouteInfo {
     feasible_lane_sequence.clear();
   }
 };
+
 
 struct RouteInfoOutput {
   // for NOA output

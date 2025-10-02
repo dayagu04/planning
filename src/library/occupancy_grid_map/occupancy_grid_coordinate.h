@@ -15,8 +15,8 @@ struct OccupancyGridBound {
 
   OccupancyGridBound() = default;
 
-  OccupancyGridBound(const float x_min_, const float y_min_, const float x_max_,
-                     const float y_max_)
+  OccupancyGridBound(const float x_min_, const float y_min_,
+                     const float x_max_, const float y_max_)
       : min_x(x_min_), min_y(y_min_), max_x(x_max_), max_y(y_max_){};
 
   void PrintInfo(const bool enable_log = true) const {

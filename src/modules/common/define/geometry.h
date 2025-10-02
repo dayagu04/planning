@@ -1,8 +1,8 @@
 #ifndef __UTILS__GEOMETRY_H__
 #define __UTILS__GEOMETRY_H__
 
-#include "src/common/quaternion.h"
 #include "src/modules/common/common.h"
+#include "src/common/quaternion.h"
 
 namespace planning {
 

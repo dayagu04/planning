@@ -31,7 +31,7 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   const double default_front_dis = 150;
   const double default_front_v = 33.3;
 
-  const auto& vehicle_param =
+  const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
   lc_path_result_.reset();
@@ -41,7 +41,7 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   const double ld = ego_state.velocity() * 3.0;
   BasicPurePursuitModel::ModelParam pp_model_param(ld, wheel_base);
 
-  const auto& planning_init_point = ego_state.planning_init_point();
+  const auto &planning_init_point = ego_state.planning_init_point();
 
   BasicPurePursuitModel::ModelState pp_model_state(
       planning_init_point.x, planning_init_point.y,
@@ -56,7 +56,7 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
       0.0, planning_init_point.lon_init_state.v(), default_front_dis,
       default_front_v);
 
-  const auto& lane_change_decider_output =
+  const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
 
   const int front_agent_node_id =
@@ -98,7 +98,7 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   while (!iter_terminate) {
     index++;
 
-    // lat simulation
+    //lat simulation
 
     pp_model_.set_model_state(pp_model_state);
 
@@ -116,18 +116,15 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
 
     // lon simulation
     double desire_acc;
-    idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state,
-                                         &desire_acc);
+    idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state, &desire_acc);
     temp_state.v = idm_model_state.vel + desire_acc * dt;
 
-    // update ego next state using vehicle simulation model
+    //update ego next state using vehicle simulation model
     pnc::steerModel::VehicleSimulation vehicle_simulate;
     vehicle_simulate.set_dt_resolution(0.2);
     pnc::steerModel::VehicleParameter vehicle_param;
-    pnc::steerModel::VehicleState vehicle_state{temp_state.x, temp_state.y,
-                                                temp_state.theta};
-    pnc::steerModel::VehicleControl vehicle_control{temp_state.v,
-                                                    temp_state.delta};
+    pnc::steerModel::VehicleState vehicle_state{temp_state.x, temp_state.y, temp_state.theta};
+    pnc::steerModel::VehicleControl vehicle_control{temp_state.v, temp_state.delta};
 
     vehicle_simulate.Init(vehicle_state);
     vehicle_simulate.Update(vehicle_control, vehicle_param);
@@ -140,7 +137,8 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
     pp_model_state.vel = temp_state.v;
 
     // update idm_model state continue iter
-    if (is_exist_front_agent && is_get_front_agent_predicton_infos_succeed) {
+    if (is_exist_front_agent &&
+        is_get_front_agent_predicton_infos_succeed) {
       idm_model_state.s = 0;
       idm_model_state.s_front =
           front_agent_prediction_infos.s_t_spline(dt * index);
@@ -174,8 +172,8 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
       return false;
     }
 
-    double theta_err =
-        std::abs(new_state.phi_ - reference_path_point.path_point.theta());
+    double theta_err = std::abs(new_state.phi_ -
+                                reference_path_point.path_point.theta());
     double lat_err = std::abs(frenet_point.y - lat_offset);
     bool is_poise_near_lane =
         lat_err < end_poise_lat_err && theta_err < end_poise_theta_err;
@@ -189,7 +187,9 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
     }
 
     iter_terminate =
-        is_poise_near_lane || index * dt > max_simulate_time || is_over_lane;
+          is_poise_near_lane ||
+          index * dt > max_simulate_time ||
+          is_over_lane;
   }
 
   if (lc_path_result_.t.size() < 3) {
@@ -210,22 +210,20 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   return true;
 }
 
-bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
-    const double lat_offset,
-    const planning_data::DynamicAgentNode* front_agent_node) {
+bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(const double lat_offset,
+                                  const planning_data::DynamicAgentNode* front_agent_node) {
   // 如果有头车，先处理预测轨迹
   front_node_future_trajectory_.clear();
   bool is_exist_front_agent = front_agent_node != nullptr;
-  if (is_exist_front_agent) {
-    const auto& front_agent_trajs =
-        front_agent_node->node_trajectories_used_by_st_graph();
-    if (front_agent_trajs.empty()) {
+  if(is_exist_front_agent){
+    const auto& front_agent_trajs = front_agent_node->node_trajectories_used_by_st_graph();
+    if(front_agent_trajs.empty()){
       return false;
     }
-    const auto& front_agent_prediction_trajectory =
-        front_agent_node->node_trajectories_used_by_st_graph()[0];
+    const auto &front_agent_prediction_trajectory =
+      front_agent_node->node_trajectories_used_by_st_graph()[0];
     const auto& ref_frenet_coord = ref_path_->get_frenet_coord();
-    if (front_agent_prediction_trajectory.empty()) {
+    if(front_agent_prediction_trajectory.empty()){
       return false;
     }
     if (!ref_frenet_coord) {
@@ -233,7 +231,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     }
     const auto vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
-    for (const auto agent_point : front_agent_prediction_trajectory) {
+    for (const auto agent_point: front_agent_prediction_trajectory) {
       TrajectoryPoint point;
       point.x = agent_point.x();
       point.y = agent_point.y();
@@ -247,11 +245,10 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       double s = 0.0;
       double l = 0.0;
       if (!ref_frenet_coord->XYToSL(point.x, point.y, &s, &l)) {
-        continue;  //更换xytosl
+          continue;//更换xytosl
       }
       Point2D frenet_point(s, l);
-      point.s =
-          frenet_point.x - front_agent_node->node_length() * 0.5;  // back edge
+      point.s = frenet_point.x - front_agent_node->node_length() * 0.5; // back edge
       front_node_future_trajectory_.push_back(point);
     }
   }
@@ -265,21 +262,21 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   const double end_poise_theta_err = 0.12;
 
   // 公共信息
-  const auto& car_param =
+  const auto &car_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& ego_state = ref_path_->get_frenet_ego_state();
-  const auto& planning_init_point = ego_state.planning_init_point();
+  const auto &planning_init_point = ego_state.planning_init_point();
   const auto& ref_frenet_coor = ref_path_->get_frenet_coord();
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
+  const auto &lane_change_decider_output =
+    session_->planning_context().lane_change_decider_output();
 
   // pp model default
   const double wheel_base = car_param.wheel_base;
   const double ld = ego_state.velocity() * 2.0 + 1.0;
   BasicPurePursuitModel::ModelParam pp_model_param(ld, wheel_base);
   BasicPurePursuitModel::ModelState pp_model_state(
-      planning_init_point.x, planning_init_point.y,
-      planning_init_point.heading_angle, ego_state.velocity());
+    planning_init_point.x, planning_init_point.y,
+    planning_init_point.heading_angle, ego_state.velocity());
   pp_model_.ProcessReferencePath(ref_path_);
 
   // idm model default
@@ -289,25 +286,26 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   idm_model_param.kDesiredVelocity =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
   BasicIntelligentDriverModel::ModelState idm_model_state(
-      0.0, ego_state.velocity(), default_front_dis, default_front_v);
+      0.0, ego_state.velocity(), default_front_dis,
+      default_front_v);
 
   if (is_exist_front_agent) {
-    idm_model_state.s = 0;
-    idm_model_state.s_front =
-        front_node_future_trajectory_[0].s -
-        (50.0 + car_param.front_edge_to_rear_axle);  // ego_traj_point.s
-    // idm_model_state.vel = temp_state.v;
-    idm_model_state.vel_front = front_node_future_trajectory_[0].v;
-  }
+      idm_model_state.s = 0;
+      idm_model_state.s_front = front_node_future_trajectory_[0].s -
+      (50.0 + car_param.front_edge_to_rear_axle);//ego_traj_point.s
+      // idm_model_state.vel = temp_state.v;
+      idm_model_state.vel_front =
+          front_node_future_trajectory_[0].v;
+    }
   // const auto &lane_change_decider_output =
   //     session_->planning_context().lane_change_decider_output();
 
   // const int front_agent_node_id =
   //     lane_change_decider_output.lc_gap_info.front_node_id;
 
-  // bool is_exist_front_agent = front_agent_node_id !=
-  // planning_data::kInvalidId; bool is_get_front_agent_predicton_infos_succeed
-  // = false; LaneChangePathGenerateManager::AgentPredictionTrajectoryPoints
+  // bool is_exist_front_agent = front_agent_node_id != planning_data::kInvalidId;
+  // bool is_get_front_agent_predicton_infos_succeed = false;
+  // LaneChangePathGenerateManager::AgentPredictionTrajectoryPoints
   //     front_agent_prediction_infos;
 
   // if (is_exist_front_agent) {
@@ -340,7 +338,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   init_point.t = 0;
   ego_future_trajectory_.push_back(init_point);
   // 可视化同步
-  lc_path_result_.x.push_back(init_point.x);
+  lc_path_result_.x.push_back(init_point.x );
   lc_path_result_.y.push_back(init_point.y);
   lc_path_result_.theta.push_back(init_point.heading_angle);
   lc_path_result_.t.push_back(0);
@@ -352,11 +350,11 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   bool is_close = false;
   // 递推自车轨迹
   while (!iter_terminate) {
-    index++;  // index = 1 -> ...
-    // lat simulation
+    index++; //index = 1 -> ...
+    //lat simulation
     // double ld_v = ComputeLd(pp_model_state.vel, is_close);
     double ld_v = pp_model_state.vel * 1.2 + 1;
-    if (is_close) {
+    if(is_close){
       ld_v = pp_model_state.vel * 0.3 + 0.5;
     }
     BasicPurePursuitModel::ModelParam pp_model_param(ld_v, wheel_base);
@@ -373,18 +371,15 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
 
     // lon simulation
     double desire_acc;
-    idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state,
-                                         &desire_acc);
+    idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state, &desire_acc);
     desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
     temp_state.v = idm_model_state.vel + desire_acc * dt;
 
-    // update ego next state using vehicle simulation model
+    //update ego next state using vehicle simulation model
     pnc::steerModel::VehicleSimulation vehicle_simulate;
     pnc::steerModel::VehicleParameter vehicle_param;
-    pnc::steerModel::VehicleState vehicle_state{temp_state.x, temp_state.y,
-                                                temp_state.theta};
-    pnc::steerModel::VehicleControl vehicle_control{temp_state.v,
-                                                    temp_state.delta};
+    pnc::steerModel::VehicleState vehicle_state{temp_state.x, temp_state.y, temp_state.theta};
+    pnc::steerModel::VehicleControl vehicle_control{temp_state.v, temp_state.delta};
 
     vehicle_simulate.Init(vehicle_state);
     vehicle_simulate.Update(vehicle_control, vehicle_param);
@@ -410,7 +405,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     double s = 0.0;
     double l = 0.0;
     if (!ref_frenet_coor->XYToSL(new_state.x_, new_state.y_, &s, &l)) {
-      return false;  //更换xytosl
+        return false;//更换xytosl
     }
     Point2D sl_point(s, l);
     TrajectoryPoint ego_traj_point;
@@ -426,14 +421,14 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
 
     ego_sim_s.push_back(sl_point.x - ref_path_->get_frenet_ego_state().s());
 
-    // update idm_model state continue iter
+ // update idm_model state continue iter
     if (is_exist_front_agent) {
       idm_model_state.s = 0;
-      idm_model_state.s_front =
-          front_node_future_trajectory_[index].s -
-          (ego_traj_point.s + car_param.front_edge_to_rear_axle);
+      idm_model_state.s_front = front_node_future_trajectory_[index].s -
+      (ego_traj_point.s + car_param.front_edge_to_rear_axle);
       idm_model_state.vel = temp_state.v;
-      idm_model_state.vel_front = front_node_future_trajectory_[index].v;
+      idm_model_state.vel_front =
+          front_node_future_trajectory_[index].v;
     } else {
       idm_model_state.s = 0;
       idm_model_state.s_front = default_front_dis;
@@ -441,14 +436,15 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       idm_model_state.vel_front = default_front_v;
     }
 
+
     ReferencePathPoint reference_path_point;
     if (!ref_path_->get_reference_point_by_lon(sl_point.x,
                                                reference_path_point)) {
       return false;
     }
 
-    double theta_err =
-        std::abs(new_state.phi_ - reference_path_point.path_point.theta());
+    double theta_err = std::abs(new_state.phi_ -
+                                reference_path_point.path_point.theta());
     double lat_err = std::abs(sl_point.y - lat_offset);
     bool is_near_lane =
         lat_err < end_poise_lat_err && theta_err < end_poise_theta_err;
@@ -461,17 +457,16 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       is_over_lane = sl_point.y < planning_math::KD_EPSILON;
     }
     is_close = is_near_lane;
-    iter_terminate = index * dt > max_simulate_time;
+    iter_terminate =
+          index * dt > max_simulate_time;
   }
 
   if (ego_future_trajectory_.size() < 3) {
     return false;
   }
 
-  // lc_path_result_.x_t_spline.set_points(lc_path_result_.t,
-  // lc_path_result_.x);
-  // lc_path_result_.y_t_spline.set_points(lc_path_result_.t,
-  // lc_path_result_.y);
+  // lc_path_result_.x_t_spline.set_points(lc_path_result_.t, lc_path_result_.x);
+  // lc_path_result_.y_t_spline.set_points(lc_path_result_.t, lc_path_result_.y);
   // lc_path_result_.theta_t_spline.set_points(lc_path_result_.t,
   //                                           lc_path_result_.theta);
 
@@ -483,15 +478,14 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
 
   return true;
 }
-LaneChangePathGenerateManager::State_Sim
-LaneChangePathGenerateManager::UpdateDynamicsOneStep(State_Sim state,
+LaneChangePathGenerateManager::State_Sim LaneChangePathGenerateManager::UpdateDynamicsOneStep( State_Sim state ,
                                                      double dt) {
-  const double& theta = state.theta;
-  const double& delta = state.delta;
-  const double& omega = state.omega;
+  const double &theta = state.theta;
+  const double &delta = state.delta;
+  const double &omega = state.omega;
 
-  const double& v = state.v;
-  const double& k = 0.33;
+  const double &v = state.v;
+  const double &k = 0.33;
 
   const double dt2 = dt * dt;
   const double dtv = dt * v;
@@ -523,15 +517,14 @@ LaneChangePathGenerateManager::UpdateDynamicsOneStep(State_Sim state,
 bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
     AgentPredictionTrajectoryPoints* agent_prediction_traj_points,
     const planning_data::DynamicAgentNode* front_agent) {
-  const auto front_agent_trajs =
-      front_agent->node_trajectories_used_by_st_graph();
-  if (front_agent_trajs.empty()) {
+  const auto front_agent_trajs = front_agent->node_trajectories_used_by_st_graph();
+  if(front_agent_trajs.empty()){
     return false;
   }
-  const auto& front_agent_prediction_trajectory =
+  const auto &front_agent_prediction_trajectory =
       front_agent->node_trajectories_used_by_st_graph()[0];
-  if (front_agent_prediction_trajectory.empty()) {
-    return false;
+  if(front_agent_prediction_trajectory.empty()){
+      return false;
   }
   const auto& ref_frenet_coord = ref_path_->get_frenet_coord();
   if (!ref_frenet_coord) {
@@ -541,7 +534,7 @@ bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
   const auto vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
 
-  for (const auto agent_point : front_agent_prediction_trajectory) {
+  for (const auto agent_point: front_agent_prediction_trajectory) {
     // Point2D cart_point(agent_point.x(), agent_point.y());
     // Point2D frenet_point;
     // if (!ref_frenet_coord->XYToSL(cart_point, frenet_point)) {
@@ -550,7 +543,7 @@ bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
     double s = 0.0;
     double l = 0.0;
     if (!ref_frenet_coord->XYToSL(agent_point.x(), agent_point.y(), &s, &l)) {
-      continue;  //更换 xytosl
+        continue;//更换 xytosl
     }
     Point2D frenet_point(s, l);
     double s_front_agent =
@@ -591,4 +584,4 @@ double LaneChangePathGenerateManager::ComputeLd(double v, bool is_close) {
   }
   return Ld;
 }
-}  // namespace planning
+}

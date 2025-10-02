@@ -8,16 +8,13 @@
 
 namespace planning {
 namespace lateral_offset_decider {
-bool IsStaticObstacle(const std::shared_ptr<FrenetObstacle> tr) {
-  return tr->obstacle()->velocity() < 0.1;
-}
+bool IsStaticObstacle(const std::shared_ptr<FrenetObstacle> tr) { return tr->obstacle()->velocity() < 0.1; }
 
 bool IsStaticObstacle(const AvoidObstacleInfo &avoid_obstacle) {
   return avoid_obstacle.vs < 3;
 }
 
-bool IsAboutToEnterLonRange(const std::shared_ptr<FrenetObstacle> tr,
-                            bool is_front) {
+bool IsAboutToEnterLonRange(const std::shared_ptr<FrenetObstacle> tr, bool is_front) {
   if (is_front) {
     return tr->d_s_rel() < std::max(std::min(-tr->rel_v() * 15, 60.0), 20.0);
   } else {
@@ -27,8 +24,7 @@ bool IsAboutToEnterLonRange(const std::shared_ptr<FrenetObstacle> tr,
     if (IsStaticObstacle(tr)) {
       return tr->d_s_rel() > -ego_length - 1;
     } else {
-      return tr->d_s_rel() > std::min(-10.0 - tr->rel_v() * 2, -5.0) &&
-             tr->d_s_rel() < 2;
+      return tr->d_s_rel() > std::min(-10.0 - tr->rel_v() * 2, -5.0) && tr->d_s_rel() < 2;
     }
   }
 }
@@ -50,8 +46,8 @@ bool IsFasterThanAvoidObstacle(const std::shared_ptr<FrenetObstacle> tr,
 // is_left: True: left tracked_object
 //          False: right tracked_object
 bool IsInConsiderFrontLateralRange(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
-    bool is_left, double normal_avoid_threshold,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
+    double normal_avoid_threshold,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
@@ -91,8 +87,7 @@ bool IsInConsiderFrontLateralRange(
 }
 
 bool IsInConsiderSideLateralRange(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
-    bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
@@ -112,8 +107,7 @@ bool IsInConsiderSideLateralRange(
   double lat_dis =
       is_left
           ? tr->d_min_cpath() - fix_ref->get_frenet_ego_state().boundary().l_end
-          : fix_ref->get_frenet_ego_state().boundary().l_start -
-                tr->d_max_cpath();
+          : fix_ref->get_frenet_ego_state().boundary().l_start - tr->d_max_cpath();
 
   if (lat_dis <= 0) {
     return false;
@@ -145,8 +139,8 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
                                     const AvoidObstacleInfo &avoid_obstacle,
                                     const std::shared_ptr<FrenetObstacle> tr) {
   const auto ego_cart_state_manager =
-      session->environmental_model().get_ego_state_manager();
-  const double v_ego = ego_cart_state_manager->ego_v();
+        session->environmental_model().get_ego_state_manager();
+    const double v_ego = ego_cart_state_manager->ego_v();
   double rel_v = tr->frenet_velocity_s() - v_ego;
   if (1) {
     const auto &vehicle_param =
@@ -238,32 +232,25 @@ bool AvoidWaySelectForTwoObstaclev2(const framework::Session *session,
   }
 }
 
-bool IsFrontObstacle(const std::shared_ptr<FrenetObstacle> tr) {
-  return tr->d_s_rel() > 0;
-}
+bool IsFrontObstacle(const std::shared_ptr<FrenetObstacle> tr) { return tr->d_s_rel() > 0; }
 
-bool IsCutIn(const std::shared_ptr<FrenetObstacle> tr) {
-  return tr->obstacle()->cutin_prob() > 0.4;
-}
+bool IsCutIn(const std::shared_ptr<FrenetObstacle> tr) { return tr->obstacle()->cutin_prob() > 0.4; }
 
 bool IsFrontObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
-    bool is_left, const AvoidInfo &avoid_info,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
+    const AvoidInfo &avoid_info,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
         &hysteresis_maps) {
-  const auto &lateral_obstacle_manager =
-      session->environmental_model().get_lateral_obstacle();
-  const auto &extra_obstacle_info_map =
-      lateral_obstacle_manager->extra_obstacle_info_map();
+  const auto &lateral_obstacle_manager =  session->environmental_model().get_lateral_obstacle();
+  const auto& extra_obstacle_info_map = lateral_obstacle_manager->extra_obstacle_info_map();
   if (!IsCameraObstacle(tr)) {
     return false;
   }
 
-  if (IsFrontObstacle(tr) && (extra_obstacle_info_map.find(tr->id()) !=
-                                  extra_obstacle_info_map.end() &&
-                              extra_obstacle_info_map.at(tr->id()).is_lead)) {
+  if (IsFrontObstacle(tr) &&
+     (extra_obstacle_info_map.find(tr->id()) != extra_obstacle_info_map.end() && extra_obstacle_info_map.at(tr->id()).is_lead)) {
     return false;
   }
 
@@ -289,8 +276,7 @@ bool IsFrontObstacleConsider(
 }
 
 bool IsSideObstacleConsider(
-    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr,
-    bool is_left,
+    const framework::Session *session, const std::shared_ptr<FrenetObstacle> tr, bool is_left,
     std::map<HysteresisType,
              std::variant<std::map<int, HysteresisDecision>,
                           std::map<std::pair<int, int>, HysteresisDecision>>>
@@ -345,7 +331,7 @@ bool HasOverlap(const framework::Session *session,
 bool IsTruck(const AvoidObstacleInfo &avoid_obstacle) {
   return (avoid_obstacle.type == iflyauto::OBJECT_TYPE_BUS ||
           (avoid_obstacle.type == iflyauto::OBJECT_TYPE_TRUCK &&
-           avoid_obstacle.length > 6));
+          avoid_obstacle.length > 6));
 }
 
 bool IsVRU(const AvoidObstacleInfo &avoid_obstacle) {

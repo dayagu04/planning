@@ -2,9 +2,9 @@
 #pragma once
 #include <functional>
 
-#include "camera_perception_occupancy_grid_c.h"
-#include "camera_perception_scene_c.h"
 #include "camera_perception_tsr_c.h"
+#include "camera_perception_scene_c.h"
+#include "camera_perception_occupancy_grid_c.h"
 #include "component_intf.h"
 #include "control_command_c.h"
 #include "ehr.pb.h"
@@ -37,11 +37,13 @@ class PlanningInterface : public ComponentInterface {
   virtual bool Init() = 0;
   virtual bool Proc() = 0;
 
-  virtual void Feed_IflytekEhrSdmapInfo(const SdMapSwtx::SdMap &data) = 0;
+  virtual void Feed_IflytekEhrSdmapInfo(
+      const SdMapSwtx::SdMap &data) = 0;
 
   virtual void Feed_IflytekEhrSdpromapInfo(
       const iflyauto::StructContainer &data) = 0;
-  virtual void Feed_IflytekEhrStaticMap(const Map::StaticMap &data) = 0;
+  virtual void Feed_IflytekEhrStaticMap(
+      const Map::StaticMap &data) = 0;
   virtual void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization &data) = 0;
   virtual void Feed_IflytekVehicleService(

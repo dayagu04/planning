@@ -598,8 +598,7 @@ planning_math::Polygon2d Obstacle::get_polygon_at_point(
 
   planning_math::Polygon2d polygon;
   if (!planning_math::Polygon2d::ComputeConvexHull(polygon_points, &polygon)) {
-    ILOG_ERROR << "polygon_debug : get position" << point.path_point.x() << ", "
-               << point.path_point.y() << " failed";
+    ILOG_ERROR << "polygon_debug : get position" << point.path_point.x() << ", " << point.path_point.y() << " failed";
     if (!planning_math::Polygon2d::ComputeConvexHull(
             get_bounding_box(point).GetAllCorners(), &polygon)) {
       ILOG_ERROR << "polygon_debug : invalid box polygon";
