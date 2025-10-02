@@ -25,16 +25,16 @@
 namespace planning {
 
 namespace {
-constexpr double kLongClusterCoeff = 2.6;
+constexpr double kLongClusterCoeff = 3.2;
 constexpr double kLatClusterThre = 0.6;
-constexpr double kLatPassThre = 0.5;
-constexpr double kLatPassThreBuffer = 0.2;
+constexpr double kLatPassThre = 0.6;
+constexpr double kLatPassThreBuffer = 0.3;
 constexpr uint32_t kConeAlcCountThre = 3;
 constexpr int kConeAlcCountLowerThre = 0;
 constexpr double kLongClusterTimeGap = 4.0;
 constexpr double kDefaultLaneWidth = 3.75;
-constexpr double kMinDefaultLaneWidth = 3.0;
-constexpr uint32_t kConeDirecSize = 5;
+constexpr double kMinDefaultLaneWidth = 2.65;
+constexpr uint32_t kConeDirecSize = 3;
 constexpr double kConeDirecThre = 0.5;
 constexpr double kConeSlopeThre = 1;
 constexpr int kInvalidAgentId = -1;
@@ -134,6 +134,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       session_->environmental_model().get_ego_state_manager();
   double ego_fx = std::cos(ego_state->ego_pose_raw().theta);
   double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
+  right_lane_nums_ = 0;
+  left_lane_nums_ = 0;
 
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
@@ -147,7 +149,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
-          
+
   const auto &frenet_obstacles_map = origin_refline->get_obstacles_map();
   base_frenet_coord_ = origin_refline->get_frenet_coord();
   Point2D ego_frenet_point;
@@ -158,6 +160,24 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     is_cone_lane_change_situation_ = false;
     return;
   }
+
+  auto lane_nums_msg = base_lane->get_lane_nums();
+  Point2D ego_frenet;
+  if (base_frenet_coord_->XYToSL(
+          {ego_state->ego_pose().x, ego_state->ego_pose().y}, ego_frenet)) {
+    auto iter =
+        std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
+                    [&ego_frenet](const iflyauto::LaneNumMsg& lane_num) {
+                      return lane_num.begin <= ego_frenet.x && lane_num.end > ego_frenet.x;
+                    });
+    if (iter != lane_nums_msg.end()) {
+      left_lane_nums_ = iter->left_lane_num;
+      right_lane_nums_ = iter->right_lane_num;
+    } else {
+      return;
+    }
+  }
+
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   double eps_s = vehicle_param.length * kLongClusterCoeff;
   double eps_l = vehicle_param.width + kLatClusterThre;
@@ -249,13 +269,6 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     cone_cluster_attribute_set_[p.cluster].push_back(p);
   }
 
-  const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
-      virtual_lane_mgr_->get_virtual_lanes();
-  int lane_nums = relative_id_lanes.size();
-  int lane_index = base_lane->get_order_id();
-  int right_lane_nums = std::max((int)lane_nums - lane_index - 1, 0);
-  int left_lane_nums = lane_index;
-
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
@@ -263,23 +276,27 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
 
-    if (left_lane_nums == 0 && right_lane_nums == 0) {
-      pass_threshold_left =
-          vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-      pass_threshold_right =
-          vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-    } else if (left_lane_nums == 0) {
-      pass_threshold_left =
-          vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-      pass_threshold_right = vehicle_param.width + kLatPassThre;
-    } else if (right_lane_nums == 0) {
-      pass_threshold_left = vehicle_param.width + kLatPassThre;
-      pass_threshold_right =
-          vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-    } else {
-      pass_threshold_left = vehicle_param.width + kLatPassThre;
-      pass_threshold_right = vehicle_param.width + kLatPassThre;
-    }
+    pass_threshold_left =
+        vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    pass_threshold_right =
+        vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    // if (left_lane_nums_ == 0 && right_lane_nums_ == 0) {
+    //   pass_threshold_left =
+    //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    //   pass_threshold_right =
+    //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    // } else if (left_lane_nums_ == 0) {
+    //   pass_threshold_left =
+    //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    //   pass_threshold_right = vehicle_param.width + kLatPassThre;
+    // } else if (right_lane_nums_ == 0) {
+    //   pass_threshold_left = vehicle_param.width + kLatPassThre;
+    //   pass_threshold_right =
+    //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+    // } else {
+    //   pass_threshold_left = vehicle_param.width + kLatPassThre;
+    //   pass_threshold_right = vehicle_param.width + kLatPassThre;
+    // }
 
     ILOG_DEBUG << "min_left_l is:" << min_left_l
                << ", min_right_l is: is:" << min_right_l
@@ -317,6 +334,8 @@ void ConeRequest::setLaneChangeRequestByCone() {
       virtual_lane_mgr_->current_lane_virtual_id();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
@@ -355,14 +374,14 @@ void ConeRequest::setLaneChangeRequestByCone() {
       enable_right && ComputeLcValid(RIGHT_CHANGE);
 
   if (cone_lane_change_direction_ == LEFT_CHANGE) {
-    if (request_type_ != LEFT_CHANGE && is_left_lane_change_safe) {
+    if (request_type_ != LEFT_CHANGE && enable_left) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       ILOG_DEBUG << "[ConeRequest::update] Ask for cone changing lane to left";
     }
   } else if (cone_lane_change_direction_ == RIGHT_CHANGE) {
-    if (request_type_ != RIGHT_CHANGE && is_right_lane_change_safe) {
+    if (request_type_ != RIGHT_CHANGE && enable_right) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -518,18 +537,55 @@ double ConeRequest::CalcClusterToBoundaryDist(
 }
 
 void ConeRequest::ConeDir() {
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& merge_point_info = route_info_output.merge_point_info;
+  double distance_to_first_road_split = NL_NMAX;
+  double dis_to_first_merge = NL_NMAX;
+  double dis_to_merge_point = NL_NMAX;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    const auto& split_region_info_list = route_info_output.split_region_info_list;
+    const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+    if (!split_region_info_list.empty()) {
+      if (split_region_info_list[0].is_valid) {
+        distance_to_first_road_split = split_region_info_list[0].distance_to_split_point;
+      }
+    }
+    if (!merge_region_info_list.empty()) {
+      if (merge_region_info_list[0].is_valid) {
+        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+      }
+    }
+  }
   const auto base_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
   const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes =
       virtual_lane_mgr_->get_virtual_lanes();
-  int lane_nums = relative_id_lanes.size();
-  int lane_index = base_lane->get_order_id();
-  int right_lane_nums = std::max((int)lane_nums - lane_index - 1, 0);
-  int left_lane_nums = lane_index;
   cone_lane_change_direction_ = NO_CHANGE;
   int current_left_boundary_type = 0;
   int current_right_boundary_type = 0;
+  const auto& feasible_lane_sequence = route_info_output.mlc_decider_route_info.feasible_lane_sequence;
+  bool left_lane_is_on_navigation_route = true;
+  bool right_lane_is_on_navigation_route = true;
+  if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 || dis_to_merge_point < 500.0) {
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = left_lane_nums_ + 1;
+      int target_lane_order_num = current_lane_order_num - 1;
+      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+        left_lane_is_on_navigation_route = false;
+      }
+    }
 
+
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = left_lane_nums_ + 1;
+      int target_lane_order_num = current_lane_order_num + 1;
+      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(), target_lane_order_num) == feasible_lane_sequence.end()) {
+        right_lane_is_on_navigation_route = false;
+      }
+    }
+  }
   // 获取左车道线型
   if (base_lane != nullptr) {
     auto left_boundary_type =
@@ -543,7 +599,7 @@ void ConeRequest::ConeDir() {
     return;
   }
 
-  if (left_lane_nums == 0 && right_lane_nums == 0) {
+  if (left_lane_nums_ == 0 && right_lane_nums_ == 0) {
     return;
   }
   bool left_change_available = false;
@@ -551,36 +607,35 @@ void ConeRequest::ConeDir() {
 
   RequestType cone_dir;
   if (ConesDirection(cone_dir)) {
-    if (cone_dir == LEFT_CHANGE && left_lane_nums) {
+    if (cone_dir == LEFT_CHANGE && left_lane_nums_) {
       cone_lane_change_direction_ = LEFT_CHANGE;
       return;
     }
-    if (cone_dir == RIGHT_CHANGE && right_lane_nums) {
+    if (cone_dir == RIGHT_CHANGE && right_lane_nums_) {
       cone_lane_change_direction_ = RIGHT_CHANGE;
       return;
     }
   } else {
     // right seach
     if (CheckEgoLaneAvailable(false)) {
-      if (right_lane_nums > 0) {
+      if (right_lane_nums_ > 0) {
         const auto& rlane = virtual_lane_mgr_->get_right_lane();
         if (rlane != nullptr && rlane->width() > kMinDefaultLaneWidth) {
-          std::shared_ptr<ReferencePath> target_refline =
+          std::shared_ptr<ReferencePath> right_refline =
               session_->mutable_environmental_model()
                   ->get_reference_path_manager()
                   ->get_reference_path_by_lane(rlane->get_virtual_id(), false);
           right_lane_s_width_.clear();
-          if (target_refline != nullptr) {
-            right_lane_s_width_.reserve(target_refline->get_points().size());
-            for (auto i = 0; i < target_refline->get_points().size(); i++) {
+          if (right_refline != nullptr) {
+            right_lane_s_width_.reserve(right_refline->get_points().size());
+            for (auto i = 0; i < right_refline->get_points().size(); i++) {
               const ReferencePathPoint& ref_path_point =
-                  target_refline->get_points()[i];
+                  right_refline->get_points()[i];
               right_lane_s_width_.emplace_back(std::make_pair(
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(false, rlane) &&
-              ComputeLcValid(RIGHT_CHANGE) &&
               !IsRoadBorderSurpressDuringLaneChange(RIGHT_CHANGE,
                                                     origin_lane_virtual_id_,
                                                     rlane->get_virtual_id())) {
@@ -592,25 +647,24 @@ void ConeRequest::ConeDir() {
     }
     // left seach
     if (CheckEgoLaneAvailable(true)) {
-      if (left_lane_nums > 0) {
+      if (left_lane_nums_ > 0) {
         const auto& llane = virtual_lane_mgr_->get_left_lane();
         if (llane != nullptr && llane->width() > kMinDefaultLaneWidth) {
-          std::shared_ptr<ReferencePath> target_refline =
+          std::shared_ptr<ReferencePath> left_refline =
               session_->mutable_environmental_model()
                   ->get_reference_path_manager()
                   ->get_reference_path_by_lane(llane->get_virtual_id(), false);
           left_lane_s_width_.clear();
-          if (target_refline != nullptr) {
-            left_lane_s_width_.reserve(target_refline->get_points().size());
-            for (auto i = 0; i < target_refline->get_points().size(); i++) {
+          if (left_refline != nullptr) {
+            left_lane_s_width_.reserve(left_refline->get_points().size());
+            for (auto i = 0; i < left_refline->get_points().size(); i++) {
               const ReferencePathPoint& ref_path_point =
-                  target_refline->get_points()[i];
+                  left_refline->get_points()[i];
               left_lane_s_width_.emplace_back(std::make_pair(
                   ref_path_point.path_point.s(), ref_path_point.lane_width));
             }
           }
           if (CheckTargetLaneAvailable(true, llane) &&
-              ComputeLcValid(LEFT_CHANGE) &&
               !IsRoadBorderSurpressDuringLaneChange(LEFT_CHANGE,
                 origin_lane_virtual_id_,
                 llane->get_virtual_id())) {
@@ -622,15 +676,11 @@ void ConeRequest::ConeDir() {
     }
   }
 
-  if (left_change_available && right_change_available) {
-    ILOG_DEBUG << "cone alc right!!!";
-    cone_lane_change_direction_ = RIGHT_CHANGE;
-    return;
-  } else if (left_change_available) {
+  if (left_change_available && left_lane_is_on_navigation_route) {
     ILOG_DEBUG << "cone alc left!!!";
     cone_lane_change_direction_ = LEFT_CHANGE;
     return;
-  } else if (right_change_available) {
+  } else if (right_change_available && right_lane_is_on_navigation_route) {
     ILOG_DEBUG << "cone alc right!!!";
     cone_lane_change_direction_ = RIGHT_CHANGE;
     return;
@@ -639,6 +689,24 @@ void ConeRequest::ConeDir() {
     cone_lane_change_direction_ = NO_CHANGE;
     return;
   }
+
+  // if (left_change_available && right_change_available) {
+  //   ILOG_DEBUG << "cone alc right!!!";
+  //   cone_lane_change_direction_ = RIGHT_CHANGE;
+  //   return;
+  // } else if (left_change_available) {
+  //   ILOG_DEBUG << "cone alc left!!!";
+  //   cone_lane_change_direction_ = LEFT_CHANGE;
+  //   return;
+  // } else if (right_change_available) {
+  //   ILOG_DEBUG << "cone alc right!!!";
+  //   cone_lane_change_direction_ = RIGHT_CHANGE;
+  //   return;
+  // } else {
+  //   // default
+  //   cone_lane_change_direction_ = NO_CHANGE;
+  //   return;
+  // }
 }
 
 bool ConeRequest::ConesDirection(RequestType& direction) {
@@ -674,7 +742,6 @@ bool ConeRequest::ConesDirection(RequestType& direction) {
 bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
   const auto& ego_lane =
       virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
-  ;
   if (ego_lane == nullptr) {
     ILOG_DEBUG << "seach fail: ego lane is nullptr";
     return false;
@@ -703,7 +770,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
       if (ego_distance_to_cone < ego_vel * kLongClusterTimeGap / 2 && p.l > 0 &&
           p.l < left_width) {
         ILOG_DEBUG << "left front cone is dangerous for lane change";
-        return false;
+        // return false;
       }
     }
   } else {
@@ -713,7 +780,7 @@ bool ConeRequest::CheckEgoLaneAvailable(bool is_left) {
       if (ego_distance_to_cone < ego_vel * kLongClusterTimeGap / 2 && p.l < 0 &&
           p.l > -right_width) {
         ILOG_DEBUG << "right front cone is dangerous for lane change";
-        return false;
+        // return false;
       }
     }
   }
@@ -748,7 +815,7 @@ bool ConeRequest::CheckTargetLaneAvailable(
   for (auto& p : serach_cone_points) {
     if (!target_lane_frenet_coord->XYToSL(p.x, p.y, &p.s, &p.l)) {
       ILOG_DEBUG << "[CheckTargetLaneAvailable]: XYToSL fail";
-      return false;
+      continue;
     } else {
       GetTargetLaneWidthByCone(lane_s_width, seach_lane, p.s, p.l, true,
                                &p.left_dist);
@@ -927,6 +994,8 @@ void ConeRequest::Reset() {
   cone_cluster_.clear();
   cone_points_.clear();
   cone_cluster_attribute_set_.clear();
+  right_lane_nums_ = 0;
+  left_lane_nums_ = 0;
 }
 
 }  // namespace planning
