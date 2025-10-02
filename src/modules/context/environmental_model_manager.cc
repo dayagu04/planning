@@ -1403,7 +1403,7 @@ bool EnvironmentalModelManager::IsStatic(
 
 bool EnvironmentalModelManager::InputReady(double current_time,
                                            std::string &error_msg) {
-  using namespace framework;                                          
+  using namespace framework;
   auto to_string = [](FeedType feed_type) -> const char * {
     switch (feed_type) {
       case FEED_VEHICLE_DBW_STATUS:
@@ -1541,36 +1541,36 @@ bool EnvironmentalModelManager::InputReady(double current_time,
         }
       }
     } else {
-      (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter = 0;
       switch (feed_type) {
         //location
         case FEED_EGO_ENU:
           if (getFaultcode() == 39001) {
-            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
           }
           break;
         //prediction
         case FEED_PREDICTION_INFO:
           if (getFaultcode() == 39002) {
-            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
           }
           break;
         //static fusion
         case FEED_FUSION_LANES_INFO:
           if (getFaultcode() == 39000) {
-            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
           }
           break;
         //vehicle service
         case FEED_EGO_STEER_ANGLE:
           if (getFaultcode() == 39003) {
-            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
           }
           break;
         //functional state machine
         case FEED_VEHICLE_DBW_STATUS:
           if (getFaultcode() == 39004) {
-            (*fault_counter_info_ptr)[i].fault_recovery_counter++;
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
           }
           break;
         default: break;

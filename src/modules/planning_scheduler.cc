@@ -246,6 +246,42 @@ bool PlanningScheduler::FaultCanRecover() {
         can_recover = true;
       }
       break;
+    case 39006:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LENGTH_RANGE)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39007:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_CURVATURE_RANGE)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39008:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LON_POS_CONSISTENCY)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39009:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LON_VEL_CONSISTENCY)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39010:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LON_ACC_CONSISTENCY)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39011:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LON_DEC_CONSISTENCY)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+    case 39012:
+      if (fault_counter_vec[static_cast<int>(FaultType::TRAJ_LAT_POS_CONSISTENCY)].fault_recovery_counter >= 3) {
+        can_recover = true;
+      }
+      break;
+
     default: break;
   }
   return can_recover;
@@ -1174,11 +1210,13 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
       return false;
     }
   } else {
+    CheckTrajectory();
     FillPlanningRequest(iflyauto::REQUEST_LEVEL_NO_REQ, planning_output);
     UpdateSuccessfulPlanningResult();
   }
 
   ILOG_INFO << "The RunOnce is successed !!!!:";
+  JSON_DEBUG_VALUE("planning_fault_code", FaultCode());
   // 存在问题
   // session_.mutable_planning_context()->mutable_last_planning_success() =
   // planning_success;
@@ -1208,6 +1246,7 @@ void PlanningScheduler::CheckTrajectory() {
   const auto ego_state_mgr = session_.environmental_model().get_ego_state_manager();
   const auto &ego_pose = ego_state_mgr->ego_pose();
   Eigen::Vector2d cur_pos(ego_pose.x, ego_pose.y);
+  Eigen::Vector2d init_point(ego_state_mgr->planning_init_point().x, ego_state_mgr->planning_init_point().y);
 
   auto* fault_counter_info_ptr = session_.mutable_fault_counter_info();
   for (FaultType type = FaultType::TRAJ_LENGTH_RANGE; type != static_cast<FaultType>(static_cast<int>(FaultType::TRAJ_ROLL_CONSISTENCY) + 1); type = static_cast<FaultType>(static_cast<int>(type) + 1)) {
@@ -1219,30 +1258,123 @@ void PlanningScheduler::CheckTrajectory() {
       if (traj_length > 250) {
         (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
         (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+             FaultCode() < 39000) {
+          SetFaultCode(39006);
+        }
       } else {
         (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
-        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        if (FaultCode() == 39006) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
       }
       break;
     }
     case FaultType::TRAJ_LENGTH_CONTINUITY:
 
       break;
-    
+
     case FaultType::TRAJ_CURVATURE_RANGE: {
-      if (std::any_of(traj_points.begin(), traj_points.end(), [](const TrajectoryPoint& traj_point) { return std::fabs(traj_point.curvature) < 0.2; })) {
+      if (std::any_of(traj_points.begin(), traj_points.end(), [](const TrajectoryPoint& traj_point) { return std::fabs(traj_point.curvature) > 0.2; })) {
         (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
         (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+             FaultCode() < 39000) {
+          SetFaultCode(39007);
+        }
       } else {
         (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
-        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        if (FaultCode() == 39007) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
       }
       break;
     }
-      
-    case FaultType::TRAJ_CURVATURE_CONTINUITY: 
+
+    case FaultType::TRAJ_CURVATURE_CONTINUITY:
       break;
-    
+
+    case FaultType::TRAJ_LON_POS_CONSISTENCY: {
+      pnc::spline::Projection projection_spline;
+      projection_spline.CalProjectionPoint(
+          motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
+          motion_planner_output.s_lat_vec.front(),
+          motion_planner_output.s_lat_vec.back(), cur_pos);
+      const auto &proj_point = projection_spline.GetOutput().point_proj;
+      const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
+                                  init_point.y() - proj_point.y());
+      if (fabs(lon_err) > 1.5) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+              FaultCode() < 39000) {
+          SetFaultCode(39008);
+        }
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        if (FaultCode() == 39008) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
+      }
+      break;
+    }
+
+    case FaultType::TRAJ_LON_VEL_CONSISTENCY: {
+      const auto lon_vel_err = ego_state_mgr->planning_init_point().v - ego_state_mgr->ego_v();
+      if (fabs(lon_vel_err) > (5.0 / 3.6)) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+              FaultCode() < 39000) {
+          SetFaultCode(39009);
+        }
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        if (FaultCode() == 39009) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
+      }
+      break;
+    }
+
+    case FaultType::TRAJ_LON_ACC_CONSISTENCY: {
+      bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
+      const auto lon_acc_err = ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
+      if (is_acc && fabs(lon_acc_err) > 1.5) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+              FaultCode() < 39000) {
+          SetFaultCode(39010);
+        }
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        if (FaultCode() == 39010) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
+      }
+      break;
+    }
+
+    case FaultType::TRAJ_LON_DEC_CONSISTENCY: {
+      bool is_acc = ego_state_mgr->planning_init_point().a > 0.1;
+      const auto lon_acc_err = ego_state_mgr->planning_init_point().a - ego_state_mgr->ego_acc();
+      if ((!is_acc) && fabs(lon_acc_err) > 4.0) {
+        (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
+        (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+              FaultCode() < 39000) {
+          SetFaultCode(39011);
+        }
+      } else {
+        (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
+        if (FaultCode() == 39011) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
+      }
+      break;
+    }
+
     case FaultType::TRAJ_LAT_POS_CONSISTENCY: {
       pnc::spline::Projection projection_spline;
       projection_spline.CalProjectionPoint(
@@ -1253,9 +1385,15 @@ void PlanningScheduler::CheckTrajectory() {
       if (fabs(lat_err) > 0.8) {
         (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
         (*fault_counter_info_ptr)[i].fault_trigger_counter ++;
+        if ((*fault_counter_info_ptr)[i].fault_trigger_counter >= 5 &&
+             FaultCode() < 39000) {
+          SetFaultCode(39012);
+        }
       } else {
         (*fault_counter_info_ptr)[i].fault_trigger_counter = 0;
-        (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        if (FaultCode() == 39012) {
+          (*fault_counter_info_ptr)[i].fault_recovery_counter ++;
+        }
       }
       break;
     }
@@ -1267,17 +1405,17 @@ void PlanningScheduler::CheckTrajectory() {
       // v_body.vx = v_world.vx * cos_theta + v_world.vy * sin_theta;
       break;
     }
-      
+
 
     case FaultType::TRAJ_YAW_CONSISTENCY: {
       break;
     }
-      
+
 
     default:
       break;
     }
   }
-  
+
 }
 }  // namespace planning
