@@ -21,27 +21,11 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   ILOG_INFO << "MapRequest::update";
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
-  const int ego_blinker = session_->mutable_environmental_model()
-                              ->get_ego_state_manager()
-                              ->ego_blinker();
-  const bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
-  const bool is_cancel_mlc_for_ego_blinker =
-      is_valid_ego_blinker && lc_status <= kLaneChangeExecution &&
-      request_type_ != NO_CHANGE &&
-      ((ego_blinker == 1 && request_type_ == RIGHT_CHANGE) ||
-       (ego_blinker == 2 && request_type_ == LEFT_CHANGE));
-  // 如果CheckMLCEnable检查没通过，根据当前状态判断是否可以取消已经生成了的request_type_
-  const bool allow_cancel =
-      (lc_status == kLaneChangePropose || lc_status == kLaneKeeping);
+
   //检查是否满足变道请求
   const bool is_mlc_enable = CheckMLCEnable(lc_status);
-  if (is_mlc_enable && !is_valid_ego_blinker) {
+  if (is_mlc_enable) {
     GenerateMLCRequest();
-  } else if ((allow_cancel || is_cancel_mlc_for_ego_blinker) &&
-             request_type_ != NO_CHANGE) {
-    Finish();
-    set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
-    ILOG_DEBUG << "[MapRequest::update] cancel map request as allow cancel";
   }
   if (trigger_lane_change_cancel_) {
     lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
