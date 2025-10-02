@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vector>
 
 #include "agent/agent.h"
@@ -56,6 +57,10 @@ class StGraphUtils {
       const std::unordered_map<int64_t, std::unique_ptr<STBoundary>>&
           boundary_id_st_boundaries_map,
       std::vector<int32_t>& caution_yield_agent_ids);
+
+  static bool IsPredictionReverseAgent(
+      const std::shared_ptr<agent::Agent>& agent,
+      const std::shared_ptr<VirtualLane> ego_lane);
 
   static void DetermineRelieveJerkDecision(
       const std::shared_ptr<StGraphInput>& st_graph_input,

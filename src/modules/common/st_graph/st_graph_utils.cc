@@ -249,6 +249,34 @@ void StGraphUtils::DetermineCautionYieldDecision(
   }
 }
 
+bool StGraphUtils::IsPredictionReverseAgent(
+    const std::shared_ptr<agent::Agent>& agent,
+    const std::shared_ptr<VirtualLane> ego_lane) {
+  double agent_s = 0.0;
+  double agent_l = 0.0;
+  const auto agent_box_center = agent->box().center();
+  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return false;
+  }
+  ego_lane_coord->XYToSL(agent_box_center.x(), agent_box_center.y(), &agent_s,
+                         &agent_l);
+  const auto matched_path_point = ego_lane_coord->GetPathPointByS(agent_s);
+  const double heading_diff = std::fabs(planning_math::NormalizeAngle(
+      matched_path_point.theta() - agent->box().heading()));
+  bool is_prediction_reverse = false;
+
+  if (!agent->trajectories().empty() &&
+      !agent->trajectories().front().empty()) {
+    const auto& end_point = agent->trajectories().front().back();
+    double end_s = 0.0;
+    double end_l = 0.0;
+    ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &end_s, &end_l);
+    is_prediction_reverse = end_s < agent_s;
+  }
+  return is_prediction_reverse;
+}
+
 void StGraphUtils::DetermineRelieveJerkDecision(
     const std::shared_ptr<StGraphInput>& st_graph_input,
     const std::unordered_map<int32_t, std::vector<int64_t>>&
@@ -357,6 +385,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
         st_graph_input->ptr_virtual_lane_manager();
     const auto is_not_in_intersection =
         virtual_lane_manager->GetIntersectionState() == common::NO_INTERSECTION;
+    const bool is_reverse = IsPredictionReverseAgent(agent, ego_lane);
     bool is_within_ego_lane = false;
     bool is_within_ego_neighbor_lane = false;
     double nearest_s = 0.0;
@@ -374,7 +403,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
           nearest_l < half_ego_lane_width;
     }
     const bool is_relieve_jerk_reverse_agent =
-        is_not_in_intersection && agent->is_reverse() &&
+        is_not_in_intersection && is_reverse &&
         (is_within_ego_lane || is_within_ego_neighbor_lane);
     if (is_relieve_jerk_reverse_agent) {
       relieve_jerk_agent_ids.emplace_back(agent->agent_id());
