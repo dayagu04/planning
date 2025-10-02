@@ -172,9 +172,10 @@ OSQPSettings* PiecewiseJerkSpeedProblem::SolverDefaultSettings() {
   return settings;
 }
 
+
 void PiecewiseJerkSpeedProblem::CalculateKernel2(std::vector<c_float>* P_data,
-                                                 std::vector<c_int>* P_indices,
-                                                 std::vector<c_int>* P_indptr) {
+                                                std::vector<c_int>* P_indices,
+                                                std::vector<c_int>* P_indptr) {
   const c_int n = static_cast<c_int>(num_of_knots_);
   // N*3, for x =[x, x', x'']
   const c_int kNumParam = 3 * n;

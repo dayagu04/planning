@@ -2,10 +2,10 @@
 
 #include <cmath>
 #include <cstddef>
+#include "obstacle_manager.h"
 #include "ego_state_manager.h"
 #include "ifly_time.h"
 #include "math/math_utils.h"
-#include "obstacle_manager.h"
 #include "session.h"
 #include "utils/kd_path.h"
 #include "utils/path_point.h"
@@ -155,11 +155,9 @@ void ReferencePath::update_refpath_points_in_hpp(
         continue;
       }
       // check direction
-      planning_math::Vec2d last_direction =
-          planning_math::Vec2d::CreateUnitVec2d(last_pt.theta());
+      planning_math::Vec2d last_direction = planning_math::Vec2d::CreateUnitVec2d(last_pt.theta());
       planning_math::Vec2d cur_direction =
-          planning_math::Vec2d::CreateUnitVec2d(
-              raw_ref_path_points[i].path_point.theta());
+          planning_math::Vec2d::CreateUnitVec2d(raw_ref_path_points[i].path_point.theta());
       if (cur_direction.InnerProd(last_direction) < 0) {
         if (ref_length > init_length) {
           end_index = i;
@@ -185,13 +183,11 @@ void ReferencePath::update_refpath_points_in_hpp(
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
   if (coord_path_points.size() < 2) {
-    ILOG_DEBUG << "drop_length = " << drop_length
-               << ", init_length = " << init_length;
+    ILOG_DEBUG << "drop_length = " << drop_length << ", init_length = " << init_length;
     ILOG_ERROR << "update_refpath_points_in_hpp: coord points size < 2";
     return;
   }
-  frenet_coord_ =
-      std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
+  frenet_coord_ = std::make_shared<planning_math::KDPath>(std::move(coord_path_points));
 
   // Step 2) 1. update refined_ref_path_points_' frenet points by frenet_coord_
   refined_ref_path_points_.clear();
@@ -435,8 +431,9 @@ bool ReferencePath::transform_trajectory_point(TrajectoryPoint &traj_pt) const {
   return success;
 }
 
-bool ReferencePath::get_polygon_at_time(
-    const int id, bool is_use_recurrence, const int relative_time,
+bool ReferencePath::get_polygon_at_time(const int id,
+    bool is_use_recurrence,
+    const int relative_time,
     planning_math::Polygon2d &obstacle_polygon) {
   auto obstacle_manager =
       session_->mutable_environmental_model()->get_obstacle_manager();
@@ -445,12 +442,9 @@ bool ReferencePath::get_polygon_at_time(
     return false;
   }
   if (is_use_recurrence) {
-    if (obstacles_frenet_infos_recurrence_.find(id) !=
-        obstacles_frenet_infos_recurrence_.end()) {
-      if (obstacles_frenet_infos_recurrence_[id].find(relative_time) !=
-          obstacles_frenet_infos_recurrence_[id].end()) {
-        obstacle_polygon =
-            obstacles_frenet_infos_recurrence_[id][relative_time];
+    if (obstacles_frenet_infos_recurrence_.find(id) != obstacles_frenet_infos_recurrence_.end()) {
+      if (obstacles_frenet_infos_recurrence_[id].find(relative_time) != obstacles_frenet_infos_recurrence_[id].end()) {
+        obstacle_polygon = obstacles_frenet_infos_recurrence_[id][relative_time];
         return true;
       }
     }
@@ -478,8 +472,7 @@ bool ReferencePath::get_polygon_at_time(
       carte_point.x = pt.x();
       carte_point.y = pt.y();
       if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-        ILOG_INFO << "obstacle id " << obstacle_ptr->id()
-                  << " Frenet_coord failed!!";
+        ILOG_INFO << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!";
         continue;
       }
       frenet_points.push_back(planning_math::Vec2d(
@@ -493,8 +486,7 @@ bool ReferencePath::get_polygon_at_time(
     return ok;
   } else {
     if (obstacles_frenet_infos_.find(id) != obstacles_frenet_infos_.end()) {
-      if (obstacles_frenet_infos_[id].find(relative_time) !=
-          obstacles_frenet_infos_[id].end()) {
+      if (obstacles_frenet_infos_[id].find(relative_time) != obstacles_frenet_infos_[id].end()) {
         obstacle_polygon = obstacles_frenet_infos_[id][relative_time];
         return true;
       }
@@ -508,8 +500,7 @@ bool ReferencePath::get_polygon_at_time(
       carte_point.x = pt.x();
       carte_point.y = pt.y();
       if (!frenet_coord_->XYToSL(carte_point, frenet_point)) {
-        ILOG_INFO << "obstacle id " << obstacle_ptr->id()
-                  << " Frenet_coord failed!!!!";
+        ILOG_INFO << "obstacle id " << obstacle_ptr->id() << " Frenet_coord failed!!!!";
         continue;
       }
       frenet_points.push_back(

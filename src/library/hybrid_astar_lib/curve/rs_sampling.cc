@@ -350,8 +350,7 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
   node_path.points[0].y = rs_end_point.y;
   node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
 
-  rs_node_to_goal->Set(node_path, *grid_map_bound_, *config_,
-                       node_path.path_dist);
+  rs_node_to_goal->Set(node_path, *grid_map_bound_, *config_, node_path.path_dist);
 
   rs_node_to_goal->SetPathType(AstarPathType::REEDS_SHEPP);
   rs_node_to_goal->SetGearType(request_->direction_request ==

@@ -74,6 +74,6 @@ void Logger::Flush() { wrapped_->Flush(); }
 
 uint32_t Logger::LogSize() { return wrapped_->LogSize(); }
 
-}  // namespace ilog
+}  // namespace logger
 }  // namespace cyber
 }  // namespace planning

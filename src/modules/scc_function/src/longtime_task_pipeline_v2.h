@@ -41,28 +41,28 @@ class LongTimeTaskPipelineV2 : public BaseTaskPipeline {
   bool Run() override;
 
  private:
-  //   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
-  //   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
-  //   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
-  //   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
-  //   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
-  //   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
-  //   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
-  // //   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
-  //   std::unique_ptr<SccLongitudinalMotionPlanner>
-  //       scc_longitudinal_motion_planner_;
-  //   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
-  //   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
-  //   std::unique_ptr<CipvLostProhibitAccelerationDecider>
-  //       cipv_lost_prohibit_acceleration_decider_;
-  //   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
-  //   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
-  //       lane_borrow_deciderV2_;
-  //   std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
-  //       lane_borrow_deciderV1_;
-  //   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
-  //   std::unique_ptr<SamplePolySpeedAdjustDecider>
-  //       sample_poly_speed_adjust_decider_;
-  //   bool enable_lane_borrow_deciderV2_ = false;
+//   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
+//   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
+//   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
+//   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
+//   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
+//   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
+//   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
+// //   std::unique_ptr<SccLonBehaviorPlanner> scc_lon_behavior_planner_;
+//   std::unique_ptr<SccLongitudinalMotionPlanner>
+//       scc_longitudinal_motion_planner_;
+//   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
+//   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;
+//   std::unique_ptr<CipvLostProhibitAccelerationDecider>
+//       cipv_lost_prohibit_acceleration_decider_;
+//   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
+//   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>
+//       lane_borrow_deciderV2_;
+//   std::unique_ptr<lane_borrow_deciderV1::LaneBorrowDecider>
+//       lane_borrow_deciderV1_;
+//   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
+//   std::unique_ptr<SamplePolySpeedAdjustDecider>
+//       sample_poly_speed_adjust_decider_;
+//   bool enable_lane_borrow_deciderV2_ = false;
 };
 }  // namespace planning

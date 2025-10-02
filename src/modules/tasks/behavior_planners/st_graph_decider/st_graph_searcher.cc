@@ -1124,8 +1124,8 @@ double StGraphSearcher::ComputeHeuristicCost(const StSearchInput& input_info,
 
   // std::cout << "\t\t\t\th_time_cost:     " << time_cost << std::endl;
   // std::cout << "\t\t\t\th_s_cost:        " << s_cost << std::endl;
-  // std::cout << "\t\t\t\th_lane_change_cost: " << lane_change_cost <<
-  // std::endl; std::cout << "\t\t\t\tcost_h:          " << cost_h << std::endl;
+  // std::cout << "\t\t\t\th_lane_change_cost: " << lane_change_cost << std::endl;
+  // std::cout << "\t\t\t\tcost_h:          " << cost_h << std::endl;
 
   return cost_h;
 }

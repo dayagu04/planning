@@ -187,8 +187,8 @@ class GJK2DInterface {
    * \param[in] dirB               PolygonB moving direction;
    * \return int
    */
-  void ShapeCastByDirection(bool *is_collision, cdl::real *distA,
-                            cdl::real *distB, Position2D *collision_pointA,
+  void ShapeCastByDirection(bool *is_collision, cdl::real *distA, cdl::real *distB,
+                            Position2D *collision_pointA,
                             Position2D *collision_pointB,
                             const Polygon2D *polygonA_start,
                             const Position2D *dirA,

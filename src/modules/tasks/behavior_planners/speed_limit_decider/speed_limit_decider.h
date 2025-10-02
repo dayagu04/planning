@@ -63,7 +63,7 @@ class SpeedLimitDecider : public Task {
 
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
-  bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo> &vru_round_map);
+  bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map);
   double JudgeCurvBySDProMap();
 
   // used in curv speed limit
@@ -80,7 +80,7 @@ class SpeedLimitDecider : public Task {
   double v_avoid_hold_ = 0.0;
   pnc::filters::SlopeFilter vel_slope_filter_function_fading_away_;
   double last_vel_function_fading_away_;
-  double v_cruise_limit_;  // kph
+  double v_cruise_limit_;//kph
 
   // used in intersection speed limit
   planning::common::IntersectionState last_intersection_state_ =
@@ -98,6 +98,7 @@ class SpeedLimitDecider : public Task {
   std::map<int32_t, VRURoundInfo> historical_vru_round_map_;
   VRURoundInfo triggered_vru_;
   bool vru_round_triggered_ = false;
+
 };
 
 }  // namespace planning

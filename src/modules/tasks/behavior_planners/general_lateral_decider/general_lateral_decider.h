@@ -16,10 +16,11 @@
 #include "spline_projection.h"
 #include "task_basic_types.h"
 #include "tasks/task.h"
-#include "utils/hysteresis_decision.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+#include "utils/hysteresis_decision.h"
+#include "task_basic_types.h"
 
 namespace planning {
 
@@ -41,7 +42,7 @@ class GeneralLateralDecider : public Task {
 
  private:
   bool CalCruiseVelByCurvature(const double ego_v,
-                               const CoarsePlanningInfo &coars_planning_info,
+                               const CoarsePlanningInfo& coars_planning_info,
                                double &cruise_v);
 
   void ConstructTrajPoints(TrajectoryPoints &traj_points);
@@ -74,7 +75,8 @@ class GeneralLateralDecider : public Task {
       ObstacleDecisions &obstacle_decisions);
   void GenerateDynamicObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
-      ObstacleDecision &obstacle_decision, bool is_update_hard_bound);
+      ObstacleDecision &obstacle_decision,
+      bool is_update_hard_bound);
   double CalculateExtraDecreaseBuffer(
       const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left);
   double CalculateExtraLaneTypeDecreaseBuffer(bool is_nudge_left,
@@ -174,56 +176,56 @@ class GeneralLateralDecider : public Task {
   bool IsAgentPredLonOverlapWithPlanPath(
       const std::shared_ptr<FrenetObstacle> obstacle);
   double CalculateSideObstacleExtraDecreaseBufferInIntersection(
-      const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left,
-      bool in_intersection);
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      bool is_nudge_left, bool in_intersection);
   double AdjustBufferForSideObstacleInIntersection(
-      const std::shared_ptr<FrenetObstacle> obstacle, double overlap_min_y,
-      double overlap_max_y, double lat_buf_dis, bool is_nudge_left,
-      double rear_lon_buf_dis, double front_lon_buf_dis,
-      LatObstacleDecisionType lat_decision, int index);
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    double overlap_min_y, double overlap_max_y,
+    double lat_buf_dis, bool is_nudge_left,
+    double rear_lon_buf_dis, double front_lon_buf_dis,
+    LatObstacleDecisionType lat_decision, int index);
   bool CheckPredLonOverlapStability(
       int id, bool is_agent_pred_lon_overlap_with_plan_path);
   void ResetIsExceedObstacleHysteresisMap(int id = -1);
   void CalculateAvoidObstacles(
-      const std::vector<std::pair<double, double>> frenet_soft_bounds,
-      std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
-  double CalStaticNudgeLatBufDis(const std::shared_ptr<FrenetObstacle> obstacle,
-                                 bool in_intersection, bool is_nudge_left,
-                                 double overlap_min_y, double overlap_max_y,
-                                 bool is_side_obstacle,
-                                 double extra_lane_type_decrease_buffer,
-                                 bool is_update_hard_bound, double lane_width,
-                                 bool is_care_reverse_ignore_obj);
+    const std::vector<std::pair<double, double>> frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
+  double CalStaticNudgeLatBufDis(
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    bool is_side_obstacle, double extra_lane_type_decrease_buffer,
+    bool is_update_hard_bound, double lane_width,
+    bool is_care_reverse_ignore_obj);
   double CalDynamicNudgeLatBufDis(
-      const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
-      bool is_nudge_left, double overlap_min_y, double overlap_max_y,
-      double limit_overlap_min_y, double limit_overlap_max_y, double pred_ts,
-      double extra_lane_type_decrease_buffer,
-      bool is_same_side_obstacle_during_lane_change, bool is_update_hard_bound,
-      double extra_reverse_obj_decrease_buffer, bool is_care_reverse_ignore_obj,
-      double last_t_lat_buf_dis, double &updated_overlap_min_y,
-      double &updated_overlap_max_y);
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    double limit_overlap_min_y, double limit_overlap_max_y,
+    double pred_ts, double extra_lane_type_decrease_buffer,
+    bool is_same_side_obstacle_during_lane_change,
+    bool is_update_hard_bound, double extra_reverse_obj_decrease_buffer,
+    bool is_care_reverse_ignore_obj, double last_t_lat_buf_dis,
+    double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);
   void PostProcessRoadSoftBoundary();
-  void ExtendRoadSoftBound(int num_rear_extended_points,
-                           int num_front_extended_points, bool is_lower,
-                           int bound_size);
+  void ExtendRoadSoftBound(
+    int num_rear_extended_points,
+    int num_front_extended_points,
+    bool is_lower, int bound_size);
   void GenerateEmergencyObstacleDecision(
       const std::shared_ptr<FrenetObstacle> obstacle,
       ObstacleDecision &obstacle_decision);
   double CalEmergencyNudgeLatBufDis(
-      const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
-      bool is_nudge_left, double overlap_min_y, double overlap_max_y,
-      double limit_overlap_min_y, double limit_overlap_max_y, double pred_ts,
-      double extra_lane_type_decrease_buffer,
-      bool is_same_side_obstacle_during_lane_change,
-      double &updated_overlap_min_y, double &updated_overlap_max_y);
-  bool CheckLateralEmergencyAvoidSpace(
-      bool is_nudge_left, const std::shared_ptr<FrenetObstacle> obstacle);
+    const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
+    bool is_nudge_left, double overlap_min_y, double overlap_max_y,
+    double limit_overlap_min_y, double limit_overlap_max_y,
+    double pred_ts, double extra_lane_type_decrease_buffer,
+    bool is_same_side_obstacle_during_lane_change,
+    double &updated_overlap_min_y, double &updated_overlap_max_y);
+  bool CheckLateralEmergencyAvoidSpace(bool is_nudge_left,
+    const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsObstacleOutsideRoadBoundary(
-      const std::shared_ptr<FrenetObstacle> obstacle);
-
+    const std::shared_ptr<FrenetObstacle> obstacle);
  private:
   GeneralLateralDeciderConfig config_;
 
@@ -233,8 +235,7 @@ class GeneralLateralDecider : public Task {
   TrajectoryPoints plan_history_traj_;
   TrajectoryPoints uniform_plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;
-  std::unordered_map<int, HysteresisDecision>
-      is_exceed_obstacle_hysteresis_map_;
+  std::unordered_map<int,HysteresisDecision> is_exceed_obstacle_hysteresis_map_;
   bool is_agent_current_pred_lonoverlap_ = false;
 
   ReferencePathPoints ref_path_points_;

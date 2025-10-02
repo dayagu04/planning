@@ -323,9 +323,9 @@ GapSelectorStatus GapSelectorDecider::Update() {
 
   double avoid_lat_offset =
       is_lc_hold ? lane_change_decider_output.lc_hold_state_lat_offset
-                 : lateral_offset_decider_output.is_valid
-                       ? lateral_offset_decider_output.lateral_offset
-                       : 0.0;
+      : lateral_offset_decider_output.is_valid
+          ? lateral_offset_decider_output.lateral_offset
+          : 0.0;
   const auto &ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
   Point2D ego_cart_pose{ego_state_mgr->ego_carte().x,
@@ -455,13 +455,12 @@ GapSelectorStatus GapSelectorDecider::Update() {
     } else {
       RefineLCTime(&lc_end_s, &remain_lh_time, avoid_lat_offset);
       if (remain_lh_time < 1.0) {
-        gap_selector_decider_output.is_quitic_spline_change_to_center_line =
-            true;
+        gap_selector_decider_output.is_quitic_spline_change_to_center_line = true;
         GenerateLHTrajectory(traj_points, avoid_lat_offset);
       } else {
         QuinticPathPlanner quintic_path_planner(config_, session_);
         quintic_path_planner.Plan(avoid_lat_offset, lc_end_s, remain_lh_time,
-                                  traj_points);
+                                traj_points);
       }
     }
   } else if (is_lc_back_scene) {
@@ -469,13 +468,11 @@ GapSelectorStatus GapSelectorDecider::Update() {
         remain_lb_time = lc_back_total_time_ - lc_back_timer_;
     if (ego_frenet_pose.y >= std::fabs(avoid_lat_offset)) {
       if (ego_frenet_pose.y >= 1e-6) {
-        lb_target_l =
-            std::max(avoid_lat_offset, lc_back_vel_ * lc_back_total_time_ -
-                                           lc_back_vel_ * lc_back_timer_);
+        lb_target_l = std::max(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
       } else {
-        lb_target_l =
-            std::min(avoid_lat_offset, lc_back_vel_ * lc_back_total_time_ -
-                                           lc_back_vel_ * lc_back_timer_);
+        lb_target_l = std::min(avoid_lat_offset,
+            lc_back_vel_ * lc_back_total_time_ - lc_back_vel_ * lc_back_timer_);
       }
 
       // FixedTimeQuinticPathPlan(lb_target_l, lb_end_s, remain_lb_time,
@@ -658,8 +655,7 @@ void GapSelectorDecider::RefineLCTime(double *lc_end_s, double *remain_lc_time,
                                       const double lat_avoid_offset) {
   const auto &ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
-  if (ego_state_mgr->ego_v() >= config_.min_ego_v_cruise &&
-      (*remain_lc_time > 1.0 || use_ego_v_)) {
+  if (ego_state_mgr->ego_v() >= config_.min_ego_v_cruise && (*remain_lc_time > 1.0 || use_ego_v_ )) {
     return;
   }
 
@@ -706,8 +702,7 @@ GapSelectorStatus GapSelectorDecider::Update(
       env_preprocessor_status == LC_FINISHED ||
       env_preprocessor_status == LC_PASS_TIME_EXCEED_THRESHOLD) {
     gap_selector_decider_output = {false, target_state_, false, false};
-    ILOG_DEBUG << "Gap Selector finished after env preprocessor, the status is:"
-               << env_preprocessor_status;
+    ILOG_DEBUG << "Gap Selector finished after env preprocessor, the status is:" << env_preprocessor_status;
     return env_preprocessor_status;
   }
   GapSelectorStatus status = GapSelectorStatus::DEFAULT;
@@ -824,18 +819,14 @@ GapSelectorStatus GapSelectorDecider::EnvHandle(
       base_frenet_coord_ == nullptr) {
     ResetAllInfo();
     gap_selector_decider_output = {false, target_state_, false, false};
-    ILOG_DEBUG << "Gap selector skip is "
-               << gap_selector_state_machine_info_.gs_skip
-               << ", base_frenet_coord is ok:"
-               << int(base_frenet_coord_ == nullptr);
+    ILOG_DEBUG << "Gap selector skip is " << gap_selector_state_machine_info_.gs_skip << ", base_frenet_coord is ok:" << int(base_frenet_coord_ == nullptr);
     gs_status = gap_selector_state_machine_info_.gs_skip
                     ? GS_SKIP
                     : BASE_FRENET_COORD_NULLPTR;
   } else if (CheckLCFinish() || gap_selector_state_machine_info_.lc_cancel) {
     ResetAllInfo();
     gap_selector_decider_output = {true, target_state_, false, false};
-    ILOG_DEBUG << "Gap selector lc cancel "
-               << gap_selector_state_machine_info_.lc_cancel;
+    ILOG_DEBUG << "Gap selector lc cancel " << gap_selector_state_machine_info_.lc_cancel;
     gs_status =
         gap_selector_state_machine_info_.lc_cancel ? LC_CANCEL : LC_FINISHED;
   } else if (gap_selector_state_machine_info_.lc_pass_time > kMaxTotalLCTime &&
@@ -1663,8 +1654,7 @@ void GapSelectorDecider::ConstructTimeOptimal(
                  path_spline_start_cart_point.y - ego_cart_point_[1]);
   if (base_frenet_coord_->XYToSL(path_spline_start_cart_point,
                                  path_spline_start_frenet_point)) {
-    ILOG_ERROR
-        << "GS:Cart 2 frenet success, spline start cart point -> frenet point!";
+    ILOG_ERROR << "GS:Cart 2 frenet success, spline start cart point -> frenet point!";
     compensated_dis =
         ego_planning_init_s_[0] - path_spline_start_frenet_point.x;
   }
@@ -2148,8 +2138,7 @@ pnc::spline::QuinticPolynominalPath GapSelectorDecider::ConstructQuinticPath(
   Point2D frenet_end_point{lane_change_end_s, 0.};
   Point2D cart_end_point;
   if (!coord->SLToXY(frenet_end_point, cart_end_point)) {
-    ILOG_ERROR
-        << "ERROR! TargetLaneCoordPtr Frenet Point -> Cart Point Failed!!!";
+    ILOG_ERROR << "ERROR! TargetLaneCoordPtr Frenet Point -> Cart Point Failed!!!";
   }
   const auto lane_change_end_heading_angle =  // use target lane info!
       coord->GetPathCurveHeading(lane_change_end_s);
@@ -2453,8 +2442,9 @@ void GapSelectorDecider::GenerateLHTrajectory(
   // return;
 }
 
-void GapSelectorDecider::GenerateLHTrajectory(TrajectoryPoints &traj_points,
-                                              const double lat_offset) {
+void GapSelectorDecider::GenerateLHTrajectory(
+    TrajectoryPoints &traj_points, const double lat_offset) {
+
   const auto &cur_ref_path = session_->environmental_model()
                                  .get_reference_path_manager()
                                  ->get_reference_path_by_current_lane();
@@ -2471,7 +2461,9 @@ void GapSelectorDecider::GenerateLHTrajectory(TrajectoryPoints &traj_points,
 
   for (auto i = 0; i < traj_points.size(); i++) {
     auto &traj_point = traj_points[i];
-    Point2D tmp_frenet_point{traj_point.s, lat_offset};
+    Point2D tmp_frenet_point{
+        traj_point.s,
+        lat_offset};
     Point2D tmp_cart_point;
 
     if (cur_ref_path_coor->SLToXY(tmp_frenet_point, tmp_cart_point)) {

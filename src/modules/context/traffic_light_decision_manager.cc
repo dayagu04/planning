@@ -44,13 +44,11 @@ bool TrafficLightDecisionManager::UpdateNearestTFLDis() {
   nearest_tfl_dis_window_.pop_front();
   nearest_tfl_dis_window_.push_back(ego_to_nearest_tfl_dis);
 
-  if (nearest_tfl_dis_window_[0] < 200.0 &&
-      nearest_tfl_dis_window_[1] < 200.0 &&
-      nearest_tfl_dis_window_[2] < 200.0) {
+  if (nearest_tfl_dis_window_[0] < 200.0 && nearest_tfl_dis_window_[1] < 200.0 &&
+    nearest_tfl_dis_window_[2] < 200.0) {
     distance_to_nearest_tfl_ = ego_to_nearest_tfl_dis;
-  } else if (nearest_tfl_dis_window_[0] > 200.0 &&
-             nearest_tfl_dis_window_[1] > 200.0 &&
-             nearest_tfl_dis_window_[2] > 200.0) {
+  } else if (nearest_tfl_dis_window_[0] > 200.0 && nearest_tfl_dis_window_[1] > 200.0 &&
+    nearest_tfl_dis_window_[2] > 200.0) {
     distance_to_nearest_tfl_ = NL_NMAX;
   }
   return true;

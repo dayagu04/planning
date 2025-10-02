@@ -8,7 +8,6 @@
 
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
-#include "apa_utils.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -18,6 +17,7 @@
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "src/library/convex_collision_detection/gjk2d_interface.h"
+#include "apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -154,7 +154,7 @@ void ApaObstacleManager::Update(
       obs_id_generate_++;
     }
   }
-  if (param.use_object_detect_specificationer) {
+  if (param.use_object_detect_specificationer){
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_objects_info.fusion_object_size,
                  static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
@@ -193,6 +193,7 @@ void ApaObstacleManager::Update(
       apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
+
     }
   }
   if (param.use_object_detect) {
@@ -377,7 +378,8 @@ void ApaObstacleManager::TransformCoordFromGlobalToLocal(
   }
 }
 
-const bool ApaObstacleManager::IsOccType(const iflyauto::ObjectType type) {
+const bool ApaObstacleManager::IsOccType(
+    const iflyauto::ObjectType type) {
   if (type >= iflyauto::OBJECT_TYPE_OCC_EMPTY &&
       type <= iflyauto::OBJECT_TYPE_OCC_NUM) {
     return true;

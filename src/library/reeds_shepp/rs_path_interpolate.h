@@ -61,6 +61,7 @@ struct RSPath {
     return;
   }
 
+
   void FirstPathEndPoint(RSPoint *point) {
     if (size < 1) {
       return;
@@ -155,7 +156,8 @@ class RSPathInterpolator {
    **/
   int CalcShortestRSPathKappa(RSPathKappaParam *kappa_list,
                               const Pose2f *start_pose, const Pose2f *goal_pose,
-                              float min_turn_radius, const float inverse_radius,
+                              float min_turn_radius,
+                              const float inverse_radius,
                               const RSPathRequestType request_type);
 
   int CalcSCSPathKappa(RSPathKappaParam *kappa_list, const Pose2f *start_pose,
@@ -163,7 +165,8 @@ class RSPathInterpolator {
                        const float inverse_radius,
                        const RSPathRequestType request_type);
 
-  int ShrinkRSPathByInvalidDist(RSPathKappaParam *kappa_list, float dist_thres);
+  int ShrinkRSPathByInvalidDist(RSPathKappaParam *kappa_list,
+                                float dist_thres);
 
   int UpdateGearSwitchNum(RSPathKappaParam *kappa_list,
                           const AstarPathGear initial_pose_dir);

@@ -4,10 +4,10 @@
 #include "hybrid_astar_common.h"
 #include "hybrid_astar_request.h"
 #include "node_collision_detect.h"
+#include "src/library/hybrid_astar_lib/decider/obstacle_clear_zone.h"
 #include "park_reference_line.h"
 #include "point_cloud_obstacle.h"
 #include "pose2d.h"
-#include "src/library/hybrid_astar_lib/decider/obstacle_clear_zone.h"
 
 namespace planning {
 
@@ -36,11 +36,11 @@ class CurveSampling {
   EulerDistanceTransform* edt_;
 
   // xmin, xmax, ymin, ymax
-  const MapBound* grid_map_bound_;
+  const MapBound *grid_map_bound_;
 
   const ParkReferenceLine* ref_line_;
 
-  const AstarRequest* request_;
+  const AstarRequest *request_;
 
   const PlannerOpenSpaceConfig* config_;
   float min_radius_;

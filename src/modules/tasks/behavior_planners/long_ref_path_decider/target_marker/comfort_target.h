@@ -72,11 +72,11 @@ class ComfortTarget : public Target {
                                       const double current_vel,
                                       const double current_s,
                                       const double front_vel,
-                                      const double front_s,
-                                      const double tau) const;
+                                      const double front_s, const double tau) const;
 
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
+
 
   void AddComfortTargetDataToProto();
 

@@ -26,16 +26,16 @@
 namespace planning {
 namespace planning_math {
 
+
 CubicPolynomialCurve1d::CubicPolynomialCurve1d(
     const std::array<double, 2>& start, const std::array<double, 2>& end,
     const double param)
-    : CubicPolynomialCurve1d(start[0], start[1], end[0], end[1], param) {}
+    : CubicPolynomialCurve1d(start[0], start[1], end[0], end[1],
+                             param) {}
 
-CubicPolynomialCurve1d::CubicPolynomialCurve1d(const double x0,
-                                               const double dx0,
-                                               const double x1,
-                                               const double dx1,
-                                               const double param) {
+CubicPolynomialCurve1d::CubicPolynomialCurve1d(
+    const double x0, const double dx0, const double x1,
+    const double dx1, const double param) {
   ComputeCoefficients(x0, dx0, x1, dx1, param);
   start_condition_[0] = x0;
   start_condition_[1] = dx0;

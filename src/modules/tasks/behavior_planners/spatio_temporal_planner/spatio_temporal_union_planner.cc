@@ -13,31 +13,31 @@
 
 #include "basic_types.pb.h"
 #include "config/basic_type.h"
-#include "debug_info_log.h"
 #include "define/geometry.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
+#include "refline.h"
+#include "debug_info_log.h"
 #include "ifly_time.h"
 #include "log.h"
 #include "math/linear_interpolation.h"
 #include "math_lib.h"
 #include "quintic_poly_path.h"
 #include "reference_path_manager.h"
-#include "refline.h"
 #include "speed/st_point.h"
 // #include "trajectory1d/second_order_time_optimal_trajectory.h"
 // #include "trajectory1d/trajectory1d.h"
 
-#include "path_time_heuristic_optimizer.h"
 #include "planning_context.h"
-#include "spatio_temporal_union_planner.h"
-#include "speed_data.h"
 #include "utils/frenet_coordinate_system.h"
 #include "utils/kd_path.h"
 #include "utils/spline.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+#include "spatio_temporal_union_planner.h"
+#include "path_time_heuristic_optimizer.h"
+#include "speed_data.h"
 namespace planning {
 
 using namespace planning_math;
@@ -49,6 +49,7 @@ constexpr double kDistanceThresholdApproachToStopline = 10.0;
 constexpr double kDistanceThresholdApproachToCrosswalk = 12.0;
 constexpr int kEgoInIntersectionCount = 3;
 constexpr int kDefaultDistanceAwayFromIntersection = 500.0;
+
 
 }  // namespace
 
@@ -73,17 +74,16 @@ bool SpatioTemporalPlanner::Execute() {
   // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
   //                                .GetDebugInfoPb()
   //                                ->mutable_spatio_temporal_union_plan();
-  const auto &lane_change_decider_output =
+  const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto &coarse_planning_info =
+  const auto& coarse_planning_info =
       lane_change_decider_output.coarse_planning_info;
   auto &spatio_temporal_union_plan_output =
-      session_->mutable_planning_context()
-          ->mutable_spatio_temporal_union_plan_output();
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
   const auto lc_state = coarse_planning_info.target_state;
-  const auto &virtual_lane_manager =
-      session_->environmental_model().get_virtual_lane_manager();
-  const auto &intersection_state = virtual_lane_manager->GetIntersectionState();
+  const auto& virtual_lane_manager =
+        session_->environmental_model().get_virtual_lane_manager();
+  const auto& intersection_state = virtual_lane_manager->GetIntersectionState();
   spatio_temporal_union_plan_.set_st_dp_is_sucess(false);
   spatio_temporal_union_plan_.set_cost_time(0.0);
   spatio_temporal_union_plan_.set_enable_using_st_plan(false);
@@ -110,8 +110,7 @@ bool SpatioTemporalPlanner::Execute() {
   }
 
   if (!config_.enable_use_spatio_temporal_planning) {
-    ILOG_DEBUG
-        << "SpatioTemporalPlanner::can not use spatio temporal union planning!";
+    ILOG_DEBUG << "SpatioTemporalPlanner::can not use spatio temporal union planning!";
     last_enable_using_st_plan_ = false;
     return true;
   }
@@ -122,17 +121,16 @@ bool SpatioTemporalPlanner::Execute() {
                           ->mutable_lane_change_decider_output()
                           .coarse_planning_info.trajectory_points;
   // TrajectoryPoints traj_points;
-  const auto &agent_trajs_state = slt_grid_map_.SurroundForwardAgentsTrajs();
-  const auto &virtual_agents_st_info = slt_grid_map_.VirtualAgentSTInFo();
+  const auto& agent_trajs_state =
+      slt_grid_map_.SurroundForwardAgentsTrajs();
+  const auto& virtual_agents_st_info =
+      slt_grid_map_.VirtualAgentSTInFo();
 
   const double st_pre_time = IflyTime::Now_ms();
-  path_time_heuristic_optimizer_.Process(
-      traj_points, agent_trajs_state, virtual_agents_st_info,
-      last_enable_using_st_plan_, spatio_temporal_union_plan_input_);
+  path_time_heuristic_optimizer_.Process( traj_points, agent_trajs_state, virtual_agents_st_info, last_enable_using_st_plan_, spatio_temporal_union_plan_input_);
 
   // 更新障碍物决策
-  path_time_heuristic_optimizer_.UpdateLateralObstacleDecision(
-      agent_trajs_state);
+  path_time_heuristic_optimizer_.UpdateLateralObstacleDecision(agent_trajs_state);
   const double st_end_time = IflyTime::Now_ms();
 
   spatio_temporal_union_plan_.set_cost_time(st_end_time - st_pre_time);
@@ -150,10 +148,8 @@ void SpatioTemporalPlanner::LogDebugInfo(
     const TrajectoryPoints &traj_points,
     const std::vector<AgentFrenetSpatioTemporalInFo> &agents_state) {
 #ifdef ENABLE_PROTO_LOG
-  auto &lateral_obstacle_decision =
-      session_->mutable_planning_context()
-          ->mutable_lateral_obstacle_decider_output()
-          .lat_obstacle_decision;
+  auto& lateral_obstacle_decision = session_->mutable_planning_context()
+      ->mutable_lateral_obstacle_decider_output().lat_obstacle_decision;
   auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::EnvironmentModelInfo *environment_model_debug_info =
       planning_debug_data->mutable_environment_model_info();
@@ -161,36 +157,33 @@ void SpatioTemporalPlanner::LogDebugInfo(
   //                                .GetDebugInfoPb()
   //                                ->mutable_spatio_temporal_union_plan();
   auto &spatio_temporal_union_plan_output =
-      session_->mutable_planning_context()
-          ->mutable_spatio_temporal_union_plan_output();
-  const auto &ego_state_mgr =
+      session_->mutable_planning_context()->mutable_spatio_temporal_union_plan_output();
+  const auto& ego_state_mgr =
       session_->mutable_environmental_model()->get_ego_state_manager();
 
-  const auto &virtual_lane_mgr =
+  const auto& virtual_lane_mgr =
       // session_->mutable_planning_context()->virtual_lane_manager();
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const auto &current_lane = virtual_lane_mgr->get_current_lane();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
   const double lateral_offset = session_->mutable_planning_context()
                                     ->lateral_offset_decider_output()
                                     .lateral_offset;
   std::shared_ptr<ReferencePath> origin_refline =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
-          ->get_reference_path_by_lane(
-              virtual_lane_mgr->current_lane_virtual_id(), false);
+          ->get_reference_path_by_lane(virtual_lane_mgr->current_lane_virtual_id(), false);
   if (origin_refline == nullptr) {
     return;
   }
-  const auto &base_frenet_coord = origin_refline->get_frenet_coord();
+  const auto& base_frenet_coord = origin_refline->get_frenet_coord();
   if (base_frenet_coord == nullptr) {
     return;
   }
-  Point2D ego_cart_point(ego_state_mgr->ego_pose().x,
-                         ego_state_mgr->ego_pose().y);
+  Point2D ego_cart_point(
+      ego_state_mgr->ego_pose().x, ego_state_mgr->ego_pose().y);
   Point2D ego_frenet_point;
   if (!base_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    ILOG_ERROR << "SpatioTemporalPlanner::LogDebugInfo: Cart Point -> Frenet "
-                  "Point Failed!!";
+    ILOG_ERROR << "SpatioTemporalPlanner::LogDebugInfo: Cart Point -> Frenet Point Failed!!";
   }
 
   auto origin_refline_points =
@@ -214,13 +207,12 @@ void SpatioTemporalPlanner::LogDebugInfo(
   }
 
   spatio_temporal_union_plan_.set_st_dp_is_sucess(
-      path_time_heuristic_optimizer_.GetStDpIsSuccess());
+        path_time_heuristic_optimizer_.GetStDpIsSuccess());
   spatio_temporal_union_plan_output.st_dp_is_sucess =
       path_time_heuristic_optimizer_.GetStDpIsSuccess();
 
   // trajectory points
-  auto mutable_traj_points =
-      spatio_temporal_union_plan_.mutable_trajectory_points();
+  auto mutable_traj_points = spatio_temporal_union_plan_.mutable_trajectory_points();
   mutable_traj_points->Clear();
   for (size_t i = 0; i < traj_points.size(); i++) {
     planning::common::TrajectoryPoint *traj_point = mutable_traj_points->Add();
@@ -238,10 +230,9 @@ void SpatioTemporalPlanner::LogDebugInfo(
 
   // 更新障碍物横向决策proto
   if (!agents_state.empty()) {
-    for (const auto &agent_state : agents_state) {
+    for (const auto& agent_state : agents_state) {
       auto obstacles = environment_model_debug_info->mutable_obstacle();
-      for (size_t i = 0; i < environment_model_debug_info->obstacle_size();
-           ++i) {
+      for (size_t i = 0; i < environment_model_debug_info->obstacle_size(); ++i) {
         auto obs = obstacles->Mutable(i);
         if (obs->id() == agent_state.agent_id) {
           obs->clear_lat_decision();
@@ -267,20 +258,20 @@ void SpatioTemporalPlanner::LogDebugInfo(
 
 void SpatioTemporalPlanner::UpdateIntersection() {
   const auto &tfl_decider = session_->mutable_planning_context()
-                                ->mutable_traffic_light_decider_output();
+                          ->mutable_traffic_light_decider_output();
   const auto intersection_state = session_->environmental_model()
-                                      .get_virtual_lane_manager()
-                                      ->GetIntersectionState();
+                              .get_virtual_lane_manager()
+                              ->GetIntersectionState();
   const double distance_to_stopline = session_->environmental_model()
-                                          .get_virtual_lane_manager()
-                                          ->GetEgoDistanceToStopline();
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToStopline();
   const double distance_to_crosswalk = session_->environmental_model()
-                                           .get_virtual_lane_manager()
-                                           ->GetEgoDistanceToCrosswalk();
+                                    .get_virtual_lane_manager()
+                                    ->GetEgoDistanceToCrosswalk();
   bool current_intersection_state =
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
       distance_to_stopline <= kDistanceThresholdApproachToStopline;
-  // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
+      // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
   if (current_intersection_state) {
     intersection_count_ = kEgoInIntersectionCount;
   } else {
@@ -292,4 +283,4 @@ void SpatioTemporalPlanner::UpdateIntersection() {
   return;
 }
 
-}  // namespace planning
+}

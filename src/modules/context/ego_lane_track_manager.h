@@ -16,8 +16,8 @@ namespace planning {
 
 class EgoLaneTrackManger {
  public:
-  explicit EgoLaneTrackManger(const EgoPlanningConfigBuilder *config_builder,
-                              planning::framework::Session *session);
+  explicit EgoLaneTrackManger(
+      const EgoPlanningConfigBuilder* config_builder, planning::framework::Session *session);
   // EgoLaneTrackManger() = default;
   ~EgoLaneTrackManger(){};
 
@@ -57,8 +57,8 @@ class EgoLaneTrackManger {
           &virtual_id_mapped_lane);
 
   void ProcessIntersectionSplit(
-      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      const std::vector<int> &order_ids);
+      std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+      const std::vector<int>& order_ids);
 
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
@@ -74,9 +74,8 @@ class EgoLaneTrackManger {
           &virtual_id_mapped_lane);
 
   void MakesureManualLaneChangeByLaneOffset(
-      std::shared_ptr<VirtualLane> &last_zero_relative_id_lane_,
-      const std::shared_ptr<VirtualLane> &current_zero_relative_id_lane_,
-      bool &is_manual_lane_change);
+      std::shared_ptr<VirtualLane>& last_zero_relative_id_lane_,
+      const std::shared_ptr<VirtualLane>& current_zero_relative_id_lane_, bool& is_manual_lane_change);
 
   bool CheckIfInRampSelectSplit(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
@@ -185,8 +184,8 @@ class EgoLaneTrackManger {
       bool &virtual_lane_exist_virtual);
 
   void ComputeIsSplitRegion(
-      const std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
-      const std::vector<int> &order_ids);
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids);
 
  private:
   planning::framework::Session *session_ = nullptr;

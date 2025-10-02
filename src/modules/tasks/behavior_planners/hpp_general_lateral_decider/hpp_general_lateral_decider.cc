@@ -143,33 +143,35 @@ void HppGeneralLateralDecider::UnitTest() {
         //           type
         //           upper     10    2
         //           lower               -1   -10
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 2, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 2,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 0;
-      } break;
+      }
+      break;
       case 2: {
         // case 1:
         //           type
         //           upper     10      -1
         //           lower          3       -10
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, -1, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, -1,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 0;
-      } break;
+      }
+      break;
       case 3: {
         // case 3:
         //           type           J        A      A
@@ -177,20 +179,21 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3        2      1  -10
         // init                         2.5
         // result                        *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 2.5;
-      } break;
+      }
+      break;
       case 4: {
         // case 4:
         //           type           J    A      A        A
@@ -198,23 +201,24 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3    2      1       -2    -10
         // init                             1.5
         // result                        *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 1.5;
-      } break;
+      }
+      break;
       case 5: {
         // case 4:
         //           type           A    J      A        A
@@ -222,23 +226,24 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3    2      1       -2    -10
         // init                             1.5
         // result                   *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 1.5;
-      } break;
+      }
+      break;
 
       case 6: {
         // case 4:
@@ -247,29 +252,30 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3        1       -1   -2    -10
         // init                          2
         // result                          *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-2, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 2.5,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 0,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -2, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 2;
-      } break;
+      }
+      break;
       case 7: {
         // case 4:
         //           type           J   A      A  A   A
@@ -277,26 +283,27 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3         0.5     -1   -10
         // init                              1
         // result                            *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{0.5, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 2.5,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 0,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              0.5, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 1;
-      } break;
+      }
+      break;
 
       case 8: {
         // case 4:
@@ -305,26 +312,27 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3  2.5        -1   -10
         // init                               0.75
         // result                           *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{2.5, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 2.5,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 0,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              2.5, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 0.75;
-      } break;
+      }
+      break;
       case 9: {
         // case 4:
         //           type           J   A      A   J
@@ -332,26 +340,27 @@ void HppGeneralLateralDecider::UnitTest() {
         //           lower          3          1      -1   -10
         // init                                1
         // result                              *
-        bounds_input.emplace_back(
-            WeightedBound{-10, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ROAD_BORDER}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 2.5, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-10, 0, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{3, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::ADJACENT_AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
-        bounds_input.emplace_back(
-            WeightedBound{-1, 10, config_.kPhysicalBoundWeight,
-                          BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+          -10, 10,
+          config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 2.5,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -10, 0,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              3, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ADJACENT_AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
+        bounds_input.emplace_back(WeightedBound{
+              -1, 10,
+              config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::AGENT}});
         init_l = 1;
-      } break;
+      }
+      break;
     }
     PostProcessBound(init_l, bounds_input, bound_output, bound_info);
     ILOG_DEBUG << "case " << i << bound_output.first << bound_output.second;
@@ -425,8 +434,7 @@ bool HppGeneralLateralDecider::CalCruiseVelByCurvature(
   return false;
 }
 
-void HppGeneralLateralDecider::ConstructTrajPoints(
-    TrajectoryPoints &traj_points) {
+void HppGeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -434,7 +442,8 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id);
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
   Eigen::Vector2d cart_init_point(
       ego_cart_state_manager_->planning_init_point().lat_init_state.x(),
       ego_cart_state_manager_->planning_init_point().lat_init_state.y());
@@ -449,8 +458,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   const double kMaxAcc = 0.2;
   const double kMinAcc = -5.5;
   double cruise_v = session_->planning_context().v_ref_cruise();
-  double ego_v =
-      std::max(planning_init_point.v, std::min(config_.min_v_cruise, cruise_v));
+  double ego_v = std::max(planning_init_point.v, std::min(config_.min_v_cruise , cruise_v));
   // if (CalCruiseVelByCurvature(ego_v, flane->get_center_line(), cruise_v)) {
   //   limit_ref_vel_on_ramp_valid = true;
   // }
@@ -479,15 +487,15 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   pnc::spline::Projection projection_spline;
   projection_spline.CalProjectionPoint(
       cart_ref_info.x_s_spline, cart_ref_info.y_s_spline,
-      cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(), cart_init_point);
+      cart_ref_info.s_vec.front(), cart_ref_info.s_vec.back(),
+      cart_init_point);
 
   double s_ref = projection_spline.GetOutput().s_proj;
   s_ref = frenet_init_pt.x;
 
-  const double max_ref_length =
-      std::max(std::min(cart_ref_info.s_vec.back(), frenet_coord->Length()) -
-                   s_ref - config_.ref_length_thr,
-               0.0);
+  const double max_ref_length = std::max(
+      std::min(cart_ref_info.s_vec.back(),frenet_coord->Length()) - s_ref - config_.ref_length_thr,
+      0.0);
   double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
   double delta_s = avg_cruise_v * config_.delta_t;
 
@@ -501,7 +509,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
       point.y = cart_ref_info.y_s_spline(s_ref);
       point.heading_angle =
           std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
-                     cart_ref_info.x_s_spline.deriv(1, s_ref));
+                      cart_ref_info.x_s_spline.deriv(1, s_ref));
     }
 
     // frenet info
@@ -516,6 +524,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
     traj_points.emplace_back(point);
   }
 
+
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
@@ -524,6 +533,7 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   } else {
     general_lateral_decider_output.ramp_scene = false;
   }
+
 
   general_lateral_decider_output.complete_follow =
       false;  // fusion is unsteady, lane keep weight need decay in end of
@@ -542,8 +552,8 @@ void HppGeneralLateralDecider::ConstructTrajPoints(
   // }
 
   auto &search_result = session_->mutable_planning_context()
-                            ->mutable_lateral_obstacle_decider_output()
-                            .search_result;
+                              ->mutable_lateral_obstacle_decider_output()
+                              .search_result;
   if (config_.enable_ara_ref && search_result == SearchResult::SUCCESS &&
       hybrid_ara_result.s.back() > traj_points.back().s) {
     if (HandleAraPath(traj_points)) {
@@ -559,7 +569,8 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
                                 ->mutable_lateral_obstacle_decider_output()
                                 .hybrid_ara_result;
 
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
   const PlanningInitPoint &planning_init_point = session_->environmental_model()
                                                      .get_ego_state_manager()
                                                      ->planning_init_point();
@@ -615,7 +626,7 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   if (session_->planning_context()
           .lane_change_decider_output()
           .hpp_turn_signal == NO_CHANGE) {
-    kFilterLBuffer = 0.0;  // 0.28
+    kFilterLBuffer = 0.0; // 0.28
   } else {
     kFilterLBuffer = 0.0;
   }
@@ -715,16 +726,14 @@ bool HppGeneralLateralDecider::HandleAraPath(TrajectoryPoints &traj_points) {
   return true;
 }
 
-void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
-                                                double dynamic_ref_buffer) {
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points, double dynamic_ref_buffer) {
+  const auto &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
 
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  if (lateral_offset_decider_output.is_valid ||
-      std::fabs(dynamic_ref_buffer) > 1e-6) {
-    double lateral_offset =
-        lateral_offset_decider_output.lateral_offset + dynamic_ref_buffer;
+  if (lateral_offset_decider_output.is_valid || std::fabs(dynamic_ref_buffer) > 1e-6) {
+    double lateral_offset = lateral_offset_decider_output.lateral_offset + dynamic_ref_buffer;
     Point2D first_offset_xy_point;
     if (frenet_coord->SLToXY(Point2D(traj_points[0].s, lateral_offset),
                              first_offset_xy_point)) {
@@ -751,14 +760,13 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     double point_s = traj_point.s;
-    if (traj_point.s >
-        reference_path_ptr_->get_points().back().path_point.s()) {
+    if (traj_point.s > reference_path_ptr_->get_points().back().path_point.s()) {
       point_s = reference_path_ptr_->get_points().back().path_point.s();
     }
-    if (!reference_path_ptr_->get_reference_point_by_lon(point_s, refpath_pt)) {
+    if (!reference_path_ptr_->get_reference_point_by_lon(point_s,
+                                                         refpath_pt)) {
       // add logs
-      ILOG_ERROR
-          << "ConstructReferencePathPoints: Get reference point by lon failed!";
+      ILOG_ERROR << "ConstructReferencePathPoints: Get reference point by lon failed!";
     }
     ref_path_points_.emplace_back(refpath_pt);
   }
@@ -766,7 +774,8 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
-  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
+  const auto &frenet_coord =
+      reference_path_ptr_->get_frenet_coord();
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
@@ -794,20 +803,16 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
         if (motion_planner_output.s_lat_vec.size() > 0) {
           tmp_t = std::fmin(0.1 + i * 0.2, final_t);
-          double last_lat_path_x =
-              motion_planner_output.lateral_x_t_spline(tmp_t);
-          double last_lat_path_y =
-              motion_planner_output.lateral_y_t_spline(tmp_t);
+          double last_lat_path_x = motion_planner_output.lateral_x_t_spline(tmp_t);
+          double last_lat_path_y = motion_planner_output.lateral_y_t_spline(tmp_t);
           double last_lat_path_s = ref_traj_points_[i].s;
           double last_lat_path_l = 0.0;
-          if (!frenet_coord->XYToSL(last_lat_path_x, last_lat_path_y,
-                                    &last_lat_path_s, &last_lat_path_l)) {
+          if (!frenet_coord->XYToSL(last_lat_path_x, last_lat_path_y, &last_lat_path_s, &last_lat_path_l)) {
             last_lat_path_l = 0.0;
           }
-          std::cout << "last_lat_path_s" << last_lat_path_s << std::endl;
+          std::cout << "last_lat_path_s" << last_lat_path_s <<std::endl;
           double ref_traj_theta = ref_traj_points_[i].heading_angle;
-          double last_path_theta =
-              motion_planner_output.lateral_theta_t_spline(tmp_t);
+          double last_path_theta = motion_planner_output.lateral_theta_t_spline(tmp_t);
           double theta_err = ref_traj_theta - last_path_theta;
           const double pi2 = 2.0 * M_PI;
           if (theta_err > M_PI) {
@@ -816,14 +821,12 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
             last_path_theta -= pi2;
           }
           const double ego_yaw = last_path_theta;
-          const double ego_center_x =
-              last_lat_path_x +
+          const double ego_center_x = last_lat_path_x +
               std::cos(ego_yaw) * vehicle_param.rear_axle_to_center;
-          const double ego_center_y =
-              last_lat_path_y +
+          const double ego_center_y = last_lat_path_y +
               std::sin(ego_yaw) * vehicle_param.rear_axle_to_center;
-          const Box2d ego_box({ego_center_x, ego_center_y}, ego_yaw,
-                              vehicle_param.length, vehicle_param.max_width);
+          const Box2d ego_box(
+            {ego_center_x, ego_center_y}, ego_yaw, vehicle_param.length, vehicle_param.max_width);
           std::pair<double, double> ego_lbuffer{last_lat_path_s, 0};
           std::pair<double, double> ego_rbuffer{last_lat_path_s, 0};
           std::vector<planning_math::Vec2d> frenet_corners;
@@ -831,9 +834,9 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
             Point2D frenet_corner, cart_corner;
             cart_corner.x = pt.x();
             cart_corner.y = pt.y();
-            if (frenet_coord->XYToSL(cart_corner, frenet_corner)) {
+            if(frenet_coord->XYToSL(cart_corner, frenet_corner)){
               double rel_corner_l = frenet_corner.y - last_lat_path_l;
-              if (frenet_corner.x > last_lat_path_s) {
+              if (frenet_corner.x > last_lat_path_s ) {
                 if (ego_lbuffer.second < rel_corner_l) {
                   ego_lbuffer.first = frenet_corner.x;
                   ego_lbuffer.second = rel_corner_l;
@@ -847,8 +850,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
           }
           ego_lbuffer.second = std::max(ego_lbuffer.second, half_ego_width);
           ego_rbuffer.second = std::min(ego_rbuffer.second, -half_ego_width);
-          if ((ego_lbuffer.first <= left_outline_s.back()) ||
-              (ego_rbuffer.first <= right_outline_s.back())) {
+          if ((ego_lbuffer.first <= left_outline_s.back()) || (ego_rbuffer.first <= right_outline_s.back())) {
             continue;
             // LOG_DEBUG("corner s not in valid range!");
             // if (left_outline_s[i + 2] < end_s) {
@@ -866,8 +868,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
           right_outline_s.emplace_back(ego_rbuffer.first);
           right_outline_l.emplace_back(ego_rbuffer.second);
         } else {
-          if ((ref_traj_points_[i].s <= left_outline_s.back()) ||
-              (ref_traj_points_[i].s <= right_outline_s.back())) {
+          if ((ref_traj_points_[i].s <= left_outline_s.back()) || (ref_traj_points_[i].s <= right_outline_s.back())) {
             continue;
             // LOG_DEBUG("corner s not in valid range!");
             // if (left_outline_s[i + 2] < end_s) {
@@ -890,14 +891,12 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       for (size_t i = 0; i < ref_traj_points_.size(); i++) {
         const auto &traj_point = ref_traj_points_[i];
         const double ego_yaw = traj_point.heading_angle;
-        const double ego_center_x =
-            traj_point.x +
+        const double ego_center_x = traj_point.x +
             std::cos(ego_yaw) * vehicle_param.rear_axle_to_center;
-        const double ego_center_y =
-            traj_point.y +
+        const double ego_center_y = traj_point.y +
             std::sin(ego_yaw) * vehicle_param.rear_axle_to_center;
-        const Box2d ego_box({ego_center_x, ego_center_y}, ego_yaw,
-                            vehicle_param.length, vehicle_param.max_width);
+        const Box2d ego_box(
+          {ego_center_x, ego_center_y}, ego_yaw, vehicle_param.length, vehicle_param.max_width);
         std::pair<double, double> ego_lbuffer{traj_point.s, half_ego_width};
         std::pair<double, double> ego_rbuffer{traj_point.s, -half_ego_width};
         std::vector<planning_math::Vec2d> frenet_corners;
@@ -906,7 +905,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
           Point2D frenet_corner, cart_corner;
           cart_corner.x = pt.x();
           cart_corner.y = pt.y();
-          if (frenet_coord->XYToSL(cart_corner, frenet_corner)) {
+          if(frenet_coord->XYToSL(cart_corner, frenet_corner)){
             if (frenet_corner.x > traj_point.s) {
               if (frenet_corner.y > ego_lbuffer.second) {
                 ego_lbuffer.first = frenet_corner.x;
@@ -919,8 +918,7 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
             }
           }
         }
-        if ((ego_lbuffer.first <= left_outline_s.back()) ||
-            (ego_rbuffer.first <= right_outline_s.back())) {
+        if ((ego_lbuffer.first <= left_outline_s.back()) || (ego_rbuffer.first <= right_outline_s.back())) {
           continue;
           // LOG_DEBUG("corner s not in valid range!");
           // if (left_outline_s[i + 2] < end_s) {
@@ -949,10 +947,8 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
   right_outline_s.emplace_back(right_outline_s.back() + 5.0);
   right_outline_l.emplace_back(-half_ego_width);
   // result buffer
-  lbuffer_s_spline_.set_points(left_outline_s, left_outline_l,
-                               pnc::mathlib::spline::linear);
-  rbuffer_s_spline_.set_points(right_outline_s, right_outline_l,
-                               pnc::mathlib::spline::linear);
+  lbuffer_s_spline_.set_points(left_outline_s, left_outline_l, pnc::mathlib::spline::linear);
+  rbuffer_s_spline_.set_points(right_outline_s, right_outline_l, pnc::mathlib::spline::linear);
 
   auto &last_traj_points = session_->mutable_planning_context()
                                ->mutable_last_planning_result()
@@ -1043,16 +1039,15 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     // const Box2d history_ego_box(
     //   {history_ego_center_x, history_ego_center_y},
     //  history_ego_yaw, vehicle_param.length, vehicle_param.max_width);
-    // std::pair<double, double> history_ego_buffer{half_ego_width,
-    // -half_ego_width}; std::vector<planning_math::Vec2d> frenet_corners; for
-    // (auto &pt : history_ego_box.GetAllCorners()) {
+    // std::pair<double, double> history_ego_buffer{half_ego_width, -half_ego_width};
+    // std::vector<planning_math::Vec2d> frenet_corners;
+    // for (auto &pt : history_ego_box.GetAllCorners()) {
     //   Point2D frenet_corner, cart_corner;
     //   cart_corner.x = pt.x();
     //   cart_corner.y = pt.y();
     //   if(frenet_coord->XYToSL(cart_corner, frenet_corner)){
-    //     history_ego_buffer.first = std::max(history_ego_buffer.first,
-    //     frenet_corner.y); history_ego_buffer.second =
-    //     std::min(history_ego_buffer.second, frenet_corner.y);
+    //     history_ego_buffer.first = std::max(history_ego_buffer.first, frenet_corner.y);
+    //     history_ego_buffer.second = std::min(history_ego_buffer.second, frenet_corner.y);
     //   }
     // }
     // vehicle_dynamic_buffer_.emplace_back(history_ego_buffer);
@@ -1112,8 +1107,7 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
   std::array<std::vector<std::pair<int, Polygon2d>>, 2> groundline_polygons;
   std::array<std::vector<std::pair<int, Polygon2d>>, 2> parking_space_polygons;
 
-  ConstructStaticObstacleTotalPolygons(groundline_polygons,
-                                       parking_space_polygons);
+  ConstructStaticObstacleTotalPolygons(groundline_polygons, parking_space_polygons);
 
   // 后面根据实际情况，将parking-space与groundline逻辑合并
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
@@ -1133,107 +1127,70 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
         Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
 
     // double extra_soft_buffer = config_.extra_soft_buffer2groundline;
-    // double extra_hard_buffer =
-    // std::fabs(ref_path_points_[i].path_point.kappa) /
+    // double extra_hard_buffer = std::fabs(ref_path_points_[i].path_point.kappa) /
     //     config_.max_ref_curvature * 0.2;
-    double extra_soft_buffer =
-        std::max(std::fabs(ref_path_points_[i].path_point.kappa()) /
-                     config_.max_ref_curvature,
-                 config_.extra_soft_buffer2groundline);
+    double extra_soft_buffer = std::max(std::fabs(ref_path_points_[i].path_point.kappa()) / config_.max_ref_curvature,
+        config_.extra_soft_buffer2groundline);
     double extra_hard_buffer = config_.extra_hard_buffer2groundline;
 
-    // Bound soft_bound_groundline{-kDefaultDistanceToRoad,
-    // kDefaultDistanceToRoad}; Bound
-    // hard_bound_groundline{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    Bound soft_bound_parking_space{-kDefaultDistanceToRoad,
-                                   kDefaultDistanceToRoad};
-    // Bound hard_bound_parking_space{-kDefaultDistanceToRoad,
-    // kDefaultDistanceToRoad};
+    // Bound soft_bound_groundline{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    // Bound hard_bound_groundline{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    Bound soft_bound_parking_space{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
+    // Bound hard_bound_parking_space{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     for (int direction = 0; direction < 2; direction++) {
       bool is_left = direction == 0;
       // ObstacleBorderInfo groundline_obstacle_border =
-      //   hpp_general_lateral_decider_utils::GetNearestObstacleBorder(care_polygon,
-      //   care_area_s_start,
-      //                            care_area_s_end,
-      //                            groundline_polygons[direction], is_left,
-      //                            false, false, i, ref_traj_points_);
+      //   hpp_general_lateral_decider_utils::GetNearestObstacleBorder(care_polygon, care_area_s_start,
+      //                            care_area_s_end, groundline_polygons[direction],
+      //                            is_left, false, false, i, ref_traj_points_);
       ObstacleBorderInfo parking_space_border =
-          hpp_general_lateral_decider_utils::GetNearestObstacleBorder(
-              care_polygon, care_area_s_start, care_area_s_end,
-              parking_space_polygons[direction], is_left, false, false, i,
-              ref_traj_points_);
+        hpp_general_lateral_decider_utils::GetNearestObstacleBorder(care_polygon, care_area_s_start,
+                                 care_area_s_end, parking_space_polygons[direction],
+                                 is_left, false, false, i, ref_traj_points_);
       if (is_left) {
         // hard_bound_groundline.upper =
-        //   std::fmin(hard_bound_groundline.upper,
-        //   groundline_obstacle_border.obstacle_border - half_ego_width -
-        //   extra_hard_buffer);
+        //   std::fmin(hard_bound_groundline.upper, groundline_obstacle_border.obstacle_border - half_ego_width - extra_hard_buffer);
         // hard_bound_parking_space.upper =
-        //   std::fmin(hard_bound_parking_space.upper,
-        //   parking_space_border.obstacle_border - half_ego_width -
-        //   extra_hard_buffer);
+        //   std::fmin(hard_bound_parking_space.upper, parking_space_border.obstacle_border - half_ego_width - extra_hard_buffer);
         // soft_bound_groundline.upper =
-        //   std::fmin(soft_bound_groundline.upper,
-        //   groundline_obstacle_border.obstacle_border - half_ego_width -
-        //   extra_soft_buffer);
+        //   std::fmin(soft_bound_groundline.upper, groundline_obstacle_border.obstacle_border - half_ego_width - extra_soft_buffer);
         soft_bound_parking_space.upper =
-            std::fmin(soft_bound_parking_space.upper,
-                      parking_space_border.obstacle_border - half_ego_width -
-                          extra_soft_buffer);
+          std::fmin(soft_bound_parking_space.upper, parking_space_border.obstacle_border - half_ego_width - extra_soft_buffer);
 
         // hard_bounds_[i].emplace_back(WeightedBound{
-        // -kDefaultDistanceToRoad, hard_bound_groundline.upper,
-        // config_.kHardBoundWeight,
-        // BoundInfo{groundline_obstacle_border.obstacle_id,
-        // BoundType::GROUNDLINE}}); hard_bounds_[i].emplace_back(WeightedBound{
-        // -kDefaultDistanceToRoad, hard_bound_parking_space.upper,
-        // config_.kHardBoundWeight, BoundInfo{parking_space_border.obstacle_id,
-        // BoundType::PARKING_SPACE}});
+        // -kDefaultDistanceToRoad, hard_bound_groundline.upper, config_.kHardBoundWeight,
+        // BoundInfo{groundline_obstacle_border.obstacle_id, BoundType::GROUNDLINE}});
+        // hard_bounds_[i].emplace_back(WeightedBound{
+        // -kDefaultDistanceToRoad, hard_bound_parking_space.upper, config_.kHardBoundWeight,
+        // BoundInfo{parking_space_border.obstacle_id, BoundType::PARKING_SPACE}});
         // soft_bounds_[i].emplace_back(WeightedBound{
-        // -kDefaultDistanceToRoad, soft_bound_groundline.upper,
-        // config_.kPhysicalBoundWeight,
-        // BoundInfo{groundline_obstacle_border.obstacle_id,
-        // BoundType::GROUNDLINE}});
+        // -kDefaultDistanceToRoad, soft_bound_groundline.upper, config_.kPhysicalBoundWeight,
+        // BoundInfo{groundline_obstacle_border.obstacle_id, BoundType::GROUNDLINE}});
         soft_bounds_[i].emplace_back(WeightedBound{
-            -kDefaultDistanceToRoad, soft_bound_parking_space.upper,
-            config_.kPhysicalBoundWeight,
-            BoundInfo{parking_space_border.obstacle_id,
-                      BoundType::PARKING_SPACE}});
+        -kDefaultDistanceToRoad, soft_bound_parking_space.upper, config_.kPhysicalBoundWeight,
+        BoundInfo{parking_space_border.obstacle_id, BoundType::PARKING_SPACE}});
       } else {
         // hard_bound_groundline.lower =
-        //   std::fmax(hard_bound_groundline.lower,
-        //   groundline_obstacle_border.obstacle_border + half_ego_width +
-        //   extra_hard_buffer);
+        //   std::fmax(hard_bound_groundline.lower, groundline_obstacle_border.obstacle_border + half_ego_width + extra_hard_buffer);
         // hard_bound_parking_space.lower =
-        //   std::fmax(hard_bound_parking_space.lower,
-        //   parking_space_border.obstacle_border + half_ego_width +
-        //   extra_hard_buffer);
+        //   std::fmax(hard_bound_parking_space.lower, parking_space_border.obstacle_border + half_ego_width + extra_hard_buffer);
         // soft_bound_groundline.lower =
-        //   std::fmax(soft_bound_groundline.lower,
-        //   groundline_obstacle_border.obstacle_border + half_ego_width +
-        //   extra_soft_buffer);
+        //   std::fmax(soft_bound_groundline.lower, groundline_obstacle_border.obstacle_border + half_ego_width + extra_soft_buffer);
         soft_bound_parking_space.lower =
-            std::fmax(soft_bound_parking_space.lower,
-                      parking_space_border.obstacle_border + half_ego_width +
-                          extra_soft_buffer);
+          std::fmax(soft_bound_parking_space.lower, parking_space_border.obstacle_border + half_ego_width + extra_soft_buffer);
 
         // hard_bounds_[i].emplace_back(WeightedBound{
-        // hard_bound_groundline.lower, kDefaultDistanceToRoad,
-        // config_.kHardBoundWeight,
-        // BoundInfo{groundline_obstacle_border.obstacle_id,
-        // BoundType::GROUNDLINE}}); hard_bounds_[i].emplace_back(WeightedBound{
-        // hard_bound_parking_space.lower, kDefaultDistanceToRoad,
-        // config_.kHardBoundWeight, BoundInfo{parking_space_border.obstacle_id,
-        // BoundType::PARKING_SPACE}});
+        // hard_bound_groundline.lower, kDefaultDistanceToRoad, config_.kHardBoundWeight,
+        // BoundInfo{groundline_obstacle_border.obstacle_id, BoundType::GROUNDLINE}});
+        // hard_bounds_[i].emplace_back(WeightedBound{
+        // hard_bound_parking_space.lower, kDefaultDistanceToRoad, config_.kHardBoundWeight,
+        // BoundInfo{parking_space_border.obstacle_id, BoundType::PARKING_SPACE}});
         // soft_bounds_[i].emplace_back(WeightedBound{
-        // soft_bound_groundline.lower,  kDefaultDistanceToRoad,
-        // config_.kPhysicalBoundWeight,
-        // BoundInfo{groundline_obstacle_border.obstacle_id,
-        // BoundType::GROUNDLINE}});
-        soft_bounds_[i].emplace_back(
-            WeightedBound{soft_bound_parking_space.lower,
-                          kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
-                          BoundInfo{parking_space_border.obstacle_id,
-                                    BoundType::PARKING_SPACE}});
+        // soft_bound_groundline.lower,  kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+        // BoundInfo{groundline_obstacle_border.obstacle_id, BoundType::GROUNDLINE}});
+        soft_bounds_[i].emplace_back(WeightedBound{
+        soft_bound_parking_space.lower, kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
+        BoundInfo{parking_space_border.obstacle_id, BoundType::PARKING_SPACE}});
       }
     }
   }
@@ -1374,11 +1331,9 @@ void HppGeneralLateralDecider::GetDesireRoadExtraBuffer(
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
 
   *left_road_extra_buffer =
-      interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-             config_.extra_collision_lateral_buffer);
+      interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp, config_.extra_collision_lateral_buffer);
   *right_road_extra_buffer =
-      interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-             config_.extra_collision_lateral_buffer);
+      interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp, config_.extra_collision_lateral_buffer);
   // *left_road_extra_buffer =
   //     std::min(0.2, (max_collision_t - left_collision_t) * 0.1);
   // *right_road_extra_buffer =
@@ -1542,8 +1497,8 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->mutable_planning_context()
-                                          ->lateral_obstacle_decider_output()
-                                          .lat_obstacle_decision;
+                                    ->lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
 
@@ -1597,8 +1552,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
         ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
     const double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
-    // std::max((front_lon_buf_dis - std::fabs(traj_point.curvature *
-    // config_.ref_curvature_factor)), 0.0);
+        // std::max((front_lon_buf_dis - std::fabs(traj_point.curvature * config_.ref_curvature_factor)), 0.0);
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
@@ -1639,25 +1593,20 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
 
     GenerateObstaclePreliminaryDecision(
         ego_l, ref_path_points_[i].distance_to_right_lane_border,
-        ref_path_points_[i].distance_to_left_lane_border, care_overlap_polygon,
-        lat_buf_dis, b_overlap_side, init_lon_no_overlap, is_nudge_left,
-        is_cross_obj, pre_lateral_decision, reset_conflict_decision,
-        obstacle_decision, lat_decision, lon_decision);
+        ref_path_points_[i].distance_to_left_lane_border, care_overlap_polygon, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+        is_nudge_left, is_cross_obj, pre_lateral_decision,
+        reset_conflict_decision, obstacle_decision, lat_decision, lon_decision);
     has_lat_decision =
         has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
     has_lon_decision =
         has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
 
-    AddObstacleDecisionBound(obstacle->id(), t, bound_type,
-                             care_overlap_polygon, lat_buf_dis, lat_decision,
-                             lon_decision, obstacle_decision, true,
-                             is_update_hard_bound);
+    AddObstacleDecisionBound(obstacle->id(), t, bound_type, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision,
+                            obstacle_decision, true, is_update_hard_bound);
   }
 }
 
-bool HppGeneralLateralDecider::IsCutoutSideObstacle(
-    const std::shared_ptr<FrenetObstacle> obstacle,
-    Polygon2d &care_overlap_polygon) {
+bool HppGeneralLateralDecider::IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle, Polygon2d &care_overlap_polygon) {
   if (plan_history_traj_.empty()) {
     return false;
   }
@@ -1675,9 +1624,10 @@ bool HppGeneralLateralDecider::IsCutoutSideObstacle(
     const double care_area_s_end = ego_s + 10;
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
-    const double care_area_length = care_area_s_end - care_area_s_start;
-    const auto care_polygon =
-        Polygon2d(Box2d(care_area_center, 0, care_area_length, l_care_width));
+    const double care_area_length =
+        care_area_s_end - care_area_s_start;
+    const auto care_polygon = Polygon2d(
+        Box2d(care_area_center, 0, care_area_length, l_care_width));
     Polygon2d obstacle_sl_polygon;
     auto ok = obstacle->get_polygon_at_time_tmp(0, reference_path_ptr_,
                                                 obstacle_sl_polygon);
@@ -1686,45 +1636,35 @@ bool HppGeneralLateralDecider::IsCutoutSideObstacle(
       return false;
     }
     if (!obstacle_sl_polygon.ComputeOverlap(care_polygon,
-                                            &care_overlap_polygon)) {
+                                                &care_overlap_polygon)) {
       return false;
     }
-    if ((obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0) &&
-        fabs(obstacle->frenet_velocity_l()) > 0.3) {
+    if ((obstacle->frenet_l() * obstacle->frenet_velocity_l() > 0) && fabs(obstacle->frenet_velocity_l()) > 0.3) {
       return true;
     }
   }
   return false;
 }
 
-double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(
-    const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left) {
-  bool in_intersection = session_->environmental_model()
-                             .get_virtual_lane_manager()
-                             ->GetIntersectionState() ==
-                         common::IntersectionState::IN_INTERSECTION;
+double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(const std::shared_ptr<FrenetObstacle> obstacle, bool is_nudge_left) {
+  bool in_intersection = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState() == common::IntersectionState::IN_INTERSECTION;
   if (in_intersection) {
     return 0.0;
   }
 
-  const double relative_position =
-      obstacle->frenet_obstacle_boundary().s_end -
-      reference_path_ptr_->get_ego_frenet_boundary().s_start;
+  const double relative_position = obstacle->frenet_obstacle_boundary().s_end - reference_path_ptr_->get_ego_frenet_boundary().s_start;
   double extra_relative_position_decrease_buffer = 0.0;
   if ((is_nudge_left && ego_frenet_state_.heading_angle() < 0.03) ||
       (!is_nudge_left && ego_frenet_state_.heading_angle() > -0.03)) {
-    extra_relative_position_decrease_buffer =
-        interp(relative_position, config_._relative_positon_bp,
-               config_._relative_positon_decrease_extra_buffer);
+    extra_relative_position_decrease_buffer = interp(relative_position, config_._relative_positon_bp, config_._relative_positon_decrease_extra_buffer);
   }
+
 
   double extra_relative_v_decrease_buffer = 0.0;
   if (relative_position <= 2.5 &&
       ((is_nudge_left && ego_frenet_state_.heading_angle() < 0.03) ||
-       (!is_nudge_left && ego_frenet_state_.heading_angle() > -0.03))) {
-    extra_relative_v_decrease_buffer = interp(
-        obstacle->frenet_velocity_s() - ego_frenet_state_.velocity_s(),
-        config_._relative_v_bp, config_._relative_v_decrease_extra_buffer);
+      (!is_nudge_left && ego_frenet_state_.heading_angle() > -0.03))) {
+    extra_relative_v_decrease_buffer = interp(obstacle->frenet_velocity_s() - ego_frenet_state_.velocity_s(), config_._relative_v_bp, config_._relative_v_decrease_extra_buffer);
   }
 
   double extra_type_decrease_buffer = 0.0;
@@ -1733,16 +1673,13 @@ double HppGeneralLateralDecider::CalculateExtraDecreaseBuffer(
   }
 
   if (extra_relative_position_decrease_buffer > 0.0) {
-    JSON_DEBUG_VALUE("extra_relative_position_decrease_buffer",
-                     extra_relative_position_decrease_buffer);
+    JSON_DEBUG_VALUE("extra_relative_position_decrease_buffer", extra_relative_position_decrease_buffer);
   }
   if (extra_relative_v_decrease_buffer > 0.0) {
-    JSON_DEBUG_VALUE("extra_relative_v_decrease_buffer",
-                     extra_relative_v_decrease_buffer);
+    JSON_DEBUG_VALUE("extra_relative_v_decrease_buffer", extra_relative_v_decrease_buffer);
   }
 
-  return extra_relative_position_decrease_buffer +
-         extra_relative_v_decrease_buffer + extra_type_decrease_buffer;
+  return extra_relative_position_decrease_buffer + extra_relative_v_decrease_buffer + extra_type_decrease_buffer;
 }
 
 void HppGeneralLateralDecider::GenerateDynamicObstaclesBoundary(
@@ -1776,12 +1713,9 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto &lat_obstacle_decision = session_->mutable_planning_context()
-                                          ->lateral_obstacle_decider_output()
-                                          .lat_obstacle_decision;
-  bool in_intersection = session_->environmental_model()
-                             .get_virtual_lane_manager()
-                             ->GetIntersectionState() ==
-                         common::IntersectionState::IN_INTERSECTION;
+                                    ->lateral_obstacle_decider_output()
+                                    .lat_obstacle_decision;
+  bool in_intersection = session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState() == common::IntersectionState::IN_INTERSECTION;
 
   // Step 1) configs
   const auto &l_care_width = config_.l_care_width;
@@ -1826,15 +1760,13 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
   // double limit_overlap_max_y = 1000;
   // hack: consider that the obstacle is not completely over the car
   Polygon2d limit_care_overlap_polygon;
-  bool is_cut_out_side_obstacle =
-      IsCutoutSideObstacle(obstacle, limit_care_overlap_polygon);
+  bool is_cut_out_side_obstacle = IsCutoutSideObstacle(obstacle, limit_care_overlap_polygon);
   BoundType bound_type = BoundType::DYNAMIC_AGENT;
   if (is_cut_out_side_obstacle) {
     bound_type = BoundType::ADJACENT_AGENT;
   }
 
-  double extra_decrease_buffer =
-      CalculateExtraDecreaseBuffer(obstacle, is_nudge_left);
+  double extra_decrease_buffer = CalculateExtraDecreaseBuffer(obstacle, is_nudge_left);
 
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
@@ -1877,24 +1809,20 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
 
     if (is_nudge_left) {
       if (is_cut_out_side_obstacle) {
-        care_overlap_polygon =
-            care_overlap_polygon.min_y() > limit_care_overlap_polygon.min_y()
-                ? care_overlap_polygon
-                : limit_care_overlap_polygon;
+        care_overlap_polygon = care_overlap_polygon.min_y() > limit_care_overlap_polygon.min_y() ?
+          care_overlap_polygon : limit_care_overlap_polygon;
       }
     } else {
       if (is_cut_out_side_obstacle) {
-        care_overlap_polygon =
-            care_overlap_polygon.max_y() > limit_care_overlap_polygon.max_y()
-                ? limit_care_overlap_polygon
-                : care_overlap_polygon;
+        care_overlap_polygon = care_overlap_polygon.max_y() > limit_care_overlap_polygon.max_y() ?
+          limit_care_overlap_polygon : care_overlap_polygon;
       }
     }
 
     double lat_buf_dis =
         hpp_general_lateral_decider_utils::CalDesireLateralDistance(
-            ego_cart_state_manager_->ego_v(), t, 0, obstacle, is_nudge_left,
-            in_intersection, config_);
+            ego_cart_state_manager_->ego_v(), t, 0, obstacle,
+            is_nudge_left, in_intersection, config_);
     // todo: high speed vehicle
     // do decision
     auto lat_decision = LatObstacleDecisionType::IGNORE;
@@ -1917,19 +1845,17 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
       for (auto index : indexes) {
         GenerateObstaclePreliminaryDecision(
             ego_l, ref_path_points_[index].distance_to_right_lane_border,
-            ref_path_points_[index].distance_to_left_lane_border,
-            care_overlap_polygon, lat_buf_dis, b_overlap_side,
-            init_lon_no_overlap, is_nudge_left, is_cross_obj,
-            pre_lateral_decision, reset_conflict_decision, obstacle_decision,
-            lat_decision, lon_decision);
+            ref_path_points_[index].distance_to_left_lane_border, care_overlap_polygon, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+            is_nudge_left, is_cross_obj, pre_lateral_decision,
+            reset_conflict_decision, obstacle_decision, lat_decision,
+            lon_decision);
         has_lat_decision =
             has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
         has_lon_decision =
             has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
       }
-      AddObstacleDecisionBound(obstacle->id(), t, bound_type,
-                               care_overlap_polygon, lat_buf_dis, lat_decision,
-                               lon_decision, obstacle_decision, false);
+      AddObstacleDecisionBound(obstacle->id(), t, bound_type, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision,
+                              obstacle_decision, false);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -1941,19 +1867,17 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
         for (auto index : indexes) {
           GenerateObstaclePreliminaryDecision(
               ego_l, ref_path_points_[index].distance_to_right_lane_border,
-              ref_path_points_[index].distance_to_left_lane_border,
-              care_overlap_polygon, lat_buf_dis, b_overlap_side,
-              init_lon_no_overlap, is_nudge_left, is_cross_obj,
-              pre_lateral_decision, reset_conflict_decision, obstacle_decision,
-              lat_decision, lon_decision);
-          has_lat_decision = has_lat_decision ||
-                             lat_decision != LatObstacleDecisionType::IGNORE;
-          has_lon_decision = has_lon_decision ||
-                             lon_decision != LonObstacleDecisionType::IGNORE;
+              ref_path_points_[index].distance_to_left_lane_border, care_overlap_polygon, lat_buf_dis, b_overlap_side, init_lon_no_overlap,
+              is_nudge_left, is_cross_obj, pre_lateral_decision,
+              reset_conflict_decision, obstacle_decision, lat_decision,
+              lon_decision);
+          has_lat_decision =
+              has_lat_decision || lat_decision != LatObstacleDecisionType::IGNORE;
+          has_lon_decision =
+              has_lon_decision || lon_decision != LonObstacleDecisionType::IGNORE;
         }
-        AddObstacleDecisionBound(
-            obstacle->id(), t, bound_type, care_overlap_polygon, lat_buf_dis,
-            lat_decision, lon_decision, obstacle_decision, false);
+        AddObstacleDecisionBound(obstacle->id(), t, bound_type, care_overlap_polygon, lat_buf_dis, lat_decision, lon_decision,
+                                obstacle_decision, false);
       }
     }
   }
@@ -1961,9 +1885,8 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
 
 void HppGeneralLateralDecider::GenerateObstaclePreliminaryDecision(
     double ego_l, double distance_to_right_lane_border,
-    double distance_to_left_lane_border, const Polygon2d &overlap_polygon,
-    double lat_buf_dis, bool b_overlap_side, bool init_lon_no_overlap,
-    bool is_nudge_left, bool is_cross_obj,
+    double distance_to_left_lane_border, const Polygon2d &overlap_polygon, double lat_buf_dis, bool b_overlap_side,
+    bool init_lon_no_overlap, bool is_nudge_left, bool is_cross_obj,
     LatObstacleDecisionType pre_lateral_decision, bool &reset_conflict_decision,
     ObstacleDecision &obstacle_decision, LatObstacleDecisionType &lat_decision,
     LonObstacleDecisionType &lon_decision) {
@@ -2037,8 +1960,7 @@ void HppGeneralLateralDecider::GenerateObstaclePreliminaryDecision(
 }
 
 void HppGeneralLateralDecider::AddObstacleDecisionBound(
-    int id, double t, BoundType bound_type, const Polygon2d &overlap_polygon,
-    double lat_buf_dis, LatObstacleDecisionType lat_decision,
+    int id, double t,  BoundType bound_type, const Polygon2d &overlap_polygon, double lat_buf_dis, LatObstacleDecisionType lat_decision,
     LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision,
     bool is_static, bool is_update_hard_bound) {
   const double l_offset_limit = 10.0;
@@ -2181,8 +2103,7 @@ void HppGeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < hard_bounds_.size(); i++) {
     std::pair<double, double> hard_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, hard_bounds_[i], hard_bound,
-                     hard_bound_info);
+    PostProcessBound(planning_init_point_l, hard_bounds_[i], hard_bound, hard_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
@@ -2201,8 +2122,7 @@ void HppGeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < soft_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, soft_bounds_[i], soft_bound,
-                     soft_bound_info);
+    PostProcessBound(planning_init_point_l, soft_bounds_[i], soft_bound, soft_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(soft_bound, soft_bound_info);
     }
@@ -2359,20 +2279,19 @@ void HppGeneralLateralDecider::PostProcessBound(
     double lower = lower_bounds[lower_index].lower;
     double upper = upper_bounds[upper_index].upper;
     const int lower_priority =
-        hpp_general_lateral_decider_utils::GetBoundTypePriority(lower_type);
+        hpp_general_lateral_decider_utils::GetBoundTypePriority(
+            lower_type);
     const int upper_priority =
-        hpp_general_lateral_decider_utils::GetBoundTypePriority(upper_type);
-    const double lower_weight =
-        hpp_general_lateral_decider_utils::GetBoundWeight(
-            lower_type, config_.map_bound_weight);
-    const double upper_weight =
-        hpp_general_lateral_decider_utils::GetBoundWeight(
-            upper_type, config_.map_bound_weight);
+        hpp_general_lateral_decider_utils::GetBoundTypePriority(
+            upper_type);
+    const double lower_weight = hpp_general_lateral_decider_utils::GetBoundWeight(
+        lower_type, config_.map_bound_weight);
+    const double upper_weight = hpp_general_lateral_decider_utils::GetBoundWeight(
+        upper_type, config_.map_bound_weight);
     // start compare
     if (upper >= lower) {  // <==> (upper_bound >= lower_bound)
       // end condition 2.upper > upper bound >= lower boud > lower
-      if (((upper > upper_bound) && (lower < lower_bound)) ||
-          (upper_bound == lower_bound)) {
+      if (((upper > upper_bound) && (lower < lower_bound)) || (upper_bound == lower_bound)) {
         break;
       }
 
@@ -2442,8 +2361,7 @@ void HppGeneralLateralDecider::PostProcessBound(
         if (upper_type == BoundType::ADJACENT_AGENT) {
           if (upper_bound < planning_init_point_l) {
             upper_bound = planning_init_point_l;
-            lower_bound =
-                std::min(planning_init_point_l, std::max(lower, lower_bound));
+            lower_bound = std::min(planning_init_point_l, std::max(lower, lower_bound));
             use_upper_init_protect = true;
             // continue upper
             upper_index += 1;
@@ -2489,12 +2407,10 @@ void HppGeneralLateralDecider::PostProcessBound(
       } else {
         // double mid_bound = std::min(
         //     std::max(upper + (std::max(lower - upper, 0.0) *
-        //                       (lower_weight / (upper_weight +
-        //                       lower_weight))),
+        //                       (lower_weight / (upper_weight + lower_weight))),
         //              lower_bound), upper_bound);
-        double mid_bound =
-            upper + (std::max(lower - upper, 0.0) *
-                     (lower_weight / (upper_weight + lower_weight)));
+        double mid_bound = upper + (std::max(lower - upper, 0.0) *
+                              (lower_weight / (upper_weight + lower_weight)));
         if (use_upper_init_protect) {
           mid_bound = std::min(mid_bound, planning_init_point_l);
         }
@@ -2608,12 +2524,9 @@ void HppGeneralLateralDecider::SaveLatDebugInfo(
       ->CopyFrom(lat_debug_info_);
 }
 
-void HppGeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+void HppGeneralLateralDecider::PostProcessReferenceTrajBySoftBound(const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    ref_traj_points_[i].l =
-        std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
-                 frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l = std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first), frenet_soft_bounds[i].second);
   }
 }
 
@@ -2935,8 +2848,7 @@ bool HppGeneralLateralDecider::IsAgentPredLonOverlapWithPlanPath(
   return false;
 }
 
-bool HppGeneralLateralDecider::IsLonOverlap(
-    const std::shared_ptr<FrenetObstacle> obstacle) {
+bool HppGeneralLateralDecider::IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle) {
   const double obstacle_s_start = obstacle->frenet_obstacle_boundary().s_start;
   const double obstacle_s_end = obstacle->frenet_obstacle_boundary().s_end;
 
@@ -3072,16 +2984,14 @@ void HppGeneralLateralDecider::ConstructStaticObstacleTotalPolygons(
   // Step1: 主要区分 lines 类型 和 polygon 类型（slot &
   // pillar），生成所有polygons Step 1.1 : 处理 lines
   // for (auto &obstacle : reference_path_ptr->get_free_space_ground_lines()) {
-  //   hpp_general_lateral_decider_utils::MakeLinePolygons(obstacle,
-  //   reference_path_ptr, groundline_polygons[0],
+  //   hpp_general_lateral_decider_utils::MakeLinePolygons(obstacle, reference_path_ptr, groundline_polygons[0],
   //                    groundline_polygons[1]);
   // }
   // Step 1.2 : 处理 polygon
   for (auto &obstacle : reference_path_ptr->get_parking_space()) {
     const planning_math::Polygon2d &polygon = obstacle->perception_polygon();
-    hpp_general_lateral_decider_utils::MakePolygon(
-        obstacle->id(), frenet_coord, polygon, parking_space_polygons[0],
-        parking_space_polygons[1]);
+    hpp_general_lateral_decider_utils::MakePolygon(obstacle->id(), frenet_coord, polygon,
+                parking_space_polygons[0], parking_space_polygons[1]);
   }
 }
 }  // namespace planning

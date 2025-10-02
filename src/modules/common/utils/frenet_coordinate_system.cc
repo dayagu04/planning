@@ -143,8 +143,8 @@ double FrenetCoordinateSystem::HessianSquaredDistanceToPointOnCurve(
 
 // Find the offset that has the minimal distance to the given point
 double FrenetCoordinateSystem::FindMinDistanceOffsetOnCurve(
-    const planning::Point2D& cart0, double yaw, bool has_yaw,
-    bool has_heuristics, double s_begin, double s_end) const {
+    const planning::Point2D& cart0, double yaw, bool has_yaw, bool has_heuristics,
+    double s_begin, double s_end) const {
   double squared_distance = std::numeric_limits<double>::infinity();
   double shortest_s = 0.0;
   double check_s_begin{0.0}, check_s_end{m_length};

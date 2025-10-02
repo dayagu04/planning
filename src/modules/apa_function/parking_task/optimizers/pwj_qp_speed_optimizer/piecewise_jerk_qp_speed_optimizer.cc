@@ -233,7 +233,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     piecewise_jerk_problem.set_end_state_constriants(end_state_ref);
   }
 
-    // debug info
+  // debug info
 #if DECIDER_DEBUG
   DebugRef(t_ref, x_ref, dx_ref);
   DebugLinearConstraints(x_ref, ds_bounds);

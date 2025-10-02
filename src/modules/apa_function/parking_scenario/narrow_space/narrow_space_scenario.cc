@@ -675,7 +675,7 @@ const int NarrowSpaceScenario::PublishHybridAstarDebugInfo(
     complete_path_point_global_vec_.emplace_back(gl_pt);
   }
 
-    // do not publish it.
+  // do not publish it.
 #if 0
   RecordSearchNode(tf);
 #endif

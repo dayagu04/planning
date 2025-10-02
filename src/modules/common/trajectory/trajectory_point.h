@@ -173,8 +173,8 @@ class TrajectoryPoint : public planning_math::PathPoint {
   // double relative_time_ = 0.0;  // s
 };
 
-TrajectoryPoint InterpolateUsingLinearApproximation(const TrajectoryPoint& p0,
-                                                    const TrajectoryPoint& p1,
+TrajectoryPoint InterpolateUsingLinearApproximation(const TrajectoryPoint &p0,
+                                                    const TrajectoryPoint &p1,
                                                     const double s);
 
 }  // namespace trajectory

@@ -41,7 +41,7 @@ class AgentHeadwayDecider : public Task {
       const std::shared_ptr<EgoStateManager>& ego_state_manager,
       const agent::Agent* agent);
 
-  double CalculateCutinHeadway(const agent::Agent* agent,
+  double CalculateCutinHeadway(const agent::Agent* agent, 
                                const double ego_velocity,
                                const double current_headway);
 

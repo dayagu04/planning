@@ -10,9 +10,9 @@
 
 #include "math/math_utils.h"
 #include "speed/st_point.h"
-#include "src/common/vec2d.h"
 #include "src/modules/common/math/box2d.h"
 #include "src/modules/common/math/line_segment2d.h"
+#include "src/common/vec2d.h"
 
 namespace planning {
 

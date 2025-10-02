@@ -845,4 +845,4 @@ void AgentNodeManager::RefineObjInitState(const int64_t &obj_id,
   // map_gs_care_obstacles_.insert(std::make_pair(obj_id, tmp_obstacle));
   return;
 }
-}  // namespace planning
+}

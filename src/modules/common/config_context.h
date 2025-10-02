@@ -5,11 +5,11 @@
 #include <iterator>
 #include <unordered_map>
 
-#include "log_glog.h"
 #include "macro.h"
 #include "nlohmann_json.hpp"
 #include "scene_type_config.pb.h"
 #include "utils/file.h"
+#include "log_glog.h"
 
 namespace planning {
 namespace common {
@@ -52,7 +52,8 @@ class ConfigurationContext {
     }
     bool ret = common::util::GetProtoFromFile(config_file_dir + "/scene.pb.txt",
                                               &scene_type_config_);
-    ILOG_DEBUG << "scene_type_config=" << scene_type_config_.ShortDebugString();
+    ILOG_DEBUG << "scene_type_config=" << scene_type_config_.ShortDebugString()
+             ;
     return ret;
   }
 
@@ -150,7 +151,8 @@ class ConfigurationContext {
     }
     std::string vehicle_cfg_dir_temp = json_data["vehicle_cfg_dir"];
     std::string vehicle_cfg_dir = res_path + vehicle_cfg_dir_temp;
-    ILOG_INFO << "json vehicle_cfg_dir: !!!====" << vehicle_cfg_dir;
+    ILOG_INFO << "json vehicle_cfg_dir: !!!====" << vehicle_cfg_dir
+             ;
     engine_conf_.vehicle_cfg_dir = vehicle_cfg_dir;
 
     ILOG_INFO << "Load engine config DONE!";

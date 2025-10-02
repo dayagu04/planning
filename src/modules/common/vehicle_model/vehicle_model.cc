@@ -8,8 +8,8 @@
 
 // #include "config/vehicle_param_tmp.h"
 #include "config_context.h"
-#include "log_glog.h"
 #include "mjson/mjson.hpp"
+#include "log_glog.h"
 
 namespace planning {
 namespace common {

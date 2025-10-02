@@ -16,8 +16,8 @@
 #include "local_view.h"
 #include "log_glog.h"
 #include "planning_debug_info.pb.h"
-#include "time_benchmark.h"
 #include "version.h"
+#include "time_benchmark.h"
 
 namespace planning {
 
@@ -189,17 +189,17 @@ bool PlanningAdapter::Proc() {
   // input_topic_latency->set_hmi(get_latency(
   //     start_time, local_view_ptr_->hmi_inner_info.msg_header.stamp));
 
-  //   if (is_hmi_mcu_inner_info_msg_updated_) {
-  //     std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
-  //     local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
-  //     local_view_ptr_->hmi_mcu_inner_info_recv_time =
-  //         hmi_mcu_inner_info_msg_recv_time_;
-  //     is_hmi_mcu_inner_info_msg_updated_.store(false);
-  //   }
-  //   input_topic_timestamp->set_hmi(
-  //       local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
-  //   input_topic_latency->set_hmi(get_latency(
-  //       start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
+//   if (is_hmi_mcu_inner_info_msg_updated_) {
+//     std::lock_guard<std::mutex> lock(hmi_mcu_inner_msg_mutex_);
+//     local_view_ptr_->hmi_mcu_inner_info = hmi_mcu_inner_info_msg_;
+//     local_view_ptr_->hmi_mcu_inner_info_recv_time =
+//         hmi_mcu_inner_info_msg_recv_time_;
+//     is_hmi_mcu_inner_info_msg_updated_.store(false);
+//   }
+//   input_topic_timestamp->set_hmi(
+//       local_view_ptr_->hmi_mcu_inner_info.header.timestamp);
+//   input_topic_latency->set_hmi(get_latency(
+//       start_time, local_view_ptr_->hmi_mcu_inner_info.header.timestamp));
 
   // 1.7 receive parking_fusion
   if (is_parking_fusion_info_msg_updated_) {
@@ -267,8 +267,7 @@ bool PlanningAdapter::Proc() {
     ILOG_INFO << "receive sdpro_map";
   }
 
-  JSON_DEBUG_VALUE("FeedDataTimeSD",
-                   (IflyTime::Now_us() - start_time_sd) / 1000.0);
+  JSON_DEBUG_VALUE("FeedDataTimeSD", (IflyTime::Now_us() - start_time_sd) / 1000.0);
   // 1.13 receive parking_map
   //   if (is_parking_map_info_msg_updated_) {
   //     std::lock_guard<std::mutex> lock(parking_map_info_msg_mutex_);
@@ -332,8 +331,7 @@ bool PlanningAdapter::Proc() {
 
   if (planning_debug_writer_) {
     Log();
-    auto &planning_debug_data =
-        DebugInfoManager::GetInstance().GetDebugInfoPb();
+    auto &planning_debug_data = DebugInfoManager::GetInstance().GetDebugInfoPb();
     auto payload = planning_debuginfo_container->mutable_payload();
     planning_debug_data->SerializeToString(payload);
     planning_debug_writer_(*planning_debuginfo_container);
@@ -396,6 +394,7 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
       local_view_ptr_->road_info.msg_header.seq;
   msg_meta.input_list[INPUT_TOPIC::STATIC_FUSION].stamp =
       local_view_ptr_->road_info.msg_header.stamp;
+
 
   msg_meta.input_list[INPUT_TOPIC::LOCALIZATION].input_type =
       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_LOCALIZATION;
@@ -467,8 +466,8 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   msg_meta.input_list[INPUT_TOPIC::EHR].stamp =
       local_view_ptr_->sd_map_info.header().timestamp();
 
-  msg_meta.input_list[INPUT_TOPIC::TSR].input_type = iflyauto::
-      INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+  msg_meta.input_list[INPUT_TOPIC::TSR].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
   msg_meta.input_list[INPUT_TOPIC::TSR].seq =
       local_view_ptr_->perception_tsr_info.msg_header.seq;
   msg_meta.input_list[INPUT_TOPIC::TSR].stamp =
@@ -481,8 +480,8 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   msg_meta.input_list[INPUT_TOPIC::SD_PRO].stamp =
       local_view_ptr_->sdpro_map_info.header().timestamp();
 
-  msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].input_type = iflyauto::
-      INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_SCENE;
+  msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].input_type =
+      iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_SCENE;
   msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].seq =
       local_view_ptr_->perception_scene_info.msg_header.seq;
   msg_meta.input_list[INPUT_TOPIC::PERCEPTION_SCENE].stamp =
@@ -509,12 +508,12 @@ void PlanningAdapter::UpdateInputListInfo(iflyauto::MsgMeta &msg_meta) {
   msg_meta.input_list[INPUT_TOPIC::GROUND_LINE].stamp =
       local_view_ptr_->ground_line_perception.msg_header.stamp;
 
-  //   msg_meta.input_list[INPUT_TOPIC::FUSION_SPEED_BUMP].input_type =
-  //       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
-  //   msg_meta.input_list[input_list_count].seq =
-  //       local_view_ptr_->perception_tsr_info.msg_header.seq;
-  //   msg_meta.input_list[input_list_count].stamp =
-  //       local_view_ptr_->perception_tsr_info.msg_header.stamp;
+//   msg_meta.input_list[INPUT_TOPIC::FUSION_SPEED_BUMP].input_type =
+//       iflyauto::INPUT_HISTORY_TIMESTAMP_SOURCE_TYPE_PANORAMA_VIEW_CAMERA_PERCEPTION_TSR;
+//   msg_meta.input_list[input_list_count].seq =
+//       local_view_ptr_->perception_tsr_info.msg_header.seq;
+//   msg_meta.input_list[input_list_count].stamp =
+//       local_view_ptr_->perception_tsr_info.msg_header.stamp;
 
   msg_meta.input_list_size = INPUT_TOPIC::GROUND_LINE + 1;
 }
@@ -561,59 +560,56 @@ void PlanningAdapter::LogTopicLatency() {
   input_topic_latency_.set_prediction(get_latency(
       start_time_, local_view_ptr_->prediction_result.msg_header.stamp));
 
-  input_topic_latency_.set_fusion_road(
-      get_latency(start_time_, local_view_ptr_->road_info.msg_header.stamp));
+  input_topic_latency_.set_fusion_road(get_latency(
+    start_time_, local_view_ptr_->road_info.msg_header.stamp));
 
-  input_topic_latency_.set_localization(
-      get_latency(start_time_, local_view_ptr_->localization.msg_header.stamp));
+  input_topic_latency_.set_localization(get_latency(
+    start_time_, local_view_ptr_->localization.msg_header.stamp));
 
   input_topic_latency_.set_ground_line(get_latency(
-      start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
+    start_time_, local_view_ptr_->ground_line_perception.msg_header.stamp));
 
   input_topic_latency_.set_fusion_object(get_latency(
-      start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
+    start_time_, local_view_ptr_->fusion_objects_info.msg_header.stamp));
 
   input_topic_latency_.set_fusion_occupancy_object(get_latency(
-      start_time_,
-      local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp));
+    start_time_, local_view_ptr_->fusion_occupancy_objects_info.msg_header.stamp));
 
   input_topic_latency_.set_vehicle_service(get_latency(
-      start_time_,
-      local_view_ptr_->vehicle_service_output_info.msg_header.stamp));
+    start_time_, local_view_ptr_->vehicle_service_output_info.msg_header.stamp));
 
   input_topic_latency_.set_control_output(get_latency(
-      start_time_, local_view_ptr_->control_output.msg_header.stamp));
+    start_time_, local_view_ptr_->control_output.msg_header.stamp));
 
   input_topic_latency_.set_parking_fusion(get_latency(
-      start_time_, local_view_ptr_->parking_fusion_info.msg_header.stamp));
+    start_time_, local_view_ptr_->parking_fusion_info.msg_header.stamp));
 
   input_topic_latency_.set_uss_perception(get_latency(
-      start_time_, local_view_ptr_->uss_percept_info.msg_header.stamp));
+    start_time_, local_view_ptr_->uss_percept_info.msg_header.stamp));
 
   input_topic_latency_.set_function_state_machine(get_latency(
-      start_time_,
-      local_view_ptr_->function_state_machine_info.msg_header.stamp));
+    start_time_, local_view_ptr_->function_state_machine_info.msg_header.stamp));
 
   input_topic_latency_.set_uss_wave(get_latency(
-      start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
+    start_time_, local_view_ptr_->uss_wave_info.msg_header.stamp));
 
   input_topic_latency_.set_map(get_latency(
-      start_time_, local_view_ptr_->static_map_info.header().timestamp()));
+    start_time_, local_view_ptr_->static_map_info.header().timestamp()));
 
   input_topic_latency_.set_sd_map(get_latency(
-      start_time_, local_view_ptr_->sd_map_info.header().timestamp()));
+    start_time_, local_view_ptr_->sd_map_info.header().timestamp()));
 
   input_topic_latency_.set_sdpro_map(get_latency(
-      start_time_, local_view_ptr_->sdpro_map_info.header().timestamp()));
+    start_time_, local_view_ptr_->sdpro_map_info.header().timestamp()));
 
   input_topic_latency_.set_perception_tsr(get_latency(
-      start_time_, local_view_ptr_->perception_tsr_info.msg_header.stamp));
+    start_time_, local_view_ptr_->perception_tsr_info.msg_header.stamp));
 
   input_topic_latency_.set_perception_scene(get_latency(
-      start_time_, local_view_ptr_->perception_scene_info.msg_header.stamp));
+    start_time_, local_view_ptr_->perception_scene_info.msg_header.stamp));
 
   input_topic_latency_.set_fusion_speed_bump(get_latency(
-      start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
+    start_time_, local_view_ptr_->fusion_speed_bump_info.msg_header.stamp));
 
   if (input_topic_latency_.prediction() > kMaxPredictionLatency) {
     ILOG_WARN << "prediction latency:" << input_topic_latency_.prediction();
@@ -622,26 +618,19 @@ void PlanningAdapter::LogTopicLatency() {
     ILOG_WARN << "localization latency:" << input_topic_latency_.localization();
   }
   if (input_topic_latency_.fusion_object() > kMaxFusionObjectLatency) {
-    ILOG_WARN << "fusion_object latency:"
-              << input_topic_latency_.fusion_object();
+    ILOG_WARN << "fusion_object latency:" << input_topic_latency_.fusion_object();
   }
-  if (input_topic_latency_.fusion_occupancy_object() >
-      kMaxFusionOccupancyLatency) {
-    ILOG_WARN << "fusion_occupancy_object latency:"
-              << input_topic_latency_.fusion_occupancy_object();
+  if (input_topic_latency_.fusion_occupancy_object() > kMaxFusionOccupancyLatency) {
+    ILOG_WARN << "fusion_occupancy_object latency:" << input_topic_latency_.fusion_occupancy_object();
   }
   if (input_topic_latency_.parking_fusion() > kMaxParkingFusionLatency) {
-    ILOG_WARN << "parking_fusion latency:"
-              << input_topic_latency_.parking_fusion();
+    ILOG_WARN << "parking_fusion latency:" << input_topic_latency_.parking_fusion();
   }
   if (input_topic_latency_.uss_perception() > kMaxUssPerceptionLatency) {
-    ILOG_WARN << "uss_perception latency:"
-              << input_topic_latency_.uss_perception();
+    ILOG_WARN << "uss_perception latency:" << input_topic_latency_.uss_perception();
   }
-  if (input_topic_latency_.function_state_machine() >
-      kMaxFunctionStateMachineLatency) {
-    ILOG_WARN << "function_state_machine latency:"
-              << input_topic_latency_.function_state_machine();
+  if (input_topic_latency_.function_state_machine() > kMaxFunctionStateMachineLatency) {
+    ILOG_WARN << "function_state_machine latency:" << input_topic_latency_.function_state_machine();
   }
   if (input_topic_latency_.uss_wave() > kMaxUssWaveLatency) {
     ILOG_WARN << "uss_wave latency:" << input_topic_latency_.uss_wave();
@@ -656,16 +645,13 @@ void PlanningAdapter::LogTopicLatency() {
     ILOG_WARN << "sdpro_map latency:" << input_topic_latency_.sdpro_map();
   }
   if (input_topic_latency_.perception_tsr() > kMaxPerceptionTsrLatency) {
-    ILOG_WARN << "perception_tsr latency:"
-              << input_topic_latency_.perception_tsr();
+    ILOG_WARN << "perception_tsr latency:" << input_topic_latency_.perception_tsr();
   }
   if (input_topic_latency_.perception_scene() > kMaxPerceptionSceneLatency) {
-    ILOG_WARN << "perception_scene latency:"
-              << input_topic_latency_.perception_scene();
+    ILOG_WARN << "perception_scene latency:" << input_topic_latency_.perception_scene();
   }
   if (input_topic_latency_.fusion_speed_bump() > kMaxFusionSpeedBumpLatency) {
-    ILOG_WARN << "fusion_speed_bump latency:"
-              << input_topic_latency_.fusion_speed_bump();
+    ILOG_WARN << "fusion_speed_bump latency:" << input_topic_latency_.fusion_speed_bump();
   }
   if (input_topic_latency_.ground_line() > kMaxGroundLineLatency) {
     ILOG_WARN << "ground_line latency:" << input_topic_latency_.ground_line();
@@ -731,31 +717,31 @@ void PlanningAdapter::Log() {
   input_topic_timestamp->set_fusion_speed_bump(
       local_view_ptr_->fusion_speed_bump_info.msg_header.stamp);
 
-  // #ifdef ENABLE_PROTO_LOG
+// #ifdef ENABLE_PROTO_LOG
   auto input_topic_latency = planning_debug_data->mutable_input_topic_latency();
-  input_topic_timestamp->set_prediction(
+        input_topic_timestamp->set_prediction(
       local_view_ptr_->prediction_result.msg_header.stamp);
 
-  planning_debug_data->mutable_input_topic_latency()->CopyFrom(
-      input_topic_latency_);
-  // #endif
+  planning_debug_data->mutable_input_topic_latency()->CopyFrom(input_topic_latency_);
+// #endif
 
   planning_debug_data->mutable_frame_info()->set_version(__version_str__);
-  const auto &debug_info_json = *DebugInfoManager::GetInstance().GetDebugJson();
-  planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
+  const auto &debug_info_json =
+    *DebugInfoManager::GetInstance().GetDebugJson();
+    planning_debug_data->set_data_json(mjson::Json(debug_info_json).dump());
 
 #if defined(PLANNING_GIT_COMMIT_HASH)
-  planning_debug_data->mutable_version_commit()->set_planning_commit(
-      PLANNING_GIT_COMMIT_HASH);
-  planning_debug_data->mutable_version_commit()->set_interface_commit(
-      INTERFACE_GIT_COMMIT_HASH);
-  planning_debug_data->mutable_version_commit()->set_adcommon_commit(
-      ADCOMMON_GIT_COMMIT_HASH);
+    planning_debug_data->mutable_version_commit()->set_planning_commit(
+        PLANNING_GIT_COMMIT_HASH);
+    planning_debug_data->mutable_version_commit()->set_interface_commit(
+        INTERFACE_GIT_COMMIT_HASH);
+    planning_debug_data->mutable_version_commit()->set_adcommon_commit(
+        ADCOMMON_GIT_COMMIT_HASH);
 #endif
   planning_debug_data->set_timestamp(output_time_us_);
 
   auto frame_info = planning_debug_data->mutable_frame_info();
-  frame_info->set_frame_num(frame_num_);
+    frame_info->set_frame_num(frame_num_);
   const auto frame_duration = (output_time_us_ - start_time_) * 1e-3;
   frame_info->set_frame_duration_ms(frame_duration);
   frame_info->set_planning_succ(run_success_);

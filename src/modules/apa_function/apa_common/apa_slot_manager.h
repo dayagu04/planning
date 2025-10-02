@@ -12,9 +12,9 @@
 #include "apa_state_machine_manager.h"
 #include "collision_detection/collision_detector_interface.h"
 #include "geometry_math.h"
-#include "hmi_inner_c.h"
 #include "local_view.h"
 #include "target_pose_decider/target_pose_decider.h"
+#include "hmi_inner_c.h"
 
 namespace planning {
 namespace apa_planner {
@@ -245,7 +245,9 @@ class ApaSlotManager final {
 
   const size_t GetEgoSlotInfoID() const;
 
-  const bool GetFreeSlotActivate() const { return free_slot_activate_; }
+  const bool GetFreeSlotActivate() const {
+    return free_slot_activate_;
+  }
 
  private:
   void ParkingLotCruiseProcess();

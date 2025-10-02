@@ -29,7 +29,6 @@ class PerpendicularHeadInScenario : public PerpendicularParkScenario {
   virtual const bool CheckFinished() override;
   virtual const bool PostProcessPath() override;
   const bool PostProcessPathAccordingLimiter() override;
-
  private:
   PerpendicularPathHeadingInPlanner perpendicular_path_planner_;
 

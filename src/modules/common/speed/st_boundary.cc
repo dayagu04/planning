@@ -4,8 +4,8 @@
 
 #include "assert.h"
 #include "common.h"
-#include "log_glog.h"
 #include "math/math_utils.h"
+#include "log_glog.h"
 
 namespace planning {
 

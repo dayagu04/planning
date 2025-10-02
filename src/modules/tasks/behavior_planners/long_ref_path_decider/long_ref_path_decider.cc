@@ -46,8 +46,7 @@ bool LongRefPathDecider::Execute() {
   SaveToDebugInfo();
 
   const auto end_timestamp = IflyTime::Now_ms();
-  ILOG_DEBUG << "LongRefPathDecider time cost:"
-             << end_timestamp - start_timestamp;
+  ILOG_DEBUG << "LongRefPathDecider time cost:" << end_timestamp - start_timestamp;
 
   return true;
 }
@@ -129,7 +128,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
     if (lane_change_info.s_search_status &&
         speed_planning_config_.enable_speed_adjust &&
         start_stop_decider_output.ego_start_stop_info().state() !=
-            common::StartStopInfo::STOP) {
+        common::StartStopInfo::STOP) {
       lon_j_bound.lower = -1.0;
       lon_j_bound.upper = 1.0;
     } else {
@@ -142,7 +141,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
     if (lane_change_info.s_search_status &&
         speed_planning_config_.enable_speed_adjust &&
         start_stop_decider_output.ego_start_stop_info().state() !=
-            common::StartStopInfo::STOP) {
+        common::StartStopInfo::STOP) {
       if (lane_change_info.st_search_vec.size() == plan_points_num_) {
         for (size_t i = 0; i <= plan_points_num_; i++) {
           lon_behavior_output_.s_refs[i].first =
@@ -150,8 +149,7 @@ void LongRefPathDecider::UpdateLonRefPath() {
         }
         ILOG_DEBUG << "use search path in lc wait!";
       } else {
-        ILOG_WARN << "search path num is error: "
-                  << lane_change_info.st_search_vec.size();
+        ILOG_WARN << "search path num is error: " << lane_change_info.st_search_vec.size();
       }
     }
   }
@@ -172,8 +170,8 @@ void LongRefPathDecider::SaveToSession() {
 }
 
 void LongRefPathDecider::SaveToDebugInfo() {
-// 转存纵向决策信息至debuginfo
-// 1.update t_list
+  // 转存纵向决策信息至debuginfo
+  // 1.update t_list
 #ifdef ENABLE_PROTO_LOG
   lon_behavior_output_pb_.mutable_t_list()->Reserve(
       lon_behavior_output_.t_list.size());

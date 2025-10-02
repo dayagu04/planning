@@ -32,8 +32,7 @@ FrenetObstacle::FrenetObstacle(
 
 void FrenetObstacle::compute_frenet_obstacle(
     const ReferencePath &reference_path) {
-  const FrenetEgoState &frenet_ego_state =
-      reference_path.get_frenet_ego_state();
+  const FrenetEgoState &frenet_ego_state = reference_path.get_frenet_ego_state();
   double ego_s = frenet_ego_state.s();
   double ego_l = frenet_ego_state.l();
   double ego_head_s = frenet_ego_state.head_s();
@@ -78,30 +77,30 @@ void FrenetObstacle::compute_frenet_obstacle(
   double half_width = width_ * 0.5;
   double half_length = length_ * 0.5;
 
-  frenet_obstacle_corners_.s_front_left = frenet_s_ +
-                                          half_length * cos_relative_heading -
-                                          half_width * sin_relative_heading;
-  frenet_obstacle_corners_.l_front_left = frenet_l_ +
-                                          half_length * sin_relative_heading +
-                                          half_width * cos_relative_heading;
-  frenet_obstacle_corners_.s_front_right = frenet_s_ +
-                                           half_length * cos_relative_heading +
-                                           half_width * sin_relative_heading;
-  frenet_obstacle_corners_.l_front_right = frenet_l_ +
-                                           half_length * sin_relative_heading -
-                                           half_width * cos_relative_heading;
-  frenet_obstacle_corners_.s_rear_left = frenet_s_ -
-                                         half_length * cos_relative_heading -
-                                         half_width * sin_relative_heading;
-  frenet_obstacle_corners_.l_rear_left = frenet_l_ -
-                                         half_length * sin_relative_heading +
-                                         half_width * cos_relative_heading;
-  frenet_obstacle_corners_.s_rear_right = frenet_s_ -
-                                          half_length * cos_relative_heading +
-                                          half_width * sin_relative_heading;
-  frenet_obstacle_corners_.l_rear_right = frenet_l_ -
-                                          half_length * sin_relative_heading -
-                                          half_width * cos_relative_heading;
+  frenet_obstacle_corners_.s_front_left =
+      frenet_s_ + half_length * cos_relative_heading -
+      half_width * sin_relative_heading;
+  frenet_obstacle_corners_.l_front_left =
+      frenet_l_ + half_length * sin_relative_heading +
+      half_width * cos_relative_heading;
+  frenet_obstacle_corners_.s_front_right =
+      frenet_s_ + half_length * cos_relative_heading +
+      half_width * sin_relative_heading;
+  frenet_obstacle_corners_.l_front_right =
+      frenet_l_ + half_length * sin_relative_heading -
+      half_width * cos_relative_heading;
+  frenet_obstacle_corners_.s_rear_left =
+      frenet_s_ - half_length * cos_relative_heading -
+      half_width * sin_relative_heading;
+  frenet_obstacle_corners_.l_rear_left =
+      frenet_l_ - half_length * sin_relative_heading +
+      half_width * cos_relative_heading;
+  frenet_obstacle_corners_.s_rear_right =
+      frenet_s_ - half_length * cos_relative_heading +
+      half_width * sin_relative_heading;
+  frenet_obstacle_corners_.l_rear_right =
+      frenet_l_ - half_length * sin_relative_heading -
+      half_width * cos_relative_heading;
 
   double curve_heading = frenet_coord->GetPathCurveHeading(frenet_s_);
   frenet_relative_velocity_angle_ = planning_math::NormalizeAngle(
@@ -205,9 +204,8 @@ void FrenetObstacle::compute_frenet_obstacle(
     // for (int sgn_length : sgn_list) {
     //   for (int sgn_width : sgn_list) {
     //     double _s = frenet_s_ +
-    //                 sgn_length * std::cos(obs_relative_heading) * half_length
-    //                 - sgn_width * std::sin(obs_relative_heading) *
-    //                 half_width;
+    //                 sgn_length * std::cos(obs_relative_heading) * half_length -
+    //                 sgn_width * std::sin(obs_relative_heading) * half_width;
     //     if ((frenet_s_ - ego_head_s) * (_s - ego_head_s) <= 0) {
     //       half_width = width_ * 0.5;
     //       break;
@@ -218,12 +216,14 @@ void FrenetObstacle::compute_frenet_obstacle(
     if (1) {
       for (int sgn_length : sgn_list) {
         for (int sgn_width : sgn_list) {
-          double _s = frenet_s_ +
-                      sgn_length * cos_relative_heading * half_length -
-                      sgn_width * sin_relative_heading * half_width;
-          double _l = frenet_l_ +
-                      sgn_length * sin_relative_heading * half_length +
-                      sgn_width * cos_relative_heading * half_width;
+          double _s =
+              frenet_s_ +
+              sgn_length * cos_relative_heading  * half_length -
+              sgn_width * sin_relative_heading  * half_width;
+          double _l =
+              frenet_l_ +
+              sgn_length * sin_relative_heading * half_length +
+              sgn_width * cos_relative_heading * half_width;
           obstacle_box[box_s].push_back(_s);
           obstacle_box[box_l].push_back(_l);
           if (_s >= ego_s) {
@@ -251,20 +251,20 @@ void FrenetObstacle::compute_frenet_obstacle(
       (!bbox_l_pos.empty())
           ? *std::max_element(bbox_l_pos.begin(), bbox_l_pos.end())
           : 0;
-  if (frenet_l_ >= lat_offset) {
+  if (frenet_l_>= lat_offset) {
     d_path_ = ((frenet_l_ - lat_offset) * (min_l - lat_offset) > 0)
-                  ? (min_l - lat_offset)
-                  : 0;
-    d_path_pos_ = ((frenet_l_ - lat_offset) * (min_l_pos - lat_offset) > 0)
-                      ? (min_l_pos - lat_offset)
+                      ? (min_l - lat_offset)
                       : 0;
+    d_path_pos_ = ((frenet_l_ - lat_offset) * (min_l_pos - lat_offset) > 0)
+                                ? (min_l_pos - lat_offset)
+                                : 0;
   } else {
     d_path_ = ((frenet_l_ - lat_offset) * (max_l - lat_offset) > 0)
-                  ? (max_l - lat_offset)
-                  : 0;
-    d_path_pos_ = ((frenet_l_ - lat_offset) * (max_l_pos - lat_offset) > 0)
-                      ? (max_l_pos - lat_offset)
+                      ? (max_l - lat_offset)
                       : 0;
+    d_path_pos_ = ((frenet_l_ - lat_offset) * (max_l_pos - lat_offset) > 0)
+                            ? (max_l_pos - lat_offset)
+                            : 0;
   }
 
   y_rel_ = obstacle_ptr_->x_relative_center() - frenet_l_ + d_path_;
@@ -313,8 +313,7 @@ void FrenetObstacle::compute_frenet_obstacle_boundary(
     d_s_rel_ = obs_end_s - ego_head_s;  // obstacle behind ego
   }
 
-  tail_s_rel_ = frenet_obstacle_boundary_.s_start -
-                reference_path.get_frenet_ego_state().s();
+  tail_s_rel_ = frenet_obstacle_boundary_.s_start - reference_path.get_frenet_ego_state().s();
 }
 
 void FrenetObstacle::compute_frenet_polygon_sequence(
@@ -597,6 +596,8 @@ void FrenetObstacle::generate_precise_frenet_polygon(
   }
 }
 
+
+
 bool FrenetObstacle::get_polygon_at_time(
     const double relative_time,
     const std::shared_ptr<ReferencePath> &reference_path,
@@ -611,8 +612,7 @@ bool FrenetObstacle::get_polygon_at_time(
     carte_point.x = pt.x();
     carte_point.y = pt.y();
     if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
-      ILOG_INFO << "obstacle id " << obstacle_ptr_->id()
-                << " Frenet_coord failed!";
+      ILOG_INFO << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!";
       continue;
     }
     frenet_points.push_back(
@@ -628,7 +628,7 @@ bool FrenetObstacle::get_polygon_at_time_tmp(
     const double relative_time,
     const std::shared_ptr<ReferencePath> &reference_path,
     planning_math::Polygon2d &obstacle_polygon) const {
-  // Hack(clren): 当前无预测，横向l不变，纵向速度递推
+    // Hack(clren): 当前无预测，横向l不变，纵向速度递推
   double prediction_frenet_s = frenet_velocity_s_ * relative_time;
   auto enu_polygon =
       obstacle_ptr_->get_polygon_at_point(obstacle_ptr_->get_point_at_time(0));
@@ -640,8 +640,7 @@ bool FrenetObstacle::get_polygon_at_time_tmp(
     carte_point.x = pt.x();
     carte_point.y = pt.y();
     if (!frenet_coord->XYToSL(carte_point, frenet_point)) {
-      ILOG_INFO << "obstacle id " << obstacle_ptr_->id()
-                << " Frenet_coord failed!!";
+      ILOG_INFO << "obstacle id " << obstacle_ptr_->id() << " Frenet_coord failed!!";
       continue;
     }
     frenet_points.push_back(planning_math::Vec2d(
@@ -653,11 +652,12 @@ bool FrenetObstacle::get_polygon_at_time_tmp(
   return ok;
 }
 
+
 bool FrenetObstacle::get_static_polygon_at_time_tmp(
     const double relative_time,
     const std::shared_ptr<ReferencePath> &reference_path,
     planning_math::Polygon2d &obstacle_polygon) const {
-  // Hack(clren): 当前无预测，横向l不变，纵向速度递推
+    // Hack(clren): 当前无预测，横向l不变，纵向速度递推
   double prediction_frenet_s = frenet_velocity_s_ * relative_time;
   // planning_math::Polygon2d current_enu_polygon =
   //     obstacle_ptr_->get_polygon_at_point(obstacle_ptr_->get_point_at_time(0));
@@ -668,8 +668,8 @@ bool FrenetObstacle::get_static_polygon_at_time_tmp(
   auto length = obstacle_ptr_->length();
   auto yaw = obstacle_ptr_->heading_angle();
   const auto care_area_center = planning_math::Vec2d(x_center, y_center);
-  const auto current_enu_polygon = planning_math::Polygon2d(
-      planning_math::Box2d(care_area_center, yaw, length, width));
+  const auto current_enu_polygon =
+      planning_math::Polygon2d(planning_math::Box2d(care_area_center, yaw, length, width));
 
   auto &frenet_coord = reference_path->get_frenet_coord();
   std::vector<planning_math::Vec2d> frenet_points;
@@ -681,9 +681,8 @@ bool FrenetObstacle::get_static_polygon_at_time_tmp(
       LOG_DEBUG(
           "Frenet_coord failed, the obstacle [%i]'s enu ploygon min_x: [%f], "
           "max_x: [%f], min_y: [%f], max_y: [%f] \n",
-          obstacle_ptr_->id(), current_enu_polygon.min_x(),
-          current_enu_polygon.max_x(), current_enu_polygon.min_y(),
-          current_enu_polygon.max_y());
+          obstacle_ptr_->id(), current_enu_polygon.min_x(), current_enu_polygon.max_x(),
+          current_enu_polygon.min_y(), current_enu_polygon.max_y());
       continue;
     }
     frenet_points.push_back(planning_math::Vec2d(

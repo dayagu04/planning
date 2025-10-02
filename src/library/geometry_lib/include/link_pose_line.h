@@ -25,7 +25,7 @@ struct LinkPoseLineInput {
   double bigger_radius_no_asssign;
   double bigger_radius_asssign;
 
-  double lat_err;    // m
+  double lat_err;      // m
   double theta_err;  // deg
 
   bool link_line_start_pt = true;

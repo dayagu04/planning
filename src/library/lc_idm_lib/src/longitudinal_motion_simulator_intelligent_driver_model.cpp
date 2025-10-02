@@ -47,8 +47,7 @@ ErrorType LonMotionSimulatorIntelligentDriverModel::Simulate() {
     return ErrorType::kWrongStatus;
   }
   // if (t < dt_resolution_) {
-  //   LOG_ERROR("idm simulates failed, t %f is less than kStepForwarddt %f \n",
-  //   t,
+  //   LOG_ERROR("idm simulates failed, t %f is less than kStepForwarddt %f \n", t,
   //             dt_resolution_);
   //   return ErrorType::kIllegalInput;
   // }
@@ -221,5 +220,6 @@ void LonMotionSimulatorIntelligentDriverModel::UpdateInternalState() {
   internal_state_[2] = state_.s_front;
   internal_state_[3] = state_.vel_front;
 }
+
 
 }  // namespace planning

@@ -80,9 +80,9 @@
 
 //   std::map<int, CarCount> &right_alc_car_cnt() { return right_alc_car_cnt_; }
 
-//   const std::vector<int> &left_close_objs() const { return left_close_objs_;
-//   } const std::vector<int> &right_close_objs() const { return
-//   right_close_objs_; } const std::vector<int> &current_close_objs() const {
+//   const std::vector<int> &left_close_objs() const { return left_close_objs_; }
+//   const std::vector<int> &right_close_objs() const { return right_close_objs_; }
+//   const std::vector<int> &current_close_objs() const {
 //     return current_close_objs_;
 //   }
 

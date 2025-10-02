@@ -121,7 +121,7 @@ class NodeCollisionDetect {
 
   EulerDistanceTransform* edt_;
 
-  const MapBound* grid_map_bound_;
+  const MapBound *grid_map_bound_;
   const AstarRequest* request_;
 };
 }  // namespace planning

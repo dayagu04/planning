@@ -14,7 +14,6 @@
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
 #include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
-#include "../tasks/task_interface/crossing_agent_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
 #include "../tasks/task_interface/general_lateral_decider_output.h"
@@ -26,11 +25,12 @@
 #include "../tasks/task_interface/longitudinal_decider_output.h"
 #include "../tasks/task_interface/motion_planner_output.h"
 #include "../tasks/task_interface/parking_switch_decider_output.h"
-#include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "../tasks/task_interface/traffic_light_decider_output.h"
 #include "../tasks/task_interface/vision_lateral_behavior_planner_output.h"
 #include "../tasks/task_interface/vision_lateral_motion_planner_output.h"
 #include "../tasks/task_interface/vision_longitudinal_behavior_planner_output.h"
+#include "../tasks/task_interface/crossing_agent_decider_output.h"
+#include "../tasks/task_interface/spatio_temporal_union_plan_output.h"
 #include "config/basic_type.h"
 #include "config/vehicle_param.h"
 #include "define/lateral_behavior_planner_output.h"
@@ -100,8 +100,7 @@ class PlanningContext {
     return lane_change_decider_output_;
   }
 
-  const SpatioTemporalUnionPlanOutput &spatio_temporal_union_plan_output()
-      const {
+  const SpatioTemporalUnionPlanOutput &spatio_temporal_union_plan_output() const {
     return spatio_temporal_union_plan_output_;
   }
 
@@ -410,8 +409,8 @@ class PlanningContext {
     return &agent_longitudinal_decider_output_;
   }
 
-  const std::shared_ptr<AdaptiveCruiseControl>
-      &adaptive_cruise_control_function() {
+  const std::shared_ptr<AdaptiveCruiseControl> &
+  adaptive_cruise_control_function() {
     return adaptive_cruise_control_ptr_;
   }
   void set_adaptive_cruise_control_function(

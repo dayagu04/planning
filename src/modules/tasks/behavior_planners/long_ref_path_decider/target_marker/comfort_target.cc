@@ -166,7 +166,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   std::unordered_set<int32_t> forbidden_ids(blocked_obs_id.begin(),
                                             blocked_obs_id.end());
 
-  for (const auto & [ agent_id, decision ] : lat_obstacle_decision) {
+  for (const auto& [agent_id, decision] : lat_obstacle_decision) {
     if (decision == LatObstacleDecisionType::FOLLOW) {
       if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
           added_agent_ids.find(agent_id) != added_agent_ids.end()) {

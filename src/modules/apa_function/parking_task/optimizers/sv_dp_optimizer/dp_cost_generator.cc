@@ -93,7 +93,7 @@ double DPCostGenerator::CalcSpeedDownCost(const double dec, const double node_v,
 
   double acc_diff;
   if (node_v < speed_limit_around) {
-    acc_diff = dec - config_->advised_deceleration;
+    acc_diff  = dec - config_->advised_deceleration;
   } else if (node_v > speed_limit) {
     acc_diff = dec;
   } else {

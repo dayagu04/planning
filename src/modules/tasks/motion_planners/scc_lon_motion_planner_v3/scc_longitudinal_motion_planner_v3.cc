@@ -251,7 +251,7 @@ void SccLongitudinalMotionPlannerV3::Update() {
     a_vec[i] = planning_output.acc_vec(i);
     j_vec[i] = planning_output.jerk_vec(i);
   }
-
+  
   JSON_DEBUG_VALUE("ego_jerk", j_vec[0]);
 
   // generate motion planning output into planning_context

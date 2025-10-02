@@ -1,15 +1,15 @@
 #ifndef LATERAL_OBSTACLE_H
 #define LATERAL_OBSTACLE_H
 
-#include <cstdint>
-#include <utility>
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
-#include "frenet_obstacle.h"
 #include "prediction_object.h"
 #include "task_basic_types.h"
 #include "tracked_object.h"
 #include "tracklet_maintainer.h"
+#include "frenet_obstacle.h"
+#include <cstdint>
+#include <utility>
 
 namespace planning {
 
@@ -55,14 +55,11 @@ class LateralObstacle {
     return front_tracks_;
   }
 
-  const std::vector<std::shared_ptr<FrenetObstacle>> &front_tracks_copy()
-      const {
+  const std::vector<std::shared_ptr<FrenetObstacle>> &front_tracks_copy() const {
     return front_tracks_copy_;
   }
 
-  const std::vector<std::shared_ptr<FrenetObstacle>> &side_tracks() const {
-    return side_tracks_;
-  }
+  const std::vector<std::shared_ptr<FrenetObstacle>> &side_tracks() const { return side_tracks_; }
 
   const std::vector<std::shared_ptr<FrenetObstacle>> &front_tracks_l() const {
     return front_tracks_l_;
@@ -80,20 +77,13 @@ class LateralObstacle {
     return side_tracks_r_;
   }
 
-  // const std::vector<std::shared_ptr<FrenetObstacle>> &all_tracks() const {
-  // return all_tracks_; }
+  // const std::vector<std::shared_ptr<FrenetObstacle>> &all_tracks() const { return all_tracks_; }
 
-  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &tracks_map()
-      const {
-    return tracks_map_;
-  }
+  const std::unordered_map<int, std::shared_ptr<FrenetObstacle>> &tracks_map() const { return tracks_map_; }
 
   bool find_track(int track_id, std::shared_ptr<FrenetObstacle> &dest);
 
-  const std::unordered_map<int, ExtraObstacleInfo> &extra_obstacle_info_map()
-      const {
-    return extra_obstacle_info_map_;
-  }
+  const std::unordered_map<int, ExtraObstacleInfo> &extra_obstacle_info_map() const { return extra_obstacle_info_map_; }
 
  private:
   bool update_sensors(const std::shared_ptr<EgoStateManager> &ego_state,
@@ -130,6 +120,7 @@ class LateralObstacle {
   std::unordered_map<int, ExtraObstacleInfo> extra_obstacle_info_map_;
 };
 
+
 class LaneTracksManager {
  public:
   LaneTracksManager(LateralObstacle &lateral_obstacle,
@@ -164,8 +155,7 @@ class LaneTracksManager {
   const std::vector<std::shared_ptr<FrenetObstacle>> &side_tracks_c() const {
     return side_tracks_clane_;
   }
-  std::vector<std::shared_ptr<FrenetObstacle>> *get_lane_tracks(
-      int lane, TrackType track_type);
+  std::vector<std::shared_ptr<FrenetObstacle>> *get_lane_tracks(int lane, TrackType track_type);
 
   // std::pair<int, double> get_vavg_poi_int(int side, double bound, double
   // poi_back_limit, double poi_front_limit); std::pair<int, pair<double,

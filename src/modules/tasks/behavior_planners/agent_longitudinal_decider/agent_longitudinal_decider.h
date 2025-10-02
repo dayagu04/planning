@@ -85,10 +85,11 @@ class AgentLongitudinalDecider : public Task {
       const double ego_speed_mps);
 
   bool CheckSlowLargeAgentCutIn(
-      const agent::Agent& agent, const double ego_speed_mps,
-      const AgentHistoryState& current_state,
-      const std::shared_ptr<planning_math::KDPath>& planned_path,
-      const std::shared_ptr<VirtualLane>& ego_lane);
+    const agent::Agent& agent,
+    const double ego_speed_mps,
+    const AgentHistoryState& current_state,
+    const std::shared_ptr<planning_math::KDPath>& planned_path,
+    const std::shared_ptr<VirtualLane>& ego_lane);
 
   void IsSlowSpeedCutinSuppression(
       const std::shared_ptr<planning_math::KDPath>& planned_path,
@@ -105,17 +106,18 @@ class AgentLongitudinalDecider : public Task {
   bool IsLargeAgent(const agent::Agent& agent);
   double GetDynamicBoundaryBuffer(double ego_speed_mps, double agent_speed_mps);
 
-  bool IsVruCutIn(const agent::Agent& agent, const double object_l_speed_mps,
-                  const double small_lateral_distance, const double max_s,
-                  const double ego_s, const double ego_half_length,
-                  const std::shared_ptr<planning_math::KDPath>& planned_path);
+  bool IsVruCutIn(
+    const agent::Agent& agent, const double object_l_speed_mps,
+    const double small_lateral_distance, const double max_s,
+    const double ego_s, const double ego_half_length,
+    const std::shared_ptr<planning_math::KDPath>& planned_path);
   bool IsVruCutInWithHistory(
-      const agent::Agent& agent,
-      const std::shared_ptr<planning_math::KDPath>& planned_path);
+    const agent::Agent& agent,
+    const std::shared_ptr<planning_math::KDPath>& planned_path);
   void UpdateAndGetAgentState(
-      const agent::Agent& agent, const PlanningInitPoint& init_point,
-      const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
-      AgentHistoryState& current_state);
+    const agent::Agent& agent, const PlanningInitPoint& init_point,
+    const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
+    AgentHistoryState& current_state);
 
   void UpdateCutInAgentTable();
 
@@ -165,12 +167,11 @@ class AgentLongitudinalDecider : public Task {
                                      const double end_2) const;
   double CalculateMean(const std::vector<double>& values) const;
 
-  double CalculateVariance(const std::vector<double>& values,
-                           double mean) const;
+  double CalculateVariance(const std::vector<double>& values, double mean) const;
 
   std::deque<AgentHistoryState> GetHistoryInWindow(
-      const std::deque<AgentHistoryState>& history,
-      double window_duration) const;
+    const std::deque<AgentHistoryState>& history, double window_duration) const;
+
 
  private:
   // framework::Session *session_ = nullptr;

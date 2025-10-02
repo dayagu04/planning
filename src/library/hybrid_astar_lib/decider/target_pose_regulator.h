@@ -25,7 +25,7 @@ struct TerminalCandidatePoint {
 
   TerminalCandidatePoint() = default;
   TerminalCandidatePoint(const Pose2f &point, const float dist,
-                         const float offset) {
+                        const float offset) {
     pose = point;
     dist_to_obs = dist;
     lat_offset = offset;
@@ -122,7 +122,8 @@ class TargetPoseRegulator : public AstarDecider {
   void GenerateYboundary(const AstarRequest *request,
                          const VehicleParam &veh_param);
 
-  const void GetSafeIntegralForPath(TerminalGuessPath &path, const float buffer,
+  const void GetSafeIntegralForPath(TerminalGuessPath &path,
+                                    const float buffer,
                                     const float min_lateral_buffer);
 
   const TerminalCandidatePoint GetCandidatePoseForParkOut(
@@ -131,7 +132,8 @@ class TargetPoseRegulator : public AstarDecider {
   // Get most safe target pose, 15 cm is ok, 8 cm is not safe. So buffer range
   // [8, 15].
   const TerminalCandidatePoint GetCandidatePoseForParkIn(
-      const float lat_buffer = 0.15f, const float min_lateral_buffer = 0.08f);
+      const float lat_buffer = 0.15f,
+      const float min_lateral_buffer = 0.08f);
 
   void DebugPath(const TerminalGuessPath &path) const;
 

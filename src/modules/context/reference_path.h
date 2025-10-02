@@ -105,10 +105,10 @@ class ReferencePath {
   bool transform_trajectory_points(TrajectoryPoints &trajectory_points) const;
   bool transform_trajectory_point(TrajectoryPoint &trajectory_point) const;
 
-  bool get_polygon_at_time(
-      const int id, bool is_use_recurrence, const int relative_time,
-      planning_math::Polygon2d
-          &obstacle_polygon);  // relative_time 为时间相对时间 * 10
+  bool get_polygon_at_time(const int id,
+    bool is_use_recurrence, 
+    const int relative_time,
+    planning_math::Polygon2d &obstacle_polygon); // relative_time 为时间相对时间 * 10
 
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
@@ -171,10 +171,8 @@ class ReferencePath {
   std::vector<const Obstacle *> road_edges_;
 
   // 第一个int为障碍物id;  第二个int为预测时间（t*10， Polygon2d为障碍物轮廓)
-  std::unordered_map<int, std::unordered_map<int, planning_math::Polygon2d>>
-      obstacles_frenet_infos_;
-  std::unordered_map<int, std::unordered_map<int, planning_math::Polygon2d>>
-      obstacles_frenet_infos_recurrence_;
+  std::unordered_map<int, std::unordered_map<int, planning_math::Polygon2d>> obstacles_frenet_infos_;
+  std::unordered_map<int, std::unordered_map<int, planning_math::Polygon2d>> obstacles_frenet_infos_recurrence_;
 
   // session
   planning::framework::Session *session_;

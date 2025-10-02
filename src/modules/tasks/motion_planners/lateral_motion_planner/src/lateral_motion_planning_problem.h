@@ -17,12 +17,12 @@ class LateralMotionPlanningProblem {
  public:
   void Init();
 
-  uint8_t Update(
-      const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
-      const double end_ratio_for_qjerk, const double concerned_start_q_jerk,
-      const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
-          &planning_weight,
-      planning::common::LateralPlanningInput &planning_input);
+  uint8_t Update(const double end_ratio_for_qxy,
+                 const double end_ratio_for_qtheta,
+                 const double end_ratio_for_qjerk,
+                 const double concerned_start_q_jerk,
+                 const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
+                 planning::common::LateralPlanningInput &planning_input);
 
   uint8_t Update(double expected_acc, double start_acc, double end_acc,
                  double end_ratio_for_qxy, double end_ratio_for_qtheta,

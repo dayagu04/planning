@@ -4,7 +4,6 @@
 #include "agent/agent_manager.h"
 #include "agent_node_manager.h"
 #include "dynamic_world/dynamic_world.h"
-#include "edt_manager.h"
 #include "ego_planning_config.h"
 #include "ego_state_manager.h"
 #include "history_obstacle_manager.h"
@@ -16,6 +15,7 @@
 #include "route_info.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
+#include "edt_manager.h"
 
 namespace planning {
 namespace planner {

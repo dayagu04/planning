@@ -129,7 +129,7 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::MAP_ON_RAMP,  SpeedLimitType::INTERSECTION,
       SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL,
       SpeedLimitType::AVOID_AGENT,  SpeedLimitType::DANGEROUS_OBSTACLE,
-      SpeedLimitType::NEAR_POI};
+      SpeedLimitType::NEAR_POI };
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;

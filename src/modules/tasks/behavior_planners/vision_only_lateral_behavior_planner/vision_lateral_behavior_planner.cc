@@ -1,5 +1,4 @@
-// #include
-// "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
+// #include "tasks/behavior_planners/vision_only_lateral_behavior_planner/vision_lateral_behavior_planner.h"
 // #include "debug_info_log.h"
 // #include "environmental_model.h"
 // #include "ifly_time.h"
@@ -7,8 +6,8 @@
 // namespace planning {
 
 // VisionLateralBehaviorPlanner::VisionLateralBehaviorPlanner(
-//     const EgoPlanningConfigBuilder *config_builder, framework::Session
-//     *session) : Task(config_builder, session) {
+//     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+//     : Task(config_builder, session) {
 //   config_ = config_builder->cast<VisionLateralBehaviorPlannerConfig>();
 //   name_ = "VisionLateralBehaviorPlanner";
 // }

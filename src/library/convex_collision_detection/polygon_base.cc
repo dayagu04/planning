@@ -2,10 +2,10 @@
 
 #include <algorithm>
 
-#include <array>
 #include "log_glog.h"
 #include "src/modules/apa_function/apa_param_config.h"
 #include "transform2d.h"
+#include <array>
 
 namespace planning {
 
@@ -50,8 +50,7 @@ int PolygonCopy(Polygon2D *des_poly, const Polygon2D *src_poly) {
 }
 
 void UpdatePolygonValue(Polygon2D *polygon, const Pose2D *center_pose,
-                        bool use_center_pose, bool radius_known,
-                        double radius) {
+                        bool use_center_pose, bool radius_known, double radius) {
   int i;
   double tmp_dist;
 
@@ -490,10 +489,11 @@ void ULFLocalPolygonToGlobal(Polygon2D *poly_global,
 }
 
 void RULocalPolygonToGlobalFast(Polygon2D *poly_global,
-                                const Polygon2D *poly_local,
-                                const Transform2d &tf) {
+                               const Polygon2D *poly_local,
+                               const Transform2d &tf) {
   for (int i = 0; i < poly_local->vertex_num; i++) {
-    tf.RUFLocalPoseToGlobal(&poly_global->vertexes[i], poly_local->vertexes[i]);
+    tf.RUFLocalPoseToGlobal(&poly_global->vertexes[i],
+                             poly_local->vertexes[i]);
   }
 
   poly_global->vertex_num = poly_local->vertex_num;
@@ -929,7 +929,7 @@ void GetBoundingBoxByPolygon(cdl::AABB2f *box,
 }
 
 void GetVehPolygonBy12Edge(const double lat_buffer, const double lon_buffer,
-                           Polygon2D *polygon) {
+                          Polygon2D *polygon) {
   const apa_planner::ApaParameters &config = apa_param.GetParam();
   if (config.car_vertex_x_vec.size() != 20 ||
       config.car_vertex_y_vec.size() != 20) {

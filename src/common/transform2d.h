@@ -100,7 +100,7 @@ class Transform2d {
     base_pose_.theta = base_pose[2];
 
     return;
-  }
+}
 
  private:
   Pose2D base_pose_;

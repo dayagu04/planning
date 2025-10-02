@@ -38,16 +38,14 @@ LongTimeTaskPipelineV2::LongTimeTaskPipelineV2(
   // // scc_lon_behavior_planner_ =
   // //     std::make_unique<SccLonBehaviorPlanner>(config_builder, session);
   // scc_longitudinal_motion_planner_ =
-  //     std::make_unique<SccLongitudinalMotionPlanner>(config_builder,
-  //     session);
+  //     std::make_unique<SccLongitudinalMotionPlanner>(config_builder, session);
   // result_trajectory_generator_ =
   //     std::make_unique<ResultTrajectoryGenerator>(config_builder, session);
   // cipv_lost_prohibit_acceleration_decider_ =
   //     std::make_unique<CipvLostProhibitAccelerationDecider>(config_builder,
   //                                                           session);
   // sample_poly_speed_adjust_decider_ =
-  //     std::make_unique<SamplePolySpeedAdjustDecider>(config_builder,
-  //     session);
+  //     std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
   // auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
   // enable_lane_borrow_deciderV2_ =
   //     lane_borrow_config.enable_lane_borrow_deciderV2;

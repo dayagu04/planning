@@ -68,24 +68,20 @@ void LatLonVehicleMotionSimulator::set_dt_resolution(const double dt) {
 
 ErrorType LatLonVehicleMotionSimulator::Simulate(const double t) {
   if (!is_model_param_set_) {
-    ILOG_ERROR
-        << "LatLonVehicleMotionSimulator::Simulate: model param not set!!!";
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: model param not set!!!";
     return ErrorType::kWrongStatus;
   }
   if (!is_model_state_set_) {
-    ILOG_ERROR
-        << "LatLonVehicleMotionSimulator::Simulate: model state not set!!!";
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: model state not set!!!";
     return ErrorType::kWrongStatus;
   }
   if (!is_model_input_set_) {
-    ILOG_ERROR
-        << "LatLonVehicleMotionSimulator::Simulate: model input not set!!!";
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: model input not set!!!";
     return ErrorType::kWrongStatus;
   }
   const size_t N = std::round(t / dt_resolution_);
   if (N < 1) {
-    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: t " << t
-               << "is less than kStepForwarddt " << dt_resolution_;
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: t " << t << "is less than kStepForwarddt " << dt_resolution_;
     return ErrorType::kIllegalInput;
   }
   Reset_Simulation_Result(N + 1);
@@ -104,8 +100,7 @@ ErrorType LatLonVehicleMotionSimulator::Simulate(const double t) {
   pp_state_.vel = idm_simulation_result.vel_vec.front();
   if (pure_pursuit_model_.ProcessReferencePath(reference_path_) !=
       ErrorType::kSuccess) {
-    ILOG_ERROR
-        << "LatLonVehicleMotionSimulator::Simulate: reference path is null";
+    ILOG_ERROR << "LatLonVehicleMotionSimulator::Simulate: reference path is null";
     return ErrorType::kIllegalInput;
   }
   pnc::steerModel::VehicleParameter vehicle_param;

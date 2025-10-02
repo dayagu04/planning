@@ -8,7 +8,6 @@
 #include "map_data.pb.h"
 #include "planning_intf.h"
 // #include "ifly_parking_map.pb.h"
-#include "camera_perception_scene_c.h"
 #include "func_state_machine_c.h"
 #include "fusion_deceler_c.h"
 #include "fusion_groundline_c.h"
@@ -22,6 +21,7 @@
 #include "prediction_c.h"
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
+#include "camera_perception_scene_c.h"
 // #include "interface/src/legacy/interface2.4.5/hmi_mcu_inner_c.h"
 // #include "interface/src/legacy/interface2.4.6/localization_c.h"
 

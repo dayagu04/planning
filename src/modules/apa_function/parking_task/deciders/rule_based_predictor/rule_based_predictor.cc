@@ -4,11 +4,11 @@
 #include <cstddef>
 
 #include "apa_param_config.h"
-#include "debug_info_log.h"
 #include "geometry_math.h"
 #include "log_glog.h"
 #include "math/vec2d.h"
 #include "pose2d.h"
+#include "debug_info_log.h"
 
 namespace planning {
 namespace apa_planner {
@@ -20,7 +20,8 @@ void RuleBasedPredictor::Execute(
   for (auto& obj : obs_manager->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
 
-    if (obstacle.GetObsAttributeType() != ApaObsAttributeType::FUSION_POLYGON) {
+    if (obstacle.GetObsAttributeType() !=
+        ApaObsAttributeType::FUSION_POLYGON) {
       continue;
     }
 
@@ -78,7 +79,7 @@ void RuleBasedPredictor::RecordDebugInfo(
   common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->clear_predict_traj_set();
 
-  common::ParkPredictTraj* debug_traj;
+  common::ParkPredictTraj *debug_traj;
   common::TrajectoryPoint point;
   for (auto& obj : obs_manager->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
