@@ -21,10 +21,9 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   ILOG_INFO << "MapRequest::update";
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
-  const int ego_blinker =
-      session_->mutable_environmental_model()
-          ->get_ego_state_manager()
-          ->ego_blinker();
+  const int ego_blinker = session_->mutable_environmental_model()
+                              ->get_ego_state_manager()
+                              ->ego_blinker();
   const bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
   const bool is_cancel_mlc_for_ego_blinker =
       is_valid_ego_blinker && lc_status <= kLaneChangeExecution &&

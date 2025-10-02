@@ -81,7 +81,8 @@ class LaneChangeRequestManager {
 
   const bool is_near_merge_region() { return is_near_merge_region_; };
   void ProcessBlinkState(const uint ego_blinker,
-                         const StateMachineLaneChangeStatus& lc_status, const RequestType& cur_req);
+                         const StateMachineLaneChangeStatus& lc_status,
+                         const RequestType& cur_req);
 
  private:
   EgoPlanningConfig config_;

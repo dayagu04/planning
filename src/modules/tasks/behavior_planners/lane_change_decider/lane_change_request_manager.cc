@@ -136,16 +136,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   ProcessBlinkState(
       ego_blinker, static_cast<StateMachineLaneChangeStatus>(lc_status),
       static_cast<RequestType>(lane_change_decider_output.lc_request));
-  bool cancel_lane_change_freeze = false;
-  static int lane_change_cancel_freeze_cnt = 40;
-  if (trigger_lane_change_cancel_ || lane_change_cancel_freeze_cnt < 40) {
-    lane_change_cancel_freeze_cnt = 0;
-    cancel_lane_change_freeze = true;
-    ++lane_change_cancel_freeze_cnt;
-  } else {
-    lane_change_cancel_freeze_cnt = 40;
-    cancel_lane_change_freeze = false;
-  }
+
   // todo(ldh): 使用工厂模式管理变道请求。
   int_request_.SetLaneChangeCmd(lane_change_cmd_);
   int_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
@@ -221,6 +212,12 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       if (curr_time < int_request_.tfinish() + k_default_lane_change_cooling_duration) {
         overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
+      }
+      if (trigger_lane_change_cancel_) {
+        EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
+        overtake_request_.Finish();
+        overtake_request_.Reset();
+        ILOG_INFO << "cann't generate overtake lane change since cancel!";
       }
 
       // TODO:添加至操作时间域的距离小于一定值时将overtake_count_=0
@@ -507,6 +504,16 @@ void LaneChangeRequestManager::ProcessBlinkState(
     cancel_freeze_count = 0;
   }
   last_frame_blinker_ = ego_blinker;
+
+  static int lane_change_cancel_freeze_cnt = 40;
+  if (trigger_lane_change_cancel_ || lane_change_cancel_freeze_cnt < 40) {
+    lane_change_cancel_freeze_cnt = 0;
+    trigger_lane_change_cancel_ = true;
+    ++lane_change_cancel_freeze_cnt;
+  } else {
+    lane_change_cancel_freeze_cnt = 40;
+    trigger_lane_change_cancel_ = false;
+  }
 }
 
 }  // namespace planning

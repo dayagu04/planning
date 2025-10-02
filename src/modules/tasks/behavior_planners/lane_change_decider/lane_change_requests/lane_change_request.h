@@ -84,7 +84,6 @@ class LaneChangeRequest {
     return lc_request_cancel_reason_;
   }
 
-
  protected:
   TrackInfo lc_invalid_track_;
   RequestType request_type_ = NO_CHANGE;
