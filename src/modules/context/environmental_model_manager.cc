@@ -1493,7 +1493,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
         fault_counter_vec_idx = static_cast<int>(FaultType::LOCALIZATION_TIME_OUT);
         break;
       case FEED_PREDICTION_INFO:
-        fault_counter_vec_idx = static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
+        fault_counter_vec_idx = static_cast<int>(FaultType::PREDICTION_TIME_OUT);
         break;
       case FEED_FUSION_LANES_INFO:
         fault_counter_vec_idx = static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
