@@ -321,7 +321,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const pnc::geometry_lib::PathPoint &start_pose,
       const bool is_park_out = false);
-  const bool CheckEgoLine(pnc::geometry_lib::LineSegment &ego_line);
+  const bool CheckEgoLine(pnc::geometry_lib::LineSegment &ego_line,
+                          const bool not_bigangle);
 
   const bool PlanFromTargetToLineInNarrowChannel(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

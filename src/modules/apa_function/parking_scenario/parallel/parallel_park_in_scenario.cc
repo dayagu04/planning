@@ -68,6 +68,7 @@ void ParallelParkInScenario::Reset() {
   parallel_path_planner_.Reset();
   parallel_replan_again_ = 0;
   previous_output_path_.Reset();
+  previous_remain_dist_obs.clear();
 
   ParkingScenario::Reset();
 }
@@ -174,6 +175,55 @@ void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild() {
   return;
 }
 
+const double ParallelParkInScenario::UpdateRemainDistObs(
+    const double remain_dist_path, const double remain_dist_obs) {
+  ILOG_INFO << "Enter UpdateRemainDistObs!";
+  const double dist_path_threshold = 0.3;
+  const double dist_obs_threshold = 1.0;
+  previous_remain_dist_obs.emplace_back(remain_dist_obs);
+  if (previous_remain_dist_obs.size() > 12) {
+    previous_remain_dist_obs.pop_front();
+  }
+  if (previous_remain_dist_obs.size() < 3) {
+    ILOG_INFO << "size: use real calc remain_dist_obs";
+    return remain_dist_obs;
+  }
+  if (remain_dist_path > dist_path_threshold) {
+    ILOG_INFO << "path: use real calc remain_dist_obs";
+    return remain_dist_obs;
+  }
+  int ascending_count = 0;
+  double min_dist_obs = previous_remain_dist_obs.front();
+  double max_dist_obs = previous_remain_dist_obs.front();
+  for (size_t i = 1; i < previous_remain_dist_obs.size(); ++i) {
+    min_dist_obs = std::min(min_dist_obs, previous_remain_dist_obs[i]);
+    max_dist_obs = std::max(max_dist_obs, previous_remain_dist_obs[i]);
+    if (previous_remain_dist_obs[i] >
+        (previous_remain_dist_obs[i - 1] + 1e-3)) {
+      ascending_count++;
+    }
+  }
+  const bool is_ascending =
+      ascending_count >
+      static_cast<int>(previous_remain_dist_obs.size() - 1) / 2;
+
+  const double previous_obs =
+      previous_remain_dist_obs[previous_remain_dist_obs.size() - 2];
+  const double cur_remain_dist_obs =
+      is_ascending ? std::max(max_dist_obs, remain_dist_obs)
+                   : std::min(min_dist_obs, remain_dist_obs);
+  ILOG_INFO << "cur_remain_dist_obs = " << cur_remain_dist_obs
+            << " previous_remain_dist_obs = " << previous_obs
+            << " is_ascending = " << static_cast<int>(is_ascending);
+  const double dist_diff = std::fabs(previous_obs - remain_dist_obs);
+  if (dist_diff > dist_obs_threshold && previous_obs < remain_dist_obs) {
+    ILOG_INFO << "diff: use real calc remain_dist_obs";
+    previous_remain_dist_obs.clear();
+    return remain_dist_obs;
+  }
+  return cur_remain_dist_obs;
+}
+
 void ParallelParkInScenario::ExcutePathPlanningTask() {
   ILOG_INFO << "Enter parallel parking planner!-----------------------";
   // init simulation
@@ -191,6 +241,10 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // calculate remain dist uss according to uss
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
+
+  // update remain dist obs by previous state
+  frame_.remain_dist_obs =
+      UpdateRemainDistObs(frame_.remain_dist_path, frame_.remain_dist_obs);
 
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
@@ -291,6 +345,9 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
 // TODO: 增加 ScenarioTry 先用running代替 @shuaili26
 void ParallelParkInScenario::ScenarioTry() {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    return;
+  }
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
@@ -312,68 +369,15 @@ void ParallelParkInScenario::ScenarioTry() {
   // init simulation
   InitSimulation();
 
-  // check planning status
-  if (CheckPlanSkip()) {
-    return;
-  }
-
-  UpdateStuckTime();
-
   if (CheckPaused()) {
     return;
   }
-
-  // calculate remain dist according to plan path
-  frame_.remain_dist_path = CalRemainDistFromPath();
-
-  double lat_buffer = 0.0;
-  double safe_uss_remain_dist = 0.0;
-  CalStaticBufferInDiffSteps(lat_buffer, safe_uss_remain_dist);
-  ILOG_INFO << "parallel lat_buffer = " << lat_buffer;
-  ILOG_INFO << "parallel safe_uss_remain_dist = " << safe_uss_remain_dist;
-
-  double dynaminc_lat_buffer = 0.0;
-  double dynamic_lon_buffer = 0.0;
-  CalDynamicBufferInDiffSteps(dynaminc_lat_buffer, dynamic_lon_buffer);
-
-  // calculate remain dist uss according to uss
-  frame_.remain_dist_obs =
-      CalRemainDistFromObs(safe_uss_remain_dist, lat_buffer, dynamic_lon_buffer,
-                           dynaminc_lat_buffer);
-  ILOG_INFO << "final remain_dist_obs = " << frame_.remain_dist_obs;
 
   // generate t-lane
   if (!GenTlane()) {
     ILOG_INFO << "GenTlane failed!";
     return;
   }
-
-  // check finish
-  if (CheckFinished()) {
-    ILOG_INFO << "check apa finished!";
-    return;
-  }
-
-  // check failed
-  if (CheckStuckFailed()) {
-    ILOG_INFO << "check stuck failed!";
-    return;
-  }
-
-  const double max_replan_path_dist = 0.15;
-  const double uss_stuck_replan_wait_time = 1.5;
-
-  CheckReplanParams replan_params(
-      max_replan_path_dist, 0.068, apa_param.GetParam().max_replan_remain_dist,
-      uss_stuck_replan_wait_time, apa_param.GetParam().max_replan_remain_dist,
-      0.168, apa_param.GetParam().stuck_replan_time);
-  // check replan
-  if (!CheckReplan(replan_params)) {
-    ILOG_INFO << "replan is not required!";
-    return;
-  }
-
-  ILOG_INFO << "replan is required!";
 
   // update obstacles
   GenTBoundaryObstacles();

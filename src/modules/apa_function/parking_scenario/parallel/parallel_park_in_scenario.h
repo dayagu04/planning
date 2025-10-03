@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <deque>
 
 #include "apa_world.h"
 #include "dubins_lib.h"
@@ -55,6 +56,9 @@ class ParallelParkInScenario : public ParkingScenario {
   const GeometryPathOutput& SuitablePathReplan();
   void CheckEgoPoseWhenPlanFaild();
 
+  const double UpdateRemainDistObs(const double remain_dist_path,
+                                   const double remain_dist_obs);
+
   Tlane t_lane_;
   std::vector<Eigen::Vector2d> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
@@ -62,6 +66,7 @@ class ParallelParkInScenario : public ParkingScenario {
   GeometryPathOutput previous_output_path_;
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
+  std::deque<double> previous_remain_dist_obs;
 };
 
 }  // namespace apa_planner

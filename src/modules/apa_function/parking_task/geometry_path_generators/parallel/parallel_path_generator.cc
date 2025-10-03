@@ -84,6 +84,9 @@ static const double kParkingHeadingDegPenalty = 0.0;
 static const double kMaxXPenalty = 0.8;
 static const double kMaxYPenalty = 2.0;
 
+static std::vector<double> big_heading_vec_ = {22.5, 27.5, 47.5,
+                                               55.0, 35.0, 60.0};
+
 void ParallelPathGenerator::Reset() {
   output_.Reset();
   debug_info_.Reset();
@@ -393,6 +396,9 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
   ILOG_INFO << "calc_params_.valid_target_pt_vec size = "
             << calc_params_.valid_target_pt_vec.size();
+  const bool not_bigangle =
+      std::fabs(ego_line.heading) < big_heading_vec_.front() * kDeg2Rad;
+
   std::vector<PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
     arc_1.pA = target_pose.pos;
@@ -439,7 +445,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
       ego_line.heading = start_pose.heading;
       ego_line.SetPoints(start_pose.pos, diverse_arc_2.pB);
-      if (!CheckEgoLine(ego_line)) {
+      if (!CheckEgoLine(ego_line, not_bigangle)) {
         ILOG_INFO << "CheckEgoLine failed!";
         continue;
       }
@@ -554,14 +560,16 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 }
 
 const bool ParallelPathGenerator::CheckEgoLine(
-    pnc::geometry_lib::LineSegment& ego_line) {
+    pnc::geometry_lib::LineSegment& ego_line, const bool not_bigangle) {
   using namespace pnc::geometry_lib;
 
   const auto ego_line_gear = CalLineSegGear(ego_line);
   if (ego_line_gear == SEG_GEAR_DRIVE) {
     const double heading_mag_deg = std::fabs(ego_line.heading) * kRad2Deg;
-    if (heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
+    if (not_bigangle && heading_mag_deg > kMaxHeadingFirstStepForwardLine &&
         ego_line.length > kMaxFirstStepForwardInclinedLineLength) {
+      ILOG_INFO << "check heading and length failed deg " << heading_mag_deg
+                << " length " << ego_line.length;
       return false;
     }
   }
@@ -574,7 +582,7 @@ const bool ParallelPathGenerator::CheckEgoLine(
   if (col_res.collision_flag ||
       col_res.remain_car_dist >
           col_res.remain_obstacle_dist - kColBufferOutSlot) {
-    // ILOG_INFO << "ego line collided!";
+    ILOG_INFO << "ego line collided!";
     return false;
   }
 
@@ -1134,12 +1142,11 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
       continue;
     }
 
-    calc_params_.suc_rev_parking_out_vec.emplace_back(inversed_park_out_path);
-
     if (inversed_park_out_path.front().seg_type ==
         pnc::geometry_lib::SEG_TYPE_LINE) {
       inversed_park_out_path.erase(inversed_park_out_path.begin());
     }
+    calc_params_.suc_rev_parking_out_vec.emplace_back(inversed_park_out_path);
 
     const auto prepare_pose = inversed_park_out_path.front().GetStartPose();
     const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
@@ -1555,12 +1562,11 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
   if (!(input_.tlane.is_short_channel)) {
     return false;
   }
-  std::vector<double> heading_vec = {22.5, 27.5, 47.5, 55.0, 35.0, 60.0};
 
   const double step = 0.2;
   size_t max_num = 16;
 
-  for (const auto& heading_deg : heading_vec) {
+  for (const auto& heading_deg : big_heading_vec_) {
     const double heading_rad =
         heading_deg * kDeg2Rad * input_.tlane.slot_side_sgn;
     const auto v_preparing_line_heading =
@@ -1582,14 +1588,14 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
         ILOG_INFO << "CalTangentLineFromHeadingAndArc failed!";
         continue;
       }
-      tp = tangent_points[0];
-      Eigen::Vector2d x_tmp(-1.0, 0.0);
-      Eigen::Vector2d y_tmp(0.0, 1.0);
+      tp = tangent_points[0] +
+           v_preparing_line_heading * apa_param.GetParam().car_width;
+      Eigen::Vector2d y_tmp(0.0, -1.0);
       // ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
       for (size_t i = 0; i < max_num; i++) {
         auto start_pos =
             tp + v_preparing_line_norm * input_.tlane.slot_side_sgn * i * step +
-            y_tmp * 2;
+            y_tmp * input_.tlane.slot_side_sgn;
 
         if (start_pos.x() - 1.0 < input_.tlane.obs_pt_outside.x()) {
           break;
