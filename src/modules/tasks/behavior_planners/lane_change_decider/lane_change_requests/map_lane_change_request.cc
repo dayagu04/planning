@@ -35,8 +35,8 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   //检查是否满足变道请求
   const bool is_mlc_enable = CheckMLCEnable(lc_status);
 
-  // 此时为propose状态
-  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150){
+  // 这里判断条件要不要加上此时为propose状态
+  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150 && lc_status <= kLaneChangePropose){
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
     ILOG_DEBUG << "[MapRequest::update] avoide MLC time out, cancel";
