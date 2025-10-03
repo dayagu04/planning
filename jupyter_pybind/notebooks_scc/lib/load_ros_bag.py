@@ -669,7 +669,7 @@ class LoadRosbag:
                           "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
                           "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
                           "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
-                          "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel",
+                          "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel", "planning_fault_code",
                           "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
                           "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
                           "potential_dangerous_agent_id", "need_decelerate_func_fade_away", "v_target_func_fade_away", "cur_lane_mark",
