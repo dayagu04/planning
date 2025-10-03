@@ -545,6 +545,7 @@ void ConeRequest::ConeDir() {
   double dis_to_first_merge = NL_NMAX;
   double dis_to_merge_point = NL_NMAX;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    dis_to_merge_point = merge_point_info.dis_to_merge_fp;
     const auto& split_region_info_list = route_info_output.split_region_info_list;
     const auto& merge_region_info_list = route_info_output.merge_region_info_list;
     if (!split_region_info_list.empty()) {
@@ -568,7 +569,7 @@ void ConeRequest::ConeDir() {
   const auto& feasible_lane_sequence = route_info_output.mlc_decider_route_info.feasible_lane_sequence;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
-  if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 || dis_to_merge_point < 500.0) {
+  if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 || dis_to_merge_point < 200.0) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums_ + 1;
       int target_lane_order_num = current_lane_order_num - 1;
