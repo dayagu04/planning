@@ -27,9 +27,12 @@ struct NodeGCost {
   float expected_dist_cost;
   float obs_dist_cost;
 
+  // prepare searching route box
   float recommend_route_box_cost;
+
+  // two s curve is zigzag
   float zigzag_cost;
-  // heading error accumulate
+  // heading error
   float ref_line_heading_cost;
 
   float total_cost;

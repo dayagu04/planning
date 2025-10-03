@@ -683,7 +683,7 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
     if (path->points[i].x < lon_lower) {
       continue;
     }
-    if (path->points[i].dist_to_obs > lat_buffer - 0.001f) {
+    if (path->points[i].dist_to_obs > lat_buffer + 0.2f) {
       best_lon = path->points[i].x;
       break;
     }

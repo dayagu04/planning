@@ -1939,14 +1939,17 @@ void NarrowSpaceScenario::FillGearRequest(const bool is_scenario_try,
 
   // 目前,平行车位入库使用混合A星搜索，交换起点终点
   cur_request.swap_start_goal = false;
-  if (cur_request.space_type == ParkSpaceType::PARALLEL) {
-    if (cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::ASTAR_SEARCHING ||
-        cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::TRY_SEARCHING) {
-      cur_request.swap_start_goal = true;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkInStatus()) {
+    if (cur_request.space_type == ParkSpaceType::PARALLEL) {
+      if (cur_request.path_generate_method ==
+              planning::AstarPathGenerateType::ASTAR_SEARCHING ||
+          cur_request.path_generate_method ==
+              planning::AstarPathGenerateType::TRY_SEARCHING) {
+        cur_request.swap_start_goal = true;
+      }
     }
   }
+
   if (apa_world_ptr_->GetSimuParam().enable_debug_swap_start_goal) {
     cur_request.swap_start_goal =
         apa_world_ptr_->GetSimuParam().swap_start_goal;

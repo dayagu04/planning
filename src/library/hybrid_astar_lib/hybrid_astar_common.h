@@ -239,6 +239,18 @@ struct MapBound {
 
     return true;
   }
+
+  void MergePoint(const Pose2f& p) {
+    // x bound
+    x_min = std::min(x_min, p.x);
+    x_max = std::max(x_max, p.x);
+
+    // y bound
+    y_min = std::min(y_min, p.y);
+    y_max = std::max(y_max, p.y);
+
+    return;
+  }
 };
 
 struct AStarPathPoint {

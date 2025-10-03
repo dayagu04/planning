@@ -6,7 +6,9 @@
 
 namespace planning {
 
-#define NODE_POOL_MAX_NUM (50000)
+// use 200000 node pool is better for x86，but for arm, 200000 will consume too
+// much time.
+#define NODE_POOL_MAX_NUM (60000)
 
 // stack is small, so use data segment in memory to store all nodes.
 // of course you can store nodes in heap by malloc function.

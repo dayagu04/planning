@@ -61,9 +61,6 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
       slot.GetType() == SlotType::SLANT) {
     double virtual_wall_x_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
-    if (path_fail_num > 0) {
-      virtual_wall_x_offset = 2.5;
-    }
 
     double virtual_wall_y_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;

@@ -12,8 +12,7 @@ namespace planning {
 struct NodeHeadingShrink {
   bool limit_search_heading_;
   // [0, Pi]
-  float heading_low_bound_;
-  float heading_up_bound_;
+  float max_ref_line_heading_error;
 };
 
 struct XCoordinateShrinkBound {
@@ -29,14 +28,12 @@ class NodeShrinkDecider : public AstarDecider {
 
   void Process(const Pose2f &start, const Pose2f &end) override;
 
-  void Process(const Pose2f &start, const Pose2f &end,
-               const ParkingVehDirection park_dir, const Pose2f &limiter_pose,
-               const MapBound &XYbounds);
-
-  bool IsLegalForHeading(const float heading);
-
-  bool IsLegalForPos(const float x, const float y, const float x_limit,
-                     const float y_limit);
+  /**
+   * ego: ego pose
+   * end: pose decided by limiter pose
+   */
+  void Process(const Pose2f &ego, const Pose2f &end, const MapBound &XYbounds,
+               const AstarRequest &request);
 
   bool IsShrinkByParent(const Node3d *parent, const Node3d *child_node);
 
@@ -55,19 +52,24 @@ class NodeShrinkDecider : public AstarDecider {
   const bool IsSameGridNodeContinuous(const Node3d *new_node,
                                       const Node3d *old_node) const;
 
-  bool IsLegalByXBound(const float x);
+  bool IsLegalForPose(const Pose2f &pose);
 
  private:
-  void ShrinkChildrenByHeadingForTailIn();
+  void UpdateHeadingErrorWithRefLine();
 
-  void ShrinkChildrenByHeadingForHeadIn();
+  bool IsLegalForHeading(const Pose2f &pose);
+
+  bool IsLegalByXBound(const float x);
 
   // [0,+pi]
   NodeHeadingShrink heading_shrink_;
 
-  ParkingVehDirection park_dir_;
-
+  // searching zone, shrink node
   XCoordinateShrinkBound x_bound_;
+
+  // passage zone, if pose is in this zone, keep it. If pose is out of this
+  // zone, check pose heading.
+  MapBound passage_zone_;
 };
 
 }  // namespace planning
