@@ -690,17 +690,19 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   //   static_obs_buffer = config_.large_static_obs_buffer;
   // }
 
+  double min_near_car_thr = 0.09;
   std::array<double, 3> xp{20, 40, 60};
-  std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
+  std::array<double, 3> fp{near_car_thr, 0.12, min_near_car_thr};
   double near_car_d_lane_thr = interp(d_s_rel, xp, fp);
   // lower buffer for car
   if (!obstacle.is_static() &&
       (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_BUS)) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_VAN) &&
+      !IsTruck(frenet_obstacle)) {
     // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
     near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
+    near_car_d_lane_thr = std::fmax(near_car_d_lane_thr, min_near_car_thr);
   }
   // addition buffer for oversize vehicle
   if (obstacle.is_oversize_vehicle()) {
