@@ -535,7 +535,7 @@ void LaneChangeRequestManager::ProcessBlinkState(
   if (lane_change_cancel_freeze_cnt < 40) {
     trigger_lane_change_cancel_ = true;
     ++lane_change_cancel_freeze_cnt;
-    lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
+    // lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
   } else {
     lane_change_cancel_freeze_cnt = 40;
     trigger_lane_change_cancel_ = false;
