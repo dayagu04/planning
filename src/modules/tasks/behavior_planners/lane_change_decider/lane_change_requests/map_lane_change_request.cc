@@ -95,6 +95,7 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
+  congestion_detection_config.heavy_density = 30;
   if (target_lane && is_avoidance_MLC){
     const int target_lane_id = target_lane->get_virtual_id();
     CongestionDetector detector(&congestion_detection_config, session_, target_lane_id);
