@@ -27,14 +27,14 @@ namespace planning {
 namespace {
 constexpr double kLongClusterCoeff = 3.2;
 constexpr double kLatClusterThre = 0.6;
-constexpr double kLatPassThre = 0.6;
-constexpr double kLatPassThreBuffer = 0.3;
+constexpr double kLatPassThre = 0.75;
+constexpr double kLatPassThreBuffer = 0.35;
 constexpr uint32_t kConeAlcCountThre = 3;
 constexpr int kConeAlcCountLowerThre = 0;
 constexpr double kLongClusterTimeGap = 4.0;
 constexpr double kDefaultLaneWidth = 3.75;
 constexpr double kMinDefaultLaneWidth = 2.65;
-constexpr uint32_t kConeDirecSize = 3;
+constexpr uint32_t kConeDirecSize = 5;
 constexpr double kConeDirecThre = 0.5;
 constexpr double kConeSlopeThre = 1;
 constexpr int kInvalidAgentId = -1;
