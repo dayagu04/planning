@@ -525,11 +525,21 @@ void LaneChangeRequestManager::ProcessBlinkState(
     trigger_lane_change_cancel_ = true;
   }
   static int lane_change_cancel_freeze_cnt = 40;
+
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  bool is_interactive_lane_change_cancel =
+      static_cast<RequestSource>(
+          lane_change_decider_output.lc_request_source) == INT_REQUEST;
   if (trigger_left_lane_change_cancel || trigger_right_lane_change_cancel) {
+    if (is_interactive_lane_change_cancel) {
+      lane_change_cancel_freeze_cnt = 35;
+    } else {
+      lane_change_cancel_freeze_cnt = 0;
+    }
     lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
     trigger_lane_change_cancel_ = true;
     cancel_freeze_count = 0;
-    lane_change_cancel_freeze_cnt = 0;
   }
   last_frame_blinker_ = ego_blinker;
   if (lane_change_cancel_freeze_cnt < 40) {

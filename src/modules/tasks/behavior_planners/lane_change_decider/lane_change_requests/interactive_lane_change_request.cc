@@ -278,6 +278,7 @@ void IntRequest::Update(int lc_status) {
     counter_left_ = 0;
     counter_right_ = 0;
     lane_change_cmd_ = TurnSwitchState::NONE;
+    trigger_lane_change_cancel_ = false;
     // }
   } else if (lane_change_cmd_ == TurnSwitchState::NONE) {
     Finish();
