@@ -313,6 +313,7 @@ class LateralMotionPlanningWeight {
   double expected_average_acc_;
   double expected_max_acc_;
   double expected_min_acc_;
+  double min_road_radius_;
   double target_road_radius_;
   double min_q_jerk_;
   double expected_avoid_jerk_;

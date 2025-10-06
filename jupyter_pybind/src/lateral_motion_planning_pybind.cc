@@ -102,20 +102,22 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
     planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
   }
   // virtual ref
-  bool is_virtual_empty =
-      virtual_ref_x.size() != N ||
-      virtual_ref_y.size() != N ||
-      virtual_ref_theta.size() != N;
-  if (is_virtual_empty) {
-    virtual_ref_x.clear();
-    virtual_ref_y.clear();
-    virtual_ref_theta.clear();
-    for (size_t i = 0; i < N; i++) {
-      virtual_ref_x.emplace_back(planning_input.ref_x_vec(i));
-      virtual_ref_y.emplace_back(planning_input.ref_y_vec(i));
-      virtual_ref_theta.emplace_back(planning_input.ref_theta_vec(i));
-    }
-  }
+  // bool is_virtual_empty =
+  //     virtual_ref_x.size() != N ||
+  //     virtual_ref_y.size() != N ||
+  //     virtual_ref_theta.size() != N;
+  // if (is_virtual_empty) {
+  //   virtual_ref_x.clear();
+  //   virtual_ref_y.clear();
+  //   virtual_ref_theta.clear();
+  //   for (size_t i = 0; i < N; i++) {
+  //     virtual_ref_x.emplace_back(planning_input.ref_x_vec(i));
+  //     virtual_ref_y.emplace_back(planning_input.ref_y_vec(i));
+  //     virtual_ref_theta.emplace_back(planning_input.ref_theta_vec(i));
+  //   }
+  //   q_virtual_ref_xy = 0;
+  //   q_virtual_ref_theta = 0;
+  // }
   // set bound idx
   if (safe_lb_start_idx < 0) {
     safe_lb_start_idx = 0;

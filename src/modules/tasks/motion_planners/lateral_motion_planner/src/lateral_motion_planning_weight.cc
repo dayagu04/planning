@@ -48,6 +48,7 @@ void LateralMotionPlanningWeight::Init() {
   expected_average_acc_ = 0.0;
   expected_max_acc_ = 0.0;
   expected_min_acc_ = 0.0;
+  min_road_radius_ = 10000.0;
   target_road_radius_ = 10000.0;
   min_q_jerk_ = 2.0;
   expected_avoid_jerk_ = 0.0;
@@ -464,7 +465,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   size_t kappa_gap = 0;
   size_t left_count = 0;
   size_t right_count = 0;
-  double min_road_radius = 10000.0;
+  min_road_radius_ = 10000.0;
   double max_road_radius = 1.0;
   double preview_road_radius = 10000.0;
   double sum_kappa = 0;
@@ -539,8 +540,8 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
         double average_radius = 1 / average_kappa;
         curvature_radius_vec_[time] = average_radius;
         if (time < 5) {
-          min_road_radius =
-              std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius);
+          min_road_radius_ =
+              std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius_);
           max_road_radius =
               std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
         }
@@ -896,8 +897,11 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
     } else if (is_lane_change_back_) {
       jerk_bound += 0.3;
     }
-  } else if (is_bound_avoid_) {
-    jerk_bound = expected_avoid_jerk_;
+  } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
+    jerk_bound = config_.jerk_bound_ramp;
+  }
+  if (is_bound_avoid_) {
+    jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
   // tiny speed
   double init_delta = planning_input.init_state().delta();
@@ -1063,7 +1067,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         planning::interp(target_road_radius_, xp_road_radius,
                          config_.map_jerk_bound_ramp);
     if (is_sharp_turn_) {
-      jerk_bound += 0.5;
+      jerk_bound = // 1.0 0.8 0.6 0.5
+        planning::interp(min_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp) + 0.5;
     }
   } else if (is_bound_avoid_) {
     jerk_bound = expected_avoid_jerk_;
@@ -1140,7 +1145,12 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       }
     }
   }
-  if (is_high_priority_back && (is_lane_change_hold_ || is_lane_change_back_)) {
+  if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
+    emergency_level_ = EmergencyLevel::P0;
+  }
+  if (is_high_priority_back &&
+      (is_lane_change_hold_ ||
+       is_lane_change_back_)) {
     emergency_level_ = EmergencyLevel::P0;
     planning_input.set_q_continuity(0.0);
   }
@@ -1175,11 +1185,19 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     emergency_jerk_bound = config_.jerk_bound_inactivated_limit;
   }
   // consider 20 frame
-  if (enter_lccnoa_time > 1e-6 && enter_lccnoa_time < 2.0) {
-    emergency_jerk_bound = P2_emergency_jerk_bound;
-    extra_jerk_buffer = std::min(0.025, extra_jerk_buffer);
+  if (enter_lccnoa_time > 1e-6 &&
+      enter_lccnoa_time < 2.0) {
+    extra_jerk_buffer =
+        std::min(0.025, extra_jerk_buffer);
     if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
       extra_jerk_buffer *= 2.0;
+      if (is_sharp_turn_ || is_s_bend_) {
+        extra_jerk_buffer *= 2.0;
+      } else {
+        emergency_jerk_bound = P1_emergency_jerk_bound;
+      }
+    } else {
+      emergency_jerk_bound = P2_emergency_jerk_bound;
     }
   }
   // jerk_bound = std::max(last_jerk_bound_limit_, jerk_bound);
@@ -1515,6 +1533,9 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   } else if (emergency_level_ == EmergencyLevel::P1) {
     emergence_factor = 1.5 * config_.emergence_avoid_factor;
   } else if (emergency_level_ == EmergencyLevel::P2) {
+    emergence_factor = config_.emergence_avoid_factor;
+  }
+  if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     emergence_factor = config_.emergence_avoid_factor;
   }
   if (is_in_intersection_) {
