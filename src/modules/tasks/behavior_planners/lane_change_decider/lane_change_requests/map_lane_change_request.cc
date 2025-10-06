@@ -22,8 +22,30 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
 
+  if (suppression_counter > 0) {
+    suppression_counter++;
+  }
+  if (is_in_avoidance_mlc) {
+    avoidance_MLC_counter++;
+  }
+  if (suppression_counter > 30){
+    suppression_counter = 0;
+  }
+
   //检查是否满足变道请求
   const bool is_mlc_enable = CheckMLCEnable(lc_status);
+
+  // 这里判断条件要不要加上此时为propose状态
+  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150 && lc_status <= kLaneChangePropose){
+    Finish();
+    set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
+    ILOG_DEBUG << "[MapRequest::update] avoide MLC time out, cancel";
+    is_in_avoidance_mlc = false;
+    avoidance_MLC_counter = 0;
+    suppression_counter = 1; //启动抑制
+    return;
+  }
+
   if (is_mlc_enable) {
     GenerateMLCRequest();
   }
@@ -31,6 +53,8 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
     lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
+    is_in_avoidance_mlc = false;
+    avoidance_MLC_counter = 0;
   }
   ILOG_DEBUG << "MapRequest::update: finished";
 }
@@ -40,6 +64,8 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   if (current_lane == nullptr) {
     return false;
   }
@@ -53,7 +79,33 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   const RequestType request_type =
       lc_map_decision < 0 ? LEFT_CHANGE : RIGHT_CHANGE;
 
-  // 2、当前状态可以生成变道请求，否则返回false
+  // 2、根据拥堵类型和MLC_Request_type判断是否要抑制
+  std::shared_ptr<VirtualLane> target_lane = nullptr;
+
+  if (request_type == LEFT_CHANGE) {
+    target_lane = virtual_lane_mgr_->get_left_lane();
+  } else {
+    target_lane = virtual_lane_mgr_->get_right_lane();
+  }
+  const bool is_avoidance_MLC =
+              route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
+              route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+  if (is_avoidance_MLC && suppression_counter > 0) {
+    ILOG_INFO << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
+    return false;
+  }
+
+  congestion_detection_config.heavy_density = 30;
+  if (target_lane && is_avoidance_MLC){
+    const int target_lane_id = target_lane->get_virtual_id();
+    CongestionDetector detector(&congestion_detection_config, session_, target_lane_id);
+    CongestionResult result = detector.DetectLaneCongestion();
+    if (result.level == CongestionLevel::CONGESTION) {
+      return false;
+    }
+  }
+
+  // 3、当前状态可以生成变道请求，否则返回false
   const bool allow_generate = lc_status == kLaneChangePropose ||
                               lc_status == kLaneChangeHold ||
                               lc_status == kLaneKeeping;
@@ -61,13 +113,13 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
-  // 3、判断剩余距离是否触发生成变道请求
+  // 4、判断剩余距离是否触发生成变道请求
   bool is_trigger_mlc = IsTriggerMLCForRemainDistane();
   if (!is_trigger_mlc) {
     return false;
   }
 
-  // 4、判断虚线长度是否满足变道条件
+  // 5、判断虚线长度是否满足变道条件
   const auto& ego_lane_road_right_decider_output =
       session_->planning_context().ego_lane_road_right_decider_output();
   bool is_split_region = ego_lane_road_right_decider_output.is_split_region;
@@ -111,12 +163,12 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     }
   }
 
-  // 5、判断目标车道是否有汇流箭头与当前变道请求冲突
+  // 6、判断目标车道是否有汇流箭头与当前变道请求冲突
   if (!CheckTargetLaneLaneMarks(request_type)) {
     return false;
   }
 
-  // 6、判断目标车道与当前车道在前方是否存在merge split_region
+  // 7、判断目标车道与当前车道在前方是否存在merge split_region
   if (!CheckTargetLaneMergeDirection(request_type)) {
     return false;
   }
@@ -223,6 +275,8 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
 void MapRequest::GenerateMLCRequest() {
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
   const int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   // lc_map_decision 小于0表示左转，大于0表示右转
   if (lc_map_decision < 0) {
     const auto& target_lane = virtual_lane_mgr_->get_left_lane();
@@ -238,6 +292,16 @@ void MapRequest::GenerateMLCRequest() {
       set_target_lane_virtual_id(target_lane->get_virtual_id());
       ILOG_DEBUG << "[MapRequest::update] Ask for map changing lane to right";
     }
+  }
+  const bool is_avoidance_MLC =
+              route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
+              route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+  if (is_avoidance_MLC && !is_in_avoidance_mlc) {
+    is_in_avoidance_mlc = true; // 设置状态标志
+    avoidance_MLC_counter = 1;   // 启动超时计时器
+  } else if(!is_avoidance_MLC){
+    is_in_avoidance_mlc = false;
+    avoidance_MLC_counter = 0;
   }
 }
 

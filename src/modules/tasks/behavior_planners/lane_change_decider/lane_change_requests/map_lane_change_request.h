@@ -2,7 +2,8 @@
 
 #include "config/basic_type.h"
 #include "lane_change_request.h"
-
+#include "ego_planning_config.h"
+#include "traffic_congestion_decider.h"
 namespace planning {
 
 /// @brief 换道请求子类：地图换道请求
@@ -30,6 +31,11 @@ class MapRequest : public LaneChangeRequest {
   void GenerateMLCRequest();
   bool CheckTargetLaneLaneMarks(RequestType request_type);
   bool CheckTargetLaneMergeDirection(RequestType request_type);
+
+  CongestionDetectionConfig congestion_detection_config;
+  int avoidance_MLC_counter = 0;
+  int suppression_counter = 0;
+  bool is_in_avoidance_mlc = false;
 };
 
 }  // namespace planning
