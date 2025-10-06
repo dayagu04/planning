@@ -1,6 +1,8 @@
 #include "map_lane_change_request.h"
+
 #include <climits>
 #include <cmath>
+
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
@@ -17,34 +19,24 @@ MapRequest::MapRequest(
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
 void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   ILOG_INFO << "MapRequest::update";
-  //检查是否有拨杆信息
-  const int ego_blinker = session_->mutable_environmental_model()
-                              ->get_ego_state_manager()
-                              ->ego_blinker();
-  const bool is_valid_ego_blinker = ego_blinker == 1 || ego_blinker == 2;
-  const bool is_cancel_mlc_for_ego_blinker =
-      is_valid_ego_blinker && lc_status <= kLaneChangeExecution &&
-      request_type_ != NO_CHANGE &&
-      ((ego_blinker == 1 && request_type_ == RIGHT_CHANGE) ||
-       (ego_blinker == 2 && request_type_ == LEFT_CHANGE));
-  //如果CheckMLCEnable检查没通过，根据当前状态判断是否可以取消已经生成了的request_type_
-  const bool allow_cancel =
-      (lc_status == kLaneChangePropose || lc_status == kLaneKeeping);
+  // 检查是否有拨杆信息
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
+
   //检查是否满足变道请求
   const bool is_mlc_enable = CheckMLCEnable(lc_status);
-  if (is_mlc_enable && !is_valid_ego_blinker) {
+  if (is_mlc_enable) {
     GenerateMLCRequest();
-  } else if ((allow_cancel || is_cancel_mlc_for_ego_blinker) &&
-             request_type_ != NO_CHANGE) {
+  }
+  if (trigger_lane_change_cancel_) {
+    lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
-    ILOG_DEBUG << "[MapRequest::update] cancel map request as allow cancel";
   }
   ILOG_DEBUG << "MapRequest::update: finished";
 }
 
 bool MapRequest::CheckMLCEnable(const int lc_status) {
-  //检查是否满足变道条件，如果满足，则生成mlc_req
+  // 检查是否满足变道条件，如果满足，则生成mlc_req
   const int current_lane_virtual_id =
       virtual_lane_mgr_->current_lane_virtual_id();
   const auto& current_lane = virtual_lane_mgr_->get_current_lane();
@@ -142,7 +134,7 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   int lc_map_decision = virtual_lane_mgr_->lc_map_decision(current_lane);
 
   // TODO(fengwang31):目前自车在最左侧车道上时，无法确认到最右边有几条车道，
-  //因此hack一下，判断自车在左侧，提前产生变道任务
+  // 因此hack一下，判断自车在左侧，提前产生变道任务
   bool is_ego_on_leftmost = false;
   auto right_lane = virtual_lane_mgr_->get_right_lane();
   if (right_lane) {
@@ -182,7 +174,7 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
         is_current_lane_is_leftmost && is_right_lane_boundary_both_dash;
   }
 
-  //确定地图变道触发距离lc_map_decision
+  // 确定地图变道触发距离lc_map_decision
   const double kTmpRampLength = 100.;
   const double kResponseOffset = 300.;
   const double kDefaultMapDelay = 3.;
@@ -281,7 +273,7 @@ bool MapRequest::CheckTargetLaneLaneMarks(RequestType request_type) {
       break;
     }
   }
-  //遍历判断前方是否有与变道方向冲突的汇流车道
+  // 遍历判断前方是否有与变道方向冲突的汇流车道
   for (int j = seg_index; j < target_lane_marks.size(); ++j) {
     if (request_type == LEFT_CHANGE) {
       if (target_lane_marks[j].lane_mark ==

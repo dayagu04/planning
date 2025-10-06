@@ -7,15 +7,6 @@ namespace planning {
 
 /// @brief 交互式(Interactive)换道请求
 class IntRequest : public LaneChangeRequest {
-  enum TurnSwitchState {
-    NONE = 0,
-    LEFT_FIRMLY_TOUCH = 1,
-    RIGHT_FIRMLY_TOUCH = 2,
-    LEFT_LIGHTLY_TOUCH = 3,
-    RIGHT_LIGHTLY_TOUCH = 4,
-    ERROR = 5,
-  };
-
  public:
   IntRequest(planning::framework::Session* session,
              std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -24,10 +15,16 @@ class IntRequest : public LaneChangeRequest {
 
   void Update(int lc_status);
 
-  IntCancelReasonType request_cancel_reason() {
-    return request_cancel_reason_;
+  IntCancelReasonType request_cancel_reason() { return request_cancel_reason_; }
+  virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
+    lane_change_cmd_ = lane_change_cmd;
   }
-
+  virtual void SetLaneChangeCancelFromTrigger(bool trigger_lane_change_cancel) {
+    trigger_lane_change_cancel_ = trigger_lane_change_cancel;
+  }
+  virtual IntCancelReasonType lc_request_cancel_reason() {
+    return lc_request_cancel_reason_;
+  }
   void set_request_cancel_reason(IntCancelReasonType request_cancel_reason) {
     request_cancel_reason_ = request_cancel_reason;
   }
@@ -62,8 +59,6 @@ class IntRequest : public LaneChangeRequest {
   void PrintForbidGeneratingReason(
       const std::vector<std::string> forbid_generating_reason);
 
-  void ProcessBlinkState(const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status);
-
   // void check_lc_forbid_reason(
   //     std::vector<std::string>& forbid_generating_left_reason,
   //     std::vector<std::string>& forbid_generating_right_reason);
@@ -82,7 +77,6 @@ class IntRequest : public LaneChangeRequest {
   bool is_lever_status_valid_last_frame_ = true;
   bool is_in_diverted_lane_change_ = false;
   RequestType ilc_virtual_req_ = NO_CHANGE;
-  uint last_frame_blinker_ = 0;
 };
 
 }  // namespace planning

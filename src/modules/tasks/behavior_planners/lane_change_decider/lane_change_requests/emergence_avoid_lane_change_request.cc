@@ -44,6 +44,7 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   std::cout << "EmergenceAvoidRequest::Update::coming emergence avoid lane "
                "change request"
             << std::endl;
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
 
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
@@ -178,6 +179,12 @@ void EmergenceAvoidRequest::Update(int lc_status) {
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
       }
+      if (trigger_lane_change_cancel_) {
+        lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+        Finish();
+        Reset();
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      }
     } else {
       // 获取右车道线型
       iflyauto::LaneBoundaryType right_boundary_type =
@@ -195,6 +202,12 @@ void EmergenceAvoidRequest::Update(int lc_status) {
         Finish();
         set_target_lane_virtual_id(target_lane_virtual_id_tmp);
         ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, dash not enough";
+      }
+      if (trigger_lane_change_cancel_) {
+        lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+        Finish();
+        Reset();
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       }
     }
   } else if (request_type_ != NO_CHANGE &&

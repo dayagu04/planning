@@ -34,6 +34,8 @@ void IntRequest::Update(int lc_status) {
                                   .lane_change_decider_output()
                                   .lc_request_source;
   // 其他变道进行到execution状态中，则抑制拨杆变道
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
+
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
       lc_req_source != INT_REQUEST) {
     lane_change_cmd_ = TurnSwitchState::NONE;
@@ -71,11 +73,7 @@ void IntRequest::Update(int lc_status) {
   // }
   // is_lever_status_valid_last_frame_ =
   //     is_lever_status_valid_;  //反方向拨杆时，能触发反方向的变道请求
-  const auto& ego_blinker = session_->mutable_environmental_model()
-                                ->get_ego_state_manager()
-                                ->ego_blinker();
-  ProcessBlinkState(ego_blinker,
-                    static_cast<StateMachineLaneChangeStatus>(lc_status));
+
   JSON_DEBUG_VALUE("lane_change_cmd_", lane_change_cmd_);
 
   // init lanes with id
@@ -263,23 +261,25 @@ void IntRequest::Update(int lc_status) {
       ILOG_DEBUG << "[IntRequest::update] waiting counter for interactive "
                     "changing lane to right";
     }
-  } else if (lane_change_cmd_ == TurnSwitchState::NONE &&
-             request_type_ != NO_CHANGE) {
+  } else if (trigger_lane_change_cancel_ && request_type_ != NO_CHANGE) {
     // 3.换道过程中取消拨杆
-    if (lane_change_lane_mgr_->has_target_lane() &&
-        (std::fabs(frenet_ego_state_l) <
-         tlane->width() / 2 +
-             int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
-      // 取消换道，但此时已经进入目标车道，则保持至换道完成
-      ILOG_DEBUG << "[IntRequest::update]: Cancel int lc blinker when ego car "
-                    "on target lane and continue lc state";
-    } else {
-      request_cancel_reason_ = MANUAL_CANCEL;
-      Finish();
-      set_target_lane_virtual_id(current_lane_virtual_id);
-      counter_left_ = 0;
-      counter_right_ = 0;
-    }
+    // if (lane_change_lane_mgr_->has_target_lane() &&
+    //     (std::fabs(frenet_ego_state_l) <
+    //      tlane->width() / 2 +
+    //          int_request_config_.disallow_cancel_int_lc_lateral_thr)) {
+    //   // 取消换道，但此时已经进入目标车道，则保持至换道完成
+    //   ILOG_DEBUG << "[IntRequest::update]: Cancel int lc blinker when ego car
+    //   "
+    //                 "on target lane and continue lc state";
+    // } else {
+    request_cancel_reason_ = MANUAL_CANCEL;
+    Finish();
+    set_target_lane_virtual_id(current_lane_virtual_id);
+    counter_left_ = 0;
+    counter_right_ = 0;
+    lane_change_cmd_ = TurnSwitchState::NONE;
+    trigger_lane_change_cancel_ = false;
+    // }
   } else if (lane_change_cmd_ == TurnSwitchState::NONE) {
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
@@ -306,52 +306,6 @@ void IntRequest::PrintForbidGeneratingReason(
     std::cout << "[IntRequest], Disable Reason: " << reason.c_str()
               << std::endl;
   }
-}
-
-void IntRequest::ProcessBlinkState(
-    const uint ego_blinker, const StateMachineLaneChangeStatus& lc_status) {
-  static int32_t cancel_freeze_count = 11;
-  bool is_allowed_cancel_state =
-      (lc_status == StateMachineLaneChangeStatus::kLaneChangePropose ||
-       lc_status == StateMachineLaneChangeStatus::kLaneChangeExecution ||
-       lc_status == StateMachineLaneChangeStatus::kLaneChangeHold ||
-       lc_status == StateMachineLaneChangeStatus::kLaneChangeCancel);
-  bool trigger_left_lane_change =
-      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping) &&
-      ((last_frame_blinker_ == TurnSwitchState::NONE ||
-        last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
-        last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
-       ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH);
-  bool trigger_right_lane_change =
-      (lc_status == StateMachineLaneChangeStatus::kLaneKeeping) &&
-      ((last_frame_blinker_ == TurnSwitchState::NONE ||
-        last_frame_blinker_ == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
-        last_frame_blinker_ == TurnSwitchState::RIGHT_LIGHTLY_TOUCH) &&
-       ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH);
-  bool trigger_left_lane_change_cancel =
-      is_allowed_cancel_state &&
-      (lane_change_cmd_ == TurnSwitchState::LEFT_FIRMLY_TOUCH &&
-       (ego_blinker == TurnSwitchState::RIGHT_LIGHTLY_TOUCH ||
-        ego_blinker == TurnSwitchState::RIGHT_FIRMLY_TOUCH));
-  bool trigger_right_lane_change_cancel =
-      is_allowed_cancel_state &&
-      (lane_change_cmd_ == TurnSwitchState::RIGHT_FIRMLY_TOUCH &&
-       (ego_blinker == TurnSwitchState::LEFT_LIGHTLY_TOUCH ||
-        ego_blinker == TurnSwitchState::LEFT_FIRMLY_TOUCH));
-  if (trigger_left_lane_change && cancel_freeze_count > 10) {
-    lane_change_cmd_ = TurnSwitchState::LEFT_FIRMLY_TOUCH;
-  } else if (trigger_right_lane_change && cancel_freeze_count > 10) {
-    lane_change_cmd_ = TurnSwitchState::RIGHT_FIRMLY_TOUCH;
-  }
-  cancel_freeze_count++;
-  if (cancel_freeze_count > 11) {
-    cancel_freeze_count = 11;
-  }
-  if (trigger_left_lane_change_cancel || trigger_right_lane_change_cancel) {
-    lane_change_cmd_ = TurnSwitchState::NONE;
-    cancel_freeze_count = 0;
-  }
-  last_frame_blinker_ = ego_blinker;
 }
 
 // void IntRequest::check_lc_forbid_reason(

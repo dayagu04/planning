@@ -51,7 +51,7 @@ ConeRequest::ConeRequest(
 void ConeRequest::Update(int lc_status) {
   std::cout << "ConeRequest::Update::coming cone lane change request"
             << std::endl;
-
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   // trigger EA lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
     ILOG_DEBUG << "ConeRequest::Update: ego not in lane keeping!";
@@ -114,7 +114,17 @@ void ConeRequest::Update(int lc_status) {
                    (int)cone_lane_change_direction_);
 
   setLaneChangeRequestByCone();
-  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: [ " << turn_signal_ << "]";
+  if (trigger_lane_change_cancel_) {
+    Finish();
+    Reset();
+    set_target_lane_virtual_id(current_lane_virtual_id);
+    ILOG_DEBUG << "[ConeRequest::update] " << __FUNCTION__ << " " << __LINE__
+               << " finish request, trigger_lane_change_cancel_ is true";
+    lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+    return;
+  }
+  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: [ "
+             << turn_signal_ << "]";
 }
 
 void ConeRequest::UpdateConeSituation(int lc_status) {

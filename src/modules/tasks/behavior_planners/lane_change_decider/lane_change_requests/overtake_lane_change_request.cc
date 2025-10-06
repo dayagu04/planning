@@ -119,7 +119,7 @@ OvertakeRequest::OvertakeRequest(
 void OvertakeRequest::Update(int lc_status) {
   std::cout << "OvertakeRequest::Update::coming overtake lane change request"
             << std::endl;
-
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   lane_tracks_manager_ =
       session_->environmental_model().get_lane_tracks_manager();
@@ -567,6 +567,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     set_target_lane_virtual_id(current_lane_virtual_id);
     ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":" << __LINE__ << " finish request, !trigger_left_overtake and !trigger_right_overtake";
   }
+  // if (trigger_lane_change_cancel_) {
+  //   Finish();
+  //   Reset();
+  //   set_target_lane_virtual_id(current_lane_virtual_id);
+  //   lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+  // }
   last_request_type_ = request_type_;
   return;
 }

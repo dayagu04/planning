@@ -39,7 +39,7 @@ MergeRequest::MergeRequest(
 void MergeRequest::Update(int lc_status) {
   std::cout << "MergeRequest::Update::coming merge lane change request"
             << std::endl;
-
+  lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
   // trigger merge lane change when lane keep status.
   if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose) {
     ILOG_DEBUG << "MergeRequest::Update: ego not in lane keeping!";
@@ -52,7 +52,7 @@ void MergeRequest::Update(int lc_status) {
     Finish();
     return;
   }
-  
+
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   planning_init_point_ = ego_state->planning_init_point();
@@ -123,7 +123,14 @@ void MergeRequest::Update(int lc_status) {
   }
 
   setLaneChangeRequestByMerge(lc_status);
-  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: [" << turn_signal_ << "\n";
+  ILOG_DEBUG << "request_type_: [" << request_type_ << "] turn_signal_: ["
+             << turn_signal_ << "\n";
+  if (trigger_lane_change_cancel_) {
+    lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
+    Finish();
+    Reset();
+    set_target_lane_virtual_id(origin_lane_virtual_id_);
+  }
 }
 
 void MergeRequest::UpdateLaneMergeSituation(int lc_status) {
@@ -479,7 +486,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    //根据地面标识判断是否向右汇流
+    // 根据地面标识判断是否向右汇流
     if (segment >= 0 && ego_s != 0.0) {
       std::vector<iflyauto::LaneMarkMsg> lane_marks = base_lane->lane_marks();
 

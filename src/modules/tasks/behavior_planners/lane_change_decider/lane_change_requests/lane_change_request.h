@@ -19,6 +19,14 @@ namespace planning {
 /// @brief 换道请求的基类，生成、结束换道请求等
 class LaneChangeRequest {
  public:
+  enum TurnSwitchState {
+    NONE = 0,
+    LEFT_FIRMLY_TOUCH = 1,
+    RIGHT_FIRMLY_TOUCH = 2,
+    LEFT_LIGHTLY_TOUCH = 3,
+    RIGHT_LIGHTLY_TOUCH = 4,
+    ERROR = 5,
+  };
   LaneChangeRequest(
       planning::framework::Session* session,
       std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
@@ -66,6 +74,16 @@ class LaneChangeRequest {
   double CalculateDynamicTTCtime(const int origin_lane_id, const RequestType &lc_request) const;
   bool EgoInIntersection();
 
+  virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
+    lane_change_cmd_ = lane_change_cmd;
+  }
+  virtual void SetLaneChangeCancelFromTrigger(bool trigger_lane_change_cancel) {
+    trigger_lane_change_cancel_ = trigger_lane_change_cancel;
+  }
+  virtual IntCancelReasonType lc_request_cancel_reason() {
+    return lc_request_cancel_reason_;
+  }
+
  protected:
   TrackInfo lc_invalid_track_;
   RequestType request_type_ = NO_CHANGE;
@@ -81,6 +99,9 @@ class LaneChangeRequest {
   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr_;
   double aggressive_lane_change_distance_highway_{0.0};
   double aggressive_lane_change_distance_urban_{150.0};
+  std::uint8_t lane_change_cmd_{0};
+  bool trigger_lane_change_cancel_{false};
+  IntCancelReasonType lc_request_cancel_reason_{NO_CANCEL};
 };
 
 }  // namespace planning
