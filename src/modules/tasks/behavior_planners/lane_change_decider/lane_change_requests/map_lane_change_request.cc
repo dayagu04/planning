@@ -299,6 +299,9 @@ void MapRequest::GenerateMLCRequest() {
   if (is_avoidance_MLC && !is_in_avoidance_mlc) {
     is_in_avoidance_mlc = true; // 设置状态标志
     avoidance_MLC_counter = 1;   // 启动超时计时器
+  } else if(!is_avoidance_MLC){
+    is_in_avoidance_mlc = false;
+    avoidance_MLC_counter = 0;
   }
 }
 
