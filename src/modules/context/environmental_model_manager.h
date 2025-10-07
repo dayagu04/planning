@@ -124,7 +124,6 @@ class EnvironmentalModelManager {
   // bool is_right_firmly_touch_ = false;
   // int num_right_firmly_touch_ = 0;
   std::vector<int> history_lc_source_ = {0, 0};  // 0表示none，1表示ilc.
-  uint64_t faultcode_ = 39999;
 };
 
 }  // namespace planner

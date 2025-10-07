@@ -166,6 +166,7 @@ void EnvironmentalModelManager::InitContext() {
   edt_manager_ptr_ =
       std::make_shared<planning::EdtManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_edt_manager(edt_manager_ptr_);
+
 }
 
 void EnvironmentalModelManager::SetConfig(
@@ -439,7 +440,8 @@ bool EnvironmentalModelManager::Run() {
   ILOG_INFO << "EnvironmentalModelManager::Run cost time"
             << time_end - time_start;
   JSON_DEBUG_VALUE("EnvironmentalModelManagerCost", end_time - current_time);
-  // std::string status_msg;
+  std::string status_msg;
+  InputReady(current_time, status_msg);
   // if (!InputReady(current_time, status_msg)) {
   //   //   ILOG_ERROR << "";
   // LOG_ERROR(("InputReady is failed !!!! \n");
@@ -1401,6 +1403,7 @@ bool EnvironmentalModelManager::IsStatic(
 
 bool EnvironmentalModelManager::InputReady(double current_time,
                                            std::string &error_msg) {
+  using namespace framework;
   auto to_string = [](FeedType feed_type) -> const char * {
     switch (feed_type) {
       case FEED_VEHICLE_DBW_STATUS:
@@ -1430,13 +1433,10 @@ bool EnvironmentalModelManager::InputReady(double current_time,
     }
   };
 
-  static const std::vector<double> kCheckTimeDiff = {20, 20, 20, 20, 20, 20,
-                                                     20, 50, -1, -1, -1};
-  static const double kMapCheckTimeDiff = 1000;
-  static const double kpredictionCheckTimeDiff = 50;
-  static const double kfusionlaneCheckTimeDiff = 50;
+  static const double kCheckTimeDiff = 1.5 * 100; //1.5 * planning_T
+  //static const double kpredictionCheckTimeDiff = 50;
+  //static const double kfusionlaneCheckTimeDiff = 50;
   // set default value
-  setFaultcode(666);
   static const std::vector<FeedType> input_longtime_with_hdmap{
       FEED_VEHICLE_DBW_STATUS, FEED_EGO_VEL,
       FEED_EGO_STEER_ANGLE,    FEED_EGO_ENU,
@@ -1480,52 +1480,101 @@ bool EnvironmentalModelManager::InputReady(double current_time,
           : (session_->environmental_model().location_valid()
                  ? input_longtime_without_hdmap
                  : input_realtime_without_hdmap);
+  auto* fault_counter_info_ptr = session_->mutable_fault_counter_info();
   for (int i : input_list) {
     auto feed_type = static_cast<FeedType>(i);
     const char *feed_type_str = to_string(feed_type);
-    if (last_feed_time_[i] > 0.0) {
+    ILOG_DEBUG << "(" << __FUNCTION__ << ")"
+                << " topic latency: " << feed_type_str << ", "
+                << current_time - last_feed_time_[i] << "ms";
+    int fault_counter_vec_idx = -1;
+    switch (feed_type) {
+      case FEED_EGO_ENU:
+        fault_counter_vec_idx = static_cast<int>(FaultType::LOCALIZATION_TIME_OUT);
+        break;
+      case FEED_PREDICTION_INFO:
+        fault_counter_vec_idx = static_cast<int>(FaultType::PREDICTION_TIME_OUT);
+        break;
+      case FEED_FUSION_LANES_INFO:
+        fault_counter_vec_idx = static_cast<int>(FaultType::PERCEPTION_TIME_OUT);
+        break;
+      case FEED_EGO_STEER_ANGLE:
+        fault_counter_vec_idx = static_cast<int>(FaultType::VEHICLE_SERVICE_TIME_OUT);
+        break;
+      case FEED_VEHICLE_DBW_STATUS:
+        fault_counter_vec_idx = static_cast<int>(FaultType::FSM_TIME_OUT);
+        break;
+      default: break;
+    }
+    if (fault_counter_vec_idx < 0) {
+      continue;
+    }
+    if (current_time - last_feed_time_[i] > kCheckTimeDiff) {
       ILOG_DEBUG << "(" << __FUNCTION__ << ")"
-                 << " topic latency: " << feed_type_str << ", "
-                 << current_time - last_feed_time_[i] << "ms";
-      if (current_time - last_feed_time_[i] > 200) {
-        ILOG_DEBUG << "(" << __FUNCTION__ << ")"
-                   << "input_delay:" << i << ", " << feed_type_str;
-        error_msg += std::string(feed_type_str) + "; ";
-        setFaultcode(39001);
-        res = false;
-      } else {
-        if ((current_time - last_feed_time_[i] > kCheckTimeDiff[i] * 1.2) ||
-            (current_time - last_feed_time_[i] < kCheckTimeDiff[i] * 0.8)) {
-          if (feed_type == FEED_MAP_INFO &&
-              current_time - last_feed_time_[i] <= kMapCheckTimeDiff * 1.2 &&
-              current_time - last_feed_time_[i] >= kMapCheckTimeDiff * 0.8)
-            continue;
-          if (feed_type == FEED_FUSION_LANES_INFO &&
-              current_time - last_feed_time_[i] <=
-                  kfusionlaneCheckTimeDiff * 1.2 &&
-              current_time - last_feed_time_[i] >=
-                  kfusionlaneCheckTimeDiff * 0.8)
-            continue;
-          if (feed_type == FEED_PREDICTION_INFO &&
-              current_time - last_feed_time_[i] <=
-                  kpredictionCheckTimeDiff * 1.2 &&
-              current_time - last_feed_time_[i] >=
-                  kpredictionCheckTimeDiff * 0.8)
-            continue;
-          ILOG_ERROR << "(" << __FUNCTION__ << ")input_rate_error: " << i
-                     << ", " << feed_type_str;
-          error_msg += std::string(feed_type_str) + "; ";
-          setFaultcode(39000);
-          res = false;
+                  << "input_delay:" << i << ", " << feed_type_str;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter++;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter = 0;
+      if ((*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter >= 5 &&
+        getFaultcode() < 39000) {
+        switch (feed_type) {
+          //location
+          case FEED_EGO_ENU:
+            setFaultcode(39001);
+            break;
+          //prediction
+          case FEED_PREDICTION_INFO:
+            setFaultcode(39002);
+            break;
+          //static fusion
+          case FEED_FUSION_LANES_INFO:
+            setFaultcode(39000);
+            break;
+          //vehicle service
+          case FEED_EGO_STEER_ANGLE:
+            setFaultcode(39003);
+            break;
+          //functional state machine
+          case FEED_VEHICLE_DBW_STATUS:
+            setFaultcode(39004);
+            break;
+          default: break;
         }
       }
     } else {
-      // ILOG_ERROR(("(%s)no feed: %d, %s", __FUNCTION__, i, feed_type_str,
-      // "\n");
-      ILOG_ERROR << "lost frame: " << feed_type_str;
-      error_msg += std::string(feed_type_str) + "; ";
-      setFaultcode(39002);
-      res = false;
+      (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_trigger_counter = 0;
+      switch (feed_type) {
+        //location
+        case FEED_EGO_ENU:
+          if (getFaultcode() == 39001) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
+          }
+          break;
+        //prediction
+        case FEED_PREDICTION_INFO:
+          if (getFaultcode() == 39002) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
+          }
+          break;
+        //static fusion
+        case FEED_FUSION_LANES_INFO:
+          if (getFaultcode() == 39000) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
+          }
+          break;
+        //vehicle service
+        case FEED_EGO_STEER_ANGLE:
+          if (getFaultcode() == 39003) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
+          }
+          break;
+        //functional state machine
+        case FEED_VEHICLE_DBW_STATUS:
+          if (getFaultcode() == 39004) {
+            (*fault_counter_info_ptr)[fault_counter_vec_idx].fault_recovery_counter++;
+          }
+          break;
+        default: break;
+      }
     }
   }
   return res;
@@ -1642,14 +1691,10 @@ bool EnvironmentalModelManager::InputReady(double current_time,
 // }
 
 void EnvironmentalModelManager::setFaultcode(uint64_t faultcode) {
-  if (faultcode >= 39000 && faultcode <= 39999) {
-    faultcode_ = std::max(faultcode_, faultcode);
-  } else {
-    faultcode_ = 666;
-  }
+  session_->set_fault_code(faultcode);
 }
 
-uint64_t EnvironmentalModelManager::getFaultcode() { return faultcode_; }
+uint64_t EnvironmentalModelManager::getFaultcode() { return session_->get_fault_code(); }
 
 bool EnvironmentalModelManager::CheckIfOversizeVehicle(const int type) {
   if (type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||

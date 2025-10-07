@@ -66,6 +66,22 @@ class Session : public planning::common::Arena {
     return simulation_context_;
   }
 
+  const std::vector<FaultCounter>& fault_counter_info() {
+    return fault_counter_vec_;
+  }
+
+  std::vector<FaultCounter>* mutable_fault_counter_info() {
+    return &fault_counter_vec_;
+  }
+
+  uint64_t get_fault_code() {
+    return faultcode_;
+  }
+
+  void set_fault_code(uint64_t fault_code) {
+    faultcode_ = fault_code;
+  }
+
  private:
   planning::EnvironmentalModel *environmental_model_;
 
@@ -76,6 +92,10 @@ class Session : public planning::common::Arena {
   PlanningInitConfig planning_init_config_;
 
   SimulationContext *simulation_context_;
+
+  std::vector<FaultCounter> fault_counter_vec_;
+
+  uint64_t faultcode_ = 666;
 
   IFLY_DISALLOW_COPY_AND_ASSIGN(Session);
 };

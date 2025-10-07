@@ -34,6 +34,10 @@ class PlanningScheduler {
 
   uint64_t FaultCode();
 
+  void SetFaultCode(uint64_t faultcode);
+
+  bool FaultCanRecover();
+
  private:
   // 解析障碍物
   void FillPredictionTrajectoryPoint(
@@ -116,7 +120,7 @@ class PlanningScheduler {
       const common::SceneType function_type, const double start_timestamp,
       iflyauto::PlanningOutput *const planning_output,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
-
+  void CheckTrajectory();
  private:
   enum FeedType {
     FEED_VEHICLE_DBW_STATUS = 0,

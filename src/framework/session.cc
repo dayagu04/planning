@@ -42,6 +42,12 @@ bool Session::Init() {
 
   environmental_model_->set_module_config_file_dir(module_config_file_dir);
   simulation_context_ = SimulationContext::Instance();
+
+  fault_counter_vec_.resize(static_cast<int>(FaultType::FAULT_TYPE_NUM));
+  for(int i = 0; i < static_cast<int>(FaultType::FAULT_TYPE_NUM); i++) {
+    fault_counter_vec_[i].fault_trigger_counter = 0;
+    fault_counter_vec_[i].fault_recovery_counter = 0;
+  }
   return true;
 }
 

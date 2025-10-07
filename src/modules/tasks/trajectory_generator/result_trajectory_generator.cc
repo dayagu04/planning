@@ -14,7 +14,8 @@
 #include "math/math_utils.h"
 #include "math_lib.h"
 #include "planning_context.h"
-
+#include "environmental_model.h"
+#include "ego_state_manager.h"
 namespace planning {
 
 using namespace std;
@@ -39,6 +40,7 @@ void ResultTrajectoryGenerator::Init() {
   ddkappa_vec_.resize(N + 1);
   lat_acc_vec_.resize(N + 1);
   lat_jerk_vec_.resize(N + 1);
+
 }
 
 bool ResultTrajectoryGenerator::Execute() {

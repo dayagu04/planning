@@ -370,7 +370,12 @@ bool PlanningAdapter::Proc() {
   // Trigger: write fault info where error occured
   if (planning_scheduler_->FaultCode() >= 39000 &&
       planning_scheduler_->FaultCode() <= 39999) {
-    ReportFmIfno(planning_scheduler_->FaultCode(), 1, true);
+    if (planning_scheduler_->FaultCanRecover()) {
+      ReportFmIfno(planning_scheduler_->FaultCode(), 1, false);
+      planning_scheduler_->SetFaultCode(666);
+    } else {
+      ReportFmIfno(planning_scheduler_->FaultCode(), 1, true);
+    }
   }
 
   double planning_cost_time = (IflyTime::Now_us() - start_time_) / 1000;
