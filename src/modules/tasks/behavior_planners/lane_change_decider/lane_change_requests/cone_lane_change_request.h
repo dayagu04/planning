@@ -131,6 +131,8 @@ class ConeRequest : public LaneChangeRequest {
   std::vector<std::pair<double, double>>
       right_lane_s_width_;  // <s, lane_width>
   std::vector<std::pair<double, double>> origin_lane_s_width_;
+  int right_lane_nums_ = 0;
+  int left_lane_nums_ = 0;
   // bool use_query_lane_width_ = false;
 };
 
