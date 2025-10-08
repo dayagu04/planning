@@ -2044,7 +2044,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     return;
   }
 
-  const double l_offset_limit = config_.first_soft_min_distance2center;
+  const double l_offset_limit = config_.first_soft_min_distance2center + 1;
   constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
