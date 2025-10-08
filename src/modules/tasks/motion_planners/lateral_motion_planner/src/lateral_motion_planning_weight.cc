@@ -576,7 +576,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   // S bend
   if ((is_left_bend && is_right_bend) ||
       (expected_average_acc_ * preview_road_radius < -1e-6 &&
-       std::fabs(preview_road_radius) < 400.0)) {
+       std::fabs(preview_road_radius) < 2000.0)) {
     is_s_bend_ = true;
   }
   // anchor: target road radius
@@ -1712,7 +1712,8 @@ void LateralMotionPlanningWeight::ConstructVirtualRef(
   // combine history and future
   double average_acc;
   if (!history_path_points_.empty() &&
-      std::fabs(history_average_acc_) > 1e-3) {
+      std::fabs(history_average_acc_) > 1e-3 &&
+      expected_average_acc_ * history_average_acc_ > 1e-6) {
     double alpha = 0.5;
     average_acc =
         alpha * history_average_acc_ +

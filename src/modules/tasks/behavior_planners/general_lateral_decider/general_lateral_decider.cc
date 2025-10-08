@@ -450,17 +450,22 @@ bool GeneralLateralDecider::HandleRoadCurvature(
   std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
   double curve_radius_thr =
       planning::interp(ego_v, xp_vel, fp_radius_thr);
-  if (virtual_lane_manager
-          ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-      virtual_lane_manager
-          ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-      (max_virtual_seg_ahead_x > 0.0 &&
-       max_virtual_seg_ahead_x < ego_v * 5.0 &&
-       max_virtual_seg_ahead_length > 15.0)) {
+  double straight_radius_thr = 2000.0;
+  if ((virtual_lane_manager
+           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
+       virtual_lane_manager
+           ->GetIntersectionState() <= common::OFF_INTERSECTION &&
+       (max_virtual_seg_ahead_x > 0.0 &&
+        max_virtual_seg_ahead_x < (ego_v * 5.0 + 5.0) &&
+        max_virtual_seg_ahead_length > 15.0)) ||
+      (max_virtual_seg_ahead_x >= 0.0 &&
+       max_virtual_seg_ahead_x < (ego_v * 5.0 + 5.0) &&
+       max_virtual_seg_ahead_length > std::min(ego_v * 2.5, 50.0))) {
     curve_radius_thr = 50.0;
+    straight_radius_thr = 50.0;
   }
   double big_curve_thr = 1.0 / curve_radius_thr;
-  double straight_curv_thr = 1.0 / 2000.0;
+  double straight_curv_thr = 1.0 / straight_radius_thr;
   const auto& cart_ref_info =
       coars_planning_info.cart_ref_info;
   const auto& reference_path =
@@ -485,6 +490,16 @@ bool GeneralLateralDecider::HandleRoadCurvature(
   double right_curve_length = 0.0;
   double min_curve_length = 6.0;
   double min_mid_curve_length = 11.0;
+  double sum_near_curve = 0.0;
+  double sum_far_curve = 0.0;
+  double near_range_start = init_s - 1.0;
+  double near_range_end = init_s + 11.0;
+  double far_range =
+      std::min(std::max(init_s + ego_v * 4.0, init_s + 31.0), 61.0);
+  double far_range_start = far_range - 11.0;
+  double far_range_end = far_range + 1.0;
+  int near_count = 0;
+  int far_count = 0;
   bool is_big_curve = false;
   for (double sampling_s = init_s - sampling_gap; sampling_s <= sampling_range; sampling_s += sampling_gap) {
     std::vector<double> curv_window_vec;
@@ -572,12 +587,30 @@ bool GeneralLateralDecider::HandleRoadCurvature(
         is_big_curve = false;
       }
     }
+    if (sampling_s > near_range_start &&
+        sampling_s < near_range_end) {
+      sum_near_curve += avg_curv;
+      near_count++;
+    }
+    if (sampling_s > far_range_start &&
+        sampling_s < far_range_end) {
+      sum_far_curve += avg_curv;
+      far_count++;
+    }
     ref_curve_info_.curve_vec.emplace_back(avg_curv);
     ref_curve_info_.s_vec.emplace_back(sampling_s);
     if (std::fabs(avg_curv) > ref_curve_info_.max_curve) {
       ref_curve_info_.max_curve = std::fabs(avg_curv);
       ref_curve_info_.max_curve_s = (sampling_s);
     }
+  }
+  double aver_near_radius = 1e4;
+  if (near_count > 0) {
+    aver_near_radius = std::fabs(1.0 / (sum_near_curve / near_count));
+  }
+  double aver_far_radius = 1e4;
+  if (far_count > 0) {
+    aver_far_radius = std::fabs(1.0 / (sum_far_curve / far_count));
   }
   ref_curve_info_.min_radius = 1.0 / ref_curve_info_.max_curve;
   if (is_big_curve && (sampling_range - segment_start > min_mid_curve_length)) {
@@ -643,13 +676,19 @@ bool GeneralLateralDecider::HandleRoadCurvature(
   }
   ref_curve_info_.start_s = seg_start_s;
   ref_curve_info_.end_s = seg_end_s;
-  double max_curve_change_length = 36.0;
+  // double max_curve_change_length = 36.0;
+  double min_radius_change_diff = 200.0;
   double min_big_curve_continuous_length = 31.0;
-  if (large_curvature_segments.size() - connection_seg_count > 1 &&
-      seg_length < max_curve_change_length &&
+  // if (large_curvature_segments.size() - connection_seg_count > 1 &&
+  //     seg_length < max_curve_change_length &&
+  //     (init_dist_to_seg < min_mid_curve_length ||
+  //      seg_length > min_mid_curve_length) &&
+  //     ref_curve_info_.min_radius < curve_radius_thr) {
+  if (ref_curve_info_.min_radius < curve_radius_thr &&
+      (aver_near_radius - ref_curve_info_.min_radius > min_radius_change_diff ||
+       aver_far_radius - ref_curve_info_.min_radius > min_radius_change_diff) &&
       (init_dist_to_seg < min_mid_curve_length ||
-       seg_length > min_mid_curve_length) &&
-      ref_curve_info_.min_radius < curve_radius_thr) {
+       seg_length > min_mid_curve_length)) {
     ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::SHARP_CURVE;
   } else if (ref_curve_info_.is_left &&
              ref_curve_info_.is_right &&
@@ -982,6 +1021,8 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double front_axle_s_ref = s_ref + vehicle_param.wheel_base;
+
+
   for (size_t i = 0; i < config_.num_step + 1; ++i) {
     // cart info
     if (s_ref < s_vec.back() + kEps) {
@@ -1136,7 +1177,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
 }
 
 void GeneralLateralDecider::HandleRefPathOffset(
-    TrajectoryPoints &traj_points, double dynamic_ref_buffer) {
+    TrajectoryPoints &traj_points,
+    std::vector<std::pair<double, double>> &front_axis_ref_path,
+    double dynamic_ref_buffer) {
   const auto &frenet_coord =
       reference_path_ptr_->get_frenet_coord();
   if (std::fabs(dynamic_ref_buffer) > 1e-6) {
