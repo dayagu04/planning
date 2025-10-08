@@ -121,6 +121,11 @@ struct FPPoint {
     lane_ids.clear();
   }
 
+  bool isEmpty() const {
+    return (link_id == static_cast<uint64>(-1)) &&
+           (fp_distance_to_split_point == 0.0) &&
+           lane_ids.empty();
+  }
   // FPPoint(int link_id, double fp_distance_to_split_point,
   //         std::vector<int> lane_ids)
   //     : link_id(link_id),
