@@ -66,6 +66,7 @@ void EgoStateManager::set_ego_pose_and_vel(
   ego_pose_.x = vehicle_status.location().location_enu().x();
   ego_pose_.y = vehicle_status.location().location_enu().y();
   ego_pose_.theta = vehicle_status.heading_yaw().heading_yaw_data().value_rad();
+  last_ego_pose_raw_ = ego_pose_raw_;
   ego_pose_raw_ = ego_pose_;
 
   ego_v_ = vehicle_status.velocity().heading_velocity().value_mps();

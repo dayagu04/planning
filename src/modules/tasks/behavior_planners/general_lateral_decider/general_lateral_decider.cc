@@ -123,6 +123,7 @@ bool GeneralLateralDecider::Execute() {
 
   if (!PreCheck()) {
     last_first_soft_bounds_.clear();
+    last_ref_traj_points_.clear();
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     last_desire_final_nudge_l_map_.clear();
@@ -136,6 +137,7 @@ bool GeneralLateralDecider::Execute() {
   if (!InitInfo()) {
     last_desire_final_nudge_l_map_.clear();
     last_first_soft_bounds_.clear();
+    last_ref_traj_points_.clear();
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     ResetIsExceedObstacleHysteresisMap();
@@ -2049,8 +2051,12 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   // 对每个点的边界进行滞回处理
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
     const auto& current_bounds = first_soft_bounds_[i];
-    const auto& last_bounds = last_first_soft_bounds_[i];
-    // 如果上一帧边界为空，使用当前边界
+    WeightedBounds last_bounds;
+    const double current_index_s = ref_traj_points_[i].s;
+    if (!FindNearestBoundPoint(current_index_s, last_bounds)) {
+      continue;
+    }
+    // 如果上一帧/当前帧边界为空，使用当前边界
     if (last_bounds.empty() || current_bounds.empty()) {
       continue;
     }
@@ -2144,6 +2150,61 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
       }
     }
   }
+}
+
+bool GeneralLateralDecider::FindNearestBoundPoint(
+    const double current_index_s, WeightedBounds &last_bounds) {
+  const auto &frenet_coord =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_coord();
+  // 预留接口，采用两种方式滞回
+  // 1、采用前后帧相同时间滞回
+  // last_bounds = last_first_soft_bounds_[i];
+  // 2、采用前后帧相同s
+  Point2D last_ego_xy(ego_cart_state_manager_->last_ego_pose_raw().x,
+                      ego_cart_state_manager_->last_ego_pose_raw().y);
+  Point2D current_ego_xy(ego_cart_state_manager_->ego_pose_raw().x,
+                          ego_cart_state_manager_->ego_pose_raw().y);
+  Point2D last_ego_sl;
+  Point2D current_ego_sl;
+  if (!frenet_coord->XYToSL(last_ego_xy, last_ego_sl)) {
+    last_ref_traj_points_ = ref_traj_points_;
+    return false;
+  }
+  if (!frenet_coord->XYToSL(current_ego_xy, current_ego_sl)) {
+    last_ref_traj_points_ = ref_traj_points_;
+    return false;
+  }
+  const double delta_s = current_ego_sl.x - last_ego_sl.x;
+  constexpr double limit_s_range = 8;
+  if (std::fabs(delta_s) > limit_s_range) {
+    last_ref_traj_points_ = ref_traj_points_;
+    return false;
+  }
+  const double target_index_s = current_index_s + delta_s;
+  if (!last_ref_traj_points_.empty()) {
+    // 因为s是单调递增，可以用二分法查找
+    int left = 0;
+    int right = static_cast<int>(last_ref_traj_points_.size()) - 1;
+    while (left < right - 1) {
+      int mid = (left + right) * 0.5;
+      if (last_ref_traj_points_[mid].s < target_index_s) {
+        left = mid;
+      } else {
+        right = mid;
+      }
+    }
+    // 返回距离更近的一个
+    if (std::abs(last_ref_traj_points_[left].s - target_index_s) <
+        std::abs(last_ref_traj_points_[right].s - target_index_s)) {
+      last_bounds = last_first_soft_bounds_[left];
+    } else {
+      last_bounds = last_first_soft_bounds_[right];
+    }
+  }
+  last_ref_traj_points_ = ref_traj_points_;
+  return true;
 }
 
 void GeneralLateralDecider::GenerateStaticObstaclesBoundary(

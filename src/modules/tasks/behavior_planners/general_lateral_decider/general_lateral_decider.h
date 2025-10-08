@@ -279,6 +279,7 @@ class GeneralLateralDecider : public Task {
   void CheckObstacleSideCutinNudgeCondition(
       const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
       BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle);
+  bool FindNearestBoundPoint(const double current_index_s, WeightedBounds &last_bounds);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -286,6 +287,7 @@ class GeneralLateralDecider : public Task {
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
+  TrajectoryPoints last_ref_traj_points_;
   TrajectoryPoints plan_history_traj_;
   TrajectoryPoints uniform_plan_history_traj_;
   std::unordered_map<int, std::vector<int>> match_index_map_;

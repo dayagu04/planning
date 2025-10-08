@@ -95,6 +95,7 @@ class EgoStateManager {
   EulerAngle euler_angle() const { return euler_angle_; }
   Pose2D ego_pose() const { return ego_pose_; };
   Pose2D ego_pose_raw() const { return ego_pose_raw_; };
+  Pose2D last_ego_pose_raw() const { return last_ego_pose_raw_; };
   Point2D ego_carte() const { return ego_carte_; };
   uint32_t ego_gear() const { return ego_gear_; };
   double heading_angle() const { return ego_pose_.theta; }
@@ -180,6 +181,7 @@ class EgoStateManager {
   EulerAngle euler_angle_;  // 车身姿态yaw, pitch, roll
   Pose2D ego_pose_;
   Pose2D ego_pose_raw_;
+  Pose2D last_ego_pose_raw_;
   Point2D ego_carte_;
   double ego_v_ = 0;
   double ego_v_angle_ = 0;
