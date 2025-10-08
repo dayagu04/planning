@@ -241,10 +241,13 @@ class LaneChangeStateMachineManager {
                         std::pair<double, double> l2, double v2,
                         double max_time = 4.0, double dt = 0.5);
   void CheckOtherAgents(LaneChangeStageInfo *const lc_state_info);
-  bool GetDecelerationTraj(double a0,
-    const TrajectoryPoints &agent_traj,
-    TrajectoryPoints &agent_deceleration_traj,
-    const double deceleration);
+  bool GetDecelerationTraj(
+      double a0,
+      const TrajectoryPoints &agent_traj,
+      TrajectoryPoints &agent_deceleration_traj,
+      const double deceleration,
+      const double j,
+      bool is_press_line);
   bool IfFrenetCollision2D(
     std::pair<double,double> s1, double vs1,
     std::pair<double,double> s2, double vs2,

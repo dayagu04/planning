@@ -2848,6 +2848,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
   // 考虑假设侵入的轨迹
   TrajectoryPoints agent_switch_traj;
   double deceleration = -1.0; // m/s^2, 后车减速
+  double jerk = - 2.0;
   bool is_large_agent = (agent::AgentType::BUS == agent->type() ||
                         agent::AgentType::TRUCK == agent->type() ||
                         agent::AgentType::TRAILER == agent->type() ||
@@ -2856,7 +2857,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
     deceleration = - 0.7; //大车减速度小很多
   }
   if(is_executing && agent_traj.size() > 3 && !agent->is_static()){
-    GetDecelerationTraj(agent->accel_fusion(), agent_traj, agent_switch_traj, deceleration);
+    GetDecelerationTraj(agent->accel_fusion(), agent_traj, agent_switch_traj, deceleration, jerk, false);
   }else{
     agent_switch_traj = agent_traj;
   }
@@ -3737,20 +3738,42 @@ bool LaneChangeStateMachineManager::
   std::array<double, 6> fpv{3.0, 4.0, 5.0, 6.5, 7.};  //起始ttc
   double delta_kph = 3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
+  //自车压线目标车道情况
+  const double ego_press_line_ratio = lc_request_.CalculatePressLineRatioByTwoLanes(
+  lc_lane_mgr_->origin_lane_virtual_id(), lc_lane_mgr_->target_lane_virtual_id(),
+  transition_info_.lane_change_direction);
+  //如果压线了， 重新映射起始ttc
+  std::array<double, 3> x_press_ratio{0.0, 0.15, 0.3}; // 后车 - 自车速度 kph
+  std::array<double, 3> f_press_ttc{max_box_ttc_rear, 1.0, 0.0};  //起始ttc
+  double press_ttc =  interp(ego_press_line_ratio, x_press_ratio, f_press_ttc);  // 距离/ 时间
+  bool is_press_boundary = ego_press_line_ratio > 0.01;
+  if(is_press_boundary){
+    max_box_ttc_rear = press_ttc;
+  }
   double std_beyond_lane_time = 2.0; // 实际在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{2.0, 6.0, 8.0,
                            12., 13., 15.};  //触发变道需要预留最小空间
   bool is_executing = transition_info_.lane_change_status == kLaneChangeExecution;
+    bool is_deceleration_check = is_executing
+                              && !is_front_agent
+                              && agent_traj.size() >= 3
+                              && !agent_node->is_static_type()
+                              && (last_target_rear_agent_id_ == agent_node->node_agent_id()
+                              ||ego_press_line_ratio > 0.01);
   TrajectoryPoints agent_switch_traj;
   double deceleration = -1.0; // m/s^2, 后车减速
+  double jerk = -2.0;
   if(is_large_car){
-    deceleration = - 0.7; //大车减速度小很多
+    deceleration = - 0.5; //大车减速度小很多
   }
   // agent_node->is_reverse_type() 不太好用，暂时在GetDecelerationTraj 增加保护
-  if(is_executing && !is_front_agent && agent_traj.size() >= 3 && !agent_node->is_static_type()){
-    GetDecelerationTraj(agent_node->node_accel_fusion(), agent_traj, agent_switch_traj, deceleration);
+  if(is_deceleration_check){
+    GetDecelerationTraj(agent_node->node_accel_fusion(),
+                        agent_traj, agent_switch_traj,
+                        deceleration, jerk,
+                        is_press_boundary);
   }else{
     agent_switch_traj = agent_traj;
   }
@@ -3769,32 +3792,38 @@ bool LaneChangeStateMachineManager::
       speed_times = std::max(speed_times, 1);
       speed_times = std::min(speed_times, 10);
       box_ttc = std::max(max_box_ttc_rear - i * 0.2,
-                std::max(lc_safety_check_time_ - i * 0.2, 0.0) * speed_times);
+                std::max(max_box_ttc_rear - i * 0.2, 0.0) * speed_times);
       double beyond_lane_time = std_beyond_lane_time - i * 0.2;
       beyond_lane_time =  std::max(beyond_lane_time, 0.0);
       // 根据速度差获得ttc 速度阈值
       // double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
       // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
-      if(is_executing && last_target_rear_agent_id_ == agent_node->node_agent_id()){// execution 阶段 并且后方是同一个障碍物
-        double agent_vel_i =  agent_switch_traj[i].v;
-        double back_agent_tts_s = agent_vel_i * box_ttc + 0.5 * deceleration * box_ttc * box_ttc;
+      if(is_deceleration_check){//减速轨迹 -> 是否压线了
         double ego_ttc_s = ego_trajs_future_[i].v * box_ttc;
-        box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
+        if(is_press_boundary){
+          double agent_vel_i =  agent_switch_traj[i].v;
+          double back_agent_tts_s = agent_vel_i * box_ttc + 0.5 * deceleration * box_ttc * box_ttc;
+          box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
+        }else{
+          double agent_vel_i =  agent_switch_traj[i].v;
+          double a0 = agent_node->node_accel_fusion();
+          double back_agent_tts_s = agent_vel_i * box_ttc + 0.5 * a0 * box_ttc * box_ttc
+                                    + (1.0 / 6.0) * jerk * box_ttc * box_ttc * box_ttc;
+          box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
+        }
       }else{// proposal, hold 阶段
-      // 根据速度差获得ttc 速度阈值
-      double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
-      // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
-      // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
-      double dist_rel_vel = (rel_vel > 0)? rel_vel * box_ttc
-                                       : - rel_vel * beyond_lane_time;
-      box_longitudinal_buff = (rel_vel > 0)? std::max(dist_rel_vel, dis_buff)
-                                        : dis_buff - dist_rel_vel; // 1.5s 到达边界(实际观察约为2.5s)
-      box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
+        // 根据速度差获得ttc 速度阈值
+        double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
+        // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
+        // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
+        double dist_rel_vel = (rel_vel > 0)? rel_vel * box_ttc
+                                        : - rel_vel * beyond_lane_time;
+        box_longitudinal_buff = (rel_vel > 0)? std::max(dist_rel_vel, dis_buff)
+                                          : dis_buff - dist_rel_vel; // 1.5s 到达边界(实际观察约为2.5s)
+        box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
       }
     }
-
-
     // if(ego_trajs_future_[i].a < - 1.0){
     //   std::cout << "deacceleration not safety !!!" << std::endl;
     //   return false;
@@ -4789,7 +4818,9 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
     double a0,
     const TrajectoryPoints &agent_traj,
     TrajectoryPoints &agent_deceleration_traj,
-    const double deceleration) {
+    const double deceleration,
+    const double j,
+    bool is_press_line) {
 
   const int point_size = agent_traj.size();
   if (point_size < 2) {
@@ -4817,19 +4848,22 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
   const double s0 = agent_traj.front().s;
   const double v0 = agent_traj.front().v;
   const double dt = 0.2;  // 时间步长
+  double dec_a = 0.0;
+  double dec_v = 0.0;
+  double dec_s = 0.0;
   for (int i = 0; i < point_size; ++i) {
     double t = i * dt;
-    // 匀减速 s,v 公式
-    // double dec_v = std::max(0.0, v0 + deceleration * t);
-    // double dec_s = s0 + v0 * t + 0.5 * deceleration * t * t;
-    //匀jerk
-
-    double j = -2.0;  // 恒定 jerk
-
-    double dec_a = a0 + j * t;  // 当前加速度
-    double dec_v = std::max(0.1, v0 + a0 * t + 0.5 * j * t * t);
-    double dec_s = s0 + v0 * t + 0.5 * a0 * t * t + (1.0/6.0) * j * t * t * t;
-
+    if(is_press_line){
+      // 匀减速 s,v 公式
+      dec_v = std::max(0.0, v0 + deceleration * t);
+      dec_s = s0 + v0 * t + 0.5 * deceleration * t * t;
+    }else{
+      //匀jerk
+      // double j = -2.0;  // 恒定 jerk
+      dec_a = a0 + j * t;  // 当前加速度
+      dec_v = std::max(0.1, v0 + a0 * t + 0.5 * j * t * t);
+      dec_s = s0 + v0 * t + 0.5 * a0 * t * t + (1.0/6.0) * j * t * t * t;
+    }
     // 确保位移不小于前一个点
     if (i > 0) {
       dec_s = std::max(dec_s, agent_deceleration_traj[i-1].s + 0.1); // 最小前进距离
