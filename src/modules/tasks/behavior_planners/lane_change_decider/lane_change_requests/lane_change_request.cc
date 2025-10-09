@@ -137,17 +137,21 @@ double LaneChangeRequest::CalculatePressLineRatioByTwoLanes(const int origin_lan
                                                   const int target_lane_id,
                                                   const RequestType &lc_request) const {
   double press_line_ratio = 0.0;
-  auto origin_lane =
-      virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
-  auto target_lane =
-      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
-  if(origin_lane != nullptr){
-    press_line_ratio = CalculatePressLineRatioByOrigin(origin_lane_id, lc_request);
-  }else if(target_lane != nullptr){
-    press_line_ratio = CalculatePressLineRatioByTarget(target_lane_id, lc_request);
-  }else{
-    press_line_ratio = 0.0;
-  }
+  // auto origin_lane =
+  //     virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_id);
+  // auto target_lane =
+  //     virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_id);
+  // if(origin_lane != nullptr){
+  //   press_line_ratio = CalculatePressLineRatioByOrigin(origin_lane_id, lc_request);
+  // }else if(target_lane != nullptr){
+  //   press_line_ratio = CalculatePressLineRatioByTarget(target_lane_id, lc_request);
+  // }else{
+  //   press_line_ratio = 0.0;
+  // }
+  // 内部有非空保护了
+  double press_origin_line_ratio = CalculatePressLineRatioByOrigin(origin_lane_id, lc_request);
+  double press_target_line_ratio = CalculatePressLineRatioByTarget(target_lane_id, lc_request);
+  press_line_ratio = std::max(press_origin_line_ratio, press_target_line_ratio);
   return press_line_ratio;
 }
 double LaneChangeRequest::CalculatePressLineRatioByOrigin(
