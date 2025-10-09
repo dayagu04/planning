@@ -2190,8 +2190,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   bool is_exist_merge_fp = false;
 
-  // 计算feasible_lane_sequence
-  std::vector<int> feasible_lane_sequence;
+  // 处理split信息缺失，向一侧变道的场景
   for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane->get_relative_id() != 0) {
       continue;
@@ -2211,6 +2210,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       return;
     }
   }
+
+  //计算feasible_lane_sequence
+  std::vector<int> feasible_lane_sequence;
+
   if (mlc_decider_route_info_.ego_status_on_route ==
           IN_EXCHANGE_AREAR_FRONT ||
       mlc_decider_route_info_.ego_status_on_route == IN_EXCHANGE_AREAR_REAR) {
