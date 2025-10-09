@@ -2092,8 +2092,9 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
              std::fabs(last_bound_it->upper - l_offset_limit) < kEps)) {
           const auto lat_obs_position_iter = lat_obstacle_position.find(last_bound_it->bound_info.id);
           if (lat_obs_position_iter != lat_obstacle_position.end() &&
-              lat_obs_position_iter->second.side_car) {
-              // 侧方障碍物增加稳定性，直接沿用上一帧bound
+              lat_obs_position_iter->second.side_car &&
+              lat_obs_position_iter->second.front_car) {
+              // 来自前方的侧方障碍物增加稳定性，直接沿用上一帧bound
             smoothed_bound.lower = last_bound_it->lower;
             smoothed_bound.upper = last_bound_it->upper;
           } else {
