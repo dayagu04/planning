@@ -1007,6 +1007,32 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
             poi_v_limit_set = true;
+          } else {
+            bool function_need_inhibited = false;
+            auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+            speed_limit_output->set_function_inhibited_near_roundabout(false);
+            auto roundabout_info = sdpro_map.GetRoundAboutInfo(current_segment->id(), nearest_s, 300.0);
+            if (roundabout_info.first != nullptr && roundabout_info.second < 50.0) {
+              //in map mode, roundabout distance meets the condition
+                function_need_inhibited = true;
+            } else if (roundabout_info.first == nullptr) {
+              auto roundabout_info_list = sdpro_map.GetRoundAboutList(current_segment->id(), nearest_s, 300.0);
+              if (roundabout_info_list.size() == 0) {
+                return;
+              } else {
+                auto closest_roundabout = roundabout_info_list[0];
+                if (closest_roundabout.first != nullptr && closest_roundabout.second < 60.0) {
+                  //not in map mode, closest roundabout distance meets the condition
+                    function_need_inhibited = true;
+                }
+
+              }
+            }
+            if (function_need_inhibited) {
+              speed_limit_output->set_function_inhibited_near_roundabout(function_need_inhibited);
+            }
+
           }
         }
       }
