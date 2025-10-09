@@ -43,7 +43,7 @@ const bool PerpendicularPathOutPlanner::Update() {
       if (STurnParallelPlan()) {
         ILOG_INFO << "parking out s t turn paralle plan success";
       } else {
-        ILOG_INFO << "frist plan fail";
+        ILOG_INFO << "first plan fail";
         return false;
       };
     }

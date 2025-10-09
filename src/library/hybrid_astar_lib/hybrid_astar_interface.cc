@@ -73,6 +73,7 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
   hybrid_astar_->Init();
   gear_switch_number_scenario_try_ = -1;
   time_benchmark_.Clear();
+  search_gear_.Clear();
 
   ILOG_INFO << "astar interface success";
 
@@ -256,7 +257,6 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
     lat_buffer = 0.2;
     lon_buffer = 0.4;
   }
-
 
   DebugAstarRequestString(request_);
 
@@ -559,6 +559,7 @@ void HybridAStarInterface::PathClear() {
   }
   // ILOG_INFO << "reset path";
   time_benchmark_.Clear();
+  search_gear_.Clear();
 
   return;
 }
@@ -756,8 +757,7 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     // search single shot path.
-    if (target_pose.dist_to_obs >
-            config_.single_shot_path_width_thresh ||
+    if (target_pose.dist_to_obs > config_.single_shot_path_width_thresh ||
         request_.path_generate_method ==
             AstarPathGenerateType::GEAR_DRIVE_SEARCHING ||
         request_.path_generate_method ==
@@ -810,6 +810,13 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       ILOG_INFO << "path gear is nice";
       break;
     }
+
+    // check gear
+    search_gear_.first_action_gear[i] =
+        static_cast<int32_t>(traj_candidates_[i].gear[0]);
+    search_gear_.first_action_gear_request[i] =
+        static_cast<int32_t>(request_.first_action_request.gear_request);
+    search_gear_.size++;
   }
 
   PathCandidateCompare();
@@ -842,8 +849,7 @@ void HybridAStarInterface::PathSearchForScenarioTry(
     const TerminalCandidatePoint target_pose =
         regulator.GetCandidatePose(0.15f);
     if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
-      ILOG_INFO << "goal_point dist to obs = "
-                << target_pose.dist_to_obs;
+      ILOG_INFO << "goal_point dist to obs = " << target_pose.dist_to_obs;
     }
 
     target_regulator_goal_ = target_pose.pose;

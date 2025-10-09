@@ -28,6 +28,7 @@ struct AstarResponse {
 
   std::array<bool, 6> feasible_directions;
   SearchTimeBenchmark time;
+  SearchGear search_gear;
 
   void Clear() {
     request.Clear();
