@@ -1655,12 +1655,14 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   bool is_side_obstacle = false;
   const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   const bool is_find_lat_obs_position_iter = lat_obs_position_iter != lat_obstacle_position.end();
-  
+
   BoundType bound_type = BoundType::AGENT;
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.side_car &&
       lat_obstacle_decision.at(obstacle->id()) ==
-      LatObstacleDecisionType::IGNORE) {
+      LatObstacleDecisionType::IGNORE ||
+      lat_obstacle_decision.at(obstacle->id()) ==
+      LatObstacleDecisionType::FOLLOW) {
     is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
     bound_type = BoundType::ADJACENT_AGENT;
   }
@@ -2236,7 +2238,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   if (is_find_lat_obs_position_iter) {
     if (lat_obs_position_iter->second.side_car) {
       if (lat_obstacle_decision.at(obstacle->id()) ==
-        LatObstacleDecisionType::IGNORE) {
+          LatObstacleDecisionType::IGNORE ||
+          lat_obstacle_decision.at(obstacle->id()) ==
+          LatObstacleDecisionType::FOLLOW) {
         // if (obstacle->frenet_l() < 0) {
         //   is_nudge_left = false;
         // } else if (obstacle->frenet_l() > 0) {
