@@ -81,6 +81,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       path_length_vec.clear();
       cost.fill(0.0);
       cost_total = 0.0;
+      dangerous_value = 0.0;
+      short_segment_count = 0;
     }
 
     void PrintDebugInfo() const {
@@ -110,6 +112,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     std::vector<pnc::geometry_lib::PathSegment> path_segment_vec;
 
     double cost_total{0.0f};
+    double dangerous_value{0.0f};
+    int short_segment_count = 0;
     std::array<double, COST_WEIGHT_MAX> cost{};
   };
 
@@ -415,7 +419,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
           0.15);  // start pose and radius should be given in arc
 
   const bool CheckParkOutCornerSafeWithObsPin(
-      const pnc::geometry_lib::Arc &first_arc) const;
+        pnc::geometry_lib::Arc &first_arc) const;
 
   const bool TwoSameGearArcPlanToLine(
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,

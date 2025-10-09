@@ -1,5 +1,5 @@
 #include "parallel_path_generator.h"
-
+#include "parallel_out_path_generator.h"
 #include <google/protobuf/message.h>
 #include <math.h>
 #include <sys/types.h>
@@ -31,7 +31,7 @@
 
 namespace planning {
 namespace apa_planner {
-
+class ParallelOutPathGenerator;   // 前向声明，供 dynamic_cast 使用
 // for park out
 static const double kMaxParkOutFirstArcHeading = 66.0;
 static const double kMaxParkOutRootHeading = 25.0;
@@ -83,6 +83,9 @@ static const double kPathLengthShortPenalty = 0.0;
 static const double kParkingHeadingDegPenalty = 0.0;
 static const double kMaxXPenalty = 0.8;
 static const double kMaxYPenalty = 2.0;
+
+static double kEps = 1e-5;
+static double kFrontDetaXMagWhenFrontVacant = 3.0;
 
 static std::vector<double> big_heading_vec_ = {22.5, 27.5, 47.5,
                                                55.0, 35.0, 60.0};
@@ -313,6 +316,7 @@ const bool ParallelPathGenerator::Update() {
     } else {
       ILOG_INFO << "MultiPlan  failed!";
       if (is_multi_align_success) {
+        output_.Reset();
         ILOG_INFO << "use multi align plan res!";
         AddPathSegToOutPut(path_seg_vec);
         return true;
@@ -2399,6 +2403,9 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
     return false;
   }
 
+  const bool is_park_out =
+    (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr);
+
   // 复制路径向量用于排序
   sorted_path_vec = total_path_vec;
 
@@ -2408,15 +2415,249 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
         std::fabs(path.path_segment_vec.back().GetStartHeading() * kRad2Deg);
   }
 
-  // 按照以下优先级排序：
-  // 1. 换挡次数少的优先
-  // 2. 停车时航向角小的优先（相差1度以内视为相同优先级）
-  // 3. 路径总长度短的优先
-  std::sort(sorted_path_vec.begin(), sorted_path_vec.end(),
-            [](const GeometryPath& path_a, const GeometryPath& path_b) {
+  if (is_park_out) {
+    ILOG_INFO << "!!!! park out Sort PATH !!!!";
+    for (size_t i = 0; i < sorted_path_vec.size(); ++i) {
+      auto& path = sorted_path_vec[i];
+
+      // 计算路径中“短路径段”（长度 < 0.3m）的数量
+      path.short_segment_count = 0;  // 初始化计数器
+      const double short_segment_threshold = 0.3;
+      for (const auto& seg : path.path_segment_vec) {
+        if (seg.GetLength() < short_segment_threshold) {
+          path.short_segment_count++;
+        }
+      }
+
+      // 计算危险值
+      path.dangerous_value = 0.0;  // 初始化危险值
+
+      double corner_dist = 100.0;  // 用于ILOG
+      if (!path.path_segment_vec.empty() &&
+          path.path_segment_vec.back().seg_type ==
+              pnc::geometry_lib::SEG_TYPE_ARC) {
+        // 计算出库轨迹段距离障碍物最近的距离
+        corner_dist = path.path_segment_vec.back().GetArcSeg().dis_ObsPin;
+
+        // ===============[ 新增日志 ]========
+        std::stringstream ss;
+        ss << "Path [" << i << "] All Arc dis_ObsPin values -> ";
+        for (size_t j = 0; j < path.path_segment_vec.size(); ++j) {
+          const auto& seg = path.path_segment_vec[j];
+          // 只处理圆弧段
+          if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+            ss << "seg[" << j << "]:" << std::fixed << std::setprecision(3)
+               << seg.GetArcSeg().dis_ObsPin << "; ";
+          }
+        }
+        ILOG_INFO << ss.str();
+
+        // pnc::geometry_lib::PrintSegmentsVecInfo(path.path_segment_vec); //
+        // 打印路径段信息
+
+        const double corner_danger_threshold = 0.3;
+        if (corner_dist < corner_danger_threshold) {
+          path.dangerous_value +=
+              10.0 * (corner_danger_threshold - corner_dist);
+        }
+      }
+
+      // ====================================================================
+      // 基于在所有倒车过程中，与障碍物的最小距离来计算危险值
+      double min_opening_dist = 100.0;  // 初始化一个很大的最小距离值
+      if (!path.path_segment_vec.empty()) {
+        // 遍历这条路径的每一段
+        for (const auto& seg : path.path_segment_vec) {
+          if (seg.seg_gear ==
+              pnc::geometry_lib::
+                  SEG_GEAR_REVERSE) {  // 只关心档位为倒车(REVERSE)的路径段
+            const auto& end_pose =
+                seg.GetEndPose();  // 获取这段倒车动作结束后的位置
+            const double current_dist =
+                end_pose.pos.x() - input_.tlane.obs_pt_outside.x();
+            min_opening_dist = std::min(min_opening_dist, current_dist);
+          }
+        }
+
+        const double opening_danger_threshold = 0.2;
+        if (min_opening_dist < opening_danger_threshold) {
+          path.dangerous_value +=
+              10.0 * (opening_danger_threshold - min_opening_dist);
+        }
+      }
+
+      // double opening_dist = 100.0; // 用于ILOG
+      // if (!path.path_segment_vec.empty()) {
+      //   opening_dist =
+      //       path.path_segment_vec.front().GetEndPose().pos.x() -
+      //       input_.tlane.obs_pt_outside.x();
+      //   const double opening_danger_threshold = 0.2;
+      //   if (opening_dist < opening_danger_threshold) {
+      //     path.dangerous_value += 10.0 * (opening_danger_threshold -
+      //     opening_dist);
+      //   }
+      // }
+      if (path.path_segment_vec.front().seg_type ==
+          pnc::geometry_lib::SEG_TYPE_ARC) {
+        ILOG_INFO << "path [" << i << "] -> start_position_x:"
+                  << path.path_segment_vec.front().GetStartPose().pos.x()
+                  << " | gear_change_count:" << path.gear_change_count
+                  << " | dangerous_value:" << path.dangerous_value
+                  << " | short_segment_count:" << path.short_segment_count
+                  << " | park_out_heading_deg:" << path.park_out_heading_deg
+                  << " | length:" << path.length
+                  << " | (detail: corner_dist=" << corner_dist
+                  << ", min_opening_dist=" << min_opening_dist << ")";
+      } else {
+        ILOG_INFO << "path [" << i << "] -> start_position_x:"
+                  << path.path_segment_vec.front().GetEndPose().pos.x()
+                  << " | gear_change_count:" << path.gear_change_count
+                  << " | dangerous_value:" << path.dangerous_value
+                  << " | short_segment_count:" << path.short_segment_count
+                  << " | park_out_heading_deg:" << path.park_out_heading_deg
+                  << " | length:" << path.length
+                  << " | (detail: corner_dist=" << corner_dist
+                  << ", min_opening_dist=" << min_opening_dist << ")";
+      }
+    }
+    ILOG_INFO << "==================================================";
+    ILOG_INFO << "++++SORT PATH++++";
+    std::sort(
+        sorted_path_vec.begin(), sorted_path_vec.end(),
+        [](const GeometryPath& path_a, const GeometryPath& path_b) {
+          // 首先比较危险系数，危险值越小越好
+          if (std::fabs(path_a.dangerous_value - path_b.dangerous_value) >
+              0.1) {
+            return path_a.dangerous_value < path_b.dangerous_value;
+          }
+
+          // 其次比较短段数量，短段数量越少越好
+          if (path_a.short_segment_count != path_b.short_segment_count) {
+            return path_a.short_segment_count < path_b.short_segment_count;
+          }
+
+          if (path_a.gear_change_count != path_b.gear_change_count) {
+            return path_a.gear_change_count < path_b.gear_change_count;
+          }
+
+          // 换挡次数相同时，比较停车时的航向角（允许1度的误差）
+          const double heading_diff = std::fabs(path_a.park_out_heading_deg -
+                                                path_b.park_out_heading_deg);
+          if (heading_diff > 1.0) {
+            return path_a.park_out_heading_deg < path_b.park_out_heading_deg;
+          }
+
+          // 航向角相近时，比较路径总长度
+          return path_a.length < path_b.length;
+        });
+
+    if (!sorted_path_vec.empty()) {
+      const auto& best_path = sorted_path_vec.front();
+      ILOG_INFO << "path sort completed, the best path gear_change_count:"
+                << best_path.gear_change_count
+                << " | dangerous_value:" << best_path.dangerous_value
+                << " | short_segment_count:" << best_path.short_segment_count
+                << " | park_out_heading_deg:" << best_path.park_out_heading_deg
+                << " | length:" << best_path.length;
+    }
+    return true;
+  } else {
+    const double empty_threshold =
+        input_.tlane.slot_length + kFrontDetaXMagWhenFrontVacant;
+
+    bool is_front_vacant = false;
+    double vacant_offset = 0.0;
+
+    if (input_.tlane.obs_pt_inside.x() >= empty_threshold - kEps) {
+      is_front_vacant = true;
+      vacant_offset = 0.6;
+      ILOG_INFO << "use tlane determine vacant!";
+    } else {
+      const std::vector<double> offsets_to_check = {0.6, 0.4, 0.2};
+      for (const double offset : offsets_to_check) {
+        // 1. 创建一个“虚拟起点”，即比最终目标点靠前0.6米的位置
+        pnc::geometry_lib::PathPoint check_pose = calc_params_.target_pose;
+        check_pose.pos.x() += offset;
+
+        // 2. 定义一次标准的“前进泊出”动作
+        const uint8_t gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
+        const uint8_t steer =
+            (calc_params_.is_left_side ? pnc::geometry_lib::SEG_STEER_RIGHT
+                                       : pnc::geometry_lib::SEG_STEER_LEFT);
+
+        // 3. 计算从该虚拟起点出发，能安全行驶的最大圆弧路径
+        pnc::geometry_lib::Arc check_arc;
+        check_arc.pA = check_pose.pos;
+        check_arc.headingA = check_pose.heading;
+        check_arc.circle_info.radius = apa_param.GetParam().min_turn_radius;
+
+        if (!CalcArcStepLimitPose(check_arc, gear, steer,
+                                  calc_params_.lon_buffer_rev_trials)) {
+          ILOG_INFO << "CalcArcStepLimitPose failed!";
+        }
+
+        // 4. 对这条安全圆弧进行库角检查，获取 dis_ObsPin
+        CheckParkOutCornerSafeWithObsPin(check_arc);
+
+        if (check_arc.dis_ObsPin > 0.3) {
+          is_front_vacant = true;
+          vacant_offset = offset;  // 记录下这个最大的偏移量
+          ILOG_INFO << "offset = " << offset;
+          ILOG_INFO << "use dis_ObsPin determine vacant!";
+          break;
+        }
+      }
+    }
+
+    if (is_front_vacant) {
+      ILOG_INFO << "The front environment is clear, enable the one-time "
+                   "parking priority sorting strategy.";
+    }
+
+    const double final_target_x = calc_params_.target_pose.pos.x();
+
+    // 按照以下优先级排序：
+    // 1. 换挡次数少的优先
+    // 2. 停车时航向角小的优先（相差1度以内视为相同优先级）
+    // 3. 路径总长度短的优先
+    std::
+        sort(
+            sorted_path_vec.begin(), sorted_path_vec.end(),
+            [is_front_vacant, final_target_x, vacant_offset](
+                const GeometryPath& path_a, const GeometryPath& path_b) {
               // 首先比较换挡次数
               if (path_a.gear_change_count != path_b.gear_change_count) {
                 return path_a.gear_change_count < path_b.gear_change_count;
+              }
+
+              // ======================== [新增] ========================
+              // 如果前方空旷，并且是“一把入”（0次换挡）的路径，则启用新的排序准则
+              if (is_front_vacant && path_a.gear_change_count == 0) {
+                const double start_a_x =
+                    path_a.path_segment_vec.back().GetStartPos().x();
+                const double start_b_x =
+                    path_b.path_segment_vec.back().GetStartPos().x();
+                const double threshold = vacant_offset + 0.01;
+
+                // 选出x坐标 > 最终目标点的x坐标
+                bool a_is_early_stop = start_a_x > final_target_x;
+                bool b_is_early_stop = start_b_x > final_target_x;
+
+                if (a_is_early_stop != b_is_early_stop) {
+                  return a_is_early_stop;  // a是则返回true(a更优)，b是则返回false(b更优)
+                }
+
+                if (a_is_early_stop) {  // b也是，如果不是，就进前面的if了
+                  bool a_over = (start_a_x - final_target_x) > threshold;
+                  bool b_over = (start_b_x - final_target_x) > threshold;
+                  if (a_over != b_over) {
+                    return !a_over;  // 没超过阈值的更优
+                  }
+                  if (std::fabs(start_a_x - start_b_x) > 0.05) {
+                    return start_a_x >
+                           start_b_x;
+                  }
+                }
               }
 
               // 换挡次数相同时，比较停车时的航向角（允许1度的误差）
@@ -2430,6 +2671,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
               // 航向角相近时，比较路径总长度
               return path_a.length < path_b.length;
             });
+  }
 
   ILOG_INFO << "sort paths completed, total path count: "
             << sorted_path_vec.size();
@@ -2669,9 +2911,9 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
   if (CalcArcStepLimitPose(forward_arc, pnc::geometry_lib::SEG_GEAR_DRIVE,
                            forward_steer, calc_params_.lon_buffer_rev_trials)) {
     if (CheckParkOutCornerSafeWithObsPin(forward_arc)) {
-      if (!(input_.tlane.is_short_channel)) {
-        gear_vec.erase(gear_vec.begin());
-      }
+      // if (!(input_.tlane.is_short_channel)) {
+      //   gear_vec.erase(gear_vec.begin());
+      // }
       ILOG_INFO << "ego can park out at first, no need use backward loop!";
     }
   }
@@ -2778,14 +3020,17 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
       break;
     }
 
-    search_out_res.emplace_back(
-        pnc::geometry_lib::PathSegment(ref_steer, ref_gear, arc));
 
     if (ref_gear == SEG_GEAR_DRIVE && CheckParkOutCornerSafeWithObsPin(arc)) {
       // ILOG_INFO << "is_dirve_out_safe success";
       success = true;
+      search_out_res.emplace_back(
+        pnc::geometry_lib::PathSegment(ref_steer, ref_gear, arc));
       break;
     }
+
+    search_out_res.emplace_back(
+        pnc::geometry_lib::PathSegment(ref_steer, ref_gear, arc));
 
     // reverse for next loop
     arc.pA = arc.pB;
@@ -2796,10 +3041,10 @@ const bool ParallelPathGenerator::InversedTrialsByGivenGear(
   }
 
   if (success) {
-    ILOG_INFO << "success !";
+    ILOG_INFO << "InversedTrialsByGivenGear success !";
     path_seg_vec = search_out_res;
   } else {
-    ILOG_INFO << "failed !";
+    ILOG_INFO << "InversedTrialsByGivenGear failed !";
   }
 
   return success;
@@ -2929,7 +3174,7 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
 }
 
 const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
-    const pnc::geometry_lib::Arc& first_arc) const {
+    pnc::geometry_lib::Arc& first_arc) const {
   double center_to_obs_in = 100.0;
 
   // ILOG_INFO <<"center_to_obs_in = " << center_to_obs_in);
@@ -2977,7 +3222,11 @@ const bool ParallelPathGenerator::CheckParkOutCornerSafeWithObsPin(
   // ILOG_INFO << "park_out_corner.y() = " << park_out_corner.y()
   //           << "   virtual_obs_y_lim = " << virtual_obs_y_lim;
   // ILOG_INFO << "is_corner_out = " << is_corner_out;
+  ILOG_INFO << "dis_ObsPin before = " << first_arc.dis_ObsPin;
 
+  first_arc.dis_ObsPin = center_to_obs_in - calc_params_.min_outer_front_corner_radius ; // 【新增 dis_ObsPin】
+
+  ILOG_INFO << "dis_ObsPin after= " << first_arc.dis_ObsPin;
   return corner_safe && is_corner_out;
 }
 
