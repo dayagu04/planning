@@ -3784,7 +3784,10 @@ bool LaneChangeStateMachineManager::
       box_ttc = 0.0;  // 对前方车辆 未来纵向buff不需要增大太多
       box_longitudinal_buff = 5.0;
       if(is_executing){// execution 阶段
-        box_longitudinal_buff = 1.0;
+        box_longitudinal_buff = 0.0;
+      }
+      if(ego_press_line_ratio > 0.01){
+        break; // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
     } else {
       int speed_times =  static_cast<int>(agent_switch_traj[i].v / (ego_trajs_future_[i].v + 0.1));
