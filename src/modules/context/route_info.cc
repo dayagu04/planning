@@ -790,7 +790,8 @@ void RouteInfo::CaculateSplitInfo(
               route_info_output_.split_region_info_list[0].start_fp_point.fp_distance_to_split_point =
                                         dis_between_first_split_and_merge > 0 ?
                                         -std::min(dis_between_first_split_and_merge, 100.0) : -100.0;
-            } else if(route_info_output_.split_region_info_list[0].end_fp_point.isEmpty()){
+            }
+            if (route_info_output_.split_region_info_list[0].end_fp_point.isEmpty()){
               if (dis_between_first_split_and_merge > 0){
                 route_info_output_.split_region_info_list[0].end_fp_point.fp_distance_to_split_point =
                                           std::min(std::abs(dis_between_first_and_second_split), 100.0);
@@ -3070,7 +3071,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       return split_region_info;
     }
   }
-
+  split_region_info.start_fp_point.fp_distance_to_split_point =
+      -fp_start_length;
   double fp_end_length = 0;
   const iflymapdata::sdpro::LinkInfo_Link* split_region_end_link =
       split_seccessor_link;
@@ -3142,11 +3144,13 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       }
     }
 
-    const double search_dis = dis - ego_dis_to_split;
+    // 限制从split向后最多搜索300米
+    double search_dis = std::min((dis - ego_dis_to_split), 300.0);
 
     split_region_end_link =
         sdpro_map.GetNextLinkOnRoute(split_region_end_link->id());
-    if (split_region_end_link == nullptr || fp_end_length > search_dis) {
+    if (split_region_end_link == nullptr ||
+        (search_dis - fp_end_length) > kEpsilon) {
       return split_region_info;
     }
   }
@@ -3161,8 +3165,6 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       sdpro_map.isRamp(split_seccessor_link->link_type());
   split_region_info.split_link_id = split_segment.id();
 
-  split_region_info.start_fp_point.fp_distance_to_split_point =
-      -fp_start_length;
   split_region_info.end_fp_point.fp_distance_to_split_point = fp_end_length;
 
   // 1、计算第一区域的车道总数
