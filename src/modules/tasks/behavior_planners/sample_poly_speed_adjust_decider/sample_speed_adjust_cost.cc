@@ -18,6 +18,8 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                            const double ego_current_vel,
                            const bool is_merge_change) {
   // Helper function to calculate the cost for distance and velocity
+  const double ttc_safe_limit = is_merge_change ? 6.0 : 2.0;
+
   auto calculate_gap_distance_match_cost =
       [](double dist_to_obj, double safe_border_distance,
          double clip_border_distance, double safe_dis_penalty_factor_coef,
@@ -36,10 +38,11 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
       };
 
   auto calculate_gap_vel_match_cost =
-      [](double gap_front_car_vel, double gap_rear_car_vel,
-         double distance_to_gap_front_car, double distance_to_gap_rear_car,
-         double sample_poly_end_v, double gap_vel_penalty_threshold,
-         double rel_vel_penalty_factor_coef, double weight) {
+      [ttc_safe_limit](
+          double gap_front_car_vel, double gap_rear_car_vel,
+          double distance_to_gap_front_car, double distance_to_gap_rear_car,
+          double sample_poly_end_v, double gap_vel_penalty_threshold,
+          double rel_vel_penalty_factor_coef, double weight) {
         double vel_diff_to_gap_front_car =
             std::fmax(sample_poly_end_v - gap_front_car_vel, kZeroEpsilon);
         double vel_diff_to_gap_rear_car =
@@ -50,7 +53,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
             distance_to_gap_rear_car / vel_diff_to_gap_rear_car;
 
         double cost = 0.0;
-        if (ttc_to_front_car > 0 && ttc_to_front_car < 2.0) {
+        if (ttc_to_front_car > 0 && ttc_to_front_car < ttc_safe_limit) {
           cost = vel_diff_to_gap_front_car > 0
                      ? weight * std::exp(rel_vel_penalty_factor_coef *
                                          std::fmin(vel_diff_to_gap_front_car,
@@ -58,7 +61,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                      : 0.0;
         }
 
-        if (ttc_to_rear_car > 0 && ttc_to_rear_car < 2.0) {
+        if (ttc_to_rear_car > 0 && ttc_to_rear_car < ttc_safe_limit) {
           cost = std::fmax(
               cost,
               vel_diff_to_gap_rear_car > 0
