@@ -382,6 +382,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                << target_lane_order_id
                << " target_lane_virtual_id:" << target_lane_virtual_id_;
   } else {
+    request_ = NO_CHANGE;
+    request_source_ = NO_REQUEST;
     target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
     ILOG_DEBUG << "[LCRequestManager::update] Target lane lost !!! final "
                   "target_lane_virtual_id:"
