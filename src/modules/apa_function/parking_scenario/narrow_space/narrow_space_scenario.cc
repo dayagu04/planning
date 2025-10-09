@@ -146,23 +146,20 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
     return true;
   }
 
-  // stucked by directly behind uss
-  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetUssObsAvoidancePtr();
+  // stopped by static obstacle
   const bool enter_slot_condition =
       ego_info.slot_occupied_ratio >
       apa_param.GetParam().finish_uss_slot_occupied_ratio;
-  const bool remain_uss_condition =
+  const bool remain_obs_dist_condition =
       frame_.remain_dist_obs < apa_param.GetParam().max_replan_remain_dist;
 
   parking_finish = lat_condition && static_condition && enter_slot_condition &&
-                   remain_uss_condition;
-
+                   remain_obs_dist_condition;
   if (parking_finish) {
     return true;
   }
 
-  // for more wide slot
+  // for more wide slot, finish condition is easy.
   if (lon_condition && static_condition && remain_s_condition) {
     Polygon2D local;
     GetVehPolygonBy12Edge(0.08, 0.0, &local);
@@ -966,37 +963,26 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    ego_info_under_slot.target_pose.heading));
 
-  // 固定车位,计算占库比
+  // 计算占库比
   if (std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
           param.astar_config.lat_err_for_fix_slot &&
       std::fabs(ego_info_under_slot.terminal_err.heading) <
           param.astar_config.heading_err_for_fix_slot * kDeg2Rad) {
-    // 车头泊入占比
+    std::vector<double> x_tab(2);
     if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
-      const std::vector<double> x_tab = {
-          ego_info_under_slot.target_pose.pos.x() - param.wheel_base -
-              param.front_overhanging,
-          ego_info_under_slot.slot.slot_length_};
-
-      const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
-      const Eigen::Vector2d front_car_pos =
-          ego_info_under_slot.cur_pose.pos +
-          (param.wheel_base + param.front_overhanging) *
-              ego_info_under_slot.cur_pose.heading_vec;
-
-      ego_info_under_slot.slot_occupied_ratio =
-          mathlib::Interp1(x_tab, occupied_ratio_tab, front_car_pos.x());
+      // 车头泊入占比
+      x_tab[0] = ego_info_under_slot.target_pose.pos.x();
+      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.wheel_base +
+                 param.front_overhanging;
     } else {
       // 车尾泊入占比
-      const std::vector<double> x_tab = {
-          ego_info_under_slot.target_pose.pos.x(),
-          ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
-
-      const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
-      ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
-          x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
+      x_tab[0] = ego_info_under_slot.target_pose.pos.x();
+      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
     }
+    const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
+    ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
+        x_tab, occupied_ratio_tab, ego_info_under_slot.cur_pose.pos.x());
 
   } else {
     ego_info_under_slot.slot_occupied_ratio = 0.0;
