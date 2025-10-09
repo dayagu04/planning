@@ -3753,8 +3753,7 @@ bool LaneChangeStateMachineManager::
   double std_beyond_lane_time = 2.0; // 实际在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
-  std::array<double, 6> fp{2.0, 6.0, 8.0,
-                           12., 13., 15.};  //触发变道需要预留最小空间
+  std::array<double, 6> fp{2.0, 4.0, 5.0, 7., 8., 10.};  //触发变道需要预留最小空间
   bool is_executing = transition_info_.lane_change_status == kLaneChangeExecution;
     bool is_deceleration_check = is_executing
                               && !is_front_agent
@@ -3763,7 +3762,7 @@ bool LaneChangeStateMachineManager::
                               && (last_target_rear_agent_id_ == agent_node->node_agent_id()
                               ||ego_press_line_ratio > 0.01);
   TrajectoryPoints agent_switch_traj;
-  double deceleration = -1.0; // m/s^2, 后车减速
+  double deceleration = - 1.0; // m/s^2, 后车减速
   double jerk = -2.0;
   if(is_large_car){
     deceleration = - 0.5; //大车减速度小很多
