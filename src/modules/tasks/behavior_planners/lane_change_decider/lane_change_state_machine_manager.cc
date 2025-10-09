@@ -4821,7 +4821,7 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
     const double deceleration,
     const double j,
     bool is_press_line) {
-
+  is_press_line = false; // 暂时不修饰-a轨迹
   const int point_size = agent_traj.size();
   if (point_size < 2) {
     return false;
