@@ -168,19 +168,25 @@ void SampleQuarticPolynomialCurve::CalcCost(
     sample_space_base.GetBorderByAvailable(ego_s, 0,
                                            &prediction_matched_lower_st_point,
                                            &prediction_matched_upper_st_point);
+    const double vel_diff_to_gap_rear_car =
+        prediction_matched_lower_st_point.velocity() - ego_v >= 0
+            ? std::fmax(prediction_matched_lower_st_point.velocity() - ego_v,
+                        kZeroEpsilon)
+            : prediction_matched_lower_st_point.velocity() - ego_v;
+    const double ttc_to_rear_car =
+        (ego_s - prediction_matched_lower_st_point.s()) /
+        vel_diff_to_gap_rear_car;
     if (prediction_matched_lower_st_point.agent_id() != kNoAgentId) {
-      if (ego_s - prediction_matched_lower_st_point.s() < 20.0 &&
-          ego_v < prediction_matched_lower_st_point.velocity() * 1.2) {
+      if (ttc_to_rear_car < 5.0) {
         speed_differ_gain =
             std::pow(ego_v - prediction_matched_lower_st_point.velocity(), 2) +
             3;
-      } else if (ego_s - prediction_matched_upper_st_point.s() > 20.0 &&
-                 ego_v > prediction_matched_upper_st_point.velocity() * 1.2 &&
-                 prediction_matched_upper_st_point.agent_id() == kNoAgentId) {
+      } else if (ttc_to_rear_car > 5.0 &&
+                 ego_s - prediction_matched_lower_st_point.s() > 5.0 &&
+                 prediction_matched_upper_st_point.agent_id() !=
+                     prediction_matched_lower_st_point.agent_id()) {
         speed_differ_gain =
-            1 /
-            (std::pow(ego_v - prediction_matched_upper_st_point.velocity(), 2) +
-             3);
+            ttc_to_rear_car > 7.0 ? 0.0 : std::exp(5.0 - ttc_to_rear_car) / 4.0;
       }
     }
   }

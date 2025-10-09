@@ -97,6 +97,18 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   ok = ProcessEnvInfos();
 
   if (ok) {
+    speed::STPoint current_matched_upper_st_point;
+    speed::STPoint current_matched_lower_st_point;
+    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0,
+                                               &current_matched_lower_st_point,
+                                               &current_matched_upper_st_point);
+    if (current_matched_upper_st_point.agent_id() == kNoAgentId &&
+        current_matched_lower_st_point.agent_id() == kNoAgentId) {
+      ok = false;
+    }
+  }
+
+  if (ok) {
     ok = SamplePolys();
   }
 
@@ -303,7 +315,17 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
                             .is_merge_region;
   merge_stop_line_distance_ = kMaxMergeDistance;
   // process lane change status
-  if (coarse_planning_info.target_state != kLaneChangePropose) {
+  const auto& function_info = session_->environmental_model().function_info();
+
+  const bool enable_merge_decelaration =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MERGE_REQUEST);
+  const bool enable_merge_decelaration_hold =
+      (enable_merge_decelaration &&
+       coarse_planning_info.target_state == kLaneChangeHold);
+
+  if (coarse_planning_info.target_state != kLaneChangePropose &&
+      !enable_merge_decelaration_hold) {
     count_wait_state_ = 0;
     lane_change_request_ = 0;
     sample_scene_ = SampleScene::NormalSampleScene;
@@ -312,11 +334,15 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
     ClearStitchedPolyPtr();
     return false;
   }
-  if (coarse_planning_info.target_state == kLaneChangePropose) {
+
+  if (coarse_planning_info.target_state == kLaneChangePropose ||
+      enable_merge_decelaration_hold) {
     count_wait_state_++;
   }
 
-  if (count_wait_state_ <= 3) {
+  const int count_wait_limit = enable_merge_decelaration ? 1 : 3;
+
+  if (count_wait_state_ <= count_wait_limit) {
     ClearStitchedPolyPtr();
     return false;
   }
