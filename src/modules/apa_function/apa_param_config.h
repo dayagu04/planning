@@ -202,6 +202,9 @@ struct DynamicGearSwitchConfig {
 
   double lat_error_for_dynamic_gear_switch;
   double theta_error_for_dynamic_gear_switch;
+
+  double next_path_lat_buffer = 0.3;
+  double next_path_lon_buffer = 0.3;
 };
 
 // Do not publish path to HMI per frame for stable display.
