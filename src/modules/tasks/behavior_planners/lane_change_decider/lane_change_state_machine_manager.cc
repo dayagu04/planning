@@ -3797,7 +3797,7 @@ bool LaneChangeStateMachineManager::
   // 根据与后车差速 调整起始ttc
   double max_box_ttc_rear = 4.0;
   std::array<double, 5> xpv{10., 20., 25., 30.0, 40.};  // 后车 - 自车速度 kph
-  std::array<double, 5> fpv{3.0, 4.0, 5.0, 6.5, 7.};  //起始ttc
+  std::array<double, 5> fpv{6.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
@@ -3819,8 +3819,8 @@ bool LaneChangeStateMachineManager::
   double std_beyond_lane_time = 2.0;  // 实际在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
-  std::array<double, 6> fp{2.0, 4.0, 5.0,
-                           7.,  8.,  10.};  //触发变道需要预留最小空间
+  std::array<double, 6> fp{2.0, 2.5, 4.0,
+                           5.,  6.,  8.};  //触发变道需要预留最小空间
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   bool is_deceleration_check =
