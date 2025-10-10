@@ -436,7 +436,7 @@ void ParkingScenarioManager::PubPreparePlanStateFreeSlot() {
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_SUCCESS;
       break;
     case SlotReleaseState::UNKNOWN:
-      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_NONE;
+      apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_FAILED;
       break;
     default:
       apa_hmi_data_.prepare_plan_state = iflyauto::PREPARE_PLANNING_COMPUTING;

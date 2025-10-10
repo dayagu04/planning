@@ -410,7 +410,11 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
   SlotReleaseVoterType release_voter_type = SlotReleaseVoterType::CLEAR;
   if ((slot.slot_type_ == SlotType::PERPENDICULAR ||
        slot.slot_type_ == SlotType::SLANT)) {
-    release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
+    if (!free_slot_activate_) {
+      release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
+    } else {
+      release_voter_type = SlotReleaseVoterType::MAXIMUM;
+    }
   } else if (slot.slot_type_ == SlotType::PARALLEL) {
     release_voter_type = IsParallelSlotAndPassageAreaOccupied(slot);
   }

@@ -343,7 +343,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   //           ;
 }
 
-// TODO: 增加 ScenarioTry 先用running代替 @shuaili26
+// TODO: 增加 ScenarioTry
 void ParallelParkInScenario::ScenarioTry() {
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
     return;
@@ -359,6 +359,16 @@ void ParallelParkInScenario::ScenarioTry() {
   ego_info_under_slot.slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::NOT_RELEASE;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotActivate() &&
+      !(apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir())) {
+    ego_info_under_slot.slot.release_info_
+      .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+      SlotReleaseState::NOT_RELEASE;
+    ILOG_INFO
+        << "free slot not support head parking posdir: "
+        << apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir();
+    return;
+  }
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     return;
