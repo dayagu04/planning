@@ -187,6 +187,7 @@
   "ihc_high_beam_code": 0,
   "ihc_low_beam_code": 0,
   "ihc_fault_code": 0,
+  "ihc_active_code": 0,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
   "elk_roadedge_testswitch_temp_":false

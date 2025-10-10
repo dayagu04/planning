@@ -179,6 +179,8 @@ struct Parameters {
   uint16 ihc_low_beam_code = 0;
   // IHC故障码
   uint16 ihc_fault_code = 0;
+  // IHC激活码
+  uint16 ihc_active_code = 0;
   // TSR故障码
   uint16 tsr_fault_code = 0;
 };

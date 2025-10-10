@@ -71,6 +71,7 @@ void IhcCore::RunOnce(void) {
     ihc_sys_.state.ihc_low_beam_code =
         GetContext.get_param()->ihc_low_beam_code;
     ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code;
+    ihc_sys_.state.ihc_active_code = GetContext.get_param()->ihc_active_code;
   }
 
   ihc_sys_.state.ihc_state = IHCStateMachine();

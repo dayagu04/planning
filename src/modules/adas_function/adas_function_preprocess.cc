@@ -163,6 +163,8 @@ void Preprocess::SyncParameters(void) {
                        "ihc_low_beam_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code, int,
                        "ihc_fault_code");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code, int,
+                       "ihc_active_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_use_json_code, bool,
                        "tsr_use_json_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code, int,
