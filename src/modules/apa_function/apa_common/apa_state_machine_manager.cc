@@ -12,6 +12,8 @@ namespace planning {
 namespace apa_planner {
 
 const int kSlotFreeId = 0;
+const int kSlotFreeCorner1 = 0;
+const int kSlotFreeCorner2 = 3;
 
 void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   Reset();
@@ -30,6 +32,13 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
 
   ILOG_INFO << "fun_state_machine_info.current_state = "
             << static_cast<int>(fun_state_machine_info.current_state);
+
+  free_slot_pos_dir_ =
+      fun_state_machine_info.parking_req.apa_free_slot_info
+          .corner_points[kSlotFreeCorner1]
+          .x > fun_state_machine_info.parking_req.apa_free_slot_info
+                   .corner_points[kSlotFreeCorner2]
+                   .x;
 
   is_free_slot_selected_ = fun_state_machine_info.parking_req.apa_free_slot_info
                                .is_free_slot_selected;

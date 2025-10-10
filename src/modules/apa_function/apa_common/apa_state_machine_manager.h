@@ -69,6 +69,10 @@ class ApaStateMachineManager final {
     return is_free_slot_selected_;
   }
 
+  const bool GetFreeSlotPosDir() const {
+    return free_slot_pos_dir_;
+  }
+
   void SetParkOutDirection(const ApaParkOutDirection& park_out_direction) {
     out_direction_ = park_out_direction;
   }
@@ -99,6 +103,7 @@ class ApaStateMachineManager final {
     is_free_slot_selected_ =
         iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
     functional_state_ = iflyauto::FunctionalState::FunctionalState_MANUAL;
+    free_slot_pos_dir_ = false;
   }
 
   static std::string GetApaStateMachineString(
@@ -134,6 +139,7 @@ class ApaStateMachineManager final {
       iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
   iflyauto::FunctionalState functional_state_ =
       iflyauto::FunctionalState::FunctionalState_MANUAL;
+  bool free_slot_pos_dir_ = false;
 };
 
 }  // namespace apa_planner
