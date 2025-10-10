@@ -47,8 +47,8 @@ class MatchGapCost : public CurveCost {
   double rel_vel_penalty_factor_coef_ = 3.0;
   double narrow_gap_penalty_factor_coef_ = 1.8;
 
-  double acc_speed_weight_ = 1.5;
-  double dec_speed_weight_ = 2;
+  double acc_speed_weight_ = 3.0;
+  double dec_speed_weight_ = 4.0;
 };
 
 class FollowVelCost : public CurveCost {
