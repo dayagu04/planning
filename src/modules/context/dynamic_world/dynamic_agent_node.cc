@@ -372,8 +372,8 @@ const std::vector<trajectory::Trajectory>& DynamicAgentNode::node_trajectories()
     const {
   return agent_->trajectories();
 }
-const std::vector<trajectory::Trajectory>& DynamicAgentNode::node_trajectories_used_by_st_graph()
-    const {
+const std::vector<trajectory::Trajectory>&
+DynamicAgentNode::node_trajectories_used_by_st_graph() const {
   return agent_->trajectories_used_by_st_graph();
 }
 const agent::AgentType DynamicAgentNode::type() const { return agent_->type(); }
@@ -411,8 +411,6 @@ bool DynamicAgentNode::is_vehicle_type() const {
   return agent_->is_vehicle_type();
 }
 
-bool DynamicAgentNode::is_static_type() const {
-  return agent_->is_static();
-}
+bool DynamicAgentNode::is_static_type() const { return agent_->is_static(); }
 }  // namespace planning_data
 }  // namespace planning

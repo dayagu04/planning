@@ -85,8 +85,7 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     const ParkReferenceLine *ref_line) {
   // update dist to ref line
   Vec2f ego_line_segment =
-      Vec2f(ego_pose.x, ego_pose.y) -
-      ref_line->GetStartPoint();
+      Vec2f(ego_pose.x, ego_pose.y) - ref_line->GetStartPoint();
 
   float vertical_dist = ref_line->UnitDirection().CrossProd(ego_line_segment);
   future_drive_dist_info_.dist_to_ref_line = std::fabs(vertical_dist);

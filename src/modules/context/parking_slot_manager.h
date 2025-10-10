@@ -48,9 +48,7 @@ class ParkingSlotManager {
     return distance_to_nearest_slot_;
   }
 
-  const ParkingSlotPoints &GetTargetSlotPoints() const {
-    return target_slot_;
-  }
+  const ParkingSlotPoints &GetTargetSlotPoints() const { return target_slot_; }
 
   const planning_math::Polygon2d &GetTargetSlotPolygon() const {
     return target_slot_polygon_;

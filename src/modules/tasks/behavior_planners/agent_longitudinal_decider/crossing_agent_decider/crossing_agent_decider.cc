@@ -50,9 +50,9 @@ bool CrossingAgentDecider::Execute() {
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
-  auto &is_crossing_map = session_->mutable_planning_context()
-                                          ->mutable_crossing_agent_decider_output()
-                                          .is_crossing_map;
+  auto& is_crossing_map = session_->mutable_planning_context()
+                              ->mutable_crossing_agent_decider_output()
+                              .is_crossing_map;
   is_crossing_map.clear();
   const auto& environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
@@ -86,11 +86,10 @@ bool CrossingAgentDecider::Execute() {
   return true;
 }
 
-bool CrossingAgentDecider::MakeYieldToVRUDecision(
-    agent::Agent* agent) {
-  auto &is_crossing_map = session_->mutable_planning_context()
-                                          ->mutable_crossing_agent_decider_output()
-                                          .is_crossing_map;
+bool CrossingAgentDecider::MakeYieldToVRUDecision(agent::Agent* agent) {
+  auto& is_crossing_map = session_->mutable_planning_context()
+                              ->mutable_crossing_agent_decider_output()
+                              .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
@@ -162,14 +161,15 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
     double project_l = 0.0;
     double projrct_s = 0.0;
     if (!ego_lane_coord->XYToSL(corner.x(), corner.y(), &projrct_s,
-                                    &project_l)) {
+                                &project_l)) {
       continue;
     }
     agent_min_s = std::fmin(agent_min_s, projrct_s);
     agent_max_s = std::fmax(agent_max_s, projrct_s);
   }
 
-  if (agent_min_s < ego_s + veh_param.front_edge_to_rear_axle && agent->is_reverse()) {
+  if (agent_min_s < ego_s + veh_param.front_edge_to_rear_axle &&
+      agent->is_reverse()) {
     return false;
   }
 
@@ -235,9 +235,12 @@ bool CrossingAgentDecider::MakeYieldToVRUDecision(
     }
   }
 
-  if (!is_vru_entering_danger_zone || (is_vru_entering_danger_zone &&
-      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_current_s + kEgoPassVRUSafeLength &&
-      v_ego * vru_danger_zone_pred_point_rel_time + ego_s > vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength)) {
+  if (!is_vru_entering_danger_zone ||
+      (is_vru_entering_danger_zone &&
+       v_ego * vru_danger_zone_pred_point_rel_time + ego_s >
+           vru_current_s + kEgoPassVRUSafeLength &&
+       v_ego * vru_danger_zone_pred_point_rel_time + ego_s >
+           vru_danger_zone_pred_point_s + kEgoPassVRUSafeLength)) {
     return false;
   }
 
@@ -405,11 +408,10 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
   return true;
 }
 
-bool CrossingAgentDecider::MakeYieldToVehicleDecision(
-    agent::Agent* agent) {
-  auto &is_crossing_map = session_->mutable_planning_context()
-                                          ->mutable_crossing_agent_decider_output()
-                                          .is_crossing_map;
+bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
+  auto& is_crossing_map = session_->mutable_planning_context()
+                              ->mutable_crossing_agent_decider_output()
+                              .is_crossing_map;
   if (agent == nullptr) {
     return false;
   }
@@ -607,7 +609,7 @@ bool CrossingAgentDecider::ConstructVirtualAgentByCrossing(
   virtual_agent.set_theta(obs_point.theta());
   virtual_agent.set_accel(0.0);
   virtual_agent.set_fusion_source(1);  // camera avoiding filtered in st
-  
+
   virtual_agent.set_is_vru_crossing_virtual_obs(is_vru);
   planning_math::Box2d box(
       planning_math::Vec2d(virtual_agent.x(), virtual_agent.y()),

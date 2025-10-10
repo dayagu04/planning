@@ -21,7 +21,7 @@ struct AvoideMergeDiverge {
   EgoMLCRequestType mlc_request_type;
   int avoide_lane;
 
-  void reset(){
+  void reset() {
     mlc_request_type = None_MLC;
     avoide_lane = NL_NMAX;
   }
@@ -50,13 +50,13 @@ class RouteInfo {
   const ad_common::hdmap::HDMap& get_hd_map() const { return hd_map_; }
   bool get_sdpromap_valid() const { return sdpromap_valid_; }
 
-  const ad_common::sdpromap::SDProMap& get_sdpro_map() const { return sdpro_map_; }
+  const ad_common::sdpromap::SDProMap& get_sdpro_map() const {
+    return sdpro_map_;
+  }
 
   const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
 
-  void ResetMLCInfoDecider() {
-    mlc_decider_route_info_.reset();
-  }
+  void ResetMLCInfoDecider() { mlc_decider_route_info_.reset(); }
 
  private:
   using MapLane = iflymapdata::sdpro::Lane;
@@ -181,20 +181,25 @@ class RouteInfo {
       const ad_common::sdpromap::SDProMap& sdpro_map);
 
   NOASplitRegionInfo CalculateSplitRegionLaneTupoInfo(
-    const iflymapdata::sdpro::LinkInfo_Link& split_segment,
+      const iflymapdata::sdpro::LinkInfo_Link& split_segment,
       const ad_common::sdpromap::SDProMap& sdpro_map,
-      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& split_info_vec,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*,
+                                  double>>& split_info_vec,
       const double ego_dis_to_split);
 
   NOASplitRegionInfo CalculateMergeRegionLaneTupoInfo(
-    const iflymapdata::sdpro::LinkInfo_Link& split_segment,
+      const iflymapdata::sdpro::LinkInfo_Link& split_segment,
       const ad_common::sdpromap::SDProMap& sdpro_map,
-      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& merge_info_vec,
-      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>& split_info_vec,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*,
+                                  double>>& merge_info_vec,
+      const std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*,
+                                  double>>& split_info_vec,
       const double ego_dis_to_merge);
 
   bool CalculateMergeLaneInfo(std::vector<int>& merge_lane_sequence);
-  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp, iflymapdata::sdpro::LinkInfo_Link* last_fp_link, const uint64 fp_link_id,
+  bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp,
+                       iflymapdata::sdpro::LinkInfo_Link* last_fp_link,
+                       const uint64 fp_link_id,
                        const iflymapdata::sdpro::FeaturePoint& find_fp);
 
   bool CalculateMergeFP(MergeType* merge_type,
@@ -208,7 +213,8 @@ class RouteInfo {
       NOASplitRegionInfo* split_region_info) const;
   bool CalculateOtherMergeRoadFeasibleLane(
       NOASplitRegionInfo* split_region_info);
-  bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type, const iflymapdata::sdpro::FeaturePoint& fp) const;
+  bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type,
+                 const iflymapdata::sdpro::FeaturePoint& fp) const;
   const iflymapdata::sdpro::LinkInfo_Link* CalculateCurrentLink(double* s,
                                                                 double* l);
   bool CalculateLastFPInCurrentLink(
@@ -221,11 +227,13 @@ class RouteInfo {
   bool IsExistLengthSolidLine(
       std::vector<std::pair<const MarkingLineChangeType, double>>&
           mlc_fp_info_list,
-      const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp, const double first_distance_to_split_point);
+      const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+      const double first_distance_to_split_point);
 
   bool CalculateLastMarkingLineChangeFp(
       iflymapdata::sdpro::FeaturePoint* mlc_fp, uint64* mlc_link_id,
-      double* sum_dis, const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+      double* sum_dis, const uint64 fp_link_id,
+      const iflymapdata::sdpro::FeaturePoint cur_fp,
       const double first_distance_to_split_point);
 
   bool IsExistMarkingLineChangeFP(iflymapdata::sdpro::FeaturePoint* last_fp,
@@ -237,14 +245,14 @@ class RouteInfo {
 
   bool IsDashSolidLineTypeChnage(
       MarkingLineChangeType* marking_line_change_type,
-      const iflymapdata::sdpro::FeaturePoint& mlc_fp,
-      const uint64 mlc_link_id);
+      const iflymapdata::sdpro::FeaturePoint& mlc_fp, const uint64 mlc_link_id);
 
   bool IsSolidBoundary(const uint64 lane_id);
 
   int EmergencyLaneNum(const iflymapdata::sdpro::FeaturePoint& mlc_fp);
 
-  double LengthSolidLineJudge(const uint64 fp_link_id, const iflymapdata::sdpro::FeaturePoint cur_fp,
+  double LengthSolidLineJudge(const uint64 fp_link_id,
+                              const iflymapdata::sdpro::FeaturePoint cur_fp,
                               const double first_distance_to_split_point);
 
   std::vector<int> CalculateMLCTaskNoLaneNum() const;
@@ -289,7 +297,7 @@ class RouteInfo {
     auto it = std::find(vec.begin(), vec.end(), target);
 
     if (it != vec.end()) {
-        vec.erase(it);
+      vec.erase(it);
     }
   }
 

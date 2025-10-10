@@ -23,8 +23,8 @@ namespace planning {
 
 #define LANE_BOUNDARY_POINT_SET_NUM 20
 
-using ad_common::hdmap::LaneGroupConstPtr;
 using Map::CurrentRouting;
+using ad_common::hdmap::LaneGroupConstPtr;
 
 enum LaneChangeStatus {
   NO_LANE_CHANGE = 0,

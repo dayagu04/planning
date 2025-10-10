@@ -1,12 +1,12 @@
 #pragma once
+#include <Eigen/Dense>
 #include <memory>
 #include <vector>
-#include <Eigen/Dense>
 #include "config/basic_type.h"
 #include "ego_state_manager.h"
+#include "quintic_poly_path.h"
 #include "session.h"
 #include "utils/kd_path.h"
-#include "quintic_poly_path.h"
 
 namespace planning {
 
@@ -17,17 +17,16 @@ class QuinticPathPlanner {
 
   // 执行固定时间的五次多项式轨迹规划
   bool Plan(const double lat_avoid_offset, const double lc_end_s,
-            const double remain_lc_duration,
-            TrajectoryPoints& traj_points);
+            const double remain_lc_duration, TrajectoryPoints& traj_points);
 
  private:
   // 初始化规划所需的状态
   bool InitializeState(const double remain_lc_duration,
-      const TrajectoryPoints& traj_points);
+                       const TrajectoryPoints& traj_points);
 
   // 计算终点状态
   bool CalculateEndState(const double lat_avoid_offset,
-                        const double lane_change_end_s);
+                         const double lane_change_end_s);
 
   // 构建五次多项式轨迹
   bool ConstructQuinticPath(const double remain_lc_duration);

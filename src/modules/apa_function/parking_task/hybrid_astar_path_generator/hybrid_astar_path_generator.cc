@@ -330,7 +330,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     }
   }
 
-  // interpolation
+    // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif

@@ -67,7 +67,6 @@ bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
       st_graph_input->lane_change_request(), agent_id_st_boundaries_map_,
       boundary_id_st_boundaries_map_, caution_yield_agent_ids_);
 
-
   StGraphUtils::DetermineRelieveJerkDecision(
       st_graph_input_, agent_id_st_boundaries_map_,
       boundary_id_st_boundaries_map_, relieve_jerk_agent_ids_);
@@ -501,9 +500,10 @@ void STGraph::MakeDynamicAgentStBoundary(
 
     if (!st_point_pairs.empty()) {
       // 补全0~1秒的ST边界
-      // CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path, path_range,
-      //                       path_border_querier, planning_init_point_box, type,
-      //                       is_rads_scene);
+      // CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path,
+      // path_range,
+      //                       path_border_querier, planning_init_point_box,
+      //                       type, is_rads_scene);
 
       std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       st_boundary->set_id(boundary_id);
@@ -1149,7 +1149,7 @@ bool STGraph::CalculateNeighborCorridor() {
 
   // refresh final yield or overtake index and agent id
   if (!neighbor_corridor_yield_info_map_.empty()) {
-    const auto [closet_s_to_ego, neighbor_corridor_yield_info] =
+    const auto[closet_s_to_ego, neighbor_corridor_yield_info] =
         *neighbor_corridor_yield_info_map_.begin();
     neighbor_corridor_[neighbor_corridor_yield_info.first_yield_index].first =
         neighbor_corridor_yield_info.first_yield_st_point;
@@ -1160,7 +1160,7 @@ bool STGraph::CalculateNeighborCorridor() {
   }
 
   if (!neighbor_corridor_overtake_info_map_.empty()) {
-    const auto [closet_s_to_ego, neighbor_corridor_overtake_info] =
+    const auto[closet_s_to_ego, neighbor_corridor_overtake_info] =
         *neighbor_corridor_overtake_info_map_.begin();
     neighbor_corridor_[neighbor_corridor_overtake_info.first_overtake_index]
         .second = neighbor_corridor_overtake_info.first_overtake_st_point;
@@ -1292,7 +1292,6 @@ void STGraph::CompleteStBoundaryGap(
     const PathBorderQuerier* path_border_querier,
     const planning_math::Box2d& planning_init_point_box,
     const StBoundaryType type, const bool is_rads_scene) {
-
   if (!agent.is_cutin()) {
     return;
   }

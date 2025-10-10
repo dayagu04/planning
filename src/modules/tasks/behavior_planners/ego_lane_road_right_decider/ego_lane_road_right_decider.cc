@@ -482,10 +482,10 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
     }
     auto overlap_pt =
         planning_math::PathPoint(over_ref_path_point_temp.path_point.x(),
-                                  over_ref_path_point_temp.path_point.y());
+                                 over_ref_path_point_temp.path_point.y());
     auto cur_pt =
         planning_math::PathPoint(cur_ref_path_point_temp.path_point.x(),
-                                  cur_ref_path_point_temp.path_point.y());
+                                 cur_ref_path_point_temp.path_point.y());
     overlap_path_points.emplace_back(overlap_pt);
     cur_path_points.emplace_back(cur_pt);
   }
@@ -717,7 +717,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
-        near_average_l < kExistSplitLateralDisThd) ||
+         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       split_lane_virtual_id_ = llane->get_virtual_id();
@@ -768,7 +768,7 @@ void EgoLaneRoadRightDecider::ComputeIsSplitRegion() {
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
-        near_average_l < kExistSplitLateralDisThd) ||
+         near_average_l < kExistSplitLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       is_split_region_ = true;
       split_lane_virtual_id_ = rlane->get_virtual_id();

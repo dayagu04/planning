@@ -68,8 +68,8 @@ const bool CubicKnotsToCoefficients(coefficient_cubic_t *coefficients,
  *  \param[in] coefficients The coeffcient representation of a cubic spiral.
  *  \param[in]            s The arc-length of a point along the cubic spiral.
  * */
-const bool FThetaCubicByS(float *theta,
-                          const coefficient_cubic_t *coefficients, float s);
+const bool FThetaCubicByS(float *theta, const coefficient_cubic_t *coefficients,
+                          float s);
 
 /**
  *  \brief Calculate the curvature according to a given coefficient vector and s
@@ -154,8 +154,8 @@ const bool SampleCubicSpiralStatesBySol(
  *  \param[in] shift_distance The shifted distance in arclength i
  *  \param[in]         coeffs The original coefficients of the sprial.
  **/
-const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c,
-                                      float *d, float shift_distance,
+const bool TransformCubicSpiralCoeffs(float *a, float *b, float *c, float *d,
+                                      float shift_distance,
                                       const coefficient_cubic_t *coeffs);
 
 /**

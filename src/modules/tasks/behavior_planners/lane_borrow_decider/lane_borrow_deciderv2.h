@@ -135,8 +135,6 @@ class LaneBorrowDecider : public Task {
   int start_frame_{0};
   bool nudging_prompt_{false};
   bool takeover_prompt_{false};
-
-
 };
 }  // namespace lane_borrow_deciderV2
 }  // namespace planning

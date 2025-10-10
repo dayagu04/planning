@@ -636,7 +636,8 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 13
   // 故障降级
   if ((degraded_driving_function_info_ptr->elk.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->elk.degraded == iflyauto::ERROR_DEGRADED)) {
+       degraded_driving_function_info_ptr->elk.degraded ==
+           iflyauto::ERROR_DEGRADED)) {
     elk_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
@@ -1381,8 +1382,8 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
   }
 
   // 状态机处于完成过初始化的状态
-  if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
-                        ELK_FUNCTION_FSM_WORK_STATE_FAULT) {
+  if (elk_state_ ==
+      iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (elk_main_switch_ == false) {
       elk_state =
@@ -1410,8 +1411,8 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
       elk_state =
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
-      elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
+      elk_state =
+          iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_enable_code_ == 0) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1432,8 +1433,8 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
       elk_state =
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
-      elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
+      elk_state =
+          iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_disable_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_STANDBY;

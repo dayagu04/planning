@@ -1,8 +1,8 @@
 #pragma once
+#include <queue>
 #include "ego_planning_config.h"
 #include "local_view.h"
 #include "session.h"
-#include <queue>
 namespace planning {
 
 class TrafficLightDecisionManager {
@@ -25,9 +25,7 @@ class TrafficLightDecisionManager {
     return traffic_lights_info_;
   };
 
-  const double GetNearestTFLDis() {
-    return distance_to_nearest_tfl_;
-  }
+  const double GetNearestTFLDis() { return distance_to_nearest_tfl_; }
 
  private:
   bool UpdateNearestTFLDis();

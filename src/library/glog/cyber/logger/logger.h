@@ -38,6 +38,6 @@ class Logger : public google::base::Logger {
   std::mutex mutex_;
 };
 
-}  // namespace logger
+}  // namespace ilog
 }  // namespace cyber
 }  // namespace planning

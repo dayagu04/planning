@@ -44,7 +44,7 @@ float Vec2f::InnerProd(const Vec2f &other) const {
 
 Vec2f Vec2f::rotate(const float angle) const {
   return Vec2f(x_ * cos(angle) - y_ * sin(angle),
-                      x_ * sin(angle) + y_ * cos(angle));
+               x_ * sin(angle) + y_ * cos(angle));
 }
 
 void Vec2f::SelfRotate(const float angle) {
@@ -100,9 +100,7 @@ bool Vec2f::operator==(const Vec2f &other) const {
           std::abs(y_ - other.y()) < kMathEpsilon32);
 }
 
-Vec2f operator*(const float ratio, const Vec2f &vec) {
-  return vec * ratio;
-}
+Vec2f operator*(const float ratio, const Vec2f &vec) { return vec * ratio; }
 
 float CrossProdf32(const Vec2f &start_point, const Vec2f &end_point_1,
                    const Vec2f &end_point_2) {

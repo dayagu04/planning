@@ -118,11 +118,11 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     length_cost += config_.expect_dist_penalty;
   }
 
-  // safe dist cost  可以细分库内库外障碍物距离
-  // weight: 15
-  // [0-0.15], cost: 1000;
-  // [0.15-0.5],cost: (1/dist -2) * weight;
-  // [0.5-1000], cost:0;
+    // safe dist cost  可以细分库内库外障碍物距离
+    // weight: 15
+    // [0-0.15], cost: 1000;
+    // [0.15-0.5],cost: (1/dist -2) * weight;
+    // [0.5-1000], cost:0;
 #if ENABLE_OBS_DIST_G_COST
   const float dist = next_node->GetDistToObs();
   const float weight = 10.0f;
@@ -453,9 +453,11 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   // NodeGridIndex grid_index;
   // Node3d::CoordinateToGridIndex(
   //     search_map_boundary_.x_max, search_map_boundary_.y_max,
-  //     search_map_boundary_.phi_max, &grid_index, search_map_boundary_, config_);
+  //     search_map_boundary_.phi_max, &grid_index, search_map_boundary_,
+  //     config_);
   // if (!CheckOutOfGridBound(grid_index)) {
-  //   ILOG_ERROR << "search boundary out of map boundary" << grid_index.x << " "
+  //   ILOG_ERROR << "search boundary out of map boundary" << grid_index.x << "
+  //   "
   //              << grid_index.y << " " << grid_index.phi;
 
   //   result_.fail_type = AstarFailType::OUT_OF_BOUND;
@@ -1118,9 +1120,10 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
         cost.unsuitable_last_line_length_cost = gear_change_penalty + 1.0f;
       } else {
         const float unsuitable_last_line_length =
-            (last_line_length < 1.86f)   ? (1.86f - last_line_length)
-            : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
-                                         : 0.0f;
+            (last_line_length < 1.86f)
+                ? (1.86f - last_line_length)
+                : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
+                                             : 0.0f;
         cost.unsuitable_last_line_length_cost =
             unsuitable_last_line_length * unsuitable_last_line_length_penalty;
       }

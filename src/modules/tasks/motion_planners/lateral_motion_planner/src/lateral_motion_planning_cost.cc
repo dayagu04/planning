@@ -198,10 +198,10 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
+      cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -231,10 +231,10 @@ double PathSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
+      cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -272,10 +272,10 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(SOFT_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(SOFT_UPPER_BOUND_X0),
+      cost_config_ptr_->at(SOFT_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(SOFT_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -308,10 +308,10 @@ void PathSoftCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(SOFT_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(SOFT_LOWER_BOUND_X0),
+      cost_config_ptr_->at(SOFT_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(SOFT_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -348,10 +348,10 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
-    cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+      cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -380,10 +380,10 @@ double PathHardCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
-    cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+      cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -419,10 +419,10 @@ void PathHardCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
-    cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(HARD_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_X0),
+      cost_config_ptr_->at(HARD_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -455,10 +455,10 @@ void PathHardCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
-    cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(HARD_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_X0),
+      cost_config_ptr_->at(HARD_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(HARD_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -470,9 +470,9 @@ void PathHardCorridorCostTerm::GetGradientHessian(
         std::abs(numerator2) / std::sqrt(d2);
     if (numerator2 > 0. && distance_to_hard_lower_bound > kEps) {
       lx(X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * a2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lx(Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * b2 *
-              (a2 * x[X] + b2 * x[Y] + c2) / d2;
+               (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lxx(X, X) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(a2) / d2;
       lxx(Y, Y) += cost_config_ptr_->at(W_HARD_CORRIDOR) * Square(b2) / d2;
     }

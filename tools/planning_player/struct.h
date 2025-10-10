@@ -27,8 +27,8 @@
 // rosmsg
 #include "proto_msgs/StaticMap.h"
 #include "sensor_interface/DebugInfo.h"
-#include "struct_msgs/CameraPerceptionTsrInfo.h"
 #include "struct_msgs/CameraPerceptionScene.h"
+#include "struct_msgs/CameraPerceptionTsrInfo.h"
 #include "struct_msgs/ControlOutput.h"
 #include "struct_msgs/FuncStateMachine.h"
 #include "struct_msgs/FusionDecelerInfo.h"
@@ -49,16 +49,16 @@
 #include "struct_msgs/PredictionResult.h"
 #include "struct_msgs/RoadInfo.h"
 #include "struct_msgs/SystemVersion.h"
+#include "struct_msgs/UssPdcIccSendDataType.h"
 #include "struct_msgs/UssPerceptInfo.h"
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "struct_msgs_legacy_v2_4_6/LocalizationEstimate.h"
-#include "struct_msgs/UssPdcIccSendDataType.h"
 // #include "struct_msgs/DegradedDrivingFunction.h"
 
 // struct schema
 #include "interface/type_convert/struct_convert/camera_perception_parking_slot_c.h"
-#include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
 #include "interface/type_convert/struct_convert/camera_perception_scene_c.h"
+#include "interface/type_convert/struct_convert/camera_perception_tsr_c.h"
 #include "interface/type_convert/struct_convert/common_c.h"
 #include "interface/type_convert/struct_convert/control_command_c.h"
 #include "interface/type_convert/struct_convert/func_state_machine_c.h"
@@ -81,8 +81,8 @@
 #include "interface/type_convert/struct_convert_legacy/interface2.4.5/hmi_mcu_inner_c.h"
 #include "interface/type_convert/struct_convert_legacy/interface2.4.6/common_c.h"
 #include "interface/type_convert/struct_convert_legacy/interface2.4.6/localization_c.h"
-// #include "interface/type_convert/struct_convert/degraded_driving_function_c.h"
-// proto
+// #include
+// "interface/type_convert/struct_convert/degraded_driving_function_c.h" proto
 // #include "proto/common.pb.h"
 // #include "proto/ehr.pb.h"
 // #include "proto/sensor_image.pb.h"

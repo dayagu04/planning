@@ -6,8 +6,8 @@
 #include <cmath>
 #include <iostream>
 
-#include "src/common/log.h"
 #include "log_glog.h"
+#include "src/common/log.h"
 
 namespace planning {
 namespace jlt {

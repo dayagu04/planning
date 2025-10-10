@@ -6,29 +6,28 @@
 namespace planning {
 
 SscMap::SscMap(const SscMap::Config &config) : config_(config) {
-
   p_3d_grid_ = new GridMapND<SscMapDataType, 3>(
       config_.map_size, config_.map_resolution, config_.axis_name);
   p_3d_inflated_grid_ = new GridMapND<SscMapDataType, 3>(
       config_.map_size, config_.map_resolution, config_.axis_name);
 }
 
-void SscMap::ResetSscMap(
-    const FrenetEgoState &ego_frenet_state, const double &time) {
+void SscMap::ResetSscMap(const FrenetEgoState &ego_frenet_state,
+                         const double &time) {
   ClearGridMap();
   UpdateMapOrigin(ego_frenet_state, time);
 
   return;
 }
 
-void SscMap::UpdateMapOrigin(
-    const FrenetEgoState &ego_state, const double &time) {
+void SscMap::UpdateMapOrigin(const FrenetEgoState &ego_state,
+                             const double &time) {
   std::array<double, 3> map_origin;
   // set s
   map_origin[0] = ego_state.s() - config_.s_back_len;
-  //set l
+  // set l
   map_origin[1] = 0.0;
-  //set t
+  // set t
   map_origin[2] = time;
 
   p_3d_grid_->set_origin(map_origin);
@@ -36,8 +35,7 @@ void SscMap::UpdateMapOrigin(
 }
 
 void SscMap::ConstructSscMap(
-    const AgentFrenetSpatioTemporalInFo
-      &surround_trajs_state_info) {
+    const AgentFrenetSpatioTemporalInFo &surround_trajs_state_info) {
   p_3d_grid_->clear_data();
   p_3d_inflated_grid_->clear_data();
 
@@ -53,14 +51,16 @@ void SscMap::ClearGridMap() {
   return;
 }
 
-// void SscMap::FillStaticPart(const std::vector<AgentFrenetSpatioTemporalInFo>) {
+// void SscMap::FillStaticPart(const std::vector<AgentFrenetSpatioTemporalInFo>)
+// {
 //   for (int i = 0; i < static_cast<int>(obs_grid_fs.size()); ++i) {
 //     if (obs_grid_fs[i](0) <= 0) {
 //       continue;
 //     }
 //     for (int k = 0; k < config_.map_size[2]; ++k) {
 //       std::array<decimal_t, 3> pt = {{obs_grid_fs[i](0), obs_grid_fs[i](1),
-//                                       (double)k * config_.map_resolution[2]}};
+//                                       (double)k *
+//                                       config_.map_resolution[2]}};
 //       auto coord = p_3d_grid_->GetCoordUsingGlobalPosition(pt);
 //       if (p_3d_grid_->CheckCoordInRange(coord)) {
 //         p_3d_grid_->SetValueUsingCoordinate(coord, 100);
@@ -71,7 +71,7 @@ void SscMap::ClearGridMap() {
 // }
 
 void SscMap::FillDynamicPart(
-  const AgentFrenetSpatioTemporalInFo &sur_vehicle_trajs_fs) {
+    const AgentFrenetSpatioTemporalInFo &sur_vehicle_trajs_fs) {
   // FillMapWithFsVehicleTraj(sur_vehicle_trajs_fs.frenet_vertices);
   return;
 }
@@ -84,7 +84,7 @@ void SscMap::FillMapWithFsVehicleTraj(
   }
   for (size_t i = 0; i < traj_point.size(); ++i) {
     bool is_valid = true;
-    for (const auto& v : traj_point[i]) {
+    for (const auto &v : traj_point[i]) {
       if (v.s() <= 0) {
         is_valid = false;
         break;

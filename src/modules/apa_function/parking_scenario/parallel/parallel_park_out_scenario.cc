@@ -283,8 +283,7 @@ void ParallelParkOutScenario::ScenarioTry() {
         multi_parkout_path_vec[ApaParkOutDirection::LEFT_FRONT];
   }
   TansformPreparePlanningTraj();
-  ILOG_INFO << "relaese direction = "
-            << apa_hmi_.planning_park_dir
+  ILOG_INFO << "relaese direction = " << apa_hmi_.planning_park_dir
             << ", recommendation direction = "
             << apa_hmi_.planning_recommend_park_dir;
   parkout_direction_ = ApaParkOutDirection::INVALID;

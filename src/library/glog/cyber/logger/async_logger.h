@@ -200,7 +200,6 @@ class AsyncLogger : public google::base::Logger {
   IFLY_DISALLOW_COPY_AND_ASSIGN(AsyncLogger);
 };
 
-}  // namespace logger
+}  // namespace ilog
 }  // namespace cyber
 }  // namespace planning
-

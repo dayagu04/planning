@@ -1036,10 +1036,8 @@ const bool ParallelParkInScenario::GenTlane() {
         is_width_curb ? 0.0 : apa_param.GetParam().terminal_parallel_y_offset;
     ego_info_under_slot.target_pose.pos.y() =
         (side_sgn > 0.0
-            ? std::max(-terminal_parallel_y_offset,
-                        target_y_with_curb)
-            : std::min(terminal_parallel_y_offset,
-                        target_y_with_curb));
+             ? std::max(-terminal_parallel_y_offset, target_y_with_curb)
+             : std::min(terminal_parallel_y_offset, target_y_with_curb));
   } else {
     ego_info_under_slot.target_pose.pos.y() = 0.0;
   }
@@ -1618,7 +1616,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
                               planner_output.path_point_vec.back().pos)
                                  .norm();
     const double compensate_distance = 0.6;
-    if (path_length < apa_param.GetParam().min_opt_path_length + compensate_distance) {
+    if (path_length <
+        apa_param.GetParam().min_opt_path_length + compensate_distance) {
       ILOG_INFO << "path length is too short, optimizer is closed ";
 
       is_use_optimizer = false;

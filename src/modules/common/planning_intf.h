@@ -2,11 +2,12 @@
 #pragma once
 #include <functional>
 
-#include "camera_perception_tsr_c.h"
-#include "camera_perception_scene_c.h"
 #include "camera_perception_occupancy_grid_c.h"
+#include "camera_perception_scene_c.h"
+#include "camera_perception_tsr_c.h"
 #include "component_intf.h"
 #include "control_command_c.h"
+#include "degraded_driving_function_c.h"
 #include "ehr.pb.h"
 #include "ehr_sdmap.pb.h"
 #include "fm_info_c.h"
@@ -26,7 +27,6 @@
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
-#include "degraded_driving_function_c.h"
 
 namespace iflyauto {
 namespace interface {
@@ -38,13 +38,11 @@ class PlanningInterface : public ComponentInterface {
   virtual bool Init() = 0;
   virtual bool Proc() = 0;
 
-  virtual void Feed_IflytekEhrSdmapInfo(
-      const SdMapSwtx::SdMap &data) = 0;
+  virtual void Feed_IflytekEhrSdmapInfo(const SdMapSwtx::SdMap &data) = 0;
 
   virtual void Feed_IflytekEhrSdpromapInfo(
       const iflyauto::StructContainer &data) = 0;
-  virtual void Feed_IflytekEhrStaticMap(
-      const Map::StaticMap &data) = 0;
+  virtual void Feed_IflytekEhrStaticMap(const Map::StaticMap &data) = 0;
   virtual void Feed_IflytekLocalizationEgomotion(
       const iflyauto::IFLYLocalization &data) = 0;
   virtual void Feed_IflytekVehicleService(
@@ -80,7 +78,7 @@ class PlanningInterface : public ComponentInterface {
   virtual void Feed_IflytekControlControlCommand(
       const iflyauto::ControlOutput &data) = 0;
   virtual void Feed_IflytekFmADegradeFunciton(
-    const iflyauto::DegradedDrivingFunction &data) = 0;
+      const iflyauto::DegradedDrivingFunction &data) = 0;
 
   virtual void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput &)> &writer) = 0;

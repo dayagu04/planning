@@ -1,11 +1,11 @@
 #pragma once
 
 #include "arena.h"
+#include "log_glog.h"
 #include "macro.h"
 #include "planning_def.h"
 #include "scene_type_config.pb.h"
 #include "simulation_context.h"
-#include "log_glog.h"
 namespace planning {
 
 class PlanningContext;
@@ -66,21 +66,17 @@ class Session : public planning::common::Arena {
     return simulation_context_;
   }
 
-  const std::vector<FaultCounter>& fault_counter_info() {
+  const std::vector<FaultCounter> &fault_counter_info() {
     return fault_counter_vec_;
   }
 
-  std::vector<FaultCounter>* mutable_fault_counter_info() {
+  std::vector<FaultCounter> *mutable_fault_counter_info() {
     return &fault_counter_vec_;
   }
 
-  uint64_t get_fault_code() {
-    return faultcode_;
-  }
+  uint64_t get_fault_code() { return faultcode_; }
 
-  void set_fault_code(uint64_t fault_code) {
-    faultcode_ = fault_code;
-  }
+  void set_fault_code(uint64_t fault_code) { faultcode_ = fault_code; }
 
  private:
   planning::EnvironmentalModel *environmental_model_;

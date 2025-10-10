@@ -110,9 +110,9 @@ void StGraphInput::Update() {
       session_->planning_context().motion_planner_output().lateral_path_coord;
   is_lane_keeping_ = lane_change_status == kLaneKeeping;
   is_lane_change_cancle_ = lane_change_status == kLaneChangeCancel;
-  is_in_lane_borrow_status_ =
-      session_->planning_context().lane_borrow_decider_output()
-          .is_in_lane_borrow_status;
+  is_in_lane_borrow_status_ = session_->planning_context()
+                                  .lane_borrow_decider_output()
+                                  .is_in_lane_borrow_status;
   GetAgentOfTargetLane(dynamic_world, is_lane_keeping_);
   const auto& init_point = ego_state_manager->planning_init_point();
   PlanningInitPointToTrajectoryPoint(init_point);

@@ -16,12 +16,15 @@ double SLTGraphPoint::path_cost() const { return path_cost_; }
 
 double SLTGraphPoint::obstacle_cost() const { return dynamic_obstacle_cost_; }
 
-double SLTGraphPoint::longitinal_cost() const { return longitinal_relative_cost_; }
+double SLTGraphPoint::longitinal_cost() const {
+  return longitinal_relative_cost_;
+}
 
 double SLTGraphPoint::min_obs_distance() const { return min_obs_distance_; }
 
-double SLTGraphPoint::min_distance_agent_id() const { return min_dis_agent_id_; }
-
+double SLTGraphPoint::min_distance_agent_id() const {
+  return min_dis_agent_id_;
+}
 
 double SLTGraphPoint::spatial_potential_cost() const {
   return spatial_potential_cost_;
@@ -29,9 +32,10 @@ double SLTGraphPoint::spatial_potential_cost() const {
 
 double SLTGraphPoint::total_cost() const { return total_cost_; }
 
-void SLTGraphPoint::Init(
-    const std::uint32_t index_t, const std::uint32_t index_s,
-    const std::uint32_t index_l, const SLTPoint& slt_point) {
+void SLTGraphPoint::Init(const std::uint32_t index_t,
+                         const std::uint32_t index_s,
+                         const std::uint32_t index_l,
+                         const SLTPoint& slt_point) {
   index_t_ = index_t;
   index_s_ = index_s;
   index_l_ = index_l;
@@ -69,8 +73,6 @@ void SLTGraphPoint::SetOptimalSpeed(const double optimal_speed) {
   optimal_speed_ = optimal_speed;
 }
 
-void SLTGraphPoint::SetAcc(const double &acc) {
-  a_ = acc;
-}
+void SLTGraphPoint::SetAcc(const double& acc) { a_ = acc; }
 
 }  // namespace planning

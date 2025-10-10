@@ -72,7 +72,7 @@ class LdwCore {
   // LDW报警冷却时间阈值 单位:s
   double ldw_right_coolingtime_duration_ = 0.0;
   double ldw_left_coolingtime_duration_ = 0.0;
-  
+
   // LDW变道报警抑制条件阈值 单位:s 默认10，避免开始就抑制两秒
   double LDW_LaneChange_duration_ = 10.0;
   uint32 ldw_left_suppression_code_ = 255;

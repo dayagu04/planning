@@ -32,7 +32,8 @@ void AgentManager::Reset() {
   historical_agents_.clear();
 }
 
-const std::vector<std::shared_ptr<Agent>>& AgentManager::GetAllCurrentAgents() const {
+const std::vector<std::shared_ptr<Agent>>& AgentManager::GetAllCurrentAgents()
+    const {
   return current_agents_;
 }
 const std::unordered_set<int32_t>& AgentManager::GetAgentSet() const {
@@ -69,7 +70,8 @@ void AgentManager::Update(const double start_timestamp_s) {
     // Ignore the agent which is within the FOV and is fail to fusion with the
     // camera，or too small, or unknown
     if (prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
-      ILOG_DEBUG << "[AgentManager Update] ignore unknown obstacle :[" << prediction_object.id << "]";
+      ILOG_DEBUG << "[AgentManager Update] ignore unknown obstacle :["
+                 << prediction_object.id << "]";
       continue;
     }
     bool is_in_fov =
@@ -83,7 +85,8 @@ void AgentManager::Update(const double start_timestamp_s) {
         prediction_object.length == 0 || prediction_object.width == 0;
 
     if (is_ignore_by_fov || is_ignore_by_size) {
-      ILOG_DEBUG << "[obstacle_prediction_update] ignore obstacle :[" << prediction_object.id << "]";
+      ILOG_DEBUG << "[obstacle_prediction_update] ignore obstacle :["
+                 << prediction_object.id << "]";
       continue;
     }
 

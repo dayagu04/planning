@@ -384,7 +384,8 @@ void ParkingScenarioManager::PublishPreparePlanInfo() {
   apa_hmi_data_.planning_recommend_park_dir =
       current_scenario_->GetAPAHmi().planning_recommend_park_dir;
   ILOG_INFO << "release park dir = " << apa_hmi_data_.planning_park_dir
-            << ", recommend park dir = " << apa_hmi_data_.planning_recommend_park_dir;
+            << ", recommend park dir = "
+            << apa_hmi_data_.planning_recommend_park_dir;
 }
 
 void ParkingScenarioManager::PubPreparePlanState() {

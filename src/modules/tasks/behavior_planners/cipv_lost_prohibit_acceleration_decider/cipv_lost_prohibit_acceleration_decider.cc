@@ -240,9 +240,11 @@ void CipvLostProhibitAccelerationDecider::UpdateCipvInfo(
   // // check lead two
   // bool is_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->leadtwo());
   // // check temp lead one
-  // bool is_temp_lead_one_vehicle = IsLeadVehicle(lateral_obstacle->tleadone());
+  // bool is_temp_lead_one_vehicle =
+  // IsLeadVehicle(lateral_obstacle->tleadone());
   // // check temp lead two
-  // bool is_temp_lead_two_vehicle = IsLeadVehicle(lateral_obstacle->tleadtwo());
+  // bool is_temp_lead_two_vehicle =
+  // IsLeadVehicle(lateral_obstacle->tleadtwo());
   bool is_lead_two_vehicle = false;
   bool is_temp_lead_one_vehicle = false;
   bool is_temp_lead_two_vehicle = false;

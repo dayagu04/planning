@@ -76,7 +76,8 @@ bool TrafficLightDecider::Execute() {
         if (IsSmallFrontIntersection() && !IsIntersectionMatchTFL()) {
           can_pass_ = true;
         } else if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
-                  std::max(2.0 - yellow_light_timer_, 0.0) > dis_to_stopline)) {
+                                     std::max(2.0 - yellow_light_timer_, 0.0) >
+                                 dis_to_stopline)) {
           can_pass_ = true;
         } else {
           can_pass_ = false;
@@ -136,8 +137,9 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       can_pass_ = true;
 
-    } else if (traffic_status.go_straight == 20 || traffic_status.go_straight == 22) {
-      //wrong yellow light brake in intersection then yellow blink, can pass
+    } else if (traffic_status.go_straight == 20 ||
+               traffic_status.go_straight == 22) {
+      // wrong yellow light brake in intersection then yellow blink, can pass
       green_light_timer_ = 0.0;
       yellow_light_timer_ = 0.0;
       green_blink_timer_ = 0.0;
@@ -174,19 +176,21 @@ bool TrafficLightDecider::Execute() {
   }
   */
   auto cur_fsm_state = environmental_model.get_local_view()
-                          .function_state_machine_info.current_state;
+                           .function_state_machine_info.current_state;
   if (cur_fsm_state == iflyauto::FunctionalState_ACC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY) {
-    auto &tla_output_info =
-        session_->mutable_planning_context()->mutable_planning_hmi_info()->tla_output_info;
+    auto &tla_output_info = session_->mutable_planning_context()
+                                ->mutable_planning_hmi_info()
+                                ->tla_output_info;
     if (IsRunningRedTFL()) {
-      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
+      tla_output_info.traffic_light_reminder =
+          iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
     }
     if (IsStayingStillGreenTFL()) {
-      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
+      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
+          TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
     }
-
   }
 
   auto &tfl_decider = session_->mutable_planning_context()
@@ -211,17 +215,18 @@ bool TrafficLightDecider::AddVirtualObstacle() {
                                 ->GetEgoDistanceToCrosswalk();
 
   const auto &reference_path_ptr = session_->planning_context()
-                                .lane_change_decider_output()
-                                .coarse_planning_info.reference_path;
+                                       .lane_change_decider_output()
+                                       .coarse_planning_info.reference_path;
   if (reference_path_ptr == nullptr) {
     return false;
   }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
-  double virtual_obs_dis = std::min(dis_to_stopline + 3.5, dis_to_crosswalk + 1.5);
+  double virtual_obs_dis =
+      std::min(dis_to_stopline + 3.5, dis_to_crosswalk + 1.5);
   ReferencePathPoint refpath_pt;
   if (reference_path_ptr->get_reference_point_by_lon(
-    ego_start_s + virtual_obs_dis, refpath_pt)) {
+          ego_start_s + virtual_obs_dis, refpath_pt)) {
     virtual_agent.set_x(refpath_pt.path_point.x());  //几何中心
     virtual_agent.set_y(refpath_pt.path_point.y());
   } else {
@@ -324,7 +329,8 @@ bool TrafficLightDecider::IsRunningRedTFL() {
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
 
-  double brake_stop_dis = std::max(0.1, std::min(dis_to_stopline - 4.5, dis_to_crosswalk - 6.5));
+  double brake_stop_dis =
+      std::max(0.1, std::min(dis_to_stopline - 4.5, dis_to_crosswalk - 6.5));
   double avg_decel = (0.0 - v_ego * v_ego) / (2.0 * brake_stop_dis);
   if (can_pass_ == false && avg_decel < -2.5) {
     return true;

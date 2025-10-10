@@ -32,15 +32,19 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   if (is_same_side_obstacle_during_lane_change) {
     base_dis -= config.nudge_extra_decrease_buffer_in_lane_change_scene;
   }
-  double extra_pred_ts_decrease_buffer = interp(pred_ts, config.obstacle_pred_ts_bp,
-                               config.obstacle_pred_decrease_buffer);
-  double extra_buffer = interp(ego_vel * 3.6, config.lateral_obstacle_nudge_buffer_v_bp,
-                               config.lateral_nudge_buffer);
+  double extra_pred_ts_decrease_buffer =
+      interp(pred_ts, config.obstacle_pred_ts_bp,
+             config.obstacle_pred_decrease_buffer);
+  double extra_buffer =
+      interp(ego_vel * 3.6, config.lateral_obstacle_nudge_buffer_v_bp,
+             config.lateral_nudge_buffer);
   // return std::fmax(base_dis + 0.015 * ego_vel, 0.);
   if (is_update_hard_bound) {
-    return std::fmax(config.hard_buffer2dynamic_agent - extra_pred_ts_decrease_buffer, 0.);
+    return std::fmax(
+        config.hard_buffer2dynamic_agent - extra_pred_ts_decrease_buffer, 0.);
   } else {
-    base_dis = std::fmax(base_dis + extra_buffer, config.hard_buffer2dynamic_agent);
+    base_dis =
+        std::fmax(base_dis + extra_buffer, config.hard_buffer2dynamic_agent);
     return std::fmax(base_dis - extra_pred_ts_decrease_buffer, 0.);
   }
 }
@@ -64,12 +68,12 @@ double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
   }
 }
 
-double CalDesireStaticLateralDistance(const double base_distance,
-                                      const double ego_vel, const double ego_l,
-                                      const std::shared_ptr<FrenetObstacle> obstacle,
-                                      bool is_update_hard_bound,
-                                      GeneralLateralDeciderConfig &config) {
-  const double kStaticVRUMaxExtraLateralBuffer = config.static_vru_max_lateral_buffer;
+double CalDesireStaticLateralDistance(
+    const double base_distance, const double ego_vel, const double ego_l,
+    const std::shared_ptr<FrenetObstacle> obstacle, bool is_update_hard_bound,
+    GeneralLateralDeciderConfig &config) {
+  const double kStaticVRUMaxExtraLateralBuffer =
+      config.static_vru_max_lateral_buffer;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
@@ -228,7 +232,7 @@ bool IsCone(iflyauto::ObjectType type) {
 bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle) {
   return (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
-          obstacle->length() > 6));
+           obstacle->length() > 6));
 }
 
 }  // namespace general_lateral_decider_utils

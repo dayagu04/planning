@@ -17,7 +17,8 @@
 
 //   vision_longitudinal_behavior_planner_output.velocity_target = v_target_;
 //   vision_longitudinal_behavior_planner_output.a_target_min = a_target_.first;
-//   vision_longitudinal_behavior_planner_output.a_target_max = a_target_.second;
+//   vision_longitudinal_behavior_planner_output.a_target_max =
+//   a_target_.second;
 
 //   vision_longitudinal_behavior_planner_output.cutin_msg = cutin_msg_;
 
@@ -49,7 +50,8 @@
 
 //   rapidjson::Document publish_json;
 //   publish_json.SetObject();
-//   rapidjson::Document::AllocatorType &allocator = publish_json.GetAllocator();
+//   rapidjson::Document::AllocatorType &allocator =
+//   publish_json.GetAllocator();
 //   // --------- acc debug ---------
 //   // 1.record a_limit
 //   rapidjson::Value a_limit(rapidjson::kObjectType);
@@ -71,7 +73,8 @@
 //     }
 //     a_limit.AddMember("a_limit_cutin", json_array, allocator);
 //   }
-//   if (vision_longitudinal_behavior_planner_output.a_limit_cutin_history.size() >
+//   if
+//   (vision_longitudinal_behavior_planner_output.a_limit_cutin_history.size() >
 //       0) {
 //     rapidjson::Value track_id(rapidjson::kArrayType);
 //     rapidjson::Value a_limit_cutin(rapidjson::kArrayType);
@@ -156,9 +159,11 @@
 //                         vision_longitudinal_behavior_planner_output.decel_base),
 //                     allocator);
 //   a_limit.AddMember("a_target_min",
-//                     rapidjson::Value().SetDouble(a_target_.first), allocator);
+//                     rapidjson::Value().SetDouble(a_target_.first),
+//                     allocator);
 //   a_limit.AddMember("a_target_max",
-//                     rapidjson::Value().SetDouble(a_target_.second), allocator);
+//                     rapidjson::Value().SetDouble(a_target_.second),
+//                     allocator);
 //   // 2.record v_limit
 //   rapidjson::Value v_limit(rapidjson::kObjectType);
 //   v_limit.AddMember(

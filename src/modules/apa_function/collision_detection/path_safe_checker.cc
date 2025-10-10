@@ -76,7 +76,6 @@ void PathSafeChecker::ExcuteDistanceCheck(
       if (dist < 1e-3) {
         is_collision = true;
         collision_index = i;
-
       }
     }
 
