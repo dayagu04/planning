@@ -572,6 +572,7 @@ struct Arc {
   Eigen::Vector2d headingB_vec = Eigen::Vector2d::Zero();
   bool is_anti_clockwise = true;
   bool is_ignored = false;
+  double dis_ObsPin = 100;
 
   void Reset() {
     circle_info.Reset();
@@ -582,6 +583,7 @@ struct Arc {
     headingB = 0.0;
     is_anti_clockwise = true;
     is_ignored = false;
+    dis_ObsPin = 100;
   }
 
   void SetRadius(const double radius) { circle_info.radius = radius; }
