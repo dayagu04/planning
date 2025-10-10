@@ -182,6 +182,34 @@ void ApaObstacle::SetObsScemanticType(const iflyauto::ObjectType obs_type) {
   return;
 }
 
+void ApaObstacle::SetObsScemanticType(const iflyauto::GroundLineType obs_type) {
+  obs_scemantic_type_ = ApaObsScemanticType::UNKNOWN;
+  switch (obs_type) {
+    case iflyauto::GROUND_LINE_TYPE_COLUMN:
+      obs_scemantic_type_ = ApaObsScemanticType::COLUMN;
+      break;
+    case iflyauto::GROUND_LINE_TYPE_WALL:
+      obs_scemantic_type_ = ApaObsScemanticType::WALL;
+      break;
+    case iflyauto::GROUND_LINE_TYPE_FENCE:
+      obs_scemantic_type_ = ApaObsScemanticType::FENCE;
+      break;
+    case iflyauto::GROUND_LINE_TYPE_STEP:
+      obs_scemantic_type_ = ApaObsScemanticType::STEP;
+      break;
+    case iflyauto::GROUND_LINE_TYPE_CURB:
+      obs_scemantic_type_ = ApaObsScemanticType::CURB;
+      break;
+    case iflyauto::GROUND_LINE_TYPE_SPECIAL:
+      obs_scemantic_type_ = ApaObsScemanticType::SPECIAL;
+      break;
+    default:
+      obs_scemantic_type_ = ApaObsScemanticType::UNKNOWN;
+      break;
+  }
+  return;
+}
+
 const bool ApaObstacle::IsMovableStaticObs() const {
   if (obs_movement_type_ != ApaObsMovementType::STATIC) {
     return false;

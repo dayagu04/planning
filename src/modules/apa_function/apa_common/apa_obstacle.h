@@ -231,6 +231,8 @@ class ApaObstacle final {
 
   void SetObsScemanticType(const iflyauto::ObjectType obs_type);
 
+  void SetObsScemanticType(const iflyauto::GroundLineType obs_type);
+
   const bool IsMovableStaticObs() const;
 
  private:

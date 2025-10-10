@@ -26,11 +26,15 @@ parking_planning_stm_dict = {0: 'park_idle', 1: 'park_running', 2: 'park_gearcha
 parking_replan_fail_reason_dict = {0: 'not_failed', 1: 'pause_failed_time', 2: 'stuck_failed_time', 3: 'update_ego_slot_info', 4: 'post_process_path_point_size', 5: 'post_process_path_point_same', 6: 'set_seg_index', 7: 'check_gear_length', 8: 'path_plan_failed', 9: 'plan_count_exceed_limit', 10: 'dynamic_path_not_superior', 11: "no_target_pose", 12: "fold_mirror_failed", 13: "slot_id_changed", 14: "slot_type_changed", 15: "gear_change_count_too_much", 16: "loss_search_path"}
 parking_replan_reason_dict = {0: 'not_replan', 1: 'first_plan', 2: 'seg_completed_path', 3: 'seg_completed_obs', 4: 'stucked', 5: 'dynamic', 6: 'seg_completed_col_det', 7: "force_plan", 8: "seg_completed_slot_jump", 9: "path_dangerous"}
 parking_process_obs_method_dict = {0: 'do_nothing', 1: 'move_obs_out_slot', 2: 'move_obs_out_car_safe_pos', 3: 'count'}
+parking_pathplan_result = {0: 'failed', 1: 'hold', 2: 'update', 3: 'wait_path'}
+parking_free_slot_status = {0: 'default', 1: 'draging', 2: 'finished'}
+chassis_reduce_length = 0.2
 
 class CarStruct(IntEnum):
   WITH_MIRROR = 0
-  WITHOUT_MIRROR = 1
-  CHASSIS = 2
+  FOLD_MIRROR = 1
+  WITHOUT_MIRROR = 2
+  CHASSIS = 3
 
 def check_two_number_is_equal(a, b, epsilon=1e-3):
   return abs(a - b) < epsilon
@@ -49,60 +53,200 @@ CHERY_E0X = 'CHERY_E0X'
 CHERY_M32T = 'CHERY_M32T'
 BESTUNE_E541 = 'BESTUNE_E541'
 
-def load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, fold_mirror_flag=False):
+vehicle_type_list = [JAC_S811, CHERY_T26, CHERY_E0X, CHERY_M32T, BESTUNE_E541]
+
+def get_car_type(car_type_int):
+  if car_type_int == 0:
+    return JAC_S811
+  elif car_type_int == 1:
+    return CHERY_T26
+  elif car_type_int == 2:
+    return CHERY_E0X
+  elif car_type_int == 3:
+    return CHERY_M32T
+  elif car_type_int == 4:
+    return BESTUNE_E541
+  else:
+    return CHERY_E0X
+
+def construct_rectangle_from_center(cx, cy, length, width, heading, is_rad=False):
+  # 将航向转换为弧度
+  if not is_rad:
+    radians = math.radians(heading)
+  else:
+    radians = heading
+
+  unit_t = np.array([np.cos(radians), np.sin(radians)])
+  unit_n = np.array([-unit_t[1], unit_t[0]]) # 逆时针旋转
+
+  half_length = length / 2
+  half_width = width / 2
+
+  top_left = np.array([cx, cy]) + half_length * unit_t + half_width * unit_n
+  top_right = np.array([cx, cy]) + half_length * unit_t - half_width * unit_n
+  bottom_right = np.array([cx, cy]) - half_length * unit_t - half_width * unit_n
+  bottom_left = np.array([cx, cy]) - half_length * unit_t + half_width * unit_n
+
+  return [top_left[0], top_right[0], bottom_right[0], bottom_left[0], top_left[0]], [top_left[1], top_right[1], bottom_right[1], bottom_left[1], top_left[1]]
+
+def get_car_params(vehicle_type = CHERY_E0X):
+  tyre_radius, tyre_width, steer_ratio = 0.4, 0.22, 13.2
   if vehicle_type == JAC_S811:
-    # for JAC_S811
-    car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
-    car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
     wheel_base = 2.7
     car_width = 1.89
-    if fold_mirror_flag:
-      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
-      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
   elif vehicle_type == CHERY_T26:
-    # for CHERY_T26
-    car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980,  2.0920,  2.092,  1.892,  1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020, 1.892,  1.892, 2.092, 2.092]
-    car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595, 0.9595, 1.092, 1.092, 0.9595]
     wheel_base = 2.796
     car_width = 1.919
-    if fold_mirror_flag:
+  elif vehicle_type == CHERY_E0X:
+    wheel_base = 3.0
+    car_width = 1.975
+    tyre_radius = 0.75 * 0.5
+    tyre_width = 0.25
+  elif vehicle_type == CHERY_M32T:
+    wheel_base = 2.8
+    car_width = 1.89
+    tyre_radius = 0.72 * 0.5
+    tyre_width = 0.25
+  elif vehicle_type == BESTUNE_E541:
+    wheel_base = 3.0
+    car_width = 1.975
+  else:
+    wheel_base = 3.0
+    car_width = 1.975
+  return wheel_base, car_width, tyre_radius, tyre_width, steer_ratio
+
+def load_car_params_patch_parking(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR):
+  if vehicle_type == JAC_S811:
+    # for JAC_S811
+    wheel_base = 2.7
+    car_width = 1.89
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.187, 3.424, 3.624,  3.624,  3.424,  3.187,  2.177,  2.177,  1.977,  1.977, -0.476, -0.798, -0.947, -0.947, -0.798, -0.476, 1.977, 1.977, 2.177, 2.177]
+      car_y = [0.945, 0.795, 0.645, -0.645, -0.795, -0.945, -0.945, -1.055, -1.055, -0.945, -0.945, -0.795, -0.645,  0.645,  0.795,  0.945, 0.945, 1.055, 1.055, 0.945]
+
+  elif vehicle_type == CHERY_T26:
+    # for CHERY_T26
+    wheel_base = 2.796
+    car_width = 1.919
+    if car_struct == CarStruct.FOLD_MIRROR:
       car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980,  2.0920,  2.092,  1.892,  1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020, 1.892,  1.892, 2.092, 2.092]
       car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595, 0.9595, 1.092, 1.092, 0.9595]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.2980, 3.5800, 3.7180,  3.7180,  3.5800,  3.2980,  2.0920,  2.092,  1.892,  1.8920, -0.6020, -0.9970, -1.0850, -1.085, -0.9970, -0.6020, 1.892,  1.892, 2.092, 2.092]
+      car_y = [0.9595, 0.8095, 0.6595, -0.6595, -0.8095, -0.9595, -0.9595, -1.092, -1.092, -0.9595, -0.9595, -0.8095, -0.6595, 0.6595,  0.8095,  0.9595, 0.9595, 1.092, 1.092, 0.9595]
+
   elif vehicle_type == CHERY_E0X:
     # for CHERY_E0X
-    car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
-    car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
     wheel_base = 3.0
     car_width = 1.975
-    if fold_mirror_flag:
-      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350, 2.2350, 2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
       car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.0245, 1.0245, 0.9875]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
+      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
 
   elif vehicle_type == CHERY_M32T:
-    car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
-    car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.106,  -1.106, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.106,  1.106,   0.934]
+    # for CHERY_M32T
     wheel_base = 2.8
     car_width = 1.868
-    if fold_mirror_flag:
+    if car_struct == CarStruct.FOLD_MIRROR:
       car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
       car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.016,  -1.016, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.016,  1.016,   0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.106,  -1.106, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.106,  1.106,   0.934]
 
   elif vehicle_type == BESTUNE_E541:
-    car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
-    car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -1.040, -1.040, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  1.040,  1.040,  0.958]
+    # for BESTUNE_E541
     wheel_base = 2.88
     car_width = 1.916
-    if fold_mirror_flag:
+    if car_struct == CarStruct.FOLD_MIRROR:
       car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
       car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -0.968, -0.968, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  0.968,  0.968,  0.958]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  -0.625, -0.996, -1.097, -1.097, -0.996, -0.625]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958,  -0.958, -0.742, -0.361,  0.361,  0.742,  0.958]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  -0.625, -0.996, -1.097, -1.097, -0.996, -0.625]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958,  -0.958, -0.742, -0.361,  0.361,  0.742,  0.958]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
+      car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -1.040, -1.040, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  1.040,  1.040,  0.958]
+
   else:
-    car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350,  2.2350,  2.0350,  2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
-    car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.1145, -1.1145, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.1145, 1.1145, 0.9875]
-    wheel_base = 3.0
-    car_width = 1.975
-    if fold_mirror_flag:
-      car_x = [3.5815, 3.8330, 3.9250,  3.9250,  3.8330,  3.5815,  2.2350, 2.2350, 2.0350, 2.0350, -0.4690, -0.8960, -1.0250, -1.0250, -0.8960, -0.4690, 2.0350, 2.0350, 2.2350, 2.2350]
-      car_y = [0.9875, 0.6755, 0.2545, -0.2545, -0.6755, -0.9875, -0.9875, -1.0245, -1.0245, -0.9875, -0.9875, -0.8617, -0.4696,  0.4696,  0.8617,  0.9875, 0.9875, 1.0245, 1.0245, 0.9875]
+    # for CHERY_M32T
+    wheel_base = 2.8
+    car_width = 1.868
+    if car_struct == CarStruct.FOLD_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.016,  -1.016, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.016,  1.016,   0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259, -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934, -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934]
+      for i in range(len(car_x)):
+        if (car_x[i] > 0.0):
+          car_x[i] -= chassis_reduce_length
+        else:
+          car_x[i] += chassis_reduce_length
+    else:
+      car_x = [3.259,  3.490,  3.724,   3.724,   3.490,   3.259,   2.121,   2.121,   1.916,  1.916,   -0.530,  -0.862,  -1.030,  -1.030,  -0.862,  -0.530,  1.916,  1.916,  2.121,   2.121]
+      car_y = [0.934,  0.844,  0.438,  -0.438,  -0.844,  -0.934,  -0.934,  -1.106,  -1.106, -0.934,   -0.934,  -0.761,  -0.398,   0.398,   0.761,   0.934,  0.934,  1.106,  1.106,   0.934]
 
   for i in range(len(car_x)):
     if car_y[i] > 0.0:
@@ -121,11 +265,11 @@ def load_car_patch_coord_relative_ego_pose(car_x, car_y, ego_pose):
     car_yn.append(tmp_y)
   return car_xn, car_yn
 
-def load_car_patch_coord_relative_ego_pose_by_veh(ego_pose, vehicle_type = CHERY_E0X, fold_mirror_flag = False):
+def load_car_patch_coord_relative_ego_pose_by_veh(ego_pose, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
   # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
   if len(ego_pose) == 3:
     ego_pose = np.append(ego_pose, 0.0)
-  car_x, car_y, wheel_base = load_car_params_patch_parking(vehicle_type, ego_pose[3], fold_mirror_flag)
+  car_x, car_y, wheel_base = load_car_params_patch_parking(vehicle_type, ego_pose[3], car_struct)
   return load_car_patch_coord_relative_ego_pose(car_x, car_y, [ego_pose[0], ego_pose[1], ego_pose[2]])
 
 def load_car_patch_coords_relative_ego_pose_list(car_x, car_y, ego_pose_list):
@@ -137,10 +281,10 @@ def load_car_patch_coords_relative_ego_pose_list(car_x, car_y, ego_pose_list):
     car_yns.append(car_yn)
   return car_xns, car_yns
 
-def load_car_patch_coords_relative_ego_pose_list_by_veh(ego_pose_list, vehicle_type = CHERY_E0X, fold_mirror_flag = False):
+def load_car_patch_coords_relative_ego_pose_list_by_veh(ego_pose_list, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
   car_xns, car_yns = [], []
   for i in range(len(ego_pose_list)):
-    car_xn, car_yn = load_car_patch_coord_relative_ego_pose_by_veh(ego_pose_list[i], vehicle_type, fold_mirror_flag)
+    car_xn, car_yn = load_car_patch_coord_relative_ego_pose_by_veh(ego_pose_list[i], vehicle_type, car_struct)
     car_xns.append(car_xn)
     car_yns.append(car_yn)
   return car_xns, car_yns
@@ -160,7 +304,7 @@ def load_car_circle_coord():
 
   return circle_x, circle_y, circle_r
 
-def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, fold_mirror_flag=False, car_struct=CarStruct.WITH_MIRROR):
+def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR):
   if vehicle_type == JAC_S811:
     circle_x = [1.35, 3.3, 3.3, 2.02, -0.55, -0.55, 2.02, 2.7, 1.8, 0.9, 0.0]
     circle_y = [0.0, 0.55, -0.55, -0.95, -0.5, 0.5, 0.95, 0.0, 0.0, 0.0, 0.0]
@@ -172,44 +316,98 @@ def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0
     circle_r = [2.4075, 0.46, 0.46, 0.18, 0.46, 0.46, 0.18, 0.9595, 0.9595, 0.9595, 0.9595]
 
   elif vehicle_type == CHERY_E0X:
-    circle_x = [1.45, 3.4650,  3.4650,  2.14,   -0.5650, -0.5650, 2.14,   2.9375, 1.8,    0.9,   -0.0375]
-    circle_y = [0.0,  0.5175, -0.5175, -0.9345, -0.5275,  0.5275, 0.9345, 0.0,    0.0,    0.0,    0.0]
-    circle_r = [2.58, 0.47,    0.47,    0.18,    0.46,    0.46,   0.18,   0.9875, 0.9875, 0.9875, 0.9875]
-    if fold_mirror_flag:
+    if car_struct == CarStruct.FOLD_MIRROR:
       circle_x = [1.45,  3.4650,   3.4650,   2.14,    -0.5650,  -0.5650,  2.14,    2.9375,  1.8,    0.9,   -0.0375]
       circle_y = [0.0,   0.5175,  -0.5175,  -0.8145,  -0.5275,   0.5275,  0.8145,  0.0,     0.0,    0.0,    0.0]
       circle_r = [2.58,  0.47,     0.47,     0.21,     0.46,     0.46,    0.21,    0.9875,  0.9875, 0.9875, 0.9875]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.45,  3.4650,   3.4650,  -0.5650,  -0.5650,  2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.5275,   0.5275,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.46,     0.46,    0.9875,  0.9875, 0.9875, 0.9875]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.45,  3.4650,   3.4650,  -0.5650,  -0.5650,  2.9375,  1.8,    0.9,   -0.0375]
+      circle_y = [0.0,   0.5175,  -0.5175,  -0.5275,   0.5275,  0.0,     0.0,    0.0,    0.0]
+      circle_r = [2.58,  0.47,     0.47,     0.46,     0.46,    0.9875,  0.9875, 0.9875, 0.9875]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.45, 3.4650,  3.4650,  2.14,   -0.5650, -0.5650, 2.14,   2.9375, 1.8,    0.9,   -0.0375]
+      circle_y = [0.0,  0.5175, -0.5175, -0.9345, -0.5275,  0.5275, 0.9345, 0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.58, 0.47,    0.47,    0.18,    0.46,    0.46,   0.18,   0.9875, 0.9875, 0.9875, 0.9875]
 
   elif vehicle_type == CHERY_M32T:
-    circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
-    circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
-    circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
-    if fold_mirror_flag:
+    if car_struct == CarStruct.FOLD_MIRROR:
       circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
       circle_y = [0.0,  0.3875, -0.3875, -0.776,   -0.4075,   0.4075,  0.776,  0.0,   0.0,   0.0,   0.0]
       circle_r = [2.49, 0.5495,  0.5495,  0.24,     0.5295,   0.5295,  0.24,   0.934, 0.934, 0.934, 0.934]
-
-    if car_struct == CarStruct.WITHOUT_MIRROR:
-      circle_x = [1.36, 3.1750,  3.1750,  -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
-      circle_y = [0.0,  0.3875, -0.3875,  -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
-      circle_r = [2.49, 0.5495,  0.5495,   0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
 
   elif vehicle_type == BESTUNE_E541:
-    circle_x = [1.36, 3.305,   3.305,   2.12,   -0.615,  -0.615, 2.12,   2.8475, 1.8,    0.9,   -0.1575]
-    circle_y = [0.0,  0.5075, -0.5075, -0.9245, -0.4675, 0.4675, 0.9245, 0.0,    0.0,    0.0,    0.0]
-    circle_r = [2.7,  0.45,    0.45,    0.14,    0.49,   0.49,   0.14,   0.9575, 0.9575, 0.9575, 0.9575]
-
-    if fold_mirror_flag or car_struct == CarStruct.WITHOUT_MIRROR:
+    if car_struct == CarStruct.FOLD_MIRROR:
       circle_x = [1.36, 3.305,   3.305,   2.12,   -0.615,  -0.615, 2.12,   2.8475, 1.8,    0.9,   -0.1575]
       circle_y = [0.0,  0.5075, -0.5075, -0.8345, -0.4675, 0.4675, 0.8345, 0.0,    0.0,    0.0,    0.0]
       circle_r = [2.7,  0.45,    0.45,    0.16,    0.49,   0.49,   0.16,   0.9575, 0.9575, 0.9575, 0.9575]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.305,   3.305,  -0.615,  -0.615,  2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.4675, 0.4675,  0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.49,   0.49,    0.9575, 0.9575, 0.9575, 0.9575]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.305,   3.305,  -0.615,  -0.615,  2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.4675, 0.4675,  0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.49,   0.49,    0.9575, 0.9575, 0.9575, 0.9575]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.305,   3.305,   2.12,   -0.615,  -0.615, 2.12,   2.8475, 1.8,    0.9,   -0.1575]
+      circle_y = [0.0,  0.5075, -0.5075, -0.9245, -0.4675, 0.4675, 0.9245, 0.0,    0.0,    0.0,    0.0]
+      circle_r = [2.7,  0.45,    0.45,    0.14,    0.49,   0.49,   0.14,   0.9575, 0.9575, 0.9575, 0.9575]
 
   else:
-    circle_x = [1.45, 3.5150, 3.5150, 2.12, -0.5650, -0.5650, 2.12, 2.9375, 1.8, 0.9, -0.0375]
-    circle_y = [0.0, 0.6375, -0.6375, -0.9345, -0.5275, 0.5275, 0.9345, 0.0, 0.0, 0.0, 0.0]
-    circle_r = [2.58, 0.35, 0.35, 0.18, 0.46, 0.46, 0.18, 0.9875, 0.9875, 0.9875, 0.9875]
+    if car_struct == CarStruct.FOLD_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.776,   -0.4075,   0.4075,  0.776,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.24,     0.5295,   0.5295,  0.24,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.WITHOUT_MIRROR:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+    elif car_struct == CarStruct.CHASSIS:
+      circle_x = [1.36, 3.1750,  3.1750, -0.5045,  -0.5045,   2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.4075,   0.4075,   0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.5295,   0.5295,   0.934, 0.934, 0.934, 0.934]
+      for i in range(len(circle_x)):
+        if i == 1 or i == 2 or i == 5:
+          circle_x[i] -= chassis_reduce_length
+        elif i == 3 or i == 4 or i == 8:
+          circle_x[i] += chassis_reduce_length
+    else:
+      circle_x = [1.36, 3.1750,  3.1750,  2.0185,  -0.5045,  -0.5045,  2.0185, 2.80,  1.8,   0.9,  -0.1075]
+      circle_y = [0.0,  0.3875, -0.3875, -0.896,   -0.4075,   0.4075,  0.896,  0.0,   0.0,   0.0,   0.0]
+      circle_r = [2.49, 0.5495,  0.5495,  0.21,     0.5295,   0.5295,  0.21,   0.934, 0.934, 0.934, 0.934]
 
-  if car_struct == CarStruct.WITH_MIRROR:
+  if car_struct == CarStruct.WITH_MIRROR or car_struct == CarStruct.FOLD_MIRROR:
     for i in range(1, len(circle_x)):
       if i == 1 or i == 5:
         circle_y[i] += car_lat_inflation
@@ -225,7 +423,7 @@ def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0
         circle_x[i] += car_lat_inflation
       else:
         circle_r[i] += car_lat_inflation
-  elif car_struct == CarStruct.WITHOUT_MIRROR:
+  elif car_struct == CarStruct.WITHOUT_MIRROR or car_struct == CarStruct.CHASSIS:
     for i in range(1, len(circle_x)):
       if i == 1 or i == 4:
         circle_y[i] += car_lat_inflation
@@ -241,6 +439,54 @@ def load_car_circle_coord_by_veh(vehicle_type = CHERY_E0X, car_lat_inflation = 0
         circle_r[i] += car_lat_inflation
 
   return circle_x, circle_y, circle_r
+
+def load_car_circle_coord_relative_ego_pose(circle_x, circle_y, circle_r, ego_pose):
+  # ego_pose 0->x 1->y 2->heading(rad)
+  circle_xn, circle_yn = [], []
+  for i in range(len(circle_x)):
+    tmp_x, tmp_y = local2global(circle_x[i], circle_y[i], ego_pose[0], ego_pose[1], ego_pose[2])
+    circle_xn.append(tmp_x)
+    circle_yn.append(tmp_y)
+  return circle_xn, circle_yn, circle_r
+
+def load_car_circle_coord_relative_ego_pose_by_veh(ego_pose, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
+  if len(ego_pose) == 3:
+    ego_pose = np.append(ego_pose, 0.0)
+  circle_x, circle_y, circle_r = load_car_circle_coord_by_veh(vehicle_type, ego_pose[3], car_struct)
+  return load_car_circle_coord_relative_ego_pose(circle_x, circle_y, circle_r, [ego_pose[0], ego_pose[1], ego_pose[2]])
+
+def load_car_circle_coord_relative_ego_pose_list_by_veh(ego_pose_list, vehicle_type = CHERY_E0X, car_struct = CarStruct.WITH_MIRROR):
+  car_xns, car_yns, car_rns = [], [], []
+  # ego_pose 0->x 1->y 2->heading(rad) 3->car_inflation
+  for i in range(len(ego_pose_list)):
+    car_xn, car_yn, car_rn = load_car_circle_coord_relative_ego_pose_by_veh(ego_pose_list[i], vehicle_type, car_struct)
+    car_xns.append(car_xn)
+    car_yns.append(car_yn)
+    car_rns.append(car_rn)
+  return car_xns, car_yns, car_rns
+
+def get_next_filename(folder):
+  # 获取文件夹中的所有文件
+  files = os.listdir(folder)
+  # 记录最高的编号
+  max_number = 0
+
+  # 遍历文件名，寻找以 data_ 开头且以 .json 结尾的文件
+  for file in files:
+    if file.startswith("data_") and file.endswith(".json"):
+      try:
+        # 从文件名中提取编号，并更新最大编号
+        number = int(file[len("data_"):-len(".json")])
+        if number > max_number:
+          max_number = number
+      except ValueError:
+        pass  # 如果转换失败，则跳过该文件
+
+  # 生成下一个文件名
+  next_number = max_number + 1
+  next_filename = f"data_{next_number}.json"
+  return next_filename
 
 def load_car_uss_patch(vehicle_type = JAC_S811):
   if vehicle_type == JAC_S811:
@@ -953,8 +1199,8 @@ def find_closest_index(values, target):
 if __name__ == "__main__":
   import matplotlib.pyplot as plt
 
-  ori_x_vec, ori_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, fold_mirror_flag=False)
-  new_x_vec, new_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, fold_mirror_flag=True)
+  ori_x_vec, ori_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, car_struct=CarStruct.WITH_MIRROR)
+  new_x_vec, new_y_vec, wheel_base = load_car_params_patch_parking(vehicle_type = CHERY_M32T, car_lat_inflation = 0.0, car_struct=CarStruct.FOLD_MIRROR)
 
   ori_x = ori_x_vec + [ori_x_vec[0]]
   ori_y = ori_y_vec + [ori_y_vec[0]]

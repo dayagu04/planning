@@ -160,6 +160,7 @@ void SyncParkingParameters(const bool is_simulation) {
                   "rear_overhanging_height");
   JSON_READ_VALUE(param.height_redundancy, double, "height_redundancy");
   JSON_READ_VALUE(param.runover_height, double, "runover_height");
+  JSON_READ_VALUE(param.chassis_reduce_length, double, "chassis_reduce_length");
 
   JSON_READ_VALUE(param.wheel_base, double, "wheel_base");
   JSON_READ_VALUE(param.car_width, double, "car_width");
@@ -607,8 +608,24 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
                   "enable_multi_height_col_det");
 
-  JSON_DEBUG_VALUE("enable_multi_height_col_det",
-                   param.enable_multi_height_col_det)
+  int use_obs_height_method = 0;
+  JSON_READ_VALUE(use_obs_height_method, int, "use_obs_height_method");
+  if (use_obs_height_method == 1) {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH_LOW;
+  } else if (use_obs_height_method == 2) {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH_MID_LOW;
+  } else {
+    param.use_obs_height_method = UseObsHeightMethod::HIGH;
+  }
+
+  if (param.use_obs_height_method == UseObsHeightMethod::HIGH) {
+    param.enable_multi_height_col_det = false;
+  } else {
+    param.enable_multi_height_col_det = true;
+  }
+
+  JSON_DEBUG_VALUE("use_obs_height_method", use_obs_height_method);
+  JSON_DEBUG_VALUE("enable_multi_height_col_det", param.enable_multi_height_col_det);
 
   JSON_READ_VALUE(param.car_lat_inflation_strict, double,
                   "car_lat_inflation_strict");
@@ -1391,6 +1408,23 @@ const SpeedModeParams& ParkingSpeedConfig::GetSpeedParams(
     default:
       return middle_mode;
   }
+}
+
+const std::string GetUseObsHeightMethodString(const UseObsHeightMethod method) {
+  switch (method) {
+    case UseObsHeightMethod::HIGH_LOW:
+      return "HIGH_LOW";
+    case UseObsHeightMethod::HIGH_MID_LOW:
+      return "HIGH_MID_LOW";
+    default:
+      return "HIGH";
+  }
+}
+
+void PrintUseObsHeightMethod(const UseObsHeightMethod method,
+                             const bool enable_log) {
+  ILOG_INFO_IF(enable_log) << "use_obs_height_method = "
+                           << GetUseObsHeightMethodString(method);
 }
 
 }  // namespace apa_planner

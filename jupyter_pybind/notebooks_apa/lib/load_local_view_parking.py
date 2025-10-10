@@ -996,15 +996,18 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       vehicle_type = CHERY_E0X
 
   fold_mirror_flag = False
+  car_struct = CarStruct.WITH_MIRROR
   if bag_loader.plan_debug_msg['enable'] == True:
     fold_mirror_flag = bag_loader.plan_debug_msg['json'][plan_debug_msg_idx]['fold_mirror_flag']
+  if fold_mirror_flag == True:
+    car_struct = CarStruct.FOLD_MIRROR
 
   vs_fold_mirror = 0
   if bag_loader.vs_msg['enable'] == True:
     vs_fold_mirror = bag_loader.vs_msg['data'][vs_msg_idx].rearview_mirror_sts
 
   print("vehicle_type = ", vehicle_type, "  fold_mirror_flag = ", fold_mirror_flag, " vs_fold_mirror = ", vs_fold_mirror)
-  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0, fold_mirror_flag)
+  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, 0.0, car_struct)
   car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
 
   ### step 2: load positioning information
