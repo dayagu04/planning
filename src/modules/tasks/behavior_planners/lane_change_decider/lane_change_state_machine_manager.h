@@ -15,7 +15,7 @@
 #include "trajectory1d/third_order_time_optimal_trajectory.h"
 #include "virtual_lane.h"
 namespace planning {
-using namespace planning_math;// fix
+using namespace planning_math;  // fix
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
   RequestType lane_change_direction = NO_CHANGE;
@@ -102,6 +102,7 @@ class LaneChangeStateMachineManager {
   void Update();
   void ResetStateMachine();
   void WeaklyResetStateMachine();
+
  private:
   void PreProcess();
   void RunStateMachine();
@@ -190,7 +191,8 @@ class LaneChangeStateMachineManager {
       const planning_data::DynamicAgentNode** after_filter_agent);
   TrajectoryPoints CalculateEgoFutureTrajs() const;
   TrajectoryPoints CalculateEgoPPIDMTrajs();
-  TrajectoryPoints CalculateEgoPPIDMTrajs(const planning_data::DynamicAgentNode* front_agent_node);
+  TrajectoryPoints CalculateEgoPPIDMTrajs(
+      const planning_data::DynamicAgentNode* front_agent_node);
   bool CheckIfSafetyForPredictionTrajs(
       const TrajectoryPoints& agent_traj,
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
@@ -198,7 +200,8 @@ class LaneChangeStateMachineManager {
   bool IsFilterAgent(
       const planning_data::DynamicAgentNode* agent_node,
       const std::shared_ptr<planning_math::KDPath> target_lane_coor,
-      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent, const bool is_front_agent);
+      TrajectoryPoints* agent_prediction_trajs, const bool is_ego_lane_agent,
+      const bool is_front_agent);
   void StoreObjDebugPredictionInfo(
       const planning_data::DynamicAgentNode* agent_node,
       const TrajectoryPoints* agent_prediction_trajs, const bool is_front_agent,
@@ -219,46 +222,44 @@ class LaneChangeStateMachineManager {
   bool IsCancelToHold();
   double CalculateLCHoldStateLatOffset() const;
   bool IsHighPriorityCompleteMLC() const;
-  bool IsFilterStaticAgentLC(const planning_data::DynamicAgentNode& agent_node) const;
+  bool IsFilterStaticAgentLC(
+      const planning_data::DynamicAgentNode& agent_node) const;
 
   void UpdateLCCoarsePlanningInfo();
 
-  void UpdateLCPath(TrajectoryPoints& traj_points,
-                    const LaneChangePathGenerateManager::LCPathResult& lc_path_result,
-                    const std::shared_ptr<ReferencePath> ref_path);
+  void UpdateLCPath(
+      TrajectoryPoints& traj_points,
+      const LaneChangePathGenerateManager::LCPathResult& lc_path_result,
+      const std::shared_ptr<ReferencePath> ref_path);
   void CheckTargetFrontNode(int64_t target_lane_front_node_id);
-  void  CheckTargetRearNode(int64_t target_lane_rear_node_id);
-  FrenetObstacleBoundary  GetSLboundaryFromAgent(
-    const std::shared_ptr<ReferencePath>ref_path, const planning_math::Box2d& obs_box);
-  bool PassInLane(double lane_width,
-                    const FrenetObstacleBoundary& obs_bd,
-                    const double car_width,
-                    const double safety_margin,
-                    const RequestType direction);
+  void CheckTargetRearNode(int64_t target_lane_rear_node_id);
+  FrenetObstacleBoundary GetSLboundaryFromAgent(
+      const std::shared_ptr<ReferencePath> ref_path,
+      const planning_math::Box2d& obs_box);
+  bool PassInLane(double lane_width, const FrenetObstacleBoundary& obs_bd,
+                  const double car_width, const double safety_margin,
+                  const RequestType direction);
   bool CheckFrontRiskAgentTrajs(
-    const planning_data::DynamicAgentNode *agent_node, bool is_large_car);
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car);
   bool IfFrenetCollision(std::pair<double, double> l1, double v1,
-                        std::pair<double, double> l2, double v2,
-                        double max_time = 4.0, double dt = 0.5);
-  void CheckOtherAgents(LaneChangeStageInfo *const lc_state_info);
-  bool GetDecelerationTraj(
-      double a0,
-      const TrajectoryPoints &agent_traj,
-      TrajectoryPoints &agent_deceleration_traj,
-      const double deceleration,
-      const double j,
-      bool is_press_line);
-  bool IfFrenetCollision2D(
-    std::pair<double,double> s1, double vs1,
-    std::pair<double,double> s2, double vs2,
-    std::pair<double,double> l1, double vl1,
-    std::pair<double,double> l2, double vl2,
-    double max_time, double dt);
+                         std::pair<double, double> l2, double v2,
+                         double max_time = 4.0, double dt = 0.5);
+  void CheckOtherAgents(LaneChangeStageInfo* const lc_state_info);
+  bool GetDecelerationTraj(double a0, const TrajectoryPoints& agent_traj,
+                           TrajectoryPoints& agent_deceleration_traj,
+                           const double deceleration, const double j,
+                           bool is_press_line);
+  bool IfFrenetCollision2D(std::pair<double, double> s1, double vs1,
+                           std::pair<double, double> s2, double vs2,
+                           std::pair<double, double> l1, double vl1,
+                           std::pair<double, double> l2, double vl2,
+                           double max_time, double dt);
   void AddRearAgentMerging();
-  void CheckMergingRearAgent(LaneChangeStageInfo *const lc_state_info);
+  void CheckMergingRearAgent(LaneChangeStageInfo* const lc_state_info);
   bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
+
  private:
-//   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
+  //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
   CongestionDetectionConfig congestion_detection_config_;
@@ -295,9 +296,9 @@ class LaneChangeStateMachineManager {
   const planning_data::DynamicAgentNode* target_lane_middle_node_ = nullptr;
   const planning_data::DynamicAgentNode* target_lane_rear_node_ = nullptr;
   const planning_data::DynamicAgentNode* ego_lane_front_node_ = nullptr;
-  int last_target_rear_agent_id_  = -1;
-  int last_merging_rear_agent_id_  = -1;
-  int merging_rear_agent_id_  = -1;
+  int last_target_rear_agent_id_ = -1;
+  int last_merging_rear_agent_id_ = -1;
+  int merging_rear_agent_id_ = -1;
   bool is_large_car_in_side_ = false;
   bool is_ego_on_leftmost_lane_ = false;
   bool is_ego_on_rightmost_lane_ = false;
@@ -315,7 +316,7 @@ class LaneChangeStateMachineManager {
   TrajectoryPoints ego_trajs_future_;
   TrajectoryPoints front_node_trajs_future_;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
-  std::vector<std::shared_ptr<FrenetObstacle>>  risk_side_agents_nodes_;
+  std::vector<std::shared_ptr<FrenetObstacle>> risk_side_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;
