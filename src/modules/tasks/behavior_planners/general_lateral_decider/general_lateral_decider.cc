@@ -2939,7 +2939,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     // 从后方来的侧方障碍物，第一层和第二层Bound一致
     return;
   }
-  
+
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.emergency_avoid &&
       !obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
@@ -3515,7 +3515,8 @@ void GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
   if (lat_obs_position_iter != lat_obstacle_position.end() &&
       lat_obs_position_iter->second.side_car) {
     is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
-                      (!lat_obs_position_iter->second.front_car);
+                      (!lat_obs_position_iter->second.front_car) &&
+                      (!lat_obs_position_iter->second.is_potential_avoiding_side_car);
     if (lat_obstacle_decision.at(obstacle->id()) ==
         LatObstacleDecisionType::IGNORE ||
         lat_obstacle_decision.at(obstacle->id()) ==

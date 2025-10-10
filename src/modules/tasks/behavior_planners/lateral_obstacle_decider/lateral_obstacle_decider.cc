@@ -220,6 +220,7 @@ bool LateralObstacleDecider::Execute() {
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
       FollowObstacleInfo &follow_info = follow_obstacle_info_[obs->id()];
+      history.is_potential_avoiding_side_car = false;
       history.is_behind_ego = false;
       if (history.can_not_avoid) {
         history.is_not_set = false;
@@ -275,8 +276,9 @@ bool LateralObstacleDecider::Execute() {
           history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
         }
         if (history.side_2_front_count > side_2_front_count_thr) {
-          history.front_car = true;
-          history.rear_car = false;
+          // history.front_car = true;
+          // history.rear_car = false;
+          history.is_potential_avoiding_side_car = true;
           history.overlap_ego_head_thr = 2.5;
         } else {
           history.overlap_ego_head_thr = 2;
