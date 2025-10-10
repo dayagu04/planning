@@ -313,9 +313,9 @@
     "avd_vrel_bp_5": -30,
     "avd_lon_distance_1": 1,
     "avd_lon_distance_2": 5,
-    "avd_lon_distance_3": 20,
-    "avd_lon_distance_4": 28,
-    "avd_lon_distance_5": 38,
+    "avd_lon_distance_3": 25,
+    "avd_lon_distance_4": 36,
+    "avd_lon_distance_5": 50,
     "extra_truck_nudge_lat_offset":0.1,
     "lateral_offset_obstacle_nudge_buffer_v_bp":[10, 40, 60, 80, 100, 130],
     "lateral_offset_nudge_buffer":    [0.042, 0.17, 0.25, 0.23, 0.31, 0.44]
