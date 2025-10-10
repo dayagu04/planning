@@ -216,18 +216,18 @@ uint16 IhcCore::IhcActiveCode() {
   // 待补充
 
   // condition1: 大灯开关挡位在AUTO档 (auto_light_state一直为false)
-  // if (ihc_sys_.input.auto_light_state != true) {
-  //   ihc_active_code_temp += uint16_bit[1];
-  // } else {
-  //   // do nothing
-  // }
-
-  // condition2: 近光灯点亮
-  if (ihc_sys_.input.low_beam_state != true) {
-    ihc_active_code_temp += uint16_bit[2];
+  if (ihc_sys_.input.auto_light_state != true) {
+    ihc_active_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
+
+  // condition2: 近光灯点亮
+  // if (ihc_sys_.input.low_beam_state != true) {
+  //   ihc_active_code_temp += uint16_bit[2];
+  // } else {
+  //   // do nothing
+  // }
 
   return ihc_active_code_temp;
 }
