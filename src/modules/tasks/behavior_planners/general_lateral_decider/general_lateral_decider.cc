@@ -3639,7 +3639,7 @@ double GeneralLateralDecider::CalEmergencyNudgeLatBufDis(
   double lat_buf_dis = general_lateral_decider_utils::CalDesireLateralDistance(
       ego_cart_state_manager_->ego_v(), pred_ts, 0, obstacle, is_nudge_left,
       in_intersection, is_same_side_obstacle_during_lane_change,
-      BoundHierarchy::FIRST_SOFT_BOUND, config_);
+      BoundHierarchy::SECOND_SOFT_BOUND, config_);
 
   if (is_use_recurrence_) {
     // 高速上限制bound大小
