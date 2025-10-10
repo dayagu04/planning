@@ -105,7 +105,8 @@ class HybridAStarInterface {
 
   void UpdateEDTByObs(const ParkObstacleList& obs_list);
 
-  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
+  // for debug
+  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   const SearchTimeBenchmark& GetTimeBenchmark() const {
     return time_benchmark_;

@@ -161,8 +161,8 @@ void UpdateFootprintCircle(const AstarPathGear gear,
     return;
   }
 
-  FootPrintCircleModel *model =
-      hybrid_astar_interface_->GetSlotOutsideCircleFootPrint();
+  FootPrintCircleModel *model = hybrid_astar_interface_->GetCircleFootPrint(
+      HierarchySafeBuffer::INSIDE_SLOT_BUFFER);
   if (model == nullptr) {
     return;
   }
@@ -170,14 +170,15 @@ void UpdateFootprintCircle(const AstarPathGear gear,
   const FootPrintCircleList circle_footprint =
       model->GetLocalFootPrintCircleByGear(gear);
 
+  footprint_circle.reserve(circle_footprint.size + 1);
   const FootPrintCircle *circle = &circle_footprint.max_circle;
-  footprint_circle.push_back(
+  footprint_circle.emplace_back(
       Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
   for (int i = 0; i < std::min(FOOTPRINT_CIRCLE_NUM, circle_footprint.size);
        i++) {
     circle = &circle_footprint.circles[i];
 
-    footprint_circle.push_back(
+    footprint_circle.emplace_back(
         Eigen::Vector3d(circle->pos.x, circle->pos.y, circle->radius));
   }
 
@@ -257,17 +258,12 @@ int GetPathFromHybridAstar() {
 
   ILOG_INFO << "astar path size " << global_astar_path_.size();
 
-  // ILOG_INFO << "rs path size " << rs_path_.size();
-
   const Pose2f target_local = thread_solver_->GetAstarTargetPose();
-
   tf.ULFLocalPoseToGlobal(&global_position, target_local.ToPose2d());
 
   astar_end_pose_[0] = global_position.x;
   astar_end_pose_[1] = global_position.y;
   astar_end_pose_[2] = global_position.theta;
-
-  ILOG_INFO << "target_local ";
 
   // node list
   real_time_node_list_.clear();
@@ -378,7 +374,7 @@ int GetPathFromHybridAstar() {
     deletenode_sequence_path_.emplace_back(
         Eigen::Vector2d(global_position.x, global_position.y));
   }
-  ILOG_INFO << "delnode_path size = " << delnode_path.size();
+  ILOG_INFO << "delete node size = " << delnode_path.size();
 
   // 基坐标位置
   coordinate_system_[0] = ego_slot_info_.origin_pose_global.pos[0];
@@ -409,7 +405,7 @@ int GetPathFromHybridAstar() {
 
   UpdateFootprintCircleList();
 
-  ILOG_INFO << "receive finish";
+  // ILOG_INFO << "receive finish";
 
   return 0;
 }

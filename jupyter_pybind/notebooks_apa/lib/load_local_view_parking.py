@@ -892,8 +892,6 @@ class LoadCyberbag:
 
 def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car_inflation, local_view_data, plot_ctrl_flag=False):
 
-  car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, car_inflation)
-  car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type, car_inflation)
   abs_t = bag_time + smallest_abs_t
 
   ### step 1: timestamp alignment

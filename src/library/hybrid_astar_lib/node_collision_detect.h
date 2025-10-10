@@ -33,10 +33,10 @@ class NodeCollisionDetect {
                                    const PlannerOpenSpaceConfig& config);
 
   // check collision and validity
-  bool ValidityCheckByConvex(Node3d* node);
+  bool IsValidByConvexHull(Node3d* node);
 
   // check collision and validity
-  const bool ValidityCheckByEDT(Node3d* node);
+  const bool IsValidByEDT(Node3d* node);
 
   // check Reeds Shepp path collision and validity
   bool RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
@@ -59,14 +59,12 @@ class NodeCollisionDetect {
 
   const bool IsFootPrintCollision(const Transform2d& tf);
 
-  Polygon2D* GetVehPolygon(const AstarPathGear& gear);
-
   void DebugEDTCheck(HybridAStarResult* path);
 
-  const bool IsPointBeyondBound(const float x, const float y) const;
+  const bool IsPointOutOfGridMapBound(const float x, const float y) const;
 
   // debug
-  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
+  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   const bool IsContainByRecommendBox(const Pose2f& global_pose);
 
@@ -92,12 +90,6 @@ class NodeCollisionDetect {
 
  private:
   GJK2DInterface gjk_interface_;
-
-  // todo, width = vehicle width + mirror width + safe width, bounding box
-  // to accelerate collision detection.
-  Polygon2D veh_box_gear_none_;
-  Polygon2D veh_box_gear_drive_;
-  Polygon2D veh_box_gear_reverse_;
 
   // convex hull for accurate car
   PolygonFootPrint cvx_hull_foot_print_;

@@ -116,7 +116,7 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
 
   RSPathRequestType rs_request = RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE;
   if (!CalcRSPathToGoal(current_node, false, false, rs_request, rs_radius)) {
-    ILOG_INFO << " generate rs fail";
+    // ILOG_INFO << " generate rs fail";
 
     return false;
   }
@@ -621,7 +621,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   // check if the vehicle runs outside of XY boundary
   const Pose2f& end_point = path.GetEndPoint();
-  if (collision_detect_->IsPointBeyondBound(end_point.x, end_point.y)) {
+  if (collision_detect_->IsPointOutOfGridMapBound(end_point.x, end_point.y)) {
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
 
@@ -1233,10 +1233,9 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   // check start
   double check_start_time = IflyTime::Now_ms();
-  if (!collision_detect_->ValidityCheckByEDT(start_node_)) {
+  if (!collision_detect_->IsValidByEDT(start_node_)) {
     // second check
-    if (collision_detect_->IsFootPrintCollision(
-            Transform2d(start_node_->GetPose()))) {
+    if (collision_detect_->IsValidByConvexHull(start_node_)) {
       ILOG_INFO << "start_node in collision with obstacles "
                 << static_cast<int>(start_node_->GetConstCollisionType());
 
@@ -1271,7 +1270,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
 
   // check end
   check_start_time = IflyTime::Now_ms();
-  if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
+  if (!collision_detect_->IsValidByEDT(astar_end_node_)) {
     ILOG_INFO << "end_node in collision with obstacles "
               << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
@@ -1422,7 +1421,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       check_start_time = IflyTime::Now_ms();
 #endif
 
-      is_safe = collision_detect_->ValidityCheckByEDT(&new_node);
+      is_safe = collision_detect_->IsValidByEDT(&new_node);
 
 #if LOG_TIME_PROFILE
       check_end_time = IflyTime::Now_ms();
@@ -1667,7 +1666,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   // check start
   double check_start_time = IflyTime::Now_ms();
-  if (!collision_detect_->ValidityCheckByEDT(start_node_)) {
+  if (!collision_detect_->IsValidByEDT(start_node_)) {
     // second check
     if (collision_detect_->IsFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
@@ -1707,7 +1706,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   // check end
   check_start_time = IflyTime::Now_ms();
-  if (!collision_detect_->ValidityCheckByEDT(astar_end_node_)) {
+  if (!collision_detect_->IsValidByEDT(astar_end_node_)) {
     ILOG_INFO << "end_node in collision with obstacles "
               << static_cast<int>(astar_end_node_->GetConstCollisionType());
 
@@ -1885,7 +1884,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       check_start_time = IflyTime::Now_ms();
 #endif
 
-      is_safe = collision_detect_->ValidityCheckByEDT(&new_node);
+      is_safe = collision_detect_->IsValidByEDT(&new_node);
 
 #if LOG_TIME_PROFILE
       check_end_time = IflyTime::Now_ms();
@@ -2097,6 +2096,8 @@ void HybridAStar::Init() {
 
   rs_path_h_cost_debug_.clear();
   rs_path_.Clear();
+
+  UpdateCarBoxBySafeBuffer(0.0f, 0.0f, 0.0f);
 
   ILOG_INFO << "astar init finish";
 
@@ -2484,12 +2485,13 @@ void HybridAStar::CopyNodePath(const Node3d* node,
   return;
 }
 
-FootPrintCircleModel* HybridAStar::GetSlotOutsideCircleFootPrint() {
+FootPrintCircleModel* HybridAStar::GetCircleFootPrint(
+    const HierarchySafeBuffer buffer) {
   if (collision_detect_ == nullptr) {
     return nullptr;
   }
 
-  return collision_detect_->GetSlotOutsideCircleFootPrint();
+  return collision_detect_->GetCircleFootPrint(buffer);
 }
 
 void HybridAStar::UpdatePathS(HybridAStarResult* path) {

@@ -101,7 +101,7 @@ class HybridAStar {
                           const Pose2f& target, HybridAStarResult* result);
 
   // debug
-  FootPrintCircleModel* GetSlotOutsideCircleFootPrint();
+  FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 
   // todo: move sampling based method out of astar class, we can move it to
   // interface.
