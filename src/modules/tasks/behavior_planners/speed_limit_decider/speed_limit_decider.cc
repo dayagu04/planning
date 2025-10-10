@@ -331,15 +331,15 @@ double SpeedLimitDecider::JudgeCurvBySDProMap() {
     return 300.0;
   }
   if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
-    std::cout << "sd_map is invalid!!!" << std::endl;
+    ILOG_INFO << "sd_map is invalid!!!";
     return 300.0;
   }
   ad_common::math::Vec2d current_point;
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto &pose = ego_state->location_enu();
-  std::cout << "ego_pose_x_:" << pose.position.x
-            << "ego_pose_y_:" << pose.position.y << std::endl;
+  ILOG_INFO << "ego_pose_x_:" << pose.position.x
+            << "ego_pose_y_:" << pose.position.y;
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
   const auto &sdpro_map =
@@ -508,7 +508,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   bool is_on_ramp = route_info_output.is_on_ramp;
   //set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
-    std::cout << "sd_map is invalid!!!" << std::endl;
+    ILOG_INFO << "sd_map is invalid!!!";
     //map info invalid, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
@@ -536,7 +536,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
 
   double v_limit_gaode = 0;
   if (!environmental_model.get_route_info()->get_sdmap_valid()) {
-    std::cout << "sd_map is invalid!!!" << std::endl;
+    ILOG_INFO << "sd_map is invalid!!!";
   } else {
     const auto &sd_map = environmental_model.get_route_info()->get_sd_map();//cur_road_speed_limit()
     if (sd_map.GetNaviRoadInfo() != std::nullopt) {

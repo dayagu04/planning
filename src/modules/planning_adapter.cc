@@ -317,7 +317,7 @@ bool PlanningAdapter::Proc() {
         degraded_driving_function_msg_recv_time_;
     is_degraded_driving_function_msg_updated_.store(false);
   }
-
+  LogTopicLatency();
   JSON_DEBUG_VALUE("FeedDataTime", (IflyTime::Now_us() - start_time_) / 1000.0);
 
   UpdateApaResetFlag();
