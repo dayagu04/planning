@@ -111,6 +111,8 @@ class HybridAStarInterface {
     return time_benchmark_;
   }
 
+  const SearchGear& GetSearchGear() const { return search_gear_; }
+
  private:
   int UpdateEDT();
 
@@ -189,6 +191,7 @@ class HybridAStarInterface {
 
   // for debug
   SearchTimeBenchmark time_benchmark_;
+  SearchGear search_gear_;
 };
 
 }  // namespace planning

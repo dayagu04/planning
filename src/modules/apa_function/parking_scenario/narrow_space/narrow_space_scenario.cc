@@ -740,7 +740,7 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
-  constexpr float kFristXDiffThresh = 0.5f;
+  constexpr float kFirstXDiffThresh = 0.5f;
   constexpr float kHeadingDiffThresh = 0.01f;
   const float target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
                                        ->GetEgoInfoUnderSlot()
@@ -2170,6 +2170,7 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
     // get output
     thread_.PublishResponse(&response_);
     RecordSearchTime(response_.time);
+    RecordSearchGear(response_.search_gear);
 
     if (!IsResponseNice(cur_request, response_)) {
       ThreadClearState();
@@ -2582,6 +2583,24 @@ void NarrowSpaceScenario::RecordSearchTime(const SearchTimeBenchmark& time) {
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_ASTAR,
                                     time.total_time_ms);
+
+  return;
+}
+
+void NarrowSpaceScenario::RecordSearchGear(const SearchGear& search_gear) {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  debug->mutable_apa_path_debug()->clear_search_gear();
+  common::SearchGearForPath* search_gear_debug =
+      debug->mutable_apa_path_debug()->mutable_search_gear();
+
+  for (int8_t i = 0; i < search_gear.size; i++) {
+    search_gear_debug->add_first_action_gear(search_gear.first_action_gear[i]);
+    search_gear_debug->add_first_action_gear_request(
+        search_gear.first_action_gear_request[i]);
+    ILOG_INFO << "first_action_gear = " << search_gear.first_action_gear[i];
+    ILOG_INFO << "first_action_gear_request = "
+              << search_gear.first_action_gear_request[i];
+  }
 
   return;
 }

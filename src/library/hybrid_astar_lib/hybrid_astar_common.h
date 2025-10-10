@@ -3,8 +3,8 @@
 #include <string>
 #include <vector>
 
-#include "pose2d.h"
 #include "aabb2d.h"
+#include "pose2d.h"
 
 namespace planning {
 
@@ -287,6 +287,17 @@ struct SearchTimeBenchmark {
 
   void Clear() {
     total_time_ms = 0;
+    size = 0;
+    return;
+  }
+};
+
+struct SearchGear {
+  int32_t first_action_gear[6];
+  int32_t first_action_gear_request[6];
+  int8_t size;
+
+  void Clear() {
     size = 0;
     return;
   }
