@@ -4104,20 +4104,48 @@ void GeneralLateralDecider::ExtractBoundary(
         second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION ||
         second_soft_bounds_info[i].first.type == BoundType :: LANE ||
         !config_.use_first_soft_bound)) {
-      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
-        first_soft_bound.first = second_frenet_soft_bounds[i].second;
-      } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+      // if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+      //   first_soft_bound.first = second_frenet_soft_bounds[i].second;
+      // } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+      //   first_soft_bound.first = second_frenet_soft_bounds[i].first;
+      // }
+      if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
         first_soft_bound.first = second_frenet_soft_bounds[i].first;
+      }
+      if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+        first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      }
+      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+        if (second_soft_bounds_info[i].second.type == BoundType :: LANE ||
+            second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION) {
+          second_frenet_soft_bounds[i].second = first_soft_bound.first;
+        } else {
+          first_soft_bound.first = second_frenet_soft_bounds[i].second;
+        }
       }
     }
     if (!(second_soft_bounds_info[i].second.type == BoundType :: ROAD_BORDER ||
         second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION ||
         second_soft_bounds_info[i].second.type == BoundType :: LANE ||
         !config_.use_first_soft_bound)) {
+      // if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
+      //   first_soft_bound.second = second_frenet_soft_bounds[i].second;
+      // } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+      //   first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      // }
       if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
         first_soft_bound.second = second_frenet_soft_bounds[i].second;
-      } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
-        first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      }
+      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+        first_soft_bound.first = second_frenet_soft_bounds[i].second;
+      }
+      if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+        if (second_soft_bounds_info[i].first.type == BoundType :: LANE ||
+            second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION) {
+          second_frenet_soft_bounds[i].first = first_soft_bound.second;
+        } else {
+          first_soft_bound.second = second_frenet_soft_bounds[i].first;
+        }
       }
     }
     first_frenet_soft_bounds[i] = first_soft_bound;
