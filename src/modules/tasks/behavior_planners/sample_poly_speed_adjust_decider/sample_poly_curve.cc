@@ -185,8 +185,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
                  ego_s - prediction_matched_lower_st_point.s() > 5.0 &&
                  prediction_matched_upper_st_point.agent_id() !=
                      prediction_matched_lower_st_point.agent_id()) {
-        speed_differ_gain =
-            ttc_to_rear_car > 7.0 ? 0.0 : std::exp(5.0 - ttc_to_rear_car) / 50.0;
+        speed_differ_gain = ttc_to_rear_car > 7.0
+                                ? 0.0
+                                : std::exp(5.0 - ttc_to_rear_car) / 50.0;
       }
     }
   }

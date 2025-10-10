@@ -2,7 +2,8 @@
 
 // #include "filters.h"
 // #include "lateral_obstacle.h"
-// #include "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
+// #include
+// "tasks/behavior_planners/vision_only_lane_change_decider/vision_only_lane_change_decider.h"
 // #include "tasks/task.h"
 // #include "utils_math.h"
 // #include "virtual_lane_manager.h"
@@ -30,11 +31,12 @@
 
 //   bool limit_accel_velocity_for_cutin(
 //       const std::vector<TrackedObject> &front_tracks,
-//       const std::vector<TrackedObject> &side_tracks, const std::string &lc_status,
-//       const double v_ego);
+//       const std::vector<TrackedObject> &side_tracks, const std::string
+//       &lc_status, const double v_ego);
 //   bool calc_speed_with_leads(const TrackedObject *lead_one,
 //                              const TrackedObject *lead_two,
-//                              const std::string &lc_request, const double v_ego);
+//                              const std::string &lc_request, const double
+//                              v_ego);
 //   bool calc_speed_with_temp_leads(const TrackedObject *temp_lead_one,
 //                                   const TrackedObject *temp_lead_two,
 //                                   const double v_ego,
@@ -43,8 +45,8 @@
 //                                   const std::string &lc_status);
 //   bool calc_speed_for_ramp(double v_ego);
 //   bool calc_speed_with_potential_cutin_car(
-//       const std::vector<TrackedObject> &front_tracks, const std::string &lc_request,
-//       const double v_cruise, const double v_ego);
+//       const std::vector<TrackedObject> &front_tracks, const std::string
+//       &lc_request, const double v_cruise, const double v_ego);
 
 //   bool calc_speed_for_lane_change(const TrackedObject *lead_one,
 //                                   const double v_cruise, const double v_ego,
@@ -85,7 +87,8 @@
 //  private:
 //   void update_planner_output();
 //   void log_planner_debug_info();
-//   void create_vision_longitudinal_behavior_planner_msg(std::string &plan_msg);
+//   void create_vision_longitudinal_behavior_planner_msg(std::string
+//   &plan_msg);
 
 //  private:
 //   // lookup tables VS speed to determine min and max accels in cruise
@@ -150,7 +153,8 @@
 
 //   VisionLongitudinalBehaviorPlannerConfig config_;
 
-// //   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ = nullptr;
+// //   std::shared_ptr<VisionOnlyLaneChangeDecider> lane_changing_decider_ =
+// nullptr;
 //   // 限制猛加速的滤波器
 //   pnc::filters::SlopeFilter accel_vel_filter_;
 //   bool is_on_ramp_ = false;

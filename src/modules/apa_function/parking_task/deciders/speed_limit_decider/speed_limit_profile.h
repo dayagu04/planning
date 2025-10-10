@@ -29,7 +29,7 @@ class SpeedLimitProfile {
 
   void Reserve(const size_t size) {
     speed_limit_points_.reserve(size);
-    return ;
+    return;
   }
 
  private:

@@ -563,7 +563,8 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 13
   // 故障降级
   if ((degraded_driving_function_info_ptr->ldw.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->ldw.degraded == iflyauto::ERROR_DEGRADED)) {
+       degraded_driving_function_info_ptr->ldw.degraded ==
+           iflyauto::ERROR_DEGRADED)) {
     ldw_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
@@ -1120,13 +1121,13 @@ double LdwCore::UpdateTlcThreshold(void) {
     if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
         iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_LOW) {
       tlc_calculate_base = ldw_tlc_near_;
-    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
-               iflyauto::SensitivityLevel::
-                   SENSITIVITY_LEVEL_MIDDLE) {
+    } else if (function_state_machine_info_ptr->switch_sts
+                   .ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_MIDDLE) {
       tlc_calculate_base = ldw_tlc_medium_;
-    } else if (function_state_machine_info_ptr->switch_sts.ldw_set_sensitivity_level ==
-               iflyauto::SensitivityLevel::
-                   SENSITIVITY_LEVEL_HIGH) {
+    } else if (function_state_machine_info_ptr->switch_sts
+                   .ldw_set_sensitivity_level ==
+               iflyauto::SensitivityLevel::SENSITIVITY_LEVEL_HIGH) {
       tlc_calculate_base = ldw_tlc_far_;
     } else {
       tlc_calculate_base = ldw_tlc_medium_;
@@ -1202,8 +1203,8 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
   }
 
   // 状态机处于完成过初始化的状态
-  if (ldw_state_ == iflyauto::LDWFunctionFSMWorkState::
-                        LDW_FUNCTION_FSM_WORK_STATE_FAULT) {
+  if (ldw_state_ ==
+      iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (ldw_main_switch_ == false) {
       ldw_state =
@@ -1231,8 +1232,8 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
       ldw_state =
           iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldw_fault_code_) {
-      ldw_state = iflyauto::LDWFunctionFSMWorkState::
-          LDW_FUNCTION_FSM_WORK_STATE_FAULT;
+      ldw_state =
+          iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldw_enable_code_ == 0) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
           LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1253,8 +1254,8 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
       ldw_state =
           iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldw_fault_code_) {
-      ldw_state = iflyauto::LDWFunctionFSMWorkState::
-          LDW_FUNCTION_FSM_WORK_STATE_FAULT;
+      ldw_state =
+          iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldw_disable_code_) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
           LDW_FUNCTION_FSM_WORK_STATE_STANDBY;

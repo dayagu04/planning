@@ -61,7 +61,7 @@ class BasicPurePursuitModel {
 
   const double get_delta() const { return delta_; }
 
-  const Eigen::Vector2d get_goal_point() const {return goal_point_; }
+  const Eigen::Vector2d get_goal_point() const { return goal_point_; }
 
   const double get_ld_actual_lenghth() const { return ld_actual_length_; }
 
@@ -70,8 +70,7 @@ class BasicPurePursuitModel {
                                          const double look_ahead_dist,
                                          double* delta);
 
-  ErrorType ProcessReferencePath(
-      std::shared_ptr<ReferencePath> reference_path);
+  ErrorType ProcessReferencePath(std::shared_ptr<ReferencePath> reference_path);
 
   ErrorType CalculateDesiredDelta(const double lat_offset);
 

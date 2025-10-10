@@ -47,7 +47,6 @@ class ResultTrajectoryGenerator : public Task {
 
  private:
   ResultTrajectoryGeneratorConfig config_;
-
 };
 
 }  // namespace planning

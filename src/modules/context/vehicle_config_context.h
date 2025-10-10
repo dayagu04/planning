@@ -36,7 +36,8 @@ class VehicleConfigurationContext {
   void load_vehicle_param() {
     std::string vehicle_param_path = get_vehicle_param_dir() + "/vehicle.yaml";
 
-    ILOG_DEBUG << "load_vehicle_param: vehicle_param_path:" << vehicle_param_path.c_str();
+    ILOG_DEBUG << "load_vehicle_param: vehicle_param_path:"
+               << vehicle_param_path.c_str();
     if (access(vehicle_param_path.c_str(), F_OK) == -1) {
       ILOG_ERROR << "ConfigContext: vehicle.yaml not exist!";
       return;

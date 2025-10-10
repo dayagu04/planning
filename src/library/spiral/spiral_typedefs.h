@@ -6,7 +6,7 @@ typedef struct SpiralPathPoint {
   float x;
   float y;
   float theta;
-  float kappa;           /* curvature of state */
+  float kappa; /* curvature of state */
 } spiral_path_point_t;
 
 typedef struct KnotCubic {

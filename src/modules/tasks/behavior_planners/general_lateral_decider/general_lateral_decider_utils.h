@@ -3,8 +3,8 @@
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
 #include "math.h"
-#include "task_basic_types.h"
 #include "obstacle_manager.h"
+#include "task_basic_types.h"
 
 namespace planning {
 namespace general_lateral_decider_utils {
@@ -22,11 +22,10 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
                             bool is_same_side_obstacle_during_lane_change,
                             GeneralLateralDeciderConfig &config);
 
-double CalDesireStaticLateralDistance(const double base_distance,
-                                      const double ego_vel, const double ego_l,
-                                      const std::shared_ptr<FrenetObstacle> obstacle,
-                                      bool is_update_hard_bound,
-                                      GeneralLateralDeciderConfig &config);
+double CalDesireStaticLateralDistance(
+    const double base_distance, const double ego_vel, const double ego_l,
+    const std::shared_ptr<FrenetObstacle> obstacle, bool is_update_hard_bound,
+    GeneralLateralDeciderConfig &config);
 double GetBoundWeight(
     BoundType type,
     const std::unordered_map<BoundType, double> &map_bound_weight);

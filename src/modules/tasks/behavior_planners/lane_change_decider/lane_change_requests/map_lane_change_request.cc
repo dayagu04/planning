@@ -28,7 +28,7 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   if (is_in_avoidance_mlc) {
     avoidance_MLC_counter++;
   }
-  if (suppression_counter > 30){
+  if (suppression_counter > 30) {
     suppression_counter = 0;
   }
 
@@ -36,13 +36,14 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
   const bool is_mlc_enable = CheckMLCEnable(lc_status);
 
   // 这里判断条件要不要加上此时为propose状态
-  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150 && lc_status <= kLaneChangePropose){
+  if (is_in_avoidance_mlc && avoidance_MLC_counter >= 150 &&
+      lc_status <= kLaneChangePropose) {
     Finish();
     set_target_lane_virtual_id(lane_change_lane_mgr_->origin_lane_virtual_id());
     ILOG_DEBUG << "[MapRequest::update] avoide MLC time out, cancel";
     is_in_avoidance_mlc = false;
     avoidance_MLC_counter = 0;
-    suppression_counter = 1; //启动抑制
+    suppression_counter = 1;  //启动抑制
     return;
   }
 
@@ -88,17 +89,19 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     target_lane = virtual_lane_mgr_->get_right_lane();
   }
   const bool is_avoidance_MLC =
-              route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
-              route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
   if (is_avoidance_MLC && suppression_counter > 0) {
-    ILOG_INFO << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
+    ILOG_INFO
+        << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
     return false;
   }
 
   congestion_detection_config.heavy_density = 30;
-  if (target_lane && is_avoidance_MLC){
+  if (target_lane && is_avoidance_MLC) {
     const int target_lane_id = target_lane->get_virtual_id();
-    CongestionDetector detector(&congestion_detection_config, session_, target_lane_id);
+    CongestionDetector detector(&congestion_detection_config, session_,
+                                target_lane_id);
     CongestionResult result = detector.DetectLaneCongestion();
     if (result.level == CongestionLevel::CONGESTION) {
       return false;
@@ -157,7 +160,7 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   if (!is_no_care_dash_length) {
     bool is_dash_enough = IsDashEnoughForRepeatSegments(
         target_direction, lc_request_source, current_lane->get_virtual_id(),
-      static_cast<StateMachineLaneChangeStatus>(lc_status));
+        static_cast<StateMachineLaneChangeStatus>(lc_status));
     if (!is_dash_enough) {
       return false;
     }
@@ -193,33 +196,33 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
     bool is_solid_right_lane_left =
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+            iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_solid_right_lane_right =
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     right_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+            iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_right_lane_boundary_both_dash =
         !is_solid_right_lane_left && !is_solid_right_lane_right;
     bool is_solid_cur_lane_left =
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
         MakesureCurrentBoundaryType(LEFT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+            iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_solid_cur_lane_right =
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_SOLID ||
+            iflyauto::LaneBoundaryType_MARKING_SOLID ||
         MakesureCurrentBoundaryType(RIGHT_CHANGE,
                                     current_lane->get_virtual_id()) ==
-        iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
+            iflyauto::LaneBoundaryType_MARKING_DECELERATION_SOLID;
     bool is_current_lane_is_leftmost =
         is_solid_cur_lane_left && !is_solid_cur_lane_right;
     is_ego_on_leftmost =
@@ -280,26 +283,28 @@ void MapRequest::GenerateMLCRequest() {
   // lc_map_decision 小于0表示左转，大于0表示右转
   if (lc_map_decision < 0) {
     const auto& target_lane = virtual_lane_mgr_->get_left_lane();
-    if (request_type_ != LEFT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
+    if (request_type_ != LEFT_CHANGE && target_lane &&
+        target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
       ILOG_DEBUG << "[MapRequest::update] Ask for map changing lane to left";
     }
   } else {
     const auto& target_lane = virtual_lane_mgr_->get_right_lane();
-    if (request_type_ != RIGHT_CHANGE && target_lane && target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
+    if (request_type_ != RIGHT_CHANGE && target_lane &&
+        target_lane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane->get_virtual_id());
       ILOG_DEBUG << "[MapRequest::update] Ask for map changing lane to right";
     }
   }
   const bool is_avoidance_MLC =
-              route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
-              route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
   if (is_avoidance_MLC && !is_in_avoidance_mlc) {
-    is_in_avoidance_mlc = true; // 设置状态标志
+    is_in_avoidance_mlc = true;  // 设置状态标志
     avoidance_MLC_counter = 1;   // 启动超时计时器
-  } else if(!is_avoidance_MLC){
+  } else if (!is_avoidance_MLC) {
     is_in_avoidance_mlc = false;
     avoidance_MLC_counter = 0;
   }

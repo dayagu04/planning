@@ -5,9 +5,9 @@
 #include "ego_planning_config.h"
 #include "math.h"
 #include "obstacle.h"
+#include "obstacle_manager.h"
 #include "task_basic_types.h"
 #include "utils/kd_path.h"
-#include "obstacle_manager.h"
 
 using namespace planning::planning_math;
 namespace planning {

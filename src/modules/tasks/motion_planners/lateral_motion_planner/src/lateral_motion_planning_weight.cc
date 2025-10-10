@@ -141,8 +141,7 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         }
       }
 
-      if (is_lane_change_back_ ||
-          is_lane_change_hold_) {
+      if (is_lane_change_back_ || is_lane_change_hold_) {
         planning_input.set_q_acc(config_.q_acc);
         MakeLaneChangeBackDynamicWeight(planning_input);
       }
@@ -219,14 +218,11 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input) {
   last_path_max_dist2ref_ = 0.0;
-  double min_ref_size =
-      std::min(planning_input.ref_x_vec_size(),
-               planning_input.ref_y_vec_size());
-  double min_last_path_size =
-      std::min(planning_input.last_x_vec_size(),
-               planning_input.last_y_vec_size());
-  if (reference_path == nullptr ||
-      min_ref_size == 0 ||
+  double min_ref_size = std::min(planning_input.ref_x_vec_size(),
+                                 planning_input.ref_y_vec_size());
+  double min_last_path_size = std::min(planning_input.last_x_vec_size(),
+                                       planning_input.last_y_vec_size());
+  if (reference_path == nullptr || min_ref_size == 0 ||
       min_last_path_size == 0) {
     return;
   }
@@ -241,8 +237,7 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
                                   planning_input.ref_y_vec(i));
     planning::Point2D frenet_ref_xy;
     if (frenet_coord->XYToSL(cart_ref_xy, frenet_ref_xy)) {
-      if (i > 0 &&
-          frenet_ref_xy.x <= ref_last_s) {
+      if (i > 0 && frenet_ref_xy.x <= ref_last_s) {
         continue;
       }
       ref_last_s = frenet_ref_xy.x;
@@ -265,20 +260,19 @@ void LateralMotionPlanningWeight::CalculateLastPathDistToRef(
         continue;
       }
       double ref_rel_l = ref_l_s_spline(frenet_last_xy.x);
-      last_path_max_dist2ref_ =
-          std::max(std::fabs(frenet_last_xy.y - ref_rel_l), last_path_max_dist2ref_);
+      last_path_max_dist2ref_ = std::max(
+          std::fabs(frenet_last_xy.y - ref_rel_l), last_path_max_dist2ref_);
     }
   }
 }
 
 void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
-    double init_s, double ref_vel, double wheel_base,
-    double steer_ratio, double curv_factor,
+    double init_s, double ref_vel, double wheel_base, double steer_ratio,
+    double curv_factor,
     const planning::CoarsePlanningInfo &coarse_planning_info,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
-    std::vector<double>& expected_steer_vec) {
-  const auto &k_s_spline =
-      coarse_planning_info.cart_ref_info.k_s_spline;
+    std::vector<double> &expected_steer_vec) {
+  const auto &k_s_spline = coarse_planning_info.cart_ref_info.k_s_spline;
   expected_average_acc_ = 0.0;
   expected_max_acc_ = -10.0;
   expected_min_acc_ = 10.0;
@@ -286,8 +280,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   is_s_bend_ = false;
   is_sharp_turn_ = false;
   bool is_k_s_spline_valid = false;
-  if (!k_s_spline.get_x().empty() &&
-      !k_s_spline.get_y().empty()) {
+  if (!k_s_spline.get_x().empty() && !k_s_spline.get_y().empty()) {
     is_k_s_spline_valid = true;
   }
   bool is_left_bend = false;
@@ -304,7 +297,8 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   max_jerk_low_speed_ =
       (config_.max_steer_angle_dot_low_speed / steer_ratio / kRad2Deg) * kv2;
   std::fill(weight_.expected_acc.begin(), weight_.expected_acc.end(), 0.0);
-  std::fill(curvature_radius_vec_.begin(), curvature_radius_vec_.end(), 10000.0);
+  std::fill(curvature_radius_vec_.begin(), curvature_radius_vec_.end(),
+            10000.0);
   double pt_kappa = 1e-6;
   planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
@@ -343,7 +337,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
     }
     kappa_gap += 1;
     sum_kappa += std::fabs(pt_kappa);
-    double expected_delta = std::atan(wheel_base * pt_kappa);  // rad
+    double expected_delta = std::atan(wheel_base * pt_kappa);         // rad
     double expected_steer = steer_ratio * expected_delta * kRad2Deg;  // deg
     double expected_lat_acc = kv2 * expected_delta;
     expected_steer_vec[i] = expected_steer;
@@ -361,8 +355,10 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
         double average_radius = 1 / average_kappa;
         curvature_radius_vec_[time] = average_radius;
         if (time < 5) {
-          min_road_radius = std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius);
-          max_road_radius = std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
+          min_road_radius =
+              std::min(std::fabs(curvature_radius_vec_[time]), min_road_radius);
+          max_road_radius =
+              std::max(std::fabs(curvature_radius_vec_[time]), max_road_radius);
         }
       }
       time += 1;
@@ -373,42 +369,35 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   }
   expected_average_acc_ = expected_average_acc_ / 16;
   if (std::fabs(expected_max_acc_) > std::fabs(expected_min_acc_)) {
-    expected_average_acc_ +=
-        std::max(std::min(0.5 * (expected_max_acc_ - expected_average_acc_), 0.5), -0.5);
+    expected_average_acc_ += std::max(
+        std::min(0.5 * (expected_max_acc_ - expected_average_acc_), 0.5), -0.5);
   } else {
-    expected_average_acc_ +=
-        std::max(std::min(0.5 * (expected_min_acc_ - expected_average_acc_), 0.5), -0.5);
+    expected_average_acc_ += std::max(
+        std::min(0.5 * (expected_min_acc_ - expected_average_acc_), 0.5), -0.5);
   }
-  expected_average_acc_ +=
-      std::max(std::min(0.8 * (last_expected_average_acc_ - expected_average_acc_), 0.2), -0.2);
-  expected_average_acc_ =
-      std::max(std::min(expected_average_acc_, expected_max_acc_), expected_min_acc_);
+  expected_average_acc_ += std::max(
+      std::min(0.8 * (last_expected_average_acc_ - expected_average_acc_), 0.2),
+      -0.2);
+  expected_average_acc_ = std::max(
+      std::min(expected_average_acc_, expected_max_acc_), expected_min_acc_);
   last_expected_average_acc_ = expected_average_acc_;
   // S bend
   if (is_left_bend && is_right_bend) {
     is_s_bend_ = true;
   }
   // anchor: target road radius
-  double end_radius =
-      std::fabs(curvature_radius_vec_[4]);
-  double far_radius =
-      std::fabs(curvature_radius_vec_[3]);
-  double mid_radius =
-      std::fabs(curvature_radius_vec_[2]);
-  double max_near_radius =
-      std::max(std::fabs(curvature_radius_vec_[1]),
-               std::fabs(curvature_radius_vec_[0]));
+  double end_radius = std::fabs(curvature_radius_vec_[4]);
+  double far_radius = std::fabs(curvature_radius_vec_[3]);
+  double mid_radius = std::fabs(curvature_radius_vec_[2]);
+  double max_near_radius = std::max(std::fabs(curvature_radius_vec_[1]),
+                                    std::fabs(curvature_radius_vec_[0]));
   if (max_near_radius >= 400.0 &&
-      ((max_near_radius - mid_radius > 150 &&
-        mid_radius < 250.0) ||
-       (max_near_radius - far_radius > 200 &&
-        far_radius < 200.0))) {
+      ((max_near_radius - mid_radius > 150 && mid_radius < 250.0) ||
+       (max_near_radius - far_radius > 200 && far_radius < 200.0))) {
     is_sharp_turn_ = true;
   } else if (max_near_radius < 200.0 &&
-             ((mid_radius - max_near_radius > 150 &&
-               mid_radius > 350.0) ||
-              (far_radius - max_near_radius > 200 &&
-               far_radius > 400.0))) {
+             ((mid_radius - max_near_radius > 150 && mid_radius > 350.0) ||
+              (far_radius - max_near_radius > 200 && far_radius > 400.0))) {
     is_sharp_turn_ = true;
   }
   if (max_road_radius < 150.0 ||   // in large bend
@@ -417,21 +406,17 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   } else {
     if (end_radius - far_radius >= 100.0) {
       target_road_radius_ =
-          std::max(0.5 * (end_radius + far_radius),
-                   max_near_radius);
+          std::max(0.5 * (end_radius + far_radius), max_near_radius);
     } else {
       if (far_radius - mid_radius >= 100.0) {
         target_road_radius_ =
-            std::max(0.5 * (far_radius + mid_radius),
-                     max_near_radius);
+            std::max(0.5 * (far_radius + mid_radius), max_near_radius);
       } else {
         if (mid_radius - max_near_radius >= 50.0) {
-          target_road_radius_ =
-              0.5 * (mid_radius + max_near_radius);
+          target_road_radius_ = 0.5 * (mid_radius + max_near_radius);
         } else {
           if (far_radius - max_near_radius >= 100.0) {
-            target_road_radius_ =
-                0.5 * (far_radius + max_near_radius);
+            target_road_radius_ = 0.5 * (far_radius + max_near_radius);
           } else {
             target_road_radius_ = max_near_radius;
           }
@@ -465,8 +450,10 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
     const std::vector<std::pair<double, double>> &hard_bounds,
     const std::vector<planning::WeightedBounds> soft_bounds_vec,
     const std::vector<planning::WeightedBounds> hard_bounds_vec,
-    const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>& soft_bounds_info,
-    const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>& hard_bounds_info) {
+    const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
+        &soft_bounds_info,
+    const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
+        &hard_bounds_info) {
   std::vector<double> bound_s_vector;
   std::vector<double> soft_lbound_l_vector;
   std::vector<double> soft_ubound_l_vector;
@@ -474,10 +461,11 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
   std::vector<double> hard_ubound_l_vector;
   size_t bounds_size =
       std::min(soft_bounds_info.size(), hard_bounds_info.size());
-  if (bounds_size < weight_.point_num ||
-      ref_vel_ <= 1e-2) {
-    std::fill(soft_bound_qratio_vec_.begin(), soft_bound_qratio_vec_.end(), 1.0);
-    std::fill(hard_bound_qratio_vec_.begin(), hard_bound_qratio_vec_.end(), 1.0);
+  if (bounds_size < weight_.point_num || ref_vel_ <= 1e-2) {
+    std::fill(soft_bound_qratio_vec_.begin(), soft_bound_qratio_vec_.end(),
+              1.0);
+    std::fill(hard_bound_qratio_vec_.begin(), hard_bound_qratio_vec_.end(),
+              1.0);
     soft_lbound_l_s_spline_.get_x().clear();
     soft_lbound_l_s_spline_.get_y().clear();
     soft_ubound_l_s_spline_.get_x().clear();
@@ -534,12 +522,12 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
            soft_lbound_type == planning::BoundType::ROAD_BORDER) ||
           (is_update_soft_ubound &&
            soft_ubound_type == planning::BoundType::ROAD_BORDER)) {
-          q_soft_bound_ratio += 0.2;
+        q_soft_bound_ratio += 0.2;
       } else {
         auto base_ratio = weight_.time2soft_ratio.find((i - 1) / 5);
         if (base_ratio != weight_.time2soft_ratio.end()) {
           q_soft_bound_ratio =
-            std::max(base_ratio->second, q_soft_bound_ratio - 0.1);
+              std::max(base_ratio->second, q_soft_bound_ratio - 0.1);
         } else {
           q_soft_bound_ratio -= 0.1;
         }
@@ -552,12 +540,12 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
            hard_lbound_type == planning::BoundType::ROAD_BORDER) ||
           (is_update_hard_ubound &&
            hard_ubound_type == planning::BoundType::ROAD_BORDER)) {
-          q_hard_bound_ratio += 0.4;
+        q_hard_bound_ratio += 0.4;
       } else {
         auto base_ratio = weight_.time2hard_ratio.find((i - 1) / 5);
         if (base_ratio != weight_.time2hard_ratio.end()) {
           q_hard_bound_ratio =
-            std::max(base_ratio->second, q_hard_bound_ratio - 0.1);
+              std::max(base_ratio->second, q_hard_bound_ratio - 0.1);
         } else {
           q_hard_bound_ratio -= 0.1;
         }
@@ -593,14 +581,14 @@ void LateralMotionPlanningWeight::CalculateLatAvoidBoundPriority(
       }
     }
   }
-  soft_lbound_l_s_spline_.set_points(
-    bound_s_vector, soft_lbound_l_vector, pnc::mathlib::spline::linear);
-  soft_ubound_l_s_spline_.set_points(
-    bound_s_vector, soft_ubound_l_vector, pnc::mathlib::spline::linear);
-  hard_lbound_l_s_spline_.set_points(
-    bound_s_vector, hard_lbound_l_vector, pnc::mathlib::spline::linear);
-  hard_ubound_l_s_spline_.set_points(
-    bound_s_vector, hard_ubound_l_vector, pnc::mathlib::spline::linear);
+  soft_lbound_l_s_spline_.set_points(bound_s_vector, soft_lbound_l_vector,
+                                     pnc::mathlib::spline::linear);
+  soft_ubound_l_s_spline_.set_points(bound_s_vector, soft_ubound_l_vector,
+                                     pnc::mathlib::spline::linear);
+  hard_lbound_l_s_spline_.set_points(bound_s_vector, hard_lbound_l_vector,
+                                     pnc::mathlib::spline::linear);
+  hard_ubound_l_s_spline_.set_points(bound_s_vector, hard_ubound_l_vector,
+                                     pnc::mathlib::spline::linear);
 }
 
 void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
@@ -623,8 +611,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   }
   // tiny speed
   double init_delta = planning_input.init_state().delta();
-  if (ego_vel_ < 0.2 &&
-      ref_vel_ - 2.0 < 1e-6 &&
+  if (ego_vel_ < 0.2 && ref_vel_ - 2.0 < 1e-6 &&
       std::fabs(init_ref_theta_error_) < 2.0 &&
       std::fabs(init_delta) * 57.3 < 2.0 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
@@ -656,8 +643,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
       weight_.expected_acc[i] =
           std::max(weight_.expected_acc[i], expected_average_acc_ - 0.2);
     }
-    if (i < 6 &&
-        config_.use_acc_compensation) {
+    if (i < 6 && config_.use_acc_compensation) {
       double acc_gain = std::max(std::min(init_dis_to_ref_ * 0.25, 0.1), -0.1);
       weight_.expected_acc[i] -= acc_gain;
     }
@@ -693,7 +679,7 @@ void LateralMotionPlanningWeight::SetMinJerkWeightByVel(
 }
 
 void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
-    const bool is_high_priority_back,  const bool is_in_function,
+    const bool is_high_priority_back, const bool is_in_function,
     const double enter_lccnoa_time,
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     const planning::common::LateralPlanningOutput &last_planning_output,
@@ -702,7 +688,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   const auto &last_omega_vec = last_planning_output.omega_vec();
   last_max_omega_ = 0;
   for (size_t omega_i = 0; omega_i < last_omega_vec.size(); ++omega_i) {
-    last_max_omega_ = std::max(std::fabs(last_omega_vec[omega_i]), last_max_omega_);
+    last_max_omega_ =
+        std::max(std::fabs(last_omega_vec[omega_i]), last_max_omega_);
   }
   double last_omega_to_jerk =
       std::min(last_max_omega_, last_jerk_bound_limit_) *
@@ -726,20 +713,18 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   double jerk_bound =  // 0.4 0.4 0.4 0.3
       planning::interp(ref_vel_, xp_v, config_.map_jerk_bound);
   if (lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
-      std::fabs(avoid_dist_) <= 0.01 &&
-      std::fabs(lat_offset_) <= 0.01 &&
+      std::fabs(avoid_dist_) <= 0.01 && std::fabs(lat_offset_) <= 0.01 &&
       target_road_radius_ > 750.0) {
     // jerk_bound = config_.jerk_bound;
     // planning_input.set_q_continuity(config_.q_continuity);
-    double q_continuity_lk =
-      planning::interp(std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
+    double q_continuity_lk = planning::interp(
+        std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
     planning_input.set_q_continuity(q_continuity_lk);
   }
   if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
     std::vector<double> xp_v_lc{2.0, 3.0};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
-    max_jerk =
-        planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
+    max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
     jerk_bound =  // 0.5 0.5 0.45 0.4
         planning::interp(ref_vel_, xp_v, config_.map_jerk_bound_lc);
     if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
@@ -773,8 +758,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     extra_jerk_buffer = 0.5;
     std::vector<double> xp_road_radius{250.0, 400.0, 600.0, 750.0};
-    jerk_bound = // 1.0 0.8 0.6 0.5
-      planning::interp(target_road_radius_, xp_road_radius, config_.map_jerk_bound_ramp);
+    jerk_bound =  // 1.0 0.8 0.6 0.5
+        planning::interp(target_road_radius_, xp_road_radius,
+                         config_.map_jerk_bound_ramp);
     if (is_sharp_turn_) {
       jerk_bound += 0.5;
     }
@@ -799,17 +785,16 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   double violate_bound_max_dist = 0;
   EmergencyLevel cur_emergency_level = EmergencyLevel::NONE;
   if (reference_path != nullptr) {
-    double init_s =
-        reference_path->get_frenet_ego_state()
-                      .planning_init_point()
-                      .frenet_state.s;
-    const auto& frenet_coord = reference_path->get_frenet_coord();
+    double init_s = reference_path->get_frenet_ego_state()
+                        .planning_init_point()
+                        .frenet_state.s;
+    const auto &frenet_coord = reference_path->get_frenet_coord();
     if (frenet_coord != nullptr) {
-      size_t last_points_size =
-          std::min(last_planning_output.x_vec_size(), last_planning_output.y_vec_size());
+      size_t last_points_size = std::min(last_planning_output.x_vec_size(),
+                                         last_planning_output.y_vec_size());
       for (size_t i = 0; i < last_points_size; ++i) {
         planning::Point2D cart_last_xy(last_planning_output.x_vec(i),
-                             last_planning_output.y_vec(i));
+                                       last_planning_output.y_vec(i));
         planning::Point2D frenet_last_sl;
         if (frenet_coord->XYToSL(cart_last_xy, frenet_last_sl)) {
           double last_point_rel_s = frenet_last_sl.x - init_s;
@@ -832,7 +817,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
                 frenet_last_sl.y > soft_ubound_l) {
               violate_bound_max_dist =
                   std::max(std::max(soft_lbound_l - frenet_last_sl.y,
-                    frenet_last_sl.y - soft_ubound_l), violate_bound_max_dist);
+                                    frenet_last_sl.y - soft_ubound_l),
+                           violate_bound_max_dist);
               cur_emergency_level = EmergencyLevel::P1;
             }
           }
@@ -853,16 +839,13 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       }
     }
   }
-  if (is_high_priority_back &&
-      (is_lane_change_hold_ ||
-       is_lane_change_back_)) {
+  if (is_high_priority_back && (is_lane_change_hold_ || is_lane_change_back_)) {
     emergency_level_ = EmergencyLevel::P0;
     planning_input.set_q_continuity(0.0);
   }
   if (!is_in_function ||
       (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE &&
-       !is_lane_change_back_ &&
-       !is_lane_change_hold_)) {
+       !is_lane_change_back_ && !is_lane_change_hold_)) {
     emergency_level_ = EmergencyLevel::NONE;
   }
   double emergency_jerk_bound = P2_emergency_jerk_bound;
@@ -874,16 +857,16 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
     // std::vector<double> fp_extra_p1_jerk_bound{0.05, 0.1, 0.5, 0.8};
     std::vector<double> fp_p1_jerk_buffer{0.1, 0.2, 0.5, 0.7};
-    extra_jerk_buffer =
-        planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p1_jerk_buffer);
+    extra_jerk_buffer = planning::interp(violate_bound_max_dist,
+                                         xp_violate_dist, fp_p1_jerk_buffer);
     jerk_bound = P1_emergency_jerk_bound;
     emergency_jerk_bound = P0_emergency_jerk_bound;
   } else if (emergency_level_ == EmergencyLevel::P2) {
     std::vector<double> xp_violate_dist{0.05, 0.15, 0.3, 0.5};
     // std::vector<double> fp_extra_p1_jerk_bound{0.05, 0.1, 0.4, 0.6};
     std::vector<double> fp_p2_jerk_buffer{0.1, 0.1, 0.3, 0.5};
-    extra_jerk_buffer =
-        planning::interp(violate_bound_max_dist, xp_violate_dist, fp_p2_jerk_buffer);
+    extra_jerk_buffer = planning::interp(violate_bound_max_dist,
+                                         xp_violate_dist, fp_p2_jerk_buffer);
     jerk_bound = P2_emergency_jerk_bound;
     emergency_jerk_bound = P1_emergency_jerk_bound;
   }
@@ -891,11 +874,9 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     emergency_jerk_bound = config_.jerk_bound_inactivated_limit;
   }
   // consider 20 frame
-  if (enter_lccnoa_time > 1e-6 &&
-      enter_lccnoa_time < 2.0) {
+  if (enter_lccnoa_time > 1e-6 && enter_lccnoa_time < 2.0) {
     emergency_jerk_bound = P2_emergency_jerk_bound;
-    extra_jerk_buffer =
-        std::min(0.025, extra_jerk_buffer);
+    extra_jerk_buffer = std::min(0.025, extra_jerk_buffer);
     if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
       extra_jerk_buffer *= 2.0;
     }
@@ -904,16 +885,14 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   jerk_bound = std::max(last_omega_to_jerk, jerk_bound);
   // tiny speed
   double init_delta = planning_input.init_state().delta();
-  if (ego_vel_ < 0.2 &&
-      ref_vel_ - 2.0 < 1e-6 &&
+  if (ego_vel_ < 0.2 && ref_vel_ - 2.0 < 1e-6 &&
       std::fabs(init_ref_theta_error_) < 2.0 &&
       std::fabs(init_delta) * 57.3 < 2.0 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP &&
       std::fabs(avoid_dist_) < 0.1) {
     jerk_bound = max_jerk_low_speed_;
   }
-  jerk_bound =
-      std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk);
+  jerk_bound = std::min(std::min(emergency_jerk_bound, jerk_bound), max_jerk);
   // use last jerk
   // when last big jerk exceed jerk bound , loosening jerk bound
   bool is_need_loosening_upper_jerk_bound = false;
@@ -929,13 +908,17 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         if (extra_upper_jerk > -1e-3) {
           is_need_loosening_upper_jerk_bound = true;
           new_jerk_ubound =
-            std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk + extra_jerk_buffer,
-                              new_jerk_ubound), jerk_bound);
+              std::min(std::max(weight_.jerk_upper_bound[i] + extra_upper_jerk +
+                                    extra_jerk_buffer,
+                                new_jerk_ubound),
+                       jerk_bound);
         } else if (extra_lower_jerk < 1e-3) {
           is_need_loosening_lower_jerk_bound = true;
           new_jerk_lbound =
-            std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk - extra_jerk_buffer,
-                              new_jerk_lbound), -jerk_bound);
+              std::max(std::min(weight_.jerk_lower_bound[i] + extra_lower_jerk -
+                                    extra_jerk_buffer,
+                                new_jerk_lbound),
+                       -jerk_bound);
         }
       }
     }
@@ -954,21 +937,25 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         std::min(std::min(emergency_jerk_bound, new_jerk_bound), max_jerk);
     new_jerk_ubound = new_jerk_bound;
     new_jerk_lbound = new_jerk_bound;
-    std::fill(weight_.jerk_upper_bound.begin(), weight_.jerk_upper_bound.end(), std::fabs(new_jerk_ubound));
-    std::fill(weight_.jerk_lower_bound.begin(), weight_.jerk_lower_bound.end(), -std::fabs(new_jerk_lbound));
+    std::fill(weight_.jerk_upper_bound.begin(), weight_.jerk_upper_bound.end(),
+              std::fabs(new_jerk_ubound));
+    std::fill(weight_.jerk_lower_bound.begin(), weight_.jerk_lower_bound.end(),
+              -std::fabs(new_jerk_lbound));
     planning_input.set_jerk_bound(std::fabs(new_jerk_bound));
   } else {
     emergency_level_ = EmergencyLevel::NONE;
   }
   // last_jerk_bound_limit_ = planning_input.jerk_bound();
-  last_jerk_bound_limit_ =
-      planning_input.jerk_bound() / (planning_input.curv_factor() * ref_vel_ * ref_vel_);
-  // when last positive or negative jerk is big, adding zero jerk bound protection for this time
-  if (lateral_motion_scene_ == LateralMotionScene::LANE_KEEP) {  // not big curvature
+  last_jerk_bound_limit_ = planning_input.jerk_bound() /
+                           (planning_input.curv_factor() * ref_vel_ * ref_vel_);
+  // when last positive or negative jerk is big, adding zero jerk bound
+  // protection for this time
+  if (lateral_motion_scene_ ==
+      LateralMotionScene::LANE_KEEP) {  // not big curvature
     if (last_planning_output.jerk_vec_size() >= 2) {
       double jerk_thr = 0.1;
-      double init_jerk =
-          0.5 * (last_planning_output.jerk_vec(0) + last_planning_output.jerk_vec(1));
+      double init_jerk = 0.5 * (last_planning_output.jerk_vec(0) +
+                                last_planning_output.jerk_vec(1));
       if (init_jerk > jerk_thr) {
         weight_.jerk_lower_bound[0] = 0.;
         weight_.jerk_lower_bound[1] = -0.1;
@@ -989,13 +976,13 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   std::vector<double> xp_theta{0.5, 2.0, 5.0};
   std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.3};
   std::vector<double> fp_ratio_to_xy3{1.0, 1.2, 1.5, 1.0, 0.6, 0.3};
-  double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
-  double q_xy_ratio1 =
-    planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
+  double lateral_dist =
+      std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
+  double q_xy_ratio1 = planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
   // double q_xy_ratio2 =
-    // planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_xy2);
-  if (is_bound_avoid_ ||
-      std::fabs(lat_offset_) > 1e-2) {
+  // planning::interp(std::fabs(init_ref_theta_error_), xp_theta,
+  // fp_ratio_to_xy2);
+  if (is_bound_avoid_ || std::fabs(lat_offset_) > 1e-2) {
     q_xy_ratio1 =
         planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_ratio_to_xy3);
   }
@@ -1007,15 +994,15 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   std::vector<double> fp_ratio_to_theta2{1.0, 1.5, 3.0};
   double q_theta = planning::interp(ref_vel_, xp_v, config_.map_qtheta);
   // double q_theta_ratio1 =
-  //   planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy, fp_ratio_to_theta1);
+  //   planning::interp(std::fabs(init_l_ - lat_offset_), xp_xy,
+  //   fp_ratio_to_theta1);
   // double q_theta_ratio2 =
   //   planning::interp(std::fabs(avoid_dist_), xp_xy, fp_ratio_to_theta2);
   double q_theta_ratio1 =
-    planning::interp(lateral_dist, xp_xy, fp_ratio_to_theta1);
-  double q_theta_ratio2 =
-    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_theta2);
-  double q_theta_ratio =
-      std::max(q_theta_ratio1, q_theta_ratio2);
+      planning::interp(lateral_dist, xp_xy, fp_ratio_to_theta1);
+  double q_theta_ratio2 = planning::interp(std::fabs(init_ref_theta_error_),
+                                           xp_theta, fp_ratio_to_theta2);
+  double q_theta_ratio = std::max(q_theta_ratio1, q_theta_ratio2);
   planning_input.set_q_ref_theta(q_theta_ratio * q_theta);
 
   std::vector<double> xp_high_v{20.833, 25.0, 27.778, 30.556};
@@ -1024,30 +1011,27 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
     planning_input.set_q_acc(q_acc);
   }
 
-  double q_jerk1 =
-      planning::interp(lateral_dist, xp_xy, config_.map_qjerk1);
-  double q_jerk2 =
-      planning::interp(lateral_dist, xp_xy, config_.map_qjerk2);
+  double q_jerk1 = planning::interp(lateral_dist, xp_xy, config_.map_qjerk1);
+  double q_jerk2 = planning::interp(lateral_dist, xp_xy, config_.map_qjerk2);
   std::vector<double> fp_ratio_to_jerk1{1.5, 1.2, 1.0};
   std::vector<double> fp_ratio_to_jerk2{1.5, 2.0, 4.0};
   std::vector<double> fp_ratio_to_jerk3{0.5, 0.5, 0.5, 0.2, 0.2, 0.2};
-  double q_jerk_ratio1 =
-    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_jerk1);
-  double q_jerk_ratio2 =
-    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_jerk2);
+  double q_jerk_ratio1 = planning::interp(std::fabs(init_ref_theta_error_),
+                                          xp_theta, fp_ratio_to_jerk1);
+  double q_jerk_ratio2 = planning::interp(std::fabs(init_ref_theta_error_),
+                                          xp_theta, fp_ratio_to_jerk2);
   double q_jerk_ratio = q_jerk_ratio1;
   if ((init_l_ - lat_offset_) * (init_ref_theta_error_) > 1e-6) {
     q_jerk_ratio = q_jerk_ratio2;
   }
   std::vector<double> fp_decay_jerk_ratio{0.3, 0.3, 0.8, 1.0, 1.0, 1.0};
   double decay_jerk_ratio =
-    planning::interp(lateral_dist, xp_xy, fp_decay_jerk_ratio);
+      planning::interp(lateral_dist, xp_xy, fp_decay_jerk_ratio);
   q_jerk_ratio = std::max(q_jerk_ratio * decay_jerk_ratio, 1.0);
   if (lateral_dist < 0.1) {
     q_jerk2 = q_jerk1;
   }
-  if (!is_bound_avoid_ ||
-      std::fabs(lat_offset_) > 1e-2) {
+  if (!is_bound_avoid_ || std::fabs(lat_offset_) > 1e-2) {
     q_jerk_ratio =
         planning::interp(std::fabs(init_dis_to_ref_), xp_xy, fp_ratio_to_jerk3);
   }
@@ -1066,18 +1050,21 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
     std::vector<double> xp_v{8.333, 12.5};
     std::vector<double> fp_end_ratio_for_qrefxy{
         config_.lc_end_ratio_for_second_qrefxy, config_.end_ratio_for_qrefxy};
-    end_ratio_for_qrefxy_ = planning::interp(ref_vel_, xp_v, fp_end_ratio_for_qrefxy);
+    end_ratio_for_qrefxy_ =
+        planning::interp(ref_vel_, xp_v, fp_end_ratio_for_qrefxy);
   }
 }
 
 void LateralMotionPlanningWeight::MakeLateralOffsetAvoidDynamicWeight(
     planning::common::LateralPlanningInput &planning_input) {
   std::vector<double> xp_v{2.0, 4.167, 8.333, 20.0};
-  std::vector<double> fp_qtheta{3000.0, 5000.0, config_.q_ref_theta_avoid, config_.q_ref_theta_avoid_high_vel};
+  std::vector<double> fp_qtheta{3000.0, 5000.0, config_.q_ref_theta_avoid,
+                                config_.q_ref_theta_avoid_high_vel};
   double q_ref_theta = planning::interp(ref_vel_, xp_v, fp_qtheta);
   planning_input.set_q_ref_theta(q_ref_theta);
 
-  std::vector<double> fp_qjerk{50.0, 30.0, config_.q_jerk_avoid, config_.q_jerk_avoid_high_vel};
+  std::vector<double> fp_qjerk{50.0, 30.0, config_.q_jerk_avoid,
+                               config_.q_jerk_avoid_high_vel};
   double q_jerk = planning::interp(ref_vel_, xp_v, fp_qjerk);
   planning_input.set_q_jerk(q_jerk);
   concerned_start_q_jerk_ = q_jerk;
@@ -1089,16 +1076,15 @@ void LateralMotionPlanningWeight::MakeRampDynamicWeight(
   std::vector<double> xp_xy{0.2, 0.4, 0.8, 1.5};
   std::vector<double> fp_ratio_to_xy1{1.0, 1.0, 0.5, 0.25};
   double lateral_dist = std::fabs(init_l_ - lat_offset_);
-  double q_xy_ratio1 =
-    planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
+  double q_xy_ratio1 = planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
   planning_input.set_q_ref_x(q_xy_ratio1 * q_xy);
   planning_input.set_q_ref_y(q_xy_ratio1 * q_xy);
 
   double q_theta = config_.q_ref_theta_ramp;
   std::vector<double> xp_theta{1.0, 2.0};
   std::vector<double> fp_ratio_to_theta1{0.25, 1.0};
-  double q_theta_ratio1 =
-    planning::interp(std::fabs(init_ref_theta_error_), xp_theta, fp_ratio_to_theta1);
+  double q_theta_ratio1 = planning::interp(std::fabs(init_ref_theta_error_),
+                                           xp_theta, fp_ratio_to_theta1);
   if (lateral_dist < 0.4) {
     q_theta_ratio1 = 0.25;
   }
@@ -1120,15 +1106,15 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   std::vector<double> xp_xy3{0.5, 1.5, 2.5, 3.0};
 
   double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                    config_.map_qjerk_lc_high_vel);
+                                   config_.map_qjerk_lc_high_vel);
   concerned_start_q_jerk_ = q_jerk;
   planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
 
   double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                      config_.map_qrefxy_lc_high_vel);
+                                     config_.map_qrefxy_lc_high_vel);
   std::vector<double> fp_qxy_ratio{0.05, 0.15, 0.5, 1.0};
-  double q_xy_ratio =
-      planning::interp(std::fabs(target_road_radius_), xp_road_radius, fp_qxy_ratio);
+  double q_xy_ratio = planning::interp(std::fabs(target_road_radius_),
+                                       xp_road_radius, fp_qxy_ratio);
   q_ref_xy *= q_xy_ratio;
   q_ref_xy = std::max(q_ref_xy, config_.q_ref_x_lane_change);
   planning_input.set_q_ref_x(q_ref_xy);
@@ -1141,10 +1127,8 @@ void LateralMotionPlanningWeight::MakeLaneChangeDynamicWeight(
   double q_ref_theta =
       planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta);
   std::vector<double> fp_qtheta_raito{0.05, 0.1, 0.5, 1.0, 2.25, 4.0, 9.0};
-  double q_ref_theta_ratio =
-      planning::interp(ref_vel_, xp_v, fp_qtheta_raito);
-  q_ref_theta =
-      q_ref_theta * q_ref_theta_ratio;
+  double q_ref_theta_ratio = planning::interp(ref_vel_, xp_v, fp_qtheta_raito);
+  q_ref_theta = q_ref_theta * q_ref_theta_ratio;
   planning_input.set_q_ref_theta(q_ref_theta);
 }
 
@@ -1154,18 +1138,21 @@ void LateralMotionPlanningWeight::MakeLaneChangeBackDynamicWeight(
   std::vector<double> fp_factor1{10.0, 5.0, 1.0, 4.0, 8.0};
   std::vector<double> fp_factor2{0.2, 0.6, 1.0, 1.2, 1.5};
   double init_lat_dist = std::fabs(init_l_ - lat_offset_);
-  double q_ref_xy_factor =
-      planning::interp(init_lat_dist, xp_xy, fp_factor1);
-  planning_input.set_q_ref_x(config_.q_ref_xy_lane_change_back * q_ref_xy_factor);
-  planning_input.set_q_ref_y(config_.q_ref_xy_lane_change_back * q_ref_xy_factor);
-  double q_ref_theta_lc_back = std::max(config_.q_ref_theta_lane_change_back +
-      (ref_vel_ - config_.lane_change_high_vel) * 1000.0,
-      config_.q_ref_theta_lane_change_back);
+  double q_ref_xy_factor = planning::interp(init_lat_dist, xp_xy, fp_factor1);
+  planning_input.set_q_ref_x(config_.q_ref_xy_lane_change_back *
+                             q_ref_xy_factor);
+  planning_input.set_q_ref_y(config_.q_ref_xy_lane_change_back *
+                             q_ref_xy_factor);
+  double q_ref_theta_lc_back =
+      std::max(config_.q_ref_theta_lane_change_back +
+                   (ref_vel_ - config_.lane_change_high_vel) * 1000.0,
+               config_.q_ref_theta_lane_change_back);
   double q_ref_theta_factor =
       planning::interp(init_lat_dist, xp_xy, fp_factor2);
   planning_input.set_q_ref_theta(q_ref_theta_lc_back * q_ref_theta_factor);
   std::vector<double> xp_v{1.5, 3.0, 4.167, 8.333, 16.667};
-  std::vector<double> fp_qjerk{500.0, 200.0, 100.0, 20.0, config_.q_jerk_lane_change_back};
+  std::vector<double> fp_qjerk{500.0, 200.0, 100.0, 20.0,
+                               config_.q_jerk_lane_change_back};
   double q_jerk = planning::interp(ref_vel_, xp_v, fp_qjerk);
   planning_input.set_q_jerk(q_jerk);
   concerned_start_q_jerk_ = q_jerk;
@@ -1186,12 +1173,12 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
     end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_second_qrefxy;
     std::vector<double> xp_xy{0.25, 0.5, 1.0, 1.5};
     double q_jerk = planning::interp(std::fabs(init_dis_to_ref_), xp_xy,
-                                    config_.map_qjerk_lc_high_vel_old);
+                                     config_.map_qjerk_lc_high_vel_old);
     concerned_start_q_jerk_ = q_jerk;
     planning_input.set_q_jerk(config_.q_jerk_lane_change_high_vel);
     std::vector<double> xp_xy2{0.15, 0.5, 1.0, 1.5};
     double q_ref_xy = planning::interp(std::fabs(init_dis_to_ref_), xp_xy2,
-                                      config_.map_qrefxy_lc_high_vel);
+                                       config_.map_qrefxy_lc_high_vel);
     planning_input.set_q_ref_x(q_ref_xy);
     planning_input.set_q_ref_y(q_ref_xy);
 
@@ -1201,10 +1188,10 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
                                   config_.q_ref_theta_lane_change_high_vel1};
     std::vector<double> xp_vel{5, 10, 15, 20};
     std::vector<double> fp_dr{0.125, 0.25, 0.5, 1.0};
-    double decay_ratio =
-        planning::interp(ref_vel_, xp_vel, fp_dr);
+    double decay_ratio = planning::interp(ref_vel_, xp_vel, fp_dr);
     double q_ref_theta =
-        planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta) * 5.0 * decay_ratio;
+        planning::interp(std::fabs(init_dis_to_ref_), xp_xy3, fp_qtheta) * 5.0 *
+        decay_ratio;
     planning_input.set_q_ref_theta(q_ref_theta);
   }
 }
@@ -1234,26 +1221,30 @@ void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
   }
   if (std::fabs(avoid_dist_) <= 0.1 ||
       lateral_motion_scene_ == LateralMotionScene::RAMP) {
-    std::fill(soft_bound_qratio_vec_.begin(), soft_bound_qratio_vec_.end(), 1.0);
-    std::fill(hard_bound_qratio_vec_.begin(), hard_bound_qratio_vec_.end(), 1.0);
+    std::fill(soft_bound_qratio_vec_.begin(), soft_bound_qratio_vec_.end(),
+              1.0);
+    std::fill(hard_bound_qratio_vec_.begin(), hard_bound_qratio_vec_.end(),
+              1.0);
   }
   // std::vector<double> xp_road_radius{50.0, 200.0, 400.0, 800.0};
   // std::vector<double> fp_kappa_coefficient{0.2, 0.4, 0.6, 1.0};
   // double kappa_coeff =
-  //     planning::interp(std::fabs(curvature_radius_vec_[3]), xp_road_radius, fp_kappa_coefficient);
+  //     planning::interp(std::fabs(curvature_radius_vec_[3]), xp_road_radius,
+  //     fp_kappa_coefficient);
   // Set according to different vel
   std::vector<double> xp_v{1.0, 4.167, 8.333, 16.667, 25.0, 30.0};
   double q_soft_bound =
-      planning::interp(ref_vel_, xp_v, config_.map_qsoft_bound) *
-      risk_factor * emergence_factor * intersection_factor;
+      planning::interp(ref_vel_, xp_v, config_.map_qsoft_bound) * risk_factor *
+      emergence_factor * intersection_factor;
   double q_hard_bound =
-      planning::interp(ref_vel_, xp_v, config_.map_qhard_bound) *
-      risk_factor * emergence_factor * intersection_factor;
+      planning::interp(ref_vel_, xp_v, config_.map_qhard_bound) * risk_factor *
+      emergence_factor * intersection_factor;
   if (std::fabs(avoid_dist_) > 0.4 &&
       lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE) {
     std::vector<double> xp_lat_dist{0.4, 1.5, 3.0};
     std::vector<double> fp_ratio_to_bound{1.0, 0.4, 0.1};
-    double decay_ratio = planning::interp(std::fabs(avoid_dist_), xp_lat_dist, fp_ratio_to_bound);
+    double decay_ratio = planning::interp(std::fabs(avoid_dist_), xp_lat_dist,
+                                          fp_ratio_to_bound);
     q_soft_bound *= decay_ratio;
     q_hard_bound *= decay_ratio;
   }
@@ -1275,22 +1266,20 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     planning::common::LateralPlanningInput &planning_input) {
   double ego_s = reference_path->get_frenet_ego_state().s();
-  const auto& frenet_coord = reference_path->get_frenet_coord();
+  const auto &frenet_coord = reference_path->get_frenet_coord();
   if (origin_complete_follow) {
     weight_.complete_follow = origin_complete_follow;
   }
 
   std::vector<double> xp_road_radius{50.0, 150.0, 400.0, 1000.0, 2000.0};
-  double valid_perception_range =
-      planning::interp(
-        target_road_radius_, xp_road_radius, config_.valid_perception_range);
+  double valid_perception_range = planning::interp(
+      target_road_radius_, xp_road_radius, config_.valid_perception_range);
   for (size_t i = weight_.proximal_index + 1; i < weight_.remotely_index; ++i) {
     planning::Point2D cart_ref_xy(planning_input.ref_x_vec(i),
                                   planning_input.ref_y_vec(i));
     planning::Point2D frenet_ref_sl;
     if (frenet_coord != nullptr &&
-        frenet_coord->XYToSL(cart_ref_xy,
-                             frenet_ref_sl)) {
+        frenet_coord->XYToSL(cart_ref_xy, frenet_ref_sl)) {
       if (frenet_ref_sl.x > (ego_s + valid_perception_range)) {
         weight_.remotely_index = i;
         break;
@@ -1298,40 +1287,38 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     }
   }
   // consider avoid
-  if (is_bound_avoid_ &&
-      std::fabs(avoid_dist_) > 0.1) {
+  if (is_bound_avoid_ && std::fabs(avoid_dist_) > 0.1) {
     weight_.remotely_index = avoid_end_index_;
   }
-  double lateral_dist = std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
+  double lateral_dist =
+      std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
   if (lateral_dist > 0.6) {
     size_t min_remotely_index = 15;
-    weight_.remotely_index = std::max(min_remotely_index, weight_.remotely_index);
+    weight_.remotely_index =
+        std::max(min_remotely_index, weight_.remotely_index);
   }
   // consider intersection and S bend
-  if ((target_road_radius_ < 750.0 &&
-       is_in_intersection_) ||
-      is_s_bend_) {
+  if ((target_road_radius_ < 750.0 && is_in_intersection_) || is_s_bend_) {
     weight_.remotely_index = 20;
     planning_input.set_q_acc(0.0);
   }
 
   // limit large diff
   if (config_.use_index_clip &&
-      lateral_motion_scene_ ==  LateralMotionScene::RAMP) {
-    int d_index = planning::clip((int)(weight_.remotely_index - last_remotely_index_), 2, -2);
+      lateral_motion_scene_ == LateralMotionScene::RAMP) {
+    int d_index = planning::clip(
+        (int)(weight_.remotely_index - last_remotely_index_), 2, -2);
     weight_.remotely_index =
-        std::max(last_remotely_index_ + d_index,
-                weight_.proximal_index);
+        std::max(last_remotely_index_ + d_index, weight_.proximal_index);
   }
 
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
   if ((lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) &&
-      (!is_lane_change_back_) &&
-      (!is_lane_change_hold_)) {
+      (!is_lane_change_back_) && (!is_lane_change_hold_)) {
     // weight_.complete_follow = false;
     // weight_.remotely_index = 20;
     if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
-       planning_input.set_q_continuity(0.0);
+      planning_input.set_q_continuity(0.0);
     }
     // if (std::fabs(init_dis_to_ref_) > 0.1) {
     weight_.complete_follow = false;
@@ -1360,8 +1347,7 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
 
   // set complete hold flag, concerned index
   planning_input.set_complete_follow(weight_.complete_follow);
-  planning_input.set_motion_plan_concerned_index(
-      weight_.remotely_index);
+  planning_input.set_motion_plan_concerned_index(weight_.remotely_index);
   last_remotely_index_ = weight_.remotely_index;
   // set low speed protection
   SetMinJerkWeightByVel(planning_input);

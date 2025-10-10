@@ -107,13 +107,17 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
           .is_need_parallel_longitudinal_avoid() &&
       (parallel_longitudinal_avoid_output.is_parallel_yield() ||
        parallel_longitudinal_avoid_output.is_lead_and_target_is_truck())) {
-    yield_s = std::min(yield_s, parallel_longitudinal_avoid_output.trajectory_start_s());
-    yield_v = std::min(yield_v, parallel_longitudinal_avoid_output.trajectory_start_v());
+    yield_s = std::min(yield_s,
+                       parallel_longitudinal_avoid_output.trajectory_start_s());
+    yield_v = std::min(yield_v,
+                       parallel_longitudinal_avoid_output.trajectory_start_v());
   } else if (parallel_longitudinal_avoid_output
                  .is_need_parallel_longitudinal_avoid() &&
              parallel_longitudinal_avoid_output.is_parallel_overtake()) {
-    overtake_s = std::max(overtake_s, parallel_longitudinal_avoid_output.trajectory_start_s());
-    overtake_v = std::max(overtake_v, parallel_longitudinal_avoid_output.trajectory_start_v());
+    overtake_s = std::max(
+        overtake_s, parallel_longitudinal_avoid_output.trajectory_start_s());
+    overtake_v = std::max(
+        overtake_v, parallel_longitudinal_avoid_output.trajectory_start_v());
   }
 
   LonState init_state;
@@ -155,7 +159,8 @@ void NeighborTarget::GenerateNeighborTargetCurve() {
               config_.neighbor_target_p_precision));
 
   auto state_limit_lower_bound = state_limit;
-  state_limit_lower_bound.v_end = config_.neighbor_target_neighbor_limit_velocity;
+  state_limit_lower_bound.v_end =
+      config_.neighbor_target_neighbor_limit_velocity;
   neighbor_target_curve_lower_bound_ =
       std::make_unique<SecondOrderTimeOptimalTrajectory>(
           SecondOrderTimeOptimalTrajectory(init_state,

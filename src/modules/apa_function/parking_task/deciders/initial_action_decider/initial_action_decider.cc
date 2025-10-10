@@ -1,7 +1,7 @@
+#include "initial_action_decider.h"
 #include "apa_param_config.h"
 #include "geometry_math.h"
 #include "hybrid_astar_common.h"
-#include "initial_action_decider.h"
 
 namespace planning {
 namespace apa_planner {
@@ -25,7 +25,8 @@ void InitalActionDecider::Process(InitalActionRequest& inital_action_request,
   ILOG_INFO << "drive_ref_path_length = " << drive_ref_path_length
             << ", reverse_ref_path_length = " << reverse_ref_path_length;
 
-  inital_action_request.ref_reverse_length = std::min(reverse_ref_path_length, 6.8);
+  inital_action_request.ref_reverse_length =
+      std::min(reverse_ref_path_length, 6.8);
   inital_action_request.ref_drive_length = std::min(drive_ref_path_length, 6.8);
 
   const double dist_to_ref_line =

@@ -439,8 +439,6 @@ bool HybridARAStar::ImprovePath() {
   // std::cout << "ImprovePath: prepare time " << (end_time - start_time)
   //           << std::endl;
 
-
-
   while (true) {
     auto current_time = (uint64_t)IflyTime::Now_ms();
     auto diff = current_time - start_search_time_;

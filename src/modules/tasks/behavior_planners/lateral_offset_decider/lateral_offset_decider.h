@@ -5,12 +5,7 @@
 #include "tasks/task.h"
 namespace planning {
 
-enum class HMIAvoidState : int {
-  RUNNING,
-  EXITING,
-  COOLDOWN,
-  IDLE
-};
+enum class HMIAvoidState : int { RUNNING, EXITING, COOLDOWN, IDLE };
 
 struct HMIAvoidParam {
   int cooldown_count = 0;
@@ -34,9 +29,8 @@ class LateralOffsetDecider : public Task {
   void SmoothLateralOffset(double in_lat_offset);
   void SaveDebugInfo();
   void CheckAvoidObstaclesDecision();
-  bool IsObstacleDecisionSwitch(
-      LatObstacleDecisionType last_decision,
-      LatObstacleDecisionType current_decision);
+  bool IsObstacleDecisionSwitch(LatObstacleDecisionType last_decision,
+                                LatObstacleDecisionType current_decision);
   void Reset();
   void GenerateOutput();
   bool IsStartRunning();
@@ -46,8 +40,10 @@ class LateralOffsetDecider : public Task {
   AvoidObstacleMaintainer5V avoid_obstacle_maintainer5v_;
   LateralOffsetCalculatorV2 lateral_offset_calculatorv2_;
 
-  LatObstacleDecisionType last_first_obstacle_decision_ = LatObstacleDecisionType::IGNORE;
-  LatObstacleDecisionType last_second_obstacle_decision_ = LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType last_first_obstacle_decision_ =
+      LatObstacleDecisionType::IGNORE;
+  LatObstacleDecisionType last_second_obstacle_decision_ =
+      LatObstacleDecisionType::IGNORE;
   uint last_first_obstacle_id_ = 0;
   uint last_second_obstacle_id_ = 0;
 

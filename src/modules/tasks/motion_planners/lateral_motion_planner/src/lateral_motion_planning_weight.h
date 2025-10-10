@@ -19,12 +19,7 @@ enum class LateralMotionScene {
   LANE_BORROW
 };
 
-enum class EmergencyLevel {
-  NONE = 0,
-  P2,
-  P1,
-  P0
-};
+enum class EmergencyLevel { NONE = 0, P2, P1, P0 };
 
 enum class LaneChangeStyle {
   STANDARD_LANE_CHANGE = 0,
@@ -55,19 +50,9 @@ struct PathWeight {  // temp
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
   std::unordered_map<size_t, double> time2soft_ratio = {
-    {0, 1.3},
-    {1, 1.3},
-    {2, 1.2},
-    {3, 1.0},
-    {4, 0.8}
-  };
+      {0, 1.3}, {1, 1.3}, {2, 1.2}, {3, 1.0}, {4, 0.8}};
   std::unordered_map<size_t, double> time2hard_ratio = {
-    {0, 1.5},
-    {1, 1.5},
-    {2, 1.4},
-    {3, 1.2},
-    {4, 1.0}
-  };
+      {0, 1.5}, {1, 1.5}, {2, 1.4}, {3, 1.2}, {4, 1.0}};
 
   void Init() {
     expected_acc.resize(point_num, 0.0);
@@ -125,15 +110,17 @@ class LateralMotionPlanningWeight {
       const std::vector<std::pair<double, double>> &hard_bounds,
       const std::vector<planning::WeightedBounds> soft_bounds_vec,
       const std::vector<planning::WeightedBounds> hard_bounds_vec,
-      const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &soft_bounds_info,
-      const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>> &hard_bounds_info);
+      const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
+          &soft_bounds_info,
+      const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
+          &hard_bounds_info);
 
   void CalculateExpectedLatAccAndSteerAngle(
-      double init_s, double ref_vel, double wheel_base,
-      double steer_ratio, double curv_factor,
+      double init_s, double ref_vel, double wheel_base, double steer_ratio,
+      double curv_factor,
       const planning::CoarsePlanningInfo &coarse_planning_info,
       const std::shared_ptr<planning::ReferencePath> &reference_path,
-      std::vector<double>& expected_steer_vec);
+      std::vector<double> &expected_steer_vec);
 
   void CalculateJerkBoundByLastJerk(
       const bool is_high_priority_back, const bool is_in_function,
@@ -221,13 +208,11 @@ class LateralMotionPlanningWeight {
     return end_ratio_for_qreftheta_;
   }
 
-  double GetConcernedEndRatioForJerk() const {
-    return end_ratio_for_qjerk_;
-  }
+  double GetConcernedEndRatioForJerk() const { return end_ratio_for_qjerk_; }
 
-  const PathWeight& GetPathWeights() const { return weight_; }
+  const PathWeight &GetPathWeights() const { return weight_; }
 
-  const EmergencyLevel& GetEmergencyLevel() const { return emergency_level_; }
+  const EmergencyLevel &GetEmergencyLevel() const { return emergency_level_; }
 
  private:
   void SetAccJerkBoundAndWeight(

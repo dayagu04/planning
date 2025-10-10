@@ -620,7 +620,8 @@ uint32 LdpCore::UpdateLdpFaultCode(void) {
   // bit 13
   // 故障降级
   if ((degraded_driving_function_info_ptr->ldp.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->ldp.degraded == iflyauto::ERROR_DEGRADED)) {
+       degraded_driving_function_info_ptr->ldp.degraded ==
+           iflyauto::ERROR_DEGRADED)) {
     ldp_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
@@ -834,7 +835,7 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   //                                     ->get_virtual_lane_manager();
   // left_lane_width_ =
   //     ptr_virtual_lane_manager->get_left_lane()->width();
-  
+
   // if (left_lane_width_ < 1.20) {
   //   ldp_left_suppression_code += uint16_bit[12];
   // }
@@ -1017,7 +1018,7 @@ uint32 LdpCore::UpdateLdpLeftKickDownCode(void) {
     /*do nothing*/
   }
 
-//bit9
+  // bit9
   // 纠偏侧为分流口
   if ((GetContext.get_road_info()->current_lane.left_sideway_exist_flag ||
        GetContext.get_road_info()->current_lane.right_sideway_exist_flag) &&
@@ -1410,7 +1411,7 @@ uint32 LdpCore::UpdateLdpRightKickDownCode(void) {
     /*do nothing*/
   }
 
-//bit9
+  // bit9
   // 纠偏侧为分流口
   if ((GetContext.get_road_info()->current_lane.left_sideway_exist_flag ||
        GetContext.get_road_info()->current_lane.right_sideway_exist_flag) &&
@@ -1440,8 +1441,8 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
   }
 
   // 状态机处于完成过初始化的状态
-  if (ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
-                        LDP_FUNCTION_FSM_WORK_STATE_FAULT) {
+  if (ldp_state_ ==
+      iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (ldp_main_switch_ == false) {
       ldp_state =
@@ -1469,8 +1470,8 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
       ldp_state =
           iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldp_fault_code_) {
-      ldp_state = iflyauto::LDPFunctionFSMWorkState::
-          LDP_FUNCTION_FSM_WORK_STATE_FAULT;
+      ldp_state =
+          iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldp_enable_code_ == 0) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
           LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1491,8 +1492,8 @@ iflyauto::LDPFunctionFSMWorkState LdpCore::LdpStateMachine(void) {
       ldp_state =
           iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldp_fault_code_) {
-      ldp_state = iflyauto::LDPFunctionFSMWorkState::
-          LDP_FUNCTION_FSM_WORK_STATE_FAULT;
+      ldp_state =
+          iflyauto::LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldp_disable_code_) {
       ldp_state = iflyauto::LDPFunctionFSMWorkState::
           LDP_FUNCTION_FSM_WORK_STATE_STANDBY;

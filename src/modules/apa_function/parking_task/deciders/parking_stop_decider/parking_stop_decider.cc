@@ -14,8 +14,8 @@
 #include "pose2d.h"
 #include "speed/apa_speed_decision.h"
 #include "task_basic_types.h"
-#include "vec2d.h"
 #include "time_benchmark.h"
+#include "vec2d.h"
 
 namespace planning {
 namespace apa_planner {
@@ -310,7 +310,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     }
   } else {
     Polygon2D global_polygon = obstacle.GetPolygon2DGlobal();
-    const pnc::geometry_lib::PathPoint&  center=obstacle. GetCenterPose();
+    const pnc::geometry_lib::PathPoint& center = obstacle.GetCenterPose();
     Transform2d tf(Pose2D(center.pos[0], center.pos[1], center.heading));
     Polygon2D local_polygon;
     GlobalPolygonToULFLocal(&global_polygon, tf, &local_polygon);
@@ -328,7 +328,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     for (int i = 0; i < traj.size(); ++i) {
       const trajectory::TrajectoryPoint& trajectory_point = traj[i];
       double trajectory_point_time = trajectory_point.absolute_time();
-      if (trajectory_point_time  > 7.0) {
+      if (trajectory_point_time > 7.0) {
         continue;
       }
 
@@ -344,7 +344,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
         double low_s = std::fmax(0.0, path[first_collision_index].s);
         double high_s = std::fmin(end_s, path[end_collision_index].s);
 
-        lower_points->emplace_back(low_s,  trajectory_point_time);
+        lower_points->emplace_back(low_s, trajectory_point_time);
         upper_points->emplace_back(high_s, trajectory_point_time);
       }
     }

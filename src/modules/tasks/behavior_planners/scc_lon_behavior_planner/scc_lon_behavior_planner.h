@@ -18,7 +18,8 @@
 
 // class SccLonBehaviorPlanner : public Task {
 //  public:
-//   explicit SccLonBehaviorPlanner(const EgoPlanningConfigBuilder *config_builder,
+//   explicit SccLonBehaviorPlanner(const EgoPlanningConfigBuilder
+//   *config_builder,
 //                                  framework::Session *session);
 
 //   ~SccLonBehaviorPlanner() = default;

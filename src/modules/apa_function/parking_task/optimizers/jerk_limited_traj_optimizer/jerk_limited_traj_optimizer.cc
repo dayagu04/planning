@@ -73,7 +73,7 @@ void JerkLimitedTrajOptimizer::Execute(
 #endif
 
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_JLT_TIME,
-                                        IflyTime::Now_ms() - opt_start_time);
+                                    IflyTime::Now_ms() - opt_start_time);
 
   return;
 }

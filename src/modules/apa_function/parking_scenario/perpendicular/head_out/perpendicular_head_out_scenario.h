@@ -38,6 +38,7 @@ class PerpendicularHeadOutScenario : public PerpendicularParkScenario {
   const bool CheckSecurityCurrentpath();
   const bool CheckRationalityEndpointPosition();
   const bool CurrentPathTrimmed();
+
  private:
   PerpendicularPathOutPlanner perpendicular_path_planner_;
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;

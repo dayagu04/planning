@@ -42,8 +42,11 @@ void LateralMotionPlanningProblem::Init() {
       std::make_shared<LatJerkCostTerm>());  // lateral jerk cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<LatAccBoundCostTerm>());  // lateral acc bound cost
-  ilqr_core_ptr_->AddCost(
-      std::make_shared<LatJerkBoundCostTerm>());  // lateral jerk soft bound cost
+  ilqr_core_ptr_->AddCost(std::make_shared<LatJerkBoundCostTerm>());  // lateral
+                                                                      // jerk
+                                                                      // soft
+                                                                      // bound
+                                                                      // cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<PathSoftCorridorCostTerm>());  // path soft corridor cost
   ilqr_core_ptr_->AddCost(
@@ -66,9 +69,9 @@ void LateralMotionPlanningProblem::Init() {
 
 uint8_t LateralMotionPlanningProblem::Update(
     const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
-    const double end_ratio_for_qjerk,
-    const double concerned_start_q_jerk,
-    const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
+    const double end_ratio_for_qjerk, const double concerned_start_q_jerk,
+    const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>
+        &planning_weight,
     planning::common::LateralPlanningInput &planning_input) {
   // set cost config
   const size_t N = ilqr_core_ptr_->GetSolverConfigPtr()->horizon + 1;
@@ -168,7 +171,8 @@ uint8_t LateralMotionPlanningProblem::Update(
         // cost_config_vec.at(i)[W_HARD_CORRIDOR] =
         //     planning_input.q_hard_corridor() * 1.5;
       } else if (i > planning_input.motion_plan_concerned_index()) {
-        cost_config_vec.at(i)[EXPECTEDE_DELTA] = cost_config_vec.at(i - 1)[EXPECTEDE_DELTA];
+        cost_config_vec.at(i)[EXPECTEDE_DELTA] =
+            cost_config_vec.at(i - 1)[EXPECTEDE_DELTA];
         cost_config_vec.at(i)[W_REF_X] =
             end_ratio_for_qxy * cost_config_vec.at(i - 1)[W_REF_X];
         cost_config_vec.at(i)[W_REF_Y] =
@@ -293,9 +297,11 @@ uint8_t LateralMotionPlanningProblem::Update(
   }
 
   // temp debug
-//   if (planning_output_.solver_info().iter_info(planning_output_.solver_info().iter_info_size()-1).cost() > 10000) {
-//     return ilqr_solver::iLqr::NON_POSITIVE_EXPECT;
-//   }
+  //   if
+  //   (planning_output_.solver_info().iter_info(planning_output_.solver_info().iter_info_size()-1).cost()
+  //   > 10000) {
+  //     return ilqr_solver::iLqr::NON_POSITIVE_EXPECT;
+  //   }
   return solver_condition;
 }
 

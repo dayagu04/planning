@@ -58,7 +58,8 @@ TaskPipelineRADS::TaskPipelineRADS(
   st_graph_searcher_ =
       std::make_unique<StGraphSearcher>(config_builder, session);
   parallel_longitudinal_avoid_decider_ =
-      std::make_unique<ParallelLongitudinalAvoidDecider>(config_builder, session);
+      std::make_unique<ParallelLongitudinalAvoidDecider>(config_builder,
+                                                         session);
   agent_headway_decider_ =
       std::make_unique<AgentHeadwayDecider>(config_builder, session);
   longitudinal_decision_decider_ =

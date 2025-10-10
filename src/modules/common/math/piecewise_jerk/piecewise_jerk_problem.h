@@ -7,9 +7,9 @@
 #include <utility>
 #include <vector>
 
+#include "Eigen/Core"
 #include "log_glog.h"
 #include "osqp.h"
-#include "Eigen/Core"
 
 namespace planning {
 /*

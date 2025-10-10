@@ -1,18 +1,16 @@
+#include <array>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <unordered_map>
-#include <vector>
-#include <array>
-#include <cstdint>
-#include <string>
 #include <vector>
 
 #include <assert.h>
 #include "config/basic_type.h"
 #include "define/geometry.h"
+#include "grid_map.h"
 #include "session.h"
 #include "task_basic_types.h"
-#include "grid_map.h"
 
 namespace planning {
 using namespace planning_math;
@@ -111,8 +109,7 @@ std::array<int, N_DIM> GridMapND<T, N_DIM>::GetCoordUsingGlobalPosition(
 }
 
 template <typename T, int N_DIM>
-std::array<double, N_DIM>
-GridMapND<T, N_DIM>::GetRoundedPosUsingGlobalPosition(
+std::array<double, N_DIM> GridMapND<T, N_DIM>::GetRoundedPosUsingGlobalPosition(
     const std::array<double, N_DIM> &p_w) const {
   std::array<int, N_DIM> coord = {};
   for (int i = 0; i < N_DIM; ++i) {
@@ -127,8 +124,7 @@ GridMapND<T, N_DIM>::GetRoundedPosUsingGlobalPosition(
 
 template <typename T, int N_DIM>
 void GridMapND<T, N_DIM>::GetGlobalPositionUsingCoordinate(
-    const std::array<int, N_DIM> &coord,
-    std::array<double, N_DIM> *p_w) const {
+    const std::array<int, N_DIM> &coord, std::array<double, N_DIM> *p_w) const {
   auto ptr = p_w->data();
   for (int i = 0; i < N_DIM; ++i) {
     *(ptr + i) = coord[i] * dims_resolution_[i] + origin_[i];
@@ -201,8 +197,7 @@ void GridMapND<T, N_DIM>::SetNDimSteps(
 }
 
 template <typename T, int N_DIM>
-void GridMapND<T, N_DIM>::SetDataSize(
-    const std::array<int, N_DIM> &dims_size) {
+void GridMapND<T, N_DIM>::SetDataSize(const std::array<int, N_DIM> &dims_size) {
   int total_ele_num = 1;
   for (int i = 0; i < N_DIM; ++i) {
     total_ele_num = total_ele_num * dims_size_[i];

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "config/basic_type.h"
-#include "lane_change_request.h"
 #include "ego_planning_config.h"
+#include "lane_change_request.h"
 #include "traffic_congestion_decider.h"
 namespace planning {
 

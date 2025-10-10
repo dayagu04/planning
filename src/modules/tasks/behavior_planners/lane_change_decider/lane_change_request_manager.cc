@@ -110,8 +110,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
                                    .is_merge_region;
   double ego_distance_to_boundary_merge = 100.0;
   const double default_distance_threshld_to_stop_line = 30.0;
-  const double dis_to_stopline =
-      session_->environmental_model().get_virtual_lane_manager()->GetEgoDistanceToStopline();
+  const double dis_to_stopline = session_->environmental_model()
+                                     .get_virtual_lane_manager()
+                                     ->GetEgoDistanceToStopline();
   const double ego_v =
       session_->environmental_model().get_ego_state_manager()->ego_v();
 
@@ -180,7 +181,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (enable_use_merge_lc_request && origin_relative_id_zero_nums == 1 &&
-        (curr_time > int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
+        (curr_time >
+         int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();

@@ -42,11 +42,11 @@
 #include "virtual_lane.h"
 namespace planning {
 
-using ad_common::hdmap::LaneGroupConstPtr;
-using ad_common::hdmap::LaneInfoConstPtr;
 using Map::CurrentRouting;
 using Map::FormOfWayType::MAIN_ROAD;
 using Map::FormOfWayType::RAMP;
+using ad_common::hdmap::LaneGroupConstPtr;
+using ad_common::hdmap::LaneInfoConstPtr;
 const double PI = 3.1415926;
 
 namespace {
@@ -83,8 +83,7 @@ std::vector<double> VirtualLaneManager::construct_reference_line_acc(void) {
                                      .get_ego_state_manager()
                                      ->ego_steer_angle();
 
-  ILOG_DEBUG << "ego_v = " << ego_v
-             << "ego_yaw_rate = " << ego_yaw_rate
+  ILOG_DEBUG << "ego_v = " << ego_v << "ego_yaw_rate = " << ego_yaw_rate
              << "ego_steer_angle = " << ego_steer_angle;
 
   const auto& vehicle_param =
@@ -480,7 +479,8 @@ void VirtualLaneManager::construct_reference_line_msg(
   current_lane_virtual_ref->virtual_lane_refline_points_size =
       FUSION_ROAD_REFLINE_POINT_MAX_NUM;
 
-  ILOG_DEBUG << "current_lane_virtual_ref->virtual_lane_refline_points_size = " << current_lane_virtual_ref->virtual_lane_refline_points_size;
+  ILOG_DEBUG << "current_lane_virtual_ref->virtual_lane_refline_points_size = "
+             << current_lane_virtual_ref->virtual_lane_refline_points_size;
   ILOG_DEBUG << "s_end = " << s;
 
   // set left_lane_boundary
@@ -748,7 +748,8 @@ bool VirtualLaneManager::update(
                                          virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
-    ILOG_DEBUG << "select_ego_lane_without_plan: " << select_ego_lane_without_plan;
+    ILOG_DEBUG << "select_ego_lane_without_plan: "
+               << select_ego_lane_without_plan;
     JSON_DEBUG_VALUE("select_ego_lane_without_plan",
                      select_ego_lane_without_plan);
 
@@ -788,7 +789,8 @@ bool VirtualLaneManager::update(
 
   set_is_exist_split_on_expressway(
       ego_lane_track_manager_.is_exist_split_on_expressway());
-  ILOG_DEBUG << "is_exist_split_on_expressway:" << is_exist_split_on_expressway_;
+  ILOG_DEBUG << "is_exist_split_on_expressway:"
+             << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
@@ -799,13 +801,15 @@ bool VirtualLaneManager::update(
 
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
-  ILOG_DEBUG << "is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation;
+  ILOG_DEBUG << "is_in_ramp_select_split_situation:"
+             << is_in_ramp_select_split_situation;
   JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
                    is_in_ramp_select_split_situation);
 
   const bool is_on_road_select_ramp_situation =
       ego_lane_track_manager_.is_on_road_select_ramp_situation();
-  ILOG_DEBUG << "is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation;
+  ILOG_DEBUG << "is_on_road_select_ramp_situation:"
+             << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
 
@@ -845,11 +849,12 @@ bool VirtualLaneManager::update(
       planning_debug_data->mutable_environment_model_info();
   environment_model_debug_info->set_currrent_lane_vitual_id(
       current_lane_virtual_id_);
-  #endif
+#endif
 
   ILOG_DEBUG << "current lane virtual id:" << current_lane_virtual_id_;
   for (const auto& lane : relative_id_lanes_) {
-    ILOG_DEBUG << "relative id:" << lane->get_relative_id() << ", virtual id:" << lane->get_virtual_id();
+    ILOG_DEBUG << "relative id:" << lane->get_relative_id()
+               << ", virtual id:" << lane->get_virtual_id();
   }
   last_fsm_state_ = session_->environmental_model()
                         .get_local_view()
@@ -981,7 +986,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
                                          virtual_id_mapped_lane_);
     const bool select_ego_lane_without_plan =
         ego_lane_track_manager_.is_select_ego_lane_without_plan();
-    ILOG_DEBUG << "select_ego_lane_without_plan:" << select_ego_lane_without_plan;
+    ILOG_DEBUG << "select_ego_lane_without_plan:"
+               << select_ego_lane_without_plan;
     JSON_DEBUG_VALUE("select_ego_lane_without_plan",
                      select_ego_lane_without_plan);
 
@@ -1021,7 +1027,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   set_is_exist_split_on_expressway(
       ego_lane_track_manager_.is_exist_split_on_expressway());
-  ILOG_DEBUG << "is_exist_split_on_expressway:" << is_exist_split_on_expressway_;
+  ILOG_DEBUG << "is_exist_split_on_expressway:"
+             << is_exist_split_on_expressway_;
   JSON_DEBUG_VALUE("is_exist_split_on_expressway",
                    is_exist_split_on_expressway_);
 
@@ -1032,13 +1039,15 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
 
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
-  ILOG_DEBUG << "is_in_ramp_select_split_situation:" << is_in_ramp_select_split_situation;
+  ILOG_DEBUG << "is_in_ramp_select_split_situation:"
+             << is_in_ramp_select_split_situation;
   JSON_DEBUG_VALUE("is_in_ramp_select_split_situation",
                    is_in_ramp_select_split_situation);
 
   const bool is_on_road_select_ramp_situation =
       ego_lane_track_manager_.is_on_road_select_ramp_situation();
-  ILOG_DEBUG << "is_on_road_select_ramp_situation:" << is_on_road_select_ramp_situation;
+  ILOG_DEBUG << "is_on_road_select_ramp_situation:"
+             << is_on_road_select_ramp_situation;
   JSON_DEBUG_VALUE("is_on_road_select_ramp_situation",
                    is_on_road_select_ramp_situation);
 
@@ -1086,7 +1095,8 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
       current_lane_virtual_id_);
   ILOG_DEBUG << "current lane virtual id:" << current_lane_virtual_id_;
   for (const auto& lane : relative_id_lanes_) {
-    ILOG_DEBUG << "relative id:" << lane->get_relative_id() << ", virtual id:" << lane->get_virtual_id();
+    ILOG_DEBUG << "relative id:" << lane->get_relative_id()
+               << ", virtual id:" << lane->get_virtual_id();
   }
   last_fsm_state_ = session_->environmental_model()
                         .get_local_view()
@@ -1202,7 +1212,8 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_left_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==
@@ -1221,7 +1232,8 @@ double VirtualLaneManager::get_distance_to_dash_line(
       const auto& type_segment =
           lane->get_right_lane_boundary().type_segments[i];
       if (type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
-          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
           type_segment.type ==
@@ -1807,7 +1819,8 @@ std::vector<std::shared_ptr<VirtualLane>> VirtualLaneManager::UpdateLanes(
     std::shared_ptr<VirtualLane> virtual_lane_tmp =
         std::make_shared<VirtualLane>();
     virtual_lane_tmp->update_data(lane);
-    ILOG_DEBUG << "lane relative_id:" << lane.relative_id << ", order_id:" << lane.order_id;
+    ILOG_DEBUG << "lane relative_id:" << lane.relative_id
+               << ", order_id:" << lane.order_id;
     // if (virtual_lane_tmp->get_lane_type() == iflyauto::LANETYPE_EMERGENCY)
     //   break;
     relative_id_lanes.emplace_back(virtual_lane_tmp);
@@ -1903,8 +1916,8 @@ std::shared_ptr<VirtualLane> VirtualLaneManager::GetNearestLane(
     double frenet_l = 0;
     if (!frenet_coord->XYToSL(cart_x, cart_y, &frenet_s, &frenet_l)) {
       continue;
-    // if (!frenet_coord->XYToSL(point, frenet_point)) {
-    //   continue;
+      // if (!frenet_coord->XYToSL(point, frenet_point)) {
+      //   continue;
     } else {
       frenet_point.x = frenet_s;
       frenet_point.y = frenet_l;

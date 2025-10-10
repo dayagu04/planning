@@ -78,7 +78,6 @@ inline void FindModuleName(std::string* log_message, std::string* module_name) {
   }
 }
 
-}  // namespace logger
+}  // namespace ilog
 }  // namespace cyber
 }  // namespace planning
-

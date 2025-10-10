@@ -8,8 +8,8 @@
 #include "assert.h"
 
 #include "common.h"
-#include "math/math_utils.h"
 #include "log_glog.h"
+#include "math/math_utils.h"
 
 namespace planning {
 namespace planning_math {

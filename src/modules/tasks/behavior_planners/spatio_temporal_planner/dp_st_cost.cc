@@ -9,7 +9,7 @@ namespace {
 constexpr double kInf = std::numeric_limits<double>::infinity();
 constexpr double kDefaultTotalTime = std::numeric_limits<double>::infinity();
 
-}
+}  // namespace
 
 DpStCost::DpStCost() {
   unit_t_ = 1.0;
@@ -51,7 +51,8 @@ DpStCost::DpStCost() {
 //       ++i;
 //       ++j;
 //     } else {
-//       keep_clear_range->at(i).second = std::max(keep_clear_range->at(i).second,
+//       keep_clear_range->at(i).second =
+//       std::max(keep_clear_range->at(i).second,
 //                                                 keep_clear_range->at(j).second);
 //       ++j;
 //     }
@@ -74,15 +75,15 @@ DpStCost::DpStCost() {
 //          (point.s() - reference_point.s()) * unit_t_;
 // }
 
-
 double DpStCost::GetSpatialPotentialCost(const SLTGraphPoint& point) {
   return (total_s_ - point.point().s()) * config_.spatial_potential_penalty();
 }
 
-double DpStCost::GetSpeedCost(const SLTGraphPoint& first, const SLTGraphPoint& second,
-                              const double &speed_limit,
-                              const double &inv_speed_limit,
-                              const double &cruise_speed) const {
+double DpStCost::GetSpeedCost(const SLTGraphPoint& first,
+                              const SLTGraphPoint& second,
+                              const double& speed_limit,
+                              const double& inv_speed_limit,
+                              const double& cruise_speed) const {
   const bool enable_dp_reference_speed = true;
   double cost = 0.0;
   const double speed = (second.point().s() - first.point().s()) * inv_unit_t_;
@@ -157,15 +158,17 @@ double DpStCost::GetAccelCost(const double accel) {
 double DpStCost::GetAccelCostByThreePoints(const SLTGraphPoint& first,
                                            const SLTGraphPoint& second,
                                            const SLTGraphPoint& third) {
-  double accel = 
-      (first.point().s() + third.point().s() - 2 * second.point().s()) * inv_t_squared_;
+  double accel =
+      (first.point().s() + third.point().s() - 2 * second.point().s()) *
+      inv_t_squared_;
   return GetAccelCost(accel);
 }
 
 double DpStCost::GetAccelCostByTwoPoints(const double pre_speed,
                                          const SLTGraphPoint& pre_point,
                                          const SLTGraphPoint& curr_point) {
-  double current_speed = (curr_point.point().s() - pre_point.point().s()) * inv_unit_t_;
+  double current_speed =
+      (curr_point.point().s() - pre_point.point().s()) * inv_unit_t_;
   double accel = (current_speed - pre_speed) * inv_unit_t_;
   return GetAccelCost(accel);
 }
@@ -199,9 +202,9 @@ double DpStCost::GetJerkCostByFourPoints(const SLTGraphPoint& first,
                                          const SLTGraphPoint& second,
                                          const SLTGraphPoint& third,
                                          const SLTGraphPoint& fourth) {
-  double jerk = 
-      (fourth.point().s() - 3 * third.point().s() + 3 * second.point().s() - first.point().s()) *
-      inv_t_cube_;
+  double jerk = (fourth.point().s() - 3 * third.point().s() +
+                 3 * second.point().s() - first.point().s()) *
+                inv_t_cube_;
   return JerkCost(jerk);
 }
 
@@ -209,7 +212,7 @@ double DpStCost::GetJerkCostByTwoPoints(const double pre_speed,
                                         const double pre_acc,
                                         const SLTGraphPoint& pre_point,
                                         const SLTGraphPoint& curr_point) {
-  const double curr_speed = 
+  const double curr_speed =
       (curr_point.point().s() - pre_point.point().s()) * inv_unit_t_;
   const double curr_accel = (curr_speed - pre_speed) * inv_unit_t_;
   const double jerk = (curr_accel - pre_acc) * inv_unit_t_;
@@ -220,9 +223,11 @@ double DpStCost::GetJerkCostByThreePoints(const double first_speed,
                                           const SLTGraphPoint& first,
                                           const SLTGraphPoint& second,
                                           const SLTGraphPoint& third) {
-  const double pre_speed = (second.point().s() - first.point().s()) * inv_unit_t_;
+  const double pre_speed =
+      (second.point().s() - first.point().s()) * inv_unit_t_;
   const double pre_acc = (pre_speed - first_speed) * inv_unit_t_;
-  const double curr_speed = (third.point().s() - second.point().s()) * inv_unit_t_;
+  const double curr_speed =
+      (third.point().s() - second.point().s()) * inv_unit_t_;
   const double curr_acc = (curr_speed - pre_speed) * inv_unit_t_;
   const double jerk = (curr_acc - pre_acc) * inv_unit_t_;
   return JerkCost(jerk);

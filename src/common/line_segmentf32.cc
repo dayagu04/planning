@@ -16,7 +16,6 @@ bool IsWithin(float val, float bound1, float bound2) {
   return val >= bound1 - kMathEpsilon32 && val <= bound2 + kMathEpsilon32;
 }
 
-
 LineSegmentf32::LineSegmentf32() {
   unit_direction_ = Vec2f(1, 0);
   InitMaxMin();
@@ -29,7 +28,7 @@ LineSegmentf32::LineSegmentf32(const Vec2f &start, const Vec2f &end)
   length_ = hypot(dx, dy);
   unit_direction_ =
       (length_ <= kMathEpsilon32 ? Vec2f(0, 0)
-                               : Vec2f(dx / length_, dy / length_));
+                                 : Vec2f(dx / length_, dy / length_));
   heading_ = unit_direction_.Angle();
 
   line_a_ = (end.y() - start.y());
@@ -165,7 +164,7 @@ bool LineSegmentf32::HasIntersect(const LineSegmentf32 &other_segment) const {
 }
 
 bool LineSegmentf32::GetIntersect(const LineSegmentf32 &other_segment,
-                                 Vec2f *const point) const {
+                                  Vec2f *const point) const {
   assert(point != nullptr);
   if (IsPointIn(other_segment.start())) {
     *point = other_segment.start();
@@ -230,5 +229,5 @@ Vec2f LineSegmentf32::GetPoint(float s) const {
   float ratio = s / length_;
   return start_ * (1 - ratio) + end_ * ratio;
 }
-}
+}  // namespace planning
 // namespace planning

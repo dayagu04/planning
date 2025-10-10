@@ -32,7 +32,8 @@ bool Session::Init() {
   auto module_config_file_dir = engine_config.module_cfg_dir;
   if (!common::ConfigurationContext::Instance()->load_params_from_json(
           engine_config.vehicle_cfg_dir)) {
-    ILOG_ERROR << "ConfigurationContext load_params_from_json :" << "ERROR";
+    ILOG_ERROR << "ConfigurationContext load_params_from_json :"
+               << "ERROR";
     return false;
   }
 
@@ -44,7 +45,7 @@ bool Session::Init() {
   simulation_context_ = SimulationContext::Instance();
 
   fault_counter_vec_.resize(static_cast<int>(FaultType::FAULT_TYPE_NUM));
-  for(int i = 0; i < static_cast<int>(FaultType::FAULT_TYPE_NUM); i++) {
+  for (int i = 0; i < static_cast<int>(FaultType::FAULT_TYPE_NUM); i++) {
     fault_counter_vec_[i].fault_trigger_counter = 0;
     fault_counter_vec_[i].fault_recovery_counter = 0;
   }

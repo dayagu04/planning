@@ -26,7 +26,8 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
   return std::fmax(base_dis + 0.015 * ego_vel, 0.);
 }
 
-double CalDesireLonDistance(double ego_vel, double agent_vel, double base_dist) {
+double CalDesireLonDistance(double ego_vel, double agent_vel,
+                            double base_dist) {
   return base_dist + std::fmax(0., (ego_vel - agent_vel) * 0.2) + ego_vel * 0.2;
 }
 
@@ -188,7 +189,7 @@ bool IsCone(iflyauto::ObjectType type) {
 bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle) {
   return (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
           (obstacle->type() == iflyauto::ObjectType::OBJECT_TYPE_TRUCK &&
-          obstacle->length() > 6));
+           obstacle->length() > 6));
 }
 
 ObstacleBorderInfo GetNearestObstacleBorder(

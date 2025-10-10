@@ -29,7 +29,6 @@ class CautionTarget : public Target {
  private:
   std::vector<UpperBoundInfo> upper_bound_infos_;
   planning::common::CautionTarget caution_target_pb_;
-
 };
 
 }  // namespace planning

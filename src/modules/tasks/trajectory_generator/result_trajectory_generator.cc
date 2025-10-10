@@ -11,11 +11,11 @@
 // #include "core/common/trace.h"
 #include "debug_info_log.h"
 #include "define/geometry.h"
+#include "ego_state_manager.h"
+#include "environmental_model.h"
 #include "math/math_utils.h"
 #include "math_lib.h"
 #include "planning_context.h"
-#include "environmental_model.h"
-#include "ego_state_manager.h"
 namespace planning {
 
 using namespace std;
@@ -40,7 +40,6 @@ void ResultTrajectoryGenerator::Init() {
   ddkappa_vec_.resize(N + 1);
   lat_acc_vec_.resize(N + 1);
   lat_jerk_vec_.resize(N + 1);
-
 }
 
 bool ResultTrajectoryGenerator::Execute() {
@@ -545,7 +544,8 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                   .distance_to_split_point;
     // if (route_info_output.dis_to_ramp < 100.0 &&
     //     route_info_output.dis_to_ramp < dis_to_merge) {
-    //   ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_SPLIT;
+    //   ad_info.lane_change_reason =
+    //   iflyauto::LaneChangeReason::LC_REASON_SPLIT;
     // } else
     if (route_info_output.mlc_decider_route_info.is_process_merge) {
       ad_info.lane_change_reason = iflyauto::LaneChangeReason::LC_REASON_MERGE;

@@ -27,8 +27,8 @@ int RSPathInterpolator::CopyRSPathKappaParam(RSPathKappaParam *dst_list,
 
 int RSPathInterpolator::CalcShortestRSPathKappa(
     RSPathKappaParam *kappa_list, const Pose2f *start_pose,
-    const Pose2f *goal_pose, float min_turn_radius,
-    const float inverse_radius, const RSPathRequestType request_type) {
+    const Pose2f *goal_pose, float min_turn_radius, const float inverse_radius,
+    const RSPathRequestType request_type) {
   bool is_same;
   RSPathParam *path;
   RSPathInfo *path_info = GetRSPathGlobalInfo();

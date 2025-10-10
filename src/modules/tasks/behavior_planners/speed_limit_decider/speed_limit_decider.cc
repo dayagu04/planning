@@ -152,17 +152,18 @@ double CalcDesiredVelocity(const double d_rel, const double d_des,
   return v_target;
 }
 bool IsPointOutsideLaneByLeftRightThred(
-  const std::shared_ptr<VirtualLane>& ego_lane, const planning_math::Vec2d& point,
-  const double distance_to_left_boundary_threshold,
-  const double distance_to_right_boundary_threshold) {
+    const std::shared_ptr<VirtualLane> &ego_lane,
+    const planning_math::Vec2d &point,
+    const double distance_to_left_boundary_threshold,
+    const double distance_to_right_boundary_threshold) {
   bool is_outside_lane = false;
   double match_s = 0.0;
   double match_l = 0.0;
-  const auto& ego_reference_path = ego_lane->get_reference_path();
+  const auto &ego_reference_path = ego_lane->get_reference_path();
   if (ego_reference_path == nullptr) {
     return true;
   }
-  const auto& ego_lane_coord = ego_reference_path ->get_frenet_coord();
+  const auto &ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord == nullptr) {
     return true;
   }
@@ -171,8 +172,9 @@ bool IsPointOutsideLaneByLeftRightThred(
     return true;
   }
   double lane_width = ego_lane->width_by_s(match_s);
-  is_outside_lane = (match_l > lane_width / 2.0 + distance_to_left_boundary_threshold) ||
-                    (match_l < -lane_width / 2.0 - distance_to_right_boundary_threshold);
+  is_outside_lane =
+      (match_l > lane_width / 2.0 + distance_to_left_boundary_threshold) ||
+      (match_l < -lane_width / 2.0 - distance_to_right_boundary_threshold);
   return is_outside_lane;
 }
 
@@ -275,8 +277,8 @@ bool SpeedLimitDecider::Execute() {
                                 ->mutable_speed_limit_decider_output();
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
   auto ad_info = &(session_->mutable_planning_context()
-                      ->mutable_planning_hmi_info()
-                      ->ad_info);
+                       ->mutable_planning_hmi_info()
+                       ->ad_info);
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
 
@@ -357,8 +359,9 @@ double SpeedLimitDecider::JudgeCurvBySDProMap() {
     return 300.0;  // 返回300.0,较小的曲率半径，代表判断出弯道，不加速，有异常就不加速
   }
   std::vector<std::pair<double, double>> curv_list;
-  curv_list = sdpro_map.GetCurvatureList(current_segment->id(), nearest_s,
-  speed_limit_config_.search_sdmap_curv_dis);
+  curv_list =
+      sdpro_map.GetCurvatureList(current_segment->id(), nearest_s,
+                                 speed_limit_config_.search_sdmap_curv_dis);
   double min_curv_radius = 10000.0;
   for (int i = 0; i < curv_list.size(); i++) {
     double one_curv_radius = 1.0 / (std::abs(curv_list[i].second));
@@ -499,17 +502,18 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   ILOG_DEBUG << "----CalculateMapSpeedLimit for ramp---";
   const auto &environmental_model = session_->environmental_model();
   const auto &function_state_machine_info =
-              environmental_model.get_local_view().function_state_machine_info;
-  double v_cruise_fsm = function_state_machine_info.pilot_req.acc_curise_real_spd;
+      environmental_model.get_local_view().function_state_machine_info;
+  double v_cruise_fsm =
+      function_state_machine_info.pilot_req.acc_curise_real_spd;
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
-  //set v_cruise_limit by map info
+  // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
-    //map info invalid, using fsm cruise speed
+    // map info invalid, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
   ad_common::math::Vec2d current_point;
@@ -527,10 +531,10 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (current_segment == nullptr) {
-    //get ego link failed, using fsm cruise speed
+    // get ego link failed, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   } else {
-    v_cruise_limit_ = current_segment->speed_limit();//kph
+    v_cruise_limit_ = current_segment->speed_limit();  // kph
     JSON_DEBUG_VALUE("v_limit_tencent", v_cruise_limit_);
   }
 
@@ -538,20 +542,22 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   if (!environmental_model.get_route_info()->get_sdmap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
   } else {
-    const auto &sd_map = environmental_model.get_route_info()->get_sd_map();//cur_road_speed_limit()
+    const auto &sd_map = environmental_model.get_route_info()
+                             ->get_sd_map();  // cur_road_speed_limit()
     if (sd_map.GetNaviRoadInfo() != std::nullopt) {
-        v_limit_gaode = sd_map.GetNaviRoadInfo().value().cur_road_speed_limit();
+      v_limit_gaode = sd_map.GetNaviRoadInfo().value().cur_road_speed_limit();
     }
     const auto cur_seg = sd_map.GetNearestRoadWithHeading(
-      current_point, search_distance, ego_heading_angle, max_heading_diff,
-      nearest_s, nearest_l);
+        current_point, search_distance, ego_heading_angle, max_heading_diff,
+        nearest_s, nearest_l);
     if (cur_seg != nullptr) {
-      auto v_limit_camera_list_info = sd_map.GetCameraInfoList(cur_seg->id(), nearest_s, 400.0);
+      auto v_limit_camera_list_info =
+          sd_map.GetCameraInfoList(cur_seg->id(), nearest_s, 400.0);
       int camera_num = 10;
       camera_num = v_limit_camera_list_info.size();
       JSON_DEBUG_VALUE("camera_num", camera_num);
     }
-    //GetCameraInfoList();
+    // GetCameraInfoList();
   }
   JSON_DEBUG_VALUE("v_limit_gaode", v_limit_gaode);
 
@@ -566,12 +572,13 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  //bool sdmap_has_curv = JudgeCurvBySDProMap();
+  // bool sdmap_has_curv = JudgeCurvBySDProMap();
   double sdpro_min_curv = JudgeCurvBySDProMap();
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
-      if (sdpro_min_curv > speed_limit_config_.ramp_curv_radius_small && sdpro_min_curv < speed_limit_config_.ramp_curv_radius_big) {
+      if (sdpro_min_curv > speed_limit_config_.ramp_curv_radius_small &&
+          sdpro_min_curv < speed_limit_config_.ramp_curv_radius_big) {
         v_target_ramp = speed_limit_config_.straight_ramp_v_limit_low;
       } else if (sdpro_min_curv >= speed_limit_config_.ramp_curv_radius_big) {
         v_target_ramp = speed_limit_config_.straight_ramp_v_limit_high;
@@ -675,7 +682,8 @@ void SpeedLimitDecider::CalculateSpeedLimitFromTFLDis() {
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
   double dis_tfl = tfl_manager->GetNearestTFLDis();
-  if (speed_limit_config_.enable_tfl_v_limit && dis_tfl < kTFLSpeedLimitDis && (!noa_mode)) {
+  if (speed_limit_config_.enable_tfl_v_limit && dis_tfl < kTFLSpeedLimitDis &&
+      (!noa_mode)) {
     v_limit_tfl_dis = 55 / 3.6;
     if (traffic_status.go_straight == 1 || traffic_status.go_straight == 41 ||
         traffic_status.go_straight == 11 || traffic_status.go_straight == 10) {
@@ -708,8 +716,9 @@ void SpeedLimitDecider::CalculateIntersectionSpeedLimit() {
     if (v_limit_with_intersection_ <
         speed_limit_config_.v_intersection_min_limit) {
       /// v_target_intersection = std::max(v_ego - 3.0, 8.33);
-      v_limit_with_intersection_ =
-          std::max(v_ego - speed_limit_config_.v_reduce_rate_intersection * v_ego, speed_limit_config_.v_intersection_min_limit);
+      v_limit_with_intersection_ = std::max(
+          v_ego - speed_limit_config_.v_reduce_rate_intersection * v_ego,
+          speed_limit_config_.v_intersection_min_limit);
     }
     v_target_intersection = v_limit_with_intersection_;
   } else {
@@ -932,44 +941,70 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     bool poi_v_limit_set = false;
     double cur_link_v_limit = current_segment->speed_limit();
     double v_limit_dis = 10000.0;
-    v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
-      speed_limit_config_.tunnel_vel_limit_dis_table.dis_table);
+    v_limit_dis =
+        interp(cur_link_v_limit,
+               speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
+               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table);
 
-    auto tunnel_info = sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
-    if (tunnel_info.first != nullptr && tunnel_info.second > 0 && tunnel_info.second < v_limit_dis) {
-    //less than calibration distance before entering tunnel speed limit works
+    auto tunnel_info =
+        sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
+    if (tunnel_info.first != nullptr && tunnel_info.second > 0 &&
+        tunnel_info.second < v_limit_dis) {
+      // less than calibration distance before entering tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
       poi_v_limit_set = true;
-    } else if (tunnel_info.second < kEpsilon && current_segment->link_type() == iflymapdata::sdpro::LinkType::LT_TUNNEL) {
-    //inside tunnel speed limit works
+    } else if (tunnel_info.second < kEpsilon &&
+               current_segment->link_type() ==
+                   iflymapdata::sdpro::LinkType::LT_TUNNEL) {
+      // inside tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
       poi_v_limit_set = true;
     } else {
-      v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.toll_station_vel_limit_dis_table.vel_limit_table,
-        speed_limit_config_.toll_station_vel_limit_dis_table.dis_table);
-      auto toll_station_info = sdpro_map.GetTollStationInfo(current_segment->id(), nearest_s, 700.0);
-      if (toll_station_info.first != nullptr && toll_station_info.second > 0 && toll_station_info.second <
-        speed_limit_config_.function_off_dis_before_toll_station + v_limit_dis) {
-      //less than calibration distance before entering toll station speed limit works
+      v_limit_dis = interp(
+          cur_link_v_limit,
+          speed_limit_config_.toll_station_vel_limit_dis_table.vel_limit_table,
+          speed_limit_config_.toll_station_vel_limit_dis_table.dis_table);
+      auto toll_station_info =
+          sdpro_map.GetTollStationInfo(current_segment->id(), nearest_s, 700.0);
+      if (toll_station_info.first != nullptr && toll_station_info.second > 0 &&
+          toll_station_info.second <
+              speed_limit_config_.function_off_dis_before_toll_station +
+                  v_limit_dis) {
+        // less than calibration distance before entering toll station speed
+        // limit works
         v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
         poi_v_limit_set = true;
       } else {
-        v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.sapa_vel_limit_dis_table.vel_limit_table,
-          speed_limit_config_.sapa_vel_limit_dis_table.dis_table);
-        auto sapa_info = sdpro_map.GetSaPaInfo(current_segment->id(), nearest_s, 700.0);
-        if (sapa_info.first != nullptr && sapa_info.second > 0 && sapa_info.second < v_limit_dis) {
-          //less than calibration distance before entering sapa speed limit works
-            v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-            poi_v_limit_set = true;
-        } else if (sapa_info.second < kEpsilon && current_segment->link_type() == iflymapdata::sdpro::LinkType::LT_SAPA) {
-            v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-            poi_v_limit_set = true;
+        v_limit_dis =
+            interp(cur_link_v_limit,
+                   speed_limit_config_.sapa_vel_limit_dis_table.vel_limit_table,
+                   speed_limit_config_.sapa_vel_limit_dis_table.dis_table);
+        auto sapa_info =
+            sdpro_map.GetSaPaInfo(current_segment->id(), nearest_s, 700.0);
+        if (sapa_info.first != nullptr && sapa_info.second > 0 &&
+            sapa_info.second < v_limit_dis) {
+          // less than calibration distance before entering sapa speed limit
+          // works
+          v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
+          poi_v_limit_set = true;
+        } else if (sapa_info.second < kEpsilon &&
+                   current_segment->link_type() ==
+                       iflymapdata::sdpro::LinkType::LT_SAPA) {
+          v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
+          poi_v_limit_set = true;
         } else {
-          //GetNonExpressInfo, less than calibration distance before entering non-express speed limit works
-          v_limit_dis = interp(cur_link_v_limit, speed_limit_config_.non_express_vel_limit_dis_table.vel_limit_table,
-            speed_limit_config_.non_express_vel_limit_dis_table.dis_table);
-          auto none_express_info = sdpro_map.GetNonExpressInfo(current_segment->id(), nearest_s, 700.0);
-          if (none_express_info.first != nullptr && none_express_info.second > 0 && none_express_info.second < v_limit_dis) {
+          // GetNonExpressInfo, less than calibration distance before entering
+          // non-express speed limit works
+          v_limit_dis = interp(
+              cur_link_v_limit,
+              speed_limit_config_.non_express_vel_limit_dis_table
+                  .vel_limit_table,
+              speed_limit_config_.non_express_vel_limit_dis_table.dis_table);
+          auto none_express_info = sdpro_map.GetNonExpressInfo(
+              current_segment->id(), nearest_s, 700.0);
+          if (none_express_info.first != nullptr &&
+              none_express_info.second > 0 &&
+              none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
             poi_v_limit_set = true;
           }
@@ -982,11 +1017,10 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     }
     JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
     auto speed_limit_output = session_->mutable_planning_context()
-                                ->mutable_speed_limit_decider_output();
+                                  ->mutable_speed_limit_decider_output();
     speed_limit_output->SetSpeedLimitIntoMap(v_cruise_limit_ / 3.6,
-                                           SpeedLimitType::NEAR_POI);
+                                             SpeedLimitType::NEAR_POI);
   }
-
 }
 
 void SpeedLimitDecider::CalculateLaneBorrowSpeedLimit() {
@@ -1415,8 +1449,8 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
     vru_round_map_.clear();
     return;
   }
-  const auto& agents = agent_manager->GetAllCurrentAgents();
-  const auto& agents_set = agent_manager->GetAgentSet();
+  const auto &agents = agent_manager->GetAllCurrentAgents();
+  const auto &agents_set = agent_manager->GetAgentSet();
   if (agents.empty()) {
     vru_round_map_.clear();
     return;
@@ -1459,13 +1493,13 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
   double ego_l = 0.0;
   if (!planned_kd_path->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
     vru_round_map_.clear();
-    return ;
+    return;
   }
   const double ego_back_s = ego_s - rear_edge_to_rear_axle;
   const double ego_front_s = ego_s + front_edge_to_rear_axle;
 
   historical_vru_round_map_ = vru_round_map_;
-  for (const auto& agent : agents) {
+  for (const auto &agent : agents) {
     if (agent->type() != agent::AgentType::PEDESTRIAN &&
         agent->type() != agent::AgentType::CYCLE_RIDING &&
         agent->type() != agent::AgentType::MOTORCYCLE_RIDING &&
@@ -1478,23 +1512,27 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
     if (!planned_kd_path->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
       return;
     }
-    double agent_to_ego_distance = agent_s - ego_front_s - agent->length() * 0.5;
+    double agent_to_ego_distance =
+        agent_s - ego_front_s - agent->length() * 0.5;
 
     planning_math::Vec2d agent_pose(agent->x(), agent->y());
     bool is_lateral_buffer_satisfied = false;
-    is_lateral_buffer_satisfied = !IsPointOutsideLaneByLeftRightThred(current_lane,
-          agent_pose, kExitVruRoundLateralBufferThr, kExitVruRoundLateralBufferThr);
+    is_lateral_buffer_satisfied = !IsPointOutsideLaneByLeftRightThred(
+        current_lane, agent_pose, kExitVruRoundLateralBufferThr,
+        kExitVruRoundLateralBufferThr);
     double agent_speed = agent->is_reverse() ? -agent->speed() : agent->speed();
-    double ttc =
-        (agent_s) / std::max(init_point.v - agent_speed, std::numeric_limits<double>::min());
-    if (ttc < kEnterVruRoundTtcThr && agent_s > std::numeric_limits<double>::min()) {
+    double ttc = (agent_s) / std::max(init_point.v - agent_speed,
+                                      std::numeric_limits<double>::min());
+    if (ttc < kEnterVruRoundTtcThr &&
+        agent_s > std::numeric_limits<double>::min()) {
       is_longotidinal_satisfied = true;
     }
 
-    if (agent->speed() < kLowSpeedVruVelThr &&
-        is_longotidinal_satisfied && is_lateral_buffer_satisfied) {
+    if (agent->speed() < kLowSpeedVruVelThr && is_longotidinal_satisfied &&
+        is_lateral_buffer_satisfied) {
       if (vru_round_map_.find(agent->agent_id()) != vru_round_map_.end()) {
-        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].distance_to_ego =
+            agent_to_ego_distance;
         vru_round_map_[agent->agent_id()].ttc = ttc;
         vru_round_map_[agent->agent_id()].id = agent->agent_id();
         vru_round_map_[agent->agent_id()].last_is_satisfied_round =
@@ -1502,11 +1540,14 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
         vru_round_map_[agent->agent_id()].is_satisfied_round = true;
         vru_round_map_[agent->agent_id()].enter_counter++;
         vru_round_map_[agent->agent_id()].is_trigger =
-            vru_round_map_[agent->agent_id()].enter_counter >= kTriggerVruRoundcounterThr ? true
-                                                                                          : false;
+            vru_round_map_[agent->agent_id()].enter_counter >=
+                    kTriggerVruRoundcounterThr
+                ? true
+                : false;
 
       } else {
-        vru_round_map_[agent->agent_id()].distance_to_ego = agent_to_ego_distance;
+        vru_round_map_[agent->agent_id()].distance_to_ego =
+            agent_to_ego_distance;
         vru_round_map_[agent->agent_id()].ttc = ttc;
         vru_round_map_[agent->agent_id()].id = agent->agent_id();
         vru_round_map_[agent->agent_id()].is_satisfied_round = true;
@@ -1519,7 +1560,7 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
       vru_round_map_.erase(agent->agent_id());
     }
   }
-  for (const auto& historical_vru : historical_vru_round_map_) {
+  for (const auto &historical_vru : historical_vru_round_map_) {
     if (agents_set.find(historical_vru.first) == agents_set.end()) {
       vru_round_map_.erase(historical_vru.first);
     }
@@ -1536,7 +1577,8 @@ void SpeedLimitDecider::CalculateVRURoundSpeedLimit() {
   }
 }
 
-bool SpeedLimitDecider::HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& vru_round_map) {
+bool SpeedLimitDecider::HasTriggeredVRU(
+    const std::map<int32_t, VRURoundInfo> &vru_round_map) {
   triggered_vru_.id = -1;
   triggered_vru_.is_trigger = false;
   if (vru_round_map_.empty()) {
@@ -1544,7 +1586,7 @@ bool SpeedLimitDecider::HasTriggeredVRU(const std::map<int32_t, VRURoundInfo>& v
   }
   int32_t triggered_vru_id = -1;
   double min_distance = std::numeric_limits<double>::max();
-  for (const auto& vru : vru_round_map_) {
+  for (const auto &vru : vru_round_map_) {
     if (vru.second.is_trigger && vru.second.distance_to_ego < min_distance) {
       min_distance = vru.second.distance_to_ego;
       triggered_vru_id = vru.first;

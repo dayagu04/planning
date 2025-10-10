@@ -198,8 +198,7 @@ class LineSegmentf32 {
    *        the straight line expanded from the line segment.
    * @return The distance from the input point to the perpendicular foot.
    */
-  float GetPerpendicularFoot(const Vec2f &point,
-                              Vec2f *const foot_point) const;
+  float GetPerpendicularFoot(const Vec2f &point, Vec2f *const foot_point) const;
 
   float min_x() const { return min_x_; }
   float max_x() const { return max_x_; }

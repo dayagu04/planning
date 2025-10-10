@@ -30,6 +30,7 @@
 // #include "gap_selector_common.h"
 // #include "gap_selector_debug_info.h"
 // #include "config/vehicle_param_tmp.h"
+#include "fixed_time_quintic_path.h"
 #include "spline_projection.h"
 #include "task_basic_types.h"
 #include "tasks/task.h"
@@ -40,7 +41,6 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
-#include "fixed_time_quintic_path.h"
 // #define DEBUG_GAP_SELECTOR FALSE
 #define __COLLECT_GAP_SELECTOR_DEBUG_INFO__
 
@@ -93,7 +93,8 @@ class GapSelectorDecider : public Task {
   void GenerateLHTrajectory(
       const SecondOrderTimeOptimalTrajectory &lane_hold_time_speed_profile,
       TrajectoryPoints &traj_points);
-  void GenerateLHTrajectory(TrajectoryPoints &traj_points, const double lat_offset);
+  void GenerateLHTrajectory(TrajectoryPoints &traj_points,
+                            const double lat_offset);
   void GenerateLBTrajectory(TrajectoryPoints &traj_points);
 
   void ConstructTimeOptimal(

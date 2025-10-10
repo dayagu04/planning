@@ -16,8 +16,8 @@
 #include "speed/st_boundary.h"
 #include "src/library/convex_collision_detection/aabb2d.h"
 #include "src/library/convex_collision_detection/polygon_base.h"
-#include "utils/index_list.h"
 #include "trajectory/trajectory.h"
+#include "utils/index_list.h"
 
 namespace planning {
 namespace apa_planner {

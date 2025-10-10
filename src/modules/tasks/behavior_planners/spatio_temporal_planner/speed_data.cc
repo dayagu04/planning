@@ -19,9 +19,7 @@ bool SpeedData::EvaluateByTime(const double t,
     return false;
   }
 
-  auto comp = [](const SpeedInfo& sp, const double t) {
-    return sp.t < t;
-  };
+  auto comp = [](const SpeedInfo& sp, const double t) { return sp.t < t; };
 
   auto it_lower = std::lower_bound(begin(), end(), t, comp);
   if (it_lower == end()) {
@@ -58,9 +56,7 @@ bool SpeedData::EvaluateByS(const double s,
     return false;
   }
 
-  auto comp = [](const SpeedInfo& sp, const double s) {
-    return sp.s < s;
-  };
+  auto comp = [](const SpeedInfo& sp, const double s) { return sp.s < s; };
 
   auto it_lower = std::lower_bound(begin(), end(), s, comp);
   if (it_lower == end()) {
@@ -102,4 +98,4 @@ double SpeedData::TotalLength() const {
   return back().s - front().s;
 }
 
-}
+}  // namespace planning

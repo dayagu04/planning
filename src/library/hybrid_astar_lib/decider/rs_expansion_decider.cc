@@ -9,10 +9,12 @@
 
 namespace planning {
 
-void RSExpansionDecider::Process(
-    const float min_radius, const float slot_width, const float slot_length,
-    const Pose2f &ego_pose, const Pose2f &astar_end, const float veh_width,
-    const ParkSpaceType slot_type, const ParkingVehDirection park_dir) {
+void RSExpansionDecider::Process(const float min_radius, const float slot_width,
+                                 const float slot_length,
+                                 const Pose2f &ego_pose,
+                                 const Pose2f &astar_end, const float veh_width,
+                                 const ParkSpaceType slot_type,
+                                 const ParkingVehDirection park_dir) {
   rs_end_pose_ = astar_end;
   AstarDecider::Process(ego_pose, astar_end);
 

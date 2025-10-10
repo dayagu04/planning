@@ -19,7 +19,9 @@ class TrafficLightDecider : public Task {
   // 1. if
   bool Execute();
 
-  const bool& GetIsSmallFrontIntersection() { return is_small_front_intersection_;}
+  const bool &GetIsSmallFrontIntersection() {
+    return is_small_front_intersection_;
+  }
 
  private:
   // add virtual agent to agent manager

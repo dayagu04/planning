@@ -431,7 +431,8 @@ void BoundMaker::MakeComfortBound() {
                               v_lead * v_lead / (2.0 * b_hard),
                           v_ego * v_rel / (2.0 * b_hard));
     } else {
-      s_safety = s0 + std::max(0.0, tau * v_ego + v_ego * v_rel / (2.0 * b_max));
+      s_safety =
+          s0 + std::max(0.0, tau * v_ego + v_ego * v_rel / (2.0 * b_max));
     }
     comfort_upper_bound[i] = std::max(0.0, s_upper_bound_[i] - s_safety);
   }
@@ -557,9 +558,9 @@ void BoundMaker::GenerateUpperBoundInfo() {
       session_->planning_context().lon_ref_path_decider_output();
   if (lon_ref_path_decider_output.is_comfort_target_lat_follow ||
       lon_ref_path_decider_output.is_comfort_target_lon_cutin) {
-    for (size_t i = 0;
-         i < plan_points_num_ &&
-         i < lon_ref_path_decider_output.comfort_target_upper_bound_infos.size();
+    for (size_t i = 0; i < plan_points_num_ &&
+                       i < lon_ref_path_decider_output
+                               .comfort_target_upper_bound_infos.size();
          i++) {
       const auto& comfort_upper_bound_info =
           lon_ref_path_decider_output.comfort_target_upper_bound_infos[i];
@@ -743,7 +744,7 @@ void BoundMaker::JudgeDangerAgentByMaxDecelCurve(
 
 void BoundMaker::AddMaxDecelCurveDataToProto(
     const SecondOrderTimeOptimalTrajectory& max_deceleration_curve) {
-  // store max decel s curve in proto
+// store max decel s curve in proto
 #ifdef ENABLE_PROTO_LOG
   auto& debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto mutable_max_decel_target_data =
