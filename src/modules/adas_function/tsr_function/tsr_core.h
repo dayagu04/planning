@@ -53,7 +53,7 @@ class TsrCore {
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
-  bool tsr_speed_limit_valid_ = false; // 视觉感知限速信息标志位
+  bool perception_speed_limit_valid_ = false; // 视觉感知限速信息标志位
 
   // 限速标识牌信息 (视觉信息)
   uint32 tsr_speed_limit_ = 0;  // 限速值 单位:kph
@@ -78,6 +78,7 @@ class TsrCore {
   std::vector<adas_function::context::SpeedSignInfo> end_of_speed_sign_info_vector_;
 
   double current_map_speed_limit_ = 0.0;
+  uint16 current_map_type_ = 0;  // 地图类型: 0-无地图, 1-sd_map, 2-sd_pro_map
   void UpdateMapSpeedLimit(void);
   // 更新限速标识牌信息
   void UpdateTsrSpeedLimit(void);

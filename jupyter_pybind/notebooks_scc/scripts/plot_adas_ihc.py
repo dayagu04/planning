@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20250906/20250906-00-37-03/data_collection_CHERY_M32T_74572_EVENT_KEY_2025-09-06-00-37-03_no_camera.bag.1757301618.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82006/trigger/20250918/20250918-18-47-13/data_collection_CHERY_M32T_82006_EVENT_KEY_2025-09-18-18-47-13_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -98,7 +98,7 @@ fig_low_beam_reason.yaxis.axis_label_text_font_style = 'bold'
 # fig_dynamic_state = bkp.figure(x_axis_label='time', y_axis_label='ihc state',x_range = [adas_t_debug[0], adas_t_debug[-1]], width=700, height=200)
 # fig_dynamic_state.yaxis.axis_label_text_font_style = 'bold'
 
-f_machine = fig_machine.line('time', 'ihc_function::ihc_state', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ihc_state')
+f_machine = fig_machine.line('time', 'ihc_function::ihc_state', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ihc_state U,O,S,A,F')
 fig_machine.line('time', 'ihc_function::ihc_request_status', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ihc_request_status')
 fig_machine.line('time', 'ihc_function::ihc_request', source = adas_json_list_dict, line_width = 2, line_color = 'purple', line_dash = 'solid', legend_label = 'ihc_request')
 fig_machine.line('time', 'ihc_function::ihc_main_switch', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ihc_main_switch')

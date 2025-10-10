@@ -514,6 +514,13 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+
   uint16 elk_fault_code = 0;
   // bit 0
   // 实际车速信号无效
@@ -622,6 +629,15 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
     elk_fault_code += uint16_bit[12];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 13
+  // 故障降级
+  if ((degraded_driving_function_info_ptr->elk.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->elk.degraded == iflyauto::ERROR_DEGRADED)) {
+    elk_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/
   }
@@ -748,16 +764,16 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDP_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDP_CoolingTime_duration_ > 60.0) {
-      LDP_CoolingTime_duration_ = 60.0;
+    elk_left_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (elk_left_coolingtime_duration_ > 60.0) {
+      elk_left_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDP_CoolingTime_duration_ = 0.0;
+    elk_left_coolingtime_duration_ = 0.0;
   }
-  if ((LDP_CoolingTime_duration_ < 3.0) &&
+  if ((elk_left_coolingtime_duration_ < 3.0) &&
       fabs(GetContext.get_state_info()->driver_hand_trq) >
           GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
     elk_left_suppression_code += uint16_bit[5];
@@ -781,8 +797,9 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
 
   // bit 7
   // 纠偏侧为虚拟道线
-  if (GetContext.get_road_info()->current_lane.left_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.left_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.left_roadedge.valid == false)) {
     elk_left_suppression_code += uint16_bit[7];
   } else {
     /*do nothing*/
@@ -980,6 +997,15 @@ uint16 ElkCore::UpdateElkLeftKickDownCode(void) {
     /*do nothing*/
   }
 
+  // bit 8
+  if (elk_left_warning_time_ > GetContext.get_param()->kickdown_warning_time &&
+      (GetContext.get_road_info()->current_lane.left_line.valid) &&
+      fabs(GetContext.get_state_info()->fl_wheel_distance_to_line) >
+          GetContext.get_param()->kickdown_warning_distance_thr) {
+    elk_left_kickdown_code += uint16_bit[8];
+  } else {
+    /*do nothing*/
+  }
   return elk_left_kickdown_code &
          GetContext.get_param()->elk_left_kickdown_code_maskcode;
 }
@@ -1095,16 +1121,16 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDP_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDP_CoolingTime_duration_ > 60.0) {
-      LDP_CoolingTime_duration_ = 60.0;
+    elk_right_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (elk_right_coolingtime_duration_ > 60.0) {
+      elk_right_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDP_CoolingTime_duration_ = 0.0;
+    elk_right_coolingtime_duration_ = 0.0;
   }
-  if ((LDP_CoolingTime_duration_ < 3.0) &&
+  if ((elk_right_coolingtime_duration_ < 3.0) &&
       fabs(GetContext.get_state_info()->driver_hand_trq) >
           GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
     elk_right_suppression_code += uint16_bit[5];
@@ -1128,8 +1154,10 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
 
   // bit 7
   // 触发侧为虚拟道线
-  if (GetContext.get_road_info()->current_lane.right_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.right_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+       false)) {
     elk_right_suppression_code += uint16_bit[7];
   } else {
     /*do nothing*/
@@ -1323,6 +1351,15 @@ uint16 ElkCore::UpdateElkRightKickDownCode(void) {
     /*do nothing*/
   }
 
+  // bit 8
+  if (elk_right_warning_time_ > GetContext.get_param()->kickdown_warning_time &&
+      (GetContext.get_road_info()->current_lane.right_line.valid) &&
+      fabs(GetContext.get_state_info()->fr_wheel_distance_to_line) >
+          GetContext.get_param()->kickdown_warning_distance_thr) {
+    elk_right_kickdown_code += uint16_bit[8];
+  } else {
+    /*do nothing*/
+  }
   return elk_right_kickdown_code &
          GetContext.get_param()->elk_right_kickdown_code_maskcode;
 }
@@ -1345,7 +1382,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
-                        ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
+                        ELK_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (elk_main_switch_ == false) {
       elk_state =
@@ -1374,7 +1411,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_enable_code_ == 0) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1396,7 +1433,7 @@ iflyauto::ELKFunctionFSMWorkState ElkCore::ElkStateMachine(void) {
           iflyauto::ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (elk_fault_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
-          ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          ELK_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (elk_disable_code_) {
       elk_state = iflyauto::ELKFunctionFSMWorkState::
           ELK_FUNCTION_FSM_WORK_STATE_STANDBY;
@@ -1700,9 +1737,8 @@ void ElkCore::RunOnce(void) {
       GetContext.get_param()->lka_r_vector,
       GetContext.get_param()->lka_dec_y_gap_by_c2_vector, R_temp_thr);
 
-  // ELK—Roadedge场景，触发线逻辑修改
-  // 弯道，触发线外移
-  double roadedge_y_gap_dec_by_curv = 0.0;
+  // 弯道场景，路沿的可触发区域调整
+  double roadedge_y_gap_dec_by_curv = 0.0;  //路沿场景晚触发阈值
   double roadedge_C2_temp_thr = 0.0;
   double roadedge_R_temp_thr = 0.0;
   if (GetContext.get_road_info()->current_lane.left_roadedge.valid == true) {

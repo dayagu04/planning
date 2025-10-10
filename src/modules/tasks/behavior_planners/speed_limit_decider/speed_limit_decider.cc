@@ -331,15 +331,15 @@ double SpeedLimitDecider::JudgeCurvBySDProMap() {
     return 300.0;
   }
   if (!session_->environmental_model().get_route_info()->get_sdpromap_valid()) {
-    std::cout << "sd_map is invalid!!!" << std::endl;
+    ILOG_INFO << "sd_map is invalid!!!";
     return 300.0;
   }
   ad_common::math::Vec2d current_point;
   const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto &pose = ego_state->location_enu();
-  std::cout << "ego_pose_x_:" << pose.position.x
-            << "ego_pose_y_:" << pose.position.y << std::endl;
+  ILOG_INFO << "ego_pose_x_:" << pose.position.x
+            << "ego_pose_y_:" << pose.position.y;
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
   const auto &sdpro_map =
@@ -508,7 +508,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   bool is_on_ramp = route_info_output.is_on_ramp;
   //set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
-    std::cout << "sd_map is invalid!!!" << std::endl;
+    ILOG_INFO << "sd_map is invalid!!!";
     //map info invalid, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
@@ -531,6 +531,32 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   } else {
     v_cruise_limit_ = current_segment->speed_limit();//kph
+    JSON_DEBUG_VALUE("v_limit_tencent", v_cruise_limit_);
+  }
+
+  double v_limit_gaode = 0;
+  if (!environmental_model.get_route_info()->get_sdmap_valid()) {
+    ILOG_INFO << "sd_map is invalid!!!";
+  } else {
+    const auto &sd_map = environmental_model.get_route_info()->get_sd_map();//cur_road_speed_limit()
+    if (sd_map.GetNaviRoadInfo() != std::nullopt) {
+        v_limit_gaode = sd_map.GetNaviRoadInfo().value().cur_road_speed_limit();
+    }
+    const auto cur_seg = sd_map.GetNearestRoadWithHeading(
+      current_point, search_distance, ego_heading_angle, max_heading_diff,
+      nearest_s, nearest_l);
+    if (cur_seg != nullptr) {
+      auto v_limit_camera_list_info = sd_map.GetCameraInfoList(cur_seg->id(), nearest_s, 400.0);
+      int camera_num = 10;
+      camera_num = v_limit_camera_list_info.size();
+      JSON_DEBUG_VALUE("camera_num", camera_num);
+    }
+    //GetCameraInfoList();
+  }
+  JSON_DEBUG_VALUE("v_limit_gaode", v_limit_gaode);
+
+  if (v_limit_gaode > 30.0) {
+    v_cruise_limit_ = v_limit_gaode;
   }
 
   const auto virtual_lane_manager =

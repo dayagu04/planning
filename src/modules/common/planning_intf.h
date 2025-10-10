@@ -26,6 +26,7 @@
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
+#include "degraded_driving_function_c.h"
 
 namespace iflyauto {
 namespace interface {
@@ -63,7 +64,6 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::FusionDecelerInfo &data) = 0;
   virtual void Feed_IflytekPredictionPredictionResult(
       const iflyauto::PredictionResult &data) = 0;
-
   virtual void Feed_IflytekCameraPerceptionTrafficSignRecognition(
       const iflyauto::CameraPerceptionTsrInfo &data) = 0;
   virtual void Feed_IflytekCameraPerceptionScene(
@@ -79,6 +79,8 @@ class PlanningInterface : public ComponentInterface {
       const iflyauto::FusionOccupancyObjectsInfo &data) = 0;
   virtual void Feed_IflytekControlControlCommand(
       const iflyauto::ControlOutput &data) = 0;
+  virtual void Feed_IflytekFmADegradeFunciton(
+    const iflyauto::DegradedDrivingFunction &data) = 0;
 
   virtual void RegWriter_IflytekPlanningPlan(
       const std::function<void(const iflyauto::PlanningOutput &)> &writer) = 0;

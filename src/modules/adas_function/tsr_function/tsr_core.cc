@@ -46,7 +46,7 @@ uint16 TsrCore::UpdateTsrEnableCode(void) {
   //   /*do nothing*/
   // }
 
-  // if (tsr_speed_limit_valid_ == false) {
+  // if (perception_speed_limit_valid_ == false) {
   //   enable_code += uint16_bit[1];
   // } else {
   //   /*do nothing*/
@@ -77,7 +77,7 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
   //   /*do nothing*/
   // }
 
-  // if (tsr_speed_limit_valid_ == false) {
+  // if (perception_speed_limit_valid_ == false) {
   //   disable_code += uint16_bit[1];
   // } else {
   //   /*do nothing*/
@@ -145,6 +145,21 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
   // 判断横摆角速度信号有效性
   if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
     fault_code += uint16_bit[5];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 故障降级
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+  
+  if ((degraded_driving_function_info_ptr->tsr.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->tsr.degraded == iflyauto::ERROR_DEGRADED)) {
+    // fault_code += uint16_bit[6];
   } else {
     /*do nothing*/
   }
@@ -385,8 +400,36 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
-  // sd_map信息，获取限速
+
+  // 地图限速获取逻辑：优先使用sd_map，如果sd_map无效或限速为0，则使用sd_pro_map
+  bool sd_map_speed_limit_valid = false;
+  uint32 sd_map_speed_limit = 0;
+  
+  // 先尝试获取sd_map限速信息
   if (GetContext.get_session()->environmental_model()
+                                .get_route_info()
+                                ->get_sdmap_valid()) {
+    const auto &sd_map_info_ptr = GetContext.get_session()
+                                  ->environmental_model()
+                                  .get_route_info()
+                                  ->get_sd_map();
+    
+    if (sd_map_info_ptr.GetNaviRoadInfo() != std::nullopt) {
+      sd_map_speed_limit = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      if (sd_map_speed_limit > 0) {
+        sd_map_speed_limit_valid = true;
+      }
+    }
+  }
+  
+  // 如果sd_map限速有效且大于0，则使用sd_map限速
+  if (sd_map_speed_limit_valid) {
+    current_map_speed_limit_valid_ = true;
+    current_map_speed_limit_ = sd_map_speed_limit;
+    current_map_type_ = 1;  // sd_map
+  }
+  // 否则尝试获取sd_pro_map限速信息
+  else if (GetContext.get_session()->environmental_model()
                                 .get_route_info()
                                 ->get_sdpromap_valid()) {
     const auto &sd_pro_map_info_ptr = GetContext.get_session()
@@ -412,13 +455,16 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     if (!current_link) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
+      current_map_type_ = 0;  // 无地图
     } else {
       current_map_speed_limit_ = current_link->speed_limit();
       current_map_speed_limit_valid_ = true;
+      current_map_type_ = 2;  // sd_pro_map
     }
   } else {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
+    current_map_type_ = 0;  // 无地图
   }
 
   // 判断限速标识牌是否需要抑制显示
@@ -435,7 +481,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     // 进入新道路, 则清掉视觉限速信息与视觉解除限速信息, 采用地图限速信息
     speed_limit_exist_in_view_flag_ = false;
     speed_limit_exist_in_view_ = 0;
-    tsr_speed_limit_valid_ = false;
+    perception_speed_limit_valid_ = false;
     tsr_speed_limit_ = current_map_speed_limit_;
     end_of_speed_sign_value_ = 0;
     end_of_speed_sign_display_time_ = 0.0;
@@ -522,7 +568,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   if (speed_limit_exist_in_view_flag_last == true &&
       speed_limit_exist_in_view_flag_ == false) {
     // 通过限速标志消失与否判断车辆是否驶入限速路段
-    if (tsr_speed_limit_valid_ == false) {
+    if (perception_speed_limit_valid_ == false) {
       tsr_speed_limit_ = speed_limit_exist_in_view_last;
     } else {
       // 如果视觉限速信息还存在，且有新的限速感知，则采用新的限速感知
@@ -530,19 +576,19 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
         tsr_speed_limit_ = speed_limit_exist_in_view_last;
       }
     }
-    tsr_speed_limit_valid_ = true;
+    perception_speed_limit_valid_ = true;
   } else if (speed_limit_exist_in_view_flag_ == true) {
     // 当标志牌一直存在时，如果限速值存在变化时，判断进入了限速路段
     if ((speed_limit_exist_in_view_last != speed_limit_exist_in_view_) &&
         (speed_limit_exist_in_view_flag_last == true)) {
       tsr_speed_limit_ = speed_limit_exist_in_view_last;
-      tsr_speed_limit_valid_ = true;
+      perception_speed_limit_valid_ = true;
     }
   } else {
     /*do nothing*/
   }
 
-  if (tsr_speed_limit_valid_ == false) {
+  if (perception_speed_limit_valid_ == false) {
     // 没有视觉限速有效值, 采用地图限速信息
     tsr_speed_limit_ = current_map_speed_limit_;
   } else {
@@ -555,8 +601,8 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     // 驶过解除限速标识，
     // 1. 清除小于解除限速牌的限速值
     // 2. 显示解除显示标识
-    if (tsr_speed_limit_valid_ == true && tsr_speed_limit_ <= end_of_speed_sign_value_) {
-      tsr_speed_limit_valid_ = false;
+    if (perception_speed_limit_valid_ == true && tsr_speed_limit_ <= end_of_speed_sign_value_) {
+      perception_speed_limit_valid_ = false;
       tsr_speed_limit_ = end_of_speed_sign_value_; // 解除限速牌限速值
       end_of_speed_sign_display_flag_ = true; // 显示解除限速牌
       end_of_speed_sign_display_time_ = 0.0;
@@ -566,11 +612,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   if (accumulated_path_length_ >
       GetContext.get_param()->tsr_reset_path_length) {
     // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
-    tsr_speed_limit_valid_ = false;
+    perception_speed_limit_valid_ = false;
     tsr_speed_limit_ = current_map_speed_limit_;
   }
 
-  if (tsr_speed_limit_valid_ == false && end_of_speed_sign_display_flag_ == false) {
+  if (perception_speed_limit_valid_ == false && end_of_speed_sign_display_flag_ == false) {
     // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
     if (current_map_speed_limit_valid_ == true) {
       tsr_speed_limit_ = current_map_speed_limit_;
@@ -583,47 +629,32 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
   // 只透传地图限速信息
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  
+  perception_speed_limit_valid_ = false; // 强制视觉限速信息无效
   // sd_map信息，获取限速
   if (GetContext.get_session()->environmental_model()
                                 .get_route_info()
-                                ->get_sdpromap_valid()) {
-    const auto &sd_pro_map_info_ptr = GetContext.get_session()
+                                ->get_sdmap_valid()) {
+    const auto &sd_map_info_ptr = GetContext.get_session()
                                   ->environmental_model()
                                   .get_route_info()
-                                  ->get_sdpro_map();
+                                  ->get_sd_map();
     
-    // 获取当前道路限速值
-    auto localization_info = GetContext.mutable_session()->mutable_environmental_model()->
-                              get_ego_state_manager();
-    ad_common::math::Vec2d current_point;
-    current_point.set_x(localization_info->location_enu().position.x);
-    current_point.set_y(localization_info->location_enu().position.y);
-    const double search_distance = 50.0;
-    const double max_heading_diff = PI / 4;
-    double temp_nearest_s = 0;
-    double nearest_l = 0;
-    const double ego_heading_angle = localization_info->heading_angle();
-    const iflymapdata::sdpro::LinkInfo_Link* current_link = sd_pro_map_info_ptr.GetNearestLinkWithHeading(
-        current_point, search_distance, ego_heading_angle, max_heading_diff,
-        temp_nearest_s, nearest_l);
-    
-    if (!current_link) {
+    if (sd_map_info_ptr.GetNaviRoadInfo() == std::nullopt) {
       tsr_speed_limit_ = 0;
-      tsr_speed_limit_valid_ = false;
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
+      current_map_type_ = 0;  // 无地图
     } else {
-      tsr_speed_limit_ = current_link->speed_limit();
-      tsr_speed_limit_valid_ = true;
+      tsr_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
       current_map_speed_limit_valid_ = true;
-      current_map_speed_limit_ = current_link->speed_limit();
+      current_map_speed_limit_ = sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      current_map_type_ = 1;  // sd_map
     }
   } else {
     tsr_speed_limit_ = 0;
-    tsr_speed_limit_valid_ = false;
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
+    current_map_type_ = 0;  // 无地图
   }
   
   return;
@@ -722,11 +753,11 @@ void TsrCore::UpdateTsrSpeedLimitNew(void) {
     uint32 current_tsr_speed_limit = GetHighestSpeedLimit();
     if (current_tsr_speed_limit > 0) {
       // 限速信息有效
-      tsr_speed_limit_valid_ = true;
+      perception_speed_limit_valid_ = true;
       tsr_speed_limit_ = current_tsr_speed_limit;
     } else {
       // 限速信息无效
-      tsr_speed_limit_valid_ = false;
+      perception_speed_limit_valid_ = false;
       tsr_speed_limit_ = 0;
     }
     if (last_tsr_speed_limit != tsr_speed_limit_) {
@@ -734,7 +765,7 @@ void TsrCore::UpdateTsrSpeedLimitNew(void) {
     }
   }
   if (accumulated_path_length_ > GetContext.get_param()->tsr_reset_path_length) {
-    tsr_speed_limit_valid_ = false;
+    perception_speed_limit_valid_ = false;
     tsr_speed_limit_ = 0;
   }
   return;
@@ -849,7 +880,7 @@ void TsrCore::CalculatePathLengthAccumulated() {
   }
   
   // 非NOA模式下，正常计算累积距离用于感知限速的距离衰减
-  if (tsr_speed_limit_change_flag_ == true || tsr_speed_limit_valid_ == false) {
+  if (tsr_speed_limit_change_flag_ == true || perception_speed_limit_valid_ == false) {
     accumulated_path_length_ = 0.0;
     // 重置限速变化标志，避免标志一直为true
     tsr_speed_limit_change_flag_ = false;
@@ -987,8 +1018,9 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("end_of_speed_sign_display_flag_", end_of_speed_sign_display_flag_);
   JSON_DEBUG_VALUE("current_map_speed_limit_", current_map_speed_limit_);
   JSON_DEBUG_VALUE("current_map_speed_limit_valid_", current_map_speed_limit_valid_);
+  JSON_DEBUG_VALUE("current_map_type_", current_map_type_);
   JSON_DEBUG_VALUE("speed_limit_suppression_flag_", speed_limit_suppression_flag_);
-  JSON_DEBUG_VALUE("tsr_speed_limit_valid_", tsr_speed_limit_valid_);
+  JSON_DEBUG_VALUE("perception_speed_limit_valid_", perception_speed_limit_valid_);
   JSON_DEBUG_VALUE("tsr_warning_image_", tsr_warning_image_);
   JSON_DEBUG_VALUE("tsr_warning_voice_", tsr_warning_voice_);
   JSON_DEBUG_VALUE("tsr_overspeed_status_", overspeed_status_);

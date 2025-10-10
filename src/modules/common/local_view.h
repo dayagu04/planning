@@ -97,6 +97,10 @@ struct LocalView {
 
   iflyauto::FusionDecelerInfo fusion_speed_bump_info;
   double fusion_speed_bump_info_recv_time = 0.0;
+
+  // 功能降级话题
+  iflyauto::DegradedDrivingFunction degraded_driving_function_info;
+  double degraded_driving_function_info_recv_time = 0.0;
 };
 
 }  // namespace planning

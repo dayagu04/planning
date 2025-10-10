@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20250806/20250806-18-00-42/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-08-06-18-00-42_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_81865/trigger/20250916/20250916-18-08-24/data_collection_CHERY_M32T_81865_EVENT_KEY_2025-09-16-18-08-24_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

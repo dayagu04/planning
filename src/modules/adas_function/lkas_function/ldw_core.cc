@@ -460,6 +460,11 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
 
   uint32 ldw_fault_code = 0;
 
@@ -555,7 +560,14 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   } else {
     /*do nothing*/
   }
-
+  // bit 13
+  // 故障降级
+  if ((degraded_driving_function_info_ptr->ldw.degraded == iflyauto::INHIBIT ||
+       degraded_driving_function_info_ptr->ldw.degraded == iflyauto::ERROR_DEGRADED)) {
+    ldw_fault_code += uint16_bit[13];
+  } else {
+    /*do nothing*/
+  }
   return ldw_fault_code & GetContext.get_param()->ldw_fault_code_maskcode;
 }
 
@@ -633,16 +645,16 @@ uint32 LdwCore::UpdateLdwLeftSuppressionCode(void) {
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDW_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDW_CoolingTime_duration_ > 60.0) {
-      LDW_CoolingTime_duration_ = 60.0;
+    ldw_left_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (ldw_left_coolingtime_duration_ > 60.0) {
+      ldw_left_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDW_CoolingTime_duration_ = 0.0;
+    ldw_left_coolingtime_duration_ = 0.0;
   }
-  if (LDW_CoolingTime_duration_ < 3.0) {
+  if (ldw_left_coolingtime_duration_ < 3.0) {
     ldw_left_suppression_code += uint16_bit[3];
   } else {
     /*do nothing*/
@@ -906,16 +918,16 @@ uint32 LdwCore::UpdateLdwRightSuppressionCode(void) {
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldw_state_ != iflyauto::LDWFunctionFSMWorkState::
                         LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
-    LDW_CoolingTime_duration_ += GetContext.get_param()->dt;
-    if (LDW_CoolingTime_duration_ > 60.0) {
-      LDW_CoolingTime_duration_ = 60.0;
+    ldw_right_coolingtime_duration_ += GetContext.get_param()->dt;
+    if (ldw_right_coolingtime_duration_ > 60.0) {
+      ldw_right_coolingtime_duration_ = 60.0;
     } else {
       /*do nothing*/
     }
   } else {
-    LDW_CoolingTime_duration_ = 0.0;
+    ldw_right_coolingtime_duration_ = 0.0;
   }
-  if (LDW_CoolingTime_duration_ < 3.0) {
+  if (ldw_right_coolingtime_duration_ < 3.0) {
     ldw_right_suppression_code += uint16_bit[3];
   } else {
     /*do nothing*/
@@ -1191,7 +1203,7 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (ldw_state_ == iflyauto::LDWFunctionFSMWorkState::
-                        LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
+                        LDW_FUNCTION_FSM_WORK_STATE_FAULT) {
     // 上一时刻处于LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
     if (ldw_main_switch_ == false) {
       ldw_state =
@@ -1220,7 +1232,7 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
           iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldw_fault_code_) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
-          LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          LDW_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldw_enable_code_ == 0) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
           LDW_FUNCTION_FSM_WORK_STATE_ACTIVE_NO_INTERVENTION;
@@ -1242,7 +1254,7 @@ iflyauto::LDWFunctionFSMWorkState LdwCore::LdwStateMachine(void) {
           iflyauto::LDWFunctionFSMWorkState::LDW_FUNCTION_FSM_WORK_STATE_OFF;
     } else if (ldw_fault_code_) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
-          LDW_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+          LDW_FUNCTION_FSM_WORK_STATE_FAULT;
     } else if (ldw_disable_code_) {
       ldw_state = iflyauto::LDWFunctionFSMWorkState::
           LDW_FUNCTION_FSM_WORK_STATE_STANDBY;

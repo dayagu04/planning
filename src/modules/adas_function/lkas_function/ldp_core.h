@@ -66,7 +66,8 @@ class LdpCore {
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool left_suppress_repeat_warning_flag_ = false;
   // LDP纠偏冷却时间阈值 单位:s
-  double LDP_CoolingTime_duration_ = 0.0;
+  double ldp_right_coolingtime_duration_ = 0.0;
+  double ldp_left_coolingtime_duration_ = 0.0;
   // LDP变道纠偏抑制时间阈值 单位:s
   double LDP_LaneChange_duration_ = 10.0;
   // LDP手力矩作用时间阈值 单位:s
@@ -81,6 +82,7 @@ class LdpCore {
   double ldp_left_kickdown_lat_v_duration_ = 0.0;
   uint32 ldp_left_kickdown_code_ = 255;
   uint32 UpdateLdpLeftKickDownCode(void);
+//   double left_lane_width_ = 0.0;
 
   // 是否抑制重复报警的标志位 false:不抑制 true:抑制
   bool right_suppress_repeat_warning_flag_ = false;
