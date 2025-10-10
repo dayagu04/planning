@@ -2900,6 +2900,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_care_rear_obstacle =
       IsRearObstacle(obstacle) && is_agent_current_pred_lonoverlap_;
   bool is_side_obstacle = false;
+  bool is_valid_first_soft_bound = true;
   BoundType bound_type = BoundType::DYNAMIC_AGENT;
   const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   const bool is_find_lat_obs_position_iter =
@@ -2923,6 +2924,22 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left,
       bound_type, is_avoid_side_ignore_obj, is_side_obstacle);
 
+  if ((is_find_lat_obs_position_iter &&
+      lat_obs_position_iter->second.side_car &&
+      (!lat_obs_position_iter->second.front_car)) ||
+      is_care_rear_obstacle ||
+      is_avoid_side_ignore_obj) {
+    is_valid_first_soft_bound = false;
+  }
+
+  if (bound_hierarchy == BoundHierarchy :: FIRST_SOFT_BOUND &&
+      !is_valid_first_soft_bound) {
+    // 侧方ignore障碍物的避让
+    // 后方障碍物避让
+    // 从后方来的侧方障碍物，第一层和第二层Bound一致
+    return;
+  }
+  
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.emergency_avoid &&
       !obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
