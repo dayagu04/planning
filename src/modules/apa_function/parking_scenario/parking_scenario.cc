@@ -1248,7 +1248,7 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
     return false;
   }
 
-  if (frame_.remain_dist_obs < 0.5) {
+  if (frame_.remain_dist_obs < 0.08) {
     return true;
   }
 
@@ -1258,6 +1258,7 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
 void ParkingScenario::ScenarioSuspend() {
   ClearTimeBySuspendStatus();
 
+  frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
 
   return;
