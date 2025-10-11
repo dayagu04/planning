@@ -25,7 +25,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # e0y8:  14520
 # e0y9:  18049
 # e0y10: 20267
-bag_path ='/data_cold/abu_zone/autoparse/chery_m32t_81865/trigger/20250925/20250925-23-22-08/park_in_data_collection_CHERY_M32T_81865_EVENT_FILTER_2025-09-25-23-22-08_no_camera.bag'
+bag_path ='/data_cold/abu_zone/autoparse/bestune_e541_00110/trigger/20251008/20251008-18-09-22/park_in_data_collection_BESTUNE_E541_00110_EVENT_FILTER_2025-10-08-18-09-22_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
@@ -121,9 +121,9 @@ data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 data_astar_collision_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 # 路径关键点处的圆
-data_anchor_point_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
+data_anchor_point_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[], 'car_circle_rn':[]})
 # 路径所有的圆
-data_path_all_circle = ColumnDataSource(data = {'car_circle_yn':[], 'car_circle_xn':[], 'car_circle_rn':[]})
+data_path_all_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[], 'car_circle_rn':[]})
 data_rs_path = ColumnDataSource(data={'plan_path_x': [],
                                       'plan_path_y': [],
                                       'plan_path_heading': [], })
@@ -175,14 +175,14 @@ fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#
 fig1.patches('y_vec', 'x_vec', source = data_current_gear_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'online_traj_envelop', visible = False)
 fig1.multi_line('y', 'x',source = all_rs_heuristic_path, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'rs_h_path',visible = False)
 fig1.circle('y', 'x', source = data_obstacle_points, size=4, color='red', legend_label = 'virtual_wall')
-fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_anchor_point_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'anchor_point_circle', visible = False)
-fig1.circle(x ='car_circle_yn', y ='car_circle_xn', radius = 'car_circle_rn', source = data_path_all_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'path_circle', visible = False)
+fig1.circle('car_circle_yn', 'car_circle_xn', radius = 'car_circle_rn', source = data_anchor_point_circle, line_alpha = 0.5, line_width = 1, line_color = "red", fill_alpha=0, legend_label = 'anchor_point_circle', visible = False)
+fig1.circle('car_circle_yn', 'car_circle_xn', radius = 'car_circle_rn', source = data_path_all_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'path_circle', visible = False)
 fig1.line('y_vec', 'x_vec', source = data_search_sequence_path, line_width = 2, line_color = 'blue', line_dash = 'solid', line_alpha = 0.8, legend_label = 'search_sequence',visible = False)
 fig1.circle('y_vec', 'x_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_delete_node, size=4, color='red',  legend_label = 'all_delete_node')
 fig1.circle('y_vec', 'x_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 fig1.circle('y_vec', 'x_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
-fig1.line('plan_path_x', 'plan_path_y', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
+fig1.line('plan_path_y', 'plan_path_x', source = data_polynomial_path, line_width = 6, line_color = 'purple', line_dash = 'solid', line_alpha = 0.5, legend_label = 'polynomial')
 fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
 
 ### sliders config
@@ -244,9 +244,9 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   # vehicle_type = 'JAC_S811'
   # vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_T26'
-  vehicle_type = 'CHERY_M32T'
+  # vehicle_type = 'CHERY_M32T'
+  vehicle_type = 'BESTUNE_E541'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
-  car_circle_x, car_circle_y, car_circle_r = load_car_circle_coord_by_veh(vehicle_type)
   car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
       vehicle_type, 0.0)
   index_map = bag_loader.get_msg_index(bag_time)
@@ -673,14 +673,13 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   # rs
   rs_path = replay_simulation_hybrid_astar.GetReedsShapePath()
   # print('rs path',len(rs_path))
-
-  if (len(rs_path) > 0):
-    data_rs_path.data.update({
+  data_rs_path.data.update({
         'plan_path_x': [],
         'plan_path_y': [],
         'plan_path_heading': [],
     })
 
+  if (len(rs_path) > 0):
     path_x = []
     path_y = []
     path_heading = []
@@ -747,10 +746,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   })
 
   # anchor point circle
-  car_circle_xn = []
-  car_circle_yn = []
-  car_circle_rn = []
-
   car_circle_x = []
   car_circle_y = []
   car_circle_r = []
@@ -762,8 +757,12 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     car_circle_x.append(footprint_model[i][0])
     car_circle_y.append(footprint_model[i][1])
     car_circle_r.append(footprint_model[i][2])
+    # print('diameter',car_circle_r[i] * 2.0)
 
   points = replay_simulation_hybrid_astar.GetAnchorPoints()
+  car_circle_xn = []
+  car_circle_yn = []
+  car_circle_rn = []
   for j in range(len(points)):
     for i in range(len(car_circle_x)):
       tmp_x, tmp_y = local2global(car_circle_x[i], car_circle_y[i], points[j][0], points[j][1], points[j][2])
@@ -822,12 +821,12 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
         path_y.append(astar_path[i][1])
         path_heading.append(astar_path[i][2])
 
-    # update value
-    data_astar_path.data.update({
-        'plan_path_x': path_x,
-        'plan_path_y': path_y,
-        'plan_path_heading': path_heading,
-    })
+  # update value
+  data_astar_path.data.update({
+      'plan_path_x': path_x,
+      'plan_path_y': path_y,
+      'plan_path_heading': path_heading,
+  })
 
   # envelop
   for k in range(len(path_x)):

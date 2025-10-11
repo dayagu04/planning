@@ -685,12 +685,13 @@ const Pose2f& HybridAStarInterface::GetGoalPoint() {
   return target_regulator_goal_;
 }
 
-FootPrintCircleModel* HybridAStarInterface::GetSlotOutsideCircleFootPrint() {
+FootPrintCircleModel* HybridAStarInterface::GetCircleFootPrint(
+    const HierarchySafeBuffer buffer) {
   if (hybrid_astar_ == nullptr) {
     return nullptr;
   }
 
-  return hybrid_astar_->GetSlotOutsideCircleFootPrint();
+  return hybrid_astar_->GetCircleFootPrint(buffer);
 }
 
 const bool HybridAStarInterface::IsEgoOverlapWithSlot() {

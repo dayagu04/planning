@@ -300,10 +300,20 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   planning::Transform2d tf;
   tf.SetBasePose(ego_global_pose);
 
-  const EulerDistanceTransform *edt_ =
-      hybrid_astar_interface_->GetEulerDistanceTransform();
+  if (hybrid_astar_interface_ == nullptr) {
+    return;
+  }
+
+  FootPrintCircleModel *model = hybrid_astar_interface_->GetCircleFootPrint(
+      HierarchySafeBuffer::INSIDE_SLOT_BUFFER);
+
+  if (model == nullptr) {
+    return;
+  }
+
   const FootPrintCircleList circle_footprint =
-      edt_->GetCircleFootPrint(AstarPathGear::NORMAL);
+      model->GetLocalFootPrintCircleByGear(AstarPathGear::NORMAL);
+
   footprint_circle_model_global_.clear();
   footprint_circle_model_local_.clear();
   const FootPrintCircle *circle = &circle_footprint.max_circle;
@@ -317,7 +327,8 @@ void UpdateFootprintCircle(const Eigen::Vector3d &ego_pose) {
   footprint_circle_model_local_.push_back(Eigen::Vector3d(
       circle->pos.x, circle->pos.y, circle->radius));
 
-  for (int i = 0; i < circle_footprint.size; i++) {
+  for (int i = 0; i < std::min(circle_footprint.size, FOOTPRINT_CIRCLE_NUM);
+       i++) {
     circle = &circle_footprint.circles[i];
     tf.ULFLocalPointToGlobal(&global_position2d,
                              planning::Position2D(circle->pos.x, circle->pos.y));

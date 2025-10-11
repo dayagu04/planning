@@ -21,8 +21,8 @@ NodeCollisionDetect::NodeCollisionDetect(const ParkObstacleList* obstacles,
       grid_map_bound_(XYbounds),
       request_(request) {}
 
-const bool NodeCollisionDetect::IsPointBeyondBound(const float x,
-                                                   const float y) const {
+const bool NodeCollisionDetect::IsPointOutOfGridMapBound(const float x,
+                                                         const float y) const {
   if (x > grid_map_bound_->x_max || x < grid_map_bound_->x_min ||
       y > grid_map_bound_->y_max || y < grid_map_bound_->y_min) {
     return true;
@@ -66,7 +66,7 @@ const bool NodeCollisionDetect::IsFootPrintCollision(const Transform2d& tf) {
   return false;
 }
 
-bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
+bool NodeCollisionDetect::IsValidByConvexHull(Node3d* node) {
   if (node == nullptr) {
     return false;
   }
@@ -95,63 +95,23 @@ bool NodeCollisionDetect::ValidityCheckByConvex(Node3d* node) {
   double check_start_time = IflyTime::Now_ms();
 #endif
 
-  Polygon2D global_polygon;
   Pose2D global_pose;
-  bool is_collision = false;
-  cdl::AABB path_point_aabb;
-
-  Polygon2D* veh_local_polygon = GetVehPolygon(node->GetGearType());
+  Transform2d tf;
 
   for (int i = check_start_index; i < node_step_size; ++i) {
     // check bound
-    if (IsPointBeyondBound(path.points[i].x, path.points[i].y)) {
-      node->SetCollisionType(NodeCollisionType::MAP_BOUND);
-      return false;
-    }
+    // if (IsPointOutOfGridMapBound(path.points[i].x, path.points[i].y)) {
+    //   node->SetCollisionType(NodeCollisionType::MAP_BOUND);
+    //   return false;
+    // }
 
     global_pose.x = path.points[i].x;
     global_pose.y = path.points[i].y;
     global_pose.theta = path.points[i].theta;
+    tf.SetBasePose(global_pose);
 
-    RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
-
-    if (clear_zone_->IsValidClearZone()) {
-      GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-      if (clear_zone_->IsContain(path_point_aabb)) {
-        // ILOG_INFO << "clear";
-        continue;
-      }
-    }
-
-    for (const auto& obstacle : obstacles_->virtual_obs) {
-      gjk_interface_.PolygonPointCollisionDetect(&is_collision, &global_polygon,
-                                                 obstacle);
-
-      if (is_collision) {
-        node->SetCollisionType(NodeCollisionType::VIRTUAL_WALL);
-        return false;
-      }
-    }
-
-    for (const auto& obstacle : obstacles_->point_cloud_list) {
-      // envelop box check
-      gjk_interface_.PolygonCollisionByCircleCheck(
-          &is_collision, &obstacle.envelop_polygon, &global_polygon, 0.01);
-
-      if (!is_collision) {
-        continue;
-      }
-
-      // internal points
-      for (size_t j = 0; j < obstacle.points.size(); j++) {
-        gjk_interface_.PolygonPointCollisionDetect(
-            &is_collision, &global_polygon, obstacle.points[j]);
-
-        if (is_collision) {
-          node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
-          return false;
-        }
-      }
+    if (IsFootPrintCollision(tf)) {
+      return false;
     }
   }
 
@@ -227,7 +187,7 @@ bool NodeCollisionDetect::RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
   return is_valid;
 }
 
-const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
+const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
   if (node == nullptr) {
     return false;
   }
@@ -236,7 +196,6 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     return false;
   }
 
-  node->SetDistToObs(0.0f);
   const NodePath& path = node->GetNodePath();
 
   // The first {x, y, phi} is collision free unless they are start and end
@@ -251,30 +210,24 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
 
   Pose2f global_pose;
   Transform2f tf;
-  AstarPathGear node_gear = node->GetGearType();
-  AstarPathGear point_gear;
+  AstarPathGear point_gear = node->GetGearType();
   bool is_circle_path = IsCirclePathBySteeringWheel(node->GetSteer());
   FootPrintCircleModel* footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
 
-  float dist = 100.0;
-  float min_dist = 100.0;
+  float dist = 100.0f;
+  float min_dist = 100.0f;
 
   for (int i = check_start_index; i < node_step_size; ++i) {
-    // check bound
-    if (IsPointBeyondBound(path.points[i].x, path.points[i].y)) {
-      node->SetCollisionType(NodeCollisionType::MAP_BOUND);
-      return false;
-    }
+    // check bound, has checked this in node generator
+    // if (IsPointOutOfGridMapBound(path.points[i].x, path.points[i].y)) {
+    //   node->SetCollisionType(NodeCollisionType::MAP_BOUND);
+    //   node->SetDistToObs(0.0f);
+    //   return false;
+    // }
 
     global_pose = path.points[i];
     tf.SetBasePose(global_pose);
-
-    if (i == node_step_size - 1) {
-      point_gear = node_gear;
-    } else {
-      point_gear = AstarPathGear::NONE;
-    }
 
 // for accelerate calculation, use macro
 #if ENABLE_OBS_DIST_G_COST
@@ -294,6 +247,7 @@ const bool NodeCollisionDetect::ValidityCheckByEDT(Node3d* node) {
     if (edt_->IsCollisionForPoint(&tf, point_gear, footprint_model)) {
       node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
       // node->SetCollisionID(i);
+      node->SetDistToObs(0.0f);
 
       return false;
     }
@@ -328,11 +282,8 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
   // configuration of search problem
   int check_start_index = 0;
 
-  Polygon2D global_polygon;
   Pose2D global_pose;
-  bool is_collision;
-  cdl::AABB path_point_aabb;
-  Polygon2D* veh_local_polygon = nullptr;
+  Transform2d tf;
 
   for (int seg_id = 0; seg_id < reeds_shepp_path->size; seg_id++) {
     const RSPathSegment* segment = &reeds_shepp_path->paths[seg_id];
@@ -346,7 +297,8 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
 
     for (int i = check_start_index; i < point_size; ++i) {
       // check bound
-      if (IsPointBeyondBound(segment->points[i].x, segment->points[i].y)) {
+      if (IsPointOutOfGridMapBound(segment->points[i].x,
+                                   segment->points[i].y)) {
         node->SetCollisionType(NodeCollisionType::MAP_BOUND);
         return false;
       }
@@ -355,49 +307,10 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
       global_pose.y = segment->points[i].y;
       global_pose.theta = segment->points[i].theta;
 
-      veh_local_polygon = GetVehPolygon(segment->gear);
-
-      RULocalPolygonToGlobal(&global_polygon, veh_local_polygon, &global_pose);
-
-      if (clear_zone_->IsValidClearZone()) {
-        GetBoundingBoxByPolygon(&path_point_aabb, &global_polygon);
-        if (clear_zone_->IsContain(path_point_aabb)) {
-          // ILOG_INFO << "clear";
-          continue;
-        }
+      tf.SetBasePose(global_pose);
+      if (IsFootPrintCollision(tf)) {
+        return false;
       }
-
-      for (const auto& obstacle : obstacles_->virtual_obs) {
-        gjk_interface_.PolygonPointCollisionDetect(&is_collision,
-                                                   &global_polygon, obstacle);
-
-        if (is_collision) {
-          node->SetCollisionType(NodeCollisionType::VIRTUAL_WALL);
-          return false;
-        }
-      }
-
-      for (const auto& obstacle : obstacles_->point_cloud_list) {
-        // envelop box check
-        gjk_interface_.PolygonCollisionByCircleCheck(
-            &is_collision, &obstacle.envelop_polygon, &global_polygon, 0.01);
-
-        if (!is_collision) {
-          continue;
-        }
-
-        // internal points
-        for (size_t j = 0; j < obstacle.points.size(); j++) {
-          gjk_interface_.PolygonPointCollisionDetect(
-              &is_collision, &global_polygon, obstacle.points[j]);
-
-          if (is_collision) {
-            node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
-            return false;
-          }
-        }
-      }
-      //
     }
   }
 
@@ -438,9 +351,11 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
     }
     is_circle_path = IsCirclePathByKappa(segment->kappa);
 
+    point_gear = segment->gear;
     for (int i = check_start_index; i < point_size; ++i) {
       // check bound
-      if (IsPointBeyondBound(segment->points[i].x, segment->points[i].y)) {
+      if (IsPointOutOfGridMapBound(segment->points[i].x,
+                                   segment->points[i].y)) {
         node->SetCollisionType(NodeCollisionType::MAP_BOUND);
         return false;
       }
@@ -451,16 +366,10 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
 
       tf.SetBasePose(global_pose);
 
-      if (i == point_size - 1) {
-        point_gear = segment->gear;
-      } else {
-        point_gear = AstarPathGear::NONE;
-      }
-
       if (edt_->IsCollisionForPoint(
               &tf, point_gear,
               GetCircleFootPrintModel(global_pose, is_circle_path))) {
-        node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
+        // node->SetCollisionType(NodeCollisionType::FUSION_OCC_OBS);
         return false;
       }
     }
@@ -487,7 +396,7 @@ const bool NodeCollisionDetect::IsPolynomialPathSafeByEDT(
 
   for (int i = check_start_index; i < point_size; ++i) {
     // check bound
-    if (IsPointBeyondBound(path[i].x, path[i].y)) {
+    if (IsPointOutOfGridMapBound(path[i].x, path[i].y)) {
       node->SetCollisionType(NodeCollisionType::MAP_BOUND);
       return false;
     }
@@ -524,77 +433,31 @@ int NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
   }
 
   int path_end_id = result->x.size() - 1;
+  int collision_id = 10000;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
-    return path_end_id;
+    return collision_id;
   }
 
-  Polygon2D polygon;
   Pose2D global_pose;
-  bool is_collision;
-
-  int collision_index = 100000;
-  cdl::AABB path_point_aabb;
-
-  Polygon2D* veh_local_polygon = nullptr;
+  Transform2d tf;
 
   for (int i = 0; i <= path_end_id; ++i) {
     // check bound
-    if (IsPointBeyondBound(result->x[i], result->y[i])) {
-      collision_index = i;
-
-#if DEBUG_GJK
-      ILOG_INFO << "i=" << i << "beyond bound";
-#endif
-      break;
+    if (IsPointOutOfGridMapBound(result->x[i], result->y[i])) {
+      return i;
     }
 
     global_pose.x = result->x[i];
     global_pose.y = result->y[i];
     global_pose.theta = result->phi[i];
-
-    veh_local_polygon = GetVehPolygon(result->gear[i]);
-    RULocalPolygonToGlobal(&polygon, veh_local_polygon, &global_pose);
-
-    if (clear_zone_->IsValidClearZone()) {
-      GetBoundingBoxByPolygon(&path_point_aabb, &polygon);
-      if (clear_zone_->IsContain(path_point_aabb)) {
-#if DEBUG_GJK
-        ILOG_INFO << "i=" << i << "clear";
-#endif
-        continue;
-      }
-    }
-
-    for (const auto& obstacle : obstacles_->point_cloud_list) {
-      // envelop box check
-      gjk_interface_.PolygonCollisionByCircleCheck(
-          &is_collision, &obstacle.envelop_polygon, &polygon, 0.01);
-
-      if (!is_collision) {
-        continue;
-      }
-
-      // internal points
-      for (size_t j = 0; j < obstacle.points.size(); j++) {
-        gjk_interface_.PolygonPointCollisionDetect(&is_collision, &polygon,
-                                                   obstacle.points[j]);
-
-        if (is_collision) {
-          collision_index = i;
-
-#if DEBUG_GJK
-          ILOG_INFO << "path id=" << i
-                    << ",obs type=" << static_cast<int>(obstacle.obs_type)
-                    << ",obs size=" << obstacle.points.size();
-#endif
-          return collision_index;
-        }
-      }
+    tf.SetBasePose(global_pose);
+    if (IsFootPrintCollision(tf)) {
+      return i;
     }
   }
 
-  return collision_index;
+  return collision_id;
 }
 
 int NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
@@ -607,21 +470,19 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
   }
 
   int path_end_id = result->x.size() - 1;
+  int collision_id = 10000;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
-    return path_end_id;
+    return collision_id;
   }
 
   Pose2f global_pose;
-  int collision_index = 100000;
   Transform2f tf;
 
   for (int i = 0; i <= path_end_id; ++i) {
     // check bound
-    if (IsPointBeyondBound(result->x[i], result->y[i])) {
-      collision_index = i;
-
-      break;
+    if (IsPointOutOfGridMapBound(result->x[i], result->y[i])) {
+      return i;
     }
 
     global_pose.x = result->x[i];
@@ -636,7 +497,7 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(HybridAStarResult* result) {
     }
   }
 
-  return collision_index;
+  return collision_id;
 }
 
 int NodeCollisionDetect::GetPathCollisionIDByEDT(
@@ -646,18 +507,18 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(
   }
 
   int path_end_id = poly_path.size() - 1;
+  int collision_index = 10000;
 
   if (obstacles_->point_cloud_list.empty() && obstacles_->virtual_obs.empty()) {
-    return path_end_id;
+    return collision_index;
   }
 
   Pose2f global_pose;
-  int collision_index = 100000;
   Transform2f tf;
 
   for (int i = 0; i <= path_end_id; ++i) {
     // check bound
-    if (IsPointBeyondBound(poly_path[i].x, poly_path[i].y)) {
+    if (IsPointOutOfGridMapBound(poly_path[i].x, poly_path[i].y)) {
       collision_index = i;
 
       break;
@@ -677,16 +538,6 @@ int NodeCollisionDetect::GetPathCollisionIDByEDT(
   }
 
   return collision_index;
-}
-
-Polygon2D* NodeCollisionDetect::GetVehPolygon(const AstarPathGear& gear) {
-  if (gear == AstarPathGear::DRIVE) {
-    return &veh_box_gear_drive_;
-  } else if (gear == AstarPathGear::REVERSE) {
-    return &veh_box_gear_reverse_;
-  }
-
-  return &veh_box_gear_none_;
 }
 
 void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
@@ -749,9 +600,9 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
                    : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
 }
 
-FootPrintCircleModel* NodeCollisionDetect::GetSlotOutsideCircleFootPrint() {
-  return &hierachy_circle_model_.footprint_model
-              [HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER];
+FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrint(
+    const HierarchySafeBuffer buffer) {
+  return &hierachy_circle_model_.footprint_model[buffer];
 }
 
 void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
@@ -773,34 +624,10 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
   float safe_half_width =
       (vehicle_param.max_width + lat_buffer_outside * 2) * 0.5f;
 
-  GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_drive_,
-      vehicle_param.rear_edge_to_rear_axle +
-          config.safe_buffer.lon_min_safe_buffer,
-      vehicle_param.front_edge_to_rear_axle + lon_buffer, safe_half_width);
-
-  // gear r
-  GetRightUpCoordinatePolygonByParam(
-      &veh_box_gear_reverse_, vehicle_param.rear_edge_to_rear_axle + lon_buffer,
-      vehicle_param.front_edge_to_rear_axle +
-          config.safe_buffer.lon_min_safe_buffer,
-      safe_half_width);
-
-  // gear none
-  GetRightUpCoordinatePolygonByParam(&veh_box_gear_none_,
-                                     vehicle_param.rear_edge_to_rear_axle +
-                                         config.safe_buffer.lon_min_safe_buffer,
-                                     vehicle_param.front_edge_to_rear_axle +
-                                         config.safe_buffer.lon_min_safe_buffer,
-                                     safe_half_width);
-
   GenerateVehCompactPolygon(lat_buffer_inside,
                             config.safe_buffer.lon_min_safe_buffer,
                             lat_buffer_inside, &cvx_hull_foot_print_);
 
-  // PolygonDebugString(&veh_box_gear_drive_, "drive");
-  // PolygonDebugString(&veh_box_gear_reverse_, "reverse");
-  // PolygonDebugString(&veh_box_gear_none_, "none gear");
   // PolygonDebugString(&cvx_hull_foot_print_.body, "body");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_left, "left mirror");
   // PolygonDebugString(&cvx_hull_foot_print_.mirror_right, "right mirror");

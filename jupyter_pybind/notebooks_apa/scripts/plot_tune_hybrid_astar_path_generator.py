@@ -106,7 +106,7 @@ fig1.line('x_vec', 'y_vec', source = data_search_path, line_width = 2, line_colo
 fig1.circle('x_vec', 'y_vec', source = data_all_search_node, size=4, color='black',  legend_label = 'all_search_node')
 fig1.circle('x_vec', 'y_vec', source = data_all_search_collision_node, size=4, color='gray',  legend_label = 'all_collision_node')
 
-fig1.circle(x='car_circle_xn', y='car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
+fig1.circle('car_circle_xn', 'car_circle_yn', radius='car_circle_rn', source = data_veh_circle, line_alpha = 0.5, line_width = 1, line_color = "blue", fill_alpha=0, legend_label = 'veh_circle', visible = False)
 fig1.circle('x_vec', 'y_vec', source = data_gear_switch_node, size=4, color='purple',  legend_label = 'gear_switch_node')
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -227,8 +227,9 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
   kwargs = locals()
 
   # vehicle_type = 'CHERY_T26'
-  vehicle_type = 'CHERY_E0X'
+  # vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_M32T'
+  vehicle_type = 'BESTUNE_E541'
   lat_buffer = 0.0
   car_xb, car_yb, wheel_base = load_car_params_patch_parking(vehicle_type, lat_buffer)
 
@@ -692,7 +693,6 @@ def slider_callback(ego_x, ego_y, ego_heading, slot_pt0_x, slot_pt0_y, parking_d
   #   'car_yn': car_yn,
   # })
 
-  # vehicle_type = 'CHERY_T26'
   footprint_model_global = hybrid_astar_py.GetFootPrintModelGlobal()
 
   car_circle_xn = []
