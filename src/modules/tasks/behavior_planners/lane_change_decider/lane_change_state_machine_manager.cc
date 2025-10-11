@@ -3820,7 +3820,7 @@ bool LaneChangeStateMachineManager::
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{2.0, 2.5, 4.0,
-                           5.,  6.,  8.};  //触发变道需要预留最小空间
+                           5.,  6.,  8.};  //触发变道需要预留最小空间 下方 大车额外增加5m基础距离
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   bool is_deceleration_check =
@@ -3844,7 +3844,10 @@ bool LaneChangeStateMachineManager::
   }
   for (int i = 0; i < iter_count; i++) {
     double agent_kph = agent_switch_traj[i].v * 3.6;
-    const double dis_buff = interp(agent_kph, xp, fp);  // 距离/ 时间
+    double dis_buff = interp(agent_kph, xp, fp);  // 距离/ 时间
+    if (is_large_car) {
+      dis_buff += 5.0;  //大车额外增加5m基础距离
+    }
     // 新的纵向安全距离/ 每对box的安全阈值 假设变道时间为4s
     if (is_front_agent) {
       box_ttc = 0.0;  // 对前方车辆 未来纵向buff不需要增大太多
