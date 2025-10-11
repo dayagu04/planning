@@ -98,6 +98,19 @@ void GeometryCollisionDetector::Update(
       obs_manager_ptr_->GetObstacles();
 
   std::vector<geometry_lib::LineSegment> *car_line_vec;
+  std::vector<geometry_lib::LineSegment> *low_car_line_vec;
+  std::vector<geometry_lib::LineSegment> *mid_car_line_vec;
+  std::vector<geometry_lib::LineSegment> *high_car_line_vec;
+
+  low_car_line_vec = &chassis_line_vec;
+  if (apa_param.GetParam().use_obs_height_method ==
+      UseObsHeightMethod::HIGH_LOW) {
+    mid_car_line_vec = &car_with_mirror_line_vec;
+  } else {
+    mid_car_line_vec = &car_without_mirror_line_vec;
+  }
+  high_car_line_vec = &car_with_mirror_line_vec;
+
   geometry_lib::LineSegment obs_move_line;
   Eigen::Vector2d cross_point;
   for (const auto &obs_pair : obs_map) {
@@ -106,13 +119,13 @@ void GeometryCollisionDetector::Update(
       case ApaObsHeightType::RUN_OVER:
         continue;
       case ApaObsHeightType::LOW:
-        car_line_vec = &chassis_line_vec;
+        car_line_vec = low_car_line_vec;
         break;
       case ApaObsHeightType::MID:
-        car_line_vec = &car_without_mirror_line_vec;
+        car_line_vec = mid_car_line_vec;
         break;
       default:
-        car_line_vec = &car_with_mirror_line_vec;
+        car_line_vec = high_car_line_vec;
         break;
     }
 
@@ -207,6 +220,19 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
       obs_manager_ptr_->GetObstacles();
 
   std::vector<geometry_lib::LineSegment> *car_line_vec;
+  std::vector<geometry_lib::LineSegment> *low_car_line_vec;
+  std::vector<geometry_lib::LineSegment> *mid_car_line_vec;
+  std::vector<geometry_lib::LineSegment> *high_car_line_vec;
+
+  low_car_line_vec = &chassis_line_vec;
+  if (apa_param.GetParam().use_obs_height_method ==
+      UseObsHeightMethod::HIGH_LOW) {
+    mid_car_line_vec = &car_with_mirror_line_vec;
+  } else {
+    mid_car_line_vec = &car_without_mirror_line_vec;
+  }
+  high_car_line_vec = &car_with_mirror_line_vec;
+
   // obstacle rotates around the the car rotation center to form a circle
   // The minimum angle allowed for obstacle rotation
   auto min_obs_rot_limit_angle = 5.0;
@@ -217,16 +243,16 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
     const ApaObstacle obs = obs_pair.second;
     switch (obs.GetObsHeightType()) {
       case ApaObsHeightType::RUN_OVER:
-        car_line_vec = &chassis_line_vec;
-        break;
+        continue;
       case ApaObsHeightType::LOW:
-        car_line_vec = &car_without_mirror_line_vec;
+        car_line_vec = low_car_line_vec;
         break;
       case ApaObsHeightType::MID:
-        car_line_vec = &car_with_mirror_line_vec;
+        car_line_vec = mid_car_line_vec;
         break;
       default:
-        car_line_vec = &car_with_mirror_line_vec;
+        car_line_vec = high_car_line_vec;
+        break;
     }
 
     const std::vector<Eigen::Vector2d> pt_clout_2d = obs.GetPtClout2dLocal();

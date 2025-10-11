@@ -73,6 +73,67 @@ const ColResult GJKCollisionDetector::Update(
   const std::unordered_map<size_t, ApaObstacle>& obs_map =
       obs_manager_ptr_->GetObstacles();
 
+  std::vector<Polygon2D*> low_polygon_vec{
+      &polygon_foot_print_global_.max_polygon,
+      &polygon_foot_print_global_.chassis};
+
+  std::vector<Polygon2D*> mid_polygon_vec;
+  std::vector<Polygon2D*> high_polygon_vec;
+
+  switch (gjk_col_det_request.car_body_type) {
+    case CarBodyType::ONLY_MAX_POLYGAN:
+      mid_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+      high_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+      break;
+    case CarBodyType::ONLY_MIRROR:
+      mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                         &polygon_foot_print_global_.mirror_left,
+                         &polygon_foot_print_global_.mirror_right};
+      high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                          &polygon_foot_print_global_.mirror_left,
+                          &polygon_foot_print_global_.mirror_right};
+      break;
+    case CarBodyType::EXPAND_MIRROR_TO_FRONT:
+      mid_polygon_vec = {
+          &polygon_foot_print_global_.max_polygon,
+          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
+          &polygon_foot_print_global_.mirror_to_rear_overhang};
+      high_polygon_vec = {
+          &polygon_foot_print_global_.max_polygon,
+          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
+          &polygon_foot_print_global_.mirror_to_rear_overhang};
+      break;
+    case CarBodyType::EXPAND_MIRROR_TO_END:
+      // todo: should use right polygon for end expansion
+      mid_polygon_vec = {
+          &polygon_foot_print_global_.max_polygon,
+          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
+          &polygon_foot_print_global_.mirror_to_rear_overhang};
+      high_polygon_vec = {
+          &polygon_foot_print_global_.max_polygon,
+          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
+          &polygon_foot_print_global_.mirror_to_rear_overhang};
+      break;
+    default:
+      if (apa_param.GetParam().use_obs_height_method ==
+          UseObsHeightMethod::HIGH_LOW) {
+        mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                           &polygon_foot_print_global_.body,
+                           &polygon_foot_print_global_.mirror_left,
+                           &polygon_foot_print_global_.mirror_right};
+      } else {
+        mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                           &polygon_foot_print_global_.body};
+      }
+
+      high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                          &polygon_foot_print_global_.body,
+                          &polygon_foot_print_global_.mirror_left,
+                          &polygon_foot_print_global_.mirror_right};
+      break;
+  }
+
+  std::vector<Polygon2D*> polygon_vec;
   Eigen::Vector2d dangerous_pt;
 
   for (const geometry_lib::PathPoint& pt : path_pt_vec_) {
@@ -80,49 +141,18 @@ const ColResult GJKCollisionDetector::Update(
 
     for (const auto& obs_pair : obs_map) {
       const ApaObstacle& obs = obs_pair.second;
-      std::vector<Polygon2D> polygon_vec{
-          polygon_foot_print_global_.max_polygon};
 
       switch (obs.GetObsHeightType()) {
         case ApaObsHeightType::RUN_OVER:
           continue;
         case ApaObsHeightType::LOW:
-          polygon_vec.emplace_back(polygon_foot_print_global_.chassis);
+          polygon_vec = low_polygon_vec;
           break;
         case ApaObsHeightType::MID:
-          polygon_vec.emplace_back(polygon_foot_print_global_.body);
+          polygon_vec = mid_polygon_vec;
           break;
         default:
-          switch (gjk_col_det_request.car_body_type) {
-            case CarBodyType::NORMAL:
-              polygon_vec.emplace_back(polygon_foot_print_global_.body);
-              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
-              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
-              break;
-            case CarBodyType::ONLY_MAX_POLYGAN:
-              break;
-            case CarBodyType::ONLY_MIRROR:
-              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_left);
-              polygon_vec.emplace_back(polygon_foot_print_global_.mirror_right);
-              break;
-            case CarBodyType::EXPAND_MIRROR_TO_FRONT:
-              polygon_vec.emplace_back(
-                  polygon_foot_print_global_
-                      .mirror_to_front_overhang_expand_front);
-              polygon_vec.emplace_back(
-                  polygon_foot_print_global_.mirror_to_rear_overhang);
-              break;
-            case CarBodyType::EXPAND_MIRROR_TO_END:
-              // todo: should use right polygon for end expansion
-              polygon_vec.emplace_back(
-                  polygon_foot_print_global_
-                      .mirror_to_front_overhang_expand_front);
-              polygon_vec.emplace_back(
-                  polygon_foot_print_global_.mirror_to_rear_overhang);
-              break;
-            default:
-              break;
-          }
+          polygon_vec = high_polygon_vec;
           break;
       }
 
@@ -132,7 +162,7 @@ const ColResult GJKCollisionDetector::Update(
       }
 
       for (size_t i = 0; i < polygon_vec.size(); ++i) {
-        col_flag = IsPolygonCollision(polygon_vec[i], obs, gjk_col_det_request,
+        col_flag = IsPolygonCollision(*polygon_vec[i], obs, gjk_col_det_request,
                                       dangerous_pt);
         if (i == 0) {
           if (!col_flag) {

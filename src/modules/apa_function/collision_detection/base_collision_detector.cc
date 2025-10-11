@@ -65,13 +65,18 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
   }
 
-  // 底盘矩形
+  // 底盘多边形
   chassis_vertex_.clear();
-  chassis_vertex_.resize(4);
-  chassis_vertex_[0] << 0.0, 0.5 * param.car_width;
-  chassis_vertex_[1] << 0.0, -0.5 * param.car_width;
-  chassis_vertex_[2] << param.wheel_base, -0.5 * param.car_width;
-  chassis_vertex_[3] << param.wheel_base, 0.5 * param.car_width;
+  chassis_vertex_.resize(car_without_mirror_polygon_vertex_.size());
+  for (size_t i = 0; i < chassis_vertex_.size(); ++i) {
+    chassis_vertex_[i] << car_without_mirror_polygon_vertex_[i].x(),
+        car_without_mirror_polygon_vertex_[i].y();
+    if (chassis_vertex_[i].x() > 0.0) {
+      chassis_vertex_[i].x() -= param.chassis_reduce_length;
+    } else {
+      chassis_vertex_[i].x() += param.chassis_reduce_length;
+    }
+  }
 
   // 包含左右后视镜的矩形
   car_with_mirror_rectangle_vertex_.clear();
@@ -155,9 +160,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   }
 
   car_without_mirror_circles_list_.Reset();
-  circle_x = param.fold_mirror_footprint_circle_x;
-  circle_y = param.fold_mirror_footprint_circle_y;
-  circle_r = param.fold_mirror_footprint_circle_r;
   car_without_mirror_circles_list_.max_circle.center_local << circle_x[0],
       circle_y[0];
   car_without_mirror_circles_list_.max_circle.radius = circle_r[0];
@@ -169,6 +171,7 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
 
     if (i == 3 || i == 6) {
+      // 对应后视镜两个圆
       continue;
     }
 
@@ -179,9 +182,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   }
 
   car_chassis_circles_list_.Reset();
-  circle_x = param.fold_mirror_footprint_circle_x;
-  circle_y = param.fold_mirror_footprint_circle_y;
-  circle_r = param.fold_mirror_footprint_circle_r;
   car_chassis_circles_list_.max_circle.center_local << circle_x[0], circle_y[0];
   car_chassis_circles_list_.max_circle.radius = circle_r[0];
   circles = car_chassis_circles_list_.circles;
@@ -189,9 +189,26 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     if (car_chassis_circles_list_.count >= MAX_CAR_FOOTPRINT_CIRCLE_NUM) {
       break;
     }
+
+    if (i == 3 || i == 6) {
+      // 对应后视镜两个圆
+      continue;
+    }
+
     circles[car_chassis_circles_list_.count].center_local << circle_x[i],
         circle_y[i];
     circles[car_chassis_circles_list_.count].radius = circle_r[i];
+
+    if (i == 1 || i == 2 || i == 7) {
+      // 对应前保险杠3个圆
+      circles[car_chassis_circles_list_.count].center_local.x() -=
+          param.chassis_reduce_length;
+    } else if (i == 4 || i == 5 || i == 10) {
+      // 对应后保险杠3个圆
+      circles[car_chassis_circles_list_.count].center_local.x() +=
+          param.chassis_reduce_length;
+    }
+
     car_chassis_circles_list_.count++;
   }
 
@@ -272,7 +289,7 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     right_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 底盘矩形
+  // 底盘多边形
   chassis_vertex_with_buffer_.clear();
   chassis_vertex_with_buffer_.reserve(chassis_vertex_.size());
   for (const Eigen::Vector2d& pt : chassis_vertex_) {

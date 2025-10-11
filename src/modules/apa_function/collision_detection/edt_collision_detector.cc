@@ -391,21 +391,18 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
   for (size_t i = 0; i < car_chassis_circles_list_with_buffer_.count; ++i) {
     circles[i].center_local = origin_circles[i].center_local;
     circles[i].radius = origin_circles[i].radius;
-    if (i == 0 || i == 4) {
+    if (i == 0 || i == 3) {
       // left front circle, left rear circle, move toward left
       circles[i].center_local.y() += body_lat_buffer_;
-    } else if (i == 1 || i == 3) {
+    } else if (i == 1 || i == 2) {
       // right front circle, right rear circle, move toward right
       circles[i].center_local.y() -= body_lat_buffer_;
-    } else if (i == 2 || i == 5) {
-      // left and right mirror, increase radius
-      circles[i].radius += mirror_lat_buffer_;
-    } else if (i == 6) {
+    } else if (i == 4) {
       // front circle, increase radius
       circles[i].radius += body_lat_buffer_;
       // move toward down, still tangent to the front lane of the car
       circles[i].center_local.x() -= body_lat_buffer_;
-    } else if (i == 9) {
+    } else if (i == 7) {
       // rear circle, increase radius
       circles[i].radius += body_lat_buffer_;
       // move toward up, still tangent to the rear lane of the car
@@ -419,8 +416,8 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
 }
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
-    const geometry_lib::PathPoint &pt,
-    CarFootPrintCircleList *car_circle_list) {
+    const geometry_lib::PathPoint &pt, CarFootPrintCircleList *car_circle_list,
+    const ApaObsHeightType height_type) {
   car_circle_list->LocalToGlobal(pt);
 
   CarFootPrintCircle *circle = nullptr;
@@ -435,8 +432,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
   if (!IsIndexValid(center_index)) {
     return true;
   }
-  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-         circle->radius;
+  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
   if (dist > 0.0) {
     return false;
   }
@@ -460,7 +456,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const geometry_lib::PathPoint &pt, CarFootPrintCircleList *car_circle_list,
-    float *min_dist, int *circle_id, const float safe_dist) {
+    float *min_dist, int *circle_id, const ApaObsHeightType height_type,
+    const float safe_dist) {
   car_circle_list->LocalToGlobal(pt);
 
   CarFootPrintCircle *circle = nullptr;
@@ -477,8 +474,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     *circle_id = -1;
     return true;
   }
-  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-         circle->radius;
+  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
   if (dist > safe_dist) {
     *min_dist = dist;
     *circle_id = -1;
@@ -514,7 +510,8 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const common_math::PathPt<float> &pt,
-    CarFootPrintCircleList *car_circle_list) {
+    CarFootPrintCircleList *car_circle_list,
+    const ApaObsHeightType height_type) {
   car_circle_list->LocalToGlobal(pt);
   CarFootPrintCircle *circle = nullptr;
   // grid number where the circle center is located
@@ -527,8 +524,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
   if (!IsIndexValid(center_index)) {
     return true;
   }
-  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-         circle->radius;
+  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
   if (dist > 0.0f) {
     return false;
   }
@@ -553,7 +549,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
 const bool EDTCollisionDetector::IsCollisionForPoint(
     const common_math::PathPt<float> &pt,
     CarFootPrintCircleList *car_circle_list, float *min_dist,
-    const float safe_dist) {
+    const ApaObsHeightType height_type, const float safe_dist) {
   car_circle_list->LocalToGlobal(pt);
   CarFootPrintCircle *circle = nullptr;
   // grid number where the circle center is located
@@ -568,8 +564,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     return true;
   }
 
-  dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-         circle->radius;
+  dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
   if (dist > safe_dist) {
     *min_dist = dist;
     return false;
@@ -674,21 +669,32 @@ const ColResult EDTCollisionDetector::Update(
     } while (s < lon_buffer_);
   }
 
+  CarFootPrintCircleList *high_circle_list =
+      &car_with_mirror_circles_list_buffer_;
+  CarFootPrintCircleList *mid_circle_list =
+      &car_without_mirror_circles_list_with_buffer_;
+  CarFootPrintCircleList *low_circle_list =
+      &car_chassis_circles_list_with_buffer_;
+
+  if (apa_param.GetParam().use_obs_height_method ==
+      UseObsHeightMethod::HIGH_LOW) {
+    mid_circle_list = &car_with_mirror_circles_list_buffer_;
+  }
+
   bool col_flag = false;
   double lon_safe_dist = 0.0;
   float obs_dist = 0.0;
   int circle_id = -1;
   geometry_lib::CarSafePos car_safe_pos = geometry_lib::CarSafePos::ALL;
-  CarFootPrintCircleList *car_circle_list = nullptr;
   for (const geometry_lib::PathPoint &pt : path_pt_vec_) {
     circle_id = -1;
     obs_dist = 26.8f;
     if (!IsPoseInClearZone(pt)) {
-      col_flag =
-          need_cal_obs_dist
-              ? IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_,
-                                    &obs_dist, &circle_id)
-              : IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_);
+      col_flag = need_cal_obs_dist
+                     ? IsCollisionForPoint(pt, high_circle_list, &obs_dist,
+                                           &circle_id, ApaObsHeightType::HIGH)
+                     : IsCollisionForPoint(pt, high_circle_list,
+                                           ApaObsHeightType::HIGH);
 
       if (col_flag) {
         break;
@@ -696,22 +702,20 @@ const ColResult EDTCollisionDetector::Update(
 
       if (apa_param.GetParam().enable_multi_height_col_det) {
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(
-                             pt, &car_without_mirror_circles_list_with_buffer_,
-                             &obs_dist, &circle_id)
-                       : IsCollisionForPoint(
-                             pt, &car_without_mirror_circles_list_with_buffer_);
+                       ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
+                                             &circle_id, ApaObsHeightType::MID)
+                       : IsCollisionForPoint(pt, mid_circle_list,
+                                             ApaObsHeightType::MID);
 
         if (col_flag) {
           break;
         }
 
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(
-                             pt, &car_chassis_circles_list_with_buffer_,
-                             &obs_dist, &circle_id)
-                       : IsCollisionForPoint(
-                             pt, &car_chassis_circles_list_with_buffer_);
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             &circle_id, ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
 
         if (col_flag) {
           break;
@@ -798,38 +802,47 @@ const ColResultF EDTCollisionDetector::Update(
     } while (s < lon_buffer_ - 0.001f);
   }
 
+  CarFootPrintCircleList *high_circle_list =
+      &car_with_mirror_circles_list_buffer_;
+  CarFootPrintCircleList *mid_circle_list =
+      &car_without_mirror_circles_list_with_buffer_;
+  CarFootPrintCircleList *low_circle_list =
+      &car_chassis_circles_list_with_buffer_;
+
+  if (apa_param.GetParam().use_obs_height_method ==
+      UseObsHeightMethod::HIGH_LOW) {
+    mid_circle_list = &car_with_mirror_circles_list_buffer_;
+  }
+
   float obs_dist = 26.8f, min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
   bool col_flag = false;
-  CarFootPrintCircleList *car_circle_list = nullptr;
   for (const common_math::PathPt<float> &pt : pts_) {
     obs_dist = 26.8f;
     if (!IsPoseInClearZone(pt)) {
-      col_flag =
-          need_cal_obs_dist
-              ? IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_,
-                                    &obs_dist)
-              : IsCollisionForPoint(pt, &car_with_mirror_circles_list_buffer_);
+      col_flag = need_cal_obs_dist
+                     ? IsCollisionForPoint(pt, high_circle_list, &obs_dist,
+                                           ApaObsHeightType::HIGH)
+                     : IsCollisionForPoint(pt, high_circle_list,
+                                           ApaObsHeightType::HIGH);
       if (col_flag) {
         break;
       }
 
       if (apa_param.GetParam().enable_multi_height_col_det) {
         col_flag = need_cal_obs_dist
-                       ? IsCollisionForPoint(
-                             pt, &car_without_mirror_circles_list_with_buffer_,
-                             &obs_dist)
-                       : IsCollisionForPoint(
-                             pt, &car_without_mirror_circles_list_with_buffer_);
+                       ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
+                                             ApaObsHeightType::MID)
+                       : IsCollisionForPoint(pt, mid_circle_list,
+                                             ApaObsHeightType::MID);
         if (col_flag) {
           break;
         }
 
-        col_flag =
-            need_cal_obs_dist
-                ? IsCollisionForPoint(
-                      pt, &car_chassis_circles_list_with_buffer_, &obs_dist)
-                : IsCollisionForPoint(pt,
-                                      &car_chassis_circles_list_with_buffer_);
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
         if (col_flag) {
           break;
         }
