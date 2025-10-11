@@ -2935,16 +2935,19 @@ double GeneralLateralDecider::CalEmergencyNudgeLatBufDis(
 
   if (is_use_recurrence_) {
     // 高速上限制bound大小
-    double nudge_buffer2lane_boundary_buffer = config_.nudge_buffer2lane_boundary_buffer;
+    double nudge_buffer2lane_boundary_buffer =
+        config_.nudge_buffer2lane_boundary_buffer;
     if (is_nudge_left) {
       double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
       if (nudge_position < nudge_buffer2lane_boundary_buffer - half_lane_width) {
-        lat_buf_dis = overlap_min_y - vehicle_param.width + half_lane_width - nudge_buffer2lane_boundary_buffer;
+        lat_buf_dis = overlap_min_y - vehicle_param.width + half_lane_width -
+                      nudge_buffer2lane_boundary_buffer;
       }
     } else {
       double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
       if (nudge_position > half_lane_width - nudge_buffer2lane_boundary_buffer) {
-        lat_buf_dis = half_lane_width - nudge_buffer2lane_boundary_buffer - vehicle_param.width - overlap_max_y;
+        lat_buf_dis = half_lane_width - nudge_buffer2lane_boundary_buffer -
+                      vehicle_param.width - overlap_max_y;
       }
     }
   }
