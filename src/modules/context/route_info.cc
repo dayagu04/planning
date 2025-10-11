@@ -3882,7 +3882,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           before_excr_feasible_lane.emplace_back(i + 1);
         }
         for (int i = 1; i <= on_exclnum - successor_exclnum; ++i){
-          mlc_request_info_[successor_exclnum + i] = MAIN_TO_RAMP;
+          mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
         }
 
         if (is_other_split_ramp && !is_continue_lane) {
@@ -3897,7 +3897,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           before_excr_feasible_lane.emplace_back(i + 1);
         }
         for (int i = 1; i <= before_exclnum - successor_exclnum; ++i){
-          mlc_request_info_[successor_exclnum + i] = MAIN_TO_RAMP;
+          mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
         }
       } else {
         for (int i = 0; i < before_exclnum; ++i) {
@@ -3914,7 +3914,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         before_excr_feasible_lane.emplace_back(i + 1);
       }
       for (int i = 1; i <= max_lane_num - valid_lane_num; ++i){
-        mlc_request_info_[valid_lane_num + i] = MAIN_TO_RAMP;
+        mlc_request_info_[valid_lane_num + i] = KEEP_LEFT;
       }
     }
 
