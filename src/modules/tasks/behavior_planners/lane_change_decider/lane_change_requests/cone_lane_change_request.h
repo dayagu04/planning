@@ -127,6 +127,7 @@ class ConeRequest : public LaneChangeRequest {
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
   bool is_cone_lane_change_situation_ = false;
+  bool is_cone_must_lane_change_situation_ = false;
   int cone_alc_trigger_counter_;
   RequestType cone_lane_change_direction_ = NO_CHANGE;
   std::vector<ConePoint> cone_points_;

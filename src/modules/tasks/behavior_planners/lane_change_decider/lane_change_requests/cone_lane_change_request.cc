@@ -32,10 +32,11 @@ constexpr double kLatPassThre = 0.8;
 constexpr double kLatPassThreBuffer = 0.35;
 constexpr double kConeCrossingLaneLineBuffer = 0.15;
 constexpr uint32_t kConeAlcCountThre = 4;
+constexpr uint32_t kConeAlcMaxCountThre = 8;
 constexpr uint32_t kConeAlcHystereticCount = 1;
 constexpr int kConeAlcCountLowerThre = 0;
 constexpr double kLongClusterTimeGap = 4.0;
-constexpr double kDefaultLaneWidth = 4.25;
+constexpr double kDefaultLaneWidth = 4.5;
 constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr uint32_t kConeDirecSize = 5;
 constexpr double kConeDirecThre = 0.5;
@@ -101,17 +102,18 @@ void ConeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("is_cone_lane_change_situation_",
                    is_cone_lane_change_situation_);
 
-  if (!is_cone_lane_change_situation_) {
-    if (request_type_ != NO_CHANGE &&
-        (lane_change_lane_mgr_->has_origin_lane() &&
-         lane_change_lane_mgr_->is_ego_on(olane))) {
-      Finish();
-      Reset();
-      set_target_lane_virtual_id(current_lane_virtual_id);
-      ILOG_DEBUG << "[ConeRequest::update] " << __FUNCTION__ << " " << __LINE__
-                 << " finish request, !trigger_left_clc and !trigger_right_clc";
+  if (!is_cone_must_lane_change_situation_) {
+    if (!is_cone_lane_change_situation_) {
+      if (request_type_ != NO_CHANGE &&
+          (lane_change_lane_mgr_->has_origin_lane() &&
+          lane_change_lane_mgr_->is_ego_on(olane))) {
+        Finish();
+        Reset();
+        set_target_lane_virtual_id(current_lane_virtual_id);
+        ILOG_DEBUG << "[ConeRequest::update] " << __FUNCTION__ << " " << __LINE__ <<" finish request, !trigger_left_clc and !trigger_right_clc";
+      }
+      return;
     }
-    return;
   }
   ConeDir();
   JSON_DEBUG_VALUE("cone_lane_change_direction_",
@@ -138,8 +140,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       session_->environmental_model().get_ego_state_manager();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
-  double ego_fx = std::cos(ego_state->ego_pose_raw().theta);
-  double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
+  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
+  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   right_lane_nums_ = 0;
   left_lane_nums_ = 0;
 
@@ -181,6 +183,12 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     right_lane_nums_ = rlane ? 1 : 0;
   }
 
+  if (llane == nullptr) {
+    k_right_cone_occ_lane_line_buffer += 0.25;
+  }
+  if (rlane == nullptr) {
+    k_left_cone_occ_lane_line_buffer += 0.25;
+  }
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   double eps_s = vehicle_param.length * kLongClusterCoeff;
   double eps_l = vehicle_param.width + kLatClusterThre;
@@ -273,8 +281,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
   double pass_threshold_right =
       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-  pass_threshold_left = std::max(pass_threshold_left, lane_width + kConeCrossingLaneLineBuffer);
-  pass_threshold_right = std::max(pass_threshold_right, lane_width + kConeCrossingLaneLineBuffer);
+  pass_threshold_left = std::max(pass_threshold_left, lane_width + k_left_cone_occ_lane_line_buffer);
+  pass_threshold_right = std::max(pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
@@ -306,11 +314,15 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
                << ", pass_threshold_right is:" << pass_threshold_right;
 
     // judge if to trigger cone lc
-    if (min_left_l < pass_threshold_left &&
-        min_right_l < pass_threshold_right) {
+    if ((min_left_l < pass_threshold_left && min_right_l < pass_threshold_right) ||
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5)) {
       cone_alc_trigger_counter_++;
-      ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
-                 << ", cluster is " << cluster;
+      ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_ << ", cluster is " << cluster;
+      if (cone_alc_trigger_counter_ >= kConeAlcMaxCountThre) {
+        is_cone_must_lane_change_situation_ = true;
+        return;
+      }
       if (cone_alc_trigger_counter_ >= kConeAlcCountThre) {
         is_cone_lane_change_situation_ = true;
         return;
@@ -1061,8 +1073,8 @@ double ConeRequest::QueryLaneMinWidth(
     const double target_s) {
   const auto& function_info = session_->environmental_model().function_info();
   double max_lane_width = 2.65;
-  double lane_width = 3.0;
-  const double k_default_lane_width = 3.0;
+  double lane_width = 2.5;
+  const double k_default_lane_width = 2.5;
   int cone_nums = 0;
   if (!cone_points.empty()) {
     for (const auto& cone : cone_points) {
@@ -1089,6 +1101,7 @@ double ConeRequest::QueryLaneMinWidth(
 void ConeRequest::Reset() {
   cone_alc_trigger_counter_ = 0;
   is_cone_lane_change_situation_ = false;
+  is_cone_must_lane_change_situation_ = false;
   cone_lane_change_direction_ = NO_CHANGE;
   cone_cluster_size_.clear();
   cone_cluster_.clear();
