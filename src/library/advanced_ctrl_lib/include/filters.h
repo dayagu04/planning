@@ -29,8 +29,8 @@ class ButterworthFilter {
   double fp_;
   double fz_;
   double fs_;
-  double coef_p_[MAX_BUTTER_ORDER];
-  double coef_z_[MAX_BUTTER_ORDER];
+  double coef_p_[MAX_BUTTER_ORDER + 1];
+  double coef_z_[MAX_BUTTER_ORDER + 1];
   int Np_;
   int Nz_;
 
