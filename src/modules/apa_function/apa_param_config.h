@@ -34,12 +34,22 @@ enum class AnalyticExpansionType : uint8_t {
   ALL
 };
 
+enum class UseObsHeightMethod : uint8_t {
+  HIGH = 0,          // 全部当做高于后视镜
+  HIGH_LOW = 1,      // 当做高于后视镜或低于保险杠
+  HIGH_MID_LOW = 2,  // 高于后视镜, 低于后视镜, 低于保险杠
+};
+
 const std::string GetParkPathPlanType(const ParkPathPlanType type);
 void PrintParkPathPlanType(const ParkPathPlanType type,
                            const bool enable_log = true);
 const std::string GetAnalyticExpansionTypeString(
     const AnalyticExpansionType type);
 void PrintAnalyticExpansionType(const AnalyticExpansionType type,
+                                const bool enable_log = true);
+const std::string GetUseObsHeightMethodString(
+    const UseObsHeightMethod method);
+void PrintUseObsHeightMethod(const UseObsHeightMethod method,
                                 const bool enable_log = true);
 
 struct AstarParkingConfig {
@@ -367,6 +377,7 @@ struct ApaParameters {
   double rear_overhanging_height = 0.41;
   double height_redundancy = 0.12;
   double runover_height = 0.15;
+  double chassis_reduce_length = 0.2;
   double lon_dist_mirror_to_rear_axle = 1.844;
   double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;
@@ -548,6 +559,7 @@ struct ApaParameters {
   double max_lat_err = 0.068;
   double max_phi_err = 2.68;
   bool enable_multi_height_col_det = false;
+  UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;
   double max_obs_lat_invasion_slot_dist_dynamic_col = -0.026;

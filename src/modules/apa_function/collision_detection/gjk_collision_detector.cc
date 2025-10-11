@@ -211,6 +211,10 @@ const bool GJKCollisionDetector::IsPolygonCollision(
     return false;
   }
 
+  if (pt_clout->empty()) {
+    return false;
+  }
+
   gjk_interface_.PolygonCollisionByCircleCheck(&col_flag, obs_polygon, &polygon,
                                                0.01);
 
