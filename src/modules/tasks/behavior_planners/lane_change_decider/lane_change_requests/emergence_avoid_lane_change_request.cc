@@ -302,8 +302,6 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
       //       common::DrivingFunctionInfo::NOA) &&
       // 对静止车暂时不做处理
       if (front_vehicle_iter->second->type() !=
-              iflyauto::OBJECT_TYPE_TRAFFIC_CONE &&
-          front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
           front_vehicle_iter->second->type() !=
               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
