@@ -2453,6 +2453,13 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
   risk_agents_nodes_.clear();
+  const std::unordered_set<agent::AgentType> FacilityTypes = {
+      agent::AgentType::TRAFFIC_CONE,
+      agent::AgentType::TRAFFIC_BARREL,
+      agent::AgentType::WATER_SAFETY_BARRIER,
+      agent::AgentType::CTASH_BARREL,
+      agent::AgentType::WARNING_TRIANGLE
+  };
   for (const auto *target_lane_node : target_lane_nodes) {
     if (target_lane_node == nullptr) {
       continue;
@@ -2468,7 +2475,7 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
     if (agent_s - target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
       continue;
     }
-    if (target_lane_node->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (FacilityTypes.count(target_lane_node->type()) > 0) {
       continue;
     }
     int id = target_lane_node->node_agent_id();
