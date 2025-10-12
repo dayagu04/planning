@@ -94,20 +94,25 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   void UpdateCarChassisSafeBuffer();
 
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
-                                 CarFootPrintCircleList *car_circle_list);
+                                 CarFootPrintCircleList *car_circle_list,
+                                 const ApaObsHeightType height_type);
 
   // return min dist between obs and car circle
   const bool IsCollisionForPoint(const geometry_lib::PathPoint &pt,
                                  CarFootPrintCircleList *car_circle_list,
                                  float *min_dist, int *circle_id,
+                                 const ApaObsHeightType height_type,
                                  const float safe_dist = 0.5);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
-                                 CarFootPrintCircleList *car_circle_list);
+                                 CarFootPrintCircleList *car_circle_list,
+                                 const ApaObsHeightType height_type);
 
   const bool IsCollisionForPoint(const common_math::PathPt<float> &pt,
                                  CarFootPrintCircleList *car_circle_list,
-                                 float *min_dist, const float safe_dist = 0.5f);
+                                 float *min_dist,
+                                 const ApaObsHeightType height_type,
+                                 const float safe_dist = 0.5f);
 
   const ColResult Update(const geometry_lib::PathSegment &path_seg,
                          const double body_lat_buffer, const double lon_buffer,

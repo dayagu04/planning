@@ -48,7 +48,7 @@
   "mirror_height": 1.15,
   "height_redundancy": 0.04,
   "runover_height": 0.0,
-  "chassis_reduce_length": 0.2,
+  "chassis_reduce_length": 0.25,
   "steer_ratio": 13.0,
   "lon_dist_mirror_to_rear_axle": 2.0185,
   "lat_dist_mirror_to_center": 1.02,
