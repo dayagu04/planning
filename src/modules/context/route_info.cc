@@ -2154,7 +2154,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   bool is_exist_merge_fp = false;
 
-  //计算feasible_lane_sequence
+  // 计算feasible_lane_sequence
   std::vector<int> feasible_lane_sequence;
 
   if (mlc_decider_route_info_.ego_status_on_route == IN_EXCHANGE_AREAR_FRONT ||
@@ -2184,7 +2184,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     const uint64 static_split_link_id =
         first_static_split_region_info.split_link_id;
 
-    //根据需要的变道次数和距离优化feasible lane
+    // 根据需要的变道次数和距离优化feasible lane
     if (!temp_split_infos.empty() &&
         static_split_link_id == temp_split_infos[0].split_link_id &&
         !feasible_lane_sequence.empty()) {
@@ -2206,7 +2206,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
       if (first_static_split_region_info.split_direction == SPLIT_RIGHT) {
         for (int i = 1; i < feasible_lane_sequence[0]; i++) {
-          //因为split在右边，所以存在都是右边的车道，seq都比左边的大
+          // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
           const int lc_num = feasible_lane_sequence[0] - i;
           const double lc_need_dis =
               kResponseOffset + adaptor_interval * std::fabs(lc_num);
@@ -2409,11 +2409,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         lc_num_task.emplace_back(1);
       }
     }
-    if (!lc_num_task.empty()){
+    if (!lc_num_task.empty()) {
       auto it = mlc_request_info_.find(ego_seq);
-      if (it != mlc_request_info_.end()){
+      if (it != mlc_request_info_.end()) {
         route_info_output_.mlc_request_type_route_info =
-                            mlc_request_info_[ego_seq];
+            mlc_request_info_[ego_seq];
       } else {
         route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       }
@@ -3127,7 +3127,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       }
     }
 
-    //车道数对不上时，取大（小）值
+    // 车道数对不上时，取大（小）值
     const int last_fp_link_lane_num = last_fp_link.lane_num();
     if (temp_lane_num1 != last_fp_link_lane_num) {
       if (split_seg_info.split_direction == RAMP_ON_LEFT) {
@@ -3258,7 +3258,7 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
                 return fp_a.projection_percent() < fp_b.projection_percent();
               });
 
-    //增加判断在当前merge link上是否有下一个交换区的起点
+    // 增加判断在当前merge link上是否有下一个交换区的起点
     bool is_exist_next_start_fp = false;
     iflymapdata::sdpro::FeaturePoint temp_end_fp;
     if (temp_seg->id() == merge_segment.id()) {
@@ -3282,7 +3282,7 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type ==
             iflymapdata::sdpro::FeaturePointType::EXCHANGE_AREA_START) {
-          //增加判断在当前merge link上是否有下一个交换区的起点
+          // 增加判断在当前merge link上是否有下一个交换区的起点
           if (temp_seg->id() == merge_segment.id() && is_exist_next_start_fp &&
               fp_point.projection_percent() >
                   temp_end_fp.projection_percent()) {
@@ -3764,7 +3764,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
         }
         before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= successor_other_exclnum; ++i){
+        for (int i = 1; i <= successor_other_exclnum; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       } else if (successor_other_exclnum < before_exclnum) {
@@ -3779,13 +3779,13 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         for (int i = 0; i < on_excr_feasible_lane_temp; ++i) {
           on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
         }
-        for (int i = 1; i <= successor_other_exclnum; ++i){
+        for (int i = 1; i <= successor_other_exclnum; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       } else {
         on_excr_feasible_lane.emplace_back(on_exclnum);
         before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= on_exclnum - 1; ++i){
+        for (int i = 1; i <= on_exclnum - 1; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       }
@@ -3800,7 +3800,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         }
 
         before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= successor_other_exclnum; ++i){
+        for (int i = 1; i <= successor_other_exclnum; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       } else if (before_exclnum == on_exclnum &&
@@ -3809,7 +3809,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           on_excr_feasible_lane.emplace_back(on_exclnum + i + 1);
         }
         before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= on_exclnum; ++i){
+        for (int i = 1; i <= on_exclnum; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       } else if (before_exclnum == on_exclnum &&
@@ -3829,7 +3829,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       } else {
         on_excr_feasible_lane.emplace_back(on_exclnum);
         before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= on_exclnum - 1; ++i){
+        for (int i = 1; i <= on_exclnum - 1; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
       }
@@ -3881,7 +3881,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           on_excr_feasible_lane.emplace_back(i + 1);
           before_excr_feasible_lane.emplace_back(i + 1);
         }
-        for (int i = 1; i <= on_exclnum - successor_exclnum; ++i){
+        for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
           mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
         }
 
@@ -3896,7 +3896,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
           on_excr_feasible_lane.emplace_back(i + 1);
           before_excr_feasible_lane.emplace_back(i + 1);
         }
-        for (int i = 1; i <= before_exclnum - successor_exclnum; ++i){
+        for (int i = 1; i <= before_exclnum - successor_exclnum; ++i) {
           mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
         }
       } else {
@@ -3913,7 +3913,7 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         on_excr_feasible_lane.emplace_back(i + 1);
         before_excr_feasible_lane.emplace_back(i + 1);
       }
-      for (int i = 1; i <= max_lane_num - valid_lane_num; ++i){
+      for (int i = 1; i <= max_lane_num - valid_lane_num; ++i) {
         mlc_request_info_[valid_lane_num + i] = KEEP_LEFT;
       }
     }
@@ -3986,7 +3986,7 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
         on_excr_feasible_lane.emplace_back(i + 1);
       }
       before_excr_feasible_lane.emplace_back(1);
-      for (int i = 1; i <= (on_exclnum - successor_exclnum); ++i){
+      for (int i = 1; i <= (on_exclnum - successor_exclnum); ++i) {
         mlc_request_info_[successor_exclnum + i] = RAMP_TO_MAIN;
       }
     }
@@ -4355,7 +4355,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
   const double search_distance = 50.0;
   const double max_heading_diff = PI / 4;
-  //获取当前的segment
+  // 获取当前的segment
   ad_common::math::Vec2d current_point;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
@@ -4426,12 +4426,14 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() {
       task_num.emplace_back(1);
     }
   }
-  if (!task_num.empty()){
+  if (!task_num.empty()) {
     route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
-  } else{
+  } else {
     route_info_output_.mlc_request_type_route_info = None_MLC;
   }
-  JSON_DEBUG_VALUE("mlc_request_type", static_cast<int>(route_info_output_.mlc_request_type_route_info));
+  JSON_DEBUG_VALUE(
+      "mlc_request_type",
+      static_cast<int>(route_info_output_.mlc_request_type_route_info));
   return task_num;
 }
 
@@ -4562,7 +4564,7 @@ bool RouteInfo::CalculateLastMarkingLineChangeFp(
         return true;
       } else {
         const auto& pre_link = sdpro_map_.GetPreviousLinkOnRoute(cur_link_id);
-        //如果是nullptr的时候，需要注意处理这种情况
+        // 如果是nullptr的时候，需要注意处理这种情况
         if (pre_link == nullptr) {
           return false;
         } else {
@@ -4582,7 +4584,7 @@ bool RouteInfo::CalculateLastMarkingLineChangeFp(
 
       } else {
         const auto& pre_link = sdpro_map_.GetPreviousLinkOnRoute(cur_link_id);
-        //如果是nullptr的时候，需要注意处理这种情况
+        // 如果是nullptr的时候，需要注意处理这种情况
         if (pre_link == nullptr) {
           return false;
         } else {
