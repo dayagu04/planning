@@ -2116,6 +2116,14 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
       follow_info.follow_confidence =
           std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
     } else {
+      // 针对cut_out或者横穿的障碍物，即远离自车道的障碍物，v_lat > 0, 衰减需要加快
+      std::array<double, 5> x_cut_factor{0.2, 0.3, 0.4, 0.6, 0.8};
+      std::array<double, 5> f_cut_factor{0, 0, 2, 6, 11};
+      double cut_factor = interp(v_lat, x_cut_factor, f_cut_factor);
+      follow_info.follow_confidence = std::fmax(
+          follow_info.follow_confidence - cut_factor * planning_cycle_time, 0.0);
+
+      // 正常衰减
       follow_info.follow_confidence = std::fmax(
           follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
     }
