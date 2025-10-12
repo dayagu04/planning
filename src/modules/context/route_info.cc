@@ -1884,7 +1884,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
 
       if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
-        mlc_request_info_.reset();
+        mlc_request_info_.clear();
         if ((mlc_decider_route_info_.is_process_split ||
              mlc_decider_route_info_.is_process_other_merge_split) &&
             split_region_info_list[0].is_valid) {
