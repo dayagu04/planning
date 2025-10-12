@@ -732,12 +732,12 @@ void RouteInfo::CaculateSplitInfo(
               first_split_region_lane_tupo_info);
           route_info_output_.first_split_dir_dis_info =
               std::make_pair(static_cast<SplitRelativeDirection>(
-                                route_info_output_.first_split_direction),
-                            route_info_output_.distance_to_first_road_split);
+                                 route_info_output_.first_split_direction),
+                             route_info_output_.distance_to_first_road_split);
           route_info_output_.split_dir_dis_info_list.emplace_back(
               std::make_pair(static_cast<SplitRelativeDirection>(
-                                route_info_output_.first_split_direction),
-                            route_info_output_.distance_to_first_road_split));
+                                 route_info_output_.first_split_direction),
+                             route_info_output_.distance_to_first_road_split));
 
           is_find_first_split_info = true;
           traverse_num++;
@@ -773,31 +773,44 @@ void RouteInfo::CaculateSplitInfo(
         }
         double dis_between_first_split_and_merge = 100.0;
         double dis_between_first_and_second_split = -100.0;
-        if (!route_info_output_.split_region_info_list.empty()){
-          if (!route_info_output_.split_region_info_list[0].is_valid){
-            if (!route_info_output_.merge_region_info_list.empty()){
-              dis_between_first_split_and_merge = route_info_output_.split_region_info_list[0].distance_to_split_point
-                                                  - route_info_output_.merge_region_info_list[0].distance_to_split_point;
+        if (!route_info_output_.split_region_info_list.empty()) {
+          if (!route_info_output_.split_region_info_list[0].is_valid) {
+            if (!route_info_output_.merge_region_info_list.empty()) {
+              dis_between_first_split_and_merge =
+                  route_info_output_.split_region_info_list[0]
+                      .distance_to_split_point -
+                  route_info_output_.merge_region_info_list[0]
+                      .distance_to_split_point;
             }
-            if (route_info_output_.split_region_info_list.size() > 1){
-              dis_between_first_and_second_split = route_info_output_.split_region_info_list[0].distance_to_split_point
-                                                  - route_info_output_.split_region_info_list[1].distance_to_split_point;
+            if (route_info_output_.split_region_info_list.size() > 1) {
+              dis_between_first_and_second_split =
+                  route_info_output_.split_region_info_list[0]
+                      .distance_to_split_point -
+                  route_info_output_.split_region_info_list[1]
+                      .distance_to_split_point;
             }
 
-            if (route_info_output_.split_region_info_list[0].start_fp_point.isEmpty()){
-              route_info_output_.split_region_info_list[0].start_fp_point.fp_distance_to_split_point =
-                                        dis_between_first_split_and_merge > 0 ?
-                                        -std::min(dis_between_first_split_and_merge, 100.0) : -100.0;
+            if (route_info_output_.split_region_info_list[0]
+                    .start_fp_point.isEmpty()) {
+              route_info_output_.split_region_info_list[0]
+                  .start_fp_point.fp_distance_to_split_point =
+                  dis_between_first_split_and_merge > 0
+                      ? -std::min(dis_between_first_split_and_merge, 100.0)
+                      : -100.0;
             }
-            if (route_info_output_.split_region_info_list[0].end_fp_point.isEmpty()){
-              if (dis_between_first_split_and_merge > 0){
-                route_info_output_.split_region_info_list[0].end_fp_point.fp_distance_to_split_point =
-                                          std::min(std::abs(dis_between_first_and_second_split), 100.0);
+            if (route_info_output_.split_region_info_list[0]
+                    .end_fp_point.isEmpty()) {
+              if (dis_between_first_split_and_merge > 0) {
+                route_info_output_.split_region_info_list[0]
+                    .end_fp_point.fp_distance_to_split_point = std::min(
+                    std::abs(dis_between_first_and_second_split), 100.0);
               } else {
-                double min_distance = std::min(std::abs(dis_between_first_and_second_split),
-                                                std::abs(dis_between_first_split_and_merge));
-                route_info_output_.split_region_info_list[0].end_fp_point.fp_distance_to_split_point =
-                                                std::min(min_distance, 100.0);
+                double min_distance =
+                    std::min(std::abs(dis_between_first_and_second_split),
+                             std::abs(dis_between_first_split_and_merge));
+                route_info_output_.split_region_info_list[0]
+                    .end_fp_point.fp_distance_to_split_point =
+                    std::min(min_distance, 100.0);
               }
             }
           }
@@ -1873,8 +1886,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       if (mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
         mlc_request_info_.reset();
         if ((mlc_decider_route_info_.is_process_split ||
-            mlc_decider_route_info_.is_process_other_merge_split)
-             && split_region_info_list[0].is_valid) {
+             mlc_decider_route_info_.is_process_other_merge_split) &&
+            split_region_info_list[0].is_valid) {
           // 处理前方只有1个split的场景
           // exclnum = exchange_arear_lane_num;
           if (split_region_info_list.empty()) {
@@ -1896,8 +1909,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_decider_route_info_.first_static_split_region_info =
               route_info_output_.split_region_info_list[0];
 
-        } else if (mlc_decider_route_info_.is_process_split_split
-                    && split_region_info_list[0].is_valid) {
+        } else if (mlc_decider_route_info_.is_process_split_split &&
+                   split_region_info_list[0].is_valid) {
           // 处理前方有2个split的场景
           if (split_region_info_list.size() < 2) {
             mlc_decider_route_info_.reset();
@@ -2194,29 +2207,32 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       continue;
     }
     if ((mlc_decider_route_info_.is_process_split ||
-        mlc_decider_route_info_.is_process_split_split ||
-        mlc_decider_route_info_.is_process_other_merge_split) &&
+         mlc_decider_route_info_.is_process_split_split ||
+         mlc_decider_route_info_.is_process_other_merge_split) &&
         !mlc_decider_route_info_.first_static_split_region_info.is_valid) {
       std::vector<int> task_num;
-      if (mlc_decider_route_info_.first_static_split_region_info.split_direction == SPLIT_LEFT) {
+      if (mlc_decider_route_info_.first_static_split_region_info
+              .split_direction == SPLIT_LEFT) {
         task_num.emplace_back(-1);
         route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
-      } else if (mlc_decider_route_info_.first_static_split_region_info.split_direction == SPLIT_RIGHT) {
+      } else if (mlc_decider_route_info_.first_static_split_region_info
+                     .split_direction == SPLIT_RIGHT) {
         task_num.emplace_back(1);
         route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       }
-      JSON_DEBUG_VALUE("mlc_request_type", static_cast<int>(route_info_output_.mlc_request_type_route_info));
+      JSON_DEBUG_VALUE(
+          "mlc_request_type",
+          static_cast<int>(route_info_output_.mlc_request_type_route_info));
       relative_id_lane->set_current_tasks(task_num);
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
     }
   }
 
-  //计算feasible_lane_sequence
+  // 计算feasible_lane_sequence
   std::vector<int> feasible_lane_sequence;
 
-  if (mlc_decider_route_info_.ego_status_on_route ==
-          IN_EXCHANGE_AREAR_FRONT ||
+  if (mlc_decider_route_info_.ego_status_on_route == IN_EXCHANGE_AREAR_FRONT ||
       mlc_decider_route_info_.ego_status_on_route == IN_EXCHANGE_AREAR_REAR) {
     if (mlc_decider_route_info_.is_process_merge ||
         mlc_decider_route_info_.is_process_other_merge) {
@@ -3071,8 +3087,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     }
 
     previous_seg = sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
-    if (previous_seg == nullptr ||
-        fp_start_length > valid_dis) {
+    if (previous_seg == nullptr || fp_start_length > valid_dis) {
       break;
     }
   }
@@ -3161,9 +3176,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   }
 
   split_region_info.start_fp_point.fp_distance_to_split_point =
-                    is_find_split_region_start == true ? -fp_start_length : 0.0;
+      is_find_split_region_start == true ? -fp_start_length : 0.0;
   split_region_info.end_fp_point.fp_distance_to_split_point =
-                    is_find_split_region_end == true ? fp_end_length : 0.0;
+      is_find_split_region_end == true ? fp_end_length : 0.0;
   split_region_info.is_ramp_split =
       sdpro_map.isRamp(split_seccessor_link->link_type());
   split_region_info.split_link_id = split_segment.id();
