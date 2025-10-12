@@ -773,8 +773,6 @@ void RouteInfo::CaculateSplitInfo(
         }
         double dis_between_first_split_and_merge = 100.0;
         double dis_between_first_and_second_split = -100.0;
-        auto& split_region_info_list = route_info_output_.split_region_info_list;
-        auto& merge_region_info_list = route_info_output_.merge_region_info_list;
         if (!route_info_output_.split_region_info_list.empty()){
           if (!route_info_output_.split_region_info_list[0].is_valid){
             if (!route_info_output_.merge_region_info_list.empty()){
@@ -2202,9 +2200,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       std::vector<int> task_num;
       if (mlc_decider_route_info_.first_static_split_region_info.split_direction == SPLIT_LEFT) {
         task_num.emplace_back(-1);
+        route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       } else if (mlc_decider_route_info_.first_static_split_region_info.split_direction == SPLIT_RIGHT) {
         task_num.emplace_back(1);
+        route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       }
+      JSON_DEBUG_VALUE("mlc_request_type", static_cast<int>(route_info_output_.mlc_request_type_route_info));
       relative_id_lane->set_current_tasks(task_num);
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
@@ -3070,12 +3071,12 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     }
 
     previous_seg = sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
-    if (previous_seg == nullptr || fp_start_length > valid_dis) {
-      return split_region_info;
+    if (previous_seg == nullptr ||
+        fp_start_length > valid_dis) {
+      break;
     }
   }
-  split_region_info.start_fp_point.fp_distance_to_split_point =
-      -fp_start_length;
+
   double fp_end_length = 0;
   const iflymapdata::sdpro::LinkInfo_Link* split_region_end_link =
       split_seccessor_link;
@@ -3149,26 +3150,29 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
 
     // 限制从split向后最多搜索300米
     double search_dis = std::min((dis - ego_dis_to_split), 300.0);
+    const double kSearchMargin = 0.1;
 
     split_region_end_link =
         sdpro_map.GetNextLinkOnRoute(split_region_end_link->id());
     if (split_region_end_link == nullptr ||
-        (search_dis - fp_end_length) > kEpsilon) {
-      return split_region_info;
+        (fp_end_length > (search_dis - kSearchMargin))) {
+      break;
     }
   }
+
+  split_region_info.start_fp_point.fp_distance_to_split_point =
+                    is_find_split_region_start == true ? -fp_start_length : 0.0;
+  split_region_info.end_fp_point.fp_distance_to_split_point =
+                    is_find_split_region_end == true ? fp_end_length : 0.0;
+  split_region_info.is_ramp_split =
+      sdpro_map.isRamp(split_seccessor_link->link_type());
+  split_region_info.split_link_id = split_segment.id();
 
   if (!is_find_split_region_start || !is_find_split_region_end) {
     return split_region_info;
   }
 
   route_info_output_.is_find_exc_fp = true;
-
-  split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type());
-  split_region_info.split_link_id = split_segment.id();
-
-  split_region_info.end_fp_point.fp_distance_to_split_point = fp_end_length;
 
   // 1、计算第一区域的车道总数
   // 计算该split的方向
