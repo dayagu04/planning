@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+
 #include "config/basic_type.h"
 #include "ego_lane_track_manager.h"
 #include "ego_planning_config.h"
@@ -200,8 +201,7 @@ class RouteInfo {
       NOASplitRegionInfo* split_region_info,
       const ad_common::sdpromap::SDProMap& sdpro_map) const;
   bool CalculateFeasibleLane(NOASplitRegionInfo* split_region_info);
-  bool CalculateMergeRegionFeasibleLane(
-      NOASplitRegionInfo* split_region_info);
+  bool CalculateMergeRegionFeasibleLane(NOASplitRegionInfo* split_region_info);
   bool CalculateOtherMergeRoadFeasibleLane(
       NOASplitRegionInfo* split_region_info);
   bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type,
@@ -246,11 +246,19 @@ class RouteInfo {
                               const iflymapdata::sdpro::FeaturePoint cur_fp,
                               const double first_distance_to_split_point);
 
-  std::vector<int> CalculateMLCTaskNoLaneNum() ;
+  std::vector<int> CalculateMLCTaskNoLaneNum();
 
   bool CalculateDistanceToLastSplitPoint(double* dis, const double s) const;
 
   bool CalculateDistanceToLastMergePoint(double* dis, const double s) const;
+
+  bool CalculateDistanceNextToLastSplitPoint(
+      double* dis,
+      const iflymapdata::sdpro::LinkInfo_Link* next_split_or_merge_link) const;
+
+  bool CalculateDistanceNextToLastMergePoint(
+      double* dis,
+      const iflymapdata::sdpro::LinkInfo_Link* next_split_or_merge_link) const;
 
   std::vector<int> CommonElements(const std::vector<int>& A,
                                   const std::vector<int>& B) {

@@ -3018,6 +3018,20 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
 
+  double dis_to_last_split_point;
+  double dis_to_last_merge_point;
+  double valid_dis = NL_NMAX;
+
+  if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
+                                            split_info_vec[0].first)) {
+    valid_dis = std::min(valid_dis, dis_to_last_split_point);
+  }
+
+  if (CalculateDistanceNextToLastMergePoint(&dis_to_last_merge_point,
+                                            split_info_vec[0].first)) {
+    valid_dis = std::min(valid_dis, dis_to_last_merge_point);
+  }
+
   while (!is_find_split_region_start) {
     int fp_point_size = previous_seg->feature_points_size();
 
@@ -3069,22 +3083,6 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
 
     // 计算fp_length的累计长度
     fp_start_length = fp_start_length + previous_seg->length() * 0.01;
-
-    double dis_to_last_split_point;
-    double dis_to_last_merge_point;
-    double valid_dis = NL_NMAX;
-    const double passed_dis =
-        route_info_output_.current_segment_passed_distance;
-
-    if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point,
-                                          passed_dis)) {
-      valid_dis = std::min(valid_dis, dis_to_last_split_point);
-    }
-
-    if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point,
-                                          passed_dis)) {
-      valid_dis = std::min(valid_dis, dis_to_last_merge_point);
-    }
 
     previous_seg = sdpro_map.GetPreviousLinkOnRoute(previous_seg->id());
     if (previous_seg == nullptr || fp_start_length > valid_dis) {
@@ -3239,9 +3237,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     const int end_last_fp_link_lane_num = end_last_fp_link.lane_num();
     if (temp_lane_num2 != end_last_fp_link_lane_num) {
       if (split_seg_info.split_direction == RAMP_ON_LEFT) {
-        temp_lane_num2 = std::min(temp_lane_num1, end_last_fp_link_lane_num);
+        temp_lane_num2 = std::min(temp_lane_num2, end_last_fp_link_lane_num);
       } else if (split_seg_info.split_direction == RAMP_ON_RIGHT) {
-        temp_lane_num2 = std::max(temp_lane_num1, end_last_fp_link_lane_num);
+        temp_lane_num2 = std::max(temp_lane_num2, end_last_fp_link_lane_num);
       }
     }
 
@@ -3319,6 +3317,20 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
 
   if (temp_seg == nullptr) {
     return merge_region_info;
+  }
+
+  double dis_to_last_split_point;
+  double dis_to_last_merge_point;
+  double valid_dis = NL_NMAX;
+
+  if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
+                                            merge_info_vec[0].first)) {
+    valid_dis = std::min(valid_dis, dis_to_last_split_point);
+  }
+
+  if (CalculateDistanceNextToLastMergePoint(&dis_to_last_merge_point,
+                                            merge_info_vec[0].first)) {
+    valid_dis = std::min(valid_dis, dis_to_last_merge_point);
   }
 
   while (!is_find_merge_region_start) {
@@ -3411,22 +3423,6 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
     }
 
     temp_seg = sdpro_map.GetPreviousLinkOnRoute(temp_seg->id());
-
-    double dis_to_last_split_point;
-    double dis_to_last_merge_point;
-    double valid_dis = NL_NMAX;
-    const double passed_dis =
-        route_info_output_.current_segment_passed_distance;
-
-    if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point,
-                                          passed_dis)) {
-      valid_dis = std::min(valid_dis, dis_to_last_split_point);
-    }
-
-    if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point,
-                                          passed_dis)) {
-      valid_dis = std::min(valid_dis, dis_to_last_merge_point);
-    }
 
     if (temp_seg == nullptr || fp_start_length > valid_dis) {
       return merge_region_info;
@@ -4235,9 +4231,12 @@ bool RouteInfo::CalculateMergeLaneInfo(
     }
 
     int find_fp_lane_num = 0;
-    for (const auto& lane_id : find_fp.lane_ids()) {
-      if (!IsEmergencyLane(lane_id, sdpro_map_)) {
+    for (const auto& lane_id_temp : find_fp.lane_ids()) {
+      if (!IsEmergencyLane(lane_id_temp, sdpro_map_)) {
         find_fp_lane_num++;
+      }
+      if (lane_id_temp == lane_id) {
+        break;
       }
     }
 
@@ -5082,6 +5081,71 @@ bool RouteInfo::CalculateDistanceToLastMergePoint(double* dis,
 
   if (last_merge_link && last_merge_link->predecessor_link_ids().size() == 2) {
     *dis = sum_dis_to_last_merge_point;
+    return true;
+  }
+
+  return false;
+}
+
+bool RouteInfo::CalculateDistanceNextToLastSplitPoint(
+    double* dis,
+    const iflymapdata::sdpro::LinkInfo_Link* next_split_or_merge_link) const {
+  if (next_split_or_merge_link == nullptr) {
+    return false;
+  }
+  const iflymapdata::sdpro::LinkInfo_Link* temp_last_split_seg =
+      next_split_or_merge_link;
+  double accumulate_dis_next_to_last_split_point = 0.0;
+
+  while (temp_last_split_seg->successor_link_ids().size() == 1) {
+    accumulate_dis_next_to_last_split_point =
+        accumulate_dis_next_to_last_split_point +
+        temp_last_split_seg->length() * 0.01;
+
+    temp_last_split_seg =
+        sdpro_map_.GetPreviousLinkOnRoute(temp_last_split_seg->id());
+
+    if (!temp_last_split_seg) {
+      return false;
+    }
+  }
+
+  if (temp_last_split_seg &&
+      temp_last_split_seg->successor_link_ids().size() >= 2) {
+    *dis = accumulate_dis_next_to_last_split_point;
+
+    return true;
+  }
+
+  return false;
+}
+
+bool RouteInfo::CalculateDistanceNextToLastMergePoint(
+    double* dis,
+    const iflymapdata::sdpro::LinkInfo_Link* next_split_or_merge_link) const {
+  if (next_split_or_merge_link == nullptr) {
+    return false;
+  }
+  const iflymapdata::sdpro::LinkInfo_Link* temp_last_merge_seg =
+      next_split_or_merge_link;
+  double accumulate_dis_next_to_last_merge_point = 0.0;
+
+  while (temp_last_merge_seg->predecessor_link_ids().size() == 1) {
+    accumulate_dis_next_to_last_merge_point =
+        accumulate_dis_next_to_last_merge_point +
+        temp_last_merge_seg->length() * 0.01;
+
+    temp_last_merge_seg =
+        sdpro_map_.GetPreviousLinkOnRoute(temp_last_merge_seg->id());
+    // 判断是否为nullptr
+    if (temp_last_merge_seg == nullptr) {
+      return false;
+    }
+  }
+
+  if (temp_last_merge_seg &&
+      temp_last_merge_seg->predecessor_link_ids().size() >= 2) {
+    *dis = accumulate_dis_next_to_last_merge_point;
     return true;
   }
 
