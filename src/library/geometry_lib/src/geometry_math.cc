@@ -4252,5 +4252,30 @@ void GetSecondGearPath(const std::vector<pnc::geometry_lib::PathPoint> &path,
   return;
 }
 
+const bool IsScurvePath(const std::vector<pnc::geometry_lib::PathPoint> &path) {
+  if (path.empty()) {
+    return false;
+  }
+
+  bool left_turn = false;
+  bool right_turn = false;
+
+  for (size_t i = 0; i < path.size(); i++) {
+    if (path[i].kappa > 0.01) {
+      left_turn = true;
+    }
+
+    if (path[i].kappa < -0.01) {
+      right_turn = true;
+    }
+
+    if (left_turn && right_turn) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

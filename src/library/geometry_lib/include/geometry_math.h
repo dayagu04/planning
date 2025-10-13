@@ -1422,6 +1422,8 @@ const double GetSecondGearPathLength(
 void GetSecondGearPath(const std::vector<pnc::geometry_lib::PathPoint> &path,
                        std::vector<pnc::geometry_lib::PathPoint> &second_path);
 
+const bool IsScurvePath(const std::vector<pnc::geometry_lib::PathPoint> &path);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

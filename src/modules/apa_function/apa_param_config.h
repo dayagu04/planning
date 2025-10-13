@@ -215,6 +215,8 @@ struct DynamicGearSwitchConfig {
 
   double next_path_lat_buffer = 0.3;
   double next_path_lon_buffer = 0.3;
+
+  bool check_s_curve_for_next_path = true;
 };
 
 // Do not publish path to HMI per frame for stable display.

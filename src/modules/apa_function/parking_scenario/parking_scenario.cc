@@ -1156,11 +1156,16 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
     return false;
   }
 
-  // check next path
+  // check next path safe
   std::vector<pnc::geometry_lib::PathPoint> second_path;
   GetSecondGearPath(complete_path_point_global_vec_, second_path);
   if (IsPathCollision(second_path, param.next_path_lon_buffer,
                       param.next_path_lat_buffer, param.next_path_lat_buffer)) {
+    return false;
+  }
+
+  // check s curve
+  if (param.check_s_curve_for_next_path && IsScurvePath(second_path)) {
     return false;
   }
 
