@@ -2478,6 +2478,19 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
     if (target_lane_node == nullptr) {
       continue;
     }
+    double x = target_lane_node->node_x();
+    double y = target_lane_node->node_y();
+    Point2D node_cart(x, y);
+    double s = 0;
+    double l = 0;
+    const auto &nearest_lane =
+      virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
+    if (nearest_lane == nullptr) {
+      continue;
+    }
+    if (target_lane_virtual_id != nearest_lane->get_virtual_id()) {
+      continue;
+    }
     double agent_s = target_lane_node->node_s();
     if (target_lane_front_node_ != nullptr &&
         target_lane_node->node_id() == target_lane_front_node_->node_id()) {
