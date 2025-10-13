@@ -223,6 +223,8 @@ class ApaSlotManager final {
     slot_release_voter_.clear();
     release_slot_id_vec_.clear();
     ego_slot_min_dist_map_.clear();
+    parallel_slot_release_count_ = 0;
+    parallel_slot_not_release_count_ = 0;
   }
 
   void GenerateReleaseSlotIdVec();
@@ -285,6 +287,8 @@ class ApaSlotManager final {
   bool is_ego_col_parallel_ = false;
   bool free_slot_activate_ = false;
   iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;
+  int parallel_slot_release_count_ = 0;
+  int parallel_slot_not_release_count_ = 0;
 };
 }  // namespace apa_planner
 }  // namespace planning
