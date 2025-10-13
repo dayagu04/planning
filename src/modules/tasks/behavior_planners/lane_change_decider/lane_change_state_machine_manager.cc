@@ -102,8 +102,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangePropose: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangePropose) {
-
-
         const auto &virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
         propose_state_frame_nums_++;
@@ -1108,19 +1106,19 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       // if (side_a == 0 || side_b == 0 || side_c == 0) {
       //   cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
       // } else {
-      //   double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b) / (2 * side_a * side_c);
-      //   double sin_B = std::sqrt(std::max((1 - cos_B * cos_B), 1e-6));
-      //   cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
+      //   double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b)
+      //   / (2 * side_a * side_c); double sin_B = std::sqrt(std::max((1 - cos_B
+      //   * cos_B), 1e-6)); cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
       // }
       // 计算向量
-      double dx1 = ref_point.at(i).path_point.x() -
-                   ref_point.at(i - 5).path_point.x();
-      double dy1 = ref_point.at(i).path_point.y() -
-                   ref_point.at(i - 5).path_point.y();
-      double dx2 = ref_point.at(i + 5).path_point.x() -
-                   ref_point.at(i).path_point.x();
-      double dy2 = ref_point.at(i + 5).path_point.y() -
-                   ref_point.at(i).path_point.y();
+      double dx1 =
+          ref_point.at(i).path_point.x() - ref_point.at(i - 5).path_point.x();
+      double dy1 =
+          ref_point.at(i).path_point.y() - ref_point.at(i - 5).path_point.y();
+      double dx2 =
+          ref_point.at(i + 5).path_point.x() - ref_point.at(i).path_point.x();
+      double dy2 =
+          ref_point.at(i + 5).path_point.y() - ref_point.at(i).path_point.y();
       // 计算弧长
       double ds1 = std::sqrt(dx1 * dx1 + dy1 * dy1);
       double ds2 = std::sqrt(dx2 * dx2 + dy2 * dy2);
@@ -2279,7 +2277,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     double s = 0;
     double l = 0;
     const auto &nearest_lane =
-      virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
+        virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
     if (nearest_lane == nullptr) {
       continue;
     }
@@ -2375,8 +2373,9 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
       continue;
     }
     if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
-        agent_s + target_lane_node->node_length() * 0.5 > ego_sl_bd.s_start - 5.0) {
-      continue; //过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
+        agent_s + target_lane_node->node_length() * 0.5 >
+            ego_sl_bd.s_start - 5.0) {
+      continue;  //过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
     }
     // const double target_lane_width = target_lane->width_by_s(agent_s);
     // const auto agent =
@@ -2468,12 +2467,9 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
           target_lane_virtual_id);
   risk_agents_nodes_.clear();
   const std::unordered_set<agent::AgentType> FacilityTypes = {
-      agent::AgentType::TRAFFIC_CONE,
-      agent::AgentType::TRAFFIC_BARREL,
-      agent::AgentType::WATER_SAFETY_BARRIER,
-      agent::AgentType::CTASH_BARREL,
-      agent::AgentType::WARNING_TRIANGLE
-  };
+      agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
+      agent::AgentType::WATER_SAFETY_BARRIER, agent::AgentType::CTASH_BARREL,
+      agent::AgentType::WARNING_TRIANGLE};
   for (const auto *target_lane_node : target_lane_nodes) {
     if (target_lane_node == nullptr) {
       continue;
@@ -2484,7 +2480,7 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
     double s = 0;
     double l = 0;
     const auto &nearest_lane =
-      virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
+        virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
     if (nearest_lane == nullptr) {
       continue;
     }
@@ -3853,8 +3849,9 @@ bool LaneChangeStateMachineManager::
   double std_beyond_lane_time = 2.0;  // 实际在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
-  std::array<double, 6> fp{2.0, 2.5, 4.0,
-                           5.,  6.,  8.};  //触发变道需要预留最小空间 下方 大车额外增加5m基础距离
+  std::array<double, 6> fp{
+      2.0, 2.5, 4.0,
+      5.,  6.,  8.};  //触发变道需要预留最小空间 下方 大车额外增加5m基础距离
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   bool is_deceleration_check =
