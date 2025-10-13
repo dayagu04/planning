@@ -13,6 +13,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
+  construction_scene_decider_ =
+      std::make_unique<ConstructionSceneDecider>(config_builder, session);
   spatio_temporal_planner_ =
       std::make_unique<SpatioTemporalPlanner>(config_builder, session);
   lane_change_decider_ =
@@ -103,6 +105,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = potential_dangerous_agent_decider_->Execute();
   if (!ok) {
     AddErrorInfo(potential_dangerous_agent_decider_->Name());
+    return false;
+  }
+
+  ok = construction_scene_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(construction_scene_decider_->Name());
     return false;
   }
 

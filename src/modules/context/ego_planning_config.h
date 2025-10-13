@@ -2163,6 +2163,20 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
 
 };
 
+
+struct ConstructionSceneDeciderConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, hard_buffer2dynamic_agent, "construction_scene_decider",
+                     "hard_buffer2dynamic_agent");
+
+    /* read config from json */
+  }
+  double hard_buffer2dynamic_agent = 0.15;
+  double desired_vel = 11.11;                    // KPH_40;
+
+};
+
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
