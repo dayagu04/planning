@@ -1413,15 +1413,6 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   JSON_DEBUG_VALUE("left_road_extra_buffer", left_road_extra_buffer);
   JSON_DEBUG_VALUE("right_road_extra_buffer", right_road_extra_buffer);
 
-  // 大曲率右湾加左侧道路边缘Bound，大曲率左弯加右侧道路边缘
-  if (general_lateral_decider_output.ramp_scene) {
-    if (!ref_curve_info_.is_left && ref_curve_info_.is_right) {
-      right_road_extra_buffer += config_.extra_road_buffer_in_big_curvature;
-    } else if (ref_curve_info_.is_left && !ref_curve_info_.is_right) {
-      left_road_extra_buffer += config_.extra_road_buffer_in_big_curvature;
-    }
-  }
-
   const double kDefaultDistanceToRoad = 10.0;
   // const double kMaxTime = 3.5;
   min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
