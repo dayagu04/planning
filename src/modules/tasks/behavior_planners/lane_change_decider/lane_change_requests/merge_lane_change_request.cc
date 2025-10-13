@@ -272,7 +272,6 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       ego_lane_road_right_decider_output.is_split_region;
   const bool cur_lane_is_continue =
       ego_lane_road_right_decider_output.cur_lane_is_continue;
-  use_map_is_merge_situation_ = false;
 
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
@@ -315,21 +314,23 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
         distance_to_merge_point_ < distance_to_first_road_split &&
         distance_to_merge_point_ < dis_to_first_merge &&
-        distance_to_merge_point_ > 25.0) {
+        distance_to_merge_point_ > 60.0) {
       // 依赖sdpro提供的前方最左侧车道/最右侧车道的LaneChangeType
       if (is_left_edge_side_lane && lane_merge_direction_ == LEFT_MERGE) {
         merge_lane_change_direction_ = RIGHT_CHANGE;
         use_map_is_merge_situation_ = true;
-        return;
       } else if (is_right_edge_side_lane &&
                  lane_merge_direction_ == RIGHT_MERGE) {
         merge_lane_change_direction_ = LEFT_CHANGE;
         use_map_is_merge_situation_ = true;
-        return;
       }
     }
   } else {
     merge_lane_change_direction_ = NO_CHANGE;
+  }
+
+  if (use_map_is_merge_situation_) {
+    return;
   }
 
   if (base_lane != nullptr) {
