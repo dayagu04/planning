@@ -2370,12 +2370,13 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (nearest_lane == nullptr) {
       continue;
     }
-    if (target_lane_virtual_id != nearest_lane->get_virtual_id()) {
-      continue;
-    }
     double agent_s = target_lane_node->node_s();
     if (agent_s + target_lane_node->node_length() * 0.5 > ego_sl_bd.s_start) {
       continue;
+    }
+    if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
+        agent_s + target_lane_node->node_length() * 0.5 > ego_sl_bd.s_start - 5.0) {
+      continue; //过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
     }
     // const double target_lane_width = target_lane->width_by_s(agent_s);
     // const auto agent =
