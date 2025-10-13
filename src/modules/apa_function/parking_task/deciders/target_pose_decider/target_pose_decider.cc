@@ -71,11 +71,18 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     }
 
     // park in the middle of the slot
+    double mid_x = (slot_.processed_corner_coord_local_.pt_01_mid.x() +
+                    slot_.processed_corner_coord_local_.pt_23_mid.x()) *
+                   0.5;
+
+    if (slot_.slot_type_ == SlotType::SLANT) {
+      mid_x = (slot_.origin_corner_coord_local_.pt_01_mid.x() +
+               slot_.origin_corner_coord_local_.pt_23_mid.x()) *
+              0.5;
+    }
+
     const double mid_ego_x =
-        (slot_.processed_corner_coord_local_.pt_01_mid.x() -
-         slot_.processed_corner_coord_local_.pt_23_mid.x()) *
-            0.5 -
-        (0.5 * param.car_length - param.rear_overhanging);
+        mid_x - (0.5 * param.car_length - param.rear_overhanging);
 
     virtual_tar_x = std::max(virtual_tar_x, mid_ego_x);
   }
@@ -203,7 +210,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   if (param.smart_fold_mirror_params.has_smart_fold_mirror &&
       !col_det_interface_ptr_->GetFoldMirrorFlag()) {
-    front_exceed_line_dx = std::min(front_exceed_line_dx, 0.068);
+    front_exceed_line_dx = std::min(front_exceed_line_dx, 0.36);
   }
 
   max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
