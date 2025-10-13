@@ -5096,7 +5096,14 @@ bool RouteInfo::CalculateDistanceNextToLastSplitPoint(
   const iflymapdata::sdpro::LinkInfo_Link* temp_last_split_seg =
       next_split_or_merge_link;
   double accumulate_dis_next_to_last_split_point = 0.0;
+  accumulate_dis_next_to_last_split_point +=
+      temp_last_split_seg->length() * 0.01;
+  temp_last_split_seg =
+      sdpro_map_.GetPreviousLinkOnRoute(temp_last_split_seg->id());
 
+  if (temp_last_split_seg == nullptr) {
+    return false;
+  }
   while (temp_last_split_seg->successor_link_ids().size() == 1) {
     accumulate_dis_next_to_last_split_point =
         accumulate_dis_next_to_last_split_point +
@@ -5130,6 +5137,14 @@ bool RouteInfo::CalculateDistanceNextToLastMergePoint(
       next_split_or_merge_link;
   double accumulate_dis_next_to_last_merge_point = 0.0;
 
+  accumulate_dis_next_to_last_merge_point +=
+      temp_last_merge_seg->length() * 0.01;
+  temp_last_merge_seg =
+      sdpro_map_.GetPreviousLinkOnRoute(temp_last_merge_seg->id());
+
+  if (temp_last_merge_seg == nullptr) {
+    return false;
+  }
   while (temp_last_merge_seg->predecessor_link_ids().size() == 1) {
     accumulate_dis_next_to_last_merge_point =
         accumulate_dis_next_to_last_merge_point +
