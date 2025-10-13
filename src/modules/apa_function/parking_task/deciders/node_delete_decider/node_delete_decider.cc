@@ -313,6 +313,7 @@ const bool NodeDeleteDecider::CheckCollision() {
       if (pt_vec_vec.empty()) {
         break;
       }
+      const AstarPathGear last_gear = gear_vec.back();
       const auto& pts = pt_vec_vec.back();
 #if USE_LINK_PT_LINE
       std::vector<common_math::PathPt<float>> pt_line, pt_arc;
@@ -357,15 +358,18 @@ const bool NodeDeleteDecider::CheckCollision() {
       }
 
       pt_vec_vec.pop_back();
+      gear_vec.pop_back();
 
       if (pt_arc.size() > 0) {
         std::reverse(pt_arc.begin(), pt_arc.end());
         pt_vec_vec.emplace_back(pt_arc);
+        gear_vec.emplace_back(last_gear);
       }
 
       if (mirror_x < upper_x) {
         std::reverse(pt_line.begin(), pt_line.end());
         pt_vec_vec.emplace_back(pt_line);
+        gear_vec.emplace_back(last_gear);
       } else {
 #if USE_LINK_PT_LINE
         std::vector<common_math::PathPt<float>> pt_line_up, pt_line_down;
@@ -387,6 +391,8 @@ const bool NodeDeleteDecider::CheckCollision() {
         std::reverse(pt_line_up.begin(), pt_line_up.end());
         pt_vec_vec.emplace_back(pt_line_up);
         pt_vec_vec.emplace_back(pt_line_down);
+        gear_vec.emplace_back(last_gear);
+        gear_vec.emplace_back(last_gear);
       }
 
       enable_smart_fold_mirror = true;
@@ -694,6 +700,10 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     ObsToPathDistRelativeSlot* obs_dist, double* safe_remain_dist) {
   const std::shared_ptr<EDTCollisionDetector>& edt_col_det_ptr =
       col_det_interface_ptr_->GetEDTColDetPtr();
+
+  if (pts.empty()) {
+    return false;
+  }
 
   const bool need_cal_obs_dist = input_.need_cal_obs_dist;
 

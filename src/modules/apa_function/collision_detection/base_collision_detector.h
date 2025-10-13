@@ -23,10 +23,14 @@ struct ColResultF {
 
   float min_obs_dist = 26.8f;
 
+  Eigen::Vector2f dangerous_path_pt;
+
   void Reset() {
     col_flag = false;
     remain_dist = 26.8f;
     min_obs_dist = 26.8f;
+
+    dangerous_path_pt.setZero();
   }
 };
 
@@ -156,7 +160,7 @@ struct CarFootPrintCircleList {
     ILOG_INFO_IF(enable_log) << "max_circle: ";
     max_circle.PrintInfo(enable_log);
     for (uint8_t i = 0; i < count; ++i) {
-      ILOG_INFO_IF(enable_log) << "circle[" << i << "]: ";
+      ILOG_INFO_IF(enable_log) << "circle[" << static_cast<int>(i) << "]: ";
       circles[i].PrintInfo(enable_log);
     }
     ILOG_INFO_IF(enable_log) << "height_type: " << int(height_type);

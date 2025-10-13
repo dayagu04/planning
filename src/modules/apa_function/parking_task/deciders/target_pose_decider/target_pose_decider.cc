@@ -209,9 +209,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
   max_lon_move_dist = std::max(max_lon_move_dist, 0.0001);
 
-  ILOG_INFO << "max_lon_move_dist = " << max_lon_move_dist
-            << "  max_lat_move_dist = " << max_lat_move_dist;
-
   // calc lat_move_step and lon_move_step
   double lat_move_step{0.02};
   double lon_move_step{0.05};
@@ -219,6 +216,11 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_move_step = 0.05;
     lon_move_step = 0.1;
   }
+
+  ILOG_INFO << "max_lon_move_dist = " << max_lon_move_dist
+            << "  max_lat_move_dist = " << max_lat_move_dist
+            << "  lat_move_step = " << lat_move_step
+            << "  lon_move_step = " << lon_move_step;
 
   // 车位内的核心区域不能有障碍物  有就直接失败
   Polygon2D polygon;
@@ -271,9 +273,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
         for (const double lon_move_dist : lon_dist_vec) {
           std::vector<geometry_lib::PathPoint> tmp_pose_vec;
           // 考虑车辆纵向行驶路径上 如果有障碍物 则也视为不安全
-          std::vector<double> lon_path_vec{
-              lon_move_dist, lon_move_dist - lon_buffer_, lon_move_dist + 1.0,
-              lon_move_dist + 2.0};
+          std::vector<double> lon_path_vec{lon_move_dist - lon_buffer_,
+                                           lon_move_dist, lon_move_dist + 1.0,
+                                           lon_move_dist + 2.0};
           for (const double dist : lon_path_vec) {
             if (base_on_slot_) {
               tmp_pose = tar_pose_local;
@@ -292,12 +294,12 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
             result_.safe_lat_move_dist = lat_move_dist;
             result_.safe_lat_buffer = lat_buffer;
             if (base_on_slot_) {
-              result_.target_pose_local = tmp_pose_vec.front();
+              result_.target_pose_local = tmp_pose_vec[1];
               result_.target_pose_global =
                   geometry_lib::TransformPoseFromLocalToGlobal(
                       result_.target_pose_local, l2g_tf);
             } else {
-              result_.target_pose_global = tmp_pose_vec.front();
+              result_.target_pose_global = tmp_pose_vec[1];
               result_.target_pose_local =
                   geometry_lib::TransformPoseFromGlobalToLocal(
                       result_.target_pose_global, g2l_tf);
