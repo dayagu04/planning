@@ -7,6 +7,13 @@ namespace planning {
 namespace apa_planner {
 class PerpendicularParkScenario : public ParkingScenario {
  public:
+  PerpendicularParkScenario() = default;
+  PerpendicularParkScenario(const PerpendicularParkScenario&) = default;
+  PerpendicularParkScenario& operator=(const PerpendicularParkScenario&) =
+      default;
+  PerpendicularParkScenario(PerpendicularParkScenario&&) = delete;
+  PerpendicularParkScenario& operator=(PerpendicularParkScenario&&) = delete;
+
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); }
 

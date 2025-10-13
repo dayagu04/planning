@@ -369,7 +369,7 @@ void JerkLimitedTrajOptimizer::GenerateStartingAndStoppingTraj(
         2.0 / acc;
 
     double time = 0.0;
-    double p;
+    double p = 0.0;
     double v;
     // speed up
     int point_size = std::ceil(first_phase_time / config_.delta_time);

@@ -356,7 +356,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
 void ParkingStopDecider::ComputeSTBoundary(
     std::vector<pnc::geometry_lib::PathPoint>& path, ApaObstacle& obstacle) {
   ParkLonDecision decision;
-  decision.decision_type = LonDecisionType::NONE;
+  decision.Clear();
 
   std::vector<STPoint> lower_points;
   std::vector<STPoint> upper_points;
@@ -523,6 +523,7 @@ void ParkingStopDecider::AddStopDecisionByDistance(
     const double stop_s, const LonDecisionReason decision_reason,
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path) {
   ParkLonDecision stop_decision;
+  stop_decision.Clear();
   if (decision_reason == LonDecisionReason::STATIC_OCC_COLLISION) {
     stop_decision.lon_decision_buffer = config_.lon_buffer_to_static_agent;
   } else if (decision_reason == LonDecisionReason::DYNAMIC_OCC_COLLISION) {
