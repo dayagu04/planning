@@ -343,8 +343,9 @@ void EDTCollisionDetector::UpdateCarWithOutMirrorSafeBuffer() {
   car_without_mirror_circles_list_with_buffer_.height_type =
       ApaObsHeightType::MID;
 
-  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
-  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
+  CarFootPrintCircle *circles =
+      car_without_mirror_circles_list_with_buffer_.circles;
+  CarFootPrintCircle *origin_circles = car_without_mirror_circles_list_.circles;
 
   for (size_t i = 0; i < car_without_mirror_circles_list_with_buffer_.count;
        ++i) {
@@ -385,8 +386,8 @@ void EDTCollisionDetector::UpdateCarChassisSafeBuffer() {
 
   car_chassis_circles_list_with_buffer_.height_type = ApaObsHeightType::LOW;
 
-  CarFootPrintCircle *circles = car_with_mirror_circles_list_buffer_.circles;
-  CarFootPrintCircle *origin_circles = car_with_mirror_circles_list_.circles;
+  CarFootPrintCircle *circles = car_chassis_circles_list_with_buffer_.circles;
+  CarFootPrintCircle *origin_circles = car_chassis_circles_list_.circles;
 
   for (size_t i = 0; i < car_chassis_circles_list_with_buffer_.count; ++i) {
     circles[i].center_local = origin_circles[i].center_local;
@@ -793,7 +794,7 @@ const ColResultF EDTCollisionDetector::Update(
     common_math::PathPt<float> temp_pt = pt;
     do {
       s += ds;
-      if (s >= lon_buffer_) {
+      if (s >= lon_buffer_ + 0.001f) {
         s = lon_buffer_;
       }
       temp_pt.pos = pt.pos + dir * s;
@@ -816,6 +817,7 @@ const ColResultF EDTCollisionDetector::Update(
 
   float obs_dist = 26.8f, min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
   bool col_flag = false;
+  Eigen::Vector2f dangerous_pt;
   for (const common_math::PathPt<float> &pt : pts_) {
     obs_dist = 26.8f;
     if (!IsPoseInClearZone(pt)) {
@@ -825,6 +827,7 @@ const ColResultF EDTCollisionDetector::Update(
                      : IsCollisionForPoint(pt, high_circle_list,
                                            ApaObsHeightType::HIGH);
       if (col_flag) {
+        dangerous_pt = pt.GetPos();
         break;
       }
 
@@ -835,6 +838,7 @@ const ColResultF EDTCollisionDetector::Update(
                        : IsCollisionForPoint(pt, mid_circle_list,
                                              ApaObsHeightType::MID);
         if (col_flag) {
+          dangerous_pt = pt.GetPos();
           break;
         }
 
@@ -844,6 +848,7 @@ const ColResultF EDTCollisionDetector::Update(
                        : IsCollisionForPoint(pt, low_circle_list,
                                              ApaObsHeightType::LOW);
         if (col_flag) {
+          dangerous_pt = pt.GetPos();
           break;
         }
       }
@@ -859,6 +864,7 @@ const ColResultF EDTCollisionDetector::Update(
   col_res_f_.col_flag = col_flag;
   col_res_f_.remain_dist = lon_safe_dist - lon_buffer_;
   col_res_f_.min_obs_dist = min_obs_dist + body_lat_buffer_;
+  col_res_f_.dangerous_path_pt = dangerous_pt;
 
   return col_res_f_;
 }
