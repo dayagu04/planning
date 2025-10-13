@@ -54,7 +54,10 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
                    int motion_plan_concerned_start_index, int motion_plan_concerned_end_index,
                    double curv_factor,
                    double start_w_jerk, double ego_v, double expected_acc, double start_acc, double end_acc,
-                   double end_ratio1, double end_ratio2, double end_ratio3, double max_iter) {
+                   double end_ratio1, double end_ratio2, double end_ratio3, double max_iter,
+                   double wheel_base, double q_front_ref_xy,
+                   double q_virtual_ref_xy, double q_virtual_ref_theta,
+                   std::vector<double> virtual_ref_x, std::vector<double> virtual_ref_y, std::vector<double> virtual_ref_theta) {
   planning::common::LateralPlanningInput planning_input =
       BytesToProto<planning::common::LateralPlanningInput>(
           planning_input_bytes);
@@ -98,6 +101,23 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
     planning_input.mutable_ref_x_vec()->Set(i, origin_planning_input.ref_x_vec(i) + ref_unit_vector.x() * ref_xy);
     planning_input.mutable_ref_y_vec()->Set(i, origin_planning_input.ref_y_vec(i) + ref_unit_vector.y() * ref_xy);
   }
+  // virtual ref
+  // bool is_virtual_empty =
+  //     virtual_ref_x.size() != N ||
+  //     virtual_ref_y.size() != N ||
+  //     virtual_ref_theta.size() != N;
+  // if (is_virtual_empty) {
+  //   virtual_ref_x.clear();
+  //   virtual_ref_y.clear();
+  //   virtual_ref_theta.clear();
+  //   for (size_t i = 0; i < N; i++) {
+  //     virtual_ref_x.emplace_back(planning_input.ref_x_vec(i));
+  //     virtual_ref_y.emplace_back(planning_input.ref_y_vec(i));
+  //     virtual_ref_theta.emplace_back(planning_input.ref_theta_vec(i));
+  //   }
+  //   q_virtual_ref_xy = 0;
+  //   q_virtual_ref_theta = 0;
+  // }
   // set bound idx
   if (safe_lb_start_idx < 0) {
     safe_lb_start_idx = 0;
@@ -282,7 +302,14 @@ int UpdateByParams(py::bytes &planning_input_bytes, double q_ref_xy,
   //   model_dt_vec[i] = new_dt;
   // }
 
-  pBase->Update(expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter, motion_plan_concerned_start_index, start_w_jerk, ego_v, planning_input);
+  pBase->Update(expected_acc, start_acc, end_acc,
+                end_ratio1, end_ratio2, end_ratio3,
+                max_iter, motion_plan_concerned_start_index,
+                start_w_jerk, ego_v,
+                wheel_base, q_front_ref_xy,
+                q_virtual_ref_xy, q_virtual_ref_theta,
+                virtual_ref_x, virtual_ref_y, virtual_ref_theta,
+                planning_input);
   return 0;
 }
 

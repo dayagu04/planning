@@ -434,6 +434,20 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       'steer_dot_deg_lower_bound': steer_dot_deg_lower_bound,
     })
 
+    try:
+      refline_s = 0
+      refline_s_vec = []
+      refline_curvature_vec = planning_json['raw_refline_k_vec']
+      for i in range(len(refline_curvature_vec)):
+        refline_s_vec.append(refline_s)
+        refline_s = refline_s + 2
+      lat_plan_data['data_refline_curvature'].data.update({
+        'refline_s': refline_s_vec,
+        'refline_curvature': refline_curvature_vec,
+      })
+    except:
+      print("no plan debug json: raw_refline_k_vec")
+
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
     print("lat_err = ", planning_json['lat_err'])
@@ -581,6 +595,13 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
         data_center_line.data.update({
           'center_line_{}_x'.format(i): center_line_list[i]['line_x_vec'],
           'center_line_{}_y'.format(i): center_line_list[i]['line_y_vec'],
+        })
+        if center_line_list[i]['relative_id'][0] == 0:
+          lat_plan_data['data_center_line_curvature'].data.update({
+          'center_line_s' :  center_line_list[i]['line_s_vec'],
+          'center_line_curvature' :  center_line_list[i]['curvature_vec'],
+          'center_line_d_poly_curvature' :  center_line_list[i]['d_poly_curvature_vec'],
+          'center_line_confidence' :  [confidence * 1000.0 for confidence in center_line_list[i]['confidence_vec']],
         })
 
   # load control
@@ -852,9 +873,32 @@ def load_receive_topic_time(bag_loader):
   fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
   return fig
 
+def load_road_curve(bag_loader, lat_plan_data):
+  fig = bkp.figure(x_axis_label='s', y_axis_label='k_radius', width=800, height=160)
+  f_1 = fig.line('center_line_s', 'center_line_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'kappa radius')
+  fig.line('center_line_s', 'center_line_d_poly_curvature', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'road radius')
+  f_2 = fig.line('refline_s', 'refline_curvature', source = lat_plan_data['data_refline_curvature'], line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ref kappa radius')
+  fig.line('center_line_s', 'center_line_confidence', source = lat_plan_data['data_center_line_curvature'], line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'road confidence')
+  f_1 = HoverTool(renderers=[f_1], tooltips=[('s', '@center_line_s'), ('radius', '@center_line_curvature')], mode='vline')
+  f_2 = HoverTool(renderers=[f_2], tooltips=[('s', '@refline_s'), ('radius', '@refline_curvature')], mode='vline')
+  fig.add_tools(f_1)
+  fig.add_tools(f_2)
+  fig.toolbar.active_scroll = fig.select_one(WheelZoomTool)
+  fig.legend.click_policy = 'hide'
+  return fig
+
+
 def load_lat_plan_figure(fig1, local_view_data):
   data_refline = ColumnDataSource(data = {'raw_refline_x':[],
                                           'raw_refline_y':[],})
+
+  data_center_line_curvature = ColumnDataSource(data = {'center_line_s':[],
+                                                        'center_line_curvature':[],
+                                                        'center_line_d_poly_curvature':[],
+                                                        'center_line_confidence':[], })
+
+  data_refline_curvature = ColumnDataSource(data = {'refline_s':[],
+                                                    'refline_curvature':[]})
 
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
@@ -993,7 +1037,9 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_center_line_3':data_center_line_3, \
                    'data_center_line_4':data_center_line_4, \
                    'data_arastar': data_arastar,\
-                   'data_spatio_temporal_trajs': data_spatio_temporal_trajs,
+                   'data_spatio_temporal_trajs': data_spatio_temporal_trajs, \
+                   'data_center_line_curvature':data_center_line_curvature, \
+                   'data_refline_curvature':data_refline_curvature, \
   }
 
 

@@ -102,6 +102,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
     case StateMachineLaneChangeStatus::kLaneChangePropose: {
       if (transition_info_.lane_change_status ==
           StateMachineLaneChangeStatus::kLaneChangePropose) {
+
+
         const auto &virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
         propose_state_frame_nums_++;
@@ -1088,23 +1090,64 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
                                    ref_point.at(i - 1).path_point.y())
               : 0.;
     if (i > 4 && i < point_size - 5) {
-      double side_a = std::hypot(
-          ref_point.at(i + 5).path_point.x() - ref_point.at(i).path_point.x(),
-          ref_point.at(i + 5).path_point.y() - ref_point.at(i).path_point.y());
-      double side_b = std::hypot(ref_point.at(i + 5).path_point.x() -
-                                     ref_point.at(i - 5).path_point.x(),
-                                 ref_point.at(i + 5).path_point.y() -
-                                     ref_point.at(i - 5).path_point.y());
-      double side_c = std::hypot(
-          ref_point.at(i).path_point.x() - ref_point.at(i - 5).path_point.x(),
-          ref_point.at(i).path_point.y() - ref_point.at(i - 5).path_point.y());
-      if (side_a == 0 || side_b == 0 || side_c == 0) {
+      // double side_a =
+      //     std::hypot(ref_point.at(i + 5).path_point.x() -
+      //                ref_point.at(i).path_point.x(),
+      //                ref_point.at(i + 5).path_point.y() -
+      //                ref_point.at(i).path_point.y());
+      // double side_b =
+      //     std::hypot(ref_point.at(i + 5).path_point.x() -
+      //                ref_point.at(i - 5).path_point.x(),
+      //                ref_point.at(i + 5).path_point.y() -
+      //                ref_point.at(i - 5).path_point.y());
+      // double side_c =
+      //     std::hypot(ref_point.at(i).path_point.x() -
+      //                ref_point.at(i - 5).path_point.x(),
+      //                ref_point.at(i).path_point.y() -
+      //                ref_point.at(i - 5).path_point.y());
+      // if (side_a == 0 || side_b == 0 || side_c == 0) {
+      //   cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
+      // } else {
+      //   double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b) / (2 * side_a * side_c);
+      //   double sin_B = std::sqrt(std::max((1 - cos_B * cos_B), 1e-6));
+      //   cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
+      // }
+      // 计算向量
+      double dx1 = ref_point.at(i).path_point.x() -
+                   ref_point.at(i - 5).path_point.x();
+      double dy1 = ref_point.at(i).path_point.y() -
+                   ref_point.at(i - 5).path_point.y();
+      double dx2 = ref_point.at(i + 5).path_point.x() -
+                   ref_point.at(i).path_point.x();
+      double dy2 = ref_point.at(i + 5).path_point.y() -
+                   ref_point.at(i).path_point.y();
+      // 计算弧长
+      double ds1 = std::sqrt(dx1 * dx1 + dy1 * dy1);
+      double ds2 = std::sqrt(dx2 * dx2 + dy2 * dy2);
+      if (ds1 < 1e-6 || ds2 < 1e-6) {
         cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
       } else {
-        double cos_B = (side_a * side_a + side_c * side_c - side_b * side_b) /
-                       (2 * side_a * side_c);
-        double sin_B = std::sqrt(std::max((1 - cos_B * cos_B), 1e-6));
-        cart_ref_info.k_vec[i] = 2.0 * sin_B / side_b;
+        // 平均弧长
+        double avg_ds = (ds1 + ds2) / 2.0;
+        // 计算一阶导数（单位切向量）
+        double dx_ds = dx1 / ds1;
+        double dy_ds = dy1 / ds1;
+        // 计算二阶导数（曲率向量）
+        double d2x = ((dx2 / ds2) - (dx1 / ds1)) / avg_ds;
+        double d2y = ((dy2 / ds2) - (dy1 / ds1)) / avg_ds;
+        // 计算曲率: k = (x'y'' - y'x'') / (x'^2 + y'^2)^(3/2)
+        double numerator = dx_ds * d2y - dy_ds * d2x;
+        double denominator = std::pow(dx_ds * dx_ds + dy_ds * dy_ds, 1.5);
+        if (std::fabs(denominator) < 1e-6) {
+          cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
+        } else {
+          cart_ref_info.k_vec[i] = numerator / denominator;
+          // 处理数值异常
+          if (std::isnan(cart_ref_info.k_vec[i]) ||
+              std::isinf(cart_ref_info.k_vec[i])) {
+            cart_ref_info.k_vec[i] = cart_ref_info.k_vec[i - 1];
+          }
+        }
       }
     } else {
       cart_ref_info.k_vec[i] = ref_point.at(i).path_point.kappa();

@@ -522,6 +522,45 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
       'expected_steer_deg_vec': expected_steer_deg_vec,
     })
 
+    history_time_vec = []
+    history_steer_deg_vec = []
+    try:
+      history_time = -0.1 * len(history_steer_deg_vec)
+      history_steer_deg_vec = planning_json['history_steer_vec']
+      for i in range(len(history_steer_deg_vec)):
+        history_time_vec.append(history_time)
+        history_time += 0.1
+    except:
+      print("no history path info!")
+
+    lat_plan_data['data_history_path'].data.update({
+      'time_vec': history_time_vec,
+      'history_steer_deg_vec': history_steer_deg_vec,
+    })
+
+    virtual_ref_x = []
+    virtual_ref_y = []
+    virtual_ref_xn = []
+    virtual_ref_yn = []
+    virtual_ref_theta = []
+    try:
+      virtual_ref_xn = plan_debug_json_msg['virtual_ref_x']
+      virtual_ref_yn = plan_debug_json_msg['virtual_ref_y']
+      virtual_ref_x, virtual_ref_y = coord_tf.global_to_local(plan_debug_json_msg['virtual_ref_x'], plan_debug_json_msg['virtual_ref_y'])
+      virtual_ref_theta_rad = plan_debug_json_msg['virtual_ref_theta']
+      for i in range(len(virtual_ref_theta_rad)):
+        virtual_ref_theta.append(virtual_ref_theta_rad[i] * 57.3)
+    except:
+      print("no virtual ref")
+    lat_plan_data['data_virtual_ref'].data.update({
+      'time_vec': time_vec,
+      'virtual_ref_x': virtual_ref_x,
+      'virtual_ref_y': virtual_ref_y,
+      'virtual_ref_xn': virtual_ref_xn,
+      'virtual_ref_yn': virtual_ref_yn,
+      'virtual_ref_theta': virtual_ref_theta,
+    })
+
     # print("dbw_status = ", planning_json['dbw_status'])
     # print("replan_status = ", planning_json['replan_status'])
     # print("lat_err = ", planning_json['lat_err'])
@@ -876,10 +915,23 @@ def load_lat_plan_figure(fig1):
 
   data_ego = ColumnDataSource(data = {'ego_xn':[],
                                       'ego_yn':[],})
+
   data_car = ColumnDataSource(data = {'car_xn':[],
                                       'car_yn':[],
                                       'car_xn2':[],
                                       'car_yn2':[],})
+
+  data_history_path = ColumnDataSource(data = {'time_vec':[],
+                                               'history_steer_deg_vec':[],
+                                              })
+
+  data_virtual_ref = ColumnDataSource(data = {'time_vec':[],
+                                              'virtual_ref_x':[],
+                                              'virtual_ref_y':[],
+                                              'virtual_ref_xn':[],
+                                              'virtual_ref_yn':[],
+                                              'virtual_ref_theta':[]})
+
   lat_plan_data = {'data_lat_motion_plan_input':data_lat_motion_plan_input,
                    'data_lat_motion_plan_output':data_lat_motion_plan_output,
                    'data_refline':data_refline,
@@ -948,7 +1000,9 @@ def load_lat_plan_figure(fig1):
                    'data_center_line_18':data_center_line_18, \
                    'data_center_line_19':data_center_line_19, \
                    'data_center_line_curvature':data_center_line_curvature, \
-                   'data_control':data_control
+                   'data_control':data_control,
+                   'data_history_path':data_history_path,
+                   'data_virtual_ref':data_virtual_ref
   }
 
 
@@ -967,6 +1021,7 @@ def load_lat_plan_figure(fig1):
   fig_hard_ubound = fig1.circle('hard_upper_bound_y0_vec','hard_upper_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard upper bound')
   fig_hard_lbound = fig1.circle('hard_lower_bound_y0_vec','hard_lower_bound_x0_vec', source = data_lat_motion_plan_input, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard lower bound')
   fig1.line('last_y_vec', 'last_x_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'brown', line_dash = 'solid', line_alpha = 0.35, legend_label = 'last path', visible=False)
+  fig1.line('virtual_ref_y', 'virtual_ref_x', source = data_virtual_ref, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'virtual ref', visible=True)
 
   columns = [
         TableColumn(field="bound_t_vec", title="t"),
@@ -978,10 +1033,10 @@ def load_lat_plan_figure(fig1):
       ]
   tab1 = DataTable(source = data_lat_motion_plan_input, columns = columns, width = 600, height = 400)
 
-  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=180)
+  fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 5.2], width=600, height=200)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=600, height=160)
   fig4 = bkp.figure(x_axis_label='time', y_axis_label='lat jerk',x_range = fig2.x_range, width=600, height=160)
-  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=160)
+  fig5 = bkp.figure(x_axis_label='time', y_axis_label='steer',x_range = fig2.x_range, width=600, height=180)
   fig6 = bkp.figure(x_axis_label='time', y_axis_label='steer dot',x_range = fig2.x_range, width=600, height=160)
 
   fig7 = bkp.figure(x_axis_label='y', y_axis_label='x', width=800, height=600, match_aspect = True, aspect_scale=1)
@@ -1049,6 +1104,7 @@ def load_lat_plan_figure(fig1):
   fig2.line('time_vec', 'theta_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned theta')
   fig2.line('time_vec', 'next_ref_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'orange', line_dash = 'dashed', legend_label = 'next ref_theta')
   fig2.line('time_vec', 'last_theta_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'brown', line_dash = 'solid', legend_label = 'last traj theta', visible=False)
+  fig2.line('time_vec', 'virtual_ref_theta', source = data_virtual_ref, line_width = 1, line_color = 'deepskyblue', line_dash = 'solid', legend_label = 'virtual ref theta', visible=True)
 
   f3 = fig3.line('time_vec', 'acc_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin lat acc')
   fig3.line('time_vec', 'acc_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned lat acc')
@@ -1071,6 +1127,7 @@ def load_lat_plan_figure(fig1):
   fig5.triangle ('time_vec', 'steer_deg_lower_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
   fig5.inverted_triangle ('time_vec', 'steer_deg_upper_bound', source = data_lat_motion_plan_output, size = 5, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'steer deg corridor')
   fig5.line('time_vec', 'expected_steer_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'expected steer deg')
+  fig5.line('time_vec', 'history_steer_deg_vec', source = data_history_path, line_width = 1, line_color = 'grey', line_dash = 'solid', legend_label = 'history steer deg')
 
   f6 = fig6.line('time_vec', 'steer_dot_deg_vec', source = data_lat_motion_plan_output, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'origin steer dot deg')
   fig6.line('time_vec', 'steer_dot_deg_vec_t', source = data_lat_motion_plan_output, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tuned steer dot deg')
@@ -1090,7 +1147,7 @@ def load_lat_plan_figure(fig1):
   hover2 = HoverTool(renderers=[f2], tooltips=[('time', '@time_vec'), ('ref_theta', '@ref_theta_deg_vec'), ('origin theta', '@theta_deg_vec'), ('tuned theta', '@theta_deg_vec_t'), ('next_ref_theta', '@next_ref_theta_deg_vec'), ('last_traj_theta', '@last_theta_deg_vec')], mode='vline')
   hover3 = HoverTool(renderers=[f3], tooltips=[('time', '@time_vec'), ('origin acc', '@acc_vec'), ('tuned acc', '@acc_vec_t'), ('|acc bound|', '@acc_upper_bound')], mode='vline')
   hover4 = HoverTool(renderers=[f4], tooltips=[('time', '@time_vec'), ('origin jerk', '@jerk_vec'), ('tuned jerk', '@jerk_vec_t'), ('|jerk bound|', '@jerk_upper_bound')], mode='vline')
-  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound'), ('expected steer', '@expected_steer_deg_vec')], mode='vline')
+  hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('origin steer', '@steer_deg_vec'), ('tuned steer', '@steer_deg_vec_t'), ('|steer deg bound|', '@steer_deg_upper_bound'), ('expected steer', '@expected_steer_deg_vec'), ('history steer', '@history_steer_deg_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('origin steer dot', '@steer_dot_deg_vec'), ('tuned steer dot', '@steer_dot_deg_vec_t'), ('|steer dot deg bound|', '@steer_dot_deg_upper_bound')], mode='vline')
 
   fig1.add_tools(hover1_1)

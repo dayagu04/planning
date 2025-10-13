@@ -35,10 +35,12 @@ fig1, fig2, fig3, fig4, fig5, fig6, fig7, fig8, fig9, lat_plan_data = load_lat_p
 fig1.height = 1500
 
 load_measure_distance_tool(fig1)
+load_measure_distance_tool(fig7)
 fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
 fig_hmi = load_avoid_hmi(bag_loader)
+fig_curve = load_road_curve(bag_loader, lat_plan_data)
 # data_select_obstacle_polygon = load_select_obstacle_polygon(fig1)
 
 # behavior
@@ -112,7 +114,7 @@ def update_lat_behavior_data(local_view_data):
         names.append(name)
       except:
         pass
-      
+
     if name == 'static_blocked_obj_id_vec':
       try:
         value = getattr(lane_borrow_decider_info, name)
@@ -173,7 +175,7 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=600)
+data_hmi_hpp_info_table = DataTable(source=hmi_hpp_info_data, columns=columns, width=400, height=460)
 
 def update_hmi_hpp_info(hmi_hpp_info):
   vars = ['is_avaliable', 'distance_to_parking_space', 'avoid_status', \
@@ -302,12 +304,15 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
     data_hmi_hpp_info_table = update_hmi_hpp_info(hmi_hpp_info)
   push_notebook()
 
-pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_12)), title="CurveFigure")
-pan2 = Panel(child=row(column(fig_lat_offset, fig_hmi, row(column(data_behavior_table_1), column(data_hmi_ad_info_table, data_hmi_hpp_info_table,fig_receive_topic_time)))), title="TableInfo")
-pan3 = Panel(child=row(column(fig7)), title="!Figure")
-pans = Tabs(tabs=[ pan1, pan2, pan3 ])
+pan1 = Panel(child=row(column(fig2, fig9, fig3, fig4, fig5, fig6, fig10, fig11, fig_curve)), title="CurveFigure")
+pan2 = Panel(child=row(column(fig_hmi, fig_lat_offset, row(column(data_behavior_table_1)))), title="BehaviorInfo")
+pan3 = Panel(child=row(column(column(fig_receive_topic_time, row(data_hmi_ad_info_table, data_hmi_hpp_info_table)))), title="Hmi")
+pan4 = Panel(child=row(column(fig7)), title="!Figure")
+pans = Tabs(tabs=[ pan1, pan2, pan3, pan4 ])
 if global_fig_plot:
   bkp.show(row(fig1, pans), notebook_handle=True)
 else:
   bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
+
+

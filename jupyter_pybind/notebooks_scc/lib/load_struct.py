@@ -115,6 +115,18 @@ def load_steer_ratio(car_type = 'CHERY_E0X'):
     steer_ratio = 15.88
   return steer_ratio
 
+def load_wheel_base(car_type = 'CHERY_E0X'):
+  wheel_base = 3.0
+  if car_type == 'JAC_S811':
+    wheel_base = 2.7
+  elif car_type == 'CHERY_T26':
+    wheel_base = 2.796
+  elif car_type == 'CHERY_E0X':
+    wheel_base = 3.0
+  elif car_type == 'CHERY_M32T':
+    wheel_base = 2.8
+  return wheel_base
+
 def load_car_uss_patch():
   apa_x = [3.187342, 3.424531, 3.593071,  3.593071,  3.424531,  3.187342, -0.476357, -0.798324, -0.879389, -0.879389, -0.798324, -0.476357]
   apa_y = [0.887956, 0.681712, 0.334651, -0.334651, -0.681712, -0.887956, -0.887956, -0.706505, -0.334845,  0.334845,  0.706505,  0.887956]
@@ -979,7 +991,7 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
   for i in range(10):
     lane_info = {'line_x_vec':[], 'line_y_vec':[], 'relative_id':[],'type':[], 'line_s_vec':[], 'curvature_vec':[], 'd_poly_curvature_vec':[], 'lane_mark_vec':[],
-                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[]}
+                 'lane_mark_point_x':[], 'lane_mark_point_y':[], 'lane_mark_loc_x':[], 'lane_mark_loc_y':[], 'confidence_vec':[], 'dist_to_lborder':[], 'dist_to_rborder':[]}
     if i< reference_line_msg_size:
       lane = reference_line_msg[i]
       virtual_lane_refline_points = lane.lane_reference_line.virtual_lane_refline_points
@@ -989,7 +1001,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_mark_s_vec = [lane.lane_marks[j].end for j in range(virtual_lane_marks_size)]
       lane_mark_s_begin_vec = [lane.lane_marks[j].begin for j in range(virtual_lane_marks_size)]
       lane_info['lane_mark_vec'] = [lane.lane_marks[j].lane_mark for j in range(virtual_lane_marks_size)]
-
+      lane_info['dist_to_lborder'] = [virtual_lane_refline_points[j].distance_to_left_road_border for j in range(virtual_lane_refline_points_size)]
+      lane_info['dist_to_rborder'] = [virtual_lane_refline_points[j].distance_to_right_road_border for j in range(virtual_lane_refline_points_size)]
       lane_mark_point_x = []
       lane_mark_point_y = []
       lane_mark_loc_x = []
@@ -1096,6 +1109,8 @@ def load_lane_center_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is
       lane_info['d_poly_curvature_vec'] = [0]
       lane_info['confidence_vec'] = [0]
       lane_info['lane_mark_vec'] = []
+      lane_info['dist_to_lborder'] = [0]
+      lane_info['dist_to_rborder'] = [0]
 
     lane_info['lane_mark_point_x'] = lane_mark_point_x
     lane_info['lane_mark_point_y'] = lane_mark_point_y

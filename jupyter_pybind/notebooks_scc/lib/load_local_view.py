@@ -466,6 +466,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'center_line_{}_k'.format(i): center_line_list[i]['curvature_vec'],
           'center_line_{}_confidence'.format(i): center_line_list[i]['confidence_vec'],
           'center_line_{}_id'.format(i): center_line_list[i]['relative_id'],
+          'center_line_{}_dist_to_lborder'.format(i): center_line_list[i]['dist_to_lborder'],
+          'center_line_{}_dist_to_rborder'.format(i): center_line_list[i]['dist_to_rborder'],
         })
         lane_mark_data = data_lane_mark_dict[i]
         # lane_mark_loc_x = []
@@ -2021,16 +2023,16 @@ def load_local_view_figure():
     data_sdpromap_other_road = ColumnDataSource(data = {'data_sdpromap_other_road_y':[], 'data_sdpromap_other_road_x':[]})
     data_sdpromap_FP_vec = ColumnDataSource(data = {'data_sdpromap_FP_vec_y':[], 'data_sdpromap_FP_vec_x':[], 'data_sdpromap_FP_info_vec':[]})
 
-  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[], 'center_line_0_id':[], 'center_line_0_s':[], 'center_line_0_k':[], 'center_line_0_confidence':[]})
-  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[], 'center_line_1_id':[], 'center_line_1_s':[], 'center_line_1_k':[], 'center_line_1_confidence':[]})
-  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[], 'center_line_2_id':[], 'center_line_2_s':[], 'center_line_2_k':[], 'center_line_2_confidence':[]})
-  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[], 'center_line_3_id':[], 'center_line_3_s':[], 'center_line_3_k':[], 'center_line_3_confidence':[]})
-  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[], 'center_line_4_id':[], 'center_line_4_s':[], 'center_line_4_k':[], 'center_line_4_confidence':[]})
-  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[], 'center_line_5_id':[], 'center_line_5_s':[], 'center_line_5_k':[], 'center_line_5_confidence':[]})
-  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[], 'center_line_6_id':[], 'center_line_6_s':[], 'center_line_6_k':[], 'center_line_6_confidence':[]})
-  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[], 'center_line_7_id':[], 'center_line_7_s':[], 'center_line_7_k':[], 'center_line_7_confidence':[]})
-  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[], 'center_line_8_id':[], 'center_line_8_s':[], 'center_line_8_k':[], 'center_line_8_confidence':[]})
-  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[], 'center_line_9_id':[], 'center_line_9_s':[], 'center_line_9_k':[], 'center_line_9_confidence':[]})
+  data_center_line_0 = ColumnDataSource(data = {'center_line_0_y':[], 'center_line_0_x':[], 'center_line_0_id':[], 'center_line_0_s':[], 'center_line_0_k':[], 'center_line_0_confidence':[], 'center_line_0_dist_to_lborder':[], 'center_line_0_dist_to_rborder':[]})
+  data_center_line_1 = ColumnDataSource(data = {'center_line_1_y':[], 'center_line_1_x':[], 'center_line_1_id':[], 'center_line_1_s':[], 'center_line_1_k':[], 'center_line_1_confidence':[], 'center_line_1_dist_to_lborder':[], 'center_line_1_dist_to_rborder':[]})
+  data_center_line_2 = ColumnDataSource(data = {'center_line_2_y':[], 'center_line_2_x':[], 'center_line_2_id':[], 'center_line_2_s':[], 'center_line_2_k':[], 'center_line_2_confidence':[], 'center_line_2_dist_to_lborder':[], 'center_line_2_dist_to_rborder':[]})
+  data_center_line_3 = ColumnDataSource(data = {'center_line_3_y':[], 'center_line_3_x':[], 'center_line_3_id':[], 'center_line_3_s':[], 'center_line_3_k':[], 'center_line_3_confidence':[], 'center_line_3_dist_to_lborder':[], 'center_line_3_dist_to_rborder':[]})
+  data_center_line_4 = ColumnDataSource(data = {'center_line_4_y':[], 'center_line_4_x':[], 'center_line_4_id':[], 'center_line_4_s':[], 'center_line_4_k':[], 'center_line_4_confidence':[], 'center_line_4_dist_to_lborder':[], 'center_line_4_dist_to_rborder':[]})
+  data_center_line_5 = ColumnDataSource(data = {'center_line_5_y':[], 'center_line_5_x':[], 'center_line_5_id':[], 'center_line_5_s':[], 'center_line_5_k':[], 'center_line_5_confidence':[], 'center_line_5_dist_to_lborder':[], 'center_line_5_dist_to_rborder':[]})
+  data_center_line_6 = ColumnDataSource(data = {'center_line_6_y':[], 'center_line_6_x':[], 'center_line_6_id':[], 'center_line_6_s':[], 'center_line_6_k':[], 'center_line_6_confidence':[], 'center_line_6_dist_to_lborder':[], 'center_line_6_dist_to_rborder':[]})
+  data_center_line_7 = ColumnDataSource(data = {'center_line_7_y':[], 'center_line_7_x':[], 'center_line_7_id':[], 'center_line_7_s':[], 'center_line_7_k':[], 'center_line_7_confidence':[], 'center_line_7_dist_to_lborder':[], 'center_line_7_dist_to_rborder':[]})
+  data_center_line_8 = ColumnDataSource(data = {'center_line_8_y':[], 'center_line_8_x':[], 'center_line_8_id':[], 'center_line_8_s':[], 'center_line_8_k':[], 'center_line_8_confidence':[], 'center_line_8_dist_to_lborder':[], 'center_line_8_dist_to_rborder':[]})
+  data_center_line_9 = ColumnDataSource(data = {'center_line_9_y':[], 'center_line_9_x':[], 'center_line_9_id':[], 'center_line_9_s':[], 'center_line_9_k':[], 'center_line_9_confidence':[], 'center_line_9_dist_to_lborder':[], 'center_line_9_dist_to_rborder':[]})
 
   data_center_line_topo_0 = ColumnDataSource(data = {'center_line_topo_0_y':[], 'center_line_topo_0_x':[]})
   data_center_line_topo_1 = ColumnDataSource(data = {'center_line_topo_1_y':[], 'center_line_topo_1_x':[]})
@@ -2616,11 +2618,11 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+  fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+  fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+  fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
@@ -2733,11 +2735,11 @@ def load_local_view_figure():
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
   hover1_2 = HoverTool(renderers=[fig_ego_point], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  # hover1_3 = HoverTool(renderers=[fig1.renderers[51]], tooltips=[('index', '$index')])
-  # hover1_4 = HoverTool(renderers=[fig1.renderers[52]], tooltips=[('index', '$index'), ('s', '@plan_traj_s')])
-  # hover1_5 = HoverTool(renderers=[fig1.renderers[53]], tooltips=[('index', '$index'), ('s', '@plan_traj_s')])
-  # hover1_6 = HoverTool(renderers=[fig1.renderers[59]], tooltips=[('index', '$index')])
-  # hover1_7 = HoverTool(renderers=[fig1.renderers[69]], tooltips=[('index', '$index')])
+  hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
+  hover1_4 = HoverTool(renderers=[fig_cline1], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_1_dist_to_lborder'), ('dist_to_right_border', '@center_line_1_dist_to_rborder')])
+  hover1_5 = HoverTool(renderers=[fig_cline2], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_2_dist_to_lborder'), ('dist_to_right_border', '@center_line_2_dist_to_rborder')])
+  hover1_6 = HoverTool(renderers=[fig_cline3], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_3_dist_to_lborder'), ('dist_to_right_border', '@center_line_3_dist_to_rborder')])
+  hover1_7 = HoverTool(renderers=[fig_cline4], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_4_dist_to_lborder'), ('dist_to_right_border', '@center_line_4_dist_to_rborder')])
   hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
   hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
   hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
@@ -2753,11 +2755,11 @@ def load_local_view_figure():
 
   fig1.add_tools(hover1_1)
   fig1.add_tools(hover1_2)
-  # fig1.add_tools(hover1_3)
-  # fig1.add_tools(hover1_4)
-  # fig1.add_tools(hover1_5)
-  # fig1.add_tools(hover1_6)
-  # fig1.add_tools(hover1_7)
+  fig1.add_tools(hover1_3)
+  fig1.add_tools(hover1_4)
+  fig1.add_tools(hover1_5)
+  fig1.add_tools(hover1_6)
+  fig1.add_tools(hover1_7)
   fig1.add_tools(hover1_9)
   fig1.add_tools(hover1_10)
   fig1.add_tools(hover1_11)

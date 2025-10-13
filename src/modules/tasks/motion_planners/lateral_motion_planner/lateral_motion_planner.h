@@ -74,8 +74,12 @@ class LateralMotionPlanner : public Task {
   std::vector<double> s_vec_;
   std::vector<double> t_vec_;
 
+  std::vector<double> history_steer_vec_;
   std::vector<double> expected_steer_vec_;
   std::vector<double> ref_theta_vec_;
+  std::vector<double> virtual_ref_x_;
+  std::vector<double> virtual_ref_y_;
+  std::vector<double> virtual_ref_theta_;
 };
 
 }  // namespace planning

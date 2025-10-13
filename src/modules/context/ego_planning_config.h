@@ -1756,6 +1756,19 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, nudge_buffer2lane_boundary_buffer,
                      "general_lateral_decider",
                      "nudge_buffer2lane_boundary_buffer");
+    ReadItem<double>(json, max_care_time_for_roadborder,
+                     "general_lateral_decider",
+                     "max_care_time_for_roadborder");
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "curv_bp"},
+        curv_bp);
+    read_json_vec<double>(
+        json,
+        std::vector<std::string>{"general_lateral_decider",
+                                 "lat_compensation_buffer"},
+        lat_compensation_buffer);
     /* read config from json */
   }
   double hard_buffer2dynamic_agent = 0.15;
@@ -1865,6 +1878,9 @@ struct GeneralLateralDeciderConfig : public EgoPlanningConfig {
   double dynamic_vru_nudge_lateral_buffer = 0.8;
   double bound_recurrence_v_limit_max = 60;
   double nudge_buffer2lane_boundary_buffer = 0.0;
+  double max_care_time_for_roadborder = 3;
+  std::vector<double> curv_bp{50, 150, 400, 600};
+  std::vector<double> lat_compensation_buffer{0.25, 0.1, 0.0, 0.0};
 };
 
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
@@ -2333,6 +2349,10 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_y_ramp, "lat_motion_ilqr", "q_ref_y_ramp");
     ReadItem<double>(json, q_ref_theta_ramp, "lat_motion_ilqr",
                      "q_ref_theta_ramp");
+    ReadItem<double>(json, q_front_ref_xy_ramp, "lat_motion_ilqr", "q_front_ref_xy_ramp");
+    ReadItem<double>(json, q_virtual_ref_xy, "lat_motion_ilqr", "q_virtual_ref_xy");
+    ReadItem<double>(json, q_virtual_ref_theta, "lat_motion_ilqr",
+                     "q_virtual_ref_theta");
     ReadItem<double>(json, q_acc_ramp, "lat_motion_ilqr", "q_acc_ramp");
     ReadItem<double>(json, q_jerk_ramp_close, "lat_motion_ilqr",
                      "q_jerk_ramp_close");
@@ -2464,6 +2484,9 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_x_ramp = 400.0;
   double q_ref_y_ramp = 400.0;
   double q_ref_theta_ramp = 5000.0;
+  double q_front_ref_xy_ramp = 400.0;
+  double q_virtual_ref_xy = 400.0;
+  double q_virtual_ref_theta = 5000.0;
   double q_acc_ramp = 0.02;
   double q_jerk_ramp_close = 45.0;
   double q_jerk_ramp_mid = 10.0;
