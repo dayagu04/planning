@@ -424,13 +424,12 @@ const MapBound VirtualWallDecider::GetMaxMapBound() const {
   tmp.Combine(slot_boundary_);
   tmp.Combine(veh_boundary_);
 
-  MapBound bound;
-  bound.x_max = tmp.x_upper;
-  bound.x_min = tmp.x_lower;
-  bound.y_max = tmp.y_upper;
-  bound.y_min = tmp.y_lower;
-
-  return bound;
+  return MapBound(
+    tmp.x_lower,   // x_min
+    tmp.x_upper,   // x_max
+    tmp.y_lower,   // y_min
+    tmp.y_upper    // y_max
+  );
 }
 
 const MapBound VirtualWallDecider::GetVehBound() const {

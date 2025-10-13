@@ -229,7 +229,7 @@ int SCS(RSPathParam *path, float *Lmin, const RSEndPoint *end) {
 
 static int CSC(RSPathParam *path, float *Lmin, RSEndPoint *end) {
   bool pass;
-  float t, u, v, L;
+  float t = 0.0f, u = 0.0f, v = 0.0f, L;
 
   // 1
   pass = LpSpLp(&t, &u, &v, end->pose.x, end->pose.y, end->pose.theta,
@@ -341,7 +341,7 @@ static bool LpRmL(float *t, float *u, float *v, float x, float y, float phi,
 
 static int CCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  float t, u, v, L;
+  float t = 0.0f, u = 0.0f, v = 0.0f, L;
   float xb, yb;
 
   // type 2
@@ -475,7 +475,7 @@ static bool LpRumLumRp(float *t, float *u, float *v, float x, float y,
 
 static int CCCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  float t, u, v, L;
+  float t = 0.0f, u = 0.0f, v = 0.0f, L;
 
   pass = LpRupLumRm(&t, &u, &v, point->pose.x, point->pose.y, point->pose.theta,
                     point->sin_theta, point->cos_theta);
@@ -611,7 +611,7 @@ static bool LpRmSmRm(float *t, float *u, float *v, float x, float y, float phi,
 
 static int CCSC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  float t, u, v, L;
+  float t = 0.0f, u = 0.0f, v = 0.0f, L;
   float xb, yb;
 
   *Lmin = *Lmin - 0.5 * M_PI;
@@ -797,7 +797,7 @@ static bool LpRmSLmRp(float *t, float *u, float *v, float x, float y, float phi,
 
 static int CCSCC(RSPathParam *path, float *Lmin, RSEndPoint *point) {
   bool pass;
-  float t, u, v, L;
+  float t = 0.0f, u = 0.0f, v = 0.0f, L;
 
   if (re_request_type_ == RSPathRequestType::GEAR_SWITCH_LESS_THAN_TWICE) {
     return 0;

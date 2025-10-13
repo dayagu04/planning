@@ -403,13 +403,12 @@ const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
 }
 
 const MapBound TransformMapBound(const cdl::AABB& box) {
-  MapBound bound;
-  bound.x_max = box.max_[0];
-  bound.y_max = box.max_[1];
-  bound.x_min = box.min_[0];
-  bound.y_min = box.min_[1];
-
-  return bound;
+  return MapBound(
+    box.min_[0],  // x_min
+    box.max_[0],  // x_max
+    box.min_[1],  // y_min
+    box.max_[1]   // y_max
+  );
 }
 
 void DebugMapBoundString(const MapBound& box) {
