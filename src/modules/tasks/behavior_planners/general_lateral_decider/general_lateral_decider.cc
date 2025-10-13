@@ -3283,7 +3283,9 @@ bool GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
       is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
                         (!lat_obs_position_iter->second.front_car);
       if (lat_obstacle_decision.at(obstacle->id()) ==
-        LatObstacleDecisionType::IGNORE) {
+          LatObstacleDecisionType::IGNORE ||
+          lat_obstacle_decision.at(obstacle->id()) ==
+          LatObstacleDecisionType::FOLLOW) {
         is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
         if (is_nudge_left && (care_lateral_distacle <
             obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {

@@ -175,6 +175,7 @@
   "side_2_front_count_thr": 10,
   "side_2_front_max_count": 20,
   "open_side_lat_offset_nudge": false,
+  "start_nudge_ttc": 5,
   "expand_ego_vel": [0, 10],
   "expand_obs_rel_vel": [0, 1],
   "base_nudge_distance": 0.85,

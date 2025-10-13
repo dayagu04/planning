@@ -30,8 +30,7 @@ bool LateralOffsetDecider::Execute() {
   auto current_fix_lane_id = session_->planning_context()
                                  .lane_change_decider_output()
                                  .fix_lane_virtual_id;
-  bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
-  dbw_status = true;
+  const bool dbw_status = session_->environmental_model().GetVehicleDbwStatus();
   if (last_fix_lane_id != current_fix_lane_id || !dbw_status) {
     avoid_obstacle_maintainer5v_.Reset();
     lateral_offset_calculatorv2_
