@@ -182,6 +182,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   double max_lat_move_dist{0.};
   max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
   // 车轮离车位线的距离 正数表示不能越过线 负数表示可以越过
+  double car2line_dist_threshold = param.car2line_dist_threshold;
+  if (!is_searching_stage_) {
+    car2line_dist_threshold -= 0.03;
+  }
   max_lat_move_dist -= param.car2line_dist_threshold;
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
   double max_lon_move_dist{0.};
