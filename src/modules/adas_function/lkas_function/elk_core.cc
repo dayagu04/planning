@@ -869,6 +869,58 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
 
   // bit 5
   // 距离上一次LDp报警结束后，冷却超过3s
+  bool ldp_handtrq_abs_flag = false;
+  bool elk_handtrq_kickdown_flag = false;
+  bool elk_handtrq_kickdown_dur_flag = false;
+  if (fabs(GetContext.mutable_state_info()->driver_hand_trq) >
+          GetContext.get_param()->ELK_kickdown_abs_hand_trq &&
+      elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                        ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
+    elk_left_handtrq_kickdown_duration_ += GetContext.get_param()->dt;
+    if (elk_left_handtrq_kickdown_duration_ > 60.0) {
+      elk_left_handtrq_kickdown_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    elk_left_handtrq_kickdown_duration_ = 0.0;
+  }
+  if (elk_left_handtrq_kickdown_duration_ >
+      GetContext.get_param()->ELK_kickdown_hand_trq_dur) {
+    ldp_handtrq_abs_flag = true;
+  } else {
+    ldp_handtrq_abs_flag = false;
+  }
+
+  if (GetContext.mutable_state_info()->driver_hand_trq >
+          GetContext.get_param()->ELK_kickdown_oppodir_hand_trq ||
+      GetContext.mutable_state_info()->driver_hand_trq <
+          -GetContext.get_param()->ELK_kickdown_samedir_hand_trq ||
+      ldp_handtrq_abs_flag) {
+    elk_handtrq_kickdown_flag = true;
+  } else {
+    elk_handtrq_kickdown_flag = false;
+  }
+
+  if (elk_handtrq_kickdown_flag == false) {
+    elk_left_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (elk_left_supp_handtrq_duration_ > 60.0) {
+      elk_left_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    elk_left_supp_handtrq_duration_ = 0.0;
+  }
+
+  if (elk_left_supp_handtrq_duration_ < 3.0) {
+    elk_handtrq_kickdown_dur_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  //以上代码复制手力矩打断条件，目的：手力矩打断纠偏的场景始终冷却时间保持3秒
+
   if (elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
@@ -882,9 +934,12 @@ uint16 ElkCore::UpdateElkLeftSuppressionCode(void) {
   } else {
     elk_left_coolingtime_duration_ = 0.0;
   }
-  if ((elk_left_coolingtime_duration_ < 3.0) &&
-      fabs(GetContext.get_state_info()->driver_hand_trq) >
-          GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
+
+  if (((elk_left_coolingtime_duration_ < 3.0) &&
+       (fabs(GetContext.get_state_info()->driver_hand_trq) >
+        GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr)) ||
+      ((elk_left_coolingtime_duration_ < 3.0) &&
+       (elk_handtrq_kickdown_dur_flag == true))) {
     elk_left_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -1099,8 +1154,9 @@ uint16 ElkCore::UpdateElkLeftKickDownCode(void) {
 
   // bit 7
   // 偏离侧道线为虚拟线
-  if (GetContext.get_road_info()->current_lane.left_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.left_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.left_roadedge.valid == false)) {
     elk_left_kickdown_code += uint16_bit[7];
   } else {
     /*do nothing*/
@@ -1226,6 +1282,58 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
 
   // bit5
   // 距离上一次LDW报警结束后，冷却超过3s
+  bool ldp_handtrq_abs_flag = false;
+  bool elk_handtrq_kickdown_flag = false;
+  bool elk_handtrq_kickdown_dur_flag = false;
+
+  if (fabs(GetContext.mutable_state_info()->driver_hand_trq) >
+          GetContext.get_param()->ELK_kickdown_abs_hand_trq &&
+      elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                        ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    elk_right_kickdown_lat_v_duration_ += GetContext.get_param()->dt;
+    if (elk_right_kickdown_lat_v_duration_ > 60.0) {
+      elk_right_kickdown_lat_v_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    elk_right_kickdown_lat_v_duration_ = 0.0;
+  }
+  if (elk_right_kickdown_lat_v_duration_ >
+      GetContext.get_param()->ELK_kickdown_hand_trq_dur) {
+    ldp_handtrq_abs_flag = true;
+  } else {
+    ldp_handtrq_abs_flag = false;
+  }
+
+  if (GetContext.mutable_state_info()->driver_hand_trq <
+          -GetContext.get_param()->ELK_kickdown_oppodir_hand_trq ||
+      GetContext.mutable_state_info()->driver_hand_trq >
+          GetContext.get_param()->ELK_kickdown_samedir_hand_trq ||
+      ldp_handtrq_abs_flag) {
+    elk_handtrq_kickdown_flag = true;
+  } else {
+    /*do nothing*/
+  }
+  if (elk_handtrq_kickdown_flag == false) {
+    elk_right_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (elk_right_supp_handtrq_duration_ > 60.0) {
+      elk_right_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    elk_right_supp_handtrq_duration_ = 0.0;
+  }
+
+  if (elk_right_supp_handtrq_duration_ < 3.0) {
+    elk_handtrq_kickdown_dur_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  //以上代码复制手力矩打断条件，目的：手力矩打断纠偏的场景始终冷却时间保持3秒
+
   if (elk_state_ != iflyauto::ELKFunctionFSMWorkState::
                         ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       elk_state_ != iflyauto::ELKFunctionFSMWorkState::
@@ -1239,9 +1347,12 @@ uint16 ElkCore::UpdateElkRightSuppressionCode(void) {
   } else {
     elk_right_coolingtime_duration_ = 0.0;
   }
-  if ((elk_right_coolingtime_duration_ < 3.0) &&
-      fabs(GetContext.get_state_info()->driver_hand_trq) >
-          GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) {
+
+  if (((elk_right_coolingtime_duration_ < 3.0) &&
+       fabs(GetContext.get_state_info()->driver_hand_trq) >
+           GetContext.get_param()->ELK_supp_CoolingTime_handtrq_thr) ||
+      ((elk_right_coolingtime_duration_ < 3.0) &&
+       (elk_handtrq_kickdown_dur_flag == true))) {
     elk_right_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -1453,8 +1564,10 @@ uint16 ElkCore::UpdateElkRightKickDownCode(void) {
   }
 
   // bit 7
-  if (GetContext.get_road_info()->current_lane.right_line.line_type ==
-      context::Enum_LineType::Enum_LineType_Virtual) {
+  if ((GetContext.get_road_info()->current_lane.right_line.line_type ==
+       context::Enum_LineType::Enum_LineType_Virtual) &&
+      (GetContext.get_road_info()->current_lane.right_roadedge.valid ==
+       false)) {
     elk_right_kickdown_code += uint16_bit[7];
   } else {
     /*do nothing*/

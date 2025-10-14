@@ -89,6 +89,10 @@ class PlanningScheduler {
       double start_timestamp,
       iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
+  void FillAdasPlanningHmiInfo(
+      double start_timestamp,
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
+
   void FillPlanningRequest(iflyauto::RequestLevel request,
                            iflyauto::PlanningOutput *const planning_output);
 
@@ -116,8 +120,9 @@ class PlanningScheduler {
 
   // parking function: APA, RPA, HPP, AVP
   const bool ExcuteParkingFunction(
-      const common::SceneType function_type,
-      iflyauto::PlanningOutput *const planning_output);
+      const common::SceneType function_type, const double start_timestamp,
+      iflyauto::PlanningOutput *const planning_output,
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
 
   // Navigation function: NOA, SCC, LCC, HPP
   const bool ExcuteNavigationFunction(

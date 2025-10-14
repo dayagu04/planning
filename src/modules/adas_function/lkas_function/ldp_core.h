@@ -68,6 +68,10 @@ class LdpCore {
   // LDP纠偏冷却时间阈值 单位:s
   double ldp_right_coolingtime_duration_ = 0.0;
   double ldp_left_coolingtime_duration_ = 0.0;
+
+  double ldp_right_supp_handtrq_duration_ = 0.0;
+  double ldp_left_supp_handtrq_duration_ = 0.0;
+
   // LDP变道纠偏抑制时间阈值 单位:s
   double LDP_LaneChange_duration_ = 10.0;
   // LDP手力矩作用时间阈值 单位:s

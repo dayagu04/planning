@@ -75,6 +75,9 @@ class ElkCore {
   // LDP纠偏冷却时间阈值 单位:s
   double elk_right_coolingtime_duration_ = 0.0;
   double elk_left_coolingtime_duration_ = 0.0;
+
+  double elk_right_supp_handtrq_duration_ = 0.0;
+  double elk_left_supp_handtrq_duration_ = 0.0;
   uint16 elk_left_suppression_code_ = 255;
   uint16 UpdateElkLeftSuppressionCode(void);
 

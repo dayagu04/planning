@@ -858,6 +858,59 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
 
   // bit 5
   // 距离上一次LDp报警结束后，冷却超过3s
+  bool ldp_handtrq_abs_flag = false;
+  bool ldp_handtrq_kickdown_flag = false;
+  bool ldp_handtrq_kickdown_dur_flag = false;
+
+  if (fabs(GetContext.mutable_state_info()->driver_hand_trq) >
+          GetContext.get_param()->LDP_kickdown_abs_hand_trq &&
+      ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
+                        LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION) {
+    ldp_left_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (ldp_left_supp_handtrq_duration_ > 60.0) {
+      ldp_left_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    ldp_left_supp_handtrq_duration_ = 0.0;
+  }
+  if (ldp_left_supp_handtrq_duration_ >
+      GetContext.get_param()->LDP_kickdown_hand_trq_dur) {
+    ldp_handtrq_abs_flag = true;
+  } else {
+    ldp_handtrq_abs_flag = false;
+  }
+
+  if (GetContext.mutable_state_info()->driver_hand_trq >
+          GetContext.get_param()->LDP_kickdown_oppodir_hand_trq ||
+      GetContext.mutable_state_info()->driver_hand_trq <
+          -GetContext.get_param()->LDP_kickdown_samedir_hand_trq ||
+      ldp_handtrq_abs_flag) {
+    ldp_handtrq_kickdown_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  if (ldp_handtrq_kickdown_flag == false) {
+    ldp_left_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (ldp_left_supp_handtrq_duration_ > 60.0) {
+      ldp_left_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    ldp_left_supp_handtrq_duration_ = 0.0;
+  }
+
+  if (ldp_left_supp_handtrq_duration_ < 3.0) {
+    ldp_handtrq_kickdown_dur_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  //以上代码复制手力矩打断条件，目的：手力矩打断纠偏的场景始终冷却时间保持3秒
+
   if (ldp_state_ != iflyauto::LDPFunctionFSMWorkState::
                         LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldp_state_ != iflyauto::LDPFunctionFSMWorkState::
@@ -871,9 +924,11 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   } else {
     ldp_left_coolingtime_duration_ = 0.0;
   }
-  if ((ldp_left_coolingtime_duration_ < 3.0) &&
-      fabs(GetContext.get_state_info()->driver_hand_trq) >
-          GetContext.get_param()->LDP_supp_CoolingTime_handtrq_thr) {
+  if (((ldp_left_coolingtime_duration_ < 3.0) &&
+       fabs(GetContext.get_state_info()->driver_hand_trq) >
+           GetContext.get_param()->LDP_supp_CoolingTime_handtrq_thr) ||
+      ((ldp_left_coolingtime_duration_ < 3.0) &&
+       (ldp_handtrq_kickdown_dur_flag == true))) {
     ldp_left_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
@@ -1255,6 +1310,57 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
 
   // bit5
   // 距离上一次LDW报警结束后，冷却超过3s
+  bool ldp_handtrq_abs_flag = false;
+  bool ldp_handtrq_kickdown_flag = false;
+  bool ldp_handtrq_kickdown_dur_flag = false;
+  if (fabs(GetContext.mutable_state_info()->driver_hand_trq) >
+          GetContext.get_param()->LDP_kickdown_abs_hand_trq &&
+      ldp_state_ == iflyauto::LDPFunctionFSMWorkState::
+                        LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    ldp_right_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (ldp_right_supp_handtrq_duration_ > 60.0) {
+      ldp_right_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    ldp_right_supp_handtrq_duration_ = 0.0;
+  }
+  if (ldp_right_supp_handtrq_duration_ >
+      GetContext.get_param()->LDP_kickdown_hand_trq_dur) {
+    ldp_handtrq_abs_flag = true;
+  } else {
+    ldp_handtrq_abs_flag = false;
+  }
+
+  if (GetContext.mutable_state_info()->driver_hand_trq <
+          -GetContext.get_param()->LDP_kickdown_oppodir_hand_trq ||
+      GetContext.mutable_state_info()->driver_hand_trq >
+          GetContext.get_param()->LDP_kickdown_samedir_hand_trq ||
+      ldp_handtrq_abs_flag) {
+    ldp_handtrq_kickdown_flag = true;
+  } else {
+    /*do nothing*/
+  }
+  if (ldp_handtrq_kickdown_flag == false) {
+    ldp_right_supp_handtrq_duration_ += GetContext.get_param()->dt;
+    if (ldp_right_supp_handtrq_duration_ > 60.0) {
+      ldp_right_supp_handtrq_duration_ = 60.0;
+    } else {
+      /*do nothing*/
+    }
+  } else {
+    ldp_right_supp_handtrq_duration_ = 0.0;
+  }
+
+  if (ldp_right_supp_handtrq_duration_ < 3.0) {
+    ldp_handtrq_kickdown_dur_flag = true;
+  } else {
+    /*do nothing*/
+  }
+
+  //以上代码复制手力矩打断条件，目的：手力矩打断纠偏的场景始终冷却时间保持3秒
+
   if (ldp_state_ != iflyauto::LDPFunctionFSMWorkState::
                         LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION &&
       ldp_state_ != iflyauto::LDPFunctionFSMWorkState::
@@ -1268,9 +1374,11 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   } else {
     ldp_right_coolingtime_duration_ = 0.0;
   }
-  if ((ldp_right_coolingtime_duration_ < 3.0) &&
-      fabs(GetContext.get_state_info()->driver_hand_trq) >
-          GetContext.get_param()->LDP_supp_CoolingTime_handtrq_thr) {
+  if (((ldp_right_coolingtime_duration_ < 3.0) &&
+       fabs(GetContext.get_state_info()->driver_hand_trq) >
+           GetContext.get_param()->LDP_supp_CoolingTime_handtrq_thr) ||
+      ((ldp_right_coolingtime_duration_ < 3.0) &&
+       (ldp_handtrq_kickdown_dur_flag == true))) {
     ldp_right_suppression_code += uint16_bit[5];
   } else {
     /*do nothing*/
