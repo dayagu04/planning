@@ -535,6 +535,8 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetLCBackFlag(lane_change_back);
   bool lane_change_hold = target_state == kLaneChangeHold;
   planning_weight_ptr_->SetLCHoldFlag(lane_change_hold);
+  bool is_cone_lc =
+      lane_change_decider_output.lc_request_source == CONE_REQUEST;
   bool is_merge_lc =
       lane_change_decider_output.lc_request_source == MERGE_REQUEST ||
       lane_change_decider_output.lc_request_source == MAP_REQUEST;
@@ -565,6 +567,7 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
   } else if (is_prevent_solid_line_lc ||
+             is_cone_lc ||
              (is_merge_lc && std::fabs(dist_to_merge_point) < ref_vel * 5.0)) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);

@@ -69,8 +69,8 @@ struct PathWeight {  // temp
     q_ref_y.resize(point_num, 0);
     q_ref_theta.resize(point_num, 0);
     q_continuity.resize(point_num, 0);
-    q_front_ref_x.resize(point_num, 0);;
-    q_front_ref_y.resize(point_num, 0);;
+    q_front_ref_x.resize(point_num, 0);
+    q_front_ref_y.resize(point_num, 0);
     q_virtual_ref_x.resize(point_num, 0);
     q_virtual_ref_y.resize(point_num, 0);
     q_virtual_ref_theta.resize(point_num, 0);
