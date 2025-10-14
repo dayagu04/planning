@@ -40,6 +40,7 @@ class ConstructionSceneDecider : public Task {
   struct ConstructionAgentPoint {
     // 施工障碍物数据结构体
     double x, y;
+    double car_x, car_y;
     double s, l;
     double left_dist, right_dist;
     int32_t id;
@@ -50,6 +51,8 @@ class ConstructionSceneDecider : public Task {
     ConstructionAgentPoint()
         : x(0.0),
           y(0.0),
+          car_x(0.0),
+          car_y(0.0),
           s(0.0),
           l(0.0),
           left_dist(0.0),
@@ -58,10 +61,12 @@ class ConstructionSceneDecider : public Task {
           cluster(-1),
           visited(false) {}
     // Parameterized constructor
-    ConstructionAgentPoint(int32_t id, double x, double y, double s, double l,
-              double left_dist, double right_dist)
+    ConstructionAgentPoint(int32_t id, double x, double y, double car_x, double car_y,
+              double s, double l, double left_dist, double right_dist)
         : x(x),
           y(y),
+          car_x(car_x),
+          car_y(car_y),
           s(s),
           l(l),
           left_dist(left_dist),
@@ -79,7 +84,7 @@ class ConstructionSceneDecider : public Task {
       const std::shared_ptr<VirtualLane> target_lane, const double construction_agent_s,
       const double construction_agent_l, bool is_left, double* dist);
 
-  bool GetOriginLaneWidthByConstructionAgent(const std::shared_ptr<VirtualLane> ego_lane,
+  void GetOriginLaneWidthByConstructionAgent(const std::shared_ptr<VirtualLane> ego_lane,
                                 const double construction_agent_s, const double construction_agent_l,
                                 bool is_left, double* dist);
 
@@ -121,6 +126,9 @@ class ConstructionSceneDecider : public Task {
   double QueryLaneWidth(
       const double s0,
       const std::vector<std::pair<double, double>>& lane_s_width);
+
+  bool IsConstructionAgent(iflyauto::ObjectType type);
+
 
  private:
   ConstructionSceneDeciderConfig config_;

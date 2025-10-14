@@ -1175,7 +1175,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # load prediction_obj
   if bag_loader.prediction_msg['enable'] == True:
 
-    obstacles_info_all1 = load_prediction_obstacle(prediction_msg, is_enu_to_car, loc_msg, environment_model_info)
+    obstacles_info_all1 = load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car, loc_msg, environment_model_info)
     # 加载自车坐标系下的数据
     local_view_data['data_prediction_obj'].data.update({
             'obstacles_x': [],
@@ -1183,6 +1183,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'pos_x' : [],
             'pos_y' : [],
             'obs_label' : [],
+            'color' : [],
+            'text_color' : [],
           })
     for key in obstacles_info_all1:
       obstacles_info = obstacles_info_all1[key]
@@ -1194,6 +1196,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'pos_x' : obstacles_info['pos_x'],
           'pos_y' : obstacles_info['pos_y'],
           'obs_label' : obstacles_info['obs_label'],
+          'color' : obstacles_info['color'],
+          'text_color' : obstacles_info['text_color'],
         })
       else:
         local_view_data[key_name].data.update({
@@ -1202,6 +1206,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           'pos_x' : obstacles_info['pos_x_rel'],
           'pos_y' : obstacles_info['pos_y_rel'],
           'obs_label' : obstacles_info['obs_label'],
+          'color' : obstacles_info['color'],
+          'text_color' : obstacles_info['text_color'],
         })
 
   # load radar_obj
@@ -2079,7 +2085,7 @@ def load_local_view_figure():
                                         'obs_label':[]})
   data_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
-                                        'obs_label':[]})
+                                        'obs_label':[], 'color':[]})
   data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})
@@ -2644,8 +2650,8 @@ def load_local_view_figure():
   fig1.patches('obstacles_y', 'obstacles_x', source = data_snrd_obj, fill_color = "black", line_color = "black", line_width = 1, fill_alpha = 0.5, legend_label = 'snrd',visible = False)
   fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_snrd_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'snrd_info',visible = False)
 
-  fig1.patches('obstacles_y', 'obstacles_x', source = data_prediction_obj, fill_color = "yellow", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'prediction_obj')
-  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'prediction_info')
+  fig1.patches('obstacles_y', 'obstacles_x', source = data_prediction_obj, fill_color = 'color', line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'prediction_obj')
+  fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_prediction_obj, text_color='text_color', text_align="center", text_font_size="10pt", legend_label = 'prediction_info')
 
   if is_vis_rdg_obj:
     fig1.patches('obstacles_y', 'obstacles_x', source = data_rdg_obj, fill_color = "orange", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'rdg_obj',visible = False)
