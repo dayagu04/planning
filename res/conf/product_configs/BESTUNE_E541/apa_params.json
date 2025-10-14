@@ -244,6 +244,7 @@
   "max_lat_err": 0.086,
   "max_phi_err": 2.68,
   "enable_multi_height_col_det": false,
+  "enable_runover_obs": false,
   "use_obs_height_method": 0,
   "parallel_obs2slot_max_dist": 16.66,
   "parallel_channel_y_mag": 7.9,

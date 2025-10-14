@@ -57,6 +57,8 @@ void ApaObstacleManager::Update(
     runover_height = -1068.8;
     chassis_height = -1068.8;
     mirror_height = -1068.8;
+  } else if (!param.enable_runover_obs) {
+    runover_height = -1068.8;
   }
 
   // 读取超声波扇形距离

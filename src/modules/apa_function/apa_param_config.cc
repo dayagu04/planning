@@ -608,6 +608,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
                   "enable_multi_height_col_det");
 
+  JSON_READ_VALUE(param.enable_runover_obs, bool, "enable_runover_obs");
+
   int use_obs_height_method = 0;
   JSON_READ_VALUE(use_obs_height_method, int, "use_obs_height_method");
   if (use_obs_height_method == 1) {
