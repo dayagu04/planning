@@ -445,8 +445,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     if (!IsIndexValid(center_index)) {
       return true;
     }
-    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-           circle->radius;
+    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
     if (dist < 0.0f) {
       return true;
     }
@@ -493,8 +492,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
       *circle_id = -1;
       return true;
     }
-    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-           circle->radius;
+    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
     if (dist < 0.0f) {
       *min_dist = dist;
       *circle_id = -1;
@@ -537,8 +535,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
     if (!IsIndexValid(center_index)) {
       return true;
     }
-    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-           circle->radius;
+    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
     if (dist < 0.0f) {
       return true;
     }
@@ -581,8 +578,7 @@ const bool EDTCollisionDetector::IsCollisionForPoint(
       *min_dist = 0.0f;
       return true;
     }
-    dist = GetObsDistByIndex(center_index, car_circle_list->height_type) -
-           circle->radius;
+    dist = GetObsDistByIndex(center_index, height_type) - circle->radius;
     if (dist < 0.0f) {
       *min_dist = dist;
       return true;
