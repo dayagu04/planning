@@ -280,6 +280,12 @@ struct ParkingLatLonSpeedBuffer {
   float leave_initial_place_lon_buffer;
   float leave_initial_place_min_lon_dist;
   float leave_initial_place_dist;
+
+  bool enable_keep_stuck_place;
+  float keep_stuck_place_body_lat_buffer;
+  float keep_stuck_place_mirror_lat_buffer;
+  float keep_stuck_place_lon_buffer;
+  float keep_stuck_place_min_lon_dist;
 };
 
 struct ParkingLatLonSlotReleaseBuffer {

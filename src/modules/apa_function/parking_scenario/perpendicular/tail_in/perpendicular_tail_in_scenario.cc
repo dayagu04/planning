@@ -2245,63 +2245,102 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
   real_time_brake_info_vec.resize(4);
 
-  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
-    real_time_brake_info_vec[0].Set(
-        RealTimeBrakeType::STOP, param.stop_lat_inflation,
-        param.stop_lat_inflation, param.stop_lon_dist, lon_buffer);
-    real_time_brake_info_vec[1].Set(RealTimeBrakeType::HEAVY_BRAKE,
-                                    param.heavy_brake_lat_inflation,
-                                    param.heavy_brake_lat_inflation,
-                                    param.moderate_brake_lon_dist, lon_buffer);
-    real_time_brake_info_vec[2].Set(RealTimeBrakeType::MODERATE_BRAKE,
-                                    param.moderate_brake_lat_inflation,
-                                    param.moderate_brake_lat_inflation,
-                                    param.slight_brake_lon_dist, lon_buffer);
-    real_time_brake_info_vec[3].Set(RealTimeBrakeType::SLIGHT_BRAKE,
-                                    param.slight_brake_lat_inflation,
-                                    param.slight_brake_lat_inflation,
-                                    param.slight_brake_lon_dist, lon_buffer);
-    if (increase_lat_err_flag) {
-      real_time_brake_info_vec[0].Set(
-          RealTimeBrakeType::STOP, param.moderate_brake_lat_inflation,
-          param.moderate_brake_lat_inflation, param.stop_lon_dist, lon_buffer);
+  double stop_body_lat_inflation = param.stop_lat_inflation;
+  double stop_mirror_lat_inflation = param.stop_lat_inflation;
+  double stop_lon_dist = param.stop_lon_dist;
+
+  double heavy_brake_body_lat_inflation = param.heavy_brake_lat_inflation;
+  double heavy_brake_mirror_lat_inflation = param.heavy_brake_lat_inflation;
+  double heavy_brake_lon_dist = param.heavy_brake_lon_dist;
+
+  double moderate_brake_body_lat_inflation = param.moderate_brake_lat_inflation;
+  double moderate_brake_mirror_lat_inflation =
+      param.moderate_brake_lat_inflation;
+  double moderate_brake_lon_dist = param.moderate_brake_lon_dist;
+
+  double slight_brake_body_lat_inflation = param.slight_brake_lat_inflation;
+  double slight_brake_mirror_lat_inflation = param.slight_brake_lat_inflation;
+  double slight_brake_lon_dist = param.slight_brake_lon_dist;
+
+  if (param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+    stop_body_lat_inflation = speed_buffer.stop_body_lat_buffer;
+    stop_mirror_lat_inflation = speed_buffer.stop_mirror_lat_buffer;
+    stop_lon_dist = speed_buffer.stop_min_lon_dist;
+
+    heavy_brake_body_lat_inflation = speed_buffer.low_speed_body_lat_buffer;
+    heavy_brake_mirror_lat_inflation = speed_buffer.low_speed_mirror_lat_buffer;
+    heavy_brake_lon_dist = speed_buffer.low_speed_min_lon_dist;
+
+    moderate_brake_body_lat_inflation = speed_buffer.mid_speed_body_lat_buffer;
+    moderate_brake_mirror_lat_inflation =
+        speed_buffer.mid_speed_mirror_lat_buffer;
+    moderate_brake_lon_dist = speed_buffer.mid_speed_min_lon_dist;
+
+    slight_brake_body_lat_inflation = speed_buffer.high_speed_body_lat_buffer;
+    slight_brake_mirror_lat_inflation =
+        speed_buffer.high_speed_mirror_lat_buffer;
+    slight_brake_lon_dist = speed_buffer.high_speed_min_lon_dist;
+  }
+
+  real_time_brake_info_vec[0].Set(
+      RealTimeBrakeType::STOP, stop_body_lat_inflation,
+      stop_mirror_lat_inflation, stop_lon_dist, lon_buffer);
+  real_time_brake_info_vec[1].Set(
+      RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
+      heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer);
+  real_time_brake_info_vec[2].Set(
+      RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
+      moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist, lon_buffer);
+  real_time_brake_info_vec[3].Set(
+      RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
+      slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer);
+
+  bool special_stop_flag = false;
+  double special_stop_body_lat_buffer =
+      speed_buffer.special_stop_body_lat_buffer;
+  double special_stop_mirror_lat_buffer =
+      speed_buffer.special_stop_mirror_lat_buffer;
+  double special_stop_lon_dist = speed_buffer.special_stop_min_lon_dist;
+  double special_stop_lon_buffer = lon_buffer;
+  if (increase_lat_err_flag) {
+    special_stop_flag = true;
+  } else if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag()) {
+    const bool new_plan_path =
+        (frame_.current_path_length - frame_.remain_dist_path < 0.168);
+    if (new_plan_path) {
+      // leave inital place logic to let car move
+      if (speed_buffer.enable_leave_initial_place &&
+          frame_.current_path_length - frame_.remain_dist_path <
+              speed_buffer.leave_initial_place_dist) {
+        special_stop_flag = true;
+        special_stop_body_lat_buffer =
+            speed_buffer.leave_initial_place_body_lat_buffer;
+        special_stop_mirror_lat_buffer =
+            speed_buffer.leave_initial_place_mirror_lat_buffer;
+        special_stop_lon_dist = speed_buffer.leave_initial_place_min_lon_dist;
+        special_stop_lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
+      }
+    } else {
+      // keep stuck place logic to let cat stuck and replan reverse path
+      if (speed_buffer.enable_keep_stuck_place &&
+          (frame_.stuck_obs_time > 0.0 ||
+           frame_.stuck_dynamic_obs_time > 0.0)) {
+        special_stop_flag = true;
+        special_stop_body_lat_buffer =
+            speed_buffer.keep_stuck_place_body_lat_buffer;
+        special_stop_mirror_lat_buffer =
+            speed_buffer.keep_stuck_place_mirror_lat_buffer;
+        special_stop_lon_dist = speed_buffer.keep_stuck_place_min_lon_dist;
+        special_stop_lon_buffer = speed_buffer.keep_stuck_place_lon_buffer;
+      }
     }
   }
 
-  else {
-    real_time_brake_info_vec[0].Set(RealTimeBrakeType::STOP,
-                                    speed_buffer.stop_body_lat_buffer,
-                                    speed_buffer.stop_mirror_lat_buffer,
-                                    speed_buffer.stop_min_lon_dist, lon_buffer);
-    real_time_brake_info_vec[1].Set(
-        RealTimeBrakeType::HEAVY_BRAKE, speed_buffer.low_speed_body_lat_buffer,
-        speed_buffer.low_speed_mirror_lat_buffer,
-        speed_buffer.low_speed_min_lon_dist, lon_buffer);
-    real_time_brake_info_vec[2].Set(RealTimeBrakeType::SLIGHT_BRAKE,
-                                    speed_buffer.high_speed_body_lat_buffer,
-                                    speed_buffer.high_speed_mirror_lat_buffer,
-                                    speed_buffer.high_speed_min_lon_dist,
-                                    lon_buffer);
-    real_time_brake_info_vec[3].Set(RealTimeBrakeType::SLIGHT_BRAKE,
-                                    speed_buffer.high_speed_body_lat_buffer,
-                                    speed_buffer.high_speed_mirror_lat_buffer,
-                                    speed_buffer.high_speed_min_lon_dist,
-                                    lon_buffer);
-    if (increase_lat_err_flag) {
-      real_time_brake_info_vec[0].Set(
-          RealTimeBrakeType::STOP, speed_buffer.special_stop_body_lat_buffer,
-          speed_buffer.special_stop_mirror_lat_buffer,
-          speed_buffer.special_stop_min_lon_dist, lon_buffer);
-    } else if (speed_buffer.enable_leave_initial_place &&
-               frame_.current_path_length - frame_.remain_dist_path <
-                   speed_buffer.leave_initial_place_dist) {
-      real_time_brake_info_vec[0].Set(
-          RealTimeBrakeType::STOP,
-          speed_buffer.leave_initial_place_body_lat_buffer,
-          speed_buffer.leave_initial_place_mirror_lat_buffer,
-          speed_buffer.leave_initial_place_min_lon_dist,
-          speed_buffer.leave_initial_place_lon_buffer);
-    }
+  if (special_stop_flag) {
+    real_time_brake_info_vec[0].Set(
+        RealTimeBrakeType::STOP, special_stop_body_lat_buffer,
+        special_stop_mirror_lat_buffer, special_stop_lon_dist,
+        special_stop_lon_buffer);
   }
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();

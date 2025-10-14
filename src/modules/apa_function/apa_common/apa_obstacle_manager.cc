@@ -386,6 +386,9 @@ void ApaObstacleManager::Update(
     }
   }
 
+  PrintUseObsHeightMethod(param.use_obs_height_method);
+  ILOG_INFO << "enable obs height method: " << param.enable_multi_height_col_det;
+
   JSON_DEBUG_VALUE("total_obs_size", obstacles_.size())
   ILOG_INFO << "obstacle size: " << obstacles_.size();
 
