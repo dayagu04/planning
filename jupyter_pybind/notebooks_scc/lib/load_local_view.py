@@ -166,10 +166,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         index = 0
         try:
           for i in range(16):
-            if (road_msg_tmp.msg_header.input_list[i].input_type == 22):
+            if (road_msg_tmp.msg_meta.input_list[i].input_type == 22):
               index = i
               break
-          rdg_lane_lines_msg_tmp = findbyseq(bag_loader.rdg_lane_lines_msg, road_msg_tmp.msg_header.input_list[index].seq)
+          rdg_lane_lines_msg_tmp = findbyseq(bag_loader.rdg_lane_lines_msg, road_msg_tmp.msg_meta.input_list[index].seq)
         except:
           rdg_lane_lines_msg_tmp = None
         if rdg_lane_lines_msg_tmp != None:
