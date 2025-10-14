@@ -262,6 +262,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     cone_alc_trigger_counter_ =
         std::max(cone_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
     is_cone_lane_change_situation_ = false;
+    is_cone_must_lane_change_situation_ = false;
     return;
   } else {
     // 检测类型为cone的障碍物赋予cluster属性
