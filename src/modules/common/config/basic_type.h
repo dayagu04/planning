@@ -91,7 +91,10 @@ enum EgoMLCRequestType {
   None_MLC = 0,
   AVOIDE_MERGE = 1,
   AVOIDE_DIVERGE = 2,
-  OTHER_TYPE_MLC = 3,
+  RAMP_TO_MAIN = 3,
+  MAIN_TO_RAMP = 4,
+  KEEP_LEFT = 5,
+  OTHER_TYPE_MLC = 6,
 };
 
 struct LaneChangeGapInfo {
@@ -118,6 +121,11 @@ struct FPPoint {
     lane_ids.clear();
   }
 
+  bool isEmpty() const {
+    return (link_id == static_cast<uint64>(-1)) &&
+           (fp_distance_to_split_point == 0.0) &&
+           lane_ids.empty();
+  }
   // FPPoint(int link_id, double fp_distance_to_split_point,
   //         std::vector<int> lane_ids)
   //     : link_id(link_id),
