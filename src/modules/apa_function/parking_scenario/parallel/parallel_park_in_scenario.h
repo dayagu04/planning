@@ -54,7 +54,7 @@ class ParallelParkInScenario : public ParkingScenario {
 
   bool CheckReplanParallel();
   const GeometryPathOutput& SuitablePathReplan();
-  void CheckEgoPoseWhenPlanFaild();
+  void CheckEgoPoseWhenPlanFaild(ParkingFailReason reason);
 
   const double UpdateRemainDistObs(const double remain_dist_path,
                                    const double remain_dist_obs);

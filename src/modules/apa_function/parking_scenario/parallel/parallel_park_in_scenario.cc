@@ -104,11 +104,14 @@ bool ParallelParkInScenario::CheckReplanParallel() {
   return false;
 }
 
-void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild() {
+void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild(ParkingFailReason reason) {
   ILOG_INFO << "Enter CheckEgoPoseWhenPlanFaild!";
 
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double finish_parallel_lat_err = 0.5;
+  const double finish_parallel_lon_err = 0.5;
 
   const double finish_parallel_heading = 10.0;
   const bool heading_condition =
@@ -120,8 +123,8 @@ void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild() {
   ILOG_INFO << "heading_condition = " << heading_condition;
 
   ILOG_INFO << "lat error = " << ego_slot_info.terminal_err.pos.y();
-  const bool lat_condition_1 = std::fabs(ego_slot_info.terminal_err.pos.y()) <=
-                               apa_param.GetParam().finish_parallel_lat_rac_err;
+  const bool lat_condition_1 =
+      std::fabs(ego_slot_info.terminal_err.pos.y()) <= finish_parallel_lat_err;
 
   // lat condition 2, keep both outer wheels in slot
   const double side_sgn =
@@ -158,19 +161,24 @@ void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild() {
   if (lat_condition) {
     if (lat_condition_1) {
       ILOG_INFO << "lat y err = " << ego_slot_info.terminal_err.pos.y() << " < "
-                << apa_param.GetParam().finish_parallel_lat_rac_err;
+                << finish_parallel_lat_err;
     } else {
       ILOG_INFO << "ego outer wheel are both in slot!";
     }
   }
 
-  if (lat_condition && heading_condition) {
+  const bool lon_condition =
+      std::fabs(ego_slot_info.terminal_err.pos.x()) < finish_parallel_lon_err;
+  ILOG_INFO << "terminal y error = " << ego_slot_info.terminal_err.pos.x();
+  ILOG_INFO << "lon_condition = " << lon_condition;
+
+  if (lat_condition && heading_condition && lon_condition) {
     ILOG_INFO << "parallel parking finish!";
     SetParkingStatus(PARKING_FINISHED);
   } else {
     ILOG_INFO << "parallel parking failed!";
     SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    frame_.plan_fail_reason = reason;
   }
   return;
 }
@@ -256,9 +264,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   // generate t-lane
   if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
     ILOG_INFO << "GenTlane failed!";
-    frame_.plan_fail_reason = NO_TARGET_POSE;
+    CheckEgoPoseWhenPlanFaild(ParkingFailReason::NO_TARGET_POSE);
     return;
   }
 
@@ -272,8 +279,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   // check failed
   if (CheckStuckFailed()) {
     ILOG_INFO << "check stuck failed!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    CheckEgoPoseWhenPlanFaild(ParkingFailReason::STUCK_FAILED_TIME);
     return;
   }
 
@@ -315,9 +321,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_GEARCHANGE);
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      // SetParkingStatus(PARKING_FAILED);
-      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
-      CheckEgoPoseWhenPlanFaild();
+      CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -325,22 +329,14 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_PLANNING);
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      // SetParkingStatus(PARKING_FAILED);
-      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
-      CheckEgoPoseWhenPlanFaild();
+      CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    // SetParkingStatus(PARKING_FAILED);
-    // frame_.plan_fail_reason = PATH_PLAN_FAILED;
-    CheckEgoPoseWhenPlanFaild();
+    CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
-  // print planning status
-  // ILOG_INFO << "parking status = "
-  //           << static_cast<int>(GetPlannerStates().planning_status)
-  //           ;
 }
 
 // TODO: 增加 ScenarioTry

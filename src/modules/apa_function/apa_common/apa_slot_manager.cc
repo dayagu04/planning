@@ -24,6 +24,7 @@ static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
 static const double kMaxEgoSlotAbsoluteDist = 10.68;
 static const double kMaxEgoSlotRelativeDist = 7.2;
+static const int kMaxSlotObserveFrameCount = 30;
 
 void ApaSlotManager::Update(
     const LocalView* local_view,
@@ -724,10 +725,34 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
     }
   }
   ILOG_INFO << "final parallel slot is occupied = " << is_slot_occupied;
-
+  // Use sliding Windows to prevent parking slot flashing
   if (is_slot_occupied) {
+    parallel_slot_not_release_count_++;
+  } else {
+    parallel_slot_release_count_++;
+  }
+  if ((parallel_slot_not_release_count_ + parallel_slot_release_count_) >=
+      kMaxSlotObserveFrameCount) {
+    if (is_slot_occupied) {
+      parallel_slot_release_count_--;
+    } else {
+      parallel_slot_not_release_count_--;
+    }
+    parallel_slot_not_release_count_ = std::clamp(
+        parallel_slot_not_release_count_, 0, kMaxSlotObserveFrameCount);
+    parallel_slot_release_count_ =
+        std::clamp(parallel_slot_release_count_, 0, kMaxSlotObserveFrameCount);
+  }
+  ILOG_INFO << "parallel_slot_not_release_count_ = "
+            << parallel_slot_not_release_count_
+            << " parallel_slot_release_count_ = "
+            << parallel_slot_release_count_;
+  if (is_slot_occupied &&
+      parallel_slot_not_release_count_ > parallel_slot_release_count_) {
+    parallel_slot_not_release_count_ = 0;
     return SlotReleaseVoterType::CLEAR;
   }
+
   return SlotReleaseVoterType::MAXIMUM;
 }
 
