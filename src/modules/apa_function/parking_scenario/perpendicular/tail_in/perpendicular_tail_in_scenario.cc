@@ -1972,9 +1972,9 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (!(dist_ego_limiter < car_to_limiter_dis &&
         std::fabs(ego_info_under_slot.terminal_err.heading) * kRad2Deg <
-            param.check_finish_params.heading_err * 1.05 &&
+            param.check_finish_params.heading_err * 2.0 &&
         std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
-            param.check_finish_params.lat_err * 1.05)) {
+            param.check_finish_params.lat_err * 2.0)) {
     return false;
   }
 
