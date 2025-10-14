@@ -30,6 +30,7 @@ class PotentialDangerousAgentDecider : public Task {
   void EstimateAgentPosType(std::shared_ptr<FrenetObstacle> agent_ptr,
                             AgentPosType* output, double* lateral_distance,
                             double* longitudinal_distance);
+  void LogDebugInfo();
 
  private:
   PotentialDangerousAgentDeciderConfig config_;
@@ -38,6 +39,7 @@ class PotentialDangerousAgentDecider : public Task {
   FrenetBoundary ego_frenet_boundary_;
   std::vector<std::shared_ptr<FrenetObstacle>> frenet_obstacles_{};
   RssModel::FrenetState ego_state_;
+  planning::common::PotentialDangerousAgentDeciderInfo potential_dangerous_agent_decider_info_;
 };
 
 }  // namespace planning

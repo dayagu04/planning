@@ -28,8 +28,7 @@ bool PotentialDangerousAgentDecider::Execute() {
           session_->mutable_planning_context()
               ->mutable_potential_dangerous_agent_decider_output();
   if (potential_dangerous_agent_decider_output == nullptr) {
-    std::cout << "potential_dangerous_agent_decider_output is nullptr"
-              << std::endl;
+    ILOG_DEBUG << "potential_dangerous_agent_decider_output is nullptr";
     return false;
   }
   potential_dangerous_agent_decider_output->dangerous_agent_info.clear();
@@ -39,10 +38,8 @@ bool PotentialDangerousAgentDecider::Execute() {
                               ->get_frenet_ego_state();
   ego_state_ = {{ego_frenet_state.s(), ego_frenet_state.velocity_s(), 0.0},
                 {ego_frenet_state.l(), 0.0, 0.0}};
-  auto* debug_info = DebugInfoManager::GetInstance()
-                         .GetDebugInfoPb()
-                         ->mutable_potential_dangerous_agent_decider_info();
-  debug_info->Clear();
+
+  potential_dangerous_agent_decider_info_.Clear();
 
   virtual_lane_manager_ =
       session_->mutable_environmental_model()->mutable_virtual_lane_manager();
@@ -50,7 +47,7 @@ bool PotentialDangerousAgentDecider::Execute() {
       session_->planning_context().ego_lane_road_right_decider_output();
   const auto current_lane = virtual_lane_manager_->get_current_lane();
   if (current_lane == nullptr) {
-    std::cout << "------------current_lane is nullptr" << std::endl;
+    ILOG_DEBUG << "current_lane is nullptr";
     return true;
   }
   ego_frenet_boundary_ =
@@ -65,19 +62,6 @@ bool PotentialDangerousAgentDecider::Execute() {
                       potential_dangerous_agent_decider_output);
                 });
 
-  debug_info->set_risk_free_lateral_distance(
-      config_.risk_free_lateral_distance);
-  debug_info->set_risk_free_longitudinal_distance(
-      config_.risk_free_longitudinal_distance);
-  debug_info->set_ego_lateral_vel(ego_state_.second[1]);
-  debug_info->set_ego_longitudinal_vel(ego_state_.first[1]);
-  auto* ego_sl_info = debug_info->mutable_ego_sl_info();
-  ego_sl_info->set_s(ego_state_.first[0]);
-  ego_sl_info->set_ds(ego_state_.first[1]);
-  ego_sl_info->set_l(ego_state_.second[0]);
-  ego_sl_info->set_dl(ego_state_.second[1]);
-  ego_sl_info->set_dds(ego_state_.first[2]);
-  ego_sl_info->set_ddl(ego_state_.second[2]);
   std::sort(
       potential_dangerous_agent_decider_output->dangerous_agent_info.begin(),
       potential_dangerous_agent_decider_output->dangerous_agent_info.end(),
@@ -89,6 +73,9 @@ bool PotentialDangerousAgentDecider::Execute() {
                     (rhs.lateral_distance * rhs.lateral_distance +
                      rhs.longitudinal_distance * rhs.longitudinal_distance));
       });
+
+  LogDebugInfo();
+
   return true;
 }
 
@@ -101,7 +88,7 @@ bool PotentialDangerousAgentDecider::EstimateRiskLevel(
     return false;
   }
   if (potential_dangerous_agent_decider_output == nullptr) {
-    std::cout << "risk_level is nullptr" << std::endl;
+    ILOG_DEBUG << "risk_level is nullptr";
     return false;
   }
   AgentPosType agent_pos_type = AgentPosType::UNKNOWN;
@@ -155,10 +142,7 @@ bool PotentialDangerousAgentDecider::EstimateRiskLevel(
                                   rss_config, &lateral_moderate_distance,
                                   &longitudinal_moderate_distance);
 
-  auto* debug = DebugInfoManager::GetInstance()
-                    .GetDebugInfoPb()
-                    ->mutable_potential_dangerous_agent_decider_info()
-                    ->add_potential_dangerous_agent();
+  auto* debug = potential_dangerous_agent_decider_info_.add_potential_dangerous_agent();
   debug->set_s(obs_state.first[0]);
   debug->set_ds(obs_state.first[1]);
   debug->set_l(obs_state.second[0]);
@@ -427,6 +411,30 @@ void PotentialDangerousAgentDecider::EstimateAgentPosType(
   }
 
   return;
+}
+
+
+void PotentialDangerousAgentDecider::LogDebugInfo() {
+  potential_dangerous_agent_decider_info_.set_risk_free_lateral_distance(
+      config_.risk_free_lateral_distance);
+  potential_dangerous_agent_decider_info_.set_risk_free_longitudinal_distance(
+      config_.risk_free_longitudinal_distance);
+  potential_dangerous_agent_decider_info_.set_ego_lateral_vel(ego_state_.second[1]);
+  potential_dangerous_agent_decider_info_.set_ego_longitudinal_vel(ego_state_.first[1]);
+  auto* ego_sl_info = potential_dangerous_agent_decider_info_.mutable_ego_sl_info();
+  ego_sl_info->set_s(ego_state_.first[0]);
+  ego_sl_info->set_ds(ego_state_.first[1]);
+  ego_sl_info->set_l(ego_state_.second[0]);
+  ego_sl_info->set_dl(ego_state_.second[1]);
+  ego_sl_info->set_dds(ego_state_.first[2]);
+  ego_sl_info->set_ddl(ego_state_.second[2]);
+
+#ifdef ENABLE_PROTO_LOG
+  DebugInfoManager::GetInstance()
+      .GetDebugInfoPb()
+      ->mutable_potential_dangerous_agent_decider_info()
+      ->CopyFrom(potential_dangerous_agent_decider_info_);
+#endif
 }
 
 }  // namespace planning
