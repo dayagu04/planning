@@ -250,13 +250,15 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   const double lsl_length = route_info_output.lsl_length;
   if (route_info_output.map_vendor ==
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_BAIDU_LD) {
-    if (route_info_output.is_on_ramp ||
-        route_info_output.lc_nums_for_split != 0) {
-      lc_end_dis =
-          route_info_output.distance_to_first_road_split - kTmpRampLength;
-    } else {
-      lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
-    }
+    // if (route_info_output.is_on_ramp ||
+    //     route_info_output.lc_nums_for_split != 0) {
+    //   lc_end_dis =
+    //       route_info_output.distance_to_first_road_split - kTmpRampLength;
+    // } else {
+    //   lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
+    // }
+    lc_end_dis = 0.0;
+
   } else if (route_info_output.map_vendor ==
              iflymapdata::sdpro::MapVendorType::MAP_VENDOR_TENCENT_SD_PRO) {
     lc_end_dis =

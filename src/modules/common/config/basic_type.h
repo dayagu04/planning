@@ -221,6 +221,20 @@ struct MLCDeciderRouteInfo {
   }
 };
 
+enum MLCSceneType {
+  NORMAL_SCENE = 0,
+  SPLIT_SCENE = 1,
+  MERGE_SCENE = 2,
+  SPLIT_SPLIT_SCENE = 3
+};
+struct MLCDeciderInfoBaseBaidu {
+  MLCSceneType mlc_scene_type = NORMAL_SCENE;
+
+  void reset() {
+    mlc_scene_type = NORMAL_SCENE;
+  }
+
+};
 struct RouteInfoOutput {
   // for NOA output
   int split_seg_forward_lane_nums = 0;
@@ -289,6 +303,7 @@ struct RouteInfoOutput {
   // double dis_to_merge_fp = NL_NMAX;
   MergePointInfo merge_point_info;
   EgoMLCRequestType mlc_request_type_route_info;
+  MLCSceneType baidu_mlc_scene = NORMAL_SCENE;
 
   // for hpp output
   bool is_on_hpp_lane = false;
@@ -364,6 +379,7 @@ struct RouteInfoOutput {
     distance_to_target_slot = NL_NMAX;
     distance_to_next_speed_bump = NL_NMAX;
     mlc_request_type_route_info = None_MLC;
+    baidu_mlc_scene = NORMAL_SCENE;
   }
 };
 

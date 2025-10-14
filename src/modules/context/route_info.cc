@@ -9,6 +9,8 @@
 #include <utility>
 #include <vector>
 
+#include "route_info_strategy/LD_route_info_strategy.h"
+#include "route_info_strategy/SDPro_route_info_strategy.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -57,12 +59,22 @@ void RouteInfo::Update() {
     // } else {
     //   std::cout << "UpdateSdMap failed!!!" << std::endl;
     // }
-    if (UpdateSdProMap(local_view)) {
-      UpdateSdMap(local_view);
-      UpdateRouteInfoForNOA(sdpro_map_);
-    } else {
-      std::cout << "UpdateSdMap failed!!!" << std::endl;
+    if (local_view.sdpro_map_info.data_source() ==
+        iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+      GetStrategy();
+      route_info_strategy_->Update(route_info_output_);
+      sdpromap_valid_ = route_info_strategy_->get_sdpromap_valid();
+      sdpro_map_ = route_info_strategy_->get_sdpro_map();
+    } else if (local_view.sdpro_map_info.data_source() ==
+               iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+      if (UpdateSdProMap(local_view)) {
+        UpdateSdMap(local_view);
+        UpdateRouteInfoForNOA(sdpro_map_);
+      } else {
+        std::cout << "UpdateSdMap failed!!!" << std::endl;
+      }
     }
+
   } else {
     if (UpdateStaticMap(local_view)) {
       UpdateRouteInfoForHPP(hd_map_);
@@ -1470,6 +1482,7 @@ bool RouteInfo::UpdateSdProMap(const LocalView& local_view) {
   JSON_DEBUG_VALUE("sdpromap_valid_", sdpromap_valid_)
   return sdpromap_valid_;
 }
+
 
 bool RouteInfo::UpdateStaticMap(const LocalView& local_view) {
   const auto& static_map_info = local_view.static_map_info;
@@ -5875,5 +5888,28 @@ void RouteInfo::ProcessLaneDistance(
   }
 
   relative_id_lane->set_feasible_lane_distance(virtual_lane_distance);
+}
+
+void RouteInfo::GetStrategy() {
+  static bool map_updated = false;
+  const auto& local_view = session_->environmental_model().get_local_view();
+  if (!map_updated) {
+    if (local_view.sdpro_map_info.data_source() ==
+        iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+      route_info_strategy_.reset(
+          new LDRouteInfoStrategy(&mlc_decider_config_, session_));
+      map_updated = true;
+    } else if (local_view.sdpro_map_info.data_source() ==
+               iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
+      route_info_strategy_.reset(
+          new SDProRouteInfoStrategy(&mlc_decider_config_, session_));
+      map_updated = true;
+    }
+  }
+}
+
+void RouteInfo::UpdateMLCInfoDeciderBaseBaidu(
+    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+  route_info_strategy_->CalculateMLCDecider(relative_id_lanes, route_info_output_);
 }
 }  // namespace planning
