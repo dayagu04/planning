@@ -467,8 +467,7 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
              distance_to_road_split_ < kDistanceToMapRequestPoint) {
     merge_stop_line_distance_ = distance_to_road_split_;
     return true;
-  } else if (lane_change_source_ == MAP_REQUEST ||
-             lane_change_source_ == MERGE_REQUEST) {
+  } else if (lane_change_source_ == MERGE_REQUEST) {
     if (boundary_merge_point_valid_) {
       const auto& boundary_merge_point =
           session_->planning_context()
@@ -479,21 +478,60 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
                      boundary_merge_point.y - ego_cart_point_.second);
       return true;
     } else {
-      if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
-          distance_to_road_merge_ < kDistanceToMapRequestPoint ||
-          is_in_merge_region_) {
+      if (distance_to_merge_point_ < distance_to_road_merge_ &&
+          distance_to_merge_point_ < distance_to_road_split_ &&
+          distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+          ((is_left_edge_side_lane &&
+            merge_point_info.merge_type == LEFT_MERGE) ||
+           (is_right_edge_side_lane &&
+            merge_point_info.merge_type == RIGHT_MERGE))) {
+        merge_stop_line_distance_ = distance_to_merge_point_;
+        return true;
+      } else if (distance_to_road_split_ < kDistanceToMapRequestPoint ||
+                 distance_to_road_merge_ < kDistanceToMapRequestPoint ||
+                 is_in_merge_region_) {
         merge_stop_line_distance_ =
             std::fmin(distance_to_road_merge_, distance_to_road_split_);
         return true;
-      } else if (distance_to_merge_point_ < distance_to_road_merge_ &&
-                 distance_to_merge_point_ < distance_to_road_split_ &&
-                 distance_to_merge_point_ < kDistanceToMapRequestPoint &&
-                 ((is_left_edge_side_lane &&
-                   merge_point_info.merge_type == LEFT_MERGE) ||
-                  (is_right_edge_side_lane &&
-                   merge_point_info.merge_type == RIGHT_MERGE))) {
-        merge_stop_line_distance_ = distance_to_merge_point_;
-        return true;
+      }
+    }
+  } else if (lane_change_source_ == MAP_REQUEST &&
+             (route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN ||
+              route_info_output.mlc_request_type_route_info == MAIN_TO_RAMP)) {
+    bool is_ramp_to_main =
+        route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN;
+    if (boundary_merge_point_valid_) {
+      const auto& boundary_merge_point =
+          session_->planning_context()
+              .ego_lane_road_right_decider_output()
+              .boundary_merge_point;
+      auto current_merge_stop_line_distance =
+          std::hypot(boundary_merge_point.x - ego_cart_point_.first,
+                     boundary_merge_point.y - ego_cart_point_.second);
+      merge_stop_line_distance_ =
+          is_ramp_to_main
+              ? current_merge_stop_line_distance
+              : current_merge_stop_line_distance - route_info_output.lsl_length;
+      return true;
+    } else {
+      if (is_ramp_to_main) {
+        if (distance_to_merge_point_ < distance_to_road_merge_ &&
+            distance_to_merge_point_ < distance_to_road_split_ &&
+            distance_to_merge_point_ < kDistanceToMapRequestPoint &&
+            ((is_left_edge_side_lane &&
+              merge_point_info.merge_type == LEFT_MERGE) ||
+             (is_right_edge_side_lane &&
+              merge_point_info.merge_type == RIGHT_MERGE))) {
+          merge_stop_line_distance_ = distance_to_merge_point_;
+          return true;
+        } else if (distance_to_road_merge_ < kDistanceToMapRequestPoint ||
+                   is_in_merge_region_) {
+          merge_stop_line_distance_ = distance_to_road_merge_;
+          return true;
+        }
+      } else {
+        merge_stop_line_distance_ =
+            distance_to_road_split_ - route_info_output.lsl_length;
       }
     }
   }
