@@ -3826,8 +3826,8 @@ bool LaneChangeStateMachineManager::
   double box_ttc = lc_safety_check_time_;  // time 的计算已经有非零保护了
   // 根据与后车差速 调整起始ttc
   double max_box_ttc_rear = 4.0;
-  std::array<double, 5> xpv{10., 20., 25., 30.0, 40.};  // 后车 - 自车速度 kph
-  std::array<double, 5> fpv{6.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
+  std::array<double, 7> xpv{0.0, 5.0, 10., 20., 25., 30.0, 40.};  // 后车 - 自车速度 kph
+  std::array<double, 7> fpv{3.0, 4.0, 6.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
