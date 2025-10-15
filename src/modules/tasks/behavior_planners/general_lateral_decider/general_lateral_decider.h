@@ -268,7 +268,7 @@ class GeneralLateralDecider : public Task {
   void GenerateRecommendJerk(
       const std::shared_ptr<FrenetObstacle> obstacle,
       bool &is_high_dangerous);
-  bool CheckObstacleSideCutinNudgeCondition(
+  void CheckObstacleSideCutinNudgeCondition(
       const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
       BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle);
 

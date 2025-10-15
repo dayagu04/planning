@@ -1235,7 +1235,7 @@ void GeneralLateralDecider::HandleRefPathOffset(
         front_axis_point.second += diff_y;
       }
     } else {
-      std::cout << "HandleAvoidScene frenet error!" << std::endl;
+      ILOG_DEBUG << "HandleAvoidScene frenet error!";
     }
   }
 }
@@ -1927,9 +1927,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
           ->mutable_general_lateral_decider_output();
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  const auto potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
   CalculateExtraLaneWidthDecreaseBuffer();
 
   std::unordered_map<int, HysteresisDecision> is_exceed_obstacle_map;
@@ -1955,21 +1952,6 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
     ResetIsExceedObstacleHysteresisMap();
     ILOG_INFO << "Ref traj points or ref path points is null!";
     return;
-  }
-
-  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
-      (potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_SLIGHTLY_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: LEFT_NUDGE ||
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.lateral_maneuver ==
-      LateralManeuver :: RIGHT_NUDGE)) {
-    JSON_DEBUG_VALUE("potential_dangerous_agent_id",
-        potential_dangerous_agent_decider_output.dangerous_agent_info.front().id);
-  } else {
-    JSON_DEBUG_VALUE("potential_dangerous_agent_id", -0.01);
   }
 
   const auto &obs_vec = reference_path_ptr_->get_obstacles();
@@ -2701,10 +2683,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   // judge side cut_in nudge
   bool is_avoid_side_ignore_obj = false;
-  if (!CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left,
-      bound_type, is_avoid_side_ignore_obj, is_side_obstacle)) {
-    return;
-  }
+  CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left,
+      bound_type, is_avoid_side_ignore_obj, is_side_obstacle);
 
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.emergency_avoid &&
@@ -3014,7 +2994,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 void GeneralLateralDecider::GenerateRecommendJerk(
     const std::shared_ptr<FrenetObstacle> obstacle,
     bool &is_high_dangerous) {
-  const auto potential_dangerous_agent_decider_output =
+  const auto &potential_dangerous_agent_decider_output =
       session_->planning_context()
                .potential_dangerous_agent_decider_output();
   auto &general_lateral_decider_output =
@@ -3025,15 +3005,15 @@ void GeneralLateralDecider::GenerateRecommendJerk(
                                       .lateral_obstacle_history_info;
   const auto lat_obs_position_iter =
       lat_obstacle_position.find(obstacle->id());
-  const bool is_find_lat_obs_position_iter = lat_obs_position_iter != lat_obstacle_position.end();
   bool is_side_obj = false;
-  if (is_find_lat_obs_position_iter) {
-    if (lat_obs_position_iter->second.side_car) {
-      is_side_obj = true;
-    }
+  if (lat_obs_position_iter != lat_obstacle_position.end() &&
+      lat_obs_position_iter->second.side_car) {
+    is_side_obj = true;
   }
   if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() && obstacle->id() ==
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().id && is_side_obj) {
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front().id && is_side_obj &&
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.
+      lateral_maneuver != LateralManeuver :: IGNORE) {
     const auto risk_level = potential_dangerous_agent_decider_output
                                 .dangerous_agent_info.front().risk_level;
     if (risk_level == RiskLevel::NO_RISK) {
@@ -3265,7 +3245,7 @@ bool GeneralLateralDecider::HackYawSideObstacle(
   return false;
 }
 
-bool GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
+void GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
     const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
     BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle) {
   const auto &lat_obstacle_decision = session_->planning_context()
@@ -3277,35 +3257,32 @@ bool GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
   const auto lat_obs_position_iter =
       lat_obstacle_position.find(obstacle->id());
   const double care_lateral_distacle = 2;
-  const bool is_find_lat_obs_position_iter = lat_obs_position_iter != lat_obstacle_position.end();
-  if (is_find_lat_obs_position_iter) {
-    if (lat_obs_position_iter->second.side_car) {
-      is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
-                        (!lat_obs_position_iter->second.front_car);
-      if (lat_obstacle_decision.at(obstacle->id()) ==
-          LatObstacleDecisionType::IGNORE ||
-          lat_obstacle_decision.at(obstacle->id()) ==
-          LatObstacleDecisionType::FOLLOW) {
-        is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
-        if (is_nudge_left && (care_lateral_distacle <
-            obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {
-          return false;
-        } else if (!is_nudge_left && (care_lateral_distacle <
-            ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().l_end)) {
-          return false;
-        } else {
-          // if (obstacle->frenet_l() < 0) {
-          //   is_nudge_left = false;
-          // } else if (obstacle->frenet_l() > 0) {
-          //   is_nudge_left = true;
-          // }
-          bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT : BoundType::DYNAMIC_AGENT;
-          is_avoid_side_ignore_obj = true;
-        }
+  if (lat_obs_position_iter != lat_obstacle_position.end() &&
+      lat_obs_position_iter->second.side_car) {
+    is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
+                      (!lat_obs_position_iter->second.front_car);
+    if (lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::IGNORE ||
+        lat_obstacle_decision.at(obstacle->id()) ==
+        LatObstacleDecisionType::FOLLOW) {
+      is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+      if (is_nudge_left && (care_lateral_distacle <
+          obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {
+        bound_type = BoundType::ADJACENT_AGENT;
+      } else if (!is_nudge_left && (care_lateral_distacle <
+          ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().l_end)) {
+        bound_type = BoundType::ADJACENT_AGENT;
+      } else {
+        // if (obstacle->frenet_l() < 0) {
+        //   is_nudge_left = false;
+        // } else if (obstacle->frenet_l() > 0) {
+        //   is_nudge_left = true;
+        // }
+        bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT : BoundType::DYNAMIC_AGENT;
+        is_avoid_side_ignore_obj = true;
       }
     }
   }
-  return true;
 }
 
 double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
@@ -4437,6 +4414,18 @@ void GeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+  const auto &potential_dangerous_agent_decider_output =
+      session_->planning_context()
+               .potential_dangerous_agent_decider_output();
+  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front().
+      recommended_maneuver.lateral_maneuver != LateralManeuver :: IGNORE) {
+    JSON_DEBUG_VALUE("potential_dangerous_agent_id",
+        potential_dangerous_agent_decider_output.dangerous_agent_info.front().id);
+  } else {
+    JSON_DEBUG_VALUE("potential_dangerous_agent_id", -0.01);
+  }
+
 #ifdef ENABLE_PROTO_LOG
   lat_debug_info_.Clear();
   lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
