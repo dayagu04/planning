@@ -71,6 +71,8 @@ class RouteInfo {
   uint64_t sdpro_map_info_updated_timestamp_ = 0;
   MLCDeciderRouteInfo mlc_decider_route_info_;
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  std::string last_path_id_;
+  bool last_path_id_is_set_ = false;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;

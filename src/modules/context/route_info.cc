@@ -130,6 +130,21 @@ void RouteInfo::UpdateRouteInfoForNOA(
     return;
   }
 
+  const auto& local_view = session_->environmental_model().get_local_view();
+  auto& route_map_info = local_view.sdpro_map_info.route();
+  // 根据地图数据path_id来判断是否更新导航路线
+  std::string path_id = route_map_info.path_id();
+  if (route_map_info.has_path_id() != last_path_id_is_set_ ||
+      (last_path_id_ != path_id && route_map_info.has_path_id())) {
+    mlc_decider_route_info_.reset();
+    last_path_id_is_set_ = route_map_info.has_path_id();
+    if (last_path_id_is_set_) {
+      last_path_id_ = path_id;
+    } else {
+      last_path_id_.clear();
+    }
+  }
+
   if (IsClosingIntersectionEntrance(
           link, sdpro_map,
           route_info_output_.current_segment_passed_distance)) {
@@ -137,7 +152,6 @@ void RouteInfo::UpdateRouteInfoForNOA(
     return;
   }
   const iflymapdata::sdpro::LinkInfo_Link& current_link = *link;
-  const auto& local_view = session_->environmental_model().get_local_view();
   const auto& sdpro_map_info = local_view.sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
 
@@ -4521,7 +4535,7 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() {
   return task_num;
 }
 
-//搜寻当前link上有没有REGULAR_INTERSECTION_ENTRANCE（普通路口进入点）
+// 搜寻当前link上有没有REGULAR_INTERSECTION_ENTRANCE（普通路口进入点）
 bool RouteInfo::IsClosingIntersectionEntrance(
     const iflymapdata::sdpro::LinkInfo_Link* link,
     const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link) {
@@ -4566,9 +4580,9 @@ bool RouteInfo::IsClosingIntersectionEntrance(
 
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type == iflymapdata::sdpro::FeaturePointType::
-                             REGULAR_INTERSECTION_ENTRANCE ||
+                                 REGULAR_INTERSECTION_ENTRANCE ||
             fp_point_type == iflymapdata::sdpro::FeaturePointType::
-                             REGULAR_INTERSECTION_EXIT) {
+                                 REGULAR_INTERSECTION_EXIT) {
           return true;
         }
       }
