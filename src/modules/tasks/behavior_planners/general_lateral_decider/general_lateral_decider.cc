@@ -5382,12 +5382,22 @@ bool GeneralLateralDecider::IsLonOverlap(
 
 bool GeneralLateralDecider::IsFarObstacle(
     const std::shared_ptr<FrenetObstacle> obstacle) {
-  const auto &care_object_lat_distance_threshold =
-      config_.care_obj_lat_distance_threshold;
-  const auto &care_object_lon_distance_threshold =
-      config_.care_obj_lon_distance_threshold;
   const auto &ego_cur_s = plan_history_traj_.front().s;
   const auto &ego_cur_l = plan_history_traj_.front().l;
+  const auto &care_object_lat_distance_threshold =
+      config_.care_obj_lat_distance_threshold;
+  // 增加自车与障碍物ttc插值计算纵向距离，固定的60米在高速上不够用
+  double lon_ttc = 5.0;
+  if (obstacle->frenet_s() > ego_cur_s) {
+    lon_ttc = obstacle->frenet_relative_velocity_s() < 0 ?
+                   ((obstacle->frenet_s() - ego_cur_s) / (-obstacle->frenet_relative_velocity_s()))
+                   : lon_ttc;
+  }
+  std::array<double, 6> x1{2, 2.5, 3, 4, 4.5, 5};
+  std::array<double, 6> f1{100, 90, 80, 70, 60, 50};
+  double care_object_lon_distance_threshold = interp(lon_ttc, x1, f1);
+  care_object_lon_distance_threshold = std::fmax(config_.care_obj_lon_distance_threshold,
+                                                 care_object_lon_distance_threshold);
   if (std::fabs(obstacle->frenet_s() - ego_cur_s) >
           care_object_lon_distance_threshold or
       std::fabs(obstacle->frenet_l() - ego_cur_l) >
