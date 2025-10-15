@@ -2058,6 +2058,7 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
                    ? planning_cycle_time
                    : (obstacle.timestamp() - history.last_recv_time);
   int count = (int)((gap + 0.01) / planning_cycle_time);
+  double lateral_distacle_to_lane = 0.25;
   if (obstacle.is_static()) {
     // 先过滤静态障碍物，因为静态障碍物的不确定性较低
     follow_info.follow_confidence = 0;
@@ -2126,6 +2127,13 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
       // 正常衰减
       follow_info.follow_confidence = std::fmax(
           follow_info.follow_confidence - 2 * count * planning_cycle_time, 0.0);
+
+      // 针对离自车道较远的障碍物，不计数
+      // 防止障碍物横向跳动较大，异常计数，导致纵向不提速或者减速现象
+      if (intrusion_distance < -lateral_distacle_to_lane) {
+        // 障碍物在车道线0.25m之外
+        follow_info.follow_confidence = 0;
+      }
     }
     follow_info.is_need_folow =
         follow_info.follow_confidence >= follow_confidence_thr;
