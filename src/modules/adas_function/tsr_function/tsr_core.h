@@ -26,6 +26,7 @@ struct TsrParameters {
   double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
   double warning_time_max = 2.0;  // 单次最大报警时长，单位：s
+  const double OUT_FLAG_NEED_LAST_TIME = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
 };
 
 class TsrCore {
@@ -53,18 +54,28 @@ class TsrCore {
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
-  bool perception_speed_limit_valid_ = false;  // 视觉感知限速信息标志位
 
   // 限速标识牌信息 (视觉信息)
   uint32 tsr_speed_limit_ = 0;  // 限速值 单位:kph
-  bool tsr_speed_limit_change_flag_ = false;
-  bool speed_limit_exist_in_view_flag_ = false;
-  uint32 speed_limit_exist_in_view_ = 0;
   double accumulated_path_length_ = 0.0;
+  bool has_perception_speed_limit_ = false;
+  bool speed_limit_renew_flag_ = false;  // 限速牌刷新标志位
+  std::unordered_set<uint8_t> speed_limit_set_; // 限速标识牌值集合
+  // 未感知到任何限速标识持续时间
+  double no_speed_limit_duration_time_ = 0.0;
+  bool speed_limit_out_flag_ = false;
+  bool speed_limit_ever_appeared_ = false;  // 限速牌是否曾经出现过
+
   // 解除限速标识牌信息 (视觉信息)
   uint32 end_of_speed_sign_value_ = 0;           // 解除限速牌值
-  double end_of_speed_sign_display_time_ = 0.0;  // 解除限速牌显示时间 单位:s
-  bool end_of_speed_sign_display_flag_ = false;  // 解除限速牌显示标志位
+  bool has_perception_end_of_speed_limit_ = false;
+  double end_of_speed_sign_display_time_ = 0.0;  // 解除限速牌显示持续时间 单位:s
+  std::unordered_set<uint8_t> end_of_speed_limit_set_; // 解除限速标识牌值集合
+  // 未感知到任何解除限速标识牌持续时间
+  double no_end_of_speed_limit_duration_time_ = 0.0;
+  bool end_of_speed_limit_out_flag_ = false;
+  bool end_of_speed_limit_ever_appeared_ = false;  // 解除限速牌是否曾经出现过
+
   // 当前道路限速信息 (道路信息)
   bool current_map_speed_limit_valid_ = false;
 
@@ -81,13 +92,9 @@ class TsrCore {
 
   double current_map_speed_limit_ = 0.0;
   uint16 current_map_type_ = 0;  // 地图类型: 0-无地图, 1-sd_map, 2-sd_pro_map
-  void UpdateMapSpeedLimit(void);
+
   // 更新限速标识牌信息
   void UpdateTsrSpeedLimit(void);
-
-  // 新版更新限速信息
-  void UpdateTsrSpeedLimitNew(void);
-
   // 只使用地图限速的更新函数
   void UpdateTsrSpeedLimitOnlyByMap(void);
 
@@ -110,17 +117,18 @@ class TsrCore {
   void UpdateTsrSuppInfo(void);
   // 辅助标识牌置位, 用于输出优先级最高的标识牌
   uint16_t supp_sign_code_ = 0;
-  // 获取限速标识牌中的最高限速值
-  uint32 GetHighestSpeedLimit(void);
+  // 获取集合中的最高限速值
+  uint32 GetHighestFromSet(const std::unordered_set<uint8_t>& input_set);
 
-  bool tsr_warning_image_ = false;  // 视觉提醒
-  bool tsr_warning_voice_ = false;  // 声音提醒
+  bool tsr_warning_flag_ = false;  // 超速报警标志位
   bool overspeed_status_ = false;  // false:未处于超速状态 true:处于超速状态
   double overspeed_duration_time_ = 0.0;  // 处于超速状态持续的时间 单位:s
   void UpdateTsrWarning(void);
-  // 输出ldw计算结果
+  // 输出限速结果
   void SetTsrOutputInfo();
+  // 行驶距离累计计算
   void CalculatePathLengthAccumulated();
+  // 持续时间计算模块
   void CalculateDurationTime(void);
   // TSR实时信息重置
   void ResetRealTimeTsrInfo(void);
