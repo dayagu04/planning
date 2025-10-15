@@ -643,6 +643,16 @@ bool IhcCore::DynamicObstacleCheck(void) {
   const int fusion_objs_num = fusion_objects_info.fusion_object_size;
 
   for (int i = 0; i < fusion_objs_num; i++) {
+    // 判断障碍物数据来源, 必须是视觉和雷达都检测出才行, 使用fusion_source判断
+    uint32_t fusion_source = fusion_objs[i].additional_info.fusion_source;
+    bool has_camera = (fusion_source & 0x01) != 0;  // 第1位：前相机来源
+    bool has_radar = (fusion_source & 0xFE) != 0;   // 第2-8位：雷达来源（前毫米波、左前、右前、左后、右后、超声波、激光雷达）
+    
+    // 必须同时有相机和雷达来源才认为是真实物体
+    if (!has_camera || !has_radar) {
+      continue;  // 跳过没有同时满足相机和雷达检测的障碍物
+    }
+    
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
@@ -657,11 +667,6 @@ bool IhcCore::DynamicObstacleCheck(void) {
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车
-          // //
-          // 如果对向车纵向距离过近（<70m），横向距离太远(>20m)，则不在灯光影响区域
-          // if (distance_x < 70.0f && abs(distance_y) > 20.0f) {
-          //   continue;
-          // }
           // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
           if (distance_x +
                   fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
