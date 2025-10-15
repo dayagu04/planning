@@ -280,6 +280,12 @@ struct ParkingLatLonSpeedBuffer {
   float leave_initial_place_lon_buffer;
   float leave_initial_place_min_lon_dist;
   float leave_initial_place_dist;
+
+  bool enable_keep_stuck_place;
+  float keep_stuck_place_body_lat_buffer;
+  float keep_stuck_place_mirror_lat_buffer;
+  float keep_stuck_place_lon_buffer;
+  float keep_stuck_place_min_lon_dist;
 };
 
 struct ParkingLatLonSlotReleaseBuffer {
@@ -561,6 +567,7 @@ struct ApaParameters {
   double max_lat_err = 0.068;
   double max_phi_err = 2.68;
   bool enable_multi_height_col_det = false;
+  bool enable_runover_obs = false;
   UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
   double car_lat_inflation_strict = 0.1;
   double max_obs_lat_invasion_slot_dist = -0.026;

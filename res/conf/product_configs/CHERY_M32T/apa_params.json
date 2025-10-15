@@ -247,6 +247,7 @@
   "max_lat_err": 0.086,
   "max_phi_err": 2.68,
   "enable_multi_height_col_det": false,
+  "enable_runover_obs": false,
   "use_obs_height_method": 0,
   "parallel_obs2slot_max_dist": 16.66,
   "parallel_channel_y_mag": 7.9,
@@ -513,6 +514,12 @@
   "leave_initial_place_lon_buffer": 0.15,
   "leave_initial_place_min_lon_dist": -0.1,
   "leave_initial_place_dist": 0.5,
+
+  "enable_keep_stuck_place": true,
+  "keep_stuck_place_body_lat_buffer": 0.15,
+  "keep_stuck_place_mirror_lat_buffer": 0.12,
+  "keep_stuck_place_lon_buffer": 0.5,
+  "keep_stuck_place_min_lon_dist": -0.1,
 
   "comment_24": "lat lon slot release buffer",
   "slot_release_lon_buffer": 0.3,

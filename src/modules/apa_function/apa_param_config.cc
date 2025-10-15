@@ -608,6 +608,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.enable_multi_height_col_det, bool,
                   "enable_multi_height_col_det");
 
+  JSON_READ_VALUE(param.enable_runover_obs, bool, "enable_runover_obs");
+
   int use_obs_height_method = 0;
   JSON_READ_VALUE(use_obs_height_method, int, "use_obs_height_method");
   if (use_obs_height_method == 1) {
@@ -625,7 +627,8 @@ void SyncParkingParameters(const bool is_simulation) {
   }
 
   JSON_DEBUG_VALUE("use_obs_height_method", use_obs_height_method);
-  JSON_DEBUG_VALUE("enable_multi_height_col_det", param.enable_multi_height_col_det);
+  JSON_DEBUG_VALUE("enable_multi_height_col_det",
+                   param.enable_multi_height_col_det);
 
   JSON_READ_VALUE(param.car_lat_inflation_strict, double,
                   "car_lat_inflation_strict");
@@ -1318,6 +1321,17 @@ void SyncParkingParameters(const bool is_simulation) {
                   float, "leave_initial_place_min_lon_dist");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.leave_initial_place_dist, float,
                   "leave_initial_place_dist");
+
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.enable_keep_stuck_place, bool,
+                  "enable_keep_stuck_place");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_body_lat_buffer,
+                  float, "keep_stuck_place_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_mirror_lat_buffer,
+                  float, "keep_stuck_place_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_lon_buffer, float,
+                  "keep_stuck_place_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.keep_stuck_place_min_lon_dist,
+                  float, "keep_stuck_place_min_lon_dist");
 
   // lat lon slot release buffer params
   JSON_READ_VALUE(param.lat_lon_slot_release_buffer.lon_buffer, float,
