@@ -630,6 +630,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     end_of_speed_limit_out_flag_ = false;
     speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
     end_of_speed_limit_ever_appeared_ = false;  // 重置曾经出现标志
+    speed_limit_renew_flag_ = true;
   }
 
   // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
@@ -781,9 +782,13 @@ void TsrCore::CalculatePathLengthAccumulated() {
   if (speed_limit_renew_flag_ == true) {
     accumulated_path_length_ = 0.0;
   } else {
-    accumulated_path_length_ =
-        accumulated_path_length_ +
-        GetContext.get_state_info()->vehicle_speed * GetContext.get_param()->dt;
+    if (tsr_speed_limit_ != 0) {
+      accumulated_path_length_ =
+            accumulated_path_length_ +
+            GetContext.get_state_info()->vehicle_speed * GetContext.get_param()->dt;
+    } else {
+      accumulated_path_length_ = 0.0;
+    }
   }
   return;
 }
