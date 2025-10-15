@@ -15,6 +15,7 @@
 #include "interface/src/c/common_c.h"
 #include "log.h"
 #include "planning_context.h"
+#include "vehicle_config_context.h"
 #include "virtual_lane.h"
 
 namespace planning {
@@ -1780,6 +1781,10 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     return;
   }
 
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double rear_axle_to_front_edge = vehicle_param.front_edge_to_rear_axle;
+
   const auto& agents = agent_manager->GetAllCurrentAgents();
   if (agents.empty()) {
     return;
@@ -1877,6 +1882,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
     const bool has_trajectory = !agent->trajectories().empty() &&
                                 !agent->trajectories().front().empty();
     double end_point_heading_from_start = 0.0;
+    bool is_end_point_s_valid = false;
     if (has_trajectory) {
       const auto& end_point = agent->trajectories().front().back();
       current_lane_coord->XYToSL(end_point.x(), end_point.y(),
@@ -1884,6 +1890,9 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
       end_point_heading_from_start = Vec2d(end_point.x() - agent_box_center.x(),
                                            end_point.y() - agent_box_center.y())
                                          .Angle();
+      is_end_point_s_valid =
+          agent_end_point_s - planning_init_point_s - rear_axle_to_front_edge >
+          0.0;
     }
 
     double half_lane_width =
@@ -1899,8 +1908,8 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
               agent_min_s, agent_max_l, agent_min_l)) {
         mutable_agent->mutable_agent_decision()->set_agent_decision_type(
             agent::AgentDecisionType::IGNORE);
+        continue;
       }
-      continue;
     }
 
     // 2. not ignore large heading diff cross agent
@@ -1909,7 +1918,7 @@ void AgentLongitudinalDecider::FilterReverseAgents() {
         std::fmax(kMinFilterDistance, planning_init_point.v * kLongitudalTtc);
 
     if (has_trajectory && agent_end_point_l * agent_l_in_ego_lane < kEpsilon &&
-        agent_s_in_ego_lane < crossing_dist_thr) {
+        agent_s_in_ego_lane < crossing_dist_thr && is_end_point_s_valid) {
       const double heading_diff = std::fabs(planning_math::NormalizeAngle(
           end_point_heading_from_start - (mathed_point_heading + M_PI)));
       // agent's trajectory cross the planned path,and the heading diff is large
