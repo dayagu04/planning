@@ -157,7 +157,7 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     }
   }
   const RequestSource lc_request_source = MAP_REQUEST;
-  if (!is_no_care_dash_length) {
+  if (!is_no_care_dash_length || is_avoidance_MLC) {
     bool is_dash_enough = IsDashEnoughForRepeatSegments(
         target_direction, lc_request_source, current_lane->get_virtual_id(),
         static_cast<StateMachineLaneChangeStatus>(lc_status));
