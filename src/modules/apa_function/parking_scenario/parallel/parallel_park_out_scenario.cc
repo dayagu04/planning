@@ -844,7 +844,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   //                         |---->x                   |
   //                         |                         |
   //                         c-------------------------D
-
+  ILOG_INFO << "--------------- GenTBoundaryObstacles ------------------------";
   apa_world_ptr_->GetCollisionDetectorPtr()->Reset();
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -921,6 +921,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   // set tlane obs
   pnc::geometry_lib::LineSegment tlane_line;
   std::vector<pnc::geometry_lib::LineSegment> tlane_line_vec;
+  ILOG_INFO << "-----------tlane AB/EF-------------";
   // set tlane parallel line obs
   tlane_line.SetPoints(A, B);
   tlane_line_vec.emplace_back(tlane_line);
@@ -966,6 +967,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec.emplace_back(obstacle_point_slot);
     }
   }
+  ILOG_INFO << "-----------tlane BC/DE-------------";
 
   // tlane
   tlane_line_vec.clear();
@@ -1024,21 +1026,57 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
 
+  ILOG_INFO << "-----------tlane CD-------------";
   point_set.clear();
   tlane_obstacle_vec.clear();
   tlane_line.SetPoints(C_curb, D_curb);
   pnc::geometry_lib::SamplePointSetInLineSeg(point_set, tlane_line,
                                              kTBoundarySampleDist);
 
+  // 记录首尾 被过滤（车内） 的点的 x
+  bool filter_start = false;
+  double first_filtered_x = 0.0;
+  double last_filtered_x = 0.0;
+
   for (const auto& obs : point_set) {
     if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
             obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
       tlane_obstacle_vec.emplace_back(obs);
+    } else {
+      // 被过滤（在车内）的点
+      ILOG_INFO << "Filtered point: x=" << obs.x() << ", y=" << obs.y();
+
+      if (!filter_start) {
+        first_filtered_x = obs.x();
+        last_filtered_x = obs.x();
+        filter_start = true;
+      } else {
+        last_filtered_x = obs.x();
+      }
     }
   }
+
+  if (filter_start) {
+    double xmin = std::min(first_filtered_x, last_filtered_x);
+    double xmax = std::max(first_filtered_x, last_filtered_x);
+    double eps = 1e-6;
+
+    auto it =
+        std::remove_if(tlane_obstacle_vec.begin(), tlane_obstacle_vec.end(),
+                       [&](const Eigen::Vector2d& p) {
+                         return (p.x() >= xmin - eps && p.x() <= xmax + eps);
+                       });
+    if (it != tlane_obstacle_vec.end()) {
+      tlane_obstacle_vec.erase(it, tlane_obstacle_vec.end());
+    }
+    ILOG_INFO << "Pruned tlane CD samples between x=[" << xmin << ", " << xmax
+              << "], remaining=" << tlane_obstacle_vec.size();
+  }
+
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 
+  ILOG_INFO << "-----------tlane limiter-------------";
   if (t_lane_.limiter.valid) {
     double limiter_obs_x = 0.0;
     if (t_lane_.limiter.start_pt.x() < 0.5 * t_lane_.slot_length) {
