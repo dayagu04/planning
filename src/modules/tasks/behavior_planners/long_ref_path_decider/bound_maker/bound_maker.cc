@@ -26,9 +26,7 @@ constexpr double kJerkLowerComfortableBound = -1.2;
 constexpr double kBrakeDelayTimeBuffer = 0.3;
 
 constexpr double kAccMaxLowerBound = -5.0;
-constexpr double kAccMaxLowerBoundLatFollow = -2.0;
 constexpr double kJerkMaxLowerBound = -4.0;
-constexpr double kJerkMaxLowerBoundLatFollow = -2.0;
 
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
@@ -148,11 +146,6 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
-    for (int32_t i = 0; i < plan_points_num_; i++) {
-      acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
-    }
-  }
 
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
@@ -196,6 +189,11 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     if (start_stop_decider_output.ego_start_stop_info().state() !=
         common::StartStopInfo::START) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
+    }
+  }
+  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
     }
   }
 }

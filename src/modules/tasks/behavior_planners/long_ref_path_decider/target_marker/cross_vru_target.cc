@@ -56,7 +56,7 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
   const double desired_speed = std::fmin(speed_limit_normal, speed_limit_ref);
 
   params_.v0 = desired_speed;
-  params_.s0 = 5.0;
+  params_.s0 = 4.0;
   params_.T = 1.2;
   params_.a = 1.5;
   params_.b = 1.0;
@@ -68,7 +68,7 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
   params_.default_front_s = 200;
   params_.cool_factor = 0.99;
   params_.over_speed_factor = 0.3;
-  params_.end_time_buffer = 0.5;
+  params_.end_time_buffer = 1.0;
 
   AnalyzeCrossVRUAgentsAndInitialize();
 
@@ -115,6 +115,13 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
   const auto& planning_init_point = ego_state_mgr->planning_init_point();
+
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                              &ego_s, &ego_l)) {
+    return;
+  }
 
   const auto& ego_vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -194,14 +201,14 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
       }
       auto matched_point = ego_lane_coord->GetPathPointByS(center_s);
       double heading_diff = traj_point.theta() - matched_point.theta();
+      double agent_s =
+          center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5;
       double agent_speed = traj_point.vel() * std::cos(heading_diff);
-      if (t <= info.crossing_start_time) {
+      if(t <= info.crossing_start_time) {
         info.agent_traj_s.push_back(st_boundary.min_s());
         info.agent_traj_v.push_back(agent_speed);
-      } else if (t <= info.crossing_end_time + params_.end_time_buffer) {
-        int32_t index =
-            static_cast<int32_t>((t - info.crossing_start_time) / dt_);
-        info.agent_traj_s.push_back(st_boundary.lower_points()[index].s());
+      } else if (t > info.crossing_start_time && t <= info.crossing_end_time + params_.end_time_buffer) {
+        info.agent_traj_s.push_back(agent_s);
         info.agent_traj_v.push_back(agent_speed);
       } else {
         info.agent_traj_s.push_back(params_.default_front_s);
@@ -232,18 +239,22 @@ void CrossVRUTarget::GenerateCrossVRUTarget() {
     auto& target_value = target_values_[i];
     target_value.set_relative_t(i * dt_);
 
-    double target_acc = CalculateVRUDeceleration(current_v, current_s,
+    double cross_vru_acc = CalculateVRUDeceleration(current_v, current_s,
                                                  current_a, i, agent_infos_);
 
-    current_a = target_acc;
-    current_v = std::max(0.0, current_v + target_acc * dt_);
-    current_s = std::max(
-        current_s, current_s + current_v * dt_ + 0.5 * target_acc * dt_ * dt_);
+    double next_s =
+        current_s + current_v * dt_ + 0.5 * cross_vru_acc * dt_ * dt_;
+    double next_v = std::max(0.0, current_v + cross_vru_acc * dt_);
+    next_s = std::max(0.0, std::max(current_s, next_s));
 
     target_value.set_has_target(true);
-    target_value.set_s_target_val(current_s);
-    target_value.set_v_target_val(current_v);
+    target_value.set_s_target_val(next_s);
+    target_value.set_v_target_val(next_v);
     target_value.set_target_type(TargetType::kCrossVRU);
+
+    current_s = next_s;
+    current_v = next_v;
+    current_a = cross_vru_acc;
   }
 }
 
