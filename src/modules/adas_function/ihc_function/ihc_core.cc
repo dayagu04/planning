@@ -636,19 +636,37 @@ bool IhcCore::DynamicObstacleCheck(void) {
   const auto &fusion_objs = fusion_objects_info.fusion_object;
   const int fusion_objs_num = fusion_objects_info.fusion_object_size;
 
+  // 步骤1: 收集当前帧所有障碍物ID，用于后续清理
+  std::set<uint16> current_frame_ids;
+  
+  // 步骤2: 第一次遍历，更新verified_obstacle_ids_（同时被相机和雷达检测到的障碍物）
   for (int i = 0; i < fusion_objs_num; i++) {
+    uint16 track_id = fusion_objs[i].additional_info.track_id;
+    current_frame_ids.insert(track_id);
+    
     // 判断障碍物的track_age
     if (fusion_objs[i].additional_info.track_age < 500) {
       continue;  // 跳过track_age小于500ms的障碍物
     }
+    
     // 判断障碍物数据来源, 必须是视觉和雷达都检测出才行, 使用fusion_source判断
     uint32_t fusion_source = fusion_objs[i].additional_info.fusion_source;
     bool has_camera = (fusion_source & 0x01) != 0;  // 第1位：前相机来源
     bool has_radar = (fusion_source & 0xFE) != 0;   // 第2-8位：雷达来源（前毫米波、左前、右前、左后、右后、超声波、激光雷达）
     
-    // 必须同时有相机和雷达来源才认为是真实物体
-    if (!has_camera || !has_radar) {
-      continue;  // 跳过没有同时满足相机和雷达检测的障碍物
+    // 如果同时有相机和雷达来源，则加入到可信障碍物集合中
+    if (has_camera && has_radar) {
+      verified_obstacle_ids_.insert(track_id);
+    }
+  }
+  
+  // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
+  for (int i = 0; i < fusion_objs_num; i++) {
+    uint16 track_id = fusion_objs[i].additional_info.track_id;
+    
+    // 只有在verified_obstacle_ids_中的障碍物才被认为是真实障碍物
+    if (verified_obstacle_ids_.find(track_id) == verified_obstacle_ids_.end()) {
+      continue;  // 跳过不在可信列表中的障碍物
     }
     
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
@@ -719,6 +737,31 @@ bool IhcCore::DynamicObstacleCheck(void) {
     }
   }
 
+  // 步骤4: 清理不在当前帧的障碍物ID
+  // 遍历verified_obstacle_ids_，删除不在current_frame_ids中的ID
+  for (auto it = verified_obstacle_ids_.begin(); it != verified_obstacle_ids_.end(); ) {
+    if (current_frame_ids.find(*it) == current_frame_ids.end()) {
+      // 不在当前帧中，删除
+      it = verified_obstacle_ids_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  // 同向车辆
+  if (detected_same_dir) {
+    ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
+  }
+  // 对向机动车
+  if (detected_oncoming_vehicle) {
+    ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
+  }
+
+  // 对向非机动车
+  if (detected_oncoming_cycle) {
+    ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
+  }
+  
   // 返回是否检测到稳定的障碍物
   return (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
           ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||
