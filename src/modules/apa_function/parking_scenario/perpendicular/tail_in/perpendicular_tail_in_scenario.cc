@@ -3556,13 +3556,21 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
 
   const double half_slot_width = 0.5 * ego_info_under_slot.slot.slot_width_;
 
-  for (const double& y : car_border_ys) {
-    if (half_slot_width - std::fabs(y) < finish_params.min_car2line_dist) {
+  double min_car2line_dist = finish_params.min_car2line_dist;
+  const double dw = half_slot_width - 0.5 * params.car_width;
+  if (dw < 0.0) {
+    min_car2line_dist += dw;
+  } else if (dw < 0.03) {
+    min_car2line_dist -= dw;
+  }
+
+  for (const double y : car_border_ys) {
+    if (half_slot_width - std::fabs(y) < min_car2line_dist) {
       return CarSlotRelationship::TOUCHING;
     }
   }
 
-  for (const double& y : car_border_ys) {
+  for (const double y : car_border_ys) {
     if (half_slot_width - std::fabs(y) < finish_params.max_car2line_dist) {
       return CarSlotRelationship::MARGINAL;
     }

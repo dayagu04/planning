@@ -466,11 +466,11 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   }
 
   const ApaParameters& param = apa_param.GetParam();
-  const Eigen::Vector2d pM01 = slot.processed_corner_coord_global_.pt_01_mid;
-  const Eigen::Vector2d pM23 = slot.processed_corner_coord_global_.pt_23_mid;
-  const Eigen::Vector2d t = slot.processed_corner_coord_global_.pt_01_unit_vec;
+  const Eigen::Vector2d pM01 = slot.origin_corner_coord_global_.pt_01_mid;
+  const Eigen::Vector2d pM23 = slot.origin_corner_coord_global_.pt_23_mid;
+  const Eigen::Vector2d t = slot.origin_corner_coord_global_.pt_01_unit_vec;
   const Eigen::Vector2d n =
-      slot.processed_corner_coord_global_.pt_23mid_01mid_unit_vec;
+      slot.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
   // 构建车位可泊最低要求区域内box, 检查box内是否有障碍物 若有 不释放
   // 主要是为了缓解融合误释放车位
@@ -535,14 +535,6 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   ILOG_INFO << "release_voter_type = "
             << GetSlotReleaseVoterTypeString(release_voter_type);
 
-  double channel_width = slot_release_buffer.channel_width;
-
-  if (release_voter_type == SlotReleaseVoterType::MAXIMUM) {
-    channel_width = slot_release_buffer.channel_width - 0.2;
-  } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
-    channel_width = slot_release_buffer.channel_width + 0.2;
-  }
-
   // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,
@@ -560,6 +552,14 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
       !col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false));
 
+  double channel_width = slot_release_buffer.channel_width;
+
+  if (release_voter_type == SlotReleaseVoterType::MAXIMUM) {
+    channel_width = slot_release_buffer.channel_width - 0.2;
+  } else if (release_voter_type == SlotReleaseVoterType::HOLD) {
+    channel_width = slot_release_buffer.channel_width + 0.2;
+  }
+
   if (left_empty && right_empty) {
     channel_width = slot_release_buffer.two_side_empty_channel_width;
   } else if (left_empty || right_empty) {
@@ -574,16 +574,29 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   pt_0 = pt_0 + res.safe_lat_move_dist * t;
   pt_1 = pt_1 + res.safe_lat_move_dist * t;
 
-  polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
-      pt_0, pt_0 + channel_width * n, pt_1 + channel_width * n, pt_1});
+  double safe_channel_width = 0.0;
+  const std::vector<double> channel_width_vec{channel_width,
+                                              channel_width - 0.2};
 
-  if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
-          polygon, GJKColDetRequest(false))) {
+  for (const double channel : channel_width_vec) {
+    polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
+        pt_0, pt_0 + channel * n, pt_1 + channel * n, pt_1});
+    if (!col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
+            polygon, GJKColDetRequest(false))) {
+      safe_channel_width = channel;
+      break;
+    }
+  }
+
+  if (safe_channel_width > channel_width_vec[0] - 0.01) {
+    return release_voter_type;
+  } else if (safe_channel_width > channel_width_vec[1] - 0.01) {
+    ILOG_INFO << "passage is not enough";
+    return SlotReleaseVoterType::SUBTRACT;
+  } else {
     ILOG_INFO << "passage is occupied";
     return SlotReleaseVoterType::CLEAR;
   }
-
-  return release_voter_type;
 }
 
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
