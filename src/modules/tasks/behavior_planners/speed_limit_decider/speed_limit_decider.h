@@ -98,6 +98,8 @@ class SpeedLimitDecider : public Task {
   std::map<int32_t, VRURoundInfo> historical_vru_round_map_;
   VRURoundInfo triggered_vru_;
   bool vru_round_triggered_ = false;
+
+  bool poi_v_limit_set_ = false;
 };
 
 }  // namespace planning

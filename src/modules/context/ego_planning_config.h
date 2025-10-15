@@ -3582,8 +3582,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   };
 
   struct POIVelLimitDisTable {
-    std::vector<double> vel_limit_table{120, 110, 100, 90, 80, 70};
-    std::vector<double> dis_table{400, 320, 250, 170, 100, 50};
+    std::vector<double> vel_limit_table{70, 80, 90, 100, 110, 120};
+    std::vector<double> dis_table{50, 100, 170, 250, 320, 400};
   };
 
   int lon_num_step = 25;
