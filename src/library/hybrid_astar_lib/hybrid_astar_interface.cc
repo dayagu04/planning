@@ -793,6 +793,15 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       }
     }
 
+    // check gear
+    if (!traj_candidates_[i].gear.empty()) {
+      search_gear_.first_action_gear[i] =
+          static_cast<int32_t>(traj_candidates_[i].gear[0]);
+      search_gear_.first_action_gear_request[i] =
+          static_cast<int32_t>(request_.first_action_request.gear_request);
+      search_gear_.size++;
+    }
+
     // check time
     search_time += traj_candidates_[i].time_ms;
     time_benchmark_.time_ms[i] = traj_candidates_[i].time_ms;
@@ -811,13 +820,6 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
       ILOG_INFO << "path gear is nice";
       break;
     }
-
-    // check gear
-    search_gear_.first_action_gear[i] =
-        static_cast<int32_t>(traj_candidates_[i].gear[0]);
-    search_gear_.first_action_gear_request[i] =
-        static_cast<int32_t>(request_.first_action_request.gear_request);
-    search_gear_.size++;
   }
 
   PathCandidateCompare();
