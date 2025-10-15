@@ -8,6 +8,7 @@
 #include "reference_path.h"
 #include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
 #include "utils/spline.h"
+#include "behavior_planners/long_ref_path_decider/target_marker/comfort_target.h"
 
 using BasicPurePursuitModel = planning::BasicPurePursuitModel;
 
@@ -61,6 +62,11 @@ class LaneChangePathGenerateManager {
       t_vec.clear();
     }
   };
+  ComfortTarget::IdmParameters comfort_idm_params_;// 默认参数
+  const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
+  const std::vector<double> _L_SLOPE_V{0.35, 0.08};
+  const std::vector<double> _P_SLOPE_BP{0., 40.0};
+  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 
   LaneChangePathGenerateManager(std::shared_ptr<ReferencePath> ref_path,
                                 framework::Session* session);
@@ -96,5 +102,12 @@ class LaneChangePathGenerateManager {
     ego_future_trajectory_.clear();
     lc_path_result_.reset();
   }
+  double CalculateComfortAcceleration(
+    const double current_acc, const double current_vel, const double current_s,
+    const double front_vel, const double front_s, const double tau);
+  double CalcDesiredVelocity(const double d_rel,
+                                            const double d_des,
+                                            const double v_lead,
+                                            const double v_ego) const;
 };
 }  // namespace planning

@@ -3846,7 +3846,7 @@ bool LaneChangeStateMachineManager::
   if (is_press_boundary) {
     max_box_ttc_rear = press_ttc;
   }
-  double std_beyond_lane_time = 2.0;  // 实际在2.5 左右
+  double std_beyond_lane_time = std::max(0.0, std::min(2.0, lc_safety_check_time_ - 1.0));  // 实际初始在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
@@ -3861,7 +3861,7 @@ bool LaneChangeStateMachineManager::
        ego_press_line_ratio > 0.01);
   TrajectoryPoints agent_switch_traj;
   double deceleration = -1.0;  // m/s^2, 后车减速
-  double jerk = -2.0;
+  double jerk = -2.0;//后车假设的让行加加速度
   if (is_large_car) {
     deceleration = -0.5;  //大车减速度小很多
   }
@@ -3874,22 +3874,23 @@ bool LaneChangeStateMachineManager::
     agent_switch_traj = agent_traj;
   }
   for (int i = 0; i < iter_count; i++) {
-    double agent_kph = agent_switch_traj[i].v * 3.6;
-    double dis_buff = interp(agent_kph, xp, fp);  // 距离/ 时间
-    if (is_large_car) {
-      dis_buff += 5.0;  //大车额外增加5m基础距离
-    }
-    // 新的纵向安全距离/ 每对box的安全阈值 假设变道时间为4s
+    double beyond_lane_time = std_beyond_lane_time - i * 0.2;
+    beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
-      box_ttc = 0.0;  // 对前方车辆 未来纵向buff不需要增大太多
-      box_longitudinal_buff = 5.0;
-      if (is_executing) {  // execution 阶段
-        box_longitudinal_buff = 0.0;
-      }
+      double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
+      double ego_brake = 4.0;
+      box_longitudinal_buff = ( - rel_vel * ego_trajs_future_[i].v) /
+                                                 (2.0 * ego_brake);
+      box_longitudinal_buff = std::max(2.0, box_longitudinal_buff);
       if (ego_press_line_ratio > 0.01) {
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
     } else {
+      double agent_kph = agent_switch_traj[i].v * 3.6;
+      double dis_buff = interp(agent_kph, xp, fp);  // 后车参考安全距离
+      if (is_large_car) {
+        dis_buff += 5.0;  //大车额外增加5m基础距离
+      }
       int speed_times = static_cast<int>(agent_switch_traj[i].v /
                                          (ego_trajs_future_[i].v + 0.1));
       speed_times = std::max(speed_times, 1);
@@ -3897,8 +3898,6 @@ bool LaneChangeStateMachineManager::
       box_ttc =
           std::max(max_box_ttc_rear - i * 0.2,
                    std::max(max_box_ttc_rear - i * 0.2, 0.0) * speed_times);
-      double beyond_lane_time = std_beyond_lane_time - i * 0.2;
-      beyond_lane_time = std::max(beyond_lane_time, 0.0);
       // 根据速度差获得ttc 速度阈值
       // double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
