@@ -341,8 +341,8 @@ void PotentialDangerousAgentDecider::EstimateAgentPosType(
 
   double lane_width_at_obstacle_center =
       current_lane->width_by_s(obstacle_center_s);
-  double lane_left_width = lane_width_at_obstacle_center / 2.0;
-  double lane_right_width = lane_width_at_obstacle_center / 2.0;
+  double lane_left_width = 0.5 * lane_width_at_obstacle_center;
+  double lane_right_width = 0.5 * lane_width_at_obstacle_center;
   const auto& obstacle_frenet_boundary =
       frenet_obstacle->frenet_obstacle_boundary();
   double left_passable_width = lane_left_width - obstacle_frenet_boundary.l_end;
@@ -352,9 +352,9 @@ void PotentialDangerousAgentDecider::EstimateAgentPosType(
   double ego_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width;
   bool left_passable =
-      left_passable_width > 0.5 * lane_width_at_obstacle_center;
+      left_passable_width > lane_left_width;
   bool right_passable =
-      right_passable_width > 0.5 * lane_width_at_obstacle_center;
+      right_passable_width > lane_right_width;
   // bool outlane_obs =
   //     obstacle_frenet_boundary.l_end - obstacle_frenet_boundary.l_start +
   //         lane_left_width + lane_right_width >
