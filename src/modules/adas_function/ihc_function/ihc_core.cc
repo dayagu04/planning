@@ -5,17 +5,11 @@ namespace adas_function {
 namespace ihc_core {
 
 // IHC计时器（使用dt累积）
-static float ihc_same_dir_hold_time_s = 0.0f;          // 同向车累计时间
-static float ihc_oncoming_vehicle_hold_time_s = 0.0f;  // 对向机动车累计时间
-static float ihc_oncoming_cycle_hold_time_s = 0.0f;  // 对向非机动车累计时间
 static float ihc_low_beam_on_duration_s =
     0.0f;  // 无车空窗累计时间（用于近->远）
 static float ihc_high_beam_on_duration_s = 0.0f;  // 远光持续时间（用于最小2s）
 
 static inline void ResetIhcDynamicObstacleTimers() {
-  ihc_same_dir_hold_time_s = 0.0f;
-  ihc_oncoming_vehicle_hold_time_s = 0.0f;
-  ihc_oncoming_cycle_hold_time_s = 0.0f;
   ihc_low_beam_on_duration_s = 0.0f;
   ihc_high_beam_on_duration_s = 0.0f;
 }
@@ -643,6 +637,10 @@ bool IhcCore::DynamicObstacleCheck(void) {
   const int fusion_objs_num = fusion_objects_info.fusion_object_size;
 
   for (int i = 0; i < fusion_objs_num; i++) {
+    // 判断障碍物的track_age
+    if (fusion_objs[i].additional_info.track_age < 500) {
+      continue;  // 跳过track_age小于500ms的障碍物
+    }
     // 判断障碍物数据来源, 必须是视觉和雷达都检测出才行, 使用fusion_source判断
     uint32_t fusion_source = fusion_objs[i].additional_info.fusion_source;
     bool has_camera = (fusion_source & 0x01) != 0;  // 第1位：前相机来源
@@ -719,44 +717,6 @@ bool IhcCore::DynamicObstacleCheck(void) {
         }
       }
     }
-  }
-
-  // 基于时间的持续性判定：使用 dt 累积，阈值区分三类对象
-  const float dt = GetContext.get_param()->dt;  // 周期时长（秒）
-
-  // 阈值：对向车1.5s、同向车2.0s、非机动车1.0s
-  const float THRESHOLD_SAME_DIR_S = 2.0f;
-  const float THRESHOLD_ONCOMING_VEHICLE_S = 1.5f;
-  const float THRESHOLD_ONCOMING_CYCLE_S = 1.0f;
-
-  // 同向车辆
-  if (detected_same_dir) {
-    ihc_same_dir_hold_time_s += dt;
-    if (ihc_same_dir_hold_time_s >= THRESHOLD_SAME_DIR_S) {
-      ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
-    }
-  } else {
-    ihc_same_dir_hold_time_s = 0.0f;  // 中断则清零
-  }
-
-  // 对向机动车
-  if (detected_oncoming_vehicle) {
-    ihc_oncoming_vehicle_hold_time_s += dt;
-    if (ihc_oncoming_vehicle_hold_time_s >= THRESHOLD_ONCOMING_VEHICLE_S) {
-      ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
-    }
-  } else {
-    ihc_oncoming_vehicle_hold_time_s = 0.0f;
-  }
-
-  // 对向非机动车
-  if (detected_oncoming_cycle) {
-    ihc_oncoming_cycle_hold_time_s += dt;
-    if (ihc_oncoming_cycle_hold_time_s >= THRESHOLD_ONCOMING_CYCLE_S) {
-      ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
-    }
-  } else {
-    ihc_oncoming_cycle_hold_time_s = 0.0f;
   }
 
   // 返回是否检测到稳定的障碍物
