@@ -72,12 +72,12 @@ class NodeCollisionDetect {
   FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
                                                 const bool is_circle_path);
 
-  inline const bool IsCirclePathBySteeringWheel(const float front_wheel_angle) {
-    if (front_wheel_angle > 0.2f || front_wheel_angle < -0.2f) {
-      return true;
+  inline const bool IsCirclePathByRadius(const float radius) {
+    if (radius > 100.0f || radius < -100.0f) {
+      return false;
     }
 
-    return false;
+    return true;
   }
 
   inline const bool IsCirclePathByKappa(const float kappa) {
@@ -87,6 +87,12 @@ class NodeCollisionDetect {
 
     return false;
   }
+
+  FootPrintCircleModel* GetCircleFootPrintModelForParkOut(
+      const Pose2f& pose, const bool is_circle_path);
+
+  FootPrintCircleModel* GetCircleFootPrintModelForParkIn(
+      const Pose2f& pose, const bool is_circle_path);
 
  private:
   GJK2DInterface gjk_interface_;
@@ -115,5 +121,6 @@ class NodeCollisionDetect {
 
   const MapBound* grid_map_bound_;
   const AstarRequest* request_;
+  bool is_park_in_;
 };
 }  // namespace planning

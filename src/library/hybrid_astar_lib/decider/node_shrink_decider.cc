@@ -19,60 +19,79 @@ void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end) {
   return;
 }
 
-void NodeShrinkDecider::Process(const Pose2f &start, const Pose2f &end,
-                                const ParkingVehDirection park_dir,
-                                const Pose2f &limiter_pose,
-                                const MapBound &XYbounds) {
-  AstarDecider::Process(start, end);
+void NodeShrinkDecider::Process(const Pose2f &ego, const Pose2f &end,
+                                const MapBound &XYbounds,
+                                const AstarRequest &request) {
+  AstarDecider::Process(ego, end);
 
+  // limit heading
   heading_shrink_.limit_search_heading_ = false;
-  if (park_dir == ParkingVehDirection::TAIL_IN) {
-    ShrinkChildrenByHeadingForTailIn();
-  } else if (park_dir == ParkingVehDirection::HEAD_IN) {
-    ShrinkChildrenByHeadingForHeadIn();
+  if (request.direction_request == ParkingVehDirection::TAIL_IN ||
+      request.direction_request == ParkingVehDirection::HEAD_IN) {
+    UpdateHeadingErrorWithRefLine();
   }
 
+  // limit x position
   x_bound_.upper = XYbounds.x_max;
   constexpr float kXBoundLowerForHeadOut = 0.0f;
 
-  switch (park_dir) {
+  switch (request.direction_request) {
     case ParkingVehDirection::HEAD_OUT_TO_LEFT:
     case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
     case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
     case ParkingVehDirection::TAIL_OUT_TO_LEFT:
     case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
     case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-      x_bound_.lower = std::min(kXBoundLowerForHeadOut, start.x - 0.1f);
+      x_bound_.lower = std::min(kXBoundLowerForHeadOut, ego.x - 0.1f);
       break;
     default:
-      x_bound_.lower = std::min(limiter_pose.x + 0.4f, start.x - 0.1f);
+      x_bound_.lower = std::min(end.x + 0.4f, ego.x - 0.1f);
       break;
   }
+
+  // limit heading
+  passage_zone_ =
+      MapBound(request.slot_length - 1.0f, request.slot_length + 6.0f,
+               XYbounds.y_min, XYbounds.y_max);
+  passage_zone_.MergePoint(request.start_pose);
 
   return;
 }
 
-bool NodeShrinkDecider::IsLegalForHeading(const float heading) {
+bool NodeShrinkDecider::IsLegalForHeading(const Pose2f &pose) {
   if (!heading_shrink_.limit_search_heading_) {
     return true;
   }
 
-  float normalize_heading = std::fabs(IflyUnifyTheta(heading, M_PIf32));
-
-  if (normalize_heading < heading_shrink_.heading_low_bound_ ||
-      normalize_heading > heading_shrink_.heading_up_bound_) {
+  float heading_error = std::fabs(Getf32ThetaDiff(pose.theta, end_.theta));
+  if (heading_error > heading_shrink_.max_ref_line_heading_error + 0.1f) {
     return false;
+  }
+
+  if (!passage_zone_.Contain(pose)) {
+    // if point x value is nearby limiter, it's heading error need small, 45
+    // degree check.
+    if (std::fabs(pose.x - end_.x) < 2.0f) {
+      if (heading_error > 0.784f) {
+        return false;
+      }
+    } else {
+      // 90 degree check
+      if (heading_error > 1.57f) {
+        return false;
+      }
+    }
   }
 
   return true;
 }
 
-bool NodeShrinkDecider::IsLegalForPos(const float x, const float y,
-                                      const float x_limit,
-                                      const float y_limit) {
-  if (std::fabs(y) < y_limit && x < x_limit) {
+bool NodeShrinkDecider::IsLegalForPose(const Pose2f &pose) {
+  if (!IsLegalForHeading(pose) || !IsLegalByXBound(pose.x)) {
+    // pose.DebugString();
     return false;
   }
+
   return true;
 }
 
@@ -83,41 +102,19 @@ bool NodeShrinkDecider::IsLegalByXBound(const float x) {
   return true;
 }
 
-void NodeShrinkDecider::ShrinkChildrenByHeadingForTailIn() {
-  // heading shrink
+void NodeShrinkDecider::UpdateHeadingErrorWithRefLine() {
+  float error = std::fabs(Getf32ThetaDiff(start_.theta, end_.theta));
 
   // 搜索时,heading 尽量不超过角度
-  float heading_check_bound = ifly_deg2rad(135.0);
-  float heading_buffer = ifly_deg2rad(20.0);
-
-  heading_shrink_.limit_search_heading_ = true;
-  heading_shrink_.heading_low_bound_ = 0.0f;
-
-  heading_shrink_.heading_up_bound_ =
-      std::max(heading_check_bound, std::fabs(start_.theta) + heading_buffer);
-  heading_shrink_.heading_up_bound_ =
-      std::min(heading_shrink_.heading_up_bound_, M_PIf32);
-
-  return;
-}
-
-void NodeShrinkDecider::ShrinkChildrenByHeadingForHeadIn() {
-  // heading shrink
-  float theta_diff = start_.theta - end_.theta;
-  theta_diff = IflyUnifyTheta(theta_diff, M_PIf32);
-
-  // 搜索时,heading 尽量大于30度. 且heading接近180度更好.
-  float heading_check_bound = ifly_deg2rad(30.0);
-  float heading_buffer = ifly_deg2rad(20.0);
-
   heading_shrink_.limit_search_heading_ = true;
 
-  heading_shrink_.heading_low_bound_ =
-      std::min(heading_check_bound, std::fabs(start_.theta) - heading_buffer);
-  heading_shrink_.heading_low_bound_ =
-      std::max(0.0f, heading_shrink_.heading_low_bound_);
+  // 135 degree
+  heading_shrink_.max_ref_line_heading_error = std::max(2.35f, error + 0.35f);
+  heading_shrink_.max_ref_line_heading_error =
+      std::min(heading_shrink_.max_ref_line_heading_error, M_PIf32);
 
-  heading_shrink_.heading_up_bound_ = M_PIf32;
+  // ILOG_INFO << "heading error "
+  //           << heading_shrink_.max_ref_line_heading_error * 57.4;
 
   return;
 }

@@ -634,27 +634,16 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::OUT_OF_BOUNDARY;
   }
 
-  bool heading_legal = false;
-  heading_legal = node_shrink_decider_.IsLegalForHeading(new_node->GetPhi());
-  if (!heading_legal) {
+  // heading shrink limit pose
+  if (!node_shrink_decider_.IsLegalForPose(new_node->GetPose())) {
 #if PLOT_DELETE_NODE
     delete_queue_path_debug_.emplace_back(
         Vec2f(new_node->GetX(), new_node->GetY()));
 #endif
     // ILOG_INFO << "heading is illegal";
+
     new_node->ClearPath();
     return NodeShrinkType::UNEXPECTED_HEADING;
-  }
-
-  // headin shrink limit pose
-  if (!node_shrink_decider_.IsLegalByXBound(new_node->GetX())) {
-#if PLOT_DELETE_NODE
-    delete_queue_path_debug_.emplace_back(
-        Vec2f(new_node->GetX(), new_node->GetY()));
-#endif
-    // ILOG_INFO << "pos is illegal";
-    new_node->ClearPath();
-    return NodeShrinkType::UNEXPECTED_POS;
   }
 
   new_node->SetPre(parent_node);
@@ -709,32 +698,29 @@ void HybridAStar::CalculateNodeHeuristicCost(Node3d* father_node,
   const double start_time = IflyTime::Now_ms();
 #endif
 
-  NodeHeuristicCost cost;
+  // NodeHeuristicCost cost;
   // evaluate heuristic cost
   float optimal_path_cost = 0.0f;
-  float dp_path_dist = 0.0f;
-
-  float dp_path_cost = 0.0f;
-  dp_path_dist = ObstacleHeuristicWithHolonomic(next_node);
-  dp_path_cost = dp_path_dist * config_.traj_forward_penalty;
-  cost.astar_dist = dp_path_cost;
+  float dp_path_dist = ObstacleHeuristicWithHolonomic(next_node);
+  float dp_path_cost = dp_path_dist * config_.traj_forward_penalty;
+  // cost.astar_dist = dp_path_cost;
 
   float rs_path_cost = 0.0f;
-  rs_path_cost = GenerateHeuristicCostByRsPath(next_node, &cost);
+  rs_path_cost = GenerateHeuristicCostByRsPath(next_node);
+  // cost.rs_path_dist = rs_path_cost
   optimal_path_cost = std::max(dp_path_cost, rs_path_cost);
 
   // heading cost
   float ref_line_heading_cost = 0.0f;
   ref_line_heading_cost = GenerateRefLineHeuristicCost(next_node, dp_path_dist);
-  cost.ref_line_heading_cost = ref_line_heading_cost;
+  // cost.ref_line_heading_cost = ref_line_heading_cost;
 
   optimal_path_cost = std::max(optimal_path_cost, ref_line_heading_cost);
-  // optimal_path_cost += ref_line_heading_cost;
 
   // euler cost
   float euler_dist_cost = 0.0f;
   euler_dist_cost = next_node->GetEulerDist(astar_end_node_);
-  cost.euler_dist = euler_dist_cost;
+  // cost.euler_dist = euler_dist_cost;
 
   optimal_path_cost = std::max(euler_dist_cost, optimal_path_cost);
 
@@ -774,8 +760,7 @@ void HybridAStar::CalculateNodeGCost(Node3d* current_node, Node3d* next_node) {
   return;
 }
 
-float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
-                                                 NodeHeuristicCost* cost) {
+float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node) {
   RSPathRequestType rs_request = RSPathRequestType::NONE;
   if (!CalcRSPathToGoal(next_node, false, false, rs_request,
                         vehicle_param_.min_turn_radius)) {
@@ -786,7 +771,6 @@ float HybridAStar::GenerateHeuristicCostByRsPath(Node3d* next_node,
   float path_dist = std::fabs(rs_path_.total_length);
 
   float dist_cost = path_dist * config_.traj_forward_penalty;
-  cost->rs_path_dist = dist_cost;
 
 #if PLOT_RS_COST_PATH
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM) {
@@ -827,17 +811,13 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
       //     config_.traj_steer_penalty * std::fabs(next_node->GetSteer());
 
       // 3.2 Steering change penalty:
-      // Strong penalty for small changes to control
-      // zigzag; large changes are allowed to avoid penalizing paths with large
-      // curvature and increasing the number of gear shifts
       piecewise_cost +=
           config_.traj_steer_change_penalty *
           std::fabs(current_node->GetSteerChange(next_node->GetSteer()));
 
-      // 3.3 Zigzag penalty: directional jump change with an angle exceeding a
-      // certain value
+      // 3.3 s curve penalty:
       if (current_node->IsSteerOpposite(next_node->GetSteer())) {
-        piecewise_cost += config_.zigzag_penalty;
+        piecewise_cost += config_.s_curve_penalty;
       }
     }
   }
@@ -1283,8 +1263,8 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   collision_check_time_ms_ += check_end_time - check_start_time;
 
   // node shrink related
-  node_shrink_decider_.Process(start, target, request_.direction_request,
-                               request_.real_goal, grid_map_bound_);
+  node_shrink_decider_.Process(request_.start_pose, request_.real_goal,
+                               grid_map_bound_, request_);
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
       start, target, vehicle_param_.width, request_.space_type,
@@ -1715,8 +1695,8 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   }
 
   // node shrink related
-  node_shrink_decider_.Process(start, end, request_.direction_request,
-                               request_.real_goal, grid_map_bound_);
+  node_shrink_decider_.Process(request_.start_pose, request_.real_goal,
+                               grid_map_bound_, request_);
 
   rs_expansion_decider_.Process(
       vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
@@ -2603,10 +2583,6 @@ void HybridAStar::SetSearchTime(const double time) {
 }
 
 float HybridAStar::GenRefLineCost(Node3d* next_node) {
-  if (next_node->GetX() > request_.slot_length) {
-    return 0.0f;
-  }
-
   // heading cost
   float theta1 = next_node->GetPhi();
   float theta2 = ref_line_->GetHeading();
@@ -2615,12 +2591,11 @@ float HybridAStar::GenRefLineCost(Node3d* next_node) {
     return 0.0f;
   }
 
-#if DEBUG_REF_LINE_COST
-  ILOG_INFO << "node heading = " << next_node->GetPhi() * 57.3
-            << ", ref line heading =" << theta2 * 57.3;
-#endif
+  // in passage, penalty is small
+  // out of passage, if heading error is big, penalty is big.
+  float penalty = next_node->GetX() > request_.slot_length ? 0.5f : 10.0f;
 
-  return heading_error * 100.0f;
+  return heading_error * penalty;
 }
 
 }  // namespace planning

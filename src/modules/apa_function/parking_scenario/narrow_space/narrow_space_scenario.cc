@@ -553,7 +553,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   const float passage_height = SetPassageHeight(ego_info);
   virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot, start,
                                 ego_info.slot_side, parking_dir_type,
-                                passage_height, path_planning_fail_num_);
+                                passage_height);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);
@@ -1939,14 +1939,17 @@ void NarrowSpaceScenario::FillGearRequest(const bool is_scenario_try,
 
   // 目前,平行车位入库使用混合A星搜索，交换起点终点
   cur_request.swap_start_goal = false;
-  if (cur_request.space_type == ParkSpaceType::PARALLEL) {
-    if (cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::ASTAR_SEARCHING ||
-        cur_request.path_generate_method ==
-            planning::AstarPathGenerateType::TRY_SEARCHING) {
-      cur_request.swap_start_goal = true;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkInStatus()) {
+    if (cur_request.space_type == ParkSpaceType::PARALLEL) {
+      if (cur_request.path_generate_method ==
+              planning::AstarPathGenerateType::ASTAR_SEARCHING ||
+          cur_request.path_generate_method ==
+              planning::AstarPathGenerateType::TRY_SEARCHING) {
+        cur_request.swap_start_goal = true;
+      }
     }
   }
+
   if (apa_world_ptr_->GetSimuParam().enable_debug_swap_start_goal) {
     cur_request.swap_start_goal =
         apa_world_ptr_->GetSimuParam().swap_start_goal;

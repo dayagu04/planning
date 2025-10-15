@@ -239,6 +239,18 @@ struct MapBound {
 
     return true;
   }
+
+  void MergePoint(const Pose2f& p) {
+    // x bound
+    x_min = std::min(x_min, p.x);
+    x_max = std::max(x_max, p.x);
+
+    // y bound
+    y_min = std::min(y_min, p.y);
+    y_max = std::max(y_max, p.y);
+
+    return;
+  }
 };
 
 struct AStarPathPoint {
@@ -373,6 +385,23 @@ struct HybridAStarResult {
     search_node_num = 0;
 
     return;
+  }
+
+  size_t GetFirstGearPathPointSize() const {
+    if (gear.empty()) {
+      return 0;
+    }
+
+    size_t id = 0;
+    AstarPathGear first_point_gear = gear[0];
+    for (size_t i = 0; i < gear.size(); i++) {
+      if (gear[i] != first_point_gear) {
+        break;
+      }
+      id = i;
+    }
+
+    return id + 1;
   }
 };
 

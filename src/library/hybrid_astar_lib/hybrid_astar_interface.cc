@@ -419,53 +419,32 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
   // init
   result.clear();
 
-  if (best_traj_ == nullptr) {
+  if (best_traj_ == nullptr || best_traj_->x.empty()) {
     return false;
   }
 
   AStarPathPoint point;
   float kappa_bound = 0.15;
   bool kappa_change_too_much = false;
+  float kappa_diff;
 
-  if (best_traj_->x.size() > 0) {
-    size_t x_size = best_traj_->x.size();
-    size_t y_size = best_traj_->y.size();
-    size_t phi_size = best_traj_->phi.size();
-    size_t gear_size = best_traj_->gear.size();
-    size_t accumulated_s_size = best_traj_->accumulated_s.size();
-    float kappa_diff;
+  size_t point_size = best_traj_->GetFirstGearPathPointSize();
+  result.reserve(point_size);
 
-    AstarPathGear first_point_gear = best_traj_->gear[0];
-    for (size_t i = 0; i < x_size; i++) {
-      if (i >= gear_size || i >= x_size || i >= y_size || i >= phi_size ||
-          i >= accumulated_s_size) {
-        ILOG_ERROR << "point size " << i << ",x_size=" << x_size
-                   << ",y_size=" << y_size << "phi_size=" << phi_size
-                   << ",gear_size=" << gear_size << ",accumulated_s_size"
-                   << accumulated_s_size;
-        break;
-      }
+  AstarPathGear first_point_gear = best_traj_->gear[0];
+  for (size_t i = 0; i < point_size; i++) {
+    point =
+        AStarPathPoint(best_traj_->x[i], best_traj_->y[i], best_traj_->phi[i],
+                       best_traj_->gear[i], best_traj_->accumulated_s[i],
+                       best_traj_->type[i], best_traj_->kappa[i]);
+    result.emplace_back(point);
 
-      if (best_traj_->gear[i] == first_point_gear) {
-        point = AStarPathPoint(best_traj_->x[i], best_traj_->y[i],
-                               best_traj_->phi[i], best_traj_->gear[i],
-                               best_traj_->accumulated_s[i],
-                               best_traj_->type[i], best_traj_->kappa[i]);
+    // check kappa
+    if (i > 0) {
+      kappa_diff = best_traj_->kappa[i] - best_traj_->kappa[i - 1];
 
-        result.emplace_back(point);
-
-        // ILOG_INFO << "xy " << point.x << " " << point.y;
-      } else {
-        break;
-      }
-
-      // check kappa
-      if (i > 0) {
-        kappa_diff = best_traj_->kappa[i] - best_traj_->kappa[i - 1];
-
-        if (std::fabs(kappa_diff) > kappa_bound) {
-          kappa_change_too_much = true;
-        }
+      if (std::fabs(kappa_diff) > kappa_bound) {
+        kappa_change_too_much = true;
       }
     }
   }

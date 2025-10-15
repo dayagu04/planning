@@ -106,12 +106,12 @@ class PiecewiseJerkProblem {
  protected:
   // naming convention follows osqp solver.
   // square cost, hessian matrix
-  // dense matrix version.
+  // vector version.
   virtual void CalculateKernel(std::vector<c_float>* P_data,
                                std::vector<c_int>* P_indices,
                                std::vector<c_int>* P_indptr) = 0;
 
-  // sparse matrix version.
+  // struct version.
   virtual void CalculateKernel2(std::vector<c_float>* P_data,
                                 std::vector<c_int>* P_indices,
                                 std::vector<c_int>* P_indptr) = 0;

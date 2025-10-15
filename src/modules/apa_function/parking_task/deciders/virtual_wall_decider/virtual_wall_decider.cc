@@ -48,8 +48,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const ApaSlot& slot, const Pose2D& ego_pose,
                                  const pnc::geometry_lib::SlotSide slot_side,
                                  const ParkingVehDirection parking_type,
-                                 const double head_out_passage_height,
-                                 const int path_fail_num) {
+                                 const double head_out_passage_height) {
   ego_pose_ = ego_pose;
   slot_side_ = slot_side;
   GenerateVehPolygonInSlot(ego_pose);
@@ -61,9 +60,6 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
       slot.GetType() == SlotType::SLANT) {
     double virtual_wall_x_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_x_offset;
-    if (path_fail_num > 0) {
-      virtual_wall_x_offset = 2.5;
-    }
 
     double virtual_wall_y_offset =
         apa_param.GetParam().astar_config.tail_in_slot_virtual_wall_y_offset;

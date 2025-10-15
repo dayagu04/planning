@@ -162,8 +162,7 @@ class HybridAStar {
 
   float GenerateRefLineHeuristicCost(Node3d* next_node, const float dist_to_go);
 
-  float GenerateHeuristicCostByRsPath(Node3d* next_node,
-                                      NodeHeuristicCost* cost);
+  float GenerateHeuristicCostByRsPath(Node3d* next_node);
 
   void ResetNodePool();
 
@@ -262,6 +261,7 @@ class HybridAStar {
 
   void UpdateMaxGridIndex();
 
+  // add ref line penalty for g cost
   float GenRefLineCost(Node3d* next_node);
 
  private:
