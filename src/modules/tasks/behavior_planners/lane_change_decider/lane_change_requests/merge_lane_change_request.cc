@@ -290,48 +290,48 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
 
   std::shared_ptr<planning_math::KDPath> left_base_boundary_path;
   std::shared_ptr<planning_math::KDPath> right_base_boundary_path;
-  const auto& merge_point_info = route_info_output.merge_point_info;
-  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-    distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
-    lane_merge_direction_ = merge_point_info.merge_type;
-    double distance_to_first_road_split = NL_NMAX;
-    double dis_to_first_merge = NL_NMAX;
-    const auto& split_region_info_list =
-        route_info_output.split_region_info_list;
-    const auto& merge_region_info_list =
-        route_info_output.merge_region_info_list;
-    if (!split_region_info_list.empty()) {
-      if (split_region_info_list[0].is_valid) {
-        distance_to_first_road_split =
-            split_region_info_list[0].distance_to_split_point;
-      }
-    }
-    if (!merge_region_info_list.empty()) {
-      if (merge_region_info_list[0].is_valid) {
-        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
-      }
-    }
-    if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
-        distance_to_merge_point_ < distance_to_first_road_split &&
-        distance_to_merge_point_ < dis_to_first_merge &&
-        distance_to_merge_point_ > 60.0) {
-      // 依赖sdpro提供的前方最左侧车道/最右侧车道的LaneChangeType
-      if (is_left_edge_side_lane && lane_merge_direction_ == LEFT_MERGE) {
-        merge_lane_change_direction_ = RIGHT_CHANGE;
-        use_map_is_merge_situation_ = true;
-      } else if (is_right_edge_side_lane &&
-                 lane_merge_direction_ == RIGHT_MERGE) {
-        merge_lane_change_direction_ = LEFT_CHANGE;
-        use_map_is_merge_situation_ = true;
-      }
-    }
-  } else {
-    merge_lane_change_direction_ = NO_CHANGE;
-  }
+  // const auto& merge_point_info = route_info_output.merge_point_info;
+  // if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+  //   distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+  //   lane_merge_direction_ = merge_point_info.merge_type;
+  //   double distance_to_first_road_split = NL_NMAX;
+  //   double dis_to_first_merge = NL_NMAX;
+  //   const auto& split_region_info_list =
+  //       route_info_output.split_region_info_list;
+  //   const auto& merge_region_info_list =
+  //       route_info_output.merge_region_info_list;
+  //   if (!split_region_info_list.empty()) {
+  //     if (split_region_info_list[0].is_valid) {
+  //       distance_to_first_road_split =
+  //           split_region_info_list[0].distance_to_split_point;
+  //     }
+  //   }
+  //   if (!merge_region_info_list.empty()) {
+  //     if (merge_region_info_list[0].is_valid) {
+  //       dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+  //     }
+  //   }
+  //   if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
+  //       distance_to_merge_point_ < distance_to_first_road_split &&
+  //       distance_to_merge_point_ < dis_to_first_merge &&
+  //       distance_to_merge_point_ > 60.0) {
+  //     // 依赖sdpro提供的前方最左侧车道/最右侧车道的LaneChangeType
+  //     if (is_left_edge_side_lane && lane_merge_direction_ == LEFT_MERGE) {
+  //       merge_lane_change_direction_ = RIGHT_CHANGE;
+  //       use_map_is_merge_situation_ = true;
+  //     } else if (is_right_edge_side_lane &&
+  //                lane_merge_direction_ == RIGHT_MERGE) {
+  //       merge_lane_change_direction_ = LEFT_CHANGE;
+  //       use_map_is_merge_situation_ = true;
+  //     }
+  //   }
+  // } else {
+  //   merge_lane_change_direction_ = NO_CHANGE;
+  // }
 
-  if (use_map_is_merge_situation_) {
-    return;
-  }
+  // if (use_map_is_merge_situation_) {
+  //   return;
+  // }
 
   if (base_lane != nullptr) {
     double left_lane_line_length = 0.0;
