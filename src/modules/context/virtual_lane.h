@@ -165,7 +165,9 @@ class VirtualLane {
     current_tasks_ = current_tasks;
   };
 
-  const double get_feasible_lane_distance(int feasible_lane_num) const;
+  const std::map<int, double> &get_feasible_lane_distance() const {
+    return feasible_lane_distance_;
+  };
   void set_feasible_lane_distance(const std::map<int, double> &feasible_lane_distance) {
     feasible_lane_distance_ = feasible_lane_distance;
   }

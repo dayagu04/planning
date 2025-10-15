@@ -665,13 +665,4 @@ void VirtualLane::restore_context(const VirtualLaneContext &context) {
   // todo: clren
 }
 
-const double VirtualLane::get_feasible_lane_distance(
-    int feasible_lane_num) const {
-  auto it = feasible_lane_distance_.find(feasible_lane_num);
-  if (it != feasible_lane_distance_.end()) {
-    return it->second;
-  } else {
-    return 0.0;
-  }
-}
 }  // namespace planning

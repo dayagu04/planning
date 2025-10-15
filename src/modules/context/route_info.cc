@@ -2376,7 +2376,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       // 这种场景下由于没有feasible_lane计算结果，默认是所有车道均可超车变道，这里应该抑制超车变道
       std::vector<int> feasible_lane_sequence;
       std::map<int, double> feasible_lane_distance;
-      feasible_lane_sequence.emplace_back(0);
+      feasible_lane_sequence.emplace_back(-1);
       feasible_lane_distance[0] = 0.0;
       mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
       relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
@@ -2604,12 +2604,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       ++it;
     }
   }
-  for (auto& relative_id_lane : relative_id_lanes) {
-    if (relative_id_lane->get_relative_id() != 0) {
-      continue;
-    }
-    relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
-  }
 
   mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
   route_info_output_.mlc_request_type_route_info = None_MLC;
@@ -2629,6 +2623,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       continue;
     }
 
+    relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
     const auto& lane_nums = relative_id_lane->get_lane_nums();
     // TODO(fengwang31):需要考虑这个车道数的准确性
     // 现在基于感知车道数不准的情况下：当感知车道数与地图车道数对不上时，就往一个方向变道。
