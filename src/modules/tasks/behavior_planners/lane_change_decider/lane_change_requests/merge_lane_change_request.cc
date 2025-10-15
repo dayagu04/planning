@@ -308,7 +308,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   //   }
   //   if (!merge_region_info_list.empty()) {
   //     if (merge_region_info_list[0].is_valid) {
-  //       dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
+  //       dis_to_first_merge =
+  //       merge_region_info_list[0].distance_to_split_point;
   //     }
   //   }
   //   if (distance_to_merge_point_ < max_trigger_merge_request_distance &&
@@ -550,12 +551,14 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
-  } else if (left_boundary_exist_virtual_type &&
-             !target_right_boundary_exist_virtual_type &&
+  } else if (((left_boundary_exist_virtual_type &&
+               !target_right_boundary_exist_virtual_type) ||
+              route_info_output.is_on_ramp) &&
              is_right_edge_side_lane && is_merge_region) {
     merge_lane_change_direction_ = LEFT_CHANGE;
-  } else if (right_boundary_exist_virtual_type &&
-             !target_left_boundary_exist_virtual_type &&
+  } else if (((right_boundary_exist_virtual_type &&
+               !target_left_boundary_exist_virtual_type) ||
+              route_info_output.is_on_ramp) &&
              is_left_edge_side_lane && is_merge_region) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else if (!right_boundary_exist_virtual_type &&
