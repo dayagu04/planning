@@ -82,7 +82,6 @@ using namespace planning;
 using namespace planning::apa_planner;
 
 typedef std::vector<Eigen::Vector2d> EigenPath2d;
-typedef std::vector<Eigen::Vector2d> EigenPointSet2d;
 
 static apa_planner::ApaPlanInterface *apa_interface_ptr = nullptr;
 static PerfectControl *perfect_control_ptr;
@@ -100,17 +99,17 @@ std::vector<Eigen::Vector3d> static_rs_path_;
 Eigen::Vector3d astar_end_pose_;
 Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
-EigenPointSet2d virtual_wall_points_;
+EigenPath2d virtual_wall_points_;
 std::vector<std::vector<Eigen::Vector2d>> real_time_node_list_;
 // 所有启发项的rs path，record in here
 std::vector<EigenPath2d> static_rs_path_list_;
 Pose2D base_pose_;
 EigenPath2d static_ref_line_;
 std::vector<Eigen::Vector3d> polynomial_path_;
+std::vector<Eigen::Vector3d> current_path_;
 
-// bit 4 is flag
-EigenPointSet2d search_sequence_path_;
-EigenPointSet2d deletenode_sequence_path_;
+EigenPath2d search_sequence_path_;
+EigenPath2d deletenode_sequence_path_;
 Eigen::Vector3d coordinate_system_;
 
 // all search node, not only include: open + close, and include deleted node.
@@ -205,6 +204,7 @@ int GetPathFromHybridAstar() {
   polynomial_path_.clear();
   global_astar_path_.clear();
   anchor_points_.clear();
+  current_path_.clear();
 
   HybridAStarResult result;
 
@@ -404,6 +404,21 @@ int GetPathFromHybridAstar() {
   history_gear_request_ = request.first_action_request.gear_request;
 
   UpdateFootprintCircleList();
+
+  // update first gear path
+  std::vector<AStarPathPoint> cur_path;
+  hybrid_astar_interface_->GetFirstSegmentPath(cur_path);
+  current_path_.reserve(cur_path.size());
+  for (auto &point : cur_path) {
+    local_position.x = point.x;
+    local_position.y = point.y;
+    local_position.theta = point.phi;
+
+    tf.ULFLocalPoseToGlobal(&global_position, local_position);
+    Eigen::Vector3d tmp(global_position.x, global_position.y,
+                        global_position.theta);
+    current_path_.emplace_back(tmp);
+  }
 
   // ILOG_INFO << "receive finish";
 
@@ -878,6 +893,10 @@ const std::vector<Eigen::Vector3d> &GetPolynomialPath() {
   return polynomial_path_;
 }
 
+const std::vector<Eigen::Vector3d> &GetCurrentGearPath() {
+  return current_path_;
+}
+
 const std::vector<Eigen::Vector3d> &GetAnchorPoints() { return anchor_points_; }
 
 PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
@@ -908,5 +927,6 @@ PYBIND11_MODULE(replay_simulation_hybrid_astar, m) {
       .def("GetFootPrintModel", &GetFootPrintModel)
       .def("GetPolynomialPath", &GetPolynomialPath)
       .def("GetPlanningDebugInfo", &GetPlanningDebugInfo)
+      .def("GetCurrentGearPath", &GetCurrentGearPath)
       .def("GetAnchorPoints", &GetAnchorPoints);
 }

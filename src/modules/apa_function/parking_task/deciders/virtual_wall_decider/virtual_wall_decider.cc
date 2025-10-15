@@ -48,8 +48,7 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
                                  const ApaSlot& slot, const Pose2D& ego_pose,
                                  const pnc::geometry_lib::SlotSide slot_side,
                                  const ParkingVehDirection parking_type,
-                                 const double head_out_passage_height,
-                                 const int path_fail_num) {
+                                 const double head_out_passage_height) {
   ego_pose_ = ego_pose;
   slot_side_ = slot_side;
   GenerateVehPolygonInSlot(ego_pose);

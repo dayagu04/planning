@@ -553,7 +553,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   const float passage_height = SetPassageHeight(ego_info);
   virtual_wall_decider_.Process(obs.virtual_obs, ego_info.slot, start,
                                 ego_info.slot_side, parking_dir_type,
-                                passage_height, path_planning_fail_num_);
+                                passage_height);
 
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info.g2l_tf);

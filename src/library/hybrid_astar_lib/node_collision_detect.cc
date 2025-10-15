@@ -211,7 +211,7 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
   Pose2f global_pose;
   Transform2f tf;
   AstarPathGear point_gear = node->GetGearType();
-  bool is_circle_path = IsCirclePathBySteeringWheel(node->GetSteer());
+  bool is_circle_path = IsCirclePathByRadius(node->GetRadius());
   FootPrintCircleModel* footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
 
@@ -575,23 +575,42 @@ void NodeCollisionDetect::DebugEDTCheck(HybridAStarResult* path) {
 
 FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
     const Pose2f& pose, const bool is_circle_path) {
-  // 60 degree
-  const ParkingVehDirection& dir = request_->direction_request;
+  if (is_park_in_) {
+    return GetCircleFootPrintModelForParkIn(pose, is_circle_path);
+  }
+
+  return GetCircleFootPrintModelForParkOut(pose, is_circle_path);
+}
+
+FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModelForParkIn(
+    const Pose2f& pose, const bool is_circle_path) {
   bool inside_slot = slot_box_.contain(pose);
-  bool need_theta_check = (dir == ParkingVehDirection::HEAD_IN ||
-                           dir == ParkingVehDirection::TAIL_IN);
+  // 40 degree
+  bool theta_condition =
+      std::fabs(IflyUnifyTheta(pose.theta - request_->goal.theta, M_PIf32)) <
+      0.7f;
 
-  // The parking out function does not require this condition
-  bool theta_close = std::fabs(IflyUnifyTheta(pose.theta - request_->goal.theta,
-                                              M_PIf32)) < 1.05f;
+  if (inside_slot && theta_condition) {
+    return &hierachy_circle_model_.footprint_model
+                [is_circle_path
+                     ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                     : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
+  }
 
+  return &hierachy_circle_model_.footprint_model
+              [is_circle_path
+                   ? HierarchySafeBuffer::CIRCLE_PATH_OUTSIDE_SLOT_BUFFER
+                   : HierarchySafeBuffer::OUTSIDE_SLOT_BUFFER];
+}
+
+FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModelForParkOut(
+    const Pose2f& pose, const bool is_circle_path) {
+  bool inside_slot = slot_box_.contain(pose);
   if (inside_slot) {
-    if ((need_theta_check && theta_close) || !need_theta_check) {
-      return &hierachy_circle_model_.footprint_model
-                  [is_circle_path
-                       ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
-                       : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
-    }
+    return &hierachy_circle_model_.footprint_model
+                [is_circle_path
+                     ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER
+                     : HierarchySafeBuffer::INSIDE_SLOT_BUFFER];
   }
 
   return &hierachy_circle_model_.footprint_model
@@ -618,6 +637,12 @@ void NodeCollisionDetect::UpdateFootPrintBySafeBuffer(
     slot_box_ = cdl::AABB2f(Eigen::Vector2f(0.0f, -request_->slot_width / 2),
                             Eigen::Vector2f(request_->slot_length + 2.5f,
                                             request_->slot_width / 2));
+  }
+
+  is_park_in_ = false;
+  if (request_->direction_request == ParkingVehDirection::HEAD_IN ||
+      request_->direction_request == ParkingVehDirection::TAIL_IN) {
+    is_park_in_ = true;
   }
 
   // gear d

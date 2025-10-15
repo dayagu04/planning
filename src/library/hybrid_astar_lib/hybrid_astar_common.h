@@ -386,6 +386,23 @@ struct HybridAStarResult {
 
     return;
   }
+
+  size_t GetFirstGearPathPointSize() const {
+    if (gear.empty()) {
+      return 0;
+    }
+
+    size_t id = 0;
+    AstarPathGear first_point_gear = gear[0];
+    for (size_t i = 0; i < gear.size(); i++) {
+      if (gear[i] != first_point_gear) {
+        break;
+      }
+      id = i;
+    }
+
+    return id + 1;
+  }
 };
 
 struct QueuePoint {

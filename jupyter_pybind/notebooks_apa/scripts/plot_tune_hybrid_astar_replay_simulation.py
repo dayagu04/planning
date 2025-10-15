@@ -244,8 +244,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   # vehicle_type = 'JAC_S811'
   # vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_T26'
-  # vehicle_type = 'CHERY_M32T'
-  vehicle_type = 'BESTUNE_E541'
+  vehicle_type = 'CHERY_M32T'
+  # vehicle_type = 'BESTUNE_E541'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
       vehicle_type, 0.0)
@@ -547,9 +547,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   car_yn = []
   car_box_x_vec = []
   car_box_y_vec = []
-  current_gear_end_x=0
-  current_gear_end_y=0
-  current_gear_end_theta=0
 
   if res == True:
     tuned_planning_output = PlanningOutput()
@@ -560,10 +557,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
       current_gear_path_x.append(tuned_planning_output.trajectory.trajectory_points[i].x)
       current_gear_path_y.append(tuned_planning_output.trajectory.trajectory_points[i].y)
       current_gear_path_heading.append(tuned_planning_output.trajectory.trajectory_points[i].heading_yaw)
-
-      current_gear_end_x = tuned_planning_output.trajectory.trajectory_points[i].x
-      current_gear_end_y = tuned_planning_output.trajectory.trajectory_points[i].y
-      current_gear_end_theta = tuned_planning_output.trajectory.trajectory_points[i].heading_yaw
 
     if (len(current_gear_path_x) > 1):
       half_car_width = 0.9
@@ -780,14 +773,17 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   car_circle_xn = []
   car_circle_yn = []
   car_circle_rn = []
-  for k in range(len(current_gear_path_x)):
+
+  cur_gear_path = replay_simulation_hybrid_astar.GetCurrentGearPath()
+  for k in range(len(cur_gear_path)):
     for i in range(len(car_circle_x)):
       # 最大圆不需要plot
-      if i== 0:
+      if i == 0:
         continue
 
       tmp_x, tmp_y = local2global(
-        car_circle_x[i], car_circle_y[i], current_gear_path_x[k], current_gear_path_y[k], current_gear_path_heading[k])
+        car_circle_x[i], car_circle_y[i], cur_gear_path[k][0], \
+        cur_gear_path[k][1], cur_gear_path[k][2])
 
       car_circle_xn.append(tmp_x)
       car_circle_yn.append(tmp_y)
@@ -798,8 +794,6 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
     'car_circle_yn': car_circle_yn,
     'car_circle_rn': car_circle_rn,
   })
-
-  # print('target')
 
   # a star path
   # reset
