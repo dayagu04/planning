@@ -673,7 +673,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
     // 筛选前方的车辆动态障碍物，使用滞回控制
-    if (distance_x > 0 && distance_x < 220.0F) {  // 扩大检测范围
+    if (distance_x > 0 && distance_x < 230.0F) {  // 扩大检测范围
       // 判断障碍物是否为机动车
       if (fusion_objs[i].common_info.type >=
               iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
@@ -690,48 +690,48 @@ bool IhcCore::DynamicObstacleCheck(void) {
             // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
             continue;
           }
-          // 滞回控制，190m~210m为滞回区间
-          if (distance_x < 190.0f) {
+          // 滞回控制，200m~230m为滞回区间
+          if (distance_x < 200.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_vehicle = true;
-          } else if (distance_x <= 210.0f) {
-            // 190m~210m滞回区间，保持当前状态
+          } else if (distance_x <= 230.0f) {
+            // 200m~230m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_vehicle = true;
             }
           }
-          // distance > 210.0f 时继续检查其他障碍物
+          // distance > 230.0f 时继续检查其他障碍物
         } else if (fusion_objs[i].additional_info.motion_pattern_current ==
                    iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
-          // 同向机动车：滞回控制，90m~110m为滞回区间
-          if (distance_x < 90.0f) {
+          // 同向机动车：滞回控制，100m~120m为滞回区间
+          if (distance_x < 100.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_same_dir = true;
-          } else if (distance_x <= 110.0f) {
-            // 90m~110m滞回区间，保持当前状态
+          } else if (distance_x <= 120.0f) {
+            // 100m~120m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_same_dir = true;
             }
           }
-          // distance > 110.0f 时继续检查其他障碍物
+          // distance > 120.0f 时继续检查其他障碍物
         }
       } else if (fusion_objs[i].common_info.type >=
                      iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING &&
                  fusion_objs[i].common_info.type <=
                      iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
-        // 对向非机动车：滞回控制，65m~85m为滞回区间
+        // 对向非机动车：滞回控制，75m~95m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          if (distance_x < 65.0f) {
+          if (distance_x < 75.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
-          } else if (distance_x <= 85.0f) {
-            // 65m~85m滞回区间，保持当前状态
+          } else if (distance_x <= 95.0f) {
+            // 75m~95m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_cycle = true;
             }
           }
-          // distance > 85.0f 时继续检查其他障碍物
+          // distance > 95.0f 时继续检查其他障碍物
         }
       }
     }
