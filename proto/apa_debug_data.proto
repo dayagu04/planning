@@ -114,9 +114,10 @@ message SearchTimeForPath {
   optional double total_search_time = 3;
 }
 
-message SearchGearForPath {
+message SearchTrajectoryInfo {
   repeated int32 first_action_gear = 1;
   repeated int32 first_action_gear_request = 2;
+  optional double first_seg_path_length = 3;
 }
 
 message PathTimeBenchmark {
@@ -129,5 +130,5 @@ message ApaPathDebug {
   optional ControlBasedPredictTraj predict_traj = 3;
   optional PathTimeBenchmark path_time = 4;
   optional HistoryApaStatus history_apa_status = 6;
-  optional SearchGearForPath search_gear = 7;
+  optional SearchTrajectoryInfo search_traj_info = 7;
 }

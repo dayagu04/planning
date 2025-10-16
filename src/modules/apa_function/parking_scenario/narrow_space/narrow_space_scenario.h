@@ -168,7 +168,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   void UpdateRecommentRouteBox();
 
   void RecordSearchTime(const SearchTimeBenchmark& time);
-  void RecordSearchGear(const SearchGear& search_gear);
+  void RecordSearchTrajectoryInfo(const SearchTrajectoryInfo& search_traj_info);
 
   virtual const double CalRealTimeBrakeDist() override;
 
