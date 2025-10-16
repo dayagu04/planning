@@ -138,10 +138,12 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const auto& function_info = session_->environmental_model().function_info();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
+  double k_default_ego_pass_buffer = kLatPassThre;
   right_lane_nums_ = 0;
   left_lane_nums_ = 0;
 
@@ -189,6 +191,10 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   if (rlane == nullptr) {
     k_left_cone_occ_lane_line_buffer += 0.25;
   }
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    k_default_ego_pass_buffer = kLatPassThre + kLatPassThreBuffer;
+  }
+
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   double eps_s = vehicle_param.length * kLongClusterCoeff;
   double eps_l = vehicle_param.width + kLatClusterThre;
@@ -279,9 +285,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
 
   double lane_width = QueryLaneMinWidth(cone_points_, origin_lane_s_width_, ego_frenet_point.x);
   double pass_threshold_left =
-      vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+      vehicle_param.width + k_default_ego_pass_buffer;
   double pass_threshold_right =
-      vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
+      vehicle_param.width + k_default_ego_pass_buffer;
   pass_threshold_left = std::max(pass_threshold_left, lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_right = std::max(pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
