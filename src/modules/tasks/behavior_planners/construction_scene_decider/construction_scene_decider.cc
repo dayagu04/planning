@@ -55,6 +55,7 @@ ConstructionSceneDecider::ConstructionSceneDecider(
 }
 
 bool ConstructionSceneDecider::InitInfo() {
+  is_construction_agent_cluster_success_ = false;
   return true;
 }
 
@@ -111,6 +112,7 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   }
 
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
+  const double ego_length = vehicle_param.length;
   double eps_x = vehicle_param.length * kLongClusterCoeff;
   double eps_y = vehicle_param.width + kLatClusterThre;
   int cone_nums_of_front_objects = 0; // 前方锥桶数量
@@ -136,7 +138,7 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
       if (IsConstructionAgent(front_vehicle_iter->second->type())) {
         // 目前仅针对锥桶一个类型，后续扩展这里可以用子函数筛选
         // IsConstructionAgent 是否为施工类型障碍物
-        if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
+        if (front_vehicle_iter->second->d_s_rel() < - ego_length ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
           continue;
@@ -190,6 +192,14 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   for (const auto& p : construction_agent_points_) {
     // 构建相同cluster属性所包含cones的map
     construction_agent_cluster_attribute_set_[p.cluster].push_back(p);
+  }
+  is_construction_agent_cluster_success_ = true;
+
+  for (auto& [cluster_id, points] : construction_agent_cluster_attribute_set_) {
+      std::sort(points.begin(), points.end(),
+                [](const ConstructionAgentPoint& a, ConstructionAgentPoint& b) {
+                    return a.car_x < b.car_x;
+                });
   }
 
   // 保存聚类的障碍物信息
@@ -325,7 +335,9 @@ double ConstructionSceneDecider::CalcClusterToBoundaryDist(
 
 bool ConstructionSceneDecider::IsConstructionAgent(iflyauto::ObjectType type) {
   // 目前仅针对锥桶一个类型，后续扩展可以在这里添加
-  return (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE);
+  return (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
+          type == iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER ||
+          type == iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL);
 }
 
 void ConstructionSceneDecider::GetOriginLaneWidthByConstructionAgent(

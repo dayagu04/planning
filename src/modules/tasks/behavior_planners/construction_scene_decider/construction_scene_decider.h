@@ -152,6 +152,7 @@ class ConstructionSceneDecider : public Task {
   std::vector<std::pair<double, double>> origin_lane_s_width_;
   int right_lane_nums_ = 0;
   int left_lane_nums_ = 0;
+  bool is_construction_agent_cluster_success_ = false;
   // bool use_query_lane_width_ = false;
 };
 
