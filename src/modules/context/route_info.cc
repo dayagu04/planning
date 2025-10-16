@@ -2491,8 +2491,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
 
     // 刚经过split，感知车道数可能还带左侧主路车道，这种情况抑制MLC
-    if (route_info_output_.accumulate_dis_ego_to_last_split_point < 50.0) {
-      if (left_lane_num >= current_link_->lane_num()) {
+    if (route_info_output_.accumulate_dis_ego_to_last_split_point < 50.0 &&
+        route_info_output_.accumulate_dis_ego_to_last_split_point > 0.0) {
+      if (left_lane_num > current_link_->lane_num()) {
         continue;
       }
     }
