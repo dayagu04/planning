@@ -112,7 +112,7 @@ class HybridAStarInterface {
     return time_benchmark_;
   }
 
-  const SearchTrajectoryInfo& GetSearchGear() const { return search_traj_info_; }
+  const SearchTrajectoryInfo& GetSearchTrajInfo() const { return search_traj_info_; }
 
  private:
   int UpdateEDT();
