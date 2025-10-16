@@ -39,6 +39,7 @@ constexpr uint32_t kConeDirecSize = 5;
 constexpr double kConeDirecThre = 0.5;
 constexpr double kConeSlopeThre = 1;
 constexpr int kInvalidAgentId = -1;
+constexpr double kCareLongDistance = 130;
 
 }  // namespace
 
@@ -53,7 +54,27 @@ ConstructionSceneDecider::ConstructionSceneDecider(
 }
 
 bool ConstructionSceneDecider::InitInfo() {
+  lateral_obstacle_ =
+      session_->environmental_model().get_lateral_obstacle();
+  lane_tracks_manager_ =
+      session_->environmental_model().get_lane_tracks_manager();
+  std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
+        session_->mutable_environmental_model()->get_virtual_lane_manager();
+  lane_change_lane_mgr_ =
+      std::make_shared<LaneChangeLaneManager>(virtual_lane_mgr, session_);
+  const int current_lane_virtual_id =
+      virtual_lane_mgr->current_lane_virtual_id();
+  if (lane_change_lane_mgr_->has_origin_lane()) {
+    auto origin_lane = lane_change_lane_mgr_->olane();
+    origin_lane_virtual_id_ = origin_lane->get_virtual_id();
+  } else {
+    origin_lane_virtual_id_ = current_lane_virtual_id;
+  }
   is_construction_agent_cluster_success_ = false;
+  construction_agent_points_.clear();
+  construction_agent_cluster_attribute_set_.clear();
+  construction_agent_cluster_size_.clear();
+  construction_agent_cluster_.clear();
   return true;
 }
 
@@ -62,16 +83,20 @@ bool ConstructionSceneDecider::Execute() {
   auto start_time = IflyTime::Now_ms();
   if (!InitInfo()) {
     return false;
-  };
-  auto end_time = IflyTime::Now_ms();
+  }
 
   // 施工障碍物聚类
   UpdateConstructionAgentClusters();
 
   UpdateDriveArea();
 
+
+  // 依据聚类结果判定施工区域场景
+  IdentifyConstructionScene();
+
   SaveLatDebugInfo();
 
+  auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("ConstructionSceneDeciderCostTime", end_time - start_time);
   return true;
 }
@@ -89,37 +114,29 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
 
   const auto virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
-  const int current_lane_virtual_id =
-      virtual_lane_mgr->current_lane_virtual_id();
   const auto origin_refline =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
-          ->get_reference_path_by_lane(current_lane_virtual_id, false);
+          ->get_reference_path_by_lane(origin_lane_virtual_id_, false);
   const auto base_lane =
-      virtual_lane_mgr->get_lane_with_virtual_id(current_lane_virtual_id);
+      virtual_lane_mgr->get_lane_with_virtual_id(origin_lane_virtual_id_);
 
   const auto& frenet_obstacles_map = origin_refline->get_obstacles_map();
   base_frenet_coord_ = origin_refline->get_frenet_coord();
-  Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
-  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
-    // 有待商榷
-    ILOG_DEBUG << "fail to get ego position on base lane";
-    is_construction_agent_lane_change_situation_ = false;
-    return;
-  }
+  // Point2D ego_frenet_point;
+  // if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+  //   // 有待商榷
+  //   return;
+  // }
 
   const double ego_rear_edge = vehicle_param.rear_edge_to_rear_axle;
   const double ego_length = vehicle_param.length;
   double eps_x = vehicle_param.length * kLongClusterCoeff;
   double eps_y = vehicle_param.width + kLatClusterThre;
-  int cone_nums_of_front_objects = 0;  // 前方锥桶数量
-  int minPts = 1;                      // 最小聚类簇个数
-  construction_agent_points_.clear();
-  construction_agent_cluster_attribute_set_.clear();
-
-  lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
+  int construction_agent_nums_of_front_objects = 0; // 前方锥桶数量
+  int minPts = 1; // 最小聚类簇个数
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
   const auto& side_obstacles_array = lateral_obstacle_->side_tracks();
@@ -147,12 +164,11 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
       if (IsConstructionAgent(vehicle_iter->second->type())) {
         // 目前仅针对锥桶一个类型，后续扩展这里可以用子函数筛选
         // IsConstructionAgent 是否为施工类型障碍物
-        if (vehicle_iter->second->d_s_rel() < -ego_length ||
-            vehicle_iter->second->d_s_rel() >
-                base_frenet_coord_->Length() - ego_frenet_point.x) {
+        if (vehicle_iter->second->d_s_rel() < - ego_length ||
+            vehicle_iter->second->d_s_rel() > kCareLongDistance) {
           continue;
         }
-        cone_nums_of_front_objects++;
+        construction_agent_nums_of_front_objects++;
         Point2D obs_cart_point{0.0, 0.0};
         Point2D obs_frenet_point;
         obs_cart_point.x = vehicle_iter->second->obstacle()->x_center();
@@ -162,44 +178,36 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
             !frenet_obstacles_map.at(obstacle_id)->b_frenet_valid()) {
           continue;
         }
-        double cone_s = vehicle_iter->second->frenet_s();
-        double cone_l = vehicle_iter->second->frenet_l();
+        double construction_agent_s = vehicle_iter->second->frenet_s();
+        double construction_agent_l = vehicle_iter->second->frenet_l();
         Pose2D obs_car_point;
         ego_base.GlobalPointToULFLocal(
             &obs_car_point, Pose2D(obs_cart_point.x, obs_cart_point.y, 0));
         double dist_to_left_boundary = kDefaultLaneWidth;
-        GetOriginLaneWidthByConstructionAgent(base_lane, cone_s, cone_l, true,
+        GetOriginLaneWidthByConstructionAgent(base_lane, construction_agent_s, construction_agent_l, true,
                                               &dist_to_left_boundary);
         double dist_to_right_boundary = kDefaultLaneWidth;
-        GetOriginLaneWidthByConstructionAgent(base_lane, cone_s, cone_l, false,
+        GetOriginLaneWidthByConstructionAgent(base_lane, construction_agent_s, construction_agent_l, false,
                                               &dist_to_right_boundary);
-        auto point = ConstructionAgentPoint(
-            vehicle_iter->first, obs_cart_point.x, obs_cart_point.y,
-            obs_car_point.x, obs_car_point.y, cone_s, cone_l,
-            dist_to_left_boundary, dist_to_right_boundary);
+        auto point = ConstructionAgentPoint(vehicle_iter->first, obs_cart_point.x,
+                               obs_cart_point.y, obs_car_point.x, obs_car_point.y,
+                               construction_agent_s, construction_agent_l, dist_to_left_boundary, dist_to_right_boundary);
         construction_agent_points_.push_back(point);
       }
     } else {
       continue;
     }
   }
-  JSON_DEBUG_VALUE("cone_nums_of_front_objects", cone_nums_of_front_objects);
+  JSON_DEBUG_VALUE("construction_agent_nums_of_front_objects", construction_agent_nums_of_front_objects);
 
-  if (construction_agent_points_.empty()) {
-    // if no cones found, counter--
-    ILOG_DEBUG << "no construction agent found!!!";
-    construction_agent_alc_trigger_counter_ = std::max(
-        construction_agent_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
-    is_construction_agent_lane_change_situation_ = false;
-    return;
-  } else {
+  if (!construction_agent_points_.empty()) {
     // 检测类型为cone的障碍物赋予cluster属性
     // 按照自车系下的坐标点聚类
     DbScan(construction_agent_points_, eps_x, eps_y, minPts);
+  } else {
+    return;
   }
 
-  construction_agent_cluster_size_.clear();
-  construction_agent_cluster_.clear();
   for (const auto& p : construction_agent_points_) {
     // 构建相同cluster属性所包含施工障碍物的map
     construction_agent_cluster_attribute_set_[p.cluster].points.push_back(p);
@@ -293,10 +301,9 @@ bool ConstructionSceneDecider::IsConstructionAgent(iflyauto::ObjectType type) {
 }
 
 void ConstructionSceneDecider::GetOriginLaneWidthByConstructionAgent(
-    const std::shared_ptr<VirtualLane> base_lane, const double cone_s,
-    const double cone_l, bool is_left, double* dist) {
+    const std::shared_ptr<VirtualLane> base_lane, const double construction_agent_s,
+    const double construction_agent_l, bool is_left, double* dist) {
   if (base_lane == nullptr) {
-    is_construction_agent_lane_change_situation_ = false;
     return;
   }
   const auto origin_refline =
@@ -313,21 +320,21 @@ void ConstructionSceneDecider::GetOriginLaneWidthByConstructionAgent(
       origin_lane_s_width_.emplace_back(std::make_pair(
           ref_path_point.path_point.s(), ref_path_point.lane_width));
     }
-    origin_lane_width = QueryLaneWidth(cone_s, origin_lane_s_width_);
+    origin_lane_width = QueryLaneWidth(construction_agent_s, origin_lane_s_width_);
   }
   if (is_left) {
     double left_width = 0.5 * origin_lane_width;
-    if (cone_l > left_width) {
+    if (construction_agent_l > left_width) {
       *dist = kDefaultLaneWidth;
     } else {
-      *dist = left_width - cone_l;
+      *dist = left_width - construction_agent_l;
     }
   } else {
     double right_width = 0.5 * origin_lane_width;
-    if (cone_l < -right_width) {
+    if (construction_agent_l < -right_width) {
       *dist = kDefaultLaneWidth;
     } else {
-      *dist = right_width + cone_l;
+      *dist = right_width + construction_agent_l;
     }
   }
 }
@@ -352,6 +359,12 @@ double ConstructionSceneDecider::QueryLaneWidth(
         first_pair_on_lane->second, first_pair_on_lane->first, s0);
   }
   return std::fmax(lane_width, 2.8);
+}
+
+void ConstructionSceneDecider::IdentifyConstructionScene() {
+
+  // 判定是否能够触发变道
+
 }
 
 void ConstructionSceneDecider::UpdateDriveArea() {

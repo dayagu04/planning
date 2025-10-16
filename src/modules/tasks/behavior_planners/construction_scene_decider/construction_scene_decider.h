@@ -17,6 +17,8 @@
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
+
 namespace planning {
 
 using namespace planning_math;
@@ -146,6 +148,8 @@ class ConstructionSceneDecider : public Task {
 
   bool IsConstructionAgent(iflyauto::ObjectType type);
 
+  void IdentifyConstructionScene();
+
   void UpdateDriveArea();
 
   std::pair<bool, int> CalIntersectionRefAndCone(
@@ -182,8 +186,11 @@ class ConstructionSceneDecider : public Task {
   std::vector<std::pair<double, double>> origin_lane_s_width_;
   int right_lane_nums_ = 0;
   int left_lane_nums_ = 0;
-  bool is_construction_agent_cluster_success_ = false;
   // bool use_query_lane_width_ = false;
+  bool is_construction_agent_cluster_success_ = false;
+  std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr_;
+  int origin_lane_virtual_id_;
+
 };
 
 }  // namespace planning
