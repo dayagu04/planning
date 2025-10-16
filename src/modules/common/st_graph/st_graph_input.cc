@@ -177,13 +177,15 @@ void StGraphInput::GetAgentOfTargetLane(
     return;
   }
 
-  const auto target_lane_front_rear_agents =
-      MakeTargetLaneFrontRearAgents(session_);
-
+  const auto lane_agents = MakeTargetLaneFrontRearAgents(session_);
   front_agent_of_target_ = dynamic_world->agent_manager()->GetAgent(
-      target_lane_front_rear_agents.first);
+      lane_agents.target_front_agent_id);
   rear_agent_of_target_ = dynamic_world->agent_manager()->GetAgent(
-      target_lane_front_rear_agents.second);
+      lane_agents.target_rear_agent_id);
+  front_agent_of_origin_ = dynamic_world->agent_manager()->GetAgent(
+      lane_agents.current_front_agent_id);
+  rear_agent_of_origin_ = dynamic_world->agent_manager()->GetAgent(
+      lane_agents.current_rear_agent_id);
 }
 
 void StGraphInput::FilterAgentsByDecisionType(
@@ -628,6 +630,14 @@ const agent::Agent* StGraphInput::rear_agent_of_target() const {
   return rear_agent_of_target_;
 }
 
+const agent::Agent* StGraphInput::front_agent_of_origin() const {
+  return front_agent_of_origin_;
+}
+
+const agent::Agent* StGraphInput::rear_agent_of_origin() const {
+  return rear_agent_of_origin_;
+}
+
 double StGraphInput::front_agent_lower_s_safety_buffer_for_lane_change() const {
   return config_.front_agent_lower_s_safety_buffer_for_lane_change;
 }
@@ -909,8 +919,9 @@ StGraphInput::GenerateMaxAccelerationCurve(
                                                             state_limit);
 }
 
-std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
+LaneFrontRearAgents StGraphInput::MakeTargetLaneFrontRearAgents(
     framework::Session* session) {
+  LaneFrontRearAgents result;
   const auto& dynamic_world =
       session->environmental_model().get_dynamic_world();
   // get lane change status
@@ -922,23 +933,29 @@ std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
   // get front and rear agents
   int64_t target_lane_front_node_id = -1;
   int64_t target_lane_rear_node_id = -1;
-  int32_t target_lane_front_agent_id;
-  int32_t target_lane_rear_agent_id;
+  int64_t current_lane_front_node_id = -1;
+  int64_t current_lane_rear_node_id = -1;
+
+  const bool is_lane_changing = (lane_change_state == kLaneChangeExecution ||
+                                 lane_change_state == kLaneChangeComplete);
 
   if (lc_request_direction == LEFT_CHANGE) {
-    if (lane_change_state == kLaneChangeExecution ||
-        lane_change_state == kLaneChangeComplete) {
+    if (is_lane_changing) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
+      current_lane_front_node_id = dynamic_world->ego_right_front_node_id();
+      current_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
     } else {
+      // Target lane (left lane, not yet in it)
       target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
     }
   } else if (lc_request_direction == RIGHT_CHANGE) {
-    if (lane_change_state == kLaneChangeExecution ||
-        lane_change_state == kLaneChangeComplete) {
+    if (is_lane_changing) {
       target_lane_front_node_id = dynamic_world->ego_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_rear_node_id();
+      current_lane_front_node_id = dynamic_world->ego_left_front_node_id();
+      current_lane_rear_node_id = dynamic_world->ego_left_rear_node_id();
     } else {
       target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
       target_lane_rear_node_id = dynamic_world->ego_right_rear_node_id();
@@ -949,7 +966,7 @@ std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
     auto* target_lane_front_node =
         dynamic_world->GetNode(target_lane_front_node_id);
     if (target_lane_front_node != nullptr) {
-      target_lane_front_agent_id = target_lane_front_node->node_agent_id();
+      result.target_front_agent_id = target_lane_front_node->node_agent_id();
     }
   }
 
@@ -957,10 +974,30 @@ std::pair<int32_t, int32_t> StGraphInput::MakeTargetLaneFrontRearAgents(
     auto* target_lane_rear_node =
         dynamic_world->GetNode(target_lane_rear_node_id);
     if (target_lane_rear_node != nullptr) {
-      target_lane_rear_agent_id = target_lane_rear_node->node_agent_id();
+      result.target_rear_agent_id = target_lane_rear_node->node_agent_id();
     }
   }
-  return std::make_pair(target_lane_front_agent_id, target_lane_rear_agent_id);
+
+  if (is_lane_changing) {
+    if (current_lane_front_node_id != -1) {
+      auto* current_lane_front_node =
+          dynamic_world->GetNode(current_lane_front_node_id);
+      if (current_lane_front_node != nullptr) {
+        result.current_front_agent_id =
+            current_lane_front_node->node_agent_id();
+      }
+    }
+
+    if (current_lane_rear_node_id != -1) {
+      auto* current_lane_rear_node =
+          dynamic_world->GetNode(current_lane_rear_node_id);
+      if (current_lane_rear_node != nullptr) {
+        result.current_rear_agent_id = current_lane_rear_node->node_agent_id();
+      }
+    }
+  }
+
+  return result;
 }
 
 void StGraphInput::Reset() {
