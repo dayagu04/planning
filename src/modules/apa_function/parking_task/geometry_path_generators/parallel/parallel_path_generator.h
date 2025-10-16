@@ -196,6 +196,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     std::vector<std::vector<Eigen::Vector2d>> line_pt_vec;
     std::vector<pnc::geometry_lib::LineSegment> debug_line_vec;
     std::vector<GeometryPath> debug_inslot_path_vec;
+    std::vector<pnc::geometry_lib::PathPoint> current_path_last_time;
 
     void Reset() {
       debug_arc_vec.clear();
@@ -205,6 +206,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       line_pt_vec.clear();
       debug_line_vec.clear();
       debug_inslot_path_vec.clear();
+      current_path_last_time.clear();
     }
   };
 
@@ -214,6 +216,15 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   virtual const bool Update(const std::shared_ptr<CollisionDetector>
                                 &collision_detector_ptr) override;
 
+  void TrimPathByLimiter(pnc::geometry_lib::PathSegment &path_seg);
+  void TrimPathByLimiterPathPoint(
+      std::vector<geometry_lib::PathPoint> &sampled_path_seg,
+      bool is_global = false);
+  //   void TrimPathByLimiterLastPathVec(const bool is_replan) ;
+  void SetLastPathSeg(
+      std::vector<pnc::geometry_lib::PathPoint> path_point_vec) {
+    debug_info_.current_path_last_time = path_point_vec;
+  };
   void CalcEgoParams();
   void ExpandObstacles();
   void AddPInVirtualObstacles();
@@ -602,6 +613,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
 
   const bool CheckSamePos(const Eigen::Vector2d &pos0,
                           const Eigen::Vector2d &pos1) const;
+  std::pair<Eigen::Vector2d, Eigen::Vector2d> ExtendLineSegAlongHeading(
+      const Eigen::Vector2d &P1, const Eigen::Vector2d &P2, double heading_rad,
+      double move_length);
 
  protected:
   PlannerParams calc_params_;

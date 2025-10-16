@@ -858,6 +858,12 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.is_parallel_advanced_method, bool,
                   "is_parallel_advanced_method");
 
+  JSON_READ_VALUE(param.is_trim_limter_parallel_enable, bool,
+                  "is_trim_limter_parallel_enable");
+
+  JSON_READ_VALUE(param.trim_limter_tire_distance, double,
+                  "trim_limter_tire_distance");
+
   int path_generator_type = 1;
   JSON_READ_VALUE(path_generator_type, int, "path_generator_type");
   switch (path_generator_type) {
