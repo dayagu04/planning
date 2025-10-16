@@ -103,7 +103,7 @@ void HybridAStarThreadSolver::SetResponse() {
 
   thread_response_data_.request = thread_request_data_;
   thread_response_data_.time = solver_interface_->GetTimeBenchmark();
-  thread_response_data_.search_gear = solver_interface_->GetSearchGear();
+  thread_response_data_.search_traj_info = solver_interface_->GetSearchTrajInfo();
 
   // child node
   all_child_node_list_.clear();

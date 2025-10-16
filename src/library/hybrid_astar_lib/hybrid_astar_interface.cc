@@ -73,7 +73,7 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
   hybrid_astar_->Init();
   gear_switch_number_scenario_try_ = -1;
   time_benchmark_.Clear();
-  search_gear_.Clear();
+  search_traj_info_.Clear();
 
   ILOG_INFO << "astar interface success";
 
@@ -453,6 +453,8 @@ const bool HybridAStarInterface::GetFirstSegmentPath(
     GetFallBackPath(result);
   }
 
+  search_traj_info_.first_seg_path_length = result.back().accumulated_s;
+
   ILOG_INFO << "cur path s " << result.back().accumulated_s << " size "
             << result.size();
 
@@ -538,7 +540,7 @@ void HybridAStarInterface::PathClear() {
   }
   // ILOG_INFO << "reset path";
   time_benchmark_.Clear();
-  search_gear_.Clear();
+  search_traj_info_.Clear();
 
   return;
 }
@@ -774,11 +776,11 @@ void HybridAStarInterface::PathSearchForScenarioRunning(
 
     // check gear
     if (!traj_candidates_[i].gear.empty()) {
-      search_gear_.first_action_gear[i] =
+      search_traj_info_.first_action_gear[i] =
           static_cast<int32_t>(traj_candidates_[i].gear[0]);
-      search_gear_.first_action_gear_request[i] =
+      search_traj_info_.first_action_gear_request[i] =
           static_cast<int32_t>(request_.first_action_request.gear_request);
-      search_gear_.size++;
+      search_traj_info_.size++;
     }
 
     // check time

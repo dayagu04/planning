@@ -304,12 +304,14 @@ struct SearchTimeBenchmark {
   }
 };
 
-struct SearchGear {
+struct SearchTrajectoryInfo {
   int32_t first_action_gear[6];
   int32_t first_action_gear_request[6];
+  float first_seg_path_length;
   int8_t size;
 
   void Clear() {
+    first_seg_path_length = 0;
     size = 0;
     return;
   }
