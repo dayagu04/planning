@@ -2094,7 +2094,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.emergency_avoid &&
-      !obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
+      !is_blocked_obstacle_ &&
       (lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::IGNORE ||
        lat_obstacle_decision.at(obstacle->id()) ==
@@ -2102,7 +2102,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     // 紧急避让不走正常避让逻辑
     return;
   }
-  if (is_potential_dangerous_obstacle_ && !obstacle->obstacle()->is_reverse() &&
+  if (is_potential_dangerous_obstacle_ &&
       !is_blocked_obstacle_ &&
       (lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::IGNORE ||
@@ -3052,7 +3052,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
   if (general_lateral_decider_output.lane_change_scene ||
-      is_blocked_obstacle_ || obstacle->obstacle()->is_reverse()) {
+      is_blocked_obstacle_ || (obstacle->obstacle()->is_reverse() &&
+      !obstacle->is_static())) {
     // 由于借道障碍物和变道过程中导致的大制动先忽略
     return;
   }
