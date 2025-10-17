@@ -151,9 +151,8 @@ class ConstructionSceneDecider : public Task {
       std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
       const std::vector<Point2d>& ref_points,
       const std::vector<Point2d>& cone_points);
-  void CheckResult(
-      const std::map<int, std::map<int, std::vector<int>>>& results);
-
+  void UpdateResult(
+    const std::map<int, std::map<int, std::vector<int>>>& results);
  private:
   ConstructionSceneDeciderConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;

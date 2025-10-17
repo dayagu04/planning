@@ -122,11 +122,14 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
   const auto& side_obstacles_array = lateral_obstacle_->side_tracks();
   std::vector<std::shared_ptr<FrenetObstacle>> combined_obstacles;
-  combined_obstacles.reserve(front_obstacles_array.size() + side_obstacles_array.size());
+  combined_obstacles.reserve(front_obstacles_array.size() +
+                             side_obstacles_array.size());
   combined_obstacles.insert(combined_obstacles.end(),
-                            front_obstacles_array.begin(), front_obstacles_array.end());
+                            front_obstacles_array.begin(),
+                            front_obstacles_array.end());
   combined_obstacles.insert(combined_obstacles.end(),
-                            side_obstacles_array.begin(), side_obstacles_array.end());
+                            side_obstacles_array.begin(),
+                            side_obstacles_array.end());
   Transform2d ego_base;
   auto base_pose = Pose2D(planning_init_point.lat_init_state.x(),
                           planning_init_point.lat_init_state.y(),
@@ -204,10 +207,11 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
 
   for (auto& [cluster_id, cluster_area] :
        construction_agent_cluster_attribute_set_) {
-    std::sort(cluster_area.points.begin(), cluster_area.points.end(),
-              [](const ConstructionAgentPoint& a, const ConstructionAgentPoint& b) {
-                return a.car_x < b.car_x;
-              });
+    std::sort(
+        cluster_area.points.begin(), cluster_area.points.end(),
+        [](const ConstructionAgentPoint& a, const ConstructionAgentPoint& b) {
+          return a.car_x < b.car_x;
+        });
   }
 
   // 保存聚类的障碍物信息
@@ -232,9 +236,8 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
                     construction_agent_cluster_attribute_ids, 0);
 }
 
-void ConstructionSceneDecider::DbScan(
-    ConstructionAgentPoints& cone_points, double eps_x,
-    double eps_y, int minPts) {
+void ConstructionSceneDecider::DbScan(ConstructionAgentPoints& cone_points,
+                                      double eps_x, double eps_y, int minPts) {
   int c = 0;  // cluster index
   for (size_t index = 0; index < cone_points.size(); ++index) {
     if (!cone_points[index].visited) {
@@ -253,8 +256,8 @@ bool ConstructionSceneDecider::ConstructionAgentDistance(
 }
 
 void ConstructionSceneDecider::ExpandCluster(
-    ConstructionAgentPoints& cone_points, int index, int c,
-    double eps_x, double eps_y, int minPts) {
+    ConstructionAgentPoints& cone_points, int index, int c, double eps_x,
+    double eps_y, int minPts) {
   std::vector<int> neighborPts;
 
   for (size_t i = 0; i < cone_points.size(); ++i) {
@@ -404,6 +407,8 @@ void ConstructionSceneDecider::UpdateDriveArea() {
       if (construction_agent_cluster_iter.second.points.size() <= 1) {
         continue;
       }
+
+      // Attention!!! 存在重复计算
       std::vector<Point2d> cone_points;
       cone_points.reserve(construction_agent_cluster_iter.second.points.size());
       for (const auto& agent_clusters :
@@ -424,17 +429,7 @@ void ConstructionSceneDecider::UpdateDriveArea() {
     }
   }
 
-  CheckResult(results);
-
-  // for (auto result : results) {
-  //   if (result.second.count(1) && result.second.count(2)) {
-  //     construction_agent_cluster_attribute_set_[result.first].
-  //   }
-
-  //   if (result.second.count(-1)) {
-  //     ILOG_DEBUG << "colinear_or_facing ref";
-  //   }
-  // }
+  UpdateResult(results);
 }
 
 std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndCone(
@@ -468,15 +463,25 @@ std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndCone(
   }
 }
 
-void ConstructionSceneDecider::CheckResult(
+void ConstructionSceneDecider::UpdateResult(
     const std::map<int, std::map<int, std::vector<int>>>& results) {
-  for (const auto result : results) {
+  for (auto result : results) {
     if (result.second.count(1) && result.second.count(2)) {
-      ILOG_DEBUG << "abnormal ref";
+      construction_agent_cluster_attribute_set_[result.first].direction =
+          Direction::UNSURE;
+      std::cout << "abnormal ref" << std::endl;
+    } else if (result.second.count(1)) {
+      construction_agent_cluster_attribute_set_[result.first].direction =
+          Direction::LEFT;
+    } else if (result.second.count(2)) {
+      construction_agent_cluster_attribute_set_[result.first].direction =
+          Direction::RIGHT;
     }
 
     if (result.second.count(-1)) {
-      ILOG_DEBUG << "colinear_or_facing ref";
+      construction_agent_cluster_attribute_set_[result.first].direction =
+          Direction::UNSURE;
+      std::cout << "colinear_or_facing ref" << std::endl;
     }
   }
 }
