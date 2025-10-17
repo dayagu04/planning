@@ -2248,6 +2248,10 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   double stop_body_lat_inflation = param.stop_lat_inflation;
   double stop_mirror_lat_inflation = param.stop_lat_inflation;
+  if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
+    stop_body_lat_inflation += 0.02;
+    stop_mirror_lat_inflation += 0.02;
+  }
   double stop_lon_dist = param.stop_lon_dist;
 
   double heavy_brake_body_lat_inflation = param.heavy_brake_lat_inflation;
