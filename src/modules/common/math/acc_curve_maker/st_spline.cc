@@ -5,7 +5,7 @@
 namespace planning {
 
 StPoint StSpline::get_point_by_t(double t) {
-  StPoint output;
+  StPoint output{0.0, 0.0, 0.0, 0.0, 0.0};
   if (st_points_.size() == 0) {
     return output;
   }
@@ -38,7 +38,7 @@ StPoint StSpline::get_point_by_t(double t) {
 }
 
 StPoint StSpline::get_point_by_s(double s) {
-  StPoint output;
+  StPoint output{0.0, 0.0, 0.0, 0.0, 0.0};
   if (st_points_.size() == 0) {
     return output;
   }
