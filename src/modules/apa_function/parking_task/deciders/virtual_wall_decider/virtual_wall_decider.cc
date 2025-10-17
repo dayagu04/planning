@@ -429,13 +429,11 @@ const MapBound VirtualWallDecider::GetMaxMapBound() const {
 }
 
 const MapBound VirtualWallDecider::GetVehBound() const {
-  MapBound bound;
-  bound.x_max = veh_boundary_.x_upper;
-  bound.x_min = veh_boundary_.x_lower;
-  bound.y_max = veh_boundary_.y_upper;
-  bound.y_min = veh_boundary_.y_lower;
-
-  return bound;
+  return MapBound(veh_boundary_.x_lower,  // x_min
+                  veh_boundary_.x_upper,  // x_max
+                  veh_boundary_.y_lower,  // y_min
+                  veh_boundary_.y_upper   // y_max
+  );
 }
 }  // namespace apa_planner
 }  // namespace planning
