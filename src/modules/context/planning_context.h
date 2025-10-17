@@ -37,6 +37,7 @@
 #include "define/planning_status.h"
 #include "lon_behavior_planner.pb.h"
 #include "macro.h"
+#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 #include "planning_hmi_c.h"
 #include "real_time_lon_behavior_planner.pb.h"
 #include "speed/speed_limit.h"
@@ -233,6 +234,16 @@ class PlanningContext {
   const VisionLongitudinalBehaviorPlannerOutput &
   vision_longitudinal_behavior_planner_output() const {
     return vision_longitudinal_behavior_planner_output_;
+  }
+
+  const PotentialDangerousAgentDeciderOutput &
+  potential_dangerous_agent_decider_output() const {
+    return potential_dangerous_agent_decider_output_;
+  }
+
+  PotentialDangerousAgentDeciderOutput *
+  mutable_potential_dangerous_agent_decider_output() {
+    return &potential_dangerous_agent_decider_output_;
   }
 
   VisionLongitudinalBehaviorPlannerOutput &
@@ -538,7 +549,8 @@ class PlanningContext {
   AgentLongitudinalDeciderOutput agent_longitudinal_decider_output_;
   TrafficLightDeciderOutput traffic_light_decider_output_;
   LaneBorrowDeciderOutput lane_borrow_decider_output_;
-
+  PotentialDangerousAgentDeciderOutput
+      potential_dangerous_agent_decider_output_;
   // TODO(xjli32)：将adas功能的输出暂时保持不变
   AdaptiveCruiseControlInfo adaptive_cruise_control_result_;
   common::StartStopInfo start_stop_result_;

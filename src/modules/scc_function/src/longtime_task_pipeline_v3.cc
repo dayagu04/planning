@@ -1,4 +1,5 @@
 #include "longtime_task_pipeline_v3.h"
+
 #include <memory>
 
 #include "behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
@@ -26,6 +27,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   lane_borrow_deciderV2_ =
       std::make_unique<lane_borrow_deciderV2::LaneBorrowDecider>(config_builder,
                                                                  session);
+  potential_dangerous_agent_decider_ =
+      std::make_unique<PotentialDangerousAgentDecider>(config_builder, session);
   lateral_offset_decider_ =
       std::make_unique<LateralOffsetDecider>(config_builder, session);
   gap_selector_decider_ =
@@ -95,6 +98,11 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = ego_lane_road_right_decider_->Execute();
   if (!ok) {
     AddErrorInfo(ego_lane_road_right_decider_->Name());
+    return false;
+  }
+  ok = potential_dangerous_agent_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(potential_dangerous_agent_decider_->Name());
     return false;
   }
 

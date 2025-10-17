@@ -25,6 +25,8 @@ struct LateralObstacleHistoryInfo {
   bool front_car = false;
   bool side_car = false;
   bool rear_car = false;
+  int side_2_front_count = 0;
+  double overlap_ego_head_thr = 2;
   bool cut_in_or_cross = false;
   int cut_in_or_cross_count = 0;
   double front_expand_len = 0.0;

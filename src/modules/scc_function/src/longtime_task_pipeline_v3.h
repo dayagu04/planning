@@ -31,6 +31,7 @@
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
 #include "tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider.h"
 #include "tasks/behavior_planners/parallel_longitudinal_avoid_decider/parallel_longitudinal_avoid_decider.h"
+#include "tasks/behavior_planners/potential_dangerous_agent_decider/potential_dangerous_agent_decider.h"
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_union_planner.h"
 #include "tasks/behavior_planners/speed_limit_decider/speed_limit_decider.h"
@@ -69,6 +70,8 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
       lane_borrow_deciderV1_;
   std::unique_ptr<SamplePolySpeedAdjustDecider>
       sample_poly_speed_adjust_decider_;
+  std::unique_ptr<PotentialDangerousAgentDecider>
+      potential_dangerous_agent_decider_;
 
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<MRCBrakeDecider> mrc_brake_decider_;

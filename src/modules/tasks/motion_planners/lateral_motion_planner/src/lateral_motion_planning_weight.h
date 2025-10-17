@@ -5,6 +5,7 @@
 #include <vector>
 #include "ego_planning_config.h"
 #include "lateral_motion_planner.pb.h"
+#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 #include "virtual_lane.h"
 
 namespace pnc {
@@ -236,6 +237,10 @@ class LateralMotionPlanningWeight {
     expected_avoid_jerk_ = expected_avoid_jerk;
   }
 
+  void SetRiskLevel(const planning::RiskLevel risk_level) {
+    risk_level_ = risk_level;
+  }
+
   double GetInitDisToRef() const { return init_dis_to_ref_; }
 
   double GetConcernedStartQJerk() const { return concerned_start_q_jerk_; }
@@ -294,6 +299,7 @@ class LateralMotionPlanningWeight {
   PathWeight weight_;
   EmergencyLevel emergency_level_;
   LaneChangeStyle lc_style_;
+  planning::RiskLevel risk_level_;
   double lat_offset_;
   double avoid_dist_;
   double init_dis_to_ref_;

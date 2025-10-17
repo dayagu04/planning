@@ -28,6 +28,19 @@ enum class LatIngoreType {
   IGNORE_NONE
 };
 
+enum class AgentPosType {
+  FRONT,
+  REAR,
+  LEFT_REAR,
+  RIGHT_REAR,
+  LEFT_FRONT,
+  RIGHT_FRONT,
+  LEFT_OVERLAP,
+  RIGHT_OVERLAP,
+  COLLISION,
+  UNKNOWN,
+};
+
 enum class ObsRelPosType { FRONT, CUTIN, CROSSING, ADJACENT, REAR, NONE };
 
 enum class LatDeciderLaneChangeInfo {

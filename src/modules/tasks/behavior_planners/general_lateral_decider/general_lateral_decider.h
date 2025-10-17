@@ -175,7 +175,9 @@ class GeneralLateralDecider : public Task {
                                 LatObstacleDecisionType lat_decision,
                                 LonObstacleDecisionType lon_decision,
                                 ObstacleDecision &obstacle_decision,
-                                bool is_update_hard_bound = false);
+                                bool is_update_hard_bound = false,
+                                bool is_avoid_side_ignore_obj = false,
+                                bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
@@ -260,9 +262,15 @@ class GeneralLateralDecider : public Task {
   bool CheckLateralEmergencyAvoidSpace(
       bool is_nudge_left, const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsObstacleOutsideRoadBoundary(
-    const std::shared_ptr<FrenetObstacle> obstacle);
+      const std::shared_ptr<FrenetObstacle> obstacle);
   void LimitFrenetLateralSlope(
-    std::vector<std::pair<double, double>> &frenet_bounds);
+      std::vector<std::pair<double, double>> &frenet_bounds);
+  void GenerateRecommendJerk(
+      const std::shared_ptr<FrenetObstacle> obstacle,
+      bool &is_high_dangerous);
+  void CheckObstacleSideCutinNudgeCondition(
+      const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
+      BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -312,9 +320,11 @@ class GeneralLateralDecider : public Task {
   bool enable_emergency_avoid_ = false;
   HysteresisDecision has_enough_speed_bound_recurrence_hysteresis_;
   bool is_use_recurrence_ = false;
-
   RoadCurvatureInfo ref_curve_info_;
   double last_compensation_buffer_ = 0.0;
+  std::unordered_map<uint32_t, double> current_desire_final_nudge_l_map_;
+  std::unordered_map<uint32_t, double> last_desire_final_nudge_l_map_;
+
 };
 
 }  // namespace planning

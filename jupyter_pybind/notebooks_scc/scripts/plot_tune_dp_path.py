@@ -243,29 +243,15 @@ def ClearFig():
     obstacles_info_data_sources[i].data.update({'L':[], 'S':[]})
 
 
-def slider_callback(bag_time,
-                    update_s_range,
-                    update_l_range,
-                    update_coeff_l_cost,
-                    update_coeff_dl_cost,
-                    update_coeff_ddl_cost,
-                   update_coeff_end_l_cost,
-                   update_coeff_collision_cost,
-                   update_path_resolution,
-                   update_collision_distance):
+def slider_callback(bag_time):
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
 
   plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
-  dp_road_info_debug_msg = plan_debug_msg.dp_road_info
-  # print(local_view_data['data_msg']['plan_debug_msg'].dp_road_info.obstacles_info)
-  ClearFig()
-  plot_sample_lane_info(dp_road_info_debug_msg)
-  plot_dp_path(dp_road_info_debug_msg)
-  plot_static_obstacles(dp_road_info_debug_msg)
-  plot_table_info(dp_road_info_debug_msg.print_info)
-  # dp_road_info_debug_msg_string = dp_road_info_debug_msg.SerializeToString()
-  # dp_path_decider_py.InputProcess(dp_road_info_debug_msg_string) # input from logs
+  pda_debug_msg = plan_debug_msg.potential_dangerous_info
+
+  pda_debug_msg_string = pda_debug_msg.SerializeToString()
+  potemt.InputProcess(dp_road_info_debug_msg_string) # input from logs
   # dp_path_decider_py.UpdateParams( update_s_range,
   #                                 update_l_range,
   #                                 update_coeff_l_cost,

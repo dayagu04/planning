@@ -26,6 +26,7 @@ void LateralMotionPlanningWeight::Init() {
   lateral_motion_scene_ = LateralMotionScene::LANE_KEEP;
   emergency_level_ = EmergencyLevel::NONE;
   lc_style_ = LaneChangeStyle(config_.lc_style);
+  risk_level_ = planning::RiskLevel::NO_RISK;
   lat_offset_ = 0.0;
   avoid_dist_ = 0.0;
   init_dis_to_ref_ = 0.0;
@@ -1528,6 +1529,15 @@ void LateralMotionPlanningWeight::MakeSplitDynamicWeight(
 void LateralMotionPlanningWeight::MakeDynamicPosBoundWeight(
     planning::common::LateralPlanningInput &planning_input) {
   double risk_factor = 1.0;
+  if (risk_level_ == planning::RiskLevel::LOW_RISK &&
+      emergency_level_ < EmergencyLevel::P2) {
+    emergency_level_ = EmergencyLevel::P2;
+    risk_factor = 1.5;
+  } else if (risk_level_ == planning::RiskLevel::HIGH_RISK &&
+             emergency_level_ < EmergencyLevel::P1) {
+    emergency_level_ = EmergencyLevel::P1;
+    risk_factor = 2.0;
+  }
   if (std::fabs(avoid_dist_) > 0.1 &&
       lateral_motion_scene_ == LateralMotionScene::LANE_KEEP) {
     if (emergency_level_ >= EmergencyLevel::P1) {
@@ -1696,6 +1706,9 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
         std::max(last_remotely_index_ + d_index, weight_.proximal_index);
   }
 
+  if (risk_level_ == planning::RiskLevel::HIGH_RISK) {
+    planning_input.set_q_continuity(0.0);
+  }
   // const double lateral_offset = lateral_offset_decider_output.lateral_offset;
   if ((lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) &&
       (!is_lane_change_back_) && (!is_lane_change_hold_)) {

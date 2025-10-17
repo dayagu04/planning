@@ -1154,7 +1154,7 @@ void LateralOffsetCalculatorV2::PostProcess(
         double lat_offset_compensate =
             LateralOffsetCompensate(avoid_obstacles[0]);
         double desire_lat_offset = 0.0;
-        if (avoid_obstacles[0].s_to_ego <= 0.0) {
+        if (avoid_obstacles[0].s_to_ego <= 0.0 && !config_.open_side_lat_offset_nudge) {
           desire_lat_offset = fabs(last_avoid_info_.lat_offset);
         } else {
           desire_lat_offset = DesireLateralOffsetSideWay(
