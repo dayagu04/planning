@@ -139,7 +139,7 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
 
   // bit 8
   // 驾驶员未踩下制动踏板:制动力<3bar，持续2s.后续再讨论
-  if (vehicle_service_output_info_ptr->esp_pressure > 3.0) {
+  if (vehicle_service_output_info_ptr->esp_pressure < 3.0) {
     brake_pedal_pressed_supp_recover_duration_ += GetContext.get_param()->dt;
     if (brake_pedal_pressed_supp_recover_duration_ > 60.0) {
       brake_pedal_pressed_supp_recover_duration_ = 60.0;
@@ -149,7 +149,7 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
   } else {
     brake_pedal_pressed_supp_recover_duration_ = 0.0;
   }
-  if (brake_pedal_pressed_supp_recover_duration_ > 2.0) {
+  if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
     enable_code += uint16_bit[8];
   } else {
     /*do nothing*/
