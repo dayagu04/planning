@@ -1388,12 +1388,12 @@ bool OvertakeRequest::checkLaneChangeSafety(
 
   int not_safety_agent_id = -1;
   if (has_front_obs && has_rear_obs) {
-    const double front_to_ego_dis =
-        std::hypot(front_track_iter->second->obstacle()->x_center(),
-                   front_track_iter->second->obstacle()->y_center());
-    const double rear_to_ego_dis =
-        std::hypot(rear_track_iter->second->obstacle()->x_center(),
-                   rear_track_iter->second->obstacle()->y_center());
+    const double front_to_ego_dis = std::hypot(
+        front_track_iter->second->obstacle()->x_center() - ego_cart_point.x,
+        front_track_iter->second->obstacle()->y_center() - ego_cart_point.y);
+    const double rear_to_ego_dis = std::hypot(
+        rear_track_iter->second->obstacle()->x_center() - ego_cart_point.x,
+        rear_track_iter->second->obstacle()->y_center() - ego_cart_point.y);
     not_safety_agent_id = front_to_ego_dis < rear_to_ego_dis
                               ? front_track_iter->first
                               : rear_track_iter->first;
@@ -1410,14 +1410,8 @@ bool OvertakeRequest::checkLaneChangeSafety(
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
     const double long_dis = front_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x =
-        ego_cart_point.x +
-        front_track_iter->second->obstacle()->x_center() * ego_fx -
-        front_track_iter->second->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y =
-        ego_cart_point.y +
-        front_track_iter->second->obstacle()->x_center() * ego_fy +
-        front_track_iter->second->obstacle()->x_center() * ego_fx;
+    obs_cart_point.x = front_track_iter->second->obstacle()->x_center();
+    obs_cart_point.y = front_track_iter->second->obstacle()->y_center();
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1465,14 +1459,8 @@ bool OvertakeRequest::checkLaneChangeSafety(
     double ego_fy = std::sin(ego_state->ego_pose_raw().theta);
     const double long_dis = rear_track_iter->second->d_s_rel();
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x =
-        ego_cart_point.x +
-        rear_track_iter->second->obstacle()->x_center() * ego_fx -
-        rear_track_iter->second->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y =
-        ego_cart_point.y +
-        rear_track_iter->second->obstacle()->x_center() * ego_fy +
-        rear_track_iter->second->obstacle()->y_center() * ego_fx;
+    obs_cart_point.x = rear_track_iter->second->obstacle()->x_center();
+    obs_cart_point.y = rear_track_iter->second->obstacle()->y_center();
 
     Point2D obs_target_frenet_point;
     if (!target_lane_coord_ptr->XYToSL(obs_cart_point,
@@ -1572,10 +1560,8 @@ void OvertakeRequest::selectTargetObstacleIds(
       return false;
     }
     Point2D obs_cart_point{0.0, 0.0};
-    obs_cart_point.x = ego_cart_point.x + veh->obstacle()->x_center() * ego_fx -
-                       veh->obstacle()->y_center() * ego_fy;
-    obs_cart_point.y = ego_cart_point.y + veh->obstacle()->x_center() * ego_fy +
-                       veh->obstacle()->y_center() * ego_fx;
+    obs_cart_point.x = veh->obstacle()->x_center();
+    obs_cart_point.y = veh->obstacle()->y_center();
 
     Point2D new_frenet_point;
     double new_lane_theta = 0.0;
@@ -1618,8 +1604,8 @@ void OvertakeRequest::selectTargetObstacleIds(
       continue;
     }
 
-    const double distance = std::hypot(obs_info->obstacle()->x_center(),
-                                       obs_info->obstacle()->y_center());
+    const double distance = std::hypot(
+        obs_info->obstacle()->x_center() - ego_state->ego_pose().x, obs_info->obstacle()->y_center() - ego_state->ego_pose().y);
     if (distance < search_range) {
       target_tracks_ids->emplace_back(id);
     }

@@ -112,6 +112,14 @@ class ConeRequest : public LaneChangeRequest {
       const double s0,
       const std::vector<std::pair<double, double>>& lane_s_width);
 
+  double QueryLaneMinWidth(
+      std::vector<ConePoint>& cone_points,
+      const std::vector<std::pair<double, double>>& lane_s_width,
+      const double target_s);
+
+  bool EnableTargetLane(
+    bool is_left, const std::shared_ptr<VirtualLane> seach_lane);
+
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;
@@ -119,6 +127,7 @@ class ConeRequest : public LaneChangeRequest {
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
   bool is_cone_lane_change_situation_ = false;
+  bool is_cone_must_lane_change_situation_ = false;
   int cone_alc_trigger_counter_;
   RequestType cone_lane_change_direction_ = NO_CHANGE;
   std::vector<ConePoint> cone_points_;
