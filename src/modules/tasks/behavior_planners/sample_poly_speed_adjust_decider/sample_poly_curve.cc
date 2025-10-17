@@ -204,9 +204,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
           rear_speed_differ_gain =
               distance_to_rear_car > acc_distance
                   ? 0.0
-                  : 2.0 * std::pow(
-                              7.0 -ttc_to_rear_car,
-                              2);
+                  : 2.0 * std::pow(7.0 - ttc_to_rear_car, 2);
         }
       } else {
         rear_speed_differ_gain = 0.0;
