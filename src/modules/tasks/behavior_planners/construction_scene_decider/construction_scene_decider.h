@@ -37,13 +37,7 @@ class ConstructionSceneDecider : public Task {
   void UnitTest();
 
  private:
-  enum class Direction {
-    DEFAULT,
-    LEFT,
-    RIGHT,
-    LON,
-    UNSURE
-  };
+  enum class Direction { DEFAULT, LEFT, RIGHT, LON, UNSURE };
   struct ConstructionAgentPoint {
     // 施工障碍物数据结构体
     double x, y;

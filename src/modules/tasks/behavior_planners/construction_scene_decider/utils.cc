@@ -1,6 +1,6 @@
 #include "utils.h"
-#include "math.h"
 #include <algorithm>  // 包含std::min_element所需的头文件
+#include "math.h"
 #include "tuple"
 namespace planning {
 namespace construction_scene_utils {
@@ -13,8 +13,8 @@ double orientation(const Point2d& a, const Point2d& b, const Point2d& c) {
 
 bool onSegment(const Point2d& a, const Point2d& b, const Point2d& p) {
   if (fabs(orientation(a, b, p)) > EPS) return false;
-    return (std::min(a.x, b.x) - EPS <= p.x && p.x <= std::max(a.x, b.x) + EPS &&
-            std::min(a.y, b.y) - EPS <= p.y && p.y <= std::max(a.y, b.y) + EPS);
+  return (std::min(a.x, b.x) - EPS <= p.x && p.x <= std::max(a.x, b.x) + EPS &&
+          std::min(a.y, b.y) - EPS <= p.y && p.y <= std::max(a.y, b.y) + EPS);
 }
 
 bool segmentsIntersect(const Point2d& p1, const Point2d& p2, const Point2d& q1,
@@ -35,7 +35,8 @@ bool segmentsIntersect(const Point2d& p1, const Point2d& p2, const Point2d& q1,
 }
 
 // 折线是否相交：任意两段相交即相交
-bool polylinesIntersect(const std::vector<Point2d>& A, const std::vector<Point2d>& B) {
+bool polylinesIntersect(const std::vector<Point2d>& A,
+                        const std::vector<Point2d>& B) {
   for (size_t i = 0; i + 1 < A.size(); ++i) {
     for (size_t j = 0; j + 1 < B.size(); ++j) {
       if (segmentsIntersect(A[i], A[i + 1], B[j], B[j + 1])) return true;

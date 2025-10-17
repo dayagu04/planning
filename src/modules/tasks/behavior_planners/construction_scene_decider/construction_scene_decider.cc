@@ -194,7 +194,8 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   }
   is_construction_agent_cluster_success_ = true;
 
-  for (auto& [cluster_id, points] : construction_agent_cluster_attribute_set_) {
+  for (auto & [ cluster_id, points ] :
+       construction_agent_cluster_attribute_set_) {
     std::sort(points.begin(), points.end(),
               [](const ConstructionAgentPoint& a, ConstructionAgentPoint& b) {
                 return a.car_x < b.car_x;
@@ -428,13 +429,13 @@ void ConstructionSceneDecider::UpdateDriveArea() {
       continue;
     }
 
-    std::cout << "lane id:" << lane->get_virtual_id() << std::endl;
+    ILOG_DEBUG << "lane id:" << lane->get_virtual_id();
     const auto& lane_points = lane->lane_points();
     std::vector<Point2d> ref_points;
     ref_points.reserve(lane_points.size());
     for (const auto& lane_point : lane_points) {
-      ref_points.emplace_back(
-          std::move(Point2d(lane_point.local_point.x, lane_point.local_point.y)));
+      ref_points.emplace_back(std::move(
+          Point2d(lane_point.local_point.x, lane_point.local_point.y)));
     }
 
     for (const auto construction_agent_cluster_iter :
@@ -455,10 +456,10 @@ void ConstructionSceneDecider::UpdateDriveArea() {
 
       results[construction_agent_cluster_iter.first][result.second]
           .emplace_back(lane->get_virtual_id());
-      std::cout << "result: " << "lane id:" << lane->get_virtual_id()
-                << "   ***  " << "cone cluster id"
-                << construction_agent_cluster_iter.first
-                << "intersection :" << result.second << std::endl;
+      ILOG_DEBUG << "result: "
+                 << "lane id:" << lane->get_virtual_id() << "   ***  "
+                 << "cone cluster id" << construction_agent_cluster_iter.first
+                 << "intersection :" << result.second;
     }
   }
 
@@ -470,7 +471,7 @@ void ConstructionSceneDecider::UpdateDriveArea() {
   //   }
 
   //   if (result.second.count(-1)) {
-  //     std::cout << "colinear_or_facing ref" << std::endl;
+  //     ILOG_DEBUG << "colinear_or_facing ref";
   //   }
   // }
 }
@@ -490,9 +491,10 @@ std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndCone(
   if (construction_scene_utils::polylinesIntersect(ref_points, cone_points)) {
     return {true, 0};
   }
-    
+
   Point2D frenet_point;
-  if (!lane_frenet_coord->XYToSL(Point2D(cone_points[0].x, cone_points[0].y), frenet_point)) {
+  if (!lane_frenet_coord->XYToSL(Point2D(cone_points[0].x, cone_points[0].y),
+                                 frenet_point)) {
     return {false, -1};
   }
 
@@ -509,11 +511,11 @@ void ConstructionSceneDecider::CheckResult(
     const std::map<int, std::map<int, std::vector<int>>>& results) {
   for (const auto result : results) {
     if (result.second.count(1) && result.second.count(2)) {
-      std::cout << "abnormal ref" << std::endl;
+      ILOG_DEBUG << "abnormal ref";
     }
 
     if (result.second.count(-1)) {
-      std::cout << "colinear_or_facing ref" << std::endl;
+      ILOG_DEBUG << "colinear_or_facing ref";
     }
   }
 }
