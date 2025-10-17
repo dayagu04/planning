@@ -190,9 +190,11 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
 
 bool SamplePolySpeedAdjustDecider::Evaluate() {
   const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
   const bool enable_merge_decelaration =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
-       lane_change_source_ == MERGE_REQUEST);
+       is_in_deceleartion_scene_);
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -398,6 +400,12 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   RunSampleSceneStateMachine();
 
   // sample v upper and lower
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  bool is_split_map_change =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
+       lane_change_source_ == MAP_REQUEST &&
+       route_info_output.mlc_request_type_route_info == MAIN_TO_RAMP);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
@@ -406,6 +414,10 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           ? 0.0
           : std::fmax(config_.sample_v_lower,
                       ego_v_ - config_.maximum_speed_adjustment);
+  speed_adjust_range_.second =
+      is_split_map_change ? std::fmax(v_suggestted_ / 2.5,
+                                      ego_v_ - config_.maximum_speed_adjustment)
+                          : speed_adjust_range_.second;
   return !agent_info_.empty();
 }
 
@@ -435,6 +447,9 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   const auto& rlane = virtual_lane_mgr->get_right_lane();
   bool is_left_edge_side_lane = llane == nullptr;
   bool is_right_edge_side_lane = rlane == nullptr;
+  bool is_split_lc_to_left =
+      route_info_output.mlc_request_type_route_info == KEEP_LEFT &&
+      !is_left_edge_side_lane;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
     const auto& split_region_info_list =
@@ -497,7 +512,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     }
   } else if (lane_change_source_ == MAP_REQUEST &&
              (route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN ||
-              route_info_output.mlc_request_type_route_info == MAIN_TO_RAMP)) {
+              route_info_output.mlc_request_type_route_info == MAIN_TO_RAMP ||
+              is_split_lc_to_left)) {
     bool is_ramp_to_main =
         route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN;
     if (boundary_merge_point_valid_) {
@@ -532,6 +548,7 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       } else {
         merge_stop_line_distance_ =
             distance_to_road_split_ - route_info_output.lsl_length;
+        return true;
       }
     }
   }
@@ -649,6 +666,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
     count_normal_to_hover_state_ = 0;
     SetDeclerationSceneWeight();
     ClearStitchedPolyPtr();
+    is_in_deceleartion_scene_ = true;
   } else {
     if (sample_scene_ == NormalSampleScene) {
       SetNormalSceneWeight();
@@ -656,6 +674,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
       v_suggestted_ = target_lane_objs_flow_vel_;
       SetPurseFlowVelSceneWeight();
     }
+    is_in_deceleartion_scene_ = false;
   }
 }
 
