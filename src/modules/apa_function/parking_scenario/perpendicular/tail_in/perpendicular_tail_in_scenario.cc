@@ -1018,15 +1018,17 @@ void PerpendicularTailInScenario::PathPlan() {
     frame_.dynamic_replan_fail_count++;
 
     // restore target pose and terminal err
-    ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-    ego_info_under_slot.target_pose.pos.y() +=
-        ego_info_under_slot.lat_move_dist_replan_success;
-    ego_info_under_slot.target_pose.pos.x() +=
-        ego_info_under_slot.lon_move_dist_replan_success;
-    ego_info_under_slot.terminal_err.Set(
-        ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
-        geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                     ego_info_under_slot.target_pose.heading));
+    // now not restore, use real-time target pose
+    // ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+    // ego_info_under_slot.target_pose.pos.y() +=
+    //     ego_info_under_slot.lat_move_dist_replan_success;
+    // ego_info_under_slot.target_pose.pos.x() +=
+    //     ego_info_under_slot.lon_move_dist_replan_success;
+    // ego_info_under_slot.terminal_err.Set(
+    //     ego_info_under_slot.cur_pose.pos -
+    //     ego_info_under_slot.target_pose.pos,
+    //     geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+    //                                  ego_info_under_slot.target_pose.heading));
 
     // const bool ego_should_stop_by_slot_jump =
     // CheckShouldStopWhenSlotJumpsMuch();
@@ -1462,17 +1464,20 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
         break;
       }
 
-      ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-      ego_info_under_slot.target_pose.pos.y() +=
-          last_ego_info_under_slot.lat_move_dist_replan_success;
-      ego_info_under_slot.target_pose.pos.x() +=
-          last_ego_info_under_slot.lon_move_dist_replan_success;
-      ego_info_under_slot.terminal_err.Set(
-          ego_info_under_slot.cur_pose.pos -
-              ego_info_under_slot.target_pose.pos,
-          geometry_lib::NormalizeAngle(
-              ego_info_under_slot.cur_pose.heading -
-              ego_info_under_slot.target_pose.heading));
+      // restore target pose and terminal err
+      // now not restore, use real-time target pose
+      // ego_info_under_slot.target_pose =
+      // ego_info_under_slot.origin_target_pose;
+      // ego_info_under_slot.target_pose.pos.y() +=
+      //     last_ego_info_under_slot.lat_move_dist_replan_success;
+      // ego_info_under_slot.target_pose.pos.x() +=
+      //     last_ego_info_under_slot.lon_move_dist_replan_success;
+      // ego_info_under_slot.terminal_err.Set(
+      //     ego_info_under_slot.cur_pose.pos -
+      //         ego_info_under_slot.target_pose.pos,
+      //     geometry_lib::NormalizeAngle(
+      //         ego_info_under_slot.cur_pose.heading -
+      //         ego_info_under_slot.target_pose.heading));
 
       break;
     }
