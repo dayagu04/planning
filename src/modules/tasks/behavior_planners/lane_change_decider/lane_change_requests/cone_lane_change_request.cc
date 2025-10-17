@@ -585,18 +585,6 @@ void ConeRequest::ConeDir() {
   bool right_change_available = false;
 
   RequestType cone_dir;
-  // scc优先利用锥桶分布判断变道方向
-  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC &&
-      ConesDirection(cone_dir)) {
-    if (cone_dir == LEFT_CHANGE && llane) {
-      cone_lane_change_direction_ = LEFT_CHANGE;
-      return;
-    }
-    if (cone_dir == RIGHT_CHANGE && rlane) {
-      cone_lane_change_direction_ = RIGHT_CHANGE;
-      return;
-    }
-  }
   bool cone_distribution_enable_left = true;
   bool cone_distribution_enable_right = true;
 
@@ -650,6 +638,18 @@ void ConeRequest::ConeDir() {
         left_change_available = true;
         ILOG_DEBUG << "left_change_available: " << left_change_available;
       }
+    }
+  }
+
+  // scc优先利用锥桶分布判断变道方向
+  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC && ConesDirection(cone_dir)) {
+    if (cone_dir == LEFT_CHANGE && llane && cone_distribution_enable_left) {
+      cone_lane_change_direction_ = LEFT_CHANGE;
+      return;
+    }
+    if (cone_dir == RIGHT_CHANGE && rlane && cone_distribution_enable_right) {
+      cone_lane_change_direction_ = RIGHT_CHANGE;
+      return;
     }
   }
 
