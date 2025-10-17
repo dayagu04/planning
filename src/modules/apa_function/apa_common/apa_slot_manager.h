@@ -244,6 +244,7 @@ class ApaSlotManager final {
   }
 
   const SlotReleaseState GetSlotReleaseState() const;
+  const SlotReleaseState GetSlotReleaseStateFreeSlot() const;
 
   const size_t GetEgoSlotInfoID() const;
 

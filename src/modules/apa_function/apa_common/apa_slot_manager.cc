@@ -824,6 +824,25 @@ const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE];
 }
 
+const SlotReleaseState ApaSlotManager::GetSlotReleaseStateFreeSlot() const {
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::RULE_BASED_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE || ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::FUSION_RELEASE] ==
+      SlotReleaseState::NOT_RELEASE) {
+    return SlotReleaseState::NOT_RELEASE;
+  }
+
+  if (ego_info_under_slot_.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] ==
+      SlotReleaseState::RELEASE) {
+    return SlotReleaseState::RELEASE;
+  }
+
+  return ego_info_under_slot_.slot.release_info_
+      .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE];
+}
+
 const size_t ApaSlotManager::GetEgoSlotInfoID() const {
   return ego_info_under_slot_.id;
 }
