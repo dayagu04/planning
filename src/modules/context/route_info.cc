@@ -3018,8 +3018,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
 
-  double dis_to_last_split_point;
-  double dis_to_last_merge_point;
+  double dis_to_last_split_point = 0.0;
+  double dis_to_last_merge_point = 0.0;
   double valid_dis = NL_NMAX;
 
   if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
@@ -3319,8 +3319,8 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
     return merge_region_info;
   }
 
-  double dis_to_last_split_point;
-  double dis_to_last_merge_point;
+  double dis_to_last_split_point = 0.0;
+  double dis_to_last_merge_point = 0.0;
   double valid_dis = NL_NMAX;
 
   if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
