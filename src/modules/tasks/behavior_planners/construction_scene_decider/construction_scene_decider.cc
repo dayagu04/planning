@@ -120,38 +120,45 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   lateral_obstacle_ = session_->environmental_model().get_lateral_obstacle();
   const auto& tracks_map = lateral_obstacle_->tracks_map();
   const auto& front_obstacles_array = lateral_obstacle_->front_tracks();
+  const auto& side_obstacles_array = lateral_obstacle_->side_tracks();
+  std::vector<std::shared_ptr<FrenetObstacle>> combined_obstacles;
+  combined_obstacles.reserve(front_obstacles_array.size() + side_obstacles_array.size());
+  combined_obstacles.insert(combined_obstacles.end(),
+                            front_obstacles_array.begin(), front_obstacles_array.end());
+  combined_obstacles.insert(combined_obstacles.end(),
+                            side_obstacles_array.begin(), side_obstacles_array.end());
   Transform2d ego_base;
   auto base_pose = Pose2D(planning_init_point.lat_init_state.x(),
                           planning_init_point.lat_init_state.y(),
                           planning_init_point.lat_init_state.theta());
   ego_base.SetBasePose(base_pose);
-  for (const auto front_obstacle : front_obstacles_array) {
-    int obstacle_id = front_obstacle->id();
-    auto front_vehicle_iter = tracks_map.find(obstacle_id);
-    if (front_vehicle_iter != tracks_map.end()) {
+  for (const auto obstacle : combined_obstacles) {
+    int obstacle_id = obstacle->id();
+    auto vehicle_iter = tracks_map.find(obstacle_id);
+    if (vehicle_iter != tracks_map.end()) {
       if (obstacle_id == kInvalidAgentId) {
         continue;
       }
-      if (IsConstructionAgent(front_vehicle_iter->second->type())) {
+      if (IsConstructionAgent(vehicle_iter->second->type())) {
         // 目前仅针对锥桶一个类型，后续扩展这里可以用子函数筛选
         // IsConstructionAgent 是否为施工类型障碍物
-        if (front_vehicle_iter->second->d_s_rel() < -ego_length ||
-            front_vehicle_iter->second->d_s_rel() >
+        if (vehicle_iter->second->d_s_rel() < -ego_length ||
+            vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
           continue;
         }
         cone_nums_of_front_objects++;
         Point2D obs_cart_point{0.0, 0.0};
         Point2D obs_frenet_point;
-        obs_cart_point.x = front_vehicle_iter->second->obstacle()->x_center();
-        obs_cart_point.y = front_vehicle_iter->second->obstacle()->y_center();
+        obs_cart_point.x = vehicle_iter->second->obstacle()->x_center();
+        obs_cart_point.y = vehicle_iter->second->obstacle()->y_center();
         if (frenet_obstacles_map.find(obstacle_id) ==
                 frenet_obstacles_map.end() ||
             !frenet_obstacles_map.at(obstacle_id)->b_frenet_valid()) {
           continue;
         }
-        double cone_s = front_vehicle_iter->second->frenet_s();
-        double cone_l = front_vehicle_iter->second->frenet_l();
+        double cone_s = vehicle_iter->second->frenet_s();
+        double cone_l = vehicle_iter->second->frenet_l();
         Pose2D obs_car_point;
         ego_base.GlobalPointToULFLocal(
             &obs_car_point, Pose2D(obs_cart_point.x, obs_cart_point.y, 0));
@@ -162,7 +169,7 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
         GetOriginLaneWidthByConstructionAgent(base_lane, cone_s, cone_l, false,
                                               &dist_to_right_boundary);
         auto point = ConstructionAgentPoint(
-            front_vehicle_iter->first, obs_cart_point.x, obs_cart_point.y,
+            vehicle_iter->first, obs_cart_point.x, obs_cart_point.y,
             obs_car_point.x, obs_car_point.y, cone_s, cone_l,
             dist_to_left_boundary, dist_to_right_boundary);
         construction_agent_points_.push_back(point);
@@ -189,15 +196,16 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   construction_agent_cluster_size_.clear();
   construction_agent_cluster_.clear();
   for (const auto& p : construction_agent_points_) {
-    // 构建相同cluster属性所包含cones的map
-    construction_agent_cluster_attribute_set_[p.cluster].push_back(p);
+    // 构建相同cluster属性所包含施工障碍物的map
+    construction_agent_cluster_attribute_set_[p.cluster].points.push_back(p);
   }
+
   is_construction_agent_cluster_success_ = true;
 
-  for (auto & [ cluster_id, points ] :
+  for (auto& [cluster_id, cluster_area] :
        construction_agent_cluster_attribute_set_) {
-    std::sort(points.begin(), points.end(),
-              [](const ConstructionAgentPoint& a, ConstructionAgentPoint& b) {
+    std::sort(cluster_area.points.begin(), cluster_area.points.end(),
+              [](const ConstructionAgentPoint& a, const ConstructionAgentPoint& b) {
                 return a.car_x < b.car_x;
               });
   }
@@ -208,8 +216,8 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
   std::vector<double> construction_agent_clusters_length;
   for (const auto& cluster_attribute_iter :
        construction_agent_cluster_attribute_set_) {
-    const std::vector<ConstructionAgentPoint>& points =
-        cluster_attribute_iter.second;
+    const ConstructionAgentPoints& points =
+        cluster_attribute_iter.second.points;
     for (const auto& p : points) {
       construction_agent_cluster_attribute_ids.emplace_back(p.id);
     }
@@ -222,57 +230,10 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
                     construction_agent_clusters_length, 0);
   JSON_DEBUG_VECTOR("construction_agent_cluster_attribute_ids",
                     construction_agent_cluster_attribute_ids, 0);
-
-  bool did_break = false;
-  for (const auto& cluster_attribute_iter :
-       construction_agent_cluster_attribute_set_) {
-    int cluster = cluster_attribute_iter.first;
-    const std::vector<ConstructionAgentPoint>& points =
-        cluster_attribute_iter.second;
-    double min_left_l, min_right_l, pass_threshold_left, pass_threshold_right;
-    min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
-    min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
-
-    pass_threshold_left =
-        vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-    pass_threshold_right =
-        vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
-    ILOG_DEBUG << "min_left_l is:" << min_left_l
-               << ", min_right_l is: is:" << min_right_l
-               << ", pass_threshold_left is:" << pass_threshold_left
-               << ", pass_threshold_right is:" << pass_threshold_right;
-    // judge if to trigger cone lc
-    if (min_left_l < pass_threshold_left &&
-        min_right_l < pass_threshold_right) {
-      construction_agent_alc_trigger_counter_++;
-      ILOG_DEBUG << "trigger_counter is "
-                 << construction_agent_alc_trigger_counter_ << ", cluster is "
-                 << cluster;
-      if (construction_agent_alc_trigger_counter_ >= kConeAlcCountThre) {
-        is_construction_agent_lane_change_situation_ = true;
-        return;
-      }
-      did_break = true;
-      break;
-    }
-  }
-
-  // if all clusters is far away from cernter line, counter--
-  if (!did_break) {
-    construction_agent_alc_trigger_counter_ = std::max(
-        construction_agent_alc_trigger_counter_ - 1, kConeAlcCountLowerThre);
-    ILOG_DEBUG << "trigger_counter is "
-               << construction_agent_alc_trigger_counter_;
-    if (construction_agent_alc_trigger_counter_ < kConeAlcCountThre) {
-      is_construction_agent_lane_change_situation_ = false;
-    }
-  }
-  // if all cone l is larger than threshold, then no need to lane change
-  return;
 }
 
 void ConstructionSceneDecider::DbScan(
-    std::vector<ConstructionAgentPoint>& cone_points, double eps_x,
+    ConstructionAgentPoints& cone_points, double eps_x,
     double eps_y, int minPts) {
   int c = 0;  // cluster index
   for (size_t index = 0; index < cone_points.size(); ++index) {
@@ -292,7 +253,7 @@ bool ConstructionSceneDecider::ConstructionAgentDistance(
 }
 
 void ConstructionSceneDecider::ExpandCluster(
-    std::vector<ConstructionAgentPoint>& cone_points, int index, int c,
+    ConstructionAgentPoints& cone_points, int index, int c,
     double eps_x, double eps_y, int minPts) {
   std::vector<int> neighborPts;
 
@@ -324,7 +285,7 @@ void ConstructionSceneDecider::ExpandCluster(
 }
 
 double ConstructionSceneDecider::CalcClusterToBoundaryDist(
-    const std::vector<ConstructionAgentPoint>& points, RequestType direction) {
+    const ConstructionAgentPoints& points, RequestType direction) {
   double left_l = std::abs(points[0].left_dist);
   double right_l = std::abs(points[0].right_dist);
   for (const auto& p : points) {
@@ -440,13 +401,13 @@ void ConstructionSceneDecider::UpdateDriveArea() {
 
     for (const auto construction_agent_cluster_iter :
          construction_agent_cluster_attribute_set_) {
-      if (construction_agent_cluster_iter.second.size() <= 1) {
+      if (construction_agent_cluster_iter.second.points.size() <= 1) {
         continue;
       }
       std::vector<Point2d> cone_points;
-      cone_points.reserve(construction_agent_cluster_iter.second.size());
+      cone_points.reserve(construction_agent_cluster_iter.second.points.size());
       for (const auto& agent_clusters :
-           construction_agent_cluster_iter.second) {
+           construction_agent_cluster_iter.second.points) {
         cone_points.emplace_back(
             std::move(Point2d(agent_clusters.x, agent_clusters.y)));
       }
