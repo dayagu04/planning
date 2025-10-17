@@ -147,12 +147,17 @@ class ConstructionSceneDecider : public Task {
   bool IsConstructionAgent(iflyauto::ObjectType type);
 
   void UpdateDriveArea();
+
   std::pair<bool, int> CalIntersectionRefAndCone(
       std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
       const std::vector<Point2d>& ref_points,
       const std::vector<Point2d>& cone_points);
+
   void UpdateResult(
     const std::map<int, std::map<int, std::vector<int>>>& results);
+
+  void SaveLatDebugInfo();
+
  private:
   ConstructionSceneDeciderConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;

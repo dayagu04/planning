@@ -70,6 +70,8 @@ bool ConstructionSceneDecider::Execute() {
 
   UpdateDriveArea();
 
+  SaveLatDebugInfo();
+
   JSON_DEBUG_VALUE("ConstructionSceneDeciderCostTime", end_time - start_time);
   return true;
 }
@@ -213,27 +215,6 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
           return a.car_x < b.car_x;
         });
   }
-
-  // 保存聚类的障碍物信息
-  std::vector<double> construction_agent_cluster_attribute_ids;
-  std::vector<double> construction_agent_clusters;
-  std::vector<double> construction_agent_clusters_length;
-  for (const auto& cluster_attribute_iter :
-       construction_agent_cluster_attribute_set_) {
-    const ConstructionAgentPoints& points =
-        cluster_attribute_iter.second.points;
-    for (const auto& p : points) {
-      construction_agent_cluster_attribute_ids.emplace_back(p.id);
-    }
-    construction_agent_clusters.emplace_back(cluster_attribute_iter.first);
-    construction_agent_clusters_length.emplace_back(points.size());
-  }
-  JSON_DEBUG_VECTOR("construction_agent_clusters", construction_agent_clusters,
-                    0);
-  JSON_DEBUG_VECTOR("construction_agent_clusters_length",
-                    construction_agent_clusters_length, 0);
-  JSON_DEBUG_VECTOR("construction_agent_cluster_attribute_ids",
-                    construction_agent_cluster_attribute_ids, 0);
 }
 
 void ConstructionSceneDecider::DbScan(ConstructionAgentPoints& cone_points,
@@ -485,4 +466,37 @@ void ConstructionSceneDecider::UpdateResult(
     }
   }
 }
+
+void ConstructionSceneDecider::SaveLatDebugInfo() {
+  // 保存聚类的障碍物信息
+  JSON_DEBUG_VALUE("is_construction_agent_cluster_success",
+                    is_construction_agent_cluster_success_);
+  if (is_construction_agent_cluster_success_) {
+    std::vector<double> construction_agent_cluster_attribute_ids;
+    std::vector<double> construction_agent_clusters;
+    std::vector<double> construction_agent_clusters_length;
+    std::vector<double> construction_agent_clusters_driection;
+    for (const auto& cluster_attribute_iter :
+        construction_agent_cluster_attribute_set_) {
+      const ConstructionAgentPoints& points =
+          cluster_attribute_iter.second.points;
+      for (const auto& p : points) {
+        construction_agent_cluster_attribute_ids.emplace_back(p.id);
+      }
+      construction_agent_clusters.emplace_back(cluster_attribute_iter.first);
+      construction_agent_clusters_length.emplace_back(points.size());
+      construction_agent_clusters_driection.emplace_back(static_cast<uint32_t>(
+          cluster_attribute_iter.second.direction));
+    }
+    JSON_DEBUG_VECTOR("construction_agent_clusters", construction_agent_clusters,
+                      0);
+    JSON_DEBUG_VECTOR("construction_agent_clusters_length",
+                      construction_agent_clusters_length, 0);
+    JSON_DEBUG_VECTOR("construction_agent_cluster_attribute_ids",
+                      construction_agent_cluster_attribute_ids, 0);
+    JSON_DEBUG_VECTOR("construction_agent_clusters_driection",
+                      construction_agent_clusters_driection, 0);
+  }
+}
+
 }  // namespace planning

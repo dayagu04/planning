@@ -326,7 +326,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
                 loc_msg.velocity.velocity_boot.vz * loc_msg.velocity.velocity_boot.vz)
       vel_ego =  linear_velocity_from_wheel
 
-    steer_deg = vs_msg.steering_wheel_angle * 57.3
+    steer_deg = 0
     if g_is_display_enu:
       local_view_data['data_text'].data.update({
         'vel_ego_text': ['v={:.2f}\nsteer={:.2f}'.format(round(vel_ego, 2), round(steer_deg, 2))],

@@ -1887,6 +1887,7 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
   construction_agent_clusters = plan_debug_json_msg['construction_agent_clusters']
   construction_agent_clusters_length = plan_debug_json_msg['construction_agent_clusters_length']
   construction_agent_cluster_attribute_ids = plan_debug_json_msg['construction_agent_cluster_attribute_ids']
+  construction_agent_clusters_driection = plan_debug_json_msg['construction_agent_clusters_driection']
   vars = [f'cluster_{i}' for i in range(1, 9)] # 默认8个类别
   construction_agent_clusters_nums = len(construction_agent_clusters)
   names  = []
@@ -1894,7 +1895,7 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
   i = 0
   id_to_color = {}
   id_to_text_color = {}
-
+  id_to_direction = {}
   for name in vars:
     try:
       if i < construction_agent_clusters_nums:
@@ -1902,6 +1903,16 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
         start = sum(construction_agent_clusters_length[:i])
         end = start + construction_agent_clusters_length[i]
         cluster_ids = construction_agent_cluster_attribute_ids[int(start):int(end)]
+        if (0 == construction_agent_clusters_driection[i]):
+          direction = "DEFAULT"
+        elif (1 == construction_agent_clusters_driection[i]):
+          direction = "LEFT"
+        elif (2 == construction_agent_clusters_driection[i]):
+          direction = "RIGHT"
+        elif (3 == construction_agent_clusters_driection[i]):
+          direction = "LON"
+        elif (4 == construction_agent_clusters_driection[i]):
+          direction = "UNSURE"
         datas.append(cluster_ids)
         names.append(cluster)
         color = palette[i % len(palette)] if i < len(palette) else default_fill_color
@@ -1910,6 +1921,8 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
         text_color = palette[i % len(palette)] if i < len(palette) else default_text_color
         for cid in cluster_ids:
             id_to_text_color[cid] = text_color
+        for cid in cluster_ids:
+            id_to_direction[cid] = direction
       else:
         datas.append([])
         names.append([])
@@ -2039,18 +2052,33 @@ def load_prediction_obstacle(prediction_msg, plan_debug_json_msg, is_enu_to_car 
     obs_info_all[source]['obstacles_vel'].append(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x)
     obs_info_all[source]['obstacles_acc'].append(obstacle_list[i].fusion_obstacle.common_info.relative_acceleration.x)
     obs_info_all[source]['obstacles_tid'].append(obstacle_list[i].fusion_obstacle.common_info.id)
-    if frenet_vs == 255 and frenet_vl == 255:
-      obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
-          + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
-          + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
-          + lat_decision + '\n' + is_static)
-    else:
-      obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
-          + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
-          + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
-          +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
-          + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2)))
 
+    if obstacle_list[i].fusion_obstacle.additional_info.track_id in id_to_direction:
+      obs_direction = id_to_direction[obstacle_list[i].fusion_obstacle.additional_info.track_id]
+      if frenet_vs == 255 and frenet_vl == 255:
+        obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'direction: ' + obs_direction)
+      else:
+        obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
+            +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2))+'\n'\
+            + 'direction: ' + obs_direction)
+    else:
+      if frenet_vs == 255 and frenet_vl == 255:
+        obs_info_all[source]['obs_label'].append('v(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 4))+','+ str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n'\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+','+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 4))+'\n'\
+            + lat_decision + '\n' + is_static)
+      else:
+        obs_info_all[source]['obs_label'].append('vs(' + str(obstacle_list[i].fusion_obstacle.additional_info.track_id) + ')=' \
+            + str(round(frenet_vs, 2))+', '+ str(round(frenet_vl, 2))+', '+str(obstacle_list[i].fusion_obstacle.common_info.type)+'\n' +'rel_v: '\
+            + str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.relative_velocity.y, 2))+'\n'\
+            +'abs_v: '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.x, 2))+', '+ str(round(obstacle_list[i].fusion_obstacle.common_info.velocity.y, 2))+'\n'\
+            + lat_decision + '\n' + is_static + '\n' + 'total_v: '+ str(round(math.hypot(obstacle_list[i].fusion_obstacle.common_info.velocity.x, obstacle_list[i].fusion_obstacle.common_info.velocity.y), 2)))
 
     obs_color = id_to_color.get(obstacle_list[i].fusion_obstacle.additional_info.track_id, default_fill_color)
     obs_info_all[source]['color'].append(obs_color)
