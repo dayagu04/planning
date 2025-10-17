@@ -441,7 +441,7 @@
   "force_fold_mirror": false,
   "locked_obs_slot_with_fold_mirror": false,
   "fold_mirror_consume_time": 2.4,
-  "fold_mirror_lat_buffer": 0.12,
+  "fold_mirror_lat_buffer": 0.15,
   "fold_mirror_min_lat_buffer": 0.09,
   "fold_mirror_min_vel": 0.3,
   "fold_mirror_reaction_time": 1.6,
