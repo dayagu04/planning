@@ -255,7 +255,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
           lat_motion_plan_input.hard_lower_bound_y0_vec
 
         first_soft_upper_bound_x1_vec, first_soft_upper_bound_y1_vec = lat_motion_plan_input.hard_upper_bound_x1_vec, \
-          lat_motion_plan_input.hard_soft_upper_bound_y1_vec
+          lat_motion_plan_input.hard_upper_bound_y1_vec
 
         first_soft_lower_bound_x1_vec, first_soft_lower_bound_y1_vec = lat_motion_plan_input.hard_lower_bound_x1_vec, \
           lat_motion_plan_input.hard_lower_bound_y1_vec
@@ -658,11 +658,14 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       plan_delta = trajectory.trajectory_points[i].curvature
       if i % 8 == 0:
         plan_lat_acc.append(plan_delta * plan_v2)
-        if i < len(trajectory.trajectory_points) - 1:
+        if i < len(trajectory.trajectory_points) - 8:
           plan_next_delta = trajectory.trajectory_points[i + 8].curvature
           plan_next_time = trajectory.trajectory_points[i + 8].t
           plan_time = trajectory.trajectory_points[i].t
-          plan_omega = (plan_next_delta - plan_delta) / (plan_next_time - plan_time)
+          dt = plan_next_time - plan_time
+          if dt < 1e-6:
+            dt = 0.2
+          plan_omega = (plan_next_delta - plan_delta) / dt
         plan_lat_jerk.append(plan_omega * plan_v2)
     lat_plan_data['data_lat_motion_plan_output'].data.update({
       'final_acc_vec': plan_lat_acc,
