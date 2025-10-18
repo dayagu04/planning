@@ -82,6 +82,8 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
   virtual const CarSlotRelationship CalCarSlotRelationship(
       const geometry_lib::PathPoint& cur_pose) override;
 
+  void DecideFoldMirrorCommand();
+
   std::vector<pnc::geometry_lib::PathSegment> current_plan_path_vec_;
   std::vector<pnc::geometry_lib::PathSegment> all_plan_path_vec_;
 };
