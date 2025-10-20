@@ -113,19 +113,6 @@ int HybridAStarInterface::UpdateEDT() {
   return 0;
 }
 
-void HybridAStarInterface::UpdateEDTByObs(const ParkObstacleList& obs_list) {
-  Pose2f ogm_base_pose;
-  UpdateEDTBasePose(ogm_base_pose);
-
-  ogm_.Clear();
-  ogm_.Process(ogm_base_pose);
-  ogm_.AddParkingObs(obs_list);
-
-  edt_.Excute(ogm_, ogm_base_pose);
-
-  return;
-}
-
 void HybridAStarInterface::UpdateOutput() {
   double response_start_time = IflyTime::Now_ms();
 
@@ -620,32 +607,41 @@ void HybridAStarInterface::UpdateGridMapBound() {
   // update grid map range, ego pose need to be in range map_bounds.
   if (request_.space_type == ParkSpaceType::VERTICAL ||
       request_.space_type == ParkSpaceType::SLANTING) {
-    map_bounds_.x_min = -2;
-    map_bounds_.x_max = 20;
-    map_bounds_.y_min = -20;
-    map_bounds_.y_max = 20;
+    map_bounds_.x_min = config_.vertical_map_bound_x_lower;
+    map_bounds_.x_max = 20.0f;
+    map_bounds_.y_min = -20.0f;
+    map_bounds_.y_max = 20.0f;
+
+    // check ego position
+    std::array<Position2f, 4> veh_box;
+    GetVehPolygonBy4Edge(veh_box, vehicle_param_.rear_edge_to_rear_axle,
+                         vehicle_param_.front_edge_to_rear_axle,
+                         vehicle_param_.max_width / 2.0 + 0.2f);
+
+    Transform2f tf;
+    tf.SetBasePose(request_.start_pose);
+    Position2f global;
+    for (int i = 0; i < 4; i++) {
+      tf.ULFLocalPointToGlobal(&global, veh_box[i]);
+
+      map_bounds_.x_min = std::min(map_bounds_.x_min, global.x);
+      map_bounds_.x_min =
+          std::max(map_bounds_.x_min, config_.vertical_map_bound_min_x_lower);
+    }
   } else {
-    map_bounds_.x_min = -10;
-    map_bounds_.x_max = 14;
-    map_bounds_.y_min = -12;
-    map_bounds_.y_max = 15;
+    map_bounds_.x_min = -10.0f;
+    map_bounds_.x_max = 14.0f;
+    map_bounds_.y_min = -20.0f;
+    map_bounds_.y_max = 15.0f;
   }
 
   return;
 }
 
 void HybridAStarInterface::UpdateEDTBasePose(Pose2f& ogm_base_pose) {
-  // range
-  if (request_.space_type == ParkSpaceType::VERTICAL ||
-      request_.space_type == ParkSpaceType::SLANTING) {
-    ogm_base_pose.x = -3.0;
-    ogm_base_pose.y = -20.0;
-    ogm_base_pose.theta = 0.0;
-  } else {
-    ogm_base_pose.x = -10.0;
-    ogm_base_pose.y = -20.0;
-    ogm_base_pose.theta = 0.0;
-  }
+  ogm_base_pose.x = map_bounds_.x_min;
+  ogm_base_pose.y = map_bounds_.y_min;
+  ogm_base_pose.theta = 0.0;
 
   return;
 }

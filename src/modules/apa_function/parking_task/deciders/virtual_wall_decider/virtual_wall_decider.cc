@@ -415,19 +415,15 @@ const MapBound VirtualWallDecider::GetMaxMapBound() const {
   tmp.Combine(veh_boundary_);
 
   return MapBound(
-    tmp.x_lower,   // x_min
-    tmp.x_upper,   // x_max
-    tmp.y_lower,   // y_min
-    tmp.y_upper    // y_max
-  );
+      static_cast<float>(tmp.x_lower), static_cast<float>(tmp.x_upper),
+      static_cast<float>(tmp.y_lower), static_cast<float>(tmp.y_upper));
 }
 
 const MapBound VirtualWallDecider::GetVehBound() const {
-  return MapBound(veh_boundary_.x_lower,  // x_min
-                  veh_boundary_.x_upper,  // x_max
-                  veh_boundary_.y_lower,  // y_min
-                  veh_boundary_.y_upper   // y_max
-  );
+  return MapBound(static_cast<float>(veh_boundary_.x_lower),
+                  static_cast<float>(veh_boundary_.x_upper),
+                  static_cast<float>(veh_boundary_.y_lower),
+                  static_cast<float>(veh_boundary_.y_upper));
 }
 }  // namespace apa_planner
 }  // namespace planning
