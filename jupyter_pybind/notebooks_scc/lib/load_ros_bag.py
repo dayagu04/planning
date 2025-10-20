@@ -163,7 +163,8 @@ class LoadRosbag:
         global_var.set_value('car_type', 'CHERY_E0X')
     elif 'M32T' in self.bag_path:
         global_var.set_value('car_type', 'CHERY_M32T')
-
+    elif 'E541' in self.bag_path:
+        global_var.set_value('car_type', 'BESTUNE_E541')
   def load_all_data(self, normal_print = True):
     print('load bag')
     scene_type = 'HIGHWAY'
@@ -943,7 +944,7 @@ class LoadRosbag:
     except Exception as e:
       self.soc_state_msg['enable'] = False
       print('missing /iflytek/fsm/soc_state !!!')
-
+    # scene_type = 'HPP'
     # load ehr static map msg
     try:
       ehr_static_map_msg_dict = {}
