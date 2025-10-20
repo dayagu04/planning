@@ -667,27 +667,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         except:
           pass
 
-
-
-    #加载planning 生成中心线的信息
-    try:
-      plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
-      if(len(plan_gen_refline_list) > 0):
-        plan_gen_refline = plan_gen_refline_list[0]
-        line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg)
-          #line_x.append(virtual_lane_refline_point.car_point.x)
-          #line_y.append(virtual_lane_refline_point.car_point.y)
-        local_view_data['data_center_line_gen'].data.update({
-              'center_line_gen_x': line_x,
-              'center_line_gen_y': line_y,
-        })
-      else:
-        local_view_data['data_center_line_gen'].data.update({
-              'center_line_gen_x': [],
-              'center_line_gen_y': [],
-        })
-    except:
-      pass
   # fix_lane,origin_lane
   planning_succ = False
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -714,6 +693,27 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     except:
       pass
     print("distance_to_target_slot: ", plan_debug_json_msg['distance_to_target_slot'])
+
+    #加载planning 生成中心线的信息
+    try:
+      plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
+      if(len(plan_gen_refline_list) > 0):
+        plan_gen_refline = plan_gen_refline_list[0]
+        line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg, g_is_display_enu)
+          #line_x.append(virtual_lane_refline_point.car_point.x)
+          #line_y.append(virtual_lane_refline_point.car_point.y)
+        local_view_data['data_center_line_gen'].data.update({
+          'center_line_gen_x': line_x,
+          'center_line_gen_y': line_y,
+        })
+      else:
+        local_view_data['data_center_line_gen'].data.update({
+          'center_line_gen_x': [],
+          'center_line_gen_y': [],
+        })
+    except:
+      print("no generated_refline_info!")
+      pass
     lat_behavior_common = plan_debug_msg.lat_behavior_common
     environment_model_info = plan_debug_msg.environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -2633,6 +2633,7 @@ def load_local_view_figure():
   fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
