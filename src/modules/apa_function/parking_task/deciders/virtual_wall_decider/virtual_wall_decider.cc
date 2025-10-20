@@ -34,14 +34,9 @@ void VirtualWallDecider::GenerateVehPolygonInSlot(const Pose2D& ego) {
 const bool VirtualWallDecider::IsVirtualWallPointCollision(
     const Position2D& point) {
   bool is_collision;
-
   gjk_interface_.PolygonPointCollisionDetect(&is_collision,
                                              &ego_polygon_in_slot_, point);
-  if (is_collision) {
-    return true;
-  }
-
-  return false;
+  return is_collision;
 }
 
 void VirtualWallDecider::Process(std::vector<Position2D>& points,
@@ -105,10 +100,9 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
     } else if (slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       LeftSideParallelVirtualWall(points, slot.GetWidth(), slot.GetLength());
     }
-
-    ILOG_INFO << "parallel slot virtual wall";
   }
 
+  ILOG_INFO << "slot virtual wall";
   return;
 }
 
@@ -125,7 +119,7 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
   int size = std::ceil(len / ds) + 1;
 
   Eigen::Vector2d point;
-  for (size_t i = 0; i < size; i++) {
+  for (int i = 0; i < size; i++) {
     point = start + s * unit_line_vec;
     s += ds;
     s = std::min(s, len);

@@ -147,13 +147,11 @@ void GJK2DInterface::PolygonPointCollisionDetect(bool *is_collision,
 
   if (!ifly_fless(delta_d, 0.01)) {
     *is_collision = false;
-  } else if (d <= polygon->min_tangent_radius) {
+  } else if (d < polygon->min_tangent_radius) {
     *is_collision = true;
   } else {
-    int32_t i;
-
     shape_p_.size = polygon->vertex_num;
-    for (i = 0; i < polygon->vertex_num; ++i) {
+    for (int i = 0; i < polygon->vertex_num; ++i) {
       shape_p_.vertices[i][0] = polygon->vertexes[i].x;
       shape_p_.vertices[i][1] = polygon->vertexes[i].y;
     }
