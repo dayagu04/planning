@@ -358,6 +358,9 @@ bool EnvironmentalModelManager::Run() {
   } else if (rads_mode) {
     environmental_model->set_function_info(common::DrivingFunctionInfo::RADS,
                                            function_state);
+  } else if (nsa_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::NSA,
+                                           function_state);
   } else {
     LOG_NOTICE("function mode error");
     environmental_model->set_function_info(common::DrivingFunctionInfo::ACC,

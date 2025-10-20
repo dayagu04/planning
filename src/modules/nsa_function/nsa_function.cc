@@ -1,6 +1,6 @@
-#include "hpp_function.h"
+#include "nsa_function.h"
 
-#include "src/hpp_task_pipeline.h"
+#include "src/nsa_task_pipeline.h"
 
 namespace planning {
 NsaFunction::NsaFunction(framework::Session *session) : BaseFunction(session) {

@@ -80,6 +80,7 @@ void PlanningScheduler::Init(
   apa_function_ = std::make_unique<ApaFunction>(&session_);
   rads_function_ = std::make_unique<RadsFunction>(&session_);
   adas_function_ = std::make_unique<AdasFunction>(&session_);
+  nsa_function_ = std::make_unique<NsaFunction>(&session_);
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
@@ -135,9 +136,14 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::HPP;
   } else if (IsValidRadsState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::RADS;
+  } else if (IsValidNsaState(func_state_machine.current_state)) {
+    scene_type = planning::common::SceneType::NSA;
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
+
+  // hack
+  scene_type = planning::common::SceneType::NSA;
   session_.set_scene_type(scene_type);
 
   auto frame_info =
@@ -197,7 +203,7 @@ bool PlanningScheduler::RunOnce(
   }
 
   if (function_type == common::HIGHWAY || function_type == common::HPP ||
-      function_type == common::RADS) {
+      function_type == common::RADS || function_type == common::NSA) {
     planning_success = ExcuteNavigationFunction(
         function_type, start_timestamp, planning_output, planning_hmi_info);
     // can not active lcc/noa function if planning failed
@@ -1009,6 +1015,12 @@ bool PlanningScheduler::IsValidRadsState(
          current_state == iflyauto::FunctionalState_RADS_COMPLETE;
 }
 
+bool PlanningScheduler::IsValidNsaState(
+    const iflyauto::FunctionalState &current_state) {
+  return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
+         current_state <= iflyauto::FunctionalState_HPP_ERROR;
+}
+
 void PlanningScheduler::InitSccFunction() {
   // TODO：配置文件改成和场景/功能有关，不能使用默认场景
   planning::common::SceneType scene_type = session_.get_scene_type();
@@ -1264,8 +1276,10 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
   // update environment model
   if (!environmental_model_manager_.Run()) {
-    session_.mutable_planning_context()->Clear();
-    return false;
+
+    // hack
+    // session_.mutable_planning_context()->Clear();
+    // return false;
   }
 
   bool planning_success;
@@ -1275,6 +1289,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     planning_success = hpp_function_->Plan();
   } else if (function_type == planning::common::SceneType::RADS) {
     planning_success = rads_function_->Plan();
+  }  else if (function_type == planning::common::SceneType::NSA) {
+    planning_success = nsa_function_->Plan();
   } else {
     planning_success = scc_function_->Plan();
   }

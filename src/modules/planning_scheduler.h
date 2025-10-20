@@ -15,6 +15,7 @@
 #include "planning_plan_c.h"
 #include "rads_function/rads_function.h"
 #include "scc_function/scc_function.h"
+#include "nsa_function/nsa_function.h"
 #include "session.h"
 namespace planning {
 
@@ -102,7 +103,7 @@ class PlanningScheduler {
   bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
   bool IsValidHppState(const iflyauto::FunctionalState &current_state);
   bool IsValidRadsState(const iflyauto::FunctionalState &current_state);
-
+  bool IsValidNsaState(const iflyauto::FunctionalState &current_state); 
   void InitSccFunction();
 
   void interpolate_with_last_trajectory_points();
@@ -161,6 +162,7 @@ class PlanningScheduler {
   std::unique_ptr<BaseFunction> apa_function_ = nullptr;
   std::unique_ptr<BaseFunction> rads_function_;
   std::unique_ptr<BaseFunction> adas_function_ = nullptr;
+  std::unique_ptr<BaseFunction> nsa_function_ = nullptr;
 
   planner::EnvironmentalModelManager environmental_model_manager_;
 
