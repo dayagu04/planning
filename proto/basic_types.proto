@@ -324,6 +324,7 @@ message DrivingFunctionInfo {
     NOA = 2;
     HPP = 3;
     RADS = 4;
+    NSA = 5;
   }
   enum DrivingFunctionstate {
     ACTIVATE = 0;

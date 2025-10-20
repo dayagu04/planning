@@ -156,6 +156,9 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
       }
     }
   }
+
+  // 临时hack
+  scene_type_ = "nsa";
   bag.close();
   if (!find_scene_type) {
     std::cout << "Attention!!!!!!! Unable to recognize the scene_type frome "
@@ -187,7 +190,7 @@ bool PlanningPlayer::Init(bool is_close_loop, double auto_time_sec,
   copy_confif_files(source, destination);
 
   if (scene_type_ == "scc" || scene_type_ == "hpp" || scene_type_ == "noa" ||
-      scene_type_ == "acc" || scene_type_ == "rads") {
+      scene_type_ == "acc" || scene_type_ == "rads" || scene_type_ == "nsa") {
     for (const auto& it : msg_cache_[TOPIC_PLANNING_DEBUG_INFO]) {
       auto debug_info_msg =
           boost::any_cast<sensor_interface::DebugInfo::Ptr>(it.second);

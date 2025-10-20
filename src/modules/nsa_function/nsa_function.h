@@ -7,11 +7,11 @@
 
 namespace planning {
 
-class HppFunction : public BaseFunction {
+class NsaFunction : public BaseFunction {
  public:
-  HppFunction(framework::Session *session);
+  NsaFunction(framework::Session *session);
 
-  virtual ~HppFunction() = default;
+  virtual ~NsaFunction() = default;
 
   bool Reset() override;
 
