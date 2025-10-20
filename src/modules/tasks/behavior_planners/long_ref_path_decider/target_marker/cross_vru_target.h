@@ -12,7 +12,7 @@ constexpr double kInvalid = -1.0;
 
 struct CrossVRUProfileParams {
   double v0 = 33.5;
-  double s0 = 5.0;
+  double s0 = 4.0;
   double T = 1.2;
   double a = 1.5;
   double b = 1.0;
@@ -24,7 +24,7 @@ struct CrossVRUProfileParams {
   double default_front_s = 200;
   double cool_factor = 0.99;
   double over_speed_factor = 0.3;
-  double end_time_buffer = 0.5;
+  double end_time_buffer = 1.0;
 };
 
 struct CrossVRUAgentInfo {
