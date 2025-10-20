@@ -36,7 +36,7 @@ fig1.height = 1500
 
 load_measure_distance_tool(fig1)
 load_measure_distance_tool(fig7)
-fig_12, data_center_line_info = load_center_line_info()
+# fig_12, data_center_line_info = load_center_line_info()
 fig_lat_offset = load_lateral_offset(bag_loader)
 fig_receive_topic_time = load_receive_topic_time(bag_loader)
 fig_hmi = load_avoid_hmi(bag_loader)
@@ -293,7 +293,7 @@ def slider_callback(bag_time, prediction_obstacle_id, obstacle_polygon_id):
   update_select_obstacle_id(prediction_obstacle_id, obstacle_polygon_id, local_view_data)
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
   update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_data)
-  update_center_line_info(data_center_line_info, local_view_data)
+  # update_center_line_info(data_center_line_info, local_view_data)
   # update_select_obstacle_polygon(data_select_obstacle_polygon, local_view_data)
   if bag_loader.plan_debug_msg['enable'] == True:
     update_lat_behavior_data(local_view_data)
