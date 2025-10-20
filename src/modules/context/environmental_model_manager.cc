@@ -255,6 +255,7 @@ bool EnvironmentalModelManager::Run() {
   const auto& local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
+  // check localization
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
@@ -263,9 +264,14 @@ bool EnvironmentalModelManager::Run() {
         local_view.localization.status.status_info.mode ==
         iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
   }
-  bool fusion_localization_valid =
+  // check fusion
+  bool fusion_valid_on_road =
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
+  bool location_valid_on_openspace =
+      local_view.fusion_objects_info.local_point_valid &&
+      local_view.fusion_occupancy_objects_info.local_point_valid;
+  // check planner type
   bool planner_valid = GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::SCC_PLANNER_V2 ||
                        GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
@@ -275,8 +281,11 @@ bool EnvironmentalModelManager::Run() {
   // printf("planner_type:%d\n",
   // GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid =
-      localization_valid && fusion_localization_valid && planner_valid;
-
+      localization_valid && fusion_valid_on_road && planner_valid;
+  if (session_->is_nsa_scene()) {
+    location_valid =
+        localization_valid && location_valid_on_openspace && planner_valid;
+  }
   if (session_->is_hpp_scene() && !location_valid) {
     ILOG_ERROR << "hpp location invalid";
     return false;

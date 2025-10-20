@@ -295,7 +295,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       # 步骤1: 找到距离(0,0)最近的点，且该点在序列中已经超过(0,0)
       min_dist_to_origin = float('inf')
       start_idx = -1
-      
+
       for i in range(len(ego_xb)):
         dist_to_origin = np.sqrt(ego_xb[i]**2 + ego_yb[i]**2)
         # 找到距离原点最近的点，且该点应该已经超过原点（x坐标大于0，或者距离在增加）
@@ -307,11 +307,11 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           prev_dist = np.sqrt(ego_xb[i-1]**2 + ego_yb[i-1]**2)
           if dist_to_origin > prev_dist:
             is_past_origin = True
-        
+
         if is_past_origin and dist_to_origin < min_dist_to_origin:
           min_dist_to_origin = dist_to_origin
           start_idx = i
-      
+
       # 如果没找到超过原点的点，使用距离原点最近的点
       if start_idx == -1:
         for i in range(len(ego_xb)):
@@ -319,7 +319,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
           if dist_to_origin < min_dist_to_origin:
             min_dist_to_origin = dist_to_origin
             start_idx = i
-      
+
       if start_idx == -1:
         print("自车真值路径点：无法找到起始点")
       else:
@@ -327,18 +327,18 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         forward_points_x = []
         forward_points_y = []
         cumulative_dist = 0.0
-        
+
         # 添加起始点
         forward_points_x.append(ego_xb[start_idx])
         forward_points_y.append(ego_yb[start_idx])
-        
+
         # 从起始点的下一个点开始累计距离
         for i in range(start_idx + 1, len(ego_xb)):
           # 计算到前一个点的距离
           prev_x = forward_points_x[-1]
           prev_y = forward_points_y[-1]
           segment_dist = np.sqrt((ego_xb[i] - prev_x)**2 + (ego_yb[i] - prev_y)**2)
-          
+
           if cumulative_dist + segment_dist <= 80.0:
             # 累计距离未超过80m，添加该点
             cumulative_dist += segment_dist
@@ -354,7 +354,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
               forward_points_x.append(interp_x)
               forward_points_y.append(interp_y)
             break
-        
+
         # 步骤3: 在筛选出的路径点上计算最小转弯半径
         if len(forward_points_x) >= 3:
           min_radius = float('inf')
@@ -363,24 +363,24 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             x1, y1 = forward_points_x[i], forward_points_y[i]
             x2, y2 = forward_points_x[i+1], forward_points_y[i+1]
             x3, y3 = forward_points_x[i+2], forward_points_y[i+2]
-            
+
             # 计算三点构成的三角形的边长
             a = np.sqrt((x2-x1)**2 + (y2-y1)**2)
             b = np.sqrt((x3-x2)**2 + (y3-y2)**2)
             c = np.sqrt((x3-x1)**2 + (y3-y1)**2)
-            
+
             # 如果三点不共线，计算外接圆半径（曲率半径）
             if a > 1e-6 and b > 1e-6 and c > 1e-6:
               # 使用海伦公式计算面积
               s = (a + b + c) / 2.0
               area = np.sqrt(max(0, s * (s - a) * (s - b) * (s - c)))
-              
+
               if area > 1e-6:
                 # 外接圆半径 R = (a*b*c) / (4*area)
                 radius = (a * b * c) / (4.0 * area)
                 if radius < min_radius:
                   min_radius = radius
-          
+
           if min_radius != float('inf'):
             print("自车前方（0-80m）真值路径点的最小转弯半径: {:.2f} m (起始点索引: {}, 累计距离: {:.2f} m, 点数: {})".format(
               min_radius, start_idx, cumulative_dist, len(forward_points_x)))
@@ -767,27 +767,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
         except:
           pass
 
-
-
-    #加载planning 生成中心线的信息
-    try:
-      plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
-      if(len(plan_gen_refline_list) > 0):
-        plan_gen_refline = plan_gen_refline_list[0]
-        line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg)
-          #line_x.append(virtual_lane_refline_point.car_point.x)
-          #line_y.append(virtual_lane_refline_point.car_point.y)
-        local_view_data['data_center_line_gen'].data.update({
-              'center_line_gen_x': line_x,
-              'center_line_gen_y': line_y,
-        })
-      else:
-        local_view_data['data_center_line_gen'].data.update({
-              'center_line_gen_x': [],
-              'center_line_gen_y': [],
-        })
-    except:
-      pass
   # fix_lane,origin_lane
   planning_succ = False
   if bag_loader.plan_debug_msg['enable'] == True:
@@ -814,6 +793,27 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     except:
       pass
     print("distance_to_target_slot: ", plan_debug_json_msg['distance_to_target_slot'])
+
+    #加载planning 生成中心线的信息
+    try:
+      plan_gen_refline_list = list(plan_debug_msg.generated_refline_info)
+      if(len(plan_gen_refline_list) > 0):
+        plan_gen_refline = plan_gen_refline_list[0]
+        line_x, line_y = load_intersection_generated_refline(plan_gen_refline, is_enu_to_car, loc_msg, g_is_display_enu)
+          #line_x.append(virtual_lane_refline_point.car_point.x)
+          #line_y.append(virtual_lane_refline_point.car_point.y)
+        local_view_data['data_center_line_gen'].data.update({
+          'center_line_gen_x': line_x,
+          'center_line_gen_y': line_y,
+        })
+      else:
+        local_view_data['data_center_line_gen'].data.update({
+          'center_line_gen_x': [],
+          'center_line_gen_y': [],
+        })
+    except:
+      print("no generated_refline_info!")
+      pass
     lat_behavior_common = plan_debug_msg.lat_behavior_common
     environment_model_info = plan_debug_msg.environment_model_info
     current_lane_virtual_id = environment_model_info.currrent_lane_vitual_id
@@ -2754,6 +2754,7 @@ def load_local_view_figure():
   fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
   fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
+  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')

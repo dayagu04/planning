@@ -88,8 +88,7 @@ def load_car_params_patch(car_type = 'CHERY_E0X'):
     # 根据车辆参数修正坐标
     car_x = [3.08738, 3.46959, 3.75000,  3.75000,  3.46959,  3.08738,  2.01876,  1.90588,  1.80856,  1.86535, -0.34922, -0.79736, -1.03000, -1.03000, -0.79736, -0.34922, 1.86535, 1.80856, 1.90588, 2.01876]
     car_y = [0.94500, 0.87503, 0.37512, -0.37512, -0.87503, -0.94500, -0.93662, -1.06905, -1.09433, -0.93891, -0.92123, -0.82245, -0.39167,  0.39167,  0.82245,  0.92123, 0.93891, 1.09433, 1.06905, 0.93662]
-  elif car_type == "BESTUNE_E541":
-    # for BESTUNE_E541
+  elif car_type == 'BESTUNE_E541':
     car_x = [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030, -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217]
     car_y = [0.958,  0.628,  0.345, -0.345, -0.628, -0.958, -0.958, -1.040, -1.040, -0.958, -0.958, -0.742, -0.361,  0.361,  0.742,  0.958,  0.958,  1.040,  1.040,  0.958]
   return car_x, car_y
@@ -1650,15 +1649,16 @@ def load_zebra_crossing_lines(rdg_lane_lines_msg, is_enu_to_car = False, loc_msg
 
 def load_intersection_generated_refline(plan_gen_refline, is_enu_to_car = False, loc_msg = [], g_is_display_enu = False):
   virtual_lane_refline_points = plan_gen_refline.virtual_lane_refline_points
-  line_x = []
-  line_y = []
+  line_x, line_y = [], []
   coord_tf = coord_transformer()
   cur_pos_xn = loc_msg.position.position_boot.x
   cur_pos_yn = loc_msg.position.position_boot.y
   cur_yaw = loc_msg.orientation.euler_boot.yaw
   coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
   for virtual_lane_refline_point in virtual_lane_refline_points:
-    car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y])
+    car_point_x, car_point_y = [virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y]
+    if not g_is_display_enu:
+      car_point_x, car_point_y = coord_tf.global_to_local([virtual_lane_refline_point.local_point.x], [virtual_lane_refline_point.local_point.y])
     line_x.append(car_point_x[0])
     line_y.append(car_point_y[0])
   return line_x, line_y

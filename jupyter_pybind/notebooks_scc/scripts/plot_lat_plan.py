@@ -26,7 +26,7 @@ bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
 # global_var.set_value('car_type', 'CHERY_E0X')
-# global_var.set_value('is_vis_hpp', True)
+# global_var.set_value_by_scene('HPP')
 # global_var.set_value('g_is_display_enu', False)
 # global_var.set_value('is_vis_map', True)
 car_type = global_var.get_value('car_type')
