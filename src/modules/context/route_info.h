@@ -71,6 +71,8 @@ class RouteInfo {
   uint64_t sdpro_map_info_updated_timestamp_ = 0;
   MLCDeciderRouteInfo mlc_decider_route_info_;
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  std::string last_path_id_;
+  bool last_path_id_is_set_ = false;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;
@@ -274,7 +276,9 @@ class RouteInfo {
 
   bool IsEmergencyLane(const uint64 lane_id,
                        const ad_common::sdpromap::SDProMap& sdpro_map) const;
-
+  bool IsClosingIntersectionEntrance(const iflymapdata::sdpro::LinkInfo_Link* link,
+                                              const ad_common::sdpromap::SDProMap& sdpro_map,
+                                              double distance_on_link);
   double CalculateAngle(const Point2D& o, const Point2D& p) {
     double dx = p.x - o.x;
     double dy = p.y - o.y;
