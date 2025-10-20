@@ -115,7 +115,6 @@ class VirtualWallDecider : public ParkingTask {
                                   std::vector<Position2D>& points);
 
  private:
-  std::string name_;
   Pose2D ego_pose_;
 
   Polygon2D ego_polygon_in_slot_;
