@@ -1018,15 +1018,17 @@ void PerpendicularTailInScenario::PathPlan() {
     frame_.dynamic_replan_fail_count++;
 
     // restore target pose and terminal err
-    ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-    ego_info_under_slot.target_pose.pos.y() +=
-        ego_info_under_slot.lat_move_dist_replan_success;
-    ego_info_under_slot.target_pose.pos.x() +=
-        ego_info_under_slot.lon_move_dist_replan_success;
-    ego_info_under_slot.terminal_err.Set(
-        ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
-        geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
-                                     ego_info_under_slot.target_pose.heading));
+    // now not restore, use real-time target pose
+    // ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
+    // ego_info_under_slot.target_pose.pos.y() +=
+    //     ego_info_under_slot.lat_move_dist_replan_success;
+    // ego_info_under_slot.target_pose.pos.x() +=
+    //     ego_info_under_slot.lon_move_dist_replan_success;
+    // ego_info_under_slot.terminal_err.Set(
+    //     ego_info_under_slot.cur_pose.pos -
+    //     ego_info_under_slot.target_pose.pos,
+    //     geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
+    //                                  ego_info_under_slot.target_pose.heading));
 
     // const bool ego_should_stop_by_slot_jump =
     // CheckShouldStopWhenSlotJumpsMuch();
@@ -1462,17 +1464,20 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
         break;
       }
 
-      ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-      ego_info_under_slot.target_pose.pos.y() +=
-          last_ego_info_under_slot.lat_move_dist_replan_success;
-      ego_info_under_slot.target_pose.pos.x() +=
-          last_ego_info_under_slot.lon_move_dist_replan_success;
-      ego_info_under_slot.terminal_err.Set(
-          ego_info_under_slot.cur_pose.pos -
-              ego_info_under_slot.target_pose.pos,
-          geometry_lib::NormalizeAngle(
-              ego_info_under_slot.cur_pose.heading -
-              ego_info_under_slot.target_pose.heading));
+      // restore target pose and terminal err
+      // now not restore, use real-time target pose
+      // ego_info_under_slot.target_pose =
+      // ego_info_under_slot.origin_target_pose;
+      // ego_info_under_slot.target_pose.pos.y() +=
+      //     last_ego_info_under_slot.lat_move_dist_replan_success;
+      // ego_info_under_slot.target_pose.pos.x() +=
+      //     last_ego_info_under_slot.lon_move_dist_replan_success;
+      // ego_info_under_slot.terminal_err.Set(
+      //     ego_info_under_slot.cur_pose.pos -
+      //         ego_info_under_slot.target_pose.pos,
+      //     geometry_lib::NormalizeAngle(
+      //         ego_info_under_slot.cur_pose.heading -
+      //         ego_info_under_slot.target_pose.heading));
 
       break;
     }
@@ -3762,10 +3767,6 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("ego_should_stop_by_slot_jump",
                    frame_.ego_should_stop_by_slot_jump)
 
-  JSON_DEBUG_VALUE("selected_slot_id", ego_info_under_slot.id)
-  JSON_DEBUG_VALUE("slot_length", ego_info_under_slot.slot.slot_length_)
-  JSON_DEBUG_VALUE("slot_width", ego_info_under_slot.slot.slot_width_)
-
   JSON_DEBUG_VALUE("slot_origin_pos_x",
                    ego_info_under_slot.origin_pose_global.pos.x())
 
@@ -3783,39 +3784,6 @@ void PerpendicularTailInScenario::Log() const {
       ego_info_under_slot.target_pose.pos.y()};
 
   JSON_DEBUG_VALUE("pathplan_result", frame_.pathplan_result)
-  JSON_DEBUG_VECTOR("target_ego_pos_slot", target_ego_pos_slot, 2)
-
-  const auto& path_plan_output = apa_world_ptr_->GetParkingTaskInterfacePtr()
-                                     ->GetPerpendicularTailInPathGeneratorPtr()
-                                     ->GetOutput();
-
-  JSON_DEBUG_VALUE("path_start_seg_index",
-                   path_plan_output.path_seg_index.first)
-  JSON_DEBUG_VALUE("path_end_seg_index", path_plan_output.path_seg_index.second)
-  JSON_DEBUG_VALUE("path_length", path_plan_output.length)
-
-  const UssObstacleAvoidance::RemainDistInfo uss_info =
-      apa_world_ptr_->GetColDetInterfacePtr()
-          ->GetUssObsAvoidancePtr()
-          ->GetRemainDistInfo();
-  JSON_DEBUG_VALUE("uss_available", uss_info.is_available)
-  JSON_DEBUG_VALUE("uss_remain_dist", uss_info.remain_dist)
-  JSON_DEBUG_VALUE("uss_index", uss_info.uss_index)
-  JSON_DEBUG_VALUE("uss_car_index", uss_info.car_index)
-
-  // lateral optimization
-  const auto plan_debug_info =
-      apa_world_ptr_->GetLateralPathOptimizerPtr()->GetOutputDebugInfo();
-
-  if (plan_debug_info.has_terminal_pos_error()) {
-    JSON_DEBUG_VALUE("optimization_terminal_pose_error",
-                     plan_debug_info.terminal_pos_error())
-    JSON_DEBUG_VALUE("optimization_terminal_heading_error",
-                     plan_debug_info.terminal_heading_error())
-  } else {
-    JSON_DEBUG_VALUE("optimization_terminal_pose_error", 0.0)
-    JSON_DEBUG_VALUE("optimization_terminal_heading_error", 0.0)
-  }
 }
 
 }  // namespace apa_planner

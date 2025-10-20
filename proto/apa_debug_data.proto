@@ -124,6 +124,42 @@ message PathTimeBenchmark {
   optional SearchTimeForPath astar_time = 1;
 }
 
+message ApaRemainDist {
+  optional double remain_path_dist = 1;
+  optional double remain_static_obs_dist = 2;
+  optional double remain_dynamic_obs_dist = 3;
+  optional double remain_slot_jump_dist = 4;
+}
+
+message ApaStuckTime {
+  optional double stuck_time = 1;
+  optional double stuck_path_time = 2;
+  optional double stuck_static_obs_time = 3;
+  optional double stuck_dynamic_obs_time = 4;
+}
+
+message ApaTerminalErr {
+  optional double terminal_x_err = 1;
+  optional double terminal_y_err = 2;
+  optional double terminal_y_front_err = 4;
+  optional double terminal_heading_err = 3;
+}
+
+message ApaPlanningSLotInfo {
+  optional double every_replan_lat_move_slot_dist = 1;
+  optional double success_replan_lat_move_slot_dist = 2;
+  optional double every_replan_lon_move_slot_dist = 3;
+  optional double success_replan_lon_move_slot_dist = 4;
+  optional double slot_occupied_ratio = 5;
+  optional double slot_processed_occupied_ratio = 6;
+  optional Pose2d slot_origin_pose = 7;
+  optional Pose2d origin_target_pose = 8;
+  optional Pose2d target_pose = 9;
+  repeated Point2d origin_slot_points = 10;
+  repeated Point2d target_slot_points = 11;
+  repeated Point2d virtual_limiters = 12;
+}
+
 message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;
@@ -131,4 +167,8 @@ message ApaPathDebug {
   optional PathTimeBenchmark path_time = 4;
   optional HistoryApaStatus history_apa_status = 6;
   optional SearchTrajectoryInfo search_traj_info = 7;
+  optional ApaRemainDist remain_dist = 8;
+  optional ApaStuckTime stuck_time = 9;
+  optional ApaTerminalErr terminal_err = 10;
+  optional ApaPlanningSLotInfo slot_info = 11;
 }
