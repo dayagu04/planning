@@ -99,6 +99,9 @@ bool AgentTrajectoryCalculator::CalculateCutinAgentTrajectory(
   const auto& ego_lane = virtual_lane_manager->get_current_lane();
   const auto& mutable_agent_manager =
       session_->mutable_environmental_model()->mutable_agent_manager();
+  const auto& ego_state_mgr =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& init_point = ego_state_mgr->planning_init_point();
   if (virtual_lane_manager == nullptr || mutable_agent_manager == nullptr ||
       ego_lane == nullptr) {
     return false;
@@ -112,6 +115,20 @@ bool AgentTrajectoryCalculator::CalculateCutinAgentTrajectory(
   double agent_l = 0.0;
   if (!current_lane_coord->XYToSL(ptr_agent->x(), ptr_agent->y(), &agent_s,
                                   &agent_l)) {
+    return false;
+  }
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!current_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    return false;
+  }
+  const auto& ego_vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double front_edge_to_rear_axle = ego_vehicle_param.front_edge_to_rear_axle;
+  const double half_agent_length = ptr_agent->length() * 0.5;
+  const double longitudinal_distance =
+      agent_s - ego_s - front_edge_to_rear_axle - half_agent_length;
+  if (longitudinal_distance < 0.0) {
     return false;
   }
 

@@ -1,5 +1,6 @@
 #include "agent_manager.h"
 
+#include <cmath>
 #include <cstdint>
 #include <unordered_map>
 #include <unordered_set>
@@ -283,6 +284,23 @@ void AgentManager::RecalculateDecelTrajectories(
         agent->type() == AgentType::MOTORCYCLE_RIDING ||
         agent->type() == AgentType::TRICYCLE ||
         agent->type() == AgentType::TRICYCLE_RIDING)) {
+    return;
+  }
+
+  const auto& ego_state =
+      *session_->mutable_environmental_model()->get_ego_state_manager();
+  const double ego_heading = ego_state.planning_init_point().heading_angle;
+  const double agent_heading = agent->theta_fusion();
+  double heading_diff = std::abs(agent_heading - ego_heading);
+  if (heading_diff > M_PI) {
+    heading_diff = 2 * M_PI - heading_diff;
+  }
+
+  const double heading_diff_deg = heading_diff * 180.0 / M_PI;
+  const double max_heading_diff_threshold =
+      config_.max_heading_diff_threshold_deg;
+
+  if (heading_diff_deg > max_heading_diff_threshold) {
     return;
   }
 
