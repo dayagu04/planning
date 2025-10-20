@@ -233,6 +233,8 @@ class VirtualLaneManager {
   std::shared_ptr<planning_math::KDPath> MakeBoundaryPath(
       const iflyauto::LaneBoundary &boundary);
 
+  void UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr);
+  const std::vector<std::vector<Point2D>> &Roadboundary() { return road_boundray_; } 
  private:
   void SetGeneratedReflineToDebugInfo(
       const iflyauto::LaneReferenceLine &refline);
@@ -300,6 +302,7 @@ class VirtualLaneManager {
 
   bool ego_currrent_pos_lane_has_straight_attributes_ = true;
 
+  std::vector<std::vector<Point2D>> road_boundray_;
   // rads relevance
   iflyauto::FunctionalState last_fsm_state_ =
       iflyauto::FunctionalState::FunctionalState_RADS_ABORT;

@@ -878,6 +878,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   left_lane_ = nullptr;
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
+  road_boundray_.clear();
   Intersection_state_ = planning::common::NO_INTERSECTION;
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
@@ -1092,6 +1093,9 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 12.获取自车车头位置的车道方向属性
   UpdateEgoCurrentPoseLaneMark();
 
+  // 更新道路边界信息
+  UpdateRoadBoundary(roads_ptr);
+
   LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
@@ -1103,18 +1107,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   for (const auto& lane : relative_id_lanes_) {
     ILOG_DEBUG << "relative id:" << lane->get_relative_id()
                << ", virtual id:" << lane->get_virtual_id();
-  }
-  last_fsm_state_ = session_->environmental_model()
-                        .get_local_view()
-                        .function_state_machine_info.current_state;
-  JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
-  JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
-  JSON_DEBUG_VALUE("current_lane_relative_id",
-                   current_lane_->get_relative_id());
-
-  return true;
-}
-
+  }q
 const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
     int virtual_id) const {
   if (virtual_id_mapped_lane_.find(virtual_id) !=
@@ -2071,4 +2064,17 @@ void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
                    (ego_front_edge_s_on_lane_marks_pos->second).end)
 }
 
+void VirtualLaneManager::UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr) {
+  if (roads_ptr == nullptr) {
+    return;
+  }
+  road_boundray_.resize(roads_ptr->fusion_polyline_size);
+  for (size_t i = 0; i < roads_ptr->fusion_polyline_size; i++) {
+    road_boundray_[i].resize(roads_ptr->fusion_polyline[i].local_points_size);
+    for (size_t j = 0; j < roads_ptr->fusion_polyline[i].local_points_size; j++) {
+      road_boundray_[i][j] = Point2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
+    }
+  }
+  
+}
 }  // namespace planning
