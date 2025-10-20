@@ -26,6 +26,7 @@
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
+#include "geometry_math.h"
 #include "planning_context.h"
 #include "speed/st_point.h"
 #include "st_boundary.h"
@@ -373,7 +374,7 @@ void STGraph::RecalculateTrajectoryForLcRearAgent(
       const auto& original_point = original_traj[i];
       const double delta_t = original_point.absolute_time() - start_time;
 
-      const double new_acc = a0 + kJerk * delta_t;
+      const double new_acc = std::max(a0 + kJerk * delta_t, -2.0);
       const double new_vel =
           v0 + a0 * delta_t + 0.5 * kJerk * delta_t * delta_t;
       double new_s = s0 + v0 * delta_t + 0.5 * a0 * delta_t * delta_t +
@@ -389,9 +390,8 @@ void STGraph::RecalculateTrajectoryForLcRearAgent(
         if (discriminant >= 0 && std::abs(a_coef) > 1e-6) {
           const double t_stop =
               (-b_coef - std::sqrt(discriminant)) / (2 * a_coef);
-          if (t_stop > 0 && t_stop < delta_t) {
-            stop_s = s0 + v0 * t_stop +
-                     0.5 * original_point.acc() * t_stop * t_stop +
+          if (t_stop > 0 && t_stop <= delta_t) {
+            stop_s = s0 + v0 * t_stop + 0.5 * a0 * t_stop * t_stop +
                      (1.0 / 6.0) * kJerk * t_stop * t_stop * t_stop;
           }
         }
@@ -430,7 +430,10 @@ void STGraph::RecalculateTrajectoryForLcRearAgent(
 
           x = p0.x + ratio * (p1.x - p0.x);
           y = p0.y + ratio * (p1.y - p0.y);
-          theta = p0.theta + ratio * (p1.theta - p0.theta);
+          double delta_theta = p1.theta - p0.theta;
+          delta_theta = pnc::geometry_lib::AngleSubtraction(delta_theta, 0.0);
+          theta =
+              pnc::geometry_lib::NormalizeAngle(p0.theta + ratio * delta_theta);
           kappa = p0.kappa + ratio * (p1.kappa - p0.kappa);
         }
       }
