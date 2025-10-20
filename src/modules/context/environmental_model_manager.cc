@@ -131,6 +131,10 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_rads_config_builder(
       rads_config_builder);
 
+  auto nsa_config_builder =
+      load_config_builder("general_planner_module_nsa.json");
+  session_->mutable_environmental_model()->set_nsa_config_builder(
+      nsa_config_builder);
   planning::common::SceneType scene_type = session_->get_scene_type();
   auto config_builder =
       session_->environmental_model().config_builder(scene_type);

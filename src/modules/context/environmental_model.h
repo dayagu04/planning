@@ -308,6 +308,15 @@ class EnvironmentalModel {
     rads_config_builder_ptr_ = rads_config_builder_ptr;
   }
 
+  const EgoPlanningConfigBuilder *nsa_config_builder() const {
+    return nsa_config_builder_ptr_;
+  }
+
+  void set_nsa_config_builder(
+      EgoPlanningConfigBuilder *nsa_config_builder_ptr) {
+    nsa_config_builder_ptr_ = nsa_config_builder_ptr;
+  }
+
   void feed_local_view(const LocalView *local_view) {
     local_view_ = local_view;
   }
@@ -364,6 +373,7 @@ class EnvironmentalModel {
   EgoPlanningConfigBuilder *highway_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *hpp_config_builder_ptr_ = nullptr;
   EgoPlanningConfigBuilder *rads_config_builder_ptr_ = nullptr;
+  EgoPlanningConfigBuilder *nsa_config_builder_ptr_ = nullptr;
   common::DrivingFunctionInfo function_info_;
   bool is_mrc_mode_ = false;
 };
