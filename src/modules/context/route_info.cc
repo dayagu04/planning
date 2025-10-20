@@ -522,6 +522,12 @@ void RouteInfo::CaculateMergeInfo(
         }
         const auto& merge_seg_last_seg =
             sdpro_map.GetPreviousLinkOnRoute(merge_seg->id());
+        const auto& merge_seg_last_other_seg_id =
+            merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
+                ? merge_seg->predecessor_link_ids()[1]
+                : merge_seg->predecessor_link_ids()[0];
+        const auto& merge_seg_last_other_seg =
+            sdpro_map.GetLinkOnRoute(merge_seg_last_other_seg_id);
         if (!merge_seg_last_seg) {
           break;
         }
@@ -535,7 +541,17 @@ void RouteInfo::CaculateMergeInfo(
           }
           if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
               !sdpro_map.isRamp(merge_seg->link_type()) &&
+              !sdpro_map.isSaPa(merge_seg->link_type()) &&
               !route_info_output_.is_on_ramp &&
+              route_info_output_.is_ego_on_expressway) {
+            route_info_output_.is_road_merged_by_other_lane = true;
+            is_road_merged_by_other_lane = true;
+          }
+          if (sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
+              sdpro_map.isRamp(merge_seg->link_type()) &&
+              sdpro_map.isRamp(merge_seg_last_other_seg->link_type()) &&
+              merge_seg_last_seg->lane_num() >=
+                  merge_seg_last_other_seg->lane_num() &&
               route_info_output_.is_ego_on_expressway) {
             route_info_output_.is_road_merged_by_other_lane = true;
             is_road_merged_by_other_lane = true;
@@ -1875,7 +1891,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               if (merge_region_info_list[0].is_other_merge_to_road) {
                 double dis_err =
                     split_region_info_list[0].distance_to_split_point -
-                    merge_region_info_list[0].distance_to_split_point;
+                    merge_region_info_list[0].distance_to_split_point -
+                    merge_region_info_list[0]
+                        .end_fp_point.fp_distance_to_split_point -
+                    lsl_length;
                 if (dis_err >
                     mlc_decider_config_.other_merge_split_gap_threshold) {
                   mlc_decider_route_info_.is_process_other_merge = true;
