@@ -274,7 +274,7 @@ bool StGraphUtils::IsPredictionReverseAgent(
     ego_lane_coord->XYToSL(end_point.x(), end_point.y(), &end_s, &end_l);
     is_prediction_reverse = end_s < agent_s;
   }
-  return is_prediction_reverse;
+  return is_prediction_reverse && !agent->is_static();
 }
 
 void StGraphUtils::DetermineRelieveJerkDecision(

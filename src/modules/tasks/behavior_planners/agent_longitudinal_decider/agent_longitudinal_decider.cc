@@ -2004,7 +2004,7 @@ bool AgentLongitudinalDecider::IsReverseAgent(
   } else {
     is_reverse = is_perception_reverse || is_prediction_reverse;
   }
-  return is_reverse;
+  return is_reverse && !agent->is_static();
 }
 
 bool AgentLongitudinalDecider::IsIgnoredLowSpeedReverseAgent(
