@@ -132,9 +132,13 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
            ->get_local_view()
            .degraded_driving_function_info;
 
-  if ((degraded_driving_function_info_ptr->tsr.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->tsr.degraded ==
-           iflyauto::ERROR_DEGRADED)) {
+  if ((degraded_driving_function_info_ptr->tsr.degraded == iflyauto::INHIBIT) ||
+       (degraded_driving_function_info_ptr->tsr.degraded ==
+           iflyauto::ERROR_DEGRADED) ||
+       (degraded_driving_function_info_ptr->tsr.degraded ==
+           iflyauto::ERROR_SAFE_STOP) ||
+       (degraded_driving_function_info_ptr->tsr.degraded ==
+           iflyauto::MCU_COMM_SHUTDOWN)) {
     fault_code += uint16_bit[6];
   } else {
     /*do nothing*/
