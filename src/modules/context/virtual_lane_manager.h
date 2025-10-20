@@ -211,6 +211,8 @@ class VirtualLaneManager {
   }
 
   void construct_reference_line_msg(
+      const double ego_behind_length,
+      const double ego_ahead_length,
       const std::vector<double> &current_lane_virtual_poly,
       iflyauto::ReferenceLineMsg &current_lane_virtual);
   void construct_reference_line_msg(

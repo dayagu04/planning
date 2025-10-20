@@ -36,7 +36,7 @@ def get_value(key):
     return False
 
 def set_value_by_scene(scene):
-  if scene == 'HPP' or scene == 'PARKING_APA':
+  if scene == 'HPP' or scene == 'PARKING_APA' or scene == 'NSA':
     global_dict['scene_type'] = 'HPP'
     global_dict['g_is_display_enu'] = True
     global_dict['is_vis_hpp'] = True
