@@ -132,8 +132,8 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::HIGHWAY;
   } else if (IsSwitchApaState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::PARKING_APA;
-  } else if (IsValidHppState(func_state_machine.current_state)) {
-    scene_type = planning::common::SceneType::HPP;
+  // } else if (IsValidHppState(func_state_machine.current_state)) {
+  //   scene_type = planning::common::SceneType::HPP;
   } else if (IsValidRadsState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::RADS;
   } else if (IsValidNsaState(func_state_machine.current_state)) {
