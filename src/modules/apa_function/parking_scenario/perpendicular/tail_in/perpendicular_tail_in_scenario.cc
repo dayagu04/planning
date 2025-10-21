@@ -93,6 +93,10 @@ void PerpendicularTailInScenario::ScenarioTry() {
       break;
   }
 
+  // fill head/tail in parking action.
+  // TODO: actions need computing by algorithm.
+  SetParkInFeasibleDirection();
+
   return;
 }
 

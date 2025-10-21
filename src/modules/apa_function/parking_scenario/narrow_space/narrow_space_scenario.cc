@@ -616,7 +616,7 @@ PathPlannerResult NarrowSpaceScenario::PlanBySearchBasedMethod(
   if (is_scenario_try) {
     res = PubResponseForScenarioTry(ego_info, cur_request, obs);
 
-    apa_hmi_ = PubDirectionForParkOutTry(cur_request);
+    apa_hmi_ = PubDirectionForScenarioTry(cur_request);
   } else {
     res = PubResponseForScenarioRunning(ego_info, cur_request, obs);
   }
@@ -2367,7 +2367,7 @@ const bool NarrowSpaceScenario::IsNeedClipping(const HybridAStarResult& result,
   }
 }
 
-iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
+iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
     const AstarRequest& cur_request) {
   iflyauto::APAHMIData apa_hmi_data;
   ApaDirectionGenerator generator;
@@ -2434,11 +2434,8 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForParkOutTry(
                                              planning_recommend_park_dir);
 
   } else {
-    generator.SetReleaseDirectionFlag(apa_hmi_data, ParallelFrontLeft);
-    generator.SetReleaseDirectionFlag(apa_hmi_data, ParallelFrontRight);
     generator.SetReleaseDirectionFlag(apa_hmi_data, VerticalHeadIn);
     generator.SetReleaseDirectionFlag(apa_hmi_data, VerticalTailIn);
-    generator.SetReleaseDirectionFlag(apa_hmi_data, ParityBit);
   }
 
   return apa_hmi_data;

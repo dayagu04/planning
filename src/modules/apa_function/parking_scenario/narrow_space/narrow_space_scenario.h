@@ -159,7 +159,7 @@ class NarrowSpaceScenario : public ParkingScenario {
   const pnc::geometry_lib::PathSegGear GetGear(const AstarPathGear gear);
 
   const bool IsNeedClipping(const HybridAStarResult& result, const size_t i);
-  iflyauto::APAHMIData PubDirectionForParkOutTry(
+  iflyauto::APAHMIData PubDirectionForScenarioTry(
       const AstarRequest& cur_request);
 
   void SetRequestForScenarioTry(AstarRequest& cur_request,
