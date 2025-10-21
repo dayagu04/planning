@@ -531,7 +531,7 @@ class ParkingScenario {
   const bool CheckResponseReasonable(const HybridAStarRequest &cur_request,
                                      const HybridAstarResponse &cur_response);
 
-  void SetFeasibleDirectionFlag();
+  void SetParkInFeasibleDirection();
 
   void UpdatePlanFailTime();
 

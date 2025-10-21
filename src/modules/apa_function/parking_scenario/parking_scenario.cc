@@ -742,8 +742,6 @@ void ParkingScenario::ScenarioTry() {
       .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
       SlotReleaseState::RELEASE;
 
-  SetFeasibleDirectionFlag();
-
   return;
 }
 
@@ -1277,11 +1275,9 @@ void ParkingScenario::ClearTimeBySuspendStatus() {
   return;
 }
 
-void ParkingScenario::SetFeasibleDirectionFlag() {
+void ParkingScenario::SetParkInFeasibleDirection() {
   ApaDirectionGenerator generator;
   generator.ClearReleaseDirectionFlag(apa_hmi_);
-  generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontLeft);
-  generator.SetReleaseDirectionFlag(apa_hmi_, ParallelFrontRight);
   generator.SetReleaseDirectionFlag(apa_hmi_, VerticalHeadIn);
   generator.SetReleaseDirectionFlag(apa_hmi_, VerticalTailIn);
   generator.SetReleaseDirectionFlag(apa_hmi_, ParityBit);
