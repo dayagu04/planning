@@ -268,11 +268,11 @@ void PathTimeHeuristicOptimizer::UpdateLateralObstacleDecision(
   AABox2d agent_box;
   for (const auto &agent : agent_trajs) {
     auto iter = lateral_obstacle_decision.find(agent.agent_id);
-    auto iter_history = lateral_obstacle_history_info.find(agent.agent_id);
-    if (iter_history == lateral_obstacle_history_info.end() ||
-        iter_history->second.cut_in_or_cross) {
-      continue;
-    }
+    // auto iter_history = lateral_obstacle_history_info.find(agent.agent_id);
+    // if (iter_history == lateral_obstacle_history_info.end() ||
+    //     iter_history->second.cut_in_or_cross) {
+    //   continue;
+    // }
     if (iter != lateral_obstacle_decision.end()) {
       for (int i = 0; i < k_ego_traj_points_nums; i++) {
         auto it = agent.agent_boxs_set.find(i);
