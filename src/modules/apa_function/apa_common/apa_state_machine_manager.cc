@@ -218,7 +218,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       parking_speed_mode_ = ParkingSpeedMode::FAST;
       break;
     default:
-      parking_speed_mode_ = ParkingSpeedMode::FAST;
+      parking_speed_mode_ = ParkingSpeedMode::NORMAL;
       break;
   }
 

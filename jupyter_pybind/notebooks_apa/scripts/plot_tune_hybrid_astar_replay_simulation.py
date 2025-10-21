@@ -18,13 +18,7 @@ from jupyter_pybind.python_proto import planning_debug_info_pb2
 from jupyter_pybind import replay_simulation_hybrid_astar
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo,ControlOutput
 
-
 # bag path and frame dt
-# e0y1:  10034
-# e0y2:  04228
-# e0y8:  14520
-# e0y9:  18049
-# e0y10: 20267
 bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74574/trigger/20251015/20251015-17-'
 
 frame_dt = 0.1 # sec
