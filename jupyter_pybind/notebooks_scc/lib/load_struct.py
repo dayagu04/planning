@@ -2027,6 +2027,10 @@ def load_occupancy_obstacle(fus_occ_obj_msg, loc_msg = None, environment_model_i
       pass
     # pos_x_rel = common_info.relative_center_position.x
     # pos_y_rel = common_info.relative_center_position.y
+    # hpp
+    pos_x = common_info.relative_center_position.x
+    pos_y = common_info.relative_center_position.y
+    # apa hack
     pos_x = common_info.center_position.x
     pos_y = common_info.center_position.y
     polygon_points_size = additional_info.polygon_points_size

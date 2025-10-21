@@ -1129,7 +1129,9 @@ void HppGeneralLateralDecider::GenerateRoadAndLaneBoundary() {
   UpdateDistanceToRoadBorder();
   GenerateRoadHardSoftBoundary();
   GenerateLaneSoftBoundary();
-  GenerateGroundLineAndParkingSpaceBoundary();
+  if (!session_->is_nsa_scene()) {
+    GenerateGroundLineAndParkingSpaceBoundary();
+  }
 }
 
 void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
