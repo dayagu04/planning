@@ -91,7 +91,8 @@
 //   construction_agent_cluster_attribute_map_.clear();
 //   construction_agent_cluster_size_.clear();
 //   construction_agent_cluster_.clear();
-//   return true;
+//   road_boundaries_clusters_map_.clear();
+  // return true;
 // }
 
 // bool ConstructionSceneDecider::Execute() {
@@ -719,12 +720,17 @@
 //     return;
 //   }
 
+//   RoadBoundaryPreProcess();
+
+//   const auto& ego_point =
+//       session_->environmental_model().get_ego_state_manager()->ego_carte();
 //   const std::vector<std::shared_ptr<VirtualLane>> lanes =
 //       session_->environmental_model()
 //           .get_virtual_lane_manager()
 //           ->get_virtual_lanes();
 
-//   std::map<int, std::map<int, std::vector<int>>> results;
+//   std::map<int, std::map<int, std::vector<int>>> cone_results;
+  // std::map<int, std::map<int, std::vector<int>>> road_boundary_results;
 //   for (const auto& lane : lanes) {
 //     if (lane == nullptr) {
 //       continue;
@@ -743,6 +749,7 @@
 //           Point2d(lane_point.local_point.x, lane_point.local_point.y)));
 //     }
 
+//     // 锥桶
 //     for (const auto construction_agent_cluster_iter :
 //          construction_agent_cluster_attribute_map_) {
 //       if (construction_agent_cluster_iter.second.points.size() <= 1) {
@@ -758,30 +765,49 @@
 //             std::move(Point2d(agent_clusters.x, agent_clusters.y)));
 //       }
 
-//       const auto result =
-//           CalIntersectionRefAndCone(lane_frenet_coord, ref_points, cone_points);
+//     const auto result = CalIntersectionRefAndObstacle(
+//         lane_frenet_coord, ref_points, cone_points);
 
-//       results[construction_agent_cluster_iter.first][result.second]
+//       cone_results[construction_agent_cluster_iter.first][result.second]
 //           .emplace_back(lane->get_virtual_id());
-//       ILOG_DEBUG << "result: "
-//                  << "lane id:" << lane->get_virtual_id() << "   ***  "
-//                  << "cone cluster id" << construction_agent_cluster_iter.first
-//                  << "intersection :" << result.second;
+//       std::cout << "result: "
+//                 << "lane id:" << lane->get_virtual_id() << "   ***  "
+//                 << "cone cluster id" << construction_agent_cluster_iter.first
+//                 << "intersection :" << result.second << std::endl;
+    // }
+
+    // 路沿
+    // for (const auto road_boundaries_cluster_iter :
+    //      road_boundaries_clusters_map_) {
+    //   if (road_boundaries_cluster_iter.second.points.size() < 1) {
+    //     continue;
+    //   }
+
+    //   const auto result = CalIntersectionRefAndObstacle(
+    //       lane_frenet_coord, ref_points,
+    //       road_boundaries_cluster_iter.second.points);
+
+    //   road_boundary_results[road_boundaries_cluster_iter.first][result.second]
+    //       .emplace_back(lane->get_virtual_id());
+    //   std::cout << "result: "
+    //             << "lane id:" << lane->get_virtual_id() << "   ***  "
+    //             << "road boundary id" << road_boundaries_cluster_iter.first
+    //             << "intersection :" << result.second;
 //     }
 //   }
 
-//   UpdateResult(results);
+//   UpdateResult(cone_results, road_boundary_results);
 // }
 
-// std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndCone(
+// std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndObstacle(
 //     const std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
 //     const std::vector<Point2d>& ref_points,
-//     const std::vector<Point2d>& cone_points) {
+//     const std::vector<Point2d>& obstacle_points) {
 //   if (!lane_frenet_coord) {
 //     return {false, -1};
 //   }
 
-//   if (cone_points.size() < 1) {
+//   if (obstacle_points.size() < 1) {
 //     return {false, -1};
 //   }
 
@@ -789,11 +815,11 @@
 //     return {true, 0};
 //   }
 
-//   Point2D frenet_point;
-//   if (!lane_frenet_coord->XYToSL(Point2D(cone_points[0].x, cone_points[0].y),
-//                                  frenet_point)) {
-//     return {false, -1};
-//   }
+  // Point2D frenet_point;
+  // if (!lane_frenet_coord->XYToSL(
+  //         Point2D(obstacle_points[0].x, obstacle_points[0].y), frenet_point)) {
+  //   return {false, -1};
+  // }
 
 //   if (frenet_point.y < 0) {
 //     return {false, 1};
@@ -802,11 +828,54 @@
 //   } else {
 //     return {false, 0};
 //   }
+//   // Point2D frenet_point;
+  // std::vector<int> validNumbers;
+  // if (lane_frenet_coord->XYToSL(
+  //         Point2D(obstacle_points[0].x, obstacle_points[0].y),
+  //         frenet_point)) {
+  //   if (frenet_point.x >= 0) {
+  //     validNumbers.emplace_back(frenet_point.y);
+  //   }
+  // }
+  // if (lane_frenet_coord->XYToSL(
+  //         Point2D(obstacle_points[obstacle_points.size() / 2].x,
+  //                 obstacle_points[obstacle_points.size() / 2].y),
+  //         frenet_point)) {
+  //   if (frenet_point.x >= 0) {
+  //     validNumbers.emplace_back(frenet_point.y);
+  //   }
+  // }
+  // if (lane_frenet_coord->XYToSL(
+  //         Point2D(obstacle_points[-1].x, obstacle_points[-1].y),
+  //         frenet_point)) {
+  //   if (frenet_point.x >= 0) {
+  //     validNumbers.emplace_back(frenet_point.y);
+  //   }
+  // }
+
+  // if (validNumbers.size() < 1) {
+  //   return {false, -1};
+  // }
+
+  // // 确定第一个有效整数的符号（0按正数处理，也可根据需求修改）
+  // bool firstPositive = (validNumbers[0] >= 0);
+
+  // // 检查所有有效整数的符号是否与第一个一致
+  // for (size_t i = 1; i < validNumbers.size(); ++i) {
+  //   bool currentPositive = (validNumbers[i] >= 0);
+  //   if (currentPositive != firstPositive) {
+  //     return {false, -2};
+  //   }
+  // }
+
+  // return firstPositive ? std::make_pair(false, 2) : std::make_pair(false, 1);
 // }
 
 // void ConstructionSceneDecider::UpdateResult(
-//     const std::map<int, std::map<int, std::vector<int>>>& results) {
-//   for (auto result : results) {
+//     const std::map<int, std::map<int, std::vector<int>>>& cone_results,
+    // const std::map<int, std::map<int, std::vector<int>>>&
+    //     road_boundary_results) {
+//   for (auto result : cone_results) {
 //     if (result.second.count(1) && result.second.count(2)) {
 //       construction_agent_cluster_attribute_map_[result.first].direction =
 //           ConstructionDirection::UNSURE;
@@ -825,6 +894,58 @@
 //       std::cout << "colinear_or_facing ref" << std::endl;
 //     }
 //   }
+//
+//   for (auto result : road_boundary_results) {
+//     if (result.second.count(1) && result.second.count(2)) {
+//       std::cout << "abnormal ref" << std::endl;
+//       road_boundaries_clusters_map_[result.first].direction =
+//           ConstructionDirection::UNSURE;
+//     } else if (result.second.count(1)) {
+//       road_boundaries_clusters_map_[result.first].direction =
+//           ConstructionDirection::LEFT;
+//     } else if (result.second.count(2)) {
+//       road_boundaries_clusters_map_[result.first].direction =
+//           ConstructionDirection::RIGHT;
+//     }
+
+//     if (result.second.count(-1)) {
+//       road_boundaries_clusters_map_[result.first].direction =
+//           ConstructionDirection::UNSURE;
+//       std::cout << "colinear_or_facing ref" << std::endl;
+//     }
+//   }
+// }
+
+// void ConstructionSceneDecider::RoadBoundaryPreProcess() {
+//   const auto ego_v =
+//       session_->environmental_model().get_ego_state_manager()->ego_v();
+//   const auto& road_boundaries = session_->environmental_model()
+//                                     .get_virtual_lane_manager()
+//                                     ->GetRoadboundary();
+//   const double care_front_lon_distance = 80;
+//   const double care_rear_lon_distance = 0;
+//   for (size_t i = 0; i < road_boundaries.size(); i++) {
+//     const auto& road_boundary = road_boundaries[i];
+//     if (road_boundary.size() < 1) {
+//       continue;
+//     }
+
+//     RoadBoundaryCluster road_boundary_cluster;
+//     for (size_t j = 0; j < road_boundary.size(); j++) {
+//       const auto& car_point = road_boundary[j].first;
+//       const auto& local_point = road_boundary[j].second;
+//       if (car_point.x < care_rear_lon_distance) {
+//         continue;
+//       }
+
+//       if (car_point.x > care_front_lon_distance) {
+//         break;
+//       }
+
+//       road_boundary_cluster.points.emplace_back(local_point);
+//     }
+//     road_boundaries_clusters_map_[i] = std::move(road_boundary_cluster);
+//   }
 // }
 
 // void ConstructionSceneDecider::GenerateConstructionSceneOutput() {
@@ -837,6 +958,8 @@
 //       construction_agent_cluster_attribute_map_;
 //   construction_scene_decider_output.is_pass_construction_area =
 //       is_pass_construction_area_;
+//   construction_scene_decider_output.road_boundaries_clusters_map =
+//       road_boundaries_clusters_map_;
 // }
 
 // void ConstructionSceneDecider::SaveLatDebugInfo() {

@@ -77,14 +77,15 @@
 //       bool is_left, bool is_right);
 
 //   void UpdateDriveArea();
-
-//   std::pair<bool, int> CalIntersectionRefAndCone(
+//   std::pair<bool, int> CalIntersectionRefAndObstacle(
 //       std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
 //       const std::vector<Point2d>& ref_points,
-//       const std::vector<Point2d>& cone_points);
-
+//       const std::vector<Point2d>& obstacle_points);
 //   void UpdateResult(
-//       const std::map<int, std::map<int, std::vector<int>>>& results);
+//       const std::map<int, std::map<int, std::vector<int>>>& results,
+//       const std::map<int, std::map<int, std::vector<int>>>&
+//           road_boundary_results);
+//   void RoadBoundaryPreProcess();
 
 //   void GenerateConstructionSceneOutput();
 
@@ -111,6 +112,7 @@
 //   bool is_pass_construction_area_ = false;
 //   int no_construction_area_counter_ = std::numeric_limits<int>::max() / 2;
 //   // hysteresis for is_exist_construction_area_
+//   std::map<int, RoadBoundaryCluster> road_boundaries_clusters_map_;
 // };
 
 // }  // namespace planning

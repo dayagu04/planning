@@ -65,10 +65,16 @@
 //   ConstructionDirection direction = ConstructionDirection :: DEFAULT;
 // };
 
+// struct RoadBoundaryCluster {
+//   std::vector<Point2d> points;
+//   ConstructionDirection direction = ConstructionDirection :: DEFAULT;
+// };
+
 // struct ConstructionSceneDeciderOutput {
 //   std::map<int, ConstructionAgentClusterArea>
 //       construction_agent_cluster_attribute_map;  // 施工区域聚类结果
-//   bool is_exist_construction_area = false;       // 是否存在施工区域
+//   std::map<int, RoadBoundaryCluster> road_boundaries_clusters_map; // 路沿决策结果
+  // bool is_exist_construction_area = false;       // 是否存在施工区域
 //   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
 //   ConstructionIntrusionLevel construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
 //   bool is_current_lane_available = true;

@@ -40,6 +40,7 @@
 #include "utils/path_point.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
+#include "src/common/transform2d.h"
 namespace planning {
 
 using Map::CurrentRouting;
@@ -1107,7 +1108,10 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   for (const auto& lane : relative_id_lanes_) {
     ILOG_DEBUG << "relative id:" << lane->get_relative_id()
                << ", virtual id:" << lane->get_virtual_id();
-  }q
+  }
+  return true;
+}
+
 const std::shared_ptr<VirtualLane> VirtualLaneManager::get_lane_with_virtual_id(
     int virtual_id) const {
   if (virtual_id_mapped_lane_.find(virtual_id) !=
@@ -2068,13 +2072,24 @@ void VirtualLaneManager::UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr)
   if (roads_ptr == nullptr) {
     return;
   }
+
+  const auto ego_state_manager = session_->environmental_model().get_ego_state_manager();
+  Pose2D base_pose(ego_state_manager->ego_pose().x,
+                   ego_state_manager->ego_pose().y,
+                   ego_state_manager->ego_pose().theta);
+  Transform2d ego_base;
+  ego_base.SetBasePose(base_pose);
+
+  Pose2D obs_car_point;
   road_boundray_.resize(roads_ptr->fusion_polyline_size);
   for (size_t i = 0; i < roads_ptr->fusion_polyline_size; i++) {
     road_boundray_[i].resize(roads_ptr->fusion_polyline[i].local_points_size);
     for (size_t j = 0; j < roads_ptr->fusion_polyline[i].local_points_size; j++) {
-      road_boundray_[i][j] = Point2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
+      ego_base.GlobalPointToULFLocal(
+          &obs_car_point, Pose2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y, 0));
+      road_boundray_[i][j].first= Point2d(obs_car_point.x, obs_car_point.y);    
+      road_boundray_[i][j].second = Point2d(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
     }
   }
-  
 }
 }  // namespace planning
