@@ -1424,7 +1424,6 @@ const SpeedModeParams& ParkingSpeedConfig::GetSpeedParams(
     case ParkingSpeedMode::SLOW:
       return slow_mode;
     case ParkingSpeedMode::NORMAL:
-      return middle_mode;
     default:
       return middle_mode;
   }
