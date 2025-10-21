@@ -738,185 +738,185 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
             'origin_lane_y':center_line_list[i]['line_y_vec']
           })
 
-      lat_init_state = plan_debug_msg.lateral_motion_planning_input.init_state
-      init_state_x = lat_init_state.x
-      init_state_y = lat_init_state.y
-      init_state_theta = lat_init_state.theta
-      init_state_delta = lat_init_state.delta
-      ego_pos_compensation_x = plan_debug_json_msg['predicted_ego_x']
-      ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
-      merge_point_x = plan_debug_json_msg['merge_point_x']
-      merge_point_y = plan_debug_json_msg['merge_point_y']
-      pp_goal_point_x = plan_debug_json_msg['goal_point_x']
-      pp_goal_point_y = plan_debug_json_msg['goal_point_y']
-      pp_init_point_x = plan_debug_json_msg['pp_init_x']
-      pp_init_point_y = plan_debug_json_msg['pp_init_y']
-      ego_motion_ref_sim_x_vec = plan_debug_json_msg['ego_ref_sim_x_vec']
-      ego_motion_ref_sim_y_vec = plan_debug_json_msg['ego_ref_sim_y_vec']
-      # print("ego_motion_ref_sim_x_vec: ", ego_motion_ref_sim_x_vec)
-      # print("ego_motion_ref_sim_y_vec: ", ego_motion_ref_sim_y_vec)
-      lon_collision_object_position_x_vec = plan_debug_json_msg['lon_collision_object_position_x_vec']
-      lon_collision_object_position_y_vec = plan_debug_json_msg['lon_collision_object_position_y_vec']
-      macroeconomic_decider_merge_point_x = plan_debug_json_msg['macroeconomic_decider_merge_point_x']
-      macroeconomic_decider_merge_point_y = plan_debug_json_msg['macroeconomic_decider_merge_point_y']
-      boundary_line_merge_point_x = plan_debug_json_msg['boundary_line_merge_point_x']
-      boundary_line_merge_point_y = plan_debug_json_msg['boundary_line_merge_point_y']
-      lon_init_state = plan_debug_msg.longitudinal_motion_planning_input.init_state
-      init_state_s = lon_init_state.s
-      init_state_v = lon_init_state.v
-      init_state_a = lon_init_state.a
-      replan_status = plan_debug_json_msg["replan_status"]
-      init_pos_point_x = []
-      init_pos_point_y = []
-      init_pos_line_x = []
-      init_pos_line_y = []
-      pp_ld_x_vec = []
-      pp_ld_y_vec = []
-      pp_ld_x_vec_ = []
-      pp_ld_y_vec_ = []
-      ego_pos_compensation_x_ = []
-      ego_pos_compensation_y_ = []
-      init_pos_point_theta = []
-      lon_collision_object_position_x_vec_ = []
-      lon_collision_object_position_y_vec_ = []
-      ego_motion_ref_sim_x_vec_ = []
-      ego_motion_ref_sim_y_vec_ = []
+    lat_init_state = plan_debug_msg.lateral_motion_planning_input.init_state
+    init_state_x = lat_init_state.x
+    init_state_y = lat_init_state.y
+    init_state_theta = lat_init_state.theta
+    init_state_delta = lat_init_state.delta
+    ego_pos_compensation_x = plan_debug_json_msg['predicted_ego_x']
+    ego_pos_compensation_y = plan_debug_json_msg['predicted_ego_y']
+    merge_point_x = plan_debug_json_msg['merge_point_x']
+    merge_point_y = plan_debug_json_msg['merge_point_y']
+    pp_goal_point_x = plan_debug_json_msg['goal_point_x']
+    pp_goal_point_y = plan_debug_json_msg['goal_point_y']
+    pp_init_point_x = plan_debug_json_msg['pp_init_x']
+    pp_init_point_y = plan_debug_json_msg['pp_init_y']
+    ego_motion_ref_sim_x_vec = plan_debug_json_msg['ego_ref_sim_x_vec']
+    ego_motion_ref_sim_y_vec = plan_debug_json_msg['ego_ref_sim_y_vec']
+    # print("ego_motion_ref_sim_x_vec: ", ego_motion_ref_sim_x_vec)
+    # print("ego_motion_ref_sim_y_vec: ", ego_motion_ref_sim_y_vec)
+    lon_collision_object_position_x_vec = plan_debug_json_msg['lon_collision_object_position_x_vec']
+    lon_collision_object_position_y_vec = plan_debug_json_msg['lon_collision_object_position_y_vec']
+    macroeconomic_decider_merge_point_x = plan_debug_json_msg['macroeconomic_decider_merge_point_x']
+    macroeconomic_decider_merge_point_y = plan_debug_json_msg['macroeconomic_decider_merge_point_y']
+    boundary_line_merge_point_x = plan_debug_json_msg['boundary_line_merge_point_x']
+    boundary_line_merge_point_y = plan_debug_json_msg['boundary_line_merge_point_y']
+    lon_init_state = plan_debug_msg.longitudinal_motion_planning_input.init_state
+    init_state_s = lon_init_state.s
+    init_state_v = lon_init_state.v
+    init_state_a = lon_init_state.a
+    replan_status = plan_debug_json_msg["replan_status"]
+    init_pos_point_x = []
+    init_pos_point_y = []
+    init_pos_line_x = []
+    init_pos_line_y = []
+    pp_ld_x_vec = []
+    pp_ld_y_vec = []
+    pp_ld_x_vec_ = []
+    pp_ld_y_vec_ = []
+    ego_pos_compensation_x_ = []
+    ego_pos_compensation_y_ = []
+    init_pos_point_theta = []
+    lon_collision_object_position_x_vec_ = []
+    lon_collision_object_position_y_vec_ = []
+    ego_motion_ref_sim_x_vec_ = []
+    ego_motion_ref_sim_y_vec_ = []
 
-      pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
-      print("pp_ld_length_vec: ", pp_ld_length_vec)
+    pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
+    print("pp_ld_length_vec: ", pp_ld_length_vec)
 
-      pp_ld_x_vec.append(pp_goal_point_x)
-      pp_ld_y_vec.append(pp_goal_point_y)
-      pp_ld_x_vec.append(pp_init_point_x)
-      pp_ld_y_vec.append(pp_init_point_y)
+    pp_ld_x_vec.append(pp_goal_point_x)
+    pp_ld_y_vec.append(pp_goal_point_y)
+    pp_ld_x_vec.append(pp_init_point_x)
+    pp_ld_y_vec.append(pp_init_point_y)
+    if g_is_display_enu:
+      init_pos_point_x.append(init_state_x)
+      init_pos_point_y.append(init_state_y)
+      init_pos_point_theta.append(init_state_theta)
+      ego_pos_compensation_x_.append(ego_pos_compensation_x)
+      ego_pos_compensation_y_.append(ego_pos_compensation_y)
+      lon_collision_object_position_x_vec_ = lon_collision_object_position_x_vec
+      lon_collision_object_position_y_vec_ = lon_collision_object_position_y_vec
+      ego_motion_ref_sim_x_vec_ = ego_motion_ref_sim_x_vec
+      ego_motion_ref_sim_y_vec_ = ego_motion_ref_sim_y_vec
+      pp_ld_x_vec_ = pp_ld_x_vec
+      pp_ld_y_vec_ = pp_ld_y_vec
+    else:
+      init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
+      ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
+      ego_motion_ref_sim_x_vec_, ego_motion_ref_sim_y_vec_ = coord_tf.global_to_local(ego_motion_ref_sim_x_vec, ego_motion_ref_sim_y_vec)
+      pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
+      lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
+      temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
+      init_pos_point_theta.append(temp_theta)
+
+    print("lon_collision_object_position_x_vec: ", lon_collision_object_position_x_vec_)
+    print("lon_collision_object_position_y_vec: ", lon_collision_object_position_y_vec_)
+
+    for i in range(len(bag_loader.plan_debug_msg['data'])):
+      init_pos_xn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.x
+      init_pos_yn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.y
+
       if g_is_display_enu:
-        init_pos_point_x.append(init_state_x)
-        init_pos_point_y.append(init_state_y)
-        init_pos_point_theta.append(init_state_theta)
-        ego_pos_compensation_x_.append(ego_pos_compensation_x)
-        ego_pos_compensation_y_.append(ego_pos_compensation_y)
-        lon_collision_object_position_x_vec_ = lon_collision_object_position_x_vec
-        lon_collision_object_position_y_vec_ = lon_collision_object_position_y_vec
-        ego_motion_ref_sim_x_vec_ = ego_motion_ref_sim_x_vec
-        ego_motion_ref_sim_y_vec_ = ego_motion_ref_sim_y_vec
-        pp_ld_x_vec_ = pp_ld_x_vec
-        pp_ld_y_vec_ = pp_ld_y_vec
+        local_init_x = init_pos_xn_i
+        local_init_y = init_pos_yn_i
       else:
-        init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
-        ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
-        ego_motion_ref_sim_x_vec_, ego_motion_ref_sim_y_vec_ = coord_tf.global_to_local(ego_motion_ref_sim_x_vec, ego_motion_ref_sim_y_vec)
-        pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
-        lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
-        temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
-        init_pos_point_theta.append(temp_theta)
+        local_init_x, local_init_y = global2local(init_pos_xn_i, init_pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
 
-      print("lon_collision_object_position_x_vec: ", lon_collision_object_position_x_vec_)
-      print("lon_collision_object_position_y_vec: ", lon_collision_object_position_y_vec_)
+      init_pos_line_x.append(local_init_x)
+      init_pos_line_y.append(local_init_y)
 
-      for i in range(len(bag_loader.plan_debug_msg['data'])):
-        init_pos_xn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.x
-        init_pos_yn_i = bag_loader.plan_debug_msg['data'][i].lateral_motion_planning_input.init_state.y
-
-        if g_is_display_enu:
-          local_init_x = init_pos_xn_i
-          local_init_y = init_pos_yn_i
-        else:
-         local_init_x, local_init_y = global2local(init_pos_xn_i, init_pos_yn_i, cur_pos_xn, cur_pos_yn, cur_yaw)
-
-        init_pos_line_x.append(local_init_x)
-        init_pos_line_y.append(local_init_y)
-
-      local_view_data['data_init_line'].data.update({
-        'init_pos_line_x': init_pos_line_x,
-        'init_pos_line_y': init_pos_line_y,
-       })
-
-      local_view_data['data_init_pos_point'].data.update({
-        'init_pos_point_y': init_pos_point_y,
-        'init_pos_point_x': init_pos_point_x,
-        'init_pos_point_theta': init_pos_point_theta,
-        'init_state_x': [init_state_x],
-        'init_state_y': [init_state_y],
-        'init_state_theta': [init_state_theta],
-        'init_state_delta': [init_state_delta],
-        'init_state_s': [init_state_s],
-        'init_state_v': [init_state_v],
-        'init_state_a': [init_state_a],
-        'replan_status': [replan_status],
-        'ego_pos_compensation_x': ego_pos_compensation_x_,
-        'ego_pos_compensation_y': ego_pos_compensation_y_
-      })
-      local_view_data['data_merge_point'].data.update({
-        'merge_point_x': [merge_point_x],
-        'merge_point_y': [merge_point_y]})
-      local_view_data['data_pure_pursuit'].data.update({
-        'ld_x_vec': pp_ld_x_vec_,
-        'ld_y_vec': pp_ld_y_vec_})
-      local_view_data["data_lon_collision_object_position"].data.update({
-        'lon_collision_object_position_x': lon_collision_object_position_x_vec_,
-        'lon_collision_object_position_y': lon_collision_object_position_y_vec_,
-      })
-      local_view_data['data_ego_motion_sim_ref_traj'].data.update({
-        'ego_ref_sim_x_vec': ego_motion_ref_sim_x_vec_,
-        'ego_ref_sim_y_vec': ego_motion_ref_sim_y_vec_,
-      })
-      macroeconomic_decider_merge_point_x, macroeconomic_decider_merge_point_y = coord_tf.global_to_local([macroeconomic_decider_merge_point_x], [macroeconomic_decider_merge_point_y])
-      macroeconomic_decider_merge_point_x = macroeconomic_decider_merge_point_x[0]
-      macroeconomic_decider_merge_point_y = macroeconomic_decider_merge_point_y[0]
-      local_view_data['macroeconomic_decider_data_merge_point'].data.update({
-        'macroeconomic_decider_merge_point_x': [macroeconomic_decider_merge_point_x],
-        'macroeconomic_decider_merge_point_y': [macroeconomic_decider_merge_point_y],
-      })
-      boundary_line_merge_point_x, boundary_line_merge_point_y = coord_tf.global_to_local([boundary_line_merge_point_x], [boundary_line_merge_point_y])
-      boundary_line_merge_point_x = boundary_line_merge_point_x[0]
-      boundary_line_merge_point_y = boundary_line_merge_point_y[0]
-      local_view_data['boundary_line_merge_point'].data.update({
-        'boundary_line_merge_point_x': [boundary_line_merge_point_x],
-        'boundary_line_merge_point_y': [boundary_line_merge_point_y],
+    local_view_data['data_init_line'].data.update({
+      'init_pos_line_x': init_pos_line_x,
+      'init_pos_line_y': init_pos_line_y,
       })
 
-      lat_motion_planning_output = plan_debug_msg.lateral_motion_planning_output
-      lat_plan_traj_x = []
-      lat_plan_traj_y = []
-      lat_plan_traj_theta = []
-      for i in range(len(lat_motion_planning_output.x_vec)):
-        lat_plan_traj_x.append(lat_motion_planning_output.x_vec[i])
-        lat_plan_traj_y.append(lat_motion_planning_output.y_vec[i])
-        lat_plan_traj_theta.append(lat_motion_planning_output.theta_vec[i])
-      if not g_is_display_enu:
-          lat_plan_traj_x, lat_plan_traj_y = coord_tf.global_to_local(lat_plan_traj_x, lat_plan_traj_y)
-          cur_yaw = loc_msg.orientation.euler_boot.yaw
-          lat_plan_traj_theta_local = []
-          for i in range(len(lat_plan_traj_theta)):
-            lat_plan_traj_theta_local.append(lat_plan_traj_theta[i] - cur_yaw)
-          lat_plan_traj_theta = lat_plan_traj_theta_local
+    local_view_data['data_init_pos_point'].data.update({
+      'init_pos_point_y': init_pos_point_y,
+      'init_pos_point_x': init_pos_point_x,
+      'init_pos_point_theta': init_pos_point_theta,
+      'init_state_x': [init_state_x],
+      'init_state_y': [init_state_y],
+      'init_state_theta': [init_state_theta],
+      'init_state_delta': [init_state_delta],
+      'init_state_s': [init_state_s],
+      'init_state_v': [init_state_v],
+      'init_state_a': [init_state_a],
+      'replan_status': [replan_status],
+      'ego_pos_compensation_x': ego_pos_compensation_x_,
+      'ego_pos_compensation_y': ego_pos_compensation_y_
+    })
+    local_view_data['data_merge_point'].data.update({
+      'merge_point_x': [merge_point_x],
+      'merge_point_y': [merge_point_y]})
+    local_view_data['data_pure_pursuit'].data.update({
+      'ld_x_vec': pp_ld_x_vec_,
+      'ld_y_vec': pp_ld_y_vec_})
+    local_view_data["data_lon_collision_object_position"].data.update({
+      'lon_collision_object_position_x': lon_collision_object_position_x_vec_,
+      'lon_collision_object_position_y': lon_collision_object_position_y_vec_,
+    })
+    local_view_data['data_ego_motion_sim_ref_traj'].data.update({
+      'ego_ref_sim_x_vec': ego_motion_ref_sim_x_vec_,
+      'ego_ref_sim_y_vec': ego_motion_ref_sim_y_vec_,
+    })
+    macroeconomic_decider_merge_point_x, macroeconomic_decider_merge_point_y = coord_tf.global_to_local([macroeconomic_decider_merge_point_x], [macroeconomic_decider_merge_point_y])
+    macroeconomic_decider_merge_point_x = macroeconomic_decider_merge_point_x[0]
+    macroeconomic_decider_merge_point_y = macroeconomic_decider_merge_point_y[0]
+    local_view_data['macroeconomic_decider_data_merge_point'].data.update({
+      'macroeconomic_decider_merge_point_x': [macroeconomic_decider_merge_point_x],
+      'macroeconomic_decider_merge_point_y': [macroeconomic_decider_merge_point_y],
+    })
+    boundary_line_merge_point_x, boundary_line_merge_point_y = coord_tf.global_to_local([boundary_line_merge_point_x], [boundary_line_merge_point_y])
+    boundary_line_merge_point_x = boundary_line_merge_point_x[0]
+    boundary_line_merge_point_y = boundary_line_merge_point_y[0]
+    local_view_data['boundary_line_merge_point'].data.update({
+      'boundary_line_merge_point_x': [boundary_line_merge_point_x],
+      'boundary_line_merge_point_y': [boundary_line_merge_point_y],
+    })
 
-      local_view_data['data_planning_lat'].data.update({
-        'plan_traj_y' : lat_plan_traj_y,
-        'plan_traj_x' : lat_plan_traj_x,
+    lat_motion_planning_output = plan_debug_msg.lateral_motion_planning_output
+    lat_plan_traj_x = []
+    lat_plan_traj_y = []
+    lat_plan_traj_theta = []
+    for i in range(len(lat_motion_planning_output.x_vec)):
+      lat_plan_traj_x.append(lat_motion_planning_output.x_vec[i])
+      lat_plan_traj_y.append(lat_motion_planning_output.y_vec[i])
+      lat_plan_traj_theta.append(lat_motion_planning_output.theta_vec[i])
+    if not g_is_display_enu:
+        lat_plan_traj_x, lat_plan_traj_y = coord_tf.global_to_local(lat_plan_traj_x, lat_plan_traj_y)
+        cur_yaw = loc_msg.orientation.euler_boot.yaw
+        lat_plan_traj_theta_local = []
+        for i in range(len(lat_plan_traj_theta)):
+          lat_plan_traj_theta_local.append(lat_plan_traj_theta[i] - cur_yaw)
+        lat_plan_traj_theta = lat_plan_traj_theta_local
+
+    local_view_data['data_planning_lat'].data.update({
+      'plan_traj_y' : lat_plan_traj_y,
+      'plan_traj_x' : lat_plan_traj_x,
+    })
+
+    if len(lat_plan_traj_x) == len(lat_plan_traj_y) and len(lat_plan_traj_x) == len(lat_plan_traj_theta):
+      lat_car_xb_traj = []
+      lat_car_yb_traj = []
+      for i in range(len(lat_plan_traj_x) - 1, -1, -1):
+        car_xb_traj_point = []
+        car_yb_traj_point = []
+        for j in range(len(car_xb)):
+          tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], lat_plan_traj_x[i], lat_plan_traj_y[i], lat_plan_traj_theta[i])
+          car_xb_traj_point.append(tmp_x)
+          car_yb_traj_point.append(tmp_y)
+        lat_car_xb_traj.append(car_xb_traj_point)
+        lat_car_yb_traj.append(car_yb_traj_point)
+      local_view_data['data_car_traj_lat'].data.update({
+        'car_yb_traj' : lat_car_yb_traj,
+        'car_xb_traj' : lat_car_xb_traj,
       })
-
-      if len(lat_plan_traj_x) == len(lat_plan_traj_y) and len(lat_plan_traj_x) == len(lat_plan_traj_theta):
-        lat_car_xb_traj = []
-        lat_car_yb_traj = []
-        for i in range(len(lat_plan_traj_x) - 1, -1, -1):
-          car_xb_traj_point = []
-          car_yb_traj_point = []
-          for j in range(len(car_xb)):
-            tmp_x, tmp_y = local2global(car_xb[j], car_yb[j], lat_plan_traj_x[i], lat_plan_traj_y[i], lat_plan_traj_theta[i])
-            car_xb_traj_point.append(tmp_x)
-            car_yb_traj_point.append(tmp_y)
-          lat_car_xb_traj.append(car_xb_traj_point)
-          lat_car_yb_traj.append(car_yb_traj_point)
-        local_view_data['data_car_traj_lat'].data.update({
-          'car_yb_traj' : lat_car_yb_traj,
-          'car_xb_traj' : lat_car_xb_traj,
-        })
-      else:
-        print("car_traj_lat error!")
-        print("lat_plan_traj_x size: ", len(lat_plan_traj_x))
-        print("lat_plan_traj_y size: ", len(lat_plan_traj_y))
-        print("lat_plan_traj_theta size: ", len(lat_plan_traj_theta))
+    else:
+      print("car_traj_lat error!")
+      print("lat_plan_traj_x size: ", len(lat_plan_traj_x))
+      print("lat_plan_traj_y size: ", len(lat_plan_traj_y))
+      print("lat_plan_traj_theta size: ", len(lat_plan_traj_theta))
     # local_view_data['data_text'].data.update({
     #   'vel_ego_text': ['v={:.2f}({:d})\nsteer={:.2}'.format(round(vel_ego, 2),current_lane_virtual_id, round(steer_deg, 2))],
     #   'text_xn': [text_xn],
