@@ -1900,6 +1900,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       if (route_info_output_.accumulate_dis_ego_to_last_split_point >
           mlc_decider_route_info_.end_fp_dis_to_split) {
         mlc_decider_route_info_.reset();
+        return;
       }
       break;
     }
