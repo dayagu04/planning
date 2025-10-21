@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250904/20250904-15-29-47/data_collection_CHERY_M32T_50813_EVENT_FUNEXIT_2025-09-04-15-29-47_no_camera.bag.1760687707.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_50813/trigger/20250904/20250904-15-29-47/data_collection_CHERY_M32T_50813_EVENT_FUNEXIT_2025-09-04-15-29-47_no_camera.bag.1761017746.open-loop.scc.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -181,6 +181,22 @@ def update_construction_agent_info(local_view_data):
       i = i + 1
     except:
       pass
+
+  try:
+    is_exist_construction_area = local_view_data['data_msg']['plan_debug_json_msg']['is_exist_construction_area']
+    datas.append(is_exist_construction_area)
+    names.append('is_exist_construction_area')
+    directions.append([])
+  except:
+    pass
+
+  try:
+    is_pass_construction_area = local_view_data['data_msg']['plan_debug_json_msg']['is_pass_construction_area']
+    datas.append(is_pass_construction_area)
+    names.append('is_pass_construction_area')
+    directions.append([])
+  except:
+    pass
 
   hmi_construction_agent_data.data.update({
     'name': names,

@@ -9,15 +9,16 @@
 #include "planning_context.h"
 #include "quintic_poly_path.h"
 // #include "scenario_state_machine.h"
-#include "common/define/geometry.h"
+#include "modules/common/define/geometry.h"
+#include "modules/tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
+#include "modules/tasks/task.h"
+#include "modules/tasks/task_interface/construction_scene_decider_output.h"
 #include "spline_projection.h"
 #include "task_basic_types.h"
-#include "tasks/task.h"
 #include "utils/hysteresis_decision.h"
 #include "utils/kd_path.h"
 #include "virtual_lane.h"
 #include "virtual_lane_manager.h"
-#include "tasks/behavior_planners/lane_change_decider/lane_change_requests/lane_change_lane_manager.h"
 
 namespace planning {
 
@@ -39,53 +40,6 @@ class ConstructionSceneDecider : public Task {
   void UnitTest();
 
  private:
-  enum class Direction { DEFAULT, LEFT, RIGHT, LON, UNSURE };
-  struct ConstructionAgentPoint {
-    // 施工障碍物数据结构体
-    double x, y;
-    double car_x, car_y;
-    double s, l;
-    double left_dist, right_dist;
-    int32_t id;
-    int cluster;
-    bool visited;
-
-    // Default constructor
-    ConstructionAgentPoint()
-        : x(0.0),
-          y(0.0),
-          car_x(0.0),
-          car_y(0.0),
-          s(0.0),
-          l(0.0),
-          left_dist(0.0),
-          right_dist(0.0),
-          id(0),
-          cluster(-1),
-          visited(false) {}
-    // Parameterized constructor
-    ConstructionAgentPoint(int32_t id, double x, double y, double car_x,
-                           double car_y, double s, double l, double left_dist,
-                           double right_dist)
-        : x(x),
-          y(y),
-          car_x(car_x),
-          car_y(car_y),
-          s(s),
-          l(l),
-          left_dist(left_dist),
-          right_dist(right_dist),
-          id(id),
-          cluster(-1),
-          visited(false) {}
-  };
-  using ConstructionAgentPoints = std::vector<ConstructionAgentPoint>;
-
-  struct ConstructionAgentClusterArea {
-    ConstructionAgentPoints points;
-    Direction direction = Direction :: DEFAULT;
-  };
-
   void UpdateConstructionAgentClusters();
 
   void SetLaneChangeRequestByConstructionAgent();
@@ -105,15 +59,14 @@ class ConstructionSceneDecider : public Task {
                                  const ConstructionAgentPoint& b, double eps_s,
                                  double eps_l);
 
-  void ExpandCluster(
-      ConstructionAgentPoints& construction_agent_points, int index,
-      int c, double eps_s, double eps_l, int minPts);
+  void ExpandCluster(ConstructionAgentPoints& construction_agent_points,
+                     int index, int c, double eps_s, double eps_l, int minPts);
 
-  void DbScan(ConstructionAgentPoints& construction_agent_points,
-              double eps_s, double eps_l, int minPts);
+  void DbScan(ConstructionAgentPoints& construction_agent_points, double eps_s,
+              double eps_l, int minPts);
 
-  double CalcClusterToBoundaryDist(
-      const ConstructionAgentPoints& points, RequestType direction);
+  double CalcClusterToBoundaryDist(const ConstructionAgentPoints& points,
+                                   RequestType direction);
 
   void ConstructionAgentDir();
 
@@ -127,20 +80,18 @@ class ConstructionSceneDecider : public Task {
   double ConstructionAgentSpearmanRankCorrelation(
       const ConstructionAgentPoints points);
 
-  double ConstructionAgentComputeSlope(
-      ConstructionAgentPoints points);
+  double ConstructionAgentComputeSlope(ConstructionAgentPoints points);
 
   std::vector<double> ConstructionAgentRankify(std::vector<double>& arr);
 
   bool ConstructionAgentMean(const ConstructionAgentPoints& points,
                              double& s_mean, double& l_mean);
 
-  bool ConstructionAgentStddev(
-      const ConstructionAgentPoints& points, double s_mean,
-      double l_mean, double& s_stddev, double& l_stddev);
+  bool ConstructionAgentStddev(const ConstructionAgentPoints& points,
+                               double s_mean, double l_mean, double& s_stddev,
+                               double& l_stddev);
 
-  bool ConstructionAgentStandardize(
-      ConstructionAgentPoints& points);
+  bool ConstructionAgentStandardize(ConstructionAgentPoints& points);
 
   double QueryLaneWidth(
       const double s0,
@@ -158,7 +109,9 @@ class ConstructionSceneDecider : public Task {
       const std::vector<Point2d>& cone_points);
 
   void UpdateResult(
-    const std::map<int, std::map<int, std::vector<int>>>& results);
+      const std::map<int, std::map<int, std::vector<int>>>& results);
+
+  void GenerateConstructionSceneOutput();
 
   void SaveLatDebugInfo();
 
@@ -190,7 +143,6 @@ class ConstructionSceneDecider : public Task {
   bool is_construction_agent_cluster_success_ = false;
   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr_;
   int origin_lane_virtual_id_;
-
 };
 
 }  // namespace planning
