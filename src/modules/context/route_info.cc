@@ -1720,14 +1720,28 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
 
   const int split_num = 2;
-
+  double solid_line_length_between_two_splits = 0;
+  // 计算两个split之间实线长度
+  if (route_info_output_.split_region_info_list.size() >= split_num &&
+      split_region_info_list[0].is_valid &&
+      split_region_info_list[1].is_valid) {
+    const auto second_region_start_fp =
+        split_region_info_list[1].start_fp_point;
+    double distance_between_two_splits =
+        split_region_info_list[1].distance_to_split_point -
+        split_region_info_list[0].distance_to_split_point;
+    solid_line_length_between_two_splits = LengthSolidLineJudge(
+        second_region_start_fp.link_id, second_region_start_fp.fp,
+        distance_between_two_splits);
+  }
   const bool is_two_splits_close =
       !split_region_info_list.empty() &&
       route_info_output_.split_region_info_list.size() >= split_num &&
       (route_info_output_.split_region_info_list[1].distance_to_split_point -
            route_info_output_.split_region_info_list[0]
                .distance_to_split_point <
-       mlc_decider_config_.split_split_gap_threshold);
+       mlc_decider_config_.split_split_gap_threshold +
+           solid_line_length_between_two_splits);
 
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
@@ -1750,6 +1764,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           std::abs(split_region_info_list[0]
                        .start_fp_point.fp_distance_to_split_point);
 
+      bool is_passing_split =
+          split_region_info_list[0].split_link_id !=
+          mlc_decider_route_info_.first_static_split_region_info.split_link_id;
       // 目前都是由右边下匝道的case大多数，由于版本还不稳定，当前优先处理右边split的场景
       // bool is_is_entery_split_region = false;
       // bool is_split_region = session_->planning_context()
@@ -1789,6 +1806,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREAR_FRONT;
         mlc_decider_route_info_.end_fp_dis_to_split =
             split_region_info_list[0].end_fp_point.fp_distance_to_split_point;
+      } else if (is_passing_split) {
+        mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREAR_FRONT;
+        mlc_decider_route_info_.end_fp_dis_to_split =
+            mlc_decider_route_info_.first_static_split_region_info.end_fp_point
+                .fp_distance_to_split_point;
       }
       break;
     }
@@ -3954,6 +3976,15 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
         for (int i = 1; i <= on_exclnum - 1; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
+      }
+    } else if (on_exclnum > successor_exclnum + successor_other_exclnum) {
+      // 经过交换区后车道数变少，case较少，目前观察消亡车道均是中间车道
+      before_excr_feasible_lane.emplace_back(before_exclnum);
+      for (int i = successor_exclnum - 1; i >= 0; --i) {
+        on_excr_feasible_lane.emplace_back(on_exclnum - i);
+      }
+      for (int i = 1; i <= on_exclnum; ++i) {
+        mlc_request_info_[i] = MAIN_TO_RAMP;
       }
     }
 
