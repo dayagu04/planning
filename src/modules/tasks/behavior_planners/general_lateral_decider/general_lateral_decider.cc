@@ -159,11 +159,7 @@ bool GeneralLateralDecider::Execute() {
                   frenet_hard_bounds_, second_soft_bounds_info_,
                   first_soft_bounds_info_, hard_bounds_info_);
 
-  CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
-
-  LimitFrenetLateralSlope(first_frenet_soft_bounds_);
-  LimitFrenetLateralSlope(second_frenet_soft_bounds_);
-  LimitFrenetLateralSlope(frenet_hard_bounds_);
+  PostProcessBoundary();
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
@@ -171,15 +167,12 @@ bool GeneralLateralDecider::Execute() {
 
   if (config_.use_first_soft_bound) {
     CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
-
-    PostProcessReferenceTrajBySoftBound(first_frenet_soft_bounds_,
-                                        general_lateral_decider_output);
   } else {
     CalculateAvoidObstacles(second_frenet_soft_bounds_, second_soft_bounds_info_);
-
-    PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_,
-                                        general_lateral_decider_output);
   }
+
+  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                                      general_lateral_decider_output);
 
   GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
                                frenet_hard_bounds_, second_soft_bounds_info_,
@@ -4157,6 +4150,12 @@ void GeneralLateralDecider::ExtractBoundary(
   assert(second_frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
+void GeneralLateralDecider::PostProcessBoundary() {
+  LimitFrenetLateralSlope(first_frenet_soft_bounds_);
+  LimitFrenetLateralSlope(second_frenet_soft_bounds_);
+  LimitFrenetLateralSlope(frenet_hard_bounds_);
+}
+
 void GeneralLateralDecider::LimitFrenetLateralSlope(
     std::vector<std::pair<double, double>> &frenet_bounds) {
   // 避免dl ds 差值过大
@@ -4853,7 +4852,8 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 }
 
 void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   // bool bound_avoid = false;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
@@ -4862,8 +4862,11 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     //   bound_avoid = true;
     // }
     ref_traj_points_[i].l =
-        std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
-                 frenet_soft_bounds[i].second);
+        std::min(std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+                 second_frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l =
+        std::min(std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+                 first_frenet_soft_bounds[i].second);
   }
   // general_lateral_decider_output.bound_avoid = bound_avoid;
 }

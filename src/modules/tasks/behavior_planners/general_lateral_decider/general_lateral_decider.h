@@ -139,7 +139,8 @@ class GeneralLateralDecider : public Task {
   iflyauto::LaneBoundaryType CalLaneBoundaryType(const LineDirection direction,
                                                  const double s) const;
   void PostProcessReferenceTrajBySoftBound(
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
@@ -273,6 +274,7 @@ class GeneralLateralDecider : public Task {
       const std::shared_ptr<FrenetObstacle> obstacle);
   void LimitFrenetLateralSlope(
       std::vector<std::pair<double, double>> &frenet_bounds);
+  void PostProcessBoundary();
   void GenerateRecommendJerk(
       const std::shared_ptr<FrenetObstacle> obstacle,
       bool &is_high_dangerous);
