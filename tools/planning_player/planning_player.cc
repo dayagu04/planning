@@ -153,6 +153,11 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
         scene_type_ = "rads";
         auto_timestamp_ = fsm_msg->msg_header.stamp;
         break;
+      } else if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {  // todo: nsa active
+        find_scene_type = true;
+        scene_type_ = "nsa";
+        auto_timestamp_ = fsm_msg->msg_header.stamp;
+        break;
       }
     }
   }
@@ -1127,6 +1132,13 @@ void PlanningPlayer::PlayOneFrame(
         } else {
           functional_state = func_state_machine_ros_msg.current_state;
         }
+      } else if (scene_type_ == "nsa") {
+        if (is_close_loop) {
+          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;  // todo: nsa active
+        } else {
+          // functional_state = func_state_machine_ros_msg.current_state;
+          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;  // todo: nsa active
+        }
       }
     }
     func_state_machine_ros_msg.current_state = functional_state;
@@ -1268,7 +1280,7 @@ void PlanningPlayer::PlayAllFrames(bool is_close_loop, bool play_in_loop) {
 void PlanningPlayer::RunCloseLoop(
     const struct_msgs::PlanningOutput& planning_output) {
   if (scene_type_ == "scc" || scene_type_ == "noa" || scene_type_ == "hpp" ||
-      scene_type_ == "rads") {  // scc
+      scene_type_ == "rads" || scene_type_ == "nsa") {  // scc
     if (!check_msg_exist(msg_cache_, TOPIC_PLANNING_DEBUG_INFO)) {
       std::cerr << "Error!!! missing planning debug info" << std::endl;
       return;
@@ -1886,7 +1898,7 @@ void PlanningPlayer::GenMileage(const std::string& mileage_path) {
   if (mileage_path != "") {
     double pathLength = 0.0;
     if (scene_type_ == "scc" or scene_type_ == "noa" or scene_type_ == "hpp" or
-        scene_type_ == "rads") {
+        scene_type_ == "rads" or scene_type_ == "nsa") {
       if (check_msg_exist(msg_cache_, TOPIC_LOCALIZATION)) {
         auto it_loc_msg = msg_cache_[TOPIC_LOCALIZATION].begin();
         for (size_t i = 0; i < msg_cache_[TOPIC_LOCALIZATION].size() - 1; ++i) {
@@ -2246,6 +2258,8 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
           functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
         } else if (scene_type_ == "rads") {
           functional_state = iflyauto::FunctionalState_RADS_TRACING;
+        } else if (scene_type_ == "nsa") {
+          functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;  // todo: nsa active
         }
       }
 

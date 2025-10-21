@@ -269,7 +269,7 @@ bool EnvironmentalModelManager::Run() {
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
   bool location_valid_on_openspace =
-      local_view.fusion_objects_info.local_point_valid &&
+      // local_view.fusion_objects_info.local_point_valid &&
       local_view.fusion_occupancy_objects_info.local_point_valid;
   // check planner type
   bool planner_valid = GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
@@ -332,7 +332,7 @@ bool EnvironmentalModelManager::Run() {
   }
   bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
-                    rads_mode || mrc_mode;
+                    rads_mode || nsa_mode || mrc_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
   JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
