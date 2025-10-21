@@ -148,6 +148,9 @@ void EgoStateManager::set_ego_v_cruise(
   if (session_->is_rads_scene()) {
     ego_v_cruise_ = config_.rads_cruise_speed;
   }
+  if (session_->is_nsa_scene()) {
+    ego_v_cruise_ = config_.nsa_cruise_speed;
+  }
 }
 
 void EgoStateManager::set_ego_t_distance(

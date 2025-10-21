@@ -4587,8 +4587,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                                                  cruise_routing_speed);
     cruise_searching_speed = read_json_key<double>(
         json, "cruise_searching_speed", cruise_searching_speed);
-    rads_cruise_speed = read_json_key<double>(
-        json, "rads_cruise_speed", rads_cruise_speed);
+    ReadItem<double>(json, rads_cruise_speed, "rads_cruise_speed");
+    ReadItem<double>(json, nsa_cruise_speed, "nsa_cruise_speed");
     max_replan_lat_err =
         read_json_key<double>(json, "max_replan_lat_err", max_replan_lat_err);
     max_replan_theta_err = read_json_key<double>(json, "max_replan_theta_err",
@@ -4630,6 +4630,7 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
   double cruise_routing_speed = 5.55;
   double cruise_searching_speed = 1.5;
   double rads_cruise_speed = 1.5;
+  double nsa_cruise_speed = 1.389;
 
   double max_replan_lat_err = 0.6;
   double max_replan_theta_err = 10.0;

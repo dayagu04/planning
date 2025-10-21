@@ -917,6 +917,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     roads_virtual.reference_line_msg[0] = current_lane_virtual;
     roads_virtual.reference_line_msg_size = 1;
     roads_virtual.local_point_valid = roads.local_point_valid;
+    roads_virtual.lane_ground_markings_size = 0;
     roads_ptr = &roads_virtual;
   }
   // if (!CheckLaneValid(roads)) {

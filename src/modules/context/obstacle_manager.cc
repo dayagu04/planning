@@ -91,7 +91,7 @@ void ObstacleManager::update() {
     }
 
     // hpp中过滤近处的OD
-    if (session_->is_hpp_scene() || session_->is_rads_scene()) {
+    if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
       if (reference_path != nullptr) {
         if (frenet_coord != nullptr) {
           bool in_range = true;
@@ -138,7 +138,8 @@ void ObstacleManager::update() {
     }
   }
 
-  if (session_->is_hpp_scene() || session_->is_rads_scene()) {
+  if (session_->is_hpp_scene() &&
+      !session_->is_nsa_scene() || session_->is_rads_scene()) {
     // ground line
     double time_start = IflyTime::Now_ms();
     UpdateGroundLineObstacle();
@@ -771,7 +772,8 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
   frenet_obstacles.clear();
   frenet_obstacles_map.clear();
 
-  if (session_->is_hpp_scene() || session_->is_rads_scene() ) {
+  if (session_->is_hpp_scene() ||
+      session_->is_nsa_scene() || session_->is_rads_scene() ) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +
