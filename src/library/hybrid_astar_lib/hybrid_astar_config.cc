@@ -99,6 +99,9 @@ void PlannerOpenSpaceConfig::InitConfig() {
   rs_radius_buffer = 0.4f;
   enable_clear_zone = false;
 
+  vertical_map_bound_x_lower = -3.0f;
+  vertical_map_bound_min_x_lower = -10.0f;
+
   return;
 }
 

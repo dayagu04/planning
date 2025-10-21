@@ -118,6 +118,9 @@ struct PlannerOpenSpaceConfig {
 
   OpenSpaceSafeBuffer safe_buffer;
 
+  float vertical_map_bound_x_lower;
+  float vertical_map_bound_min_x_lower;
+
   void InitConfig();
 };
 

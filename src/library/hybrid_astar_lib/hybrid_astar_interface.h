@@ -103,8 +103,6 @@ class HybridAStarInterface {
   void GetPolynomialPathForDebug(std::vector<float>& x, std::vector<float>& y,
                                  std::vector<float>& phi);
 
-  void UpdateEDTByObs(const ParkObstacleList& obs_list);
-
   // for debug
   FootPrintCircleModel* GetCircleFootPrint(const HierarchySafeBuffer buffer);
 

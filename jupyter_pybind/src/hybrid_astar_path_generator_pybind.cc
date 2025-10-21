@@ -912,8 +912,6 @@ std::vector<Eigen::Vector3d> Update(
 
     hybrid_astar_interface_->GeneratePath(start, end, request);
 
-    // hybrid_astar_interface_->UpdateEDTByObs(hybrid_astar_obs_);
-
     ILOG_INFO << "hybrid_astar_interface_ finish";
     GetPathFromHybridAstar(
         ego_slot_info,
