@@ -105,6 +105,11 @@ class SpeedLimitDeciderOutput {
   void set_avoid_speed_limit_info(const SpeedLimitAgent speed_limit_agent_info);
   const SpeedLimitAgent avoid_speed_limit_info() const;
 
+  bool function_inhibited_near_roundabout() const { return function_inhibited_near_roundabout_; }
+  void set_function_inhibited_near_roundabout(const bool function_inhibited_near_roundabout) {
+    function_inhibited_near_roundabout_ = function_inhibited_near_roundabout;
+  }
+
  private:
   std::map<SpeedLimitType, double>
       speed_limit_map_;  //(type, speedlimit) for all scenes one by one
@@ -136,6 +141,8 @@ class SpeedLimitDeciderOutput {
 
   double v_limit_map_ramp_ = 0.0;
   SpeedLimitAgent v_limit_avoid_agent_info_;
+
+  bool function_inhibited_near_roundabout_ = false;
 };
 
 }  // namespace planning

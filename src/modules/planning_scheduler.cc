@@ -618,6 +618,11 @@ void PlanningScheduler::FillPlanningTrajectory(
         iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
     planning_output->planning_request.request_reason =
         speed_limit_decider_output.request_reason();
+  } else if (speed_limit_decider_output.function_inhibited_near_roundabout()) {
+    planning_output->planning_request.take_over_req_level =
+        iflyauto::RequestLevel::REQUEST_LEVEL_MILD;
+    planning_output->planning_request.request_reason =
+        iflyauto::RequestReason::REQUEST_REASON_ON_ROUNDABOUT;
   } else {
     planning_output->planning_request.take_over_req_level =
         iflyauto::RequestLevel::REQUEST_LEVEL_NO_REQ;

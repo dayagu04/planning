@@ -49,6 +49,7 @@ constexpr double kExitVruRoundLateralBufferThr = 1.0;
 constexpr double kExitVruRoundDistanceThr = 80.0;
 constexpr double kLowSpeedVruVelThr = 30 / 3.6;
 constexpr double kVRURoundDecelRatio = 0.7;
+constexpr double kTunnelVelLimitDisOffset = 50;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -275,7 +276,11 @@ bool SpeedLimitDecider::Execute() {
 
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
+  if (SpeedLimitType::CRUISE == v_target_type_ && poi_v_limit_set_) {
+    v_target_type_ = SpeedLimitType::NEAR_POI;
+  }
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
+
   auto ad_info = &(session_->mutable_planning_context()
                        ->mutable_planning_hmi_info()
                        ->ad_info);
@@ -510,18 +515,36 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
+  uint64_t ramp_link_id = -1;
+  double ramp_v_limit = 120;
+  const auto& split_region_info_list =
+        route_info_output.split_region_info_list;
+  if (dis_to_ramp < 2000.0) {
+    for (int i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point - dis_to_ramp) < 1.0) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
   // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
     // map info invalid, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
+  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+  const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
+  if (ramp_link == nullptr) {
+    ILOG_INFO << "ramp_link is null!!!";
+  } else {
+    ramp_v_limit = ramp_link->speed_limit();
+  }
   ad_common::math::Vec2d current_point;
   const auto &ego_state = environmental_model.get_ego_state_manager();
   const auto &pose = ego_state->location_enu();
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
-  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
   double nearest_s = 0;
   double nearest_l = 0;
   const double search_distance = 50.0;
@@ -561,7 +584,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   }
   JSON_DEBUG_VALUE("v_limit_gaode", v_limit_gaode);
 
-  if (v_limit_gaode > 30.0) {
+  if (v_limit_gaode > 30.0 - kEpsilon) {
     v_cruise_limit_ = v_limit_gaode;
   }
 
@@ -623,7 +646,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       }
     }
     v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
-    v_target_ramp = std::min(v_cruise_limit_ / 3.6, v_target_ramp);
+    v_target_ramp = v_cruise_limit_ / 3.6;
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
@@ -638,7 +661,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
                                              SpeedLimitType::MAP_ON_RAMP);
     return;
   }
-  if (dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) {
+  if ((dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) && !(ramp_v_limit > 60.0)) {
     double pre_brake_dis_near_ramp_zone = std::max(
         dis_to_ramp - speed_limit_config_.brake_dis_near_ramp_zone, 0.0);
     v_target_near_ramp_zone = std::pow(
@@ -648,7 +671,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
   v_target_ramp =
-      std::pow(std::pow(speed_limit_config_.v_limit_ramp, 2.0) -
+      std::pow(std::pow(std::max(speed_limit_config_.v_limit_ramp, ramp_v_limit / 3.6), 2.0) -
                    2 * pre_brake_dis_to_ramp * speed_limit_config_.acc_to_ramp,
                0.5);
   v_target_ramp = std::min(v_target_near_ramp_zone, v_target_ramp);
@@ -919,6 +942,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
+    poi_v_limit_set_ = false;
     return;
   }
   ad_common::math::Vec2d current_point;
@@ -936,15 +960,16 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (current_segment == nullptr) {
+    poi_v_limit_set_ = false;
     return;
   } else {
-    bool poi_v_limit_set = false;
+    poi_v_limit_set_ = false;
     double cur_link_v_limit = current_segment->speed_limit();
     double v_limit_dis = 10000.0;
     v_limit_dis =
         interp(cur_link_v_limit,
                speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
-               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table);
+               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table) + kTunnelVelLimitDisOffset;
 
     auto tunnel_info =
         sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
@@ -952,13 +977,13 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         tunnel_info.second < v_limit_dis) {
       // less than calibration distance before entering tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set = true;
+      poi_v_limit_set_ = true;
     } else if (tunnel_info.second < kEpsilon &&
                current_segment->link_type() ==
                    iflymapdata::sdpro::LinkType::LT_TUNNEL) {
       // inside tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set = true;
+      poi_v_limit_set_ = true;
     } else {
       v_limit_dis = interp(
           cur_link_v_limit,
@@ -973,7 +998,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         // less than calibration distance before entering toll station speed
         // limit works
         v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
-        poi_v_limit_set = true;
+        poi_v_limit_set_ = true;
       } else {
         v_limit_dis =
             interp(cur_link_v_limit,
@@ -986,12 +1011,12 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
           // less than calibration distance before entering sapa speed limit
           // works
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-          poi_v_limit_set = true;
+          poi_v_limit_set_ = true;
         } else if (sapa_info.second < kEpsilon &&
                    current_segment->link_type() ==
                        iflymapdata::sdpro::LinkType::LT_SAPA) {
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-          poi_v_limit_set = true;
+          poi_v_limit_set_ = true;
         } else {
           // GetNonExpressInfo, less than calibration distance before entering
           // non-express speed limit works
@@ -1006,15 +1031,38 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               none_express_info.second > 0 &&
               none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
-            poi_v_limit_set = true;
+            poi_v_limit_set_ = true;
+          } else {
+            bool function_need_inhibited = false;
+            auto speed_limit_output = session_->mutable_planning_context()
+                                ->mutable_speed_limit_decider_output();
+            speed_limit_output->set_function_inhibited_near_roundabout(false);
+            auto roundabout_info = sdpro_map.GetRoundAboutInfo(current_segment->id(), nearest_s, 300.0);
+            if (roundabout_info.first != nullptr && roundabout_info.second < 50.0) {
+              //in map mode, roundabout distance meets the condition
+                function_need_inhibited = true;
+            } else if (roundabout_info.first == nullptr) {
+              auto roundabout_info_list = sdpro_map.GetRoundAboutList(current_segment->id(), nearest_s, 300.0);
+              if (roundabout_info_list.size() == 0) {
+                return;
+              } else {
+                auto closest_roundabout = roundabout_info_list[0];
+                if (closest_roundabout.first != nullptr && closest_roundabout.second < 60.0) {
+                  //not in map mode, closest roundabout distance meets the condition
+                    function_need_inhibited = true;
+                }
+
+              }
+            }
+            if (function_need_inhibited) {
+              speed_limit_output->set_function_inhibited_near_roundabout(function_need_inhibited);
+            }
+
           }
         }
       }
     }
-    if (poi_v_limit_set && v_cruise_limit_ / 3.6 < v_target_) {
-      v_target_ = v_cruise_limit_ / 3.6;
-      v_target_type_ = SpeedLimitType::NEAR_POI;
-    }
+    
     JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
     auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();

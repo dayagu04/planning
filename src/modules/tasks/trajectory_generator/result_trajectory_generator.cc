@@ -74,6 +74,8 @@ bool ResultTrajectoryGenerator::Execute() {
 bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   auto &ego_planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
+  auto speed_limit_output = session_->mutable_planning_context()
+      ->mutable_speed_limit_decider_output();
 
   // Step 1) get x,y of trajectory points
   auto &traj_points = ego_planning_result.traj_points;
@@ -169,6 +171,11 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   } else {
     ad_info.is_avaliable = true;
   }
+
+  if (ad_info.is_avaliable && speed_limit_output->function_inhibited_near_roundabout()) {
+    ad_info.is_avaliable = false;
+  }
+
   // Step 2) get dense trajectory points
 
   std::vector<TrajectoryPoint> dense_traj_points;
