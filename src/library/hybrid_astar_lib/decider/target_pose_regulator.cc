@@ -676,7 +676,7 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
   float best_lon = lon_upper;
   float max_dist = 0.0f;
 
-  for (int32_t i = path->size - 1; i < path->size; i--) {
+  for (int32_t i = path->size - 1; i >= 0; i--) {
     if (path->points[i].x > lon_upper) {
       continue;
     }
