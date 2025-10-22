@@ -191,7 +191,7 @@ void ParallelPathGenerator::ExpandObstacles() {
   const auto channel_obs_iter = obs_map.find(CollisionDetector::CHANNEL_OBS);
   if (channel_obs_iter != obs_map.end()) {
     const Eigen::Vector2d channel_mov_vec(
-        0.0, -calc_params_.slot_side_sgn * kChannelYMoveDist);
+        0.0, -input_.tlane.slot_side_sgn * kChannelYMoveDist);
 
     calc_params_.channel_obs_vec = channel_obs_iter->second;
 
@@ -2743,20 +2743,21 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   }
 
   debug_info_.debug_inslot_path_vec = selected_path_vec;
-  sorted_path_vec = selected_path_vec;
-  for (int i = 0; i < sorted_path_vec.size(); ++i) {
+  sorted_path_vec.clear();
+  for (int i = 0; i < selected_path_vec.size(); ++i) {
     ILOG_INFO
-        << "sorted heading deg:" << sorted_path_vec[i].park_out_heading_deg
+        << "sorted heading deg:" << selected_path_vec[i].park_out_heading_deg
         << " radian : "
-        << sorted_path_vec[i].path_segment_vec.back().GetStartPose().heading
+        << selected_path_vec[i].path_segment_vec.back().GetStartPose().heading
         << " pos: "
-        << sorted_path_vec[i].path_segment_vec.back().GetStartPos().x() << " "
-        << sorted_path_vec[i].path_segment_vec.back().GetStartPos().y();
-    const double curr_y =
-        std::fabs(sorted_path_vec[i].path_segment_vec.back().GetStartPos().y());
+        << selected_path_vec[i].path_segment_vec.back().GetStartPos().x() << " "
+        << selected_path_vec[i].path_segment_vec.back().GetStartPos().y();
+    const double curr_y = std::fabs(
+        selected_path_vec[i].path_segment_vec.back().GetStartPos().y());
     if (curr_y > (input_.tlane.slot_width * 0.5)) {
-      sorted_path_vec.erase(sorted_path_vec.begin() + i);
+      continue;
     }
+    sorted_path_vec.emplace_back(selected_path_vec[i]);
   }
   return sorted_path_vec.empty() ? false : true;
 }
