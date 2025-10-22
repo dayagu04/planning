@@ -47,6 +47,8 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   Reset();
 
+  frame_.replan_reason = ReplanReason::SLOT_CRUISING;
+
   SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
                                       ->GetMutableEgoInfoUnderSlot()
                                       .slot.release_info_;
@@ -522,11 +524,12 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   CalcPtInside();
 
-  const bool update_slot_move_dist =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
-      (frame_.replan_flag && (frame_.replan_reason != ReplanReason::DYNAMIC ||
-                              (frame_.replan_reason == ReplanReason::DYNAMIC &&
-                               ego_info_under_slot.slot_occupied_ratio < 0.6)));
+  bool update_slot_move_dist = true;
+  if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
+      (frame_.replan_reason == ReplanReason::DYNAMIC &&
+       ego_info_under_slot.slot_occupied_ratio > 0.6)) {
+    update_slot_move_dist = false;
+  }
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
             << "  update_slot_move_dist = " << update_slot_move_dist
@@ -1150,10 +1153,8 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
   request.decide_cul_de_sac = apa_world_ptr_->GetSimuParam().decide_cul_de_sac;
 
-  request.is_searching_stage =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
-
-  if (request.is_searching_stage) {
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
+    // searching_stage
     request.max_gear_shift_number = param.max_plan_gear_shift_number_searching;
   } else {
     request.max_gear_shift_number =
@@ -1228,7 +1229,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
   JSON_DEBUG_VALUE("solve_number", hybrid_astar_result.solve_number)
   JSON_DEBUG_VALUE("search_node_num", hybrid_astar_result.search_node_num)
 
-  if (request.is_searching_stage) {
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
     if (!path_plan_success) {
       return PathPlannerResult::PLAN_FAILED;
     }
@@ -1411,10 +1412,23 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
     // 从线程里拿取路径规划结果  success or fail
     path_generator_thread_ptr->PublishResponseData(response);
     const HybridAStarRequest& last_request = response.request;
-    if (last_request.is_searching_stage) {
-      ILOG_INFO << "this respose path is search path, need loss and replan";
-      frame_.plan_fail_reason = LOSS_SEARCH_PATH;
-      return;
+
+    if (last_request.replan_reason == ReplanReason::SLOT_CRUISING) {
+      if (!response.result.path_plan_success) {
+        ILOG_INFO << "this respose path is search path and path plan fail";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      const double useable_search_time_ms = 3600.0;
+      if (response.result.search_consume_time_ms < useable_search_time_ms) {
+        ILOG_INFO << "this respose path is search path and consume time < "
+                  << useable_search_time_ms << "ms, need loss and replan";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      ILOG_INFO << "this respose path is search path and consume time > "
+                << useable_search_time_ms
+                << "ms, decide it can directly use th path";
     }
 
     const EgoInfoUnderSlot& last_ego_info_under_slot =
@@ -1541,6 +1555,7 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
 
     ILOG_INFO << "this respose is vaild, and use new path";
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+    frame_.is_replan_first = false;
     FillPathPointGlobalFromHybridPath(response);
 
     // update path success

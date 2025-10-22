@@ -1107,11 +1107,6 @@ const bool HybridAStarPathGenerator::BackwardPassByCurveNode(
     return false;
   }
 
-  // if (request_.is_searching_stage) {
-  //   result_.path_plan_success = true;
-  //   return true;
-  // }
-
   const double backward_start_time = IflyTime::Now_ms();
   if (request_.analytic_expansion_type ==
       AnalyticExpansionType::LINK_POSE_LINE) {

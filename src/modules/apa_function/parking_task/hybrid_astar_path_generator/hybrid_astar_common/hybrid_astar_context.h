@@ -50,7 +50,6 @@ struct HybridAStarRequest {
   float every_gear_length = 0.0;
   float sample_ds = 0.1;
   bool swap_start_goal = false;
-  bool is_searching_stage = false;
 
   SearchMode search_mode = SearchMode::FORMAL;
 

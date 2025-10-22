@@ -622,7 +622,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     find_success_curve_max_time = 86;
     config_.max_search_time_ms = 150;
   } else {
-    if (request_.is_searching_stage) {
+    if (request_.replan_reason == ReplanReason::SLOT_CRUISING) {
       find_success_curve_min_count = 0;
       find_success_curve_max_time = 68;
       config_.max_search_time_ms = 9800;
