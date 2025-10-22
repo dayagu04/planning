@@ -496,7 +496,26 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
       lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (int_request_cancel_reason == SOLID_LC) {
+  if (lane_change_decider_output.lc_invalid_reason == "propose time out") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
+  } else if (lc_back_reason == "dash line length not satisfy" ||
+             lane_change_decider_output.lc_invalid_reason ==
+                 "dash not enough") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
+  } else if (lc_invalid_reason == "side view invalid" ||
+             lc_invalid_reason == "front view invalid" ||
+             lc_back_reason == "side view back" ||
+             lc_back_reason == "front view back" ||
+             lc_back_reason == "but back cnt below threshold") {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
+    iflyauto::ObstacleInfo obstacle;
+    obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
+    ad_info.obstacle_info[0] = obstacle;
+    ad_info.obstacle_info_size = 1;
+  } else if (int_request_cancel_reason == SOLID_LC) {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
     // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
@@ -509,26 +528,6 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   } else if (int_request_cancel_reason == MANUAL_CANCEL) {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
-  } else if (lc_invalid_reason == "side view invalid" ||
-             lc_invalid_reason == "front view invalid" ||
-             lc_back_reason == "side view back" ||
-             lc_back_reason == "front view back" ||
-             lc_back_reason == "but back cnt below threshold") {
-    ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SIDE_VEH;
-    iflyauto::ObstacleInfo obstacle;
-    obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
-    ad_info.obstacle_info[0] = obstacle;
-    ad_info.obstacle_info_size = 1;
-  } else if (lc_back_reason == "dash line length not satisfy" ||
-             lane_change_decider_output.lc_invalid_reason ==
-                 "dash not enough") {
-    ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
-  } else if (lane_change_decider_output.lc_invalid_reason ==
-             "propose time out") {
-    ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
@@ -662,7 +661,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   ad_info.landing_point.relative_pos.z = 0.0;
   JSON_DEBUG_VALUE("ramp_pass_sts", (int)ad_info.ramp_pass_sts)
   double lc_complete_time_period = IflyTime::Now_ms() - lc_complete_to_lk_time;
-  static constexpr double kMaxTimeToCompleteLaneChange = 5000.0;  // ms
+  static constexpr double kMaxTimeToCompleteLaneChange = 7000.0;  // ms
   bool is_lane_keeping = curr_state == kLaneKeeping;
   bool is_time_out = lc_complete_time_period > kMaxTimeToCompleteLaneChange;
   iflyauto::LandingPoint landing_point;
