@@ -1518,6 +1518,10 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   hold_state_dash_cnt = 0;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
+  if(transition_info_.lane_change_status != kLaneChangePropose &&
+     transition_info_.lane_change_status != kLaneKeeping){
+    return;
+  }
   transition_info_.Rest();
   lc_lane_mgr_->reset_lc_lanes(transition_info_.lane_change_status);
   lane_change_stage_info_.Reset();
