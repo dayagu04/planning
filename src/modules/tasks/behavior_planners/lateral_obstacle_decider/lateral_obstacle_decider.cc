@@ -1252,7 +1252,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::RIGHT;
     }
     // cut_in 或 横穿
-    if (history.cut_in_or_cross) {
+    if (!obstacle.is_static() && history.cut_in_or_cross) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1284,7 +1284,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // cut_in 或 横穿
-    if (history.cut_in_or_cross) {
+    if (!obstacle.is_static() && history.cut_in_or_cross) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1297,6 +1297,19 @@ void LateralObstacleDecider::LateralObstacleDecision(
       history.is_avd_car = false;
       output_[id] = LatObstacleDecisionType::FOLLOW;
     }
+
+    // 如果是静态IGNORE障碍物，直接赋予FOLLOW
+    // 需要注意横向观测范围
+    if (obstacle.is_static() &&
+        !history.is_not_set &&
+        type != iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
+        type != iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL &&
+        type != iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
+        output_[id] == LatObstacleDecisionType::IGNORE &&
+        d_min_cpath * d_max_cpath > 0) {
+      output_[id] = LatObstacleDecisionType::FOLLOW;
+    }
+
     // 平行车辆
   } else if (d_s_rel <= history.front_expand_len &&
              d_s_rel > -(ego_length_ + history.rear_expand_len)) {
@@ -1329,7 +1342,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
       }
     }
     // cut_in 或 横穿
-    if (history.cut_in_or_cross) {
+    if (!obstacle.is_static() && history.cut_in_or_cross) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 后方车辆
@@ -1401,7 +1414,7 @@ void LateralObstacleDecider::LateralObstacleDecision(
     }
   }
   // cut_in 或 横穿
-  if (history.cut_in_or_cross) {
+  if (!obstacle.is_static() && history.cut_in_or_cross) {
     history.is_avd_car = false;
     history.ncar_count = 0;
     history.ncar_count_in = false;
