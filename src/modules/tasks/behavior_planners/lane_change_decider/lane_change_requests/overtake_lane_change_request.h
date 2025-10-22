@@ -58,11 +58,15 @@ class OvertakeRequest : public LaneChangeRequest {
       const std::shared_ptr<ReferencePath>& base_ref_line,
       const std::shared_ptr<VirtualLane>& target_lane,
       const double lane_traffic_speed, const agent::Agent* agent,
-      const int left_lane_num, const int right_lane_num, const bool is_left);
+      const bool is_left);
 
   bool isCouldOvertakeMaintainByRoute(const double lane_traffic_speed,
                                       const agent::Agent* agent,
                                       const bool is_left);
+
+  bool FeasibleLaneDistanceEnoughJudgment(
+    const double &lane_traffic_speed, const double &leading_speed,
+    const std::shared_ptr<VirtualLane>& target_lane, bool is_left, const double need_s);
 
   void updateLaneChangeSafety(
       const std::shared_ptr<ReferencePath>& left_ref_line,
@@ -165,6 +169,8 @@ class OvertakeRequest : public LaneChangeRequest {
   bool left_lane_exist_truck_ = false;
   bool right_lane_exist_truck_ = false;
   RequestType last_request_type_ = NO_CHANGE;
+  int right_lane_nums_ = 0;
+  int left_lane_nums_ = 0;
 };
 
 }  // namespace planning
