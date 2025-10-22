@@ -46,14 +46,13 @@ void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
                                 const float sampling_lon_resolution,
                                 EulerDistanceTransform *edt,
                                 AstarRequest &request) {
-  if (path_generate_type_ == AstarPathGenerateType::TRY_SEARCHING) {
+  if (request.path_generate_method == AstarPathGenerateType::TRY_SEARCHING) {
     request.first_action_request.Clear();
     return;
   }
 
   min_turn_radius_ = min_turn_radius;
   swap_start_goal_ = request.swap_start_goal;
-  path_generate_type_ = request.path_generate_method;
   gear_request_ = request.first_action_request.gear_request;
   sampling_lon_resolution_ = sampling_lon_resolution;
   path_inference_lat_buffer_ = 0.1;
