@@ -128,7 +128,7 @@ class ConstructionSceneDecider : public Task {
   RequestType construction_agent_lane_change_direction_ = NO_CHANGE;
   ConstructionAgentPoints construction_agent_points_;
   std::map<int, ConstructionAgentClusterArea>
-      construction_agent_cluster_attribute_set_;
+      construction_agent_cluster_attribute_map_;
 
   std::map<int, ad_common::math::Polygon2d> out_cluster_;
   std::vector<int32_t> construction_agent_cluster_size_;
@@ -143,6 +143,8 @@ class ConstructionSceneDecider : public Task {
   bool is_construction_agent_cluster_success_ = false;
   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr_;
   int origin_lane_virtual_id_;
+  bool is_exist_construction_area_ = false;
+  bool is_pass_construction_area_ = false;
 };
 
 }  // namespace planning

@@ -60,11 +60,11 @@ struct ConstructionAgentClusterArea {
 
 struct ConstructionSceneDeciderOutput {
   std::map<int, ConstructionAgentClusterArea>
-      construction_agent_cluster_attribute_set;  // 施工区域聚类结果
+      construction_agent_cluster_attribute_map;  // 施工区域聚类结果
   bool is_exist_construction_area = false;       // 是否存在施工区域
   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
   void Clear() {
-    construction_agent_cluster_attribute_set.clear();
+    construction_agent_cluster_attribute_map.clear();
     is_exist_construction_area = false;
     is_pass_construction_area = false;
   }
