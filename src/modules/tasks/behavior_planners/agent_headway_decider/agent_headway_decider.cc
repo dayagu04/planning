@@ -19,7 +19,7 @@ namespace {
 
 // define headway params here
 constexpr double user_time_gap = 1.5;
-constexpr double lane_change_decrease_time_gap = 0.3;
+constexpr double lane_change_decrease_time_gap = 0.5;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
 constexpr double kHighSpeedDiffThd = -0.5;
@@ -66,7 +66,9 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       session_->planning_context().lane_change_decider_output();
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const bool is_in_lane_change = lane_change_state == kLaneChangeExecution ||
+                                 lane_change_state == kLaneChangeHold ||
                                  lane_change_state == kLaneChangeComplete;
+  const bool is_in_lane_change_propose = lane_change_state == kLaneChangePropose;                               
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -262,13 +264,23 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     //   continue;
     // }
 
-    // if (is_in_lane_change_execution) {
-    //   const double lane_change_headway = std::fmin(
-    //       (user_time_gap - lane_change_decrease_time_gap), current_headway);
-    //   agents_headway_map_[st_agent_id].current_headway =
-    //       std::fmin(lane_change_headway + headway_step, gear_headway);
-    //   continue;
-    // }
+
+    if (is_in_lane_change_propose) {
+      const double lane_change_headway = std::fmin(
+          (user_time_gap - lane_change_decrease_time_gap), current_headway);
+      agents_headway_map_[st_agent_id].current_headway =
+          std::fmin(lane_change_headway + headway_step, gear_headway);
+      continue;
+    }
+
+    const int32_t origin_lane_front_agent_id = GetOriginLaneFrontAgentId();
+    if (is_in_lane_change && st_agent_id == origin_lane_front_agent_id) {
+      const double lane_change_headway = std::fmin(
+          (user_time_gap - lane_change_decrease_time_gap), current_headway);
+      agents_headway_map_[st_agent_id].current_headway =
+          std::fmin(lane_change_headway + headway_step, gear_headway);
+      continue;
+    }
 
     // if (is_need_reset) {
     //   const double lane_change_headway = user_time_gap -
@@ -651,6 +663,52 @@ double AgentHeadwayDecider::CalculateCutinHeadway(
       std::fmax(kCutinMinHeadway, std::fmin(final_headway, kCutinMaxHeadway));
 
   return final_headway;
+}
+
+int32_t AgentHeadwayDecider::GetOriginLaneFrontAgentId() {
+  const auto& dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+
+  if (dynamic_world == nullptr) {
+    return -1;
+  }
+
+  // get lane change status
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+
+  const bool is_lane_changing = (lane_change_state == kLaneChangeExecution ||
+                                 lane_change_state == kLaneChangeComplete);
+
+  int64_t current_lane_front_node_id = -1;
+
+  if (lc_request_direction == LEFT_CHANGE) {
+    if (is_lane_changing) {
+      current_lane_front_node_id = dynamic_world->ego_right_front_node_id();
+    } else {
+      current_lane_front_node_id = dynamic_world->ego_front_node_id();
+    }
+  } else if (lc_request_direction == RIGHT_CHANGE) {
+    if (is_lane_changing) {
+      current_lane_front_node_id = dynamic_world->ego_left_front_node_id();
+    } else {
+      current_lane_front_node_id = dynamic_world->ego_front_node_id();
+    }
+  } else {
+    current_lane_front_node_id = dynamic_world->ego_front_node_id();
+  }
+
+  if (current_lane_front_node_id != -1) {
+    auto* current_lane_front_node =
+        dynamic_world->GetNode(current_lane_front_node_id);
+    if (current_lane_front_node != nullptr) {
+      return current_lane_front_node->node_agent_id();
+    }
+  }
+
+  return -1;
 }
 
 }  // namespace planning
