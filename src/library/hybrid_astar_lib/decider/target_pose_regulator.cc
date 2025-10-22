@@ -1,6 +1,7 @@
 #include "target_pose_regulator.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstddef>
 #include <utility>
@@ -179,10 +180,6 @@ void TargetPoseRegulator::Process(
 
   // park out
   if (request_->direction_request_size > 1) {
-    // todo:
-    // 仅垂直泊车预规划使用，尾泊出还需测试，后续与GenerateCandidatesForVerticalHeadOut(edt,
-    // request, veh_param)
-    // 合并为一个函数.
     GenerateCandidatesForVerticalHeadOut(edt, direction_request, veh_param);
     return;
   }
@@ -268,13 +265,14 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
   Pose2f global_pose;
   global_pose = target_;
-  constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
-  constexpr size_t kNumberRows = 5;        // 行数
-  constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
-  constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
-  constexpr float kXStep = 0.3f;           // X轴步长
-  constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
-  constexpr float kNormalBaseX = 7.5f;     // 正常停车位基准X坐标
+  constexpr size_t kNumCandidateColumns = 5;  // 列数
+  constexpr size_t kNumberRows = 5;           // 行数
+  constexpr size_t kMidCandidateNum = 8;      //
+  constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
+  constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
+  constexpr float kXStep = 0.3f;              // X轴步长
+  constexpr float kSlantingOffset = 0.5f;     // 斜列停车位X轴偏移
+  constexpr float kNormalBaseX = 7.5f;        // 正常停车位基准X坐标
 
   const float base_x = (request->space_type == ParkSpaceType::SLANTING)
                            ? (global_pose.GetX() - kSlantingOffset)
@@ -283,27 +281,36 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   const bool is_middle_direction =
       request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
       request->direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
-  const size_t total_candidates =
-      is_middle_direction ? kMaxCandidateNum : (kNumberRows * kMaxCandidateNum);
+  const size_t total_candidates = is_middle_direction
+                                      ? kNumCandidateColumns
+                                      : (kNumberRows * kNumCandidateColumns);
   candidate_info_.reserve(candidate_info_.size() + total_candidates);
 
   Eigen::Vector2d temp_pos(0, 0);
 
   TerminalCandidatePoint candidate;
-  // 处理中间方向（只需要1列）
+  // 处理中间方向
   if (is_middle_direction) {
-    for (size_t i = 0; i < kMaxCandidateNum; ++i) {
-      global_pose.y = kYLowerMid + i * kYStepMiddle;
+    Eigen::Vector2d mid_base_pose(target_.GetX(), kYLowerMid);
+    for (size_t j = 0; j < kMidCandidateNum; ++j) {
+      const Eigen::Vector2d temp_pos =
+          mid_base_pose +
+          request_->x_axis_direction_coordinate_slant * j * kYStepMiddle;
 
-      candidate.dist_to_obs =
-          GetDistToObsHeadOut(global_pose, request->direction_request, edt);
-      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-      candidate_info_.emplace_back(candidate);
+      for (size_t i = 0; i < kNumCandidateColumns; ++i) {
+        Pose2f candidate_pose(temp_pos.x() - i * kSlantingOffset, temp_pos.y(),
+                              target_.theta);
+        candidate.dist_to_obs = GetDistToObsHeadOut(
+            candidate_pose, request->direction_request, edt);
+        candidate.pose.SetPose(candidate_pose.x, candidate_pose.y,
+                               candidate_pose.theta);
+        candidate_info_.emplace_back(candidate);
+      }
     }
     return;
   }
 
-  // 处理左右方向（需要多行）
+  // 处理左右方向
   const int8_t direction_factor =
       (request->direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
        request->direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
@@ -312,7 +319,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
 
   const Eigen::Vector2d base_pose(base_x, target_.GetY());
 
-  for (size_t j = 0; j < kMaxCandidateNum; ++j) {
+  for (size_t j = 0; j < kNumCandidateColumns; ++j) {
     const Eigen::Vector2d temp_pos =
         base_pose +
         request->x_axis_direction_coordinate_slant * j * direction_factor;
@@ -347,13 +354,14 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   }
   Pose2f global_pose;
   global_pose = target_;
-  constexpr size_t kMaxCandidateNum = 5;   // 最大候选数量
-  constexpr size_t kNumberRows = 5;        // 行数
-  constexpr float kYLowerMid = -0.1f;      // 中间方向Y轴起始偏移
-  constexpr float kYStepMiddle = 0.02f;    // 中间方向Y轴步长
-  constexpr float kXStep = 0.3f;           // X轴步长
-  constexpr float kSlantingOffset = 0.5f;  // 斜列停车位X轴偏移
-  constexpr float kNormalBaseX = 7.0f;     // 正常停车位基准X坐标
+  constexpr size_t kNumCandidateColumns = 5;  // 列数
+  constexpr size_t kNumberRows = 5;           // 行数
+  constexpr size_t kMidCandidateNum = 8;      //
+  constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
+  constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
+  constexpr float kXStep = 0.3f;              // X轴步长
+  constexpr float kSlantingOffset = 0.5f;     // 斜列停车位X轴偏移
+  constexpr float kNormalBaseX = 7.0f;        // 正常停车位基准X坐标
 
   const float base_x = (request_->space_type == ParkSpaceType::SLANTING)
                            ? (global_pose.GetX() - kSlantingOffset)
@@ -362,27 +370,36 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   const bool is_middle_direction =
       direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
       direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
-  const size_t total_candidates =
-      is_middle_direction ? kMaxCandidateNum : (kNumberRows * kMaxCandidateNum);
+  const size_t total_candidates = is_middle_direction
+                                      ? kNumCandidateColumns
+                                      : (kNumberRows * kNumCandidateColumns);
   candidate_info_.reserve(candidate_info_.size() + total_candidates);
 
   Eigen::Vector2d temp_pos(0, 0);
 
   TerminalCandidatePoint candidate;
-  // 处理中间方向（只需要1列）
+  // 处理中间方向
   if (is_middle_direction) {
-    for (size_t i = 0; i < kMaxCandidateNum; ++i) {
-      global_pose.y = kYLowerMid + i * kYStepMiddle;
+    Eigen::Vector2d mid_base_pose(target_.GetX(), kYLowerMid);
+    for (size_t j = 0; j < kMidCandidateNum; ++j) {
+      const Eigen::Vector2d temp_pos =
+          mid_base_pose +
+          request_->x_axis_direction_coordinate_slant * j * kYStepMiddle;
 
-      candidate.dist_to_obs =
-          GetDistToObsHeadOut(global_pose, direction_request, edt);
-      candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
-      candidate_info_.emplace_back(candidate);
+      for (size_t i = 0; i < kNumCandidateColumns; ++i) {
+        Pose2f candidate_pose(temp_pos.x() - i * kSlantingOffset, temp_pos.y(),
+                              target_.theta);
+        candidate.dist_to_obs =
+            GetDistToObsHeadOut(candidate_pose, direction_request, edt);
+        candidate.pose.SetPose(candidate_pose.x, candidate_pose.y,
+                               candidate_pose.theta);
+        candidate_info_.emplace_back(candidate);
+      }
     }
     return;
   }
 
-  // 处理左右方向（需要多行）
+  // 处理左右方向
   const int8_t direction_factor =
       (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
        direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
@@ -390,8 +407,9 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           : 1;
 
   const Eigen::Vector2d base_pose(base_x, target_.GetY());
+  std::array<float, kNumberRows> dist_to_obs{};
 
-  for (size_t j = 0; j < kMaxCandidateNum; ++j) {
+  for (size_t j = 0; j < kNumCandidateColumns; ++j) {
     const Eigen::Vector2d temp_pos =
         base_pose +
         request_->x_axis_direction_coordinate_slant * j * direction_factor;
@@ -399,9 +417,12 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     for (size_t i = 0; i < kNumberRows; ++i) {
       global_pose.x = temp_pos.x() + kXStep * i;
       global_pose.y = temp_pos.y();
+      if (j == 0) {
+        dist_to_obs[i] =
+            GetDistToObsHeadOut(global_pose, direction_request, edt);
+      }
 
-      candidate.dist_to_obs =
-          GetDistToObsHeadOut(global_pose, direction_request, edt);
+      candidate.dist_to_obs = dist_to_obs[i];
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     }
@@ -456,31 +477,59 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
     const Pose2f &global_pose, const ParkingVehDirection &direction_request,
     EulerDistanceTransform *edt) {
   Transform2f tf;
-  AstarPathGear gear = AstarPathGear::DRIVE;
+  AstarPathGear gear = AstarPathGear::NONE;
   float dist;
   float min_dist = 10.0f;
   Pose2f current_pose = global_pose;
-  constexpr size_t kNumSteps = 10;
   constexpr float kYStep = 0.5f;
   // constexpr float kMinSafetyDist = 0.5f;
   const float min_safety_dist = 0.04f;
+  size_t sampling_size =
+      request_->space_type == ParkSpaceType::VERTICAL ? 5 : 3;
   const Eigen::Vector2d base_pos(global_pose.GetX(), global_pose.GetY());
   Eigen::Vector2d temp_pos;
 
-  const int8_t direction_factor =
-      (direction_request == ParkingVehDirection::HEAD_OUT_TO_LEFT ||
-       direction_request == ParkingVehDirection::TAIL_OUT_TO_RIGHT)
-          ? -1
-          : 1;
-  if (direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
-      direction_request == ParkingVehDirection::TAIL_OUT_TO_MIDDLE) {
+  int8_t direction_factor = 0;
+  bool is_middle_direction = false;
+
+  switch (direction_request) {
+    case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+      direction_factor = 1;
+      gear = AstarPathGear::REVERSE;
+      break;
+    case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+      direction_factor = -1;
+      gear = AstarPathGear::REVERSE;
+      break;
+    case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+      gear = AstarPathGear::REVERSE;
+      is_middle_direction = true;
+      break;
+
+    case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+      direction_factor = -1;
+      gear = AstarPathGear::DRIVE;
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+      direction_factor = 1;
+      gear = AstarPathGear::DRIVE;
+      break;
+    case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+      gear = AstarPathGear::DRIVE;
+      is_middle_direction = true;
+      break;
+    default:
+      break;
+  }
+
+  if (is_middle_direction) {
     tf.SetBasePose(current_pose);
 
     edt->DistanceCheckForPoint(&dist, &tf, gear);
 
     min_dist = std::min(min_dist, dist);
   } else {
-    for (int j = 0; j < kNumSteps; j++) {
+    for (int j = 0; j < sampling_size; j++) {
       temp_pos = base_pos + request_->x_axis_direction_coordinate_slant *
                                 kYStep * j * direction_factor;
       current_pose.x = temp_pos.x();

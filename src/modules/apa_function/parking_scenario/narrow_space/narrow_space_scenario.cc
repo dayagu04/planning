@@ -23,7 +23,6 @@
 #include "math/vec2d.h"
 #include "math_utils.h"
 #include "narrow_space_decider.h"
-#include "park_hmi_state.h"
 #include "parking_scenario.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
@@ -2377,61 +2376,23 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
   generator.SetRecommendationDirectionFlag(apa_hmi_data, ParityBit);
 
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingOutStatus()) {
-    ApaRecommendationDirection dir;
-
     apa_world_ptr_->GetSlotManagerPtr()
         ->GetMutableEgoInfoUnderSlot()
         .slot.release_info_
         .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
         SlotReleaseState::NOT_RELEASE;
 
-    for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
-      if (response_.feasible_directions[i] == false) {
-        continue;
-      }
+    bool is_there_middle_direction = false;
+    bool is_there_left_direction = false;
+    bool is_there_right_direction = false;
 
-      apa_world_ptr_->GetSlotManagerPtr()
-          ->GetMutableEgoInfoUnderSlot()
-          .slot.release_info_
-          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
+    SetReleaseDirection(apa_hmi_data, generator, is_there_middle_direction,
+                        is_there_left_direction, is_there_right_direction,
+                        cur_request);
 
-      switch (cur_request.direction_request_stack[i]) {
-        case ParkingVehDirection::TAIL_OUT_TO_LEFT:
-          dir = ApaRecommendationDirection::VerticalBackLeft;
-          break;
-        case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
-          dir = ApaRecommendationDirection::VerticalBackRight;
-          break;
-        case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
-          dir = ApaRecommendationDirection::VerticalBack;
-          break;
-        case ParkingVehDirection::HEAD_OUT_TO_LEFT:
-          dir = ApaRecommendationDirection::VerticalFrontLeft;
-          break;
-        case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
-          dir = ApaRecommendationDirection::VerticalFrontRight;
-          break;
-        case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
-          dir = ApaRecommendationDirection::VerticalFront;
-          break;
-        default:
-          break;
-      }
-
-      generator.SetReleaseDirectionFlag(apa_hmi_data, dir);
-    }
-
-    EgoInfoUnderSlot& ego_info_under_slot =
-        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
-
-    const ApaRecommendationDirection planning_recommend_park_dir =
-        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
-            ? ApaRecommendationDirection::VerticalFront
-            : ApaRecommendationDirection::VerticalBack;
-
-    generator.SetRecommendationDirectionFlag(apa_hmi_data,
-                                             planning_recommend_park_dir);
+    SetRecommendationDirection(
+        apa_hmi_data, generator, is_there_middle_direction,
+        is_there_left_direction, is_there_right_direction);
 
   } else {
     generator.SetReleaseDirectionFlag(apa_hmi_data, VerticalHeadIn);
@@ -2754,6 +2715,92 @@ double NarrowSpaceScenario::GeneVirtualLimiter(
   }
 
   return virtual_x;
+}
+
+void NarrowSpaceScenario::SetReleaseDirection(
+    iflyauto::APAHMIData& apa_hmi_data, ApaDirectionGenerator& generator,
+    bool& is_there_middle_direction, bool& is_there_left_direction,
+    bool& is_there_right_direction, const AstarRequest& cur_request) {
+  ApaRecommendationDirection dir;
+
+  for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
+    if (response_.feasible_directions[i] == false) {
+      continue;
+    }
+
+    apa_world_ptr_->GetSlotManagerPtr()
+        ->GetMutableEgoInfoUnderSlot()
+        .slot.release_info_
+        .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+        SlotReleaseState::RELEASE;
+
+    switch (cur_request.direction_request_stack[i]) {
+      case ParkingVehDirection::TAIL_OUT_TO_LEFT:
+        dir = ApaRecommendationDirection::VerticalBackLeft;
+        is_there_left_direction = true;
+        break;
+      case ParkingVehDirection::TAIL_OUT_TO_RIGHT:
+        dir = ApaRecommendationDirection::VerticalBackRight;
+        is_there_right_direction = true;
+        break;
+      case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
+        dir = ApaRecommendationDirection::VerticalBack;
+        is_there_middle_direction = true;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_LEFT:
+        dir = ApaRecommendationDirection::VerticalFrontLeft;
+        is_there_left_direction = true;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_RIGHT:
+        dir = ApaRecommendationDirection::VerticalFrontRight;
+        is_there_right_direction = true;
+        break;
+      case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
+        dir = ApaRecommendationDirection::VerticalFront;
+        is_there_middle_direction = true;
+        break;
+      default:
+        break;
+    }
+
+    generator.SetReleaseDirectionFlag(apa_hmi_data, dir);
+  }
+}
+
+void NarrowSpaceScenario::SetRecommendationDirection(
+    iflyauto::APAHMIData& apa_hmi_data, ApaDirectionGenerator& generator,
+    const bool& is_there_middle_direction, const bool& is_there_left_direction,
+    const bool& is_there_right_direction) {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  ApaRecommendationDirection planning_recommend_park_dir;
+
+  if (is_there_left_direction) {
+    planning_recommend_park_dir =
+        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+            ? ApaRecommendationDirection::VerticalFrontLeft
+            : ApaRecommendationDirection::VerticalBackLeft;
+  }
+
+  if (is_there_right_direction) {
+    planning_recommend_park_dir =
+        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+            ? ApaRecommendationDirection::VerticalFrontRight
+            : ApaRecommendationDirection::VerticalBackRight;
+  }
+
+  if (is_there_middle_direction) {
+    planning_recommend_park_dir =
+        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+            ? ApaRecommendationDirection::VerticalFront
+            : ApaRecommendationDirection::VerticalBack;
+  }
+
+  // recommendation order priority: 0 mid, 1 right, 2 left
+
+  generator.SetRecommendationDirectionFlag(apa_hmi_data,
+                                           planning_recommend_park_dir);
 }
 
 }  // namespace apa_planner
