@@ -1100,7 +1100,6 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   if (lat_offset_is_valid) {
     ref_lat_offset = lateral_offset_decider_output.lateral_offset;
   }
-  // ref_lat_offset = 0;
   double lc_target_l = 0.0;
   if (is_LC_CHANGE) {
     lc_target_l = config_.lc_ref_offset;
@@ -1135,9 +1134,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     }
   }
   last_lc_ref_offset_ = lc_target_l;
-  ref_lat_offset += lc_target_l;
-
-  // ref_lat_offset = -0.1;
+  if (std::fabs(ref_lat_offset) > 1e-6) {
+    if (ref_lat_offset > 1e-6 && lc_target_l > 1e-6) {
+      ref_lat_offset = std::max(ref_lat_offset, lc_target_l);
+    } else if (ref_lat_offset < -1e-6 && lc_target_l < -1e-6) {
+      ref_lat_offset = std::min(ref_lat_offset, lc_target_l);
+    }
+  } else {
+    ref_lat_offset += lc_target_l;
+  }
   general_lateral_decider_output.is_use_spatio_planner_result =
       is_use_spatio_planner_result;
   general_lateral_decider_output.ramp_scene =
