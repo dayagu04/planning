@@ -1758,7 +1758,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
            route_info_output_.split_region_info_list[0]
                .distance_to_split_point -
            route_info_output_.split_region_info_list[0]
-               .end_fp_point.fp_distance_to_split_point <
+               .end_fp_point.fp_distance_to_split_point +
+           route_info_output_.split_region_info_list[1]
+               .start_fp_point.fp_distance_to_split_point <
        mlc_decider_config_.split_split_gap_threshold +
            solid_line_length_between_two_splits);
 
@@ -1879,11 +1881,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       break;
     }
     case IN_EXCHANGE_AREAR_FRONT: {
+      const double kSplitDistanceThreshold = 5;
       if (mlc_decider_route_info_.is_process_split ||
           mlc_decider_route_info_.is_process_split_split ||
           mlc_decider_route_info_.is_process_other_merge_split) {
-        if (cur_dis_to_split >
-            mlc_decider_route_info_.last_frame_dis_to_split) {
+        if (cur_dis_to_split - mlc_decider_route_info_.last_frame_dis_to_split >
+            kSplitDistanceThreshold) {
           mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREAR_REAR;
         }
       } else if (mlc_decider_route_info_.is_process_merge ||
@@ -1933,7 +1936,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               if (merge_region_info_list[0].is_other_merge_to_road) {
                 double dis_err =
                     split_region_info_list[0].distance_to_split_point -
-                    merge_region_info_list[0].distance_to_split_point -
+                    merge_region_info_list[0].distance_to_split_point +
+                    split_region_info_list[0]
+                        .start_fp_point.fp_distance_to_split_point -
                     merge_region_info_list[0]
                         .end_fp_point.fp_distance_to_split_point -
                     solid_line_length_between_other_merge_split;
@@ -4000,9 +4005,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       }
     } else if (on_exclnum > successor_exclnum + successor_other_exclnum) {
       // 经过交换区后车道数变少，case较少，目前观察消亡车道均是中间车道
-      before_excr_feasible_lane.emplace_back(before_exclnum);
       for (int i = successor_exclnum - 1; i >= 0; --i) {
         on_excr_feasible_lane.emplace_back(on_exclnum - i);
+        before_excr_feasible_lane.emplace_back(on_exclnum - i);
       }
       for (int i = 1; i <= on_exclnum; ++i) {
         mlc_request_info_[i] = MAIN_TO_RAMP;
