@@ -7,6 +7,7 @@
 #include "hybrid_astar_interface.h"
 #include "hybrid_astar_thread.h"
 #include "narrow_space_decider.h"
+#include "park_hmi_state.h"
 #include "planning_hmi_c.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
 #include "virtual_wall_decider.h"
@@ -177,6 +178,19 @@ class NarrowSpaceScenario : public ParkingScenario {
   void SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info);
 
   double GeneVirtualLimiter(const EgoInfoUnderSlot& ego_slot);
+
+  void SetReleaseDirection(iflyauto::APAHMIData& apa_hmi_data,
+                           ApaDirectionGenerator& generator,
+                           bool& is_there_middle_direction,
+                           bool& is_there_left_direction,
+                           bool& is_there_right_direction,
+                           const AstarRequest& cur_request);
+
+  void SetRecommendationDirection(iflyauto::APAHMIData& apa_hmi_data,
+                                  ApaDirectionGenerator& generator,
+                                  const bool& is_there_middle_direction,
+                                  const bool& is_there_left_direction,
+                                  const bool& is_there_right_direction);
 
  private:
   RequestResponseState thread_state_;
