@@ -55,6 +55,12 @@ void NodeShrinkDecider::Process(const Pose2f &ego, const Pose2f &end,
                XYbounds.y_min, XYbounds.y_max);
   passage_zone_.MergePoint(request.start_pose);
 
+  is_park_in_ = false;
+  if (request.direction_request == ParkingVehDirection::HEAD_IN ||
+      request.direction_request == ParkingVehDirection::TAIL_IN) {
+    is_park_in_ = true;
+  }
+
   return;
 }
 
@@ -160,9 +166,7 @@ bool NodeShrinkDecider::IsShrinkByGearSwitchNumber(Node3d *child) {
 
 bool NodeShrinkDecider::IsShrinkByHeadOutDirection(const AstarRequest &request,
                                                    const Node3d *child) {
-  if (request.direction_request != ParkingVehDirection::HEAD_OUT_TO_LEFT &&
-      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_RIGHT &&
-      request.direction_request != ParkingVehDirection::HEAD_OUT_TO_MIDDLE) {
+  if (is_park_in_) {
     return false;
   }
 

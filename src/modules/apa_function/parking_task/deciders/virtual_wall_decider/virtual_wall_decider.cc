@@ -117,8 +117,9 @@ void VirtualWallDecider::SampleInLineSegment(const Eigen::Vector2d& start,
   double ds = 0.4;
 
   int size = std::ceil(len / ds) + 1;
-
   Eigen::Vector2d point;
+  points->reserve(points->size() + size);
+
   for (int i = 0; i < size; i++) {
     point = start + s * unit_line_vec;
     s += ds;
@@ -290,12 +291,12 @@ void VirtualWallDecider::CalcVerticalVirtualWall(
   // lower
   VirtualWallBoundary tmp_passage_boundary;
   tmp_passage_boundary.x_lower = slot_length - virtual_wall_x_offset;
-  // passage up bound
 
+  // passage up bound
   double passage_up_bound_x = slot_length + passage_height;
   tmp_passage_boundary.x_upper = passage_up_bound_x;
-  // passage left/right bound
 
+  // passage left/right bound
   tmp_passage_boundary.y_lower = -passage_half_length;
   tmp_passage_boundary.y_upper = passage_half_length;
   tmp_passage_boundary.Combine(veh_boundary_);

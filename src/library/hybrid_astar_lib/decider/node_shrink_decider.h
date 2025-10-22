@@ -70,6 +70,8 @@ class NodeShrinkDecider : public AstarDecider {
   // passage zone, if pose is in this zone, keep it. If pose is out of this
   // zone, check pose heading.
   MapBound passage_zone_;
+
+  bool is_park_in_;
 };
 
 }  // namespace planning

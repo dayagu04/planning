@@ -99,8 +99,6 @@ class FuturePathDecider : public AstarDecider {
   float path_inference_lat_buffer_;
 
   bool swap_start_goal_;
-
-  AstarPathGenerateType path_generate_type_;
 };
 
 }  // namespace planning

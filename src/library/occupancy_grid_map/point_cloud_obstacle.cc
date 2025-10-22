@@ -309,6 +309,14 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
         apa_planner::ApaObsMovementType::MOTION) {
       continue;
     }
+    if (pair.second.GetObsAttributeType() ==
+        apa_planner::ApaObsAttributeType::VIRTUAL_POINT_CLOUD) {
+      continue;
+    }
+    if (pair.second.GetObsAttributeType() ==
+        apa_planner::ApaObsAttributeType::MAP_BOUND) {
+      continue;
+    }
 
     obs.points.clear();
     obs.points.reserve(pair.second.GetPtClout2dLocal().size());
