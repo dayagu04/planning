@@ -2385,6 +2385,8 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
         .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
         SlotReleaseState::NOT_RELEASE;
 
+    bool is_there_middle_direction = false;
+
     for (int8_t i = 0; i < response_.feasible_directions.size(); i++) {
       if (response_.feasible_directions[i] == false) {
         continue;
@@ -2405,6 +2407,7 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
           break;
         case ParkingVehDirection::TAIL_OUT_TO_MIDDLE:
           dir = ApaRecommendationDirection::VerticalBack;
+          is_there_middle_direction = true;
           break;
         case ParkingVehDirection::HEAD_OUT_TO_LEFT:
           dir = ApaRecommendationDirection::VerticalFrontLeft;
@@ -2414,6 +2417,7 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
           break;
         case ParkingVehDirection::HEAD_OUT_TO_MIDDLE:
           dir = ApaRecommendationDirection::VerticalFront;
+          is_there_middle_direction = true;
           break;
         default:
           break;
@@ -2425,10 +2429,19 @@ iflyauto::APAHMIData NarrowSpaceScenario::PubDirectionForScenarioTry(
     EgoInfoUnderSlot& ego_info_under_slot =
         apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-    const ApaRecommendationDirection planning_recommend_park_dir =
-        ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
-            ? ApaRecommendationDirection::VerticalFront
-            : ApaRecommendationDirection::VerticalBack;
+    ApaRecommendationDirection planning_recommend_park_dir;
+
+    if (is_there_middle_direction) {
+      planning_recommend_park_dir =
+          ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+              ? ApaRecommendationDirection::VerticalFront
+              : ApaRecommendationDirection::VerticalBack;
+    } else {
+      planning_recommend_park_dir =
+          ego_info_under_slot.relative_direction_between_ego_and_slot > 0.0
+              ? ApaRecommendationDirection::VerticalFrontRight
+              : ApaRecommendationDirection::VerticalBackRight;
+    }
 
     generator.SetRecommendationDirectionFlag(apa_hmi_data,
                                              planning_recommend_park_dir);
