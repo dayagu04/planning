@@ -7,6 +7,7 @@
 #include "environmental_model.h"
 #include "geometry_math.h"
 #include "modules/tasks/task_interface/lane_change_decider_output.h"
+#include "traffic_light_decision_manager.h"
 
 // #include "core/common/trace.h"
 #include "debug_info_log.h"
@@ -384,6 +385,15 @@ void ResultTrajectoryGenerator::UpdateTurnSignal() {
 }
 
 void ResultTrajectoryGenerator::UpdateHMIInfo() {
+  const auto tfl_manager =
+      session_->environmental_model().get_traffic_light_decision_manager();
+  const auto traffic_status = tfl_manager->GetTrafficStatus();
+  const auto &tfl_decider = session_->mutable_planning_context()
+                          ->mutable_traffic_light_decider_output();
+  planning::common::IntersectionState intersection_state =
+      session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
+  const auto cipv_info = session_->planning_context().cipv_decider_output();
+
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &route_info_output =
@@ -668,6 +678,18 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     landing_point = CalculateLandingPoint(true, lane_change_decider_output);
   }
   ad_info.landing_point = landing_point;
+
+  //update intersection traffic lights reminder hmi info
+  constexpr uint8 kIntersectionStatusNone = 8;
+  ad_info.intersection_pass_sts = iflyauto::IntersectionPassSts(kIntersectionStatusNone);
+  if ((traffic_status.go_straight != 3 && traffic_status.go_straight != 43)
+      && intersection_state == planning::common::APPROACH_INTERSECTION
+      && (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection)
+      && (cipv_info.cipv_id() == -1 || cipv_info.relative_s() > config_.tfl_reminder_cipv_dis))
+  {
+    ad_info.intersection_pass_sts = iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
+  }
+  JSON_DEBUG_VALUE("intersection_pass_sts", int(ad_info.intersection_pass_sts));
   return;
 }
 
