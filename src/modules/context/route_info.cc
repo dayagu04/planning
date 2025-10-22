@@ -1721,6 +1721,23 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   const int split_num = 2;
   double solid_line_length_between_two_splits = 0;
+  double solid_line_length_between_other_merge_split = 0;
+
+  // 计算other_merge_split之间实线长度
+  if (!merge_region_info_list.empty() && !split_region_info_list.empty() &&
+      split_region_info_list[0].is_valid &&
+      merge_region_info_list[0].is_other_merge_to_road &&
+      split_region_info_list[0].distance_to_split_point -
+              merge_region_info_list[0].distance_to_split_point >
+          0) {
+    double distance_between_other_merge_split =
+        split_region_info_list[0].distance_to_split_point -
+        merge_region_info_list[0].distance_to_split_point;
+    solid_line_length_between_other_merge_split =
+        LengthSolidLineJudge(split_region_info_list[0].start_fp_point.link_id,
+                             split_region_info_list[0].start_fp_point.fp,
+                             distance_between_other_merge_split);
+  }
   // 计算两个split之间实线长度
   if (route_info_output_.split_region_info_list.size() >= split_num &&
       split_region_info_list[0].is_valid &&
@@ -1739,7 +1756,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       route_info_output_.split_region_info_list.size() >= split_num &&
       (route_info_output_.split_region_info_list[1].distance_to_split_point -
            route_info_output_.split_region_info_list[0]
-               .distance_to_split_point <
+               .distance_to_split_point -
+           route_info_output_.split_region_info_list[0]
+               .end_fp_point.fp_distance_to_split_point <
        mlc_decider_config_.split_split_gap_threshold +
            solid_line_length_between_two_splits);
 
@@ -1917,7 +1936,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                     merge_region_info_list[0].distance_to_split_point -
                     merge_region_info_list[0]
                         .end_fp_point.fp_distance_to_split_point -
-                    lsl_length;
+                    solid_line_length_between_other_merge_split;
                 if (dis_err >
                     mlc_decider_config_.other_merge_split_gap_threshold) {
                   mlc_decider_route_info_.is_process_other_merge = true;
@@ -2330,7 +2349,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           first_static_split_region_info.recommend_lane_num[0].total_lane_num;
 
       const double ego_dis_to_split =
-          temp_split_infos[0].distance_to_split_point;
+          temp_split_infos[0].distance_to_split_point +
+          temp_split_infos[0].start_fp_point.fp_distance_to_split_point;
       const double v_limit = session_->environmental_model()
                                  .get_ego_state_manager()
                                  ->ego_v_cruise();
