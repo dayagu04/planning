@@ -83,6 +83,7 @@ struct Parameters {
   bool ihc_set_main_switch = false;
   bool ihc_high_beam_switch = false;
   bool tsr_use_json_code = false;
+  bool tsr_function_test_switch = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
   // double elk_roadedge_offset = 0.15;

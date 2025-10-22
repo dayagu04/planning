@@ -132,6 +132,13 @@ class TsrCore {
   void CalculateDurationTime(void);
   // TSR实时信息重置
   void ResetRealTimeTsrInfo(void);
+
+  // 测试函数
+  void TsrTestFunction(void);
+
+  // 测试功能相关成员变量
+  double test_timer_ = 0.0;  // 测试计时器，单位：s
+  int test_supp_sign_index_ = 0;  // 当前显示的辅助标识牌索引
 };
 
 }  // namespace tsr_core

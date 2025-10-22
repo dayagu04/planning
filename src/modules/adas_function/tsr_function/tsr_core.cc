@@ -922,6 +922,11 @@ void TsrCore::RunOnce(void) {
   // 更新tsr_warning
   UpdateTsrWarning();
 
+  // 测试功能
+  if (GetContext.get_param()->tsr_function_test_switch) {
+    TsrTestFunction();
+  }
+
   // output
   SetTsrOutputInfo();
 
@@ -932,6 +937,7 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("tsr_fault_code_", tsr_fault_code_);
   JSON_DEBUG_VALUE("tsr_state_", (int)tsr_state_);
   JSON_DEBUG_VALUE("tsr_speed_limit_", tsr_speed_limit_);
+  JSON_DEBUG_VALUE("end_of_speed_sign_value_", end_of_speed_sign_value_);
   JSON_DEBUG_VALUE("has_perception_speed_limit_", has_perception_speed_limit_)
   JSON_DEBUG_VALUE("has_perception_end_of_speed_limit_", has_perception_end_of_speed_limit_)
   JSON_DEBUG_VALUE("end_of_speed_limit_out_flag_", end_of_speed_limit_out_flag_);
@@ -952,6 +958,35 @@ void TsrCore::RunOnce(void) {
 
   // reset info
   ResetRealTimeTsrInfo();
+}
+
+// 测试函数：以2秒周期交替显示限速和解除限速，SuppSign循环显示所有标识牌
+void TsrCore::TsrTestFunction(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+
+  // 更新计时器
+  test_timer_ += GetContext.get_param()->dt;
+
+  // 2秒周期，在限速和解除限速之间交替
+  if (test_timer_ < 2.0) {
+    // 前2秒：显示限速牌，值为80
+    tsr_speed_limit_ = 80;
+    speed_limit_out_flag_ = true;
+    end_of_speed_limit_out_flag_ = false;
+    end_of_speed_sign_value_ = 0;
+  } else if (test_timer_ < 4.0) {
+    // 2~4秒：显示解除限速牌，值为80
+    end_of_speed_sign_value_ = 80;
+    end_of_speed_limit_out_flag_ = true;
+    speed_limit_out_flag_ = false;
+    tsr_speed_limit_ = 0;
+  } else {
+    // 重置计时器，循环
+    test_timer_ = 0.0;
+  }
+
+  output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN;
+  return;
 }
 
 }  // namespace tsr_core
