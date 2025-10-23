@@ -960,33 +960,95 @@ void TsrCore::RunOnce(void) {
   ResetRealTimeTsrInfo();
 }
 
-// 测试函数：以2秒周期交替显示限速和解除限速，SuppSign循环显示所有标识牌
+// 测试函数：根据不同的测试模式执行不同的测试场景
+// 模式0: 关闭测试
+// 模式1: 输出限速80，不报警
+// 模式2: 输出限速80，报警
+// 模式3: 输出解除限速80
+// 模式4: 辅助标识依次以2s为周期显示所有种类
 void TsrCore::TsrTestFunction(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  tsr_state_ = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
+  int test_mode = GetContext.get_param()->tsr_function_test_switch;
 
-  // 更新计时器
-  test_timer_ += GetContext.get_param()->dt;
-
-  // 2秒周期，在限速和解除限速之间交替
-  if (test_timer_ < 2.0) {
-    // 前2秒：显示限速牌，值为80
+  // 模式1：输出限速80，不报警
+  if (test_mode == 1) {
     tsr_speed_limit_ = 80;
     speed_limit_out_flag_ = true;
     end_of_speed_limit_out_flag_ = false;
     end_of_speed_sign_value_ = 0;
-  } else if (test_timer_ < 4.0) {
-    // 2~4秒：显示解除限速牌，值为80
+    tsr_warning_flag_ = false;  // 不报警
+    overspeed_status_ = false;
+    last_test_mode_ = 1;
+  }
+  // 模式2：输出限速80，报警
+  else if (test_mode == 2) {
+    tsr_speed_limit_ = 80;
+    speed_limit_out_flag_ = true;
+    end_of_speed_limit_out_flag_ = false;
+    end_of_speed_sign_value_ = 0;
+    tsr_warning_flag_ = true;  // 报警
+    overspeed_status_ = true;
+    last_test_mode_ = 2;
+  }
+  // 模式3：输出解除限速80
+  else if (test_mode == 3) {
     end_of_speed_sign_value_ = 80;
     end_of_speed_limit_out_flag_ = true;
     speed_limit_out_flag_ = false;
     tsr_speed_limit_ = 0;
-  } else {
-    // 重置计时器，循环
-    test_timer_ = 0.0;
+    tsr_warning_flag_ = false;
+    overspeed_status_ = false;
+    last_test_mode_ = 3;
   }
+  // 模式4：辅助标识依次以2s为周期显示所有种类
+  else if (test_mode == 4) {
+    // 辅助标识牌数组（13种标识牌）
+    static const iflyauto::SuppSignType supp_sign_test_array[] = {
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN,   // bit 0
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN,    // bit 1
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING,  // bit 2
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,  // bit 3
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING,   // bit 4
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING,  // bit 5
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,  // bit 6
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY,     // bit 7
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,  // bit 8
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,  // bit 9
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,  // bit 10
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,  // bit 11
+        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING,  // bit 12
+    };
 
-  output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN;
-  return;
+    // 确保索引在有效范围内（0~12）
+    if (test_supp_sign_index_ < 0 || test_supp_sign_index_ >= 13) {
+      test_supp_sign_index_ = 0;
+    }
+    
+    // 如果是刚进入模式4，重置计时器和索引
+    if (last_test_mode_ != 4) {
+      supp_sign_timer_ = 0.0;
+      test_supp_sign_index_ = 0;
+    }
+    last_test_mode_ = 4;
+
+    supp_sign_timer_ += GetContext.get_param()->dt;
+
+    // 每2秒切换到下一个标识牌
+    if (supp_sign_timer_ >= 2.0) {
+      supp_sign_timer_ = 0.0;
+      test_supp_sign_index_ = (test_supp_sign_index_ + 1) % 13;  // 循环递增索引
+
+      // 同时设置实时和输出标识牌，避免被重置逻辑清空
+      realtime_supp_sign_info_ = supp_sign_test_array[test_supp_sign_index_];
+      output_supp_sign_info_ = supp_sign_test_array[test_supp_sign_index_];
+      supp_sign_valid_flag_ = true;
+      supp_sign_hold_time_ = 0.0;  // 重置计时器，保持显示
+    }
+  } else {
+      // 错误模式：关闭测试，不做任何操作
+    last_test_mode_ = 0;
+  }
 }
 
 }  // namespace tsr_core
