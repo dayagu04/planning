@@ -330,7 +330,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     }
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -470,6 +470,12 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   curve_node_to_goal->SetCurGearLength(cur_gear_length);
   curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
   curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
+
+  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
+    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
+    curve_node_to_goal->SetThetaErr(
+        std::fabs(path.ptss.back().back().GetTheta()));
+  }
 
   // DebugCurvePath(path);
   //  ILOG_INFO << "rs success consume time = "
@@ -703,6 +709,12 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   curve_node_to_goal->SetCurGearLength(cur_gear_length);
   curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
   curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
+
+  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
+    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
+    curve_node_to_goal->SetThetaErr(
+        std::fabs(path.ptss.back().back().GetTheta()));
+  }
 
   // lpl_path_.PrintInfo();
 

@@ -776,7 +776,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
         break;
       }
 
-      if (curve_node_to_goal.GetGearSwitchNum() < 1) {
+      if (curve_node_to_goal.GetGearSwitchNum() < 1 &&
+          curve_node_to_goal.GetLatErr() < 0.02) {
         ILOG_INFO << "find a path that can no shift gear to enter slot";
         break;
       }
@@ -1072,6 +1073,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
   const float length_penalty = 1.0f;
   const float unsuitable_last_line_length_penalty = 1.68f;
   const float kappa_change_penalty = 1.5f * length_penalty / max_kappa_change_;
+  const float lat_err_penalty = 16.8f;
+  const float heading_err_penalty = 0.0f * common_math::kRad2DegF;
 
   result_.solve_number = curve_node_to_goal_vec.size();
 
@@ -1097,6 +1100,10 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
 
     // 长度代价
     cost.length_cost = length_penalty * temp_node.GetDistToStart();
+
+    // 误差代价
+    cost.lat_err_cost = temp_node.GetLatErr() * lat_err_penalty;
+    cost.heading_err_cost = temp_node.GetThetaErr() * heading_err_penalty;
 
     // 最后一段直线代价  曲率变化代价
     if (analytic_expansion_type == AnalyticExpansionType::LINK_POSE_LINE) {
@@ -1126,10 +1133,9 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
         cost.unsuitable_last_line_length_cost = gear_change_penalty + 1.0f;
       } else {
         const float unsuitable_last_line_length =
-            (last_line_length < 1.86f)
-                ? (1.86f - last_line_length)
-                : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
-                                             : 0.0f;
+            (last_line_length < 1.86f)   ? (1.86f - last_line_length)
+            : (last_line_length > 3.68f) ? (last_line_length - 3.68f)
+                                         : 0.0f;
         cost.unsuitable_last_line_length_cost =
             unsuitable_last_line_length * unsuitable_last_line_length_penalty;
       }

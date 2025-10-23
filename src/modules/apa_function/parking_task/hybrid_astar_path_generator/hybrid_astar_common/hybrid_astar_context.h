@@ -191,6 +191,8 @@ struct PathColDetBuffer {
 
 struct PathCompareCost {
   float length_cost = 0.0f;
+  float lat_err_cost = 0.0f;
+  float heading_err_cost = 0.0f;
   float gear_change_cost = 0.0f;
   float kappa_change_cost = 0.0f;
   float unsuitable_last_line_length_cost = 0.0f;
@@ -206,6 +208,8 @@ struct PathCompareCost {
 
   void Reset() {
     length_cost = 0.0f;
+    lat_err_cost = 0.0f;
+    heading_err_cost = 0.0f;
     gear_change_cost = 0.0f;
     kappa_change_cost = 0.0f;
     unsuitable_last_line_length_cost = 0.0f;
