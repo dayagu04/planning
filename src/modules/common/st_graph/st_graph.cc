@@ -446,7 +446,7 @@ void STGraph::RecalculateTrajectoryForLcRearAgent(
           x, y, theta, final_vel, final_acc, original_point.absolute_time(),
           0.0, final_jerk, new_s, kappa);
 
-      modified_traj.push_back(modified_point);
+      modified_traj.push_back(std::move(modified_point));
     }
     modified_trajectories.push_back(std::move(modified_traj));
   }
