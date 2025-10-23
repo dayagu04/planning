@@ -1881,7 +1881,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       break;
     }
     case IN_EXCHANGE_AREAR_FRONT: {
-      const double kSplitDistanceThreshold = 5;
+      const double kSplitDistanceThreshold = 10.0;
       if (mlc_decider_route_info_.is_process_split ||
           mlc_decider_route_info_.is_process_split_split ||
           mlc_decider_route_info_.is_process_other_merge_split) {
@@ -2028,6 +2028,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           if (is_calculate_first_feasible_lane &&
               !is_calculate_second_feasible_lane) {
             // 说明计算可行驶车道失败
+            EraseSplitSplitFeasibleLane(
+                route_info_output_.split_region_info_list[0],
+                second_split_region_info);
+            mlc_decider_route_info_.first_static_split_region_info =
+                route_info_output_.split_region_info_list[0];
             is_cal_feasible_lane_succeed = false;
             mlc_decider_route_info_.is_process_split_split = false;
             mlc_decider_route_info_.is_process_split = true;
@@ -2051,6 +2056,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                              sec_spl_before_feasi_lanes.feasible_lane_sequence);
           if (temp1.empty()) {
             // mlc_decider_route_info_.reset();
+            EraseSplitSplitFeasibleLane(
+                route_info_output_.split_region_info_list[0],
+                second_split_region_info);
+            mlc_decider_route_info_.first_static_split_region_info =
+                route_info_output_.split_region_info_list[0];
             mlc_decider_route_info_.is_process_split_split = false;
             mlc_decider_route_info_.is_process_split = true;
             mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
@@ -2066,6 +2076,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           if (temp2.empty()) {
             if (temp1.empty() || first_split_region_info.recommend_lane_num[1]
                                      .feasible_lane_sequence.empty()) {
+              EraseSplitSplitFeasibleLane(
+                  route_info_output_.split_region_info_list[0],
+                  second_split_region_info);
+              mlc_decider_route_info_.first_static_split_region_info =
+                  route_info_output_.split_region_info_list[0];
               mlc_decider_route_info_.is_process_split_split = false;
               mlc_decider_route_info_.is_process_split = true;
               mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
@@ -2080,6 +2095,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                      .feasible_lane_sequence.back());
             } else {
               // 在第一交换区中间和后面没有共同link时，就靠最右边车道行驶
+              EraseSplitSplitFeasibleLane(
+                  route_info_output_.split_region_info_list[0],
+                  second_split_region_info);
+              mlc_decider_route_info_.first_static_split_region_info =
+                  route_info_output_.split_region_info_list[0];
               mlc_decider_route_info_.is_process_split_split = false;
               mlc_decider_route_info_.is_process_split = true;
               mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
@@ -2093,6 +2113,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           if (temp3.empty()) {
             if (temp2.empty() || first_split_region_info.recommend_lane_num[0]
                                      .feasible_lane_sequence.empty()) {
+              EraseSplitSplitFeasibleLane(
+                  route_info_output_.split_region_info_list[0],
+                  second_split_region_info);
+              mlc_decider_route_info_.first_static_split_region_info =
+                  route_info_output_.split_region_info_list[0];
               mlc_decider_route_info_.is_process_split_split = false;
               mlc_decider_route_info_.is_process_split = true;
               mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
@@ -2105,6 +2130,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               temp3.emplace_back(first_split_region_info.recommend_lane_num[0]
                                      .feasible_lane_sequence.back());
             } else {
+              EraseSplitSplitFeasibleLane(
+                  route_info_output_.split_region_info_list[0],
+                  second_split_region_info);
+              mlc_decider_route_info_.first_static_split_region_info =
+                  route_info_output_.split_region_info_list[0];
               mlc_decider_route_info_.is_process_split_split = false;
               mlc_decider_route_info_.is_process_split = true;
               mlc_decider_route_info_.ego_status_on_route = NEARING_SPLIT;
@@ -5329,5 +5359,30 @@ bool RouteInfo::CalculateDistanceNextToLastMergePoint(
   }
 
   return false;
+}
+void RouteInfo::EraseSplitSplitFeasibleLane(
+    NOASplitRegionInfo& first_split_region_info,
+    NOASplitRegionInfo& second_split_region_info) {
+  if (first_split_region_info.recommend_lane_num.size() != 4) {
+    return;
+  }
+
+  if (second_split_region_info.split_direction == SplitDirection::SPLIT_LEFT) {
+    for (int i = 0; i < 3; ++i) {
+      auto& lane_sequence =
+          first_split_region_info.recommend_lane_num[i].feasible_lane_sequence;
+      if (lane_sequence.size() > 1) {
+        lane_sequence.erase(lane_sequence.begin() + 1, lane_sequence.end());
+      }
+    }
+  } else {
+    for (int i = 0; i < 3; ++i) {
+      auto& lane_sequence =
+          first_split_region_info.recommend_lane_num[i].feasible_lane_sequence;
+      if (lane_sequence.size() > 1) {
+        lane_sequence.erase(lane_sequence.begin(), lane_sequence.end() - 1);
+      }
+    }
+  }
 }
 }  // namespace planning
