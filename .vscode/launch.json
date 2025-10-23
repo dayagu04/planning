@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/bestune_e541_00105/common_frame/20251018/20251018-11-37-03/data_collection_BESTUNE_E541_00105_ALL_MANUAL_2025-10-18-11-37-03_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_m32t_52927/trigger/20251229/20251229-13-58-29/data_collection_CHERY_M32T_52927_EVENT_KEY_2025-12-29-13-58-29_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",
