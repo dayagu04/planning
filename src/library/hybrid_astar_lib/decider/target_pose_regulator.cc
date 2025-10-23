@@ -721,9 +721,17 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
     return lon_upper;
   }
 
+  // best lon position: find position from upper to lower
+  // 1. find the position, it's distance  [0.55, +inf], continue to find lower
+  // position;
+  // 2. [0, 0.35], record max distance position;
+  // 3. [0.35, 0.55], break;
+
   // search best lon position by obstacle distance.
   float best_lon = lon_upper;
-  float max_dist = 0.0f;
+  float narrow_space_max_dist = 0.0f;
+  bool find_narrow_space = false;
+  bool find_broad_space = false;
 
   for (int32_t i = path->size - 1; i >= 0; i--) {
     if (path->points[i].x > lon_upper) {
@@ -732,14 +740,23 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
     if (path->points[i].x < lon_lower) {
       continue;
     }
-    if (path->points[i].dist_to_obs > lat_buffer + 0.2f) {
+
+    if (path->points[i].dist_to_obs > lat_buffer + 0.4f) {
+      if (!find_narrow_space) {
+        best_lon = path->points[i].x;
+      }
+      find_broad_space = true;
+    } else if (path->points[i].dist_to_obs > lat_buffer + 0.2f) {
       best_lon = path->points[i].x;
       break;
-    }
-
-    if (path->points[i].dist_to_obs > max_dist) {
-      max_dist = path->points[i].dist_to_obs;
-      best_lon = path->points[i].x;
+    } else {
+      if (!find_broad_space) {
+        if (path->points[i].dist_to_obs > narrow_space_max_dist) {
+          narrow_space_max_dist = path->points[i].dist_to_obs;
+          best_lon = path->points[i].x;
+        }
+      }
+      find_narrow_space = true;
     }
   }
 
