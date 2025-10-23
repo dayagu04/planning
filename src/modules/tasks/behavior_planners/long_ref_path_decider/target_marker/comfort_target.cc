@@ -39,7 +39,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   const auto is_in_lane_change_execution =
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
-      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeCancel;
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangeHold;
 
   const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
@@ -61,6 +61,28 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   JSON_DEBUG_VALUE("limit_speed", desired_speed);
 
+  comfort_params_.v0 = desired_speed;
+  comfort_params_.s0 = 3.5;
+  comfort_params_.T = 1.0;
+  comfort_params_.a = 1.5;
+  comfort_params_.b = 1.0;
+  comfort_params_.b_max = 2.0;
+  comfort_params_.delta = 4.0;
+  comfort_params_.b_hard = 4.0;
+  comfort_params_.max_a_jerk = 5.0;
+  comfort_params_.min_decel_jerk = 1.0;
+  comfort_params_.mid_decel_jerk = 1.5;
+  comfort_params_.max_decel_jerk = 2.0;
+  comfort_params_.min_tau = 0.3;
+  comfort_params_.min_tau = 1.2;
+  comfort_params_.virtual_front_s = 200.0;
+  comfort_params_.cool_factor = 0.99;
+  comfort_params_.follow_consider_distance = 15.0;
+  comfort_params_.follow_consider_time_headway = 1.5;
+  comfort_params_.over_speed_factor = 0.3;
+  is_lat_follow_ = false;
+  is_lon_cut_in_ = false;
+
   upper_bound_infos_ =
       std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
 
@@ -73,26 +95,6 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
 
-  idm_params_.v0 = desired_speed;
-  idm_params_.s0 = 3.5;
-  idm_params_.T = 1.0;
-  idm_params_.a = 1.5;
-  idm_params_.b = 1.0;
-  idm_params_.b_max = 2.0;
-  idm_params_.delta = 4.0;
-  idm_params_.b_hard = 4.0;
-  idm_params_.max_a_jerk = 5.0;
-  idm_params_.max_b_jerk = 1.0;
-  idm_params_.max_deceleration_jerk_lat_follow = 2.0;
-  idm_params_.max_deceleration_jerk_lon_cutin = 4.0;
-  idm_params_.virtual_front_s = 200.0;
-  idm_params_.cool_factor = 0.99;
-  idm_params_.over_speed_factor = 0.3;
-  is_lat_follow_ = false;
-  is_lon_cutin_ = false;
-  idm_params_.follow_consider_distance = 10.0;
-  idm_params_.follow_consider_time_headway = 1.5;
-
   acc_values_ = std::vector<double>(plan_points_num_, 0.0);
 
   GenerateComfortTarget();
@@ -104,7 +106,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   mutable_lon_ref_path_decider_output->is_comfort_target_lat_follow =
       is_lat_follow_;
   mutable_lon_ref_path_decider_output->is_comfort_target_lon_cutin =
-      is_lon_cutin_;
+      is_lon_cut_in_;
   mutable_lon_ref_path_decider_output->follow_agent_ids = follow_agent_ids_;
   mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.clear();
   mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.reserve(
@@ -125,8 +127,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
 void ComfortTarget::GenerateUpperBoundInfo() {
   const auto* st_graph = session_->planning_context().st_graph_helper();
-  const double virtual_front_s = idm_params_.virtual_front_s;
-  const double virtual_front_vel = idm_params_.v0;
+  const double virtual_front_s = comfort_params_.virtual_front_s;
+  const double virtual_front_vel = comfort_params_.v0;
   const int32_t virtual_front_agent_id = 799999;
   const int32_t virtual_front_st_boundary_id = 799999;
   const double virtual_front_acc = 0.0;
@@ -146,6 +148,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   }
 
   double ego_s = 0.0, ego_l = 0.0;
+  double ego_v = init_lon_state_[1];
   const auto& ego_init_point = session_->environmental_model()
                                    .get_ego_state_manager()
                                    ->planning_init_point();
@@ -166,7 +169,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   std::unordered_set<int32_t> forbidden_ids(blocked_obs_id.begin(),
                                             blocked_obs_id.end());
 
-  for (const auto & [ agent_id, decision ] : lat_obstacle_decision) {
+  for (const auto& [agent_id, decision] : lat_obstacle_decision) {
     if (decision == LatObstacleDecisionType::FOLLOW) {
       if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
           added_agent_ids.find(agent_id) != added_agent_ids.end()) {
@@ -176,7 +179,9 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       auto agent =
           session_->environmental_model().get_agent_manager()->GetAgent(
               agent_id);
+
       if (agent != nullptr) {
+
         follow_agents.push_back(
             {agent, FollowAgentSource::kLatObstacleDecision});
         added_agent_ids.insert(agent_id);
@@ -203,9 +208,9 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       }
       const double dis_relative =
           agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
-      const double dis_lon_consider =
-          std::max(ego_init_point.v * idm_params_.follow_consider_time_headway,
-                   idm_params_.follow_consider_distance);
+      const double dis_lon_consider = std::max(
+          ego_init_point.v * comfort_params_.follow_consider_time_headway,
+          comfort_params_.follow_consider_distance);
 
       if (dis_relative <= dis_lon_consider) {
         follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
@@ -221,7 +226,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     for (size_t i = 0; i < plan_points_num_; i++) {
       double min_agent_s = std::numeric_limits<double>::max();
       FollowAgentInfo best_agent_info = {
-          -1, 0.0, 0.0, 0.0, 899999, FollowAgentSource::kLatObstacleDecision};
+          899999, 210.0,  comfort_params_.v0,
+          0.0,    899999, FollowAgentSource::kLatObstacleDecision};
       bool found_valid_agent = false;
 
       for (const auto& agent_with_source : follow_agents) {
@@ -267,17 +273,25 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     if (st_graph != nullptr) {
       const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
       if (upper_bound.agent_id() != speed::kNoAgentId) {
-        upper_bound_infos_[i] = {
-            upper_bound.s(),           t,
-            upper_bound.velocity(),    TargetType::kComfort,
-            upper_bound.agent_id(),    upper_bound.boundary_id(),
-            upper_bound.acceleration()};
+        upper_bound_infos_[i] = {upper_bound.s(),
+                                 t,
+                                 upper_bound.velocity(),
+                                 TargetType::kComfort,
+                                 upper_bound.agent_id(),
+                                 upper_bound.boundary_id(),
+                                 upper_bound.acceleration(),
+                                 false,
+                                 false};
       } else {
-        upper_bound_infos_[i] = {
-            virtual_front_s,        t,
-            virtual_front_vel,      TargetType::kComfort,
-            virtual_front_agent_id, virtual_front_st_boundary_id,
-            virtual_front_acc};
+        upper_bound_infos_[i] = {virtual_front_s,
+                                 t,
+                                 virtual_front_vel,
+                                 TargetType::kComfort,
+                                 virtual_front_agent_id,
+                                 virtual_front_st_boundary_id,
+                                 virtual_front_acc,
+                                 false,
+                                 false};
       }
 
       if (!follow_agents.empty() && follow_agent_infos[i].s < upper_bound.s()) {
@@ -286,16 +300,20 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           is_lat_follow_ = true;
         } else if (follow_agent_infos[i].source ==
                    FollowAgentSource::kCutinAgentIds) {
-          is_lon_cutin_ = true;
+          is_lon_cut_in_ = true;
         }
 
-        upper_bound_infos_[i] = {follow_agent_infos[i].s,
-                                 t,
-                                 follow_agent_infos[i].v,
-                                 TargetType::kComfort,
-                                 follow_agent_infos[i].agent_id,
-                                 follow_agent_infos[i].st_boundary_id,
-                                 follow_agent_infos[i].a};
+        upper_bound_infos_[i] = {
+            follow_agent_infos[i].s,
+            t,
+            follow_agent_infos[i].v,
+            TargetType::kComfort,
+            follow_agent_infos[i].agent_id,
+            follow_agent_infos[i].st_boundary_id,
+            follow_agent_infos[i].a,
+            follow_agent_infos[i].source ==
+                FollowAgentSource::kLatObstacleDecision,
+            follow_agent_infos[i].source == FollowAgentSource::kCutinAgentIds};
       }
     }
   }
@@ -332,10 +350,12 @@ void ComfortTarget::GenerateComfortTarget() {
     auto& target_value = target_values_[i];
     target_value.set_relative_t(t);
 
-    const double front_s = upper_bound_infos_[i].s;
-    const double front_vel = upper_bound_infos_[i].v;
+    const double front_s = upper_bound_infos_[i - 1].s;
+    const double front_vel = upper_bound_infos_[i - 1].v;
+    const bool is_follow = upper_bound_infos_[i - 1].is_follow;
+    const bool is_cut_in = upper_bound_infos_[i - 1].is_cut_in;
 
-    double tau = idm_params_.T;
+    double tau = comfort_params_.T;
     const auto& agents_headway_Info = session_->planning_context()
                                           .agent_headway_decider_output()
                                           .agents_headway_Info();
@@ -352,19 +372,46 @@ void ComfortTarget::GenerateComfortTarget() {
       }
     }
 
+    double min_follow_distance =
+        comfort_params_.s0 + current_v * comfort_params_.min_tau;
+    double max_follow_distance =
+        comfort_params_.s0 + current_v * comfort_params_.max_tau;
+
+    double max_decel_jerk = (is_cut_in || is_follow)
+                                ? comfort_params_.mid_decel_jerk
+                                : comfort_params_.min_decel_jerk;
+
+    double decel_jerk = comfort_params_.min_decel_jerk;
+    if (is_follow || is_cut_in) {
+      if (front_s >= max_follow_distance) {
+        decel_jerk = comfort_params_.min_decel_jerk;
+      } else if (front_s <= min_follow_distance) {
+        decel_jerk = max_decel_jerk;
+      } else {
+        double distance_diff = max_follow_distance - min_follow_distance;
+        if (std::abs(distance_diff) < 1e-6) {
+          decel_jerk = comfort_params_.min_decel_jerk;
+        } else {
+          double ratio = (front_s - min_follow_distance) / distance_diff;
+          decel_jerk =
+              max_decel_jerk +
+              ratio * (comfort_params_.min_decel_jerk - max_decel_jerk);
+        }
+      }
+    }
+
     double comfort_acc = CalculateComfortAcceleration(
-        current_a, current_v, current_s, front_vel, front_s, tau);
+        current_a, current_v, current_s, front_vel, front_s, tau, decel_jerk);
     acc_values_[i] = comfort_acc;
-    double next_s = current_s + current_v * dt_ + 0.5 * comfort_acc * dt_ * dt_;
+    double ds = std::max(0.0, current_v * dt_ + 0.5 * comfort_acc * dt_ * dt_);
+    double next_s = current_s + ds;
     double next_v = current_v + comfort_acc * dt_;
 
-    next_s = std::max(current_s, next_s);
     next_v = std::max(0.0, next_v);
 
     target_value.set_has_target(true);
     target_value.set_s_target_val(next_s);
     target_value.set_v_target_val(next_v);
-    target_value.set_target_type(TargetType::kComfort);
     target_value.set_target_type(TargetType::kComfort);
 
     current_s = next_s;
@@ -408,16 +455,17 @@ double ComfortTarget::CalcDesiredVelocity(const double d_rel,
 
 double ComfortTarget::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
-    const double front_vel, const double front_s, const double tau) const {
-  double s0 = idm_params_.s0;
-  double v0 = idm_params_.v0;
-  double a = idm_params_.a;
-  double b = idm_params_.b;
-  double b_max = idm_params_.b_max;
-  double b_hard = idm_params_.b_hard;
-  double delta = idm_params_.delta;
-  double cool_factor = idm_params_.cool_factor;
-  double over_speed_factor = idm_params_.over_speed_factor;
+    const double front_vel, const double front_s, const double tau,
+    const double decel_jerk) const {
+  double s0 = comfort_params_.s0;
+  double v0 = comfort_params_.v0;
+  double a = comfort_params_.a;
+  double b = comfort_params_.b;
+  double b_max = comfort_params_.b_max;
+  double b_hard = comfort_params_.b_hard;
+  double delta = comfort_params_.delta;
+  double cool_factor = comfort_params_.cool_factor;
+  double over_speed_factor = comfort_params_.over_speed_factor;
 
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
@@ -431,7 +479,7 @@ double ComfortTarget::CalculateComfortAcceleration(
   double s_desired = std::max(s0, front_s - s_safe);
 
   double dynamic_v0 =
-      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
+      CalcDesiredVelocity(s_alpha, s_safe, front_vel, current_vel);
 
   double desired_v0 = std::min(v0, dynamic_v0);
 
@@ -483,6 +531,8 @@ double ComfortTarget::CalculateComfortAcceleration(
     }
   }
 
+  a_idm = std::max(std::min(a, a_idm), -comfort_params_.b_hard);
+
   double ds_star = s_alpha - s_star;
   double ds_safe = s_alpha - s_safe;
   double a_cah;
@@ -490,6 +540,8 @@ double ComfortTarget::CalculateComfortAcceleration(
     a_cah = b_hard * ds_star / s_star;
   } else if (ds_safe > 0.0 && ds_star < 0.0) {
     a_cah = b * ds_star / s_star;
+  } else if (ds_safe < 0.0 && ds_star > 0.0) {
+    a_cah = b * ds_safe / s_safe;
   } else {
     a_cah = a_idm;
   }
@@ -503,23 +555,14 @@ double ComfortTarget::CalculateComfortAcceleration(
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
   }
 
-  double max_decel_jerk = 0.0;
-  if (is_lat_follow_) {
-    max_decel_jerk = idm_params_.max_deceleration_jerk_lat_follow;
-  } else if (is_lon_cutin_) {
-    max_decel_jerk = idm_params_.max_deceleration_jerk_lon_cutin;
-  } else {
-    max_decel_jerk = idm_params_.max_b_jerk;
-  }
-
   double acc_change = final_acc - current_acc;
-  if (acc_change > 0 && acc_change > idm_params_.max_a_jerk * dt_) {
-    final_acc = current_acc + idm_params_.max_a_jerk * dt_;
-  } else if (acc_change < 0 && acc_change < -max_decel_jerk * dt_) {
-    final_acc = current_acc - max_decel_jerk * dt_;
+  if (acc_change > 0 && acc_change > comfort_params_.max_a_jerk * dt_) {
+    final_acc = current_acc + comfort_params_.max_a_jerk * dt_;
+  } else if (acc_change < 0 && acc_change < -decel_jerk * dt_) {
+    final_acc = current_acc - decel_jerk * dt_;
   }
 
-  final_acc = std::max(std::min(a, final_acc), -idm_params_.b_hard);
+  final_acc = std::max(std::min(a, final_acc), -comfort_params_.b_hard);
 
   return final_acc;
 }

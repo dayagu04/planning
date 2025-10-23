@@ -19,6 +19,8 @@ class ComfortTarget : public Target {
     int32_t agent_id = -1;
     int64_t st_boundary_id = -1;
     double a = 0;
+    bool is_follow = false;
+    bool is_cut_in = false;
   };
   struct FollowAgentWithSource {
     const agent::Agent* agent;
@@ -29,7 +31,7 @@ class ComfortTarget : public Target {
   ComfortTarget(const SpeedPlannerConfig& config, framework::Session* session);
   ~ComfortTarget() = default;
 
-  struct IdmParameters {
+  struct ComfortParameters {
     double v0 = 33.5;
     double s0 = 3.5;
     double T = 1.0;
@@ -39,14 +41,16 @@ class ComfortTarget : public Target {
     double b_hard = 4.0;
     double delta = 4.0;
     double max_a_jerk = 5.0;
-    double max_b_jerk = 1.0;
-    double max_deceleration_jerk_lat_follow = 2.0;
-    double max_deceleration_jerk_lon_cutin = 4.0;
+    double min_decel_jerk = 1.0;
+    double mid_decel_jerk = 1.5;
+    double max_decel_jerk = 2.0;
+    double min_tau = 0.3;
+    double max_tau = 1.2;
     double virtual_front_s = 200.0;
     double cool_factor = 0.99;
-    double over_speed_factor = 0.3;
-    double follow_consider_distance = 10.0;
+    double follow_consider_distance = 15.0;
     double follow_consider_time_headway = 1.5;
+    double over_speed_factor = 0.3;
   };
 
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
@@ -73,7 +77,8 @@ class ComfortTarget : public Target {
                                       const double current_s,
                                       const double front_vel,
                                       const double front_s,
-                                      const double tau) const;
+                                      const double tau,
+                                      const double decel_jerk) const;
 
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
@@ -81,16 +86,14 @@ class ComfortTarget : public Target {
   void AddComfortTargetDataToProto();
 
  private:
-  bool is_lat_follow_ = false;
-  bool is_lon_cutin_ = false;
-  IdmParameters idm_params_;
-
+ 
+  ComfortParameters comfort_params_;
   std::vector<UpperBoundInfo> upper_bound_infos_;
-
   common::ComfortTarget comfort_target_pb_;
-
   std::vector<double> acc_values_;
   std::vector<int32_t> follow_agent_ids_;
+  bool is_lat_follow_ = false;
+  bool is_lon_cut_in_ = false;
 };
 
 }  // namespace planning
