@@ -2010,6 +2010,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           bool is_calculate_first_feasible_lane =
               CalculateFeasibleLane(&first_split_region_info);
 
+          std::map<int, EgoMLCRequestType> temp_mlc_type = mlc_request_info_;
           if (!is_calculate_first_feasible_lane) {
             mlc_decider_route_info_.reset();
             return;
@@ -2025,6 +2026,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           bool is_calculate_second_feasible_lane =
               CalculateFeasibleLane(&second_split_region_info);
 
+          // 规避第二次计算feasible lane对mlc_request_info_的改变
+          mlc_request_info_ = temp_mlc_type;
           if (is_calculate_first_feasible_lane &&
               !is_calculate_second_feasible_lane) {
             // 说明计算可行驶车道失败
