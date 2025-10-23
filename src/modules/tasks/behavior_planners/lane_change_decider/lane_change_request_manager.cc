@@ -169,15 +169,11 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
 
   if (int_request_.request_type() == NO_CHANGE) {
     if (enable_use_cone_change_request &&
-        request_source_ != EMERGENCE_AVOID_REQUEST &&
-        (curr_time >
-         int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
+        request_source_ != EMERGENCE_AVOID_REQUEST) {
       cone_change_request_.Update(lc_status);
     }
     if (enable_use_emergency_avoidence_lc_request &&
-        request_source_ != CONE_REQUEST &&
-        (curr_time >
-         int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
+        request_source_ != CONE_REQUEST) {
       emergence_avoid_request_.Update(lc_status);
     }
     if (enable_use_merge_lc_request && origin_relative_id_zero_nums == 1 &&
