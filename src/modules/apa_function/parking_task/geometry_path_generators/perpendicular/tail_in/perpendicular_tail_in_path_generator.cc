@@ -4386,6 +4386,9 @@ const bool PerpendicularTailInPathGenerator::FindPtCanReverseToSlot(
       if (success) {
         if (CheckStuckedByInside(geometry_path.start_pose,
                                  geometry_path.end_pose, false, false)) {
+          if (geometry_path.path_segment_vec.empty()) {
+            continue;
+          }
           auto& arc_seg = geometry_path.path_segment_vec.back();
           CalcObsDistConsiderSlotForPathSeg(arc_seg);
           const double stuck_y =
