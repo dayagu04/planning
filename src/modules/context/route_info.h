@@ -319,5 +319,8 @@ class RouteInfo {
   void CalculateDistanceToNextSpeedBump();
   bool IsOnHPPLane();
   double CalculatePointAccumulateS(size_t lane_id);
+  void EraseSplitSplitFeasibleLane(
+      NOASplitRegionInfo& first_split_region_info,
+      NOASplitRegionInfo& second_split_region_info);
 };
 }  // namespace planning
