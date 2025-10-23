@@ -78,6 +78,7 @@ struct PlannerOpenSpaceConfig {
   float s_curve_penalty = 0.0;
 
   float expect_gear_penalty;
+  float expect_steer_penalty;
   float expect_dist_penalty;
   float recommend_box_penalty;
 

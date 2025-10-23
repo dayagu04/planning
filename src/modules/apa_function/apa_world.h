@@ -68,6 +68,7 @@ struct SimulationParam {
   ParkingVehDirection dir;
 
   int ref_gear = 0;
+  int ref_steer = 0;
   int pre_search_mode = 1;
   bool decide_cul_de_sac = true;
 };

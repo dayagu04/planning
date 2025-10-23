@@ -330,7 +330,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     }
   }
 
-    // interpolation
+  // interpolation
 #if LOG_TIME_PROFILE
   double rs_start_time = IflyTime::Now_ms();
 #endif
@@ -411,6 +411,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   curve_node_to_goal->SetFCost();
 
   AstarPathGear cur_gear;
+  float cur_kappa;
   float cur_gear_length;
 #if USE_LINK_PT_LINE
   common_math::PathPt<float> gear_switch_pose;
@@ -424,6 +425,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
     gear_switch_pose.SetPos(pose.x, pose.y);
     gear_switch_pose.SetTheta(pose.theta);
     cur_gear = curve_node_to_goal->GearSwitchNode()->GetGearType();
+    cur_kappa = curve_node_to_goal->GearSwitchNode()->GetKappa();
     cur_gear_length = curve_node_to_goal->GearSwitchNode()->GetDistToStart();
   } else {
     double seg_length[6];
@@ -441,6 +443,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
       }
     }
     cur_gear = path.gears[0];
+    cur_kappa = path.kappas[0];
     cur_gear_length = seg_length[0] + current_node->GetDistToStart();
   }
 
@@ -463,9 +466,16 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   }
 
   curve_node_to_goal->SetCurGear(cur_gear);
+  curve_node_to_goal->SetCurKappa(cur_kappa);
   curve_node_to_goal->SetCurGearLength(cur_gear_length);
   curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
   curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
+
+  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
+    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
+    curve_node_to_goal->SetThetaErr(
+        std::fabs(path.ptss.back().back().GetTheta()));
+  }
 
   // DebugCurvePath(path);
   //  ILOG_INFO << "rs success consume time = "
@@ -640,6 +650,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   curve_node_to_goal->SetFCost();
 
   AstarPathGear cur_gear;
+  float cur_kappa;
   float cur_gear_length;
 #if USE_LINK_PT_LINE
   common_math::PathPt<float> gear_switch_pose;
@@ -653,6 +664,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     gear_switch_pose.SetPos(pose.x, pose.y);
     gear_switch_pose.SetTheta(pose.theta);
     cur_gear = curve_node_to_goal->GearSwitchNode()->GetGearType();
+    cur_kappa = curve_node_to_goal->GearSwitchNode()->GetKappa();
     cur_gear_length = curve_node_to_goal->GearSwitchNode()->GetDistToStart();
   } else {
     double seg_length[6];
@@ -670,6 +682,7 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
       }
     }
     cur_gear = path.gears[0];
+    cur_kappa = path.kappas[0];
     cur_gear_length = seg_length[0] + current_node->GetDistToStart();
   }
 
@@ -692,9 +705,16 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   }
 
   curve_node_to_goal->SetCurGear(cur_gear);
+  curve_node_to_goal->SetCurKappa(cur_kappa);
   curve_node_to_goal->SetCurGearLength(cur_gear_length);
   curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
   curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
+
+  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
+    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
+    curve_node_to_goal->SetThetaErr(
+        std::fabs(path.ptss.back().back().GetTheta()));
+  }
 
   // lpl_path_.PrintInfo();
 
@@ -1087,11 +1107,6 @@ const bool HybridAStarPathGenerator::BackwardPassByCurveNode(
     return false;
   }
 
-  // if (request_.is_searching_stage) {
-  //   result_.path_plan_success = true;
-  //   return true;
-  // }
-
   const double backward_start_time = IflyTime::Now_ms();
   if (request_.analytic_expansion_type ==
       AnalyticExpansionType::LINK_POSE_LINE) {
@@ -1243,8 +1258,18 @@ const bool HybridAStarPathGenerator::BackwardPassByCurveNode(
   result_.gear_change_num = result_.gear_vec.size() - 1;
 
   for (size_t i = 0; i < result_.gear_vec.size(); i++) {
-    result_.length_vec.emplace_back(
-        std::max(0.1 * (result_.x_vec_vec[i].size() - 1), 0.1));
+    result_.length_vec.emplace_back(std::max(
+        config_.node_path_dist_resolution * (result_.x_vec_vec[i].size() - 1),
+        config_.node_path_dist_resolution));
+  }
+
+  const float cur_gear_last_pt_kappa = result_.kappa_vec_vec.front().back();
+  if (cur_gear_last_pt_kappa > 1e-5f) {
+    result_.cur_steer = AstarPathSteer::LEFT;
+  } else if (cur_gear_last_pt_kappa < -1e-5f) {
+    result_.cur_steer = AstarPathSteer::RIGHT;
+  } else {
+    result_.cur_steer = AstarPathSteer::NONE;
   }
 
 #if DEBUG_FINAL_PATH

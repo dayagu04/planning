@@ -47,6 +47,8 @@ void PerpendicularTailInScenario::ScenarioTry() {
 
   Reset();
 
+  frame_.replan_reason = ReplanReason::SLOT_CRUISING;
+
   SlotReleaseInfo& release_info = apa_world_ptr_->GetSlotManagerPtr()
                                       ->GetMutableEgoInfoUnderSlot()
                                       .slot.release_info_;
@@ -522,11 +524,12 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   CalcPtInside();
 
-  const bool update_slot_move_dist =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
-      (frame_.replan_flag && (frame_.replan_reason != ReplanReason::DYNAMIC ||
-                              (frame_.replan_reason == ReplanReason::DYNAMIC &&
-                               ego_info_under_slot.slot_occupied_ratio < 0.6)));
+  bool update_slot_move_dist = true;
+  if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
+      (frame_.replan_reason == ReplanReason::DYNAMIC &&
+       ego_info_under_slot.slot_occupied_ratio > 0.6)) {
+    update_slot_move_dist = false;
+  }
 
   ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
             << "  update_slot_move_dist = " << update_slot_move_dist
@@ -1108,9 +1111,10 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   config.InitConfig();
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
-  config.exceed_pre_search_box_penalty = 68.0;
-  config.exceed_intersting_box_penalty = 11.0;
-  config.borrow_slot_penalty = 3.68;
+  config.exceed_pre_search_box_penalty = 68.0f;
+  config.exceed_intersting_box_penalty = 11.0f;
+  config.borrow_slot_penalty = 3.68f;
+  config.expect_steer_penalty = 0.3f;
 
   // gen request
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
@@ -1135,18 +1139,22 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   request.inital_action_request.ref_length = config.node_step + 0.01;
   request.inital_action_request.ref_gear =
       GetAstarGearFromSegGear(frame_.current_gear);
+  request.inital_action_request.ref_steer =
+      GetAstarSteerFromSegSteer(frame_.current_arc_steer);
   if (apa_world_ptr_->GetSimuParam().ref_gear != 0) {
     request.inital_action_request.ref_gear =
         GetAstarGearFromSegGear(apa_world_ptr_->GetSimuParam().ref_gear);
+  }
+  if (apa_world_ptr_->GetSimuParam().ref_steer != 0) {
+    request.inital_action_request.ref_steer =
+        GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
   }
 
   request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
   request.decide_cul_de_sac = apa_world_ptr_->GetSimuParam().decide_cul_de_sac;
 
-  request.is_searching_stage =
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
-
-  if (request.is_searching_stage) {
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
+    // searching_stage
     request.max_gear_shift_number = param.max_plan_gear_shift_number_searching;
   } else {
     request.max_gear_shift_number =
@@ -1182,6 +1190,8 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   ILOG_INFO << "hybrid_ref_gear = "
             << PathGearDebugString(request.inital_action_request.ref_gear)
+            << " ref steer = "
+            << GetPathSteerDebugString(request.inital_action_request.ref_steer)
             << " ref length = " << request.inital_action_request.ref_length
             << "  max_gear_shift_number = " << request.max_gear_shift_number
             << "  adjust_pose = " << request.adjust_pose
@@ -1219,7 +1229,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstar() {
   JSON_DEBUG_VALUE("solve_number", hybrid_astar_result.solve_number)
   JSON_DEBUG_VALUE("search_node_num", hybrid_astar_result.search_node_num)
 
-  if (request.is_searching_stage) {
+  if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
     if (!path_plan_success) {
       return PathPlannerResult::PLAN_FAILED;
     }
@@ -1402,10 +1412,23 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
     // 从线程里拿取路径规划结果  success or fail
     path_generator_thread_ptr->PublishResponseData(response);
     const HybridAStarRequest& last_request = response.request;
-    if (last_request.is_searching_stage) {
-      ILOG_INFO << "this respose path is search path, need loss and replan";
-      frame_.plan_fail_reason = LOSS_SEARCH_PATH;
-      return;
+
+    if (last_request.replan_reason == ReplanReason::SLOT_CRUISING) {
+      if (!response.result.path_plan_success) {
+        ILOG_INFO << "this respose path is search path and path plan fail";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      const double useable_search_time_ms = 3600.0;
+      if (response.result.search_consume_time_ms < useable_search_time_ms) {
+        ILOG_INFO << "this respose path is search path and consume time < "
+                  << useable_search_time_ms << "ms, need loss and replan";
+        frame_.plan_fail_reason = LOSS_SEARCH_PATH;
+        return;
+      }
+      ILOG_INFO << "this respose path is search path and consume time > "
+                << useable_search_time_ms
+                << "ms, decide it can directly use th path";
     }
 
     const EgoInfoUnderSlot& last_ego_info_under_slot =
@@ -1532,7 +1555,11 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
 
     ILOG_INFO << "this respose is vaild, and use new path";
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
+    frame_.is_replan_first = false;
     FillPathPointGlobalFromHybridPath(response);
+
+    // update path success
+    SetParkingStatus(PARKING_PLANNING);
 
     if (PostProcessPath()) {
       ILOG_INFO << "postprocess path success!";
@@ -1706,8 +1733,10 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
   }
 
   frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
-
   frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
+  frame_.current_arc_steer = GetSegSteerFromAstarSteer(result.cur_steer);
+  frame_.current_arc_steer =
+      geometry_lib::ReverseSteer(frame_.current_arc_steer);
 
   ILOG_INFO << "path gear change count = " << result.gear_change_num
             << " path cur gear = " << PathGearDebugString(result.cur_gear);
@@ -2081,11 +2110,24 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     ILOG_INFO << "extend path according limiter with fold mirror = "
               << apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
 
+    double body_lat_buffer = param.lat_lon_speed_buffer.stop_body_lat_buffer;
+    double mirror_lat_buffer =
+        param.lat_lon_speed_buffer.stop_mirror_lat_buffer;
+    double lon_buffer = param.lat_lon_speed_buffer.lon_buffer;
+
+    if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+      body_lat_buffer = param.stop_lat_inflation;
+      mirror_lat_buffer = param.stop_lat_inflation;
+      lon_buffer = param.col_obs_safe_dist_normal;
+    }
+
+    body_lat_buffer += 0.02;
+    mirror_lat_buffer += 0.02;
+
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
-            extend_pt_vec, apa_param.GetParam().stop_lat_inflation + 0.016,
-            apa_param.GetParam().col_obs_safe_dist_normal,
-            GJKColDetRequest(false));
+            extend_pt_vec, body_lat_buffer, lon_buffer, GJKColDetRequest(false),
+            true, mirror_lat_buffer);
 
     if (col_res.remain_dist < 0.02) {
       ILOG_INFO << "consider obs extend_length is small, not allow extend "
