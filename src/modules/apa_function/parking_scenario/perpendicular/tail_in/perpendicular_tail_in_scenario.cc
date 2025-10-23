@@ -1543,6 +1543,9 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
     frame_.process_obs_method = ProcessObsMethod::DO_NOTHING;
     FillPathPointGlobalFromHybridPath(response);
 
+    // update path success
+    SetParkingStatus(PARKING_PLANNING);
+
     if (PostProcessPath()) {
       ILOG_INFO << "postprocess path success!";
     } else {
@@ -1717,7 +1720,8 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
   frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
   frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
   frame_.current_arc_steer = GetSegSteerFromAstarSteer(result.cur_steer);
-  frame_.current_arc_steer = geometry_lib::ReverseSteer(frame_.current_arc_steer);
+  frame_.current_arc_steer =
+      geometry_lib::ReverseSteer(frame_.current_arc_steer);
 
   ILOG_INFO << "path gear change count = " << result.gear_change_num
             << " path cur gear = " << PathGearDebugString(result.cur_gear);
@@ -2091,11 +2095,24 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     ILOG_INFO << "extend path according limiter with fold mirror = "
               << apa_world_ptr_->GetColDetInterfacePtr()->GetFoldMirrorFlag();
 
+    double body_lat_buffer = param.lat_lon_speed_buffer.stop_body_lat_buffer;
+    double mirror_lat_buffer =
+        param.lat_lon_speed_buffer.stop_mirror_lat_buffer;
+    double lon_buffer = param.lat_lon_speed_buffer.lon_buffer;
+
+    if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+      body_lat_buffer = param.stop_lat_inflation;
+      mirror_lat_buffer = param.stop_lat_inflation;
+      lon_buffer = param.col_obs_safe_dist_normal;
+    }
+
+    body_lat_buffer += 0.02;
+    mirror_lat_buffer += 0.02;
+
     const ColResult col_res =
         apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr()->Update(
-            extend_pt_vec, apa_param.GetParam().stop_lat_inflation + 0.016,
-            apa_param.GetParam().col_obs_safe_dist_normal,
-            GJKColDetRequest(false));
+            extend_pt_vec, body_lat_buffer, lon_buffer, GJKColDetRequest(false),
+            true, mirror_lat_buffer);
 
     if (col_res.remain_dist < 0.02) {
       ILOG_INFO << "consider obs extend_length is small, not allow extend "

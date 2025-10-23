@@ -215,7 +215,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   if (param.smart_fold_mirror_params.has_smart_fold_mirror &&
       !col_det_interface_ptr_->GetFoldMirrorFlag()) {
-    front_exceed_line_dx = std::min(front_exceed_line_dx, 0.36);
+    front_exceed_line_dx = std::min(front_exceed_line_dx, 0.6);
   }
 
   max_lon_move_dist = front_exceed_line_dx + dx - 0.05;
@@ -277,6 +277,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_dist_vec.emplace_back(-lat_move_dist);
   }
 
+  const double mirror_lower_body_lat_buffer =
+      (param.lat_lon_path_buffer.in_slot_body_lat_buffer -
+       param.lat_lon_path_buffer.in_slot_mirror_lat_buffer);
+
   bool exist_target_pose = false;
   geometry_lib::PathPoint tmp_pose;
   for (const std::vector<double>& lon_dist_vec : all_lon_dist_vec) {
@@ -298,9 +302,17 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
                            dist * lon_move_dir;
             tmp_pose_vec.emplace_back(tmp_pose);
           }
-          if (!gjl_det_ptr
-                   ->Update(tmp_pose_vec, lat_buffer, 0.0, gjl_col_det_request)
-                   .col_flag) {
+          double body_lat_buffer = lat_buffer;
+          double mirror_lat_buffer = lat_buffer;
+          if (!is_searching_stage_ &&
+              param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+            mirror_lat_buffer -= mirror_lower_body_lat_buffer;
+          }
+
+          const ColResult& res =
+              gjl_det_ptr->Update(tmp_pose_vec, body_lat_buffer, 0.0,
+                                  gjl_col_det_request, true, mirror_lat_buffer);
+          if (!res.col_flag) {
             exist_target_pose = true;
             result_.safe_lon_move_dist = lon_move_dist;
             result_.safe_lat_move_dist = lat_move_dist;
