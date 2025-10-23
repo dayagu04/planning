@@ -108,6 +108,12 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     if (next_node->IsPathGearChange(request_.inital_action_request.ref_gear)) {
       gear_change_cost += config_.expect_gear_penalty;
     }
+    if ((next_node->GetKappa() > 0.001f &&
+         request_.inital_action_request.ref_steer == AstarPathSteer::RIGHT) ||
+        (next_node->GetKappa() < -0.001f &&
+         request_.inital_action_request.ref_steer == AstarPathSteer::LEFT)) {
+      kappa_cost += config_.expect_steer_penalty;
+    }
   }
 
   // expect first gear length cost
@@ -118,11 +124,11 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     length_cost += config_.expect_dist_penalty;
   }
 
-    // safe dist cost  可以细分库内库外障碍物距离
-    // weight: 15
-    // [0-0.15], cost: 1000;
-    // [0.15-0.5],cost: (1/dist -2) * weight;
-    // [0.5-1000], cost:0;
+  // safe dist cost  可以细分库内库外障碍物距离
+  // weight: 15
+  // [0-0.15], cost: 1000;
+  // [0.15-0.5],cost: (1/dist -2) * weight;
+  // [0.5-1000], cost:0;
 #if ENABLE_OBS_DIST_G_COST
   const float dist = next_node->GetDistToObs();
   const float weight = 10.0f;
@@ -1166,6 +1172,13 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       if (cur_gear != request_.inital_action_request.ref_gear) {
         cost.cur_gear_switch_pose_cost +=
             (gear_change_penalty + length_penalty);
+      }
+
+      if ((temp_node.GetCurKappa() > 0.001f &&
+           request_.inital_action_request.ref_steer == AstarPathSteer::RIGHT) ||
+          (temp_node.GetCurKappa() < -0.001f &&
+           request_.inital_action_request.ref_steer == AstarPathSteer::LEFT)) {
+        cost.cur_gear_switch_pose_cost += 0.3f * length_penalty;
       }
 
       if (request_.adjust_pose) {

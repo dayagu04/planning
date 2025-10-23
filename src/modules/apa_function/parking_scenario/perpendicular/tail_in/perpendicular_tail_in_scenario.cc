@@ -1108,9 +1108,10 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   config.InitConfig();
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
-  config.exceed_pre_search_box_penalty = 68.0;
-  config.exceed_intersting_box_penalty = 11.0;
-  config.borrow_slot_penalty = 3.68;
+  config.exceed_pre_search_box_penalty = 68.0f;
+  config.exceed_intersting_box_penalty = 11.0f;
+  config.borrow_slot_penalty = 3.68f;
+  config.expect_steer_penalty = 0.3f;
 
   // gen request
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
@@ -1135,9 +1136,15 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   request.inital_action_request.ref_length = config.node_step + 0.01;
   request.inital_action_request.ref_gear =
       GetAstarGearFromSegGear(frame_.current_gear);
+  request.inital_action_request.ref_steer =
+      GetAstarSteerFromSegSteer(frame_.current_arc_steer);
   if (apa_world_ptr_->GetSimuParam().ref_gear != 0) {
     request.inital_action_request.ref_gear =
         GetAstarGearFromSegGear(apa_world_ptr_->GetSimuParam().ref_gear);
+  }
+  if (apa_world_ptr_->GetSimuParam().ref_steer != 0) {
+    request.inital_action_request.ref_steer =
+        GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
   }
 
   request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
@@ -1182,6 +1189,8 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   ILOG_INFO << "hybrid_ref_gear = "
             << PathGearDebugString(request.inital_action_request.ref_gear)
+            << " ref steer = "
+            << GetPathSteerDebugString(request.inital_action_request.ref_steer)
             << " ref length = " << request.inital_action_request.ref_length
             << "  max_gear_shift_number = " << request.max_gear_shift_number
             << "  adjust_pose = " << request.adjust_pose
@@ -1706,8 +1715,9 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
   }
 
   frame_.gear_command = GetSegGearFromAstarGear(result.cur_gear);
-
   frame_.current_gear = geometry_lib::ReverseGear(frame_.gear_command);
+  frame_.current_arc_steer = GetSegSteerFromAstarSteer(result.cur_steer);
+  frame_.current_arc_steer = geometry_lib::ReverseSteer(frame_.current_arc_steer);
 
   ILOG_INFO << "path gear change count = " << result.gear_change_num
             << " path cur gear = " << PathGearDebugString(result.cur_gear);

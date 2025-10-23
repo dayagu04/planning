@@ -56,6 +56,9 @@ class CurveNode : public Node3d {
   CurvePath& GetMutableCurvePath() { return curve_path_; }
 
   void SetCurGear(const AstarPathGear& gear) { cur_gear_ = gear; }
+  void SetCurKappa(const float kappa) { cur_kappa_ = kappa; }
+  const float GetCurKappa() const { return cur_kappa_; }
+
   void SetCurGearLength(const float length) { cur_gear_length_ = length; }
   const AstarPathGear& GetCurGear() const { return cur_gear_; }
   const float GetCurGearLength() const { return cur_gear_length_; }
@@ -116,6 +119,7 @@ class CurveNode : public Node3d {
   CurvePath curve_path_;
   AstarPathGear cur_gear_;
   float cur_gear_length_;
+  float cur_kappa_;
 #if USE_LINK_PT_LINE
   link_pt_line::LinkPtLinePath<float> lpl_path_;
   common_math::PathPt<float> gear_switch_pose_;

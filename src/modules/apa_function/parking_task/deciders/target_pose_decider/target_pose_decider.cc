@@ -39,7 +39,8 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
 
 const TargetPoseDeciderResult
 TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
-  ILOG_INFO << "CalcTargetPoseForPerpendicularTailIn";
+  ILOG_INFO << "CalcTargetPoseForPerpendicularTailIn with fold mirror = "
+            << col_det_interface_ptr_->GetFoldMirrorFlag();
   const ApaParameters& param = apa_param.GetParam();
   const geometry_lib::GlobalToLocalTf g2l_tf = slot_.g2l_tf_;
   const geometry_lib::LocalToGlobalTf l2g_tf = slot_.l2g_tf_;

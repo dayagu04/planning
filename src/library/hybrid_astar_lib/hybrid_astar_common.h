@@ -339,6 +339,7 @@ struct HybridAStarResult {
   std::vector<float> length_vec;
 
   AstarPathGear cur_gear = AstarPathGear::NONE;
+  AstarPathSteer cur_steer = AstarPathSteer::NONE;
 
   bool path_plan_success = false;
 
@@ -385,6 +386,9 @@ struct HybridAStarResult {
     solve_number = 0;
 
     search_node_num = 0;
+
+    cur_gear = AstarPathGear::NONE;
+    cur_steer = AstarPathSteer::NONE;
 
     return;
   }
@@ -549,6 +553,8 @@ bool IsTurn(const uint8_t steer);
 AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear);
 
 uint8_t GetSegGearFromAstarGear(const AstarPathGear gear);
+
+uint8_t GetSegSteerFromAstarSteer(const AstarPathSteer steer);
 
 AstarPathSteer GetAstarSteerFromSegSteer(const uint8_t seg_steer);
 
