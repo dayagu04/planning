@@ -45,6 +45,8 @@ class AgentHeadwayDecider : public Task {
                                const double ego_velocity,
                                const double current_headway);
 
+  int32_t GetOriginLaneFrontAgentId();
+
  private:
   std::unordered_map<int32_t, AgentHeadwayInfo> agents_headway_map_;
   AgentHeadwayConfig config_;

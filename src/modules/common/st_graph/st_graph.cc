@@ -26,6 +26,7 @@
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
+#include "geometry_math.h"
 #include "planning_context.h"
 #include "speed/st_point.h"
 #include "st_boundary.h"
@@ -48,6 +49,7 @@ constexpr double kMathEpsilon = 1e-10;
 constexpr double kTimeResolution = 0.2;
 constexpr double kConsideredReverseVruTime = 2.0;
 constexpr double kPlanningdt = 0.1;
+constexpr double kTruncateTrajTimeForOriginFrontAgent = 3.0;
 }  // namespace
 
 bool STGraph::Init(const std::shared_ptr<StGraphInput>& st_graph_input) {
@@ -311,6 +313,146 @@ void STGraph::MakeStaticAgentStBoundary(
   }
 }
 
+void STGraph::RecalculateTrajectoryForLcRearAgent(
+    const agent::Agent* rear_agent) {
+  if (rear_agent == nullptr) {
+    return;
+  }
+  auto mutable_agent_manager = st_graph_input_->mutable_agent_manager();
+  if (mutable_agent_manager == nullptr) {
+    return;
+  }
+  auto* mutable_agent =
+      mutable_agent_manager->mutable_agent(rear_agent->agent_id());
+  if (mutable_agent == nullptr) {
+    return;
+  }
+  const auto& original_trajectories =
+      rear_agent->trajectories_used_by_st_graph();
+  if (original_trajectories.empty()) {
+    return;
+  }
+
+  struct TempPathPoint {
+    double x;
+    double y;
+    double theta;
+    double kappa;
+  };
+
+  std::vector<trajectory::Trajectory> modified_trajectories;
+  modified_trajectories.reserve(original_trajectories.size());
+
+  constexpr double kJerk = -2.0;  // m/s^3
+
+  for (const auto& original_traj : original_trajectories) {
+    if (original_traj.empty()) {
+      modified_trajectories.push_back(original_traj);
+      continue;
+    }
+
+    // Build path cache: s -> (x, y, theta, kappa)
+    std::map<double, TempPathPoint> path_cache;
+    for (const auto& point : original_traj) {
+      path_cache[point.s()] = {point.x(), point.y(), point.theta(),
+                               point.kappa()};
+    }
+
+    trajectory::Trajectory modified_traj;
+    const auto& first_point = original_traj.front();
+    const double start_time = first_point.absolute_time();
+    const double a0 = first_point.acc();
+    const double v0 = first_point.vel();
+    const double s0 = first_point.s();
+
+    modified_traj.push_back(first_point);
+
+    bool has_stopped = false;
+    double stop_s = s0;
+
+    for (size_t i = 1; i < original_traj.size(); ++i) {
+      const auto& original_point = original_traj[i];
+      const double delta_t = original_point.absolute_time() - start_time;
+
+      const double new_acc = std::max(a0 + kJerk * delta_t, -2.0);
+      const double new_vel =
+          v0 + a0 * delta_t + 0.5 * kJerk * delta_t * delta_t;
+      double new_s = s0 + v0 * delta_t + 0.5 * a0 * delta_t * delta_t +
+                     (1.0 / 6.0) * kJerk * delta_t * delta_t * delta_t;
+
+      if (new_vel <= 0.01 && !has_stopped) {
+        has_stopped = true;
+        const double a_coef = 0.5 * kJerk;
+        const double b_coef = a0;
+        const double c_coef = v0;
+        const double discriminant = b_coef * b_coef - 4 * a_coef * c_coef;
+
+        if (discriminant >= 0 && std::abs(a_coef) > 1e-6) {
+          const double t_stop =
+              (-b_coef - std::sqrt(discriminant)) / (2 * a_coef);
+          if (t_stop > 0 && t_stop <= delta_t) {
+            stop_s = s0 + v0 * t_stop + 0.5 * a0 * t_stop * t_stop +
+                     (1.0 / 6.0) * kJerk * t_stop * t_stop * t_stop;
+          }
+        }
+        new_s = stop_s;
+      } else if (has_stopped) {
+        new_s = stop_s;
+      }
+
+      new_s = std::max(path_cache.begin()->first,
+                       std::min(new_s, path_cache.rbegin()->first));
+
+      auto it_upper = path_cache.upper_bound(new_s);
+      double x, y, theta, kappa;
+
+      if (it_upper == path_cache.begin()) {
+        const auto& point = path_cache.begin()->second;
+        x = point.x;
+        y = point.y;
+        theta = point.theta;
+        kappa = point.kappa;
+      } else {
+        auto it_lower = std::prev(it_upper);
+        if (it_upper == path_cache.end()) {
+          const auto& point = it_lower->second;
+          x = point.x;
+          y = point.y;
+          theta = point.theta;
+          kappa = point.kappa;
+        } else {
+          const double s_lower = it_lower->first;
+          const double s_upper = it_upper->first;
+          const double ratio = (new_s - s_lower) / (s_upper - s_lower);
+
+          const auto& p0 = it_lower->second;
+          const auto& p1 = it_upper->second;
+
+          x = p0.x + ratio * (p1.x - p0.x);
+          y = p0.y + ratio * (p1.y - p0.y);
+          double delta_theta = p1.theta - p0.theta;
+          delta_theta = pnc::geometry_lib::AngleSubtraction(delta_theta, 0.0);
+          theta =
+              pnc::geometry_lib::NormalizeAngle(p0.theta + ratio * delta_theta);
+          kappa = p0.kappa + ratio * (p1.kappa - p0.kappa);
+        }
+      }
+
+      const double final_vel = has_stopped ? 0.0 : std::max(0.0, new_vel);
+      const double final_acc = has_stopped ? 0.0 : new_acc;
+      const double final_jerk = has_stopped ? 0.0 : kJerk;
+
+      trajectory::TrajectoryPoint modified_point(
+          x, y, theta, final_vel, final_acc, original_point.absolute_time(),
+          0.0, final_jerk, new_s, kappa);
+
+      modified_traj.push_back(std::move(modified_point));
+    }
+    modified_trajectories.push_back(std::move(modified_traj));
+  }
+  mutable_agent->set_trajectories_used_by_st_graph(modified_trajectories);
+}
+
 void STGraph::MakeDynamicAgentStBoundary(
     const agent::Agent& agent, const StBoundaryType type,
     const bool reuse_for_close_pass,
@@ -406,6 +548,17 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   // const auto& trajectories = agent.trajectories();
+  const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
+  if (rear_agent_of_target != nullptr &&
+      agent.agent_id() == rear_agent_of_target->agent_id()) {
+    RecalculateTrajectoryForLcRearAgent(rear_agent_of_target);
+  }
+  bool is_need_truncate_traj_for_origin_front_agent = false;
+  const auto* front_agent_of_origin = st_graph_input_->front_agent_of_origin();
+  if (front_agent_of_origin != nullptr &&
+      agent.agent_id() == front_agent_of_origin->agent_id()) {
+    is_need_truncate_traj_for_origin_front_agent = true;
+  }
   const auto& trajectories = agent.trajectories_used_by_st_graph();
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
@@ -452,6 +605,10 @@ void STGraph::MakeDynamicAgentStBoundary(
           StGraphUtils::LinearExtendTrajectory(
               trajectories[i], start_absolute_time + relative_time, &point);
         }
+      }
+      if (is_need_truncate_traj_for_origin_front_agent &&
+          relative_time > kTruncateTrajTimeForOriginFrontAgent) {
+        continue;
       }
       double specific_lat_buffer = need_adjust_buffer_by_t
                                        ? StGraphUtils::AdjustLateralBufferByT(

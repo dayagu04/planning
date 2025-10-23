@@ -138,6 +138,8 @@ class STGraph {
       const planning_math::Box2d& planning_init_point_box,
       const StBoundaryType type, const bool is_rads_scene);
 
+  void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
+
   void MakeStPointsTable();
 
   void ConstructDefaultStPassCorridor();
