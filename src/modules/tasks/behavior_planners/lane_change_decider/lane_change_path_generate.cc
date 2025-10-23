@@ -300,8 +300,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       2.55   // 最大
   };
   const double planning_init_vel = planning_init_point.lon_init_state.v();
-  idm_model_param.kDesiredHeadwayTime = planning::interp(
-      planning_init_vel, ego_vel_table, ego_thw_fused_table);
+  idm_model_param.kDesiredHeadwayTime =
+      planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
 
   if (is_exist_front_agent) {
     idm_model_state.s = 0;
@@ -334,15 +334,19 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   bool iter_terminate = false;
   bool is_close = false;
   // 纵向舒适加速度计算
-  double v_cruise = session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  double v_cruise =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
   double current_a = init_point.a;
   double current_v = init_point.v;
-  double current_s = 0.0; // 车头为起点
-  double front_vel = is_exist_front_agent ? front_node_future_trajectory_[0].v : v_cruise;
-  double front_s = is_exist_front_agent ? front_node_future_trajectory_[0].s -
-                   (init_point.s + car_param.front_edge_to_rear_axle) : 100.0;//已经减掉半车长度
-  double tau = planning::interp(
-      planning_init_vel, ego_vel_table, ego_thw_fused_table);
+  double current_s = 0.0;  // 车头为起点
+  double front_vel =
+      is_exist_front_agent ? front_node_future_trajectory_[0].v : v_cruise;
+  double front_s = is_exist_front_agent
+                       ? front_node_future_trajectory_[0].s -
+                             (init_point.s + car_param.front_edge_to_rear_axle)
+                       : 100.0;  //已经减掉半车长度
+  double tau =
+      planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
   // 递推自车轨迹
   while (!iter_terminate) {
     index++;  // index = 1 -> ...
@@ -370,7 +374,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     //                                      &desire_acc);
     // desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
 
-    double desire_acc = CalculateComfortAcceleration(current_a, current_v, current_s, front_vel, front_s, tau);
+    double desire_acc = CalculateComfortAcceleration(
+        current_a, current_v, current_s, front_vel, front_s, tau);
     temp_state.v = idm_model_state.vel + desire_acc * dt;
 
     // update ego next state using vehicle simulation model
@@ -430,10 +435,12 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = front_node_future_trajectory_[index].v;
       //纵向舒适加速度信息更新
-      current_s = ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
+      current_s =
+          ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
       current_v = ego_traj_point.v;
       current_a = desire_acc;
-      front_s = front_node_future_trajectory_[index].s - (init_point.s + car_param.front_edge_to_rear_axle);
+      front_s = front_node_future_trajectory_[index].s -
+                (init_point.s + car_param.front_edge_to_rear_axle);
       front_vel = front_node_future_trajectory_[index].v;
     } else {
       idm_model_state.s = 0;
@@ -441,7 +448,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = default_front_v;
       //纵向舒适加速度信息更新
-      current_s = ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
+      current_s =
+          ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
       current_v = ego_traj_point.v;
       current_a = desire_acc;
       front_s = 100.0;
@@ -601,12 +609,12 @@ double LaneChangePathGenerateManager::ComputeLd(double v, bool is_close) {
 // 纵向计算加速度基本逻辑
 double LaneChangePathGenerateManager::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
-    const double front_vel, const double front_s, const double tau){
+    const double front_vel, const double front_s, const double tau) {
   comfort_idm_params_.s0 = 3.5;
-  comfort_idm_params_.a = 0.7;   // 加速度
-  comfort_idm_params_.b = 0.8;  // 舒适减速度
-  comfort_idm_params_.b_max = 1.0; // 前车减速，自车最大减速度
-  comfort_idm_params_.b_hard = 1.0; //硬刹车减速度，期望碰撞，因此设置小一点
+  comfort_idm_params_.a = 0.7;      // 加速度
+  comfort_idm_params_.b = 0.8;      // 舒适减速度
+  comfort_idm_params_.b_max = 1.0;  // 前车减速，自车最大减速度
+  comfort_idm_params_.b_hard = 1.0;  //硬刹车减速度，期望碰撞，因此设置小一点
 
   double s0 = comfort_idm_params_.s0;
   double v0 = comfort_idm_params_.v0;
@@ -702,10 +710,9 @@ double LaneChangePathGenerateManager::CalculateComfortAcceleration(
 
   return final_acc;
 }
-double LaneChangePathGenerateManager::CalcDesiredVelocity(const double d_rel,
-                                          const double d_des,
-                                          const double v_lead,
-                                          const double v_ego) const {
+double LaneChangePathGenerateManager::CalcDesiredVelocity(
+    const double d_rel, const double d_des, const double v_lead,
+    const double v_ego) const {
   double v_lead_clip = std::max(v_lead, 0.0);
   const double max_runaway_speed = -2.0;
   double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);

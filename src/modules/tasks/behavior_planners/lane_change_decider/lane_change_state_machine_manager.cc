@@ -1518,8 +1518,8 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
   hold_state_dash_cnt = 0;
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
-  if(transition_info_.lane_change_status != kLaneChangePropose &&
-     transition_info_.lane_change_status != kLaneKeeping){
+  if (transition_info_.lane_change_status != kLaneChangePropose &&
+      transition_info_.lane_change_status != kLaneKeeping) {
     return;
   }
   transition_info_.Rest();
@@ -3832,7 +3832,8 @@ bool LaneChangeStateMachineManager::
   double box_ttc = lc_safety_check_time_;  // time 的计算已经有非零保护了
   // 根据与后车差速 调整起始ttc
   double max_box_ttc_rear = 4.0;
-  std::array<double, 7> xpv{0.0, 5.0, 10., 20., 25., 30.0, 40.};  // 后车 - 自车速度 kph
+  std::array<double, 7> xpv{0.0, 5.0,  10., 20.,
+                            25., 30.0, 40.};  // 后车 - 自车速度 kph
   std::array<double, 7> fpv{3.0, 4.0, 6.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
@@ -3852,7 +3853,8 @@ bool LaneChangeStateMachineManager::
   if (is_press_boundary) {
     max_box_ttc_rear = press_ttc;
   }
-  double std_beyond_lane_time = std::max(0.0, std::min(2.0, lc_safety_check_time_ - 1.0));  // 实际初始在2.5 左右
+  double std_beyond_lane_time = std::max(
+      0.0, std::min(2.0, lc_safety_check_time_ - 1.0));  // 实际初始在2.5 左右
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
@@ -3867,7 +3869,7 @@ bool LaneChangeStateMachineManager::
        ego_press_line_ratio > 0.01);
   TrajectoryPoints agent_switch_traj;
   double deceleration = -1.0;  // m/s^2, 后车减速
-  double jerk = -2.0;//后车假设的让行加加速度
+  double jerk = -2.0;          //后车假设的让行加加速度
   if (is_large_car) {
     deceleration = -0.5;  //大车减速度小很多
   }
@@ -3885,8 +3887,8 @@ bool LaneChangeStateMachineManager::
     if (is_front_agent) {
       double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
       double ego_brake = 4.0;
-      box_longitudinal_buff = ( - rel_vel * ego_trajs_future_[i].v) /
-                                                 (2.0 * ego_brake);
+      box_longitudinal_buff =
+          (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
       box_longitudinal_buff = std::max(2.0, box_longitudinal_buff);
       if (ego_press_line_ratio > 0.01) {
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
@@ -5035,9 +5037,9 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
     return true;
   }
 
-  const auto& ego_boundary = cur_ref_path->get_ego_frenet_boundary();
+  const auto &ego_boundary = cur_ref_path->get_ego_frenet_boundary();
 
-  const auto& cur_coord = cur_ref_path->get_frenet_coord();
+  const auto &cur_coord = cur_ref_path->get_frenet_coord();
 
   if (cur_coord == nullptr) {
     return true;
