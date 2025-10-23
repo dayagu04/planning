@@ -132,8 +132,8 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::HIGHWAY;
   } else if (IsSwitchApaState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::PARKING_APA;
-  // } else if (IsValidHppState(func_state_machine.current_state)) {
-  //   scene_type = planning::common::SceneType::HPP;
+  } else if (IsValidHppState(func_state_machine.current_state)) {
+    scene_type = planning::common::SceneType::HPP;
   } else if (IsValidRadsState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::RADS;
   } else if (IsValidNsaState(func_state_machine.current_state)) {
@@ -142,8 +142,6 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::HIGHWAY;
   }
 
-  // hack
-  scene_type = planning::common::SceneType::NSA;
   session_.set_scene_type(scene_type);
 
   auto frame_info =
@@ -1017,8 +1015,8 @@ bool PlanningScheduler::IsValidRadsState(
 
 bool PlanningScheduler::IsValidNsaState(
     const iflyauto::FunctionalState &current_state) {
-  return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
-         current_state <= iflyauto::FunctionalState_HPP_ERROR;
+  return current_state >= iflyauto::FunctionalState_NRA_PASSIVE &&
+         current_state <= iflyauto::FunctionalState_NRA_ERROR;
 }
 
 void PlanningScheduler::InitSccFunction() {
