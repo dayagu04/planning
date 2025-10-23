@@ -8,6 +8,7 @@
 #include "tasks/task.h"
 #include "traffic_light_decision_manager.h"
 #include "virtual_lane_manager.h"
+#include "tasks/task_interface/crossing_agent_decider_output.h"
 
 namespace planning {
 struct CurvInfo {
@@ -61,6 +62,8 @@ class SpeedLimitDecider : public Task {
   void CalculateFunctionFadingAwaySpeedLimit();
   void CalculateVRURoundSpeedLimit();
 
+  void CalculateConstructionZoneSpeedLimit();
+
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo> &vru_round_map);
@@ -100,6 +103,8 @@ class SpeedLimitDecider : public Task {
   bool vru_round_triggered_ = false;
 
   bool poi_v_limit_set_ = false;
+
+  bool construction_strong_deceleration_mode = false;
 };
 
 }  // namespace planning
