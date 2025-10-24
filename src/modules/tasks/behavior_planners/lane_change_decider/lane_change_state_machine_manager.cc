@@ -1220,26 +1220,57 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
 
   coarse_planning_info.trajectory_points.clear();
   TrajectoryPoint point;
+  double last_valid_s = 0.0;
+  double last_valid_l = 0.0;
+  bool first_point = true;
+
   for (size_t i = 0; i < N; ++i) {
-    // cart info
     if (s_ref < cart_ref_info.s_vec.back() + kEps) {
       point.x = cart_ref_info.x_s_spline(s_ref);
       point.y = cart_ref_info.y_s_spline(s_ref);
       point.heading_angle =
           std::atan2(cart_ref_info.y_s_spline.deriv(1, s_ref),
                      cart_ref_info.x_s_spline.deriv(1, s_ref));
+    } else {
+      point.x = cart_ref_info.x_s_spline(cart_ref_info.s_vec.back());
+      point.y = cart_ref_info.y_s_spline(cart_ref_info.s_vec.back());
+      point.heading_angle = std::atan2(
+          cart_ref_info.y_s_spline.deriv(1, cart_ref_info.s_vec.back()),
+          cart_ref_info.x_s_spline.deriv(1, cart_ref_info.s_vec.back()));
     }
 
-    // frenet info
     Point2D frenet_pt{0.0, 0.0};
     Point2D cart_pt(point.x, point.y);
-    frenet_coord->XYToSL(cart_pt, frenet_pt);
-    point.s = frenet_pt.x;
-    point.l = frenet_pt.y;
+    bool projection_success = frenet_coord->XYToSL(cart_pt, frenet_pt);
+
+    if (projection_success) {
+      point.s = frenet_pt.x;
+      point.l = frenet_pt.y;
+
+      if (!first_point && point.s <= last_valid_s) {
+        point.s = last_valid_s + 0.01;
+      }
+
+      last_valid_s = point.s;
+      last_valid_l = point.l;
+    } else {
+      if (first_point) {
+        point.s = 0.0;
+        point.l = 0.0;
+      } else {
+        point.s = last_valid_s + v_cruise_scale * v_ref_cruise * delta_time;
+        point.l = last_valid_l;
+      }
+
+      last_valid_s = point.s;
+      last_valid_l = point.l;
+    }
+
     point.t = static_cast<double>(i) * delta_time;
+    coarse_planning_info.trajectory_points.emplace_back(point);
 
     s_ref += v_cruise_scale * v_ref_cruise * delta_time;
-    coarse_planning_info.trajectory_points.emplace_back(point);
+    first_point = false;
   }
 }
 
@@ -2381,7 +2412,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
         agent_s + target_lane_node->node_length() * 0.5 >
             ego_sl_bd.s_start - 5.0) {
-      continue;  //过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
+      continue;  // 过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
     }
     // const double target_lane_width = target_lane->width_by_s(agent_s);
     // const auto agent =
@@ -2412,7 +2443,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     }
     if (s_end < s_start) {
       continue;
-    }  //小心太后方的车可能 frenet转化后堆在一起
+    }  // 小心太后方的车可能 frenet转化后堆在一起
     if (agent_s > target_rear_s) {
       target_rear_node_id = target_lane_node->node_id();
       target_rear_s = agent_s;  // 选择最靠前的
@@ -2570,7 +2601,7 @@ void LaneChangeStateMachineManager::GetSideRiskAgents() {
       continue;
     }
     if (obstacle_sl.s_end < ego_sl_bd.s_start - 5.0) {
-      continue;  //后方远距离不考虑13变2
+      continue;  // 后方远距离不考虑13变2
     }
     if (!ego_trajs_future_.empty()) {
       double s_end = ego_trajs_future_.back().s;
@@ -2612,9 +2643,9 @@ void LaneChangeStateMachineManager::GetSideRiskAgents() {
   return;
 }
 void LaneChangeStateMachineManager::AddRearAgentMerging() {
-  //变道信息
+  // 变道信息
   RequestType direction = lc_req_mgr_->request();
-  //识别汇流变道
+  // 识别汇流变道
   const bool is_merging_req =
       transition_info_.lane_change_type == MERGE_REQUEST;
   const bool is_mlc = transition_info_.lane_change_type == MAP_REQUEST;
@@ -2627,7 +2658,7 @@ void LaneChangeStateMachineManager::AddRearAgentMerging() {
     return;  // 不是汇流或者已存在后车
   }
   // 汇流激进变道又保安全， 扩大后车寻找范围
-  //目标车道信息
+  // 目标车道信息
   const int target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -2684,7 +2715,7 @@ void LaneChangeStateMachineManager::AddRearAgentMerging() {
         agent_bd.l_end < -target_lane_half_width * 3) {
       continue;
     }
-    //选择最近的障碍物
+    // 选择最近的障碍物
     if (agent_bd.s_end > rear_s_end) {
       rear_s_end = agent_bd.s_end;
       merging_rear_agent_id_ = id;
@@ -2864,7 +2895,7 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
 }
 bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
     const int merging_rear_agent_id) {
-  //目标车道信息
+  // 目标车道信息
   int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
   const auto &ref_path_manager =
       session_->environmental_model().get_reference_path_manager();
@@ -2888,7 +2919,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
       vehicle_param.rear_edge_to_rear_axle;
   // 获取后方车辆预测轨迹
   if (merging_rear_agent_id < 0) {
-    return true;  //无车，安全
+    return true;  // 无车，安全
   }
   const auto &agent_mgr =
       session_->environmental_model().get_dynamic_world()->agent_manager();
@@ -2902,7 +2933,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
   }
   const auto &trajectory_used_by_st_graph =
       agent->trajectories_used_by_st_graph()[0];
-  //预测轨迹赋值
+  // 预测轨迹赋值
   TrajectoryPoints agent_traj;
   for (int i = 0; i < trajectory_used_by_st_graph.size(); i++) {
     const auto &point = trajectory_used_by_st_graph[i];
@@ -2940,7 +2971,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{2.0, 6.0, 8.0,
-                           12., 15., 20.};  //触发变道需要预留最小空间
+                           12., 15., 20.};  // 触发变道需要预留最小空间
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   // 考虑假设侵入的轨迹
@@ -2952,7 +2983,7 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
                          agent::AgentType::TRAILER == agent->type() ||
                          agent->length() > kLargeAgentLengthM);
   if (is_large_agent) {
-    deceleration = -0.7;  //大车减速度小很多
+    deceleration = -0.7;  // 大车减速度小很多
   }
   if (is_executing && agent_traj.size() > 3 && !agent->is_static()) {
     GetDecelerationTraj(agent->accel_fusion(), agent_traj, agent_switch_traj,
@@ -3151,7 +3182,7 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficCone(
   double l = 0.0;
   if (!current_lane_coord->XYToSL(traffic_cone->node_x(),
                                   traffic_cone->node_y(), &s, &l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   Point2D frenet_point(s, l);
   if (frenet_point.x - current_lane->get_frenet_ego_state().s() >
@@ -3217,7 +3248,7 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficConeInTargetLane(
   double cone_l = 0.0;
   if (!target_lane_coord->XYToSL(traffic_cone->node_x(), traffic_cone->node_y(),
                                  &cone_s, &cone_l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   Point2D traffic_cone_frenet_pt(cone_s, cone_l);
   // ego
@@ -3225,7 +3256,7 @@ bool LaneChangeStateMachineManager::IsLCFeasibleForTrafficConeInTargetLane(
   double ego_l = 0.0;
   if (!target_lane_coord->XYToSL(ego_state->ego_pose().x,
                                  ego_state->ego_pose().y, &ego_s, &ego_l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   Point2D ego_frenet_point(ego_s, ego_l);
   if (traffic_cone_frenet_pt.x - ego_frenet_point.x > ego_need_dis) {
@@ -3290,14 +3321,14 @@ bool LaneChangeStateMachineManager::IsNotNeedLCBackForTrafficConeInTargetLane(
   double cone_l = 0.0;
   if (!target_lane_coord->XYToSL(traffic_cone->node_x(), traffic_cone->node_y(),
                                  &cone_s, &cone_l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   Point2D traffic_cone_frenet_pt(cone_s, cone_l);
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!target_lane_coord->XYToSL(ego_state->ego_pose().x,
                                  ego_state->ego_pose().y, &ego_s, &ego_l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   Point2D ego_frenet_point(ego_s, ego_l);
   if (traffic_cone_frenet_pt.x - ego_frenet_point.x <
@@ -3814,7 +3845,7 @@ bool LaneChangeStateMachineManager::
                       kAggresiveMLCThreshold));
 
   double solid_safety_dist = 0;
-  //后方的逆行车，直接返回true
+  // 后方的逆行车，直接返回true
   if (!is_front_agent && !agent_traj.empty()) {
     double s_start = agent_traj.front().s;
     double s_end = agent_traj.back().s;
@@ -3838,15 +3869,15 @@ bool LaneChangeStateMachineManager::
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
-  //自车压线目标车道情况
+  // 自车压线目标车道情况
   const double ego_press_line_ratio =
       lc_request_.CalculatePressLineRatioByTwoLanes(
           lc_lane_mgr_->origin_lane_virtual_id(),
           lc_lane_mgr_->target_lane_virtual_id(),
           transition_info_.lane_change_direction);
-  //如果压线了， 重新映射起始ttc
+  // 如果压线了， 重新映射起始ttc
   std::array<double, 3> x_press_ratio{0.0, 0.15, 0.3};  // 后车 - 自车速度 kph
-  std::array<double, 3> f_press_ttc{max_box_ttc_rear, 1.0, 0.0};  //起始ttc
+  std::array<double, 3> f_press_ttc{max_box_ttc_rear, 1.0, 0.0};  // 起始ttc
   double press_ttc =
       interp(ego_press_line_ratio, x_press_ratio, f_press_ttc);  // 距离/ 时间
   bool is_press_boundary = ego_press_line_ratio > 0.01;
@@ -3859,7 +3890,7 @@ bool LaneChangeStateMachineManager::
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
       2.0, 2.5, 4.0,
-      5.,  6.,  8.};  //触发变道需要预留最小空间 下方 大车额外增加5m基础距离
+      5.,  6.,  8.};  // 触发变道需要预留最小空间 下方 大车额外增加5m基础距离
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   bool is_deceleration_check =
@@ -3871,7 +3902,7 @@ bool LaneChangeStateMachineManager::
   double deceleration = -1.0;  // m/s^2, 后车减速
   double jerk = -2.0;          //后车假设的让行加加速度
   if (is_large_car) {
-    deceleration = -0.5;  //大车减速度小很多
+    deceleration = -0.5;  // 大车减速度小很多
   }
   // agent_node->is_reverse_type() 不太好用，暂时在GetDecelerationTraj 增加保护
   if (is_deceleration_check) {
@@ -3910,7 +3941,7 @@ bool LaneChangeStateMachineManager::
       // double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
       // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
-      if (is_deceleration_check) {  //减速轨迹 -> 是否压线了
+      if (is_deceleration_check) {  // 减速轨迹 -> 是否压线了
         double ego_ttc_s = ego_trajs_future_[i].v * box_ttc;
         if (is_press_boundary) {
           double agent_vel_i = agent_switch_traj[i].v;
@@ -4225,7 +4256,7 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
     if (!cur_lane_coor->XYToSL(agent_prediction_trajs->at(0).x,
                                agent_prediction_trajs->at(0).y, &first_s,
                                &first_l)) {
-      return false;  //更换xytosl
+      return false;  // 更换xytosl
     }
     Point2D obj_first_frenet_point(first_s, first_l);
     // back point
@@ -4234,7 +4265,7 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
     if (!cur_lane_coor->XYToSL(agent_prediction_trajs->back().x,
                                agent_prediction_trajs->back().y, &back_s,
                                &back_l)) {
-      return false;  //更换xytosl
+      return false;  // 更换xytosl
     }
     Point2D obj_back_frenet_point(back_s, back_l);
 
@@ -4753,7 +4784,7 @@ bool LaneChangeStateMachineManager::IsFilterStaticAgentLC(
   double s = 0.0;
   double l = 0.0;
   if (!target_coor->XYToSL(agent_node.node_x(), agent_node.node_y(), &s, &l)) {
-    return false;  //更换xytosl
+    return false;  // 更换xytosl
   }
   planning::Point2D frenet_point(s, l);
 
@@ -4971,8 +5002,8 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
       dec_v = std::max(0.0, v0 + deceleration * t);
       dec_s = s0 + v0 * t + 0.5 * deceleration * t * t;
     } else {
-      //匀jerk
-      // double j = -2.0;  // 恒定 jerk
+      // 匀jerk
+      //  double j = -2.0;  // 恒定 jerk
       dec_a = a0 + j * t;  // 当前加速度
       dec_v = std::max(0.1, v0 + a0 * t + 0.5 * j * t * t);
       dec_s = s0 + v0 * t + 0.5 * a0 * t * t + (1.0 / 6.0) * j * t * t * t;
