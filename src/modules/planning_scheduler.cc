@@ -188,8 +188,8 @@ bool PlanningScheduler::RunOnce(
 
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
   if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
-    planning_success =
-        ExcuteParkingFunction(function_type, start_timestamp, planning_output,planning_hmi_info);
+    planning_success = ExcuteParkingFunction(
+        function_type, start_timestamp, planning_output, planning_hmi_info);
   }
 
   if (function_type == common::HIGHWAY || function_type == common::HPP ||
@@ -357,11 +357,15 @@ void PlanningScheduler::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-
+  auto function_state_machine_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .function_state_machine_info;
   if (location_valid) {
     trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
     auto lkas_trajectory = GetContext.get_lka_trajectory_info();
-    if (lkas_intervention_flag) {
+    if (lkas_intervention_flag && function_state_machine_info_ptr->current_state !=
+        iflyauto::FunctionalState_ACC_ACTIVATE) {
       for (size_t i = 0; i < PLANNING_TRAJ_POINTS_MAX_NUM; i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = lkas_trajectory->trajectory_points[i].x;
@@ -376,7 +380,27 @@ void PlanningScheduler::FillPlanningTrajectory(
         path_point->jerk = lkas_trajectory->trajectory_points[i].jerk;
         ++(trajectory->trajectory_points_size);
       }
-    } else {
+    } else if (
+        lkas_intervention_flag &&
+        function_state_machine_info_ptr->current_state ==
+            iflyauto::
+                FunctionalState_ACC_ACTIVATE) {  //以下新增acc和ldp共同开启的工况
+      for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+        auto path_point = &trajectory->trajectory_points[i];
+        path_point->x = planning_result.traj_points[i].x;
+        path_point->y = lkas_trajectory->trajectory_points[i].y;
+        path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
+        path_point->curvature = planning_result.traj_points[i].curvature;
+        path_point->t = planning_result.traj_points[i].t;
+        path_point->v = planning_result.traj_points[i].v;
+        path_point->a = planning_result.traj_points[i].a;
+        path_point->distance = planning_result.traj_points[i].s;
+        path_point->jerk = planning_result.traj_points[i].jerk;
+        ++(trajectory->trajectory_points_size);
+      }
+    }
+
+    else {
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = planning_result.traj_points[i].x;
