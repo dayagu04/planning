@@ -272,11 +272,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
   constexpr float kXStep = 0.3f;              // X轴步长
   constexpr float kSlantingOffset = 0.5f;     // 斜列停车位X轴偏移
-  constexpr float kNormalBaseX = 7.5f;        // 正常停车位基准X坐标
-
-  const float base_x = (request->space_type == ParkSpaceType::SLANTING)
-                           ? (global_pose.GetX() - kSlantingOffset)
-                           : kNormalBaseX;
 
   const bool is_middle_direction =
       request->direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
@@ -317,7 +312,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           ? -1
           : 1;
 
-  const Eigen::Vector2d base_pose(base_x, target_.GetY());
+  const Eigen::Vector2d base_pose(target_.GetX(), target_.GetY());
 
   for (size_t j = 0; j < kNumCandidateColumns; ++j) {
     const Eigen::Vector2d temp_pos =
@@ -361,11 +356,6 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
   constexpr float kXStep = 0.3f;              // X轴步长
   constexpr float kSlantingOffset = 0.5f;     // 斜列停车位X轴偏移
-  constexpr float kNormalBaseX = 7.0f;        // 正常停车位基准X坐标
-
-  const float base_x = (request_->space_type == ParkSpaceType::SLANTING)
-                           ? (global_pose.GetX() - kSlantingOffset)
-                           : kNormalBaseX;
 
   const bool is_middle_direction =
       direction_request == ParkingVehDirection::HEAD_OUT_TO_MIDDLE ||
@@ -406,7 +396,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
           ? -1
           : 1;
 
-  const Eigen::Vector2d base_pose(base_x, target_.GetY());
+  const Eigen::Vector2d base_pose(target_.GetX(), target_.GetY());
   std::array<float, kNumberRows> dist_to_obs{};
 
   for (size_t j = 0; j < kNumCandidateColumns; ++j) {
