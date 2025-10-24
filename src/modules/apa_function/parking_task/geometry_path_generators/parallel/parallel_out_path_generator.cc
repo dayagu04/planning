@@ -125,7 +125,7 @@ const bool ParallelOutPathGenerator::Update() {
 
   success = false;
   std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
-  GenParallelPreparingLineVec(preparing_pose_vec, true);
+  GenParallelPreparingLineVecOut(preparing_pose_vec);
   ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
   for (const auto &pt : preparing_pose_vec) {
     ILOG_INFO << "preparing y = " << pt.pos.y();
@@ -165,6 +165,105 @@ const bool ParallelOutPathGenerator::Update() {
     ILOG_INFO << "PlanToPreparingLine failed in total loop!";
   }
   return success;
+}
+
+const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
+    std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
+  const double half_slot_width = 0.5 * input_.tlane.slot_width;
+  const double slot_side_sgn = input_.tlane.slot_side_sgn;
+
+  const double pin_y = input_.tlane.obs_pt_inside.y();
+
+  const bool front_vacant =
+      input_.tlane.obs_pt_inside.x() > input_.tlane.slot_length + 2.8;
+
+  const double tlane_outer_y =
+      std::fabs(pin_y) > half_slot_width - 1e-5
+          ? pin_y
+          : (half_slot_width + std::fabs(pin_y)) * 0.5 * slot_side_sgn;
+
+  const double rac_tlane_bound =
+      tlane_outer_y +
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+
+  double tlane_outer_y_ref_line =
+      std::max(input_.tlane.obs_pt_inside.y() * slot_side_sgn,
+               half_slot_width) *
+      slot_side_sgn;
+  double rac_tlane_bound_ref_line =
+      tlane_outer_y_ref_line +
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.6);
+
+  ILOG_INFO << "obs_pt_inside y = " << input_.tlane.obs_pt_inside.y()
+            << " half_slot_width = " << half_slot_width
+            << " input_.tlane.slot_side_sgn = " << input_.tlane.slot_side_sgn
+            << "calc_params_.slot_side_sgn" << calc_params_.slot_side_sgn;
+
+  const double rac_tlane_bound_near =
+      std::fabs(rac_tlane_bound) > std::fabs(rac_tlane_bound_ref_line)
+          ? rac_tlane_bound_ref_line
+          : rac_tlane_bound;
+  const double rac_tlane_bound_far =
+      std::fabs(rac_tlane_bound) > std::fabs(rac_tlane_bound_ref_line)
+          ? rac_tlane_bound
+          : rac_tlane_bound_ref_line;
+
+  double rac_channel_bound =
+      input_.tlane.channel_y -
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.3);
+
+  if (slot_side_sgn * (rac_channel_bound - rac_tlane_bound_near) < 0.0) {
+    ILOG_INFO << "rac_channel_bound - rac_tlane_bound_near "
+              << rac_channel_bound - rac_tlane_bound_near;
+    ILOG_INFO << "SGN DIFFERENT!";
+    return false;
+  }
+
+  if (rac_channel_bound * slot_side_sgn > 10) {
+    rac_channel_bound = 10.0 * slot_side_sgn;
+  }
+
+  const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound_near);
+
+  const double channel_width =
+      std::fabs(input_.tlane.channel_y) - half_slot_width;
+
+  double dy = channel_width > 4.0 ? 0.1 : 0.05;
+
+  int nums = static_cast<int>(y_bound / dy);
+  nums = pnc::mathlib::Clamp(nums, 5, 16);
+  dy = y_bound / nums;
+
+  pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, 0.0);
+  prepare_pose.pos.y() = rac_tlane_bound_near;
+
+  const auto y_vec =
+      pnc::geometry_lib::Linspace(rac_tlane_bound_near, rac_channel_bound, dy);
+
+  if (front_vacant) {
+    for (int i = 0; i < y_vec.size(); ++i) {
+      prepare_pose.pos.y() = y_vec[i];
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
+  } else {
+    int idx = 0;
+    for (int i = 0; i < y_vec.size(); ++i) {
+      if (std::fabs(y_vec[i]) < std::fabs(rac_tlane_bound_far)) {
+        idx = i;
+        continue;
+      }
+      prepare_pose.pos.y() = y_vec[i];
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
+    for (int i = 0; i < idx; ++i) {
+      prepare_pose.pos.y() = y_vec[i];
+      preparing_pose_vec.emplace_back(prepare_pose);
+    }
+  }
+  ILOG_INFO << "rac_tlane_bound_near = " << rac_tlane_bound_near
+            << " rac_tlane_bound_far = " << rac_tlane_bound_far;
+
+  return true;
 }
 
 }  // namespace apa_planner

@@ -13,6 +13,9 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
 
  protected:
   virtual void Preprocess() override;
+
+  const bool GenParallelPreparingLineVecOut(
+      std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec);
 };
 
 }  // namespace apa_planner

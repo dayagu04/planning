@@ -1451,7 +1451,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   ILOG_INFO << "slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
-  ILOG_INFO << "frame_.in_slot_plan_count = " << frame_.in_slot_plan_count;
+  ILOG_INFO << "frame_.in_slot_plan_count = "
+            << static_cast<int>(frame_.in_slot_plan_count);
 
   path_planner_input.ref_gear = frame_.current_gear;
   path_planner_input.ref_arc_steer = frame_.current_arc_steer;
