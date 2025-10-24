@@ -2072,11 +2072,11 @@ double GeneralLongitudinalDecider::get_narrow_area_velocity_limit() {
   const auto &lateral_hard_bounds =
       general_lateral_decider_output.hard_bounds_frenet_point;
   const auto &lateral_soft_bounds =
-      general_lateral_decider_output.soft_bounds_frenet_point;
+      general_lateral_decider_output.second_soft_bounds_frenet_point;
   const auto &lateral_hard_bound_info =
       general_lateral_decider_output.hard_bounds_info;
   const auto &lateral_soft_bound_info =
-      general_lateral_decider_output.soft_bounds_info;
+      general_lateral_decider_output.second_soft_bounds_info;
   // calc passable area info
   // std::vector<PassableAreaInfo> passable_area_info;
   std::pair<BoundInfo, BoundInfo>

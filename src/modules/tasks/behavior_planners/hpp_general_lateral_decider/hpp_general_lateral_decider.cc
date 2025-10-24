@@ -100,24 +100,24 @@ bool HppGeneralLateralDecider::Execute() {
 
   GenerateObstaclesBoundary();
   // UnitTest();
-  std::vector<std::pair<double, double>> frenet_soft_bounds;
+  std::vector<std::pair<double, double>> second_frenet_soft_bounds;
   std::vector<std::pair<double, double>> frenet_hard_bounds;
-  std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info;
+  std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
 
-  ExtractBoundary(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
+  ExtractBoundary(second_frenet_soft_bounds, frenet_hard_bounds, second_soft_bounds_info,
                   hard_bounds_info);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(frenet_soft_bounds);
-  GenerateLateralDeciderOutput(frenet_soft_bounds, frenet_hard_bounds,
+  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds);
+  GenerateLateralDeciderOutput(second_frenet_soft_bounds, frenet_hard_bounds,
                                general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
-  SaveLatDebugInfo(frenet_soft_bounds, frenet_hard_bounds, soft_bounds_info,
+  SaveLatDebugInfo(second_frenet_soft_bounds, frenet_hard_bounds, second_soft_bounds_info,
                    hard_bounds_info, general_lateral_decider_output);
 
   auto end_time = IflyTime::Now_ms();
@@ -2171,9 +2171,9 @@ void HppGeneralLateralDecider::RefineConflictLatDecisions(
 }
 
 void HppGeneralLateralDecider::ExtractBoundary(
-    std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
     std::vector<std::pair<double, double>> &frenet_hard_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
     std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
   const double planning_init_point_l =
       ego_frenet_state_.planning_init_point().frenet_state.r;
@@ -2220,17 +2220,17 @@ void HppGeneralLateralDecider::ExtractBoundary(
 
     // temp hack
     if (i == soft_bounds_.size() - 1) {
-      soft_bound.first = frenet_soft_bounds.back().first;
-      soft_bound.second = frenet_soft_bounds.back().second;
-      soft_bound_info.first = soft_bounds_info.back().first;
-      soft_bound_info.second = soft_bounds_info.back().second;
+      soft_bound.first = second_frenet_soft_bounds.back().first;
+      soft_bound.second = second_frenet_soft_bounds.back().second;
+      soft_bound_info.first = second_soft_bounds_info.back().first;
+      soft_bound_info.second = second_soft_bounds_info.back().second;
     }
-    frenet_soft_bounds.emplace_back(soft_bound);
-    soft_bounds_info.emplace_back(soft_bound_info);
+    second_frenet_soft_bounds.emplace_back(soft_bound);
+    second_soft_bounds_info.emplace_back(soft_bound_info);
   }
 
   assert(frenet_hard_bounds.size() == ref_traj_points_.size());
-  assert(frenet_soft_bounds.size() == ref_traj_points_.size());
+  assert(second_frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
 void HppGeneralLateralDecider::ProtectBoundByInitPoint(
@@ -2537,9 +2537,9 @@ void HppGeneralLateralDecider::PostProcessBound(
 }
 
 void HppGeneralLateralDecider::SaveLatDebugInfo(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
     std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   lat_debug_info_.Clear();
@@ -2556,11 +2556,11 @@ void HppGeneralLateralDecider::SaveLatDebugInfo(
   auto &hard_bounds_frenet_output =
       general_lateral_decider_output.hard_bounds_frenet_point;
   auto &soft_bounds_frenet_output =
-      general_lateral_decider_output.soft_bounds_frenet_point;
+      general_lateral_decider_output.second_soft_bounds_frenet_point;
   auto &hard_bounds_info_output =
       general_lateral_decider_output.hard_bounds_info;
   auto &soft_bounds_info_output =
-      general_lateral_decider_output.soft_bounds_info;
+      general_lateral_decider_output.second_soft_bounds_info;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
 
@@ -2582,23 +2582,23 @@ void HppGeneralLateralDecider::SaveLatDebugInfo(
 
     auto soft_lower_bound_info =
         lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
-    soft_lower_bound_info->set_lower(frenet_soft_bounds[i].first);
+    soft_lower_bound_info->set_lower(second_frenet_soft_bounds[i].first);
     soft_lower_bound_info->mutable_bound_info()->set_id(
-        soft_bounds_info[i].first.id);
+        second_soft_bounds_info[i].first.id);
     soft_lower_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(soft_bounds_info[i].first.type));
+        BoundType2String(second_soft_bounds_info[i].first.type));
 
     auto soft_upper_bound_info =
         lat_debug_info_.mutable_soft_upper_bound_info_vec()->Add();
-    soft_upper_bound_info->set_upper(frenet_soft_bounds[i].second);
+    soft_upper_bound_info->set_upper(second_frenet_soft_bounds[i].second);
     soft_upper_bound_info->mutable_bound_info()->set_id(
-        soft_bounds_info[i].second.id);
+        second_soft_bounds_info[i].second.id);
     soft_upper_bound_info->mutable_bound_info()->set_type(
-        BoundType2String(soft_bounds_info[i].second.type));
+        BoundType2String(second_soft_bounds_info[i].second.type));
 
     hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
-    soft_bounds_frenet_output.emplace_back(frenet_soft_bounds[i]);
-    hard_bounds_info_output.emplace_back(soft_bounds_info[i]);
+    soft_bounds_frenet_output.emplace_back(second_frenet_soft_bounds[i]);
+    hard_bounds_info_output.emplace_back(second_soft_bounds_info[i]);
     soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
   }
 
@@ -2618,13 +2618,13 @@ void HppGeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
 }
 
 void HppGeneralLateralDecider::GenerateLateralDeciderOutput(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  general_lateral_decider_output.soft_bounds = std::move(soft_bounds_);
+  general_lateral_decider_output.second_soft_bounds = std::move(soft_bounds_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  GenerateEnuBoundaryPoints(frenet_soft_bounds, frenet_hard_bounds,
+  GenerateEnuBoundaryPoints(second_frenet_soft_bounds, frenet_hard_bounds,
                             general_lateral_decider_output);
 
   GenerateEnuReferenceTheta(general_lateral_decider_output);
@@ -2633,11 +2633,11 @@ void HppGeneralLateralDecider::GenerateLateralDeciderOutput(
 }
 
 void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &soft_bounds_output =
-      general_lateral_decider_output.soft_bounds_cart_point;
+      general_lateral_decider_output.second_soft_bounds_cart_point;
   auto &hard_bounds_output =
       general_lateral_decider_output.hard_bounds_cart_point;
 
@@ -2649,14 +2649,14 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
   Point2D tmp_hard_upper_point;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_soft_bounds[i].first),
+            Point2D(ref_traj_points_[i].s, second_frenet_soft_bounds[i].first),
             tmp_soft_lower_point))  // soft lower
     {
       // TODO: add logs
     }
 
     if (!frenet_coord->SLToXY(
-            Point2D(ref_traj_points_[i].s, frenet_soft_bounds[i].second),
+            Point2D(ref_traj_points_[i].s, second_frenet_soft_bounds[i].second),
             tmp_soft_upper_point))  // soft upper
     {
       // TODO: add logs

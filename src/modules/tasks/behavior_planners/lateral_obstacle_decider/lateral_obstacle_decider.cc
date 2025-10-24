@@ -220,6 +220,7 @@ bool LateralObstacleDecider::Execute() {
       LateralObstacleHistoryInfo &history =
           lateral_obstacle_history_info_[obs->id()];
       FollowObstacleInfo &follow_info = follow_obstacle_info_[obs->id()];
+      history.is_potential_avoiding_side_car = false;
       history.is_behind_ego = false;
       if (history.can_not_avoid) {
         history.is_not_set = false;
@@ -275,8 +276,9 @@ bool LateralObstacleDecider::Execute() {
           history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
         }
         if (history.side_2_front_count > side_2_front_count_thr) {
-          history.front_car = true;
-          history.rear_car = false;
+          // history.front_car = true;
+          // history.rear_car = false;
+          history.is_potential_avoiding_side_car = true;
           history.overlap_ego_head_thr = 2.5;
         } else {
           history.overlap_ego_head_thr = 2;
@@ -688,17 +690,19 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   //   static_obs_buffer = config_.large_static_obs_buffer;
   // }
 
+  double min_near_car_thr = 0.09;
   std::array<double, 3> xp{20, 40, 60};
-  std::array<double, 3> fp{near_car_thr, 0.12, 0.09};
+  std::array<double, 3> fp{near_car_thr, 0.12, min_near_car_thr};
   double near_car_d_lane_thr = interp(d_s_rel, xp, fp);
   // lower buffer for car
   if (!obstacle.is_static() &&
       (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
-       type == iflyauto::ObjectType::OBJECT_TYPE_BUS)) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_VAN) &&
+      !IsTruck(frenet_obstacle)) {
     // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
     near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
+    near_car_d_lane_thr = std::fmax(near_car_d_lane_thr, min_near_car_thr);
   }
   // addition buffer for oversize vehicle
   if (obstacle.is_oversize_vehicle()) {

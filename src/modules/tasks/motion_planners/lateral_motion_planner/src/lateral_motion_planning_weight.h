@@ -53,6 +53,7 @@ struct PathWeight {  // temp
   std::vector<double> q_jerk;
   std::vector<double> q_acc_bound;
   std::vector<double> q_jerk_bound;
+  std::vector<double> q_pos_first_soft_bound;
   std::vector<double> q_pos_soft_bound;
   std::vector<double> q_pos_hard_bound;
   std::unordered_map<size_t, double> time2soft_ratio = {
@@ -79,6 +80,7 @@ struct PathWeight {  // temp
     q_jerk.resize(point_num, 0);
     q_acc_bound.resize(point_num, 0);
     q_jerk_bound.resize(point_num, 0);
+    q_pos_first_soft_bound.resize(point_num, 0);
     q_pos_soft_bound.resize(point_num, 0);
     q_pos_hard_bound.resize(point_num, 0);
   }
@@ -102,6 +104,7 @@ struct PathWeight {  // temp
     q_jerk.clear();
     q_acc_bound.clear();
     q_jerk_bound.clear();
+    q_pos_first_soft_bound.clear();
     q_pos_soft_bound.clear();
     q_pos_hard_bound.clear();
   }
@@ -122,12 +125,12 @@ class LateralMotionPlanningWeight {
       const std::vector<std::pair<double, double>> &bounds);
 
   void CalculateLatAvoidBoundPriority(
-      const std::vector<std::pair<double, double>> &soft_bounds,
+      const std::vector<std::pair<double, double>> &second_soft_bounds,
       const std::vector<std::pair<double, double>> &hard_bounds,
       const std::vector<planning::WeightedBounds> soft_bounds_vec,
       const std::vector<planning::WeightedBounds> hard_bounds_vec,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
-          &soft_bounds_info,
+          &second_soft_bounds_info,
       const std::vector<std::pair<planning::BoundInfo, planning::BoundInfo>>
           &hard_bounds_info);
 

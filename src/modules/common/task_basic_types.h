@@ -77,6 +77,12 @@ enum class BoundType {
   REVERSE_AGENT,
 };
 
+enum class BoundHierarchy {
+  HARD_BOUND,
+  FIRST_SOFT_BOUND,
+  SECOND_SOFT_BOUND,
+};
+
 struct BoundInfo {
   int id = 0;
   BoundType type = BoundType::DEFAULT;

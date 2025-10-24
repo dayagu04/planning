@@ -13,7 +13,7 @@ double CalDesireLateralDistance(const double ego_vel, const double pred_ts,
                                 const std::shared_ptr<FrenetObstacle> obstacle,
                                 const bool is_nudge_left, bool in_intersection,
                                 bool is_same_side_obstacle_during_lane_change,
-                                bool is_update_hard_bound,
+                                BoundHierarchy bound_hierarchy,
                                 GeneralLateralDeciderConfig &config);
 
 double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
@@ -24,7 +24,7 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(
     const double base_distance, const double ego_vel, const double ego_l,
-    const std::shared_ptr<FrenetObstacle> obstacle, bool is_update_hard_bound,
+    const std::shared_ptr<FrenetObstacle> obstacle, BoundHierarchy bound_hierarchy,
     GeneralLateralDeciderConfig &config);
 double GetBoundWeight(
     BoundType type,

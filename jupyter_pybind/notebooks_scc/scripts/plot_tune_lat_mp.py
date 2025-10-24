@@ -59,7 +59,7 @@ init_info_columns = [
       ]
 tab2 = DataTable(source = init_info, columns = init_info_columns, width = 300, height = 400)
 
-param_name = ["q_ref_xy", "q_ref_theta", "q_acc", "q_jerk", "q_continuity", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_safe_bound", "q_hard_bound", "start_q_jerk"]
+param_name = ["q_ref_xy", "q_ref_theta", "q_acc", "q_jerk", "q_continuity", "q_acc_bound", "q_jerk_bound", "acc_bound", "jerk_bound", "q_soft_bound", "q_hard_bound", "start_q_jerk"]
 param = ColumnDataSource(data = {'name':[], 'origin param':[], 'new param':[]})
 param_columns = [
         TableColumn(field="name", title="name"),
@@ -170,14 +170,16 @@ class LocalViewSlider:
     self.q_jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_jerk_bound",min=0.0, max=1000000.0, value=lat_motion_plan_input0.q_jerk_bound, step=0.1)
     self.acc_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "acc_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.acc_bound, step=0.1)
     self.jerk_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "jerk_bound",min=0.0, max=10.0, value=lat_motion_plan_input0.jerk_bound, step=0.1)
-    self.q_safe_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_safe_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1)
+    self.q_soft_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_soft_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_soft_corridor, step=0.1)
     self.q_hard_bound_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "q_hard_bound",min=0.0, max=10000.0, value=lat_motion_plan_input0.q_hard_corridor, step=0.1)
 
     self.ref_xy_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "ref_xy",min=-10., max=10.0, value=0.0, step=0.1)
-    self.upper_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_safe_bound",min=-10., max=10.0, value=0.0, step=0.05)
-    self.lower_safe_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_safe_bound",min=-10., max=10.0, value=0.0, step=0.05)
-    self.upper_hard_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "upper_hard_bound",min=-10., max=10.0, value=0.0, step=0.05)
-    self.lower_hard_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "lower_hard_bound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.first_upper_soft_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "1soft_ubound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.first_lower_soft_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "1soft_lbound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.second_upper_soft_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "2soft_ubound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.second_lower_soft_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "2soft_lbound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.upper_hard_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "hard_ubound",min=-10., max=10.0, value=0.0, step=0.05)
+    self.lower_hard_bound = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "hard_lbound",min=-10., max=10.0, value=0.0, step=0.05)
 
     self.complete_follow = ipywidgets.Checkbox(value=lat_motion_plan_input0.complete_follow, description='complete_follow')
     self.motion_plan_concerned_start_index = ipywidgets.IntText(value=0, description='motion_plan_concerned_start_index:')
@@ -192,10 +194,14 @@ class LocalViewSlider:
     self.end_ratio3_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='50%'), description= "end_ratio3",min=0.0, max=10.0, value=1.5, step=0.1)
     self.max_iter_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='50%'), description= "max_iter",min=0, max=10, value=10, step=1)
 
-    self.safe_ub_start_idx = ipywidgets.IntText(value=0, description='safe_ub_start_idx:')
-    self.safe_ub_end_idx = ipywidgets.IntText(value=26, description='safe_ub_end_idx:')
-    self.safe_lb_start_idx = ipywidgets.IntText(value=0, description='safe_lb_start_idx:')
-    self.safe_lb_end_idx = ipywidgets.IntText(value=26, description='safe_lb_end_idx:')
+    self.first_soft_ub_start_idx = ipywidgets.IntText(value=0, description='1soft_ub_start_idx:')
+    self.first_soft_ub_end_idx = ipywidgets.IntText(value=26, description='1soft_ub_end_idx:')
+    self.first_soft_lb_start_idx = ipywidgets.IntText(value=0, description='1soft_lb_start_idx:')
+    self.first_soft_lb_end_idx = ipywidgets.IntText(value=26, description='1soft_lb_end_idx:')
+    self.second_soft_ub_start_idx = ipywidgets.IntText(value=0, description='2soft_ub_start_idx:')
+    self.second_soft_ub_end_idx = ipywidgets.IntText(value=26, description='2soft_ub_end_idx:')
+    self.second_soft_lb_start_idx = ipywidgets.IntText(value=0, description='2soft_lb_start_idx:')
+    self.second_soft_lb_end_idx = ipywidgets.IntText(value=26, description='2soft_lb_end_idx:')
     self.hard_ub_start_idx = ipywidgets.IntText(value=0, description='hard_ub_start_idx:')
     self.hard_ub_end_idx = ipywidgets.IntText(value=26, description='hard_ub_end_idx:')
     self.hard_lb_start_idx = ipywidgets.IntText(value=0, description='hard_lb_start_idx:')
@@ -217,17 +223,23 @@ class LocalViewSlider:
                                          q_jerk_bound = self.q_jerk_bound_slider,
                                          acc_bound = self.acc_bound_slider,
                                          jerk_bound = self.jerk_bound_slider,
-                                         q_safe_bound = self.q_safe_bound_slider,
+                                         q_soft_bound = self.q_soft_bound_slider,
                                          q_hard_bound = self.q_hard_bound_slider,
                                          ref_xy = self.ref_xy_slider,
-                                         upper_safe_bound = self.upper_safe_bound,
-                                         lower_safe_bound = self.lower_safe_bound,
+                                         first_upper_soft_bound = self.first_upper_soft_bound,
+                                         first_lower_soft_bound = self.first_lower_soft_bound,
+                                         second_upper_soft_bound = self.second_upper_soft_bound,
+                                         second_lower_soft_bound = self.second_lower_soft_bound,
                                          upper_hard_bound = self.upper_hard_bound,
                                          lower_hard_bound = self.lower_hard_bound,
-                                         safe_ub_start_idx= self.safe_ub_start_idx,
-                                         safe_ub_end_idx= self.safe_ub_end_idx,
-                                         safe_lb_start_idx= self.safe_lb_start_idx,
-                                         safe_lb_end_idx= self.safe_lb_end_idx,
+                                         first_soft_ub_start_idx= self.first_soft_ub_start_idx,
+                                         first_soft_ub_end_idx= self.first_soft_ub_end_idx,
+                                         first_soft_lb_start_idx= self.first_soft_lb_start_idx,
+                                         first_soft_lb_end_idx= self.first_soft_lb_end_idx,
+                                         second_soft_ub_start_idx= self.second_soft_ub_start_idx,
+                                         second_soft_ub_end_idx= self.second_soft_ub_end_idx,
+                                         second_soft_lb_start_idx= self.second_soft_lb_start_idx,
+                                         second_soft_lb_end_idx= self.second_soft_lb_end_idx,
                                          hard_ub_start_idx= self.hard_ub_start_idx,
                                          hard_ub_end_idx= self.hard_ub_end_idx,
                                          hard_lb_start_idx= self.hard_lb_start_idx,
@@ -249,14 +261,23 @@ class LocalViewSlider:
 
 
 ### sliders callback
-def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_front_ref_xy, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound, ref_xy, upper_safe_bound, lower_safe_bound,
-                    upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
-                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor, expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3,
-                    q_virtual_ref_xy, q_virtual_ref_theta, max_iter):
+def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_front_ref_xy, q_acc, q_jerk, q_continuity,
+                    q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_soft_bound, q_hard_bound, ref_xy,
+                    first_upper_soft_bound, first_lower_soft_bound, second_upper_soft_bound, second_lower_soft_bound, upper_hard_bound, lower_hard_bound,
+                    first_soft_ub_start_idx, first_soft_ub_end_idx, first_soft_lb_start_idx, first_soft_lb_end_idx,
+                    second_soft_ub_start_idx, second_soft_ub_end_idx, second_soft_lb_start_idx, second_soft_lb_end_idx,
+                    hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx,
+                    complete_follow, motion_plan_concerned_start_index, motion_plan_concerned_end_index, q_start_jerk, curv_factor,
+                    expected_acc, start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, q_virtual_ref_xy, q_virtual_ref_theta, max_iter):
   g_is_display_enu = global_var.get_value('g_is_display_enu')
   kwargs = locals()
   update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_tune_lat_plan_data(fig7, bag_loader, bag_time, bag_time + bag_dt, local_view_data, lat_plan_data, ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx, safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu)
+  update_tune_lat_plan_data(fig7, bag_loader, bag_time, bag_time + bag_dt, local_view_data, lat_plan_data,
+                            ref_xy, first_upper_soft_bound, first_lower_soft_bound,
+                            second_upper_soft_bound, second_lower_soft_bound, upper_hard_bound, lower_hard_bound,
+                            first_soft_ub_start_idx, first_soft_ub_end_idx, first_soft_lb_start_idx, first_soft_lb_end_idx,
+                            second_soft_ub_start_idx, second_soft_ub_end_idx, second_soft_lb_start_idx, second_soft_lb_end_idx,
+                            hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, g_is_display_enu)
 
   vs_msg = find_nearest(bag_loader.vs_msg, bag_time)
   plan_msg = local_view_data['data_msg']['plan_msg']
@@ -345,7 +366,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
       q_jerk_bound = lat_motion_plan_input.q_jerk_bound
       acc_bound = lat_motion_plan_input.acc_bound
       jerk_bound = lat_motion_plan_input.jerk_bound
-      q_safe_bound = lat_motion_plan_input.q_soft_corridor
+      q_soft_bound = lat_motion_plan_input.q_soft_corridor
       q_hard_bound = lat_motion_plan_input.q_hard_corridor
       complete_follow = lat_motion_plan_input.complete_follow
       motion_plan_concerned_end_index = lat_motion_plan_input.motion_plan_concerned_index
@@ -362,7 +383,7 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
     new_param_vec.append(q_jerk_bound)
     new_param_vec.append(acc_bound)
     new_param_vec.append(jerk_bound)
-    new_param_vec.append(q_safe_bound)
+    new_param_vec.append(q_soft_bound)
     new_param_vec.append(q_hard_bound)
     new_param_vec.append(q_start_jerk)
 
@@ -384,9 +405,11 @@ def slider_callback(bag_time, bag_dt, use_new_param, q_ref_xy, q_ref_theta, q_fr
     print("ref_s:", ref_s)
     input_string = lat_motion_plan_input.SerializeToString()
     start_time = time.time()
-    lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_safe_bound, q_hard_bound,
-                                              ref_xy, upper_safe_bound, lower_safe_bound, upper_hard_bound, lower_hard_bound, safe_ub_start_idx, safe_ub_end_idx,
-                                              safe_lb_start_idx, safe_lb_end_idx, hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
+    lateral_motion_planning_py.UpdateByParams(input_string, q_ref_xy, q_ref_theta, q_acc, q_jerk, q_continuity, q_acc_bound, q_jerk_bound, acc_bound, jerk_bound, q_soft_bound, q_hard_bound,
+                                              ref_xy, first_upper_soft_bound, first_lower_soft_bound, second_upper_soft_bound, second_lower_soft_bound, upper_hard_bound, lower_hard_bound,
+                                              first_soft_ub_start_idx, first_soft_ub_end_idx, first_soft_lb_start_idx, first_soft_lb_end_idx,
+                                              second_soft_ub_start_idx, second_soft_ub_end_idx, second_soft_lb_start_idx, second_soft_lb_end_idx,
+                                              hard_ub_start_idx, hard_ub_end_idx, hard_lb_start_idx, hard_lb_end_idx, complete_follow,
                                               motion_plan_concerned_start_index, motion_plan_concerned_end_index, curv_factor, q_start_jerk, max(ego_vel, 1.5), expected_acc,
                                               start_acc, end_acc, end_ratio1, end_ratio2, end_ratio3, max_iter, wheel_base, q_front_ref_xy,
                                               q_virtual_ref_xy, q_virtual_ref_theta, virtual_ref_x, virtual_ref_y, virtual_ref_theta)

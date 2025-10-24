@@ -82,6 +82,7 @@ class LateralOffsetCalculatorV2 {
                                  bool is_left);
   double LimitLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
                             double lateral_offset, const AvoidWay& avoid_way);
+  double LimitDesireLateralOffsetHighSpeed(const AvoidObstacleInfo &avoid_obstacle, const double in_desire_lat_offset);                         
   double SmoothLateralOffset(const AvoidObstacleInfo& avoid_obstacle,
                              double lat_offset, const AvoidWay* avoid_way);
   void PostProcess(const std::array<AvoidObstacleInfo, 2>& avd_obstacle);
