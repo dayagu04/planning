@@ -2323,6 +2323,7 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
   if bag_loader.fus_occupancy_objects_msg['enable'] == True and load_fusion_object_from_occupancy:
     pos_x, pos_y = [], []
     box_x_vec, box_y_vec = [], []
+    pos_x_low, pos_y_low = [], []
 
     local_view_data['data_fusion_obj_semantic'].data.update({'text':[], 'text_x':[], 'text_y':[],})
 
@@ -2337,8 +2338,12 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
       for j in range(obj.additional_occupancy_info.polygon_points_size):
         x = polygon_points[j].x
         y = polygon_points[j].y
-        pos_x.append(x)
-        pos_y.append(y)
+        if polygon_points[j].z < 0.3:
+          pos_x_low.append(x)
+          pos_y_low.append(y)
+        else:
+          pos_x.append(x)
+          pos_y.append(y)
       center_x = obj.common_occupancy_info.center_position.x
       center_y = obj.common_occupancy_info.center_position.y
       heading = obj.common_occupancy_info.heading_angle
@@ -2358,6 +2363,10 @@ def update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type, car
     local_view_data['data_fusion_obj'].data.update({
       'y': pos_y,
       'x': pos_x,
+    })
+    local_view_data['data_fusion_occ_low'].data.update({
+      'y': pos_y_low,
+      'x': pos_x_low,
     })
 
     # print("box_y_vec = ", box_y_vec)
@@ -2492,6 +2501,7 @@ def load_local_view_figure_parking():
   data_wave_length_text = ColumnDataSource(data = {'wave_text_x': [], 'wave_text_y': [], 'length':[]})
 
   data_fusion_obj = ColumnDataSource(data = {'y':[], 'x':[]})
+  data_fusion_occ_low = ColumnDataSource(data = {'y':[], 'x':[]})
   data_fusion_obj_box = ColumnDataSource(data = {'y':[], 'x':[]})
   data_od_arrow = ColumnDataSource(data = {'y':[], 'x':[]})
   data_fusion_obj_semantic = ColumnDataSource(data = {'text':[], 'text_x':[], 'text_y':[]})
@@ -2580,6 +2590,7 @@ def load_local_view_figure_parking():
                      'data_dluss_point':data_dluss_point,\
                      'data_spatial_parking_slot':data_spatial_parking_slot,\
                      'data_fusion_obj':data_fusion_obj,\
+                     'data_fusion_occ_low':data_fusion_occ_low,\
                      'data_fusion_obj_box':data_fusion_obj_box,\
                      'data_od_arrow':data_od_arrow,\
                      'data_fusion_obj_semantic':data_fusion_obj_semantic,\
@@ -2647,6 +2658,7 @@ def load_local_view_figure_parking():
   fig1.circle('obj_pt_y','obj_pt_x', source = data_dluss_model, size=3, color='blue', legend_label = 'dluss_model', visible = False)
   fig1.multi_line('corner_point_y', 'corner_point_x', source = data_spatial_parking_slot, line_width = 2, line_color = 'orange', line_dash = 'solid',legend_label = 'spatial pariking slot', visible = False)
   fig1.circle('y','x', source = data_fusion_obj, size=3, color='blue', legend_label = 'fusion_objects', visible = True)
+  fig1.circle('y','x', source = data_fusion_occ_low, size=3, color='red', legend_label = 'fusion_objects', visible = True)
   fig1.circle('yn','xn', source = data_ground_line_obj, size=3, color='black', legend_label = 'ground line', visible = True)
   fig1.multi_line('y', 'x', source = data_fusion_obj_box, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = True)
   fig1.multi_line('y', 'x', source = data_od_arrow, line_width = 1, line_color = 'black', line_dash = 'solid',legend_label = 'fusion_objects', visible = True)
