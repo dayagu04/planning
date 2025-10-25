@@ -769,22 +769,26 @@ void RouteInfo::CaculateSplitInfo(
               CalculateSplitRegionLaneTupoInfo(
                   *split_link, sdpro_map, split_info,
                   route_info_output_.distance_to_first_road_split);
-          first_split_region_lane_tupo_info = split_region_lane_tupo_info;
-          first_split_region_lane_tupo_info.distance_to_split_point =
-              split_info[i].second;
-          first_split_region_lane_tupo_info.split_direction =
-              static_cast<SplitDirection>(split_seg_info.split_direction);
-          route_info_output_.split_region_info_list.emplace_back(
-              first_split_region_lane_tupo_info);
-          route_info_output_.first_split_dir_dis_info =
-              std::make_pair(static_cast<SplitRelativeDirection>(
-                                 route_info_output_.first_split_direction),
-                             route_info_output_.distance_to_first_road_split);
-          route_info_output_.split_dir_dis_info_list.emplace_back(
-              std::make_pair(static_cast<SplitRelativeDirection>(
-                                 route_info_output_.first_split_direction),
-                             route_info_output_.distance_to_first_road_split));
-
+          if (split_link != nullptr && split_link->has_link_type() &&
+              !sdpro_map.isSaPa(split_link->link_type()) &&
+              !sdpro_map.isTollStation(split_link->link_type())) {
+            first_split_region_lane_tupo_info = split_region_lane_tupo_info;
+            first_split_region_lane_tupo_info.distance_to_split_point =
+                split_info[i].second;
+            first_split_region_lane_tupo_info.split_direction =
+                static_cast<SplitDirection>(split_seg_info.split_direction);
+            route_info_output_.split_region_info_list.emplace_back(
+                first_split_region_lane_tupo_info);
+            route_info_output_.first_split_dir_dis_info =
+                std::make_pair(static_cast<SplitRelativeDirection>(
+                                   route_info_output_.first_split_direction),
+                               route_info_output_.distance_to_first_road_split);
+            route_info_output_.split_dir_dis_info_list.emplace_back(
+                std::make_pair(
+                    static_cast<SplitRelativeDirection>(
+                        route_info_output_.first_split_direction),
+                    route_info_output_.distance_to_first_road_split));
+          }
           is_find_first_split_info = true;
           traverse_num++;
         } else if (is_find_first_split_info) {
