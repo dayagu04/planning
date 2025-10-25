@@ -72,14 +72,6 @@ class NodeCollisionDetect {
   FootPrintCircleModel* GetCircleFootPrintModel(const Pose2f& pose,
                                                 const bool is_circle_path);
 
-  inline const bool IsCirclePathByRadius(const float radius) {
-    if (radius > 100.0f || radius < -100.0f) {
-      return false;
-    }
-
-    return true;
-  }
-
   inline const bool IsCirclePathByKappa(const float kappa) {
     if (kappa > 0.067f || kappa < -0.067f) {
       return true;

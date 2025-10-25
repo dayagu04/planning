@@ -414,6 +414,18 @@ const bool Node3d::IsSteerOpposite(const float next) const {
   return false;
 }
 
+const bool Node3d::IsSteerOpposite(const AstarPathSteer steer) const {
+  if (steer_type_ == AstarPathSteer::LEFT && steer == AstarPathSteer::RIGHT) {
+    return true;
+  }
+
+  if (steer_type_ == AstarPathSteer::RIGHT && steer == AstarPathSteer::LEFT) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool Node3d::IsSteerOppositeWithParent() const {
   if (pre_node_ == nullptr) {
     return false;
@@ -434,7 +446,20 @@ const bool Node3d::IsScurveWithParent() const {
   return IsSteerOppositeWithParent();
 }
 
-const bool Node3d::IsScurve(const AstarPathGear type, const float steer) const {
+const bool Node3d::IsScurveWithParentSteer() const {
+  if (pre_node_ == nullptr) {
+    return false;
+  }
+
+  if (IsPathGearChange(pre_node_->GetGearType())) {
+    return false;
+  }
+
+  return IsSteerOpposite(pre_node_->GetSteerType());
+}
+
+const bool Node3d::IsScurve(const AstarPathGear type,
+                            const AstarPathSteer steer) const {
   if (IsPathGearChange(type)) {
     return false;
   }
@@ -465,7 +490,29 @@ const bool Node3d::IsSameSteerDir(const float next) const {
   return false;
 }
 
+const bool Node3d::IsSameSteerDir(const AstarPathSteer next) const {
+  // left turn, left turn is same turn direction
+  if (steer_type_ == AstarPathSteer::LEFT && next == AstarPathSteer::LEFT) {
+    return true;
+  }
+
+  if (steer_type_ == AstarPathSteer::RIGHT && next == AstarPathSteer::RIGHT) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool Node3d::IsReturnPath(const bool is_gear_switch, const float steer) {
+  if (is_gear_switch) {
+    return IsSameSteerDir(steer);
+  }
+
+  return false;
+}
+
+const bool Node3d::IsReturnPath(const bool is_gear_switch,
+                                const AstarPathSteer steer) {
   if (is_gear_switch) {
     return IsSameSteerDir(steer);
   }
