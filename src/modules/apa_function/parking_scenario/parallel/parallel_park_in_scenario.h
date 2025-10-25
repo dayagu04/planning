@@ -61,7 +61,7 @@ class ParallelParkInScenario : public ParkingScenario {
   const bool PostProcessPathPara() ;
 
   Tlane t_lane_;
-  std::vector<Eigen::Vector2d> obs_pt_local_vec_;
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
   int parallel_replan_again_ = 0;
   GeometryPathOutput previous_output_path_;
