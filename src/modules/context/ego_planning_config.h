@@ -3702,10 +3702,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_speed_threshold = 22.22;
   double brake_dis_near_construction = 20.0;
   double acc_to_construction = -0.7;
-  double CAInvadeEntryLatDisThr = 1.8;
-  double CAInvadeExitLatDisThr  = 2.0;
+  double CAInvadeEntryLatDisThr = 2;
+  double CAInvadeExitLatDisThr  = 2.2;
   int CAInvadeLatDisCouterThr = 3.0;
-  double construction_invade_speed_diff = 4.16;
+  double construction_invade_speed_diff = 5.56;
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;

@@ -49,10 +49,12 @@ constexpr double kExitVruRoundLateralBufferThr = 1.0;
 constexpr double kExitVruRoundDistanceThr = 80.0;
 constexpr double kLowSpeedVruVelThr = 30 / 3.6;
 constexpr double kVRURoundDecelRatio = 0.7;
-constexpr double CAInvadeLatDisDiffThr  = 0.25;
-constexpr double CAInvadeVaildLonDis = 60.0;
-constexpr double CAInvadeLatMaxDis = 2.5;
-constexpr double CAInvadeLatMinDis = 2;
+constexpr double kCAInvadeLatDisDiffThr  = 0.25;
+constexpr double kCAInvadeVaildLonDis = 80.0;
+constexpr double kCAInvadeLatMaxDis = 2.5;
+constexpr double kCAInvadeLatMinDis = 2;
+constexpr int    kConstructionStrongMinHoldFrames = 100;
+constexpr int    kConstructionStrongMaxHoldFrames = 600;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -257,18 +259,18 @@ bool CheckClustersConsecutiveDiffSlidingWindow(
       for (size_t i = 0; i + 2 < ls.size(); ++i) {
         double diff01 = std::abs(ls[i + 1] - ls[i]);
         double diff12 = std::abs(ls[i + 2] - ls[i + 1]);
-        if (diff01 > CAInvadeLatDisDiffThr && diff12 > CAInvadeLatDisDiffThr) {
+        if (diff01 > kCAInvadeLatDisDiffThr && diff12 > kCAInvadeLatDisDiffThr) {
           double abs_l0 = std::abs(ls[i]);
           double abs_l1 = std::abs(ls[i + 1]);
           double abs_l2 = std::abs(ls[i + 2]);
           if (entering) {
             // 进入条件：横向距离绝对值递减
-            if (abs_l0 > abs_l1 && abs_l1 > abs_l2 && abs_l0 < CAInvadeLatMaxDis) {
+            if (abs_l0 > abs_l1 && abs_l1 > abs_l2 && abs_l0 < kCAInvadeLatMaxDis) {
               return true;
             }
           } else {
             // 退出条件：横向距离绝对值递增
-            if (abs_l0 < abs_l1 && abs_l1 < abs_l2 && abs_l0 < CAInvadeLatMinDis) {
+            if (abs_l0 < abs_l1 && abs_l1 < abs_l2 && abs_l0 < kCAInvadeLatMinDis) {
               return true;
             }
           }
@@ -1669,6 +1671,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
     JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
     JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
+    JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
     return;
   }
   //判断施工区域是否有效
@@ -1677,12 +1680,14 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   if (!construction_scene.is_exist_construction_area || 
       construction_scene.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode = false;
+    construction_strong_mode_frame_count_ = 0; 
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
     JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
     JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
+    JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
     return;
   }
 
@@ -1731,7 +1736,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
       if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
         continue;
       }
-      if (s >= ego_s && s <= ego_s + CAInvadeVaildLonDis) {
+      if (s >= ego_s && s <= ego_s + kCAInvadeVaildLonDis) {
         sl_construction_points_all.push_back({s, l});
       }
       if (std::abs(l) < std::abs(construction_nearest_l)) {
@@ -1773,15 +1778,24 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   if (!construction_strong_deceleration_mode) {
     if (enter_condition) {
       construction_strong_deceleration_mode = true;
+      construction_strong_mode_frame_count_ = 0; 
     }
   } else {
-    if (exit_condition) {
+    if (construction_strong_mode_frame_count_ < kConstructionStrongMaxHoldFrames) {
+        construction_strong_mode_frame_count_++;
+    }
+    bool min_duration_met = (construction_strong_mode_frame_count_ >= kConstructionStrongMinHoldFrames); 
+    if (exit_condition && min_duration_met) {
       construction_strong_deceleration_mode = false;
+      construction_strong_mode_frame_count_ = 0; 
+    }  else if (exit_condition && !min_duration_met) {
+      construction_strong_mode_reason = 30;
     }
   }
   ILOG_DEBUG << "construction_strong_deceleration_mode :" << construction_strong_deceleration_mode;
   JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
   JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
+  JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
   
   // Construction zone info
   dis_to_construction = std::max(construction_s_nearest - ego_s,0.0);
