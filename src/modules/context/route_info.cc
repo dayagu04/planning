@@ -769,9 +769,21 @@ void RouteInfo::CaculateSplitInfo(
               CalculateSplitRegionLaneTupoInfo(
                   *split_link, sdpro_map, split_info,
                   route_info_output_.distance_to_first_road_split);
-          if (split_link != nullptr && split_link->has_link_type() &&
+          const auto split_next_link =
+              sdpro_map.GetNextLinkOnRoute(split_link->id());
+          if (!split_next_link) {
+            break;
+          }
+          const auto& out_link = split_link->successor_link_ids();
+          auto other_link_id =
+              out_link[0] == split_next_link->id() ? out_link[1] : out_link[0];
+          const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
+          if (split_link != nullptr && other_link != nullptr &&
+              split_link->has_link_type() &&
               !sdpro_map.isSaPa(split_link->link_type()) &&
-              !sdpro_map.isTollStation(split_link->link_type())) {
+              !sdpro_map.isTollStation(split_link->link_type()) &&
+              other_link->link_class() !=
+                  iflymapdata::sdpro::LinkClass::LC_OTHER_ROAD) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
