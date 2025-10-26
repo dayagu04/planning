@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251009/20251009-13-33-33/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-10-09-13-33-33_no_camera.bag.1761142073.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82006/trigger/20251014/20251014-11-26-07/data_collection_CHERY_M32T_82006_EVENT_KEY_2025-10-14-11-26-07_no_camera.bag.1761457888.open-loop.noa.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -178,25 +178,23 @@ def update_construction_agent_info(local_view_data):
       else:
         datas.append([])
         names.append([])
+        directions.append([])
       i = i + 1
     except:
       pass
 
-  try:
-    is_exist_construction_area = local_view_data['data_msg']['plan_debug_json_msg']['is_exist_construction_area']
-    datas.append(is_exist_construction_area)
-    names.append('is_exist_construction_area')
-    directions.append([])
-  except:
-    pass
-
-  try:
-    is_pass_construction_area = local_view_data['data_msg']['plan_debug_json_msg']['is_pass_construction_area']
-    datas.append(is_pass_construction_area)
-    names.append('is_pass_construction_area')
-    directions.append([])
-  except:
-    pass
+  vars_2 = ['is_exist_construction_area','is_pass_construction_area','construction_intrusion_level',
+            'is_current_lane_available', 'is_right_lane_available','is_left_lane_available',
+            'is_left_left_lane_available','is_right_right_lane_available', 'construction_available_virtual_lane_ids']
+  for name in vars_2:
+    try:
+      names.append(name)
+      directions.append([])
+      datas.append([local_view_data['data_msg']['plan_debug_json_msg'][name]])
+      print(name)
+      print(local_view_data['data_msg']['plan_debug_json_msg'][name])
+    except:
+      pass
 
   hmi_construction_agent_data.data.update({
     'name': names,

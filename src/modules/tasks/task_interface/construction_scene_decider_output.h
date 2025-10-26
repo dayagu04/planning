@@ -12,6 +12,13 @@ namespace planning {
 
 enum class ConstructionDirection { DEFAULT, LEFT, RIGHT, LON, UNSURE };
 
+enum class ConstructionIntrusionLevel {
+  NONE = 0,   // 无施工影响
+  LOW,        // 轻微侵入（远离车道边缘或短暂施工）
+  MEDIUM,     // 中度侵入（占据部分车道或影响路径）
+  HIGH        // 严重侵入（明显占道或阻塞车道）
+};
+
 struct ConstructionAgentPoint {
   // 施工障碍物数据结构体
   double x, y;
@@ -55,7 +62,7 @@ using ConstructionAgentPoints = std::vector<ConstructionAgentPoint>;
 
 struct ConstructionAgentClusterArea {
   ConstructionAgentPoints points;
-  ConstructionDirection direction = ConstructionDirection ::DEFAULT;
+  ConstructionDirection direction = ConstructionDirection :: DEFAULT;
 };
 
 struct ConstructionSceneDeciderOutput {
@@ -63,10 +70,24 @@ struct ConstructionSceneDeciderOutput {
       construction_agent_cluster_attribute_map;  // 施工区域聚类结果
   bool is_exist_construction_area = false;       // 是否存在施工区域
   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
+  ConstructionIntrusionLevel construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
+  bool is_current_lane_available = true;
+  bool is_left_left_lane_available = true;
+  bool is_left_lane_available = true;
+  bool is_right_right_lane_available = true;
+  bool is_right_lane_available = true;
+  std::vector<int> available_virtual_lane_ids;
   void Clear() {
     construction_agent_cluster_attribute_map.clear();
     is_exist_construction_area = false;
     is_pass_construction_area = false;
+    construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
+    is_current_lane_available = true;
+    is_left_left_lane_available = true;
+    is_left_lane_available = true;
+    is_right_right_lane_available = true;
+    is_right_lane_available = true;
+    available_virtual_lane_ids.clear();
   }
 };
 }  // namespace planning

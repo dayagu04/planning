@@ -101,6 +101,14 @@ class ConstructionSceneDecider : public Task {
 
   void IdentifyConstructionScene();
 
+  void IsExistConstructionArea();
+
+  void JudgeConstructionIntrusionLevel();
+
+  bool CheckLaneAvailable(
+      const std::shared_ptr<VirtualLane> seach_lane,
+      bool is_left, bool is_right);
+
   void UpdateDriveArea();
 
   std::pair<bool, int> CalIntersectionRefAndCone(

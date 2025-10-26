@@ -680,7 +680,8 @@ class LoadRosbag:
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", "joint_lead_one_id", "joint_key_agent_ids", "joint_cut_in_agent_ids",
-                          "ego_jerk","merging_rear_id", "min_curve_radius", "curve_type", "is_construction_agent_cluster_success",'is_exist_construction_area','is_pass_construction_area']
+                          "ego_jerk","merging_rear_id", "min_curve_radius", "curve_type", "is_construction_agent_cluster_success",'is_exist_construction_area','is_pass_construction_area',
+                          'is_current_lane_available','is_right_lane_available','is_left_lane_available','is_left_left_lane_available','is_right_right_lane_available','construction_intrusion_level']
 
 
       json_value_list += [#new_ldw debug info:
@@ -746,7 +747,7 @@ class LoadRosbag:
                          'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'agent_box_corners_x', 'agent_box_corners_y', 'ego_box_corners_x', 'ego_box_corners_y', 'lat_path_v',
                          'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
                          'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
-                         'construction_agent_clusters_driection']
+                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids']
 
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
