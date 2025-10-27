@@ -466,13 +466,13 @@ bool MapRequest::IsTrafficConefeasibleInTargetLane(
         std::max((-kStandardLaneWidth / 2 - ego_frenet_point.y) *
                          ego_state->ego_v() * kEgoReachBoundaryTime +
                      kEgoLength,
-                 2 * kEgoLength);
+                 kEgoLength);
   } else {
     distance_allow_on_line_cone_lc =
         std::max((-kStandardLaneWidth / 2 + ego_frenet_point.y) *
                          ego_state->ego_v() * kEgoReachBoundaryTime +
                      kEgoLength,
-                 2 * kEgoLength);
+                 kEgoLength);
   }
   double diatance_cone_to_ego;
   bool is_cone_encroaching = false;
