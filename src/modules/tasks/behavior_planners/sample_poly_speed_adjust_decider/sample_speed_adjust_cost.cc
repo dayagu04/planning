@@ -150,6 +150,11 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         rel_vel_penalty_factor_coef_, weight_match_v_);
     cost_ += match_v_cost_;
 
+    match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
+        (safe_border_distance_to_gap_front_obj - dist_to_upper_border),
+        safe_border_distance_to_gap_front_obj, 0.0,
+        narrow_gap_penalty_factor_coef_, weight_match_s_);
+    cost_ += match_gap_center_cost_;
     return;
   }
 
@@ -169,6 +174,12 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         dist_to_lower_border, poly_end_v, kMatchGapVelPenaltyThreshold,
         rel_vel_penalty_factor_coef_, weight_match_v_);
     cost_ += match_v_cost_;
+
+    match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
+        (safe_border_distance_to_gap_back_obj - dist_to_lower_border),
+        safe_border_distance_to_gap_back_obj, 0.0,
+        narrow_gap_penalty_factor_coef_, weight_match_s_);
+    cost_ += match_gap_center_cost_;
     return;
   }
 
@@ -205,7 +216,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
           weight_match_s_);
     } else {
       match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
-          kBasicSafeDistance + 1, kBasicSafeDistance, min_gap_center_distance,
+          kBasicSafeDistance + 1, kBasicSafeDistance, 0.0,
           narrow_gap_penalty_factor_coef_, weight_match_s_);
     }
     match_v_cost_ = calculate_gap_vel_match_cost(

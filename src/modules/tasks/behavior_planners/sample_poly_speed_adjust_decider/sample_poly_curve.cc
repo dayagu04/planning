@@ -89,7 +89,7 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             const double obj_a,
                                                             bool is_front_car) {
   double differ_acc = (ego_a - obj_a) == 0.0 ? 0.001 : (ego_a - obj_a);
-  const double calculate_collision_time = (ego_v - obj_v) / differ_acc;
+  const double calculate_collision_time = (obj_v - ego_v) / differ_acc;
   if (calculate_collision_time <= 0.0 || calculate_collision_time >= 4.0) {
     double limit_distance =
         (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0;
@@ -103,11 +103,14 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
         (ego_v - obj_v) * calculate_collision_time +
         0.5 * differ_acc * calculate_collision_time * calculate_collision_time;
     if (ego_v > obj_v) {
-      return is_front_car
-                 ? limit_distance
-                 : (obj_v - ego_v) * 4.0 - 0.5 * differ_acc * 4.0 * 4.0;
+      return is_front_car ? limit_distance
+                          : std::max((obj_v - ego_v) * 4.0 -
+                                         0.5 * differ_acc * 4.0 * 4.0,
+                                     0.0);
     } else {
-      return is_front_car ? (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0
+      return is_front_car ? std::max((ego_v - obj_v) * 4.0 +
+                                         0.5 * differ_acc * 4.0 * 4.0,
+                                     0.0)
                           : -limit_distance;
     }
   }
@@ -136,16 +139,19 @@ void SampleQuarticPolynomialCurve::CalcCost(
             ? poly_.CalculatePoint(poly_.T()) +
                   anchor_arrived_v * (anchor_arrived_t - poly_.T())
             : poly_.CalculatePoint(anchor_arrived_t);
-
+    double anchor_arrived_a =
+        anchor_arrived_t - poly_.T() > 0.0
+            ? 0.0
+            : poly_.CalculateSecondDerivative(anchor_arrived_t);
     sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
                                            &anchor_matched_lower_st_point,
                                            &anchor_matched_upper_st_point);
     const double safe_distance_to_gap_front_obj = CalcGapVelSafeDistance(
-        ego_v, anchor_matched_upper_st_point.velocity(), ego_a,
-        anchor_matched_upper_st_point.acceleration(), true);
+        anchor_arrived_v, anchor_matched_upper_st_point.velocity(),
+        anchor_arrived_a, anchor_matched_upper_st_point.acceleration(), true);
     const double safe_distance_to_gap_back_obj = CalcGapVelSafeDistance(
-        ego_v, anchor_matched_upper_st_point.velocity(), ego_a,
-        anchor_matched_upper_st_point.acceleration(), false);
+        anchor_arrived_v, anchor_matched_lower_st_point.velocity(),
+        anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false);
 
     anchor_points_match_gap_cost_vec_[i].GetCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
@@ -157,9 +163,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       end_point_upper_st_point = anchor_matched_upper_st_point;
       arrived_s_ = anchor_arrived_s;
       arrived_v_ = anchor_arrived_v;
-      arrived_a_ = anchor_arrived_t - poly_.T() > 0.0
-                       ? 0.0
-                       : poly_.CalculateSecondDerivative(anchor_arrived_t);
+      arrived_a_ = anchor_arrived_a;
       if ((stop_line_s - arrived_s_) / arrived_v_ < 5.0) {
         speed_differ_gain = 0.0;
       }
