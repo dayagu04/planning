@@ -429,7 +429,7 @@
   "head_in_slot_virtual_wall_y_offset" : 2.5,
 
   "comment_19": "uss pt params",
-  "use_uss_pt_clound": true,
+  "use_uss_pt_cloud": true,
   "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
   "use_uss_pt_for_slot_release": true,
@@ -531,10 +531,10 @@
   "comment_25": "lat lon target pose buffer",
   "target_pose_lon_buffer": 0.3,
   "target_pose_max_lat_buffer": 0.17,
-  "target_pose_min_lat_buffer": 0.12,
+  "target_pose_min_lat_buffer": 0.14,
   "target_pose_step": 0.01,
   "target_pose_special_max_lat_buffer": 0.14,
-  "target_pose_preference_offset": 0.05,
+  "target_pose_preference_lat_offset": 0.05,
   "target_pose_preference_lon_buffer": -0.2,
 
   "comment_26": "dynamic gear switch params",
