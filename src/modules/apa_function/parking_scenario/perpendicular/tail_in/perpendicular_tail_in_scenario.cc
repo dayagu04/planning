@@ -1853,19 +1853,19 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   const CarSlotRelationship ship = CalCarSlotRelationship(cur_pose);
 
+  const bool auto_fold_mirror =
+      param.smart_fold_mirror_params.has_smart_fold_mirror &&
+      frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
+
   ILOG_INFO << "check finish ship = " << static_cast<int>(ship);
 
-  if (ship == CarSlotRelationship::TOUCHING) {
+  if (ship == CarSlotRelationship::TOUCHING && !auto_fold_mirror) {
     ILOG_INFO << "car press line, not allow finish";
     return false;
   }
 
-  double gain = 1.0;
-
-  if (frame_.mirror_command == MirrorCommand::FOLD &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    gain = 1.8;
-  }
+  const double gain = auto_fold_mirror ? 1.8 : 1.0;
 
   const double finish_lon_err = finish_params.lon_err;
 
