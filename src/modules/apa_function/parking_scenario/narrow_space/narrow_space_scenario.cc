@@ -989,16 +989,15 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
   // ILOG_INFO << "slot_occupied_ratio = "
   //           << ego_info_under_slot.slot_occupied_ratio;
 
-  if (((fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR &&
-        frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE)) &&
-      !ego_info_under_slot.fix_slot) {
-    Eigen::Vector2d center = (ego_info_under_slot.virtual_limiter.first +
-                              ego_info_under_slot.virtual_limiter.second) /
-                             2.0;
-    double dist = (center - ego_info_under_slot.cur_pose.pos).norm();
-    if (dist < param.car_to_limiter_dis) {
-      ILOG_INFO << "should correct path according limiter";
-      ego_info_under_slot.fix_slot = true;
+  if (!ego_info_under_slot.fix_slot) {
+    if ((fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR &&
+         frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE) ||
+        (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
+         frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE)) {
+      if (std::fabs(ego_info_under_slot.terminal_err.pos.x()) <
+          param.astar_config.lon_err_for_fix_slot) {
+        ego_info_under_slot.fix_slot = true;
+      }
     }
   }
 
@@ -1161,7 +1160,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 
   ILOG_INFO << "target point x = " << limiter_x
             << ", path end x = " << point_local[0]
-            << ", path end y=" << point_local[1];
+            << ", path end y = " << point_local[1];
 
   if (point_local[0] >= limiter_x) {
     return;

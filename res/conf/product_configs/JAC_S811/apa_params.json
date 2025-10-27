@@ -397,6 +397,7 @@
   "vertical_min_path_length" : 0.3,
   "lat_err_for_fix_slot" : 0.35,
   "heading_err_for_fix_slot" : 3,
+  "lon_err_for_fix_slot" : 1.0,
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
