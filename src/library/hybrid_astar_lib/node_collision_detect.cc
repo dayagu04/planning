@@ -97,6 +97,12 @@ bool NodeCollisionDetect::IsValidByConvexHull(Node3d* node) {
 
   Pose2D global_pose;
   Transform2d tf;
+  float sin_theta = 0.0f;
+  float cos_theta = 0.0f;
+  if (node->IsStraight()) {
+    sin_theta = std::sin(node->GetPose().theta);
+    cos_theta = std::cos(node->GetPose().theta);
+  }
 
   for (int i = check_start_index; i < node_step_size; ++i) {
     // check bound
@@ -108,7 +114,12 @@ bool NodeCollisionDetect::IsValidByConvexHull(Node3d* node) {
     global_pose.x = path.points[i].x;
     global_pose.y = path.points[i].y;
     global_pose.theta = path.points[i].theta;
-    tf.SetBasePose(global_pose);
+
+    if (node->IsStraight()) {
+      tf.SetBasePose(global_pose, sin_theta, cos_theta);
+    } else {
+      tf.SetBasePose(global_pose);
+    }
 
     if (IsFootPrintCollision(tf)) {
       return false;
@@ -211,9 +222,16 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
   Pose2f global_pose;
   Transform2f tf;
   AstarPathGear point_gear = node->GetGearType();
-  bool is_circle_path = IsCirclePathByRadius(node->GetRadius());
+  bool is_circle_path = !(node->IsStraight());
   FootPrintCircleModel* footprint_model =
       GetCircleFootPrintModel(path.points[0], is_circle_path);
+
+  float sin_theta = 0.0f;
+  float cos_theta = 0.0f;
+  if (node->IsStraight()) {
+    sin_theta = std::sin(node->GetPose().theta);
+    cos_theta = std::cos(node->GetPose().theta);
+  }
 
   float dist = 100.0f;
   float min_dist = 100.0f;
@@ -227,7 +245,12 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
     // }
 
     global_pose = path.points[i];
-    tf.SetBasePose(global_pose);
+
+    if (node->IsStraight()) {
+      tf.SetBasePose(global_pose, sin_theta, cos_theta);
+    } else {
+      tf.SetBasePose(global_pose);
+    }
 
 // for accelerate calculation, use macro
 #if ENABLE_OBS_DIST_G_COST
@@ -284,6 +307,8 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
 
   Pose2D global_pose;
   Transform2d tf;
+  float sin_theta = 0.0f;
+  float cos_theta = 0.0f;
 
   for (int seg_id = 0; seg_id < reeds_shepp_path->size; seg_id++) {
     const RSPathSegment* segment = &reeds_shepp_path->paths[seg_id];
@@ -293,6 +318,11 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
       check_start_index = 0;
     } else {
       check_start_index = 1;
+    }
+
+    if (segment->steer == RSPathSteer::RS_STRAIGHT) {
+      sin_theta = std::sin(segment->points[0].theta);
+      cos_theta = std::cos(segment->points[0].theta);
     }
 
     for (int i = check_start_index; i < point_size; ++i) {
@@ -307,7 +337,12 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
       global_pose.y = segment->points[i].y;
       global_pose.theta = segment->points[i].theta;
 
-      tf.SetBasePose(global_pose);
+      if (segment->steer == RSPathSteer::RS_STRAIGHT) {
+        tf.SetBasePose(global_pose, sin_theta, cos_theta);
+      } else {
+        tf.SetBasePose(global_pose);
+      }
+
       if (IsFootPrintCollision(tf)) {
         return false;
       }
@@ -339,6 +374,8 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
 
   AstarPathGear point_gear;
   bool is_circle_path;
+  float sin_theta = 0.0f;
+  float cos_theta = 0.0f;
 
   for (int seg_id = 0; seg_id < reeds_shepp_path->size; seg_id++) {
     const RSPathSegment* segment = &reeds_shepp_path->paths[seg_id];
@@ -349,7 +386,11 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
     } else {
       check_start_index = 1;
     }
-    is_circle_path = IsCirclePathByKappa(segment->kappa);
+    is_circle_path = segment->steer == RSPathSteer::RS_STRAIGHT ? false : true;
+    if (!is_circle_path) {
+      sin_theta = std::sin(segment->points[0].theta);
+      cos_theta = std::cos(segment->points[0].theta);
+    }
 
     point_gear = segment->gear;
     for (int i = check_start_index; i < point_size; ++i) {
@@ -364,7 +405,11 @@ const bool NodeCollisionDetect::IsRSPathSafeByEDT(
       global_pose.y = segment->points[i].y;
       global_pose.theta = segment->points[i].theta;
 
-      tf.SetBasePose(global_pose);
+      if (!is_circle_path) {
+        tf.SetBasePose(global_pose, sin_theta, cos_theta);
+      } else {
+        tf.SetBasePose(global_pose);
+      }
 
       if (edt_->IsCollisionForPoint(
               &tf, point_gear,

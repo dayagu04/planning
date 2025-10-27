@@ -56,6 +56,8 @@ class PathComparator : public AstarDecider {
                                 const Node3d *best_node,
                                 const Node3d *node_challenger);
 
+  bool IsGearSwitchNodeNice(const Node3d *node);
+
   PathWinReason win_reason_;
 
   /**

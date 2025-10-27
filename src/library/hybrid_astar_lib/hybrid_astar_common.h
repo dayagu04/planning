@@ -431,6 +431,7 @@ struct AstarSamplingAngle {
   float angles[astar_max_angle_number];
   // left turn is positive
   float radius[astar_max_angle_number];
+  AstarPathSteer steer[astar_max_angle_number];
 };
 
 struct DebugAstarSearchPoint {
@@ -592,5 +593,10 @@ void DebugMapBoundString(const MapBound& box);
 const cdl::AABB2f TransformMapBound(const MapBound& box);
 
 bool IsCurveBasedNode(const AstarPathType type);
+
+const bool HasGearRequest(const AstarPathGear type);
+
+const bool IsPathGearSameWithRequest(const AstarPathGear type,
+                                     const AstarPathGear request);
 
 }  // namespace planning

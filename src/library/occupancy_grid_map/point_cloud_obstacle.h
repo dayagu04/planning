@@ -23,6 +23,7 @@ struct PointCloudObstacle {
   Polygon2D envelop_polygon;
   cdl::AABB box;
   apa_planner::ApaObsAttributeType obs_type;
+  apa_planner::ApaObsHeightType height_type;
 };
 
 // todo: use ParkObstacle to replace PointCloudObstacle. And delete
@@ -51,23 +52,10 @@ class PointCloudObstacleTransform {
  public:
   PointCloudObstacleTransform() = default;
 
-  void GenerateLocalObstacleByLocalView(ParkObstacleList& obs_list,
-                                        const LocalView* local_view,
-                                        const double slot_length,
-                                        const double slot_width,
-                                        const Pose2D& slot_base_pose,
-                                        const Pose2D& ego_start,
-                                        const bool enable_limiter_obs);
-
   void GenerateLocalObstacle(
       std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
       ParkObstacleList& obs_list, const Pose2D& ego_pose,
       const cdl::AABB& slot_box, const bool delete_slot_obs);
-
- private:
-  void SampleInLineSegment(const Eigen::Vector2d& start,
-                           const Eigen::Vector2d& end,
-                           std::vector<Position2D>* points);
 
  private:
   GJK2DInterface gjk_;

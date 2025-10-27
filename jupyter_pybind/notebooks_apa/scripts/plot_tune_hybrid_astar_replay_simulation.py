@@ -19,7 +19,7 @@ from jupyter_pybind import replay_simulation_hybrid_astar
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo,ControlOutput
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74574/trigger/20251015/20251015-17-'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_82007/trigger/20251023/20251023-15-09-12/park_in_data_collection_CHERY_M32T_82007_EVENT_FILTER_2025-10-23-15-09-12_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True

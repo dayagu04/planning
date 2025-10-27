@@ -403,11 +403,10 @@ const cdl::AABB GetAABoxByPath(const HybridAStarResult& result,
 }
 
 const MapBound TransformMapBound(const cdl::AABB& box) {
-  return MapBound(
-    box.min_[0],  // x_min
-    box.max_[0],  // x_max
-    box.min_[1],  // y_min
-    box.max_[1]   // y_max
+  return MapBound(box.min_[0],  // x_min
+                  box.max_[0],  // x_max
+                  box.min_[1],  // y_min
+                  box.max_[1]   // y_max
   );
 }
 
@@ -436,6 +435,25 @@ bool IsCurveBasedNode(const AstarPathType type) {
   }
 
   return false;
+}
+
+const bool HasGearRequest(const AstarPathGear type) {
+  if (type == AstarPathGear::DRIVE || type == AstarPathGear::REVERSE) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool IsPathGearSameWithRequest(const AstarPathGear type,
+                                     const AstarPathGear request) {
+  if (HasGearRequest(request)) {
+    if (type != request) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace planning

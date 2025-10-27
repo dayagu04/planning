@@ -228,6 +228,8 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
 
   rs_node_to_goal->SetPathType(AstarPathType::REEDS_SHEPP);
   rs_node_to_goal->SetGearType(rs_path_.paths[0].gear);
+  rs_node_to_goal->SetSteerType(
+      GetAstarSteerFromRsSteer(rs_path_.paths[0].steer));
 
   // collision check
   if (!collision_detect_->RSPathCollisionCheck(&rs_path_, rs_node_to_goal)) {
@@ -538,6 +540,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   float front_wheel_angle = 0.0f;
   float radius = 0.0f;
   float traveled_distance = 0.0f;
+  AstarPathSteer steer_type;
 
   // clear
   new_node->ClearPath();
@@ -546,11 +549,13 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
   if (next_node_index < next_node_angles_.size) {
     front_wheel_angle = next_node_angles_.angles[next_node_index];
     radius = next_node_angles_.radius[next_node_index];
+    steer_type = next_node_angles_.steer[next_node_index];
     traveled_distance = node_path_dist_resolution_;
   } else if (next_node_index < next_node_angles_.size * 2) {
     int index = next_node_index - next_node_angles_.size;
     front_wheel_angle = next_node_angles_.angles[index];
     radius = next_node_angles_.radius[index];
+    steer_type = next_node_angles_.steer[index];
     traveled_distance = -node_path_dist_resolution_;
   } else {
     return NodeShrinkType::NONE;
@@ -579,23 +584,19 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   // zigzag check
   bool is_s_curve =
-      (!is_gear_switch) && parent_node->IsSteerOpposite(front_wheel_angle);
-  if (is_s_curve && parent_node->IsScurveWithParent()) {
+      (!is_gear_switch) && parent_node->IsSteerOpposite(steer_type);
+  if (is_s_curve && parent_node->IsScurveWithParentSteer()) {
     return NodeShrinkType::UNEXPECTED_STEERING_WHEEL;
   }
 
   // steer check
-  if (parent_node->IsReturnPath(is_gear_switch, front_wheel_angle)) {
+  if (parent_node->IsReturnPath(is_gear_switch, steer_type)) {
     return NodeShrinkType::UNEXPECTED_STEERING_WHEEL;
   }
 
   if (parent_node->IsStartNode()) {
-    if (request_.first_action_request.gear_request == AstarPathGear::DRIVE &&
-        traveled_distance < 0.0f) {
-      return NodeShrinkType::UNEXPECTED_GEAR;
-    } else if (request_.first_action_request.gear_request ==
-                   AstarPathGear::REVERSE &&
-               traveled_distance > 0.0f) {
+    if (!IsPathGearSameWithRequest(gear,
+                                  request_.first_action_request.gear_request)) {
       return NodeShrinkType::UNEXPECTED_GEAR;
     }
   }
@@ -627,6 +628,7 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
 
   new_node->Set(path, grid_map_bound_, config_, path.path_dist);
   new_node->SetGearType(gear);
+  new_node->SetSteerType(steer_type);
 
   // check search bound
   if (!NodeInSearchBound(new_node->GetIndex())) {
@@ -816,7 +818,7 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
           std::fabs(current_node->GetSteerChange(next_node->GetSteer()));
 
       // 3.3 s curve penalty:
-      if (current_node->IsSteerOpposite(next_node->GetSteer())) {
+      if (current_node->IsSteerOpposite(next_node->GetSteerType())) {
         piecewise_cost += config_.s_curve_penalty;
       }
     }
@@ -826,15 +828,13 @@ float HybridAStar::CalcGCostToParentNode(Node3d* current_node,
   if (request_.plan_reason == PlanningReason::FIRST_PLAN) {
     if (current_node->GetDistToStart() <
         request_.first_action_request.dist_request) {
-      if (current_node->IsPathGearChange(next_node->GetGearType())) {
+      if (is_gear_switch) {
         piecewise_cost += config_.expect_dist_penalty;
       }
     }
   } else {
-    if (next_node->GetDistToStart() <
-            request_.first_action_request.dist_request ||
-        current_node->GetDistToStart() <
-            request_.first_action_request.dist_request) {
+    if (current_node->GetDistToStart() <
+        request_.first_action_request.dist_request) {
       // gear is different
       if (next_node->IsPathGearChange(
               request_.first_action_request.gear_request)) {
@@ -912,9 +912,10 @@ float HybridAStar::CalcRSGCostToParentNode(Node3d* current_node,
   }
   // steer cost
   else {
-    if (current_node->GetSteer() > 0.0f && rs_path_.paths[0].steer != RS_LEFT) {
+    if (current_node->GetSteerType() == AstarPathSteer::LEFT &&
+        rs_path_.paths[0].steer != RS_LEFT) {
       steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
-    } else if (current_node->GetSteer() < 0.0f &&
+    } else if (current_node->GetSteerType() == AstarPathSteer::RIGHT &&
                rs_path_.paths[0].steer != RS_RIGHT) {
       steer_change_cost += config_.traj_steer_change_penalty * max_steer_angle_;
     }
@@ -1203,6 +1204,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   // in searching, start node gear is forward or backward which will be ok.
   start_node_->SetGearType(AstarPathGear::NONE);
   start_node_->SetSteer(0.0f);
+  start_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   start_node_->SetIsStartNode(true);
   start_node_->SetPathType(AstarPathType::START_NODE);
   start_node_->SetDistToStart(0.0f);
@@ -1238,6 +1240,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   }
   astar_end_node_->Set(NodePath(target), grid_map_bound_, config_, 0.0f);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
+  astar_end_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
 
@@ -1636,6 +1639,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   // in searching, start node gear is forward or backward which will be ok.
   start_node_->SetGearType(AstarPathGear::NONE);
   start_node_->SetSteer(0.0f);
+  start_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   start_node_->SetIsStartNode(true);
   start_node_->SetPathType(AstarPathType::START_NODE);
   start_node_->SetDistToStart(0.0f);
@@ -1674,6 +1678,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
   astar_end_node_->Set(NodePath(end), grid_map_bound_, config_, 0.0f);
   astar_end_node_->SetGearType(AstarPathGear::NONE);
+  astar_end_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
 
@@ -2050,19 +2055,24 @@ void HybridAStar::Init() {
   // front sampling number is 5, back sampling number is 5.
   next_node_angles_.angles[0] = max_steer_angle_;
   next_node_angles_.radius[0] = min_radius_;
+  next_node_angles_.steer[0] = AstarPathSteer::LEFT;
 
   next_node_angles_.angles[1] = -max_steer_angle_;
   next_node_angles_.radius[1] = -next_node_angles_.radius[0];
+  next_node_angles_.steer[1] = AstarPathSteer::RIGHT;
 
   next_node_angles_.angles[2] = 0.0f;
   next_node_angles_.radius[2] = 100000.0f;
+  next_node_angles_.steer[2] = AstarPathSteer::STRAIGHT;
 
   next_node_angles_.angles[3] = max_steer_angle_ * 0.5;
   next_node_angles_.radius[3] =
       vehicle_param_.wheel_base / std::tan(max_steer_angle_ * 0.5);
+  next_node_angles_.steer[3] = AstarPathSteer::LEFT;
 
   next_node_angles_.angles[4] = -max_steer_angle_ * 0.5;
   next_node_angles_.radius[4] = -next_node_angles_.radius[3];
+  next_node_angles_.steer[4] = AstarPathSteer::RIGHT;
   next_node_angles_.size = 5;
 
   node_path_dist_resolution_ = config_.node_path_dist_resolution;

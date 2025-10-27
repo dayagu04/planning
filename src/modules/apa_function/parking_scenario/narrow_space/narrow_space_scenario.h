@@ -15,8 +15,8 @@
 namespace planning {
 namespace apa_planner {
 
-// next scenario use search based method:
-// geometry no solution scenario;
+// below scenario use search based method:
+// tail in scenario;
 // head in scenario;
 // head out scenario;
 // tail out scenario;

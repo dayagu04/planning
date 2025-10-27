@@ -89,11 +89,19 @@ const bool RSExpansionDecider::NeedRsLinkByNodeHeadingForTailIn(
     return false;
   }
 
+  // If node y offset is big, and node is not in passage zone, do not link to
+  // goal.
+  if (std::fabs(node->GetY()) > 3.0f) {
+    if (node->GetX() < 4.0f) {
+      return false;
+    }
+  }
+
   return true;
 }
 
 const bool RSExpansionDecider::NeedRsLinkByOffset(const Node3d *node) const {
-  if (std::fabs(node->GetY()) > 10.0 || std::fabs(node->GetX()) > 15.0) {
+  if (std::fabs(node->GetY()) > 6.0f || std::fabs(node->GetX()) > 15.0f) {
     return false;
   }
 

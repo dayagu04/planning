@@ -81,7 +81,8 @@
     "codecvt": "cpp",
     "sparse": "cpp",
     "core": "cpp",
-    "dense": "cpp"
+    "dense": "cpp",
+    "filesystem": "cpp"
   },
   "C_Cpp.errorSquiggles": "disabled",
   "editor.quickSuggestions": {

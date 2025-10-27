@@ -154,6 +154,8 @@ class Node3d {
 
   const bool IsSteerOpposite(const float next) const;
 
+  const bool IsSteerOpposite(const AstarPathSteer steer) const;
+
   const float GetRadius() const { return radius_; }
 
   const float GetKappa() const { return kappa_; }
@@ -188,12 +190,18 @@ class Node3d {
   // const NodeHeuristicCost& GetHeuCostDebug() const { return h_cost_debug_; }
 
   void SetGearType(const AstarPathGear type) { gear_type_ = type; }
+  void SetSteerType(const AstarPathSteer type) { steer_type_ = type; }
 
   void SetDistToStart(const float dist) { dist_to_start_ = dist; }
 
   const float GetDistToStart() const { return dist_to_start_; }
 
-  const AstarPathGear& GetGearType() const { return gear_type_; }
+  const AstarPathGear GetGearType() const { return gear_type_; }
+  const AstarPathSteer GetSteerType() const { return steer_type_; }
+
+  const bool IsStraight() const {
+    return steer_type_ == AstarPathSteer::STRAIGHT ? true : false;
+  }
 
   void SetSteer(float steering) { steering_ = steering; }
 
@@ -323,11 +331,17 @@ class Node3d {
 
   const bool IsScurveWithParent() const;
 
-  const bool IsScurve(const AstarPathGear type, const float steer) const;
+  const bool IsScurveWithParentSteer() const;
+
+  const bool IsScurve(const AstarPathGear type,
+                      const AstarPathSteer steer) const;
 
   const bool IsSameSteerDir(const float next) const;
+  const bool IsSameSteerDir(const AstarPathSteer next) const;
 
   const bool IsReturnPath(const bool is_gear_switch, const float steer);
+  const bool IsReturnPath(const bool is_gear_switch,
+                          const AstarPathSteer steer);
 
   void SetScurveNum(const int number) {
     s_curve_num_ = number;
@@ -383,6 +397,7 @@ class Node3d {
 
   // if is rs path, record rs first path gear.
   AstarPathGear gear_type_;
+  AstarPathSteer steer_type_;
 
   // gear numer is 0: only one gear path;
   // gear numer is 1: two different gear path;
@@ -399,13 +414,12 @@ class Node3d {
 
   // for debug
   // NodeHeuristicCost h_cost_debug_;
-
   NodeCollisionType collision_type_;
   int collision_id_;
 
   std::multimap<float, Node3d*>::iterator multimap_iter_;
 
-  // 第一次换档点.
+  // 第一次换档点. the first path end point.
   // 如果换档点在搜索节点，需要记录. 这里如果搜索节点和rs曲线连接处换档，也记录.
   // 如果换档点在rs曲线上，不需要记录.
   Node3d* gear_switch_node_ = nullptr;

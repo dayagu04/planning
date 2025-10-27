@@ -29,8 +29,15 @@ bool PathComparator::Compare(const AstarRequest *request,
   }
 #endif
 
+  request_ = request;
+
   // cost超出太多
   if (node_challenger->GetFCost() > best_node->GetFCost() + 10.0) {
+    return false;
+  }
+
+  // check gear switch point
+  if (!IsGearSwitchNodeNice(node_challenger)) {
     return false;
   }
 
@@ -48,7 +55,6 @@ bool PathComparator::Compare(const AstarRequest *request,
     return false;
   }
 
-  request_ = request;
   // 换档次数一致，继续比较
   if (request->space_type == ParkSpaceType::VERTICAL ||
       request->space_type == ParkSpaceType::SLANTING) {
@@ -379,6 +385,25 @@ const bool PathComparator::CheckDistanceRequest(
   }
 
   return false;
+}
+
+bool PathComparator::IsGearSwitchNodeNice(const Node3d *node) {
+  if (!HasGearRequest(request_->first_action_request.gear_request)) {
+    return true;
+  }
+
+  AstarPathGear gear;
+  if (node->GearSwitchNode() != nullptr) {
+    gear = node->GearSwitchNode()->GetGearType();
+  } else {
+    gear = node->GetGearType();
+  }
+
+  if (gear != request_->first_action_request.gear_request) {
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace planning

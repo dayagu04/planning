@@ -970,10 +970,15 @@ void HybridAStarInterface::PathCandidateCompare() {
       continue;
     }
 
+    if (traj_candidates_[i].x.size() <= 1) {
+      continue;
+    }
+
     // current traj is better
     if ((traj_candidates_[i].gear_change_num <=
          best_traj_->gear_change_num - 2) &&
-        (traj_candidates_[i].x.size() > 1)) {
+        IsPathGearSameWithRequest(traj_candidates_[i].gear[0],
+                                  request_.first_action_request.gear_request)) {
       best_traj_ = &traj_candidates_[i];
     }
   }
