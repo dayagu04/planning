@@ -148,7 +148,7 @@
   "safe_uss_remain_dist_in_slot": 0.30,
   "limited_safe_uss_remain_dist": 0.21,
   "safe_lat_buffer_outside_parallel_slot": 0.18,
-  "safe_lat_buffer_in_parallel_slot": -0.1,
+  "safe_lat_buffer_in_parallel_slot": 0.0,
   "safe_lat_buffer_with_wall_in_parallel_slot": 0.1,
   "safe_lat_buffer_in_1r_parallel_slot": 0.05,
   "safe_remain_dist_in_1r_parallel_slot": 0.28,
