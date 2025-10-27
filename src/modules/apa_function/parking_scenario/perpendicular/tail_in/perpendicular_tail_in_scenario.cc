@@ -95,6 +95,12 @@ void PerpendicularTailInScenario::ScenarioTry() {
       break;
   }
 
+  if (apa_param.GetParam().park_path_plan_type != ParkPathPlanType::GEOMETRY) {
+    release_info.release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+        release_info
+            .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE];
+  }
+
   // fill head/tail in parking action.
   // TODO: actions need computing by algorithm.
   SetParkInFeasibleDirection();
