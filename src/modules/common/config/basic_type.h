@@ -52,6 +52,7 @@ enum SplitDirection {
   SPLIT_NONE = 0,
   SPLIT_LEFT = 1,
   SPLIT_RIGHT = 2,
+  SPLIT_MIDDLE = 3,
 };
 
 // 拥堵等级枚举

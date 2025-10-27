@@ -3917,6 +3917,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       split_region_info->split_direction == SplitDirection::SPLIT_RIGHT;
   bool is_split_left =
       split_region_info->split_direction == SplitDirection::SPLIT_LEFT;
+  bool is_split_middle =
+      split_region_info->split_direction == SplitDirection::SPLIT_MIDDLE;
 
   // 判断other split是否是ramp
   const auto split_link_id = split_region_info->split_link_id;
@@ -3931,6 +3933,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
   }
 
   uint64 other_split_link_id = 0;
+  uint64 left_split_link_id = 0;
+  uint64 middle_split_link_id = 0;
+  uint64 right_split_link_id = 0;
   if (split_link->successor_link_ids_size() == 2) {
     const auto& successor_link_ids = split_link->successor_link_ids();
     if (successor_link_ids[0] == next_link->id()) {
@@ -3938,204 +3943,309 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
     } else {
       other_split_link_id = successor_link_ids[0];
     }
+  } else if (split_link->successor_link_ids_size() == 3) {
+    const auto& successor_link_ids = split_link->successor_link_ids();
+    if (successor_link_ids[0] == next_link->id() && is_split_left ||
+        successor_link_ids[1] == next_link->id() && is_split_middle ||
+        successor_link_ids[2] == next_link->id() && is_split_right) {
+      left_split_link_id = successor_link_ids[0];
+      middle_split_link_id = successor_link_ids[1];
+      right_split_link_id = successor_link_ids[2];
+    }
   }
-
-  const auto& other_split_link = sdpro_map_.GetLinkOnRoute(other_split_link_id);
-  if (other_split_link == nullptr) {
-    return false;
-  }
-
-  // bool is_other_split_ramp =
-  // sdpro_map_.isRamp(other_split_link->link_type());
-  bool is_other_split_ramp = other_split_link->link_type() !=
-                             iflymapdata::sdpro::LinkType::LT_MAIN_ROAD;
 
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
   std::vector<int> succerssor_excr_feasible_lane;
-  // TODO(fengwang31:需要考虑split的路是否未主路的情况)
-  if (is_split_right) {
-    // 现在假设交换区终点后的lane都是由交换区分出来的，所以交换区的lane数为on_exclnum
-    // = successor_exclnum + successor_other_exclnum
-    // 通常认为右边是从主路分出去的路，因此增加的车道属于是右边增加了
-    if (on_exclnum == successor_exclnum + successor_other_exclnum) {
-      if (successor_other_exclnum == before_exclnum) {
-        // int on_excr_feasible_lane_temp = on_exclnum -
-        // successor_other_exclnum;
-        for (int i = 0; i < successor_exclnum; ++i) {
-          on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
-        }
-        before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= successor_other_exclnum; ++i) {
-          mlc_request_info_[i] = MAIN_TO_RAMP;
-        }
-      } else if (successor_other_exclnum < before_exclnum) {
-        int before_excr_feasible_lane_temp =
-            before_exclnum - successor_other_exclnum;
-        for (int i = 0; i < before_excr_feasible_lane_temp; ++i) {
-          before_excr_feasible_lane.emplace_back(successor_other_exclnum + i +
-                                                 1);
-        }
 
-        int on_excr_feasible_lane_temp = on_exclnum - successor_other_exclnum;
-        for (int i = 0; i < on_excr_feasible_lane_temp; ++i) {
-          on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
-        }
-        for (int i = 1; i <= successor_other_exclnum; ++i) {
-          mlc_request_info_[i] = MAIN_TO_RAMP;
-        }
-      } else {
-        on_excr_feasible_lane.emplace_back(on_exclnum);
-        before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= on_exclnum - 1; ++i) {
-          mlc_request_info_[i] = MAIN_TO_RAMP;
-        }
-      }
-    } else if (on_exclnum < successor_exclnum + successor_other_exclnum) {
-      // 认为是右边,交换区终点后新增加了车道
-      if (successor_other_exclnum == before_exclnum &&
-          successor_exclnum < on_exclnum &&
-          successor_other_exclnum < on_exclnum) {
-        int err = on_exclnum - successor_other_exclnum;
-        for (int i = 0; i < err; i++) {
-          on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
-        }
+  if (split_link->successor_link_ids_size() == 2) {
+    const auto& other_split_link =
+        sdpro_map_.GetLinkOnRoute(other_split_link_id);
+    if (other_split_link == nullptr) {
+      return false;
+    }
 
-        before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= successor_other_exclnum; ++i) {
-          mlc_request_info_[i] = MAIN_TO_RAMP;
+    // bool is_other_split_ramp =
+    // sdpro_map_.isRamp(other_split_link->link_type());
+    bool is_other_split_ramp = other_split_link->link_type() !=
+                               iflymapdata::sdpro::LinkType::LT_MAIN_ROAD;
+
+    // TODO(fengwang31:需要考虑split的路是否未主路的情况)
+    if (is_split_right) {
+      // 现在假设交换区终点后的lane都是由交换区分出来的，所以交换区的lane数为on_exclnum
+      // = successor_exclnum + successor_other_exclnum
+      // 通常认为右边是从主路分出去的路，因此增加的车道属于是右边增加了
+      if (on_exclnum == successor_exclnum + successor_other_exclnum) {
+        if (successor_other_exclnum == before_exclnum) {
+          // int on_excr_feasible_lane_temp = on_exclnum -
+          // successor_other_exclnum;
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
+          }
+          before_excr_feasible_lane.emplace_back(before_exclnum);
+          for (int i = 1; i <= successor_other_exclnum; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
+        } else if (successor_other_exclnum < before_exclnum) {
+          int before_excr_feasible_lane_temp =
+              before_exclnum - successor_other_exclnum;
+          for (int i = 0; i < before_excr_feasible_lane_temp; ++i) {
+            before_excr_feasible_lane.emplace_back(successor_other_exclnum + i +
+                                                   1);
+          }
+
+          int on_excr_feasible_lane_temp = on_exclnum - successor_other_exclnum;
+          for (int i = 0; i < on_excr_feasible_lane_temp; ++i) {
+            on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
+          }
+          for (int i = 1; i <= successor_other_exclnum; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
+        } else {
+          on_excr_feasible_lane.emplace_back(on_exclnum);
+          before_excr_feasible_lane.emplace_back(before_exclnum);
+          for (int i = 1; i <= on_exclnum - 1; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
         }
-      } else if (before_exclnum == on_exclnum &&
-                 on_exclnum == successor_other_exclnum) {
-        for (int i = 0; i < successor_exclnum; ++i) {
-          on_excr_feasible_lane.emplace_back(on_exclnum + i + 1);
+      } else if (on_exclnum < successor_exclnum + successor_other_exclnum) {
+        // 认为是右边,交换区终点后新增加了车道
+        if (successor_other_exclnum == before_exclnum &&
+            successor_exclnum < on_exclnum &&
+            successor_other_exclnum < on_exclnum) {
+          int err = on_exclnum - successor_other_exclnum;
+          for (int i = 0; i < err; i++) {
+            on_excr_feasible_lane.emplace_back(successor_other_exclnum + i + 1);
+          }
+
+          before_excr_feasible_lane.emplace_back(before_exclnum);
+          for (int i = 1; i <= successor_other_exclnum; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
+        } else if (before_exclnum == on_exclnum &&
+                   on_exclnum == successor_other_exclnum) {
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(on_exclnum + i + 1);
+          }
+          before_excr_feasible_lane.emplace_back(before_exclnum);
+          for (int i = 1; i <= on_exclnum; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
+        } else if (before_exclnum == on_exclnum &&
+                   on_exclnum == successor_exclnum) {
+          // 分叉，右边是主路的
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
+
+          if (is_other_split_ramp && !is_continue_lane) {
+            RemoveElement(before_excr_feasible_lane, 1);
+            RemoveElement(on_excr_feasible_lane, 1);
+            mlc_request_info_[1] = AVOIDE_DIVERGE;
+          }
+
+        } else {
+          on_excr_feasible_lane.emplace_back(on_exclnum);
+          before_excr_feasible_lane.emplace_back(before_exclnum);
+          for (int i = 1; i <= on_exclnum - 1; ++i) {
+            mlc_request_info_[i] = MAIN_TO_RAMP;
+          }
         }
-        before_excr_feasible_lane.emplace_back(before_exclnum);
+      } else if (on_exclnum > successor_exclnum + successor_other_exclnum) {
+        // 经过交换区后车道数变少，case较少，目前观察消亡车道均是中间车道
+        for (int i = successor_exclnum - 1; i >= 0; --i) {
+          on_excr_feasible_lane.emplace_back(on_exclnum - i);
+          before_excr_feasible_lane.emplace_back(on_exclnum - i);
+        }
         for (int i = 1; i <= on_exclnum; ++i) {
           mlc_request_info_[i] = MAIN_TO_RAMP;
         }
-      } else if (before_exclnum == on_exclnum &&
-                 on_exclnum == successor_exclnum) {
-        // 分叉，右边是主路的
-        for (int i = 0; i < successor_exclnum; ++i) {
-          on_excr_feasible_lane.emplace_back(i + 1);
-          before_excr_feasible_lane.emplace_back(i + 1);
-        }
-
-        if (is_other_split_ramp && !is_continue_lane) {
-          RemoveElement(before_excr_feasible_lane, 1);
-          RemoveElement(on_excr_feasible_lane, 1);
-          mlc_request_info_[1] = AVOIDE_DIVERGE;
-        }
-
-      } else {
-        on_excr_feasible_lane.emplace_back(on_exclnum);
-        before_excr_feasible_lane.emplace_back(before_exclnum);
-        for (int i = 1; i <= on_exclnum - 1; ++i) {
-          mlc_request_info_[i] = MAIN_TO_RAMP;
-        }
       }
-    } else if (on_exclnum > successor_exclnum + successor_other_exclnum) {
-      // 经过交换区后车道数变少，case较少，目前观察消亡车道均是中间车道
-      for (int i = successor_exclnum - 1; i >= 0; --i) {
-        on_excr_feasible_lane.emplace_back(on_exclnum - i);
-        before_excr_feasible_lane.emplace_back(on_exclnum - i);
+
+      if (is_merge_split_same_dir) {
+        RemoveElement(before_excr_feasible_lane, 1);
+        RemoveElement(on_excr_feasible_lane, 1);
+        mlc_request_info_[1] = AVOIDE_MERGE;
       }
-      for (int i = 1; i <= on_exclnum; ++i) {
-        mlc_request_info_[i] = MAIN_TO_RAMP;
-      }
-    }
+    } else if (is_split_left) {
+      // 默认左边都是主路的，后续需要对是否是主路的属性做判断
+      // 1、后继车道数等于交换区的车道数；
+      // 2、交换区前、交换区、交换区后的车道数都相等；
+      // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
+      if (successor_exclnum <= on_exclnum) {
+        if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
+          // const auto start_link = sdpro_map_.GetLinkOnRoute(
+          //     split_region_info->start_fp_point.link_id);
+          // if (start_link == nullptr) {
+          //   return false;
+          // }
+          // const auto start_link_is_ramp =
+          //     sdpro_map_.isRamp(start_link->link_type());
 
-    if (is_merge_split_same_dir) {
-      RemoveElement(before_excr_feasible_lane, 1);
-      RemoveElement(on_excr_feasible_lane, 1);
-      mlc_request_info_[1] = AVOIDE_MERGE;
-    }
-  } else if (is_split_left) {
-    // 默认左边都是主路的，后续需要对是否是主路的属性做判断
-    // 1、后继车道数等于交换区的车道数；
-    // 2、交换区前、交换区、交换区后的车道数都相等；
-    // 3、交换区前、交换区车道数相等，交换区后车道数小于或者大于前面的车道数
-    if (successor_exclnum <= on_exclnum) {
-      if (successor_exclnum <= on_exclnum && on_exclnum >= before_exclnum) {
-        // const auto start_link = sdpro_map_.GetLinkOnRoute(
-        //     split_region_info->start_fp_point.link_id);
-        // if (start_link == nullptr) {
-        //   return false;
-        // }
-        // const auto start_link_is_ramp =
-        //     sdpro_map_.isRamp(start_link->link_type());
+          // const auto& end_fp_point = split_region_info->end_fp_point;
+          // const auto end_link =
+          // sdpro_map_.GetLinkOnRoute(end_fp_point.link_id); if (end_link ==
+          // nullptr) {
+          //   return false;
+          // }
+          // const auto end_link_is_ramp =
+          // sdpro_map_.isRamp(end_link->link_type());
 
-        // const auto& end_fp_point = split_region_info->end_fp_point;
-        // const auto end_link =
-        // sdpro_map_.GetLinkOnRoute(end_fp_point.link_id); if (end_link ==
-        // nullptr) {
-        //   return false;
-        // }
-        // const auto end_link_is_ramp =
-        // sdpro_map_.isRamp(end_link->link_type());
+          // if (!end_link_is_ramp && !start_link_is_ramp) {
+          //   // 主路上，交换区内、前、后车道都一样
+          //   for (int i = 0; i < successor_exclnum; ++i) {
+          //     on_excr_feasible_lane.emplace_back(i + 1);
+          //     before_excr_feasible_lane.emplace_back(i + 1);
+          //   }
+          // } else {
+          //   // 交换区之后增加车道
+          //   on_excr_feasible_lane.emplace_back(1);
+          //   before_excr_feasible_lane.emplace_back(1);
+          // }
 
-        // if (!end_link_is_ramp && !start_link_is_ramp) {
-        //   // 主路上，交换区内、前、后车道都一样
-        //   for (int i = 0; i < successor_exclnum; ++i) {
-        //     on_excr_feasible_lane.emplace_back(i + 1);
-        //     before_excr_feasible_lane.emplace_back(i + 1);
-        //   }
-        // } else {
-        //   // 交换区之后增加车道
-        //   on_excr_feasible_lane.emplace_back(1);
-        //   before_excr_feasible_lane.emplace_back(1);
-        // }
+          // 主路上，交换区内、前、后车道都一样
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
+          for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
+            mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
+          }
 
-        // 主路上，交换区内、前、后车道都一样
-        for (int i = 0; i < successor_exclnum; ++i) {
-          on_excr_feasible_lane.emplace_back(i + 1);
-          before_excr_feasible_lane.emplace_back(i + 1);
-        }
-        for (int i = 1; i <= on_exclnum - successor_exclnum; ++i) {
-          mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
-        }
+          if (is_other_split_ramp && !is_continue_lane) {
+            RemoveElement(before_excr_feasible_lane, successor_exclnum);
+            RemoveElement(on_excr_feasible_lane, successor_exclnum);
+            mlc_request_info_[successor_exclnum] = AVOIDE_DIVERGE;
+          }
 
-        if (is_other_split_ramp && !is_continue_lane) {
-          RemoveElement(before_excr_feasible_lane, successor_exclnum);
-          RemoveElement(on_excr_feasible_lane, successor_exclnum);
-          mlc_request_info_[successor_exclnum] = AVOIDE_DIVERGE;
-        }
-
-      } else if (successor_exclnum <= before_exclnum) {
-        for (int i = 0; i < successor_exclnum; ++i) {
-          on_excr_feasible_lane.emplace_back(i + 1);
-          before_excr_feasible_lane.emplace_back(i + 1);
-        }
-        for (int i = 1; i <= before_exclnum - successor_exclnum; ++i) {
-          mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
+        } else if (successor_exclnum <= before_exclnum) {
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
+          for (int i = 1; i <= before_exclnum - successor_exclnum; ++i) {
+            mlc_request_info_[successor_exclnum + i] = KEEP_LEFT;
+          }
+        } else {
+          for (int i = 0; i < before_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
         }
       } else {
-        for (int i = 0; i < before_exclnum; ++i) {
+        // 交换区后面的车道数大于交换区内车道数，由于是走左边，因此取最小车道数
+        int valid_lane_num = std::min(before_exclnum, on_exclnum);
+        int max_lane_num = std::max(before_exclnum, on_exclnum);
+        for (int i = 0; i < valid_lane_num; i++) {
           on_excr_feasible_lane.emplace_back(i + 1);
           before_excr_feasible_lane.emplace_back(i + 1);
         }
+        for (int i = 1; i <= max_lane_num - valid_lane_num; ++i) {
+          mlc_request_info_[valid_lane_num + i] = KEEP_LEFT;
+        }
       }
-    } else {
-      // 交换区后面的车道数大于交换区内车道数，由于是走左边，因此取最小车道数
-      int valid_lane_num = std::min(before_exclnum, on_exclnum);
-      int max_lane_num = std::max(before_exclnum, on_exclnum);
-      for (int i = 0; i < valid_lane_num; i++) {
-        on_excr_feasible_lane.emplace_back(i + 1);
-        before_excr_feasible_lane.emplace_back(i + 1);
-      }
-      for (int i = 1; i <= max_lane_num - valid_lane_num; ++i) {
-        mlc_request_info_[valid_lane_num + i] = KEEP_LEFT;
+
+      if (is_merge_split_same_dir && merge_before_exclnum > 0) {
+        RemoveElement(before_excr_feasible_lane, merge_before_exclnum);
+        RemoveElement(on_excr_feasible_lane, merge_before_exclnum);
+        mlc_request_info_[merge_before_exclnum] = AVOIDE_MERGE;
       }
     }
+  } else if (split_link->successor_link_ids_size() == 3) {
+    const auto& left_split_link = sdpro_map_.GetLinkOnRoute(left_split_link_id);
+    const auto& middle_split_link =
+        sdpro_map_.GetLinkOnRoute(middle_split_link_id);
+    const auto& right_split_link =
+        sdpro_map_.GetLinkOnRoute(right_split_link_id);
+    if (left_split_link == nullptr || middle_split_link == nullptr ||
+        right_split_link == nullptr) {
+      return false;
+    }
 
-    if (is_merge_split_same_dir && merge_before_exclnum > 0) {
-      RemoveElement(before_excr_feasible_lane, merge_before_exclnum);
-      RemoveElement(on_excr_feasible_lane, merge_before_exclnum);
-      mlc_request_info_[merge_before_exclnum] = AVOIDE_MERGE;
+    const int left_split_link_lane_num = left_split_link->lane_num();
+    const int middle_split_link_lane_num = middle_split_link->lane_num();
+    const int right_split_link_lane_num = right_split_link->lane_num();
+    if (is_split_left) {
+      if (on_exclnum == left_split_link_lane_num + middle_split_link_lane_num +
+                            right_split_link_lane_num) {
+        if (before_exclnum >= on_exclnum) {
+          for (int i = 0; i < left_split_link_lane_num; ++i) {
+            before_excr_feasible_lane.emplace_back(i + 1);
+          }
+        } else {
+          if (left_split_link_lane_num > 1) {
+            for (int i = 0; i < left_split_link_lane_num - 1; ++i) {
+              before_excr_feasible_lane.emplace_back(i + 1);
+            }
+          } else {
+            before_excr_feasible_lane.emplace_back(1);
+          }
+        }
+        for (int i = 0; i < left_split_link_lane_num; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+        }
+      } else {
+        for (int i = 0; i < left_split_link_lane_num; ++i) {
+          before_excr_feasible_lane.emplace_back(i + 1);
+          on_excr_feasible_lane.emplace_back(i + 1);
+        }
+      }
+    } else if (is_split_middle) {
+      if (on_exclnum == left_split_link_lane_num + middle_split_link_lane_num +
+                            right_split_link_lane_num) {
+        if (before_exclnum >= on_exclnum) {
+          for (int i = 0; i < middle_split_link_lane_num; ++i) {
+            before_excr_feasible_lane.emplace_back(i + 1 +
+                                                   left_split_link_lane_num);
+          }
+        } else {
+          if (left_split_link_lane_num > 1) {
+            for (int i = 0; i < middle_split_link_lane_num; ++i) {
+              before_excr_feasible_lane.emplace_back(i +
+                                                     left_split_link_lane_num);
+            }
+          } else {
+            before_excr_feasible_lane.emplace_back(2);
+          }
+        }
+        for (int i = 0; i < left_split_link_lane_num; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+        }
+      } else {
+        for (int i = 0; i < middle_split_link_lane_num; ++i) {
+          before_excr_feasible_lane.emplace_back(i + 1 +
+                                                 left_split_link_lane_num);
+          on_excr_feasible_lane.emplace_back(i + 1 + left_split_link_lane_num);
+        }
+      }
+    } else if (is_split_right) {
+      if (on_exclnum == left_split_link_lane_num + middle_split_link_lane_num +
+                            right_split_link_lane_num) {
+        if (before_exclnum >= on_exclnum) {
+          for (int i = 0; i < right_split_link_lane_num; ++i) {
+            before_excr_feasible_lane.emplace_back(before_exclnum - i);
+          }
+        } else {
+          if (right_split_link_lane_num > 1) {
+            for (int i = 0; i < right_split_link_lane_num - 1; ++i) {
+              before_excr_feasible_lane.emplace_back(before_exclnum - i);
+            }
+          } else {
+            before_excr_feasible_lane.emplace_back(before_exclnum);
+          }
+        }
+        for (int i = 0; i < right_split_link_lane_num; ++i) {
+          on_excr_feasible_lane.emplace_back(on_exclnum - i);
+        }
+      } else {
+        for (int i = 0; i < right_split_link_lane_num; ++i) {
+          before_excr_feasible_lane.emplace_back(before_exclnum - i);
+          on_excr_feasible_lane.emplace_back(on_exclnum - i);
+        }
+      }
     }
   }
-
   for (int i = 0; i < successor_exclnum; ++i) {
     succerssor_excr_feasible_lane.emplace_back(i + 1);
   }
