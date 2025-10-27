@@ -594,9 +594,14 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       // 获取限速标识牌中的最高限速值
       uint32 hightest_perception_speed_limit = GetHighestFromSet(speed_limit_set_);
       if (hightest_perception_speed_limit > 0) {
-        tsr_speed_limit_ = hightest_perception_speed_limit;
-        speed_limit_out_flag_ = true;
-        speed_limit_renew_flag_ = true;
+        // 使用自车表显速度判断感知限速牌真实性
+        if (ego_speed_kph < 40.0 || 
+           (ego_speed_kph >= 40.0 && ego_speed_kph <= 80.0 && hightest_perception_speed_limit > 10) || 
+           (ego_speed_kph > 80.0 && hightest_perception_speed_limit > 40)) {
+          tsr_speed_limit_ = hightest_perception_speed_limit;
+          speed_limit_out_flag_ = true;
+          speed_limit_renew_flag_ = true;
+        }
         speed_limit_set_.clear();
       }
     }
