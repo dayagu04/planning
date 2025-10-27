@@ -49,12 +49,13 @@ constexpr double kExitVruRoundLateralBufferThr = 1.0;
 constexpr double kExitVruRoundDistanceThr = 80.0;
 constexpr double kLowSpeedVruVelThr = 30 / 3.6;
 constexpr double kVRURoundDecelRatio = 0.7;
-constexpr double kCAInvadeLatDisDiffThr  = 0.25;
+constexpr double kTunnelVelLimitDisOffset = 50;
+constexpr double kCAInvadeLatDisDiffThr = 0.25;
 constexpr double kCAInvadeVaildLonDis = 80.0;
 constexpr double kCAInvadeLatMaxDis = 2.5;
 constexpr double kCAInvadeLatMinDis = 2;
-constexpr int    kConstructionStrongMinHoldFrames = 100;
-constexpr int    kConstructionStrongMaxHoldFrames = 600;
+constexpr int kConstructionStrongMinHoldFrames = 100;
+constexpr int kConstructionStrongMaxHoldFrames = 600;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -235,52 +236,48 @@ bool CheckLateralConflict(
 }
 
 bool CheckClustersConsecutiveDiffSlidingWindow(
-      const std::map<int, ConstructionAgentClusterArea> &cluster_map,
-      const std::shared_ptr<planning_math::KDPath> &planned_kd_path,
-      bool entering) {
-    for (const auto& [cluster_id, construction_area] : cluster_map) {
-      const auto& pts = construction_area.points;
-      if (pts.size() < 3) {
+    const std::map<int, ConstructionAgentClusterArea> &cluster_map,
+    const std::shared_ptr<planning_math::KDPath> &planned_kd_path,
+    bool entering) {
+  for (const auto & [ cluster_id, construction_area ] : cluster_map) {
+    const auto &pts = construction_area.points;
+    if (pts.size() < 3) {
+      continue;
+    }
+    // 转换所有点到l坐标
+    std::vector<double> ls;
+    ls.reserve(20);
+    for (const auto &pt : pts) {
+      double s = 0.0, l = 0.0;
+      if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
         continue;
       }
-      // 转换所有点到l坐标
-      std::vector<double> ls;
-      for (const auto& pt : pts) {
-        double s = 0.0, l = 0.0;
-        if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
-          continue;
+      ls.push_back(l);
+    }
+    if (ls.size() < 3) {
+      continue;
+    }
+    // 滑动窗口判断连续3点
+    for (size_t i = 0; i + 2 < ls.size(); ++i) {
+      double diff01 = std::abs(ls[i + 1] - ls[i]);
+      double diff12 = std::abs(ls[i + 2] - ls[i + 1]);
+      if (diff01 > kCAInvadeLatDisDiffThr && diff12 > kCAInvadeLatDisDiffThr) {
+        double abs_l0 = std::abs(ls[i]);
+        double abs_l1 = std::abs(ls[i + 1]);
+        double abs_l2 = std::abs(ls[i + 2]);
+        if (entering && abs_l0 > abs_l1 && abs_l1 > abs_l2 &&
+            abs_l0 < kCAInvadeLatMaxDis) {
+          return true;
         }
-        ls.push_back(l);
-      }
-      if (ls.size() < 3) {
-        continue;
-      }
-      // 滑动窗口判断连续3点
-      for (size_t i = 0; i + 2 < ls.size(); ++i) {
-        double diff01 = std::abs(ls[i + 1] - ls[i]);
-        double diff12 = std::abs(ls[i + 2] - ls[i + 1]);
-        if (diff01 > kCAInvadeLatDisDiffThr && diff12 > kCAInvadeLatDisDiffThr) {
-          double abs_l0 = std::abs(ls[i]);
-          double abs_l1 = std::abs(ls[i + 1]);
-          double abs_l2 = std::abs(ls[i + 2]);
-          if (entering) {
-            // 进入条件：横向距离绝对值递减
-            if (abs_l0 > abs_l1 && abs_l1 > abs_l2 && abs_l0 < kCAInvadeLatMaxDis) {
-              return true;
-            }
-          } else {
-            // 退出条件：横向距离绝对值递增
-            if (abs_l0 < abs_l1 && abs_l1 < abs_l2 && abs_l0 < kCAInvadeLatMinDis) {
-              return true;
-            }
-          }
+        if (!entering && abs_l0 < abs_l1 && abs_l1 < abs_l2 &&
+            abs_l0 < kCAInvadeLatMinDis) {
+          return true;
         }
       }
     }
-    return false;
   }
-
-
+  return false;
+}
 }  // namespace
 
 SpeedLimitDecider::SpeedLimitDecider(
@@ -329,8 +326,12 @@ bool SpeedLimitDecider::Execute() {
   CalculateFunctionFadingAwaySpeedLimit();
 
   auto speed_limit_output = session_->mutable_planning_context()
-                                  ->mutable_speed_limit_decider_output();
+                                ->mutable_speed_limit_decider_output();
+  if (SpeedLimitType::CRUISE == v_target_type_ && poi_v_limit_set_) {
+    v_target_type_ = SpeedLimitType::NEAR_POI;
+  }
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
+
   auto ad_info = &(session_->mutable_planning_context()
                        ->mutable_planning_hmi_info()
                        ->ad_info);
@@ -565,18 +566,36 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
+  uint64_t ramp_link_id = -1;
+  double ramp_v_limit = 120;
+  const auto &split_region_info_list = route_info_output.split_region_info_list;
+  if (dis_to_ramp < 2000.0) {
+    for (int i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point -
+                    dis_to_ramp) < 1.0) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
   // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
     // map info invalid, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
+  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+  const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
+  if (ramp_link == nullptr) {
+    ILOG_INFO << "ramp_link is null!!!";
+  } else {
+    ramp_v_limit = ramp_link->speed_limit();
+  }
   ad_common::math::Vec2d current_point;
   const auto &ego_state = environmental_model.get_ego_state_manager();
   const auto &pose = ego_state->location_enu();
   current_point.set_x(pose.position.x);
   current_point.set_y(pose.position.y);
-  const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
   double nearest_s = 0;
   double nearest_l = 0;
   const double search_distance = 50.0;
@@ -616,7 +635,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   }
   JSON_DEBUG_VALUE("v_limit_gaode", v_limit_gaode);
 
-  if (v_limit_gaode > 30.0) {
+  if (v_limit_gaode > 30.0 - kEpsilon) {
     v_cruise_limit_ = v_limit_gaode;
   }
 
@@ -678,7 +697,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       }
     }
     v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
-    v_target_ramp = std::min(v_cruise_limit_ / 3.6, v_target_ramp);
+    v_target_ramp = v_cruise_limit_ / 3.6;
     if (v_target_ramp < v_target_) {
       v_target_ = v_target_ramp;
       v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
@@ -693,7 +712,8 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
                                              SpeedLimitType::MAP_ON_RAMP);
     return;
   }
-  if (dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) {
+  if ((dis_to_ramp <= speed_limit_config_.dis_near_ramp_zone) &&
+      !(ramp_v_limit > 60.0)) {
     double pre_brake_dis_near_ramp_zone = std::max(
         dis_to_ramp - speed_limit_config_.brake_dis_near_ramp_zone, 0.0);
     v_target_near_ramp_zone = std::pow(
@@ -702,10 +722,11 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         0.5);
   }
   double pre_brake_dis_to_ramp = std::max(dis_to_ramp - 50, 0.0);
-  v_target_ramp =
-      std::pow(std::pow(speed_limit_config_.v_limit_ramp, 2.0) -
-                   2 * pre_brake_dis_to_ramp * speed_limit_config_.acc_to_ramp,
-               0.5);
+  v_target_ramp = std::pow(
+      std::pow(std::max(speed_limit_config_.v_limit_ramp, ramp_v_limit / 3.6),
+               2.0) -
+          2 * pre_brake_dis_to_ramp * speed_limit_config_.acc_to_ramp,
+      0.5);
   v_target_ramp = std::min(v_target_near_ramp_zone, v_target_ramp);
   if (v_target_ramp < v_target_) {
     v_target_ = v_target_ramp;
@@ -974,6 +995,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
+    poi_v_limit_set_ = false;
     return;
   }
   ad_common::math::Vec2d current_point;
@@ -991,15 +1013,17 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (current_segment == nullptr) {
+    poi_v_limit_set_ = false;
     return;
   } else {
-    bool poi_v_limit_set = false;
+    poi_v_limit_set_ = false;
     double cur_link_v_limit = current_segment->speed_limit();
     double v_limit_dis = 10000.0;
     v_limit_dis =
         interp(cur_link_v_limit,
                speed_limit_config_.tunnel_vel_limit_dis_table.vel_limit_table,
-               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table);
+               speed_limit_config_.tunnel_vel_limit_dis_table.dis_table) +
+        kTunnelVelLimitDisOffset;
 
     auto tunnel_info =
         sdpro_map.GetTunnelInfo(current_segment->id(), nearest_s, 700.0);
@@ -1007,13 +1031,13 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         tunnel_info.second < v_limit_dis) {
       // less than calibration distance before entering tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set = true;
+      poi_v_limit_set_ = true;
     } else if (tunnel_info.second < kEpsilon &&
                current_segment->link_type() ==
                    iflymapdata::sdpro::LinkType::LT_TUNNEL) {
       // inside tunnel speed limit works
       v_cruise_limit_ = speed_limit_config_.tunnel_vel_limit_kph;
-      poi_v_limit_set = true;
+      poi_v_limit_set_ = true;
     } else {
       v_limit_dis = interp(
           cur_link_v_limit,
@@ -1028,7 +1052,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
         // less than calibration distance before entering toll station speed
         // limit works
         v_cruise_limit_ = speed_limit_config_.toll_station_vel_limit_kph;
-        poi_v_limit_set = true;
+        poi_v_limit_set_ = true;
       } else {
         v_limit_dis =
             interp(cur_link_v_limit,
@@ -1041,12 +1065,12 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
           // less than calibration distance before entering sapa speed limit
           // works
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-          poi_v_limit_set = true;
+          poi_v_limit_set_ = true;
         } else if (sapa_info.second < kEpsilon &&
                    current_segment->link_type() ==
                        iflymapdata::sdpro::LinkType::LT_SAPA) {
           v_cruise_limit_ = speed_limit_config_.sapa_vel_limit_kph;
-          poi_v_limit_set = true;
+          poi_v_limit_set_ = true;
         } else {
           // GetNonExpressInfo, less than calibration distance before entering
           // non-express speed limit works
@@ -1061,15 +1085,43 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               none_express_info.second > 0 &&
               none_express_info.second < v_limit_dis) {
             v_cruise_limit_ = speed_limit_config_.non_express_vel_limit_kph;
-            poi_v_limit_set = true;
+            poi_v_limit_set_ = true;
+          } else {
+            bool function_need_inhibited = false;
+            auto speed_limit_output =
+                session_->mutable_planning_context()
+                    ->mutable_speed_limit_decider_output();
+            speed_limit_output->set_function_inhibited_near_roundabout(false);
+            auto roundabout_info = sdpro_map.GetRoundAboutInfo(
+                current_segment->id(), nearest_s, 300.0);
+            if (roundabout_info.first != nullptr &&
+                roundabout_info.second < 50.0) {
+              // in map mode, roundabout distance meets the condition
+              function_need_inhibited = true;
+            } else if (roundabout_info.first == nullptr) {
+              auto roundabout_info_list = sdpro_map.GetRoundAboutList(
+                  current_segment->id(), nearest_s, 300.0);
+              if (roundabout_info_list.size() == 0) {
+                return;
+              } else {
+                auto closest_roundabout = roundabout_info_list[0];
+                if (closest_roundabout.first != nullptr &&
+                    closest_roundabout.second < 60.0) {
+                  // not in map mode, closest roundabout distance meets the
+                  // condition
+                  function_need_inhibited = true;
+                }
+              }
+            }
+            if (function_need_inhibited) {
+              speed_limit_output->set_function_inhibited_near_roundabout(
+                  function_need_inhibited);
+            }
           }
         }
       }
     }
-    if (poi_v_limit_set && v_cruise_limit_ / 3.6 < v_target_) {
-      v_target_ = v_cruise_limit_ / 3.6;
-      v_target_type_ = SpeedLimitType::NEAR_POI;
-    }
+
     JSON_DEBUG_VALUE("v_target_near_poi", v_cruise_limit_ / 3.6);
     auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
@@ -1655,13 +1707,13 @@ bool SpeedLimitDecider::HasTriggeredVRU(
     return false;
   }
 }
-void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
+void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   ILOG_DEBUG << "----CalculateConstructionZoneSpeedLimit for Construction---";
 
   double v_target_construction = 50.0;
   double v_target_near_construction = 50.0;
   double dis_to_construction = std::numeric_limits<double>::max();
-  //bool construction_strong_deceleration_mode = false;
+  // bool construction_strong_deceleration_mode = false;
   int construction_strong_mode_reason = 0;
 
   //是否配置开启施工区域限速
@@ -1669,30 +1721,36 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
-    JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
-    JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
-    JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
+    JSON_DEBUG_VALUE("construction_strong_deceleration_mode",
+                     construction_strong_deceleration_mode);
+    JSON_DEBUG_VALUE("construction_strong_mode_reason",
+                     construction_strong_mode_reason);
+    JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
+                     construction_strong_mode_frame_count_);
     return;
   }
   //判断施工区域是否有效
   const auto &construction_scene =
-      session_->planning_context().construction_scene_decider_output();   
-  if (!construction_scene.is_exist_construction_area || 
+      session_->planning_context().construction_scene_decider_output();
+  if (!construction_scene.is_exist_construction_area ||
       construction_scene.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode = false;
-    construction_strong_mode_frame_count_ = 0; 
+    construction_strong_mode_frame_count_ = 0;
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
     JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);
-    JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
-    JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
-    JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
+    JSON_DEBUG_VALUE("construction_strong_deceleration_mode",
+                     construction_strong_deceleration_mode);
+    JSON_DEBUG_VALUE("construction_strong_mode_reason",
+                     construction_strong_mode_reason);
+    JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
+                     construction_strong_mode_frame_count_);
     return;
   }
 
   bool is_exist_construction = construction_scene.is_exist_construction_area;
-  bool is_on_construction    = construction_scene.is_pass_construction_area;
+  bool is_on_construction = construction_scene.is_pass_construction_area;
   const auto &environmental_model = session_->environmental_model();
   const auto &function_state_machine_info =
       environmental_model.get_local_view().function_state_machine_info;
@@ -1716,22 +1774,24 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   double construction_s = 0.0;
   double construction_l = 0.0;
   double construction_s_nearest = std::numeric_limits<double>::max();
-  for (const auto & [cluster_id,  construction_area] : 
+  for (const auto & [ cluster_id, construction_area ] :
        construction_scene.construction_agent_cluster_attribute_map) {
     auto agent_info = construction_area.points.front();
-    if (!planned_kd_path->XYToSL(agent_info.x, agent_info.y, &construction_s, &construction_l)) {
+    if (!planned_kd_path->XYToSL(agent_info.x, agent_info.y, &construction_s,
+                                 &construction_l)) {
       continue;
     }
-    if (construction_s < construction_s_nearest){
-       construction_s_nearest = construction_s;
+    if (construction_s < construction_s_nearest) {
+      construction_s_nearest = construction_s;
     }
-  }  
+  }
   // Construciotn need strong deceleration
   std::vector<SLPoint> sl_construction_points_all;
+  sl_construction_points_all.reserve(20);
   double construction_nearest_l = std::numeric_limits<double>::max();
-  for (const auto& [cluster_id, construction_area] :
-        construction_scene.construction_agent_cluster_attribute_map) {
-    for (const auto& pt : construction_area.points) {
+  for (const auto & [ cluster_id, construction_area ] :
+       construction_scene.construction_agent_cluster_attribute_map) {
+    for (const auto &pt : construction_area.points) {
       double s = 0.0, l = 0.0;
       if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
         continue;
@@ -1744,9 +1804,9 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
       }
     }
   }
-  // 
+  //
   int construction_invade_count = 0;
-  for (const auto& p : sl_construction_points_all) {
+  for (const auto &p : sl_construction_points_all) {
     if (std::abs(p.l) < speed_limit_config_.ca_invade_entry_lat_dis_thr) {
       construction_invade_count++;
     }
@@ -1755,58 +1815,67 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   bool enter_condition = false;
   bool exit_condition = false;
 
-  if (construction_invade_count >= speed_limit_config_.ca_invade_lat_dis_counter_thr) {
+  if (construction_invade_count >=
+      speed_limit_config_.ca_invade_lat_dis_counter_thr) {
     enter_condition = true;
     construction_strong_mode_reason = 1;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(
-                  construction_scene.construction_agent_cluster_attribute_map,
-                  planned_kd_path, true)) {
+                 construction_scene.construction_agent_cluster_attribute_map,
+                 planned_kd_path, true)) {
     enter_condition = true;
     construction_strong_mode_reason = 2;
   }
 
-  if (std::abs(construction_nearest_l) > speed_limit_config_.ca_invade_exit_lat_dis_thr) {
+  if (std::abs(construction_nearest_l) >
+      speed_limit_config_.ca_invade_exit_lat_dis_thr) {
     exit_condition = true;
     construction_strong_mode_reason = 11;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(
-                  construction_scene.construction_agent_cluster_attribute_map,
-                  planned_kd_path, false)) {
+                 construction_scene.construction_agent_cluster_attribute_map,
+                 planned_kd_path, false)) {
     exit_condition = true;
     construction_strong_mode_reason = 12;
   }
-  // 
+  //
   if (!construction_strong_deceleration_mode) {
     if (enter_condition) {
       construction_strong_deceleration_mode = true;
-      construction_strong_mode_frame_count_ = 0; 
+      construction_strong_mode_frame_count_ = 0;
     }
   } else {
-    if (construction_strong_mode_frame_count_ < kConstructionStrongMaxHoldFrames) {
-        construction_strong_mode_frame_count_++;
+    if (construction_strong_mode_frame_count_ <
+        kConstructionStrongMaxHoldFrames) {
+      construction_strong_mode_frame_count_++;
     }
-    bool min_duration_met = (construction_strong_mode_frame_count_ >= kConstructionStrongMinHoldFrames); 
+    bool min_duration_met = (construction_strong_mode_frame_count_ >=
+                             kConstructionStrongMinHoldFrames);
     if (exit_condition && min_duration_met) {
       construction_strong_deceleration_mode = false;
-      construction_strong_mode_frame_count_ = 0; 
-    }  else if (exit_condition && !min_duration_met) {
+      construction_strong_mode_frame_count_ = 0;
+    } else if (exit_condition && !min_duration_met) {
       construction_strong_mode_reason = 30;
     }
   }
-  ILOG_DEBUG << "construction_strong_deceleration_mode :" << construction_strong_deceleration_mode;
-  JSON_DEBUG_VALUE("construction_strong_deceleration_mode", construction_strong_deceleration_mode);
-  JSON_DEBUG_VALUE("construction_strong_mode_reason", construction_strong_mode_reason);
-  JSON_DEBUG_VALUE("construction_strong_mode_frame_count", construction_strong_mode_frame_count_);
-  
+  ILOG_DEBUG << "construction_strong_deceleration_mode :"
+             << construction_strong_deceleration_mode;
+  JSON_DEBUG_VALUE("construction_strong_deceleration_mode",
+                   construction_strong_deceleration_mode);
+  JSON_DEBUG_VALUE("construction_strong_mode_reason",
+                   construction_strong_mode_reason);
+  JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
+                   construction_strong_mode_frame_count_);
+
   // Construction zone info
-  dis_to_construction = std::max(construction_s_nearest - ego_s,0.0);
+  dis_to_construction = std::max(construction_s_nearest - ego_s, 0.0);
   if (is_on_construction) {
-    if (construction_strong_deceleration_mode){
-      v_target_construction =  speed_limit_config_.v_limit_construction - std::max(
-        speed_limit_config_.construction_invade_speed_diff, 0.0);
-    } else  {
-      v_target_construction =  speed_limit_config_.v_limit_construction;
+    if (construction_strong_deceleration_mode) {
+      v_target_construction =
+          speed_limit_config_.v_limit_construction -
+          std::max(speed_limit_config_.construction_invade_speed_diff, 0.0);
+    } else {
+      v_target_construction = speed_limit_config_.v_limit_construction;
     }
-    
+
     if (v_target_construction < v_target_) {
       v_target_ = v_target_construction;
       v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
@@ -1819,25 +1888,31 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
                                   ->mutable_speed_limit_decider_output();
     speed_limit_output->SetSpeedLimitIntoMap(v_target_construction,
                                              SpeedLimitType::ON_CONSTRUCTION);
-    return; 
+    return;
   }
-  double construction_speed_threshold = speed_limit_config_.construction_speed_threshold;
-  double v_limit_near_construction = speed_limit_config_.v_limit_near_construction;
-  if (construction_strong_deceleration_mode){
-      construction_speed_threshold =  construction_speed_threshold - std::max(
-        speed_limit_config_.construction_invade_speed_diff, 0.0);
-      v_limit_near_construction =  v_limit_near_construction - std::max(
-      speed_limit_config_.construction_invade_speed_diff, 0.0);
-    } 
+  double construction_speed_threshold =
+      speed_limit_config_.construction_speed_threshold;
+  double v_limit_near_construction =
+      speed_limit_config_.v_limit_near_construction;
+  if (construction_strong_deceleration_mode) {
+    construction_speed_threshold =
+        construction_speed_threshold -
+        std::max(speed_limit_config_.construction_invade_speed_diff, 0.0);
+    v_limit_near_construction =
+        v_limit_near_construction -
+        std::max(speed_limit_config_.construction_invade_speed_diff, 0.0);
+  }
 
-  if (dis_to_construction <= speed_limit_config_.dis_near_construction && 
+  if (dis_to_construction <= speed_limit_config_.dis_near_construction &&
       v_cruise > construction_speed_threshold && is_exist_construction) {
     double pre_brake_dis_near_construction = std::max(
-        dis_to_construction - speed_limit_config_.brake_dis_near_construction, 0.0);
-    v_target_near_construction = std::pow(
-        std::pow(v_limit_near_construction, 2.0) -
-            2 * pre_brake_dis_near_construction * speed_limit_config_.acc_to_construction,
-        0.5);
+        dis_to_construction - speed_limit_config_.brake_dis_near_construction,
+        0.0);
+    v_target_near_construction =
+        std::pow(std::pow(v_limit_near_construction, 2.0) -
+                     2 * pre_brake_dis_near_construction *
+                         speed_limit_config_.acc_to_construction,
+                 0.5);
   }
   if (v_target_near_construction < v_target_) {
     v_target_ = v_target_near_construction;
@@ -1847,7 +1922,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
     auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
     speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
-                                            SpeedLimitType::NEAR_CONSTRUCTION);
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
   }
   JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
   JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
@@ -1855,4 +1930,3 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
 }
 
 }  // namespace planning
-
