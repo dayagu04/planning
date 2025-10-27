@@ -194,10 +194,9 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double desire_distance = std::max(
         vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
     const double desire_velocity = CalcDesiredVelocity(
-        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, vel);
+        upper_bound_info.d_rel, desire_distance, upper_bound_info.v, v_ego);
     const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
-
-    CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, vel,
+    CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
                   upper_bound_a, &acc_target_with_upper_bound);
     acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target_with_upper_bound.first);
     //acc_upper_bound is not relative with upper bound and use acc_target calced by v interpolate
@@ -221,10 +220,10 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
     }
   }
-  /* double min_acc_bound_val = 10.0;
+  double min_acc_bound_val = 10.0;
   auto min_it = std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
   min_acc_bound_val = *min_it;
-  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(), min_acc_bound_val); */
+  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(), min_acc_bound_val);
 
 }
 
