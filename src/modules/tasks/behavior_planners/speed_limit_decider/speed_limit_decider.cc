@@ -1747,7 +1747,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   // 
   int construction_invade_count = 0;
   for (const auto& p : sl_construction_points_all) {
-    if (std::abs(p.l) < speed_limit_config_.CAInvadeEntryLatDisThr) {
+    if (std::abs(p.l) < speed_limit_config_.ca_invade_entry_lat_dis_thr) {
       construction_invade_count++;
     }
   }
@@ -1755,7 +1755,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
   bool enter_condition = false;
   bool exit_condition = false;
 
-  if (construction_invade_count >= speed_limit_config_.CAInvadeLatDisCouterThr) {
+  if (construction_invade_count >= speed_limit_config_.ca_invade_lat_dis_counter_thr) {
     enter_condition = true;
     construction_strong_mode_reason = 1;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(
@@ -1765,7 +1765,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit(){
     construction_strong_mode_reason = 2;
   }
 
-  if (std::abs(construction_nearest_l) > speed_limit_config_.CAInvadeExitLatDisThr) {
+  if (std::abs(construction_nearest_l) > speed_limit_config_.ca_invade_exit_lat_dis_thr) {
     exit_condition = true;
     construction_strong_mode_reason = 11;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(

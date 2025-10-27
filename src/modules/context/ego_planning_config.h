@@ -3553,12 +3553,12 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "brake_dis_near_construction");
     ReadItem<double>(json, acc_to_construction, "speed_limit_decider",
                      "acc_to_construction");                 
-    ReadItem<double>(json, CAInvadeEntryLatDisThr, "speed_limit_decider",
-                     "CAInvadeEntryLatDisThr");   
-    ReadItem<double>(json, CAInvadeExitLatDisThr, "speed_limit_decider",
-                     "CAInvadeExitLatDisThr");
-    ReadItem<int>(json, CAInvadeLatDisCouterThr, "speed_limit_decider",
-                     "CAInvadeLatDisCouterThr");
+    ReadItem<double>(json, ca_invade_entry_lat_dis_thr, "speed_limit_decider",
+                     "ca_invade_entry_lat_dis_thr");   
+    ReadItem<double>(json, ca_invade_exit_lat_dis_thr, "speed_limit_decider",
+                     "ca_invade_exit_lat_dis_thr");
+    ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
+                     "ca_invade_lat_dis_counter_thr");
     ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
                      "construciton_invade_speed_diff");           
      
@@ -3702,9 +3702,9 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_speed_threshold = 22.22;
   double brake_dis_near_construction = 20.0;
   double acc_to_construction = -0.7;
-  double CAInvadeEntryLatDisThr = 2;
-  double CAInvadeExitLatDisThr  = 2.2;
-  int CAInvadeLatDisCouterThr = 3.0;
+  double ca_invade_entry_lat_dis_thr = 2;
+  double ca_invade_exit_lat_dis_thr  = 2.2;
+  int ca_invade_lat_dis_counter_thr = 3.0;
   double construction_invade_speed_diff = 5.56;
 
 

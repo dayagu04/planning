@@ -15,7 +15,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_86133/trigger/20251009/20251009-16-46-34/data_collection_CHERY_M32T_86133_EVENT_DOWNGRADE_2025-10-09-16-46-34_no_camera.bag.1761197851.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_72216/trigger/20250917/20250917-19-14-47/data_collection_CHERY_M32T_72216_EVENT_KEY_2025-09-17-19-14-47_no_camera.bag.1758356957.close-loop.scc.plan"
 
 frame_dt = 0.1 # sec
 
@@ -61,5 +61,3 @@ slider_class = LocalViewSlider(slider_callback)
 display(slider_class.prediction_obstacle_id, slider_class.obstacle_polygon_id, slider_class.time_slider)
 
 bkp.show(row(fig1, pans), notebook_handle=True)
-
-
