@@ -460,7 +460,7 @@ bool MapRequest::IsTrafficConefeasibleInTargetLane(
   // 计算距离参数
   double ego_need_dis = 0.0;
   double cone_front_search_dis = 100.0;
-  double distance_allow_on_line_cone_lc;
+  double distance_allow_on_line_cone_lc = 0.0;
   if (request_type == LEFT_CHANGE) {
     distance_allow_on_line_cone_lc =
         std::max((-kStandardLaneWidth / 2 - ego_frenet_point.y) *
@@ -474,7 +474,7 @@ bool MapRequest::IsTrafficConefeasibleInTargetLane(
                      kEgoLength,
                  kEgoLength);
   }
-  double diatance_cone_to_ego;
+  double diatance_cone_to_ego = 0.0;
   bool is_cone_encroaching = false;
   bool is_cone_between_ego_and_target_lane = false;
   // 向前搜寻search_dis
