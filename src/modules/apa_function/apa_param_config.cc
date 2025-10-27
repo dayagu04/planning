@@ -127,6 +127,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "lat_err_for_fix_slot");
   JSON_READ_VALUE(param.astar_config.heading_err_for_fix_slot, double,
                   "heading_err_for_fix_slot");
+  JSON_READ_VALUE(param.astar_config.lon_err_for_fix_slot, double,
+                  "lon_err_for_fix_slot");
 
   // car params
   std::string car_type_string;

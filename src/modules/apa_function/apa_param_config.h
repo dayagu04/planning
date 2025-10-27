@@ -101,6 +101,7 @@ struct AstarParkingConfig {
   // fix slot
   double lat_err_for_fix_slot;
   double heading_err_for_fix_slot;
+  double lon_err_for_fix_slot;
 };
 
 struct ParkingSpeedBound {
