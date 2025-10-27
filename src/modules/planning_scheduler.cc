@@ -357,14 +357,14 @@ void PlanningScheduler::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-  auto function_state_machine_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
+  const auto& function_state_machine_info_ptr = session_
+                                              .environmental_model()
+                                              .get_local_view()
                                               .function_state_machine_info;
   if (location_valid) {
     trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
     auto lkas_trajectory = GetContext.get_lka_trajectory_info();
-    if (lkas_intervention_flag && function_state_machine_info_ptr->current_state !=
+    if (lkas_intervention_flag && function_state_machine_info_ptr.current_state !=
         iflyauto::FunctionalState_ACC_ACTIVATE) {
       for (size_t i = 0; i < PLANNING_TRAJ_POINTS_MAX_NUM; i++) {
         auto path_point = &trajectory->trajectory_points[i];
@@ -382,7 +382,7 @@ void PlanningScheduler::FillPlanningTrajectory(
       }
     } else if (
         lkas_intervention_flag &&
-        function_state_machine_info_ptr->current_state ==
+        function_state_machine_info_ptr.current_state ==
             iflyauto::
                 FunctionalState_ACC_ACTIVATE) {  //以下新增acc和ldp共同开启的工况
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
