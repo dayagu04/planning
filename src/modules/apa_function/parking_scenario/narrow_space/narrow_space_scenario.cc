@@ -963,13 +963,6 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
       geometry_lib::NormalizeAngle(ego_info_under_slot.cur_pose.heading -
                                    ego_info_under_slot.target_pose.heading));
 
-  ILOG_INFO << "terminal_err,x = " << ego_info_under_slot.terminal_err.pos.x()
-            << ", y" << ego_info_under_slot.terminal_err.pos.y();
-  ILOG_INFO << "target_pose,x = " << ego_info_under_slot.target_pose.pos.x()
-            << ", y" << ego_info_under_slot.target_pose.pos.y();
-  ILOG_INFO << "cur_pose,x = " << ego_info_under_slot.cur_pose.pos.x() << ", y"
-            << ego_info_under_slot.cur_pose.pos.y();
-
   // 计算占库比
   if (std::fabs(ego_info_under_slot.terminal_err.pos.y()) <
           param.astar_config.lat_err_for_fix_slot &&
@@ -980,12 +973,16 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
       // 车头泊入占比
       x_tab[0] = ego_info_under_slot.target_pose.pos.x();
-      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.wheel_base +
-                 param.front_overhanging;
+      x_tab[1] =
+          ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+          ego_info_under_slot.slot.slot_length_ + param.wheel_base +
+          param.front_overhanging;
     } else {
       // 车尾泊入占比
       x_tab[0] = ego_info_under_slot.target_pose.pos.x();
-      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
+      x_tab[1] =
+          ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+          ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
     }
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
     ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
@@ -1003,22 +1000,22 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
          frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE)) {
       if (std::fabs(ego_info_under_slot.terminal_err.pos.x()) <
-          param.astar_config.lon_err_for_fix_slot) {
+              param.astar_config.lon_err_for_fix_slot &&
+          ego_info_under_slot.slot_occupied_ratio > 0.5) {
         ego_info_under_slot.fix_slot = true;
       }
     }
-  }
 
-  // fix slot
-  double fix_slot_ratio = param.fix_slot_occupied_ratio;
-  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    fix_slot_ratio = param.headin_fix_slot_occupied_ratio;
-  }
-
-  if (ego_info_under_slot.slot_occupied_ratio > fix_slot_ratio &&
-      !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
-    ego_info_under_slot.fix_slot = true;
-    ILOG_INFO << "fix_slot";
+    // fix slot
+    double fix_slot_ratio = param.fix_slot_occupied_ratio;
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+      fix_slot_ratio = param.headin_fix_slot_occupied_ratio;
+    }
+    if (ego_info_under_slot.slot_occupied_ratio > fix_slot_ratio &&
+        measures_ptr->GetStaticFlag()) {
+      ego_info_under_slot.fix_slot = true;
+      // ILOG_INFO << "fix_slot";
+    }
   }
 
   return true;
@@ -1262,7 +1259,6 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   Eigen::Vector2d point_local;
   point_local = ego_info.g2l_tf.GetPos(path_end_global);
 
-  ILOG_INFO << "path end x " << point_local.x();
   double dist_to_goal = point_local[0] - ego_info.target_pose.pos.x();
   if (dist_to_goal <= 0.02) {
     return;
@@ -1273,7 +1269,7 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   // limiter;
   double ego_x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double ego_y_diff = std::fabs(ego_info.terminal_err.pos.y());
-  if (ego_x_diff > 2.0 || ego_y_diff > 0.5 || ego_x_diff < 0.1) {
+  if (ego_x_diff > 2.0 || ego_y_diff > 0.5 || ego_x_diff < 0.3) {
     return;
   }
 
@@ -1284,31 +1280,25 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
     return;
   }
 
-  size_t path_point_size = current_path_point_global_vec_.size();
-
-  Eigen::Vector2d the_last_but_one =
-      current_path_point_global_vec_[path_point_size - 2].pos;
-  Eigen::Vector2d unit_line_vec =
-      Eigen::Vector2d(path_end_global[0] - the_last_but_one[0],
-                      path_end_global[1] - the_last_but_one[1]);
-  if (unit_line_vec.norm() < 0.01) {
-    ILOG_INFO << "unit_line_vec";
-    return;
+  double phi = current_path_point_global_vec_.back().heading;
+  Eigen::Vector2d unit_line_vec;
+  if (current_gear_ == AstarPathGear::DRIVE) {
+    unit_line_vec = CreateUnitVec2d(phi);
+  } else {
+    unit_line_vec = CreateUnitVec2d(phi + M_PI);
   }
-  unit_line_vec.normalize();
 
   double s = 0.0;
   double ds = 0.1;
 
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
-  double phi = current_path_point_global_vec_.back().heading;
+
   while (s < abs_dist_to_goal) {
     s += ds;
     s = std::min(s, abs_dist_to_goal);
 
     point = path_end_global + s * unit_line_vec;
-
     global_point.Set(point, phi);
     global_point.kappa = 0.0;
 

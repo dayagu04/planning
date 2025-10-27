@@ -313,15 +313,15 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
 
     print("total time", planning_proto.frame_info.frame_duration_ms)
 
-    try:
-      for i in range(len(planning_proto.apa_path_debug.path_time.astar_time.search_time)):
-        print("time", planning_proto.apa_path_debug.path_time.astar_time.search_time[i])
-        print(
-            "time", planning_proto.apa_path_debug.path_time.astar_time.node_pool_size[i])
+    # try:
+    #   for i in range(len(planning_proto.apa_path_debug.path_time.astar_time.search_time)):
+    #     print("time", planning_proto.apa_path_debug.path_time.astar_time.search_time[i])
+    #     print(
+    #         "node", planning_proto.apa_path_debug.path_time.astar_time.node_pool_size[i])
 
-      print("total time", planning_proto.apa_path_debug.path_time.astar_time.total_search_time)
-    except:
-      pass
+    #   print("total time", planning_proto.apa_path_debug.path_time.astar_time.total_search_time)
+    # except:
+    #   pass
 
   push_notebook()
 

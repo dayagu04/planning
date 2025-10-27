@@ -26,7 +26,6 @@ parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
 astar_path_start_time = -1
-# -
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
