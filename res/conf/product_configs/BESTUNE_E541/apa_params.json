@@ -433,7 +433,9 @@
   "use_uss_pt_for_path": true,
   "use_uss_pt_for_speed": true,
   "use_uss_pt_for_slot_release": true,
-  "point_max_dist" : 0.8,
+  "uss_lat_attention_dist" : 0.8,
+  "uss_lon_attention_dist" : 0.8,
+  "uss_dist_coefficient_by_vel" : 2.0,
 
   "comment_20": "fold mirror params",
   "has_smart_fold_mirror": false,

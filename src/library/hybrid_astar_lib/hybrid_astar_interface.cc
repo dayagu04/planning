@@ -158,7 +158,8 @@ void HybridAStarInterface::UpdateOutput() {
       gear_switch_number_scenario_try_ < 0) {
     request_.gear_switch_num = config_.max_gear_change_num;
   } else {
-    request_.gear_switch_num = gear_switch_number_scenario_try_ + 5;
+    request_.gear_switch_num = std::min(gear_switch_number_scenario_try_ + 8,
+                                        config_.max_gear_change_num);
   }
 
   DebugAstarRequestString(request_);

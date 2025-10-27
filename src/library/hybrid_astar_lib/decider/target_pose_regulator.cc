@@ -712,10 +712,10 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
   }
 
   // best lon position: find position from upper to lower
-  // 1. find the position, it's distance  [0.55, +inf], continue to find lower
+  // 1. find the position, it's distance  [1.0, +inf], continue to find lower
   // position;
   // 2. [0, 0.35], record max distance position;
-  // 3. [0.35, 0.55], break;
+  // 3. [0.35, 1.0], break;
 
   // search best lon position by obstacle distance.
   float best_lon = lon_upper;
@@ -731,7 +731,7 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
       continue;
     }
 
-    if (path->points[i].dist_to_obs > lat_buffer + 0.4f) {
+    if (path->points[i].dist_to_obs > lat_buffer + 0.85f) {
       if (!find_narrow_space) {
         best_lon = path->points[i].x;
       }
