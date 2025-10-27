@@ -502,6 +502,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
        is_in_deceleartion_scene_);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
+  speed_adjust_range_.first = std::fmin(
+    v_suggestted_ * 1.1, speed_adjust_range_.first);
   speed_adjust_range_.second =
       sample_scene_ == DecelerationPriorityScene &&
               merge_stop_line_distance_ <= 20.0
