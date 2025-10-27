@@ -398,7 +398,7 @@
   "lat_err_for_fix_slot" : 0.35,
   "heading_err_for_fix_slot" : 3,
 
-  "enable_apa_speed_plan" : false,
+  "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,
   "min_cruise_speed" : 0.4,
   "fast_cruise_speed" : 1.33,
