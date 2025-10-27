@@ -37,18 +37,11 @@ class ConstructionSceneDecider : public Task {
   bool ExecuteTest(bool pipeline_test);
 
   bool InitInfo();
+  
   void UnitTest();
 
  private:
   void UpdateConstructionAgentClusters();
-
-  void SetLaneChangeRequestByConstructionAgent();
-
-  void GetTargetLaneWidthByConstructionAgent(
-      const std::vector<std::pair<double, double>> lane_s_width,
-      const std::shared_ptr<VirtualLane> target_lane,
-      const double construction_agent_s, const double construction_agent_l,
-      bool is_left, double* dist);
 
   void GetOriginLaneWidthByConstructionAgent(
       const std::shared_ptr<VirtualLane> ego_lane,
@@ -67,31 +60,6 @@ class ConstructionSceneDecider : public Task {
 
   double CalcClusterToBoundaryDist(const ConstructionAgentPoints& points,
                                    RequestType direction);
-
-  void ConstructionAgentDir();
-
-  bool ConstructionAgentDirection(RequestType& direction);
-
-  bool CheckEgoLaneAvailable(bool is_left);
-
-  bool CheckTargetLaneAvailable(bool is_left,
-                                const std::shared_ptr<VirtualLane> lane);
-
-  double ConstructionAgentSpearmanRankCorrelation(
-      const ConstructionAgentPoints points);
-
-  double ConstructionAgentComputeSlope(ConstructionAgentPoints points);
-
-  std::vector<double> ConstructionAgentRankify(std::vector<double>& arr);
-
-  bool ConstructionAgentMean(const ConstructionAgentPoints& points,
-                             double& s_mean, double& l_mean);
-
-  bool ConstructionAgentStddev(const ConstructionAgentPoints& points,
-                               double s_mean, double l_mean, double& s_stddev,
-                               double& l_stddev);
-
-  bool ConstructionAgentStandardize(ConstructionAgentPoints& points);
 
   double QueryLaneWidth(
       const double s0,
@@ -126,28 +94,17 @@ class ConstructionSceneDecider : public Task {
  private:
   ConstructionSceneDeciderConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
-  PlanningInitPoint planning_init_point_;
   std::shared_ptr<ReferencePath> left_reference_path_ = nullptr;
   std::shared_ptr<ReferencePath> right_reference_path_ = nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;
   std::shared_ptr<LaneTracksManager> lane_tracks_manager_ = nullptr;
-  bool is_construction_agent_lane_change_situation_ = false;
-  int construction_agent_alc_trigger_counter_;
-  RequestType construction_agent_lane_change_direction_ = NO_CHANGE;
   ConstructionAgentPoints construction_agent_points_;
   std::map<int, ConstructionAgentClusterArea>
       construction_agent_cluster_attribute_map_;
-
   std::map<int, ad_common::math::Polygon2d> out_cluster_;
   std::vector<int32_t> construction_agent_cluster_size_;
   ConstructionAgentPoints construction_agent_cluster_;
-  std::vector<std::pair<double, double>> left_lane_s_width_;  // <s, lane_width>
-  std::vector<std::pair<double, double>>
-      right_lane_s_width_;  // <s, lane_width>
   std::vector<std::pair<double, double>> origin_lane_s_width_;
-  int right_lane_nums_ = 0;
-  int left_lane_nums_ = 0;
-  // bool use_query_lane_width_ = false;
   bool is_construction_agent_cluster_success_ = false;
   std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr_;
   int origin_lane_virtual_id_;

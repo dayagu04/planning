@@ -98,7 +98,7 @@ bool ConstructionSceneDecider::Execute() {
   // 施工障碍物聚类
   UpdateConstructionAgentClusters();
 
-  UpdateDriveArea();
+  // UpdateDriveArea();
 
   // 依据聚类结果判定施工区域场景
   IdentifyConstructionScene();
