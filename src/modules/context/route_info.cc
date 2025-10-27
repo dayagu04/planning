@@ -800,9 +800,9 @@ void RouteInfo::CaculateSplitInfo(
                     static_cast<SplitRelativeDirection>(
                         route_info_output_.first_split_direction),
                     route_info_output_.distance_to_first_road_split));
+            is_find_first_split_info = true;
+            traverse_num++;
           }
-          is_find_first_split_info = true;
-          traverse_num++;
         } else if (is_find_first_split_info) {
           route_info_output_.distance_to_second_road_split =
               split_info[i].second;
