@@ -1217,9 +1217,6 @@ void SyncParkingParameters(const bool is_simulation) {
     param.virtual_obs_right_x_pos += 1.4;
     // param.channel_length -= 4.0;
     param.channel_width += 2.0;
-  } else {
-    param.smart_fold_mirror_params.min_lat_buffer =
-        param.stop_lat_inflation + 0.01;
   }
 
   int analytic_expansion_type = 1;
