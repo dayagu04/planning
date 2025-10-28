@@ -120,13 +120,13 @@ void LongitudinalDecisionDecider::DetermineKinematicBoundForCruiseScenario() {
   bool can_increase_acc_bound = true;
 
   // 1.lane change
-  const auto lane_change_status =
+  /* const auto lane_change_status =
       planning_context.lane_change_decider_output().curr_state;
   const bool is_in_lane_keeping =
       lane_change_status == StateMachineLaneChangeStatus::kLaneKeeping;
   if (!is_in_lane_keeping) {
     can_increase_acc_bound = false;
-  }
+  } */
 
   // 2.cruise speed
   const double cruise_speed = ego_state_mgr->ego_v_cruise();

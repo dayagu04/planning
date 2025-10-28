@@ -6,6 +6,7 @@
 
 namespace planning {
 namespace {
+constexpr double kEpsilon = 1e-6;
 constexpr double IsoAccLimitUpper = -2.0;
 constexpr double IsoAccLimitLower = -3.0;
 constexpr double IsoAccLimitSpeedUpper = 20.0;
@@ -120,14 +121,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   std::pair<double, double> acc_target;
   acc_upper_bound_.resize(plan_points_num_);
   acc_lower_bound_.resize(plan_points_num_);
-  // cruise acc target
-  acc_target.first =
-      interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table,
-             speed_planning_config_.cruise_dec_bound_table.acc_table);
-  acc_target.second =
-      interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table,
-             speed_planning_config_.cruise_acc_bound_table.acc_table);
-
+  
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agent_headway_decider_output =
       session_->planning_context().agent_headway_decider_output();
@@ -146,7 +140,25 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
+  const auto& lon_decision_decider_output = 
+      session_->planning_context().longitudinal_decision_decider_output();
+  bool can_increase_acc_upper_bound = false;
+  can_increase_acc_upper_bound = lon_decision_decider_output.determined_cruise_bound().acc_positive_mps2 >
+                                 1.0 - kEpsilon ? true : false;
+  // cruise acc target
+  acc_target.first =
+      interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table,
+             speed_planning_config_.cruise_dec_bound_table.acc_table);
+  if (can_increase_acc_upper_bound) {
+    acc_target.second =
+      interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table,
+             speed_planning_config_.cruise_acc_bound_table.acc_table);
+  } else {
+    acc_target.second =
+      interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+  }
 
+  std::pair<double, double> acc_target_with_upper_bound{acc_target.first, acc_target.second};
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
@@ -161,8 +173,12 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         continue;
       }
       acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-      acc_upper_bound_[i] =
-          std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+      if (can_increase_acc_upper_bound) {
+        acc_upper_bound_[i] = acc_target.second;
+      } else {
+        acc_upper_bound_[i] = std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+      }
+      
       continue;
     }
 
@@ -181,21 +197,34 @@ void BoundMaker::MakeAccBound(const double& v_ego,
         upper_bound_info.d_rel, desire_distance, upper_bound_info.v, v_ego);
     const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
     CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
-                  upper_bound_a, &acc_target);
-    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target.first);
-    acc_upper_bound_[i] =
-        std::fmax(std::fmax(init_lon_state_[2], acc_target.second), 0.3);
-    // only allow acc upper bound over 1.0 in start state
-    if (start_stop_decider_output.ego_start_stop_info().state() !=
+                  upper_bound_a, &acc_target_with_upper_bound);
+    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target_with_upper_bound.first);
+    //acc_upper_bound is not relative with upper bound and use acc_target calced by v interpolate
+    /* if (start_stop_decider_output.ego_start_stop_info().state() ==
         common::StartStopInfo::START) {
+      acc_upper_bound_[i] = std::fmax(acc_target.second, acc_target_with_upper_bound.second);
+    } */
+    if (can_increase_acc_upper_bound) {
+      acc_upper_bound_[i] = acc_target.second;
+    } else {
+      acc_upper_bound_[i] = std::fmax(std::fmax(init_lon_state_[2], acc_target_with_upper_bound.second), 0.3);
+    }
+    if (start_stop_decider_output.ego_start_stop_info().state() !=
+        common::StartStopInfo::START && !can_increase_acc_upper_bound) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
+
   }
   if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
     }
   }
+  double min_acc_bound_val = 10.0;
+  auto min_it = std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
+  min_acc_bound_val = *min_it;
+  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(), min_acc_bound_val);
+
 }
 
 void BoundMaker::MakeSBound() {

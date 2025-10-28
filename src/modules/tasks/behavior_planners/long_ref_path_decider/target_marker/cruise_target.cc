@@ -142,11 +142,25 @@ bool CruiseTarget::MakeKinematicsBound(
       break;
   }
   // make acc_positive_mps2
-  kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
-      kinematic_param.acc_positive_upper,
+  const double determined_cruise_acc_bound =
+         session_->planning_context()
+             .longitudinal_decision_decider_output()
+             .determined_cruise_bound().acc_positive_mps2;
+  bool can_increase_acc = false;
+  can_increase_acc = determined_cruise_acc_bound > (1.0 - kEpsilon) ? true : false;
+  if (can_increase_acc) {
+    kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
+      kinematic_param.acc_positive_upper, 
       kinematic_param.acc_positive_speed_lower,
-      kinematic_param.acc_positive_lower,
-      kinematic_param.acc_positive_speed_upper, ego_speed);
+      0.3, 27.8, ego_speed);
+
+  } else {
+    kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
+        kinematic_param.acc_positive_upper,
+        kinematic_param.acc_positive_speed_lower,
+        kinematic_param.acc_positive_lower,
+        kinematic_param.acc_positive_speed_upper, ego_speed);
+  }
   // make acc_negative_mps2
   kinematic_bound->acc_negative_mps2 = planning_math::LerpWithLimit(
       kinematic_param.acc_negative_lower,
