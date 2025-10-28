@@ -271,7 +271,8 @@ void STGraph::MakeStaticAgentStBoundary(
   }
   std::vector<int64_t> st_boundaries;
   if (!st_point_pairs.empty()) {
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
     st_boundary->set_id(boundary_id);
     if (type == StBoundaryType::NEIGHBOR) {
       neighbor_boundary_id_st_boundaries_map_.insert(
@@ -662,7 +663,8 @@ void STGraph::MakeDynamicAgentStBoundary(
       //                       path_border_querier, planning_init_point_box,
       //                       type, is_rads_scene);
 
-      std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+      // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+      auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
       st_boundary->set_id(boundary_id);
       st_boundaries.emplace_back(boundary_id);
       if (type == StBoundaryType::NEIGHBOR) {
@@ -964,7 +966,8 @@ void STGraph::BackwardExtendSingleStBoundary(
     }
   }
   if (!st_point_pairs.empty()) {
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
     st_boundary->set_id(target_boundary_id);
     boundary_id_st_boundaries_map_.insert(
         std::make_pair(target_boundary_id, std::move(st_boundary)));

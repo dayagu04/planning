@@ -53,18 +53,20 @@ class SscMap {
   };
 
   SscMap() {}
-  SscMap(const Config &config);
+  SscMap(const Config& config);
   ~SscMap() {}
 
-  GridMap3D *p_3d_grid() const { return p_3d_grid_; }
-  GridMap3D *p_3d_inflated_grid() const { return p_3d_inflated_grid_; }
+  std::shared_ptr<GridMap3D> p_3d_grid() const { return p_3d_grid_; }
+  std::shared_ptr<GridMap3D> p_3d_inflated_grid() const {
+    return p_3d_inflated_grid_;
+  }
 
   Config config() const { return config_; }
 
-  void UpdateMapOrigin(const FrenetEgoState &ego_state, const double &time);
+  void UpdateMapOrigin(const FrenetEgoState& ego_state, const double& time);
 
   void ConstructSscMap(
-      const AgentFrenetSpatioTemporalInFo &surround_trajs_state_info);
+      const AgentFrenetSpatioTemporalInFo& surround_trajs_state_info);
 
   void ClearGridMap();
 
@@ -72,7 +74,7 @@ class SscMap {
 
   void GetFinalGlobalMetricCubesList();
 
-  void ResetSscMap(const FrenetEgoState &ego_frenet_state, const double &time);
+  void ResetSscMap(const FrenetEgoState& ego_frenet_state, const double& time);
 
  private:
   // 填充静态障碍物
@@ -80,10 +82,10 @@ class SscMap {
   // const std::vector<AgentFrenetSpatioTemporalInFo> &obs_grid_fs);
 
   void FillDynamicPart(
-      const AgentFrenetSpatioTemporalInFo &sur_vehicle_trajs_fs);
+      const AgentFrenetSpatioTemporalInFo& sur_vehicle_trajs_fs);
 
   void FillMapWithFsVehicleTraj(
-      const std::vector<std::vector<SLTPoint>> &traj_point);
+      const std::vector<std::vector<SLTPoint>>& traj_point);
 
   // void GetCvPoint2iVecUsingCommonPoint2iVec(
   //     const std::vector<Point2i>& pts_in, std::vector<cv::Point2i>* pts_out);
@@ -91,8 +93,8 @@ class SscMap {
   // void GetCvPoint2iUsingCommonPoint2i(const Point2i& pt_in,
   //                                           cv::Point2i* pt_out);
 
-  GridMapND<SscMapDataType, 3> *p_3d_grid_;
-  GridMapND<SscMapDataType, 3> *p_3d_inflated_grid_;
+  std::shared_ptr<GridMapND<SscMapDataType, 3>> p_3d_grid_ = nullptr;
+  std::shared_ptr<GridMapND<SscMapDataType, 3>> p_3d_inflated_grid_ = nullptr;
 
   std::unordered_map<int, std::array<bool, 6>> inters_for_cube_;
 

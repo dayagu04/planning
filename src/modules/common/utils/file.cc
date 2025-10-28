@@ -8,6 +8,9 @@ std::string ReadFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   assert(file != nullptr);
   std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
+  if (fp == nullptr){
+    return "";
+  }
   fseek(fp.get(), 0, SEEK_END);
   std::vector<char> content(ftell(fp.get()));
   fseek(fp.get(), 0, SEEK_SET);

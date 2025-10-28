@@ -1,10 +1,12 @@
 #include "src/modules/tasks/behavior_planners/spatio_temporal_planner/spatio_temporal_grid_map_adapter.h"
+
 #include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
 #include <utility>
 #include <vector>
+
 #include "behavior_planners/lateral_offset_decider/lateral_offset_decider_utils.h"
 #include "behavior_planners/spatio_temporal_planner/slt_point.h"
 #include "config/basic_type.h"
@@ -75,7 +77,7 @@ SLTGridMapAdapter::SLTGridMapAdapter(
   map_cfg.map_resolution[1] = config_.map_resl_y;
   map_cfg.map_resolution[2] = config_.map_resl_z;
   map_cfg.s_back_len = config_.s_back_len;
-  p_ssc_map_ = new SscMap(map_cfg);
+  p_ssc_map_ = std::make_shared<SscMap>(map_cfg);
 }
 
 void SLTGridMapAdapter::RunOnce(planning::common::SpationTemporalUnionDpInput&
@@ -179,7 +181,7 @@ void SLTGridMapAdapter::RunOnce(planning::common::SpationTemporalUnionDpInput&
 
   for (const auto& agent : current_agents) {
     if (agent != nullptr) {
-      //添加虚拟障碍物
+      // 添加虚拟障碍物
       if (agent->type() == agent::AgentType::VIRTUAL &&
           agent->is_tfl_virtual_obs()) {
         virtual_agents_.emplace_back(agent);
@@ -204,7 +206,7 @@ void SLTGridMapAdapter::RunOnce(planning::common::SpationTemporalUnionDpInput&
         continue;
       }
 
-      //过滤自车正后方障碍物
+      // 过滤自车正后方障碍物
       if (agent_frenet_point.x < ego_frenet_point.x) {
         auto iter = std::find(obstacles_id_behind_ego.begin(),
                               obstacles_id_behind_ego.end(), agent->agent_id());

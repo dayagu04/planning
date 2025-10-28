@@ -36,12 +36,12 @@ class AABoxKDTree2dNode {
       PartitionObjects(objects, &left_subnode_objects, &right_subnode_objects);
 
       if (!left_subnode_objects.empty()) {
-        left_subnode_.reset(new AABoxKDTree2dNode<ObjectType>(
-            left_subnode_objects, params, depth + 1));
+        left_subnode_ = std::make_unique<AABoxKDTree2dNode<ObjectType>>(
+            left_subnode_objects, params, depth + 1);
       }
       if (!right_subnode_objects.empty()) {
-        right_subnode_.reset(new AABoxKDTree2dNode<ObjectType>(
-            right_subnode_objects, params, depth + 1));
+        right_subnode_ = std::make_unique<AABoxKDTree2dNode<ObjectType>>(
+            right_subnode_objects, params, depth + 1);
       }
     } else {
       InitObjects(objects);
@@ -352,7 +352,8 @@ class AABoxKDTree2d {
       for (const auto& object : objects_) {
         object_ptrs.push_back(&object);
       }
-      root_.reset(new AABoxKDTree2dNode<ObjectType>(object_ptrs, params, 0));
+      root_ = std::make_unique<AABoxKDTree2dNode<ObjectType>>(object_ptrs,
+                                                              params, 0);
     }
   }
 
