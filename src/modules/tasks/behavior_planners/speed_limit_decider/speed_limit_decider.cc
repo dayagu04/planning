@@ -246,7 +246,7 @@ bool CheckClustersConsecutiveDiffSlidingWindow(
     }
     // 转换所有点到l坐标
     std::vector<double> ls;
-    ls.reserve(20);
+    ls.reserve(pts.size());
     for (const auto &pt : pts) {
       double s = 0.0, l = 0.0;
       if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
