@@ -140,6 +140,7 @@
   "tsr_fault_code": 0,
   "tsr_reset_path_length": 2000.0,
   "tsr_function_test_switch": 0,
+  "tsr_supp_sign_type_test": 0,
   "elk_tlc_thrd": 1.0,
   "elk_roadedge_tlc_thrd": 1.3,
   "force_no_sideway_switch": false,

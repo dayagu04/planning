@@ -537,16 +537,16 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
         }
         break;
       default:             // STANDBY
-        if (fault_code) {  // 1. 有故障 -> FAULT
+        if (!main_switch) {  // 1. 优先级最高：开关关闭 -> OFF
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        } else if (fault_code) {  // 2. 其次：有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         } else if (active_code == 0) {  // 3. active条件 -> ACTIVE, ==0为使能
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
-        } else if (main_switch == false) {  // 4. 开关关闭 -> OFF
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else {  // 维持STANDBY
+        } else {  // 4. 维持STANDBY
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         }
         break;

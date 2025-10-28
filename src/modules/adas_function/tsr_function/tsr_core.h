@@ -145,7 +145,6 @@ class TsrCore {
   double test_timer_ = 0.0;  // 测试计时器，单位：s
   int test_supp_sign_index_ = 0;  // 当前显示的辅助标识牌索引
   double supp_sign_timer_ = 0.0;  // 辅助标识牌切换计时器，单位：s
-  int last_test_mode_ = 0;  // 上次的测试模式，用于检测模式切换
 };
 
 }  // namespace tsr_core

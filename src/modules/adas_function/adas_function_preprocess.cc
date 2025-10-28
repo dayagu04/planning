@@ -145,6 +145,8 @@ void Preprocess::SyncParameters(void) {
                        "hmi_elk_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch, int,
                        "tsr_function_test_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_supp_sign_type_test, int,
+                       "tsr_supp_sign_type_test");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_state, int,
                        "hmi_tsr_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_speed_limit, int,

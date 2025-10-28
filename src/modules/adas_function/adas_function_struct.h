@@ -185,6 +185,8 @@ struct Parameters {
   uint16 tsr_fault_code = 0;
   // TSR测试模式
   uint16 tsr_function_test_switch = 0;
+  // TSR辅助标识牌测试
+  uint16 tsr_supp_sign_type_test = 0;
 };
 
 struct StateInfo {

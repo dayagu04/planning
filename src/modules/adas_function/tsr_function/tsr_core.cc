@@ -185,17 +185,20 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
   } else if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
                                     TSR_FUNCTION_FSM_WORK_STATE_OFF) {
     // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_OFF状态
-    if (tsr_fault_code_) {  // 1. 优先级最高：有故障 -> FAULT
-      tsr_state =
-          iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
-    } else if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::
+    if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::
                                        NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
                tsr_main_switch_ ==
                    iflyauto::NotificationMainSwitch::
                        NOTIFICATION_MAIN_SWITCH_VISUAL_AND_AUDIO) {
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-    } else {
+      // 1. 开关打开
+      if (tsr_fault_code_) {  // 1.1 有故障 -> FAULT
+        tsr_state =
+            iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
+      } else {  // 1.2 无故障 -> STANDBY
+        tsr_state = iflyauto::TSRFunctionFSMWorkState::
+            TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
+      }
+    } else {  // 2. 开关关闭，维持OFF
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
     }
@@ -239,20 +242,19 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
     }
   } else {
     // 处于FAULT状态
-    if (tsr_fault_code_ == 0) {
-      // 全部系统故障解除 -> 根据开关状态决定下一状态
-      if (tsr_main_switch_ ==
-              iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
-          tsr_main_switch_ ==
-              iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
-        tsr_state =
-            iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
-      } else {
-        tsr_state = iflyauto::TSRFunctionFSMWorkState::
-            TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-      }
+    if (tsr_main_switch_ ==
+            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
+        tsr_main_switch_ ==
+            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
+      // 1. 优先级最高：开关关闭 -> OFF
+      tsr_state =
+          iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
+    } else if (tsr_fault_code_ == 0) {
+      // 2. 其次：全部系统故障解除 -> STANDBY
+      tsr_state = iflyauto::TSRFunctionFSMWorkState::
+          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
     } else {
-      // 有故障时维持FAULT状态，不受开关状态影响
+      // 3. 维持FAULT状态
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
     }
@@ -975,7 +977,15 @@ void TsrCore::TsrTestFunction(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   tsr_state_ = iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
   int test_mode = GetContext.get_param()->tsr_function_test_switch;
-
+  int supp_sign_type_test = GetContext.get_param()->tsr_supp_sign_type_test;
+  // 辅助标识牌输出
+  if (supp_sign_type_test != 0) {
+    output_supp_sign_info_ = static_cast<iflyauto::SuppSignType>(supp_sign_type_test);
+    supp_sign_in_suppression_flag_ = false;
+  } else {
+    output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+    supp_sign_in_suppression_flag_ = true;
+  }
   // 模式1：输出限速80，不报警
   if (test_mode == 1) {
     tsr_speed_limit_ = 80;
@@ -984,7 +994,6 @@ void TsrCore::TsrTestFunction(void) {
     end_of_speed_sign_value_ = 0;
     tsr_warning_flag_ = false;  // 不报警
     overspeed_status_ = false;
-    last_test_mode_ = 1;
   }
   // 模式2：输出限速80，报警
   else if (test_mode == 2) {
@@ -994,7 +1003,6 @@ void TsrCore::TsrTestFunction(void) {
     end_of_speed_sign_value_ = 0;
     tsr_warning_flag_ = true;  // 报警
     overspeed_status_ = true;
-    last_test_mode_ = 2;
   }
   // 模式3：输出解除限速80
   else if (test_mode == 3) {
@@ -1004,55 +1012,8 @@ void TsrCore::TsrTestFunction(void) {
     tsr_speed_limit_ = 0;
     tsr_warning_flag_ = false;
     overspeed_status_ = false;
-    last_test_mode_ = 3;
-  }
-  // 模式4：辅助标识依次以2s为周期显示所有种类
-  else if (test_mode == 4) {
-    // 辅助标识牌数组（13种标识牌）
-    static const iflyauto::SuppSignType supp_sign_test_array[] = {
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN,   // bit 0
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN,    // bit 1
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING,  // bit 2
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,  // bit 3
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING,   // bit 4
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING,  // bit 5
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,  // bit 6
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY,     // bit 7
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,  // bit 8
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,  // bit 9
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,  // bit 10
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,  // bit 11
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING,  // bit 12
-    };
-
-    // 确保索引在有效范围内（0~12）
-    if (test_supp_sign_index_ < 0 || test_supp_sign_index_ >= 13) {
-      test_supp_sign_index_ = 0;
-    }
-    
-    // 如果是刚进入模式4，重置计时器和索引
-    if (last_test_mode_ != 4) {
-      supp_sign_timer_ = 0.0;
-      test_supp_sign_index_ = 0;
-    }
-    last_test_mode_ = 4;
-
-    supp_sign_timer_ += GetContext.get_param()->dt;
-
-    // 每2秒切换到下一个标识牌
-    if (supp_sign_timer_ >= 2.0) {
-      supp_sign_timer_ = 0.0;
-      test_supp_sign_index_ = (test_supp_sign_index_ + 1) % 13;  // 循环递增索引
-
-      // 同时设置实时和输出标识牌，避免被重置逻辑清空
-      realtime_supp_sign_info_ = supp_sign_test_array[test_supp_sign_index_];
-      output_supp_sign_info_ = supp_sign_test_array[test_supp_sign_index_];
-      supp_sign_valid_flag_ = true;
-      supp_sign_hold_time_ = 0.0;  // 重置计时器，保持显示
-    }
   } else {
       // 错误模式：关闭测试，不做任何操作
-    last_test_mode_ = 0;
   }
 }
 
