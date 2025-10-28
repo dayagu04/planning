@@ -191,8 +191,6 @@ def update_construction_agent_info(local_view_data):
       names.append(name)
       directions.append([])
       datas.append([local_view_data['data_msg']['plan_debug_json_msg'][name]])
-      print(name)
-      print(local_view_data['data_msg']['plan_debug_json_msg'][name])
     except:
       pass
 

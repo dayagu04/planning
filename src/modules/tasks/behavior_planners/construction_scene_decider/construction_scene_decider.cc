@@ -68,8 +68,15 @@ bool ConstructionSceneDecider::InitInfo() {
       session_->environmental_model().get_lane_tracks_manager();
   std::shared_ptr<VirtualLaneManager> virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
+  if (lateral_obstacle_ == nullptr || lane_tracks_manager_ == nullptr ||
+      virtual_lane_mgr == nullptr) {
+    return false;
+  }
   lane_change_lane_mgr_ =
       std::make_shared<LaneChangeLaneManager>(virtual_lane_mgr, session_);
+  if (lane_change_lane_mgr_ == nullptr) {
+    return false;
+  }
   const int current_lane_virtual_id =
       virtual_lane_mgr->current_lane_virtual_id();
   if (lane_change_lane_mgr_->has_origin_lane()) {
@@ -166,6 +173,9 @@ void ConstructionSceneDecider::UpdateConstructionAgentClusters() {
                           planning_init_point.lat_init_state.theta());
   ego_base.SetBasePose(base_pose);
   for (const auto obstacle : combined_obstacles) {
+    if (obstacle == nullptr) {
+      continue;
+    }
     int obstacle_id = obstacle->id();
     auto vehicle_iter = tracks_map.find(obstacle_id);
     if (vehicle_iter != tracks_map.end()) {
@@ -730,7 +740,7 @@ std::pair<bool, int> ConstructionSceneDecider::CalIntersectionRefAndCone(
     return {false, -1};
   }
 
-  if (construction_scene_utils::polylinesIntersect(ref_points, cone_points)) {
+  if (construction_scene_utils::PolylinesIntersect(ref_points, cone_points)) {
     return {true, 0};
   }
 

@@ -26,9 +26,8 @@ using namespace planning_math;
 
 class ConstructionSceneDecider : public Task {
  public:
-  explicit ConstructionSceneDecider(
-      const EgoPlanningConfigBuilder* config_builder,
-      framework::Session* session);
+  ConstructionSceneDecider(const EgoPlanningConfigBuilder* config_builder,
+                           framework::Session* session);
 
   virtual ~ConstructionSceneDecider() = default;
 
@@ -37,7 +36,7 @@ class ConstructionSceneDecider : public Task {
   bool ExecuteTest(bool pipeline_test);
 
   bool InitInfo();
-  
+
   void UnitTest();
 
  private:
