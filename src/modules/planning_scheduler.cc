@@ -918,7 +918,8 @@ void PlanningScheduler::FillPlanningRequest(
 }
 
 void PlanningScheduler::ClearParkingInfo(
-    iflyauto::PlanningOutput *const planning_output) {
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   session_.mutable_planning_context()
       ->mutable_planning_output()
       .planning_status.apa_planning_status = iflyauto::APA_NONE;
@@ -928,6 +929,8 @@ void PlanningScheduler::ClearParkingInfo(
       .successful_slot_info_list_size = 0;
 
   planning_output->planning_status.apa_planning_status = iflyauto::APA_NONE;
+
+  memset(&planning_hmi_info->apa_info, 0, sizeof(planning_hmi_info->apa_info));
 }
 
 bool PlanningScheduler::IsUndefinedScene(
@@ -1250,7 +1253,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  ClearParkingInfo(planning_output);
+  ClearParkingInfo(planning_output, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {
     planning_hmi_info->ad_info.is_avaliable = false;

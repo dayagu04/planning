@@ -396,7 +396,7 @@
   "parallel_passage_width" : 5.5,
   "parallel_passage_length" :26.0,
   "head_in_finish_heading_err" : 3.0,
-  "vertical_min_path_length" : 0.3,
+  "vertical_min_path_length" : 0.25,
   "lat_err_for_fix_slot" : 0.35,
   "heading_err_for_fix_slot" : 3,
   "lon_err_for_fix_slot" : 1.0,
