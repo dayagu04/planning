@@ -82,10 +82,10 @@ class LaneChangePathGenerateManager {
     double follow_consider_time_headway = 1.5;
   };
   ComfortIdmParameters comfort_idm_params_;  // 默认参数
-  const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
-  const std::vector<double> _L_SLOPE_V{0.35, 0.08};
-  const std::vector<double> _P_SLOPE_BP{0., 40.0};
-  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
+  const std::vector<double> l_slope_bp{0.0, 40.0};
+  const std::vector<double> l_slope_v{0.35, 0.08};
+  const std::vector<double> p_slope_bp{0., 40.0};
+  const std::vector<double> p_slope_v{0.8, 0.2};
 
   LaneChangePathGenerateManager(std::shared_ptr<ReferencePath> ref_path,
                                 framework::Session* session);

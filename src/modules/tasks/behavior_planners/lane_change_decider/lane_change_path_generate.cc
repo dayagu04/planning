@@ -715,8 +715,8 @@ double LaneChangePathGenerateManager::CalcDesiredVelocity(
     const double v_ego) const {
   double v_lead_clip = std::max(v_lead, 0.0);
   const double max_runaway_speed = -2.0;
-  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
-  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
+  double l_slope = interp(v_lead, l_slope_bp, l_slope_v);
+  double p_slope = interp(v_lead, p_slope_bp, p_slope_v);
   double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
   double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
 
