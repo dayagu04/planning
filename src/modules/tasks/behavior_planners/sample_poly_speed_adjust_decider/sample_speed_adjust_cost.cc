@@ -214,7 +214,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
       // extra match s center cost
       match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
       match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
-          std::fabs(safe_gap_center - poly_end_s), kBasicSafeDistance,
+          std::fabs(safe_gap_center - poly_end_s), (upper_st_point.s() + lower_st_point.s()) * 0.5,
           min_gap_center_distance, narrow_gap_penalty_factor_coef_,
           weight_match_s_);
     } else {
