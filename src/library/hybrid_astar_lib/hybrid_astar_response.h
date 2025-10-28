@@ -35,6 +35,7 @@ struct AstarResponse {
     result.Clear();
     first_seg_path.clear();
     time.Clear();
+    std::fill(feasible_directions.begin(), feasible_directions.end(), false);
     return;
   }
 };

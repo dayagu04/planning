@@ -736,18 +736,24 @@ const void NarrowSpaceScenario::GenerateFallBackPath() {
 
 const int NarrowSpaceScenario::PathOptimizationByCILQR(
     const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf) {
+  if (first_seg_path.empty()) {
+    return 0;
+  }
+
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
   constexpr float kFirstXDiffThresh = 0.5f;
-  constexpr float kHeadingDiffThresh = 0.01f;
-  const float target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
-                                       ->GetEgoInfoUnderSlot()
-                                       .target_pose.heading;
+  constexpr double kHeadingDiffThresh = 0.01;
+  const double target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
+                                        ->GetEgoInfoUnderSlot()
+                                        .target_pose.heading;
   const float target_x = apa_world_ptr_->GetSlotManagerPtr()
                              ->GetEgoInfoUnderSlot()
                              .target_pose.pos.x();
   pnc::geometry_lib::PathPoint point;
+  float expansion_dir =
+      first_seg_path.front().gear == AstarPathGear::DRIVE ? 1.0 : -1.0;
 
   for (size_t i = 0; i < first_seg_path.size(); ++i) {
     const AStarPathPoint& path_pt = first_seg_path[i];
@@ -761,13 +767,8 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
 
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
         !is_stright) {
-      const float heading_error = fabs(target_heading_rad - point.heading);
-      if (heading_error >= kHeadingDiffThresh) {
-        local_path.emplace_back(point);
-      } else {
-        ILOG_INFO << "heading_error = " << heading_error
-                  << ", target_heading_rad = " << target_heading_rad
-                  << ", point.heading = " << point.heading;
+      if (!FillParkOutPath(local_path, point, kHeadingDiffThresh,
+                           target_heading_rad, expansion_dir)) {
         break;
       }
     } else {
@@ -2161,10 +2162,6 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
     const ParkObstacleList& obs) {
   PathPlannerResult res = PathPlannerResult::WAIT_PATH;
   response_.Clear();
-  std::fill(response_.feasible_directions.begin(),
-            response_.feasible_directions.end(),
-            false);  // todo：before saving the pre planned path for park out,
-                     // temporarily initialize it here;
 
   // check result
   if (thread_state_ == RequestResponseState::HAS_RESPONSE) {
@@ -2312,11 +2309,15 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioTry(
     // success
     // get first gear path length
     bool path_search_valid = true;
+    const bool park_out_directions_valid =
+        std::any_of(response_.feasible_directions.begin(),
+                    response_.feasible_directions.end(),
+                    [](bool feasible) { return feasible; });
     if (response_.GetFirstPathLength() <
         apa_param.GetParam().astar_config.vertical_min_path_length) {
       path_search_valid = false;
     }
-    if (path_search_valid) {
+    if (path_search_valid || park_out_directions_valid) {
       res = PathPlannerResult::PLAN_UPDATE;
     } else {
       res = PathPlannerResult::PLAN_FAILED;
@@ -2804,6 +2805,34 @@ void NarrowSpaceScenario::SetRecommendationDirection(
 
   generator.SetRecommendationDirectionFlag(apa_hmi_data,
                                            planning_recommend_park_dir);
+}
+
+const bool NarrowSpaceScenario::FillParkOutPath(
+    std::vector<pnc::geometry_lib::PathPoint>& local_path,
+    const pnc::geometry_lib::PathPoint& point, const double heading_diff_thresh,
+    const double target_heading_rad, const float expansion_dir) {
+  constexpr float kExpansionLength = 0.2f;
+  const double heading_error = fabs(target_heading_rad - point.heading);
+
+  if (pnc::geometry_lib::NormalizeAnglePI(heading_error) >=
+      heading_diff_thresh) {
+    local_path.emplace_back(point);
+  } else {
+    ILOG_INFO << "heading_error = " << heading_error
+              << ", target_heading_rad = " << target_heading_rad
+              << ", point.heading = " << point.heading;
+
+    Eigen::Vector2d expansion_pos =
+        local_path.back().pos +
+        local_path.back().heading_vec * kExpansionLength * expansion_dir;
+    pnc::geometry_lib::PathPoint expansion_point(expansion_pos,
+                                                 local_path.back().heading);
+    local_path.emplace_back(expansion_point);
+
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace apa_planner

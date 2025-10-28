@@ -92,7 +92,9 @@ class PlanningScheduler {
   void FillPlanningRequest(iflyauto::RequestLevel request,
                            iflyauto::PlanningOutput *const planning_output);
 
-  void ClearParkingInfo(iflyauto::PlanningOutput *planning_output);
+  void ClearParkingInfo(
+      iflyauto::PlanningOutput *planning_output,
+      iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info);
   bool IsUndefinedScene(const iflyauto::FunctionalState &current_state);
   bool IsValidHppState(const iflyauto::FunctionalState &current_state);
   bool IsValidRadsState(const iflyauto::FunctionalState &current_state);

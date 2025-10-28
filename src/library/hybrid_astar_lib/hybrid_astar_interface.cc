@@ -1058,7 +1058,7 @@ void HybridAStarInterface::ParkingDirectionAttempt(
             ParkingVehDirection::HEAD_OUT_TO_LEFT ||
         request_.direction_request_stack[i] ==
             ParkingVehDirection::HEAD_OUT_TO_RIGHT) {
-      if (fabs(target_regulator_result.pose.y) < 1.0 &&
+      if (fabs(target_regulator_result.pose.y) < 0.0 &&
           request_.space_type == ParkSpaceType::VERTICAL) {
         ILOG_INFO << "target_regulator_goal_ = "
                   << target_regulator_result.pose.x << ", "

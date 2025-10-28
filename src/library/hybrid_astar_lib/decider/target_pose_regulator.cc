@@ -343,10 +343,11 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     const VehicleParam &veh_param) {
   // 对于前左，前右两个方向的泊出，由于视野盲区在规划时需要对目标点进行适当偏移，目前的策略是目标点逐渐向
   // y = 0 的方向偏移，直至安全为止，偏移步长1.0；
-  if (target_.GetX() < 0.0) {
+  if (target_.GetX() < 0.0 || direction_request == ParkingVehDirection::NONE) {
     // todo :: 现在的虚拟墙不支持 目标点小于0 的搜索，先跳过；
     return;
   }
+
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
@@ -407,12 +408,8 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
     for (size_t i = 0; i < kNumberRows; ++i) {
       global_pose.x = temp_pos.x() + kXStep * i;
       global_pose.y = temp_pos.y();
-      if (j == 0) {
-        dist_to_obs[i] =
-            GetDistToObsHeadOut(global_pose, direction_request, edt);
-      }
-
-      candidate.dist_to_obs = dist_to_obs[i];
+      candidate.dist_to_obs =
+          GetDistToObsHeadOut(global_pose, direction_request, edt);
       candidate.pose.SetPose(global_pose.x, global_pose.y, global_pose.theta);
       candidate_info_.emplace_back(candidate);
     }
@@ -475,7 +472,8 @@ const float TargetPoseRegulator::GetDistToObsHeadOut(
   // constexpr float kMinSafetyDist = 0.5f;
   const float min_safety_dist = 0.04f;
   size_t sampling_size =
-      request_->space_type == ParkSpaceType::VERTICAL ? 5 : 3;
+      static_cast<size_t>(ceil(fabs(global_pose.GetY()) / kYStep));
+
   const Eigen::Vector2d base_pos(global_pose.GetX(), global_pose.GetY());
   Eigen::Vector2d temp_pos;
 
