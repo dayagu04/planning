@@ -109,6 +109,10 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   }
 
   if (ok) {
+    ok = CheckLanelineChangeable();
+  }
+
+  if (ok) {
     ok = SamplePolys();
   }
 
@@ -787,6 +791,67 @@ bool SamplePolySpeedAdjustDecider::CheckInitVelTraj() {
 
 void SamplePolySpeedAdjustDecider::ClearStitchedPolyPtr() {
   stitched_last_best_quartic_poly_ptr_ = nullptr;
+}
+
+bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  if (current_lane.get() == nullptr) {
+    return false;
+  }
+  float32 left_unchangeable_distance = 0.0;
+  if (lane_change_request_ == 1) {
+    const auto& current_lane_line = current_lane->get_left_lane_boundary();
+    float32 compare_point_s = current_lane_line.begin;
+    for (int i = 0; i < current_lane_line.type_segments_size; i++) {
+      const auto& type_segment = current_lane_line.type_segments[i];
+      compare_point_s += type_segment.length;
+      bool is_changeable =
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+      if (compare_point_s > ego_s_) {
+        if (!is_changeable)
+          left_unchangeable_distance = compare_point_s - ego_s_;
+        else
+          break;
+      }
+    }
+  } else if (lane_change_request_ == 2) {
+    const auto& current_lane_line = current_lane->get_right_lane_boundary();
+    float32 compare_point_s = current_lane_line.begin;
+    for (int i = 0; i < current_lane_line.type_segments_size; i++) {
+      const auto& type_segment = current_lane_line.type_segments[i];
+      compare_point_s += type_segment.length;
+      bool is_changeable =
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DECELERATION_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_SHORT_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
+          type_segment.type ==
+              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
+      if (compare_point_s > ego_s_) {
+        if (!is_changeable)
+          left_unchangeable_distance = compare_point_s - ego_s_;
+        else
+          break;
+      }
+    }
+  }
+  if (left_unchangeable_distance < 50)
+    return true;
+  else
+    return false;
 }
 
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

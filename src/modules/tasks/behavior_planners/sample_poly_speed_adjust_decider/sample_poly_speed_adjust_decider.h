@@ -38,6 +38,7 @@ class SamplePolySpeedAdjustDecider : public Task {
                     const double evaluate_cost_time,
                     const double all_cost_time);
   bool CheckInitVelTraj();
+  bool CheckLanelineChangeable();
   double CalcHeadwayDistance(const double& headway_v, const double ego_v,
                              const std::vector<double>& t_gap_ego_v_bp,
                              const std::vector<double>& t_gap_ego_v);
