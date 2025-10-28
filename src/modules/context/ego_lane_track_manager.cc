@@ -730,7 +730,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   }
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
-      order_ids.size() < 2) {
+      !ego_in_split_region_) {
     lateral_distance_cost_weight = 0.28;
   }
 
@@ -2928,22 +2928,48 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
   // }
   Point2D ego_point = {ego_state->planning_init_point().x,
                        ego_state->planning_init_point().y};
-  if (order_ids.size() < 2) {
-    ego_in_split_region_ = false;
-    return;
-  } else if (order_ids.size() > 2) {
+  // if (order_ids.size() < 2) {
+  //   ego_in_split_region_ = false;
+  //   return;
+  // }
+  if (order_ids.size() > 2) {
     ego_in_split_region_ = true;
     return;
   } else {
-    if (order_ids[0] < relative_id_lanes.size()) {
-      relative_left_lane = relative_id_lanes[order_ids[0]];
-    }
-    if (order_ids[1] < relative_id_lanes.size()) {
-      relative_right_lane = relative_id_lanes[order_ids[1]];
-    }
-
     bool has_left_lane = false;
     bool has_right_lane = false;
+    if (order_ids.size() == 2) {
+      if (order_ids[0] < relative_id_lanes.size()) {
+        relative_left_lane = relative_id_lanes[order_ids[0]];
+      }
+      if (order_ids[1] < relative_id_lanes.size()) {
+        relative_right_lane = relative_id_lanes[order_ids[1]];
+      }
+    } else {
+      double k_right_lane_lateral_distance = -std::numeric_limits<double>::max();
+      double k_left_lane_lateral_distance = std::numeric_limits<double>::max();
+      int left_lane_index = -1;
+      int right_lane_index = -1;
+
+      for (const auto& relative_id_lane : relative_id_lanes) {
+        double ego_to_lane_lateral_distance = relative_id_lane->get_ego_lateral_offset();
+        if (ego_to_lane_lateral_distance >= 0 && ego_to_lane_lateral_distance < k_left_lane_lateral_distance){
+          k_left_lane_lateral_distance = ego_to_lane_lateral_distance;
+          right_lane_index = relative_id_lane->get_order_id();
+        }
+        if (ego_to_lane_lateral_distance < 0 && ego_to_lane_lateral_distance > k_right_lane_lateral_distance){
+          k_right_lane_lateral_distance = ego_to_lane_lateral_distance;
+          left_lane_index = relative_id_lane->get_order_id();
+        }
+      }
+      if (left_lane_index != -1 && left_lane_index < relative_id_lanes.size()) {
+        relative_left_lane = relative_id_lanes[left_lane_index];
+      }
+      if (right_lane_index != -1 && right_lane_index < relative_id_lanes.size()) {
+        relative_right_lane = relative_id_lanes[right_lane_index];
+      }
+    }
+
     if (relative_left_lane != nullptr) {
       if (relative_left_lane->get_lane_frenet_coord() != nullptr) {
         has_left_lane = true;
@@ -2954,7 +2980,6 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
         has_right_lane = true;
       }
     }
-
     const auto& relative_left_lane_points = relative_left_lane->lane_points();
     if (!has_left_lane || !has_right_lane ||
         relative_left_lane_points.size() < 3) {
@@ -3005,7 +3030,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
-         near_average_l < kExistSplitEgoRearLateralDisThd) ||
+        near_average_l < kExistSplitEgoRearLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       ego_in_split_region_ = true;
       return;
