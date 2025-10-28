@@ -400,7 +400,7 @@ const bool ApaSlotManager::IsEgoCloseToObs(const double body_lat_buffer,
       ego, body_lat_buffer, lon_buffer);
 }
 
-const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
+const bool ApaSlotManager::IsSlotCoarseRelease(ApaSlot& slot) {
   if (slot.slot_type_ == SlotType::SLANT) {
     // 车尾泊入和车头泊入释放要求车位和自车的相对方向不一致
     // 因次不在此作基于规则释放 在规划器内部预规划时做是否释放
@@ -460,7 +460,7 @@ const bool ApaSlotManager::IsSlotCoarseRelease(const ApaSlot& slot) {
 }
 
 const SlotReleaseVoterType
-ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
+ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   if (is_ego_col_vertical_) {
     return SlotReleaseVoterType::CLEAR;
   }
@@ -508,6 +508,10 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
   ILOG_INFO << "lat_move_slot_dist = " << res.safe_lat_move_dist
             << "  lon_move_slot_dist = " << res.safe_lon_move_dist
             << "  lat_buffer = " << res.safe_lat_buffer;
+
+  if (res.safe_lat_buffer < slot_release_buffer.maximum_lat_buffer - 1e-3) {
+    slot.is_narrow_slot_ = true;
+  }
 
   SlotReleaseVoterType release_voter_type;
   if (ego_col_safe_lon_buffer_ < 0.12) {
@@ -600,7 +604,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(const ApaSlot& slot) {
 }
 
 const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
-    const ApaSlot& slot) {
+    ApaSlot& slot) {
   if (is_ego_col_parallel_) {
     return SlotReleaseVoterType::CLEAR;
   }
@@ -826,10 +830,11 @@ const SlotReleaseState ApaSlotManager::GetSlotReleaseState() const {
 
 const SlotReleaseState ApaSlotManager::GetSlotReleaseStateFreeSlot() const {
   if (ego_info_under_slot_.slot.release_info_
-          .release_state[SlotReleaseMethod::RULE_BASED_RELEASE] ==
-      SlotReleaseState::NOT_RELEASE || ego_info_under_slot_.slot.release_info_
-          .release_state[SlotReleaseMethod::FUSION_RELEASE] ==
-      SlotReleaseState::NOT_RELEASE) {
+              .release_state[SlotReleaseMethod::RULE_BASED_RELEASE] ==
+          SlotReleaseState::NOT_RELEASE ||
+      ego_info_under_slot_.slot.release_info_
+              .release_state[SlotReleaseMethod::FUSION_RELEASE] ==
+          SlotReleaseState::NOT_RELEASE) {
     return SlotReleaseState::NOT_RELEASE;
   }
 

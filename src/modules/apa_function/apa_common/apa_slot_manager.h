@@ -257,13 +257,13 @@ class ApaSlotManager final {
                              const double mirror_lat_buffer = 0.268,
                              const double lon_buffer = 0.1);
 
-  const bool IsSlotCoarseRelease(const ApaSlot& slot);
+  const bool IsSlotCoarseRelease(ApaSlot& slot);
 
   const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(
-      const ApaSlot& slot);
+      ApaSlot& slot);
 
   const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
-      const ApaSlot& slot);
+      ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;

@@ -287,6 +287,8 @@ class ApaSlot final {
 
   geometry_lib::GlobalToLocalTf g2l_tf_;
   geometry_lib::LocalToGlobalTf l2g_tf_;
+
+  bool is_narrow_slot_ = false;
 };
 
 const std::string GetSlotTypeString(const SlotType type);
