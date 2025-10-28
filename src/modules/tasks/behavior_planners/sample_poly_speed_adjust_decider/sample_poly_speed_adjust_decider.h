@@ -51,6 +51,7 @@ class SamplePolySpeedAdjustDecider : public Task {
 
   bool IsInDeceleartionScene();
   void ClearStitchedPolyPtr();
+  double GetStoplineSpdDifferGain();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -139,6 +140,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   void set_weight_follow_vel(const double weight) {
     weight_follow_vel_ = weight;
   }
+
   double weight_follow_vel() const { return weight_follow_vel_; };
 
   void set_weight_stop_line(const double weight) { weight_stop_line_ = weight; }

@@ -209,7 +209,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
         ego_s_ + leading_veh_.center_s + leading_veh_.v * evaulation_t_;
     leading_veh_v = leading_veh_.v;
   }
-
+  double speed_differ_gain = GetStoplineSpdDifferGain();
   for (size_t i = 0; i < sample_trajs_.size(); i++) {
     auto& sample_traj_at_v = sample_trajs_[i];
     for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
@@ -217,7 +217,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
                            leading_veh_v, leading_veh_.id,
-                           enable_merge_decelaration);
+                           enable_merge_decelaration, speed_differ_gain);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
@@ -230,6 +230,95 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   return true;
 }
 
+double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
+  double rear_speed_differ_gain = 1;
+  double front_speed_differ_gain = 1;
+  double speed_differ_gain = 1;
+  speed::STPoint prediction_matched_upper_st_point;
+  speed::STPoint prediction_matched_lower_st_point;
+  st_sample_space_base_.GetBorderByAvailable(
+      ego_s_, 0.0, &prediction_matched_lower_st_point,
+      &prediction_matched_upper_st_point);
+  const double vel_diff_to_gap_rear_car =
+      ego_v_ - prediction_matched_lower_st_point.velocity() >= 0.0
+          ? std::fmax(ego_v_ - prediction_matched_lower_st_point.velocity(),
+                      kZeroEpsilon)
+          : ego_v_ - prediction_matched_lower_st_point.velocity();
+  const double ttc_to_rear_car =
+      ego_s_ - prediction_matched_lower_st_point.s() > 0.0
+          ? (prediction_matched_lower_st_point.s() - ego_s_) /
+                vel_diff_to_gap_rear_car
+          : (ego_s_ - prediction_matched_lower_st_point.s()) /
+                vel_diff_to_gap_rear_car;
+  const double vel_diff_to_gap_front_car =
+      ego_v_ - prediction_matched_upper_st_point.velocity() >= 0
+          ? std::fmax(ego_v_ - prediction_matched_upper_st_point.velocity(),
+                      kZeroEpsilon)
+          : ego_v_ - prediction_matched_upper_st_point.velocity();
+
+  if (prediction_matched_upper_st_point.agent_id() !=
+      prediction_matched_lower_st_point.agent_id()) {
+    if (prediction_matched_lower_st_point.agent_id() != kNoAgentId) {
+      if (vel_diff_to_gap_rear_car > 0.0) {
+        rear_speed_differ_gain = 0.0;
+      } else {
+        double acc_to_rear_car =
+            std::fmax(0.4 - prediction_matched_lower_st_point.acceleration(),
+                      kZeroEpsilon);
+        double distance_to_rear_car = std::fmax(
+            ego_s_ - prediction_matched_lower_st_point.s() - 2.0, 0.0);
+        double acc_distance =
+            std::pow(vel_diff_to_gap_rear_car, 2.0) / (2.0 * acc_to_rear_car);
+        rear_speed_differ_gain = distance_to_rear_car > acc_distance
+                                     ? 0.0
+                                     : 2.0 * std::pow(7.0 - ttc_to_rear_car, 2);
+      }
+    } else {
+      rear_speed_differ_gain = 0.0;
+    }
+
+    if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
+      if (vel_diff_to_gap_front_car >= 0.0) {
+        double ultra_acc = 0.6;
+        double distance_to_overtake = std::fmax(
+            prediction_matched_upper_st_point.s() - ego_s_ + 15.0, 0.0);
+        double overtake_time =
+            (std::sqrt(2 * distance_to_overtake * ultra_acc +
+                       std::pow(vel_diff_to_gap_front_car, 2.0)) -
+             vel_diff_to_gap_front_car) /
+            ultra_acc;
+        double rest_time = (merge_stop_line_distance_ - ego_v_ * overtake_time -
+                            std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+                           (ego_v_ + ultra_acc * overtake_time);
+        front_speed_differ_gain = rest_time > 3.0 ? 0.0 : 1.0;
+      } else {
+        front_speed_differ_gain =
+            (prediction_matched_upper_st_point.s() - ego_s_) > 12 ? 0.0 : 1.0;
+      }
+    } else {
+      front_speed_differ_gain = 0.0;
+    }
+  } else if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
+    if (vel_diff_to_gap_front_car > 0) {
+      double ultra_acc = 1;
+      double distance_to_overtake =
+          std::fmax(prediction_matched_upper_st_point.s() - ego_s_ + 2.0, 0.0);
+      double overtake_time =
+          (std::sqrt(2 * distance_to_overtake * ultra_acc +
+                     std::pow(vel_diff_to_gap_front_car, 2.0)) -
+           vel_diff_to_gap_front_car) /
+          ultra_acc;
+      double rest_time = (merge_stop_line_distance_ - ego_v_ * overtake_time -
+                          std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+                         (ego_v_ + ultra_acc * overtake_time);
+      front_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
+      rear_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
+    }
+  }
+  speed_differ_gain =
+      std::fmax(rear_speed_differ_gain, front_speed_differ_gain);
+  return speed_differ_gain;
+}
 void SamplePolySpeedAdjustDecider::CalcTargetLaneObjsFlowVel() {
   if (agent_info_.empty()) {
     target_lane_objs_flow_vel_ = ego_v_;

@@ -83,16 +83,46 @@ double SampleQuarticPolynomialCurve::CalcVelIntegral(
   return coeff[4] * t_4 + coeff[3] * t_3 + coeff[2] * t_2;
 }
 
+double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
+                                                            const double obj_v,
+                                                            const double ego_a,
+                                                            const double obj_a,
+                                                            bool is_front_car) {
+  double differ_acc = (ego_a - obj_a) == 0.0 ? 0.001 : (ego_a - obj_a);
+  const double calculate_collision_time = (ego_v - obj_v) / differ_acc;
+  if (calculate_collision_time <= 0.0 || calculate_collision_time >= 4.0) {
+    double limit_distance =
+        (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0;
+    if (ego_v > obj_v) {
+      return is_front_car ? limit_distance : 0.0;
+    } else {
+      return is_front_car ? 0.0 : -limit_distance;
+    }
+  } else {
+    double limit_distance =
+        (ego_v - obj_v) * calculate_collision_time +
+        0.5 * differ_acc * calculate_collision_time * calculate_collision_time;
+    if (ego_v > obj_v) {
+      return is_front_car
+                 ? limit_distance
+                 : (obj_v - ego_v) * 4.0 - 0.5 * differ_acc * 4.0 * 4.0;
+    } else {
+      return is_front_car ? (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0
+                          : -limit_distance;
+    }
+  }
+}
+
 void SampleQuarticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
-    int32_t leading_veh_id, bool enable_merge_decelaration) {
+    int32_t leading_veh_id, bool enable_merge_decelaration,
+    double speed_differ_gain) {
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
-  for (size_t i = anchor_points_match_gap_cost_vec_.size() - 1;
-       i < anchor_points_match_gap_cost_vec_.size(); i++) {
+  for (size_t i = 0; i < anchor_points_match_gap_cost_vec_.size(); i++) {
     STPoint anchor_matched_upper_st_point;
     STPoint anchor_matched_lower_st_point;
     const double& anchor_arrived_t =
@@ -110,24 +140,36 @@ void SampleQuarticPolynomialCurve::CalcCost(
     sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
                                            &anchor_matched_lower_st_point,
                                            &anchor_matched_upper_st_point);
-    const double safe_distance_to_gap_front_obj =
-        planning::CalcGapObjSafeDistance(
-            ego_v, anchor_matched_upper_st_point.velocity(), 0.0, false, true);
-    const double safe_distance_to_gap_back_obj =
-        planning::CalcGapObjSafeDistance(
-            ego_v, anchor_matched_upper_st_point.velocity(), 0.0, false, true);
+    const double safe_distance_to_gap_front_obj = CalcGapVelSafeDistance(
+        ego_v, anchor_matched_upper_st_point.velocity(), ego_a,
+        anchor_matched_upper_st_point.acceleration(), true);
+    const double safe_distance_to_gap_back_obj = CalcGapVelSafeDistance(
+        ego_v, anchor_matched_upper_st_point.velocity(), ego_a,
+        anchor_matched_upper_st_point.acceleration(), false);
 
     anchor_points_match_gap_cost_vec_[i].GetCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
         safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
         enable_merge_decelaration);
-
+    if (anchor_points_match_gap_cost_vec_[i].cost() == 0.0) {
+      end_point_lower_st_point = anchor_matched_lower_st_point;
+      end_point_upper_st_point = anchor_matched_upper_st_point;
+      arrived_s_ = anchor_arrived_s;
+      arrived_v_ = anchor_arrived_v;
+      arrived_a_ = anchor_arrived_t - poly_.T() > 0.0
+                       ? 0.0
+                       : poly_.CalculateSecondDerivative(anchor_arrived_t);
+      if ((stop_line_s - arrived_s_) / arrived_v_ < 5.0) {
+        speed_differ_gain = 0.0;
+      }
+      break;
+    }
     if (i == anchor_points_match_gap_cost_vec_.size() - 1) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
       end_point_upper_st_point = anchor_matched_upper_st_point;
+      cost_sum_ += anchor_points_match_gap_cost_vec_[i].cost();
     }
-    cost_sum_ += anchor_points_match_gap_cost_vec_[i].cost();
   }
   // // poly curve cost
 
@@ -160,98 +202,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
   }
 
   stop_penalty_cost_.GetCost(arrived_v_);
-
-  double speed_differ_gain = 1;
-
-  if (enable_merge_decelaration) {
-    double rear_speed_differ_gain = 1;
-    double front_speed_differ_gain = 1;
-    double ego_s = poly_.CalculatePoint(0.0);
-    STPoint prediction_matched_upper_st_point;
-    STPoint prediction_matched_lower_st_point;
-    sample_space_base.GetBorderByAvailable(ego_s, 0.0,
-                                           &prediction_matched_lower_st_point,
-                                           &prediction_matched_upper_st_point);
-    const double vel_diff_to_gap_rear_car =
-        ego_v - prediction_matched_lower_st_point.velocity() >= 0.0
-            ? std::fmax(ego_v - prediction_matched_lower_st_point.velocity(),
-                        kZeroEpsilon)
-            : ego_v - prediction_matched_lower_st_point.velocity();
-    const double ttc_to_rear_car =
-        ego_s - prediction_matched_lower_st_point.s() > 0.0
-            ? (prediction_matched_lower_st_point.s() - ego_s) /
-                  vel_diff_to_gap_rear_car
-            : (ego_s - prediction_matched_lower_st_point.s()) /
-                  vel_diff_to_gap_rear_car;
-    const double vel_diff_to_gap_front_car =
-        ego_v - prediction_matched_upper_st_point.velocity() >= 0
-            ? std::fmax(ego_v - prediction_matched_upper_st_point.velocity(),
-                        kZeroEpsilon)
-            : ego_v - prediction_matched_upper_st_point.velocity();
-
-    if (prediction_matched_upper_st_point.agent_id() !=
-        prediction_matched_lower_st_point.agent_id()) {
-      if (prediction_matched_lower_st_point.agent_id() != kNoAgentId) {
-        if (vel_diff_to_gap_rear_car > 0.0) {
-          rear_speed_differ_gain = 0.0;
-        } else {
-          double acc_to_rear_car =
-              std::fmax(0.4 - prediction_matched_lower_st_point.acceleration(),
-                        kZeroEpsilon);
-          double distance_to_rear_car = std::fmax(
-              ego_s - prediction_matched_lower_st_point.s() - 2.0, 0.0);
-          double acc_distance =
-              std::pow(vel_diff_to_gap_rear_car, 2.0) / (2.0 * acc_to_rear_car);
-          rear_speed_differ_gain =
-              distance_to_rear_car > acc_distance
-                  ? 0.0
-                  : 2.0 * std::pow(7.0 - ttc_to_rear_car, 2);
-        }
-      } else {
-        rear_speed_differ_gain = 0.0;
-      }
-
-      if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
-        if (vel_diff_to_gap_front_car >= 0.0) {
-          double ultra_acc = 0.6;
-          double distance_to_overtake = std::fmax(
-              prediction_matched_upper_st_point.s() - ego_s + 15.0, 0.0);
-          double overtake_time =
-              (std::sqrt(2 * distance_to_overtake * ultra_acc +
-                         std::pow(vel_diff_to_gap_front_car, 2.0)) -
-               vel_diff_to_gap_front_car) /
-              ultra_acc;
-          double rest_time = (stop_line_s - ego_v * overtake_time -
-                              std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
-                             (ego_v + ultra_acc * overtake_time);
-          front_speed_differ_gain = rest_time > 3.0 ? 0.0 : 1.0;
-        } else {
-          front_speed_differ_gain =
-              (prediction_matched_upper_st_point.s() - ego_s) > 12 ? 0.0 : 1.0;
-        }
-      } else {
-        front_speed_differ_gain = 0.0;
-      }
-    } else if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
-      if (vel_diff_to_gap_front_car > 0) {
-        double ultra_acc = 1;
-        double distance_to_overtake =
-            std::fmax(prediction_matched_upper_st_point.s() - ego_s + 2.0, 0.0);
-        double overtake_time =
-            (std::sqrt(2 * distance_to_overtake * ultra_acc +
-                       std::pow(vel_diff_to_gap_front_car, 2.0)) -
-             vel_diff_to_gap_front_car) /
-            ultra_acc;
-        double rest_time = (stop_line_s - ego_v * overtake_time -
-                            std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
-                           (ego_v + ultra_acc * overtake_time);
-        front_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
-        rear_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
-      }
-    }
-    speed_differ_gain =
-        std::fmax(rear_speed_differ_gain, front_speed_differ_gain);
-  }
 
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
