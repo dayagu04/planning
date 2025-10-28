@@ -194,8 +194,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   const bool FillParkOutPath(
       std::vector<pnc::geometry_lib::PathPoint>& local_path,
-      const float& heading_diff_thresh, const float& target_heading_rad,
-      const pnc::geometry_lib::PathPoint& point, const float& expansion_dir);
+      const pnc::geometry_lib::PathPoint& point,
+      const double heading_diff_thresh, const double target_heading_rad,
+      const float expansion_dir);
 
  private:
   RequestResponseState thread_state_;

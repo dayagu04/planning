@@ -736,14 +736,18 @@ const void NarrowSpaceScenario::GenerateFallBackPath() {
 
 const int NarrowSpaceScenario::PathOptimizationByCILQR(
     const std::vector<AStarPathPoint>& first_seg_path, Transform2d* tf) {
+  if (first_seg_path.empty()) {
+    return 0;
+  }
+
   std::vector<pnc::geometry_lib::PathPoint> local_path;
   local_path.reserve(first_seg_path.size());
 
   constexpr float kFirstXDiffThresh = 0.5f;
-  constexpr float kHeadingDiffThresh = 0.01f;
-  const float target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
-                                       ->GetEgoInfoUnderSlot()
-                                       .target_pose.heading;
+  constexpr double kHeadingDiffThresh = 0.01;
+  const double target_heading_rad = apa_world_ptr_->GetSlotManagerPtr()
+                                        ->GetEgoInfoUnderSlot()
+                                        .target_pose.heading;
   const float target_x = apa_world_ptr_->GetSlotManagerPtr()
                              ->GetEgoInfoUnderSlot()
                              .target_pose.pos.x();
@@ -763,8 +767,8 @@ const int NarrowSpaceScenario::PathOptimizationByCILQR(
 
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
         !is_stright) {
-      if (!FillParkOutPath(local_path, kHeadingDiffThresh, target_heading_rad,
-                           point, expansion_dir)) {
+      if (!FillParkOutPath(local_path, point, kHeadingDiffThresh,
+                           target_heading_rad, expansion_dir)) {
         break;
       }
     } else {
@@ -2805,12 +2809,13 @@ void NarrowSpaceScenario::SetRecommendationDirection(
 
 const bool NarrowSpaceScenario::FillParkOutPath(
     std::vector<pnc::geometry_lib::PathPoint>& local_path,
-    const float& heading_diff_thresh, const float& target_heading_rad,
-    const pnc::geometry_lib::PathPoint& point, const float& expansion_dir) {
+    const pnc::geometry_lib::PathPoint& point, const double heading_diff_thresh,
+    const double target_heading_rad, const float expansion_dir) {
   constexpr float kExpansionLength = 0.2f;
-  const float heading_error = fabs(target_heading_rad - point.heading);
+  const double heading_error = fabs(target_heading_rad - point.heading);
 
-  if (heading_error >= heading_diff_thresh) {
+  if (pnc::geometry_lib::NormalizeAnglePI(heading_error) >=
+      heading_diff_thresh) {
     local_path.emplace_back(point);
   } else {
     ILOG_INFO << "heading_error = " << heading_error
