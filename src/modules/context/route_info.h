@@ -284,9 +284,9 @@ class RouteInfo {
 
   bool IsEmergencyLane(const uint64 lane_id,
                        const ad_common::sdpromap::SDProMap& sdpro_map) const;
-  bool IsClosingIntersectionEntrance(const iflymapdata::sdpro::LinkInfo_Link* link,
-                                              const ad_common::sdpromap::SDProMap& sdpro_map,
-                                              double distance_on_link);
+  bool IsClosingIntersectionEntrance(
+      const iflymapdata::sdpro::LinkInfo_Link* link,
+      const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link);
   double CalculateAngle(const Point2D& o, const Point2D& p) {
     double dx = p.x - o.x;
     double dy = p.y - o.y;
@@ -334,5 +334,8 @@ class RouteInfo {
   void EraseSplitSplitFeasibleLane(
       NOASplitRegionInfo& first_split_region_info,
       NOASplitRegionInfo& second_split_region_info);
+  void OptimizeFeasibleLanesByDistance(
+      NOASplitRegionInfo exchange_region_info,
+      std::map<int, double>& feasible_lane_distance, double max_distance);
 };
 }  // namespace planning
