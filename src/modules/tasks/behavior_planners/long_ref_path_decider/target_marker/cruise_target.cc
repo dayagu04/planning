@@ -137,6 +137,10 @@ bool CruiseTarget::MakeKinematicsBound(
       break;
     case SpeedLimitType::NEAR_POI:
       kinematic_param = config_.near_poi_kinematic_param;
+    case SpeedLimitType::NEAR_CONSTRUCTION:
+      kinematic_param = config_.construction_kinematic_param;
+    case SpeedLimitType::ON_CONSTRUCTION:
+      kinematic_param = config_.construction_kinematic_param;
       break;
     default:
       break;

@@ -14,6 +14,7 @@
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
 #include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
+#include "../tasks/task_interface/construction_scene_decider_output.h"
 #include "../tasks/task_interface/crossing_agent_decider_output.h"
 #include "../tasks/task_interface/ego_lane_road_right_decider_output.h"
 #include "../tasks/task_interface/gap_selcector_decider_output.h"
@@ -91,6 +92,15 @@ class PlanningContext {
 
   EgoLaneRoadRightDeciderOutput &mutable_ego_lane_road_right_decider_output() {
     return ego_lane_road_right_decider_output_;
+  }
+
+  const ConstructionSceneDeciderOutput &construction_scene_decider_output()
+      const {
+    return construction_scene_decider_output_;
+  }
+
+  ConstructionSceneDeciderOutput &mutable_construction_scene_decider_output() {
+    return construction_scene_decider_output_;
   }
 
   const LaneChangeDeciderOutput &lane_change_decider_output() const {
@@ -519,6 +529,8 @@ class PlanningContext {
       lateral_behavior_planner_output_;  // TODO: 拆分到独立的Task里面
 
   iflyauto::PlanningHMIOutputInfoStr *planning_hmi_info_;
+
+  ConstructionSceneDeciderOutput construction_scene_decider_output_;
 
   // NOTE:注意Task成员变量的清空
   // lane change task pipeline
