@@ -164,6 +164,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       arrived_s_ = anchor_arrived_s;
       arrived_v_ = anchor_arrived_v;
       arrived_a_ = anchor_arrived_a;
+      arrived_t_ = anchor_arrived_t;
       if ((stop_line_s - arrived_s_) / arrived_v_ < 5.0) {
         speed_differ_gain = 0.0;
       }
@@ -176,7 +177,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
     }
   }
   // // poly curve cost
-
+  if (!enable_merge_decelaration) {
+    double average_vel_differ = (arrived_v_ - ego_v)/arrived_t_;
+    double vel_differ_cost =
+        average_vel_differ > 0 ? 0.0 : 2.0 * average_vel_differ * average_vel_differ;
+    cost_sum_ += vel_differ_cost;
+  }
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
   stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,

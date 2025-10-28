@@ -18,7 +18,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                            const double ego_current_vel,
                            const bool is_merge_change) {
   // Helper function to calculate the cost for distance and velocity
-  const double ttc_safe_limit = is_merge_change ? 8.0 : 2.0;
+  const double ttc_safe_limit = is_merge_change ? 8.0 : 0.0;
   const double gap_vel_gain = is_merge_change ? 2.0 : 1.0;
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
@@ -199,25 +199,34 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         dist_to_upper_border, safe_border_distance_to_gap_front_obj,
         kMinSafeDistanceFront, safe_dis_penalty_factor_coef_,
         clip_dis_penalty_factor_coef_, weight_match_s_);
-    match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
     double safe_gap_center =
-        (upper_st_point.s() - safe_border_distance_to_gap_front_obj +
+        (upper_st_point.s() - safe_border_distance_to_gap_front_obj -
+         front_edge_to_rear_axle_ + rear_edge_to_rear_axle_ +
          lower_st_point.s() + safe_border_distance_to_gap_back_obj) /
         2.0;
     double left_changeable_gap = upper_st_point.s() - lower_st_point.s() -
                                  safe_border_distance_to_gap_back_obj -
-                                 safe_border_distance_to_gap_front_obj;
+                                 safe_border_distance_to_gap_front_obj -
+                                 front_edge_to_rear_axle_ -
+                                 rear_edge_to_rear_axle_;
     double min_gap_center_distance = left_changeable_gap / 2.0;
     if (left_changeable_gap >= 0) {
       // extra match s center cost
+      match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
       match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
           std::fabs(safe_gap_center - poly_end_s), kBasicSafeDistance,
           min_gap_center_distance, narrow_gap_penalty_factor_coef_,
           weight_match_s_);
     } else {
+      double proportion_gap_center_distance =
+          std::fabs(0.5 * upper_st_point.s() + 0.5 * lower_st_point.s() -
+                    poly_end_s) /
+          (upper_st_point.s() - lower_st_point.s());
       match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
-          kBasicSafeDistance + 1, kBasicSafeDistance, 0.0,
+          kBasicSafeDistance + 1, kBasicSafeDistance,
+          -proportion_gap_center_distance * kBasicSafeDistance,
           narrow_gap_penalty_factor_coef_, weight_match_s_);
+      // match_s_cost_ = weight_match_s_ * std::exp()
     }
     match_v_cost_ = calculate_gap_vel_match_cost(
         upper_st_point.velocity(), lower_st_point.velocity(),

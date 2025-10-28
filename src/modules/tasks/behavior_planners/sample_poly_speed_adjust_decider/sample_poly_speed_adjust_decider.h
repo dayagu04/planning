@@ -61,6 +61,9 @@ class SamplePolySpeedAdjustDecider : public Task {
   double ego_v_;
   double ego_a_;
   double ego_s_;
+
+  double adjust_speed_max_acc_ = 1.5;
+  double adjust_speed_min_acc_ = -2.0;
   std::pair<double, double> ego_cart_point_;
   std::pair<double, double> last_ego_cart_point_;
 
