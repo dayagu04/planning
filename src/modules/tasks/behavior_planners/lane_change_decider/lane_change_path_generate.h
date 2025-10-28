@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include "behavior_planners/long_ref_path_decider/target_marker/comfort_target.h"
 #include "config/basic_type.h"
 #include "dynamic_world/dynamic_agent_node.h"
 #include "library/lc_idm_lib/include/basic_intelligent_driver_model.h"
@@ -61,6 +62,30 @@ class LaneChangePathGenerateManager {
       t_vec.clear();
     }
   };
+  struct ComfortIdmParameters {
+    double v0 = 33.5;
+    double s0 = 3.5;
+    double T = 1.0;
+    double a = 1.5;
+    double b = 1.0;
+    double b_max = 2.0;
+    double b_hard = 4.0;
+    double delta = 4.0;
+    double max_a_jerk = 5.0;
+    double max_b_jerk = 1.0;
+    double max_deceleration_jerk_lat_follow = 2.0;
+    double max_deceleration_jerk_lon_cutin = 4.0;
+    double virtual_front_s = 200.0;
+    double cool_factor = 0.99;
+    double over_speed_factor = 0.3;
+    double follow_consider_distance = 10.0;
+    double follow_consider_time_headway = 1.5;
+  };
+  ComfortIdmParameters comfort_idm_params_;  // 默认参数
+  const std::vector<double> l_slope_bp{0.0, 40.0};
+  const std::vector<double> l_slope_v{0.35, 0.08};
+  const std::vector<double> p_slope_bp{0., 40.0};
+  const std::vector<double> p_slope_v{0.8, 0.2};
 
   LaneChangePathGenerateManager(std::shared_ptr<ReferencePath> ref_path,
                                 framework::Session* session);
@@ -96,5 +121,12 @@ class LaneChangePathGenerateManager {
     ego_future_trajectory_.clear();
     lc_path_result_.reset();
   }
+  double CalculateComfortAcceleration(const double current_acc,
+                                      const double current_vel,
+                                      const double current_s,
+                                      const double front_vel,
+                                      const double front_s, const double tau);
+  double CalcDesiredVelocity(const double d_rel, const double d_des,
+                             const double v_lead, const double v_ego) const;
 };
 }  // namespace planning

@@ -290,6 +290,18 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
   BasicIntelligentDriverModel::ModelState idm_model_state(
       0.0, ego_state.velocity(), default_front_dis, default_front_v);
+  // 根据自车速度设置期望thw（主要与纵向保持基本一致）
+  std::vector<double> ego_vel_table = {0.0, 3.33, 16.67, 26.67, 36.67};
+  std::vector<double> ego_thw_fused_table = {
+      1.05,  // 最小
+      1.28,  // 中间取平均
+      1.50,  // 中间取平均
+      2.10,  // 中间取平均
+      2.55   // 最大
+  };
+  const double planning_init_vel = planning_init_point.lon_init_state.v();
+  idm_model_param.kDesiredHeadwayTime =
+      planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
 
   if (is_exist_front_agent) {
     idm_model_state.s = 0;
@@ -299,35 +311,6 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     // idm_model_state.vel = temp_state.v;
     idm_model_state.vel_front = front_node_future_trajectory_[0].v;
   }
-  // const auto &lane_change_decider_output =
-  //     session_->planning_context().lane_change_decider_output();
-
-  // const int front_agent_node_id =
-  //     lane_change_decider_output.lc_gap_info.front_node_id;
-
-  // bool is_exist_front_agent = front_agent_node_id !=
-  // planning_data::kInvalidId; bool is_get_front_agent_predicton_infos_succeed
-  // = false; LaneChangePathGenerateManager::AgentPredictionTrajectoryPoints
-  //     front_agent_prediction_infos;
-
-  // if (is_exist_front_agent) {
-  //   const auto front_agent_node =
-  //       session_->environmental_model().get_dynamic_world()->GetNode(
-  //           front_agent_node_id);
-  //   is_get_front_agent_predicton_infos_succeed =
-  //       CalculateFrontAgentPredictionInfo(&front_agent_prediction_infos,
-  //                                         front_agent_node);
-  // }
-
-  // Point2D cart_point(pp_model_state.x, pp_model_state.y);
-  // Point2D frenet_point;
-  // if (ref_path_ == nullptr) {
-  //   return false;
-  // }
-  // if (!ref_frenet_coor->XYToSL(cart_point, frenet_point)) {
-  //   return false;
-  // }
-
   // 自车轨迹起点
   TrajectoryPoint init_point;
   init_point.x = planning_init_point.x;
@@ -350,6 +333,20 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   int index = 0;
   bool iter_terminate = false;
   bool is_close = false;
+  // 纵向舒适加速度计算
+  double v_cruise =
+      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  double current_a = init_point.a;
+  double current_v = init_point.v;
+  double current_s = 0.0;  // 车头为起点
+  double front_vel =
+      is_exist_front_agent ? front_node_future_trajectory_[0].v : v_cruise;
+  double front_s = is_exist_front_agent
+                       ? front_node_future_trajectory_[0].s -
+                             (init_point.s + car_param.front_edge_to_rear_axle)
+                       : 100.0;  //已经减掉半车长度
+  double tau =
+      planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
   // 递推自车轨迹
   while (!iter_terminate) {
     index++;  // index = 1 -> ...
@@ -372,10 +369,13 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     temp_state.delta = pnc::mathlib::Clamp(temp_state.delta, -0.5, 0.5);
 
     // lon simulation
-    double desire_acc;
-    idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state,
-                                         &desire_acc);
-    desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
+    // double desire_acc;
+    // idm_model_.GetAccDesiredAcceleration(idm_model_param, idm_model_state,
+    //                                      &desire_acc);
+    // desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
+
+    double desire_acc = CalculateComfortAcceleration(
+        current_a, current_v, current_s, front_vel, front_s, tau);
     temp_state.v = idm_model_state.vel + desire_acc * dt;
 
     // update ego next state using vehicle simulation model
@@ -434,11 +434,26 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
           (ego_traj_point.s + car_param.front_edge_to_rear_axle);
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = front_node_future_trajectory_[index].v;
+      //纵向舒适加速度信息更新
+      current_s =
+          ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
+      current_v = ego_traj_point.v;
+      current_a = desire_acc;
+      front_s = front_node_future_trajectory_[index].s -
+                (init_point.s + car_param.front_edge_to_rear_axle);
+      front_vel = front_node_future_trajectory_[index].v;
     } else {
       idm_model_state.s = 0;
       idm_model_state.s_front = default_front_dis;
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = default_front_v;
+      //纵向舒适加速度信息更新
+      current_s =
+          ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
+      current_v = ego_traj_point.v;
+      current_a = desire_acc;
+      front_s = 100.0;
+      front_vel = v_cruise;
     }
 
     ReferencePathPoint reference_path_point;
@@ -590,5 +605,140 @@ double LaneChangePathGenerateManager::ComputeLd(double v, bool is_close) {
     Ld = std::max(Lmin, gamma * Ld);
   }
   return Ld;
+}
+// 纵向计算加速度基本逻辑
+double LaneChangePathGenerateManager::CalculateComfortAcceleration(
+    const double current_acc, const double current_vel, const double current_s,
+    const double front_vel, const double front_s, const double tau) {
+  comfort_idm_params_.s0 = 3.5;
+  comfort_idm_params_.a = 0.7;      // 加速度
+  comfort_idm_params_.b = 0.8;      // 舒适减速度
+  comfort_idm_params_.b_max = 1.0;  // 前车减速，自车最大减速度
+  comfort_idm_params_.b_hard = 1.0;  //硬刹车减速度，期望碰撞，因此设置小一点
+
+  double s0 = comfort_idm_params_.s0;
+  double v0 = comfort_idm_params_.v0;
+  double a = comfort_idm_params_.a;
+  double b = comfort_idm_params_.b;
+  double b_max = comfort_idm_params_.b_max;
+  double b_hard = comfort_idm_params_.b_hard;
+  double delta = comfort_idm_params_.delta;
+  double cool_factor = comfort_idm_params_.cool_factor;
+  double over_speed_factor = comfort_idm_params_.over_speed_factor;
+  double dt = 0.2;
+
+  double s_alpha = std::max(1e-3, front_s - current_s);
+  double delta_v = current_vel - front_vel;
+
+  double s_star =
+      s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
+                                                 (2.0 * std::sqrt(a * b_max)));
+
+  double s_safe = s0 + current_vel * tau;
+
+  double s_desired = std::max(s0, front_s - s_safe);
+
+  double dynamic_v0 =
+      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
+
+  double desired_v0 = std::min(v0, dynamic_v0);
+
+  double a_free;
+  if (current_vel <= desired_v0) {
+    a_free = a * (1.0 - std::pow(current_vel / desired_v0, delta));
+  } else {
+    a_free = -b * (1.0 - std::pow(desired_v0 / current_vel, a * delta / b));
+  }
+
+  double z = s_star / s_desired;
+
+  double a_idm;
+  if (current_vel <= desired_v0) {
+    if (z >= 1.0) {
+      a_idm = a * (1.0 - std::pow(z, 2.0));
+    } else {
+      if (std::abs(a_free) > 1e-6) {
+        a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
+      } else {
+        a_idm = a * (1.0 - std::pow(z, 2.0));
+      }
+    }
+  } else {
+    if (z >= 1.0) {
+      a_idm = a_free + a * (1.0 - std::pow(z, 2.0));
+    } else {
+      a_idm = a_free;
+    }
+  }
+
+  double ds_star = s_alpha - s_star;
+  double ds_safe = s_alpha - s_safe;
+  double a_cah;
+  if (ds_safe < 0.0 && ds_star < 0.0) {
+    a_cah = b_hard * ds_star / s_star;
+  } else if (ds_safe > 0.0 && ds_star < 0.0) {
+    a_cah = b * ds_star / s_star;
+  } else {
+    a_cah = a_idm;
+  }
+
+  double final_acc;
+  if (a_idm >= a_cah) {
+    final_acc = a_idm;
+  } else {
+    final_acc = (1.0 - cool_factor) * a_idm +
+                cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
+  }
+
+  double max_decel_jerk = 0.0;
+  // if (is_lat_follow_) {
+  //   max_decel_jerk = comfort_idm_params_.max_deceleration_jerk_lat_follow;
+  // } else if (is_lon_cutin_) {
+  //   max_decel_jerk = comfort_idm_params_.max_deceleration_jerk_lon_cutin;
+  // } else {
+  //   max_decel_jerk = comfort_idm_params_.max_b_jerk;
+  // }
+  max_decel_jerk = comfort_idm_params_.max_b_jerk;
+  double acc_change = final_acc - current_acc;
+  if (acc_change > 0 && acc_change > comfort_idm_params_.max_a_jerk * dt) {
+    final_acc = current_acc + comfort_idm_params_.max_a_jerk * dt;
+  } else if (acc_change < 0 && acc_change < -max_decel_jerk * dt) {
+    final_acc = current_acc - max_decel_jerk * dt;
+  }
+
+  final_acc = std::max(std::min(a, final_acc), -comfort_idm_params_.b_hard);
+
+  return final_acc;
+}
+double LaneChangePathGenerateManager::CalcDesiredVelocity(
+    const double d_rel, const double d_des, const double v_lead,
+    const double v_ego) const {
+  double v_lead_clip = std::max(v_lead, 0.0);
+  const double max_runaway_speed = -2.0;
+  double l_slope = interp(v_lead, l_slope_bp, l_slope_v);
+  double p_slope = interp(v_lead, p_slope_bp, p_slope_v);
+  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
+  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
+
+  double v_rel = v_ego - v_lead;
+  double v_rel_des = 0.0;
+  double soft_brake_distance = 0.0;
+  if (d_rel < d_des) {
+    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
+    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
+    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = d_rel;
+  } else if (d_rel < d_des + x_linear_to_parabola) {
+    v_rel_des = (d_rel - d_des) * l_slope;
+    v_rel_des = std::max(v_rel_des, max_runaway_speed);
+    soft_brake_distance = v_rel / l_slope + d_des;
+  } else {
+    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
+    soft_brake_distance =
+        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
+  }
+  double v_target = v_rel_des + v_lead;
+  return v_target;
 }
 }  // namespace planning
