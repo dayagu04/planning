@@ -173,58 +173,37 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         upper_st_point.s() - (poly_end_s + front_edge_to_rear_axle_);
 
     double dist_cost = 0.0;
-    if (is_merge_change) {
-      dist_cost = std::fmax(dist_to_lower_border, dist_to_upper_border);
-      double dist_to_lower_cost = calculate_gap_distance_match_cost(
-          dist_to_lower_border, safe_border_distance_to_gap_back_obj,
-          kMinSafeDistance, safe_dis_penalty_factor_coef_,
-          clip_dis_penalty_factor_coef_, weight_match_s_);
-      double dist_to_upper_cost = calculate_gap_distance_match_cost(
-          dist_to_upper_border, safe_border_distance_to_gap_front_obj,
-          kMinSafeDistance, safe_dis_penalty_factor_coef_,
-          clip_dis_penalty_factor_coef_, weight_match_s_);
-      match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
-
-      if (upper_st_point.s() - lower_st_point.s() > 40) {
-        // extra match s center cost
-        match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
-            std::fabs((upper_st_point.s() + lower_st_point.s()) * 0.5 -
-                      poly_end_s),
-            kBasicSafeDistance, kMinSafeDistance,
-            narrow_gap_penalty_factor_coef_, weight_match_s_);
-      }
-      match_v_cost_ = calculate_gap_vel_match_cost(
-          upper_st_point.velocity(), lower_st_point.velocity(),
-          dist_to_upper_border, dist_to_lower_border, poly_end_v,
-          kMatchGapVelPenaltyThreshold, rel_vel_penalty_factor_coef_,
-          weight_match_v_);
+    dist_cost = std::fmax(dist_to_lower_border, dist_to_upper_border);
+    double dist_to_lower_cost = calculate_gap_distance_match_cost(
+        dist_to_lower_border, safe_border_distance_to_gap_back_obj,
+        kMinSafeDistance, safe_dis_penalty_factor_coef_,
+        clip_dis_penalty_factor_coef_, weight_match_s_);
+    double dist_to_upper_cost = calculate_gap_distance_match_cost(
+        dist_to_upper_border, safe_border_distance_to_gap_front_obj,
+        kMinSafeDistance, safe_dis_penalty_factor_coef_,
+        clip_dis_penalty_factor_coef_, weight_match_s_);
+    match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
+    double safe_gap_center =
+        (upper_st_point.s() - safe_border_distance_to_gap_front_obj +
+          lower_st_point.s() + safe_border_distance_to_gap_back_obj) /
+        2;
+    if (upper_st_point.s() - lower_st_point.s() >
+        (safe_border_distance_to_gap_back_obj +
+          safe_border_distance_to_gap_front_obj)) {
+      // extra match s center cost
+      match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
+          std::fabs(safe_gap_center - poly_end_s), kBasicSafeDistance,
+          kMinSafeDistance, narrow_gap_penalty_factor_coef_, weight_match_s_);
     } else {
-      dist_cost = std::fmax(dist_to_lower_border, dist_to_upper_border);
-      double dist_to_lower_cost = calculate_gap_distance_match_cost(
-          dist_to_lower_border, safe_border_distance_to_gap_back_obj,
-          kMinSafeDistance, safe_dis_penalty_factor_coef_,
-          clip_dis_penalty_factor_coef_, weight_match_s_);
-      double dist_to_upper_cost = calculate_gap_distance_match_cost(
-          dist_to_upper_border, safe_border_distance_to_gap_front_obj,
-          kMinSafeDistance, safe_dis_penalty_factor_coef_,
-          clip_dis_penalty_factor_coef_, weight_match_s_);
-      match_s_cost_ = std::fmax(dist_to_lower_cost, dist_to_upper_cost);
-
-      if (dist_to_lower_border < kBasicSafeDistance &&
-          dist_to_upper_border < kBasicSafeDistance) {
-        // extra match s center cost
-        match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
-            std::fabs((upper_st_point.s() + lower_st_point.s()) * 0.5 -
-                      poly_end_s),
-            kBasicSafeDistance, kMinSafeDistance,
-            narrow_gap_penalty_factor_coef_, weight_match_s_);
-      }
-      match_v_cost_ = calculate_gap_vel_match_cost(
-          upper_st_point.velocity(), lower_st_point.velocity(),
-          dist_to_upper_border, dist_to_lower_border, poly_end_v,
-          kMatchGapVelPenaltyThreshold, rel_vel_penalty_factor_coef_,
-          weight_match_v_);
+      match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
+          kBasicSafeDistance + 1, kBasicSafeDistance, kMinSafeDistance,
+          narrow_gap_penalty_factor_coef_, weight_match_s_);
     }
+    match_v_cost_ = calculate_gap_vel_match_cost(
+        upper_st_point.velocity(), lower_st_point.velocity(),
+        dist_to_upper_border, dist_to_lower_border, poly_end_v,
+        kMatchGapVelPenaltyThreshold, rel_vel_penalty_factor_coef_,
+        weight_match_v_);
     // Final cost is the max between distances and velocities
     cost_ = match_v_cost_ + match_s_cost_ + match_gap_center_cost_;
     return;

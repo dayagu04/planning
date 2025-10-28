@@ -91,7 +91,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
-  for (size_t i = 0; i < anchor_points_match_gap_cost_vec_.size(); i++) {
+  for (size_t i = anchor_points_match_gap_cost_vec_.size() - 1;
+       i < anchor_points_match_gap_cost_vec_.size(); i++) {
     STPoint anchor_matched_upper_st_point;
     STPoint anchor_matched_lower_st_point;
     const double& anchor_arrived_t =
