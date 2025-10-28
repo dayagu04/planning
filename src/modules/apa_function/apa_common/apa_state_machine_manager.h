@@ -28,6 +28,7 @@ enum class ApaStateMachine : uint8_t {
   SUSPEND,
   SECURE,
   COMPLETE,
+  MANUAL_PARKING,
   STANDBY,
   ERROR,
   COUNT,
@@ -121,7 +122,7 @@ class ApaStateMachineManager final {
     free_slot_activate_ = false;
     is_free_slot_selected_ =
         iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
-    functional_state_ = iflyauto::FunctionalState::FunctionalState_MANUAL;
+    functional_state_ = iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
     free_slot_pos_dir_ = false;
     running_mode_ = ApaRunningMode::RUNNING_INVALID;
     pa_direction_ = ApaPADirection::PA_INVALID;
@@ -165,7 +166,7 @@ class ApaStateMachineManager final {
   iflyauto::FreeSlotSelectedStatus is_free_slot_selected_ =
       iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
   iflyauto::FunctionalState functional_state_ =
-      iflyauto::FunctionalState::FunctionalState_MANUAL;
+      iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
   bool free_slot_pos_dir_ = false;
   ApaRunningMode running_mode_ = ApaRunningMode::RUNNING_INVALID;
   ApaPADirection pa_direction_ = ApaPADirection::PA_INVALID;

@@ -28,7 +28,7 @@ struct PlanningStatemachine {
   bool dbw_status = false;
   bool apa_reset_flag = false;
   uint8_t scene_type = 0;
-  iflyauto::FunctionalState current_state = iflyauto::FunctionalState_MANUAL;
+  iflyauto::FunctionalState current_state = iflyauto::FunctionalState_MANUAL_DRIVING;
 };
 
 class GeneralPlanningContext {

@@ -46,6 +46,9 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate;
 
   switch (fun_state_machine_info.current_state) {
+    case iflyauto::FunctionalState_MANUAL_PARKING:
+      state_machine_ = ApaStateMachine::MANUAL_PARKING;
+      break;
     case iflyauto::FunctionalState_PARK_STANDBY:
       state_machine_ = ApaStateMachine::STANDBY;
       break;
@@ -382,6 +385,9 @@ std::string ApaStateMachineManager::GetApaStateMachineString(
       break;
     case ApaStateMachine::COMPLETE:
       state = "COMPLETE";
+      break;
+    case ApaStateMachine::MANUAL_PARKING:
+      state = "MANUAL_PARKING";
       break;
     case ApaStateMachine::STANDBY:
       state = "STANDBY";

@@ -384,7 +384,7 @@ void PlanningScheduler::FillPlanningTrajectory(
         lkas_intervention_flag &&
         function_state_machine_info_ptr.current_state ==
             iflyauto::
-                FunctionalState_ACC_ACTIVATE) {  //以下新增acc和ldp共同开启的工况
+                FunctionalState_ACC_ACTIVATE) {  // 以下新增acc和ldp共同开启的工况
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = planning_result.traj_points[i].x;
@@ -627,7 +627,7 @@ void PlanningScheduler::FillPlanningTrajectory(
                    static_cast<int>(planning_status->rads_planning_status))
 
   // planning request
-  //绕行接管
+  // 绕行接管
   if (lane_borrow_decider_output.takeover_prompt) {
     planning_output->planning_request.take_over_req_level =
         iflyauto::REQUEST_LEVEL_MILD;
@@ -975,7 +975,8 @@ void PlanningScheduler::ClearParkingInfo(
 
 bool PlanningScheduler::IsUndefinedScene(
     const iflyauto::FunctionalState &current_state) {
-  return current_state == iflyauto::FunctionalState_MANUAL ||
+  return current_state == iflyauto::FunctionalState_MANUAL_PARKING ||
+         current_state == iflyauto::FunctionalState_MANUAL_DRIVING ||
          current_state == iflyauto::FunctionalState_SYSTEM_ERROR ||
          current_state == iflyauto::FunctionalState_MRC;
 }
