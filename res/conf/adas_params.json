@@ -136,7 +136,7 @@
   "ldp_main_switch": false,
   "elk_main_switch": false,
   "tsr_main_switch": 0,
-  "tsr_use_json_code": true,
+  "tsr_use_json_code": false,
   "tsr_fault_code": 0,
   "tsr_reset_path_length": 2000.0,
   "tsr_function_test_switch": 0,
