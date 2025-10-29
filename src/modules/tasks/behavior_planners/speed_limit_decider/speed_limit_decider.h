@@ -106,6 +106,7 @@ class SpeedLimitDecider : public Task {
 
   bool construction_strong_deceleration_mode = false;
   int construction_strong_mode_frame_count_ = 0;
+  bool construction_lat_dist_flag = false;
 };
 
 }  // namespace planning

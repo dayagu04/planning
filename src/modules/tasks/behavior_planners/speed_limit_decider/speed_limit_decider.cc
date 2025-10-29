@@ -1727,6 +1727,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                      construction_strong_mode_reason);
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
+    JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag);
     return;
   }
   //判断施工区域是否有效
@@ -1736,6 +1737,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       construction_scene.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode = false;
     construction_strong_mode_frame_count_ = 0;
+    construction_lat_dist_flag = false;
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
@@ -1746,6 +1748,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                      construction_strong_mode_reason);
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
+    JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag);
     return;
   }
 
@@ -1864,10 +1867,22 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
                    construction_strong_mode_reason);
   JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                    construction_strong_mode_frame_count_);
-
+  // Construction Lateral Dis Flag
+  if (!construction_lat_dist_flag) {
+    if (std::abs(construction_nearest_l) <
+        speed_limit_config_.construction_Lat_dist_entry) {
+      construction_lat_dist_flag = true;
+    }
+  } else {
+    if (std::abs(construction_nearest_l) >
+        speed_limit_config_.construction_Lat_dist_exit) {
+      construction_lat_dist_flag = false;
+    }
+  }
+  JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag);
   // Construction zone info
   dis_to_construction = std::max(construction_s_nearest - ego_s, 0.0);
-  if (is_on_construction) {
+  if (is_on_construction && construction_lat_dist_flag) {
     if (construction_strong_deceleration_mode) {
       v_target_construction =
           speed_limit_config_.v_limit_construction -
@@ -1904,7 +1919,8 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   }
 
   if (dis_to_construction <= speed_limit_config_.dis_near_construction &&
-      v_cruise > construction_speed_threshold && is_exist_construction) {
+      v_cruise > construction_speed_threshold && is_exist_construction &&
+      construction_lat_dist_flag) {
     double pre_brake_dis_near_construction = std::max(
         dis_to_construction - speed_limit_config_.brake_dis_near_construction,
         0.0);
