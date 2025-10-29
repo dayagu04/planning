@@ -78,6 +78,8 @@ constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSurpressSplitSelectorDistance = 10.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
+constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 100.0;
+
 
 }  // namespace
 
@@ -163,8 +165,13 @@ void EgoLaneTrackManger::TrackEgoLane(
         return;
       }
       if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-        if (zero_relative_id_nums >= 2 && !is_in_lane_borrow_status &&
-            ego_in_split_region_) {
+        const auto &first_static_split_region_info = mlc_decider_route_info.first_static_split_region_info;
+        double ego_dis_to_split_exchange_area_start = NL_NMAX;
+        if (first_static_split_region_info.is_valid) {
+          ego_dis_to_split_exchange_area_start = first_static_split_region_info.distance_to_split_point +
+              first_static_split_region_info.start_fp_point.fp_distance_to_split_point;
+        }
+        if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
