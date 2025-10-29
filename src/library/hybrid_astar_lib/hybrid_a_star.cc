@@ -561,19 +561,20 @@ const NodeShrinkType HybridAStar::NextNodeGenerator(
     return NodeShrinkType::NONE;
   }
 
-  // gear check
-  if (gear_request_info == AstarPathGear::REVERSE && traveled_distance > 0.0f) {
-    return NodeShrinkType::UNEXPECTED_GEAR;
-  } else if (gear_request_info == AstarPathGear::DRIVE &&
-             traveled_distance < 0.0f) {
-    return NodeShrinkType::UNEXPECTED_GEAR;
-  }
-
   AstarPathGear gear;
   if (traveled_distance > 0.0f) {
     gear = AstarPathGear::DRIVE;
   } else {
     gear = AstarPathGear::REVERSE;
+  }
+
+  // gear check
+  if (gear_request_info == AstarPathGear::REVERSE &&
+      gear == AstarPathGear::DRIVE) {
+    return NodeShrinkType::UNEXPECTED_GEAR;
+  } else if (gear_request_info == AstarPathGear::DRIVE &&
+             gear == AstarPathGear::REVERSE) {
+    return NodeShrinkType::UNEXPECTED_GEAR;
   }
 
   bool is_gear_switch = parent_node->IsPathGearChange(gear);

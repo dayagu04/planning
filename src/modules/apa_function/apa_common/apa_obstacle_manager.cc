@@ -606,19 +606,19 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
         gjk_interface.PolygonPointCollisionDetect(&path[q], uss_pt_2d,
                                                   &is_contain);
 
-        if (!is_contain) {
-          continue;
-        }
+        if (is_contain) {
 #if HAVE_3D_OBS_INTERFACE
-        const int high_type = obj_info.point_high[j];
-        if (high_type == low_type) {
-          uss_pt_clout_lower_chassis.emplace_back(std::move(uss_pt_2d));
-        } else {
-          uss_pt_clout_higher_mirror.emplace_back(std::move(uss_pt_2d));
-        }
+          const int high_type = obj_info.point_high[j];
+          if (high_type == low_type) {
+            uss_pt_clout_lower_chassis.emplace_back(std::move(uss_pt_2d));
+          } else {
+            uss_pt_clout_higher_mirror.emplace_back(std::move(uss_pt_2d));
+          }
 #else
-        uss_pt_clout_higher_mirror.emplace_back(std::move(uss_pt_2d));
+          uss_pt_clout_higher_mirror.emplace_back(std::move(uss_pt_2d));
 #endif
+          break;
+        }
       }
     }
 
