@@ -503,71 +503,6 @@ bool ConeRequest::GetOriginLaneWidthByCone(
   return true;
 }
 
-void ConeRequest::DbScan(std::vector<ConePoint>& cone_points, double eps_s,
-                         double eps_l, int minPts) {
-  int c = 0;  // cluster index
-
-  for (size_t index = 0; index < cone_points.size(); ++index) {
-    if (!cone_points[index].visited) {
-      // 根据锥桶间的距离聚类
-      ExpandCluster(cone_points, index, c, eps_s, eps_l, minPts);
-      c++;
-    }
-  }
-}
-
-bool ConeRequest::ConeDistance(const ConePoint& a, const ConePoint& b,
-                               double eps_s, double eps_l) {
-  return std::abs(a.s - b.s) < eps_s && std::abs(a.l - b.l) < eps_l;
-}
-
-void ConeRequest::ExpandCluster(std::vector<ConePoint>& cone_points, int index,
-                                int c, double eps_s, double eps_l, int minPts) {
-  std::vector<int> neighborPts;
-
-  for (size_t i = 0; i < cone_points.size(); ++i) {
-    if (ConeDistance(cone_points[index], cone_points[i], eps_s, eps_l)) {
-      neighborPts.push_back(i);
-    }
-  }
-
-  if (neighborPts.size() < minPts) {
-    // The point is noise
-    cone_points[index].cluster = -1;
-    return;
-  }
-
-  // Assign the cluster to initial point
-  cone_points[index].visited = true;
-  cone_points[index].cluster = c;
-
-  // Check all neighbours for being part of the cluster
-  for (auto& neighborPt : neighborPts) {
-    ConePoint& p_neighbor = cone_points[neighborPt];
-    if (!p_neighbor.visited) {
-      // Recursively expand the cluster
-      ExpandCluster(cone_points, neighborPt, c, eps_s, eps_l, minPts);
-    }
-  }
-}
-
-double ConeRequest::CalcClusterToBoundaryDist(
-    const std::vector<ConePoint>& points, RequestType direction) {
-  double left_l = std::abs(points[0].left_dist);
-  double right_l = std::abs(points[0].right_dist);
-  for (const auto& p : points) {
-    left_l = std::min(std::abs(p.left_dist), left_l);
-    right_l = std::min(std::abs(p.right_dist), right_l);
-  }
-  if (direction == LEFT_CHANGE) {
-    return left_l;
-  } else if (direction == RIGHT_CHANGE) {
-    return right_l;
-  } else {
-    return std::max(left_l, right_l);
-  }
-}
-
 void ConeRequest::ConeDir() {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
@@ -1050,59 +985,6 @@ bool ConeRequest::ConeStddev(const std::vector<ConePoint>& points,
   s_stddev = std::sqrt(sum_s / (points.size() - 1));
   l_stddev = std::sqrt(sum_l / (points.size() - 1));
   return true;
-}
-
-double ConeRequest::QueryLaneWidth(
-    const double s0,
-    const std::vector<std::pair<double, double>>& lane_s_width) {
-  auto comp = [](const std::pair<double, double>& s_width, const double s) {
-    return s_width.first < s;
-  };
-  double lane_width;
-  const auto& first_pair_on_lane =
-      std::lower_bound(lane_s_width.begin(), lane_s_width.end(), s0, comp);
-
-  if (first_pair_on_lane == lane_s_width.begin()) {
-    lane_width = lane_s_width.front().second;
-  } else if (first_pair_on_lane == lane_s_width.end()) {
-    lane_width = lane_s_width.back().second;
-  } else {
-    lane_width = planning_math::lerp(
-        (first_pair_on_lane - 1)->second, (first_pair_on_lane - 1)->first,
-        first_pair_on_lane->second, first_pair_on_lane->first, s0);
-  }
-  return std::fmax(lane_width, 3.0);
-}
-
-double ConeRequest::QueryLaneMinWidth(
-    std::vector<ConePoint>& cone_points,
-    const std::vector<std::pair<double, double>>& lane_s_width,
-    const double target_s) {
-  const auto& function_info = session_->environmental_model().function_info();
-  double max_lane_width = 2.65;
-  double lane_width = 2.5;
-  const double k_default_lane_width = 2.5;
-  int cone_nums = 0;
-  if (!cone_points.empty()) {
-    for (const auto& cone : cone_points) {
-      if (cone.s < target_s) {
-        continue;
-      }
-      lane_width = QueryLaneWidth(cone.s, lane_s_width);
-      cone_nums++;
-      if (lane_width > max_lane_width) {
-        max_lane_width = lane_width;
-      }
-    }
-
-    if (cone_nums >= 5 && function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
-      return max_lane_width;
-    } else {
-      return k_default_lane_width;
-    }
-  }
-
-  return lane_width;
 }
 
 void ConeRequest::Reset() {
