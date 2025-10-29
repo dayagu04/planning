@@ -23,11 +23,12 @@ void DebugAstarRequestString(const AstarRequest &request) {
             << ", dir = " << static_cast<int>(request.direction_request)
             << ", gear num = " << request.gear_switch_num;
 
-  // ILOG_INFO << "start pose";
-  // request.start_pose.DebugString();
-
-  // ILOG_INFO << "goal pose";
-  // request.goal.DebugString();
+  ILOG_INFO << "start pose";
+  request.start_pose.DebugString();
+  ILOG_INFO << "goal pose";
+  request.goal.DebugString();
+  ILOG_INFO << "goal pose";
+  request.real_goal.DebugString();
 
   return;
 }

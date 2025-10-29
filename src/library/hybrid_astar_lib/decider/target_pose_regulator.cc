@@ -71,8 +71,7 @@ bool TargetPoseRegulator::IsReferenceLineSafeEnough() {
 void TargetPoseRegulator::GenerateXboundary(const AstarRequest *request,
                                             const VehicleParam &veh_param) {
   // x boundary
-  if (request->space_type == ParkSpaceType::VERTICAL ||
-      request->space_type == ParkSpaceType::SLANTING) {
+  if (request->space_type == ParkSpaceType::VERTICAL) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       float veh_front_edge_to_slot = 2.3f;
       float veh_x_upper = veh_front_edge_to_slot + request->slot_length -
@@ -88,12 +87,29 @@ void TargetPoseRegulator::GenerateXboundary(const AstarRequest *request,
 
     x_check_bounday_.lower = target_.x;
     x_check_bounday_.step = 0.2f;
+  } else if (request->space_type == ParkSpaceType::SLANTING) {
+    if (request->direction_request == ParkingVehDirection::TAIL_IN) {
+      float veh_front_edge_to_slot = 2.3f;
+      float veh_x_upper = veh_front_edge_to_slot + request->slot_length -
+                          veh_param.front_edge_to_rear_axle;
+      x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
+    } else {
+      // 对于车头入库，需要检查更大的范围. 让后视镜经过柱子.
+      float veh_back_edge_to_slot = 4.0f;
+      float veh_x_upper = request->slot_length + veh_back_edge_to_slot -
+                          veh_param.rear_edge_to_rear_axle;
+      x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
+    }
+
+    x_check_bounday_.lower = target_.x + 0.4f;
+    x_check_bounday_.step = 0.2f;
   } else {
     x_check_bounday_.upper =
         request->slot_length - veh_param.front_edge_to_rear_axle;
     x_check_bounday_.lower = veh_param.rear_edge_to_rear_axle;
     x_check_bounday_.step = 0.1f;
   }
+
   x_check_bounday_.number =
       std::ceil((x_check_bounday_.upper - x_check_bounday_.lower) /
                 x_check_bounday_.step);

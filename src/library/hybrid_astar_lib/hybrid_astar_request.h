@@ -55,6 +55,7 @@ struct AstarRequest {
   std::array<Pose2f, 6> real_goal_stack;
 
   float slot_width;
+  // If slot is slanting, length is rectangle length.
   float slot_length;
 
   bool swap_start_goal;

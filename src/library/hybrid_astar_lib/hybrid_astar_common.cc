@@ -411,7 +411,7 @@ const MapBound TransformMapBound(const cdl::AABB& box) {
 }
 
 void DebugMapBoundString(const MapBound& box) {
-  ILOG_INFO << "map bound, xmin " << box.x_min << " , ymin " << box.y_min
+  ILOG_INFO << "virtual bound, xmin " << box.x_min << " , ymin " << box.y_min
             << " ,xmax " << box.x_max << " , ymax " << box.y_max;
   return;
 }
