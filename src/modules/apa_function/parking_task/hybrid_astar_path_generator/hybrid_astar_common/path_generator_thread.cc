@@ -130,7 +130,8 @@ void PathGeneratorThread::SetRequest(const PathGenThreadRequest& request) {
   }
 
   col_det_interface_ptr_->GetEDTColDetPtr()->PreProcess(
-      par_col_det_interface_ptr->GetEDTColDetPtr()->GetOgmBound());
+      par_col_det_interface_ptr->GetEDTColDetPtr()->GetOgmBound(),
+      par_col_det_interface_ptr->GetEDTColDetPtr()->GetUseObsHeightMethod());
 
   col_det_interface_ptr_->GetEDTColDetPtr()->UpdateObsClearZone(
       std::vector<Eigen::Vector2d>{

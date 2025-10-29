@@ -21,15 +21,18 @@ namespace apa_planner {
 
 #define write_debug_file (0)
 
-void EDTCollisionDetector::PreProcess() {
+void EDTCollisionDetector::PreProcess(
+    const UseObsHeightMethod use_obs_height_method) {
+  use_obs_height_method_ = use_obs_height_method;
   AddObsToOGM();
   CalcObsDistArray();
 }
 
 void EDTCollisionDetector::PreProcess(
-    const geometry_lib::RectangleBound &ogm_bound) {
+    const geometry_lib::RectangleBound &ogm_bound,
+    const UseObsHeightMethod use_obs_height_method) {
   GenOccupancyGridMap(ogm_bound);
-  PreProcess();
+  PreProcess(use_obs_height_method);
 }
 
 void EDTCollisionDetector::GenOccupancyGridMap(
@@ -172,17 +175,15 @@ void EDTCollisionDetector::CalcObsDistArray() {
   cv::distanceTransform(car_with_mirror_map_matrix, car_with_mirror_edt_matrix,
                         CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
-                            car_without_mirror_obs_ogm_);
-    cv::distanceTransform(car_without_mirror_map_matrix,
-                          car_without_mirror_edt_matrix, CV_DIST_L2,
-                          CV_DIST_MASK_PRECISE);
+  TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
+                          car_without_mirror_obs_ogm_);
+  cv::distanceTransform(car_without_mirror_map_matrix,
+                        car_without_mirror_edt_matrix, CV_DIST_L2,
+                        CV_DIST_MASK_PRECISE);
 
-    TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
-    cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
-                          CV_DIST_L2, CV_DIST_MASK_PRECISE);
-  }
+  TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
+  cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
+                        CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
   // only protect, avoid crash caused by excessive boundary values
   const int max_row_num = std::min(max_bound_x, edt_ogm_grid_x_max);
@@ -219,22 +220,20 @@ void EDTCollisionDetector::CalcObsDistArray() {
 #endif
   cv::imwrite(path_dir + "car_with_mirror_ogm.png", car_with_mirror_map_matrix);
   cv::imwrite(path_dir + "car_with_mirror_edt.png", car_with_mirror_edt_matrix);
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
-    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
-    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
-    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
-    cv::imwrite(path_dir + "car_without_mirror_ogm.png",
-                car_without_mirror_map_matrix);
-    cv::imwrite(path_dir + "car_without_mirror_edt.png",
-                car_without_mirror_edt_matrix);
-    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
-    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
-    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
-    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
-    cv::imwrite(path_dir + "car_chassis_ogm.png", car_chassis_map_matrix);
-    cv::imwrite(path_dir + "car_chassis_edt.png", car_chassis_edt_matrix);
-  }
+  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
+  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
+  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
+  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
+  cv::imwrite(path_dir + "car_without_mirror_ogm.png",
+              car_without_mirror_map_matrix);
+  cv::imwrite(path_dir + "car_without_mirror_edt.png",
+              car_without_mirror_edt_matrix);
+  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
+  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
+  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
+  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
+  cv::imwrite(path_dir + "car_chassis_ogm.png", car_chassis_map_matrix);
+  cv::imwrite(path_dir + "car_chassis_edt.png", car_chassis_edt_matrix);
 #endif
 }
 
@@ -279,10 +278,8 @@ void EDTCollisionDetector::UpdateSafeBuffer(const float body_lat_buffer,
   max_circle_buffer_ = max_circle_buffer;
 
   UpdateCarWithMirrorSafeBuffer();
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    UpdateCarWithOutMirrorSafeBuffer();
-    UpdateCarChassisSafeBuffer();
-  }
+  UpdateCarWithOutMirrorSafeBuffer();
+  UpdateCarChassisSafeBuffer();
 }
 
 void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
@@ -673,9 +670,11 @@ const ColResult EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = &car_with_mirror_circles_list_buffer_;
+  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+    mid_circle_list = high_circle_list;
+    low_circle_list = high_circle_list;
+  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+    mid_circle_list = high_circle_list;
   }
 
   bool col_flag = false;
@@ -806,9 +805,11 @@ const ColResultF EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = &car_with_mirror_circles_list_buffer_;
+  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+    mid_circle_list = high_circle_list;
+    low_circle_list = high_circle_list;
+  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+    mid_circle_list = high_circle_list;
   }
 
   float obs_dist = 26.8f, min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
