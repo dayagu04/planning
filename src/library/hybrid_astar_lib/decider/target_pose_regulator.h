@@ -158,6 +158,10 @@ class TargetPoseRegulator : public AstarDecider {
   float max_lat_buffer_;
 
   std::vector<TerminalGuessPath> paths_;
+
+  // obstacle is always jumping in slot bottom, so add a buffer.
+  float low_confidence_zone_for_vertical_;
+  float low_confidence_zone_for_slant_;
 };
 
 }  // namespace planning
