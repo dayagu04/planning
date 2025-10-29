@@ -85,7 +85,7 @@ void TargetPoseRegulator::GenerateXboundary(const AstarRequest *request,
       x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
     }
 
-    x_check_bounday_.lower = target_.x;
+    x_check_bounday_.lower = target_.x + low_confidence_zone_for_vertical_;
     x_check_bounday_.step = 0.2f;
   } else if (request->space_type == ParkSpaceType::SLANTING) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
@@ -101,7 +101,7 @@ void TargetPoseRegulator::GenerateXboundary(const AstarRequest *request,
       x_check_bounday_.upper = std::max(target_.x, veh_x_upper);
     }
 
-    x_check_bounday_.lower = target_.x + 0.4f;
+    x_check_bounday_.lower = target_.x + low_confidence_zone_for_slant_;
     x_check_bounday_.step = 0.2f;
   } else {
     x_check_bounday_.upper =
@@ -186,6 +186,8 @@ void TargetPoseRegulator::Process(
   request_ = request;
   cross_the_slot_line_max_dist_ = 0.0;
   max_lat_buffer_ = 0.3f;
+  low_confidence_zone_for_vertical_ = 0.3f;
+  low_confidence_zone_for_slant_ = 0.4f;
   edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
 
   UpdateReferenceLinePath(request, veh_param, direction_request, edt);
