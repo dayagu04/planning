@@ -177,7 +177,7 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   void SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info);
 
-  double GeneVirtualLimiter(const EgoInfoUnderSlot& ego_slot);
+  double GeneTargetForNoLimiterSlot(const EgoInfoUnderSlot& ego_slot);
 
   void SetReleaseDirection(iflyauto::APAHMIData& apa_hmi_data,
                            ApaDirectionGenerator& generator,

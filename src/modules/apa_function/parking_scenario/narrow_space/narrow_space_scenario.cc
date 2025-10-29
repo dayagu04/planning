@@ -926,7 +926,7 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
 
     virtual_tar_x = 0.5 * (pt1 + pt2).x() + param.limiter_move_dist;
   } else {
-    virtual_tar_x = GeneVirtualLimiter(ego_info_under_slot);
+    virtual_tar_x = GeneTargetForNoLimiterSlot(ego_info_under_slot);
   }
 
   // 如果限位器很靠后 可以结合一下前面两个车位角点信息
@@ -2676,17 +2676,17 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
   }
 }
 
-double NarrowSpaceScenario::GeneVirtualLimiter(
+double NarrowSpaceScenario::GeneTargetForNoLimiterSlot(
     const EgoInfoUnderSlot& ego_slot) {
   // 根据后面两个角点计算停车终点
   const ApaParameters& param = apa_param.GetParam();
+  const ApaStateMachine fsm =
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
   double virtual_x = ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
                      param.terminal_target_x;
 
   if (ego_slot.slot_type == SlotType::SLANT) {
     double contact_point_len = 0;
-    const ApaStateMachine fsm =
-        apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine();
     if (param.car_width < ego_slot.slot.GetWidth()) {
       auto vec = ego_slot.slot.origin_corner_coord_global_.pt_0 -
                  ego_slot.slot.origin_corner_coord_global_.pt_2;
@@ -2716,6 +2716,15 @@ double NarrowSpaceScenario::GeneVirtualLimiter(
     }
 
     virtual_x = std::max(0.0, virtual_x);
+  } else {
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
+        fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR) {
+      virtual_x = ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+                  param.rear_overhanging + 0.1;
+    } else {
+      virtual_x = ego_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+                  param.front_overhanging + 0.1;
+    }
   }
 
   return virtual_x;
