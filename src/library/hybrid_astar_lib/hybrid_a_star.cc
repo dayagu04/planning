@@ -1240,7 +1240,14 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     return;
   }
   astar_end_node_->Set(NodePath(target), grid_map_bound_, config_, 0.0f);
-  astar_end_node_->SetGearType(AstarPathGear::NONE);
+
+  AstarPathGear end_node_gear = AstarPathGear::NONE;
+  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    end_node_gear = AstarPathGear::DRIVE;
+  } else if (request_.direction_request == ParkingVehDirection::TAIL_IN) {
+    end_node_gear = AstarPathGear::REVERSE;
+  }
+  astar_end_node_->SetGearType(end_node_gear);
   astar_end_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
@@ -1678,7 +1685,13 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   }
 
   astar_end_node_->Set(NodePath(end), grid_map_bound_, config_, 0.0f);
-  astar_end_node_->SetGearType(AstarPathGear::NONE);
+  AstarPathGear end_node_gear = AstarPathGear::NONE;
+  if (request_.direction_request == ParkingVehDirection::HEAD_IN) {
+    end_node_gear = AstarPathGear::DRIVE;
+  } else if (request_.direction_request == ParkingVehDirection::TAIL_IN) {
+    end_node_gear = AstarPathGear::REVERSE;
+  }
+  astar_end_node_->SetGearType(end_node_gear);
   astar_end_node_->SetSteerType(AstarPathSteer::STRAIGHT);
   astar_end_node_->SetPathType(AstarPathType::END_NODE);
   astar_end_node_->DebugString();
