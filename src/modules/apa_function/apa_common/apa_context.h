@@ -150,7 +150,7 @@ enum class CarSlotRelationship : uint8_t {
 #define LOCALIZATION_PATH_MAX_NUM (400)
 struct LocalizationPath {
   Eigen::Vector3d path[LOCALIZATION_PATH_MAX_NUM];
-  int32_t size;
+  int32_t size = 0;
 
   void Clear() {
     size = 0;

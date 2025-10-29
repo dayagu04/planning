@@ -1853,19 +1853,19 @@ const bool PerpendicularTailInScenario::CheckFinished() {
 
   const CarSlotRelationship ship = CalCarSlotRelationship(cur_pose);
 
+  const bool auto_fold_mirror =
+      param.smart_fold_mirror_params.has_smart_fold_mirror &&
+      frame_.mirror_command == MirrorCommand::FOLD &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag();
+
   ILOG_INFO << "check finish ship = " << static_cast<int>(ship);
 
-  if (ship == CarSlotRelationship::TOUCHING) {
+  if (ship == CarSlotRelationship::TOUCHING && !auto_fold_mirror) {
     ILOG_INFO << "car press line, not allow finish";
     return false;
   }
 
-  double gain = 1.0;
-
-  if (frame_.mirror_command == MirrorCommand::FOLD &&
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
-    gain = 1.8;
-  }
+  const double gain = auto_fold_mirror ? 1.8 : 1.0;
 
   const double finish_lon_err = finish_params.lon_err;
 
@@ -1980,8 +1980,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
           !frame_.is_last_path ||
-      ego_info_under_slot.fix_limiter || !frame_.spline_success ||
-      origin_traj_size < 2) {
+      !frame_.spline_success || origin_traj_size < 2) {
     return false;
   }
 
@@ -2044,6 +2043,22 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     return false;
   }
 
+  if (ego_info_under_slot.fix_limiter &&
+      (limiter_mid - pt.pos).norm() >
+          param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      dist_ego_limiter > param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter) {
+    return false;
+  }
+
   const double max_extend_dist = 2.5;
 
   double s_proj = 0.0;
@@ -2090,7 +2105,8 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (s < s_proj) {
     ILOG_INFO << "path shoule be extended because of limiter";
-    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg > 1.08) {
+    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg >
+        param.check_finish_params.heading_err_strict) {
       ILOG_INFO << "ego heading is big, not allow extend path";
       return false;
     }
@@ -2100,7 +2116,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     pt.s = temp_s;
     // reverse gear
     const Eigen::Vector2d unit_heading_vec =
-        geometry_lib::GenHeadingVec(pt.GetTheta()) * -1.0;
+        geometry_lib::GenHeadingVec(pt.GetTheta()) * (-1.0);
     std::vector<geometry_lib::PathPoint> extend_pt_vec{pt};
     do {
       temp_s += temp_ds;
@@ -3593,13 +3609,15 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   }
 
   const geometry_lib::PathPoint& termial_err = ego_info_under_slot.terminal_err;
-  if (std::fabs(termial_err.pos.y()) > smart_fold_mirror_params.y_offset ||
-      std::fabs(termial_err.heading) * kRad2Deg >
+  if (std::fabs(termial_err.GetY()) > smart_fold_mirror_params.y_offset ||
+      std::fabs(termial_err.GetTheta()) * kRad2Deg >
           smart_fold_mirror_params.heading_offset) {
     ILOG_INFO << "decide fold mirror, terminal err is not in y range, y = "
-              << termial_err.pos.y()
-              << "  min_y = " << -smart_fold_mirror_params.y_offset
-              << "  max_y = " << smart_fold_mirror_params.y_offset;
+              << termial_err.GetY()
+              << "  heading = " << termial_err.GetTheta() * kRad2Deg
+              << "  y_offset = " << -smart_fold_mirror_params.y_offset
+              << "  heading_offset= "
+              << smart_fold_mirror_params.heading_offset;
     return;
   }
 
@@ -3653,7 +3671,13 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
            : param.lat_lon_speed_buffer.stop_body_lat_buffer) +
       0.015;
 
-  if (CalRemainDistFromObs(folded_mirror_consume_dist, stop_body_lat_buffer,
+  const double stop_body_lon_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.safe_uss_remain_dist_in_slot
+           : param.lat_lon_speed_buffer.lon_buffer) +
+      0.015;
+
+  if (CalRemainDistFromObs(stop_body_lon_buffer, stop_body_lat_buffer,
                            lat_buffer, 1.0, 1.168,
                            1.168) < frame_.remain_dist_path - 0.2) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "

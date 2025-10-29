@@ -191,7 +191,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
   double max_lon_move_dist{0.};
   // 首先计算不移动时车头到车位前两个角点中点距离
-  double dx = slot_.processed_corner_coord_local_.pt_01_mid.x() -
+  double dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
               (virtual_tar_x + param.wheel_base + param.front_overhanging);
   double front_exceed_line_dx = apa_param.GetParam().max_front_exceed_line_dx;
   if (slot_.slot_type_ == SlotType::SLANT) {
@@ -352,7 +352,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   if (exist_target_pose) {
     dx = result_.target_pose_local.pos.x() + param.wheel_base +
          param.front_overhanging -
-         slot_.processed_corner_coord_local_.pt_01_mid.x();
+         slot_.origin_corner_coord_local_.pt_01_mid.x();
     result_.exceed_allow_max_dx = dx - front_exceed_line_dx;
     ILOG_INFO << "exceed_allow_max_dx = " << result_.exceed_allow_max_dx
               << "  front_exceed_line_dx = " << front_exceed_line_dx

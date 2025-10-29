@@ -2135,41 +2135,70 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
     if (calc_params_.first_multi_plan && try_compensate_line && i == 0 &&
         success_geometry_path_vec.size() < 1) {
+      bool no_path = false;
+      if (geometry_path_vec.empty()) {
+        geometry_path_vec.resize(1);
+        no_path = true;
+      }
+
       for (const geometry_lib::GeometryPath& geometry_path :
            geometry_path_vec) {
         // if 1r path col, also start pose and end pose is on the same side of
         // the target line, should enter this logic
-        if (geometry_path.collide_flag &&
-            geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
-            compensate_line_try_count < max_compensate_line_try_count) {
-          if (CheckStuckedByInside(geometry_path.start_pose,
-                                   geometry_path.end_pose, true)) {
-            ILOG_INFO << "try use a reverse gear straight line to cast off "
-                         "inside stuck";
+        if (no_path ||
+            (geometry_path.collide_flag &&
+             geometry_path.cur_gear == geometry_lib::SEG_GEAR_REVERSE &&
+             compensate_line_try_count < max_compensate_line_try_count)) {
+          if (no_path || (CheckStuckedByInside(geometry_path.start_pose,
+                                               geometry_path.end_pose, true))) {
+            ILOG_INFO
+                << "try use a reverse gear straight line or arc to cast off "
+                   "inside stuck";
             i = -1;
             geometry_path_vec.clear();
             success_geometry_path_vec.clear();
             cur_pose_vec.clear();
             compensate_line_try_count++;
-            single_cur_pose.pos =
-                pose.pos - compensate_line_length_step *
-                               compensate_line_try_count *
-                               geometry_lib::GenHeadingVec(pose.heading);
-            single_cur_pose.heading = pose.heading;
-            cur_pose_vec.emplace_back(single_cur_pose);
-            geometry_lib::PathSegment line_seg(
-                geometry_lib::SEG_GEAR_REVERSE,
-                geometry_lib::LineSegment(pose.pos, single_cur_pose.pos,
-                                          pose.heading));
-            if (TrimPathByObs(line_seg, lat_buffer, lon_buffer) !=
-                PathColDetRes::NORMAL) {
-              break;
+
+            // Priority should be given to reverse gear in a straight line, but
+            // if it doesn't work, also can try reverse gear in a arc
+            bool break_free_seg_safe = false;
+            geometry_lib::PathSegment segment;
+            for (int k = 0; k < 2; k++) {
+              if (k == 0) {
+                geometry_lib::CalLineFromPt(
+                    geometry_lib::SEG_GEAR_REVERSE,
+                    compensate_line_length_step * compensate_line_try_count,
+                    pose, segment);
+              }
+
+              if (k == 1) {
+                geometry_lib::CalArcFromPt(
+                    geometry_lib::SEG_GEAR_REVERSE,
+                    calc_params_.is_left_side ? geometry_lib::SEG_STEER_RIGHT
+                                              : geometry_lib::SEG_STEER_LEFT,
+                    compensate_line_length_step * compensate_line_try_count,
+                    calc_params_.turn_radius, pose, segment);
+              }
+
+              break_free_seg_safe =
+                  (TrimPathByObs(segment, lat_buffer, lon_buffer) ==
+                   PathColDetRes::NORMAL);
+
+              if (break_free_seg_safe) {
+                break;
+              }
             }
-            geometry_lib::GeometryPath temp_geometry_path(line_seg);
-            temp_geometry_path.PrintInfo();
-            geometry_path_vec.emplace_back(temp_geometry_path);
-            ILOG_INFO
-                << "set i is -1, and continuing a reverse gear straight line";
+
+            if (break_free_seg_safe) {
+              cur_pose_vec.emplace_back(segment.GetEndPose());
+              geometry_lib::GeometryPath temp_geometry_path(segment);
+              temp_geometry_path.PrintInfo();
+              geometry_path_vec.emplace_back(temp_geometry_path);
+              ILOG_INFO << "set i is -1, and continuing a reverse gear "
+                        << geometry_lib::GetSegTypeString(segment.seg_type);
+            }
+
             break;
           }
         }
@@ -2508,8 +2537,8 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
           } else if (geometry_path_r.path_count > 1 &&
                      geometry_path_d.path_count < 1) {
             geometry_path = geometry_path_r;
-          } else if (geometry_path_r.path_count > 1 &&
-                     geometry_path_d.path_count > 1) {
+          } else if (geometry_path_r.path_count >= 1 &&
+                     geometry_path_d.path_count >= 1) {
             geometry_path = (geometry_path_r.cost > geometry_path_d.cost)
                                 ? geometry_path_d
                                 : geometry_path_r;
