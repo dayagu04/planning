@@ -94,7 +94,7 @@ class RouteInfo {
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
   double virtual_extend_buff_ = 0.0;
-
+  NOASplitRegionInfo last_exchange_region_info;
   struct RayInfo {
     char name;
     double angle;
@@ -281,7 +281,16 @@ class RouteInfo {
     }
     return commonElements;
   }
-
+  std::vector<int> findMissingElements(const std::vector<int>& mainVec,
+                                       const std::vector<int>& subVec) {
+    std::vector<int> missingInSub;
+    for (int elem : mainVec) {
+      if (std::find(subVec.begin(), subVec.end(), elem) == subVec.end()) {
+        missingInSub.push_back(elem);
+      }
+    }
+    return missingInSub;
+  }
   bool IsEmergencyLane(const uint64 lane_id,
                        const ad_common::sdpromap::SDProMap& sdpro_map) const;
   bool IsClosingIntersectionEntrance(
@@ -331,11 +340,13 @@ class RouteInfo {
   void CalculateDistanceToNextSpeedBump();
   bool IsOnHPPLane();
   double CalculatePointAccumulateS(size_t lane_id);
-  void EraseSplitSplitFeasibleLane(
-      NOASplitRegionInfo& first_split_region_info,
-      NOASplitRegionInfo& second_split_region_info);
+  void EraseSplitSplitFeasibleLane(NOASplitRegionInfo& first_split_region_info,
+                                   NOASplitRegionInfo& second_split_region_info,
+                                   int erase_num);
   void OptimizeFeasibleLanesByDistance(
       NOASplitRegionInfo exchange_region_info,
       std::map<int, double>& feasible_lane_distance, double max_distance);
+  std::vector<int> GetIntersection(const std::vector<int>& vec1,
+                                   const std::vector<int>& vec2);
 };
 }  // namespace planning

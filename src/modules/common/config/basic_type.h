@@ -83,8 +83,8 @@ enum EgoStatusOnRoute {
   ON_MAIN = 0,
   NEARING_SPLIT = 1,
   NEARING_MERGE = 2,
-  IN_EXCHANGE_AREAR_FRONT = 3,
-  IN_EXCHANGE_AREAR_REAR = 4,
+  IN_EXCHANGE_AREA_FRONT = 3,
+  IN_EXCHANGE_AREA_REAR = 4,
 };
 
 //导航变道请求类型
@@ -199,6 +199,7 @@ struct MLCDeciderRouteInfo {
   bool is_triggle_cal_dis_to_last_merge_point = false;
   NOASplitRegionInfo static_merge_region_info;
   NOASplitRegionInfo first_static_split_region_info;
+  NOASplitRegionInfo second_static_split_region_info;
   std::vector<int> feasible_lane_sequence;
 
   void reset() {
@@ -215,6 +216,7 @@ struct MLCDeciderRouteInfo {
     is_triggle_cal_dis_to_last_merge_point = false;
     static_merge_region_info.reset();
     first_static_split_region_info.reset();
+    second_static_split_region_info.reset();
     feasible_lane_sequence.clear();
   }
 };
