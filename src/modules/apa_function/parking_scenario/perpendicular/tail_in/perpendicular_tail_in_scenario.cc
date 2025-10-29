@@ -3593,13 +3593,15 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   }
 
   const geometry_lib::PathPoint& termial_err = ego_info_under_slot.terminal_err;
-  if (std::fabs(termial_err.pos.y()) > smart_fold_mirror_params.y_offset ||
-      std::fabs(termial_err.heading) * kRad2Deg >
+  if (std::fabs(termial_err.GetY()) > smart_fold_mirror_params.y_offset ||
+      std::fabs(termial_err.GetTheta()) * kRad2Deg >
           smart_fold_mirror_params.heading_offset) {
     ILOG_INFO << "decide fold mirror, terminal err is not in y range, y = "
-              << termial_err.pos.y()
-              << "  min_y = " << -smart_fold_mirror_params.y_offset
-              << "  max_y = " << smart_fold_mirror_params.y_offset;
+              << termial_err.GetY()
+              << "  heading = " << termial_err.GetTheta() * kRad2Deg
+              << "  y_offset = " << -smart_fold_mirror_params.y_offset
+              << "  heading_offset= "
+              << smart_fold_mirror_params.heading_offset;
     return;
   }
 
@@ -3653,7 +3655,13 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
            : param.lat_lon_speed_buffer.stop_body_lat_buffer) +
       0.015;
 
-  if (CalRemainDistFromObs(folded_mirror_consume_dist, stop_body_lat_buffer,
+  const double stop_body_lon_buffer =
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.safe_uss_remain_dist_in_slot
+           : param.lat_lon_speed_buffer.lon_buffer) +
+      0.015;
+
+  if (CalRemainDistFromObs(stop_body_lon_buffer, stop_body_lat_buffer,
                            lat_buffer, 1.0, 1.168,
                            1.168) < frame_.remain_dist_path - 0.2) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
