@@ -1,9 +1,7 @@
 #pragma once
 
-#include <bits/stdint-intn.h>
+#include <cstdint>
 
-#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
-#include "common/trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
 #include "lon_target_maker.pb.h"
 #include "target.h"
 
@@ -36,21 +34,23 @@ class ComfortTarget : public Target {
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;
+    double a_max = 2.0;
     double b = 1.0;
-    double b_max = 2.0;
     double b_hard = 4.0;
     double delta = 4.0;
-    double max_a_jerk = 5.0;
+    double max_accel_jerk = 3.0;
     double min_decel_jerk = 1.0;
-    double mid_decel_jerk = 1.5;
-    double max_decel_jerk = 2.0;
-    double min_tau = 0.3;
-    double max_tau = 1.2;
+    double max_decel_jerk = 1.5;
     double virtual_front_s = 200.0;
     double cool_factor = 0.99;
     double follow_consider_distance = 15.0;
     double follow_consider_time_headway = 1.5;
-    double over_speed_factor = 0.3;
+    double delay_time_buffer = 0.3;
+    double w_speed_low = 0.0;
+    double w_speed_high = 1.0;
+    double w_gap_low = 6.0;
+    double w_gap_high = 10.0;
+    double eps = 1e-3;
   };
 
   const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
@@ -72,21 +72,21 @@ class ComfortTarget : public Target {
 
   void GenerateComfortTarget();
 
-  double CalculateComfortAcceleration(const double current_acc,
-                                      const double current_vel,
-                                      const double current_s,
-                                      const double front_vel,
-                                      const double front_s,
-                                      const double tau,
-                                      const double decel_jerk) const;
+  double CalculateComfortAcceleration(
+      const double current_acc, const double current_vel,
+      const double current_s, const double front_vel, const double front_s,
+      const double tau, const double decel_jerk, const double zero_acc_vel,
+      double& v_target) const;
 
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
 
+  double SmoothStep(const double x, const double edge0,
+                    const double edge1) const;
+
   void AddComfortTargetDataToProto();
 
  private:
- 
   ComfortParameters comfort_params_;
   std::vector<UpperBoundInfo> upper_bound_infos_;
   common::ComfortTarget comfort_target_pb_;
@@ -94,6 +94,10 @@ class ComfortTarget : public Target {
   std::vector<int32_t> follow_agent_ids_;
   bool is_lat_follow_ = false;
   bool is_lon_cut_in_ = false;
+  std::vector<double> comfort_jerk_min_vec_;
+  std::vector<double> comfort_v_target_vec_;
+  std::vector<double> zero_acc_vel_vec_;
+  std::vector<double> zero_acc_acc_vec_;
 };
 
 }  // namespace planning

@@ -5,20 +5,15 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <memory>
 
 #include "behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "behavior_planners/long_ref_path_decider/target_marker/target.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 #include "common/config/basic_type.h"
-#include "common/st_graph/st_graph_utils.h"
 #include "debug_info_log.h"
 #include "environmental_model.h"
-#include "math/linear_interpolation.h"
 #include "math/math_utils.h"
 #include "planning_context.h"
-#include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
-#include "utils/pose2d_utils.h"
 
 namespace planning {
 
@@ -62,26 +57,6 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VALUE("limit_speed", desired_speed);
 
   comfort_params_.v0 = desired_speed;
-  comfort_params_.s0 = 3.5;
-  comfort_params_.T = 1.0;
-  comfort_params_.a = 1.5;
-  comfort_params_.b = 1.0;
-  comfort_params_.b_max = 2.0;
-  comfort_params_.delta = 4.0;
-  comfort_params_.b_hard = 4.0;
-  comfort_params_.max_a_jerk = 5.0;
-  comfort_params_.min_decel_jerk = 1.0;
-  comfort_params_.mid_decel_jerk = 1.5;
-  comfort_params_.max_decel_jerk = 2.0;
-  comfort_params_.min_tau = 0.3;
-  comfort_params_.min_tau = 1.2;
-  comfort_params_.virtual_front_s = 200.0;
-  comfort_params_.cool_factor = 0.99;
-  comfort_params_.follow_consider_distance = 15.0;
-  comfort_params_.follow_consider_time_headway = 1.5;
-  comfort_params_.over_speed_factor = 0.3;
-  is_lat_follow_ = false;
-  is_lon_cut_in_ = false;
 
   upper_bound_infos_ =
       std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
@@ -98,6 +73,13 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   acc_values_ = std::vector<double>(plan_points_num_, 0.0);
 
   GenerateComfortTarget();
+
+  comfort_jerk_min_vec_[0] = comfort_jerk_min_vec_[1];
+  JSON_DEBUG_VECTOR("comfort_jerk_min_vec", comfort_jerk_min_vec_, 0);
+  comfort_v_target_vec_[0] = comfort_v_target_vec_[1];
+  JSON_DEBUG_VECTOR("comfort_v_target_vec", comfort_v_target_vec_, 0);
+  JSON_DEBUG_VECTOR("zero_acc_vel_vec", zero_acc_vel_vec_, 0);
+  JSON_DEBUG_VECTOR("zero_acc_acc_vec", zero_acc_acc_vec_, 0);
 
   auto mutable_lon_ref_path_decider_output =
       session_->mutable_planning_context()
@@ -181,7 +163,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
               agent_id);
 
       if (agent != nullptr) {
-
         follow_agents.push_back(
             {agent, FollowAgentSource::kLatObstacleDecision});
         added_agent_ids.insert(agent_id);
@@ -345,6 +326,24 @@ void ComfortTarget::GenerateComfortTarget() {
   target_values_[0].set_target_type(TargetType::kComfort);
   acc_values_[0] = current_a;
 
+  comfort_jerk_min_vec_.clear();
+  comfort_jerk_min_vec_.resize(plan_points_num_,
+                               comfort_params_.min_decel_jerk);
+
+  comfort_v_target_vec_.clear();
+  comfort_v_target_vec_.resize(plan_points_num_, comfort_params_.v0);
+
+  zero_acc_vel_vec_.clear();
+  zero_acc_vel_vec_.resize(plan_points_num_, 0.0);
+
+  zero_acc_acc_vec_.clear();
+  zero_acc_acc_vec_.resize(plan_points_num_, 0.0);
+
+  zero_acc_vel_vec_[plan_points_num_ - 1] =
+      virtual_zero_acc_curve_->Evaluate(1, planning_time_);
+  zero_acc_acc_vec_[plan_points_num_ - 1] =
+      virtual_zero_acc_curve_->Evaluate(2, planning_time_);
+
   for (int32_t i = 1; i < plan_points_num_; i++) {
     const double t = i * dt_;
     auto& target_value = target_values_[i];
@@ -352,6 +351,8 @@ void ComfortTarget::GenerateComfortTarget() {
 
     const double front_s = upper_bound_infos_[i - 1].s;
     const double front_vel = upper_bound_infos_[i - 1].v;
+    const double front_acc = upper_bound_infos_[i - 1].a;
+
     const bool is_follow = upper_bound_infos_[i - 1].is_follow;
     const bool is_cut_in = upper_bound_infos_[i - 1].is_cut_in;
 
@@ -372,36 +373,46 @@ void ComfortTarget::GenerateComfortTarget() {
       }
     }
 
+    const double zero_acc_vel =
+        virtual_zero_acc_curve_->Evaluate(1, (i - 1) * dt_);
+    const double zero_acc_acc =
+        virtual_zero_acc_curve_->Evaluate(2, (i - 1) * dt_);
+
     double min_follow_distance =
-        comfort_params_.s0 + current_v * comfort_params_.min_tau;
-    double max_follow_distance =
-        comfort_params_.s0 + current_v * comfort_params_.max_tau;
+        comfort_params_.s0 + current_v * comfort_params_.delay_time_buffer;
+    double max_follow_distance = comfort_params_.s0 + current_v * tau;
 
     double max_decel_jerk = (is_cut_in || is_follow)
-                                ? comfort_params_.mid_decel_jerk
+                                ? comfort_params_.max_decel_jerk
                                 : comfort_params_.min_decel_jerk;
 
     double decel_jerk = comfort_params_.min_decel_jerk;
-    if (is_follow || is_cut_in) {
-      if (front_s >= max_follow_distance) {
+
+    if (front_s >= max_follow_distance) {
+      decel_jerk = comfort_params_.min_decel_jerk;
+    } else if (front_s <= min_follow_distance) {
+      decel_jerk = max_decel_jerk;
+    } else {
+      double distance_diff = max_follow_distance - min_follow_distance;
+      if (std::abs(distance_diff) < comfort_params_.eps) {
         decel_jerk = comfort_params_.min_decel_jerk;
-      } else if (front_s <= min_follow_distance) {
-        decel_jerk = max_decel_jerk;
       } else {
-        double distance_diff = max_follow_distance - min_follow_distance;
-        if (std::abs(distance_diff) < 1e-6) {
-          decel_jerk = comfort_params_.min_decel_jerk;
-        } else {
-          double ratio = (front_s - min_follow_distance) / distance_diff;
-          decel_jerk =
-              max_decel_jerk +
-              ratio * (comfort_params_.min_decel_jerk - max_decel_jerk);
-        }
+        double ratio = (front_s - min_follow_distance) / distance_diff;
+        double smooth_ratio = 3.0 * ratio * ratio - 2.0 * ratio * ratio * ratio;
+        decel_jerk =
+            max_decel_jerk +
+            smooth_ratio * (comfort_params_.min_decel_jerk - max_decel_jerk);
       }
     }
 
+    comfort_jerk_min_vec_[i] = -decel_jerk;
+
+    zero_acc_vel_vec_[i - 1] = zero_acc_vel;
+    zero_acc_acc_vec_[i - 1] = zero_acc_acc;
+
     double comfort_acc = CalculateComfortAcceleration(
-        current_a, current_v, current_s, front_vel, front_s, tau, decel_jerk);
+        current_a, current_v, current_s, front_vel, front_s, tau, decel_jerk,
+        zero_acc_vel, comfort_v_target_vec_[i]);
     acc_values_[i] = comfort_acc;
     double ds = std::max(0.0, current_v * dt_ + 0.5 * comfort_acc * dt_ * dt_);
     double next_s = current_s + ds;
@@ -420,11 +431,17 @@ void ComfortTarget::GenerateComfortTarget() {
   }
 }
 
+double ComfortTarget::SmoothStep(const double x, const double edge0,
+                                 const double edge1) const {
+  double denom = std::max(comfort_params_.eps, edge1 - edge0);
+  double t = std::clamp((x - edge0) / denom, 0.0, 1.0);
+  return t * t * (3.0 - 2.0 * t);
+}
+
 double ComfortTarget::CalcDesiredVelocity(const double d_rel,
                                           const double d_des,
                                           const double v_lead,
                                           const double v_ego) const {
-  double v_lead_clip = std::max(v_lead, 0.0);
   const double max_runaway_speed = -2.0;
   double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
   double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
@@ -433,21 +450,16 @@ double ComfortTarget::CalcDesiredVelocity(const double d_rel,
 
   double v_rel = v_ego - v_lead;
   double v_rel_des = 0.0;
-  double soft_brake_distance = 0.0;
   if (d_rel < d_des) {
     double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
     double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
     v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
-    soft_brake_distance = d_rel;
   } else if (d_rel < d_des + x_linear_to_parabola) {
     v_rel_des = (d_rel - d_des) * l_slope;
     v_rel_des = std::max(v_rel_des, max_runaway_speed);
-    soft_brake_distance = v_rel / l_slope + d_des;
   } else {
     v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
-    soft_brake_distance =
-        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
   }
   double v_target = v_rel_des + v_lead;
   return v_target;
@@ -456,72 +468,58 @@ double ComfortTarget::CalcDesiredVelocity(const double d_rel,
 double ComfortTarget::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
     const double front_vel, const double front_s, const double tau,
-    const double decel_jerk) const {
+    const double decel_jerk, const double zero_acc_vel,
+    double& v_target) const {
   double s0 = comfort_params_.s0;
   double v0 = comfort_params_.v0;
   double a = comfort_params_.a;
+  double a_max = comfort_params_.a_max;
   double b = comfort_params_.b;
-  double b_max = comfort_params_.b_max;
   double b_hard = comfort_params_.b_hard;
+  double max_accel_jerk = comfort_params_.max_accel_jerk;
   double delta = comfort_params_.delta;
   double cool_factor = comfort_params_.cool_factor;
-  double over_speed_factor = comfort_params_.over_speed_factor;
 
   double s_alpha = std::max(1e-3, front_s - current_s);
   double delta_v = current_vel - front_vel;
 
+  double speed_low = std::max(current_vel, front_vel);
+
   double s_star =
       s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
-                                                 (2.0 * std::sqrt(a * b_max)));
+                                                 (2.0 * std::sqrt(a_max * b)));
 
-  double s_safe = s0 + current_vel * tau;
+  double s_follow = s0 + zero_acc_vel * tau;
 
-  double s_desired = std::max(s0, front_s - s_safe);
+  double s_desire = std::max(1e-3, front_s - s_follow);
 
-  double dynamic_v0 =
-      CalcDesiredVelocity(s_alpha, s_safe, front_vel, current_vel);
+  double v_desire =
+      CalcDesiredVelocity(s_alpha, s_follow, front_vel, current_vel);
 
-  double desired_v0 = std::min(v0, dynamic_v0);
-
-  double final_v0 = 0.0;
-
-  if (current_s < s_desired) {
-    final_v0 = v0;
-  } else {
-    final_v0 = desired_v0;
-  }
+  v_target = std::max(1e-3, std::min(v0, v_desire));
 
   double a_free;
-  if (current_vel <= final_v0) {
-    a_free = a * (1.0 - std::pow(current_vel / final_v0, delta));
-  } else if (current_vel > final_v0 && current_s < s_desired) {
-    double s_progress = std::max(0.0, std::min(1.0, current_s / s_desired));
-    double over_vel_ratio = current_vel / std::max(final_v0, 1e-6);
-    double position_ratio = 1.0 - s_progress;
-    double over_speed_ratio = over_vel_ratio - 1.0;
-    double over_speed_demand =
-        position_ratio - over_speed_ratio * over_speed_factor;
-    if (over_speed_demand > 0.1) {
-      a_free = a * over_speed_factor * over_speed_demand;
-    } else {
-      a_free = -b * over_speed_factor * over_speed_ratio;
-    }
+  if (current_vel <= v_target) {
+    a_free = a * (1.0 - std::pow(current_vel / v_target, delta));
   } else {
-    a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
+    a_free = -b * (1.0 - std::pow(v_target / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_desired;
+  double w_speed = 1.0 - SmoothStep(speed_low, comfort_params_.w_speed_low,
+                                    comfort_params_.w_speed_high);
+  double w_gap = 1.0 - SmoothStep(s_alpha, comfort_params_.w_gap_low,
+                                  comfort_params_.w_gap_high);
+  double w_alpha = std::clamp(w_speed * w_gap, 0.0, 1.0);
+  double denom = (1.0 - w_alpha) * s_desire +
+                 w_alpha * std::max(comfort_params_.eps, s_alpha);
+  double z = s_star / denom;
 
   double a_idm;
-  if (current_vel <= final_v0) {
-    if (z >= 1.0) {
-      a_idm = a * (1.0 - std::pow(z, 2.0));
+  if (current_vel <= v_target) {
+    if (z < 1.0 && std::abs(a_free) > 1e-6) {
+      a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
     } else {
-      if (std::abs(a_free) > 1e-6) {
-        a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
-      } else {
-        a_idm = a * (1.0 - std::pow(z, 2.0));
-      }
+      a_idm = a * (1.0 - std::pow(z, 2.0));
     }
   } else {
     if (z >= 1.0) {
@@ -531,38 +529,38 @@ double ComfortTarget::CalculateComfortAcceleration(
     }
   }
 
-  a_idm = std::max(std::min(a, a_idm), -comfort_params_.b_hard);
+  a_idm = std::max(std::min(a, a_idm), -b_hard);
 
   double ds_star = s_alpha - s_star;
-  double ds_safe = s_alpha - s_safe;
+  double ds_follow = s_alpha - s_follow;
+
   double a_cah;
-  if (ds_safe < 0.0 && ds_star < 0.0) {
+  if (ds_follow < 0.0 && ds_star < 0.0) {
     a_cah = b_hard * ds_star / s_star;
-  } else if (ds_safe > 0.0 && ds_star < 0.0) {
+  } else if (ds_follow > 0.0 && ds_star < 0.0) {
     a_cah = b * ds_star / s_star;
-  } else if (ds_safe < 0.0 && ds_star > 0.0) {
-    a_cah = b * ds_safe / s_safe;
+  } else if (ds_follow < 0.0 && ds_star > 0.0) {
+    a_cah = b * ds_follow / s_follow;
   } else {
     a_cah = a_idm;
   }
 
   double final_acc;
   if (a_idm >= a_cah) {
-    double distance_ratio = std::min(current_s / s_desired, 1.0);
-    final_acc = a_idm * (1.0 - distance_ratio) + a_cah * distance_ratio;
+    final_acc = a_idm;
   } else {
     final_acc = (1.0 - cool_factor) * a_idm +
                 cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
   }
 
   double acc_change = final_acc - current_acc;
-  if (acc_change > 0 && acc_change > comfort_params_.max_a_jerk * dt_) {
-    final_acc = current_acc + comfort_params_.max_a_jerk * dt_;
+  if (acc_change > 0 && acc_change > max_accel_jerk * dt_) {
+    final_acc = current_acc + max_accel_jerk * dt_;
   } else if (acc_change < 0 && acc_change < -decel_jerk * dt_) {
     final_acc = current_acc - decel_jerk * dt_;
   }
 
-  final_acc = std::max(std::min(a, final_acc), -comfort_params_.b_hard);
+  final_acc = std::max(std::min(a, final_acc), -b_hard);
 
   return final_acc;
 }
