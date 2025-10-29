@@ -2537,8 +2537,8 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
           } else if (geometry_path_r.path_count > 1 &&
                      geometry_path_d.path_count < 1) {
             geometry_path = geometry_path_r;
-          } else if (geometry_path_r.path_count > 1 &&
-                     geometry_path_d.path_count > 1) {
+          } else if (geometry_path_r.path_count >= 1 &&
+                     geometry_path_d.path_count >= 1) {
             geometry_path = (geometry_path_r.cost > geometry_path_d.cost)
                                 ? geometry_path_d
                                 : geometry_path_r;

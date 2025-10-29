@@ -1980,8 +1980,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (frame_.gear_command != geometry_lib::SEG_GEAR_REVERSE &&
           !frame_.is_last_path ||
-      ego_info_under_slot.fix_limiter || !frame_.spline_success ||
-      origin_traj_size < 2) {
+      !frame_.spline_success || origin_traj_size < 2) {
     return false;
   }
 
@@ -2044,6 +2043,22 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     return false;
   }
 
+  if (ego_info_under_slot.fix_limiter &&
+      (limiter_mid - pt.pos).norm() >
+          param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter &&
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag() &&
+      dist_ego_limiter > param.check_finish_params.lon_err - 0.026) {
+    ego_info_under_slot.fix_limiter = false;
+  }
+
+  if (ego_info_under_slot.fix_limiter) {
+    return false;
+  }
+
   const double max_extend_dist = 2.5;
 
   double s_proj = 0.0;
@@ -2090,7 +2105,8 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
 
   if (s < s_proj) {
     ILOG_INFO << "path shoule be extended because of limiter";
-    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg > 1.08) {
+    if (std::fabs(g2l_tf.GetHeading(pt.GetTheta())) * kRad2Deg >
+        param.check_finish_params.heading_err_strict) {
       ILOG_INFO << "ego heading is big, not allow extend path";
       return false;
     }
@@ -2100,7 +2116,7 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     pt.s = temp_s;
     // reverse gear
     const Eigen::Vector2d unit_heading_vec =
-        geometry_lib::GenHeadingVec(pt.GetTheta()) * -1.0;
+        geometry_lib::GenHeadingVec(pt.GetTheta()) * (-1.0);
     std::vector<geometry_lib::PathPoint> extend_pt_vec{pt};
     do {
       temp_s += temp_ds;

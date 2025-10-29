@@ -107,7 +107,7 @@
   "finish_parallel_heading_err": 1.68,
   "finish_parallel_out_heading_mag": 10.0,
 
-  "check_finish_lon_err": 0.25,
+  "check_finish_lon_err": 0.28,
   "check_finish_lat_err": 0.2,
   "check_finish_lat_err_strict": 0.1,
   "check_finish_heading_err": 2.5,
