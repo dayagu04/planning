@@ -483,7 +483,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
-
+  v_cruise_speed_ = ego_state_manager->ego_v_cruise_upper();
   // init sample space
   st_sample_space_base_.Init(agent_info_, ego_s);
 
@@ -508,7 +508,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
-      std::fmin(v_suggestted_ * 1.1, speed_adjust_range_.first);
+      std::fmin(v_cruise_speed_ * 1.05, speed_adjust_range_.first);
   speed_adjust_range_.second =
       sample_scene_ == DecelerationPriorityScene &&
               merge_stop_line_distance_ <= 20.0
@@ -516,9 +516,12 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           : std::fmax(config_.sample_v_lower,
                       ego_v_ - config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
-      is_split_map_change ? std::fmax(v_suggestted_ / 2.0,
-                                      ego_v_ - config_.maximum_speed_adjustment)
-                          : speed_adjust_range_.second;
+      is_split_map_change
+          ? (v_cruise_speed_ / 2.0) > ego_v_
+                ? ego_v_
+                : fmax(v_cruise_speed_ / 2.0,
+                       ego_v_ - config_.maximum_speed_adjustment)
+          : speed_adjust_range_.second;
   return !agent_info_.empty();
 }
 

@@ -178,9 +178,10 @@ void SampleQuarticPolynomialCurve::CalcCost(
   }
   // // poly curve cost
   if (!enable_merge_decelaration) {
-    double average_vel_differ = (arrived_v_ - ego_v)/arrived_t_;
+    double average_vel_differ = (arrived_v_ - ego_v) / arrived_t_;
     double vel_differ_cost =
-        average_vel_differ > 0 ? 0.0 : 2.0 * average_vel_differ * average_vel_differ;
+        average_vel_differ > 0 ? 0.0
+                               : 2.0 * average_vel_differ * average_vel_differ;
     cost_sum_ += vel_differ_cost;
   }
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
