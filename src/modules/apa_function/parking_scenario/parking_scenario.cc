@@ -496,7 +496,8 @@ const double ParkingScenario::CalRemainDistFromObs(
     const double static_lon_buffer, const double static_body_lat_buffer,
     const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
     const double dynamic_body_lat_buffer,
-    const double dynamic_mirror_lat_buffer, const bool only_check_mirror) {
+    const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
+    const UseObsHeightMethod use_obs_height_method) {
   const ApaParameters& param = apa_param.GetParam();
 
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -517,7 +518,8 @@ const double ParkingScenario::CalRemainDistFromObs(
         apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
         static_body_lat_buffer, 0.0,
         GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
-                         CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC),
+                         CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC,
+                         use_obs_height_method),
         true, static_mirror_lat_buffer);
 
     return col_res.remain_dist - static_lon_buffer;
@@ -532,9 +534,9 @@ const double ParkingScenario::CalRemainDistFromObs(
       static_lon_buffer;
 
   // check static obs, it can be radical
-  GJKColDetRequest gjl_col_det_request(false, param.uss_config.use_uss_pt_cloud,
-                                       CarBodyType::NORMAL,
-                                       ApaObsMovementType::STATIC);
+  GJKColDetRequest gjl_col_det_request(
+      false, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
+      ApaObsMovementType::STATIC, use_obs_height_method);
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
@@ -589,22 +591,23 @@ const double ParkingScenario::CalRealTimeBrakeDist() {
 }
 
 const double ParkingScenario::CalRemainDistFromPlanPathDangerous(
-    const double static_lon_buffer, const double static_lat_buffer) {
+    const double static_lon_buffer, const double static_lat_body_buffer,
+    const double static_lat_mirror_body_buffer,
+    const UseObsHeightMethod use_obs_height_method) {
   if (current_path_point_global_vec_.empty()) {
     return 36.8;
   }
 
   GJKColDetRequest gjl_col_det_request(
       false, apa_param.GetParam().uss_config.use_uss_pt_cloud,
-      CarBodyType::NORMAL, ApaObsMovementType::STATIC);
-  gjl_col_det_request.use_uss_pt = false;
+      CarBodyType::NORMAL, ApaObsMovementType::STATIC, use_obs_height_method);
 
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
       apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
 
-  ColResult col_res =
-      gjk_col_det_ptr->Update(current_path_point_global_vec_, static_lat_buffer,
-                              static_lon_buffer, gjl_col_det_request);
+  ColResult col_res = gjk_col_det_ptr->Update(
+      current_path_point_global_vec_, static_lat_body_buffer, static_lon_buffer,
+      gjl_col_det_request, true, static_lat_mirror_body_buffer);
 
   return col_res.remain_dist_static;
 }
@@ -959,7 +962,7 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
     return true;
   }
 
-  if (CheckDynamicGearSwitch()) {
+  if (CheckDynamicGearSwitch(check_params.use_obs_height_method)) {
     ILOG_INFO << "replan by dynamic gear switch!";
     frame_.replan_reason = ReplanReason::DYNAMIC_GEAR_SWITCH;
     return true;
@@ -1099,7 +1102,8 @@ const bool ParkingScenario::CheckResponseReasonable(
   return true;
 }
 
-const bool ParkingScenario::CheckDynamicGearSwitch() {
+const bool ParkingScenario::CheckDynamicGearSwitch(
+    const UseObsHeightMethod use_obs_height_method) {
   auto& param = apa_param.GetParam().gear_switch_config;
   if (!param.enable_dynamic_gear_switch) {
     return false;
@@ -1149,7 +1153,8 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
   // check around obs
   double dist =
       CalRemainDistFromObs(param.cur_path_lon_buffer, param.cur_path_lat_buffer,
-                           param.cur_path_lat_buffer);
+                           param.cur_path_lat_buffer, 1.168, 1.168, 1.168,
+                           false, use_obs_height_method);
   if (dist < frame_.remain_dist_path) {
     return false;
   }
@@ -1158,7 +1163,8 @@ const bool ParkingScenario::CheckDynamicGearSwitch() {
   std::vector<pnc::geometry_lib::PathPoint> second_path;
   GetSecondGearPath(complete_path_point_global_vec_, second_path);
   if (IsPathCollision(second_path, param.next_path_lon_buffer,
-                      param.next_path_lat_buffer, param.next_path_lat_buffer)) {
+                      param.next_path_lat_buffer, param.next_path_lat_buffer,
+                      1.168, 1.168, 1.168, false, use_obs_height_method)) {
     return false;
   }
 
@@ -1298,17 +1304,21 @@ const bool ParkingScenario::IsPathCollision(
     const double static_lon_buffer, const double static_body_lat_buffer,
     const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
     const double dynamic_body_lat_buffer,
-    const double dynamic_mirror_lat_buffer,
-    const bool only_check_mirror) const {
+    const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
+    const UseObsHeightMethod use_obs_height_method) const {
   const ApaParameters& param = apa_param.GetParam();
   // check static obs, it can be radical
   GJKColDetRequest request(false, param.uss_config.use_uss_pt_cloud,
-                           CarBodyType::NORMAL, ApaObsMovementType::STATIC);
+                           CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                           use_obs_height_method);
+
   const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
       apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
+
   ColResult col_res =
       gjk_col_det_ptr->Update(path, static_body_lat_buffer, 0.0, request, true,
                               static_mirror_lat_buffer);
+
   if (col_res.col_flag) {
     return true;
   }
@@ -1317,6 +1327,7 @@ const bool ParkingScenario::IsPathCollision(
   request.movement_type = ApaObsMovementType::MOTION;
   col_res = gjk_col_det_ptr->Update(path, dynamic_body_lat_buffer, 0.0, request,
                                     true, dynamic_mirror_lat_buffer);
+
   if (col_res.col_flag) {
     return true;
   }

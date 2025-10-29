@@ -84,7 +84,10 @@ const bool PerpendicularTailInPathGenerator::Update() {
               std::vector<geometry_lib::PathPoint>{
                   input_.ego_info_under_slot.cur_pose},
               apa_param.GetParam().car_lat_inflation_normal, 0.3,
-              GJKColDetRequest())
+              GJKColDetRequest(true,
+                               apa_param.GetParam().uss_config.use_uss_pt_cloud,
+                               CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                               apa_param.GetParam().use_obs_height_method))
           .col_flag) {
     ILOG_INFO << "ego pose has obs, force quit PathPlan, fail";
     return false;
@@ -1621,8 +1624,12 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
         res = geometry_col_det_ptr->Update(path_seg, lat_inflation,
                                            lon_safe_dist);
       } else if (method == ColDetMethod::EDT_GJK) {
-        res = gjk_col_det_ptr->Update(path_seg, lat_inflation, lon_safe_dist,
-                                      GJKColDetRequest());
+        res = gjk_col_det_ptr->Update(
+            path_seg, lat_inflation, lon_safe_dist,
+            GJKColDetRequest(true,
+                             apa_param.GetParam().uss_config.use_uss_pt_cloud,
+                             CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                             apa_param.GetParam().use_obs_height_method));
       }
     }
   }
@@ -1632,8 +1639,11 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   }
 
   else if (method == ColDetMethod::GJK) {
-    res = gjk_col_det_ptr->Update(path_seg, lat_inflation, lon_safe_dist,
-                                  GJKColDetRequest());
+    res = gjk_col_det_ptr->Update(
+        path_seg, lat_inflation, lon_safe_dist,
+        GJKColDetRequest(true, apa_param.GetParam().uss_config.use_uss_pt_cloud,
+                         CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                         apa_param.GetParam().use_obs_height_method));
   }
 
   calc_params_.col_det_time += IflyTime::Now_ms() - time;
@@ -4113,7 +4123,10 @@ const bool PerpendicularTailInPathGenerator::CheckStuckedByInside(
     return col_det_interface_ptr_->GetGJKColDetPtr()
         ->Update(std::vector<geometry_lib::PathPoint>{end_pose},
                  apa_param.GetParam().car_lat_inflation_strict + 0.1268, 0.0,
-                 GJKColDetRequest())
+                 GJKColDetRequest(
+                     true, apa_param.GetParam().uss_config.use_uss_pt_cloud,
+                     CarBodyType::NORMAL, ApaObsMovementType::STATIC,
+                     apa_param.GetParam().use_obs_height_method))
         .col_flag;
   }
 

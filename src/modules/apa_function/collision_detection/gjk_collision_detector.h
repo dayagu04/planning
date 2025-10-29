@@ -20,7 +20,7 @@ struct GJKColDetRequest {
   bool use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud;
   CarBodyType car_body_type = CarBodyType::NORMAL;
   ApaObsMovementType movement_type = ApaObsMovementType::ALL;
-  ApaObsHeightType height_type = ApaObsHeightType::HIGH;
+  UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
 
   GJKColDetRequest() = default;
   ~GJKColDetRequest() = default;
@@ -29,9 +29,9 @@ struct GJKColDetRequest {
       const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
       const CarBodyType _car_body_type = CarBodyType::NORMAL,
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
-      const ApaObsHeightType _height_type = ApaObsHeightType::HIGH) {
-    Set(_use_obs_base_slot, _use_uss_pt, _car_body_type, _movement_type,
-        _height_type);
+      const UseObsHeightMethod _use_obs_height_method = UseObsHeightMethod::HIGH) {
+    Set(_use_obs_base_slot, _use_uss_pt, _car_body_type,
+        _movement_type, _use_obs_height_method);
   }
 
   void Set(
@@ -39,12 +39,12 @@ struct GJKColDetRequest {
       const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
       const CarBodyType _car_body_type = CarBodyType::NORMAL,
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
-      const ApaObsHeightType _height_type = ApaObsHeightType::HIGH) {
+      const UseObsHeightMethod _use_obs_height_method = UseObsHeightMethod::HIGH) {
     use_obs_base_slot = _use_obs_base_slot;
     use_uss_pt = _use_uss_pt;
     car_body_type = _car_body_type;
     movement_type = _movement_type;
-    height_type = _height_type;
+    use_obs_height_method = _use_obs_height_method;
   }
 };
 

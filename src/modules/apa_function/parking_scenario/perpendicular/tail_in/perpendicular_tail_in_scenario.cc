@@ -131,7 +131,8 @@ void PerpendicularTailInScenario::ExcutePathPlanningTask() {
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
   frame_.remain_dist_slot_jump = CalRemainDistBySlotJump();
-  frame_.remain_dist_col_det = CalRemainDistFromPlanPathDangerous();
+  frame_.remain_dist_col_det = CalRemainDistFromPlanPathDangerous(
+      0.0, 0.0, 0.0, apa_param.GetParam().use_obs_height_method);
   DecideFoldMirrorCommand();
 
   // check finish
@@ -949,6 +950,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
 
 void PerpendicularTailInScenario::PathPlan() {
   CheckReplanParams replan_params;
+  replan_params.use_obs_height_method = apa_param.GetParam().use_obs_height_method;
   frame_.replan_flag = CheckReplan(replan_params);
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
   frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
@@ -1357,6 +1359,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
 
 void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
   CheckReplanParams replan_params;
+  replan_params.use_obs_height_method = apa_param.GetParam().use_obs_height_method;
   frame_.replan_flag = CheckReplan(replan_params);
   frame_.has_response = UpdateThreadPath();
   frame_.pathplan_result = PathPlannerResult::PLAN_UPDATE;
@@ -2425,7 +2428,8 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
     double remain_dist = CalRemainDistFromObs(
         real_time_brake_info.lon_buffer, real_time_brake_info.body_lat_buffer,
-        real_time_brake_info.mirror_lat_buffer);
+        real_time_brake_info.mirror_lat_buffer, 1.168, 0.86, 0.86, false,
+        param.use_obs_height_method);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
   }
@@ -3631,9 +3635,10 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double folding_mirror_consume_dist =
       vel * smart_fold_mirror_params.consume_time;
 
-  if (CalRemainDistFromObs(
-          folding_mirror_consume_dist, folding_mirror_safe_lat_buffer,
-          folding_mirror_safe_lat_buffer, 1.0, 1.168, 1.168, true) < 0.0) {
+  if (CalRemainDistFromObs(folding_mirror_consume_dist,
+                           folding_mirror_safe_lat_buffer,
+                           folding_mirror_safe_lat_buffer, 1.0, 1.168, 1.168,
+                           true, param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe when folding mirror, "
                  "should not fold mirror";
     return;
@@ -3659,7 +3664,8 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       0.068);
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
-                           1.0, 1.168, 1.168, true) < 0.0) {
+                           1.0, 1.168, 1.168, true,
+                           param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
@@ -3678,8 +3684,9 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       0.015;
 
   if (CalRemainDistFromObs(stop_body_lon_buffer, stop_body_lat_buffer,
-                           lat_buffer, 1.0, 1.168,
-                           1.168) < frame_.remain_dist_path - 0.2) {
+                           lat_buffer, 1.0, 1.168, 1.168, false,
+                           param.use_obs_height_method) <
+      frame_.remain_dist_path - 0.2) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
@@ -3688,8 +3695,8 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double min_safe_obs2mirror_dist = smart_fold_mirror_params.lat_buffer;
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, min_safe_obs2mirror_dist,
-                           min_safe_obs2mirror_dist, 1.0, 1.168, 1.168,
-                           true) < 0.0) {
+                           min_safe_obs2mirror_dist, 1.0, 1.168, 1.168, true,
+                           param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, need send fold mirror msg";
     frame_.mirror_command = MirrorCommand::FOLD;
   }
