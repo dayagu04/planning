@@ -252,7 +252,8 @@ bool EnvironmentalModelManager::Run() {
       (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
       (fsm_state <=
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
-  bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
+  bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_PRE_ACTIVE ||
+                   fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
                    fsm_state == iflyauto::FunctionalState_RADS_SUSPEND;
   static bool is_mrc_mode_hold = false;
   if (fsm_state == iflyauto::FunctionalState_MRC) {
