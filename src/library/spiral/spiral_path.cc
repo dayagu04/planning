@@ -20,6 +20,7 @@ const bool CvtCompactStateGlobalToLocal(
     ILOG_ERROR
         << "local_state_target, global_state_target, and base_state_reference "
            "should not be NULL!";
+    return false;
   }
 
   dx = global_state_target->x - base_state_reference->x;
@@ -43,6 +44,7 @@ const bool CvtCompactStateLocalToGlobal(
   if (global_state_target == NULL || local_state_target == NULL ||
       base_state_reference == NULL) {
     ILOG_ERROR << "input pointers should not be NULL !";
+    return false;
   }
 
   theta = base_state_reference->theta;

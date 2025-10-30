@@ -544,7 +544,7 @@ const bool NodeDeleteDecider::CheckDelByParentNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelByStartNode() {
-  if (request_.curve_node != nullptr) {
+  if (request_.curve_node != nullptr || request_.current_node == nullptr) {
     return false;
   }
 

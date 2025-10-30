@@ -43,7 +43,16 @@ float cos(Angle16 a) {
   return sin(b);
 }
 
-float tan(Angle16 a) { return sin(a) / cos(a); }
+float tan(Angle16 a) {
+    float cos_val = cos(a);
+    const float epsilon = 1e-6f;
+
+    if (std::abs(cos_val) < epsilon) {
+        return (sin(a) > 0) ? INFINITY : -INFINITY;
+    }
+
+    return sin(a) / cos_val;
+}
 
 float sin(Angle8 a) {
   Angle16 b(static_cast<int16_t>(a.raw() << 8));
