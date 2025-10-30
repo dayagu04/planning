@@ -102,9 +102,8 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     st_sample_space_base_.GetBorderByAvailable(ego_s_, 0,
                                                &current_matched_lower_st_point,
                                                &current_matched_upper_st_point);
-    if (current_matched_upper_st_point.agent_id() == kNoAgentId &&
-        current_matched_lower_st_point.agent_id() == kNoAgentId) {
-      ok = false;
+    ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
+          current_matched_lower_st_point.agent_id() != kNoAgentId)
     }
   }
 
