@@ -15,9 +15,9 @@ namespace preprocess {
 
 class Preprocess {
  public:
-  void Init(void);
+  void Init(const bool is_simulation = false);
 
-  void SyncParameters(void);
+  void SyncParameters(const bool is_simulation = false);
 
   void UpdateStateInfo(void);
 

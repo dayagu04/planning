@@ -24,7 +24,14 @@ bool AdasFunction::Reset() {
 void AdasFunction::Init(void) {
   // Preprocess
   preprocess_ptr_ = std::make_shared<adas_function::preprocess::Preprocess>();
-  preprocess_ptr_->Init();
+  
+#ifdef X86
+  // X86 平台：仿真模式
+  preprocess_ptr_->Init(true);
+#else
+  // 嵌入式平台：实车模式
+  preprocess_ptr_->Init(false);
+#endif
 
   // LdwCore
   ldw_core_ptr_ = std::make_shared<adas_function::ldw_core::LdwCore>();

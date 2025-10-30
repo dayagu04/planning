@@ -22,12 +22,33 @@ std::string Preprocess::ReadJsonFile(const std::string &path) {
   read_json_file_ok_flag_ = true;
   return std::string(content.begin(), content.end());
 }
-void Preprocess::SyncParameters(void) {
+
+namespace adas_function {
+namespace preprocess {
+
+void Preprocess::Init(const bool is_simulation) { 
+  SyncParameters(is_simulation); 
+}
+
+void Preprocess::SyncParameters(const bool is_simulation) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
-  auto engine_config =
-      planning::common::ConfigurationContext::Instance()->engine_config();
-  std::string path = engine_config.vehicle_cfg_dir + "/adas_params.json";
+  // 仿真模式使用部署的配置文件，实车模式从引擎配置目录读取
+  // 与 APA 保持一致的配置加载策略
+  std::string path = "/asw/planning/res/conf/adas_params.json";
+  
+  if (!is_simulation) {
+    // 实车模式：从引擎配置的车型目录读取
+    auto engine_config =
+        planning::common::ConfigurationContext::Instance()->engine_config();
+    
+    if (!engine_config.vehicle_cfg_dir.empty()) {
+      path = engine_config.vehicle_cfg_dir + "/adas_params.json";
+    } else {
+      ILOG_WARN << "engine_config.vehicle_cfg_dir is empty, using default path";
+    }
+  }
+  
   // read json file
   read_json_file_ok_flag_ = false;
   std::string config_file = ReadJsonFile(path);
@@ -43,16 +64,22 @@ void Preprocess::SyncParameters(void) {
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->car_type, std::string,
                        "car_type");
   ILOG_DEBUG << "car_type = " << GetContext.mutable_param()->car_type;
-  mjson::Json json_vehicle_common_params =
-      adas_config.get<mjson::Json>("jac_s811");
   std::string json_car_type = adas_config.get<std::string>("car_type");
+  
+  // 获取该车型的参数块，支持所有 5 个车型
+  mjson::Json json_vehicle_common_params;
   if ((int)json_car_type.find("jac_s811") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("jac_s811");
   } else if ((int)json_car_type.find("chery_e0x") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   } else if ((int)json_car_type.find("chery_m32t") != -1) {
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_m32t");
+  } else if ((int)json_car_type.find("chery_t26") != -1) {
+    json_vehicle_common_params = adas_config.get<mjson::Json>("chery_t26");
+  } else if ((int)json_car_type.find("bestune_e541") != -1) {
+    json_vehicle_common_params = adas_config.get<mjson::Json>("bestune_e541");
   } else {
+    ILOG_WARN << "Unknown car type: " << json_car_type << ", using chery_e0x as default";
     json_vehicle_common_params = adas_config.get<mjson::Json>("chery_e0x");
   }
   auto vehicle_common_json_reader = mjson::Reader(json_vehicle_common_params);

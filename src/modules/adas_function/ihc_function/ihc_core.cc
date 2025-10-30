@@ -450,7 +450,7 @@ uint16 IhcCore::UpdateIhcFaultCode() {
   // 雾灯信号无效
   if (vehicle_service_output_info_ptr->front_fog_light_state_available ==
           false ||
-      vehicle_service_output_info_ptr->front_fog_light_state_available ==
+      vehicle_service_output_info_ptr->rear_fog_light_state_available ==
           false) {
     fault_code += uint16_bit[6];
   } else {
