@@ -103,8 +103,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
                                                &current_matched_lower_st_point,
                                                &current_matched_upper_st_point);
     ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
-          current_matched_lower_st_point.agent_id() != kNoAgentId)
-    }
+          current_matched_lower_st_point.agent_id() != kNoAgentId);
   }
 
   if (ok) {
