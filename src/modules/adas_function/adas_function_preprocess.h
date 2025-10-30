@@ -32,6 +32,7 @@ class Preprocess {
   double count_ = 0;
 
  private:
+ std::string ReadJsonFile(const std::string &path);
   void SetLineInfoDefault(adas_function::context::LineInfo *line_info_ptr,
                           double c0);
   bool SetLineInfo(adas_function::context::LineInfo *line_info_ptr,
@@ -49,6 +50,7 @@ class Preprocess {
   double last_left_line_distance_ = 0.0;
   double last_right_line_distance_ = 0.0;
   double no_sideway_exist_time_counts = 0.0;
+  bool read_json_file_ok_flag_ = false;
 };
 
 }  // namespace preprocess

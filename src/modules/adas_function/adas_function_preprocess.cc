@@ -2,25 +2,26 @@
 
 #include "common_c.h"
 #include "common_platform_type_soc.h"
-
-static std::string ReadJsonFile(const std::string &path) {
+namespace adas_function {
+namespace preprocess {
+void Preprocess::Init(void) { SyncParameters(); }
+std::string Preprocess::ReadJsonFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   assert(file != nullptr);
   std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
+  FILE *file_ptr = fp.get();
+  if (file_ptr == nullptr) {
+    return "";
+  }
   fseek(fp.get(), 0, SEEK_END);
   std::vector<char> content(ftell(fp.get()));
   fseek(fp.get(), 0, SEEK_SET);
   auto read_bytes = fread(content.data(), 1, content.size(), fp.get());
   assert(read_bytes == content.size());
   (void)read_bytes;
+  read_json_file_ok_flag_ = true;
   return std::string(content.begin(), content.end());
 }
-
-namespace adas_function {
-namespace preprocess {
-
-void Preprocess::Init(void) { SyncParameters(); }
-
 void Preprocess::SyncParameters(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
@@ -28,7 +29,11 @@ void Preprocess::SyncParameters(void) {
       planning::common::ConfigurationContext::Instance()->engine_config();
   std::string path = engine_config.vehicle_cfg_dir + "/adas_params.json";
   // read json file
+  read_json_file_ok_flag_ = false;
   std::string config_file = ReadJsonFile(path);
+  if (read_json_file_ok_flag_ == false) {
+    return;
+  }
   auto adas_config = mjson::Reader(config_file);
 
   // get adas_function运行参数
