@@ -537,7 +537,7 @@ void RouteInfo::CaculateMergeInfo(
                 : merge_seg->predecessor_link_ids()[0];
         const auto& merge_seg_last_other_seg =
             sdpro_map.GetLinkOnRoute(merge_seg_last_other_seg_id);
-        if (!merge_seg_last_seg) {
+        if (!merge_seg_last_seg || !merge_seg_last_other_seg) {
           break;
         }
 
