@@ -556,10 +556,7 @@ void RouteInfo::CaculateMergeInfo(
             route_info_output_.is_road_merged_by_other_lane = true;
             is_road_merged_by_other_lane = true;
           }
-          if (sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
-              sdpro_map.isRamp(merge_seg->link_type()) &&
-              sdpro_map.isRamp(merge_seg_last_other_seg->link_type()) &&
-              merge_seg_last_seg->lane_num() >=
+          if (merge_seg_last_seg->lane_num() >=
                   merge_seg_last_other_seg->lane_num() &&
               route_info_output_.is_ego_on_expressway) {
             route_info_output_.is_road_merged_by_other_lane = true;
@@ -1809,27 +1806,24 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     bool is_calculate_feasible_lane = CalculateFeasibleLane(&split_region_info);
 
     if (!is_calculate_feasible_lane) {
-      mlc_decider_route_info_.reset();
-      return;
+      break;
     }
     exchange_region_info_list.emplace_back(split_region_info);
   }
 
   for (int i = 0; i < merge_region_info_list.size(); ++i) {
-    auto& merge_region_info = split_region_info_list[i];
+    auto& merge_region_info = merge_region_info_list[i];
     if (merge_region_info.is_other_merge_to_road == true) {
       bool is_calculate_feasible_lane =
           CalculateOtherMergeRoadFeasibleLane(&merge_region_info);
       if (!is_calculate_feasible_lane) {
-        mlc_decider_route_info_.reset();
-        return;
+        break;
       }
     } else {
       bool is_calculate_feasible_lane =
           CalculateMergeRegionFeasibleLane(&merge_region_info);
       if (!is_calculate_feasible_lane) {
-        mlc_decider_route_info_.reset();
-        return;
+        break;
       }
     }
     exchange_region_info_list.emplace_back(merge_region_info);
@@ -1961,7 +1955,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       current_lane_vec.emplace_back(i + 1);
     }
   }
-
+  mlc_decider_route_info_.first_static_split_region_info = first_exchange_region_info;
   // 状态流转，分配feasible_lane_sequence
   switch (mlc_decider_route_info_.ego_status_on_route) {
     case ON_MAIN: {
@@ -3942,12 +3936,19 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
     if (on_exclnum >= successor_exclnum) {
       int min_lane = std::min(before_exclnum, successor_exclnum);
       int max_lane = std::max(before_exclnum, successor_exclnum);
-      for (int i = 0; i < min_lane - 1; ++i) {
-        on_excr_feasible_lane.emplace_back(i + 1);
-        before_excr_feasible_lane.emplace_back(i + 1);
-      }
-      for (int i = 0; i <= (max_lane - min_lane); ++i) {
-        mlc_request_info_[min_lane + i] = AVOIDE_MERGE;
+      if (min_lane > 1) {
+        for (int i = 0; i < min_lane - 1; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+          before_excr_feasible_lane.emplace_back(i + 1);
+        }
+        for (int i = 0; i <= (max_lane - min_lane); ++i) {
+          mlc_request_info_[min_lane + i] = AVOIDE_MERGE;
+        }
+      } else {
+        for (int i = 0; i < min_lane; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+          before_excr_feasible_lane.emplace_back(i + 1);
+        }
       }
     }
   }
