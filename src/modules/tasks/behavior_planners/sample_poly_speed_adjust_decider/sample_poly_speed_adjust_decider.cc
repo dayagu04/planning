@@ -490,10 +490,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
   v_cruise_speed_ = v_suggestted_;
-  if(function_info.function_mode() == common::DrivingFunctionInfo::NOA){
-    if(session_->environmental_model()
-                          .get_route_info()
-                          ->get_sdmap_valid()){
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
       v_cruise_speed_ = session_->environmental_model()
                             .get_route_info()
                             ->get_sd_map()

@@ -89,9 +89,7 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             const double obj_a,
                                                             bool is_front_car) {
   double differ_acc =
-      ((ego_a - obj_a) < kZeroEpsilon && (ego_a - obj_a) > -kZeroEpsilon)
-          ? 0.001
-          : (ego_a - obj_a);
+      std::fabs(ego_a - obj_a) < kZeroEpsilon ? 0.001 : (ego_a - obj_a);
   const double calculate_collision_time = (obj_v - ego_v) / differ_acc;
   if (calculate_collision_time < 0.0 || calculate_collision_time > 4.0) {
     double limit_distance =
