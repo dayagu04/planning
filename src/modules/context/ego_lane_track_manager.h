@@ -221,6 +221,7 @@ class EgoLaneTrackManger {
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
   double current_segment_passed_distance_ = 0.0;
+  double sum_distance_from_ego_to_both_center_lines_ = 3.75;
   bool ego_in_split_region_ = false;
   std::shared_ptr<VirtualLane> relative_left_lane_ = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane_ = nullptr;

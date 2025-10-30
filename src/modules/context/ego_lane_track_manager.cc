@@ -79,6 +79,7 @@ constexpr double kDefaultSurpressSplitSelectorDistance = 10.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 100.0;
+constexpr double kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines = 0.6;
 
 
 }  // namespace
@@ -180,7 +181,8 @@ void EgoLaneTrackManger::TrackEgoLane(
         const auto &first_static_split_region_info = mlc_decider_route_info.first_static_split_region_info;
         ego_dis_to_split_exchange_area_start = 
             distance_to_first_road_split + first_static_split_region_info.start_fp_point.fp_distance_to_split_point;
-        if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd) {
+        if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd &&
+            sum_distance_from_ego_to_both_center_lines_ < kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -232,7 +234,8 @@ void EgoLaneTrackManger::TrackEgoLane(
           }
         }
 
-        if (ego_in_split_region_ && ego_dis_to_split_exchange_area_start >= kSplitSelectEgoToExchangeEreaDistanceThd) {
+        if (ego_in_split_region_ && ego_dis_to_split_exchange_area_start >= kSplitSelectEgoToExchangeEreaDistanceThd &&
+            sum_distance_from_ego_to_both_center_lines_ < kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
@@ -302,7 +305,7 @@ void EgoLaneTrackManger::TrackEgoLane(
       } else if (function_info.function_mode() ==
                  common::DrivingFunctionInfo::SCC) {
         if (zero_relative_id_nums > 1 && lane_keep_status &&
-            ego_in_split_region_) {
+            ego_in_split_region_ && sum_distance_from_ego_to_both_center_lines_ < kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                        order_ids_of_same_zero_relative_id);
@@ -2950,6 +2953,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   double ego_vel = ego_state->ego_v();
+  sum_distance_from_ego_to_both_center_lines_ = 3.75;
   // if (ego_vel < kApprochingRampSpeedThd) {
   //   return;
   // }
@@ -3016,10 +3020,27 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
 
     const auto& right_lane_frenet_crd =
         relative_right_lane->get_lane_frenet_coord();
+    const auto& left_lane_frenet_crd =
+        relative_left_lane->get_lane_frenet_coord();
     double ego_s_base_right = 0.0;
     double ego_l_base_right = 0.0;
-    right_lane_frenet_crd->XYToSL(ego_point.x, ego_point.y, &ego_s_base_right,
-                                  &ego_l_base_right);
+    Point2D ego_cart_point(ego_point.x, ego_point.y);
+    Point2D ego_frenet_right;
+    Point2D right_lane_ego_cart;
+    Point2D ego_frenet_left;
+    if (!right_lane_frenet_crd->XYToSL(ego_cart_point, ego_frenet_right)) {
+      ego_frenet_right.x = 50.0;
+      ego_frenet_right.y = 0.0;
+    }
+    ego_frenet_right.y = 0.0;
+
+    if (!right_lane_frenet_crd->SLToXY(ego_frenet_right, right_lane_ego_cart)) {
+      right_lane_ego_cart = ego_cart_point;
+    }
+    if (!left_lane_frenet_crd->XYToSL(right_lane_ego_cart, ego_frenet_left)) {
+      ego_frenet_left.y = 3.75;
+    }
+    sum_distance_from_ego_to_both_center_lines_ = std::fabs(ego_frenet_left.y);
     double near_average_l = 0.0;
     double far_average_l = 0.0;
     int32_t near_pt_count = 0;
