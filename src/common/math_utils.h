@@ -62,4 +62,8 @@ inline double DistanceTo(const T& p0, const T& p1) {
                    (p0.y - p1.y) * (p0.y - p1.y));
 }
 
+inline Eigen::Vector2d CreateUnitVec2d(const double angle) {
+  return Eigen::Vector2d(std::cos(angle), std::sin(angle));
+}
+
 }  // namespace planning

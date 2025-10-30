@@ -973,12 +973,16 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         fsm == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
       // 车头泊入占比
       x_tab[0] = ego_info_under_slot.target_pose.pos.x();
-      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.wheel_base +
-                 param.front_overhanging;
+      x_tab[1] =
+          ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+          ego_info_under_slot.slot.slot_length_ + param.wheel_base +
+          param.front_overhanging;
     } else {
       // 车尾泊入占比
       x_tab[0] = ego_info_under_slot.target_pose.pos.x();
-      x_tab[1] = ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
+      x_tab[1] =
+          ego_info_under_slot.slot.processed_corner_coord_local_.pt_23_mid.x() +
+          ego_info_under_slot.slot.slot_length_ + param.rear_overhanging;
     }
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
     ego_info_under_slot.slot_occupied_ratio = mathlib::Interp1(
@@ -996,22 +1000,22 @@ const bool NarrowSpaceScenario::UpdateVerticalSlotInfo() {
         (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT &&
          frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE)) {
       if (std::fabs(ego_info_under_slot.terminal_err.pos.x()) <
-          param.astar_config.lon_err_for_fix_slot) {
+              param.astar_config.lon_err_for_fix_slot &&
+          ego_info_under_slot.slot_occupied_ratio > 0.5) {
         ego_info_under_slot.fix_slot = true;
       }
     }
-  }
 
-  // fix slot
-  double fix_slot_ratio = param.fix_slot_occupied_ratio;
-  if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
-    fix_slot_ratio = param.headin_fix_slot_occupied_ratio;
-  }
-
-  if (ego_info_under_slot.slot_occupied_ratio > fix_slot_ratio &&
-      !ego_info_under_slot.fix_slot && measures_ptr->GetStaticFlag()) {
-    ego_info_under_slot.fix_slot = true;
-    ILOG_INFO << "fix_slot";
+    // fix slot
+    double fix_slot_ratio = param.fix_slot_occupied_ratio;
+    if (fsm == ApaStateMachine::ACTIVE_IN_CAR_FRONT) {
+      fix_slot_ratio = param.headin_fix_slot_occupied_ratio;
+    }
+    if (ego_info_under_slot.slot_occupied_ratio > fix_slot_ratio &&
+        measures_ptr->GetStaticFlag()) {
+      ego_info_under_slot.fix_slot = true;
+      // ILOG_INFO << "fix_slot";
+    }
   }
 
   return true;
@@ -1254,52 +1258,47 @@ void NarrowSpaceScenario::PathExpansionBySlotLimiter() {
   Eigen::Vector2d path_end_global = current_path_point_global_vec_.back().pos;
   Eigen::Vector2d point_local;
   point_local = ego_info.g2l_tf.GetPos(path_end_global);
-  double limiter_x = ego_info.target_pose.pos.x();
-  if (point_local[0] <= (limiter_x + 0.02)) {
+
+  double dist_to_goal = point_local[0] - ego_info.target_pose.pos.x();
+  if (dist_to_goal <= 0.02) {
     return;
   }
 
-  // car pose has big distance with limiter, return;
-  // If car is nearby with limiter, such as 0.3 meter, do not extend path to
-  // keep from speed change too much.
+  // Car pose has big distance with limiter, return;
+  // If car is nearby with limiter, such as 0.1 meter, do not extend path to
+  // limiter;
   double ego_x_diff = std::fabs(ego_info.terminal_err.pos.x());
   double ego_y_diff = std::fabs(ego_info.terminal_err.pos.y());
-  if (ego_x_diff > 2.0 || ego_y_diff > 0.5 || ego_x_diff < 0.5) {
+  if (ego_x_diff > 2.0 || ego_y_diff > 0.5 || ego_x_diff < 0.3) {
     return;
   }
 
   // path end pose has big distance with limiter, return
-  double path_end_pt_to_limiter =
-      std::fabs(point_local[0] - ego_info.target_pose.pos.x());
+  double abs_dist_to_goal = std::fabs(dist_to_goal);
   double path_y_diff = std::fabs(point_local[1] - ego_info.target_pose.pos.y());
-  if (path_end_pt_to_limiter > 1.5 || path_y_diff > 0.5) {
+  if (abs_dist_to_goal > 1.5 || path_y_diff > 0.5) {
     return;
   }
 
-  size_t path_point_size = current_path_point_global_vec_.size();
-
-  Eigen::Vector2d the_last_but_one =
-      current_path_point_global_vec_[path_point_size - 2].pos;
-  Eigen::Vector2d unit_line_vec =
-      Eigen::Vector2d(path_end_global[0] - the_last_but_one[0],
-                      path_end_global[1] - the_last_but_one[1]);
-  if (unit_line_vec.norm() < 0.01) {
-    return;
+  double phi = current_path_point_global_vec_.back().heading;
+  Eigen::Vector2d unit_line_vec;
+  if (current_gear_ == AstarPathGear::DRIVE) {
+    unit_line_vec = CreateUnitVec2d(phi);
+  } else {
+    unit_line_vec = CreateUnitVec2d(phi + M_PI);
   }
-  unit_line_vec.normalize();
 
   double s = 0.0;
   double ds = 0.1;
 
   Eigen::Vector2d point;
   pnc::geometry_lib::PathPoint global_point;
-  double phi = current_path_point_global_vec_.back().heading;
-  while (s < path_end_pt_to_limiter) {
+
+  while (s < abs_dist_to_goal) {
     s += ds;
-    s = std::min(s, path_end_pt_to_limiter);
+    s = std::min(s, abs_dist_to_goal);
 
     point = path_end_global + s * unit_line_vec;
-
     global_point.Set(point, phi);
     global_point.kappa = 0.0;
 
@@ -1963,9 +1962,12 @@ void NarrowSpaceScenario::FillGearRequest(const bool is_scenario_try,
 
 const cdl::AABB NarrowSpaceScenario::GenerateBlindZoneSlotBox(
     const EgoInfoUnderSlot& ego_info) const {
-  const SlotCoord slot_info = ego_info.slot.GetProcessedCornerCoordLocal();
+  const SlotCoord slot_info = ego_info.slot.GetOriginCornerCoordLocal();
   double y_buffer = 0.0;
-  double y_bound = 0.0;
+  double y_min = 0.0;
+  double y_max = 0.0;
+  double x_min = 0.0;
+  double x_max = 0.0;
   if (path_planning_fail_num_ == 1) {
     y_buffer = 0.08;
   } else if (path_planning_fail_num_ == 2) {
@@ -1974,17 +1976,18 @@ const cdl::AABB NarrowSpaceScenario::GenerateBlindZoneSlotBox(
     y_buffer = 0.1;
   }
 
-  y_bound = std::min(slot_info.pt_0.y(), slot_info.pt_2.y());
-  y_bound = std::min(y_bound, -apa_param.GetParam().max_car_width / 2);
+  y_min = std::min(slot_info.pt_0.y(), slot_info.pt_2.y());
+  y_min = std::min(y_min, -apa_param.GetParam().max_car_width / 2);
+  x_min = std::min(slot_info.pt_2.x(), slot_info.pt_3.x());
 
   cdl::AABB slot_box;
-  slot_box.min_ = cdl::Vector2r(slot_info.pt_23_mid.x() - 0.01f,
-                                static_cast<float>(y_bound - y_buffer));
+  slot_box.min_ = cdl::Vector2r(x_min, static_cast<float>(y_min - y_buffer));
 
-  y_bound = std::max(slot_info.pt_1.y(), slot_info.pt_3.y());
-  y_bound = std::max(y_bound, apa_param.GetParam().max_car_width / 2);
-  slot_box.max_ = cdl::Vector2r(slot_info.pt_01_mid.x() + 4.0f,
-                                static_cast<float>(y_bound + y_buffer));
+  y_max = std::max(slot_info.pt_1.y(), slot_info.pt_3.y());
+  y_max = std::max(y_max, apa_param.GetParam().max_car_width / 2);
+  x_max = slot_info.pt_01_mid.x() + 4.0f;
+
+  slot_box.max_ = cdl::Vector2r(x_max, static_cast<float>(y_max + y_buffer));
 
   return slot_box;
 }
