@@ -6,7 +6,6 @@
 #include "sample_speed_adjust_cost.h"
 #include "trajectory1d/quartic_poly_trajectory1d.h"
 namespace planning {
-
 class SamplePolyCurve {
  public:
   SamplePolyCurve() = default;

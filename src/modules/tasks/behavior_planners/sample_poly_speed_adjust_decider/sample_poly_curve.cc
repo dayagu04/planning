@@ -88,9 +88,12 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             const double ego_a,
                                                             const double obj_a,
                                                             bool is_front_car) {
-  double differ_acc = (ego_a - obj_a) == 0.0 ? 0.001 : (ego_a - obj_a);
+  double differ_acc =
+      ((ego_a - obj_a) < kZeroEpsilon && (ego_a - obj_a) > -kZeroEpsilon)
+          ? 0.001
+          : (ego_a - obj_a);
   const double calculate_collision_time = (obj_v - ego_v) / differ_acc;
-  if (calculate_collision_time <= 0.0 || calculate_collision_time >= 4.0) {
+  if (calculate_collision_time < 0.0 || calculate_collision_time > 4.0) {
     double limit_distance =
         (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0;
     if (ego_v > obj_v) {
@@ -158,13 +161,14 @@ void SampleQuarticPolynomialCurve::CalcCost(
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
         safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
         enable_merge_decelaration);
-    if (anchor_points_match_gap_cost_vec_[i].cost() == 0.0) {
+    if (anchor_points_match_gap_cost_vec_[i].cost() < kZeroEpsilon) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
       end_point_upper_st_point = anchor_matched_upper_st_point;
       arrived_s_ = anchor_arrived_s;
       arrived_v_ = anchor_arrived_v;
       arrived_a_ = anchor_arrived_a;
       arrived_t_ = anchor_arrived_t;
+      arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
       if ((stop_line_s - arrived_s_) / arrived_v_ < 5.0) {
         speed_differ_gain = 0.0;
       }

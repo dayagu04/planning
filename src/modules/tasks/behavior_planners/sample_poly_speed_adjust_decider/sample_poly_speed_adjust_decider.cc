@@ -245,12 +245,12 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
       ego_s_, 0.0, &prediction_matched_lower_st_point,
       &prediction_matched_upper_st_point);
   const double vel_diff_to_gap_rear_car =
-      ego_v_ - prediction_matched_lower_st_point.velocity() >= 0.0
+      (ego_v_ - prediction_matched_lower_st_point.velocity()) > -kZeroEpsilon
           ? std::fmax(ego_v_ - prediction_matched_lower_st_point.velocity(),
                       kZeroEpsilon)
           : ego_v_ - prediction_matched_lower_st_point.velocity();
   const double ttc_to_rear_car =
-      ego_s_ - prediction_matched_lower_st_point.s() > 0.0
+      (ego_s_ - prediction_matched_lower_st_point.s()) > 0.0
           ? (prediction_matched_lower_st_point.s() - ego_s_) /
                 vel_diff_to_gap_rear_car
           : (ego_s_ - prediction_matched_lower_st_point.s()) /
@@ -283,7 +283,7 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
     }
 
     if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
-      if (vel_diff_to_gap_front_car >= 0.0) {
+      if (vel_diff_to_gap_front_car > 0.0) {
         double ultra_acc = 0.6;
         double distance_to_overtake = std::fmax(
             prediction_matched_upper_st_point.s() - ego_s_ + 15.0, 0.0);
@@ -292,9 +292,10 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
                        std::pow(vel_diff_to_gap_front_car, 2.0)) -
              vel_diff_to_gap_front_car) /
             ultra_acc;
-        double rest_time = (merge_stop_line_distance_ - ego_v_ * overtake_time -
-                            std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
-                           (ego_v_ + ultra_acc * overtake_time);
+        double rest_time =
+            (merge_stop_line_distance_ - ego_v_ * overtake_time -
+             std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+            std::fmax(ego_v_ + ultra_acc * overtake_time, kZeroEpsilon);
         front_speed_differ_gain = rest_time > 3.0 ? 0.0 : 1.0;
       } else {
         front_speed_differ_gain =
@@ -304,7 +305,7 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
       front_speed_differ_gain = 0.0;
     }
   } else if (prediction_matched_upper_st_point.agent_id() != kNoAgentId) {
-    if (vel_diff_to_gap_front_car > 0) {
+    if (vel_diff_to_gap_front_car > 0.0) {
       double ultra_acc = 1;
       double distance_to_overtake =
           std::fmax(prediction_matched_upper_st_point.s() - ego_s_ + 2.0, 0.0);
@@ -313,9 +314,10 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
                      std::pow(vel_diff_to_gap_front_car, 2.0)) -
            vel_diff_to_gap_front_car) /
           ultra_acc;
-      double rest_time = (merge_stop_line_distance_ - ego_v_ * overtake_time -
-                          std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
-                         (ego_v_ + ultra_acc * overtake_time);
+      double rest_time =
+          (merge_stop_line_distance_ - ego_v_ * overtake_time -
+           std::pow(overtake_time, 2.0) * ultra_acc / 2.0) /
+          std::fmax(ego_v_ + ultra_acc * overtake_time, kZeroEpsilon);
       front_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
       rear_speed_differ_gain = rest_time > 4.0 ? 1.0 : 0.0;
     }
