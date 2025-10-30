@@ -489,13 +489,17 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
-  v_cruise_speed_ = session_->environmental_model()
-                        .get_route_info()
-                        ->get_sd_map()
-                        .GetNaviRoadInfo()
-                        .value()
-                        .cur_road_speed_limit() /
-                    3.6;
+  if(function_info.function_mode() == common::DrivingFunctionInfo::NOA){
+    v_cruise_speed_ = session_->environmental_model()
+                          .get_route_info()
+                          ->get_sd_map()
+                          .GetNaviRoadInfo()
+                          .value()
+                          .cur_road_speed_limit() /
+                      3.6;
+  }else{
+    v_cruise_speed_ = v_suggestted_;
+  }
   // init sample space
   st_sample_space_base_.Init(agent_info_, ego_s);
 
