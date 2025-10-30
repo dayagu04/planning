@@ -881,8 +881,8 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
       session_->environmental_model().get_ego_state_manager();
   const auto& function_info = session_->environmental_model().function_info();
   const auto& lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
-  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
-  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
+  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
+  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
   double k_default_ego_pass_buffer = kLatPassThre;
   int left_lane_nums = 0;
   int right_lane_nums = 0;
@@ -924,12 +924,12 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
     right_lane_nums = iter->right_lane_num;
   }
 
-  if (llane == nullptr) {
-    k_right_cone_occ_lane_line_buffer += 0.25;
-  }
-  if (rlane == nullptr) {
-    k_left_cone_occ_lane_line_buffer += 0.25;
-  }
+  // if (llane == nullptr) {
+  //   k_right_cone_occ_lane_line_buffer += 0.25;
+  // }
+  // if (rlane == nullptr) {
+  //   k_left_cone_occ_lane_line_buffer += 0.25;
+  // }
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     k_default_ego_pass_buffer = kLatPassThre + kLatPassThreBuffer;
   }
