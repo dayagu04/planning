@@ -288,7 +288,7 @@ void SpatioTemporalPlanner::UpdateIntersection() {
   }
 
   ego_in_intersection_state_ =
-      intersection_count_ > 0 && !tfl_decider.is_small_front_intersection;
+      intersection_count_ > 0;
   return;
 }
 
