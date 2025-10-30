@@ -70,7 +70,7 @@ constexpr double kConsiderManualLength = 80.0;
 constexpr double kAverageKappaCostWeight = 2.0;
 constexpr double kAverageThetaDiffCostWeight = 200.0;
 constexpr double kEgoLateralDistanceCostWeight = 0.5;
-constexpr double kUseVirtualLaneProcessSplitCostThd = 10.0;
+constexpr double kUseVirtualLaneProcessSplitCostThd = 3.0;
 constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 65.0;
@@ -1465,9 +1465,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
         // lane_merge_split_point.y =
         // lane_merge_split_point.merge_split_point_data[0].point.y;
 
-        if (ego_distance_to_lane_merge_split_point >
-                kDefaultConsiderSplitSelectorDistance ||
-            !lane_merge_split_point.merge_split_point_data[0].is_split ||
+        if (!lane_merge_split_point.merge_split_point_data[0].is_split ||
             (lane_merge_split_point.merge_split_point_data[0].is_split &&
              ego_distance_to_lane_merge_split_point <
                  kDefaultSurpressSplitSelectorDistance)) {
@@ -1766,33 +1764,34 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
   }
   // 转向cost较为接近时采用虚拟车道属性
   bool use_min_steering_result = true;
-  // if (enable_use_virtual_lane_process_split) {
-  //   bool origin_lane_exist_virtual = true;
-  //   std::shared_ptr<VirtualLane> origin_orider_id_lane =
-  //   relative_id_lanes[origin_order_id];
-  //   MakesureVirtualLaneIsVirtual(origin_orider_id_lane,
-  //   origin_lane_exist_virtual); if (origin_lane_exist_virtual) {
-  //     use_min_steering_result = false;
-  //   }
-  //   if (!use_min_steering_result) {
-  //     bool lane_exist_virtual = true;
-  //     for (size_t i = 0; i < order_ids.size(); i++) {
-  //       if (relative_id_lanes.size() > order_ids[i]) {
-  //         std::shared_ptr<VirtualLane> relative_id_lane =
-  //             relative_id_lanes[order_ids[i]];
-  //         MakesureVirtualLaneIsVirtual(relative_id_lane, lane_exist_virtual);
-  //         if (!lane_exist_virtual) {
-  //           origin_order_id = relative_id_lane->get_order_id();
-  //           relative_id_lane->set_relative_id(0);
-  //           last_zero_relative_id_order_id_index_ = i;
-  //           last_track_ego_lane_ = relative_id_lane;
-  //           is_exist_split_on_intersection_ = true;
-  //           break;
-  //         }
-  //       }
-  //     }
-  //   }
-  // }
+  if (enable_use_virtual_lane_process_split && order_ids.size() == 2) {
+    bool origin_lane_exist_virtual = true;
+    std::shared_ptr<VirtualLane> origin_orider_id_lane =
+    relative_id_lanes[origin_order_id];
+    MakesureVirtualLaneSideIsVirtual(origin_orider_id_lane,
+    origin_lane_exist_virtual, last_zero_relative_id_order_id_index_);
+    if (origin_lane_exist_virtual) {
+      use_min_steering_result = false;
+    }
+    if (!use_min_steering_result) {
+      bool lane_exist_virtual = true;
+      for (size_t i = 0; i < order_ids.size(); i++) {
+        if (relative_id_lanes.size() > order_ids[i]) {
+          std::shared_ptr<VirtualLane> relative_id_lane =
+              relative_id_lanes[order_ids[i]];
+          MakesureVirtualLaneSideIsVirtual(relative_id_lane, lane_exist_virtual, i);
+          if (!lane_exist_virtual) {
+            origin_order_id = relative_id_lane->get_order_id();
+            relative_id_lane->set_relative_id(0);
+            last_zero_relative_id_order_id_index_ = i;
+            last_track_ego_lane_ = relative_id_lane;
+            is_exist_split_on_intersection_ = true;
+            break;
+          }
+        }
+      }
+    }
+  }
 
   for (auto& lane : relative_id_lanes) {
     int lane_order_id = lane->get_order_id();
@@ -2913,6 +2912,66 @@ bool EgoLaneTrackManger::MakesureVirtualLaneExistOtherDirecton(
     return true;
   }
   return false;
+}
+
+void EgoLaneTrackManger::MakesureVirtualLaneSideIsVirtual(
+    const std::shared_ptr<VirtualLane> base_lane,
+    bool& virtual_lane_exist_virtual,
+    const int lane_index) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  if (base_lane == nullptr) {
+    return;
+  }
+
+  // 判断左侧车道线类型
+  bool left_boundary_exist_virtual_type = false;
+  double ego_s = base_lane->get_ego_longit_s();
+  for (const auto& point : base_lane->lane_points()) {
+    if (point.s < ego_s + kLaneLineSegmentLength) {
+      continue;
+    }
+    if (point.s > ego_s + kDefaultConsiderVirtualLineLength) {
+      break;
+    }
+
+    if (point.left_lane_border_type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      left_boundary_exist_virtual_type = true;
+      break;
+    }
+  }
+
+  // 判断右侧车道线类型
+  bool right_boundary_exist_virtual_type = false;
+  for (const auto& point : base_lane->lane_points()) {
+    if (point.s < ego_s + kLaneLineSegmentLength) {
+      continue;
+    }
+    if (point.s > ego_s + kDefaultConsiderVirtualLineLength) {
+      break;
+    }
+    if (point.right_lane_border_type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      right_boundary_exist_virtual_type = true;
+      break;
+    }
+  }
+
+  if (lane_index == 0) {
+    if (!right_boundary_exist_virtual_type) {
+      virtual_lane_exist_virtual = false;
+    }
+  } else {
+    if (!left_boundary_exist_virtual_type) {
+      virtual_lane_exist_virtual = false;
+    }
+  }
+
+  return;
 }
 
 void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(

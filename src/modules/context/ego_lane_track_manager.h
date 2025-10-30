@@ -180,6 +180,11 @@ class EgoLaneTrackManger {
   bool MakesureVirtualLaneExistOtherDirecton(
       const std::shared_ptr<VirtualLane> base_lane);
 
+  void MakesureVirtualLaneSideIsVirtual(
+      const std::shared_ptr<VirtualLane> base_lane,
+      bool &virtual_lane_exist_virtual,
+      const int lane_index);
+
   void MakesureVirtualLaneIsVirtual(
       const std::shared_ptr<VirtualLane> base_lane,
       bool &virtual_lane_exist_virtual);
