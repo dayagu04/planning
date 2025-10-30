@@ -352,6 +352,7 @@ void PlanningScheduler::FillPlanningTrajectory(
   } else {
     trajectory->available = active;
   }
+  JSON_DEBUG_VALUE("traj_available", trajectory->available)
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
@@ -597,6 +598,8 @@ void PlanningScheduler::FillPlanningTrajectory(
       planning_status->rads_planning_status = iflyauto::RADS_RUNNING_FAILED;
     }
   }
+  JSON_DEBUG_VALUE("rads_planning_status",
+                   static_cast<int>(planning_status->rads_planning_status))
 
   // planning request
   // 绕行接管

@@ -271,6 +271,7 @@ bool EnvironmentalModelManager::Run() {
                     rads_mode || mrc_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
+  JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
 
   common::DrivingFunctionInfo::DrivingFunctionstate function_state =
       common::DrivingFunctionInfo::ACTIVATE;
