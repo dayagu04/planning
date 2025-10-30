@@ -2,20 +2,15 @@
 
 #include "common_c.h"
 #include "common_platform_type_soc.h"
-
-
-
 namespace adas_function {
 namespace preprocess {
-
 void Preprocess::Init(void) { SyncParameters(); }
-
- std::string Preprocess::ReadJsonFile(const std::string &path) {
+std::string Preprocess::ReadJsonFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   assert(file != nullptr);
   std::shared_ptr<FILE> fp(file, [](FILE *file) { fclose(file); });
-  FILE* file_ptr = fp.get();
-  if(file_ptr == nullptr){
+  FILE *file_ptr = fp.get();
+  if (file_ptr == nullptr) {
     return "";
   }
   fseek(fp.get(), 0, SEEK_END);
@@ -36,7 +31,7 @@ void Preprocess::SyncParameters(void) {
   // read json file
   read_json_file_ok_flag_ = false;
   std::string config_file = ReadJsonFile(path);
-  if(read_json_file_ok_flag_ == false){
+  if (read_json_file_ok_flag_ == false) {
     return;
   }
   auto adas_config = mjson::Reader(config_file);
