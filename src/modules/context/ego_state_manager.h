@@ -103,6 +103,7 @@ class EgoStateManager {
   double ego_v_angle() const { return ego_v_angle_; };
   double ego_yaw_rate() const { return ego_yaw_rate_; }
   double ego_v_cruise() const { return ego_v_cruise_; };
+  double ego_v_cruise_upper() const { return ego_v_cruise_upper_; };
   double ego_acc() const { return ego_acc_; };
   double ego_jerk() const { return jerk_; };
   double ego_hmi_v() const { return ego_hmi_v_; }
@@ -187,6 +188,7 @@ class EgoStateManager {
   double ego_v_angle_ = 0;
   double ego_yaw_rate_ = 0.;
   double ego_v_cruise_ = 0;
+  double ego_v_cruise_upper_ = 0;
   double ego_acc_ = 0;
   double ego_acc_last_ = 0;
   double ego_hmi_v_;

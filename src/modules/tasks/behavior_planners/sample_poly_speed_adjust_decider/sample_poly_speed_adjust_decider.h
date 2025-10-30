@@ -38,6 +38,7 @@ class SamplePolySpeedAdjustDecider : public Task {
                     const double evaluate_cost_time,
                     const double all_cost_time);
   bool CheckInitVelTraj();
+  bool CheckLanelineChangeable();
   double CalcHeadwayDistance(const double& headway_v, const double ego_v,
                              const std::vector<double>& t_gap_ego_v_bp,
                              const std::vector<double>& t_gap_ego_v);
@@ -50,6 +51,7 @@ class SamplePolySpeedAdjustDecider : public Task {
 
   bool IsInDeceleartionScene();
   void ClearStitchedPolyPtr();
+  double GetStoplineSpdDifferGain();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -59,6 +61,9 @@ class SamplePolySpeedAdjustDecider : public Task {
   double ego_v_;
   double ego_a_;
   double ego_s_;
+
+  double adjust_speed_max_acc_ = 1.5;
+  double adjust_speed_min_acc_ = -2.0;
   std::pair<double, double> ego_cart_point_;
   std::pair<double, double> last_ego_cart_point_;
 
@@ -82,6 +87,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   std::vector<AgentInfo> agent_info_;
 
   double v_suggestted_{25.0};
+  double v_cruise_speed_{25.0};
   double target_lane_objs_flow_vel_{25.0};
   double evaulation_t_{5.0};
 
@@ -138,6 +144,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   void set_weight_follow_vel(const double weight) {
     weight_follow_vel_ = weight;
   }
+
   double weight_follow_vel() const { return weight_follow_vel_; };
 
   void set_weight_stop_line(const double weight) { weight_stop_line_ = weight; }

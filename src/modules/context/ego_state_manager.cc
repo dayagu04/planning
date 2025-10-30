@@ -131,6 +131,7 @@ void EgoStateManager::set_ego_v_cruise(
         vehicle_status.velocity().cruise_velocity().value_mps());
   }
   ego_v_cruise_ = v_cruise_filter_.GetOutput();
+  ego_v_cruise_upper_ = vehicle_status.velocity().cruise_velocity().value_mps();
   if (session_->is_hpp_scene()) {
     if (session_->environmental_model()
             .get_local_view()

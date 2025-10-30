@@ -6,7 +6,6 @@
 #include "sample_speed_adjust_cost.h"
 #include "trajectory1d/quartic_poly_trajectory1d.h"
 namespace planning {
-
 class SamplePolyCurve {
  public:
   SamplePolyCurve() = default;
@@ -30,6 +29,7 @@ class SamplePolyCurve {
   double arrived_s_;
   double arrived_t_;
   double arrived_v_;
+  double arrived_a_ = 0.0;
   double mid_s_;
   double mid_t_;
   double mid_v_;
@@ -60,8 +60,11 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
                 const double ego_a, const double suggested_v,
                 const double stop_line_s, const double leading_veh_s,
                 const double leading_veh_v, int32_t leading_veh_id,
-                bool enable_merge_decelaration);
+                bool enable_merge_decelaration, double speed_differ_gain);
   double CalcVelIntegral(const double t) const;
+  double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
+                                const double ego_a, const double obj_a,
+                                bool is_front_car);
 
   // interface:
   const QuarticPolynomial& poly() const { return poly_; };
