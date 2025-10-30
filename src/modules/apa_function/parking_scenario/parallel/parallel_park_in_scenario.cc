@@ -60,14 +60,16 @@ static double kEps = 1e-5;
 static double kFrontShortChannelMin = 0.5;
 static double kFrontShortChannelMax = 7.5;
 static double kWidthCurbOffset = 0.4;
+static double kWidthSlot = 2.3;
+static double kAdjustLonErr = 0.2;
 
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
   parallel_path_planner_.Reset();
+  previous_parallel_path_planner_.Reset();
   parallel_replan_again_ = 0;
-  previous_output_path_.Reset();
   previous_remain_dist_obs.clear();
 
   ParkingScenario::Reset();
@@ -323,8 +325,8 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   ILOG_INFO << "replan is required!";
-  previous_output_path_.Reset();
-  previous_output_path_ = parallel_path_planner_.GetOutput();
+  previous_parallel_path_planner_.Reset();
+  previous_parallel_path_planner_ = parallel_path_planner_;
 
   // update obstacles
   GenTBoundaryObstacles();
@@ -1066,15 +1068,22 @@ const bool ParallelParkInScenario::GenTlane() {
             << " target_y_with_curb = " << target_y_with_curb;
 
   if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
-    bool is_width_curb =
+    const bool is_width_curb =
         -side_sgn * curb_y_limit > (half_slot_width + kWidthCurbOffset) ? true
                                                                         : false;
+    const bool is_width_slot = slot_width > kWidthSlot ? true : false;
     const double terminal_parallel_y_offset =
-        is_width_curb ? 0.0 : apa_param.GetParam().terminal_parallel_y_offset;
+        (is_width_curb || is_width_slot)
+            ? 0.0
+            : apa_param.GetParam().terminal_parallel_y_offset;
     ego_info_under_slot.target_pose.pos.y() =
         (side_sgn > 0.0
              ? std::max(-terminal_parallel_y_offset, target_y_with_curb)
              : std::min(terminal_parallel_y_offset, target_y_with_curb));
+    ILOG_INFO << "is_width_curb = " << is_width_curb
+              << " is_width_slot = " << is_width_slot
+              << " slot_width = " << slot_width
+              << " target_pose = " << ego_info_under_slot.target_pose.pos.y();
   } else {
     ego_info_under_slot.target_pose.pos.y() = 0.0;
   }
@@ -1426,7 +1435,8 @@ const GeometryPathOutput& ParallelParkInScenario::SuitablePathReplan() {
   pnc::geometry_lib::PathSegGear cur_car_gear =
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetGear();
   int cur_gear_size = parallel_path_planner_.GetOutput().gear_change_count;
-  int pre_gear_size = previous_output_path_.gear_change_count;
+  int pre_gear_size =
+      previous_parallel_path_planner_.GetOutput().gear_change_count;
   ILOG_INFO << "cur_car_gear: " << int(cur_car_gear)
             << " cur_replan_gear: " << int(cur_replan_gear)
             << " cur_gear_size : " << cur_gear_size
@@ -1434,7 +1444,8 @@ const GeometryPathOutput& ParallelParkInScenario::SuitablePathReplan() {
   parallel_replan_again_ = 2;
   if (cur_car_gear != cur_replan_gear || cur_gear_size > pre_gear_size) {
     ILOG_INFO << "use previous path";
-    return previous_output_path_;
+    parallel_path_planner_ = previous_parallel_path_planner_;
+    return previous_parallel_path_planner_.GetOutput();
   }
   ILOG_INFO << "use replan path";
   return parallel_path_planner_.GetOutput();
@@ -1504,7 +1515,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   if (parallel_replan_again_ == 1 && !path_plan_success) {
     ILOG_INFO << "path planner replan failed, using last path";
     parallel_replan_again_ = 2;
-    const auto& planner_output = previous_output_path_;
+    parallel_path_planner_ = previous_parallel_path_planner_;
+    const auto& planner_output = parallel_path_planner_.GetOutput();
     frame_.plan_fail_reason = ParkingFailReason::NOT_FAILED;
     current_path_point_global_vec_.clear();
     current_path_point_global_vec_ = previous_current_path_point_global_vec_;
@@ -1850,6 +1862,41 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   return plan_result;
 }
 
+const bool ParallelParkInScenario::CheckOneReverseToSlot() {
+  const GeometryPathOutput& output = parallel_path_planner_.GetOutput();
+  if (output.path_seg_index.second >= output.path_segment_vec.size()) {
+    ILOG_INFO << "path_seg_index.second >= output.path_segment_vec.size";
+    return false;
+  }
+  //debug
+  pnc::geometry_lib::PrintSegmentsVecInfo(output.path_segment_vec);
+
+  const auto& start_pose =
+      output.path_segment_vec[output.path_seg_index.first].GetStartPose();
+
+  const auto& end_pose =
+      output.path_segment_vec[output.path_seg_index.second].GetEndPose();
+
+  const bool is_start_pose_in_slot =
+      CalcSlotOccupiedRatio(start_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_end_pose_in_slot =
+      CalcSlotOccupiedRatio(end_pose) >= kEnterMultiPlanSlotRatio;
+
+  const bool is_reverse = output.gear_cmd_vec[output.path_seg_index.first] ==
+                          geometry_lib::SEG_GEAR_REVERSE;
+
+  if (is_reverse && !is_start_pose_in_slot && is_end_pose_in_slot) {
+    for (size_t i = output.path_seg_index.second + 1; i < output.gear_cmd_vec.size(); i++) {
+      if (output.gear_cmd_vec[i] != output.gear_cmd_vec[output.path_seg_index.second]) {
+        ILOG_INFO << "not one reverse to slot!";
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 const bool ParallelParkInScenario::CheckFinished() {
   ILOG_INFO << "start CheckFinished!";
 
@@ -1866,8 +1913,13 @@ const bool ParallelParkInScenario::CheckFinished() {
   //                                   *
   //                                      ego_slot_info.ego_heading_slot_vec;
 
-  const bool lon_condition = std::fabs(ego_slot_info.terminal_err.pos.x()) <
-                             apa_param.GetParam().finish_parallel_lon_err;
+  double adjust_lon_err = apa_param.GetParam().finish_parallel_lon_err;
+  if (CheckOneReverseToSlot()) {
+    adjust_lon_err += kAdjustLonErr;
+    ILOG_INFO << "adjust_lon_err = " << adjust_lon_err;
+  }
+  const bool lon_condition =
+      std::fabs(ego_slot_info.terminal_err.pos.x()) < adjust_lon_err;
 
   ILOG_INFO << "terminal x error = " << ego_slot_info.terminal_err.pos.x();
   ILOG_INFO << "lon_condition = " << lon_condition;

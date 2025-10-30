@@ -52,6 +52,7 @@ class ParallelParkInScenario : public ParkingScenario {
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
 
+  const bool CheckOneReverseToSlot();
   bool CheckReplanParallel();
   const GeometryPathOutput& SuitablePathReplan();
   void CheckEgoPoseWhenPlanFaild(ParkingFailReason reason);
@@ -63,8 +64,8 @@ class ParallelParkInScenario : public ParkingScenario {
   Tlane t_lane_;
   std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelPathGenerator parallel_path_planner_;
+  ParallelPathGenerator previous_parallel_path_planner_;
   int parallel_replan_again_ = 0;
-  GeometryPathOutput previous_output_path_;
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
   std::deque<double> previous_remain_dist_obs;
