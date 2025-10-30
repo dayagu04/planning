@@ -4839,7 +4839,17 @@ bool RouteInfo::IsClosingIntersectionEntrance(
                                  REGULAR_INTERSECTION_ENTRANCE ||
             fp_point_type == iflymapdata::sdpro::FeaturePointType::
                                  REGULAR_INTERSECTION_EXIT) {
-          return true;
+          const iflymapdata::sdpro::LinkInfo_Link* next_link =
+              sdpro_map.GetNextLinkOnRoute(current_link->id());
+          if ((current_link->link_class() !=
+                  iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
+              current_link->link_class() !=
+                  iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) ||
+              (next_link->link_class() !=
+                  iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
+              next_link->link_class() !=
+                  iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY))
+            return true;
         }
       }
     }
