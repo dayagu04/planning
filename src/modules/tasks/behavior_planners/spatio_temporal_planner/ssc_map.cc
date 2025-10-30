@@ -1,27 +1,29 @@
 #include "ssc_map.h"
+
 #include <cstddef>
+
 #include "define/geometry.h"
 #include "log.h"
 
 namespace planning {
 
-SscMap::SscMap(const SscMap::Config &config) : config_(config) {
-  p_3d_grid_ = new GridMapND<SscMapDataType, 3>(
+SscMap::SscMap(const SscMap::Config& config) : config_(config) {
+  p_3d_grid_ = std::make_shared<GridMapND<SscMapDataType, 3>>(
       config_.map_size, config_.map_resolution, config_.axis_name);
-  p_3d_inflated_grid_ = new GridMapND<SscMapDataType, 3>(
+  p_3d_inflated_grid_ = std::make_shared<GridMapND<SscMapDataType, 3>>(
       config_.map_size, config_.map_resolution, config_.axis_name);
 }
 
-void SscMap::ResetSscMap(const FrenetEgoState &ego_frenet_state,
-                         const double &time) {
+void SscMap::ResetSscMap(const FrenetEgoState& ego_frenet_state,
+                         const double& time) {
   ClearGridMap();
   UpdateMapOrigin(ego_frenet_state, time);
 
   return;
 }
 
-void SscMap::UpdateMapOrigin(const FrenetEgoState &ego_state,
-                             const double &time) {
+void SscMap::UpdateMapOrigin(const FrenetEgoState& ego_state,
+                             const double& time) {
   std::array<double, 3> map_origin;
   // set s
   map_origin[0] = ego_state.s() - config_.s_back_len;
@@ -35,7 +37,7 @@ void SscMap::UpdateMapOrigin(const FrenetEgoState &ego_state,
 }
 
 void SscMap::ConstructSscMap(
-    const AgentFrenetSpatioTemporalInFo &surround_trajs_state_info) {
+    const AgentFrenetSpatioTemporalInFo& surround_trajs_state_info) {
   p_3d_grid_->clear_data();
   p_3d_inflated_grid_->clear_data();
 
@@ -71,20 +73,20 @@ void SscMap::ClearGridMap() {
 // }
 
 void SscMap::FillDynamicPart(
-    const AgentFrenetSpatioTemporalInFo &sur_vehicle_trajs_fs) {
+    const AgentFrenetSpatioTemporalInFo& sur_vehicle_trajs_fs) {
   // FillMapWithFsVehicleTraj(sur_vehicle_trajs_fs.frenet_vertices);
   return;
 }
 
 void SscMap::FillMapWithFsVehicleTraj(
-    const std::vector<std::vector<SLTPoint>> &traj_point) {
+    const std::vector<std::vector<SLTPoint>>& traj_point) {
   if (traj_point.size() == 0) {
     ILOG_DEBUG << "FillMapWithFsVehicleTraj::Trajectory is empty";
     return;
   }
   for (size_t i = 0; i < traj_point.size(); ++i) {
     bool is_valid = true;
-    for (const auto &v : traj_point[i]) {
+    for (const auto& v : traj_point[i]) {
       if (v.s() <= 0) {
         is_valid = false;
         break;
@@ -97,7 +99,7 @@ void SscMap::FillMapWithFsVehicleTraj(
     int t_idx = 0;
     std::vector<planning::Point2i> v_coord;
     std::array<double, 3> p_w;
-    for (const auto &v : traj_point[i]) {
+    for (const auto& v : traj_point[i]) {
       p_w = {v.s(), v.l(), v.t()};
       auto coord = p_3d_grid_->GetCoordUsingGlobalPosition(p_w);
       t_idx = coord[2];

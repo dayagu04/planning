@@ -229,7 +229,8 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
     }
   }
   if (!st_point_pairs.empty()) {
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
     st_boundary->set_id(boundary_id);
     boundary_id_st_boundaries_map.insert(
         std::make_pair(boundary_id, std::move(st_boundary)));

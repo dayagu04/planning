@@ -546,7 +546,8 @@ void StGraphUtils::PreUpdateStBoundaryForLaneChange(
   // std::cout << "[Pre]update st boundary,id:" << rear_st_id << ",rear agent
   // id:" << rear_agent_id
   //           << std::endl;
-  std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+  // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+  auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
   st_boundary->set_id(rear_st_id);
   (*boundary_id_st_boundaries_map)[rear_st_id] = std::move(st_boundary);
 }
@@ -732,7 +733,8 @@ void StGraphUtils::UpdateStBoundaryForLaneChange(
       }
     }
     // std::cout << "  update st boundary,id:" << rear_st_id << '\n';
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
     st_boundary->set_id(rear_st_id);
     (*boundary_id_st_boundaries_map)[rear_st_id] = std::move(st_boundary);
   }
@@ -797,7 +799,8 @@ void StGraphUtils::UpdateStBoundaryForOvertaking(
       const auto& lower_point = rear_st_boundary.lower_points().at(i);
       st_point_pairs.emplace_back(lower_point, upper_point);
     }
-    std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
+    auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
     st_boundary->set_id(rear_st_id);
     (*boundary_id_st_boundaries_map)[rear_st_id] = std::move(st_boundary);
   }

@@ -31,14 +31,15 @@ std::string Status::ToString() const {
 
 std::string Status::GetCodeName(const StatusCode& status) const {
   switch (status) {
-    case StatusCode::OK:
-      return "OK";
     case StatusCode::COMMON_ERROR:
       return "COMMON_ERROR";
     case StatusCode::PLANNING_ERROR:
       return "PLANNING_ERROR";
     case StatusCode::SIM_ERROR:
       return "SIM_ERROR";
+    case StatusCode::OK:
+    default:
+      return "OK";
   }
   return "OK";
 }

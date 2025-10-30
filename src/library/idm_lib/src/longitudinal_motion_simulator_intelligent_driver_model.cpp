@@ -9,6 +9,9 @@
 
 namespace planning {
 namespace simulator {
+namespace {
+static constexpr double kEpison = 1e-6;
+}
 
 LonMotionSimulatorIntelligentDriverModel::
     LonMotionSimulatorIntelligentDriverModel() {
@@ -18,7 +21,7 @@ LonMotionSimulatorIntelligentDriverModel::
 }
 
 LonMotionSimulatorIntelligentDriverModel::
-    LonMotionSimulatorIntelligentDriverModel(const ModelParam &param)
+    LonMotionSimulatorIntelligentDriverModel(const ModelParam& param)
     : param_(param) {
   already_set_state_ = false;
   already_set_param_ = true;
@@ -94,7 +97,7 @@ ErrorType LonMotionSimulatorIntelligentDriverModel::Simulate(const double t) {
 }
 
 ErrorType LonMotionSimulatorIntelligentDriverModel::Simulate(
-    const ModelState &init_state, const double t) {
+    const ModelState& init_state, const double t) {
   set_model_state(init_state);
   const auto status = Simulate(t);
   if (status == ErrorType::kIllegalInput) {
@@ -116,9 +119,9 @@ void LonMotionSimulatorIntelligentDriverModel::Reset_Simulation_Result(
   simulation_result_.t_vec.resize(n, 0);
 }
 
-void LonMotionSimulatorIntelligentDriverModel::Linear(const InternalState &x,
+void LonMotionSimulatorIntelligentDriverModel::Linear(const InternalState& x,
                                                       const double dt,
-                                                      InternalState *x_out) {
+                                                      InternalState* x_out) {
   ModelState cur_state;
   cur_state.s = x[0];
   cur_state.vel = x[1];
@@ -128,18 +131,22 @@ void LonMotionSimulatorIntelligentDriverModel::Linear(const InternalState &x,
   double acc = 0.0;
   GetIIdmDesiredAcceleration(param_, cur_state, &acc);
 
-  double average_acc = dt == 0.0 ? 0.0 : cur_state.vel / dt;
-  acc = std::max(
-      acc, -std::min(param_.kHardBrakingDeceleration, cur_state.vel / dt));
+  // double average_acc = dt == 0.0 ? 0.0 : cur_state.vel / dt;
+  bool epsilon_dt = std::fabs(dt) < kEpison;
+  double tmp_dt = epsilon_dt < kEpison ? kEpison : dt;
+  double average_acc = epsilon_dt ? 0.0 : cur_state.vel / tmp_dt;
 
-  (*x_out)[0] = x[0] + cur_state.vel * dt + 0.5 * acc * dt * dt;
-  (*x_out)[1] = cur_state.vel + acc * dt;
-  (*x_out)[2] = x[2] + x[3] * dt;
+  acc = std::max(
+      acc, -std::min(param_.kHardBrakingDeceleration, cur_state.vel / tmp_dt));
+
+  (*x_out)[0] = x[0] + cur_state.vel * tmp_dt + 0.5 * acc * tmp_dt * tmp_dt;
+  (*x_out)[1] = cur_state.vel + acc * tmp_dt;
+  (*x_out)[2] = x[2] + x[3] * tmp_dt;
   (*x_out)[3] = x[3];
 }
 
 void LonMotionSimulatorIntelligentDriverModel::operator()(
-    const InternalState &x, InternalState &dxdt, const double dt) {
+    const InternalState& x, InternalState& dxdt, const double dt) {
   // x: current state [ego s, ego vel, cipv s, cipv vel]
   // dxdt: state dot
 
@@ -165,7 +172,7 @@ void LonMotionSimulatorIntelligentDriverModel::operator()(
 }
 
 void LonMotionSimulatorIntelligentDriverModel::RK4Integrate(
-    const InternalState &x, const double dt, InternalState *x_out) {
+    const InternalState& x, const double dt, InternalState* x_out) {
   // RK4 integration
   InternalState X = x;
   InternalState K1, K2, K3, K4, X_tmp;
@@ -201,13 +208,13 @@ void LonMotionSimulatorIntelligentDriverModel::RK4Integrate(
 }
 
 void LonMotionSimulatorIntelligentDriverModel::set_model_state(
-    const ModelState &state) {
+    const ModelState& state) {
   state_ = state;
   already_set_state_ = true;
   UpdateInternalState();
 }
 void LonMotionSimulatorIntelligentDriverModel::set_model_param(
-    const ModelParam &param) {
+    const ModelParam& param) {
   param_ = param;
   already_set_param_ = true;
 }

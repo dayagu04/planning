@@ -62,7 +62,7 @@ class SLTGridMapAdapter {
   /**
    * @brief getters
    */
-  SscMap *p_ssc_map() const { return p_ssc_map_; }
+  std::shared_ptr<SscMap> p_ssc_map() const { return p_ssc_map_; }
 
   std::string Name();
 
@@ -154,7 +154,7 @@ class SLTGridMapAdapter {
   // Map
   bool map_valid_ = false;
 
-  SscMap *p_ssc_map_;
+  std::shared_ptr<SscMap> p_ssc_map_ = nullptr;
 
   double ego_front_consider_obstacle_distance_ = 50.0;
 };
