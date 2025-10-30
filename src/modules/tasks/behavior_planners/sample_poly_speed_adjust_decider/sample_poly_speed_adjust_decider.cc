@@ -420,12 +420,16 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   const bool enable_merge_decelaration =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MERGE_REQUEST);
-  const bool enable_merge_decelaration_hold =
-      (enable_merge_decelaration &&
+  // const bool enable_merge_decelaration_hold =
+  //     (enable_merge_decelaration &&
+  //      coarse_planning_info.target_state == kLaneChangeHold);
+
+  const bool enable_hold_adjust_speed =
+      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        coarse_planning_info.target_state == kLaneChangeHold);
 
   if (coarse_planning_info.target_state != kLaneChangePropose &&
-      !enable_merge_decelaration_hold) {
+      !enable_hold_adjust_speed) {
     count_wait_state_ = 0;
     lane_change_request_ = 0;
     sample_scene_ = SampleScene::NormalSampleScene;
@@ -436,7 +440,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   }
 
   if (coarse_planning_info.target_state == kLaneChangePropose ||
-      enable_merge_decelaration_hold) {
+      enable_hold_adjust_speed) {
     count_wait_state_++;
   }
 
@@ -483,7 +487,13 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
-  v_cruise_speed_ = ego_state_manager->ego_v_cruise_upper();
+  v_cruise_speed_ = session_->environmental_model()
+                        .get_route_info()
+                        ->get_sd_map()
+                        .GetNaviRoadInfo()
+                        .value()
+                        .cur_road_speed_limit() /
+                    3.6;
   // init sample space
   st_sample_space_base_.Init(agent_info_, ego_s);
 
@@ -503,8 +513,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
-       route_info_output.mlc_request_type_route_info != RAMP_TO_MAIN &&
-       is_in_deceleartion_scene_);
+       route_info_output.mlc_request_type_route_info != RAMP_TO_MAIN);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
