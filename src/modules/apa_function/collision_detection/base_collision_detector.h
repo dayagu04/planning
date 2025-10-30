@@ -252,6 +252,8 @@ class BaseCollisionDetector {
   float sample_ds_ = 0.1f;
 
   bool need_update_buffer_ = false;
+
+  UseObsHeightMethod use_obs_height_method_ = UseObsHeightMethod::HIGH;
 };
 
 }  // namespace apa_planner

@@ -172,8 +172,6 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   CarFootPrintCircleList car_chassis_circles_list_with_buffer_;
 
   float max_circle_buffer_ = 0.5f;
-
-  UseObsHeightMethod use_obs_height_method_ = UseObsHeightMethod::HIGH;
 };
 
 }  // namespace apa_planner

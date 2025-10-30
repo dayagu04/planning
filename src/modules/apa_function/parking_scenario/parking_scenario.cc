@@ -900,11 +900,6 @@ const bool ParkingScenario::CheckReplan(const CheckReplanParams& check_params) {
     return false;
   }
 
-  if (frame_.mirror_command == MirrorCommand::FOLD) {
-    ILOG_INFO << "mirror command is fold, should not replan";
-    return false;
-  }
-
   if (frame_.is_replan_first) {
     ILOG_INFO << "first plan";
     frame_.replan_reason = ReplanReason::FIRST_PLAN;

@@ -98,7 +98,17 @@ void EDTCollisionDetector::AddObsToOGM() {
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;
   for (const auto &obs_pair : obs_map) {
     const ApaObstacle obs = obs_pair.second;
-    switch (obs.GetObsHeightType()) {
+    ApaObsHeightType obs_height_type = obs.GetObsHeightType();
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+      obs_height_type = ApaObsHeightType::HIGH;
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      if (obs_height_type == ApaObsHeightType::MID) {
+        obs_height_type = ApaObsHeightType::HIGH;
+      }
+    } else {
+      // do nothing
+    }
+    switch (obs_height_type) {
       case ApaObsHeightType::RUN_OVER:
         continue;
       case ApaObsHeightType::LOW:
@@ -670,13 +680,6 @@ const ColResult EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
-    mid_circle_list = high_circle_list;
-    low_circle_list = high_circle_list;
-  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = high_circle_list;
-  }
-
   bool col_flag = false;
   double lon_safe_dist = 0.0;
   float obs_dist = 0.0;
@@ -691,12 +694,20 @@ const ColResult EDTCollisionDetector::Update(
                                            &circle_id, ApaObsHeightType::HIGH)
                      : IsCollisionForPoint(pt, high_circle_list,
                                            ApaObsHeightType::HIGH);
-
       if (col_flag) {
         break;
       }
 
-      if (apa_param.GetParam().enable_multi_height_col_det) {
+      if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             &circle_id, ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
+        if (col_flag) {
+          break;
+        }
+      } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
                                              &circle_id, ApaObsHeightType::MID)
@@ -716,6 +727,8 @@ const ColResult EDTCollisionDetector::Update(
         if (col_flag) {
           break;
         }
+      } else {
+        // only detect high obs
       }
     }
 
@@ -805,13 +818,6 @@ const ColResultF EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
-    mid_circle_list = high_circle_list;
-    low_circle_list = high_circle_list;
-  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = high_circle_list;
-  }
-
   float obs_dist = 26.8f, min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
   bool col_flag = false;
   Eigen::Vector2f dangerous_pt;
@@ -827,8 +833,17 @@ const ColResultF EDTCollisionDetector::Update(
         dangerous_pt = pt.GetPos();
         break;
       }
-
-      if (apa_param.GetParam().enable_multi_height_col_det) {
+      if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
+        if (col_flag) {
+          dangerous_pt = pt.GetPos();
+          break;
+        }
+      } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
                                              ApaObsHeightType::MID)
@@ -848,6 +863,8 @@ const ColResultF EDTCollisionDetector::Update(
           dangerous_pt = pt.GetPos();
           break;
         }
+      } else {
+        // only detect high obs
       }
     }
 

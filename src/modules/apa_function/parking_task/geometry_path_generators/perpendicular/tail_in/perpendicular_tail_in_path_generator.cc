@@ -1621,8 +1621,9 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
                                << "  pt = " << res.pt_closest2obs.second.pos.x()
                                << " " << res.pt_closest2obs.second.pos.y();
       if (method == ColDetMethod::EDT_GEOMETRY) {
-        res = geometry_col_det_ptr->Update(path_seg, lat_inflation,
-                                           lon_safe_dist);
+        res = geometry_col_det_ptr->Update(
+            path_seg, lat_inflation, lon_safe_dist, false, lat_inflation,
+            apa_param.GetParam().use_obs_height_method);
       } else if (method == ColDetMethod::EDT_GJK) {
         res = gjk_col_det_ptr->Update(
             path_seg, lat_inflation, lon_safe_dist,
@@ -1635,7 +1636,9 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
   }
 
   else if (method == ColDetMethod::GEOMETRY) {
-    res = geometry_col_det_ptr->Update(path_seg, lat_inflation, lon_safe_dist);
+    res = geometry_col_det_ptr->Update(
+        path_seg, lat_inflation, lon_safe_dist, false, lat_inflation,
+        apa_param.GetParam().use_obs_height_method);
   }
 
   else if (method == ColDetMethod::GJK) {
