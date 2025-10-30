@@ -571,24 +571,36 @@ double AgentTrajectoryCalculator::CalculateRoadCurvature(const double v_ego) {
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
   const auto& frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
-  std::vector<double> curv_window_vec;
-  for (int idx = -3; idx <= 3; ++idx) {
-    double curv;
+  bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
+  double road_radius = 10000.0;
+  if (is_ref_path_smoothed) {
+    double curv = 0.0001;
     ReferencePathPoint refpath_pt;
     if (reference_path_ptr->get_reference_point_by_lon(
-            frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
+            frenet_ego_state.s() + preview_x, refpath_pt)) {
       curv = std::fabs(refpath_pt.path_point.kappa());
-    } else {
-      curv = 0.0001;
     }
-    curv_window_vec.emplace_back(curv);
+    road_radius = 1 / std::max(curv, 0.0001);
+  } else {
+    std::vector<double> curv_window_vec;
+    for (int idx = -3; idx <= 3; ++idx) {
+      double curv;
+      ReferencePathPoint refpath_pt;
+      if (reference_path_ptr->get_reference_point_by_lon(
+              frenet_ego_state.s() + preview_x + idx * 2.0, refpath_pt)) {
+        curv = std::fabs(refpath_pt.path_point.kappa());
+      } else {
+        curv = 0.0001;
+      }
+      curv_window_vec.emplace_back(curv);
+    }
+    double curv_sum = 0.0;
+    for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+      curv_sum = curv_sum + curv_window_vec[ind];
+    }
+    double avg_curv = curv_sum / curv_window_vec.size();
+    road_radius = 1 / std::max(avg_curv, 0.0001);
   }
-  double curv_sum = 0.0;
-  for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-    curv_sum = curv_sum + curv_window_vec[ind];
-  }
-  double avg_curv = curv_sum / curv_window_vec.size();
-  double road_radius = 1 / std::max(avg_curv, 0.0001);
   return road_radius;
 }
 
