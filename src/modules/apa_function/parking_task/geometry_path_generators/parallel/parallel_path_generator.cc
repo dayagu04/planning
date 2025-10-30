@@ -2441,9 +2441,16 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
       // 计算路径中“短路径段”（长度 < 0.3m）的数量
       path.short_segment_count = 0;  // 初始化计数器
       const double short_segment_threshold = 0.3;
+      bool heading_turned = false;
+      double start_heading = path.path_segment_vec.front().GetStartHeading();
       for (const auto& seg : path.path_segment_vec) {
         if (seg.GetLength() < short_segment_threshold) {
           path.short_segment_count++;
+        }
+        if (std::abs(seg.GetStartHeading() - start_heading) > M_PI_2 &&
+            path.path_segment_vec.front().seg_gear == seg.seg_gear &&
+            ! heading_turned) {
+          heading_turned = true;
         }
       }
 
@@ -2478,6 +2485,9 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
           path.dangerous_value +=
               10.0 * (corner_danger_threshold - corner_dist);
         }
+      }
+      if(heading_turned){
+        path.dangerous_value += 100.0;
       }
 
       // ====================================================================

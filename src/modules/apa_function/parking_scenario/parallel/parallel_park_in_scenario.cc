@@ -1080,10 +1080,6 @@ const bool ParallelParkInScenario::GenTlane() {
         (side_sgn > 0.0
              ? std::max(-terminal_parallel_y_offset, target_y_with_curb)
              : std::min(terminal_parallel_y_offset, target_y_with_curb));
-    ILOG_INFO << "is_width_curb = " << is_width_curb
-              << " is_width_slot = " << is_width_slot
-              << " slot_width = " << slot_width
-              << " target_pose = " << ego_info_under_slot.target_pose.pos.y();
   } else {
     ego_info_under_slot.target_pose.pos.y() = 0.0;
   }
@@ -1868,8 +1864,6 @@ const bool ParallelParkInScenario::CheckOneReverseToSlot() {
     ILOG_INFO << "path_seg_index.second >= output.path_segment_vec.size";
     return false;
   }
-  //debug
-  pnc::geometry_lib::PrintSegmentsVecInfo(output.path_segment_vec);
 
   const auto& start_pose =
       output.path_segment_vec[output.path_seg_index.first].GetStartPose();
