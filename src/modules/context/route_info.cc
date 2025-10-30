@@ -133,7 +133,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
     return;
   }
 
-  if (IsMissSplitPoint(*link,nearest_l,nearest_s)) {
+  if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
     route_info_output_.is_miss_split_point = true;
     return;
@@ -778,12 +778,13 @@ void RouteInfo::CaculateSplitInfo(
           auto other_link_id =
               out_link[0] == split_next_link->id() ? out_link[1] : out_link[0];
           const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
-          if (split_link != nullptr && other_link != nullptr &&
-              split_link->has_link_type() &&
-              !sdpro_map.isSaPa(split_link->link_type()) &&
-              !sdpro_map.isTollStation(split_link->link_type()) &&
-              other_link->link_class() !=
-                  iflymapdata::sdpro::LinkClass::LC_OTHER_ROAD) {
+          if (split_region_lane_tupo_info.is_valid == true ||
+              split_link != nullptr && other_link != nullptr &&
+                  split_link->has_link_type() &&
+                  !sdpro_map.isSaPa(split_link->link_type()) &&
+                  !sdpro_map.isTollStation(split_link->link_type()) &&
+                  other_link->link_class() !=
+                      iflymapdata::sdpro::LinkClass::LC_OTHER_ROAD) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
@@ -1336,7 +1337,8 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
 }
 
 const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
-    const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s, double* nearest_l) {
+    const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s,
+    double* nearest_l) {
   const iflymapdata::sdpro::LinkInfo_Link* link = nullptr;
   if (!nearest_s) {
     route_info_output_.reset();
@@ -3126,12 +3128,11 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("maxVal_seq", route_info_output_.maxVal_seq);
   JSON_DEBUG_VALUE(
       "ego_status_on_route",
-      static_cast<int>(route_info_output_.mlc_decider_route_info.ego_status_on_route));
-  JSON_DEBUG_VALUE("is_find_exc_fp",
-                   (int)route_info_output_.is_find_exc_fp);
-  JSON_DEBUG_VALUE(
-      "is_miss_split_point",
-      static_cast<int>(route_info_output_.is_miss_split_point));
+      static_cast<int>(
+          route_info_output_.mlc_decider_route_info.ego_status_on_route));
+  JSON_DEBUG_VALUE("is_find_exc_fp", (int)route_info_output_.is_find_exc_fp);
+  JSON_DEBUG_VALUE("is_miss_split_point",
+                   static_cast<int>(route_info_output_.is_miss_split_point));
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
@@ -4913,8 +4914,8 @@ bool RouteInfo::IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& link,
       return false;
     }
 
-    std::vector <uint64> other_link_id_vec;
-    for (const auto tep_link_id: split_link->successor_link_ids()) {
+    std::vector<uint64> other_link_id_vec;
+    for (const auto tep_link_id : split_link->successor_link_ids()) {
       if (tep_link_id == split_next_link->id()) {
         continue;
       }
@@ -4923,7 +4924,7 @@ bool RouteInfo::IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& link,
 
     // 判断每一个other link与自车当前的横向l是否小于自车与route link的横向距离
     double dis_to_other_link = NL_NMAX;
-    for (const auto tep_link_id: other_link_id_vec) {
+    for (const auto tep_link_id : other_link_id_vec) {
       const auto tep_link = sdpro_map_.GetLinkOnRoute(tep_link_id);
       if (tep_link == nullptr) {
         continue;
@@ -4941,7 +4942,8 @@ bool RouteInfo::IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& link,
       planning_math::Vec2d segment_end{tep_link_points.rbegin()->x(),
                                        tep_link_points.rbegin()->y()};
 
-      double dis_to_other_link = DistanceToLine(point, segment_start, segment_end);
+      double dis_to_other_link =
+          DistanceToLine(point, segment_start, segment_end);
 
       if (dis_to_other_link < std::abs(l)) {
         break;
@@ -4964,38 +4966,36 @@ bool RouteInfo::IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& link,
 
     const double lat_error = lane_num * kStandardLaneWidth;
 
-    if (std::abs(l) > lat_error &&
-        dis_to_other_link < std::abs(l)) {
+    if (std::abs(l) > lat_error && dis_to_other_link < std::abs(l)) {
       return true;
     }
-
   }
 
   return false;
 }
 
 double RouteInfo::DistanceToLine(const planning_math::Vec2d& point,
-                      const planning_math::Vec2d& segment_start,
-                      const planning_math::Vec2d& segment_end) {
-    // 计算线段向量
-    planning_math::Vec2d segment = segment_end - segment_start;
-    // 计算点到线段起点的向量
-    planning_math::Vec2d point_to_start = point - segment_start;
+                                 const planning_math::Vec2d& segment_start,
+                                 const planning_math::Vec2d& segment_end) {
+  // 计算线段向量
+  planning_math::Vec2d segment = segment_end - segment_start;
+  // 计算点到线段起点的向量
+  planning_math::Vec2d point_to_start = point - segment_start;
 
-    // 计算线段长度
-    const double segment_len = segment.Length();
+  // 计算线段长度
+  const double segment_len = segment.Length();
 
-    // 处理线段长度为0的特殊情况（起点和终点重合）
-    if (segment_len < planning_math::kMathEpsilon) {
-        return point.DistanceTo(segment_start);
-    }
-
-    // 计算叉积的绝对值（平行四边形面积）
-    double cross_product = std::fabs(point_to_start.CrossProd(segment));
-
-    // 垂直距离 = 平行四边形面积 / 底边长（线段长度）
-    return cross_product / segment_len;
+  // 处理线段长度为0的特殊情况（起点和终点重合）
+  if (segment_len < planning_math::kMathEpsilon) {
+    return point.DistanceTo(segment_start);
   }
+
+  // 计算叉积的绝对值（平行四边形面积）
+  double cross_product = std::fabs(point_to_start.CrossProd(segment));
+
+  // 垂直距离 = 平行四边形面积 / 底边长（线段长度）
+  return cross_product / segment_len;
+}
 
 bool RouteInfo::IsTriggerContinueLCInPerceptionSplitRegion(
     const int perception_left_lane_num,
