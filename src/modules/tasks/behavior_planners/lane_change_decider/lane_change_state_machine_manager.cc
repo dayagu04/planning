@@ -2251,7 +2251,7 @@ void LaneChangeStateMachineManager::PreProcess() {
   // add second check for target node
   CheckTargetFrontNode(target_lane_front_node_id);
   CheckTargetRearNode(target_lane_rear_node_id);
-  GetFrontRiskAgentTrajs();
+  // GetFrontRiskAgentTrajs();
   GetSideRiskAgents();
   // AddRearAgentMerging();
 
@@ -2305,9 +2305,6 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
   for (const auto *target_lane_node : target_lane_nodes) {
-    if (!target_lane_node->is_agent_most_within_lane()) {
-      continue;
-    }
     double x = target_lane_node->node_x();
     double y = target_lane_node->node_y();
     Point2D node_cart(x, y);
@@ -2322,17 +2319,16 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       continue;
     }
     double agent_s = target_lane_node->node_s();
-    if (agent_s - target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
-      continue;
+    if (agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
+      continue; // 车头落后自车就是后车
     }
     const double target_lane_width = target_lane->width_by_s(agent_s);
     const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
     const auto &agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
-    // 在障碍物决策之前
     bool pass_in_lane =
-        PassInLane(target_lane_width, agent_bd, car_width, 0.6, direction);
-    if (pass_in_lane) {
-      continue;
+        PassInLane(target_lane_width, agent_bd, car_width, 1.0, direction);
+    if (pass_in_lane && !target_lane_node->is_agent_most_within_lane()) {
+      continue; //前者针对大型车压线，后者针对小vru靠边
     }
     const auto &agent_trajs =
         target_lane_node->node_trajectories_used_by_st_graph();
@@ -2406,8 +2402,8 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
       continue;
     }
     double agent_s = target_lane_node->node_s();
-    if (agent_s + target_lane_node->node_length() * 0.5 > ego_sl_bd.s_start) {
-      continue;
+    if (agent_s + target_lane_node->node_length() * 0.5 >= ego_sl_bd.s_end) {
+        continue;// 车头落后自车就是后车
     }
     if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
         agent_s + target_lane_node->node_length() * 0.5 >
