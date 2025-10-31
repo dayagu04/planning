@@ -20,6 +20,7 @@
 
 #include <cstdlib>
 #include <string>  // std::string
+#include <memory>
 
 namespace planning {
 namespace common {
@@ -49,13 +50,17 @@ std::string demangle(const char* name) {
   //       mangling rules.
   //   -3: One of the arguments is invalid.
   int status = 0;
-  char* buf = abi::__cxa_demangle(name, NULL, NULL, &status);
-  if (status == 0) {
-    std::string s(buf);
-    free(buf);
-    return s;
-  }
-  return std::string(name);
+  // char* buf = abi::__cxa_demangle(name, NULL, NULL, &status);
+  // if (status == 0) {
+  //   std::string s(buf);
+  //   free(buf);
+  //   return s;
+  // }
+  // return std::string(name);
+  std::unique_ptr<char, decltype(&std::free)> demangled(
+      abi::__cxa_demangle(name, nullptr, nullptr, &status), &std::free);
+  return (status == 0 && demangled != nullptr) ? std::string(demangled.get())
+                                                : std::string(name);
 }
 
 std::string& serialize(std::string&& name) {
