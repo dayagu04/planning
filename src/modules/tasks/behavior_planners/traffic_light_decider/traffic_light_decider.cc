@@ -23,6 +23,8 @@ bool TrafficLightDecider::Execute() {
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
   is_small_front_intersection_ = false;
+  IsSmallFrontIntersection();
+  IsIntersectionMatchTFL();
 
   planning::common::IntersectionState intersection_state =
       environmental_model.get_virtual_lane_manager()->GetIntersectionState();
@@ -37,8 +39,7 @@ bool TrafficLightDecider::Execute() {
   const auto tfl_manager =
       environmental_model.get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
-  if (config_.enable_tfl_decider &&
-      (dis_to_stopline > 0.5 && dis_to_crosswalk > 2) &&
+  if ((dis_to_stopline > 0.5 && dis_to_crosswalk > 2) &&
       (intersection_state != planning::common::IN_INTERSECTION ||
        (intersection_state == planning::common::IN_INTERSECTION &&
         !can_pass_))) {
@@ -51,8 +52,8 @@ bool TrafficLightDecider::Execute() {
       if (can_pass_ && dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        if (dis_to_stopline < 100.0 && IsSmallFrontIntersection() &&
-            !IsIntersectionMatchTFL()) {
+        if (dis_to_stopline < 100.0 && is_small_front_intersection_ &&
+            !is_tfl_match_intersection_) {
           can_pass_ = true;
         } else {
           can_pass_ = false;
@@ -73,7 +74,7 @@ bool TrafficLightDecider::Execute() {
       if (dis_to_stopline > 100.0) {
         can_pass_ = true;
       } else {
-        if (IsSmallFrontIntersection() && !IsIntersectionMatchTFL()) {
+        if (is_small_front_intersection_ && !is_tfl_match_intersection_) {
           can_pass_ = true;
         } else if (can_pass_ && (std::max(v_ego - 1.0, 0.0) *
                                      std::max(2.0 - yellow_light_timer_, 0.0) >
@@ -125,8 +126,7 @@ bool TrafficLightDecider::Execute() {
       }
       // can_pass_ = true;
     }
-  } else if (config_.enable_tfl_decider &&
-             (dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) &&
+  } else if ((dis_to_stopline <= 0.5 || dis_to_crosswalk <= 2) &&
              (intersection_state == planning::common::IN_INTERSECTION &&
               !can_pass_)) {
     //一般是刹停在路口中，这是看到绿灯就设置can_pass_ = true
@@ -152,7 +152,7 @@ bool TrafficLightDecider::Execute() {
     can_pass_ = true;
   }
 
-  if (!can_pass_) {
+  if (config_.enable_tfl_decider && !can_pass_) {
     AddVirtualObstacle();
   }
   //此外认为已经进入路口
@@ -197,6 +197,7 @@ bool TrafficLightDecider::Execute() {
                           ->mutable_traffic_light_decider_output();
   tfl_decider.can_pass = can_pass_;
   tfl_decider.is_small_front_intersection = is_small_front_intersection_;
+  tfl_decider.is_tfl_match_intersection = is_tfl_match_intersection_;
   return true;
 }
 
@@ -316,6 +317,7 @@ bool TrafficLightDecider::IsIntersectionMatchTFL() {
   if (std::abs(dis_to_tfl - dis_to_stopline) < config_.stopline_tfl_dis_thred) {
     is_match = true;
   }
+  is_tfl_match_intersection_ = is_match;
   return is_match;
 }
 

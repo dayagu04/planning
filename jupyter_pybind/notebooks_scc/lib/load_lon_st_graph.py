@@ -228,7 +228,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
-                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code",\
+                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts",\
                               'new_cutin_id', 'new_cutin_id_count', \
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \

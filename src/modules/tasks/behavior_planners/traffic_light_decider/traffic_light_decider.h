@@ -47,5 +47,6 @@ class TrafficLightDecider : public Task {
   double green_blink_timer_ = 0.0;
   double yellow_light_timer_ = 0.0;
   bool is_small_front_intersection_ = false;
+  bool is_tfl_match_intersection_ = true;
 };
 }  // namespace planning

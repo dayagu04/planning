@@ -3867,6 +3867,8 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                      "lon_acc_thr");
     ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
                      "lon_jerk_thr");
+    ReadItem<double>(json, tfl_reminder_cipv_dis, "result_trajectory_generator",
+                     "tfl_reminder_cipv_dis");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
@@ -3877,6 +3879,7 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   double ramp_lat_jerk_thr = 0.65;
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
+  double tfl_reminder_cipv_dis = 8.0;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
