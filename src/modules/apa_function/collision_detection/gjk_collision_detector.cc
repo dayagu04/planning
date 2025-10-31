@@ -77,60 +77,68 @@ const ColResult GJKCollisionDetector::Update(
       &polygon_foot_print_global_.max_polygon,
       &polygon_foot_print_global_.chassis};
 
-  std::vector<Polygon2D*> mid_polygon_vec;
-  std::vector<Polygon2D*> high_polygon_vec;
+  std::vector<Polygon2D*> mid_polygon_vec{
+      &polygon_foot_print_global_.max_polygon,
+      &polygon_foot_print_global_.body};
 
-  switch (gjk_col_det_request.car_body_type) {
-    case CarBodyType::ONLY_MAX_POLYGAN:
+  std::vector<Polygon2D*> high_polygon_vec{
+      &polygon_foot_print_global_.max_polygon, &polygon_foot_print_global_.body,
+      &polygon_foot_print_global_.mirror_left,
+      &polygon_foot_print_global_.mirror_right};
+
+  use_obs_height_method_ = gjk_col_det_request.use_obs_height_method;
+
+  if (gjk_col_det_request.car_body_type == CarBodyType::ONLY_MAX_POLYGAN) {
+    high_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+    mid_polygon_vec = high_polygon_vec;
+    low_polygon_vec = high_polygon_vec;
+  } else if (gjk_col_det_request.car_body_type == CarBodyType::ONLY_MIRROR) {
+    high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                        &polygon_foot_print_global_.mirror_left,
+                        &polygon_foot_print_global_.mirror_right};
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = high_polygon_vec;
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+    } else {
       mid_polygon_vec = {&polygon_foot_print_global_.max_polygon};
-      high_polygon_vec = {&polygon_foot_print_global_.max_polygon};
-      break;
-    case CarBodyType::ONLY_MIRROR:
-      mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
-                         &polygon_foot_print_global_.mirror_left,
-                         &polygon_foot_print_global_.mirror_right};
-      high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
-                          &polygon_foot_print_global_.mirror_left,
-                          &polygon_foot_print_global_.mirror_right};
-      break;
-    case CarBodyType::EXPAND_MIRROR_TO_FRONT:
-      mid_polygon_vec = {
-          &polygon_foot_print_global_.max_polygon,
-          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
-          &polygon_foot_print_global_.mirror_to_rear_overhang};
+      low_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+    }
+  } else {
+    high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                        &polygon_foot_print_global_.body,
+                        &polygon_foot_print_global_.mirror_left,
+                        &polygon_foot_print_global_.mirror_right};
+    if (gjk_col_det_request.car_body_type ==
+        CarBodyType::EXPAND_MIRROR_TO_FRONT) {
       high_polygon_vec = {
           &polygon_foot_print_global_.max_polygon,
           &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
           &polygon_foot_print_global_.mirror_to_rear_overhang};
-      break;
-    case CarBodyType::EXPAND_MIRROR_TO_END:
+    } else if (gjk_col_det_request.car_body_type ==
+               CarBodyType::EXPAND_MIRROR_TO_END) {
       // todo: should use right polygon for end expansion
-      mid_polygon_vec = {
-          &polygon_foot_print_global_.max_polygon,
-          &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
-          &polygon_foot_print_global_.mirror_to_rear_overhang};
       high_polygon_vec = {
           &polygon_foot_print_global_.max_polygon,
           &polygon_foot_print_global_.mirror_to_front_overhang_expand_front,
           &polygon_foot_print_global_.mirror_to_rear_overhang};
-      break;
-    default:
-      if (apa_param.GetParam().use_obs_height_method ==
-          UseObsHeightMethod::HIGH_LOW) {
-        mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
-                           &polygon_foot_print_global_.body,
-                           &polygon_foot_print_global_.mirror_left,
-                           &polygon_foot_print_global_.mirror_right};
-      } else {
-        mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
-                           &polygon_foot_print_global_.body};
-      }
+    }
 
-      high_polygon_vec = {&polygon_foot_print_global_.max_polygon,
-                          &polygon_foot_print_global_.body,
-                          &polygon_foot_print_global_.mirror_left,
-                          &polygon_foot_print_global_.mirror_right};
-      break;
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = high_polygon_vec;
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      mid_polygon_vec = high_polygon_vec;
+      low_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                         &polygon_foot_print_global_.chassis};
+    } else {
+      mid_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                         &polygon_foot_print_global_.body};
+      low_polygon_vec = {&polygon_foot_print_global_.max_polygon,
+                         &polygon_foot_print_global_.chassis};
+    }
   }
 
   std::vector<Polygon2D*> polygon_vec;

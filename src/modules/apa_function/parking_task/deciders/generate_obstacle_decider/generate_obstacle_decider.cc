@@ -179,7 +179,8 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
   bound.PrintInfo();
 
-  col_det_interface_ptr_->GetEDTColDetPtr()->PreProcess(bound);
+  col_det_interface_ptr_->GetEDTColDetPtr()->PreProcess(
+      bound, param.use_obs_height_method);
 
   return true;
 }

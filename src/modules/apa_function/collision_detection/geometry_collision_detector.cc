@@ -11,7 +11,8 @@ void GeometryCollisionDetector::Reset() {}
 const ColResult GeometryCollisionDetector::Update(
     const geometry_lib::PathSegment &path_seg, const double body_lat_buffer,
     const double lon_buffer, const bool special_process_mirror,
-    const double mirror_lat_buffer) {
+    const double mirror_lat_buffer,
+    const UseObsHeightMethod use_obs_height_method) {
   col_res_.Reset();
   if (obs_manager_ptr_ == nullptr || obs_manager_ptr_->GetObstacles().empty()) {
     return col_res_;
@@ -19,6 +20,8 @@ const ColResult GeometryCollisionDetector::Update(
 
   col_res_.remain_car_dist = path_seg.GetLength();
   col_res_.remain_dist = path_seg.GetLength();
+
+  use_obs_height_method_ = use_obs_height_method;
 
   UpdateSafeBuffer(body_lat_buffer, lon_buffer, special_process_mirror,
                    mirror_lat_buffer);
@@ -102,14 +105,17 @@ void GeometryCollisionDetector::Update(
   std::vector<geometry_lib::LineSegment> *mid_car_line_vec;
   std::vector<geometry_lib::LineSegment> *high_car_line_vec;
 
-  low_car_line_vec = &chassis_line_vec;
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_car_line_vec = &car_with_mirror_line_vec;
+  high_car_line_vec = &car_with_mirror_line_vec;
+  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+    mid_car_line_vec = high_car_line_vec;
+    low_car_line_vec = high_car_line_vec;
+  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+    mid_car_line_vec = high_car_line_vec;
+    low_car_line_vec = &chassis_line_vec;
   } else {
     mid_car_line_vec = &car_without_mirror_line_vec;
+    low_car_line_vec = &chassis_line_vec;
   }
-  high_car_line_vec = &car_with_mirror_line_vec;
 
   geometry_lib::LineSegment obs_move_line;
   Eigen::Vector2d cross_point;
@@ -224,14 +230,17 @@ void GeometryCollisionDetector::Update(const geometry_lib::Arc &arc_seg) {
   std::vector<geometry_lib::LineSegment> *mid_car_line_vec;
   std::vector<geometry_lib::LineSegment> *high_car_line_vec;
 
-  low_car_line_vec = &chassis_line_vec;
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_car_line_vec = &car_with_mirror_line_vec;
+  high_car_line_vec = &car_with_mirror_line_vec;
+  if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+    mid_car_line_vec = high_car_line_vec;
+    low_car_line_vec = high_car_line_vec;
+  } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+    mid_car_line_vec = high_car_line_vec;
+    low_car_line_vec = &chassis_line_vec;
   } else {
     mid_car_line_vec = &car_without_mirror_line_vec;
+    low_car_line_vec = &chassis_line_vec;
   }
-  high_car_line_vec = &car_with_mirror_line_vec;
 
   // obstacle rotates around the the car rotation center to form a circle
   // The minimum angle allowed for obstacle rotation

@@ -48,6 +48,7 @@ class ParkingScenario {
     double wait_time_slot_jump = 0.168;
     double stuck_replan_time = apa_param.GetParam().stuck_replan_time;
     double min_drive_dist = apa_param.GetParam().min_drive_dist;
+    UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
 
     CheckReplanParams() = default;
     CheckReplanParams(
@@ -55,7 +56,8 @@ class ParkingScenario {
         double _replan_dist_obs, double _wait_time_obs,
         double _replan_dist_slot_jump, double _wait_time_slot_jump,
         double _stuck_replan_time,
-        double _min_drive_dist = apa_param.GetParam().min_drive_dist)
+        double _min_drive_dist = apa_param.GetParam().min_drive_dist,
+        UseObsHeightMethod _use_obs_height_method = UseObsHeightMethod::HIGH)
         : replan_dist_path(_replan_dist_path),
           wait_time_path(_wait_time_path),
           replan_dist_obs(_replan_dist_obs),
@@ -63,7 +65,8 @@ class ParkingScenario {
           replan_dist_slot_jump(_replan_dist_slot_jump),
           wait_time_slot_jump(_wait_time_slot_jump),
           stuck_replan_time(_stuck_replan_time),
-          min_drive_dist(_min_drive_dist) {}
+          min_drive_dist(_min_drive_dist),
+          use_obs_height_method(_use_obs_height_method) {}
     ~CheckReplanParams() = default;
   };
 
@@ -471,11 +474,17 @@ class ParkingScenario {
       const double dynamic_lon_buffer = 1.168,
       const double dynamic_body_lat_buffer = 1.168,
       const double dynamic_mirror_lat_buffer = 1.168,
-      const bool only_check_mirror = false);
+      const bool only_check_mirror = false,
+      const UseObsHeightMethod use_obs_height_method =
+          UseObsHeightMethod::HIGH);
 
   virtual const double CalRemainDistFromPlanPathDangerous(
       const double static_lon_buffer = 0.0,
-      const double static_lat_buffer = 0.0);
+      const double static_lat_body_buffer = 0.0,
+      const double static_lat_mirror_body_buffer = 0.0,
+      const UseObsHeightMethod use_obs_height_method =
+          UseObsHeightMethod::HIGH);
+
   virtual const bool PostProcessPath();
 
   virtual const double CalRealTimeBrakeDist();
@@ -523,7 +532,9 @@ class ParkingScenario {
   virtual const CarSlotRelationship CalCarSlotRelationship(
       const geometry_lib::PathPoint &cur_pose);
 
-  virtual const bool CheckDynamicGearSwitch();
+  virtual const bool CheckDynamicGearSwitch(
+      const UseObsHeightMethod use_obs_height_method =
+          UseObsHeightMethod::HIGH);
 
   geometry_lib::PathPoint GetCurrentPathTerminal(const bool is_slot_coordinate);
 
@@ -543,7 +554,9 @@ class ParkingScenario {
       const double dynamic_lon_buffer = 1.168,
       const double dynamic_body_lat_buffer = 1.168,
       const double dynamic_mirror_lat_buffer = 1.168,
-      const bool only_check_mirror = false) const;
+      const bool only_check_mirror = false,
+      const UseObsHeightMethod use_obs_height_method =
+          UseObsHeightMethod::HIGH) const;
 
  protected:
   // TODO:

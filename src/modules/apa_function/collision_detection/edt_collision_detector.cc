@@ -21,15 +21,18 @@ namespace apa_planner {
 
 #define write_debug_file (0)
 
-void EDTCollisionDetector::PreProcess() {
+void EDTCollisionDetector::PreProcess(
+    const UseObsHeightMethod use_obs_height_method) {
+  use_obs_height_method_ = use_obs_height_method;
   AddObsToOGM();
   CalcObsDistArray();
 }
 
 void EDTCollisionDetector::PreProcess(
-    const geometry_lib::RectangleBound &ogm_bound) {
+    const geometry_lib::RectangleBound &ogm_bound,
+    const UseObsHeightMethod use_obs_height_method) {
   GenOccupancyGridMap(ogm_bound);
-  PreProcess();
+  PreProcess(use_obs_height_method);
 }
 
 void EDTCollisionDetector::GenOccupancyGridMap(
@@ -95,7 +98,17 @@ void EDTCollisionDetector::AddObsToOGM() {
   bool(*obs_ogm)[edt_ogm_grid_y_max] = nullptr;
   for (const auto &obs_pair : obs_map) {
     const ApaObstacle obs = obs_pair.second;
-    switch (obs.GetObsHeightType()) {
+    ApaObsHeightType obs_height_type = obs.GetObsHeightType();
+    if (use_obs_height_method_ == UseObsHeightMethod::HIGH) {
+      obs_height_type = ApaObsHeightType::HIGH;
+    } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+      if (obs_height_type == ApaObsHeightType::MID) {
+        obs_height_type = ApaObsHeightType::HIGH;
+      }
+    } else {
+      // do nothing
+    }
+    switch (obs_height_type) {
       case ApaObsHeightType::RUN_OVER:
         continue;
       case ApaObsHeightType::LOW:
@@ -172,17 +185,15 @@ void EDTCollisionDetector::CalcObsDistArray() {
   cv::distanceTransform(car_with_mirror_map_matrix, car_with_mirror_edt_matrix,
                         CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
-                            car_without_mirror_obs_ogm_);
-    cv::distanceTransform(car_without_mirror_map_matrix,
-                          car_without_mirror_edt_matrix, CV_DIST_L2,
-                          CV_DIST_MASK_PRECISE);
+  TransformObsOGMToMatrix(&car_without_mirror_map_matrix,
+                          car_without_mirror_obs_ogm_);
+  cv::distanceTransform(car_without_mirror_map_matrix,
+                        car_without_mirror_edt_matrix, CV_DIST_L2,
+                        CV_DIST_MASK_PRECISE);
 
-    TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
-    cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
-                          CV_DIST_L2, CV_DIST_MASK_PRECISE);
-  }
+  TransformObsOGMToMatrix(&car_chassis_map_matrix, car_chassis_obs_ogm_);
+  cv::distanceTransform(car_chassis_map_matrix, car_chassis_edt_matrix,
+                        CV_DIST_L2, CV_DIST_MASK_PRECISE);
 
   // only protect, avoid crash caused by excessive boundary values
   const int max_row_num = std::min(max_bound_x, edt_ogm_grid_x_max);
@@ -219,22 +230,20 @@ void EDTCollisionDetector::CalcObsDistArray() {
 #endif
   cv::imwrite(path_dir + "car_with_mirror_ogm.png", car_with_mirror_map_matrix);
   cv::imwrite(path_dir + "car_with_mirror_edt.png", car_with_mirror_edt_matrix);
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
-    cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
-    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
-    cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
-    cv::imwrite(path_dir + "car_without_mirror_ogm.png",
-                car_without_mirror_map_matrix);
-    cv::imwrite(path_dir + "car_without_mirror_edt.png",
-                car_without_mirror_edt_matrix);
-    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
-    cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
-    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
-    cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
-    cv::imwrite(path_dir + "car_chassis_ogm.png", car_chassis_map_matrix);
-    cv::imwrite(path_dir + "car_chassis_edt.png", car_chassis_edt_matrix);
-  }
+  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 0);
+  cv::flip(car_without_mirror_map_matrix, car_without_mirror_map_matrix, 1);
+  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 0);
+  cv::flip(car_without_mirror_edt_matrix, car_without_mirror_edt_matrix, 1);
+  cv::imwrite(path_dir + "car_without_mirror_ogm.png",
+              car_without_mirror_map_matrix);
+  cv::imwrite(path_dir + "car_without_mirror_edt.png",
+              car_without_mirror_edt_matrix);
+  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 0);
+  cv::flip(car_chassis_map_matrix, car_chassis_map_matrix, 1);
+  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 0);
+  cv::flip(car_chassis_edt_matrix, car_chassis_edt_matrix, 1);
+  cv::imwrite(path_dir + "car_chassis_ogm.png", car_chassis_map_matrix);
+  cv::imwrite(path_dir + "car_chassis_edt.png", car_chassis_edt_matrix);
 #endif
 }
 
@@ -279,10 +288,8 @@ void EDTCollisionDetector::UpdateSafeBuffer(const float body_lat_buffer,
   max_circle_buffer_ = max_circle_buffer;
 
   UpdateCarWithMirrorSafeBuffer();
-  if (apa_param.GetParam().enable_multi_height_col_det) {
-    UpdateCarWithOutMirrorSafeBuffer();
-    UpdateCarChassisSafeBuffer();
-  }
+  UpdateCarWithOutMirrorSafeBuffer();
+  UpdateCarChassisSafeBuffer();
 }
 
 void EDTCollisionDetector::UpdateCarWithMirrorSafeBuffer() {
@@ -673,11 +680,6 @@ const ColResult EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = &car_with_mirror_circles_list_buffer_;
-  }
-
   bool col_flag = false;
   double lon_safe_dist = 0.0;
   float obs_dist = 0.0;
@@ -692,12 +694,20 @@ const ColResult EDTCollisionDetector::Update(
                                            &circle_id, ApaObsHeightType::HIGH)
                      : IsCollisionForPoint(pt, high_circle_list,
                                            ApaObsHeightType::HIGH);
-
       if (col_flag) {
         break;
       }
 
-      if (apa_param.GetParam().enable_multi_height_col_det) {
+      if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             &circle_id, ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
+        if (col_flag) {
+          break;
+        }
+      } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
                                              &circle_id, ApaObsHeightType::MID)
@@ -717,6 +727,8 @@ const ColResult EDTCollisionDetector::Update(
         if (col_flag) {
           break;
         }
+      } else {
+        // only detect high obs
       }
     }
 
@@ -806,11 +818,6 @@ const ColResultF EDTCollisionDetector::Update(
   CarFootPrintCircleList *low_circle_list =
       &car_chassis_circles_list_with_buffer_;
 
-  if (apa_param.GetParam().use_obs_height_method ==
-      UseObsHeightMethod::HIGH_LOW) {
-    mid_circle_list = &car_with_mirror_circles_list_buffer_;
-  }
-
   float obs_dist = 26.8f, min_obs_dist = 26.8f, lon_safe_dist = 0.0f;
   bool col_flag = false;
   Eigen::Vector2f dangerous_pt;
@@ -826,8 +833,17 @@ const ColResultF EDTCollisionDetector::Update(
         dangerous_pt = pt.GetPos();
         break;
       }
-
-      if (apa_param.GetParam().enable_multi_height_col_det) {
+      if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
+        col_flag = need_cal_obs_dist
+                       ? IsCollisionForPoint(pt, low_circle_list, &obs_dist,
+                                             ApaObsHeightType::LOW)
+                       : IsCollisionForPoint(pt, low_circle_list,
+                                             ApaObsHeightType::LOW);
+        if (col_flag) {
+          dangerous_pt = pt.GetPos();
+          break;
+        }
+      } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_MID_LOW) {
         col_flag = need_cal_obs_dist
                        ? IsCollisionForPoint(pt, mid_circle_list, &obs_dist,
                                              ApaObsHeightType::MID)
@@ -847,6 +863,8 @@ const ColResultF EDTCollisionDetector::Update(
           dangerous_pt = pt.GetPos();
           break;
         }
+      } else {
+        // only detect high obs
       }
     }
 

@@ -140,9 +140,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
   }
 
-  const GJKColDetRequest gjl_col_det_request(
+  const GJKColDetRequest gjk_col_det_request(
       base_on_slot_, param.uss_config.use_uss_pt_cloud,
-      CarBodyType::EXPAND_MIRROR_TO_FRONT);
+      CarBodyType::EXPAND_MIRROR_TO_FRONT, ApaObsMovementType::ALL,
+      param.use_obs_height_method);
 
   // 检查终点位置是否碰撞
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
@@ -166,7 +167,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     if (gjl_det_ptr
             ->Update(tmp_pose_vec,
                      param.lat_lon_target_pose_buffer.max_lat_buffer, 0.0,
-                     gjl_col_det_request)
+                     gjk_col_det_request)
             .col_flag) {
       offset_y = 0.0;
       tar_pose_local.pos << virtual_tar_x, offset_y;
@@ -311,7 +312,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
           const ColResult& res =
               gjl_det_ptr->Update(tmp_pose_vec, body_lat_buffer, 0.0,
-                                  gjl_col_det_request, true, mirror_lat_buffer);
+                                  gjk_col_det_request, true, mirror_lat_buffer);
           if (!res.col_flag) {
             exist_target_pose = true;
             result_.safe_lon_move_dist = lon_move_dist;

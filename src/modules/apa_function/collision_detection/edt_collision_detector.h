@@ -52,9 +52,12 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
   }
   ~EDTCollisionDetector(){};
 
-  void PreProcess();
+  void PreProcess(const UseObsHeightMethod use_obs_height_method =
+                      UseObsHeightMethod::HIGH);
 
-  void PreProcess(const geometry_lib::RectangleBound &ogm_bound);
+  void PreProcess(const geometry_lib::RectangleBound &ogm_bound,
+                  const UseObsHeightMethod use_obs_height_method =
+                      UseObsHeightMethod::HIGH);
 
   void GenOccupancyGridMap(const geometry_lib::RectangleBound &ogm_bound);
 
@@ -137,6 +140,10 @@ class EDTCollisionDetector final : public BaseCollisionDetector {
                           const float max_circle_buffer = 0.5);
 
   const geometry_lib::RectangleBound &GetOgmBound() const { return ogm_bound_; }
+
+  const UseObsHeightMethod GetUseObsHeightMethod() const {
+    return use_obs_height_method_;
+  }
 
  private:
   // origin and boundary of grid coordinate system
