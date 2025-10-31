@@ -28,38 +28,6 @@ class ConeRequest : public LaneChangeRequest {
 
  private:
   // define cone point of cluster
-  struct ConePoint {
-    double x, y;
-    double s, l;
-    double left_dist, right_dist;
-    int32_t id;
-    int cluster;
-    bool visited;
-
-    // Default constructor
-    ConePoint()
-        : x(0.0),
-          y(0.0),
-          s(0.0),
-          l(0.0),
-          left_dist(0.0),
-          right_dist(0.0),
-          id(0),
-          cluster(-1),
-          visited(false) {}
-    // Parameterized constructor
-    ConePoint(int32_t id, double x, double y, double s, double l,
-              double left_dist, double right_dist)
-        : x(x),
-          y(y),
-          s(s),
-          l(l),
-          left_dist(left_dist),
-          right_dist(right_dist),
-          id(id),
-          cluster(-1),
-          visited(false) {}
-  };
   void UpdateConeSituation(int lc_status);
 
   void setLaneChangeRequestByCone();
@@ -73,17 +41,18 @@ class ConeRequest : public LaneChangeRequest {
                                 const double cone_s, const double cone_l,
                                 bool is_left, double* dist);
 
-  bool ConeDistance(const ConePoint& a, const ConePoint& b, double eps_s,
-                    double eps_l);
+  // bool ConeDistance(const ConePoint& a, const ConePoint& b, double eps_s,
+  //                   double eps_l);
 
-  void ExpandCluster(std::vector<ConePoint>& cone_points, int index, int c,
-                     double eps_s, double eps_l, int minPts);
+  // void ExpandCluster(std::vector<ConePoint>& cone_points, int index, int c,
+  //                    double eps_s, double eps_l, int minPts);
 
-  void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double eps_l,
-              int minPts);
+  // void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double
+  // eps_l,
+  //             int minPts);
 
-  double CalcClusterToBoundaryDist(const std::vector<ConePoint>& points,
-                                   RequestType direction);
+  // double CalcClusterToBoundaryDist(const std::vector<ConePoint>& points,
+  //                                  RequestType direction);
 
   void ConeDir();
 
@@ -108,17 +77,17 @@ class ConeRequest : public LaneChangeRequest {
 
   bool ConeStandardize(std::vector<ConePoint>& points);
 
-  double QueryLaneWidth(
-      const double s0,
-      const std::vector<std::pair<double, double>>& lane_s_width);
+  // double QueryLaneWidth(
+  //     const double s0,
+  //     const std::vector<std::pair<double, double>>& lane_s_width);
 
-  double QueryLaneMinWidth(
-      std::vector<ConePoint>& cone_points,
-      const std::vector<std::pair<double, double>>& lane_s_width,
-      const double target_s);
+  // double QueryLaneMinWidth(
+  //     std::vector<ConePoint>& cone_points,
+  //     const std::vector<std::pair<double, double>>& lane_s_width,
+  //     const double target_s);
 
-  bool EnableTargetLane(
-    bool is_left, const std::shared_ptr<VirtualLane> seach_lane);
+  bool EnableTargetLane(bool is_left,
+                        const std::shared_ptr<VirtualLane> seach_lane);
 
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;

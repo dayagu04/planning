@@ -15,6 +15,39 @@
 #include "virtual_lane_manager.h"
 
 namespace planning {
+
+struct ConePoint {
+  double x, y;
+  double s, l;
+  double left_dist, right_dist;
+  int32_t id;
+  int cluster;
+  bool visited;
+
+  // Default constructor
+  ConePoint()
+      : x(0.0),
+        y(0.0),
+        s(0.0),
+        l(0.0),
+        left_dist(0.0),
+        right_dist(0.0),
+        id(0),
+        cluster(-1),
+        visited(false) {}
+  // Parameterized constructor
+  ConePoint(int32_t id, double x, double y, double s, double l,
+            double left_dist, double right_dist)
+      : x(x),
+        y(y),
+        s(s),
+        l(l),
+        left_dist(left_dist),
+        right_dist(right_dist),
+        id(id),
+        cluster(-1),
+        visited(false) {}
+};
 /// @brief 换道请求的基类，生成、结束换道请求等
 class LaneChangeRequest {
  public:
@@ -74,6 +107,8 @@ class LaneChangeRequest {
                                  const RequestType& lc_request) const;
   bool EgoInIntersection();
 
+  bool ConeSituationJudgement(const std::shared_ptr<VirtualLane>& target_lane);
+
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
   }
@@ -83,6 +118,32 @@ class LaneChangeRequest {
   virtual IntCancelReasonType lc_request_cancel_reason() {
     return lc_request_cancel_reason_;
   }
+
+  bool ConeDistance(const ConePoint& a, const ConePoint& b, double eps_s,
+                    double eps_l);
+
+  void ExpandCluster(std::vector<ConePoint>& cone_points, int index, int c,
+                     double eps_s, double eps_l, int minPts);
+
+  void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double eps_l,
+              int minPts);
+
+  double CalcClusterToBoundaryDist(const std::vector<ConePoint>& points,
+                                   RequestType direction);
+
+  double QueryLaneWidth(
+      const double s0,
+      const std::vector<std::pair<double, double>>& lane_s_width);
+
+  double QueryLaneMinWidth(
+      std::vector<ConePoint>& cone_points,
+      const std::vector<std::pair<double, double>>& lane_s_width,
+      const double target_s);
+
+  bool GetLaneWidthByCone(const std::shared_ptr<VirtualLane> ego_lane,
+                          const double cone_s, const double cone_l,
+                          bool is_left, double* dist,
+                          std::vector<std::pair<double, double>>& lane_s_width);
 
  protected:
   TrackInfo lc_invalid_track_;
@@ -102,6 +163,12 @@ class LaneChangeRequest {
   std::uint8_t lane_change_cmd_{0};
   bool trigger_lane_change_cancel_{false};
   IntCancelReasonType lc_request_cancel_reason_{NO_CANCEL};
+  std::vector<ConePoint> target_lane_cone_points_;
+  std::map<int, std::vector<ConePoint>> target_lane_cone_cluster_attribute_set_;
+  std::vector<std::pair<double, double>> left_lane_s_width_;  // <s, lane_width>
+  std::vector<std::pair<double, double>>
+      right_lane_s_width_;  // <s, lane_width>
+  std::vector<std::pair<double, double>> origin_lane_s_width_;
 };
 
 }  // namespace planning

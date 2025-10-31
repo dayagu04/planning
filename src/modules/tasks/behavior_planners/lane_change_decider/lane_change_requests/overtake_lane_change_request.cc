@@ -518,7 +518,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const RequestSource lc_request_source = OVERTAKE_REQUEST;
   if (trigger_left_overtake && current_time - tfinish_ >= 3.0 &&
       (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
-    if (request_type_ != LEFT_CHANGE) {
+    if (request_type_ != LEFT_CHANGE && ConeSituationJudgement(llane)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -547,7 +547,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres &&
              current_time - tfinish_ >= 3.0 &&
              (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake)) {
-    if (request_type_ != RIGHT_CHANGE) {
+    if (request_type_ != RIGHT_CHANGE && ConeSituationJudgement(rlane)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -576,13 +576,13 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   } else if (request_type_ != NO_CHANGE &&
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
-    if (request_type_ == LEFT_CHANGE) {
+    if (request_type_ == LEFT_CHANGE && ConeSituationJudgement(llane)) {
       if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent,
                                          true)) {
         last_request_type_ = request_type_;
         return;
       }
-    } else if (request_type_ == RIGHT_CHANGE) {
+    } else if (request_type_ == RIGHT_CHANGE && ConeSituationJudgement(rlane)) {
       if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent,
                                          false)) {
         last_request_type_ = request_type_;
@@ -1604,8 +1604,9 @@ void OvertakeRequest::selectTargetObstacleIds(
       continue;
     }
 
-    const double distance = std::hypot(
-        obs_info->obstacle()->x_center() - ego_state->ego_pose().x, obs_info->obstacle()->y_center() - ego_state->ego_pose().y);
+    const double distance =
+        std::hypot(obs_info->obstacle()->x_center() - ego_state->ego_pose().x,
+                   obs_info->obstacle()->y_center() - ego_state->ego_pose().y);
     if (distance < search_range) {
       target_tracks_ids->emplace_back(id);
     }
