@@ -490,13 +490,15 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   v_cruise_speed_ = v_suggestted_;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
-      v_cruise_speed_ = session_->environmental_model()
-                            .get_route_info()
-                            ->get_sd_map()
-                            .GetNaviRoadInfo()
-                            .value()
-                            .cur_road_speed_limit() /
-                        3.6;
+      const auto navi_road_info = session_->environmental_model()
+                          .get_route_info()
+                          ->get_sd_map()
+                          .GetNaviRoadInfo();
+      if(navi_road_info != std::nullopt){
+        v_cruise_speed_ = navi_road_info.value()
+                              .cur_road_speed_limit() /
+                          3.6;
+      }
     }
   }
   // init sample space
