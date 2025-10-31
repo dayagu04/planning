@@ -3861,7 +3861,7 @@ bool LaneChangeStateMachineManager::
   double max_box_ttc_rear = 4.0;
   std::array<double, 7> xpv{0.0, 5.0,  10., 20.,
                             25., 30.0, 40.};  // 后车 - 自车速度 kph
-  std::array<double, 7> fpv{3.0, 4.0, 6.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
+  std::array<double, 7> fpv{3.0, 4.0, 5.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
@@ -3921,24 +3921,20 @@ bool LaneChangeStateMachineManager::
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
     } else {
+
+      // 后车参考安全距离
       double agent_kph = agent_switch_traj[i].v * 3.6;
-      double dis_buff = interp(agent_kph, xp, fp);  // 后车参考安全距离
+      double dis_buff = interp(agent_kph, xp, fp);
       if (is_large_car) {
         dis_buff += 5.0;  //大车额外增加5m基础距离
       }
-      int speed_times = static_cast<int>(agent_switch_traj[i].v /
-                                         (ego_trajs_future_[i].v + 0.1));
-      speed_times = std::max(speed_times, 1);
-      speed_times = std::min(speed_times, 10);
-      box_ttc =
-          std::max(max_box_ttc_rear - i * 0.2,
-                   std::max(max_box_ttc_rear - i * 0.2, 0.0) * speed_times);
-      // 根据速度差获得ttc 速度阈值
-      // double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
-      // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
-      // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
-      if (is_deceleration_check) {  // 减速轨迹 -> 是否压线了
-        double ego_ttc_s = ego_trajs_future_[i].v * box_ttc;
+      //预测轨迹点车速对应ttc
+      double pred_ttc = interp(3.6 * std::max(0., agent_switch_traj[i].v - ego_trajs_future_[i].v), xpv, fpv); // 后车轨迹差速<->ttc
+      max_box_ttc_rear = std::min(max_box_ttc_rear, pred_ttc);
+      //预测时间衰减性
+      box_ttc = std::max(max_box_ttc_rear - i * 0.2, 0.0);
+      if (is_deceleration_check) {  // 减速轨迹 -> 是否压线
+        double ego_ttc_s = ego_trajs_future_[i].v * box_ttc + 0.5 * ego_trajs_future_[i].a * box_ttc * box_ttc;
         if (is_press_boundary) {
           double agent_vel_i = agent_switch_traj[i].v;
           double back_agent_tts_s =
@@ -3953,10 +3949,7 @@ bool LaneChangeStateMachineManager::
           box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
         }
       } else {  // proposal, hold 阶段
-        // 根据速度差获得ttc 速度阈值
         double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
-        // double dist_rel_vel = std::max(rel_vel * box_ttc, 0.0);
-        // box_longitudinal_buff = std::max(dist_rel_vel, dis_buff);
         double dist_rel_vel =
             (rel_vel > 0) ? rel_vel * box_ttc : -rel_vel * beyond_lane_time;
         box_longitudinal_buff =
@@ -3966,10 +3959,6 @@ bool LaneChangeStateMachineManager::
         box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
       }
     }
-    // if(ego_trajs_future_[i].a < - 1.0){
-    //   std::cout << "deacceleration not safety !!!" << std::endl;
-    //   return false;
-    // }
     // check lon s safety
     double two_car_length = 0;
     // 目前障碍物的前、后边到后轴的距离等于车身长一半
