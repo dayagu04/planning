@@ -34,7 +34,7 @@ class ComfortTarget : public Target {
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;
-    double a_max = 2.0;
+    double b_max = 2.0;
     double b = 1.0;
     double b_hard = 4.0;
     double delta = 4.0;

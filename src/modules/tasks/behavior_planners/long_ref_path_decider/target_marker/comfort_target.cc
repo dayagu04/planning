@@ -473,7 +473,7 @@ double ComfortTarget::CalculateComfortAcceleration(
   double s0 = comfort_params_.s0;
   double v0 = comfort_params_.v0;
   double a = comfort_params_.a;
-  double a_max = comfort_params_.a_max;
+  double b_max = comfort_params_.b_max;
   double b = comfort_params_.b;
   double b_hard = comfort_params_.b_hard;
   double max_accel_jerk = comfort_params_.max_accel_jerk;
@@ -487,7 +487,7 @@ double ComfortTarget::CalculateComfortAcceleration(
 
   double s_star =
       s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
-                                                 (2.0 * std::sqrt(a_max * b)));
+                                                 (2.0 * std::sqrt(a * b_max)));
 
   double s_follow = s0 + zero_acc_vel * tau;
 
