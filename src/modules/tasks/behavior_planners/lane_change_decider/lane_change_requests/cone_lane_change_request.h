@@ -47,7 +47,8 @@ class ConeRequest : public LaneChangeRequest {
   // void ExpandCluster(std::vector<ConePoint>& cone_points, int index, int c,
   //                    double eps_s, double eps_l, int minPts);
 
-  // void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double eps_l,
+  // void DbScan(std::vector<ConePoint>& cone_points, double eps_s, double
+  // eps_l,
   //             int minPts);
 
   // double CalcClusterToBoundaryDist(const std::vector<ConePoint>& points,
@@ -85,8 +86,8 @@ class ConeRequest : public LaneChangeRequest {
   //     const std::vector<std::pair<double, double>>& lane_s_width,
   //     const double target_s);
 
-  bool EnableTargetLane(
-    bool is_left, const std::shared_ptr<VirtualLane> seach_lane);
+  bool EnableTargetLane(bool is_left,
+                        const std::shared_ptr<VirtualLane> seach_lane);
 
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;

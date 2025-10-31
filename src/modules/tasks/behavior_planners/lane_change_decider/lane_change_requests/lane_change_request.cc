@@ -874,13 +874,15 @@ bool LaneChangeRequest::EgoInIntersection() {
   return ego_in_intersection_state;
 }
 
-bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane>& target_lane) {
-  const auto& vehicle_param =
+bool LaneChangeRequest::ConeSituationJudgement(
+    const std::shared_ptr<VirtualLane> &target_lane) {
+  const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const auto& ego_state =
+  const auto &ego_state =
       session_->environmental_model().get_ego_state_manager();
-  const auto& function_info = session_->environmental_model().function_info();
-  const auto& lateral_obstacle = session_->environmental_model().get_lateral_obstacle();
+  const auto &function_info = session_->environmental_model().function_info();
+  const auto &lateral_obstacle =
+      session_->environmental_model().get_lateral_obstacle();
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
   double k_default_ego_pass_buffer = kLatPassThre;
@@ -888,20 +890,21 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
   int right_lane_nums = 0;
 
   if (target_lane == nullptr) {
-    ILOG_DEBUG << "LaneChangeRequest::ConeSituationJudgement() base lane not exist";
+    ILOG_DEBUG
+        << "LaneChangeRequest::ConeSituationJudgement() base lane not exist";
     return false;
   }
-  const auto& rlane =
-      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane->get_virtual_id() + 1);
-  const auto& llane =
-      virtual_lane_mgr_->get_lane_with_virtual_id(target_lane->get_virtual_id() - 1);
+  const auto &rlane = virtual_lane_mgr_->get_lane_with_virtual_id(
+      target_lane->get_virtual_id() + 1);
+  const auto &llane = virtual_lane_mgr_->get_lane_with_virtual_id(
+      target_lane->get_virtual_id() - 1);
 
   std::shared_ptr<ReferencePath> origin_refline =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(target_lane->get_virtual_id(), false);
 
-  const auto& frenet_obstacles_map = origin_refline->get_obstacles_map();
+  const auto &frenet_obstacles_map = origin_refline->get_obstacles_map();
   const auto &base_frenet_coord = origin_refline->get_frenet_coord();
   if (!base_frenet_coord) {
     return false;
@@ -916,9 +919,10 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
   auto lane_nums_msg = target_lane->get_lane_nums();
   auto iter =
       std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
-                  [&ego_frenet_point](const iflyauto::LaneNumMsg& lane_num) {
-                    return lane_num.begin <= ego_frenet_point.x && lane_num.end > ego_frenet_point.x;
-                  });
+                   [&ego_frenet_point](const iflyauto::LaneNumMsg &lane_num) {
+                     return lane_num.begin <= ego_frenet_point.x &&
+                            lane_num.end > ego_frenet_point.x;
+                   });
   if (iter != lane_nums_msg.end()) {
     left_lane_nums = iter->left_lane_num;
     right_lane_nums = iter->right_lane_num;
@@ -942,8 +946,8 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
   target_lane_cone_points_.clear();
   target_lane_cone_cluster_attribute_set_.clear();
 
-  const auto& tracks_map = lateral_obstacle->tracks_map();
-  const auto& front_obstacles_array = lateral_obstacle->front_tracks();
+  const auto &tracks_map = lateral_obstacle->tracks_map();
+  const auto &front_obstacles_array = lateral_obstacle->front_tracks();
   std::vector<std::pair<double, double>> target_lane_s_width;
   for (const auto front_obstacle : front_obstacles_array) {
     int obstacle_id = front_obstacle->id();
@@ -977,12 +981,12 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
         double cone_l = obs_frenet_point.y;
         double dist_to_left_boundary;
         if (!GetLaneWidthByCone(target_lane, cone_s, cone_l, true,
-                                      &dist_to_left_boundary, target_lane_s_width)) {
+                                &dist_to_left_boundary, target_lane_s_width)) {
           return false;
         }
         double dist_to_right_boundary;
         if (!GetLaneWidthByCone(target_lane, cone_s, cone_l, false,
-                                      &dist_to_right_boundary, target_lane_s_width)) {
+                                &dist_to_right_boundary, target_lane_s_width)) {
           return false;
         }
 
@@ -1004,21 +1008,23 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
     DbScan(target_lane_cone_points_, eps_s, eps_l, minPts);
   }
 
-  for (const auto& p : target_lane_cone_points_) {
+  for (const auto &p : target_lane_cone_points_) {
     // 构建相同cluster属性所包含cones的map
     target_lane_cone_cluster_attribute_set_[p.cluster].push_back(p);
   }
 
-  double lane_width = QueryLaneMinWidth(target_lane_cone_points_, target_lane_s_width, ego_frenet_point.x);
-  double pass_threshold_left =
-      vehicle_param.width + k_default_ego_pass_buffer;
-  double pass_threshold_right =
-      vehicle_param.width + k_default_ego_pass_buffer;
-  pass_threshold_left = std::max(pass_threshold_left, lane_width + k_left_cone_occ_lane_line_buffer);
-  pass_threshold_right = std::max(pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
-  for (const auto& cluster_attribute_iter : target_lane_cone_cluster_attribute_set_) {
+  double lane_width = QueryLaneMinWidth(
+      target_lane_cone_points_, target_lane_s_width, ego_frenet_point.x);
+  double pass_threshold_left = vehicle_param.width + k_default_ego_pass_buffer;
+  double pass_threshold_right = vehicle_param.width + k_default_ego_pass_buffer;
+  pass_threshold_left = std::max(pass_threshold_left,
+                                 lane_width + k_left_cone_occ_lane_line_buffer);
+  pass_threshold_right = std::max(
+      pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
+  for (const auto &cluster_attribute_iter :
+       target_lane_cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
-    const std::vector<ConePoint>& points = cluster_attribute_iter.second;
+    const std::vector<ConePoint> &points = cluster_attribute_iter.second;
     double min_left_l, min_right_l;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
@@ -1029,7 +1035,8 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
                << ", pass_threshold_right is:" << pass_threshold_right;
 
     // judge if to trigger cone lc
-    if ((min_left_l < pass_threshold_left && min_right_l < pass_threshold_right) ||
+    if ((min_left_l < pass_threshold_left &&
+         min_right_l < pass_threshold_right) ||
         (!llane && min_right_l < pass_threshold_right && points.size() >= 5) ||
         (!rlane && min_left_l < pass_threshold_left && points.size() >= 5)) {
       return false;
@@ -1041,7 +1048,8 @@ bool LaneChangeRequest::ConeSituationJudgement(const std::shared_ptr<VirtualLane
 
 bool LaneChangeRequest::GetLaneWidthByCone(
     const std::shared_ptr<VirtualLane> base_lane, const double cone_s,
-    const double cone_l, bool is_left, double* dist, std::vector<std::pair<double, double>>& lane_s_width) {
+    const double cone_l, bool is_left, double *dist,
+    std::vector<std::pair<double, double>> &lane_s_width) {
   if (base_lane == nullptr) {
     return false;
   }
@@ -1056,10 +1064,10 @@ bool LaneChangeRequest::GetLaneWidthByCone(
     lane_s_width.clear();
     lane_s_width.reserve(origin_refline->get_points().size());
     for (auto i = 0; i < origin_refline->get_points().size(); i++) {
-      const ReferencePathPoint& ref_path_point =
+      const ReferencePathPoint &ref_path_point =
           origin_refline->get_points()[i];
-      lane_s_width.emplace_back(std::make_pair(
-          ref_path_point.path_point.s(), ref_path_point.lane_width));
+      lane_s_width.emplace_back(std::make_pair(ref_path_point.path_point.s(),
+                                               ref_path_point.lane_width));
     }
     origin_lane_width = QueryLaneWidth(cone_s, lane_s_width);
   }
@@ -1084,12 +1092,12 @@ bool LaneChangeRequest::GetLaneWidthByCone(
 
 double LaneChangeRequest::QueryLaneWidth(
     const double s0,
-    const std::vector<std::pair<double, double>>& lane_s_width) {
-  auto comp = [](const std::pair<double, double>& s_width, const double s) {
+    const std::vector<std::pair<double, double>> &lane_s_width) {
+  auto comp = [](const std::pair<double, double> &s_width, const double s) {
     return s_width.first < s;
   };
   double lane_width;
-  const auto& first_pair_on_lane =
+  const auto &first_pair_on_lane =
       std::lower_bound(lane_s_width.begin(), lane_s_width.end(), s0, comp);
 
   if (first_pair_on_lane == lane_s_width.begin()) {
@@ -1105,16 +1113,16 @@ double LaneChangeRequest::QueryLaneWidth(
 }
 
 double LaneChangeRequest::QueryLaneMinWidth(
-    std::vector<ConePoint>& cone_points,
-    const std::vector<std::pair<double, double>>& lane_s_width,
+    std::vector<ConePoint> &cone_points,
+    const std::vector<std::pair<double, double>> &lane_s_width,
     const double target_s) {
-  const auto& function_info = session_->environmental_model().function_info();
+  const auto &function_info = session_->environmental_model().function_info();
   double max_lane_width = 2.65;
   double lane_width = 2.5;
   const double k_default_lane_width = 2.5;
   int cone_nums = 0;
   if (!cone_points.empty()) {
-    for (const auto& cone : cone_points) {
+    for (const auto &cone : cone_points) {
       if (cone.s < target_s) {
         continue;
       }
@@ -1125,7 +1133,8 @@ double LaneChangeRequest::QueryLaneMinWidth(
       }
     }
 
-    if (cone_nums >= 5 && function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    if (cone_nums >= 5 &&
+        function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
       return max_lane_width;
     } else {
       return k_default_lane_width;
@@ -1135,8 +1144,8 @@ double LaneChangeRequest::QueryLaneMinWidth(
   return lane_width;
 }
 
-void LaneChangeRequest::DbScan(std::vector<ConePoint>& cone_points, double eps_s,
-                         double eps_l, int minPts) {
+void LaneChangeRequest::DbScan(std::vector<ConePoint> &cone_points,
+                               double eps_s, double eps_l, int minPts) {
   int c = 0;  // cluster index
 
   for (size_t index = 0; index < cone_points.size(); ++index) {
@@ -1148,13 +1157,14 @@ void LaneChangeRequest::DbScan(std::vector<ConePoint>& cone_points, double eps_s
   }
 }
 
-bool LaneChangeRequest::ConeDistance(const ConePoint& a, const ConePoint& b,
-                               double eps_s, double eps_l) {
+bool LaneChangeRequest::ConeDistance(const ConePoint &a, const ConePoint &b,
+                                     double eps_s, double eps_l) {
   return std::abs(a.s - b.s) < eps_s && std::abs(a.l - b.l) < eps_l;
 }
 
-void LaneChangeRequest::ExpandCluster(std::vector<ConePoint>& cone_points, int index,
-                                int c, double eps_s, double eps_l, int minPts) {
+void LaneChangeRequest::ExpandCluster(std::vector<ConePoint> &cone_points,
+                                      int index, int c, double eps_s,
+                                      double eps_l, int minPts) {
   std::vector<int> neighborPts;
 
   for (size_t i = 0; i < cone_points.size(); ++i) {
@@ -1174,8 +1184,8 @@ void LaneChangeRequest::ExpandCluster(std::vector<ConePoint>& cone_points, int i
   cone_points[index].cluster = c;
 
   // Check all neighbours for being part of the cluster
-  for (auto& neighborPt : neighborPts) {
-    ConePoint& p_neighbor = cone_points[neighborPt];
+  for (auto &neighborPt : neighborPts) {
+    ConePoint &p_neighbor = cone_points[neighborPt];
     if (!p_neighbor.visited) {
       // Recursively expand the cluster
       ExpandCluster(cone_points, neighborPt, c, eps_s, eps_l, minPts);
@@ -1184,10 +1194,10 @@ void LaneChangeRequest::ExpandCluster(std::vector<ConePoint>& cone_points, int i
 }
 
 double LaneChangeRequest::CalcClusterToBoundaryDist(
-    const std::vector<ConePoint>& points, RequestType direction) {
+    const std::vector<ConePoint> &points, RequestType direction) {
   double left_l = std::abs(points[0].left_dist);
   double right_l = std::abs(points[0].right_dist);
-  for (const auto& p : points) {
+  for (const auto &p : points) {
     left_l = std::min(std::abs(p.left_dist), left_l);
     right_l = std::min(std::abs(p.right_dist), right_l);
   }

@@ -1604,8 +1604,9 @@ void OvertakeRequest::selectTargetObstacleIds(
       continue;
     }
 
-    const double distance = std::hypot(
-        obs_info->obstacle()->x_center() - ego_state->ego_pose().x, obs_info->obstacle()->y_center() - ego_state->ego_pose().y);
+    const double distance =
+        std::hypot(obs_info->obstacle()->x_center() - ego_state->ego_pose().x,
+                   obs_info->obstacle()->y_center() - ego_state->ego_pose().y);
     if (distance < search_range) {
       target_tracks_ids->emplace_back(id);
     }

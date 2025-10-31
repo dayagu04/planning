@@ -124,12 +124,12 @@ void EmergenceAvoidRequest::Update(int lc_status) {
     }
     if (request_type_ != NO_CHANGE &&
         (lc_status == kLaneChangeCancel &&
-          (lane_change_lane_mgr_->has_origin_lane() &&
+         (lane_change_lane_mgr_->has_origin_lane() &&
           lane_change_lane_mgr_->is_ego_on(olane)))) {
       Finish();
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
-                  << __LINE__ << " finish request, dash not enough";
+                 << __LINE__ << " finish request, dash not enough";
     }
     if (trigger_lane_change_cancel_) {
       lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
@@ -150,12 +150,12 @@ void EmergenceAvoidRequest::Update(int lc_status) {
     }
     if (request_type_ != NO_CHANGE &&
         (lc_status == kLaneChangeCancel &&
-          (lane_change_lane_mgr_->has_origin_lane() &&
+         (lane_change_lane_mgr_->has_origin_lane() &&
           lane_change_lane_mgr_->is_ego_on(olane)))) {
       Finish();
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
       ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
-                  << __LINE__ << " finish request, dash not enough";
+                 << __LINE__ << " finish request, dash not enough";
     }
     if (trigger_lane_change_cancel_) {
       lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
@@ -166,12 +166,12 @@ void EmergenceAvoidRequest::Update(int lc_status) {
   } else {
     if (request_type_ != NO_CHANGE &&
         (lane_change_lane_mgr_->has_origin_lane() &&
-        lane_change_lane_mgr_->is_ego_on(olane))) {
-    Finish();
-    set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-    ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
-              << __LINE__
-              << " !trigger_left_overtake and !trigger_right_overtake";
+         lane_change_lane_mgr_->is_ego_on(olane))) {
+      Finish();
+      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+      ILOG_DEBUG << "[EmergenceAvoidRequest::update] " << __FUNCTION__ << ":"
+                 << __LINE__
+                 << " !trigger_left_overtake and !trigger_right_overtake";
     }
   }
 
@@ -216,9 +216,10 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   auto lane_nums_msg = base_lane->get_lane_nums();
   auto iter =
       std::find_if(lane_nums_msg.begin(), lane_nums_msg.end(),
-                  [&ego_frenet_point](const iflyauto::LaneNumMsg& lane_num) {
-                    return lane_num.begin <= ego_frenet_point.x && lane_num.end > ego_frenet_point.x;
-                  });
+                   [&ego_frenet_point](const iflyauto::LaneNumMsg& lane_num) {
+                     return lane_num.begin <= ego_frenet_point.x &&
+                            lane_num.end > ego_frenet_point.x;
+                   });
   if (iter != lane_nums_msg.end()) {
     left_lane_nums_ = iter->left_lane_num;
     right_lane_nums_ = iter->right_lane_num;

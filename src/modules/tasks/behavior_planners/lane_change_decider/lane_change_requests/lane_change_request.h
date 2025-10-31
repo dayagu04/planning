@@ -108,7 +108,7 @@ class LaneChangeRequest {
   bool EgoInIntersection();
 
   bool ConeSituationJudgement(const std::shared_ptr<VirtualLane>& target_lane);
-  
+
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
   }
@@ -141,8 +141,9 @@ class LaneChangeRequest {
       const double target_s);
 
   bool GetLaneWidthByCone(const std::shared_ptr<VirtualLane> ego_lane,
-                                const double cone_s, const double cone_l,
-                                bool is_left, double* dist, std::vector<std::pair<double, double>>& lane_s_width);
+                          const double cone_s, const double cone_l,
+                          bool is_left, double* dist,
+                          std::vector<std::pair<double, double>>& lane_s_width);
 
  protected:
   TrackInfo lc_invalid_track_;
