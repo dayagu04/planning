@@ -2322,14 +2322,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     if (agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
       continue; // 车头落后自车就是后车
     }
-    const double target_lane_width = target_lane->width_by_s(agent_s);
-    const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
-    const auto &agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
-    bool pass_in_lane =
-        PassInLane(target_lane_width, agent_bd, car_width, 1.0, direction);
-    if (pass_in_lane && !target_lane_node->is_agent_most_within_lane()) {
-      continue; //前者针对大型车压线，后者针对小vru靠边
-    }
+    //逆向车
     const auto &agent_trajs =
         target_lane_node->node_trajectories_used_by_st_graph();
     if (agent_trajs.empty()) {
@@ -2337,6 +2330,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     }
     const auto &traj =
         target_lane_node->node_trajectories_used_by_st_graph()[0];
+    int mid_index = std::max(static_cast<int>(traj.size() / 2), 0);
     const auto &target_lane_coord = ref_path->get_frenet_coord();
     if (traj.empty() || target_lane_coord == nullptr) {
       continue;
@@ -2347,6 +2341,12 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
                                    &l_start)) {
       continue;
     }
+    double s_mid = 0.0;
+    double l_mid = 0.0;
+    if (!target_lane_coord->XYToSL(traj[mid_index].x(), traj[mid_index].y(), &s_mid,
+                                   &l_mid)) {
+      continue;
+    }
     double s_end = 0.0;
     double l_end = 0.0;
     if (!target_lane_coord->XYToSL(traj.back().x(), traj.back().y(), &s_end,
@@ -2355,6 +2355,45 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     }
     if (s_end < s_start) {
       continue;
+    }
+    // 静态-动态： cut in - no cut in
+    // 创建agent 3个 box 对应的 sl_bd
+    const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
+    // Vec2d agent_mid_rac(traj[mid_index].x(), traj[mid_index].y());
+    // double agent_mid_theta = traj[mid_index].theta();
+    // planning_math::Box2d agent_mid_box(agent_mid_rac, agent_mid_theta, target_lane_node->node_length(),
+    //                                target_lane_node->node_width());
+    
+    // Vec2d agent_end_rac(traj.back().x(), traj.back().y());
+    // double agent_end_theta = traj.back().theta();
+    // planning_math::Box2d agent_end_box(agent_end_rac, agent_end_theta, target_lane_node->node_length(),
+    //                               target_lane_node->node_width());    
+
+    const auto &agent_start_bd = GetSLboundaryFromAgent(ref_path, agent->box());
+    // const auto &agent_mid_bd = GetSLboundaryFromAgent(ref_path, agent_mid_box);
+    // const auto &agent_end_bd = GetSLboundaryFromAgent(ref_path, agent_end_box);
+     // 横向距离变小，预测是保守的，这里用或  ; 能绑定说明预测轨迹进来了。
+    bool is_lat_closing = (std::fabs(l_end) - std::fabs(l_mid) < - 0.5 
+                        || std::fabs(l_mid) - std::fabs(l_start) < - 0.5);
+
+    const double target_lane_width = target_lane->width_by_s(agent_s);
+    double safety_buff = 0.8;
+    if(target_lane_node->is_static_type()){// 静止
+      safety_buff = 0.7;
+      bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd, car_width, safety_buff, direction);
+      if(pass_in_lane){
+        continue;
+      }
+    }else if(!is_lat_closing){//正常直行
+      safety_buff = 1.0;
+      bool pass_in_lane =   PassInLane(target_lane_width, agent_start_bd, car_width, safety_buff, direction);
+      if (pass_in_lane && !target_lane_node->is_agent_most_within_lane()) {
+        continue; //前者针对大型车压线，后者针对小vru靠边
+      }
+    }else{ // cutin 趋势
+      if(!target_lane_node->is_agent_within_lane()){
+        continue; // 不压线先过滤了
+      }
     }
     if (agent_s < target_front_s) {
       target_front_node_id = target_lane_node->node_id();
