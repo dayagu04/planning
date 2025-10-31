@@ -280,6 +280,8 @@ void SpatioTemporalPlanner::UpdateIntersection() {
   bool current_intersection_state =
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
       distance_to_stopline <= kDistanceThresholdApproachToStopline;
+  bool is_small_intersection = false;
+  //bool is_small_intersection = tfl_decider.is_small_front_intersection;
   // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
   if (current_intersection_state) {
     intersection_count_ = kEgoInIntersectionCount;
@@ -288,7 +290,7 @@ void SpatioTemporalPlanner::UpdateIntersection() {
   }
 
   ego_in_intersection_state_ =
-      intersection_count_ > 0;
+      intersection_count_ > 0 && !is_small_intersection;
   return;
 }
 
