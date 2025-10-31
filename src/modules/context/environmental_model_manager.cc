@@ -471,7 +471,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   if (session_->environmental_model().location_valid()) {
     std::unordered_set<uint> prediction_obj_id_set;
     auto timestamp = local_view.localization.meta.timestamp;
-    if (!session_->is_hpp_scene()) {
+    if (!session_->is_hpp_scene() && !session_->is_rads_scene()) {
       truncate_prediction_info(local_view.prediction_result,
                                local_view.fusion_objects_info, timestamp,
                                prediction_obj_id_set);
