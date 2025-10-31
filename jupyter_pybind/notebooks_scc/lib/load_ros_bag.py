@@ -748,7 +748,7 @@ class LoadRosbag:
                          'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'agent_box_corners_x', 'agent_box_corners_y', 'ego_box_corners_x', 'ego_box_corners_y', 'lat_path_v',
                          'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
                          'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
-                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids']
+                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec"]
 
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\

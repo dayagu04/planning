@@ -238,7 +238,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "construction_strong_deceleration_mode", "construction_strong_mode_reason","construction_strong_mode_frame_count","agents_headway_id", "agents_headway_value",\
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\
-                              "lat_path_length", "extend_path_length", \
+                              "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec",\
 
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
@@ -725,6 +725,23 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   jerk_max_vec = lon_motion_plan_input.jerk_max_vec
   jerk_min_vec = lon_motion_plan_input.jerk_min_vec
   s_stop = lon_motion_plan_input.s_stop
+  
+  comfort_jerk_min_vec = []
+  comfort_v_target_vec = []
+  zero_acc_vel_vec = []
+  zero_acc_acc_vec = []
+  try:
+    comfort_jerk_min_vec = plan_debug_json_info['comfort_jerk_min_vec']
+    comfort_v_target_vec = plan_debug_json_info['comfort_v_target_vec']
+    zero_acc_vel_vec = plan_debug_json_info['zero_acc_vel_vec']
+    zero_acc_acc_vec = plan_debug_json_info['zero_acc_acc_vec']
+  except Exception as e:
+    print(f"Error getting comfort data: {e}")
+    time_length = len(time_vec)
+    comfort_jerk_min_vec = [0.0] * time_length
+    comfort_v_target_vec = [0.0] * time_length
+    zero_acc_vel_vec = [0.0] * time_length
+    zero_acc_acc_vec = [0.0] * time_length
 
   # time_vec = []
   # for i in range(len(ref_pos_vec)):
@@ -778,6 +795,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'vel_vec': vel_vec,
     'acc_vec': acc_vec,
     'jerk_vec': jerk_vec,
+    'comfort_jerk_min_vec': comfort_jerk_min_vec,
+    'comfort_v_target_vec': comfort_v_target_vec,
+    'zero_acc_vel_vec': zero_acc_vel_vec,
+    'zero_acc_acc_vec': zero_acc_acc_vec,
   })
 
    #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -1323,10 +1344,12 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                   'acc_min_vec':[],
                                                   'jerk_max_vec':[],
                                                   'jerk_min_vec':[],
-                                                  'pos_vec':[],
-                                                  'vel_vec':[],
-                                                  'acc_vec':[],
-                                                  'jerk_vec':[],
+                                                  'pos_vec': [],
+                                                  'vel_vec': [],
+                                                  'acc_vec': [],
+                                                  'jerk_vec': [],
+                                                  'zero_acc_vel_vec': [],
+                                                  'zero_acc_acc_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1554,6 +1577,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig5.line('t_comfort_target', 'v_comfort_target', source = data_target_s_comfort, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'v_comfort_target')
   fig5.line('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'v_upper_bound')
   fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
+  fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'comfort_target_vel')
+  fig5.line('time_vec', 'zero_acc_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'cyan', line_dash = 'dotted', legend_label = 'zero_acc_vel')
 
   # acc
   f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
@@ -1564,6 +1589,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
   fig6.inverted_triangle ('time_vec', 'acc_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_ub')
+  fig6.line('time_vec', 'zero_acc_acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'coral', line_dash = 'dotted', legend_label = 'zero_acc_acc')
 
   # jerk
   f7 = fig7.line('time_vec', 'jerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'j_plan')
@@ -1571,6 +1597,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.triangle ('time_vec', 'jerk_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_lb')
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
+  fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'comfort_min_jerk')
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
