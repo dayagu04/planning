@@ -52,6 +52,7 @@ enum SplitDirection {
   SPLIT_NONE = 0,
   SPLIT_LEFT = 1,
   SPLIT_RIGHT = 2,
+  SPLIT_MIDDLE = 3,
 };
 
 // 拥堵等级枚举
@@ -250,6 +251,7 @@ struct RouteInfoOutput {
   bool is_nearing_ramp = false;
   bool is_ego_on_split_region = false;
   bool is_find_exc_fp = false;
+  bool is_miss_split_point = false;
   double dis_to_ramp = NL_NMAX;
   double distance_to_first_road_merge = NL_NMAX;
   double distance_to_first_road_split = NL_NMAX;
@@ -352,6 +354,7 @@ struct RouteInfoOutput {
     minVal_seq = 0;
     maxVal_seq = 0;
     is_find_exc_fp = false;
+    is_miss_split_point = false;
     // for hpp
     is_on_hpp_lane = false;
     is_reached_hpp_start_point = false;

@@ -9,6 +9,7 @@
 #include "sdmap/sdmap.h"
 #include "sdpromap/sdpromap.h"
 #include "session.h"
+#include "vec2d.h"
 #include "virtual_lane.h"
 
 namespace planning {
@@ -73,6 +74,10 @@ class RouteInfo {
   const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
   std::string last_path_id_;
   bool last_path_id_is_set_ = false;
+  bool last_frame_is_process_split_{false};
+  bool is_need_judge_miss_split_ = false;
+  ad_common::math::Vec2d split_point_{0, 0};
+  uint64 split_link_id_ = 1;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;
@@ -138,7 +143,8 @@ class RouteInfo {
   void UpdateRouteInfoForNOA(const ad_common::sdpromap::SDProMap& sdpromap);
   bool UpdateSdProMap(const LocalView& local_view);
   const iflymapdata::sdpro::LinkInfo_Link* UpdateEgoLinkInfo(
-      const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s);
+      const ad_common::sdpromap::SDProMap& sdpro_map, double* nearest_s,
+      double* nearest_l);
   void CaculateRampInfo(const ad_common::sdpromap::SDProMap& sdpromap,
                         const iflymapdata::sdpro::LinkInfo_Link& segment,
                         const double nearest_s, const double max_search_length);
@@ -213,6 +219,8 @@ class RouteInfo {
   bool CalculateLastFPInCurrentLink(
       iflymapdata::sdpro::FeaturePoint* find_fp,
       const iflymapdata::sdpro::LinkInfo_Link* const cur_link, const double s);
+  bool IsMissSplitPoint(const iflymapdata::sdpro::LinkInfo_Link& segment,
+                        const double l, const double s);
 
   bool IsTriggerContinueLCInPerceptionSplitRegion(
       const int left_lane_num, const int right_lane_num) const;
@@ -288,6 +296,10 @@ class RouteInfo {
     }
     return angle;
   }
+
+  double DistanceToLine(const planning_math::Vec2d& point,
+                      const planning_math::Vec2d& segment_start,
+                      const planning_math::Vec2d& segment_end);
 
   // 正确排序跨越π的射线
   std::vector<char> SortRaysByDirection(const std::vector<RayInfo>& rays);
