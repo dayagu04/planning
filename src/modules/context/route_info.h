@@ -19,6 +19,18 @@ struct SplitSegInfo {
   int split_next_seg_forward_lane_nums;
 };
 
+struct MLCRequestType {
+  int lane_num;
+  EgoMLCRequestType mlc_request_type;
+  SplitDirection split_direction;
+
+  void reset() {
+    lane_num = -1;
+    mlc_request_type = None_MLC;
+    split_direction = SPLIT_NONE;
+  }
+};
+
 class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
@@ -56,7 +68,7 @@ class RouteInfo {
   const planning::framework::Session* session_ = nullptr;
   EgoPlanningConfig config_;
   MLCDeciderConfig mlc_decider_config_;
-  std::map<int, EgoMLCRequestType> mlc_request_info_;
+  std::vector<MLCRequestType> mlc_request_info_;
   RouteInfoOutput route_info_output_;
 
   // for NOA variables
@@ -196,7 +208,7 @@ class RouteInfo {
                                   double>>& split_info_vec,
       const double ego_dis_to_merge);
 
-  bool CalculateMergeLaneInfo(std::vector<int>& merge_lane_sequence);
+  bool CalculateMergeLaneInfo(std::map<int, SplitDirection>& merge_lane_sequence);
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp,
                        iflymapdata::sdpro::LinkInfo_Link* last_fp_link,
                        const uint64 fp_link_id,
