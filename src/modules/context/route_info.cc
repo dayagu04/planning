@@ -1722,73 +1722,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   JSON_DEBUG_VALUE("lsl_length", lsl_length)
   route_info_output_.lsl_length = lsl_length;
 
-  const bool is_near_split =
-      !split_region_info_list.empty() &&
-      split_region_info_list[0].distance_to_split_point <
-          mlc_decider_config_
-                  .default_pre_triggle_road_to_ramp_distance_threshold_value +
-              lsl_length;
-
-  bool is_near_merge = false;
-  if (!merge_region_info_list.empty()) {
-    if (merge_region_info_list[0].is_other_merge_to_road) {
-      if (merge_region_info_list[0].distance_to_split_point < 500) {
-        is_near_merge = true;
-      }
-    } else {
-      if (merge_region_info_list[0].distance_to_split_point <
-          mlc_decider_config_
-              .default_pre_triggle_merge_to_road_distance_threshold_value) {
-        is_near_merge = true;
-      }
-    }
-  }
-
-  const int split_num = 2;
-  double solid_line_length_between_two_splits = 0;
-  double solid_line_length_between_other_merge_split = 0;
-
-  // 计算other_merge_split之间实线长度
-  if (!merge_region_info_list.empty() && !split_region_info_list.empty() &&
-      split_region_info_list[0].is_valid &&
-      merge_region_info_list[0].is_other_merge_to_road &&
-      split_region_info_list[0].distance_to_split_point -
-              merge_region_info_list[0].distance_to_split_point >
-          0) {
-    double distance_between_other_merge_split =
-        split_region_info_list[0].distance_to_split_point -
-        merge_region_info_list[0].distance_to_split_point;
-    solid_line_length_between_other_merge_split =
-        LengthSolidLineJudge(split_region_info_list[0].start_fp_point.link_id,
-                             split_region_info_list[0].start_fp_point.fp,
-                             distance_between_other_merge_split);
-  }
-  // 计算两个split之间实线长度
-  if (route_info_output_.split_region_info_list.size() >= split_num &&
-      split_region_info_list[0].is_valid &&
-      split_region_info_list[1].is_valid) {
-    const auto second_region_start_fp =
-        split_region_info_list[1].start_fp_point;
-    double distance_between_two_splits =
-        split_region_info_list[1].distance_to_split_point -
-        split_region_info_list[0].distance_to_split_point;
-    solid_line_length_between_two_splits = LengthSolidLineJudge(
-        second_region_start_fp.link_id, second_region_start_fp.fp,
-        distance_between_two_splits);
-  }
-  const bool is_two_splits_close =
-      !split_region_info_list.empty() &&
-      route_info_output_.split_region_info_list.size() >= split_num &&
-      (route_info_output_.split_region_info_list[1].distance_to_split_point -
-           route_info_output_.split_region_info_list[0]
-               .distance_to_split_point -
-           route_info_output_.split_region_info_list[0]
-               .end_fp_point.fp_distance_to_split_point +
-           route_info_output_.split_region_info_list[1]
-               .start_fp_point.fp_distance_to_split_point <
-       mlc_decider_config_.split_split_gap_threshold +
-           solid_line_length_between_two_splits);
-
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
 
@@ -5459,7 +5392,19 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
 
   auto& feasible_lane_sequence =
       exchange_region_info.recommend_lane_num[0].feasible_lane_sequence;
-
+  // 判断是不是下匝道的exchange，是则需要考虑长实线
+  double lsl_length = 0;
+  if (exchange_region_info.split_direction == SPLIT_RIGHT &&
+      exchange_region_info.recommend_lane_num[4].total_lane_num >
+          exchange_region_info.recommend_lane_num[3].total_lane_num) {
+    if (exchange_region_info.is_valid) {
+      const auto start_fp = exchange_region_info.start_fp_point;
+      lsl_length =
+          LengthSolidLineJudge(start_fp.link_id, start_fp.fp,
+                               exchange_region_info.distance_to_split_point);
+    }
+  }
+  max_distance = std::max(0.0, max_distance - lsl_length);
   if (exchange_region_info.split_direction == SPLIT_RIGHT) {
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
@@ -5524,59 +5469,5 @@ std::vector<int> RouteInfo::GetIntersection(const std::vector<int>& vec1,
   }
 
   return result;
-}
-std::vector<SolidLineInfo> RouteInfo::CalculateSolidLineAhead(
-    std::vector<NOASplitRegionInfo> exchange_region_info_list) {
-  std::vector<SolidLineInfo> solid_line_info_list;
-
-  // 1. 搜索ego前一个fp
-  const auto& current_link = current_link_;
-  bool is_found_last_fp = false;
-  iflymapdata::sdpro::FeaturePoint last_feature_point;
-  while (!is_found_last_fp) {
-    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
-    if (!current_link->feature_points().empty()) {
-      for (const auto& fp : current_link->feature_points()) {
-        fp_vec.emplace_back(fp);
-      }
-    }
-    std::sort(fp_vec.begin(), fp_vec.end(),
-              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
-                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
-                return fp_a.projection_percent() < fp_b.projection_percent();
-              });
-    for (int i = current_link->feature_points_size() - 1; i >= 0; i--) {
-      const auto cur_fp = fp_vec[i];
-      if (current_link->lane_ids() != current_link_->lane_ids() ||
-          cur_fp.projection_percent() * current_link->length() * 0.01 <
-              route_info_output_.current_segment_passed_distance) {
-        last_feature_point = cur_fp;
-        is_found_last_fp = true;
-      }
-    }
-    current_link = sdpro_map_.GetPreviousLinkOnRoute(current_link->id());
-    if (current_link == nullptr) {
-      break;
-    }
-  }
-
-  // 2. 根据前一个fp来判断自车处在虚线阶段还是实线阶段
-  bool is_ego_boundary_solid = false;
-  if (is_found_last_fp) {
-    for (const auto& lane_id : last_feature_point.lane_ids()) {
-      if (IsSolidBoundary(lane_id)) {
-        const auto& lane = sdpro_map_.GetLaneInfoByID(lane_id);
-        if (lane == nullptr || lane->sequence() == EmergencyLaneNum(last_feature_point) + 1) {
-          is_ego_boundary_solid = false;
-        } else {
-          is_ego_boundary_solid = true;
-        }
-      }
-    }
-  } else {
-    
-  }
-
-  // 3. 找到前方3km或下匝道的link，判断其上最后一个fp虚实线情况
 }
 }  // namespace planning

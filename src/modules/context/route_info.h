@@ -368,7 +368,5 @@ class RouteInfo {
       std::map<int, double>& feasible_lane_distance, double max_distance);
   std::vector<int> GetIntersection(const std::vector<int>& vec1,
                                    const std::vector<int>& vec2);
-  std::vector<SolidLineInfo> CalculateSolidLineAhead(
-      std::vector<NOASplitRegionInfo> exchange_region_info_list);
 };
 }  // namespace planning
