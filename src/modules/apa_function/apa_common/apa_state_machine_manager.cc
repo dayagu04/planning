@@ -111,7 +111,9 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
     case iflyauto::FunctionalState_HPP_PARKING_IN:
       if (fun_state_machine_info.parking_req.apa_work_mode ==
-          iflyauto::APA_WORK_MODE_PARKING_IN) {
+              iflyauto::APA_WORK_MODE_PARKING_IN ||
+          fun_state_machine_info.parking_req.apa_work_mode ==
+              iflyauto::APA_WORK_MODEE_SAPA) {
         if (fun_state_machine_info.parking_req.apa_free_slot_info
                 .is_free_slot_selected ==
             iflyauto::FreeSlotSelectedStatus::
