@@ -126,19 +126,27 @@ bool CruiseTarget::MakeKinematicsBound(
     case SpeedLimitType::VRU_ROUND:
     case SpeedLimitType::MERGE_ALC:
     case SpeedLimitType::MAP_NEAR_RAMP:
+      kinematic_param = config_.map_near_ramp_kinematic_param;
+      break;
     case SpeedLimitType::MAP_ON_RAMP:
+      kinematic_param = config_.map_near_ramp_kinematic_param;
+      break;
     case SpeedLimitType::INTERSECTION:
     case SpeedLimitType::NEAR_TFL:
     case SpeedLimitType::LANE_BORROW:
+      break;
     case SpeedLimitType::AVOID_AGENT:
       kinematic_param = config_.avoid_agent_kinematic_param;
+      break;
     case SpeedLimitType::DANGEROUS_OBSTACLE:
       kinematic_param = config_.comfort_kinematic_param;
       break;
     case SpeedLimitType::NEAR_POI:
       kinematic_param = config_.near_poi_kinematic_param;
+      break;
     case SpeedLimitType::NEAR_CONSTRUCTION:
       kinematic_param = config_.construction_kinematic_param;
+      break;
     case SpeedLimitType::ON_CONSTRUCTION:
       kinematic_param = config_.construction_kinematic_param;
       break;
@@ -154,7 +162,7 @@ bool CruiseTarget::MakeKinematicsBound(
   can_increase_acc = determined_cruise_acc_bound > (1.0 - kEpsilon) ? true : false;
   if (can_increase_acc) {
     kinematic_bound->acc_positive_mps2 = planning_math::LerpWithLimit(
-      kinematic_param.acc_positive_upper, 
+      kinematic_param.acc_positive_upper,
       kinematic_param.acc_positive_speed_lower,
       0.3, 27.8, ego_speed);
 

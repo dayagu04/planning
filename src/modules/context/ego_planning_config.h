@@ -5011,6 +5011,71 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "near_poi_kinematic_param", "jerk_negative_speed_upper");
     }
 
+    // map_near_ramp_kinematic_param
+    {
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_positive_upper");
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_speed_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_positive_speed_lower");
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_positive_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_positive_speed_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_positive_speed_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_negative_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_speed_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_negative_speed_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_negative_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.acc_negative_speed_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "acc_negative_speed_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_positive_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_speed_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_positive_speed_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_positive_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_positive_speed_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_positive_speed_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_negative_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_speed_lower,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_negative_speed_lower");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_negative_upper");
+
+        ReadItem<double>(json, map_near_ramp_kinematic_param.jerk_negative_speed_upper,
+                         "speed_planning", "cruise_target",
+                         "map_near_ramp_kinematic_param", "jerk_negative_speed_upper");
+      }
+
     //  kappa_speed_limit_table
     {
       read_json_vec(json,
@@ -5290,6 +5355,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
   KinematicParam kappa_kinematic_param;
   KinematicParam avoid_agent_kinematic_param;
   KinematicParam near_poi_kinematic_param;
+  KinematicParam map_near_ramp_kinematic_param;
   KinematicParam construction_kinematic_param;
 
   SpeedPlanningBound speed_planning_bound;
