@@ -1933,7 +1933,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           int avoide_lane_num = -1;
           bool is_need_cancel_avoide_mlc = false;
           if (is_two_exchange_close) {
-            for (int n = 0; mlc_request_info_list[i].first.size(); n++) {
+            for (int n = 0; n < mlc_request_info_list[i].first.size(); n++) {
               if (mlc_request_info_list[i].first[n].mlc_request_type ==
                       AVOIDE_MERGE ||
                   mlc_request_info_list[i].first[n].mlc_request_type ==
