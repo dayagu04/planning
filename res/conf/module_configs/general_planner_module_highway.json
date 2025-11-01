@@ -1189,11 +1189,11 @@
     },
     "follow_target": {
       "acc_cipv": -1.0,
-      "lower_speed_min_follow_distance_gap" : 4.0,
-      "high_speed_min_follow_distance_gap" : 5.0,
+      "lower_speed_min_follow_distance_gap" : 3.0,
+      "high_speed_min_follow_distance_gap" : 4.0,
       "low_speed_threshold_kmph" : 18.0,
       "high_speed_threshold_kmph" : 30.0,
-      "large_vehicle_min_follow_distance_gap" : 6.0,
+      "large_vehicle_min_follow_distance_gap" : 5.0,
       "cone_min_follow_distance_gap" : 5.0,
       "traffic_light_min_follow_distance_gap" : 2.0
     }

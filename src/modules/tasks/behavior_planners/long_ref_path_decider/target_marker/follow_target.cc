@@ -129,7 +129,8 @@ void FollowTarget::MakeMinFollowDistance() {
   const double traffic_light_min_follow_distance_gap =
       config_.traffic_light_min_follow_distance_gap;
   if (cipv_info_.agent_id != -1 && cipv_info_.is_large_vehicle) {
-    min_follow_distance_lower = large_vehicle_min_follow_distance;
+    min_follow_distance_m_ = large_vehicle_min_follow_distance;
+    return;
   }
   if (cipv_info_.agent_id != -1 &&
       cipv_info_.type == agent::AgentType::TRAFFIC_CONE) {
@@ -137,7 +138,8 @@ void FollowTarget::MakeMinFollowDistance() {
     return;
   }
   if (cipv_info_.agent_id != -1 && cipv_info_.is_tfl_virtual_obs) {
-    min_follow_distance_lower = traffic_light_min_follow_distance_gap;
+    min_follow_distance_m_ = traffic_light_min_follow_distance_gap;
+    return;
   }
   const double min_follow_distance_upper =
       config_.high_speed_min_follow_distance_gap;
