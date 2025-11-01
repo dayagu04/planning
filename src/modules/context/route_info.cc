@@ -1828,11 +1828,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         total_lane_num--;
       }
     }
-    for (int i = 0; i < total_lane_num; ++i) {
-      current_lane_vec.emplace_back(i + 1);
+  } else {
+    if (current_link_ != nullptr) {
+      total_lane_num = current_link_->lane_num();
     }
   }
-
+  for (int i = 0; i < total_lane_num; ++i) {
+    current_lane_vec.emplace_back(i + 1);
+  }
   // 根据distance优化feasible lane，考虑3km内的所有exchange
   std::vector<NOASplitRegionInfo> valid_exchange_regions;
 
@@ -2149,6 +2152,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
+  if (feasible_lane_sequence.empty()) {
+    return;
+  }
   // 向mlc_decider_route_info_赋值
   mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
