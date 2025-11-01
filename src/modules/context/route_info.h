@@ -31,7 +31,10 @@ struct MLCRequestType {
   }
 };
 
-class RouteInfo {
+struct SolidLineInfo {
+  double line_distance;
+  MarkingLineChangeType line_change_type;
+} class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
             planning::framework::Session* session);
@@ -112,6 +115,8 @@ class RouteInfo {
     double angle;
     RayInfo(char n, double a) : name(n), angle(a) {}
   };
+  int mismatch_counter = 0;
+  const int MISMATH_THRESHOLD = 3;
 
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);
@@ -208,7 +213,8 @@ class RouteInfo {
                                   double>>& split_info_vec,
       const double ego_dis_to_merge);
 
-  bool CalculateMergeLaneInfo(std::map<int, SplitDirection>& merge_lane_sequence);
+  bool CalculateMergeLaneInfo(
+      std::map<int, SplitDirection>& merge_lane_sequence);
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp,
                        iflymapdata::sdpro::LinkInfo_Link* last_fp_link,
                        const uint64 fp_link_id,
@@ -360,5 +366,7 @@ class RouteInfo {
       std::map<int, double>& feasible_lane_distance, double max_distance);
   std::vector<int> GetIntersection(const std::vector<int>& vec1,
                                    const std::vector<int>& vec2);
+  std::vector<SolidLineInfo> CalculateSolidLineAhead(
+      std::vector<NOASplitRegionInfo> exchange_region_info_list);
 };
 }  // namespace planning
