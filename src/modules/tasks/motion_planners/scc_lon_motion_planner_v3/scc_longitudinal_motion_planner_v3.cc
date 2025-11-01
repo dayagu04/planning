@@ -189,6 +189,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
+    planning_input_.set_q_acc_start(config_.q_acc_start);
+    planning_input_.set_q_jerk_start(config_.q_jerk_start);
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
@@ -202,6 +204,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_vel_bound(config_.q_vel_bound);
     planning_input_.set_q_acc_bound(config_.q_acc_bound);
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
+    planning_input_.set_q_acc_start(config_.q_acc_start);
+    planning_input_.set_q_jerk_start(config_.q_jerk_start);
   }
 
   // what is s_stop?

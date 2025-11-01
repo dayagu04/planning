@@ -202,7 +202,7 @@ bool StartStopDecider::CanTransitionToStop() {
       std::fabs(cipv_vel_frenet_) < config_.cipv_static_vel_threshold;
   const bool cipv_distance_condition =
       cipv_relative_s_ <
-      stop_distance_ + (cipv_is_large_ ? config_.distance_stop_between_ego_and_large_cipv_threshold : config_.distance_stop_between_ego_and_cipv_threshold);
+      stop_distance_ + config_.distance_stop_between_ego_and_cipv_threshold;
 
   return ego_stop_condition && cipv_static_condition && cipv_distance_condition;
 }
