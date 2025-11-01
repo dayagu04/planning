@@ -2295,7 +2295,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     if ((perception_lane_num != map_lane_num && is_nearing_ramp_scenary) ||
         is_triggle_continue_lc) {
       mismatch_counter++;
-      if (m_lane_mismatch_counter >= MISMATH_THRESHOLD) {
+      if (mismatch_counter >= MISMATH_THRESHOLD) {
         relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
       }
       continue;
@@ -2327,7 +2327,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         mlc_split_direction = SPLIT_RIGHT;
       }
       bool is_found = false;
-      for (int i = 0; i < mlc_request_info_list.size() && is_found; i++) {
+      for (int i = 0; i < mlc_request_info_list.size() && !is_found; i++) {
         const auto& mlc_request_info = mlc_request_info_list[i].first;
         for (int n = 0; n < mlc_request_info.size(); n++) {
           auto it = std::find_if(
@@ -5528,6 +5528,6 @@ std::vector<int> RouteInfo::GetIntersection(const std::vector<int>& vec1,
 std::vector<SolidLineInfo> RouteInfo::CalculateSolidLineAhead(
     std::vector<NOASplitRegionInfo> exchange_region_info_list) {
   std::vector<SolidLineInfo> solid_line_info_list;
-  
+
 }
 }  // namespace planning

@@ -34,7 +34,9 @@ struct MLCRequestType {
 struct SolidLineInfo {
   double line_distance;
   MarkingLineChangeType line_change_type;
-} class RouteInfo {
+};
+
+class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
             planning::framework::Session* session);
