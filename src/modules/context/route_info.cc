@@ -2336,7 +2336,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                 return item.lane_num == ego_seq &&
                        item.split_direction == mlc_split_direction;
               });
-          bool is_found = (it != mlc_request_info.end());
+          is_found = (it != mlc_request_info.end());
           if (is_found) {
             mlc_type = it->mlc_request_type;
             break;
@@ -5529,5 +5529,54 @@ std::vector<SolidLineInfo> RouteInfo::CalculateSolidLineAhead(
     std::vector<NOASplitRegionInfo> exchange_region_info_list) {
   std::vector<SolidLineInfo> solid_line_info_list;
 
+  // 1. 搜索ego前一个fp
+  const auto& current_link = current_link_;
+  bool is_found_last_fp = false;
+  iflymapdata::sdpro::FeaturePoint last_feature_point;
+  while (!is_found_last_fp) {
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+    if (!current_link->feature_points().empty()) {
+      for (const auto& fp : current_link->feature_points()) {
+        fp_vec.emplace_back(fp);
+      }
+    }
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+    for (int i = current_link->feature_points_size() - 1; i >= 0; i--) {
+      const auto cur_fp = fp_vec[i];
+      if (current_link->lane_ids() != current_link_->lane_ids() ||
+          cur_fp.projection_percent() * current_link->length() * 0.01 <
+              route_info_output_.current_segment_passed_distance) {
+        last_feature_point = cur_fp;
+        is_found_last_fp = true;
+      }
+    }
+    current_link = sdpro_map_.GetPreviousLinkOnRoute(current_link->id());
+    if (current_link == nullptr) {
+      break;
+    }
+  }
+
+  // 2. 根据前一个fp来判断自车处在虚线阶段还是实线阶段
+  bool is_ego_boundary_solid = false;
+  if (is_found_last_fp) {
+    for (const auto& lane_id : last_feature_point.lane_ids()) {
+      if (IsSolidBoundary(lane_id)) {
+        const auto& lane = sdpro_map_.GetLaneInfoByID(lane_id);
+        if (lane == nullptr || lane->sequence() == EmergencyLaneNum(last_feature_point) + 1) {
+          is_ego_boundary_solid = false;
+        } else {
+          is_ego_boundary_solid = true;
+        }
+      }
+    }
+  } else {
+    
+  }
+
+  // 3. 找到前方3km或下匝道的link，判断其上最后一个fp虚实线情况
 }
 }  // namespace planning
