@@ -53,11 +53,6 @@ class ComfortTarget : public Target {
     double eps;
   };
 
-  const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
-  const std::vector<double> _L_SLOPE_V{0.35, 0.08};
-  const std::vector<double> _P_SLOPE_BP{0., 40.0};
-  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
-
   struct FollowAgentInfo {
     int32_t agent_id = 899999;
     double s = 210.0;
@@ -76,10 +71,7 @@ class ComfortTarget : public Target {
       const double current_acc, const double current_vel,
       const double current_s, const double front_vel, const double front_s,
       const double tau, const double decel_jerk, double& v_target) const;
-
-  double CalcDesiredVelocity(const double d_rel, const double d_des,
-                             const double v_lead, const double v_ego) const;
-
+      
   void AddComfortTargetDataToProto();
 
  private:

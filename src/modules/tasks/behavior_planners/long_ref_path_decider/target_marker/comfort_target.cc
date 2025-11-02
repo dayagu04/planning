@@ -440,33 +440,6 @@ void ComfortTarget::GenerateComfortTarget() {
   }
 }
 
-double ComfortTarget::CalcDesiredVelocity(const double d_rel,
-                                          const double d_des,
-                                          const double v_lead,
-                                          const double v_ego) const {
-  const double max_runaway_speed = -2.0;
-  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
-  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
-  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
-  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
-
-  double v_rel = v_ego - v_lead;
-  double v_rel_des = 0.0;
-  if (d_rel < d_des) {
-    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
-    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
-    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-  } else if (d_rel < d_des + x_linear_to_parabola) {
-    v_rel_des = (d_rel - d_des) * l_slope;
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-  } else {
-    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
-  }
-  double v_target = v_rel_des + v_lead;
-  return v_target;
-}
-
 double ComfortTarget::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
     const double front_vel, const double front_s, const double tau,
@@ -489,18 +462,9 @@ double ComfortTarget::CalculateComfortAcceleration(
       s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
                                                  (2.0 * std::sqrt(a * b_max)));
 
-  double s_desire = s0 + current_vel * tau;
-
-  double v_desire =
-      CalcDesiredVelocity(s_alpha, s_desire, front_vel, current_vel);
-
-  v_target = std::max(eps, std::min(v0, v_desire));
+  v_target = std::max(eps, v0);
 
   double z = s_star / s_alpha;
-
-  if (z < 1.0) {
-    v_target = v0;
-  }
 
   double a_free;
   if (current_vel <= v_target) {
@@ -526,13 +490,8 @@ double ComfortTarget::CalculateComfortAcceleration(
 
   a_idm = std::max(std::min(a, a_idm), -b_hard);
 
-  double a_cah;
-  double denominator = front_vel * front_vel - 2 * s_alpha * (-b);
-  if (std::abs(denominator) > eps) {
-    a_cah = (current_vel * current_vel * (-b)) / denominator;
-  } else {
-    a_cah = -b_hard;
-  }
+  double a_cah = (current_vel * current_vel * (-b)) /
+                 (front_vel * front_vel - 2 * s_alpha * (-b));
 
   a_cah = std::max(std::min(a, a_cah), -b_hard);
 
