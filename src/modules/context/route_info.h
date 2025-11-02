@@ -236,6 +236,8 @@ class RouteInfo {
       NOASplitRegionInfo* split_region_info);
   bool IsMergeFP(iflymapdata::sdpro::LaneChangeType* merge_type,
                  const iflymapdata::sdpro::FeaturePoint& fp) const;
+  bool IsExpandFP(iflymapdata::sdpro::LaneChangeType* expand_type,
+                  const iflymapdata::sdpro::FeaturePoint& fp) const;
   const iflymapdata::sdpro::LinkInfo_Link* CalculateCurrentLink(double* s,
                                                                 double* l);
   bool CalculateLastFPInCurrentLink(
@@ -329,8 +331,8 @@ class RouteInfo {
   }
 
   double DistanceToLine(const planning_math::Vec2d& point,
-                      const planning_math::Vec2d& segment_start,
-                      const planning_math::Vec2d& segment_end);
+                        const planning_math::Vec2d& segment_start,
+                        const planning_math::Vec2d& segment_end);
 
   // 正确排序跨越π的射线
   std::vector<char> SortRaysByDirection(const std::vector<RayInfo>& rays);
@@ -351,6 +353,10 @@ class RouteInfo {
       std::vector<iflymapdata::sdpro::FeaturePoint>& sorted_fp,
       const iflymapdata::sdpro::LinkInfo_Link* link) const;
 
+  void FindNextMergeExpandTypeFp(
+      const FPPoint& fp_start,
+      std::vector<iflymapdata::sdpro::FeaturePoint>& specific_fp,
+      double max_search_distance);
   // for HPP function
   void UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hdmap);
   bool UpdateStaticMap(const LocalView& local_view);
