@@ -297,7 +297,7 @@ double SamplePolySpeedAdjustDecider::GetStoplineSpdDifferGain() {
         front_speed_differ_gain = rest_time > 3.0 ? 0.0 : 1.0;
       } else {
         front_speed_differ_gain =
-            (prediction_matched_upper_st_point.s() - ego_s_) > 12 ? 0.0 : 1.0;
+            (prediction_matched_upper_st_point.s() - ego_s_) > 10.0 ? 0.0 : 1.0;
       }
     } else {
       front_speed_differ_gain = 0.0;
@@ -487,17 +487,16 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
-  v_cruise_speed_ = v_suggestted_;
-  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+  v_cruise_speed_ = ego_state_manager->ego_v_cruise_upper();
+  if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA) &&
+      (v_cruise_speed_ < kZeroEpsilon)) {
     if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
       const auto navi_road_info = session_->environmental_model()
-                          .get_route_info()
-                          ->get_sd_map()
-                          .GetNaviRoadInfo();
-      if(navi_road_info != std::nullopt){
-        v_cruise_speed_ = navi_road_info.value()
-                              .cur_road_speed_limit() /
-                          3.6;
+                                      .get_route_info()
+                                      ->get_sd_map()
+                                      .GetNaviRoadInfo();
+      if (navi_road_info != std::nullopt) {
+        v_cruise_speed_ = navi_road_info.value().cur_road_speed_limit() / 3.6;
       }
     }
   }
@@ -524,7 +523,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
-      std::fmin(v_cruise_speed_ * 1.05, speed_adjust_range_.first);
+      v_cruise_speed_ * 1.05 > ego_v_
+          ? std::min(v_cruise_speed_ * 1.05, speed_adjust_range_.first)
+          : ego_v_;
   speed_adjust_range_.second =
       sample_scene_ == DecelerationPriorityScene &&
               merge_stop_line_distance_ <= 20.0

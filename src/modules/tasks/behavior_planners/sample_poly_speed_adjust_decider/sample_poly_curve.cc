@@ -167,7 +167,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       arrived_a_ = anchor_arrived_a;
       arrived_t_ = anchor_arrived_t;
       arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
-      if ((stop_line_s - arrived_s_) / arrived_v_ < 5.0) {
+      if ((stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 2.5) {
         speed_differ_gain = 0.0;
       }
       break;
