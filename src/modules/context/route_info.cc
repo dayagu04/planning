@@ -595,8 +595,6 @@ void RouteInfo::CaculateMergeInfo(
               merge_seg->lane_num();
           route_info_output_.merge_last_seg_forward_lane_nums =
               merge_seg_last_seg->lane_num();
-          is_find_first_merge_onfo = true;
-          traverse_num++;
 
           NOASplitRegionInfo first_merge_region_lane_tupo_info;
           const auto merge_region_lane_tupo_info =
@@ -618,6 +616,8 @@ void RouteInfo::CaculateMergeInfo(
 
             route_info_output_.merge_region_info_list.emplace_back(
                 first_merge_region_lane_tupo_info);
+            is_find_first_merge_onfo = true;
+            traverse_num++;
           }
 
         } else if (is_find_first_merge_onfo) {
@@ -1744,10 +1744,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   std::map<int, double> feasible_lane_distance;
   std::vector<std::pair<std::vector<MLCRequestType>, double>>
       mlc_request_info_list;
-
-  if (split_region_info_list[0].distance_to_split_point <
-          merge_region_info_list[0].distance_to_split_point &&
-      !split_region_info_list[0].is_valid) {
+  if ((!split_region_info_list.empty() && !merge_region_info_list.empty() &&
+       split_region_info_list[0].distance_to_split_point <
+           merge_region_info_list[0].distance_to_split_point &&
+       !split_region_info_list[0].is_valid) ||
+      (!split_region_info_list.empty() && merge_region_info_list.empty() &&
+       !split_region_info_list[0].is_valid)) {
     // 处理split信息缺失，向一侧变道的场景
     for (auto& relative_id_lane : relative_id_lanes) {
       if (relative_id_lane->get_relative_id() != 0) {
@@ -1883,6 +1885,51 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
       relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
       mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
+
+      // 根据前方merge_fp优化feasible_lane
+      std::map<int, SplitDirection> merge_lane;
+      std::vector<int> merge_lane_sequence;
+      bool is_exist_merge_fp = false;
+      double distance_to_next_split = NL_NMAX;
+      double distance_to_next_merge = NL_NMAX;
+      if (!split_region_info_list.empty()) {
+        distance_to_next_split =
+            split_region_info_list[0].distance_to_split_point;
+      }
+      if (!merge_region_info_list.empty()) {
+        distance_to_next_merge =
+            merge_region_info_list[0].distance_to_split_point;
+      }
+      double search_dis =
+          std::min(distance_to_next_split, distance_to_next_merge);
+      if (CalculateMergeLaneInfo(merge_lane, search_dis) &&
+          !merge_lane.empty()) {
+        for (const auto& [lane_num, split_dir] : merge_lane) {
+          merge_lane_sequence.emplace_back(lane_num);
+        }
+
+        for (const auto& [lane_num, split_dir] : merge_lane) {
+          auto it = std::find(feasible_lane_sequence.begin(),
+                              feasible_lane_sequence.end(), lane_num);
+
+          if (it != feasible_lane_sequence.end()) {
+            mlc_request_info_.emplace_back(MLCRequestType{
+                .lane_num = lane_num,
+                .mlc_request_type = RAMP_TO_MAIN,
+                .split_direction = split_dir});  // 使用map中的方向
+            feasible_lane_sequence.erase(it);
+            is_exist_merge_fp = true;
+          }
+        }
+      }
+      int minVal_seq = 0;
+      int maxVal_seq = 0;
+      if (!feasible_lane_sequence.empty()) {
+        minVal_seq = feasible_lane_sequence[0];
+        maxVal_seq = feasible_lane_sequence.back();
+      }
+      route_info_output_.minVal_seq = minVal_seq;
+      route_info_output_.maxVal_seq = maxVal_seq;
       mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
@@ -1931,7 +1978,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           // 判断是否需要取消躲避分汇流
           bool is_two_exchange_close =
               valid_exchange_regions[i + 1].distance_to_split_point -
-                  valid_exchange_regions[i].distance_to_split_point <
+                  valid_exchange_regions[i].distance_to_split_point +
+                  valid_exchange_regions[i + 1]
+                      .start_fp_point.fp_distance_to_split_point -
+                  valid_exchange_regions[i]
+                      .end_fp_point.fp_distance_to_split_point <
               500.0;
           int avoide_lane_num = -1;
           bool is_need_cancel_avoide_mlc = false;
@@ -1981,8 +2032,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   // 判断当前处理的场景
   const auto first_exchange_region_info = valid_exchange_regions[0];
-  if (first_exchange_region_info.split_link_id ==
-      merge_region_info_list[0].split_link_id) {
+  if (!merge_region_info_list.empty() &&
+      first_exchange_region_info.split_link_id ==
+          merge_region_info_list[0].split_link_id) {
     if (first_exchange_region_info.is_other_merge_to_road) {
       mlc_decider_route_info_.is_process_other_merge = true;
       mlc_decider_route_info_.static_merge_region_info =
@@ -4132,26 +4184,40 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
       }
     }
   } else if (is_other_merge_right) {
+    int min_lane = std::min(before_exclnum, successor_exclnum);
     if (on_exclnum >= successor_exclnum + predecessor_other_exclnum) {
       if (before_exclnum > 1) {
         for (int i = 1; i < before_exclnum; i++) {
           before_excr_feasible_lane.emplace_back(i + 1);
-          mlc_request_info_.emplace_back(
-              MLCRequestType{.lane_num = 1,
-                             .mlc_request_type = AVOIDE_MERGE,
-                             .split_direction = SPLIT_RIGHT});
         }
+        mlc_request_info_.emplace_back(
+            MLCRequestType{.lane_num = 1,
+                           .mlc_request_type = AVOIDE_MERGE,
+                           .split_direction = SPLIT_RIGHT});
       } else {
         before_excr_feasible_lane.emplace_back(1);
       }
-      if (successor_exclnum > 1) {
-        for (int i = 1; i < successor_exclnum; i++) {
+      if (min_lane > 1) {
+        for (int i = 1; i < min_lane; i++) {
           on_excr_feasible_lane.emplace_back(predecessor_other_exclnum + i + 1);
         }
       } else {
         on_excr_feasible_lane.emplace_back(predecessor_other_exclnum +
-                                           successor_exclnum);
+                                           min_lane);
       }
+    } else {
+      if (before_exclnum > 1) {
+        for (int i = 1; i < before_exclnum; i++) {
+          before_excr_feasible_lane.emplace_back(i + 1);
+        }
+        mlc_request_info_.emplace_back(
+            MLCRequestType{.lane_num = 1,
+                           .mlc_request_type = AVOIDE_MERGE,
+                           .split_direction = SPLIT_RIGHT});
+      } else {
+        before_excr_feasible_lane.emplace_back(1);
+      }
+      on_excr_feasible_lane = before_excr_feasible_lane;
     }
   }
   for (int i = 0; i < successor_exclnum; ++i) {
