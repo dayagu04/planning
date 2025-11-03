@@ -699,6 +699,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       print(version)
       scene_type = plan_debug_msg.frame_info.scene_type
       print("scene_type: ", scene_type)
+      print("traj_available: ",plan_debug_json_msg['traj_available'])
+      print("rads_planning_status: ", plan_debug_json_msg['rads_planning_status'])
       planning_succ = plan_debug_msg.frame_info.planning_succ
       print("planning_succ: ", planning_succ)
       print("current planning_success: ", plan_debug_json_msg['current planning_success'])
