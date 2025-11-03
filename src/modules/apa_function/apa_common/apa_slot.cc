@@ -223,6 +223,58 @@ void ApaSlot::PostProcessSlotPoint() {
   processed_corner_coord_global_.CalExtraCoord();
 }
 
+const std::vector<Eigen::Vector2d> ApaSlot::GetCustomSlotPolygonByCenter(
+    const double up_dist, const double down_dist, const double left_dist,
+    const double right_dist, const bool base_on_slot) const {
+  Eigen::Vector2d pt_center;
+  Eigen::Vector2d pt_01_unit_vec, pt_23mid_01mid_vec_unit_vec;
+  if (base_on_slot) {
+    pt_center = origin_corner_coord_local_.pt_center;
+    pt_01_unit_vec = origin_corner_coord_local_.pt_01_unit_vec;
+    pt_23mid_01mid_vec_unit_vec =
+        origin_corner_coord_local_.pt_23mid_01mid_unit_vec;
+  } else {
+    pt_center = origin_corner_coord_global_.pt_center;
+    pt_01_unit_vec = origin_corner_coord_global_.pt_01_unit_vec;
+    pt_23mid_01mid_vec_unit_vec =
+        origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
+  }
+  std::vector<Eigen::Vector2d> pt_vec;
+  Eigen::Vector2d pt0, pt1, pt2, pt3;
+  pt0 = pt_center - right_dist * pt_01_unit_vec;
+  pt1 = pt_center + left_dist * pt_01_unit_vec;
+  pt2 = pt_center - up_dist * pt_23mid_01mid_vec_unit_vec;
+  pt3 = pt_center + down_dist * pt_23mid_01mid_vec_unit_vec;
+  if (slot_type_ == SlotType::PERPENDICULAR || slot_type_ == SlotType::SLANT) {
+    pt0 = pt_center - right_dist * pt_01_unit_vec +
+          up_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt1 = pt_center + left_dist * pt_01_unit_vec +
+          up_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt2 = pt_center - right_dist * pt_01_unit_vec -
+          down_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt3 = pt_center + left_dist * pt_01_unit_vec -
+          down_dist * pt_23mid_01mid_vec_unit_vec;
+
+    pt_vec = std::vector<Eigen::Vector2d>{pt0, pt1, pt3, pt2};
+  }
+  return pt_vec;
+}
+
+const bool ApaSlot::IsPointInCustomSlotByCenter(const Eigen::Vector2d& pt,
+                                                const double up_dist,
+                                                const double down_dist,
+                                                const double left_dist,
+                                                const double right_dist,
+                                                const bool base_on_slot) const {
+  return geometry_lib::IsPointInPolygon(
+      GetCustomSlotPolygonByCenter(up_dist, down_dist, left_dist, right_dist,
+                                   base_on_slot),
+      pt);
+}
+
 const std::vector<Eigen::Vector2d> ApaSlot::GetCustomSlotPolygon(
     const double slot_entrance_dist, const double slot_bottom_dist,
     const double left_move_dist, const double right_move_dist,

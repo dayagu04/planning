@@ -238,7 +238,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   // 车位内的核心区域不能有障碍物  有就直接失败
   Polygon2D polygon;
   polygon.FillTangentCircleParams(slot_.GetCustomSlotPolygon(
-      2.68, -slot_.slot_length_ * 0.4, -0.4, -0.4, true));
+      2.68, -slot_.slot_length_ * 0.3, -slot_.slot_width_ * 0.18,
+      -slot_.slot_width_ * 0.18, true));
   if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(true))) {
     ILOG_INFO << "slot min parking area is occupied";

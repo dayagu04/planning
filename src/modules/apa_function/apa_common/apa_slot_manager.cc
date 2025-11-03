@@ -475,8 +475,9 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   // 构建车位可泊最低要求区域内box, 检查box内是否有障碍物 若有 不释放
   // 主要是为了缓解融合误释放车位
   Polygon2D polygon;
-  polygon.FillTangentCircleParams(
-      slot.GetCustomSlotPolygon(2.68, -2.0, -0.4, -0.4, false));
+  polygon.FillTangentCircleParams(slot.GetCustomSlotPolygon(
+      2.68, -slot.slot_length_ * 0.3, -slot.slot_width_ * 0.18,
+      -slot.slot_width_ * 0.18, false));
   if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
           polygon, GJKColDetRequest(false))) {
     ILOG_INFO << "slot min parking area is occupied";
