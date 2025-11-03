@@ -1432,7 +1432,7 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
         frame_.plan_fail_reason = LOSS_SEARCH_PATH;
         return;
       }
-      const double useable_search_time_ms = 3600.0;
+      const double useable_search_time_ms = 1900.0;
       if (response.result.search_consume_time_ms < useable_search_time_ms) {
         ILOG_INFO << "this respose path is search path and consume time < "
                   << useable_search_time_ms << "ms, need loss and replan";
