@@ -173,14 +173,11 @@ void EgoLaneTrackManger::TrackEgoLane(
         const auto& merge_region_info_list =
             route_info_output.merge_region_info_list;
         if (!split_region_info_list.empty()) {
-          if (split_region_info_list[0].is_valid) {
-            distance_to_first_road_split =
-                split_region_info_list[0].distance_to_split_point;
-          }
+          distance_to_first_road_split =
+              split_region_info_list[0].distance_to_split_point;
         }
-        const auto &first_static_split_region_info = mlc_decider_route_info.first_static_split_region_info;
         ego_dis_to_split_exchange_area_start = 
-            distance_to_first_road_split + first_static_split_region_info.start_fp_point.fp_distance_to_split_point;
+            distance_to_first_road_split + split_region_info_list[0].start_fp_point.fp_distance_to_split_point;
         if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ < kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
