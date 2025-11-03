@@ -111,7 +111,7 @@ class RouteInfo {
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
   double virtual_extend_buff_ = 0.0;
-  NOASplitRegionInfo last_exchange_region_info;
+  NOASplitRegionInfo last_exchange_region_info_;
   struct RayInfo {
     char name;
     double angle;
@@ -216,7 +216,8 @@ class RouteInfo {
       const double ego_dis_to_merge);
 
   bool CalculateMergeLaneInfo(
-      std::map<int, SplitDirection>& merge_lane_sequence);
+      std::map<int, SplitDirection>& merge_lane_sequence,
+      double search_distance);
   bool CalculateLastFp(iflymapdata::sdpro::FeaturePoint* last_fp,
                        iflymapdata::sdpro::LinkInfo_Link* last_fp_link,
                        const uint64 fp_link_id,
@@ -224,7 +225,8 @@ class RouteInfo {
 
   bool CalculateMergeFP(MergeType* merge_type,
                         iflymapdata::sdpro::FeaturePoint* find_fp,
-                        uint64* fp_link_id, double* dis_to_merge_fp);
+                        uint64* fp_link_id, double* dis_to_merge_fp,
+                        double search_distance);
   bool CalculateFeasibleLane(
       NOASplitRegionInfo* split_region_info,
       const ad_common::sdpromap::SDProMap& sdpro_map) const;

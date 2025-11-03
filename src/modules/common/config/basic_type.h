@@ -198,8 +198,8 @@ struct MLCDeciderRouteInfo {
   double end_fp_dis_to_split = 0;
   bool is_triggle_cal_dis_to_last_merge_point = false;
   NOASplitRegionInfo static_merge_region_info;
+  NOASplitRegionInfo static_split_region_info;
   NOASplitRegionInfo first_static_split_region_info;
-  NOASplitRegionInfo second_static_split_region_info;
   std::vector<int> feasible_lane_sequence;
 
   void reset() {
@@ -215,8 +215,8 @@ struct MLCDeciderRouteInfo {
     end_fp_dis_to_split = 0;
     is_triggle_cal_dis_to_last_merge_point = false;
     static_merge_region_info.reset();
+    static_split_region_info.reset();
     first_static_split_region_info.reset();
-    second_static_split_region_info.reset();
     feasible_lane_sequence.clear();
   }
 };
