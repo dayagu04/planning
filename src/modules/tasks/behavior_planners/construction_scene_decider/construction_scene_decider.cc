@@ -431,14 +431,16 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
     pass_buffer = std::fmax(3 * pass_buffer, 3 * ego_state->ego_v());
   }
   int total_construction_agents = 0;
-  int left_construction_agents = 0;
-  int right_construction_agents = 0;
   double left_avg_spacing = 100;
   double right_avg_spacing = 100;
   std::vector<double> left_xs;
   std::vector<double> right_xs;
+  std::vector<int32_t> left_ids;
+  std::vector<int32_t> right_ids;
   left_xs.reserve(10);
   right_xs.reserve(10);
+  left_ids.reserve(10);
+  right_ids.reserve(10);
   for (const auto& [cluster_id, construction_agent_cluster_iter] :
        construction_agent_cluster_attribute_map_) {
     const auto& points = construction_agent_cluster_iter.points;
@@ -449,11 +451,11 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
     // 判断簇的左右方向
     for (const auto& p : points) {
       if (p.car_y >= 0.0) {
-        left_construction_agents++;
         left_xs.push_back(p.car_x);
+        left_ids.push_back(p.id);
       } else {
-        right_construction_agents++;
         right_xs.push_back(p.car_x);
+        right_ids.push_back(p.id);
       }
     }
     if (points.size() >= construction_agents_low_num) {
@@ -485,17 +487,49 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
   left_avg_spacing = calc_avg_spacing(left_xs);
   right_avg_spacing = calc_avg_spacing(right_xs);
   if (total_construction_agents >= 2 * construction_agents_low_num ||
-      left_construction_agents >= construction_agents_low_num ||
-      right_construction_agents >= construction_agents_low_num ||
-      (left_construction_agents > 2 &&
+      left_ids.size() >= construction_agents_low_num ||
+      right_ids.size() >= construction_agents_low_num ||
+      (left_ids.size() > 2 &&
       left_avg_spacing <= kConstructionBucketSpacingThreshold) ||
-      (right_construction_agents > 2 &&
+      (right_ids.size() > 2 &&
       right_avg_spacing <= kConstructionBucketSpacingThreshold)) {
     // 避免锥桶摆的较开，未聚成一类
     is_valid_construction_area = true;
   }
   if (!is_valid_construction_area) {
     is_pass_construction_area = false;
+  }
+
+  if (is_valid_construction_area) {
+    // 清除含有对应 id 的锥桶
+    auto erase_points_by_ids = [&](const std::vector<int32_t>& ids_to_remove) {
+      if (ids_to_remove.empty()) {
+        return;
+      }
+      std::unordered_set<int32_t> id_set(ids_to_remove.begin(), ids_to_remove.end());
+      for (auto it = construction_agent_cluster_attribute_map_.begin();
+          it != construction_agent_cluster_attribute_map_.end();) {
+        auto& points = it->second.points;
+        points.erase(
+            std::remove_if(points.begin(), points.end(),
+                          [&](const ConstructionAgentPoint& p) { return id_set.count(p.id) > 0; }),
+            points.end());
+        // 如果该 cluster 的 points 已空，则从 map 中删除该 cluster
+        if (points.empty()) {
+          it = construction_agent_cluster_attribute_map_.erase(it);
+        } else {
+          ++it;
+        }
+      }
+    };
+    // 左侧锥桶数量太少，清除左侧锥桶
+    if (left_ids.size() < 3) {
+      erase_points_by_ids(left_ids);
+    }
+    // 右侧锥桶数量太少，清除右侧锥桶
+    if (right_ids.size() < 3) {
+      erase_points_by_ids(right_ids);
+    }
   }
 
   is_exist_construction_area_ = is_valid_construction_area;
