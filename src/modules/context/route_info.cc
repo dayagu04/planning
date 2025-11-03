@@ -1893,28 +1893,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
       } else {
         // 后续exchange region的距离计算
-        double dis_to_last_split_point = 0.0;
-        double dis_to_last_merge_point = 0.0;
-
-        const auto& exchange_region_link =
-            sdpro_map_.GetLinkOnRoute(valid_exchange_regions[i].split_link_id);
-
-        if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
-                                                  exchange_region_link)) {
-          max_distances[i] =
-              std::min(max_distances[i], dis_to_last_split_point);
-        }
-
-        if (CalculateDistanceNextToLastMergePoint(&dis_to_last_merge_point,
-                                                  exchange_region_link)) {
-          max_distances[i] =
-              std::min(max_distances[i], dis_to_last_merge_point);
-        }
+        max_distances[i] =
+            valid_exchange_regions[i].distance_to_split_point +
+            valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
       }
     }
 
     // 从最后一个exchange region开始向前优化
-    for (int i = valid_exchange_regions.size() - 1; i >= 0; --i) {
+    // 限制最多仅优化连续3个
+    int iteration_num = std::min<int>(valid_exchange_regions.size() - 1, 2);
+    for (int i = iteration_num; i >= 0; --i) {
       // 先根据距离优化当前exchange region的可行车道
       OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
                                       exchange_feasible_lane_distances[i],
@@ -5414,12 +5402,23 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
     return;
   }
 
-  if (second_split_region_info.split_direction == SplitDirection::SPLIT_LEFT) {
+  // 矫正方向不能单从下一个exchange的方向，可能连续两个exchange都是为了后面的ramp_split准备
+  // 如果后一个exchange是split_left，但feasible
+  // lane中不带有1，认为已经在为后续ramp_split准备
+  if (second_split_region_info.split_direction == SplitDirection::SPLIT_LEFT &&
+      second_split_region_info.recommend_lane_num[0]
+              .feasible_lane_sequence[0] == static_cast<int>(1)) {
+    std::vector<int> missing_elements = findMissingElements(
+        first_split_region_info.recommend_lane_num[0].feasible_lane_sequence,
+        second_split_region_info.recommend_lane_num[0].feasible_lane_sequence);
+    if (missing_elements.empty()) {
+      return;
+    }
     for (int i = 0; i < 3; ++i) {
       auto& lane_sequence =
           first_split_region_info.recommend_lane_num[i].feasible_lane_sequence;
       if (lane_sequence.size() > erase_num) {
-        lane_sequence.erase(lane_sequence.begin() + erase_num,
+        lane_sequence.erase(lane_sequence.end() - erase_num,
                             lane_sequence.end());
       } else if (lane_sequence.size() > 1) {
         lane_sequence.erase(lane_sequence.begin() + 1, lane_sequence.end());
@@ -5431,7 +5430,7 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
           first_split_region_info.recommend_lane_num[i].feasible_lane_sequence;
       if (lane_sequence.size() > erase_num) {
         lane_sequence.erase(lane_sequence.begin(),
-                            lane_sequence.end() - erase_num);
+                            lane_sequence.begin() + erase_num);
       } else if (lane_sequence.size() > 1) {
         lane_sequence.erase(lane_sequence.begin(), lane_sequence.end() - 1);
       }
@@ -5439,7 +5438,7 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
   }
 }
 void RouteInfo::OptimizeFeasibleLanesByDistance(
-    NOASplitRegionInfo exchange_region_info,
+    NOASplitRegionInfo& exchange_region_info,
     std::map<int, double>& feasible_lane_distance, double max_distance) {
   const double v_limit =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
@@ -5466,6 +5465,7 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       lsl_length =
           LengthSolidLineJudge(start_fp.link_id, start_fp.fp,
                                exchange_region_info.distance_to_split_point);
+      route_info_output_.lsl_length = lsl_length;
     }
   }
   max_distance = std::max(0.0, max_distance - lsl_length);

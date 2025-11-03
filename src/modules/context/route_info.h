@@ -366,7 +366,7 @@ class RouteInfo {
                                    NOASplitRegionInfo& second_split_region_info,
                                    int erase_num);
   void OptimizeFeasibleLanesByDistance(
-      NOASplitRegionInfo exchange_region_info,
+      NOASplitRegionInfo& exchange_region_info,
       std::map<int, double>& feasible_lane_distance, double max_distance);
   std::vector<int> GetIntersection(const std::vector<int>& vec1,
                                    const std::vector<int>& vec2);
