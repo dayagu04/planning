@@ -558,19 +558,28 @@ void RouteInfo::CaculateMergeInfo(
               route_info_output_.is_on_ramp) {
             route_info_output_.is_ramp_merge_to_road_on_expressway = true;
           }
-          if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
-              !sdpro_map.isRamp(merge_seg->link_type()) &&
-              !sdpro_map.isSaPa(merge_seg->link_type()) &&
-              !route_info_output_.is_on_ramp &&
-              route_info_output_.is_ego_on_expressway) {
-            route_info_output_.is_road_merged_by_other_lane = true;
-            is_road_merged_by_other_lane = true;
-          }
-          if (merge_seg_last_seg->lane_num() >=
-                  merge_seg_last_other_seg->lane_num() &&
-              route_info_output_.is_ego_on_expressway) {
-            route_info_output_.is_road_merged_by_other_lane = true;
-            is_road_merged_by_other_lane = true;
+          // 对于other_merge/merge的判断
+          if (route_info_output_.is_ego_on_expressway) {
+            if (merge_seg_last_seg->lane_num() >
+                merge_seg_last_other_seg->lane_num()) {
+              route_info_output_.is_road_merged_by_other_lane = true;
+              is_road_merged_by_other_lane = true;
+            } else if (merge_seg_last_seg->lane_num() ==
+                       merge_seg_last_other_seg->lane_num()) {
+              if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
+                  !sdpro_map.isRamp(merge_seg->link_type()) &&
+                  !sdpro_map.isSaPa(merge_seg->link_type()) &&
+                  !route_info_output_.is_on_ramp) {
+                route_info_output_.is_road_merged_by_other_lane = true;
+                is_road_merged_by_other_lane = true;
+              } else {
+                route_info_output_.is_road_merged_by_other_lane = false;
+                is_road_merged_by_other_lane = false;
+              }
+            } else {
+              route_info_output_.is_road_merged_by_other_lane = false;
+              is_road_merged_by_other_lane = false;
+            }
           }
           if (sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
               sdpro_map.isRamp(merge_seg->link_type()) &&
