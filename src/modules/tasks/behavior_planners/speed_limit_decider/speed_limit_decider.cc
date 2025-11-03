@@ -1870,12 +1870,12 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   // Construction Lateral Dis Flag
   if (!construction_lat_dist_flag) {
     if (std::abs(construction_nearest_l) <
-        speed_limit_config_.construction_Lat_dist_entry) {
+        speed_limit_config_.construction_lat_dist_entry) {
       construction_lat_dist_flag = true;
     }
   } else {
     if (std::abs(construction_nearest_l) >
-        speed_limit_config_.construction_Lat_dist_exit) {
+        speed_limit_config_.construction_lat_dist_exit) {
       construction_lat_dist_flag = false;
     }
   }
