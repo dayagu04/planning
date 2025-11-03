@@ -856,7 +856,8 @@ bool ConeRequest::EnableTargetLane(
     }
     double average_lane_width = total_lane_width / cone_num;
     double average_cone_l = total_cone_l / cone_num;
-    if (average_cone_l < average_lane_width * lane_occ_proportion &&
+    if ((average_cone_l < average_lane_width * lane_occ_proportion ||
+          std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l) &&
         cone_num >= 5) {
       return false;
     }
