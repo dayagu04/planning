@@ -387,36 +387,35 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
   // }
 
   if (base_lane != nullptr) {
-    double left_lane_line_length = 0.0;
-    int left_current_segment_count = 0;
-    double left_ego_s = 0.0, left_ego_l = 0.0;
     // 判断左侧车道线类型
-    auto left_lane_boundarys = base_lane->get_left_lane_boundary();
-    left_base_boundary_path =
-        virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
-    if (left_base_boundary_path != nullptr) {
-      if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
-                                           &left_ego_l)) {
-        return;
+    double ego_base_s = base_lane->get_ego_longit_s();
+    for (const auto& point : base_lane->lane_points()) {
+      if (point.s < ego_base_s + 3.0) {
+        continue;
       }
-    } else {
-      return;
-    }
-    for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-      left_lane_line_length += left_lane_boundarys.type_segments[i].length;
-      if (left_lane_line_length > left_ego_s) {
-        left_current_segment_count = i;
+      if (point.s > ego_base_s + 80.0) {
         break;
       }
-    }
-    for (int i = left_current_segment_count;
-         i < left_lane_boundarys.type_segments_size; i++) {
-      if (left_lane_boundarys.type_segments[i].type ==
+
+      if (point.left_lane_border_type ==
           iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
         left_boundary_exist_virtual_type = true;
         break;
-      } else {
+      }
+    }
+
+    // 判断右侧车道线类型
+    for (const auto& point : base_lane->lane_points()) {
+      if (point.s < ego_base_s + 3.0) {
         continue;
+      }
+      if (point.s > ego_base_s + 80.0) {
+        break;
+      }
+      if (point.right_lane_border_type ==
+          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+        right_boundary_exist_virtual_type = true;
+        break;
       }
     }
 
@@ -446,37 +445,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
 
     if (llane != nullptr) {
-      double target_right_lane_line_length = 0.0;
-      int target_right_current_segment_count = 0;
-      double right_ego_s = 0.0, right_ego_l = 0.0;
-      auto right_lane_boundarys = llane->get_right_lane_boundary();
-      right_base_boundary_path =
-          virtual_lane_mgr_->MakeBoundaryPath(right_lane_boundarys);
-      if (right_base_boundary_path != nullptr) {
-        if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
-                                              &right_ego_l)) {
-          right_ego_s = 50.0;
-        }
-
-        for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-          target_right_lane_line_length +=
-              right_lane_boundarys.type_segments[i].length;
-          if (target_right_lane_line_length > right_ego_s) {
-            target_right_current_segment_count = i;
-            break;
-          }
-        }
-        for (int i = target_right_current_segment_count;
-             i < right_lane_boundarys.type_segments_size; i++) {
-          if (right_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-            target_right_boundary_exist_virtual_type = true;
-            break;
-          } else {
-            continue;
-          }
-        }
-      }
+      MakesureVirtualLaneSideIsVirtual(llane, target_right_boundary_exist_virtual_type, 0);
     }
 
     // 根据地面标识判断是否向左汇流
@@ -495,71 +464,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    double right_lane_line_length = 0.0;
-    int right_current_segment_count = 0;
-    double right_ego_s = 0.0, right_ego_l = 0.0;
-    auto right_lane_boundarys = base_lane->get_right_lane_boundary();
-    right_base_boundary_path =
-        virtual_lane_mgr_->MakeBoundaryPath(right_lane_boundarys);
-    if (right_base_boundary_path != nullptr) {
-      if (!right_base_boundary_path->XYToSL(ego_x, ego_y, &right_ego_s,
-                                            &right_ego_l)) {
-        return;
-      }
-    } else {
-      return;
-    }
-    for (int i = 0; i < right_lane_boundarys.type_segments_size; i++) {
-      right_lane_line_length += right_lane_boundarys.type_segments[i].length;
-      if (right_lane_line_length > right_ego_s) {
-        right_current_segment_count = i;
-        break;
-      }
-    }
-    for (int i = right_current_segment_count;
-         i < right_lane_boundarys.type_segments_size; i++) {
-      if (right_lane_boundarys.type_segments[i].type ==
-          iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-        right_boundary_exist_virtual_type = true;
-        break;
-      } else {
-        continue;
-      }
-    }
-
     if (rlane != nullptr) {
-      double target_left_lane_line_length = 0.0;
-      int target_left_current_segment_count = 0;
-      double left_ego_s = 0.0, left_ego_l = 0.0;
-      // 判断左侧车道线类型
-      auto left_lane_boundarys = rlane->get_left_lane_boundary();
-      left_base_boundary_path =
-          virtual_lane_mgr_->MakeBoundaryPath(left_lane_boundarys);
-      if (left_base_boundary_path != nullptr) {
-        if (!left_base_boundary_path->XYToSL(ego_x, ego_y, &left_ego_s,
-                                             &left_ego_l)) {
-          left_ego_s = 50.0;
-        }
-
-        for (int i = 0; i < left_lane_boundarys.type_segments_size; i++) {
-          target_left_lane_line_length +=
-              left_lane_boundarys.type_segments[i].length;
-          if (target_left_lane_line_length > left_ego_s) {
-            target_left_current_segment_count = i;
-            break;
-          }
-        }
-        for (int i = target_left_current_segment_count;
-             i < left_lane_boundarys.type_segments_size; i++) {
-          if (left_lane_boundarys.type_segments[i].type ==
-              iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
-            target_left_boundary_exist_virtual_type = true;
-            break;
-          } else {
-            continue;
-          }
-        }
-      }
+      MakesureVirtualLaneSideIsVirtual(rlane, target_left_boundary_exist_virtual_type, 1);
     }
 
     // 根据地面标识判断是否向右汇流
@@ -627,6 +533,66 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
                    left_boundary_exist_virtual_type);
   JSON_DEBUG_VALUE("right_boundary_exist_virtual_type",
                    right_boundary_exist_virtual_type);
+}
+
+void MergeRequest::MakesureVirtualLaneSideIsVirtual(
+    const std::shared_ptr<VirtualLane> base_lane,
+    bool& virtual_lane_exist_virtual,
+    const int lane_index) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  double ego_x = plannig_init_point.lat_init_state.x();
+  double ego_y = plannig_init_point.lat_init_state.y();
+  if (base_lane == nullptr) {
+    return;
+  }
+
+  // 判断左侧车道线类型
+  bool left_boundary_exist_virtual_type = false;
+  double ego_s = base_lane->get_ego_longit_s();
+  for (const auto& point : base_lane->lane_points()) {
+    if (point.s < ego_s + 3.0) {
+      continue;
+    }
+    if (point.s > ego_s + 65.0) {
+      break;
+    }
+
+    if (point.left_lane_border_type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      left_boundary_exist_virtual_type = true;
+      break;
+    }
+  }
+
+  // 判断右侧车道线类型
+  bool right_boundary_exist_virtual_type = false;
+  for (const auto& point : base_lane->lane_points()) {
+    if (point.s < ego_s + 3.0) {
+      continue;
+    }
+    if (point.s > ego_s + 65.0) {
+      break;
+    }
+    if (point.right_lane_border_type ==
+        iflyauto::LaneBoundaryType_MARKING_VIRTUAL) {
+      right_boundary_exist_virtual_type = true;
+      break;
+    }
+  }
+
+  if (lane_index == 0) {
+    if (!right_boundary_exist_virtual_type) {
+      virtual_lane_exist_virtual = false;
+    }
+  } else {
+    if (!left_boundary_exist_virtual_type) {
+      virtual_lane_exist_virtual = false;
+    }
+  }
+
+  return;
 }
 
 void MergeRequest::Reset() {

@@ -819,6 +819,9 @@ bool ConeRequest::EnableTargetLane(
     ILOG_DEBUG << "seach fail: seach lane is nullptr";
     return false;
   }
+  if (cone_cluster_attribute_set_.empty()) {
+    return false;
+  }
   std::vector<std::pair<double, double>> lane_s_width;
   if (is_left) {
     lane_s_width = left_lane_s_width_;
