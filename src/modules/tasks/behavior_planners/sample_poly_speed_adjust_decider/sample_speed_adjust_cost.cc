@@ -18,7 +18,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                            const double ego_current_vel,
                            const bool is_merge_change) {
   // Helper function to calculate the cost for distance and velocity
-  const double ttc_safe_limit = is_merge_change ? 8.0 : 0.0;
+  const double ttc_safe_limit = is_merge_change ? 4.0 : 0.0;
   const double gap_vel_gain = is_merge_change ? 2.0 : 1.0;
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
@@ -311,7 +311,7 @@ void StopLineCost::GetCost(const double stop_line_dis_to_ego,
       cost_ = weight_ * std::exp(near_stop_dis_penalty_coef_ *
                                  (kStopLineBasicPenaltyDis_merge -
                                   poly_end_dis_to_virtual_stop_line) /
-                                 600);
+                                 500);
     }
   } else {
     if (poly_end_dis_to_virtual_stop_line > kStopLineBasicPenaltyDis) {
