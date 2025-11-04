@@ -3711,6 +3711,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_invade_speed_diff = 5.56;
   double construction_lat_dist_entry = 4.0;
   double construction_lat_dist_exit = 4.5;
+  double construction_speed_upper = 27.78;
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
