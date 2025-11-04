@@ -2464,7 +2464,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
       cur_request.real_goal_stack[0] =
           Pose2f(target_pos_head_left.x(), target_pos_head_left.y(),
                  target_heading_rad);
-      cur_request.real_goal_stack[1] = Pose2f(4.0, 0.0, 0.0);
+      cur_request.real_goal_stack[1] = Pose2f(slot_length - 0.5, 0.0, 0.0);
       cur_request.real_goal_stack[2] =
           Pose2f(target_pos_head_right.x(), target_pos_head_right.y(),
                  opposite_target_heading_rad);
@@ -2672,7 +2672,7 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
       break;
     case ApaParkOutDirection::FRONT:
     default:
-      ego_info.target_pose.pos << slot_length - 1.0, 0.0;
+      ego_info.target_pose.pos << slot_length - 0.5, 0.0;
       ego_info.target_pose.heading = 0.0;
       ego_info.target_pose.heading_vec = Eigen::Vector2d(0, 0);
       break;
