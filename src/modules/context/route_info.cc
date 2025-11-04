@@ -1868,7 +1868,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   // 筛选3km内的exchange region
   for (const auto& exchange_region : exchange_region_info_list) {
-    if (exchange_region.distance_to_split_point <= 3000.0) {  // 3km范围内
+    if (exchange_region.distance_to_split_point <= 3000.0) {
       valid_exchange_regions.emplace_back(exchange_region);
     }
   }
@@ -1913,10 +1913,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                               feasible_lane_sequence.end(), lane_num);
 
           if (it != feasible_lane_sequence.end()) {
-            mlc_request_info_.emplace_back(MLCRequestType{
-                .lane_num = lane_num,
-                .mlc_request_type = RAMP_TO_MAIN,
-                .split_direction = split_dir});  // 使用map中的方向
+            mlc_request_info_.emplace_back(
+                MLCRequestType{.lane_num = lane_num,
+                               .mlc_request_type = RAMP_TO_MAIN,
+                               .split_direction = split_dir});
             feasible_lane_sequence.erase(it);
             is_exist_merge_fp = true;
           }
@@ -1943,12 +1943,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // 计算每个exchange region的最大距离
     for (size_t i = 0; i < valid_exchange_regions.size(); ++i) {
       if (i == 0) {
-        // 第一个exchange region的特殊处理
         max_distances[i] =
             valid_exchange_regions[i].distance_to_split_point +
             valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
       } else {
-        // 后续exchange region的距离计算
         max_distances[i] =
             valid_exchange_regions[i].distance_to_split_point +
             valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
@@ -1964,7 +1962,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                       exchange_feasible_lane_distances[i],
                                       max_distances[i]);
 
-      // 如果当前不是最后一个exchange region，用后一个优化当前这个
       if (i < valid_exchange_regions.size() - 1) {
         std::vector<int> missing_elements =
             findMissingElements(valid_exchange_regions[i]
@@ -1984,7 +1981,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                   valid_exchange_regions[i]
                       .end_fp_point.fp_distance_to_split_point <
               500.0;
-          int avoide_lane_num = -1;
+          std::vector<int> avoide_lane_num;
           bool is_need_cancel_avoide_mlc = false;
           if (is_two_exchange_close) {
             for (int n = 0; n < mlc_request_info_list[i].first.size(); n++) {
@@ -1992,14 +1989,15 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                       AVOIDE_MERGE ||
                   mlc_request_info_list[i].first[n].mlc_request_type ==
                       AVOIDE_DIVERGE) {
-                avoide_lane_num = mlc_request_info_list[i].first[n].lane_num;
+                avoide_lane_num.emplace_back(
+                    mlc_request_info_list[i].first[n].lane_num);
               }
             }
-            if (avoide_lane_num != -1) {
+            if (!avoide_lane_num.empty()) {
               is_need_cancel_avoide_mlc = valid_exchange_regions[i + 1]
                                                   .recommend_lane_num[0]
                                                   .feasible_lane_sequence[0] -
-                                              avoide_lane_num >
+                                              avoide_lane_num[0] >
                                           0;
             }
             // 把躲避分汇流的车道添加进去
@@ -2007,11 +2005,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               auto& feasible_sequence = valid_exchange_regions[i]
                                             .recommend_lane_num[0]
                                             .feasible_lane_sequence;
-              auto it =
-                  std::lower_bound(feasible_sequence.begin(),
-                                   feasible_sequence.end(), avoide_lane_num);
-              if (it == feasible_sequence.end() || *it != avoide_lane_num) {
-                feasible_sequence.insert(it, avoide_lane_num);
+              for (int lane_num : avoide_lane_num) {
+                auto it = std::lower_bound(feasible_sequence.begin(),
+                                           feasible_sequence.end(), lane_num);
+                if (it == feasible_sequence.end() || *it != lane_num) {
+                  feasible_sequence.insert(it, lane_num);
+                }
               }
             }
           }
