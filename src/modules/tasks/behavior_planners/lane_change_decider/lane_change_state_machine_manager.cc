@@ -65,6 +65,12 @@ void LaneChangeStateMachineManager::Update() {
   PreProcess();
   RunStateMachine();
   GenerateStateMachineOutput();
+  auto& lane_change_decider_output = session_->mutable_planning_context()
+                                         ->mutable_lane_change_decider_output();
+  if (transition_info_.lane_change_status == kLaneKeeping &&
+      lane_change_decider_output.curr_state != kLaneKeeping) {
+    ResetStateMachine();
+  }
   UpdateCoarsePlanningInfo();
   // UpdateLCCoarsePlanningInfo();
   UpdateStateMachineDebugInfo();
@@ -132,7 +138,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
-          ResetStateMachine();
+          // ResetStateMachine();
         }
       }
       break;
@@ -196,7 +202,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
             transition_info_.lane_change_direction,
             transition_info_.lane_change_type,
             lc_lane_mgr_->origin_lane_virtual_id(),
-            transition_info_.lane_change_status);
+            transition_info_.lane_change_status) && CheckTargetLaneValid();
         hold_state_dash_cnt = is_dash_enough ? 0 : hold_state_dash_cnt + 1;
 
         bool is_hold_to_cancel =
@@ -248,7 +254,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         if (is_complete_to_lane_keeping) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
-          ResetStateMachine();
+          // ResetStateMachine();
           pre_lane_change_finish_time_ = IflyTime::Now_ms();
         } else if (is_complete_to_cancel) {
           transition_info_.lane_change_status =
@@ -269,7 +275,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         if (is_cancel_to_lane_keeping) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
-          ResetStateMachine();
+          // ResetStateMachine();
           pre_lane_change_finish_time_ = IflyTime::Now_ms();
         } else if (is_cancel_to_complete) {
           transition_info_.lane_change_status =
@@ -322,16 +328,19 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
 bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
     const RequestType& lane_change_direction,
     const RequestSource& lane_change_type) {
-  if (ego_trajs_future_.empty()) {
-    return false;
-  }
+  // if (ego_trajs_future_.empty()) {
+  //   return false;
+  // }
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const bool has_target_lane =
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
   CheckLaneChangeValid(lane_change_direction);
-  return has_target_lane && lane_change_stage_info_.gap_insertable;
+  if (!has_target_lane) {
+     lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+  }
+  return has_target_lane && lane_change_stage_info_.gap_insertable && !ego_trajs_future_.empty();
 }
 
 bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
@@ -942,6 +951,8 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       lc_req_mgr_->target_lane_virtual_id());
 
   if (target_lane == nullptr) {
+    lc_state_info.lc_should_back = true;
+    lc_state_info.lc_back_reason = "dash not enough";
     return lc_state_info;
   }
 
