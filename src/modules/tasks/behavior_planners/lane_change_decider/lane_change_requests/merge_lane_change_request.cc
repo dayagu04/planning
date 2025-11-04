@@ -320,23 +320,25 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     return;
   }
 
-  bool left_lane_is_on_navigation_route = true;
-  if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums + 1;
-    int target_lane_order_num = current_lane_order_num - 1;
-    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
-                  target_lane_order_num) == feasible_lane_sequence.end()) {
-      left_lane_is_on_navigation_route = false;
+  bool left_lane_is_on_navigation_route = llane ? true : false;
+  bool right_lane_is_on_navigation_route = rlane ? true : false;
+  if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = left_lane_nums + 1;
+      int target_lane_order_num = current_lane_order_num - 1;
+      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+                    target_lane_order_num) == feasible_lane_sequence.end()) {
+        left_lane_is_on_navigation_route = false;
+      }
     }
-  }
 
-  bool right_lane_is_on_navigation_route = true;
-  if (feasible_lane_sequence.size() > 0) {
-    int current_lane_order_num = left_lane_nums + 1;
-    int target_lane_order_num = current_lane_order_num + 1;
-    if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
-                  target_lane_order_num) == feasible_lane_sequence.end()) {
-      right_lane_is_on_navigation_route = false;
+    if (feasible_lane_sequence.size() > 0) {
+      int current_lane_order_num = left_lane_nums + 1;
+      int target_lane_order_num = current_lane_order_num + 1;
+      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+                    target_lane_order_num) == feasible_lane_sequence.end()) {
+        right_lane_is_on_navigation_route = false;
+      }
     }
   }
 
@@ -509,16 +511,14 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       left_boundary_exist_virtual_type && right_boundary_exist_virtual_type) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
-  } else if (((left_boundary_exist_virtual_type &&
-               !target_right_boundary_exist_virtual_type) ||
-              route_info_output.is_on_ramp) &&
-             is_right_edge_side_lane && is_merge_region &&
+  } else if (left_boundary_exist_virtual_type &&
+             !target_right_boundary_exist_virtual_type &&
+             is_merge_region &&
              left_lane_is_on_navigation_route) {
     merge_lane_change_direction_ = LEFT_CHANGE;
-  } else if (((right_boundary_exist_virtual_type &&
-               !target_left_boundary_exist_virtual_type) ||
-              route_info_output.is_on_ramp) &&
-             is_left_edge_side_lane && is_merge_region &&
+  } else if (right_boundary_exist_virtual_type &&
+             !target_left_boundary_exist_virtual_type &&
+             is_merge_region &&
              right_lane_is_on_navigation_route) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else if (!right_boundary_exist_virtual_type &&
