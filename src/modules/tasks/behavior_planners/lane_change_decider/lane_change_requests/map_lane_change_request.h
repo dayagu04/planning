@@ -32,9 +32,6 @@ class MapRequest : public LaneChangeRequest {
   bool CheckTargetLaneLaneMarks(RequestType request_type);
   bool CheckTargetLaneMergeDirection(RequestType request_type);
 
-  bool IsTrafficConefeasibleInTargetLane(const int target_lane_virtual_id,
-                                    const RequestType request_type) const;
-
   CongestionDetectionConfig congestion_detection_config;
   int avoidance_MLC_counter = 0;
   int suppression_counter = 0;
