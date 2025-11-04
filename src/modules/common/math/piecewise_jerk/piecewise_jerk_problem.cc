@@ -342,6 +342,12 @@ OSQPSettings* PiecewiseJerkProblem::SolverDefaultSettings() {
   // Define Solver default settings
   OSQPSettings* settings =
       reinterpret_cast<OSQPSettings*>(c_malloc(sizeof(OSQPSettings)));
+
+  if (settings == nullptr) {
+    ILOG_ERROR << "failed to allocate memory for OSQPSettings!";
+    return nullptr;
+  }
+
   osqp_set_default_settings(settings);
   settings->polish = true;
   settings->verbose = false;
