@@ -452,20 +452,22 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
       }
     }
   } else {
-    const CurvePath& curve_path = request_.curve_node->GetCurvePath();
-    for (const auto& points : curve_path.ptss) {
-      for (size_t i = 0; i < points.size(); ++i) {
-        if (i > 0 && i < points.size() - 1) {
-          continue;
-        }
-        const auto& pose = points[i];
-        if (pose.GetX() < pose_bound_.curve_x_down_bound ||
-            pose.GetX() > pose_bound_.x_up_bound ||
-            pose.GetY() < pose_bound_.y_down_bound ||
-            pose.GetY() > pose_bound_.y_up_bound ||
-            std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
-            std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
-          return true;
+    if (request_.current_node != nullptr) {
+      const CurvePath& curve_path = request_.curve_node->GetCurvePath();
+      for (const auto& points : curve_path.ptss) {
+        for (size_t i = 0; i < points.size(); ++i) {
+          if (i > 0 && i < points.size() - 1) {
+            continue;
+          }
+          const auto& pose = points[i];
+          if (pose.GetX() < pose_bound_.curve_x_down_bound ||
+              pose.GetX() > pose_bound_.x_up_bound ||
+              pose.GetY() < pose_bound_.y_down_bound ||
+              pose.GetY() > pose_bound_.y_up_bound ||
+              std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
+              std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
+            return true;
+          }
         }
       }
     }
@@ -527,6 +529,10 @@ const bool NodeDeleteDecider::CheckDelByParentNode() {
     return false;
   }
 
+  if (request_.current_node == nullptr) {
+    return false;
+  }
+
   if (request_.current_node->GetGlobalID() ==
       request_.parent_node->GetGlobalID()) {
     return true;
@@ -585,6 +591,10 @@ const bool NodeDeleteDecider::CheckDelByLoopBackNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelBySameGridNodeContinuous() {
+  if (request_.current_node == nullptr || request_.old_node == nullptr) {
+    return false;
+  }
+
   if (request_.current_node->GetEulerDist(request_.old_node) > 0.01 ||
       request_.current_node->GetPhiErr(request_.old_node) > 0.0087f) {
     return true;

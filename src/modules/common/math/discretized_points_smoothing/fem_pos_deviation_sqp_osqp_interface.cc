@@ -488,14 +488,18 @@ void FemPosDeviationSqpOsqpInterface::SetPrimalWarmStart(
 
   // Calculate average interval length for curvature constraints
   double total_length = 0.0;
-  auto pre_point = points.front();
-  for (int i = 1; i < num_of_points_; ++i) {
-    const auto& cur_point = points[i];
-    total_length += std::hypot(pre_point.first - cur_point.first,
-                               pre_point.second - cur_point.second);
-    pre_point = cur_point;
+  if (num_of_points_ >= 2) {
+    auto pre_point = points.front();
+    for (int i = 1; i < num_of_points_; ++i) {
+      const auto& cur_point = points[i];
+      total_length += std::hypot(pre_point.first - cur_point.first,
+                                 pre_point.second - cur_point.second);
+      pre_point = cur_point;
+    }
+    average_interval_length_ = total_length / (num_of_points_ - 1);
+  } else {
+    average_interval_length_ = 0.0;
   }
-  average_interval_length_ = total_length / (num_of_points_ - 1);
 }
 
 bool FemPosDeviationSqpOsqpInterface::OptimizeWithOsqp(
