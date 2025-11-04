@@ -2861,6 +2861,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   iflymapdata::sdpro::FeaturePoint start_fp;
   iflymapdata::sdpro::FeaturePoint end_fp;
 
+  split_region_info.split_link_id = split_segment.id();
+
   auto previous_seg = &split_segment;
 
   if (previous_seg == nullptr) {
@@ -2873,7 +2875,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   if (!split_seccessor_link) {
     return split_region_info;
   }
-
+  split_region_info.is_ramp_split =
+      sdpro_map.isRamp(split_seccessor_link->link_type());
+      
   if (previous_seg->successor_link_ids().size() < 2) {
     return split_region_info;
   }
@@ -3047,9 +3051,6 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
       is_find_split_region_start == true ? -fp_start_length : 0.0;
   split_region_info.end_fp_point.fp_distance_to_split_point =
       is_find_split_region_end == true ? fp_end_length : 0.0;
-  split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type());
-  split_region_info.split_link_id = split_segment.id();
 
   if (!is_find_split_region_start || !is_find_split_region_end) {
     return split_region_info;
