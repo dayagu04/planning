@@ -911,12 +911,12 @@ bool HybridARAStar::SetStartAndEndPose(
   CalculateSearchBounds(plan_history_traj);
 
   // load nodes
-  start_node_.reset(new Node3D(start_pose_.x, start_pose_.y, start_pose_.theta,
-                               XYbounds_, x_grid_resolution_,
-                               y_grid_resolution_, phi_grid_resolution_));
-  end_node_.reset(new Node3D(end_pose_.x, end_pose_.y, end_pose_.theta,
-                             XYbounds_, x_grid_resolution_, y_grid_resolution_,
-                             phi_grid_resolution_));
+  start_node_ = std::make_shared<Node3D>(
+      start_pose_.x, start_pose_.y, start_pose_.theta, XYbounds_,
+      x_grid_resolution_, y_grid_resolution_, phi_grid_resolution_);
+  end_node_ = std::make_shared<Node3D>(
+      end_pose_.x, end_pose_.y, end_pose_.theta, XYbounds_, x_grid_resolution_,
+      y_grid_resolution_, phi_grid_resolution_);
 
   start_node_->SetS(start_s);
   start_node_->SetL(start_l);
