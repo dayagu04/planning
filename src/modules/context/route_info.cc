@@ -1753,6 +1753,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // 处理split信息缺失，向一侧变道的场景
     for (auto& relative_id_lane : relative_id_lanes) {
       ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
+    }
+    for (auto& relative_id_lane : relative_id_lanes) {
       if (relative_id_lane->get_relative_id() != 0) {
         continue;
       }
@@ -1946,6 +1948,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     for (auto& relative_id_lane : relative_id_lanes) {
       ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
+    }
+    for (auto& relative_id_lane : relative_id_lanes) {
       if (relative_id_lane->get_relative_id() != 0) {
         continue;
       }
@@ -2233,9 +2237,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       maxVal_seq = num;
     }
   }
-
   for (auto& relative_id_lane : relative_id_lanes) {
     ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
+  }
+  for (auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane->get_relative_id() != 0) {
       continue;
     }
