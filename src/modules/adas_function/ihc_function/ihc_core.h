@@ -115,6 +115,9 @@ class IhcCore {
   // 速度持续检测相关变量
   float speed_above_40kph_duration_ = 0.0f;  // 车速>=40kph的持续时间
   float speed_above_30kph_duration_ = 0.0f;  // 车速>=30kph的持续时间
+  
+  // 已验证的可信障碍物ID集合（曾经同时被相机和雷达检测到的障碍物）
+  std::set<uint16> verified_obstacle_ids_;
 };
 }  // namespace ihc_core
 }  // namespace adas_function

@@ -619,9 +619,13 @@ uint32 LdpCore::UpdateLdpFaultCode(void) {
   }
   // bit 13
   // 故障降级
-  if ((degraded_driving_function_info_ptr->ldp.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->ldp.degraded ==
-           iflyauto::ERROR_DEGRADED)) {
+  if ((degraded_driving_function_info_ptr->ldp.degraded == iflyauto::INHIBIT) ||
+       (degraded_driving_function_info_ptr->ldp.degraded ==
+           iflyauto::ERROR_DEGRADED) ||
+       (degraded_driving_function_info_ptr->ldp.degraded ==
+           iflyauto::ERROR_SAFE_STOP) ||
+       (degraded_driving_function_info_ptr->ldp.degraded ==
+           iflyauto::MCU_COMM_SHUTDOWN)) {
     ldp_fault_code += uint16_bit[13];
   } else {
     /*do nothing*/

@@ -143,6 +143,10 @@ void Preprocess::SyncParameters(void) {
                        "hmi_ldp_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_elk_state, int,
                        "hmi_elk_state");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch, int,
+                       "tsr_function_test_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_supp_sign_type_test, int,
+                       "tsr_supp_sign_type_test");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_state, int,
                        "hmi_tsr_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_speed_limit, int,
@@ -163,6 +167,8 @@ void Preprocess::SyncParameters(void) {
                        "ihc_low_beam_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code, int,
                        "ihc_fault_code");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code, int,
+                       "ihc_active_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_use_json_code, bool,
                        "tsr_use_json_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code, int,

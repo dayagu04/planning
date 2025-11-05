@@ -1,7 +1,8 @@
 {
   "car_type": "chery_m32t",
   "mark_date": "20241114",
-  "lkas_version":"20250928",
+  "lkas_version":"20251013",
+  "tsr_ihc_version":"20251015",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -135,11 +136,13 @@
   "ldp_main_switch": false,
   "elk_main_switch": false,
   "tsr_main_switch": 0,
-  "tsr_use_json_code": true,
+  "tsr_use_json_code": false,
   "tsr_fault_code": 0,
+  "tsr_reset_path_length": 2000.0,
+  "tsr_function_test_switch": 0,
+  "tsr_supp_sign_type_test": 0,
   "elk_tlc_thrd": 1.0,
   "elk_roadedge_tlc_thrd": 1.3,
-  "tsr_reset_path_length": 10000.0,
   "force_no_sideway_switch": false,
   "force_no_safe_departure_switch": false,
   "adas_sim_switch": true,
@@ -187,6 +190,7 @@
   "ihc_high_beam_code": 0,
   "ihc_low_beam_code": 0,
   "ihc_fault_code": 0,
+  "ihc_active_code": 0,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
   "elk_roadedge_testswitch_temp_":false

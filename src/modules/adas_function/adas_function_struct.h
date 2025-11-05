@@ -179,8 +179,14 @@ struct Parameters {
   uint16 ihc_low_beam_code = 0;
   // IHC故障码
   uint16 ihc_fault_code = 0;
+  // IHC激活码
+  uint16 ihc_active_code = 0;
   // TSR故障码
   uint16 tsr_fault_code = 0;
+  // TSR测试模式
+  uint16 tsr_function_test_switch = 0;
+  // TSR辅助标识牌测试
+  uint16 tsr_supp_sign_type_test = 0;
 };
 
 struct StateInfo {

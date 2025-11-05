@@ -5,17 +5,11 @@ namespace adas_function {
 namespace ihc_core {
 
 // IHC计时器（使用dt累积）
-static float ihc_same_dir_hold_time_s = 0.0f;          // 同向车累计时间
-static float ihc_oncoming_vehicle_hold_time_s = 0.0f;  // 对向机动车累计时间
-static float ihc_oncoming_cycle_hold_time_s = 0.0f;  // 对向非机动车累计时间
 static float ihc_low_beam_on_duration_s =
     0.0f;  // 无车空窗累计时间（用于近->远）
 static float ihc_high_beam_on_duration_s = 0.0f;  // 远光持续时间（用于最小2s）
 
 static inline void ResetIhcDynamicObstacleTimers() {
-  ihc_same_dir_hold_time_s = 0.0f;
-  ihc_oncoming_vehicle_hold_time_s = 0.0f;
-  ihc_oncoming_cycle_hold_time_s = 0.0f;
   ihc_low_beam_on_duration_s = 0.0f;
   ihc_high_beam_on_duration_s = 0.0f;
 }
@@ -71,6 +65,7 @@ void IhcCore::RunOnce(void) {
     ihc_sys_.state.ihc_low_beam_code =
         GetContext.get_param()->ihc_low_beam_code;
     ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code;
+    ihc_sys_.state.ihc_active_code = GetContext.get_param()->ihc_active_code;
   }
 
   ihc_sys_.state.ihc_state = IHCStateMachine();
@@ -215,18 +210,18 @@ uint16 IhcCore::IhcActiveCode() {
   // 待补充
 
   // condition1: 大灯开关挡位在AUTO档 (auto_light_state一直为false)
-  // if (ihc_sys_.input.auto_light_state != true) {
-  //   ihc_active_code_temp += uint16_bit[1];
-  // } else {
-  //   // do nothing
-  // }
-
-  // condition2: 近光灯点亮
-  if (ihc_sys_.input.low_beam_state != true) {
-    ihc_active_code_temp += uint16_bit[2];
+  if (ihc_sys_.input.auto_light_state != true) {
+    ihc_active_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
+
+  // condition2: 近光灯点亮
+  // if (ihc_sys_.input.low_beam_state != true) {
+  //   ihc_active_code_temp += uint16_bit[2];
+  // } else {
+  //   // do nothing
+  // }
 
   return ihc_active_code_temp;
 }
@@ -453,10 +448,14 @@ uint16 IhcCore::UpdateIhcFaultCode() {
            ->get_local_view()
            .degraded_driving_function_info;
 
-  if ((degraded_driving_function_info_ptr->ihc.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->ihc.degraded ==
-           iflyauto::ERROR_DEGRADED)) {
-    // fault_code += uint16_bit[8];
+  if ((degraded_driving_function_info_ptr->ihc.degraded == iflyauto::INHIBIT) ||
+       (degraded_driving_function_info_ptr->ihc.degraded ==
+           iflyauto::ERROR_DEGRADED) ||
+       (degraded_driving_function_info_ptr->ihc.degraded ==
+           iflyauto::ERROR_SAFE_STOP) ||
+       (degraded_driving_function_info_ptr->ihc.degraded ==
+           iflyauto::MCU_COMM_SHUTDOWN)) {
+    fault_code += uint16_bit[8];
   } else {
     /*do nothing*/
   }
@@ -538,16 +537,16 @@ iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
         }
         break;
       default:             // STANDBY
-        if (fault_code) {  // 1. 有故障 -> FAULT
+        if (!main_switch) {  // 1. 优先级最高：开关关闭 -> OFF
+          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
+          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
+        } else if (fault_code) {  // 2. 其次：有故障 -> FAULT
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_FAULT;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_FAULT;
         } else if (active_code == 0) {  // 3. active条件 -> ACTIVE, ==0为使能
           ihc_state_fault_off_standby_active = IHC_StateMachine_IN_ACTIVE;
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_ACTIVE;
-        } else if (main_switch == false) {  // 4. 开关关闭 -> OFF
-          ihc_state_fault_off_standby_active = IHC_StateMachine_IN_OFF;
-          ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_OFF;
-        } else {  // 维持STANDBY
+        } else {  // 4. 维持STANDBY
           ihc_state_temp = iflyauto::IHC_FUNCTION_FSM_WORK_STATE_STANDBY;
         }
         break;
@@ -637,12 +636,44 @@ bool IhcCore::DynamicObstacleCheck(void) {
   const auto &fusion_objs = fusion_objects_info.fusion_object;
   const int fusion_objs_num = fusion_objects_info.fusion_object_size;
 
+  // 步骤1: 收集当前帧所有障碍物ID，用于后续清理
+  std::set<uint16> current_frame_ids;
+  
+  // 步骤2: 第一次遍历，更新verified_obstacle_ids_（同时被相机和雷达检测到的障碍物）
   for (int i = 0; i < fusion_objs_num; i++) {
+    uint16 track_id = fusion_objs[i].additional_info.track_id;
+    current_frame_ids.insert(track_id);
+    
+    // 判断障碍物的track_age
+    if (fusion_objs[i].additional_info.track_age < 500) {
+      continue;  // 跳过track_age小于500ms的障碍物
+    }
+    
+    // 判断障碍物数据来源, 必须是视觉和雷达都检测出才行, 使用fusion_source判断
+    uint32_t fusion_source = fusion_objs[i].additional_info.fusion_source;
+    bool has_camera = (fusion_source & 0x01) != 0;  // 第1位：前相机来源
+    bool has_radar = (fusion_source & 0xFE) != 0;   // 第2-8位：雷达来源（前毫米波、左前、右前、左后、右后、超声波、激光雷达）
+    
+    // 如果同时有相机和雷达来源，则加入到可信障碍物集合中
+    if (has_camera && has_radar) {
+      verified_obstacle_ids_.insert(track_id);
+    }
+  }
+  
+  // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
+  for (int i = 0; i < fusion_objs_num; i++) {
+    uint16 track_id = fusion_objs[i].additional_info.track_id;
+    
+    // 只有在verified_obstacle_ids_中的障碍物才被认为是真实障碍物
+    if (verified_obstacle_ids_.find(track_id) == verified_obstacle_ids_.end()) {
+      continue;  // 跳过不在可信列表中的障碍物
+    }
+    
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
     // 筛选前方的车辆动态障碍物，使用滞回控制
-    if (distance_x > 0 && distance_x < 220.0F) {  // 扩大检测范围
+    if (distance_x > 0 && distance_x < 230.0F) {  // 扩大检测范围
       // 判断障碍物是否为机动车
       if (fusion_objs[i].common_info.type >=
               iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
@@ -652,11 +683,6 @@ bool IhcCore::DynamicObstacleCheck(void) {
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车
-          // //
-          // 如果对向车纵向距离过近（<70m），横向距离太远(>20m)，则不在灯光影响区域
-          // if (distance_x < 70.0f && abs(distance_y) > 20.0f) {
-          //   continue;
-          // }
           // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
           if (distance_x +
                   fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
@@ -664,91 +690,78 @@ bool IhcCore::DynamicObstacleCheck(void) {
             // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
             continue;
           }
-          // 滞回控制，190m~210m为滞回区间
-          if (distance_x < 190.0f) {
+          // 滞回控制，200m~230m为滞回区间
+          if (distance_x < 200.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_vehicle = true;
-          } else if (distance_x <= 210.0f) {
-            // 190m~210m滞回区间，保持当前状态
+          } else if (distance_x <= 230.0f) {
+            // 200m~230m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_vehicle = true;
             }
           }
-          // distance > 210.0f 时继续检查其他障碍物
+          // distance > 230.0f 时继续检查其他障碍物
         } else if (fusion_objs[i].additional_info.motion_pattern_current ==
                    iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
-          // 同向机动车：滞回控制，90m~110m为滞回区间
-          if (distance_x < 90.0f) {
+          // 同向机动车：滞回控制，100m~120m为滞回区间
+          if (distance_x < 100.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_same_dir = true;
-          } else if (distance_x <= 110.0f) {
-            // 90m~110m滞回区间，保持当前状态
+          } else if (distance_x <= 120.0f) {
+            // 100m~120m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_same_dir = true;
             }
           }
-          // distance > 110.0f 时继续检查其他障碍物
+          // distance > 120.0f 时继续检查其他障碍物
         }
       } else if (fusion_objs[i].common_info.type >=
                      iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING &&
                  fusion_objs[i].common_info.type <=
                      iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
-        // 对向非机动车：滞回控制，65m~85m为滞回区间
+        // 对向非机动车：滞回控制，75m~95m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
-          if (distance_x < 65.0f) {
+          if (distance_x < 75.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
-          } else if (distance_x <= 85.0f) {
-            // 65m~85m滞回区间，保持当前状态
+          } else if (distance_x <= 95.0f) {
+            // 75m~95m滞回区间，保持当前状态
             if (!last_high_beam_request) {
               detected_oncoming_cycle = true;
             }
           }
-          // distance > 85.0f 时继续检查其他障碍物
+          // distance > 95.0f 时继续检查其他障碍物
         }
       }
     }
   }
 
-  // 基于时间的持续性判定：使用 dt 累积，阈值区分三类对象
-  const float dt = GetContext.get_param()->dt;  // 周期时长（秒）
-
-  // 阈值：对向车1.5s、同向车2.0s、非机动车1.0s
-  const float THRESHOLD_SAME_DIR_S = 2.0f;
-  const float THRESHOLD_ONCOMING_VEHICLE_S = 1.5f;
-  const float THRESHOLD_ONCOMING_CYCLE_S = 1.0f;
+  // 步骤4: 清理不在当前帧的障碍物ID
+  // 遍历verified_obstacle_ids_，删除不在current_frame_ids中的ID
+  for (auto it = verified_obstacle_ids_.begin(); it != verified_obstacle_ids_.end(); ) {
+    if (current_frame_ids.find(*it) == current_frame_ids.end()) {
+      // 不在当前帧中，删除
+      it = verified_obstacle_ids_.erase(it);
+    } else {
+      ++it;
+    }
+  }
 
   // 同向车辆
   if (detected_same_dir) {
-    ihc_same_dir_hold_time_s += dt;
-    if (ihc_same_dir_hold_time_s >= THRESHOLD_SAME_DIR_S) {
-      ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
-    }
-  } else {
-    ihc_same_dir_hold_time_s = 0.0f;  // 中断则清零
+    ihc_sys_.state.low_beam_due_to_same_dir_vehicle = true;
   }
-
   // 对向机动车
   if (detected_oncoming_vehicle) {
-    ihc_oncoming_vehicle_hold_time_s += dt;
-    if (ihc_oncoming_vehicle_hold_time_s >= THRESHOLD_ONCOMING_VEHICLE_S) {
-      ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
-    }
-  } else {
-    ihc_oncoming_vehicle_hold_time_s = 0.0f;
+    ihc_sys_.state.low_beam_due_to_oncomming_vehicle = true;
   }
 
   // 对向非机动车
   if (detected_oncoming_cycle) {
-    ihc_oncoming_cycle_hold_time_s += dt;
-    if (ihc_oncoming_cycle_hold_time_s >= THRESHOLD_ONCOMING_CYCLE_S) {
-      ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
-    }
-  } else {
-    ihc_oncoming_cycle_hold_time_s = 0.0f;
+    ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
   }
-
+  
   // 返回是否检测到稳定的障碍物
   return (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
           ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||
