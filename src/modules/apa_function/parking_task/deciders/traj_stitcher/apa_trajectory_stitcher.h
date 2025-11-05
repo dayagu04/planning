@@ -115,6 +115,9 @@ class ApaTrajectoryStitcher {
 
   void GeneSpeedPointFromZeroState();
 
+  void DebugCombineTraj(const bool is_traj_overshoot,
+                        const SpeedData& speed_profile);
+
  private:
   SVPoint ego_lon_state_;
   pnc::geometry_lib::PathPoint stitch_path_point_;

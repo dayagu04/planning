@@ -30,9 +30,6 @@ void ApaTrajectoryStitcher::Execute(
   traj_gear_ = plan_gear;
   veh_gear_ = veh_gear;
 
-  // ILOG_INFO << "traj gear = " << static_cast<int>(traj_gear_)
-  //           << ", veh gear = " << static_cast<int>(veh_gear_);
-
   stitch_path_.clear();
   trajectory_.clear();
   config_.Init();
@@ -646,18 +643,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   CopyHistoryTraj(history_trajectory);
 
 #if DEBUG_TASK
-  ILOG_INFO << "is_traj_overshoot = " << is_traj_overshoot
-            << ", gear = " << is_forward
-            << ", traj back s = " << trajectory_.back().s()
-            << ", speed back s = " << speed_profile.back().s
-            << ", size = " << trajectory_.size();
-
-  // just debug short traj.
-  if (trajectory_.back().s() < config_.traj_min_dist) {
-    for (size_t i = 0; i < trajectory_.size(); i++) {
-      ILOG_INFO << trajectory_[i].DebugString();
-    }
-  }
+  DebugCombineTraj(is_traj_overshoot, speed_profile);
 #endif
 
   return;
@@ -674,12 +660,13 @@ void ApaTrajectoryStitcher::TaskDebug(
     ILOG_INFO << "origin path s = " << path.back().s;
   }
 
-  ILOG_INFO << "gear = " << static_cast<int>(traj_gear_)
-            << ", ego v = " << ego_lon_state_.v
+  ILOG_INFO << ", ego v = " << ego_lon_state_.v
             << ", ego a = " << ego_lon_state_.acc;
   ILOG_INFO << "lon stitch v = " << lon_stitch_point_.vel()
             << ", a = " << lon_stitch_point_.acc()
             << ", s = " << lon_stitch_point_.s();
+  ILOG_INFO << "traj gear = " << static_cast<int>(traj_gear_)
+            << ", veh gear = " << static_cast<int>(veh_gear_);
 
   ILOG_INFO << "traj size = " << trajectory.size();
 
@@ -709,6 +696,10 @@ void ApaTrajectoryStitcher::CopyHistoryTraj(
 
   if (trajectory_.back().s() > config_.traj_min_dist - 1e-3 ||
       history_trajectory.empty()) {
+    return;
+  }
+
+  if (trajectory_.GetGear() != history_trajectory.GetGear()) {
     return;
   }
 
@@ -770,6 +761,23 @@ void ApaTrajectoryStitcher::GeneSpeedPointFromZeroState() {
   lon_stitch_point_.set_acc(0);
   lon_stitch_point_.set_jerk(0);
 
+  return;
+}
+
+void ApaTrajectoryStitcher::DebugCombineTraj(const bool is_traj_overshoot,
+                                             const SpeedData& speed_profile) {
+  ILOG_INFO << "is_traj_overshoot = " << is_traj_overshoot
+            << ", gear = " << static_cast<int>(traj_gear_)
+            << ", traj back s = " << trajectory_.back().s()
+            << ", speed back s = " << speed_profile.back().s
+            << ", size = " << trajectory_.size();
+
+  // just debug short traj.
+  if (trajectory_.back().s() < config_.traj_min_dist) {
+    for (size_t i = 0; i < trajectory_.size(); i++) {
+      ILOG_INFO << trajectory_[i].DebugString();
+    }
+  }
   return;
 }
 
