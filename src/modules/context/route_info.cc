@@ -2039,8 +2039,22 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
-  // 判断当前处理的场景
   const auto first_exchange_region_info = valid_exchange_regions[0];
+  if (first_exchange_region_info.split_link_id !=
+          mlc_decider_route_info_.first_static_split_region_info
+              .split_link_id &&
+      mlc_decider_route_info_.first_static_split_region_info.split_link_id !=
+          -1) {
+    last_exchange_region_info_.last_exchange_info =
+        mlc_decider_route_info_.first_static_split_region_info;
+    last_exchange_region_info_.is_process_split =
+        mlc_decider_route_info_.is_process_split;
+    last_exchange_region_info_.is_process_merge =
+        mlc_decider_route_info_.is_process_merge;
+    last_exchange_region_info_.is_process_other_merge =
+        mlc_decider_route_info_.is_process_other_merge;
+  }
+  // 判断当前处理的场景
   if (!merge_region_info_list.empty() &&
       first_exchange_region_info.split_link_id ==
           merge_region_info_list[0].split_link_id) {
@@ -2058,23 +2072,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     mlc_decider_route_info_.static_split_region_info =
         first_exchange_region_info;
   }
-
   // 判断当前处于的状态
-  if (first_exchange_region_info.split_link_id !=
-          mlc_decider_route_info_.first_static_split_region_info
-              .split_link_id &&
-      mlc_decider_route_info_.first_static_split_region_info.split_link_id !=
-          -1) {
-    last_exchange_region_info_.last_exchange_info =
-        mlc_decider_route_info_.first_static_split_region_info;
-    last_exchange_region_info_.is_process_split =
-        mlc_decider_route_info_.is_process_split;
-    last_exchange_region_info_.is_process_merge =
-        mlc_decider_route_info_.is_process_merge;
-    last_exchange_region_info_.is_process_other_merge =
-        mlc_decider_route_info_.is_process_other_merge;
-  }
-
   double dis_to_last_split_point = 0.0;
   double dis_to_last_merge_point = 0.0;
   double dis_to_last_exchange_point = NL_NMAX;
