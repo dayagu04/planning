@@ -301,45 +301,23 @@ void TsrCore::UpdateTsrSuppInfo(void) {
           supp_sign_info.supp_sign_x <= 15.0) {
         // 根据标识牌类型设置对应的位
         switch (supp_sign_info.supp_sign_type) {
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN:
             supp_sign_code_ |= (1 << 0);  // bit 0
             break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING:
             supp_sign_code_ |= (1 << 1);  // bit 1
             break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING:
             supp_sign_code_ |= (1 << 2);  // bit 2
             break;
-          case iflyauto::SuppSignType::
-              SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING:
             supp_sign_code_ |= (1 << 3);  // bit 3
             break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_TUNNEL:
             supp_sign_code_ |= (1 << 4);  // bit 4
             break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING:
+          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_ROAD_CONSTRUCTION_SIGN:
             supp_sign_code_ |= (1 << 5);  // bit 5
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING:
-            supp_sign_code_ |= (1 << 6);  // bit 6
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY:
-            supp_sign_code_ |= (1 << 7);  // bit 7
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING:
-            supp_sign_code_ |= (1 << 8);  // bit 8
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U:
-            supp_sign_code_ |= (1 << 9);  // bit 9
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT:
-            supp_sign_code_ |= (1 << 10);  // bit 10
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT:
-            supp_sign_code_ |= (1 << 11);  // bit 11
-            break;
-          case iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING:
-            supp_sign_code_ |= (1 << 12);  // bit 12
             break;
           default:
             // 其他类型不处理
@@ -352,25 +330,17 @@ void TsrCore::UpdateTsrSuppInfo(void) {
   if (supp_sign_code_ > 0) {
     // 根据优先级定义标识牌类型对应的位数组（从低位到高位）
     static const iflyauto::SuppSignType supp_sign_priority_array[] = {
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_YIELD_SIGN,   // bit 0
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN,    // bit 1
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING,  // bit 2
-        iflyauto::SuppSignType::
-            SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,                // bit 3
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING,            // bit 4
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_OVERTAKING,         // bit 5
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_CANCEL_NO_OVERTAKING,  // bit 6
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_ENTRY,              // bit 7
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_MOTOR_ENTERING,  // bit
-                                                                         // 8
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_U,      // bit 9
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_RIGHT,  // bit 10
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_PROHIBIT_TURN_LEFT,   // bit 11
-        iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PASSING,           // bit 12
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_STOP_SIGN,    // bit 0
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_STOPPING,  // bit 1
+      iflyauto::SuppSignType::
+            SUPP_SIGN_TYPE_PROHIBIT_PROLONGED_PARKING,                // bit 2
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_NO_PARKING,   // bit 3
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_TUNNEL,       // bit 4
+      iflyauto::SuppSignType::SUPP_SIGN_TYPE_ROAD_CONSTRUCTION_SIGN, // bit 5
     };
 
     // 查找第一个从低到高位数为1的位子所对应的标识牌类型
-    for (int i = 0; i < 13; i++) {
+    for (int i = 0; i < sizeof(supp_sign_priority_array) / sizeof(supp_sign_priority_array[0]); i++) {
       if (supp_sign_code_ & (1 << i)) {
         realtime_supp_sign_info_ = supp_sign_priority_array[i];
         break;
