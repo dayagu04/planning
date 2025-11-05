@@ -1723,7 +1723,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 2、如果split为false，则需要检查是否触发merge。
   auto& split_region_info_list = route_info_output_.split_region_info_list;
   auto& merge_region_info_list = route_info_output_.merge_region_info_list;
-
+  mlc_decider_route_info_.ego_status_on_route = ON_MAIN;  // 每一帧重置状态
   // if (split_region_info_list.empty() && merge_region_info_list.empty()) {
   //   mlc_decider_route_info_.reset();
   //   return;
@@ -2065,8 +2065,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               .split_link_id &&
       mlc_decider_route_info_.first_static_split_region_info.split_link_id !=
           -1) {
-    last_exchange_region_info_ =
+    last_exchange_region_info_.last_exchange_info =
         mlc_decider_route_info_.first_static_split_region_info;
+    last_exchange_region_info_.is_process_split =
+        mlc_decider_route_info_.is_process_split;
+    last_exchange_region_info_.is_process_merge =
+        mlc_decider_route_info_.is_process_merge;
+    last_exchange_region_info_.is_process_other_merge =
+        mlc_decider_route_info_.is_process_other_merge;
   }
 
   double dis_to_last_split_point = 0.0;
@@ -2084,112 +2090,68 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         std::min(dis_to_last_exchange_point, dis_to_last_merge_point);
   }
 
-  bool is_entery_exchange_region =
+  bool is_entery_exchange_region_front =
       first_exchange_region_info.distance_to_split_point <
-          std::abs(first_exchange_region_info.start_fp_point
-                       .fp_distance_to_split_point) ||
-      first_exchange_region_info.split_link_id !=
-              mlc_decider_route_info_.first_static_split_region_info
-                  .split_link_id &&
-          mlc_decider_route_info_.first_static_split_region_info
-                  .split_link_id != -1;
-  const double kSplitDistanceThreshold = 10.0;
-  bool is_passing_exchange_split =
-      first_exchange_region_info.distance_to_split_point -
-          mlc_decider_route_info_.first_static_split_region_info
-              .distance_to_split_point >
-      kSplitDistanceThreshold;
-  bool is_passing_exchange_region =
-      dis_to_last_exchange_point >
-      last_exchange_region_info_.end_fp_point.fp_distance_to_split_point;
+      std::abs(
+          first_exchange_region_info.start_fp_point.fp_distance_to_split_point);
+  bool is_entery_exchange_region_rear = false;
+  if (last_exchange_region_info_.is_process_split) {
+    is_entery_exchange_region_rear =
+        dis_to_last_split_point < last_exchange_region_info_.last_exchange_info
+                                      .end_fp_point.fp_distance_to_split_point;
+  } else if (last_exchange_region_info_.is_process_merge ||
+             last_exchange_region_info_.is_process_other_merge) {
+    is_entery_exchange_region_rear =
+        dis_to_last_merge_point < last_exchange_region_info_.last_exchange_info
+                                      .end_fp_point.fp_distance_to_split_point;
+  }
+
+  if (is_entery_exchange_region_front) {
+    mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREA_FRONT;
+  } else if (is_entery_exchange_region_rear) {
+    mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREA_REAR;
+  }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
   // 状态流转，分配feasible_lane_sequence
   switch (mlc_decider_route_info_.ego_status_on_route) {
     case ON_MAIN: {
-      if (is_entery_exchange_region) {
-        mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREA_FRONT;
-        // 可能会出现一帧直接跳过EXCHANGE_AREA_FRONT状态
-        if (is_passing_exchange_split) {
-          mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREA_REAR;
-        }
-        feasible_lane_sequence =
-            mlc_decider_route_info_.first_static_split_region_info
-                .recommend_lane_num[1]
-                .feasible_lane_sequence;
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              mlc_decider_route_info_.first_static_split_region_info
-                  .distance_to_split_point;
-        }
-      } else {
-        feasible_lane_sequence =
-            first_exchange_region_info.recommend_lane_num[0]
-                .feasible_lane_sequence;
-        // 根据当前车道数来优化feasible_lane_sequence
-        feasible_lane_sequence =
-            GetIntersection(current_lane_vec, feasible_lane_sequence);
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              first_exchange_region_info.distance_to_split_point +
-              first_exchange_region_info.start_fp_point
-                  .fp_distance_to_split_point;
-        }
+      feasible_lane_sequence = first_exchange_region_info.recommend_lane_num[0]
+                                   .feasible_lane_sequence;
+      // 根据当前车道数来优化feasible_lane_sequence
+      feasible_lane_sequence =
+          GetIntersection(current_lane_vec, feasible_lane_sequence);
+      for (int i = 0; i < feasible_lane_sequence.size(); i++) {
+        feasible_lane_distance[feasible_lane_sequence[i]] =
+            first_exchange_region_info.distance_to_split_point +
+            first_exchange_region_info.start_fp_point
+                .fp_distance_to_split_point;
       }
       break;
     }
 
     case IN_EXCHANGE_AREA_FRONT: {
-      if (is_passing_exchange_split) {
-        mlc_decider_route_info_.ego_status_on_route = IN_EXCHANGE_AREA_REAR;
-        feasible_lane_sequence =
-            last_exchange_region_info_.recommend_lane_num[1]
-                .feasible_lane_sequence;
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              last_exchange_region_info_.end_fp_point
-                  .fp_distance_to_split_point -
-              route_info_output_.accumulate_dis_ego_to_last_split_point;
-        }
-      } else {
-        feasible_lane_sequence =
+      feasible_lane_sequence =
+          mlc_decider_route_info_.first_static_split_region_info
+              .recommend_lane_num[1]
+              .feasible_lane_sequence;
+      for (int i = 0; i < feasible_lane_sequence.size(); i++) {
+        feasible_lane_distance[feasible_lane_sequence[i]] =
             mlc_decider_route_info_.first_static_split_region_info
-                .recommend_lane_num[1]
-                .feasible_lane_sequence;
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              mlc_decider_route_info_.first_static_split_region_info
-                  .distance_to_split_point;
-        }
+                .distance_to_split_point;
       }
       break;
     }
 
     case IN_EXCHANGE_AREA_REAR: {
-      if (is_passing_exchange_region) {
-        mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
-        feasible_lane_sequence =
-            first_exchange_region_info.recommend_lane_num[0]
-                .feasible_lane_sequence;
-        // 根据当前车道数来优化feasible_lane_sequence
-        feasible_lane_sequence =
-            GetIntersection(current_lane_vec, feasible_lane_sequence);
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              first_exchange_region_info.distance_to_split_point +
-              first_exchange_region_info.start_fp_point
-                  .fp_distance_to_split_point;
-        }
-      } else {
-        feasible_lane_sequence =
-            last_exchange_region_info_.recommend_lane_num[1]
-                .feasible_lane_sequence;
-        for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              last_exchange_region_info_.end_fp_point
-                  .fp_distance_to_split_point -
-              route_info_output_.accumulate_dis_ego_to_last_split_point;
-        }
+      feasible_lane_sequence =
+          last_exchange_region_info_.last_exchange_info.recommend_lane_num[1]
+              .feasible_lane_sequence;
+      for (int i = 0; i < feasible_lane_sequence.size(); i++) {
+        feasible_lane_distance[feasible_lane_sequence[i]] =
+            last_exchange_region_info_.last_exchange_info.end_fp_point
+                .fp_distance_to_split_point -
+            route_info_output_.accumulate_dis_ego_to_last_split_point;
       }
       break;
     }

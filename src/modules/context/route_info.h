@@ -31,9 +31,11 @@ struct MLCRequestType {
   }
 };
 
-struct SolidLineInfo {
-  double line_distance;
-  MarkingLineChangeType line_change_type;
+struct LastExchangeRegionInfo {
+  bool is_process_split = false;
+  bool is_process_other_merge = false;
+  bool is_process_merge = false;
+  NOASplitRegionInfo last_exchange_info;
 };
 
 class RouteInfo {
@@ -111,7 +113,7 @@ class RouteInfo {
   double distance_to_target_slot_ = NL_NMAX;
   double distance_to_next_speed_bump_ = NL_NMAX;
   double virtual_extend_buff_ = 0.0;
-  NOASplitRegionInfo last_exchange_region_info_;
+  LastExchangeRegionInfo last_exchange_region_info_;
   struct RayInfo {
     char name;
     double angle;
