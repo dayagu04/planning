@@ -677,6 +677,9 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     end_of_speed_limit_out_flag_ == false) {
     if (current_map_speed_limit_valid_ == true) {
       tsr_speed_limit_ = current_map_speed_limit_;
+    } else {
+      // 地图限速无效时，清空限速
+      tsr_speed_limit_ = 0;
     }
   }
   return;
