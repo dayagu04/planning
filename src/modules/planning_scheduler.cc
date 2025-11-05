@@ -1199,7 +1199,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   // 行车规划部分
   // TODO(xjli32): 功能切换时，reset
-  // ClearParkingInfo(planning_output);
+  ClearParkingInfo(planning_output, planning_hmi_info);
 
   // sync parameters only if scene_type or dbw_status changes
   const bool dbw_status = session_.environmental_model().GetVehicleDbwStatus();
@@ -1257,7 +1257,6 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
-  ClearParkingInfo(planning_output, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {
     planning_hmi_info->ad_info.is_avaliable = false;
