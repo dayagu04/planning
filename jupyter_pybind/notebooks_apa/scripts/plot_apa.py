@@ -16,7 +16,7 @@ from lib.load_common import *
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52930/trigger/20251023/20251023-15-20-01/park_in_data_collection_CHERY_M32T_52930_EVENT_FILTER_2025-10-23-15-20-01_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_81859/trigger/20251105/20251105-20-44-13/park_in_data_collection_CHERY_M32T_81859_EVENT_FILTER_2025-11-05-20-44-13_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True

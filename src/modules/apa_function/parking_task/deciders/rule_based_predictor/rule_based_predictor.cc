@@ -13,10 +13,10 @@
 namespace planning {
 namespace apa_planner {
 
-#define DEBUG_TASK (1)
+#define DEBUG_TASK (0)
 
 void RuleBasedPredictor::Execute(
-    std::shared_ptr<ApaObstacleManager> obs_manager) {
+    std::shared_ptr<ApaObstacleManager>& obs_manager) {
   for (auto& obj : obs_manager->GetMutableObstacles()) {
     ApaObstacle& obstacle = obj.second;
 
@@ -24,7 +24,11 @@ void RuleBasedPredictor::Execute(
       continue;
     }
 
-    if (obstacle.Speed() < 0.01) {
+    if (obstacle.GetObsMovementType() != ApaObsMovementType::MOTION) {
+      continue;
+    }
+
+    if (obstacle.Speed() < 0.05) {
       continue;
     }
 
@@ -40,8 +44,9 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
   trajectory::Trajectory predict_traj;
   trajectory::TrajectoryPoint traj_point;
   double predict_time = 4.0;
+
+  // TODO: prediction traj need space continous.
   double delta_time = 0.4;
-  double max_dist = obs.Speed() * predict_time + 0.1;
   double delta_dist = obs.Speed() * delta_time;
 
   double current_time = 0.0;
@@ -52,7 +57,9 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
   double obs_heading = obs.GetCenterPose().heading;
 
   Eigen::Vector2d point;
-  while (current_dist < max_dist) {
+  int size = std::ceil(predict_time / delta_time);
+  predict_traj.reserve(size);
+  for (int i = 0; i < size; i++) {
     point = start + dir * current_dist;
 
     traj_point.set_absolute_time(current_time);
@@ -65,6 +72,10 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
 
     current_dist += delta_dist;
     current_time += delta_time;
+
+#if DEBUG_TASK
+    ILOG_INFO << "x " << point.x() << " y " << point.y();
+#endif
   }
 
   obs.SetPredictTraj(predict_traj);
@@ -73,7 +84,7 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
 }
 
 void RuleBasedPredictor::RecordDebugInfo(
-    std::shared_ptr<ApaObstacleManager> obs_manager) {
+    std::shared_ptr<ApaObstacleManager>& obs_manager) {
   auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->clear_predict_traj_set();
@@ -98,6 +109,11 @@ void RuleBasedPredictor::RecordDebugInfo(
 
       debug_traj->add_point()->CopyFrom(point);
     }
+    debug_traj->set_obs_id(obstacle.GetId());
+
+#if DEBUG_TASK
+    debug_traj->DebugString();
+#endif
   }
 
   return;

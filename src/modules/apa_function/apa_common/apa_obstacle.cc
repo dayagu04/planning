@@ -29,6 +29,7 @@ void ApaObstacle::Reset() {
   lon_decision_.Clear();
   polygon_global_.Clear();
   polygon_local_.Clear();
+  vel_heading_.setZero();
 }
 
 void ApaObstacle::TransformCoordFromGlobalToLocal(

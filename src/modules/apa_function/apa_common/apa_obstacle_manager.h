@@ -67,8 +67,6 @@ class ApaObstacleManager final {
 
   const bool IsOccType(const iflyauto::ObjectType type);
 
-  const bool IsConsideredODTypeSpecifier(const iflyauto::ObjectType type);
-
   void GenerateObsByOD(const LocalView *local_view,
                        const ObjectDetectObsConfig &od_config);
 

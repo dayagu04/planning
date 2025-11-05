@@ -242,6 +242,7 @@ class ApaObstacle final {
   ApaObsMovementType obs_movement_type_{ApaObsMovementType::STATIC};
 
   double vel_{0.};
+  // If object is static, no vel heading direction.
   Eigen::Vector2d vel_heading_;
   double acc_{0.};
   pnc::geometry_lib::PathPoint pose_global_;

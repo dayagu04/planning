@@ -753,6 +753,10 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
+  speed_debug->Clear();
+
   // check planning status
   if (CheckPlanSkip()) {
     return;

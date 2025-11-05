@@ -574,9 +574,6 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.use_object_detect, bool, "use_object_detect");
 
-  JSON_READ_VALUE(param.use_object_detect_specificationer, bool,
-                  "use_object_detect_specificationer");
-
   JSON_READ_VALUE(param.enable_side_pass_limiter, bool,
                   "enable_side_pass_limiter");
 
