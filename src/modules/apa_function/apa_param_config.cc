@@ -1341,14 +1341,23 @@ void SyncParkingParameters(const bool is_simulation) {
   // lat lon slot release buffer params
   JSON_READ_VALUE(param.lat_lon_slot_release_buffer.lon_buffer, float,
                   "slot_release_lon_buffer");
-  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_buffer, float,
-                  "slot_release_maximum_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.accumulate_lat_buffer,
-                  float, "slot_release_accumulate_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_buffer, float,
-                  "slot_release_hold_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_buffer, float,
-                  "slot_release_subtract_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_body_buffer,
+                  float, "slot_release_maximum_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.maximum_lat_mirror_buffer,
+                  float, "slot_release_maximum_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.accumulate_lat_body_buffer,
+                  float, "slot_release_accumulate_lat_body_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_slot_release_buffer.accumulate_lat_mirror_buffer, float,
+      "slot_release_accumulate_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_body_buffer, float,
+                  "slot_release_hold_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.hold_lat_mirror_buffer,
+                  float, "slot_release_hold_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_body_buffer,
+                  float, "slot_release_subtract_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_slot_release_buffer.subtract_lat_mirror_buffer,
+                  float, "slot_release_subtract_lat_mirror_buffer");
 
   JSON_READ_VALUE(param.lat_lon_slot_release_buffer.channel_width, double,
                   "slot_release_channel_width");
@@ -1364,12 +1373,16 @@ void SyncParkingParameters(const bool is_simulation) {
   // lat lon slot target pose params
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.lon_buffer, float,
                   "target_pose_lon_buffer");
-  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_buffer, float,
-                  "target_pose_max_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_buffer, float,
-                  "target_pose_min_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.step, float,
-                  "target_pose_step");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_body_buffer, float,
+                  "target_pose_max_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.max_lat_mirror_buffer, float,
+                  "target_pose_max_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_body_buffer, float,
+                  "target_pose_min_lat_body_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.min_lat_mirror_buffer, float,
+                  "target_pose_min_lat_mirror_buffer");
+  JSON_READ_VALUE(param.lat_lon_target_pose_buffer.buf_size, int,
+                  "target_pose_buf_size");
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.special_max_lat_buffer,
                   float, "target_pose_special_max_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lat_offset, float,

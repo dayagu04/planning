@@ -16,7 +16,8 @@ const TargetPoseDeciderResult TargetPoseDecider::CalcTargetPose(
     const ApaSlot& slot, const TargetPoseDeciderRequest& request) {
   result_.Reset();
   slot_ = slot;
-  lat_buffer_vec_ = request.lat_buffer_vec;
+  lat_body_buffer_vec_ = request.lat_body_buffer_vec;
+  lat_mirror_buffer_vec_ = request.lat_mirror_buffer_vec;
   lon_buffer_ = request.lon_buffer;
   consider_obs_ = request.consider_obs;
   base_on_slot_ = request.base_on_slot;
@@ -140,9 +141,14 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
   }
 
+  ApaObsMovementType consider_obs_movement_type = ApaObsMovementType::ALL;
+  if (!is_searching_stage_) {
+    consider_obs_movement_type = ApaObsMovementType::STATIC;
+  }
+
   const GJKColDetRequest gjk_col_det_request(
       base_on_slot_, param.uss_config.use_uss_pt_cloud,
-      CarBodyType::EXPAND_MIRROR_TO_FRONT, ApaObsMovementType::ALL,
+      CarBodyType::EXPAND_MIRROR_TO_FRONT, consider_obs_movement_type,
       param.use_obs_height_method);
 
   // 检查终点位置是否碰撞
@@ -166,8 +172,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
     if (gjl_det_ptr
             ->Update(tmp_pose_vec,
-                     param.lat_lon_target_pose_buffer.max_lat_buffer, 0.0,
-                     gjk_col_det_request)
+                     param.lat_lon_target_pose_buffer.max_lat_body_buffer, 0.0,
+                     gjk_col_det_request, true,
+                     param.lat_lon_target_pose_buffer.max_lat_mirror_buffer)
             .col_flag) {
       offset_y = 0.0;
       tar_pose_local.pos << virtual_tar_x, offset_y;
@@ -238,10 +245,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   // 车位内的核心区域不能有障碍物  有就直接失败
   Polygon2D polygon;
   polygon.FillTangentCircleParams(slot_.GetCustomSlotPolygon(
-      2.68, -slot_.slot_length_ * 0.3, -slot_.slot_width_ * 0.18,
-      -slot_.slot_width_ * 0.18, true));
+      2.68, -slot_.slot_length_ * 0.3, -slot_.slot_width_ * 0.25,
+      -slot_.slot_width_ * 0.25, base_on_slot_));
   if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
-          polygon, GJKColDetRequest(true))) {
+          polygon, gjk_col_det_request)) {
     ILOG_INFO << "slot min parking area is occupied";
     result_.target_pose_type = TargetPoseType::FAIL;
     return result_;
@@ -264,7 +271,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   if (is_searching_stage_) {
     small_lon_dist_vec.insert(small_lon_dist_vec.end(),
                               big_lon_dist_vec.begin(), big_lon_dist_vec.end());
-    all_lon_dist_vec.emplace_back(big_lon_dist_vec);
+    all_lon_dist_vec.emplace_back(small_lon_dist_vec);
   } else {
     all_lon_dist_vec.emplace_back(small_lon_dist_vec);
     all_lon_dist_vec.emplace_back(big_lon_dist_vec);
@@ -283,10 +290,17 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
       (param.lat_lon_path_buffer.in_slot_body_lat_buffer -
        param.lat_lon_path_buffer.in_slot_mirror_lat_buffer);
 
+  std::vector<std::pair<double, double>> lat_body_mirror_buf_vec;
+  lat_body_mirror_buf_vec.resize(lat_body_buffer_vec_.size());
+  for (size_t i = 0; i < lat_body_buffer_vec_.size(); ++i) {
+    lat_body_mirror_buf_vec[i] = {lat_body_buffer_vec_[i],
+                                  lat_mirror_buffer_vec_[i]};
+  }
+
   bool exist_target_pose = false;
   geometry_lib::PathPoint tmp_pose;
   for (const std::vector<double>& lon_dist_vec : all_lon_dist_vec) {
-    for (const double lat_buffer : lat_buffer_vec_) {
+    for (const auto& lat_buffer : lat_body_mirror_buf_vec) {
       for (const double lat_move_dist : lat_dist_vec) {
         for (const double lon_move_dist : lon_dist_vec) {
           std::vector<geometry_lib::PathPoint> tmp_pose_vec;
@@ -304,21 +318,16 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
                            dist * lon_move_dir;
             tmp_pose_vec.emplace_back(tmp_pose);
           }
-          double body_lat_buffer = lat_buffer;
-          double mirror_lat_buffer = lat_buffer;
-          if (!is_searching_stage_ &&
-              param.park_path_plan_type != ParkPathPlanType::GEOMETRY) {
-            mirror_lat_buffer -= mirror_lower_body_lat_buffer;
-          }
 
           const ColResult& res =
-              gjl_det_ptr->Update(tmp_pose_vec, body_lat_buffer, 0.0,
-                                  gjk_col_det_request, true, mirror_lat_buffer);
+              gjl_det_ptr->Update(tmp_pose_vec, lat_buffer.first, 0.0,
+                                  gjk_col_det_request, true, lat_buffer.second);
           if (!res.col_flag) {
             exist_target_pose = true;
             result_.safe_lon_move_dist = lon_move_dist;
             result_.safe_lat_move_dist = lat_move_dist;
-            result_.safe_lat_buffer = lat_buffer;
+            result_.safe_lat_body_buffer = lat_buffer.first;
+            result_.safe_lat_mirror_buffer = lat_buffer.second;
             if (base_on_slot_) {
               result_.target_pose_local = tmp_pose_vec[1];
               result_.target_pose_global =
@@ -334,7 +343,10 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
             ILOG_INFO << "exist_target_pose = " << exist_target_pose
                       << "  safe_lon_move_dist = " << result_.safe_lon_move_dist
                       << "  safe_lat_move_dist = " << result_.safe_lat_move_dist
-                      << "  safe_lat_buffer = " << result_.safe_lat_buffer;
+                      << "  safe_lat_body_buffer = "
+                      << result_.safe_lat_body_buffer
+                      << "  safe_lat_mirror_buffer = "
+                      << result_.safe_lat_mirror_buffer;
             break;
           }
         }

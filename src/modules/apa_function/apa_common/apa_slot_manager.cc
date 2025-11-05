@@ -472,29 +472,24 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   const Eigen::Vector2d n =
       slot.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
-  // 构建车位可泊最低要求区域内box, 检查box内是否有障碍物 若有 不释放
-  // 主要是为了缓解融合误释放车位
-  Polygon2D polygon;
-  polygon.FillTangentCircleParams(slot.GetCustomSlotPolygon(
-      2.68, -slot.slot_length_ * 0.3, -slot.slot_width_ * 0.18,
-      -slot.slot_width_ * 0.18, false));
-  if (col_det_interface_ptr_->GetGJKColDetPtr()->IsPolygonCollision(
-          polygon, GJKColDetRequest(false))) {
-    ILOG_INFO << "slot min parking area is occupied";
-    return SlotReleaseVoterType::CLEAR;
-  }
-
   const auto& slot_release_buffer = param.lat_lon_slot_release_buffer;
 
-  const std::vector<double> lat_buffer_vec{
-      slot_release_buffer.maximum_lat_buffer,
-      slot_release_buffer.accumulate_lat_buffer,
-      slot_release_buffer.hold_lat_buffer,
-      slot_release_buffer.subtract_lat_buffer};
+  const std::vector<double> lat_body_buffer_vec{
+      slot_release_buffer.maximum_lat_body_buffer,
+      slot_release_buffer.accumulate_lat_body_buffer,
+      slot_release_buffer.hold_lat_body_buffer,
+      slot_release_buffer.subtract_lat_body_buffer};
+
+  const std::vector<double> lat_mirror_buffer_vec{
+      slot_release_buffer.maximum_lat_mirror_buffer,
+      slot_release_buffer.accumulate_lat_mirror_buffer,
+      slot_release_buffer.hold_lat_mirror_buffer,
+      slot_release_buffer.subtract_lat_mirror_buffer};
 
   TargetPoseDecider tar_pose_decider(col_det_interface_ptr_);
   TargetPoseDeciderRequest tar_pose_decider_request(
-      lat_buffer_vec, slot_release_buffer.lon_buffer,
+      lat_body_buffer_vec, lat_mirror_buffer_vec,
+      slot_release_buffer.lon_buffer,
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, false,
       ApaSlotLatPosPreference::MID, true);
 
@@ -508,9 +503,11 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
 
   ILOG_INFO << "lat_move_slot_dist = " << res.safe_lat_move_dist
             << "  lon_move_slot_dist = " << res.safe_lon_move_dist
-            << "  lat_buffer = " << res.safe_lat_buffer;
+            << "  lat_body_buffer = " << res.safe_lat_body_buffer
+            << "  lat_mirror_buffer = " << res.safe_lat_mirror_buffer;
 
-  if (res.safe_lat_buffer < slot_release_buffer.maximum_lat_buffer - 1e-3) {
+  if (res.safe_lat_body_buffer <
+      slot_release_buffer.maximum_lat_body_buffer - 1e-3) {
     slot.is_narrow_slot_ = true;
   }
 
@@ -522,18 +519,20 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   } else if (res.exceed_allow_max_dx > 0.02) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   } else if (geometry_lib::IsTwoNumerEqual(
-                 slot_release_buffer.maximum_lat_buffer, res.safe_lat_buffer)) {
+                 slot_release_buffer.maximum_lat_body_buffer,
+                 res.safe_lat_body_buffer)) {
     release_voter_type = SlotReleaseVoterType::MAXIMUM;
   } else if (geometry_lib::IsTwoNumerEqual(
-                 slot_release_buffer.accumulate_lat_buffer,
-                 res.safe_lat_buffer)) {
+                 slot_release_buffer.accumulate_lat_body_buffer,
+                 res.safe_lat_body_buffer)) {
     release_voter_type = SlotReleaseVoterType::ACCUMULATE;
-  } else if (geometry_lib::IsTwoNumerEqual(slot_release_buffer.hold_lat_buffer,
-                                           res.safe_lat_buffer)) {
+  } else if (geometry_lib::IsTwoNumerEqual(
+                 slot_release_buffer.hold_lat_body_buffer,
+                 res.safe_lat_body_buffer)) {
     release_voter_type = SlotReleaseVoterType::HOLD;
   } else if (geometry_lib::IsTwoNumerEqual(
-                 slot_release_buffer.subtract_lat_buffer,
-                 res.safe_lat_buffer)) {
+                 slot_release_buffer.subtract_lat_body_buffer,
+                 res.safe_lat_body_buffer)) {
     release_voter_type = SlotReleaseVoterType::SUBTRACT;
   }
 
@@ -541,6 +540,7 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
             << GetSlotReleaseVoterTypeString(release_voter_type);
 
   // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
+  Polygon2D polygon;
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,
       pM01 + slot.slot_width_ * t - 2.0 * n, pM01 - 2.0 * n});

@@ -291,7 +291,7 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       apa_world_ptr_->GetColDetInterfacePtr());
 
   TargetPoseDeciderRequest tar_pose_decider_request(
-      std::vector<double>{0.15}, 0.3,
+      std::vector<double>{0.15}, std::vector<double>{0.15}, 0.3,
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false, false,
       apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
 
@@ -516,13 +516,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot.cur_pose;
 
-  bool move_slot_with_little_buffer = false;
-  if (param.move_slot_with_little_buffer &&
-      !CheckEgoPoseInBelieveObsArea(0.2, param.believe_obs_ego_area, 60)) {
-    ILOG_INFO << "move_slot_with_little_buffer";
-    move_slot_with_little_buffer = true;
-  }
-
   GenerateObstacleRequest gen_obs_request(
       ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
       frame_.process_obs_method);
@@ -540,8 +533,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
     update_slot_move_dist = false;
   }
 
-  ILOG_INFO << "move_slot_with_little_buffer = " << move_slot_with_little_buffer
-            << "  update_slot_move_dist = " << update_slot_move_dist
+  ILOG_INFO << "  update_slot_move_dist = " << update_slot_move_dist
             << "  process_obs_method = "
             << static_cast<int>(frame_.process_obs_method);
 
@@ -571,44 +563,47 @@ const bool PerpendicularTailInScenario::GenTlane() {
       const ParkingLatLonTargetPoseBuffer& target_pose_buffer =
           param.lat_lon_target_pose_buffer;
 
-      double max_lat_buffer, min_lat_buffer, step, lon_buffer;
-      if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
-        max_lat_buffer = move_slot_with_little_buffer ? 0.13 : 0.15;
-        min_lat_buffer = 0.09;
-        step = 0.01;
-        lon_buffer = 0.3;
-        if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
-          max_lat_buffer += 0.02;
-          min_lat_buffer += 0.02;
-        }
-      }
-
-      else {
-        max_lat_buffer = move_slot_with_little_buffer
-                             ? target_pose_buffer.special_max_lat_buffer
-                             : target_pose_buffer.max_lat_buffer;
-        min_lat_buffer = target_pose_buffer.min_lat_buffer;
-        step = target_pose_buffer.step;
-        lon_buffer = target_pose_buffer.lon_buffer;
-      }
+      double max_lat_body_buf = target_pose_buffer.max_lat_body_buffer;
+      double max_lat_mirror_buf = target_pose_buffer.max_lat_mirror_buffer;
+      double min_lat_body_buf = target_pose_buffer.min_lat_body_buffer;
+      double min_lat_mirror_buf = target_pose_buffer.min_lat_mirror_buffer;
+      int buf_size = target_pose_buffer.buf_size;
+      double lon_buffer = target_pose_buffer.lon_buffer;
 
       if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
-          frame_.replan_reason != ReplanReason::FIRST_PLAN) {
-        max_lat_buffer =
-            std::min(max_lat_buffer, ego_info_under_slot.safe_lat_buffer);
+          frame_.replan_reason != ReplanReason::FIRST_PLAN &&
+          frame_.replan_reason != FORCE_PLAN) {
+        max_lat_body_buf = std::min(max_lat_body_buf,
+                                    ego_info_under_slot.safe_lat_body_buffer);
+        max_lat_mirror_buf = std::min(
+            max_lat_mirror_buf, ego_info_under_slot.safe_lat_mirror_buffer);
       }
 
-      max_lat_buffer = std::max(max_lat_buffer, min_lat_buffer + step + 1e-3);
-      ILOG_INFO << "find target pose max lat buffer = " << max_lat_buffer;
+      const double body_buf_step =
+          (max_lat_body_buf - min_lat_body_buf) / buf_size;
+      const double mirror_buf_step =
+          (max_lat_mirror_buf - min_lat_mirror_buf) / buf_size;
 
-      std::vector<double> lat_buffer_vec;
-      for (double lat_buffer = max_lat_buffer;
-           lat_buffer > min_lat_buffer - 1e-3; lat_buffer -= step) {
-        lat_buffer_vec.emplace_back(lat_buffer);
+      max_lat_body_buf =
+          std::max(max_lat_body_buf, min_lat_body_buf + body_buf_step + 1e-3);
+      max_lat_mirror_buf = std::max(
+          max_lat_mirror_buf, min_lat_mirror_buf + mirror_buf_step + 1e-3);
+
+      ILOG_INFO << "find target pose max lat body buffer = " << max_lat_body_buf
+                << " max lat mirror buffer = " << max_lat_mirror_buf;
+
+      std::vector<double> lat_body_buffer_vec, lat_mirror_buffer_vec;
+      for (double lat_body_buf = max_lat_body_buf,
+                  lat_mirror_buf = max_lat_mirror_buf;
+           lat_body_buf > min_lat_body_buf - 1e-3 &&
+           lat_mirror_buf > min_lat_mirror_buf - 1e-3;
+           lat_body_buf -= body_buf_step, lat_mirror_buf -= mirror_buf_step) {
+        lat_body_buffer_vec.emplace_back(lat_body_buf);
+        lat_mirror_buffer_vec.emplace_back(lat_mirror_buf);
       }
 
       const TargetPoseDeciderRequest tar_pose_decider_request(
-          lat_buffer_vec, lon_buffer,
+          lat_body_buffer_vec, lat_mirror_buffer_vec, lon_buffer,
           ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true,
           apa_world_ptr_->GetStateMachineManagerPtr()
               ->GetSlotLatPosPreference(),
@@ -632,14 +627,13 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
       ego_info_under_slot.target_pose = res.target_pose_local;
 
-      if (frame_.replan_reason != ReplanReason::DYNAMIC &&
-          !move_slot_with_little_buffer) {
-        ego_info_under_slot.safe_lat_buffer = res.safe_lat_buffer;
+      if (frame_.replan_reason != ReplanReason::DYNAMIC) {
+        ego_info_under_slot.safe_lat_body_buffer = res.safe_lat_body_buffer;
+        ego_info_under_slot.safe_lat_mirror_buffer = res.safe_lat_mirror_buffer;
       }
 
       ego_info_under_slot.tar_pose_result = res;
 
-      // 记录每次重规划移动距离
       ego_info_under_slot.lon_move_dist_every_replan = res.safe_lon_move_dist;
       ego_info_under_slot.lat_move_dist_every_replan = res.safe_lat_move_dist;
 
