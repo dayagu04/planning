@@ -379,7 +379,7 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
           lc_lane_mgr_->target_lane_virtual_id(), lane_change_direction);
   JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
 
-  // 当前box的一半宽超过车道边界线，认为变道进入complete状态
+  // 当前box的一半宽超过车道边界线，认为变道进入complete状态 并且 持续时间超过1.5s
   if (ego_press_line_ratio > 0.5 && execution_state_frame_nums_ > 15) {
     return true;
   }
