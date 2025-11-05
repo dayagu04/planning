@@ -48,6 +48,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
       const double weight_leading_veh_safe_s,
       const double weight_speed_variable, const double weight_gap_avaliable,
       const double weight_acc_limit, const double weight_stop_penalty,
+      const double weight_speed_change,
       const double front_edge_to_rear_axle,
       const double back_edge_to_rear_axle);
 
@@ -120,6 +121,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   GapAvaliableCost gap_avaliable_cost_;
   StopPenaltyCost stop_penalty_cost_;
   AccLimitCost acc_limit_cost_;
+  SpeedChangeCost speed_change_cost_;
 
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;

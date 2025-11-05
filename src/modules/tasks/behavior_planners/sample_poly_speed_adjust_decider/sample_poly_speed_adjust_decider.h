@@ -80,6 +80,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_gap_avaliable_;
   double weight_acc_limit_;
   double weight_stop_penalty_;
+  double weight_speed_change_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -177,6 +178,12 @@ class SamplePolySpeedAdjustDecider : public Task {
     weight_stop_penalty_ = weight;
   }
   double weight_stop_penalty() const { return weight_stop_penalty_; };
+
+  void set_weight_speed_change(const double weight) {
+    weight_speed_change_ = weight;
+  }
+  double weight_speed_change() const { return weight_speed_change_; };
+
 
   void set_ego_v(const double ego_v) { ego_v_ = ego_v; }
   double ego_v() const { return ego_v_; }

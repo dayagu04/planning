@@ -24,6 +24,9 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
   std::array<double, 6> fp{
       2.0, 2.5, 4.0,
       5.,  6.,  8.};  //触发变道需要预留最小空间 下方 大车额外增加5m基础距离
+  std::array<double, 7> xpv{0.0, 5.0,  10., 20.,
+                            25., 30.0, 40.};  // 后车 - 自车速度 kph
+  std::array<double, 7> fpv{3.0, 4.0, 5.0, 7.0, 8.0, 9.5, 10.};  //起始ttc
   auto calculate_gap_distance_match_cost =
       [](double dist_to_obj, double safe_border_distance,
          double clip_border_distance, double safe_dis_penalty_factor_coef,
@@ -115,9 +118,14 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
   double safe_border_distance_to_gap_back_obj = 0.0;
   double min_safe_distance_rear = 0.0;
   if (lower_st_point.agent_id() != kNoAgentId) {
-    double rel_vel = std::fmax(poly_end_v - lower_st_point.velocity(), 0);
-    min_safe_distance_rear = std::fmax(
-        interp(lower_st_point.velocity(), xp, fp) - rel_vel * 2.0, 2.0);
+    double rel_vel = lower_st_point.velocity() - poly_end_v;
+    double abs_buffer = interp(lower_st_point.velocity() * 3.6, xp, fp);
+    double dist_rel_vel =
+        (rel_vel > 0) ? rel_vel * interp(rel_vel * 3.6, xpv, fpv) : -rel_vel * 2.0;
+    min_safe_distance_rear = (rel_vel > 0)
+                                 ? std::fmax(abs_buffer,dist_rel_vel)
+                                 : abs_buffer - dist_rel_vel;
+    min_safe_distance_rear = std::fmax(min_safe_distance_rear, 2.0);
     safe_border_distance_to_gap_back_obj =
         reliable_safe_distance_to_gap_back_obj +
         linear_expand_extra_gap_distance_by_ego_vel(
@@ -380,5 +388,11 @@ void AccLimitCost::GetCost(const double acc_extrema) {
               ? weight_ * std::exp(kAccPenaltyScaleFactor *
                                    (acc_extrema - kAccPenaltyLimit))
               : 0.0;
+}
+
+void SpeedChangeCost::GetCost(const double end_v,const double ego_v,const double end_t) {
+  double average_vel_differ = (end_v - ego_v) / end_t;
+  cost_ = average_vel_differ > 0 ? 0.0
+                               : weight_ * average_vel_differ * average_vel_differ;
 }
 }  // namespace planning

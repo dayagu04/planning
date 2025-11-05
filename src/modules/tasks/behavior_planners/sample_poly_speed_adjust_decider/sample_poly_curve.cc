@@ -17,8 +17,8 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_follow_vel, const double weight_stop_line,
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
     const double weight_gap_avaliable, const double weight_acc_limit,
-    const double weight_stop_penalty, const double front_edge_to_rear_axle,
-    const double back_edge_to_rear_axle) {
+    const double weight_stop_penalty, const double weight_speed_change,
+    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
   poly_ = poly;
   arrived_t_ = arrived_t;
   arrived_v_ = poly_.CalculateFirstDerivative(poly_.T());
@@ -41,6 +41,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
   acc_limit_cost_.SetWeight(weight_acc_limit);
   stop_penalty_cost_.SetWeight(weight_stop_penalty);
+  speed_change_cost_.SetWeight(weight_speed_change);
 
   std::vector<double> anchor_point_t_vec = {1.0, 2.0, 3.0, 4.0, 5.0};
   anchor_points_match_gap_cost_vec_.reserve(anchor_point_t_vec.size());
@@ -179,13 +180,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
     }
   }
   // // poly curve cost
-  if (!enable_merge_decelaration) {
-    double average_vel_differ = (arrived_v_ - ego_v) / arrived_t_;
-    double vel_differ_cost =
-        average_vel_differ > 0 ? 0.0
-                               : 2.0 * average_vel_differ * average_vel_differ;
-    cost_sum_ += vel_differ_cost;
-  }
+  speed_change_cost_.GetCost(arrived_v_, ego_v,
+                            arrived_t_);
+
   follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
   stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,
@@ -223,6 +220,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
                stop_line_cost_.cost() * speed_differ_gain +
                leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
-               acc_limit_cost_.cost();
+               acc_limit_cost_.cost() + speed_change_cost_.cost();
 }
 }  // namespace planning

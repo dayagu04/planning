@@ -30,6 +30,7 @@ constexpr double kNormalSceneWeightVelVariable = 3.5;
 constexpr double kNormalSceneWeightGapAvailable = 2.5;
 constexpr double kNormalSceneWeightAccLimit = 25.0;
 constexpr double kNormalSceneWeightStopPenalty = 2.5;
+constexpr double kNormalSceneWeightSpeedChange = 10.0;
 
 constexpr double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
 constexpr double kPurseFlowVelSceneWeightMatchGapS = 0.0;
@@ -41,6 +42,7 @@ constexpr double kPurseFlowVelSceneWeightVelVariable = 2.0;
 constexpr double kPurseFlowVelSceneWeightGapAvailable = 1.25;
 constexpr double kPurseFlowVelSceneWeightAccLimit = 25.0;
 constexpr double kPurseFlowVelSceneWeightStopPenalty = 2.5;
+constexpr double kPurseFlowVelSceneWeightSpeedChange = 0.0;
 
 constexpr double kDeclerationSceneWeightMatchGapVel = 4.5;
 constexpr double kDeclerationSceneWeightMatchGapS = 2.5;
@@ -52,6 +54,7 @@ constexpr double kDeclerationSceneWeightVelVariable = 0.5;
 constexpr double kDeclerationSceneWeightGapAvailable = 2.5;
 constexpr double kDeclerationSceneWeightAccLimit = 0.0;
 constexpr double kDeclerationSceneWeightStopPenalty = 0.0;
+constexpr double kDeclerationSceneWeightSpeedChange = 0.0;
 }  // namespace
 namespace planning {
 
@@ -124,7 +127,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
 
   if (ok) {
     if (min_cost_traj_ptr_ != nullptr) {
-      ok = BestTrajCheck();
+       ok = BestTrajCheck();
     }
   }
 
@@ -185,7 +188,7 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           quartic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,weight_speed_change_,
           front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
@@ -726,7 +729,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             resample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
             weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,weight_speed_change_,
             front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
@@ -810,6 +813,7 @@ void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
   weight_gap_avaliable_ = kNormalSceneWeightGapAvailable;
   weight_acc_limit_ = kNormalSceneWeightAccLimit;
   weight_stop_penalty_ = kNormalSceneWeightStopPenalty;
+  weight_speed_change_ = kNormalSceneWeightSpeedChange;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
@@ -823,6 +827,7 @@ void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
   weight_gap_avaliable_ = kPurseFlowVelSceneWeightGapAvailable;
   weight_acc_limit_ = kPurseFlowVelSceneWeightAccLimit;
   weight_stop_penalty_ = kPurseFlowVelSceneWeightStopPenalty;
+  weight_speed_change_ = kPurseFlowVelSceneWeightSpeedChange;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
@@ -836,6 +841,7 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
   weight_gap_avaliable_ = kDeclerationSceneWeightGapAvailable;
   weight_acc_limit_ = kDeclerationSceneWeightAccLimit;
   weight_stop_penalty_ = kDeclerationSceneWeightStopPenalty;
+  weight_speed_change_ = kDeclerationSceneWeightSpeedChange;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(

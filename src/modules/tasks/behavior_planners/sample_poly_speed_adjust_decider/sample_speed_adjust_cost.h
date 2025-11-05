@@ -106,4 +106,10 @@ class AccLimitCost : public CurveCost {
   AccLimitCost() = default;
   void GetCost(const double acc_extrema);
 };
+
+class SpeedChangeCost : public CurveCost {
+ public:
+  SpeedChangeCost() = default;
+  void GetCost(const double end_v,const double ego_v,const double end_t);
+};
 }  // namespace planning
