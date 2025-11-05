@@ -63,7 +63,8 @@ class AgentLongitudinalDecider : public Task {
                          const double road_curvature_radius,
                          const double cut_in_distance_range_m,
                          const double cut_in_lateral_threshold_m,
-                         agent::AgentManager* const mutable_agent_manager);
+                         agent::AgentManager* const mutable_agent_manager,
+                         AgentLongitudinalDeciderOutput* output = nullptr);
 
   void DeciderCutOutAgent(agent::AgentManager* const mutable_agent_manager);
 

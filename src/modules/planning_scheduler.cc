@@ -701,6 +701,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.planning_context().lane_change_decider_output();
   const auto &lat_offset_decider_output =
       session_.planning_context().lateral_offset_decider_output();
+  const auto &agent_longitudinal_decider_output =
+      session_.planning_context().agent_longitudinal_decider_output();
 
   planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
   // HMI for alc
@@ -779,6 +781,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
           .ad_info.reference_line_msg;
   planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
   // planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  
+  const auto& cutin_ttc_info = 
+      agent_longitudinal_decider_output.closest_cutin_ttc_info;
+  planning_hmi_info->ad_info.cutin_track_id = cutin_ttc_info.agent_id;
+  planning_hmi_info->ad_info.cutin_ttc = static_cast<float>(cutin_ttc_info.ttc);
+
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()
                                           .get_parking_slot_manager()
