@@ -165,12 +165,8 @@ bool GeneralLateralDecider::Execute() {
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
 
-  if (config_.use_first_soft_bound) {
-    CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
-  } else {
-    CalculateAvoidObstacles(second_frenet_soft_bounds_,
-                            second_soft_bounds_info_);
-  }
+  CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_,
+                          second_frenet_soft_bounds_, second_soft_bounds_info_);
 
   PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_,
                                       first_frenet_soft_bounds_,
@@ -4680,8 +4676,10 @@ void GeneralLateralDecider::SampleRoadDistanceInfo(
 }
 
 void GeneralLateralDecider::CalculateAvoidObstacles(
-    const std::vector<std::pair<double, double>> frenet_soft_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info) {
+    const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
+    const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
+    std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info) {
   auto &lateral_offset_decider_output =
       session_->mutable_planning_context()
           ->mutable_lateral_offset_decider_output();
@@ -4721,11 +4719,17 @@ void GeneralLateralDecider::CalculateAvoidObstacles(
     }
   };
   //(huwang5)TODO:左右bound重叠时，障碍物的释放需要进一步考虑
-  for (int i = 0; i < frenet_soft_bounds.size(); ++i) {
-    check_and_add_avoid_id(soft_bounds_info[i].first,
-                           frenet_soft_bounds[i].first, false);  // lower
-    check_and_add_avoid_id(soft_bounds_info[i].second,
-                           frenet_soft_bounds[i].second, true);  // upper
+  for (int i = 0; i < first_frenet_soft_bounds.size(); ++i) {
+    check_and_add_avoid_id(first_soft_bounds_info[i].first,
+                           first_frenet_soft_bounds[i].first, false);  // lower
+    check_and_add_avoid_id(first_soft_bounds_info[i].second,
+                           first_frenet_soft_bounds[i].second, true);  // upper
+  }
+  for (int i = 0; i < second_frenet_soft_bounds.size(); ++i) {
+    check_and_add_avoid_id(second_soft_bounds_info[i].first,
+                           second_frenet_soft_bounds[i].first, false);  // lower
+    check_and_add_avoid_id(second_soft_bounds_info[i].second,
+                           second_frenet_soft_bounds[i].second, true);  // upper
   }
   general_lateral_decider_output.bound_avoid =
       !lateral_offset_decider_output.avoid_ids.empty();

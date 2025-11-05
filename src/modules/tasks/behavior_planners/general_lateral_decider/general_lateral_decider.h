@@ -196,8 +196,11 @@ class GeneralLateralDecider : public Task {
       int id, bool is_agent_pred_lon_overlap_with_plan_path);
   void ResetIsExceedObstacleHysteresisMap(int id = -1);
   void CalculateAvoidObstacles(
-      const std::vector<std::pair<double, double>> frenet_soft_bounds,
-      std::vector<std::pair<BoundInfo, BoundInfo>> soft_bounds_info);
+        const std::vector<std::pair<double, double>> first_frenet_soft_bounds,
+        std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info,
+        const std::vector<std::pair<double, double>> second_frenet_soft_bounds,
+        std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info);
+
   double CalStaticNudgeLatBufDis(const std::shared_ptr<FrenetObstacle> obstacle,
                                  bool in_intersection, bool is_nudge_left,
                                  double overlap_min_y, double overlap_max_y,
