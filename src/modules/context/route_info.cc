@@ -1883,7 +1883,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       for (int i = 0; i < feasible_lane_sequence.size(); i++) {
         feasible_lane_distance[feasible_lane_sequence[i]] = 3000.0;
       }
-      relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
       mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
 
       // 根据前方merge_fp优化feasible_lane
@@ -1930,6 +1929,19 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
       route_info_output_.minVal_seq = minVal_seq;
       route_info_output_.maxVal_seq = maxVal_seq;
+
+      // 过滤被删除的feasible_lane_sequence
+      for (auto it = feasible_lane_distance.begin();
+           it != feasible_lane_distance.end();) {
+        auto seq_it = std::find(feasible_lane_sequence.begin(),
+                                feasible_lane_sequence.end(), it->first);
+        if (seq_it == feasible_lane_sequence.end()) {
+          it = feasible_lane_distance.erase(it);
+        } else {
+          ++it;
+        }
+      }
+      relative_id_lane->set_feasible_lane_distance(feasible_lane_distance);
       mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
@@ -1942,15 +1954,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     // 计算每个exchange region的最大距离
     for (size_t i = 0; i < valid_exchange_regions.size(); ++i) {
-      if (i == 0) {
-        max_distances[i] =
-            valid_exchange_regions[i].distance_to_split_point +
-            valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
-      } else {
-        max_distances[i] =
-            valid_exchange_regions[i].distance_to_split_point +
-            valid_exchange_regions[i].start_fp_point.fp_distance_to_split_point;
-      }
+      // 限制优化feasible lane时start_fp_distance
+      double start_fp_distance =
+          std::min(std::abs(valid_exchange_regions[i]
+                                .start_fp_point.fp_distance_to_split_point),
+                   300.0);
+      max_distances[i] =
+          valid_exchange_regions[i].distance_to_split_point + start_fp_distance;
     }
 
     // 从最后一个exchange region开始向前优化
@@ -2877,7 +2887,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   }
   split_region_info.is_ramp_split =
       sdpro_map.isRamp(split_seccessor_link->link_type());
-      
+
   if (previous_seg->successor_link_ids().size() < 2) {
     return split_region_info;
   }
