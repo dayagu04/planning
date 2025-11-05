@@ -88,6 +88,9 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
       lane_borrow_config.enable_lane_borrow_deciderV2;
   ego_motion_preplanner_ =
       std::make_unique<EgoMotionPreplanner>(config_builder, session);
+
+  hmi_decider_=
+      std::make_unique<HMIDecider>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV3::Run() {
@@ -322,13 +325,15 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(scc_longitudinal_motion_planner_->Name());
     return false;
   }
+  
+  hmi_decider_->Execute();
 
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
-
+  
   return true;
 }
 
