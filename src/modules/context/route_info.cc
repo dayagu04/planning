@@ -1865,14 +1865,15 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   // 根据distance优化feasible lane，考虑3km内的所有exchange
   std::vector<NOASplitRegionInfo> valid_exchange_regions;
-
   // 筛选3km内的exchange region
   for (const auto& exchange_region : exchange_region_info_list) {
     if (exchange_region.distance_to_split_point <= 3000.0) {
       valid_exchange_regions.emplace_back(exchange_region);
     }
   }
-
+  // 为每个exchange region准备数据
+  std::vector<std::map<int, double>> exchange_feasible_lane_distances(
+      valid_exchange_regions.size());
   // 开始计算feasible lane和对应的distance
   if (valid_exchange_regions.empty()) {
     // 认为前方所有车道均可通行，车道数大于3时去除最右侧车道
@@ -1955,9 +1956,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       return;
     }
   } else {
-    // 为每个exchange region准备数据
-    std::vector<std::map<int, double>> exchange_feasible_lane_distances(
-        valid_exchange_regions.size());
     std::vector<double> max_distances(valid_exchange_regions.size(), NL_NMAX);
 
     // 计算每个exchange region的最大距离
@@ -2128,10 +2126,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       feasible_lane_sequence =
           GetIntersection(current_lane_vec, feasible_lane_sequence);
       for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-        feasible_lane_distance[feasible_lane_sequence[i]] =
-            first_exchange_region_info.distance_to_split_point +
-            first_exchange_region_info.start_fp_point
-                .fp_distance_to_split_point;
+        auto it =
+            exchange_feasible_lane_distances[0].find(feasible_lane_sequence[i]);
+        if (it != exchange_feasible_lane_distances[0].end()) {
+          feasible_lane_distance[feasible_lane_sequence[i]] = it->second;
+        } else {
+          feasible_lane_distance[feasible_lane_sequence[i]] =
+              first_exchange_region_info.distance_to_split_point +
+              first_exchange_region_info.start_fp_point
+                  .fp_distance_to_split_point;
+        }
       }
       break;
     }
