@@ -2082,6 +2082,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   double dis_to_last_split_point = 0.0;
   double dis_to_last_merge_point = 0.0;
   double dis_to_last_exchange_point = NL_NMAX;
+  double dis_to_last_specific_point = 0.0;
   const double passed_dis = route_info_output_.current_segment_passed_distance;
 
   if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis)) {
@@ -2103,11 +2104,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     is_entery_exchange_region_rear =
         dis_to_last_split_point < last_exchange_region_info_.last_exchange_info
                                       .end_fp_point.fp_distance_to_split_point;
+    dis_to_last_specific_point = dis_to_last_split_point;
   } else if (last_exchange_region_info_.is_process_merge ||
              last_exchange_region_info_.is_process_other_merge) {
     is_entery_exchange_region_rear =
         dis_to_last_merge_point < last_exchange_region_info_.last_exchange_info
                                       .end_fp_point.fp_distance_to_split_point;
+    dis_to_last_specific_point = dis_to_last_merge_point;
   }
 
   if (is_entery_exchange_region_front) {
@@ -2161,7 +2164,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         feasible_lane_distance[feasible_lane_sequence[i]] =
             last_exchange_region_info_.last_exchange_info.end_fp_point
                 .fp_distance_to_split_point -
-            route_info_output_.accumulate_dis_ego_to_last_split_point;
+            dis_to_last_specific_point;
       }
       break;
     }
