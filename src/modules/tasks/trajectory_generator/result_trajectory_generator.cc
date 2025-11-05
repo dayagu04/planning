@@ -511,9 +511,13 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
   static int proposal_time_out_cnt = kHmiSendMsgCntThreshold;
-  if (lane_change_decider_output.lc_invalid_reason == "propose time out") {
-    proposal_time_out_cnt = 1;
+  static int manual_cancle_cnt = kHmiSendMsgCntThreshold;
+  if (int_request_cancel_reason == MANUAL_CANCEL){
+    manual_cancle_cnt = 1;
   }
+    if (lane_change_decider_output.lc_invalid_reason == "propose time out") {
+      proposal_time_out_cnt = 1;
+    }
 
   if (proposal_time_out_cnt < kHmiSendMsgCntThreshold) {
     ad_info.status_update_reason =
@@ -545,9 +549,10 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
         (iflyauto::LaneChangeDirection)
             lane_change_decider_output.lc_request;  // LC_DIR_LEFT/RIGHT
     ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
+  } else if (manual_cancle_cnt < kHmiSendMsgCntThreshold) {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
+    manual_cancle_cnt++;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
