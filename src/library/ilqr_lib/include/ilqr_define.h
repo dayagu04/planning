@@ -18,7 +18,7 @@
 
 // size of cost config array
 #ifndef MAX_COST_CONFIG_SIZE
-#define MAX_COST_CONFIG_SIZE (65)
+#define MAX_COST_CONFIG_SIZE (100)
 #endif
 
 // size of CONSTRAINT COST CONFIG array

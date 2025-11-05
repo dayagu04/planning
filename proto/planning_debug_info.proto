@@ -14,6 +14,7 @@ import "vision_only_lateral_motion_planner.proto";
 import "environment_model_debug_info.proto";
 import "lateral_motion_planner.proto";
 import "longitudinal_motion_planner.proto";
+import "joint_motion_planner.proto";
 import "lat_behavior_common.proto";
 import "scene_type_config.proto";
 import "slot_management_info.proto";
@@ -150,4 +151,8 @@ message PlanningDebugInfo {
   optional PotentialDangerousAgentDeciderInfo
       potential_dangerous_agent_decider_info = 46;
   optional ReferencePathSmoothInfo reference_path_smooth_info = 47;
+  optional JointMotionPlanningInput joint_motion_planning_input = 48;
+  optional JointMotionPlanningOutput joint_motion_planning_output = 49;
+  optional JointMotionPlanningInput joint_decision_input = 50;
+  optional JointMotionPlanningOutput joint_decision_output = 51;
 }

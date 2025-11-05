@@ -1,6 +1,8 @@
 #include "lane_change_path_generate.h"
+
 #include <cmath>
 #include <vector>
+
 #include "config/basic_type.h"
 #include "debug_info_log.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -19,9 +21,16 @@ namespace planning {
 
 LaneChangePathGenerateManager::LaneChangePathGenerateManager(
     std::shared_ptr<ReferencePath> ref_path, framework::Session* session)
-    : ref_path_(ref_path), session_(session) {
-  // lc_decider_config_ = config_builder->cast<LaneChangeDeciderConfig>();
-}
+    : ref_path_(ref_path), session_(session) {}
+
+LaneChangePathGenerateManager::LaneChangePathGenerateManager(
+    std::shared_ptr<ReferencePath> ref_path, framework::Session* session,
+    const EgoPlanningConfigBuilder* config_builder)
+    : ref_path_(ref_path),
+      session_(session),
+      speed_limit_calculator_(
+          std::make_unique<lane_change_joint_decision::JointDecisionSpeedLimit>(
+              config_builder, session)) {}
 
 bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   const double dt = 0.2;
@@ -122,7 +131,6 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
 
     // update ego next state using vehicle simulation model
     pnc::steerModel::VehicleSimulation vehicle_simulate;
-    vehicle_simulate.set_dt_resolution(0.2);
     pnc::steerModel::VehicleParameter vehicle_param;
     pnc::steerModel::VehicleState vehicle_state{temp_state.x, temp_state.y,
                                                 temp_state.theta};
@@ -138,6 +146,13 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
     pp_model_state.y = new_state.y_;
     pp_model_state.theta = new_state.phi_;
     pp_model_state.vel = temp_state.v;
+
+    double theta_value = new_state.phi_;
+    if (!lc_path_result_.theta.empty()) {
+      double last_theta = lc_path_result_.theta.back();
+      double dtheta = planning_math::NormalizeAngle(theta_value - last_theta);
+      theta_value = last_theta + dtheta;
+    }
 
     // update idm_model state continue iter
     if (is_exist_front_agent && is_get_front_agent_predicton_infos_succeed) {
@@ -156,7 +171,7 @@ bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
 
     lc_path_result_.x.push_back(new_state.x_);
     lc_path_result_.y.push_back(new_state.y_);
-    lc_path_result_.theta.push_back(new_state.phi_);
+    lc_path_result_.theta.push_back(theta_value);
     lc_path_result_.t.push_back(dt * index);
     lc_path_result_.v.push_back(temp_state.v);
 
@@ -247,7 +262,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       double s = 0.0;
       double l = 0.0;
       if (!ref_frenet_coord->XYToSL(point.x, point.y, &s, &l)) {
-        continue;  //更换xytosl
+        continue;  // 更换xytosl
       }
       Point2D frenet_point(s, l);
       point.s =
@@ -315,12 +330,13 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   TrajectoryPoint init_point;
   init_point.x = planning_init_point.x;
   init_point.y = planning_init_point.y;
-  init_point.v = ego_state.velocity();
+  init_point.v = planning_init_point.v;
   init_point.a = planning_init_point.a;
   init_point.heading_angle = planning_init_point.heading_angle;
   init_point.s = planning_init_point.frenet_state.s;
   init_point.l = planning_init_point.frenet_state.r;
   init_point.t = 0;
+  init_point.delta = planning_init_point.delta;
   ego_future_trajectory_.push_back(init_point);
   // 可视化同步
   lc_path_result_.x.push_back(init_point.x);
@@ -333,6 +349,9 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   int index = 0;
   bool iter_terminate = false;
   bool is_close = false;
+  // 记录上一个s值，确保单调递增
+  double last_s = init_point.s;
+  const double min_s_increment = 0.01;  // 最小s增量1cm
   // 纵向舒适加速度计算
   double v_cruise =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
@@ -344,9 +363,16 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   double front_s = is_exist_front_agent
                        ? front_node_future_trajectory_[0].s -
                              (init_point.s + car_param.front_edge_to_rear_axle)
-                       : 100.0;  //已经减掉半车长度
+                       : 100.0;  // 已经减掉半车长度
   double tau =
       planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
+
+  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
+
+  const double v0 = speed_limit_result.speed_limit;
+
+  JSON_DEBUG_VALUE("joint_limit_speed", v0);
+
   // 递推自车轨迹
   while (!iter_terminate) {
     index++;  // index = 1 -> ...
@@ -375,8 +401,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     // desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
 
     double desire_acc = CalculateComfortAcceleration(
-        current_a, current_v, current_s, front_vel, front_s, tau);
-    temp_state.v = idm_model_state.vel + desire_acc * dt;
+        current_a, current_v, current_s, front_vel, front_s, tau, v0);
+    temp_state.v = std::max(1e-3, idm_model_state.vel + desire_acc * dt);
 
     // update ego next state using vehicle simulation model
     pnc::steerModel::VehicleSimulation vehicle_simulate;
@@ -396,9 +422,17 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     pp_model_state.theta = new_state.phi_;
     pp_model_state.vel = temp_state.v;
 
+    double theta_value_eg = new_state.phi_;
+    if (!lc_path_result_.theta.empty()) {
+      double last_theta = lc_path_result_.theta.back();
+      double dtheta =
+          planning_math::NormalizeAngle(theta_value_eg - last_theta);
+      theta_value_eg = last_theta + dtheta;
+    }
+
     lc_path_result_.x.push_back(new_state.x_);
     lc_path_result_.y.push_back(new_state.y_);
-    lc_path_result_.theta.push_back(new_state.phi_);
+    lc_path_result_.theta.push_back(theta_value_eg);
     lc_path_result_.t.push_back(dt * index);
     lc_path_result_.v.push_back(temp_state.v);
 
@@ -410,18 +444,30 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     double s = 0.0;
     double l = 0.0;
     if (!ref_frenet_coor->XYToSL(new_state.x_, new_state.y_, &s, &l)) {
-      return false;  //更换xytosl
+      return false;  // 更换xytosl
     }
+    
+    // 确保s值单调递增，避免坐标转换误差导致的非单调问题
+    if (s <= last_s) {
+      s = last_s + min_s_increment;
+    }
+    last_s = s;
+    
     Point2D sl_point(s, l);
     TrajectoryPoint ego_traj_point;
-    ego_traj_point.s = sl_point.x;
+    if (ego_future_trajectory_.empty()) {
+      ego_traj_point.s = sl_point.x;
+    } else {
+      ego_traj_point.s = std::max(sl_point.x, ego_future_trajectory_.back().s);
+    }
     ego_traj_point.l = sl_point.y;
     ego_traj_point.t = index * dt;
     ego_traj_point.v = temp_state.v;
     ego_traj_point.x = new_state.x_;
     ego_traj_point.y = new_state.y_;
-    ego_traj_point.heading_angle = new_state.phi_;
+    ego_traj_point.heading_angle = theta_value_eg;
     ego_traj_point.a = desire_acc;
+    ego_traj_point.delta = temp_state.delta;
     ego_future_trajectory_.emplace_back(ego_traj_point);
 
     ego_sim_s.push_back(sl_point.x - ref_path_->get_frenet_ego_state().s());
@@ -434,7 +480,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
           (ego_traj_point.s + car_param.front_edge_to_rear_axle);
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = front_node_future_trajectory_[index].v;
-      //纵向舒适加速度信息更新
+      // 纵向舒适加速度信息更新
       current_s =
           ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
       current_v = ego_traj_point.v;
@@ -447,7 +493,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
       idm_model_state.s_front = default_front_dis;
       idm_model_state.vel = temp_state.v;
       idm_model_state.vel_front = default_front_v;
-      //纵向舒适加速度信息更新
+      // 纵向舒适加速度信息更新
       current_s =
           ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
       current_v = ego_traj_point.v;
@@ -475,8 +521,8 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     } else if (lc_dir == RIGHT_CHANGE) {
       is_over_lane = sl_point.y < planning_math::KD_EPSILON;
     }
-    is_close = is_near_lane;
-    iter_terminate = index * dt > max_simulate_time;
+    is_close = is_near_lane;  // unused
+    iter_terminate = index * dt > (max_simulate_time - 0.01);
   }
 
   if (ego_future_trajectory_.size() < 3) {
@@ -565,7 +611,7 @@ bool LaneChangePathGenerateManager::CalculateFrontAgentPredictionInfo(
     double s = 0.0;
     double l = 0.0;
     if (!ref_frenet_coord->XYToSL(agent_point.x(), agent_point.y(), &s, &l)) {
-      continue;  //更换 xytosl
+      continue;  // 更换 xytosl
     }
     Point2D frenet_point(s, l);
     double s_front_agent =
@@ -609,59 +655,44 @@ double LaneChangePathGenerateManager::ComputeLd(double v, bool is_close) {
 // 纵向计算加速度基本逻辑
 double LaneChangePathGenerateManager::CalculateComfortAcceleration(
     const double current_acc, const double current_vel, const double current_s,
-    const double front_vel, const double front_s, const double tau) {
-  comfort_idm_params_.s0 = 3.5;
-  comfort_idm_params_.a = 0.7;      // 加速度
-  comfort_idm_params_.b = 0.8;      // 舒适减速度
-  comfort_idm_params_.b_max = 1.0;  // 前车减速，自车最大减速度
-  comfort_idm_params_.b_hard = 1.0;  //硬刹车减速度，期望碰撞，因此设置小一点
-
+    const double front_vel, const double front_s, const double tau,
+    const double v0) {
   double s0 = comfort_idm_params_.s0;
-  double v0 = comfort_idm_params_.v0;
   double a = comfort_idm_params_.a;
-  double b = comfort_idm_params_.b;
   double b_max = comfort_idm_params_.b_max;
+  double b = comfort_idm_params_.b;
   double b_hard = comfort_idm_params_.b_hard;
+  double max_accel_jerk = comfort_idm_params_.max_accel_jerk;
+  double max_decel_jerk = comfort_idm_params_.max_decel_jerk;
   double delta = comfort_idm_params_.delta;
   double cool_factor = comfort_idm_params_.cool_factor;
-  double over_speed_factor = comfort_idm_params_.over_speed_factor;
-  double dt = 0.2;
+  double eps = comfort_idm_params_.eps;
+  double dt_ = comfort_idm_params_.dt_;
 
-  double s_alpha = std::max(1e-3, front_s - current_s);
+  double s_alpha = std::max(eps, front_s - current_s);
+
   double delta_v = current_vel - front_vel;
-
   double s_star =
       s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
                                                  (2.0 * std::sqrt(a * b_max)));
 
-  double s_safe = s0 + current_vel * tau;
+  double v_target = std::max(eps, v0);
 
-  double s_desired = std::max(s0, front_s - s_safe);
-
-  double dynamic_v0 =
-      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
-
-  double desired_v0 = std::min(v0, dynamic_v0);
+  double z = s_star / s_alpha;
 
   double a_free;
-  if (current_vel <= desired_v0) {
-    a_free = a * (1.0 - std::pow(current_vel / desired_v0, delta));
+  if (current_vel <= v_target) {
+    a_free = a * (1.0 - std::pow(current_vel / v_target, delta));
   } else {
-    a_free = -b * (1.0 - std::pow(desired_v0 / current_vel, a * delta / b));
+    a_free = -b * (1.0 - std::pow(v_target / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_desired;
-
   double a_idm;
-  if (current_vel <= desired_v0) {
-    if (z >= 1.0) {
-      a_idm = a * (1.0 - std::pow(z, 2.0));
+  if (current_vel <= v_target) {
+    if (z < 1.0 && std::abs(a_free) > eps) {
+      a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
     } else {
-      if (std::abs(a_free) > 1e-6) {
-        a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
-      } else {
-        a_idm = a * (1.0 - std::pow(z, 2.0));
-      }
+      a_idm = a * (1.0 - std::pow(z, 2.0));
     }
   } else {
     if (z >= 1.0) {
@@ -671,74 +702,30 @@ double LaneChangePathGenerateManager::CalculateComfortAcceleration(
     }
   }
 
-  double ds_star = s_alpha - s_star;
-  double ds_safe = s_alpha - s_safe;
-  double a_cah;
-  if (ds_safe < 0.0 && ds_star < 0.0) {
-    a_cah = b_hard * ds_star / s_star;
-  } else if (ds_safe > 0.0 && ds_star < 0.0) {
-    a_cah = b * ds_star / s_star;
-  } else {
-    a_cah = a_idm;
-  }
+  a_idm = std::max(std::min(a, a_idm), -b_hard);
 
-  double final_acc;
+  double a_cah = (current_vel * current_vel * (-b)) /
+                 (front_vel * front_vel - 2 * s_alpha * (-b));
+
+  a_cah = std::max(std::min(a, a_cah), -b_hard);
+
+  double comfort_acc;
   if (a_idm >= a_cah) {
-    final_acc = a_idm;
+    comfort_acc = a_idm;
   } else {
-    final_acc = (1.0 - cool_factor) * a_idm +
-                cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
+    comfort_acc = (1.0 - cool_factor) * a_idm +
+                  cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
   }
 
-  double max_decel_jerk = 0.0;
-  // if (is_lat_follow_) {
-  //   max_decel_jerk = comfort_idm_params_.max_deceleration_jerk_lat_follow;
-  // } else if (is_lon_cutin_) {
-  //   max_decel_jerk = comfort_idm_params_.max_deceleration_jerk_lon_cutin;
-  // } else {
-  //   max_decel_jerk = comfort_idm_params_.max_b_jerk;
-  // }
-  max_decel_jerk = comfort_idm_params_.max_b_jerk;
-  double acc_change = final_acc - current_acc;
-  if (acc_change > 0 && acc_change > comfort_idm_params_.max_a_jerk * dt) {
-    final_acc = current_acc + comfort_idm_params_.max_a_jerk * dt;
-  } else if (acc_change < 0 && acc_change < -max_decel_jerk * dt) {
-    final_acc = current_acc - max_decel_jerk * dt;
+  double acc_change = comfort_acc - current_acc;
+  if (acc_change > 0 && acc_change > max_accel_jerk * dt_) {
+    comfort_acc = current_acc + max_accel_jerk * dt_;
+  } else if (acc_change < 0 && acc_change < -max_decel_jerk * dt_) {
+    comfort_acc = current_acc - max_decel_jerk * dt_;
   }
 
-  final_acc = std::max(std::min(a, final_acc), -comfort_idm_params_.b_hard);
+  comfort_acc = std::max(std::min(a, comfort_acc), -b_hard);
 
-  return final_acc;
-}
-double LaneChangePathGenerateManager::CalcDesiredVelocity(
-    const double d_rel, const double d_des, const double v_lead,
-    const double v_ego) const {
-  double v_lead_clip = std::max(v_lead, 0.0);
-  const double max_runaway_speed = -2.0;
-  double l_slope = interp(v_lead, l_slope_bp, l_slope_v);
-  double p_slope = interp(v_lead, p_slope_bp, p_slope_v);
-  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
-  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
-
-  double v_rel = v_ego - v_lead;
-  double v_rel_des = 0.0;
-  double soft_brake_distance = 0.0;
-  if (d_rel < d_des) {
-    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
-    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
-    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-    soft_brake_distance = d_rel;
-  } else if (d_rel < d_des + x_linear_to_parabola) {
-    v_rel_des = (d_rel - d_des) * l_slope;
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-    soft_brake_distance = v_rel / l_slope + d_des;
-  } else {
-    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
-    soft_brake_distance =
-        std::pow(v_rel, 2) / (2 * p_slope) + x_parabola_offset + d_des;
-  }
-  double v_target = v_rel_des + v_lead;
-  return v_target;
+  return comfort_acc;
 }
 }  // namespace planning

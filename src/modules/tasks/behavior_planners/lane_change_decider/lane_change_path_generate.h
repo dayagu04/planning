@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+
 #include "behavior_planners/long_ref_path_decider/target_marker/comfort_target.h"
 #include "config/basic_type.h"
 #include "dynamic_world/dynamic_agent_node.h"
@@ -8,6 +9,7 @@
 #include "library/lc_idm_lib/include/longitudinal_motion_simulator_intelligent_driver_model.h"
 #include "reference_path.h"
 #include "src/library/lc_pure_pursuit_lib/include/basic_pure_pursuit_model.h"
+#include "tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/src/joint_decision_speed_limit.h"
 #include "utils/spline.h"
 
 using BasicPurePursuitModel = planning::BasicPurePursuitModel;
@@ -67,28 +69,31 @@ class LaneChangePathGenerateManager {
     double s0 = 3.5;
     double T = 1.0;
     double a = 1.5;
-    double b = 1.0;
     double b_max = 2.0;
+    double b = 1.0;
     double b_hard = 4.0;
     double delta = 4.0;
-    double max_a_jerk = 5.0;
-    double max_b_jerk = 1.0;
-    double max_deceleration_jerk_lat_follow = 2.0;
-    double max_deceleration_jerk_lon_cutin = 4.0;
+    double max_accel_jerk = 3.0;
+    double max_decel_jerk = 1.0;
     double virtual_front_s = 200.0;
     double cool_factor = 0.99;
-    double over_speed_factor = 0.3;
-    double follow_consider_distance = 10.0;
+    double follow_consider_distance = 15.0;
     double follow_consider_time_headway = 1.5;
+    double delay_time_buffer = 0.3;
+    double w_speed_low = 0.0;
+    double w_speed_high = 1.0;
+    double w_gap_low = 6.0;
+    double w_gap_high = 10.0;
+    double eps = 1e-3;
+    double dt_ = 0.2;
   };
-  ComfortIdmParameters comfort_idm_params_;  // 默认参数
-  const std::vector<double> l_slope_bp{0.0, 40.0};
-  const std::vector<double> l_slope_v{0.35, 0.08};
-  const std::vector<double> p_slope_bp{0., 40.0};
-  const std::vector<double> p_slope_v{0.8, 0.2};
 
   LaneChangePathGenerateManager(std::shared_ptr<ReferencePath> ref_path,
                                 framework::Session* session);
+
+  LaneChangePathGenerateManager(std::shared_ptr<ReferencePath> ref_path,
+                                framework::Session* session,
+                                const EgoPlanningConfigBuilder* config_builder);
 
   bool GenerateLCPath(const double lat_offset);
   bool GenerateEgoFutureTrajectory(const double lat_offset);
@@ -111,7 +116,10 @@ class LaneChangePathGenerateManager {
   BasicIntelligentDriverModel idm_model_;
   // LonMotionSimulatorIntelligentDriverModel lon_motion_sim_model_;
   std::shared_ptr<ReferencePath> ref_path_;
+  std::unique_ptr<lane_change_joint_decision::JointDecisionSpeedLimit>
+      speed_limit_calculator_;
   framework::Session* session_;
+  ComfortIdmParameters comfort_idm_params_;
   State_Sim UpdateDynamicsOneStep(State_Sim state, double dt);
 
   bool CalculateFrontAgentPredictionInfo(
@@ -125,8 +133,7 @@ class LaneChangePathGenerateManager {
                                       const double current_vel,
                                       const double current_s,
                                       const double front_vel,
-                                      const double front_s, const double tau);
-  double CalcDesiredVelocity(const double d_rel, const double d_des,
-                             const double v_lead, const double v_ego) const;
+                                      const double front_s, const double tau,
+                                      const double v0);
 };
 }  // namespace planning

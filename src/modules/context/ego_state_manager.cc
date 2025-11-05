@@ -855,6 +855,7 @@ void EgoStateManager::RealtimeUpdatePlanningInitState() {
   planning_init_point_.x = lat_init_state.x();
   planning_init_point_.y = lat_init_state.y();
   planning_init_point_.heading_angle = lat_init_state.theta();
+  planning_init_point_.delta = lat_init_state.delta();
   planning_init_point_.curvature = lat_init_state.curv();
   planning_init_point_.dkappa = lat_init_state.d_curv();
 
@@ -927,6 +928,7 @@ void EgoStateManager::UpdatePlanningInitState() {
   planning_init_point_.x = lat_init_state.x();
   planning_init_point_.y = lat_init_state.y();
   planning_init_point_.heading_angle = lat_init_state.theta();
+  planning_init_point_.delta = lat_init_state.delta();
   planning_init_point_.curvature = lat_init_state.curv();
   planning_init_point_.dkappa = lat_init_state.d_curv();
   planning_init_point_.v = lon_init_state.v();

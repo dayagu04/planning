@@ -376,6 +376,11 @@ const std::vector<trajectory::Trajectory>&
 DynamicAgentNode::node_trajectories_used_by_st_graph() const {
   return agent_->trajectories_used_by_st_graph();
 }
+
+const trajectory::Trajectory& DynamicAgentNode::node_trajectory_optimized() const {
+  return agent_->trajectory_optimized();
+}
+
 const agent::AgentType DynamicAgentNode::type() const { return agent_->type(); }
 
 bool DynamicAgentNode::is_agent_within_lane() const {

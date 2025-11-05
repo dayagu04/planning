@@ -139,6 +139,16 @@ double KDPath::DistanceTo(const Vec2d& point) const {
   return line_object->DistanceTo(point);
 }
 
+double KDPath::DistanceTo(const Vec2d& point, Vec2d* nearest_point) const {
+  double distance = std::numeric_limits<double>::max();
+  const auto* nearest_object = kd_tree_->GetNearestObject(point);
+  if (nearest_object == nullptr) {
+    return distance;
+  }
+  const auto& line_object = nearest_object->line_segment();
+  return line_object->DistanceTo(point, nearest_point);
+}
+
 double KDPath::DistanceSquareTo(const Vec2d& point) const {
   double distance = std::numeric_limits<double>::max();
   const auto* nearest_object = kd_tree_->GetNearestObject(point);

@@ -76,7 +76,6 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
       sample_poly_speed_adjust_decider_;
   std::unique_ptr<PotentialDangerousAgentDecider>
       potential_dangerous_agent_decider_;
-
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<MRCBrakeDecider> mrc_brake_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;

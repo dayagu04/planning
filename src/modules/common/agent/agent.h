@@ -149,7 +149,8 @@ class Agent {
       const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph);
   void add_trajectories_used_by_st_graph(
       const trajectory::Trajectory& trajectory);
-
+  const trajectory::Trajectory& trajectory_optimized() const;
+  void set_trajectory_optimized(const trajectory::Trajectory& trajectory);
   const AgentDecision& agent_decision() const;
   AgentDecision* const mutable_agent_decision();
 
@@ -266,6 +267,7 @@ class Agent {
 
   std::vector<trajectory::Trajectory> trajectories_;
   std::vector<trajectory::Trajectory> trajectories_used_by_st_graph_;
+  trajectory::Trajectory trajectory_optimized_;
 
   int32_t top_probability_index_ = 0;
   double top_probability_ = 0.0;
