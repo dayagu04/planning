@@ -426,6 +426,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   // 地图限速获取逻辑：优先使用sd_map，如果sd_map无效或限速为0，则使用sd_pro_map
   bool sd_map_speed_limit_valid = false;
   uint32 sd_map_speed_limit = 0;
+  current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
 
   // 先尝试获取sd_map限速信息
   if (GetContext.get_session()
@@ -438,11 +439,26 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                       ->get_sd_map();
 
     if (sd_map_info_ptr.GetNaviRoadInfo() != std::nullopt) {
-      sd_map_speed_limit =
-          sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      auto navi_info = sd_map_info_ptr.GetNaviRoadInfo().value();
+      
+      // 获取限速
+      sd_map_speed_limit = navi_info.cur_road_speed_limit();
       if (sd_map_speed_limit > 0) {
         sd_map_speed_limit_valid = true;
       }
+      
+      // 获取道路类型信息
+      int32 road_class = 0;
+      int32 form_way = 0;
+      
+      if (navi_info.has_road_class()) {
+        road_class = navi_info.road_class();
+      }
+      if (navi_info.has_form_way()) {
+        form_way = navi_info.form_way();
+      }
+      
+      current_road_type_ = GetRoadTypeFromNaviInfo(road_class, form_way);
     }
   }
 
@@ -484,15 +500,19 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
       current_map_type_ = 0;  // 无地图
+      current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     } else {
       current_map_speed_limit_ = current_link->speed_limit();
       current_map_speed_limit_valid_ = true;
       current_map_type_ = 2;  // sd_pro_map
+      // 获取并更新道路类型
+      current_road_type_ = GetRoadTypeFromProMap(current_link);
     }
   } else {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
     current_map_type_ = 0;  // 无地图
+    current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
 
   // 判断限速标识牌是否需要抑制显示
@@ -551,6 +571,14 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       // 插入限速标识牌值集合
       if (single_sign.supp_sign_type ==
           iflyauto::SuppSignType::SUPP_SIGN_TYPE_MAXIMUM_SPEED) {
+        // 高速公路场景下，过滤限速70或90的限速牌
+        if (current_road_type_ == iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY) {
+          if (single_sign.speed_limit == 70 || single_sign.speed_limit == 90) {
+            // 高速公路上的限速70或90标识牌不加入候选列表
+            continue;
+          }
+        }
+        
         speed_limit_set_.insert(single_sign.speed_limit);
         has_perception_speed_limit_ = true;
         speed_limit_ever_appeared_ = true;
@@ -675,19 +703,35 @@ void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
       current_map_speed_limit_valid_ = false;
       current_map_speed_limit_ = 0;
       current_map_type_ = 0;  // 无地图
+      current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
     } else {
-      tsr_speed_limit_ =
-          sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      auto navi_info = sd_map_info_ptr.GetNaviRoadInfo().value();
+      
+      // 获取限速
+      tsr_speed_limit_ = navi_info.cur_road_speed_limit();
       current_map_speed_limit_valid_ = true;
-      current_map_speed_limit_ =
-          sd_map_info_ptr.GetNaviRoadInfo().value().cur_road_speed_limit();
+      current_map_speed_limit_ = navi_info.cur_road_speed_limit();
       current_map_type_ = 1;  // sd_map
+      
+      // 获取道路类型信息
+      int32 road_class = 0;
+      int32 form_way = 0;
+      
+      if (navi_info.has_road_class()) {
+        road_class = navi_info.road_class();
+      }
+      if (navi_info.has_form_way()) {
+        form_way = navi_info.form_way();
+      }
+      
+      current_road_type_ = GetRoadTypeFromNaviInfo(road_class, form_way);
     }
   } else {
     tsr_speed_limit_ = 0;
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;
     current_map_type_ = 0;  // 无地图
+    current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
   }
 
   return;
@@ -954,6 +998,7 @@ void TsrCore::RunOnce(void) {
   JSON_DEBUG_VALUE("current_map_speed_limit_valid_",
                    current_map_speed_limit_valid_);
   JSON_DEBUG_VALUE("current_map_type_", current_map_type_);
+  JSON_DEBUG_VALUE("current_road_type_", (int)current_road_type_);
   JSON_DEBUG_VALUE("speed_limit_suppression_flag_",
                    speed_limit_suppression_flag_);
   JSON_DEBUG_VALUE("tsr_warning_flag_", tsr_warning_flag_);
@@ -1015,6 +1060,68 @@ void TsrCore::TsrTestFunction(void) {
   } else {
       // 错误模式：关闭测试，不做任何操作
   }
+}
+
+// 根据导航信息获取道路类型 (sd_map - 直接从 NaviRoadInfo 获取，无需匹配)
+iflyauto::DrivingRoadType TsrCore::GetRoadTypeFromNaviInfo(int32 road_class, int32 form_way) {
+  // 根据 ehr_sdmap.proto 的 RoadPriority 枚举定义进行映射
+  // EXPRESSWAY = 0;           // 高速公路
+  // CITY_EXPRESSWAY = 1;      // 城市快速路
+  // NATIONAL_HIGHWAY = 2;     // 国道
+  // PROVINCIAL_HIGHWAY = 3;   // 省道、城市主干道
+  // PREFECTURAL_HIGHWAY = 4;  // 县道
+  // GOOD_COUNTRY_ROAD = 5;    // 路况较好的乡镇道路
+  // COMMON_COUNTRY_ROAD = 6;  // 乡镇道路
+  
+  // 根据 road_class (RoadPriority) 判断道路等级
+  switch (road_class) {
+    case 0:  // EXPRESSWAY (sd_map) - 高速公路
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    
+    case 1:  // CITY_EXPRESSWAY (sd_map) - 城市快速路/高架
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    
+    default:
+      // 默认为城区道路
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_URBAN;
+  }
+}
+
+// 根据地图信息获取道路类型 (sd_pro_map)
+iflyauto::DrivingRoadType TsrCore::GetRoadTypeFromProMap(const iflymapdata::sdpro::LinkInfo_Link* link) {
+  if (link == nullptr) {
+    return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  }
+
+  // 根据 link_class 判断道路类型 (LinkClass 枚举定义见 map_data.proto)
+  // LC_EXPRESSWAY = 1;       // 高速公路
+  // LC_CITY_EXPRESSWAY = 2;  // 城市快速路
+  // LC_NATION_ROAD = 3;      // 国道
+  // LC_PROVINCE_ROAD = 4;    // 省道
+  // LC_COUNTRY_ROAD = 5;     // 县道
+  // LC_TOWN_ROAD = 6;        // 乡道
+  
+  if (link->has_link_class()) {
+    uint32 link_class = link->link_class();
+    
+    // 判断是否为高速路 (LC_EXPRESSWAY = 1, sd_pro_map)
+    if (link_class == 1) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    }
+    
+    // 判断是否为城市快速路/高架 (LC_CITY_EXPRESSWAY = 2, sd_pro_map)
+    if (link_class == 2) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    }
+    
+    // 判断是否为县道/乡道 (LC_COUNTRY_ROAD = 5, LC_TOWN_ROAD = 6)
+    if (link_class == 5 || link_class == 6) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_COUNTRY;
+    }
+  }
+
+  // 默认为城区道路 (主干道、次干道等)
+  return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_URBAN;
 }
 
 }  // namespace tsr_core

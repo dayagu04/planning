@@ -8,7 +8,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20251021/20251021-19-56-47/data_collection_CHERY_M32T_74572_EVENT_KEY_2025-10-21-19-56-47_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20251103/20251103-21-28-56/data_collection_CHERY_M32T_40737_EVENT_MANUAL_2025-11-03-21-28-56_no_camera.bag.1762328611.open-loop.scc.plan"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

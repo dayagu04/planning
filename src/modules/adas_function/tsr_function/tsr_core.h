@@ -92,6 +92,11 @@ class TsrCore {
 
   double current_map_speed_limit_ = 0.0;
   uint16 current_map_type_ = 0;  // 地图类型: 0-无地图, 1-sd_map, 2-sd_pro_map
+  iflyauto::DrivingRoadType current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;  // 当前道路类型
+  // 根据导航信息获取道路类型 (sd_map - 直接从 NaviRoadInfo 获取，无需匹配)
+  iflyauto::DrivingRoadType GetRoadTypeFromNaviInfo(int32 road_class, int32 form_way);
+  // 根据地图信息获取道路类型 (sd_pro_map - 需要地图匹配)
+  iflyauto::DrivingRoadType GetRoadTypeFromProMap(const iflymapdata::sdpro::LinkInfo_Link* link);
 
   // 更新限速标识牌信息
   void UpdateTsrSpeedLimit(void);
