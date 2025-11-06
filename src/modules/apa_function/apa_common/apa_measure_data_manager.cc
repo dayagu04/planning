@@ -106,7 +106,8 @@ void ApaMeasureDataManager::Update(const LocalView* local_view_ptr) {
     if (mirror_state_in_transition_) {
       const double transition_time =
           IflyTime::Now_ms() - mirror_state_transition_time_;
-      if (transition_time > smart_fold_mirror_params.consume_time * 1000) {
+      if (transition_time >
+          smart_fold_mirror_params.state_transition_time * 1000) {
         mirror_state_in_transition_ = false;
         if (mirror_state_ == MirrorState::FOLDING) {
           mirror_state_ = MirrorState::FOLDED;

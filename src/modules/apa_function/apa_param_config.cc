@@ -1133,6 +1133,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   bool, "locked_obs_slot_with_fold_mirror");
   JSON_READ_VALUE(smart_fold_mirror_params.consume_time, float,
                   "fold_mirror_consume_time");
+  JSON_READ_VALUE(smart_fold_mirror_params.state_transition_time, float,
+                  "fold_mirror_state_transition_time");
   JSON_READ_VALUE(smart_fold_mirror_params.reaction_time, float,
                   "fold_mirror_reaction_time");
   JSON_READ_VALUE(smart_fold_mirror_params.max_stuck_wait_time, float,

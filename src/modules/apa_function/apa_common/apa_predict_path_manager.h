@@ -34,6 +34,7 @@ class ApaPredictPathManager final {
   const double GetLatErr() const { return lat_err_; }
   const double GetPhiErr() const { return phi_err_; }
   const bool GetControlErrBig() const { return control_err_big_; }
+  const double GetPredictTrajS() const { return predict_traj_s_; }
 
  private:
   void RecordDebugTraj();
@@ -45,6 +46,7 @@ class ApaPredictPathManager final {
   double lat_err_{0.0};
   double phi_err_{0.0};
   bool control_err_big_{false};
+  double predict_traj_s_{0.0};
 };
 }  // namespace apa_planner
 }  // namespace planning

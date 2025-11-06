@@ -273,6 +273,12 @@ void ApaPredictPathManager::Update(
                 : pnc::geometry_lib::SEG_GEAR_REVERSE;
   }
 
+  if (predict_pt_vec_.size() > 0) {
+    predict_traj_s_ = predict_pt_vec_.back().s;
+  } else {
+    predict_traj_s_ = 0.0;
+  }
+
   RecordDebugTraj();
 
   return;

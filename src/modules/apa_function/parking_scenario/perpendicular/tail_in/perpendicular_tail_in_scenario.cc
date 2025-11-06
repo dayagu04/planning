@@ -3569,20 +3569,25 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       param.smart_fold_mirror_params;
 
   if (!smart_fold_mirror_params.has_smart_fold_mirror) {
+    ILOG_INFO << "decide fold mirror, not enable smart fold mirror";
     return;
   }
 
   if (frame_.mirror_command != MirrorCommand::NONE) {
+    ILOG_INFO << "decide fold mirror, mirror command is not none";
     return;
   }
 
   if (!frame_.is_last_path) {
+    ILOG_INFO << "decide fold mirror, not last path";
     return;
   }
 
   const auto measuredata_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   if (measuredata_ptr->GetFoldMirrorFlag() ||
       measuredata_ptr->GetStaticFlag() || measuredata_ptr->GetBrakeFlag()) {
+    ILOG_INFO
+        << "decide fold mirror, fold mirror or static or brake flag is true";
     return;
   }
 
@@ -3625,6 +3630,9 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
     return;
   }
 
+  const double predict_traj_s =
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictTrajS();
+
   const double vel = std::max(
       float(std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel())),
       smart_fold_mirror_params.min_vel);
@@ -3632,8 +3640,12 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double folding_mirror_safe_lat_buffer =
       smart_fold_mirror_params.lat_buffer + 0.01;
 
-  const double folding_mirror_consume_dist =
-      vel * smart_fold_mirror_params.consume_time;
+  const double folding_mirror_consume_dist = std::max(
+      std::min({vel * smart_fold_mirror_params.consume_time,
+                predict_traj_s - 0.1,
+                ego_info_under_slot.cur_pose.GetX() -
+                    ego_info_under_slot.target_pose.GetX() + 0.068}),
+      0.068);
 
   if (CalRemainDistFromObs(folding_mirror_consume_dist,
                            folding_mirror_safe_lat_buffer,
@@ -3657,10 +3669,11 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       -1.0 * (fold_mirror_reduce_width - folded_mirror_safe_lat_buffer);
 
   const double folded_mirror_consume_dist = std::max(
-      std::min(vel * (smart_fold_mirror_params.consume_time +
-                      smart_fold_mirror_params.reaction_time),
-               ego_info_under_slot.cur_pose.GetX() -
-                   ego_info_under_slot.origin_pose_local.GetX() + 0.068),
+      std::min({vel * (smart_fold_mirror_params.consume_time +
+                       smart_fold_mirror_params.reaction_time),
+                predict_traj_s - 0.1,
+                ego_info_under_slot.cur_pose.GetX() -
+                    ego_info_under_slot.target_pose.GetX() + 0.068}),
       0.068);
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
@@ -3699,7 +3712,10 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
                            param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, need send fold mirror msg";
     frame_.mirror_command = MirrorCommand::FOLD;
+    return;
   }
+
+  ILOG_INFO << "decide fold mirror, should not send fold mirror msg";
 
   return;
 }
