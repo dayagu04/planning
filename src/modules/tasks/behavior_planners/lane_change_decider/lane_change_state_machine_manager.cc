@@ -3874,19 +3874,32 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForOptimizedTrajs(
     //加速度检查，遍历障碍物轨迹加速度数值，超过阈值则变道不合理
     const double max_agent_deacceleration = 2.0;
     bool is_agent_deacceleration_safe = true;
-    // 预测轨迹置信时间为 3.0s
+    // 预测轨迹置信时间为 3.0s, 应对前车慢速时的安全检查
     double confidence_time = 3.0;
     int confidence_time_index = std::min(static_cast<int>(confidence_time / 0.2), static_cast<int>(agent_traj.size()));
     for (int i = 0; i < confidence_time_index; i++) {
       if (agent_traj[i].a < - max_agent_deacceleration) {
         is_agent_deacceleration_safe = false;
+        break;
       }
     }
+     // 自车优化轨迹置信时间 4.0s, 应对前车慢速时的安全检查
+     confidence_time = 4.0;
+     double max_ego_jerk = 1.5;
+     bool is_ego_jerk_safe = true;
+     confidence_time_index = std::min(static_cast<int>(confidence_time / 0.2), static_cast<int>(ego_trajs_future_.size()));
+     for (int i = 0; i < confidence_time_index; i++) {
+       if (ego_trajs_future_[i].jerk < - max_ego_jerk) {
+         is_ego_jerk_safe = false;
+         break;
+       }
+     }
+    
     JSON_DEBUG_VALUE("ego_front_edge", ego_front_edge);
     JSON_DEBUG_VALUE("ego_rear_edge", ego_rear_edge);
     bool lc_safety = false;
     if (is_front_agent) {
-      lc_safety = ego_front_edge < agent_rear_edge  - front_margin;
+      lc_safety = ego_front_edge < agent_rear_edge  - front_margin && is_ego_jerk_safe;
     JSON_DEBUG_VALUE("front_agent_front_edge", agent_front_edge);
     JSON_DEBUG_VALUE("front_agent_rear_edge", agent_rear_edge);
     } else {
@@ -3894,6 +3907,7 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForOptimizedTrajs(
       JSON_DEBUG_VALUE("rear_agent_front_edge", agent_front_edge);
       JSON_DEBUG_VALUE("rear_agent_rear_edge", agent_rear_edge);
     }
+   
     return lc_safety;
 }
 bool LaneChangeStateMachineManager::
