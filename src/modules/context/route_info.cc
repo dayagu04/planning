@@ -1954,9 +1954,43 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       if (relative_id_lane->get_relative_id() != 0) {
         continue;
       }
+      const auto& lane_nums = relative_id_lane->get_lane_nums();
+      int left_lane_num = 0;
+      int right_lane_num = 0;
+      EgoMLCRequestType mlc_type = None_MLC;
+      for (const auto& lane_num : lane_nums) {
+        if (lane_num.end > kEpsilon) {
+          left_lane_num = lane_num.left_lane_num;
+          right_lane_num = lane_num.right_lane_num;
+          break;
+        }
+      }
 
+      route_info_output_.left_lane_num = left_lane_num;
+      route_info_output_.right_lane_num = right_lane_num;
       mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
       mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
+
+      int ego_seq = left_lane_num + 1;
+      std::vector<int> lc_num_task;
+      if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
+          mlc_type = None_MLC;
+          lc_num_task.clear();
+      } else if (ego_seq > maxVal_seq) {
+        int err = ego_seq - maxVal_seq;
+        for (int i = 0; i < err; i++) {
+          lc_num_task.emplace_back(-1);
+          mlc_type = RAMP_TO_MAIN;
+        }
+      } else if (ego_seq < minVal_seq) {
+        int err = minVal_seq - ego_seq;
+        for (int i = 0; i < err; i++) {
+          lc_num_task.emplace_back(1);
+          mlc_type = RAMP_TO_MAIN;
+        }
+      }
+      route_info_output_.mlc_request_type_route_info = mlc_type;
+      relative_id_lane->set_current_tasks(lc_num_task);
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
     }
