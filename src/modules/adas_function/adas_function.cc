@@ -71,6 +71,18 @@ void AdasFunction::StoreInfoForNextCycle(void) {
           ->mutable_environmental_model()
           ->get_local_view()
           .vehicle_service_output_info.accelerator_pedal_pos;
+  GetContext.mutable_last_cycle_info()->ldp_left_intervention =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_left_intervention_flag_;
+  GetContext.mutable_last_cycle_info()->ldp_right_intervention =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_right_intervention_flag_;
+  GetContext.mutable_last_cycle_info()->elk_left_intervention =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_left_intervention_flag_;
+  GetContext.mutable_last_cycle_info()->elk_right_intervention =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_right_intervention_flag_;
 }
 
 bool AdasFunction::Plan() {
@@ -117,6 +129,8 @@ bool AdasFunction::Plan() {
     TestLkasForHmi();
   }
   SetLkaTrajectory();
+  LdpDriverhandsoffWarning();
+
   double end_time_lkas = IflyTime::Now_ms();
   ILOG_DEBUG << "lkas_function cost is [" << end_time_lkas - start_time_lkas
              << "]ms";
@@ -303,6 +317,142 @@ void AdasFunction::SetLkaTrajectory() {
   ILOG_DEBUG << "lks_trajectory_.trajectory_points_size = "
              << (int)lkas_trajectory->trajectory_points_size;
 }
+
+void AdasFunction::LdpDriverhandsoffWarning(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
+
+  lkas_intervention =
+      ((GetContext.get_output_info()
+            ->ldp_output_info_.ldp_left_intervention_flag_ == true) ||
+       (GetContext.get_output_info()
+            ->ldp_output_info_.ldp_right_intervention_flag_ == true) ||
+       (GetContext.get_output_info()
+            ->elk_output_info_.elk_left_intervention_flag_ == true) ||
+       (GetContext.get_output_info()
+            ->elk_output_info_.elk_right_intervention_flag_ == true));
+  lkas_intervention_rising_edge_ =
+      ((GetContext.get_output_info()
+                ->ldp_output_info_.ldp_left_intervention_flag_ == true &&
+        GetContext.get_last_cycle_info()->ldp_left_intervention == false) ||
+       (GetContext.get_output_info()
+                ->ldp_output_info_.ldp_right_intervention_flag_ == true &&
+        GetContext.get_last_cycle_info()->ldp_right_intervention == false) ||
+       (GetContext.get_output_info()
+                ->elk_output_info_.elk_left_intervention_flag_ == true &&
+        GetContext.get_last_cycle_info()->elk_left_intervention == false) ||
+       (GetContext.get_output_info()
+                ->elk_output_info_.elk_right_intervention_flag_ == true &&
+        GetContext.get_last_cycle_info()->elk_right_intervention == false)
+
+      );
+
+  // 计数逻辑
+  if (lkas_intervention_rising_edge_ == true) {
+    ldp_intervention_count += 1;
+    // ldp_intervention_duration_ = 0.0;  // 重置180秒计时器
+  }
+
+  if (ldp_intervention_count > 0) {
+    ldp_intervention_duration_ += GetContext.get_param()->dt;
+    if (ldp_intervention_duration_ > 180.0 ||
+        ((ldp_warning_audio_flag_ == true &&
+          (vehicle_service_output_info_ptr->driver_hands_off_state == false) &&
+          GetContext.get_param()->ldp_handoff_state_switch_test_ == true))
+
+    ) {
+      ldp_intervention_duration_ = 0.0;
+      ldp_intervention_count = 0;
+      ldp_handsoff_duration_ = 0.0;
+      ldp_warning_audio_flag_ = false;
+      ldp_intervention_count_2_dur = 0.0;
+      ldp_intervention_count_3_dur = 0.0;
+      ldp_intervention_count_4_dur = 0.0;
+    }
+
+  } else {
+    //  ldp_no_intervention_duration_ = 0.0;
+  }
+  if (ldp_intervention_count > 0) {
+    // 根据计数设置警告标志
+    if (ldp_intervention_count == 1) {
+      ldp_handsoff_duration_ = 0.0;
+      ldp_warning_audio_flag_ = false;
+    } else if (ldp_intervention_count == 2) {
+      if (lkas_intervention == true) {
+        ldp_intervention_count_2_dur += GetContext.get_param()->dt;
+      } else {
+        if (ldp_intervention_count_2_dur < 3.0) {
+          ldp_intervention_count_2_dur += GetContext.get_param()->dt;
+        }
+      }
+      //第二次纠偏，小于3秒报警小于三秒，也会报3秒
+      if (ldp_intervention_count_2_dur < 3.0) {
+        ldp_warning_audio_flag_ = true;
+        //超过三秒后，只有纠偏中止后才停止报警，
+      } else if (ldp_intervention_count_2_dur > 3.0 &&
+                 lkas_intervention == false) {
+        ldp_warning_audio_flag_ = false;
+        ldp_handsoff_duration_ = ldp_intervention_count_2_dur + 10.0;
+      }
+
+    } else if (ldp_intervention_count == 3) {
+      ldp_intervention_count_3_dur += GetContext.get_param()->dt;
+      if (ldp_intervention_count_3_dur < ldp_handsoff_duration_) {
+        ldp_warning_audio_flag_ = true;
+      } else {
+        ldp_warning_audio_flag_ = false;
+        ldp_handsoff_duration_ += 10.0;
+      }
+    } else if (ldp_intervention_count == 4) {
+      ldp_intervention_count_4_dur += GetContext.get_param()->dt;
+
+      if (ldp_intervention_count_4_dur < ldp_handsoff_duration_) {
+        ldp_warning_audio_flag_ = true;
+      } else {
+        ldp_warning_audio_flag_ = false;
+        ldp_handsoff_duration_ += 10.0;
+      }
+
+    } else if (ldp_intervention_count == 5) {
+      ldp_intervention_count_5_dur += GetContext.get_param()->dt;
+
+      if (ldp_intervention_count_5_dur < ldp_handsoff_duration_) {
+        ldp_warning_audio_flag_ = true;
+      } else {
+        ldp_warning_audio_flag_ = false;
+      }
+    } else if (ldp_intervention_count > 5) {
+      ldp_warning_audio_flag_ = true;
+    }
+  }
+
+  //以下是输出脱手报警信息
+  if (ldp_warning_audio_flag_ == true) {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_warning_audio_flag_ =
+        true;
+  } else {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_warning_audio_flag_ =
+        false;
+  }
+
+  if (ldp_intervention_count == 2) {
+    GetContext.mutable_output_info()
+        ->ldp_output_info_.ldp_driver_handsoff_warning_ =
+        iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_STAGE2;
+  } else if (ldp_intervention_count > 2) {
+    GetContext.mutable_output_info()
+        ->ldp_output_info_.ldp_driver_handsoff_warning_ =
+        iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_STAGE3;
+  } else {
+    GetContext.mutable_output_info()
+        ->ldp_output_info_.ldp_driver_handsoff_warning_ =
+        iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_OFF;
+  }
+}
 void AdasFunction::TestLkasForHmi(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   // test for ldw
@@ -365,7 +515,21 @@ void AdasFunction::TestLkasForHmi(void) {
     GetContext.mutable_output_info()->ldp_output_info_.ldp_state_ =
         iflyauto::LDPFunctionFSMWorkState::
             LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION;
-  } else {
+  } else if (GetContext.get_param()->hmi_ldp_state == 6) {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_warning_audio_flag_ =
+        true;
+    GetContext.mutable_output_info()
+        ->ldp_output_info_.ldp_driver_handsoff_warning_ =
+        iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_STAGE2;
+  } else if (GetContext.get_param()->hmi_ldp_state == 7) {
+    GetContext.mutable_output_info()->ldp_output_info_.ldp_warning_audio_flag_ =
+        true;
+    GetContext.mutable_output_info()
+        ->ldp_output_info_.ldp_driver_handsoff_warning_ =
+        iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_STAGE3;
+  }
+
+  else {
     GetContext.mutable_output_info()->ldp_output_info_.ldp_state_ = iflyauto::
         LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
   }
@@ -830,6 +994,12 @@ void AdasFunction::Log(void) {
     JSON_DEBUG_VALUE(
         "road_right_roadedge_c3",
         GetContext.get_road_info()->current_lane.right_roadedge.c3);
+
+    JSON_DEBUG_VALUE("ldp_warning_audio_flag_", ldp_warning_audio_flag_);
+    JSON_DEBUG_VALUE("ldp_intervention_count", (int)ldp_intervention_count);
+    JSON_DEBUG_VALUE("lkas_intervention_rising_edge_",
+                     lkas_intervention_rising_edge_);
+    JSON_DEBUG_VALUE("ldp_intervention_duration_", ldp_intervention_duration_);
   }
   // adas debug info
 

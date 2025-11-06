@@ -49,6 +49,23 @@ class AdasFunction : public BaseFunction {
   std::shared_ptr<adas_function::tsr_core::TsrCore> tsr_core_ptr_;
   // IhcCore
   std::shared_ptr<adas_function::ihc_core::IhcCore> ihc_core_ptr_;
+
+  void LdpDriverhandsoffWarning();
+  bool lkas_intervention = false;
+  int ldp_intervention_count = 0;
+  double ldp_intervention_count_2_dur = 0.0;
+  double ldp_intervention_count_3_dur = 0.0;
+  double ldp_intervention_count_4_dur = 0.0;
+  double ldp_intervention_count_5_dur = 0.0;
+  double ldp_intervention_duration_ = 0.0;
+  double ldp_handsoff_duration_ = 0.0;  // 驾驶员手离方向盘计时器，单位:s
+  bool ldp_driver_handsoff_flag = false;  // 驾驶员手离方向盘标志位
+  iflyauto::LDPDriverhandsoffWarning ldp_driver_handsoff_warning_ =
+      iflyauto::LDPDriverhandsoffWarning::LDP_DRIVER_HANDSOFF_WARNING_OFF;
+  bool ldp_warning_audio_flag_ = false;
+  bool lkas_intervention_rising_edge_ = false;
+  iflyauto::LDPFunctionFSMWorkState ldp_state_ = iflyauto::
+      LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
 };
 
 }  // namespace planning

@@ -348,6 +348,9 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->elk_roadedge_testswitch_temp_, bool,
       "elk_roadedge_testswitch_temp_");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_handoff_state_switch_test_, bool,
+      "ldp_handoff_state_switch_test_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->kickdown_warning_time,
                        double, "kickdown_warning_time");
   ADAS_JSON_READ_VALUE(

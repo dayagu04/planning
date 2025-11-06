@@ -728,7 +728,8 @@ class LoadRosbag:
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3"]
+                         "planning_hmi_ldp_state","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3","road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3",
+                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_",]
 
       json_vector_list = ["raw_refline_x_vec", "raw_refline_y_vec", "raw_refline_s_vec", "raw_refline_k_vec",
                          "ego_front_agent_traj_x_vec","ego_front_agent_traj_y_vec","ego_front_agent_traj_theta_vec",

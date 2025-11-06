@@ -21,7 +21,7 @@ struct ElkParameters {
   double earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double latest_warning_line = -0.3;   // 触发的最晚报警线，单位：m
   double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
-  double roadedge_earliest_warning_line = 1.8;  // 触发的最早报警线，单位：m
+  double roadedge_earliest_warning_line = 1.5;  // 触发的最早报警线，单位：m
   double roadedge_latest_warning_line = -0.3;  // 触发的最晚报警线，单位：m
   double roadedge_reset_warning_line = 0.15;  // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s

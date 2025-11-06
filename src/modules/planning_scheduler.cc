@@ -884,6 +884,11 @@ void PlanningScheduler::FillAdasPlanningHmiInfo(
   planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
       GetContext.get_output_info()
           ->ldp_output_info_.ldp_right_intervention_flag_;
+  planning_hmi_info->ldp_output_info.ldp_warning_audio_flag =
+      GetContext.get_output_info()->ldp_output_info_.ldp_warning_audio_flag_;
+  planning_hmi_info->ldp_output_info.ldp_driver_handsoff_warning =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_driver_handsoff_warning_;
   // HMI for elk
   planning_hmi_info->elk_output_info.elk_state =
       GetContext.get_output_info()->elk_output_info_.elk_state_;
