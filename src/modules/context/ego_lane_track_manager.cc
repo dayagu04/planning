@@ -188,7 +188,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_on_road_select_ramp_situation_;
 
           if (is_on_road_select_ramp_situation_ &&
-              distance_to_first_road_split_ < dis_to_split_threshold &&
+              route_info_output.mlc_decider_route_info.is_process_split &&
               lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
