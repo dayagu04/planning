@@ -4,6 +4,7 @@
 #include <utility>
 
 #include "config/basic_type.h"
+#include "ego_planning_config.h"
 #include "lane_reference_path.h"
 #include "session.h"
 
@@ -20,6 +21,7 @@ using ReferencePathKeyType = std::pair<ReferencePathType, int>;
 class ReferencePathManager {
  public:
   ReferencePathManager(planning::framework::Session* session);
+
   virtual ~ReferencePathManager();
 
   // map lane reference

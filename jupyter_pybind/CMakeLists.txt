@@ -330,3 +330,11 @@ target_link_libraries(spatio_temporal_union_planning_py PRIVATE
   modules_context
   modules_tasks
   legacy_c_interface)
+
+pybind11_add_module(reference_path_smooth_py MODULE src/reference_path_smooth_pybind.cc)
+target_link_libraries(reference_path_smooth_py PRIVATE
+  autoplt
+  modules_common
+  modules_context
+  modules_tasks
+  legacy_c_interface)

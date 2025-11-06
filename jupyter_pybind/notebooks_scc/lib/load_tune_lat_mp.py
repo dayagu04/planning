@@ -158,8 +158,15 @@ def update_tune_lat_plan_data(fig7, bag_loader, bag_time, next_bag_time, local_v
     coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
 
   if bag_loader.plan_debug_msg['enable'] == True:
+    raw_refline_xn, raw_refline_yn = plan_debug_json_msg['raw_refline_x_vec'], plan_debug_json_msg['raw_refline_y_vec']
+    raw_refline_x, raw_refline_y = coord_tf.global_to_local(plan_debug_json_msg['raw_refline_x_vec'], plan_debug_json_msg['raw_refline_y_vec'])
+    lat_plan_data['data_refline'].data.update({
+      'raw_refline_x': raw_refline_x,
+      'raw_refline_y': raw_refline_y,
+      'raw_refline_xn': raw_refline_xn,
+      'raw_refline_yn': raw_refline_yn,
+    })
     lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
-    print("lat_motion_plan_input: ", lat_motion_plan_input)
     # bound
     is_enable_first_and_second_soft_bound = False
     first_soft_upper_bound_x0_vec, first_soft_upper_bound_y0_vec = [], []
@@ -1248,6 +1255,7 @@ def load_lat_plan_figure(fig1):
   fig_hard_lbound = fig1.circle('hard_lower_bound_y_vec','hard_lower_bound_x_vec', source = data_hard_bound, size = 6, line_width = 4, line_color = "maroon", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'hard lower bound')
   fig1.line('last_y_vec', 'last_x_vec', source = data_lat_motion_plan_input, line_width = 5, line_color = 'brown', line_dash = 'solid', line_alpha = 0.35, legend_label = 'last path', visible=False)
   fig1.line('virtual_ref_y', 'virtual_ref_x', source = data_virtual_ref, line_width = 5, line_color = 'deepskyblue', line_dash = 'solid', line_alpha = 0.35, legend_label = 'virtual ref', visible=True)
+  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
 
   # columns = [
   #       TableColumn(field="bound_t_vec", title="t"),

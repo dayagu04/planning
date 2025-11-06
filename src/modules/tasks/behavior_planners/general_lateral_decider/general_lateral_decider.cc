@@ -453,437 +453,10 @@ void GeneralLateralDecider::UnitTest() {
   }
 }
 
-bool GeneralLateralDecider::HandleRoadCurvature(
-    const double ego_v, const CoarsePlanningInfo& coars_planning_info) {
-  // 1. 曲率半径阈值
-  static const double kStraightRadiusDefault = 2000.0;      // 默认直道判断半径阈值(m)
-  static const double kIntersectionRadiusThreshold = 50.0;  // 路口场景的曲率半径阈值(m)
-  // 2. 虚拟区域判断阈值
-  static const double kVirtualRangeVelCoeff = 5.0;           // 虚拟范围与车速的系数(5.0*v)
-  static const double kVirtualRangeOffset = 5.0;             // 虚拟范围偏移量(m)
-  static const double kMinIntersectionVirtualLength = 15.0;  // 路口虚拟区域最小长度(m)
-  static const double kMinVirtualLength = 50.0;              // 非路口虚拟区域最小长度(m)
-  // 3. 采样与窗口参数
-  static const size_t kMaxSamplingSize = 20;     // 最大采样点数
-  static const double kSamplingStep = 2.0;       // 滑动窗口内的采样步长(m)
-  static const double kSamplingGap = 5.0;        // 相邻采样点的间隔(m)
-  static const double kMaxSamplingRange = 81.0;  // 最大采样范围(自车位置向前，m)
-  static const int kCurvatureWindowSize = 5;     // 曲率平滑窗口大小(±5步，共11个点)
-  // 4. 道路预览与范围参数
-  static const double kPreviewRangeMin = 31.0;      // 最小预览范围(m)
-  static const double kPreviewRangeVelCoeff = 5.0;  // 预览范围与车速的系数(5.0*v)
-  static const double kPreviewRangeOffset = 20.0;   // 预览范围偏移量(m)
-  // 5. 弯道长度判断阈值
-  static const double kMinContinuousCurveLength = 21.0;     // 持续弯道判断的最小长度(m)
-  static const double kMinCurveLength = 6.0;                // 最小有效弯道长度(m)
-  static const double kMinMidCurveLength = 11.0;            // 中等弯道的最小长度(m)
-  static const double kMinBigCurveContinuousLength = 31.0;  // 大弯道的最小持续长度(m)
-  static const double kMinConnectionLength = 21.0;          // 连续弯道段的最大间隔(m)
-  // 6. 近/远距范围参数
-  static const double kNearRangeStartOffset = -1.0;  // 近距范围起始偏移(自车位置向后，m)
-  static const double kNearRangeEndOffset = 11.0;    // 近距范围结束偏移(自车位置向前，m)
-  static const double kFarRangeMin = 31.0;           // 远距范围最小距离(m)
-  static const double kFarRangeMax = 61.0;           // 远距范围最大距离(m)
-  static const double kFarRangeVelCoeff = 4.0;       // 远距范围与车速的系数(4.0*v)
-  static const double kFarRangeStartOffset = -11.0;  // 远距范围起始偏移(m，[far-11, far+1])
-  static const double kFarRangeEndOffset = 1.0;      // 远距范围结束偏移(m，[far-11, far+1])
-  // 7. 弯道类型判断辅助参数
-  static const double kCurveMaxStartDistance = 51.0;  // 有效弯道的最大起始距离(自车向前，m)
-  static const double kMinRadiusChangeDiff = 200.0;   // 急弯判断的半径变化阈值(m)
-  // get output
+void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
               ->mutable_general_lateral_decider_output();
-  // 1.average curvature filter. sliding window
-  const auto &virtual_lane_manager =
-      session_->environmental_model()
-              .get_virtual_lane_manager();
-  double max_virtual_seg_ahead_x =
-      virtual_lane_manager->get_current_lane()
-                          ->get_max_virtual_seg_ahead_x();
-  double max_virtual_seg_ahead_length =
-      virtual_lane_manager->get_current_lane()
-                          ->get_max_virtual_seg_ahead_length();
-
-  std::vector<double> xp_vel{4.167, 8.333, 10.0};          // 20.0
-  std::vector<double> fp_radius_thr{200.0, 400.0, 600.0};  // 1000.0
-  double curve_radius_thr =
-      planning::interp(ego_v, xp_vel, fp_radius_thr);
-  double straight_radius_thr = kStraightRadiusDefault;
-  if ((virtual_lane_manager
-           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-       virtual_lane_manager
-           ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-       (max_virtual_seg_ahead_x > 0.0 &&
-        max_virtual_seg_ahead_x < (ego_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-        max_virtual_seg_ahead_length > kMinIntersectionVirtualLength)) ||
-      (max_virtual_seg_ahead_x >= 0.0 &&
-       max_virtual_seg_ahead_x < (ego_v * kVirtualRangeVelCoeff + kVirtualRangeOffset) &&
-       max_virtual_seg_ahead_length > std::min(0.5 * ego_v * kVirtualRangeVelCoeff, kMinVirtualLength))) {
-    curve_radius_thr = kIntersectionRadiusThreshold;
-    straight_radius_thr = kIntersectionRadiusThreshold;
-  }
-  double big_curve_thr = 1.0 / curve_radius_thr;
-  double straight_curv_thr = 1.0 / straight_radius_thr;
-  const auto& cart_ref_info =
-      coars_planning_info.cart_ref_info;
-  const auto& reference_path =
-      coars_planning_info.reference_path;
-  const double init_s =
-      reference_path->get_frenet_ego_state()
-                    .planning_init_point()
-                    .frenet_state.s;
-  ref_curve_info_.curve_vec.reserve(kMaxSamplingSize);
-  ref_curve_info_.s_vec.reserve(kMaxSamplingSize);
-  std::vector<std::pair<double, double>> large_curvature_segments;
-  large_curvature_segments.reserve(kMaxSamplingSize);
-  double sampling_range = init_s + kMaxSamplingRange;
-  double preview_range =
-      std::min(std::max(init_s + ego_v * kPreviewRangeVelCoeff + kPreviewRangeOffset, init_s + kPreviewRangeMin), sampling_range);
-  double segment_start = init_s;
-  double left_curve_length = 0.0;
-  double right_curve_length = 0.0;
-  double sum_near_curve = 0.0;
-  double sum_far_curve = 0.0;
-  double near_range_start = init_s + kNearRangeStartOffset;
-  double near_range_end = init_s + kNearRangeEndOffset;
-  double far_range =
-      std::min(std::max(init_s + ego_v * kFarRangeVelCoeff, init_s + kFarRangeMin), kFarRangeMax);
-  double far_range_start = far_range + kFarRangeStartOffset;
-  double far_range_end = far_range + kFarRangeEndOffset;
-  int near_count = 0;
-  int far_count = 0;
-  bool is_big_curve = false;
-  for (double sampling_s = init_s - kSamplingGap; sampling_s <= sampling_range; sampling_s += kSamplingGap) {
-    std::vector<double> curv_window_vec;
-    for (int j = -kCurvatureWindowSize; j <= kCurvatureWindowSize; ++j) {
-      double curv = 1e-4;
-      if (cart_ref_info.k_s_spline.get_x().size() > 0) {
-        curv = cart_ref_info.k_s_spline(sampling_s + j * kSamplingStep);
-      } else {
-        ReferencePathPoint refpath_pt;
-        if (reference_path->get_reference_point_by_lon(
-          sampling_s + j * kSamplingStep, refpath_pt)) {
-          curv = refpath_pt.path_point.kappa();
-        }
-      }
-      curv_window_vec.emplace_back(curv);
-    }
-    if (curv_window_vec.empty()) {
-      continue;
-    }
-    double curv_sum = 0.0;
-    for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-      curv_sum += curv_window_vec[ind];
-    }
-    double avg_curv = curv_sum / curv_window_vec.size();
-    if (sampling_s < preview_range) {
-      if (std::fabs(avg_curv) > straight_curv_thr) {
-        // sign
-        if (avg_curv > 1e-6) {
-          left_curve_length += kSamplingGap;
-          right_curve_length = 0.0;
-        } else {
-          left_curve_length = 0.0;
-          right_curve_length += kSamplingGap;
-        }
-        if (left_curve_length > kMinContinuousCurveLength) {
-          ref_curve_info_.is_left = true;
-        } else if (right_curve_length > kMinContinuousCurveLength) {
-          ref_curve_info_.is_right = true;
-        }
-        // big
-        if (std::fabs(avg_curv) > big_curve_thr) {
-          if (!is_big_curve) {
-            segment_start = sampling_s;
-            if (!ref_curve_info_.curve_vec.empty()) {
-              if (std::fabs(ref_curve_info_.curve_vec.back()) > straight_curv_thr) {
-                segment_start -= (kSamplingGap * 0.5);
-              }
-            }
-            is_big_curve = true;
-          }
-        } else {
-          if (is_big_curve) {
-            double curve_seg_length = sampling_s - segment_start - (kSamplingGap * 0.5);
-            if (curve_seg_length > kMinMidCurveLength ||
-                (curve_seg_length > kMinCurveLength &&
-                segment_start - init_s < kMinCurveLength)) {
-              large_curvature_segments.emplace_back(segment_start, sampling_s - kSamplingGap);
-            }
-            is_big_curve = false;
-          }
-        }
-      } else {
-        left_curve_length = 0.0;
-        right_curve_length = 0.0;
-        if (is_big_curve) {
-          double curve_seg_length = sampling_s - segment_start - (kSamplingGap * 0.5);
-          if (curve_seg_length > kMinMidCurveLength ||
-              (curve_seg_length > kMinCurveLength &&
-                segment_start - init_s < kMinCurveLength)) {
-            large_curvature_segments.emplace_back(segment_start, sampling_s - kSamplingGap);
-          }
-          is_big_curve = false;
-        }
-      }
-    } else {
-      left_curve_length = 0.0;
-      right_curve_length = 0.0;
-      if (is_big_curve) {
-        double curve_seg_length = sampling_s - segment_start - (kSamplingGap * 0.5);
-        if (curve_seg_length > kMinMidCurveLength ||
-            (curve_seg_length > kMinCurveLength &&
-              segment_start - init_s < kMinCurveLength)) {
-          large_curvature_segments.emplace_back(segment_start, sampling_s - kSamplingGap);
-        }
-        is_big_curve = false;
-      }
-    }
-    if (sampling_s > near_range_start &&
-        sampling_s < near_range_end) {
-      sum_near_curve += avg_curv;
-      near_count++;
-    }
-    if (sampling_s > far_range_start &&
-        sampling_s < far_range_end) {
-      sum_far_curve += avg_curv;
-      far_count++;
-    }
-    ref_curve_info_.curve_vec.emplace_back(avg_curv);
-    ref_curve_info_.s_vec.emplace_back(sampling_s);
-    if (std::fabs(avg_curv) > ref_curve_info_.max_curve) {
-      ref_curve_info_.max_curve = std::fabs(avg_curv);
-      ref_curve_info_.max_curve_s = (sampling_s);
-    }
-  }
-  double aver_near_radius = 1e4;
-  if (near_count > 0) {
-    aver_near_radius = std::fabs(1.0 / (sum_near_curve / near_count));
-  }
-  double aver_far_radius = 1e4;
-  if (far_count > 0) {
-    aver_far_radius = std::fabs(1.0 / (sum_far_curve / far_count));
-  }
-  ref_curve_info_.min_radius = 1.0 / ref_curve_info_.max_curve;
-  if (is_big_curve && (sampling_range - segment_start > kMinMidCurveLength)) {
-    large_curvature_segments.emplace_back(segment_start, sampling_range + kSamplingGap);
-  }
-  is_big_curve = false;
-  if (ref_curve_info_.s_vec.size() > 2) {
-    general_lateral_decider_output.curve_s_spline.set_points(
-        ref_curve_info_.s_vec, ref_curve_info_.curve_vec);
-  }
-  // 2.scene recognition
-  if (large_curvature_segments.empty()) {
-    if (ref_curve_info_.is_left && ref_curve_info_.is_right) {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::S_CURVE;
-    } else if (!ref_curve_info_.is_left && !ref_curve_info_.is_right) {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::STRAIGHT;
-    } else {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::NORMAL_CURVE;
-    }
-    return true;
-  }
-  size_t connection_seg_count = 0;
-  double seg_start_s = large_curvature_segments.front().first;
-  double seg_end_s = large_curvature_segments.front().second;
-  if (large_curvature_segments.size() > 1) {
-    for (size_t i = 1; i < large_curvature_segments.size(); ++i) {
-      double start_s = large_curvature_segments[i].first;
-      double end_s = large_curvature_segments[i].second;
-      // if (end_s - start_s < kMinCurveLength) {
-      //   if ((i + 1) >= large_curvature_segments.size()) {
-      //     break;
-      //   }
-      //   seg_start_s = large_curvature_segments[i + 1].first;
-      //   seg_end_s = large_curvature_segments[i + 1].second;
-      //   continue;
-      // }
-      if (start_s - seg_end_s < kMinConnectionLength) {
-        connection_seg_count++;
-        seg_end_s = end_s;
-        continue;
-      } else {
-        break;
-      }
-    }
-  }
-  double init_dist_to_seg = seg_start_s - init_s;
-  double seg_length = seg_end_s - seg_start_s;
-  double cureve_max_start_s = init_s + kCurveMaxStartDistance;
-  if ((init_dist_to_seg > kMinCurveLength &&
-       (seg_length < kMinCurveLength ||
-        (seg_length < kMinMidCurveLength &&
-         ref_curve_info_.min_radius > curve_radius_thr))) ||
-      seg_start_s > cureve_max_start_s) {
-    if (ref_curve_info_.is_left && ref_curve_info_.is_right) {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::S_CURVE;
-    } else if (!ref_curve_info_.is_left && !ref_curve_info_.is_right) {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::STRAIGHT;
-    } else {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::NORMAL_CURVE;
-    }
-    return true;
-  }
-  ref_curve_info_.start_s = seg_start_s;
-  ref_curve_info_.end_s = seg_end_s;
-  // double max_curve_change_length = 36.0;
-  // if (large_curvature_segments.size() - connection_seg_count > 1 &&
-  //     seg_length < max_curve_change_length &&
-  //     (init_dist_to_seg < kMinMidCurveLength ||
-  //      seg_length > kMinMidCurveLength) &&
-  //     ref_curve_info_.min_radius < curve_radius_thr) {
-  if (ref_curve_info_.min_radius < curve_radius_thr &&
-      (aver_near_radius - ref_curve_info_.min_radius > kMinRadiusChangeDiff ||
-       aver_far_radius - ref_curve_info_.min_radius > kMinRadiusChangeDiff) &&
-      (init_dist_to_seg < kMinMidCurveLength ||
-       seg_length > kMinMidCurveLength)) {
-    ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::SHARP_CURVE;
-  } else if (ref_curve_info_.is_left &&
-             ref_curve_info_.is_right &&
-             seg_length > kMinMidCurveLength) {
-    ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::S_CURVE;
-  } else {
-    if ((init_dist_to_seg < kMinMidCurveLength ||
-         seg_length > kMinConnectionLength) &&
-        (init_dist_to_seg + seg_length) > kMinBigCurveContinuousLength) {
-      ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::BIG_CURVE;
-    } else {
-      if (ref_curve_info_.is_left && ref_curve_info_.is_right) {
-        ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::S_CURVE;
-      } else if (!ref_curve_info_.is_left && !ref_curve_info_.is_right) {
-        ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::STRAIGHT;
-      } else {
-        ref_curve_info_.curve_type = RoadCurvatureInfo::CurveType::NORMAL_CURVE;
-      }
-    }
-  }
-  return true;
-}
-
-// bool GeneralLateralDecider::CalCruiseVelByCurvature(
-//     const double ego_v, const CoarsePlanningInfo& coars_planning_info, double &cruise_v) {
-//   const auto &virtual_lane_manager =
-//       session_->environmental_model()
-//               .get_virtual_lane_manager();
-//   // if (virtual_lane_manager
-//   //         ->get_is_exist_ramp_on_road() ||
-//   //     virtual_lane_manager
-//   //         ->get_is_exist_split_on_ramp() ||
-//   //     virtual_lane_manager
-//   //         ->get_is_exist_intersection_split()) {
-//   //     // (virtual_lane_manager
-//   //     //         ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-//   //     //  virtual_lane_manager
-//   //     //         ->GetIntersectionState() <= common::OFF_INTERSECTION)) {
-//   //   return false;
-//   // }
-//   const auto &route_info_output =
-//       session_->environmental_model()
-//               .get_route_info()
-//               ->get_route_info_output();
-//   if ((config_.ramp_limit_v_valid) &&
-//       (route_info_output.is_on_ramp)) {
-//     cruise_v =
-//         std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
-//   }
-//   const auto& reference_path = coars_planning_info.reference_path;
-//   const double init_s =
-//       reference_path->get_frenet_ego_state()
-//                     .planning_init_point()
-//                     .frenet_state.s;
-//   const auto& cart_ref_info =
-//       coars_planning_info.cart_ref_info;
-//   double preview_start_time = 0.0;
-//   double preview_end_time = 4.0;
-//   double preview_dt = 1.0;
-//   double min_sampling_gap = 10.0;
-//   double preview_step = 2.0;
-//   double max_curv = 0.0001;
-//   double min_curv = 0.2;
-//   double last_preview_s = 0.0;
-//   std::vector<double> preview_curv_vec;
-//   preview_curv_vec.reserve(int((preview_end_time - preview_start_time) / preview_dt) + 1);
-//   // average curvature filter. sliding window
-//   for (double idx = preview_start_time; idx < preview_end_time; idx += preview_dt) {
-//     double preview_s = std::min(std::max(idx * ego_v, 0.0), 90.0);
-//     if (preview_s - last_preview_s < min_sampling_gap) {
-//       preview_s += min_sampling_gap;
-//     }
-//     last_preview_s = preview_s;
-//     std::vector<double> curv_window_vec;
-//     for (int j = -5; j <= 5; ++j) {
-//       double curv = 0.0001;
-//       if (cart_ref_info.k_s_spline.get_x().size() > 0) {
-//         curv = std::fabs(cart_ref_info.k_s_spline(init_s + preview_s + j * preview_step));
-//       } else {
-//         ReferencePathPoint refpath_pt;
-//         if (reference_path->get_reference_point_by_lon(
-//           init_s + preview_s + j * preview_step, refpath_pt)) {
-//           curv = std::fabs(refpath_pt.path_point.kappa());
-//         }
-//       }
-//       curv_window_vec.emplace_back(curv);
-//     }
-//     double curv_sum = 0.0;
-//     for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-//       curv_sum += curv_window_vec[ind];
-//     }
-//     double avg_curv = curv_sum / curv_window_vec.size();
-//     max_curv = std::max(avg_curv, max_curv);
-//     min_curv = std::min(avg_curv, min_curv);
-//     preview_curv_vec.emplace_back(avg_curv);
-//   }
-//   std::vector<double> xp_vel{4.167, 8.333, 10.0};
-//   std::vector<double> fp_radius_thr{250.0, 500.0, 750.0};
-//   double kappa_radius_thr =
-//       planning::interp(ego_v, xp_vel, fp_radius_thr);
-//   // double far_kappa_radius = 1.0 / std::max(preview_curv, 0.0001);
-//   double far_min_kappa_radius = 1.0 / std::max(max_curv, 0.0001);
-//   double far_max_kappa_radius = 1.0 / std::max(min_curv, 0.0001);
-//   JSON_DEBUG_VALUE("far_kappa_radius", far_min_kappa_radius);
-//   double max_virtual_seg_ahead_x =
-//       virtual_lane_manager->get_current_lane()
-//                           ->get_max_virtual_seg_ahead_x();
-//   double max_virtual_seg_ahead_length =
-//       virtual_lane_manager->get_current_lane()
-//                           ->get_max_virtual_seg_ahead_length();
-//   if (virtual_lane_manager
-//           ->GetIntersectionState() >= common::APPROACH_INTERSECTION &&
-//       virtual_lane_manager
-//           ->GetIntersectionState() <= common::OFF_INTERSECTION &&
-//       (max_virtual_seg_ahead_x > 0.0 &&
-//        max_virtual_seg_ahead_x < ego_v * 5.0 &&
-//        max_virtual_seg_ahead_length > 15.0)) {
-//     if (far_min_kappa_radius <= 50.0) {
-//       return true;
-//     }
-//   } else {
-//     int large_curv_count = 0;
-//     int max_large_curv_count = 0;
-//     for (int i = preview_curv_vec.size() -1; i >= 0; --i) {
-//       double far_kappa_radius = 1.0 / std::max(preview_curv_vec[i], 0.0001);
-//       if (far_kappa_radius < kappa_radius_thr) {
-//         large_curv_count += 1;
-//       } else {
-//         large_curv_count = 0;
-//       }
-//       max_large_curv_count = std::max(large_curv_count, max_large_curv_count);
-//     }
-//     if ((max_large_curv_count == 1 &&
-//          large_curv_count == 1) ||
-//         (max_large_curv_count >= 2)) {
-//       return true;
-//     }
-//   }
-//   return false;
-// }
-
-void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
-
-  const auto &gap_selector_decider_output =
-      session_->planning_context().gap_selector_decider_output();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info =
@@ -914,19 +487,16 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   bool is_LC_BACK = coarse_planning_info.target_state == kLaneChangeCancel;
   // calculate lc hold ref buffer
   double lc_hold_offset = 0;
-  // if (gap_selector_decider_output.is_quitic_spline_change_to_center_line &&
-  //     coarse_planning_info.trajectory_points.size() > 0) {
-  //   lc_hold_offset = coarse_planning_info.trajectory_points.front().l;
-  // }
   if (is_LC_HOLD) {
     lc_hold_offset = lane_change_decider_output.lc_hold_state_lat_offset;
   }
   // construct ref
-  traj_points = coarse_planning_info.trajectory_points;
+  const auto &coarse_traj_points =
+      coarse_planning_info.trajectory_points;
   // generate traj_points based on kMaxAcc or kMinAcc
   constexpr double kEps = 1e-4;
-  double start_s = traj_points.front().s;
-  double end_s = traj_points.back().s;
+  double start_s = coarse_traj_points.front().s;
+  double end_s = coarse_traj_points.back().s;
   double total_s = end_s - start_s;
   double kMaxAcc = 0.8;
   double kMinAcc = -5.5;
@@ -934,16 +504,23 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
                               session_->planning_context().v_ref_cruise());
   double ego_v =
       std::max(planning_init_point.v, config_.min_v_cruise);
-  HandleRoadCurvature(ego_v, coarse_planning_info);
+  // get curve info
+  ref_curve_info_ =
+    reference_path_ptr_->GetReferencePathCurveInfo();
+  if (ref_curve_info_.s_vec.size() > 2) {
+    general_lateral_decider_output.curve_s_spline.set_points(
+        ref_curve_info_.s_vec, ref_curve_info_.curve_vec);
+  }
+  // ref
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   if (virtual_lane_manager->get_is_exist_ramp_on_road() ||
       virtual_lane_manager->get_is_exist_split_on_ramp() ||
       virtual_lane_manager->get_is_exist_intersection_split()) {
     kMaxAcc = 0.2;
-  } else if (ref_curve_info_.curve_type == RoadCurvatureInfo::CurveType::SHARP_CURVE ||
-             ref_curve_info_.curve_type == RoadCurvatureInfo::CurveType::S_CURVE ||
-             ref_curve_info_.curve_type == RoadCurvatureInfo::CurveType::BIG_CURVE) {
+  } else if (ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
+             ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
+             ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
     const auto &route_info_output =
         session_->environmental_model()
                 .get_route_info()
@@ -1030,20 +607,20 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
-  std::vector<double> s_vec(traj_points.size());
+  std::vector<double> s_vec(coarse_traj_points.size());
   if (is_use_spatio_planner_result &&
       (!is_LC_PROPOSE && !is_LC_CHANGE && !is_LC_BACK && !is_LC_HOLD) &&
       !lane_borrow_decider_output.is_in_lane_borrow_status && total_s > 1.0) {
-    std::vector<double> x_vec(traj_points.size());
-    std::vector<double> y_vec(traj_points.size());
-    // std::vector<double> theta_vec(traj_points.size());
-    // std::vector<double> l_vec(traj_points.size());
-    for (size_t i = 0; i < traj_points.size(); ++i) {
-      x_vec[i] = traj_points[i].x;
-      y_vec[i] = traj_points[i].y;
-      // theta_vec[i] = traj_points[i].heading_angle;
-      s_vec[i] = traj_points[i].s;
-      // l_vec[i] = traj_points[i].l;
+    std::vector<double> x_vec(coarse_traj_points.size());
+    std::vector<double> y_vec(coarse_traj_points.size());
+    // std::vector<double> theta_vec(coarse_traj_points.size());
+    // std::vector<double> l_vec(coarse_traj_points.size());
+    for (size_t i = 0; i < coarse_traj_points.size(); ++i) {
+      x_vec[i] = coarse_traj_points[i].x;
+      y_vec[i] = coarse_traj_points[i].y;
+      // theta_vec[i] = coarse_traj_points[i].heading_angle;
+      s_vec[i] = coarse_traj_points[i].s;
+      // l_vec[i] = coarse_traj_points[i].l;
     }
     x_s_spline.set_points(s_vec, x_vec);
     y_s_spline.set_points(s_vec, y_vec);
@@ -1054,15 +631,16 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         x_s_spline, y_s_spline, s_vec.front(), s_vec.back(), spatio_init_point);
     s_ref = spatio_projection_spline.GetOutput().s_proj;
   } else {
-    s_vec = cart_ref_info.s_vec;
-    x_s_spline = cart_ref_info.x_s_spline;
-    y_s_spline = cart_ref_info.y_s_spline;
+      s_vec = cart_ref_info.s_vec;
+      x_s_spline = cart_ref_info.x_s_spline;
+      y_s_spline = cart_ref_info.y_s_spline;
   }
   const double max_ref_length = std::max(
       std::min(s_vec.back(), frenet_coord->Length()) - s_ref - 0.01, 0.0);
   double avg_cruise_v = std::max(std::min(s, max_ref_length) / span_t, 0.0);
   double delta_s = avg_cruise_v * config_.delta_t;
   traj_points.clear();
+  traj_points.reserve(config_.num_step + 1);
 
   std::vector<std::pair<double, double>> front_axis_ref_path(config_.num_step + 1);
   TrajectoryPoint point;
@@ -1108,10 +686,6 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   // calculate lc ref buffer
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  auto &general_lateral_decider_output =
-      session_->mutable_planning_context()
-              ->mutable_general_lateral_decider_output();
-
   bool lat_offset_is_valid =
       lateral_offset_decider_output.is_valid;
   double ref_lat_offset = 0.0;
@@ -1194,10 +768,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         //   HandleRefPathOffset(traj_points,
         //       lane_change_decider_output.lateral_close_boundary_offset);
         // } else {
-        if (ref_curve_info_.curve_type == RoadCurvatureInfo::CurveType::BIG_CURVE) {
-          const std::vector<double> curv_bp{50, 400};
-          const std::vector<double> lat_compensation_buffer{0.2, 0.1};
-
+        if (ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
           double compensation_buffer = interp(ref_curve_info_.min_radius, config_.curv_bp,
                 config_.lat_compensation_buffer);
           const double change_rate = 0.05;
@@ -1271,6 +842,8 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
+  const auto &k_s_spline =
+      reference_path_ptr_->GetRawCurveSpline();
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -1281,11 +854,9 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
     double road_radius1 =
         1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
     double road_radius2 = 10.0;
-    if (coarse_planning_info.cart_ref_info.k_s_spline.get_x().size() > 0) {
+    if (k_s_spline.get_x().size() > 0) {
       road_radius2 =
-          1 / std::max(std::fabs(coarse_planning_info.cart_ref_info.k_s_spline(
-                           traj_point.s)),
-                       1e-6);
+          1 / std::max(std::fabs(k_s_spline(traj_point.s)), 1e-6);
     }
     min_road_radius_ = std::max(
         std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_),

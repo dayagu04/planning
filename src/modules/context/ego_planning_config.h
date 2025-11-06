@@ -3552,19 +3552,19 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<double>(json, brake_dis_near_construction, "speed_limit_decider",
                      "brake_dis_near_construction");
     ReadItem<double>(json, acc_to_construction, "speed_limit_decider",
-                     "acc_to_construction");                 
+                     "acc_to_construction");
     ReadItem<double>(json, ca_invade_entry_lat_dis_thr, "speed_limit_decider",
-                     "ca_invade_entry_lat_dis_thr");   
+                     "ca_invade_entry_lat_dis_thr");
     ReadItem<double>(json, ca_invade_exit_lat_dis_thr, "speed_limit_decider",
                      "ca_invade_exit_lat_dis_thr");
     ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
                      "ca_invade_lat_dis_counter_thr");
     ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
-                     "construciton_invade_speed_diff");           
+                     "construciton_invade_speed_diff");
     ReadItem<double>(json, construction_lat_dist_entry, "speed_limit_decider",
                      "construction_lat_dist_entry");
     ReadItem<double>(json, construction_lat_dist_exit, "speed_limit_decider",
-                     "construction_lat_dist_exit"); 
+                     "construction_lat_dist_exit");
 
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
@@ -4871,8 +4871,8 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "speed_planning", "cruise_target",
                        "construction_kinematic_param", "jerk_negative_speed_upper");
     }
-    
-    
+
+
     {
       ReadItem<double>(json, avoid_agent_kinematic_param.acc_positive_upper,
                        "speed_planning", "cruise_target",

@@ -473,38 +473,46 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
+  bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
   std::vector<CurvInfo> preview_curv_info_vec;
   for (int idx = 0; idx * 2.0 < preview_x; idx++) {
     CurvInfo one_curv_info;
-    // calc curv abs and using average curv abs in curv window
-    std::vector<double> curv_window_vec;
-    for (int j = -3; j <= 3; j++) {
-      double curv;
+    if (is_ref_path_smoothed) {
       ReferencePathPoint refpath_pt;
-      if (reference_path_ptr->get_reference_point_by_lon(
-              ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
-        curv = std::fabs(refpath_pt.path_point.kappa());
+      if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + idx * 2.0,
+                                                        refpath_pt)) {
+        // calc curv
+        one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
+        // calc curv direction(-1 or 1, 0 for except)
+        one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
       } else {
-        curv = 0.0001;
+        one_curv_info.curv = 0.0001;
+        one_curv_info.curv_sign = 0;
       }
-      curv_window_vec.emplace_back(curv);
-    }
-    double curv_sum = 0.0;
-    for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
-      curv_sum = curv_sum + curv_window_vec[ind];
-    }
-    double avg_curv = curv_sum / curv_window_vec.size();
-    one_curv_info.curv = avg_curv;
-
-    // calc curv direction(-1 or 1, 0 for except)
-    ReferencePathPoint refpath_pt;
-    if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + idx * 2.0,
-                                                       refpath_pt)) {
-      one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
     } else {
-      one_curv_info.curv_sign = 0;
+      // calc curv abs and using average curv abs in curv window
+      std::vector<double> curv_window_vec;
+      int curv_sign = 0;
+      for (int j = -3; j <= 3; j++) {
+        double curv = 0.0001;
+        ReferencePathPoint refpath_pt;
+        if (reference_path_ptr->get_reference_point_by_lon(
+                ego_start_s + idx * 2.0 + j * 2.0, refpath_pt)) {
+          curv = std::fabs(refpath_pt.path_point.kappa());
+          if (j == 0) {
+            curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
+          }
+        }
+        curv_window_vec.emplace_back(curv);
+      }
+      double curv_sum = 0.0;
+      for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
+        curv_sum = curv_sum + curv_window_vec[ind];
+      }
+      double avg_curv = curv_sum / curv_window_vec.size();
+      one_curv_info.curv = avg_curv;
+      one_curv_info.curv_sign = curv_sign;
     }
-
     one_curv_info.s = idx * 2.0;
     preview_curv_info_vec.emplace_back(one_curv_info);
   }

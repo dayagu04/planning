@@ -46,6 +46,8 @@ namespace planning_math {
 
 class FemPosDeviationSmoother {
  public:
+  FemPosDeviationSmoother() {};
+
   explicit FemPosDeviationSmoother(
       const planning::FemPosDeviationSmootherConfig& config);
 
@@ -60,6 +62,18 @@ class FemPosDeviationSmoother {
   bool SqpWithOsqp(const std::vector<std::pair<double, double>>& raw_point2d,
                    const std::vector<double>& bounds,
                    std::vector<double>* opt_x, std::vector<double>* opt_y);
+
+  void SetFemPosDeviationSmootherConfig(const planning::FemPosDeviationSmootherConfig& config) {
+    config_ = config;
+  }
+
+  const planning::FemPosDeviationSmootherConfig& GetFemPosDeviationSmootherConfig() const {
+    return config_;
+  }
+
+  planning::FemPosDeviationSmootherConfig& MutableFemPosDeviationSmootherConfig() {
+    return config_;
+  }
 
  private:
   planning::FemPosDeviationSmootherConfig config_;
