@@ -64,6 +64,8 @@ void ApaSlotManager::Update(
   slots_map_.clear();
   dist_id_map_.clear();
 
+  ApaRunningMode running_mode = state_machine_ptr->GetParkRunningMode();
+
   const size_t slot_size =
       local_view->parking_fusion_info.parking_fusion_slot_lists_size;
   const size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
@@ -174,6 +176,12 @@ void ApaSlotManager::Update(
                  is_free_slot_selected_ ==
                      iflyauto::FreeSlotSelectedStatus::
                          FREE_SLOT_SELECTED_STATUS_FINISHED &&
+                 !slots_map_.empty()) {
+        ego_info_under_slot_.history_id = ego_info_under_slot_.id;
+        ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
+        ego_info_under_slot_.id = slots_map_.begin()->second.id_;
+        ego_info_under_slot_.slot_type = slots_map_.begin()->second.slot_type_;
+      } else if (running_mode == ApaRunningMode::RUNNING_PA &&
                  !slots_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;

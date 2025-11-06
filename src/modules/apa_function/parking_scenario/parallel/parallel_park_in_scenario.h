@@ -43,6 +43,39 @@ class ParallelParkInScenario : public ParkingScenario {
   const Tlane& GetTlane() { return t_lane_; }
 
   virtual const double CalRealTimeBrakeDist() override;
+  const bool IsPointInOrientedRectangle(const Eigen::Vector2d& point,
+                                        const Eigen::Vector2d& rect_center,
+                                        const double rect_heading,
+                                        const double rect_length,
+                                        const double rect_width);
+  SlotCoord AlignAndMoveSlotToLine(const SlotCoord& slot,
+                                   const Eigen::Vector2d& ego_pos,
+                                   const Eigen::Vector2d& ego_head, double k,
+                                   double b, double slot_width,
+                                   double distance = 0.2);
+  const bool LineFittingWithRansac(Eigen::Vector2d& line_coeffs,
+                                   const std::vector<Eigen::Vector2d>& points,
+                                   std::vector<bool>& inliers);
+  const bool GetOffsetLineCoeffsWithEgoPose(
+      Eigen::Vector2d& line_coeffs_out, const Eigen::Vector2d& line_coeffs_in,
+      const std::vector<Eigen::Vector2d>& points,
+      const std::vector<bool>& inliers, const Eigen::Vector2d& ego_pose);
+
+  const bool GeneralPASlot();
+  const bool ParkInTry(const ApaSlot& slot);
+  const bool CheckPAFinished();
+
+  const bool UpdatePASlotInfo();
+  void ExtractLongestLineSegmentPointsPCA(
+      const std::vector<Eigen::Vector2d>& obs_pos,
+      std::vector<Eigen::Vector2d>& pa_curb_obs, Eigen::Vector2d& line_coeffs,
+      double distance_threshold = 0.2);
+  void EnablePAPark() {
+    enable_pa_park_ = true;
+    return;
+  }
+  SlotCoord slot_new_;
+  Eigen::Vector2d line_coeffs_out_;
 
  private:
   // virtual func
@@ -69,6 +102,13 @@ class ParallelParkInScenario : public ParkingScenario {
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
   std::deque<double> previous_remain_dist_obs;
+  bool enable_pa_park_ = false;
+  ApaSlot first_plan_slot;
+  Eigen::Vector2d first_line_coeffs_;
+  double slot2curb_dist_;
+  pnc::geometry_lib::PathPoint first_plan_cur_pos;
+  std::unordered_map<size_t, std::vector<pnc::geometry_lib::PathPoint>>
+      multi_parkin_path_vec_;
 };
 
 }  // namespace apa_planner

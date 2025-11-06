@@ -20,8 +20,10 @@ def construct_scenario(
     curb_offset = 0.4,
     dx = 0.4,
     channel_width = 5.5,
+    front_car_x_offset = 0.0,
     front_car_y_offset = 0.4,
     front_car_heading = 5.0 / 57.3,
+    rear_car_x_offset = 0.0,
     rear_car_y_offset = 0.0,
     rear_car_heading = -2.0 / 57.3,
     is_front_occupied = True,
@@ -59,6 +61,7 @@ def construct_scenario(
       min_x = min(new_obs_car_x_vec)
       for i in range(len(new_obs_car_x_vec)):
          new_obs_car_x_vec[i] += - min_x + slot_length + obs_to_slot_line
+         new_obs_car_x_vec[i] += front_car_x_offset
 
       obs_x_vec += new_obs_car_x_vec
       obs_y_vec += new_obs_car_y_vec
@@ -76,7 +79,7 @@ def construct_scenario(
         new_obs_car_x_vec.append(tmp_x)
         new_obs_car_y_vec.append(tmp_y)
       max_x = max(new_obs_car_x_vec)
-      new_obs_car_x_vec = [x - max_x - obs_to_slot_line for x in new_obs_car_x_vec]
+      new_obs_car_x_vec = [x - max_x - obs_to_slot_line + rear_car_x_offset for x in new_obs_car_x_vec]
       obs_x_vec+= new_obs_car_x_vec
       obs_y_vec+= new_obs_car_y_vec
       rear_obs_car_matrix.append(new_obs_car_x_vec)

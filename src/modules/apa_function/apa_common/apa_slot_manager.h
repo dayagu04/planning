@@ -251,6 +251,9 @@ class ApaSlotManager final {
   const size_t GetEgoSlotInfoID() const;
 
   const bool GetFreeSlotActivate() const { return free_slot_activate_; }
+  const std::unordered_map<size_t, ApaSlot>& GetSlotsMap() const {
+    return slots_map_;
+  }
 
  private:
   void ParkingLotCruiseProcess();

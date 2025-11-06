@@ -241,6 +241,25 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.parallel_terminal_x_offset_with_obs, double,
                   "parallel_terminal_x_offset_with_obs");
 
+  // parallel pa params
+  JSON_READ_VALUE(param.finish_parallel_pa_lat_err, double,
+                  "finish_parallel_pa_lat_err");
+
+  JSON_READ_VALUE(param.finish_parallel_pa_lon_err, double,
+                  "finish_parallel_pa_lon_err");
+
+  JSON_READ_VALUE(param.finish_parallel_pa_heading_err, double,
+                  "finish_parallel_pa_heading_err");
+
+  JSON_READ_VALUE(param.debug_parallel_angle_threshold, double,
+                  "debug_parallel_angle_threshold");
+
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer, double, "s_turn_plan_pa_buffer");
+
+  JSON_READ_VALUE(param.line_plan_pa_buffer, double, "line_plan_pa_buffer");
+
+  JSON_READ_VALUE(param.pa_slot_move_distance, double, "pa_slot_move_distance");
+
   // check finish params
   JSON_READ_VALUE(param.finish_lat_err, double, "finish_lat_err");
 

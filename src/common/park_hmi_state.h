@@ -21,6 +21,12 @@ enum ApaRecommendationDirection {
   VerticalTailIn = 12,
 };
 
+enum APAPaRecommendedDirection{
+  PaParitybit = 0,
+  PaLeft = 1,    // 向左贴边
+  PaRight = 2,   // 向右贴边
+};
+
 class ApaDirectionGenerator {
  public:
   ApaDirectionGenerator() = default;
@@ -61,4 +67,25 @@ class ApaDirectionGenerator {
   }
 };
 
-}  // namespace planning
+class ApaPAStateGeneral {
+ public:
+  ApaPAStateGeneral() = default;
+  ~ApaPAStateGeneral() = default;
+
+  uint16_t PADirectionMask(const uint16_t state_bit) { return 1 << state_bit; }
+  void SetPADirectionFlag(iflyauto::APAHMIData &state,
+                          const uint16_t state_bit) {
+    state.planning_park_pa_dir |= PADirectionMask(state_bit);
+  }
+  void ClearPADirectionFlag(iflyauto::APAHMIData &state) {
+    state.planning_park_pa_dir = 0;
+  }
+  void SetPARemainDistance(iflyauto::APAHMIData &state, float32 distance) {
+    state.pa_remain_distance = distance;
+  }
+  void SetPARemainDistancePercentage(iflyauto::APAHMIData &state,
+                                     float32 percentage) {
+    state.remain_distance_percentage = percentage;
+  }
+};
+}

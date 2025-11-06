@@ -67,6 +67,18 @@ bool ApaFunction::Plan() {
       ->mutable_planning_hmi_info()
       ->apa_info.parking_pause_reason =
       apa_plan_interface_->GetAPAHmi().parking_pause_reason;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.pa_remain_distance =
+      apa_plan_interface_->GetAPAHmi().pa_remain_distance;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.remain_distance_percentage =
+      apa_plan_interface_->GetAPAHmi().remain_distance_percentage;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.planning_park_pa_dir =
+      apa_plan_interface_->GetAPAHmi().planning_park_pa_dir;
   return true;
 }
 

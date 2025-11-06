@@ -147,7 +147,8 @@ int UpdateObstacles(double ego_x, double ego_y, double ego_heading,
 
 int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
                  double slot_width, double slot_length, double ego_x,
-                 double ego_y, double ego_heading, double path_ds) {
+                 double ego_y, double ego_heading, double path_ds,
+                 std::vector<double> new_slot_x_vec, std::vector<double> new_slot_y_vec) {
   parallel_park_planner.Reset();
 
   ILOG_INFO << "---------------------------- start simulation in pybind "
@@ -179,6 +180,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   apa_world_ptr->GetMeasureDataManagerPtr()->SetPose(
       Eigen::Vector2d(ego_x, ego_y), ego_heading);
 
+  parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
   EgoInfoUnderSlot &ego_info_under_slot =
       apa_world_ptr->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   ego_info_under_slot.id = 1;
@@ -193,12 +195,24 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
       -half_slot_width;
   ego_info_under_slot.slot.origin_corner_coord_global_.pt_3 << 0.0,
       -half_slot_width;
+
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_0
+      << new_slot_x_vec[0],
+      new_slot_y_vec[0];
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_1
+      << new_slot_x_vec[1],
+      new_slot_y_vec[1];
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_2
+      << new_slot_x_vec[2],
+      new_slot_y_vec[2];
+  ego_info_under_slot.slot.origin_corner_coord_global_.pt_3
+      << new_slot_x_vec[3],
+      new_slot_y_vec[3];
+
   ego_info_under_slot.slot.origin_corner_coord_global_.CalExtraCoord();
-
-  parallel_park_planner.SetApaWorldPtr(apa_world_ptr);
-  if (!parallel_park_planner.UpdateEgoSlotInfo()) {
-    ILOG_INFO << "UpdateEgoSlotInfo failed!";
-
+  parallel_park_planner.EnablePAPark();
+  if (!parallel_park_planner.GeneralPASlot()) {
+    ILOG_ERROR << "GeneralPASlot failed!";
     return false;
   }
   parallel_park_planner.GenTlane();
@@ -216,6 +230,7 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
   path_planner_input.ref_gear = pnc::geometry_lib::SEG_GEAR_DRIVE;
   path_planner_input.ref_arc_steer = pnc::geometry_lib::SEG_STEER_RIGHT;
 
+  pBase->EnablePAPark();
   pBase->SetInput(path_planner_input);
   ILOG_INFO << "7";
   const double path_plan_start_time = IflyTime::Now_ms();
@@ -236,6 +251,35 @@ int UpdateByJson(std::vector<double> obs_x_vec, std::vector<double> obs_y_vec,
             << pBase->GetOutput().path_point_vec.size();
 
   return static_cast<int>(path_plan_success);
+}
+
+std::vector<std::vector<double>> GetPASlot() {
+  SlotCoord slot = parallel_park_planner.slot_new_;
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  x_vec.emplace_back(slot.pt_0.x());
+  x_vec.emplace_back(slot.pt_1.x());
+  x_vec.emplace_back(slot.pt_2.x());
+  x_vec.emplace_back(slot.pt_3.x());
+
+  y_vec.emplace_back(slot.pt_0.y());
+  y_vec.emplace_back(slot.pt_1.y());
+  y_vec.emplace_back(slot.pt_2.y());
+  y_vec.emplace_back(slot.pt_3.y());
+  return {x_vec, y_vec};
+}
+
+std::vector<std::vector<double>> GetPALine() {
+  Eigen::Vector2d line_coeffs = parallel_park_planner.line_coeffs_out_;
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  SlotCoord slot = parallel_park_planner.slot_new_;
+  std::vector<double> x_line = {slot.pt_0.x(), slot.pt_1.x()};
+  std::vector<double> y_line;
+  for (double x : x_line) {
+    y_line.emplace_back(line_coeffs.x() * x + line_coeffs.y());
+  }
+  return {x_line, y_line};
 }
 
 std::vector<std::vector<double>> GetParkPlannerObs() {
@@ -577,5 +621,7 @@ PYBIND11_MODULE(parallel_planning_py, m) {
       .def("GetVirtualObsY", &GetVirtualObsY)
       .def("GetInverseArcVec", &GetInverseArcVec)
       .def("GetPreparePath", &GetPreparePath)
-      .def("GetDebugInSlotPath", &GetDebugInSlotPath);
+      .def("GetDebugInSlotPath", &GetDebugInSlotPath)
+      .def("GetPASlot", &GetPASlot)
+      .def("GetPALine", &GetPALine);
 }

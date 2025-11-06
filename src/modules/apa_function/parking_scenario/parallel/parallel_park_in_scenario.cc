@@ -1,4 +1,5 @@
 #include "parallel_park_in_scenario.h"
+#include <Eigen/src/Core/Matrix.h>
 
 #include <algorithm>
 #include <cmath>
@@ -10,6 +11,10 @@
 #include <queue>
 #include <utility>
 #include <vector>
+#include <random>
+#include <numeric>
+#include <cmath>
+#include <Eigen/Dense>
 
 #include "apa_param_config.h"
 #include "apa_slot.h"
@@ -32,6 +37,7 @@
 #include "obstacle.h"
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
+#include "park_hmi_state.h"
 
 namespace planning {
 namespace apa_planner {
@@ -64,6 +70,8 @@ static double kWidthCurbOffset = 0.4;
 static double kWidthSlot = 2.3;
 static double kAdjustLonErr = 0.2;
 
+using Point = Eigen::Vector2d;
+
 void ParallelParkInScenario::Reset() {
   frame_.Reset();
   t_lane_.Reset();
@@ -72,6 +80,11 @@ void ParallelParkInScenario::Reset() {
   previous_parallel_path_planner_.Reset();
   parallel_replan_again_ = 0;
   previous_remain_dist_obs.clear();
+  enable_pa_park_ = false;
+  first_plan_slot.Reset();
+  first_line_coeffs_ << 0.0, 0.0;
+  first_plan_cur_pos.Reset();
+  multi_parkin_path_vec_.clear();
 
   ParkingScenario::Reset();
 }
@@ -109,9 +122,25 @@ bool ParallelParkInScenario::CheckReplanParallel() {
 
 void ParallelParkInScenario::CheckEgoPoseWhenPlanFaild(ParkingFailReason reason) {
   ILOG_INFO << "Enter CheckEgoPoseWhenPlanFaild!";
-
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  if (enable_pa_park_) {
+    const double finish_pa_heading = 3.0;
+    const bool pa_heading_condition =
+        std::fabs(ego_slot_info.terminal_err.heading) <=
+        finish_pa_heading * kDeg2Rad;
+    if ((reason == ParkingFailReason::PATH_PLAN_FAILED) &&
+        pa_heading_condition) {
+      ILOG_INFO << "parallel parking finish!";
+      SetParkingStatus(PARKING_FINISHED);
+    } else {
+      ILOG_INFO << "parallel parking failed!";
+      SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = reason;
+    }
+    return;
+  }
 
   const double finish_parallel_lat_err = 0.5;
   const double finish_parallel_lon_err = 0.5;
@@ -247,6 +276,12 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
 
   UpdateStuckTime();
 
+  enable_pa_park_ = false;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkRunningMode() ==
+      ApaRunningMode::RUNNING_PA) {
+    enable_pa_park_ = true;
+  }
+
   // calculate remain dist according to plan path
   frame_.remain_dist_path = CalRemainDistFromPath();
 
@@ -257,12 +292,20 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   frame_.remain_dist_obs =
       UpdateRemainDistObs(frame_.remain_dist_path, frame_.remain_dist_obs);
 
-  // update ego slot info
-  if (!UpdateEgoSlotInfo()) {
-    ILOG_INFO << "update ego slot info failed";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
-    return;
+  if (enable_pa_park_) {
+    if (!UpdatePASlotInfo()) {
+      SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+      return;
+    }
+  } else {
+    // update ego slot info
+    if (!UpdateEgoSlotInfo()) {
+      ILOG_INFO << "update ego slot info failed";
+      SetParkingStatus(PARKING_FAILED);
+      frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+      return;
+    }
   }
 
   // generate t-lane
@@ -273,10 +316,18 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   // check finish
-  if (CheckFinished()) {
-    ILOG_INFO << "check apa finished!";
-    SetParkingStatus(PARKING_FINISHED);
-    return;
+  if (enable_pa_park_) {
+    if (CheckPAFinished()) {
+      ILOG_INFO << "check pa finished!";
+      SetParkingStatus(PARKING_FINISHED);
+      return;
+    }
+  } else {
+    if (CheckFinished()) {
+      ILOG_INFO << "check apa finished!";
+      SetParkingStatus(PARKING_FINISHED);
+      return;
+    }
   }
 
   // check failed
@@ -319,10 +370,18 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
     }
   }
   // check finish
-  if (CheckFinished()) {
-    ILOG_INFO << "check apa finished!";
-    SetParkingStatus(PARKING_FINISHED);
-    return;
+  if (enable_pa_park_) {
+    if (CheckPAFinished()) {
+      ILOG_INFO << "check pa finished!";
+      SetParkingStatus(PARKING_FINISHED);
+      return;
+    }
+  } else {
+    if (CheckFinished()) {
+      ILOG_INFO << "check apa finished!";
+      SetParkingStatus(PARKING_FINISHED);
+      return;
+    }
   }
 
   ILOG_INFO << "replan is required!";
@@ -341,7 +400,9 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_GEARCHANGE);
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
+      // SetParkingStatus(PARKING_FAILED);
+      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -349,120 +410,235 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       SetParkingStatus(PARKING_PLANNING);
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
+      // SetParkingStatus(PARKING_FAILED);
+      // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    CheckEgoPoseWhenPlanFaild(ParkingFailReason::PATH_PLAN_FAILED);
+    // SetParkingStatus(PARKING_FAILED);
+    // frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    CheckEgoPoseWhenPlanFaild(PATH_PLAN_FAILED);
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
+  if (enable_pa_park_) {
+    ApaPAStateGeneral pa_state;
+    pa_state.SetPARemainDistance(apa_hmi_, frame_.remain_dist_path);
+    pa_state.SetPARemainDistancePercentage(
+        apa_hmi_, (frame_.remain_dist_path / frame_.current_path_length));
+  }
 }
 
-// TODO: 增加 ScenarioTry
-void ParallelParkInScenario::ScenarioTry() {
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
-    return;
+const bool ParallelParkInScenario::UpdatePASlotInfo() {
+  ILOG_INFO << "Enter update pa slot info!";
+  ApaSlot need_move_slot;
+  if (frame_.is_replan_first) {
+    std::unordered_map<size_t, ApaSlot> slots_map =
+        apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
+
+    ApaPADirection pa_direction =
+        apa_world_ptr_->GetStateMachineManagerPtr()->GetPADirection();
+    if (pa_direction == ApaPADirection::PA_INVALID) {
+      ILOG_ERROR << "No PA direction found";
+      return false;
+    }
+    if (pa_direction == ApaPADirection::PA_LEFT) {
+      if (slots_map.find(int(ApaPADirection::PA_LEFT)) == slots_map.end()) {
+        ILOG_ERROR << "PA_LEFT found, but slot not found";
+        return false;
+      }
+      need_move_slot = slots_map[int(ApaPADirection::PA_LEFT)];
+    } else if (pa_direction == ApaPADirection::PA_RIGHT) {
+      if (slots_map.find(int(ApaPADirection::PA_RIGHT)) == slots_map.end()) {
+        ILOG_ERROR << "PA_RIGHT found, but slot not found";
+        return false;
+      }
+      need_move_slot = slots_map[int(ApaPADirection::PA_RIGHT)];
+    }
+    first_plan_slot = need_move_slot;
+  } else {
+    need_move_slot = first_plan_slot;
   }
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  ego_info_under_slot.slot.origin_corner_coord_global_ =
+      need_move_slot.origin_corner_coord_global_;
+  if (!GeneralPASlot()) {
+    ILOG_ERROR << "GeneralPASlot failed!";
+    return false;
+  }
+  return true;
+}
+
+const bool ParallelParkInScenario::ParkInTry(const ApaSlot& slot) {
   frame_.Reset();
   t_lane_.Reset();
   obs_pt_local_vec_.clear();
   parallel_path_planner_.Reset();
 
+  ILOG_INFO << "Enter ParkInTry";
+
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
-  ego_info_under_slot.slot.release_info_
-      .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-      SlotReleaseState::NOT_RELEASE;
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotActivate() &&
-      !(apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir())) {
-    ego_info_under_slot.slot.release_info_
-      .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-      SlotReleaseState::NOT_RELEASE;
-    ILOG_INFO
-        << "free slot not support head parking posdir: "
-        << apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir();
-    return;
-  }
   // update ego slot info
-  if (!UpdateEgoSlotInfo()) {
-    return;
+  if (enable_pa_park_) {
+    ego_info_under_slot.slot.origin_corner_coord_global_ =
+        slot.origin_corner_coord_global_;
+    if (!GeneralPASlot()) {
+      ILOG_ERROR << "GeneralPASlot failed!";
+      return false;
+    }
+  } else {
+    // update ego slot info
+    if (!UpdateEgoSlotInfo()) {
+      ILOG_ERROR << "UpdateEgoSlotInfo failed!";
+      return false;
+    }
   }
 
   // ExcutePathPlanningTask()
-  ILOG_INFO << "Enter parallel parking planner!-----------------------";
+  ILOG_INFO << "Enter parallel parking try planner!";
   // init simulation
   InitSimulation();
-
-  if (CheckPaused()) {
-    return;
-  }
 
   // generate t-lane
   if (!GenTlane()) {
     ILOG_INFO << "GenTlane failed!";
-    return;
+    return false;
   }
 
   // update obstacles
   GenTBoundaryObstacles();
 
+  bool ret = false;
   // path plan
   const auto pathplan_result = PathPlanOnce();
 
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
     if (PostProcessPath()) {
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
-      ego_info_under_slot.slot.release_info_
-          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
-
+      ret = true;
       ILOG_INFO << "geometry path try success";
     } else {
       ILOG_INFO << "replan failed from PLAN_HOLD!";
-      ego_info_under_slot.slot.release_info_
-          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::NOT_RELEASE;
-
-      ILOG_INFO << "geometry path try fail";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
     if (PostProcessPath()) {
       ILOG_INFO << "replan from PARKING_PLANNING!";
-      ego_info_under_slot.slot.release_info_
-          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-          SlotReleaseState::RELEASE;
-
+      ret = true;
       ILOG_INFO << "geometry path try success";
     } else {
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
+    }
+  } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
+    ILOG_INFO << "geometry path try fail";
+  }
+  frame_.is_replan_first = true;
+
+  frame_.Reset();
+  t_lane_.Reset();
+  obs_pt_local_vec_.clear();
+  parallel_path_planner_.Reset();
+  return ret;
+}
+
+void ParallelParkInScenario::ScenarioTry() {
+  ILOG_INFO << "Enter ScenarioTry";
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    return;
+  }
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  ego_info_under_slot.slot.release_info_
+      .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+      SlotReleaseState::NOT_RELEASE;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotActivate() &&
+      !(apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir())) {
+    ego_info_under_slot.slot.release_info_
+        .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+        SlotReleaseState::NOT_RELEASE;
+    ILOG_INFO
+        << "free slot not support head parking posdir: "
+        << apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir();
+    return;
+  }
+
+  enable_pa_park_ = false;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetParkRunningMode() ==
+      ApaRunningMode::RUNNING_PA) {
+    enable_pa_park_ = true;
+  }
+  if (enable_pa_park_) {
+    ApaPAStateGeneral pa_state;
+    pa_state.ClearPADirectionFlag(apa_hmi_);
+    std::unordered_map<size_t, ApaSlot> slots_map =
+        apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
+    for (auto iter = slots_map.begin(); iter != slots_map.end(); iter++) {
+      ILOG_INFO << "slot id = " << iter->first << " try begin";
+      if (ParkInTry(iter->second)) {
+        ILOG_INFO << "slot id = " << iter->first << " try success";
+        pa_state.SetPADirectionFlag(apa_hmi_,
+                                    APAPaRecommendedDirection::PaParitybit);
+        if (iter->first == int(ApaPADirection::PA_LEFT)) {
+          pa_state.SetPADirectionFlag(apa_hmi_,
+                                      APAPaRecommendedDirection::PaLeft);
+          multi_parkin_path_vec_[int(ApaPADirection::PA_LEFT)] =
+              complete_path_point_global_vec_;
+        } else if (iter->first == int(ApaPADirection::PA_RIGHT)) {
+          pa_state.SetPADirectionFlag(apa_hmi_,
+                                      APAPaRecommendedDirection::PaRight);
+          multi_parkin_path_vec_[int(ApaPADirection::PA_RIGHT)] =
+              complete_path_point_global_vec_;
+        }
+      }
+    }
+    if (apa_hmi_.planning_park_pa_dir) {
+      complete_path_point_global_vec_.clear();
+      if (multi_parkin_path_vec_.find(int(ApaPADirection::PA_RIGHT)) !=
+          multi_parkin_path_vec_.end()) {
+        complete_path_point_global_vec_ =
+            multi_parkin_path_vec_[int(ApaPADirection::PA_RIGHT)];
+        ILOG_INFO << "complete path is PA_RIGHT";
+      } else if (multi_parkin_path_vec_.find(int(ApaPADirection::PA_LEFT)) !=
+                 multi_parkin_path_vec_.end()) {
+        complete_path_point_global_vec_ =
+            multi_parkin_path_vec_[int(ApaPADirection::PA_LEFT)];
+        ILOG_INFO << "complete path is PA_LEFT";
+      } else {
+        ILOG_INFO << "multi_parkin_path_vec_ is empty";
+      }
+      ego_info_under_slot.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
+    } else {
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
       ego_info_under_slot.slot.release_info_
           .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
           SlotReleaseState::NOT_RELEASE;
-      ILOG_INFO << "geometry path try fail";
     }
-  } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
-    ego_info_under_slot.slot.release_info_
-        .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
-        SlotReleaseState::NOT_RELEASE;
-
-    ILOG_INFO << "geometry path try fail";
+  } else {
+    ApaSlot slot;
+    bool ret = ParkInTry(slot);
+    if (!ret) {
+      ego_info_under_slot.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      ego_info_under_slot.slot.release_info_
+          .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
+          SlotReleaseState::NOT_RELEASE;
+      ILOG_INFO << "ParkInTry failed";
+    } else {
+      ego_info_under_slot.slot.release_info_
+          .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
+          SlotReleaseState::RELEASE;
+      ILOG_INFO << "ParkInTry success";
+    }
   }
-  frame_.is_replan_first = true;
-
   TansformPreparePlanningTraj();
-  frame_.Reset();
-  t_lane_.Reset();
-  obs_pt_local_vec_.clear();
-  parallel_path_planner_.Reset();
-
   return;
 }
 
@@ -487,6 +663,634 @@ const double ParallelParkInScenario::CalRealTimeBrakeDist() {
   ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
 
   return remain_dist_obs;
+}
+
+const bool ParallelParkInScenario::IsPointInOrientedRectangle(
+    const Eigen::Vector2d& point, const Eigen::Vector2d& rect_center,
+    const double rect_heading, const double rect_length,
+    const double rect_width) {
+  // Calculate the transformation from the global to local
+  Eigen::Matrix2d rotation_matrix;
+  rotation_matrix << cos(-rect_heading), -sin(-rect_heading),
+      sin(-rect_heading), cos(-rect_heading);
+
+  // Convert the point to the local coordinate system of the rectangle
+  Eigen::Vector2d local_point = rotation_matrix * (point - rect_center);
+
+  // Check whether the checkpoint is within the rectangle
+  return (std::abs(local_point.x()) <= rect_length * 0.5) &&
+         (std::abs(local_point.y()) <= rect_width * 0.5);
+}
+
+SlotCoord ParallelParkInScenario::AlignAndMoveSlotToLine(
+    const SlotCoord& slot, const Eigen::Vector2d& ego_pos,
+    const Eigen::Vector2d& ego_head, double k, double b, double slot_width,
+    double distance) {
+  SlotCoord aligned_slot;
+
+  // 1. Calculate the center point of the original parking space
+  Eigen::Vector2d center =
+      0.25 * (slot.pt_0 + slot.pt_1 + slot.pt_2 + slot.pt_3);
+
+  // 2. Calculate the long side vector (0, 1 side)
+  Eigen::Vector2d long_edge = slot.pt_0 - slot.pt_1;
+  double long_edge_length = long_edge.norm();
+
+  // 3. Calculate the short side vector (0, 1 side)
+  Eigen::Vector2d short_edge = slot.pt_2 - slot.pt_0; //debug shuaili26
+  double short_edge_length = short_edge.norm();
+
+  // 4. Calculate the direction vector and normal vector
+  Eigen::Vector2d line_direction(1.0, k);
+  line_direction.normalize();
+
+  Eigen::Vector2d line_normal(-k, 1.0);
+  line_normal.normalize();
+
+  const double dot = long_edge.dot(line_direction);
+  if (dot < 0.0) {
+    line_direction = -line_direction;
+    line_normal = -line_normal;
+  }
+
+  ILOG_INFO << "line_normal = " << line_normal.x() << ", " << line_normal.y();
+  // 5. Calculate the signed distance from the current center point to the
+  // straight line
+  double current_distance =
+      std::fabs((k * center.x() - center.y() + b) / std::sqrt(k * k + 1));
+  ILOG_INFO << "current_distance = " << current_distance;
+  ILOG_INFO << "center = " << center.x() << ", " << center.y();
+
+  current_distance = current_distance - 0.5 * slot_width;
+
+  Eigen::Vector2d ego_head_normal(-ego_head.y(), ego_head.x());
+  Eigen::Vector2d front_out_wheel = ego_pos +
+                                    (apa_param.GetParam().wheel_base +
+                                     apa_param.GetParam().front_overhanging) *
+                                        ego_head +
+                                    0.5 * apa_param.GetParam().car_width *
+                                        t_lane_.slot_side_sgn *
+                                        (-ego_head_normal);
+  Eigen::Vector2d rear_out_wheel =
+      ego_pos - apa_param.GetParam().rear_overhanging * ego_head +
+      0.5 * apa_param.GetParam().car_width * t_lane_.slot_side_sgn *
+          (-ego_head_normal);
+  const double front_distance =
+      std::fabs((k * front_out_wheel.x() - front_out_wheel.y() + b) /
+                std::sqrt(k * k + 1));
+  const double rear_distance = std::fabs(
+      (k * rear_out_wheel.x() - rear_out_wheel.y() + b) / std::sqrt(k * k + 1));
+  ILOG_INFO << "front_out_wheel: " << front_out_wheel.x() << " "
+            << front_out_wheel.y() << " rear_out_wheel: " << rear_out_wheel.x()
+            << " " << rear_out_wheel.y()
+            << " front_distance = " << front_distance
+            << " rear_distance = " << rear_distance;
+
+  current_distance = std::min(rear_distance, front_distance);
+
+  // 6. Calculate the distance that needs to be moved
+  // (only approaching the straight line, not crossing to the other side)
+  double move_distance = 0.0;
+  if (std::abs(current_distance) > distance) {
+    // The current distance is greater than the target distance,
+    // and it is necessary to approach in a straight line
+    move_distance = current_distance - distance;
+    move_distance =
+        std::min(move_distance, apa_param.GetParam().pa_slot_move_distance);
+  }
+
+  const double ego_distance =
+      std::fabs((k * ego_pos.x() - ego_pos.y() + b) / std::sqrt(k * k + 1));
+  const double slot_distance =
+      std::fabs((k * center.x() - center.y() + b) / std::sqrt(k * k + 1));
+
+  const double ego_to_slot = std::fabs(ego_distance - slot_distance);
+
+  if (pnc::geometry_lib::CalTwoPointDistSquare(ego_pos, center) > 0.01 &&
+      ego_to_slot > apa_param.GetParam().pa_slot_move_distance) {
+    line_normal *= -1.0;
+    move_distance = ego_to_slot - apa_param.GetParam().pa_slot_move_distance;
+    ILOG_INFO << "reverse line_normal = " << line_normal.x() << ", "
+              << line_normal.y();
+  } else if (move_distance < 0.05) {
+    ILOG_INFO << "move_distance < 0.05, distance is too small";
+    return aligned_slot;
+  }
+  // If the current distance is already less than or equal to
+  // the target distance, there is no need to move (move_distance remains at 0)
+  ILOG_INFO << "current_distance = " << current_distance
+            << " move_distance = " << move_distance;
+
+  // 7. Calculate the position of the target center point
+  Eigen::Vector2d target_center =
+      center - move_distance * line_normal * t_lane_.slot_side_sgn;
+  ILOG_INFO << "target_center = " << target_center.x() << ", "
+            << target_center.y();
+
+  // 8. Calculate the new long side direction (parallel to the straight line)
+  Eigen::Vector2d new_long_edge = line_direction * long_edge_length;
+
+  // 9. Calculate the new short side direction (perpendicular to the long side)
+  Eigen::Vector2d new_short_edge(-line_direction.y(), line_direction.x());
+  new_short_edge *= short_edge_length * t_lane_.slot_side_sgn;
+
+  // 10. Calculate the new four vertices based
+  // on the new edge vectors and center points
+  Eigen::Vector2d half_long = 0.5 * new_long_edge;
+  Eigen::Vector2d half_short = 0.5 * new_short_edge;
+
+  aligned_slot.pt_0 = target_center + half_long + half_short;
+  aligned_slot.pt_1 = target_center - half_long + half_short;
+  aligned_slot.pt_2 = target_center - half_long - half_short;
+  aligned_slot.pt_3 = target_center + half_long - half_short;
+
+  return aligned_slot;
+}
+
+const bool ParallelParkInScenario::CheckPAFinished() {
+  ILOG_INFO << "Enter CheckPAFinished!";
+
+  const EgoInfoUnderSlot& ego_slot_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  pnc::geometry_lib::PathPoint terminal_err(
+      first_plan_cur_pos.pos - ego_slot_info.cur_pose.pos,
+      pnc::geometry_lib::NormalizeAngle(
+          first_plan_cur_pos.heading -
+          ego_slot_info.cur_pose.heading));
+
+  const bool lon_condition =
+      std::fabs(terminal_err.pos.x()) <
+      apa_param.GetParam().finish_parallel_pa_lon_err;
+
+  ILOG_INFO << "terminal x error = " << terminal_err.pos.x();
+  ILOG_INFO << "lon_condition = " << lon_condition;
+
+  const bool heading_condition =
+      std::fabs(terminal_err.heading) <
+      apa_param.GetParam().finish_parallel_pa_heading_err * kDeg2Rad;
+
+  ILOG_INFO << "terminal heading error = "
+            << terminal_err.heading * kRad2Deg;
+  ILOG_INFO << "heading_condition = " << heading_condition;
+
+  ILOG_INFO << "lat error = " << terminal_err.pos.y();
+  const bool lat_move_condition =
+      std::fabs(terminal_err.pos.y()) >
+      apa_param.GetParam().finish_parallel_pa_lat_err;
+  const bool lat_err_y_condition =
+      std::fabs(ego_slot_info.terminal_err.pos.y()) <= 0.05;
+  const bool lat_condition = lat_move_condition || lat_err_y_condition;
+
+  const bool static_condition =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  ILOG_INFO << "static_condition = " << static_condition;
+
+  return lon_condition && lat_condition && heading_condition &&
+         static_condition;
+}
+
+void ParallelParkInScenario::ExtractLongestLineSegmentPointsPCA(
+    const std::vector<Eigen::Vector2d>& obs_pos,
+    std::vector<Eigen::Vector2d>& pa_curb_obs, Eigen::Vector2d& line_coeffs,
+    double distance_threshold) {
+  ILOG_INFO << "Enter ExtractLongestLineSegmentPointsPCA!";
+  if (obs_pos.size() < 3) {
+    return;
+  }
+
+  // 1. Calculate the centroid of the point set
+  Eigen::Vector2d centroid(0, 0);
+  for (const auto& point : obs_pos) {
+    centroid += point;
+  }
+  centroid /= obs_pos.size();
+
+  // 2. Construct the covariance matrix and perform PCA
+  Eigen::Matrix2d covariance = Eigen::Matrix2d::Zero();
+  for (const auto& point : obs_pos) {
+    Eigen::Vector2d diff = point - centroid;
+    covariance += diff * diff.transpose();
+  }
+  covariance /= obs_pos.size();
+
+  // 3. Calculate the eigenvalues and eigenvectors
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2d> eigensolver(covariance);
+  Eigen::Vector2d eigenvalues = eigensolver.eigenvalues();
+  Eigen::Matrix2d eigenvectors = eigensolver.eigenvectors();
+
+  // 4. Obtain the main direction
+  // (the eigenvector corresponding to the maximum eigenvalue)
+  Eigen::Vector2d main_direction = eigenvectors.col(1).normalized();
+
+  // 4.1 cal line_coeffs
+  line_coeffs.x() = main_direction.y() / main_direction.x();
+  line_coeffs.y() = centroid.y() - line_coeffs.x() * centroid.x();
+
+  // 5. Project all the points onto the main direction
+  std::vector<std::pair<double, int>> projections;
+  for (size_t i = 0; i < obs_pos.size(); ++i) {
+    double projection = (obs_pos[i] - centroid).dot(main_direction);
+    projections.push_back({projection, static_cast<int>(i)});
+  }
+
+  // 6. Sort by projected value
+  std::sort(projections.begin(), projections.end());
+
+  // 7. Find consecutive line segment points
+  std::vector<bool> is_linear_point(obs_pos.size(), false);
+  std::vector<std::vector<int>> segments;
+  std::vector<int> current_segment;
+
+  for (size_t i = 0; i < projections.size(); ++i) {
+    int idx = projections[i].second;
+    const Eigen::Vector2d& point = obs_pos[idx];
+
+    // Calculate the distance from the point to the straight line
+    // in the main direction
+    double distance = std::abs(
+        (point - centroid)
+            .dot(Eigen::Vector2d(-main_direction.y(), main_direction.x())));
+
+    if (distance < distance_threshold) {
+      is_linear_point[idx] = true;
+      current_segment.push_back(idx);
+    } else {
+      if (!current_segment.empty()) {
+        segments.push_back(current_segment);
+        current_segment.clear();
+      }
+    }
+  }
+
+  if (!current_segment.empty()) {
+    segments.push_back(current_segment);
+  }
+
+  // 8. Find the longest continuous line segment
+  size_t max_segment_size = 0;
+  int max_segment_index = -1;
+
+  for (size_t i = 0; i < segments.size(); ++i) {
+    if (segments[i].size() > max_segment_size) {
+      max_segment_size = segments[i].size();
+      max_segment_index = static_cast<int>(i);
+    }
+  }
+
+  // 9. Return the point on the longest line segment
+  if (max_segment_index >= 0) {
+    for (int idx : segments[max_segment_index]) {
+      pa_curb_obs.push_back(obs_pos[idx]);
+    }
+  }
+
+  return;
+}
+
+const bool ParallelParkInScenario::GeneralPASlot() {
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+
+  auto& select_slot_global =
+      ego_info_under_slot.slot.origin_corner_coord_global_;
+  ILOG_INFO << " select_slot_global pt 0 = " << select_slot_global.pt_0.x()
+            << ", " << select_slot_global.pt_0.y();
+  ILOG_INFO << " select_slot_global pt 1 = " << select_slot_global.pt_1.x()
+            << ", " << select_slot_global.pt_1.y();
+  ILOG_INFO << " select_slot_global pt 2 = " << select_slot_global.pt_2.x()
+            << ", " << select_slot_global.pt_2.y();
+  ILOG_INFO << " select_slot_global pt 3 = " << select_slot_global.pt_3.x()
+            << ", " << select_slot_global.pt_3.y();
+
+  if (select_slot_global.pt_0 == select_slot_global.pt_1 ||
+      select_slot_global.pt_0 == select_slot_global.pt_2 ||
+      select_slot_global.pt_0 == select_slot_global.pt_3 ||
+      select_slot_global.pt_1 == select_slot_global.pt_2 ||
+      select_slot_global.pt_1 == select_slot_global.pt_3 ||
+      select_slot_global.pt_2 == select_slot_global.pt_3) {
+    ILOG_ERROR << "slot corner points exist same pt!";
+    return false;
+  }
+
+  const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
+
+  Eigen::Vector2d v_10 =
+      (select_slot_global.pt_0 - select_slot_global.pt_1).normalized();
+
+  if (v_10.dot(measures_ptr->GetHeadingVec()) < 1e-9) {
+    v_10 *= -1.0;
+    select_slot_global.pt_0.swap(select_slot_global.pt_1);
+    select_slot_global.pt_2.swap(select_slot_global.pt_3);
+  }
+  select_slot_global.CalExtraCoord();
+  const double heading_10 = std::atan2(v_10.y(), v_10.x());
+
+  const pnc::geometry_lib::LineSegment line_01(
+      select_slot_global.pt_1, select_slot_global.pt_0, heading_10);
+
+  const double dist_01_2 =
+      pnc::geometry_lib::CalPoint2LineDist(select_slot_global.pt_2, line_01);
+
+  const double dist_01_3 =
+      pnc::geometry_lib::CalPoint2LineDist(select_slot_global.pt_3, line_01);
+
+  ego_info_under_slot.slot.slot_width_ = std::min(dist_01_2, dist_01_3);
+  ego_info_under_slot.slot.slot_length_ =
+      (select_slot_global.pt_0 - select_slot_global.pt_1).norm();
+
+  ILOG_INFO << "slot_length_ = " << ego_info_under_slot.slot.slot_length_;
+  ILOG_INFO << "slot_width = " << ego_info_under_slot.slot.slot_width_;
+  if (ego_info_under_slot.slot.slot_length_ <
+      ego_info_under_slot.slot.slot_width_) {
+    ILOG_ERROR << " slot_length_ > slot_width_ in parallel slot";
+    return false;
+  }
+
+  if (frame_.is_replan_first) {
+    const auto v_23mid_to_01 =
+        ego_info_under_slot.slot.origin_corner_coord_global_.pt_23mid_01mid_vec
+            .normalized();
+
+    const double cross_ego_to_slot_heading =
+        pnc::geometry_lib::GetCrossFromTwoVec2d(measures_ptr->GetHeadingVec(),
+                                                v_23mid_to_01);
+    ILOG_INFO << "v_23mid_to_01 " << v_23mid_to_01.x() << " "
+              << v_23mid_to_01.y();
+
+    frame_.current_gear = pnc::geometry_lib::SEG_GEAR_REVERSE;
+    if (cross_ego_to_slot_heading > 1e-3) {
+      t_lane_.slot_side_sgn = 1.0;
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+      ego_info_under_slot.slot_side = pnc::geometry_lib::SLOT_SIDE_RIGHT;
+
+    } else if (cross_ego_to_slot_heading < -1e-3) {
+      t_lane_.slot_side_sgn = -1.0;
+      t_lane_.slot_side = geometry_lib::SLOT_SIDE_LEFT;
+      ego_info_under_slot.slot_side = pnc::geometry_lib::SLOT_SIDE_LEFT;
+
+    } else {
+      t_lane_.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+      ego_info_under_slot.slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
+      ILOG_INFO << "calculate parallel slot side error ";
+      return false;
+    }
+
+    const Eigen::Vector2d& mid01 = select_slot_global.pt_01_mid;
+    const Eigen::Vector2d& mid23 = select_slot_global.pt_23_mid;
+    Eigen::Vector2d rect_center =
+        mid23 + (mid23 - mid01).normalized() * 0.5;  // 延伸x米
+    double original_heading =
+        std::atan2((mid23 - mid01).y(), (mid23 - mid01).x());
+    double rect_heading = pnc::geometry_lib::NormalizeAngle(
+        original_heading + M_PI / 2.0);  // 逆时针旋转90度
+    double rect_length = ego_info_under_slot.slot.slot_length_;  // 长
+    double rect_width = 1.2;                                     // 宽
+    ILOG_INFO << "rect_center = " << rect_center.x() << " " << rect_center.y();
+    ILOG_INFO << "rect_heading = " << rect_heading;
+    // Eigen::Vector2d pt_01to23_vec =
+    bool is_rigid = false;
+    std::unordered_map<size_t, std::vector<Eigen::Vector2d>> pa_curb_obs_map;
+    for (const auto& pair :
+         apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
+      if (pair.second.GetObsMovementType() != ApaObsMovementType::STATIC) {
+        continue;
+      }
+      const auto obs_scement = pair.second.GetObsScemanticType();
+
+      is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
+                  obs_scement == ApaObsScemanticType::COLUMN ||
+                  obs_scement == ApaObsScemanticType::CAR);
+      if (obs_scement == ApaObsScemanticType::UNKNOWN ||
+          obs_scement == ApaObsScemanticType::WALL) {
+        for (const auto& obs_pt_local : pair.second.GetPtClout2dGlobal()) {
+          if (IsPointInOrientedRectangle(obs_pt_local, rect_center,
+                                         rect_heading, rect_length,
+                                         rect_width)) {
+            // pa_curb_obs.emplace_back(obs_pt_local);
+            pa_curb_obs_map[pair.first].emplace_back(obs_pt_local);
+          }
+        }
+      }
+    }
+    std::vector<Eigen::Vector2d> all_pa_curb_obs;
+    size_t maximum_obs_id = 0;
+    size_t maximum_obs_size = 0;
+    for (const auto& cur_obs : pa_curb_obs_map) {
+      if (cur_obs.second.size() > maximum_obs_size) {
+        maximum_obs_id = cur_obs.first;
+        maximum_obs_size = cur_obs.second.size();
+      }
+      all_pa_curb_obs.insert(all_pa_curb_obs.end(), cur_obs.second.begin(),
+                             cur_obs.second.end());
+    }
+    if (pa_curb_obs_map[maximum_obs_id].size() < 3) {
+      ILOG_INFO << "pa curb obs size too very little";
+      return false;
+    }
+
+    std::vector<Eigen::Vector2d> pa_curb_obs;
+    Eigen::Vector2d line_coeffs;
+    auto apa_obs_map = apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles();
+    if (apa_obs_map.find(maximum_obs_id) != apa_obs_map.end()) {
+      ExtractLongestLineSegmentPointsPCA(pa_curb_obs_map[maximum_obs_id],
+                                         pa_curb_obs, line_coeffs);
+    }
+    if (pa_curb_obs.size() < 3) {
+      ILOG_INFO << "pa_curb_obs size < 3";
+      return false;
+    }
+
+    ILOG_INFO << "pa_curb_obs size = " << pa_curb_obs.size();
+    // simu_debug_info_.pa_obs_vec.clear();
+    // for (int i = 0; i < pa_curb_obs.size(); i++) {
+    //   simu_debug_info_.pa_obs_vec.emplace_back(pa_curb_obs[i]);
+    // }
+    std::vector<bool> inliers_mask;
+
+    // runing RANSAC function
+    // bool res = LineFittingWithRansac(line_coeffs, pa_curb_obs, inliers_mask);
+    // if (!res) {
+    //   ILOG_ERROR << "LineFittingWithRansac failed!";
+    //   return false;
+    // }
+    ILOG_INFO << "line_coeffs = " << line_coeffs.x() << " " << line_coeffs.y();
+    Eigen::Vector2d ego_pose = measures_ptr->GetPos();
+    Eigen::Vector2d line_coeffs_out;
+    bool res = GetOffsetLineCoeffsWithEgoPose(
+        line_coeffs_out, line_coeffs, all_pa_curb_obs, inliers_mask, ego_pose);
+    if (!res) {
+      ILOG_ERROR << "GetOffsetLineCoeffsWithEgoPose failed!";
+      return false;
+    }
+    ILOG_INFO << "line_coeffs_out = " << line_coeffs_out.x() << " "
+              << line_coeffs_out.y();
+    first_line_coeffs_ = line_coeffs_out;
+    slot2curb_dist_ = is_rigid ? 0.45 : 0.15;  // TODO debug
+    // calc slot side once at first
+    slot_new_ = AlignAndMoveSlotToLine(
+        select_slot_global, measures_ptr->GetPos(),
+        measures_ptr->GetHeadingVec(), first_line_coeffs_.x(),
+        first_line_coeffs_.y(), ego_info_under_slot.slot.slot_width_,
+        slot2curb_dist_);
+    if ((slot_new_.pt_0 - slot_new_.pt_1).norm() <=
+        apa_param.GetParam().static_pos_eps) {
+      ILOG_INFO << "first plan move slot failed";
+      return false;
+    }
+    line_coeffs_out_ = first_line_coeffs_;
+  } else {
+    if ((slot_new_.pt_0 - slot_new_.pt_1).norm() <=
+        apa_param.GetParam().static_pos_eps) {
+      ILOG_INFO << "other plan move slot failed";
+      return false;
+    }
+  }
+  ILOG_INFO << "slot_side = " << static_cast<int>(t_lane_.slot_side);
+
+  // todo debug
+  // simu_debug_info_.line_coeffs_out_ = first_line_coeffs_;
+  // simu_debug_info_.pt_0 = slot_new_.pt_0;
+  // simu_debug_info_.pt_1 = slot_new_.pt_1;
+  // simu_debug_info_.pt_2 = slot_new_.pt_2;
+  // simu_debug_info_.pt_3 = slot_new_.pt_3;
+
+  ILOG_INFO << "slot_new pt 0 = " << slot_new_.pt_0.x() << " "
+            << slot_new_.pt_0.y();
+  ILOG_INFO << "slot_new pt 1 = " << slot_new_.pt_1.x() << " "
+            << slot_new_.pt_1.y();
+  ILOG_INFO << "slot_new pt 2 = " << slot_new_.pt_2.x() << " "
+            << slot_new_.pt_2.y();
+  ILOG_INFO << "slot_new pt 3 = " << slot_new_.pt_3.x() << " "
+            << slot_new_.pt_3.y();
+  slot_new_.CalExtraCoord();
+  // return true;
+
+  const Eigen::Vector2d n = (slot_new_.pt_0 - slot_new_.pt_1).normalized();
+  ILOG_INFO << "n = " << n.x() << " " << n.y();
+  const Eigen::Vector2d t(-n.y(), n.x());
+  ILOG_INFO << "t = " << t.x() << " " << t.y();
+
+  ego_info_under_slot.origin_pose_global.heading = std::atan2(n.y(), n.x());
+  ILOG_INFO << " ego_info_under_slot.origin_pose_global.heading = "
+            << ego_info_under_slot.origin_pose_global.heading * kRad2Deg;
+  ego_info_under_slot.origin_pose_global.heading_vec = n;
+
+  const double target_y_sgn =
+      (ego_info_under_slot.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT
+           ? 1.0
+           : -1.0);
+  const double target_y = 0.5 * ego_info_under_slot.slot.GetWidth();
+
+  ego_info_under_slot.origin_pose_global.pos =
+      slot_new_.pt_1 + target_y * target_y_sgn * t;
+
+  ILOG_INFO << "ego_info_under_slot.origin_pose_global.pos = "
+            << ego_info_under_slot.origin_pose_global.pos.x() << " "
+            << ego_info_under_slot.origin_pose_global.pos.y();
+
+  ego_info_under_slot.g2l_tf = pnc::geometry_lib::GlobalToLocalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
+
+  ego_info_under_slot.l2g_tf = pnc::geometry_lib::LocalToGlobalTf(
+      ego_info_under_slot.origin_pose_global.pos,
+      ego_info_under_slot.origin_pose_global.heading);
+
+  ego_info_under_slot.origin_pose_local.pos << 0.0, 0.0;
+  ego_info_under_slot.origin_pose_local.heading = 0.0;
+  ego_info_under_slot.origin_pose_local.heading_vec << 1.0, 0.0;
+  ego_info_under_slot.slot.TransformCoordFromGlobalToLocal(
+      ego_info_under_slot.g2l_tf);
+
+  ego_info_under_slot.cur_pose.pos =
+      ego_info_under_slot.g2l_tf.GetPos(measures_ptr->GetPos());
+  ego_info_under_slot.cur_pose.heading =
+      ego_info_under_slot.g2l_tf.GetHeading(measures_ptr->GetHeading());
+  ego_info_under_slot.cur_pose.heading_vec =
+      pnc::geometry_lib::GenHeadingVec(ego_info_under_slot.cur_pose.heading);
+
+  ILOG_INFO << "ego_pos_slot = " << ego_info_under_slot.cur_pose.pos.x() << " "
+            << ego_info_under_slot.cur_pose.pos.y();
+  ILOG_INFO << "ego_heading_slot (deg)= "
+            << ego_info_under_slot.cur_pose.heading * kRad2Deg;
+
+  ILOG_INFO << "slot width =" << ego_info_under_slot.slot.slot_width_;
+  ILOG_INFO << "t_lane_.slot_side = " << static_cast<int>(t_lane_.slot_side);
+  ILOG_INFO << "frame_.current_arc_steer = "
+            << static_cast<int>(frame_.current_arc_steer);
+
+  // firstly locate in middle of slot
+  double target_x = 0.5 * (ego_info_under_slot.slot.slot_length_ -
+                           apa_param.GetParam().car_length) +
+                    apa_param.GetParam().rear_overhanging;
+
+  ILOG_INFO << "target x in middle = " << target_x;
+
+  const auto& limiter = ego_info_under_slot.slot.GetLimiter();
+  ILOG_INFO << "limiter.valid = " << limiter.valid;
+  if (limiter.valid) {
+    t_lane_.limiter.valid = true;
+    // transfer limiter in slot coordination
+    t_lane_.limiter.start_pt =
+        ego_info_under_slot.g2l_tf.GetPos(limiter.start_pt);
+
+    t_lane_.limiter.end_pt = ego_info_under_slot.g2l_tf.GetPos(limiter.end_pt);
+
+    const double max_limiter_x =
+        std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+
+    const double min_limiter_x =
+        std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
+
+    if (max_limiter_x < 0.5 * ego_info_under_slot.slot.slot_length_) {
+      ILOG_INFO << "limiter behind!";
+      target_x = std::max(
+          target_x,
+          max_limiter_x +
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+    } else {
+      ILOG_INFO << "limiter front!";
+      target_x = std::min(
+          target_x,
+          min_limiter_x - apa_param.GetParam().wheel_base -
+              apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter);
+    }
+  }
+  ILOG_INFO << "target x consider limiter = " << target_x;
+  ego_info_under_slot.target_pose.pos << target_x, 0.0;
+  ego_info_under_slot.target_pose.heading = 0.0;
+  ego_info_under_slot.target_pose.heading_vec << 1.0, 0.0;
+
+  if (frame_.is_replan_first && enable_pa_park_) {
+    first_plan_cur_pos = ego_info_under_slot.cur_pose;
+  }
+  // calc terminal error once
+  ego_info_under_slot.terminal_err.Set(
+      ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
+      pnc::geometry_lib::NormalizeAngle(
+          ego_info_under_slot.cur_pose.heading -
+          ego_info_under_slot.target_pose.heading));
+
+  // calc slot occupied ratio
+  double slot_occupied_ratio = 0.0;
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -3.0,
+                              4.0)) {
+    const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
+                               (0.5 * ego_info_under_slot.slot.slot_width_);
+
+    if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
+    } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
+      slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
+    }
+  }
+  ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
+            << ego_info_under_slot.slot_occupied_ratio;
+
+  return true;
 }
 
 const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
@@ -801,9 +1605,6 @@ const bool ParallelParkInScenario::GenTlane() {
               obs_pt_local.y(), -0.25 * slot_width * side_sgn,
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn)) {
-        ILOG_INFO << "rigid obs = " << obs_pt_local.x()
-                  << " y = " << obs_pt_local.y()
-                  << " type = " << static_cast<int>(obs_scement);
         t_lane_.is_inside_rigid = true;
       }
       if (is_limiter && is_cur_pose_in_slot) {
@@ -1086,7 +1887,10 @@ const bool ParallelParkInScenario::GenTlane() {
   ILOG_INFO << "curb_y_limit = " << curb_y_limit
             << " target_y_with_curb = " << target_y_with_curb;
 
-  if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
+  if (enable_pa_park_ ||
+      apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate()) {
+    ego_info_under_slot.target_pose.pos.y() = 0.0;
+  } else {
     const bool is_width_curb =
         -side_sgn * curb_y_limit > (half_slot_width + kWidthCurbOffset) ? true
                                                                         : false;
@@ -1099,8 +1903,6 @@ const bool ParallelParkInScenario::GenTlane() {
         (side_sgn > 0.0
              ? std::max(-terminal_parallel_y_offset, target_y_with_curb)
              : std::min(terminal_parallel_y_offset, target_y_with_curb));
-  } else {
-    ego_info_under_slot.target_pose.pos.y() = 0.0;
   }
 
   ILOG_INFO << "ego pose = " << ego_info_under_slot.cur_pose.pos.x() << " "
@@ -1517,6 +2319,9 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
   path_planner_input.parallel_replan_again_ = parallel_replan_again_;
   parallel_path_planner_.SetInput(path_planner_input);
+  if (enable_pa_park_) {
+    parallel_path_planner_.EnablePAPark();
+  }
 
   const double path_plan_start_time = IflyTime::Now_ms();
 
@@ -2300,6 +3105,185 @@ const bool ParallelParkInScenario::PostProcessPathPara() {
 
 }
 
+/*
+ *@brief fitting line with ransac
+ *@param line_coeffs: line coefficients
+ *@param points: input points
+ *@param inliers: output inliers mask bool vector with size of points
+ *@return
+ */
+const bool ParallelParkInScenario::LineFittingWithRansac(
+    Eigen::Vector2d& line_coeffs, const std::vector<Eigen::Vector2d>& points,
+    std::vector<bool>& inliers) {
+  if (points.size() < 2) {
+    ILOG_ERROR << "error, points size: " << points.size();
+    return false;
+  }
+  const double start_time_ms = IflyTime::Now_ms();
+
+  int iterations = 300;
+  double threshold = 0.02;
+  int n = points.size();
+  int bestInliersCount = 0;
+  inliers.assign(n, false);
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<int> dist(0, n - 1);
+
+
+  for (int iter = 0; iter < iterations; ++iter) {
+    int idx1 = dist(gen);
+    int idx2 = 0;
+    if (idx1 > n/2) {
+      idx2 = idx1 - n/2;
+    }else{
+      idx2 = idx1 + n/2;
+    }
+    // int idx2 = dist(gen);
+
+    while (idx1 == idx2) {
+      idx2 = dist(gen);
+    }
+
+    const Point& p1 = points[idx1];
+    const Point& p2 = points[idx2];
+
+    if (std::abs(p2.x() - p1.x()) < 1e-8) {
+      continue;
+    }
+
+    double currentA = (p2.y() - p1.y()) / (p2.x() - p1.x());
+    double currentB = p1.y() - currentA * p1.x();
+
+    std::vector<bool> currentInliers(n, false);
+    int currentInliersCount = 0;
+
+    for (int i = 0; i < n; ++i) {
+      double distance =
+          std::abs(currentA * points[i].x() - points[i].y() + currentB) /
+          std::sqrt(currentA * currentA + 1);
+
+      if (distance < threshold) {
+        currentInliers[i] = true;
+        currentInliersCount++;
+      }
+    }
+
+    if (currentInliersCount > bestInliersCount) {
+      bestInliersCount = currentInliersCount;
+      inliers = currentInliers;
+
+      int count = bestInliersCount;
+      if (count >= 2) {
+        ILOG_INFO << "A count = " << count;
+        // 构建矩阵 A 和向量 b，求解 Ax = b
+
+        // int last_size = 0;
+
+        // for (int i = 0; i < n; ++i) {
+        //   if (i % 3 == 0 && inliers[i]) {
+
+        //     last_size++;
+        //   }
+        // }
+        Eigen::MatrixXd A(2, 2);
+        Eigen::VectorXd y(2);
+        int idx = 0;
+        for (int i = 0; i < n; ++i) {
+          if ( inliers[i]) {
+            A.row(idx) << points[i].x(), 1.0;
+            y(idx) = points[i].y();
+            idx++;
+            break;
+          }
+
+        }
+        for (int i = n-1; i < n; ++i) {
+          if ( inliers[i]) {
+            A.row(idx) << points[i].x(), 1.0;
+            y(idx) = points[i].y();
+            idx++;
+            break;
+          }
+
+        }
+
+        // 求解最小二乘问题: A * [a; b] = y
+        line_coeffs = A.colPivHouseholderQr().solve(y);
+      }
+    }
+  }
+
+  // 结束计时并输出耗时
+  const double end_time_ms = IflyTime::Now_ms();
+  const double elapsed_time_ms = end_time_ms - start_time_ms;
+  ILOG_INFO << "LineFittingWithRansac time: " << elapsed_time_ms << " ms";
+  ILOG_INFO << "bestInliersCount: " << bestInliersCount << "/" << n;
+  ILOG_INFO << "line param: y = " << line_coeffs(0) << "x + " <<
+  line_coeffs(1);
+
+  return true;
+}
+
+/*
+ *@brief get the offset line coeffs with ego pose
+ *@param line_coeffs_out: the offset line coeffs
+ *@param line_coeffs_in: the input line coeffs
+ *@param points: the points of the line
+ *@param inliers_mask: the mask of the inliers
+ *@param ego_pose: the ego pose
+ *@return
+ *
+ */
+const bool ParallelParkInScenario::GetOffsetLineCoeffsWithEgoPose(
+    Eigen::Vector2d& line_coeffs_out, const Eigen::Vector2d& line_coeffs_in,
+    const std::vector<Eigen::Vector2d>& points,
+    const std::vector<bool>& inliers_mask, const Eigen::Vector2d& ego_pose) {
+  if (points.size() < 2) { //|| inliers_mask.size() != points.size()
+    ILOG_ERROR << "error, points size: " << points.size()
+               << " or inliers_mask size != points size ";
+    return false;
+  }
+  double max_dist_postive = 0.0;
+  double max_dist_negtive = 0.0;
+  int max_dist_postive_index = 0;
+  int max_dist_negtive_index = 0;
+  double tem_dis_ego =
+      (line_coeffs_in(0) * ego_pose(0) + line_coeffs_in(1) - ego_pose(1)) /
+      std::sqrt(line_coeffs_in(0) * line_coeffs_in(0) + 1);
+  // cal the max distances of inlie points beside the line
+  for (size_t i = 0; i < points.size(); ++i) {
+    if (1) { // inliers_mask[i]
+      double tem_dis = (line_coeffs_in(0) * points[i](0) + line_coeffs_in(1) -
+                        points[i](1)) /
+                       std::sqrt(line_coeffs_in(0) * line_coeffs_in(0) + 1);
+      if (tem_dis > 0) {
+        if (tem_dis > max_dist_postive) {
+          max_dist_postive = tem_dis;
+          max_dist_postive_index = i;
+        }
+      } else {
+        if (tem_dis <= max_dist_negtive) {
+          max_dist_negtive = tem_dis;
+          max_dist_negtive_index = i;
+        }
+      }
+    }
+  }
+  if (tem_dis_ego > 0) {  // ego pose  above the line
+    line_coeffs_out(0) = line_coeffs_in(0);
+    line_coeffs_out(1) =
+        points[max_dist_postive_index](1) -
+        line_coeffs_in(0) * points[max_dist_postive_index](0);  // b = y - ax
+  } else {  // ego pose  below the line
+    line_coeffs_out(0) = line_coeffs_in(0);
+    line_coeffs_out(1) =
+        points[max_dist_negtive_index](1) -
+        line_coeffs_in(0) * points[max_dist_negtive_index](0);  // b = y - ax
+  }
+  return true;
+}
 
 }  // namespace apa_planner
 }  // namespace planning
