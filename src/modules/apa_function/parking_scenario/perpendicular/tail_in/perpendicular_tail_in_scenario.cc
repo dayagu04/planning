@@ -570,6 +570,11 @@ const bool PerpendicularTailInScenario::GenTlane() {
       int buf_size = target_pose_buffer.buf_size;
       double lon_buffer = target_pose_buffer.lon_buffer;
 
+      const double body_buf_step =
+          std::max((max_lat_body_buf - min_lat_body_buf) / buf_size, 5e-3);
+      const double mirror_buf_step =
+          std::max((max_lat_mirror_buf - min_lat_mirror_buf) / buf_size, 5e-3);
+
       if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
           frame_.replan_reason != ReplanReason::FIRST_PLAN &&
           frame_.replan_reason != FORCE_PLAN) {
@@ -578,11 +583,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
         max_lat_mirror_buf = std::min(
             max_lat_mirror_buf, ego_info_under_slot.safe_lat_mirror_buffer);
       }
-
-      const double body_buf_step =
-          (max_lat_body_buf - min_lat_body_buf) / buf_size;
-      const double mirror_buf_step =
-          (max_lat_mirror_buf - min_lat_mirror_buf) / buf_size;
 
       max_lat_body_buf =
           std::max(max_lat_body_buf, min_lat_body_buf + body_buf_step + 1e-3);
@@ -3639,12 +3639,12 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
            : param.lat_lon_speed_buffer.stop_mirror_lat_buffer) +
       0.015;
 
-  const double folding_mirror_consume_dist = std::max(
-      std::min({vel * smart_fold_mirror_params.consume_time,
-                predict_traj_s - 0.1,
-                ego_info_under_slot.cur_pose.GetX() -
-                    ego_info_under_slot.target_pose.GetX() + 0.068}),
-      0.068);
+  const double folding_mirror_consume_dist =
+      std::max(std::min({vel * smart_fold_mirror_params.consume_time,
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
 
   if (CalRemainDistFromObs(folding_mirror_consume_dist,
                            folding_mirror_safe_lat_buffer,
@@ -3667,13 +3667,13 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double lat_buffer =
       -1.0 * (fold_mirror_reduce_width - folded_mirror_safe_lat_buffer);
 
-  const double folded_mirror_consume_dist = std::max(
-      std::min({vel * (smart_fold_mirror_params.consume_time +
-                       smart_fold_mirror_params.reaction_time),
-                predict_traj_s - 0.1,
-                ego_info_under_slot.cur_pose.GetX() -
-                    ego_info_under_slot.target_pose.GetX() + 0.068}),
-      0.068);
+  const double folded_mirror_consume_dist =
+      std::max(std::min({vel * (smart_fold_mirror_params.consume_time +
+                                smart_fold_mirror_params.reaction_time),
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
                            1.0, 1.168, 1.168, true,
