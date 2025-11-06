@@ -261,7 +261,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   for (double lon_move_dist = 0.0;
        lon_move_dist < max_lon_move_dist + lon_move_step * 0.5;
        lon_move_dist += lon_move_step) {
-    if (lon_move_dist < max_lon_move_dist * 0.5) {
+    if (lon_move_dist < max_lon_move_dist * 0.8) {
       small_lon_dist_vec.emplace_back(lon_move_dist);
     } else {
       big_lon_dist_vec.emplace_back(lon_move_dist);

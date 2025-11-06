@@ -467,10 +467,8 @@ class ParkingScenario {
 
   virtual const double CalRemainDistFromObs(
       const double static_lon_buffer = 0.3,
-      const double static_body_lat_buffer =
-          apa_param.GetParam().stop_lat_inflation,
-      const double static_mirror_lat_buffer =
-          apa_param.GetParam().stop_lat_inflation,
+      const double static_body_lat_buffer = 0.06,
+      const double static_mirror_lat_buffer = 0.06,
       const double dynamic_lon_buffer = 1.168,
       const double dynamic_body_lat_buffer = 1.168,
       const double dynamic_mirror_lat_buffer = 1.168,

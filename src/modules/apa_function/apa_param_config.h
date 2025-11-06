@@ -186,6 +186,7 @@ struct SmartFoldMirrorParams {
 
   float consume_time = 0.0;
   float reaction_time = 0.0;
+  float state_transition_time = 0.0;
   float lat_buffer = 0.0;
   float min_lat_buffer = 0.0;
 

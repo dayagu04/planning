@@ -570,6 +570,11 @@ const bool PerpendicularTailInScenario::GenTlane() {
       int buf_size = target_pose_buffer.buf_size;
       double lon_buffer = target_pose_buffer.lon_buffer;
 
+      const double body_buf_step =
+          std::max((max_lat_body_buf - min_lat_body_buf) / buf_size, 5e-3);
+      const double mirror_buf_step =
+          std::max((max_lat_mirror_buf - min_lat_mirror_buf) / buf_size, 5e-3);
+
       if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() &&
           frame_.replan_reason != ReplanReason::FIRST_PLAN &&
           frame_.replan_reason != FORCE_PLAN) {
@@ -578,11 +583,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
         max_lat_mirror_buf = std::min(
             max_lat_mirror_buf, ego_info_under_slot.safe_lat_mirror_buffer);
       }
-
-      const double body_buf_step =
-          (max_lat_body_buf - min_lat_body_buf) / buf_size;
-      const double mirror_buf_step =
-          (max_lat_mirror_buf - min_lat_mirror_buf) / buf_size;
 
       max_lat_body_buf =
           std::max(max_lat_body_buf, min_lat_body_buf + body_buf_step + 1e-3);
@@ -800,13 +800,15 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   else {
     if (path_plan_success) {
       ILOG_INFO << "path plan success";
+      // 必须可以再次尝试删除障碍物的情况下 此时才能设置为失败
       if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
           !frame_.is_replan_first &&
           per_path_planner_ptr->GetOutput().current_gear !=
-              frame_.current_gear) {
-        ILOG_INFO
-            << "when process_obs_method is do nothing and no first replan, "
-               "plan gear should be same with ref gear, otherwise fail";
+              frame_.current_gear &&
+          CheckCanDelObsInSlot()) {
+        ILOG_INFO << "when process_obs_method is do nothing and no first "
+                     "replan and can del obs in slot, plan gear should be same "
+                     "with ref gear, otherwise fail";
         frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
         return PathPlannerResult::PLAN_FAILED;
       }
@@ -2322,10 +2324,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   double stop_body_lat_inflation = param.stop_lat_inflation;
   double stop_mirror_lat_inflation = param.stop_lat_inflation;
-  if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
-    stop_body_lat_inflation += 0.02;
-    stop_mirror_lat_inflation += 0.02;
-  }
   double stop_lon_dist = param.stop_lon_dist;
 
   double heavy_brake_body_lat_inflation = param.heavy_brake_lat_inflation;
@@ -3567,20 +3565,25 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       param.smart_fold_mirror_params;
 
   if (!smart_fold_mirror_params.has_smart_fold_mirror) {
+    ILOG_INFO << "decide fold mirror, not enable smart fold mirror";
     return;
   }
 
   if (frame_.mirror_command != MirrorCommand::NONE) {
+    ILOG_INFO << "decide fold mirror, mirror command is not none";
     return;
   }
 
   if (!frame_.is_last_path) {
+    ILOG_INFO << "decide fold mirror, not last path";
     return;
   }
 
   const auto measuredata_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
   if (measuredata_ptr->GetFoldMirrorFlag() ||
       measuredata_ptr->GetStaticFlag() || measuredata_ptr->GetBrakeFlag()) {
+    ILOG_INFO
+        << "decide fold mirror, fold mirror or static or brake flag is true";
     return;
   }
 
@@ -3623,15 +3626,25 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
     return;
   }
 
+  const double predict_traj_s =
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictTrajS();
+
   const double vel = std::max(
       float(std::fabs(apa_world_ptr_->GetMeasureDataManagerPtr()->GetVel())),
       smart_fold_mirror_params.min_vel);
 
   const double folding_mirror_safe_lat_buffer =
-      smart_fold_mirror_params.lat_buffer + 0.01;
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.stop_lat_inflation
+           : param.lat_lon_speed_buffer.stop_mirror_lat_buffer) +
+      0.015;
 
   const double folding_mirror_consume_dist =
-      vel * smart_fold_mirror_params.consume_time;
+      std::max(std::min({vel * smart_fold_mirror_params.consume_time,
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
 
   if (CalRemainDistFromObs(folding_mirror_consume_dist,
                            folding_mirror_safe_lat_buffer,
@@ -3654,12 +3667,13 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double lat_buffer =
       -1.0 * (fold_mirror_reduce_width - folded_mirror_safe_lat_buffer);
 
-  const double folded_mirror_consume_dist = std::max(
-      std::min(vel * (smart_fold_mirror_params.consume_time +
-                      smart_fold_mirror_params.reaction_time),
-               ego_info_under_slot.cur_pose.GetX() -
-                   ego_info_under_slot.origin_pose_local.GetX() + 0.068),
-      0.068);
+  const double folded_mirror_consume_dist =
+      std::max(std::min({vel * (smart_fold_mirror_params.consume_time +
+                                smart_fold_mirror_params.reaction_time),
+                         predict_traj_s - 0.1,
+                         ego_info_under_slot.cur_pose.GetX() -
+                             ego_info_under_slot.target_pose.GetX() + 0.068}),
+               0.068);
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
                            1.0, 1.168, 1.168, true,
@@ -3697,7 +3711,10 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
                            param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, need send fold mirror msg";
     frame_.mirror_command = MirrorCommand::FOLD;
+    return;
   }
+
+  ILOG_INFO << "decide fold mirror, should not send fold mirror msg";
 
   return;
 }
