@@ -2537,7 +2537,8 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
       geometry_lib::GeometryPath geometry_path_d;
       if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
         // 除了第一次规划两个挡位 其他按照参考挡位来
-        if (input_.is_replan_first) {
+        if (input_.is_replan_first ||
+            ref_gear == geometry_lib::SEG_GEAR_INVALID) {
           OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
                                      geometry_path_r);
 
@@ -2567,7 +2568,8 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
         // 其他按照参考挡位来
         uint8_t pre_gear = ref_gear;
         if (input_.is_replan_first || input_.is_replan_second ||
-            calc_params_.first_multi_plan) {
+            calc_params_.first_multi_plan ||
+            pre_gear == geometry_lib::SEG_GEAR_INVALID) {
           pre_gear = geometry_lib::SEG_GEAR_REVERSE;
         }
         if (!OptimalMultiAdjustPathPlan(pose, pre_gear, geometry_path)) {

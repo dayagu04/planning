@@ -800,13 +800,15 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   else {
     if (path_plan_success) {
       ILOG_INFO << "path plan success";
+      // 必须可以再次尝试删除障碍物的情况下 此时才能设置为失败
       if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
           !frame_.is_replan_first &&
           per_path_planner_ptr->GetOutput().current_gear !=
-              frame_.current_gear) {
-        ILOG_INFO
-            << "when process_obs_method is do nothing and no first replan, "
-               "plan gear should be same with ref gear, otherwise fail";
+              frame_.current_gear &&
+          CheckCanDelObsInSlot()) {
+        ILOG_INFO << "when process_obs_method is do nothing and no first "
+                     "replan and can del obs in slot, plan gear should be same "
+                     "with ref gear, otherwise fail";
         frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
         return PathPlannerResult::PLAN_FAILED;
       }
