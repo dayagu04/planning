@@ -52,6 +52,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool IsInDeceleartionScene();
   void ClearStitchedPolyPtr();
   double GetStoplineSpdDifferGain();
+  void CalcDistanceToStopPoint();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -125,6 +126,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double distance_to_road_split_ = kMaxMergeDistance;
   double distance_to_ramp_ = kMaxMergeDistance;
   double distance_to_merge_point_ = kMaxMergeDistance;
+  double distance_to_stop_point_ = kMaxDistanceToStopPoint;
 
   double front_edge_to_rear_axle_ = 4.025;
   double rear_edge_to_rear_axle_ = 0.925;
@@ -274,6 +276,10 @@ class SamplePolySpeedAdjustDecider : public Task {
     distance_to_ramp_ = distance;
   }
   double distance_to_ramp() const { return distance_to_ramp_; }
+  void set_distance_to_stop_point(const double distance) {
+    distance_to_stop_point_ = distance;
+  }
+  double distance_to_stop_point() const { return distance_to_stop_point_; }
 
   void set_boundary_merge_point_valid(const bool is_valid) {
     boundary_merge_point_valid_ = is_valid;

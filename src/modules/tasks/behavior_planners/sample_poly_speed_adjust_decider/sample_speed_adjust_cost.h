@@ -112,4 +112,10 @@ class SpeedChangeCost : public CurveCost {
   SpeedChangeCost() = default;
   void GetCost(const double end_v,const double ego_v,const double end_t);
 };
+
+class StopPointCost : public CurveCost {
+ public:
+  StopPointCost() = default;
+  void GetCost(const double distance_to_stop_point);
+};
 }  // namespace planning

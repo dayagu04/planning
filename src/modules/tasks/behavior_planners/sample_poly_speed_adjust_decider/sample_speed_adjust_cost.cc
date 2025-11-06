@@ -395,4 +395,9 @@ void SpeedChangeCost::GetCost(const double end_v,const double ego_v,const double
   cost_ = average_vel_differ > 0 ? 0.0
                                : weight_ * average_vel_differ * average_vel_differ;
 }
+
+void StopPointCost::GetCost(const double distance_to_stop_point) {
+  cost_ = distance_to_stop_point > 0.0 ? 0.0
+                                 :  std::pow((-distance_to_stop_point + 10.0),2.0);
+}
 }  // namespace planning

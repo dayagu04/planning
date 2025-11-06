@@ -223,7 +223,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
                            leading_veh_v, leading_veh_.id,
-                           enable_merge_decelaration, speed_differ_gain);
+                           enable_merge_decelaration, speed_differ_gain, distance_to_stop_point_);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
@@ -788,6 +788,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
     sample_scene_ = DecelerationPriorityScene;
     count_hover_to_normal_state_ = 0;
     count_normal_to_hover_state_ = 0;
+    CalcDistanceToStopPoint();
     SetDeclerationSceneWeight();
     ClearStitchedPolyPtr();
     is_in_deceleartion_scene_ = true;
@@ -975,6 +976,34 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
     return true;
   else
     return false;
+}
+
+void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
+  const auto& virtual_lane_mgr =
+      session_->environmental_model().get_virtual_lane_manager();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  if (current_lane.get() == nullptr) {
+    return;
+  }
+  const auto& reference_points = current_lane->get_reference_path()->get_points();
+  if (!reference_points.empty()){
+    auto comp = [](const ReferencePathPoint &p, const double s) {
+        return p.path_point.s() < s;
+      };
+    auto p_first_point = std::lower_bound(
+        reference_points.begin(), reference_points.end(), ego_s_, comp);
+    if (p_first_point == reference_points.end()) {
+      return;
+    }else{
+      for(auto current_point = p_first_point; current_point != reference_points.end(); current_point++){
+        double lane_width = current_point->lane_width;
+        if(lane_width < 2.5){
+          distance_to_stop_point_ = current_point->path_point.s() - ego_s_;
+          return;
+        }
+      }
+    }
+  }
 }
 
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

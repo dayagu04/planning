@@ -123,7 +123,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
     int32_t leading_veh_id, bool enable_merge_decelaration,
-    double speed_differ_gain) {
+    double speed_differ_gain,double distance_to_stop_point) {
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
@@ -170,6 +170,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
       if ((stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 2.5) {
         speed_differ_gain = 0.0;
+        distance_to_stop_point = kMaxDistanceToStopPoint;
       }
       break;
     }
@@ -213,6 +214,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
+  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_);
+
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
@@ -220,6 +223,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
                stop_line_cost_.cost() * speed_differ_gain +
                leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
-               acc_limit_cost_.cost() + speed_change_cost_.cost();
+               acc_limit_cost_.cost() + speed_change_cost_.cost() + stop_point_cost_.cost();
 }
 }  // namespace planning
