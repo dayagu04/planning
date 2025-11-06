@@ -820,7 +820,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
           .planning_hmi_info()
           .ad_info.reference_line_msg;
   planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
-
+  // planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()
                                           .get_parking_slot_manager()
