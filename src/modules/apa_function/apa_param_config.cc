@@ -1128,6 +1128,7 @@ void SyncParkingParameters(const bool is_simulation) {
   }
   if (smart_fold_mirror_params.has_smart_fold_mirror) {
     param.car_lat_inflation_normal += 0.02;
+    param.stop_lat_inflation += 0.02;
   }
   JSON_READ_VALUE(smart_fold_mirror_params.locked_obs_slot_with_fold_mirror,
                   bool, "locked_obs_slot_with_fold_mirror");

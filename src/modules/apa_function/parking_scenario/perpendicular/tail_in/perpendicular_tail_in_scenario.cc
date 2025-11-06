@@ -2324,10 +2324,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   double stop_body_lat_inflation = param.stop_lat_inflation;
   double stop_mirror_lat_inflation = param.stop_lat_inflation;
-  if (param.smart_fold_mirror_params.has_smart_fold_mirror) {
-    stop_body_lat_inflation += 0.02;
-    stop_mirror_lat_inflation += 0.02;
-  }
   double stop_lon_dist = param.stop_lon_dist;
 
   double heavy_brake_body_lat_inflation = param.heavy_brake_lat_inflation;
@@ -3638,7 +3634,10 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
       smart_fold_mirror_params.min_vel);
 
   const double folding_mirror_safe_lat_buffer =
-      smart_fold_mirror_params.lat_buffer + 0.01;
+      ((param.park_path_plan_type == ParkPathPlanType::GEOMETRY)
+           ? param.stop_lat_inflation
+           : param.lat_lon_speed_buffer.stop_mirror_lat_buffer) +
+      0.015;
 
   const double folding_mirror_consume_dist = std::max(
       std::min({vel * smart_fold_mirror_params.consume_time,
