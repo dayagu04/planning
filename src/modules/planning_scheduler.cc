@@ -789,7 +789,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
           .planning_hmi_info()
           .ad_info.reference_line_msg;
   planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
-  // planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  planning_hmi_info->ad_info.construction_info.construction_state = ad_info.construction_info.construction_state;
 
   const auto& cutin_ttc_info =
       agent_longitudinal_decider_output.closest_cutin_ttc_info;
