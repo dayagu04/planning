@@ -65,12 +65,6 @@ void LaneChangeStateMachineManager::Update() {
   PreProcess();
   RunStateMachine();
   GenerateStateMachineOutput();
-  auto& lane_change_decider_output = session_->mutable_planning_context()
-                                         ->mutable_lane_change_decider_output();
-  if (transition_info_.lane_change_status == kLaneKeeping &&
-      lane_change_decider_output.curr_state != kLaneKeeping) {
-    ResetStateMachine();
-  }
   UpdateCoarsePlanningInfo();
   // UpdateLCCoarsePlanningInfo();
   UpdateStateMachineDebugInfo();
@@ -84,10 +78,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
   }
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
-      // 与前车距离过近，则抑制变道
-      if (IsSuppressLCShortDis()) {
-        break;
-      }
       // clear_lc_stage_info();
       RequestType lane_change_direction = NO_CHANGE;
       RequestSource lane_change_type = NO_REQUEST;
@@ -336,10 +326,10 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
   const bool has_target_lane =
       virtual_lane_manager->has_lane(lc_req_mgr_->target_lane_virtual_id());
   // check lc gap if feasible
-  CheckLaneChangeValid(lane_change_direction);
   if (!has_target_lane) {
-     lane_change_stage_info_.lc_invalid_reason = "dash not enough";
+    lane_change_stage_info_.lc_invalid_reason = "dash not enough";
   }
+  CheckLaneChangeValid(lane_change_direction);
   return has_target_lane && lane_change_stage_info_.gap_insertable && !ego_trajs_future_.empty();
 }
 
@@ -681,7 +671,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   const auto target_lane = virtual_lane_manager->get_lane_with_virtual_id(
       lc_req_mgr_->target_lane_virtual_id());
 
-  if (target_lane == nullptr) {
+  if (target_lane == nullptr || ego_trajs_future_.empty()) {
     return lc_state_info;
   }
 
@@ -1318,6 +1308,10 @@ void LaneChangeStateMachineManager::GenerateStateMachineOutput() {
     lane_change_decider_output.ego_trajs_future = ego_trajs_future_;
   } else {
     lane_change_decider_output.ego_trajs_future.clear();
+  }
+  if (lane_change_decider_output.curr_state == kLaneKeeping &&
+      last_state_ != kLaneKeeping) {
+    ResetStateMachine();
   }
 }
 bool LaneChangeStateMachineManager::CalculateSideGapFeasible(
@@ -2129,6 +2123,7 @@ LaneChangeStateMachineManager::MakesureCurrentBoundaryType(
 }
 
 void LaneChangeStateMachineManager::PreProcess() {
+  last_state_ = session_->planning_context().lane_change_decider_output().curr_state;
   IsEgoOnSideLane();
   lane_change_stage_info_.Reset();
   target_lane_front_node_ = nullptr;

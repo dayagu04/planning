@@ -144,7 +144,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       static_cast<RequestType>(lane_change_decider_output.lc_request));
   int_request_cancel_reason_ = NO_CANCEL;
       // todo(ldh): 使用工厂模式管理变道请求。
-      int_request_.SetLaneChangeCmd(lane_change_cmd_);
+  int_request_.SetLaneChangeCmd(lane_change_cmd_);
   int_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
   map_request_.SetLaneChangeCmd(lane_change_cmd_);
   map_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
