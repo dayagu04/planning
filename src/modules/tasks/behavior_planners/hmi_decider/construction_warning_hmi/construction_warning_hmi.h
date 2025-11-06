@@ -17,12 +17,14 @@ class ConstructionWarningHMIDecider {
   bool IsStartRunning();
   bool IsStopRunning();
   void SaveHmiOutput();
+  void Reset();
   bool has_construction_ = false;
 
   int start_running_count_ = 0;
   int stop_running_count_ = 0;
 
   ConstructionWarningState current_state_ = ConstructionWarningState::IDLE;
+  iflyauto::ConstructionState last_construction_state_ = iflyauto::ConstructionState::CONSTRUCTION_NONE;
   framework::Session* session_;
 };
 }  // namespace planning
