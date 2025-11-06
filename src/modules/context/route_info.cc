@@ -5776,12 +5776,12 @@ void RouteInfo::ProcessLaneDistance(
   }
 
   auto it = feasible_lane_distance.find(left_lane_num + 1);
-  std::map<bool, double> virtual_lane_distance;
+  std::pair<bool, double> virtual_lane_distance;
 
   if (it != feasible_lane_distance.end()) {
-    virtual_lane_distance = {{true, it->second}};
+    virtual_lane_distance = std::make_pair(true, it->second);
   } else {
-    virtual_lane_distance = {{false, 0.0}};
+    virtual_lane_distance = std::make_pair(false, 0.0);
   }
 
   relative_id_lane->set_feasible_lane_distance(virtual_lane_distance);
