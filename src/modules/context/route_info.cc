@@ -2023,14 +2023,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             }
             // 把躲避分汇流的车道添加进去
             if (is_need_cancel_avoide_mlc) {
-              auto& feasible_sequence = valid_exchange_regions[i]
-                                            .recommend_lane_num[0]
-                                            .feasible_lane_sequence;
-              for (int lane_num : avoide_lane_num) {
-                auto it = std::lower_bound(feasible_sequence.begin(),
-                                           feasible_sequence.end(), lane_num);
-                if (it == feasible_sequence.end() || *it != lane_num) {
-                  feasible_sequence.insert(it, lane_num);
+              for (int t = 0; t < 3; t++) {
+                auto& feasible_sequence = valid_exchange_regions[i]
+                                              .recommend_lane_num[t]
+                                              .feasible_lane_sequence;
+                for (int lane_num : avoide_lane_num) {
+                  auto it = std::lower_bound(feasible_sequence.begin(),
+                                             feasible_sequence.end(), lane_num);
+                  if (it == feasible_sequence.end() || *it != lane_num) {
+                    feasible_sequence.insert(it, lane_num);
+                  }
                 }
               }
             }
