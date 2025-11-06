@@ -310,7 +310,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
           left_lane_nums = iter->left_lane_num;
           right_lane_nums = iter->right_lane_num;
         } else {
-          return;
+          left_lane_nums = llane ? 1 : 0;
+          right_lane_nums = rlane ? 1 : 0;
         }
       }
     } else {
@@ -517,8 +518,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   JSON_DEBUG_VALUE("trigger_right_overtake", trigger_right_overtake);
   const RequestSource lc_request_source = OVERTAKE_REQUEST;
   if (trigger_left_overtake && current_time - tfinish_ >= 3.0 &&
-      (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake)) {
-    if (request_type_ != LEFT_CHANGE && ConeSituationJudgement(llane)) {
+      (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake) &&
+      request_type_ != LEFT_CHANGE) {
+    if (ConeSituationJudgement(llane)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -546,8 +548,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
     }
   } else if (trigger_right_overtake && overtake_count_ >= right_count_thres &&
              current_time - tfinish_ >= 3.0 &&
-             (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake)) {
-    if (request_type_ != RIGHT_CHANGE && ConeSituationJudgement(rlane)) {
+             (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake) &&
+             request_type_ != RIGHT_CHANGE) {
+    if (ConeSituationJudgement(rlane)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);

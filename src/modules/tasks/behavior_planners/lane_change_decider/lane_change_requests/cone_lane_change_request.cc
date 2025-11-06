@@ -546,7 +546,7 @@ void ConeRequest::ConeDir() {
       route_info_output.mlc_decider_route_info.feasible_lane_sequence;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
-  if (distance_to_first_road_split < 500.0 || dis_to_first_merge < 500.0 ||
+  if (distance_to_first_road_split < 300.0 ||
       dis_to_merge_point < 200.0) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums_ + 1;
@@ -585,18 +585,6 @@ void ConeRequest::ConeDir() {
   bool right_change_available = false;
 
   RequestType cone_dir;
-  // scc优先利用锥桶分布判断变道方向
-  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC &&
-      ConesDirection(cone_dir)) {
-    if (cone_dir == LEFT_CHANGE && llane) {
-      cone_lane_change_direction_ = LEFT_CHANGE;
-      return;
-    }
-    if (cone_dir == RIGHT_CHANGE && rlane) {
-      cone_lane_change_direction_ = RIGHT_CHANGE;
-      return;
-    }
-  }
   bool cone_distribution_enable_left = true;
   bool cone_distribution_enable_right = true;
 
@@ -650,6 +638,18 @@ void ConeRequest::ConeDir() {
         left_change_available = true;
         ILOG_DEBUG << "left_change_available: " << left_change_available;
       }
+    }
+  }
+
+  // scc优先利用锥桶分布判断变道方向
+  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC && ConesDirection(cone_dir)) {
+    if (cone_dir == LEFT_CHANGE && llane && cone_distribution_enable_left) {
+      cone_lane_change_direction_ = LEFT_CHANGE;
+      return;
+    }
+    if (cone_dir == RIGHT_CHANGE && rlane && cone_distribution_enable_right) {
+      cone_lane_change_direction_ = RIGHT_CHANGE;
+      return;
     }
   }
 
@@ -819,6 +819,9 @@ bool ConeRequest::EnableTargetLane(
     ILOG_DEBUG << "seach fail: seach lane is nullptr";
     return false;
   }
+  if (cone_cluster_attribute_set_.empty()) {
+    return false;
+  }
   std::vector<std::pair<double, double>> lane_s_width;
   if (is_left) {
     lane_s_width = left_lane_s_width_;
@@ -856,7 +859,8 @@ bool ConeRequest::EnableTargetLane(
     }
     double average_lane_width = total_lane_width / cone_num;
     double average_cone_l = total_cone_l / cone_num;
-    if (average_cone_l < average_lane_width * lane_occ_proportion &&
+    if ((average_cone_l < average_lane_width * lane_occ_proportion ||
+          std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l) &&
         cone_num >= 5) {
       return false;
     }
