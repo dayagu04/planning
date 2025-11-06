@@ -10,36 +10,36 @@ ConeWarningHMIDecider::ConeWarningHMIDecider(framework::Session *session) {
 }
 
 bool ConeWarningHMIDecider::Execute() {
-  return false;
   if (session_ == nullptr) {
+    Reset();
     return false;
   }
   
-  // has_cipv_cone_ = HasCipvCone();
-  // has_speed_limit_cone_ = HasSpeedLimitCone();
-  // has_alc_cone_ = HasConeALC();
+  has_cipv_cone_ = HasCipvCone();
+  has_speed_limit_cone_ = HasSpeedLimitCone();
+  has_alc_cone_ = HasConeALC();
 
-  // switch (current_state_) {
-  //   case ConeWarningState::IDLE:
-  //     if (IsStartRunning()) {
-  //       current_state_ = ConeWarningState::RUNNING;
-  //       stop_running_count_ = 0;
-  //     }
-  //     break;
+  switch (current_state_) {
+    case ConeWarningState::IDLE:
+      if (IsStartRunning()) {
+        current_state_ = ConeWarningState::RUNNING;
+        stop_running_count_ = 0;
+      }
+      break;
     
-  //   case ConeWarningState::RUNNING:
-  //     if (IsStopRunning()) {
-  //       current_state_ = ConeWarningState::EXITING;
-  //       start_running_count_ = 0;
-  //     }
-  //     break;
+    case ConeWarningState::RUNNING:
+      if (IsStopRunning()) {
+        current_state_ = ConeWarningState::EXITING;
+        start_running_count_ = 0;
+      }
+      break;
     
-  //   case ConeWarningState::EXITING:
-  //     current_state_ = ConeWarningState::IDLE;
-  //     stop_running_count_ = 0;
-  //     stop_running_count_ = 0;
-  //     break;
-  // }
+    case ConeWarningState::EXITING:
+      current_state_ = ConeWarningState::IDLE;
+      stop_running_count_ = 0;
+      stop_running_count_ = 0;
+      break;
+  }
 
   SaveHmiOutput();
   return true;
@@ -101,12 +101,18 @@ bool ConeWarningHMIDecider::IsStopRunning() {
 }
 
 void ConeWarningHMIDecider::SaveHmiOutput() {
-  // auto hmi_info = session_->mutable_planning_context()->mutable_planning_hmi_info();
-  // if (current_state_ == ConeWarningState::RUNNING) {
-  //   hmi_info->ad_info.cone_warning_info.cone_warning = true;
-  // } else {
-  //   hmi_info->ad_info.cone_warning_info.cone_warning = false;
-  // }
+  auto hmi_info = session_->mutable_planning_context()->mutable_planning_hmi_info();
+  if (current_state_ == ConeWarningState::RUNNING) {
+    hmi_info->ad_info.cone_warning_info.cone_warning = true;
+  } else {
+    hmi_info->ad_info.cone_warning_info.cone_warning = false;
+  }
 }
 
+void ConeWarningHMIDecider::Reset() {
+  start_running_count_ = 0;
+  stop_running_count_ = 0;
+
+  current_state_ = ConeWarningState::IDLE;
+}
 }  // namespace planning
