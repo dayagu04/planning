@@ -17,12 +17,12 @@ class RuleBasedPredictor {
  public:
   RuleBasedPredictor() = default;
 
-  void Execute(std::shared_ptr<ApaObstacleManager> obs_manager);
+  void Execute(std::shared_ptr<ApaObstacleManager>& obs_manager);
 
  private:
   void Predict(ApaObstacle& obs);
 
-  void RecordDebugInfo(std::shared_ptr<ApaObstacleManager> obs_manager);
+  void RecordDebugInfo(std::shared_ptr<ApaObstacleManager>& obs_manager);
 
  private:
 };

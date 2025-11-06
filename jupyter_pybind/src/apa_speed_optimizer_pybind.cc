@@ -43,6 +43,7 @@
 #include "src/modules/apa_function/parking_task/optimizers/sv_dp_optimizer/dp_speed_optimizer.h"
 #include "transform2d.h"
 #include "virtual_wall_decider.h"
+#include "apa_lon_util.h"
 
 using namespace planning::apa_planner;
 using namespace pnc::geometry_lib;
@@ -264,114 +265,21 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
 }
 
 std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
-  std::vector<Eigen::VectorXd> speed_debug_data;
-  Eigen::VectorXd v(7);
-
-  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_debug_data.emplace_back(v);
-    return speed_debug_data;
-  }
-
-  int size = 0;
-  if (speed_debug->has_dp_speed_constraint()) {
-    size = speed_debug->dp_speed_constraint().s_size();
-  }
-
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->dp_speed_constraint().s(i);
-
-    if (i < speed_debug->dp_speed_constraint().obs_dist_size()) {
-      v[1] = speed_debug->dp_speed_constraint().obs_dist(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().v_upper_bound_size()) {
-      v[2] = speed_debug->dp_speed_constraint().v_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().a_upper_bound_size()) {
-      v[3] = speed_debug->dp_speed_constraint().a_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().a_lower_bound_size()) {
-      v[4] = speed_debug->dp_speed_constraint().a_lower_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().jerk_upper_bound_size()) {
-      v[5] = speed_debug->dp_speed_constraint().jerk_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().jerk_lower_bound_size()) {
-      v[6] = speed_debug->dp_speed_constraint().jerk_lower_bound(i);
-    }
-
-    speed_debug_data.emplace_back(v);
-  }
-
-  if (speed_debug_data.size() == 0) {
-    speed_debug_data.emplace_back(v);
-  }
+  std::vector<Eigen::VectorXd> speed_debug_data =
+      planning::TransformDpSpeedConstraints();
 
   return speed_debug_data;
 }
 
 std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
-  std::vector<Eigen::Vector2d> speed_debug_data;
-  Eigen::Vector2d v;
-
-  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_debug_data.emplace_back(v);
-    return speed_debug_data;
-  }
-
-  int size = 0;
-  if (speed_debug->has_qp_speed_constraint()) {
-    size = speed_debug->qp_speed_constraint().s_size();
-  }
-
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->qp_speed_constraint().s(i);
-    if (i < speed_debug->qp_speed_constraint().v_upper_bound_size()) {
-      v[1] = speed_debug->qp_speed_constraint().v_upper_bound(i);
-    }
-
-    speed_debug_data.emplace_back(v);
-  }
-
-  if (speed_debug_data.size() == 0) {
-    speed_debug_data.emplace_back(v);
-  }
+  std::vector<Eigen::Vector2d> speed_debug_data =
+      planning::TransformQPSpeedConstraints();
 
   return speed_debug_data;
 }
 
 const double GetRefCruiseSpeed() {
-  auto &debug_ = planning::DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-  if (speed_debug == nullptr) {
-    return 0.0;
-  }
-
-  double speed = 0.0;
-  if (speed_debug->has_ref_cruise_speed()) {
-    speed = speed_debug->ref_cruise_speed();
-  }
-
-  return speed;
+  return planning::GetDebugRefCruiseSpeed();
 }
 
 std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {

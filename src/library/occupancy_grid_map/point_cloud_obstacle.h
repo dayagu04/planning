@@ -53,7 +53,7 @@ class PointCloudObstacleTransform {
   PointCloudObstacleTransform() = default;
 
   void GenerateLocalObstacle(
-      std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+      std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager,
       ParkObstacleList& obs_list, const Pose2D& ego_pose,
       const cdl::AABB& slot_box, const bool delete_slot_obs);
 

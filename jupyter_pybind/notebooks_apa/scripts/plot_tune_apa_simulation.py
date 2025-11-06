@@ -24,7 +24,7 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # m32t-otomb10: 40735
 # m32t-otomb12: 40737
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_82007/trigger/20251023/20251023-15-05-18/park_in_data_collection_CHERY_M32T_82007_EVENT_FILTER_2025-10-23-15-05-18_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52931/trigger/20251103/20251103-23-25-21/park_in_data_collection_CHERY_M32T_52931_EVENT_FILTER_2025-11-03-23-25-21_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -136,6 +136,7 @@ data_sim_limiter = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car_predict_traj_path = ColumnDataSource(data = {'x':[], 'y':[]})
 data_sim_car_predict_traj_path_car_box = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
+data_od_traj_point = ColumnDataSource(data = {'x':[], 'y':[]})
 data_od_traj = ColumnDataSource(data = {'x':[], 'y':[]})
 
 
@@ -155,7 +156,8 @@ fig1.circle('y', 'x', source = data_sim_car_predict_traj_path, size=4, color='or
 fig1.line('y', 'x', source = data_sim_car_predict_traj_path, line_width = 6, line_color = 'orange', line_dash = 'dashed', line_alpha = 0.5, legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.patches('y_vec', 'x_vec', source = data_sim_car_predict_traj_path_car_box, fill_color = "#89FB89", fill_alpha = 0.0, line_color = "orange", line_width = 1, legend_label = 'sim_car_predict_traj_path', visible = False)
 fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
-fig1.circle('y', 'x', source = data_od_traj, size=4.0, color='black', legend_label='fusion_objects', visible = True)
+fig1.circle('y', 'x', source = data_od_traj_point, size=4.0, color='purple', legend_label='OD_predictor', visible = True)
+fig1.multi_line('y', 'x',source = data_od_traj, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'OD_predictor',visible = True)
 
 
 ### sliders config
@@ -731,6 +733,9 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
     update_veh_speed_data(veh_speed, lon_plan_data)
 
     # plot stop signs
+    stop_signs.data.update({'x': [], 'y': [], })
+    data_od_traj_point.data.update({'x': [], 'y': [], })
+    data_od_traj.data.update({'x': [], 'y': [], })
     if res == True:
       stop_sign_lines_x,stop_sign_lines_y = GetProtoStopSigns(tuned_planning_debug_info)
       stop_signs.data.update({
@@ -738,25 +743,36 @@ def slider_callback(bag_time, vehicle_type, sim_to_target, plan_type, pybind_sta
           'y': stop_sign_lines_y,
       })
 
-    # plot od
-    trajs_x = []
-    trajs_y = []
-    data_od_traj.data.update({
-        'x': trajs_x,
-        'y': trajs_y,
-    })
+      # plot od
+      traj_point_x = []
+      traj_point_y = []
+      traj_x = []
+      traj_y = []
+      start=[]
+      end=[]
 
-    trajs = apa_simulation_py.GetODTraj()
-    for k in range(len(trajs)):
-      traj = trajs[k]
-      for i in range(len(traj)):
-        trajs_x.append(traj[i][0])
-        trajs_y.append(traj[i][1])
+      trajs = GetProtoOdTrajs(tuned_planning_debug_info)
+      for k in range(len(trajs)):
+        traj = trajs[k]
+        for i in range(len(traj)):
+          traj_point_x.append(traj[i][0])
+          traj_point_y.append(traj[i][1])
 
-    data_od_traj.data.update({
-        'x': trajs_x,
-        'y': trajs_y,
-    })
+          if i+1 < len(traj):
+            start = traj[i]
+            end = traj[i+1]
+            traj_x.append([start[0], end[0]])
+            traj_y.append([start[1], end[1]])
+
+      data_od_traj_point.data.update({
+          'x': traj_point_x,
+          'y': traj_point_y,
+      })
+      data_od_traj.data.update({
+          'x': traj_x,
+          'y': traj_y,
+      })
+
 
   push_notebook()
 

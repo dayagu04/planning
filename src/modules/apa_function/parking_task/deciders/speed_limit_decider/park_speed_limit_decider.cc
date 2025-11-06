@@ -147,8 +147,8 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
 
 void ParkSpeedLimitDecider::PublishDebugInfo(
     const std::vector<pnc::geometry_lib::PathPoint>& path) {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->set_ref_cruise_speed(config_.default_cruise_speed);
 
   return;

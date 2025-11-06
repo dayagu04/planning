@@ -60,6 +60,7 @@
 #include "struct_msgs/VehicleServiceOutputInfo.h"
 #include "transform2d.h"
 #include "vehicle_service_c.h"
+#include "apa_lon_util.h"
 
 namespace py = pybind11;
 using namespace planning;
@@ -387,289 +388,45 @@ void DynamicsSwitchBuf(double x, double y, double heading) {
 }
 
 std::vector<Eigen::VectorXd> GetDpSpeedConstraints() {
-  std::vector<Eigen::VectorXd> speed_debug_data;
-  Eigen::VectorXd v(7);
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_debug_data.emplace_back(v);
-    return speed_debug_data;
-  }
-
-  int size = 0;
-  if (speed_debug->has_dp_speed_constraint()) {
-    size = speed_debug->dp_speed_constraint().s_size();
-  }
-
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->dp_speed_constraint().s(i);
-
-    if (i < speed_debug->dp_speed_constraint().obs_dist_size()) {
-      v[1] = speed_debug->dp_speed_constraint().obs_dist(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().v_upper_bound_size()) {
-      v[2] = speed_debug->dp_speed_constraint().v_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().a_upper_bound_size()) {
-      v[3] = speed_debug->dp_speed_constraint().a_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().a_lower_bound_size()) {
-      v[4] = speed_debug->dp_speed_constraint().a_lower_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().jerk_upper_bound_size()) {
-      v[5] = speed_debug->dp_speed_constraint().jerk_upper_bound(i);
-    }
-
-    if (i < speed_debug->dp_speed_constraint().jerk_lower_bound_size()) {
-      v[6] = speed_debug->dp_speed_constraint().jerk_lower_bound(i);
-    }
-
-    speed_debug_data.emplace_back(v);
-  }
-
-  if (speed_debug_data.size() == 0) {
-    speed_debug_data.emplace_back(v);
-  }
+  std::vector<Eigen::VectorXd> speed_debug_data = TransformDpSpeedConstraints();
 
   return speed_debug_data;
 }
 
 std::vector<Eigen::Vector2d> GetQPSpeedConstraints() {
-  std::vector<Eigen::Vector2d> speed_debug_data;
-  Eigen::Vector2d v;
-  v.setZero();
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_debug_data.emplace_back(v);
-    return speed_debug_data;
-  }
-
-  int size = 0;
-  if (speed_debug->has_qp_speed_constraint()) {
-    size = speed_debug->qp_speed_constraint().s_size();
-  }
-
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->qp_speed_constraint().s(i);
-    if (i < speed_debug->qp_speed_constraint().v_upper_bound_size()) {
-      v[1] = speed_debug->qp_speed_constraint().v_upper_bound(i);
-    }
-
-    speed_debug_data.emplace_back(v);
-  }
-
-  if (speed_debug_data.size() == 0) {
-    speed_debug_data.emplace_back(v);
-  }
+  std::vector<Eigen::Vector2d> speed_debug_data = TransformQPSpeedConstraints();
 
   return speed_debug_data;
 }
 
 const double GetRefCruiseSpeed() {
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-  if (speed_debug == nullptr) {
-    return 0.0;
-  }
-
-  double speed = 0.0;
-  if (speed_debug->has_ref_cruise_speed()) {
-    speed = speed_debug->ref_cruise_speed();
-  }
-
-  return speed;
+  return GetDebugRefCruiseSpeed();
 }
 
 std::vector<Eigen::VectorXd> GetDPSpeedOptimizationData() {
-  std::vector<Eigen::VectorXd> speed_profile;
-  Eigen::VectorXd v(5);
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_profile.emplace_back(v);
-    return speed_profile;
-  }
-
-  int size = speed_debug->dp_profile_size();
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->dp_profile(i).s();
-    v[1] = speed_debug->dp_profile(i).t();
-    v[2] = speed_debug->dp_profile(i).vel();
-    v[3] = speed_debug->dp_profile(i).acc();
-    v[4] = speed_debug->dp_profile(i).jerk();
-
-    speed_profile.push_back(v);
-  }
+  std::vector<Eigen::VectorXd> speed_profile =
+      TransformDPSpeedOptimizationData();
 
   return speed_profile;
 }
 
 std::vector<Eigen::VectorXd> GetQPSpeedOptimizationData() {
-  std::vector<Eigen::VectorXd> speed_profile;
-  Eigen::VectorXd v(5);
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_profile.emplace_back(v);
-    return speed_profile;
-  }
-
-  int size = speed_debug->qp_profile_size();
-  for (int i = 0; i < size; i++) {
-    v[0] = speed_debug->qp_profile(i).s();
-    v[1] = speed_debug->qp_profile(i).t();
-    v[2] = speed_debug->qp_profile(i).vel();
-    v[3] = speed_debug->qp_profile(i).acc();
-    v[4] = speed_debug->qp_profile(i).jerk();
-
-    speed_profile.push_back(v);
-  }
+  std::vector<Eigen::VectorXd> speed_profile =
+      TransformQPSpeedOptimizationData();
 
   return speed_profile;
 }
 
 std::vector<Eigen::VectorXd> GetStopSigns() {
-  std::vector<Eigen::VectorXd> stop_signs;
-  stop_signs.clear();
-
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug->has_apa_speed_debug()) {
-    speed_debug = debug->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    return stop_signs;
-  }
-
-  int size = speed_debug->stop_signs_size();
-  if (size <= 0) {
-    return stop_signs;
-  }
-
-  Eigen::VectorXd stop_sign(4);
-  Transform2d tf;
-  Position2D local;
-  Position2D global;
-
-  for (int i = 0; i < size; i++) {
-    tf.SetBasePose(Pose2D(speed_debug->stop_signs(i).stop_pose().x(),
-                          speed_debug->stop_signs(i).stop_pose().y(),
-                          speed_debug->stop_signs(i).stop_pose().theta()));
-
-    local.x = 0;
-    local.y = -1.5;
-    tf.ULFLocalPointToGlobal(&global, local);
-    stop_sign[0] = global.x;
-    stop_sign[1] = global.y;
-
-    local.x = 0;
-    local.y = 1.5;
-    tf.ULFLocalPointToGlobal(&global, local);
-    stop_sign[2] = global.x;
-    stop_sign[3] = global.y;
-
-    stop_signs.push_back(stop_sign);
-  }
+  std::vector<Eigen::VectorXd> stop_signs = TransformStopSigns();
 
   return stop_signs;
 }
 
 std::vector<Eigen::VectorXd> GetJLTSpeedData() {
-  std::vector<Eigen::VectorXd> speed_profile;
-  Eigen::VectorXd point(5);
-
-  auto &debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug_->has_apa_speed_debug()) {
-    speed_debug = debug_->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    speed_profile.emplace_back(point);
-    return speed_profile;
-  }
-
-  int size = speed_debug->jlt_profile_size();
-  for (int i = 0; i < size; i++) {
-    point[0] = speed_debug->jlt_profile(i).s();
-    point[1] = speed_debug->jlt_profile(i).t();
-    point[2] = speed_debug->jlt_profile(i).vel();
-    point[3] = speed_debug->jlt_profile(i).acc();
-    point[4] = speed_debug->jlt_profile(i).jerk();
-
-    speed_profile.push_back(point);
-  }
+  std::vector<Eigen::VectorXd> speed_profile = TransformJLTSpeedData();
 
   return speed_profile;
-}
-
-std::vector<std::vector<Eigen::Vector2d>> GetODTraj() {
-  std::vector<std::vector<Eigen::Vector2d>> trajs;
-  trajs.clear();
-
-  auto &debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  planning::common::ApaSpeedDebug *speed_debug = nullptr;
-  if (debug->has_apa_speed_debug()) {
-    speed_debug = debug->mutable_apa_speed_debug();
-  }
-
-  if (speed_debug == nullptr) {
-    return trajs;
-  }
-
-  if (!speed_debug->has_predict_traj_set()) {
-    return trajs;
-  }
-
-  int size = speed_debug->predict_traj_set().trajs_size();
-  if (size <= 0) {
-    return trajs;
-  }
-
-  std::vector<Eigen::Vector2d> traj;
-  for (int i = 0; i < size; i++) {
-    const common::ParkPredictTraj &proto_traj =
-        speed_debug->mutable_predict_traj_set()->trajs(i);
-
-    traj.clear();
-    for (int j = 0; j < proto_traj.point_size(); j++) {
-      traj.emplace_back(
-          Eigen::Vector2d(proto_traj.point(j).x(), proto_traj.point(j).y()));
-    }
-
-    trajs.emplace_back(traj);
-  }
-
-  return trajs;
 }
 
 PYBIND11_MODULE(apa_simulation_py, m) {
@@ -690,6 +447,5 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetStopSigns", &GetStopSigns)
-      .def("GetODTraj", &GetODTraj)
       .def("GetDynamicState", &GetDynamicState);
 }

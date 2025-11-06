@@ -299,8 +299,8 @@ void PiecewiseJerkSpeedQPOptimizer::DebugPiecewiseJerkProblem(
 }
 
 void PiecewiseJerkSpeedQPOptimizer::ClearDebugInfo() {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->clear_qp_profile();
   speed_debug->clear_qp_speed_constraint();
   return;
@@ -309,8 +309,8 @@ void PiecewiseJerkSpeedQPOptimizer::ClearDebugInfo() {
 void PiecewiseJerkSpeedQPOptimizer::RecordDebugInfo(
     const std::vector<c_float>& x_ref,
     const std::vector<std::pair<c_float, c_float>>& s_dot_bounds) {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   common::SVGraphSpeedConstraint* qp_speed_constraint_debug =
       speed_debug->mutable_qp_speed_constraint();
 

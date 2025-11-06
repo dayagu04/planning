@@ -9,6 +9,7 @@
 #include "apa_obstacle.h"
 #include "apa_param_config.h"
 #include "apa_utils.h"
+#include "apa_lon_util.h"
 #include "common_c.h"
 #include "common_platform_type_soc.h"
 #include "debug_info_log.h"
@@ -195,46 +196,6 @@ void ApaObstacleManager::Update(
         obstacles_[obs_id_generate_] = apa_obs;
         obs_id_generate_++;
       }
-    }
-  }
-
-  if (param.use_object_detect_specificationer) {
-    const uint8 fusion_obs_size =
-        std::min(local_view->fusion_objects_info.fusion_object_size,
-                 static_cast<uint8>(FUSION_OBJECT_MAX_NUM));
-    for (uint8 i = 0; i < fusion_obs_size; ++i) {
-      const iflyauto::Obstacle& obs =
-          local_view->fusion_objects_info.fusion_object[i].common_info;
-      if (!IsConsideredODTypeSpecifier(obs.type)) {
-        continue;
-      }
-      Pose2D center_pose(obs.center_position.x, obs.center_position.y,
-                         obs.heading_angle);
-      std::vector<Eigen::Vector2d> local_box;
-      GenerateBoundingBox(obs.shape.length, obs.shape.width,
-                          Eigen::Vector2d(0.0f, 0.0f), local_box);
-
-      std::vector<Eigen::Vector2d> global_box;
-      LocalPolygonToGlobal(local_box, center_pose, global_box);
-      ApaObstacle apa_obs;
-      apa_obs.Reset();
-      Polygon2D polygon;
-      GeneratePolygonByPoints(global_box, &polygon);
-      apa_obs.SetPolygonGlobal(polygon);
-      cdl::AABB box = cdl::AABB();
-      GetBoundingBoxByPolygon(&box, &polygon);
-
-      apa_obs.SetPtClout2dGlobal(global_box);
-      apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
-      apa_obs.SetObsScemanticType(ApaObsScemanticType::SPECIFICATIONER);
-      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
-      apa_obs.SetBoxGlobal(box);
-      apa_obs.SetPolygonGlobal(polygon);
-      apa_obs.SetId(obs_id_generate_);
-      apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
-      apa_obs.ClearDecision();
-      obstacles_[obs_id_generate_] = apa_obs;
-      obs_id_generate_++;
     }
   }
 
@@ -455,16 +416,20 @@ void ApaObstacleManager::GenerateObsByOD(
 
     double speed = std::sqrt(obs.velocity.x * obs.velocity.x +
                              obs.velocity.y * obs.velocity.y);
-    if (IsDynamicOD(speed, obs.type)) {
-      if (!od_config.use_dynamic_obs) {
+    if (IsDynamicODVeh(speed, obs.type)) {
+      if (!od_config.use_dynamic_od_car) {
         continue;
       }
     } else if (IsODSpecificationer(obs.type)) {
       if (!od_config.use_specificationer) {
         continue;
       }
-    } else if (IsMovableStaticOD(speed, obs.type)) {
-      if (!od_config.use_movable_static_obs) {
+    } else if (obs.type == iflyauto::OBJECT_TYPE_DECELER) {
+      if (!od_config.use_speed_bump) {
+        continue;
+      }
+    } else if (IsODLivingThings(obs.type)) {
+      if (!od_config.use_living_things) {
         continue;
       }
     } else {
@@ -483,7 +448,6 @@ void ApaObstacleManager::GenerateObsByOD(
 
     ApaObstacle apa_obs;
     apa_obs.Reset();
-    apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
 
     Polygon2D polygon;
     GeneratePolygonByPoints(global_box, &polygon);
@@ -499,23 +463,18 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetPose(pose);
     apa_obs.SetSpeed(speed);
 
-    Eigen::Vector2d speed_dir(obs.velocity.y, obs.velocity.x);
-    double dot = speed_dir.dot(pose.heading_vec);
-    if (dot >= 0.0) {
-      apa_obs.SetSpeedHeading(pose.heading_vec);
+    if (IsDynamicODVeh(speed, obs.type) ||
+        IsDynamicLivingThings(speed, obs.type)) {
+      Eigen::Vector2d speed_dir(obs.velocity.x, obs.velocity.y);
+      apa_obs.SetSpeedHeading(speed_dir.normalized());
+      apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
     } else {
-      apa_obs.SetSpeedHeading(
-          Eigen::Vector2d(-pose.heading_vec[0], -pose.heading_vec[1]));
+      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
     }
 
     apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POLYGON);
     apa_obs.SetObsScemanticType(obs.type);
     apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
-    if (speed > 0.2) {
-      apa_obs.SetObsMovementType(ApaObsMovementType::MOTION);
-    } else {
-      apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
-    }
 
     apa_obs.SetId(obs_id_generate_);
     apa_obs.ClearDecision();
@@ -524,15 +483,6 @@ void ApaObstacleManager::GenerateObsByOD(
   }
 
   return;
-}
-
-const bool ApaObstacleManager::IsConsideredODTypeSpecifier(
-    const iflyauto::ObjectType type) {
-  if (type == iflyauto::ObjectType::OBJECT_TYPE_SPECIFICATIONER) {
-    return true;
-  }
-
-  return false;
 }
 
 void ApaObstacleManager::GenerateUss(const LocalView* local_view) {

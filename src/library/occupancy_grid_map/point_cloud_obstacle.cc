@@ -13,7 +13,7 @@ namespace planning {
 #define DEBUG_POINT_CLOUD_OBS (0)
 
 void PointCloudObstacleTransform::GenerateLocalObstacle(
-    std::shared_ptr<apa_planner::ApaObstacleManager> obs_manager,
+    std::shared_ptr<apa_planner::ApaObstacleManager>& obs_manager,
     ParkObstacleList& obs_list, const Pose2D& ego_pose,
     const cdl::AABB& slot_box, const bool delete_slot_obs) {
   if (obs_manager == nullptr) {
@@ -43,6 +43,10 @@ void PointCloudObstacleTransform::GenerateLocalObstacle(
     }
     if (pair.second.GetObsAttributeType() ==
         apa_planner::ApaObsAttributeType::MAP_BOUND) {
+      continue;
+    }
+
+    if (pair.second.GetPtClout2dLocal().empty()) {
       continue;
     }
 

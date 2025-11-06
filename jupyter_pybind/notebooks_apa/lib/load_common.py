@@ -72,6 +72,19 @@ def GetProtoStopSigns(planning_proto):
 
   return stop_sign_lines_x, stop_sign_lines_y
 
+def GetProtoOdTrajs(planning_proto):
+  trajs = []
+  speed_debug = planning_proto.apa_speed_debug
+  for i in range(len(speed_debug.predict_traj_set.trajs)):
+    proto_traj = speed_debug.predict_traj_set.trajs[i]
+    traj = []
+    for j in range(len(proto_traj.point)):
+      traj.append([proto_traj.point[j].x, proto_traj.point[j].y])
+
+    trajs.append(traj)
+
+  return trajs
+
 # Define the JavaScript callback code
 callback_code = """
     var x = cb_obj.x;

@@ -590,8 +590,8 @@ void DpSpeedOptimizer::DebugSpeedLimitLookUp() const {
 }
 
 void DpSpeedOptimizer::ClearDebugInfo() {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->clear_dp_profile();
   speed_debug->clear_dp_speed_constraint();
   speed_debug->clear_jlt_profile();
@@ -600,8 +600,8 @@ void DpSpeedOptimizer::ClearDebugInfo() {
 
 void DpSpeedOptimizer::RecordDebugInfo(
     const std::vector<pnc::geometry_lib::PathPoint>& path) {
-  auto& debug_ = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug_->mutable_apa_speed_debug();
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
 
   common::StPoint2D proto_point;
   for (size_t i = 0; i < speed_data_.size(); i++) {

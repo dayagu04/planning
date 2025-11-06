@@ -118,7 +118,7 @@ class ApaWorld {
     return predict_path_ptr_;
   }
 
-  std::shared_ptr<ApaObstacleManager> GetObstacleManagerPtr() {
+  std::shared_ptr<ApaObstacleManager>& GetObstacleManagerPtr() {
     return obstacle_manager_ptr_;
   }
 
