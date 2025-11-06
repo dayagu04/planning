@@ -5260,7 +5260,7 @@ bool LaneChangeStateMachineManager::IsStartJointOpt(int front_agent_id, int rear
       session_->environmental_model().get_dynamic_world();
   const auto &agent_mgr = dynamic_world->agent_manager();
   const auto front_agent = agent_mgr->GetAgent(front_agent_id);
-  const auto rear_agent = agent_mgr->GetAgent(rear_agent_id);\
+  const auto rear_agent = agent_mgr->GetAgent(rear_agent_id);
   const  auto& ref_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
   //自车boundary
   if (front_agent != nullptr && ref_path != nullptr) {
