@@ -46,6 +46,29 @@ void IhcCore::RunOnce(void) {
     ihc_sys_.input.ihc_main_switch = true;
   }
 
+  // 处理环境光照状态：将中等亮度状态根据上一次状态进行转换
+  // 根据当前输入的光照条件进行处理
+  if (ihc_sys_.input.lighting_condition == 
+      iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
+    // 明亮状态：直接设置为明亮
+    processed_lighting_condition_ = 
+        iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT;
+  } else if (ihc_sys_.input.lighting_condition == 
+             iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
+    // 昏暗状态：直接设置为昏暗
+    processed_lighting_condition_ = 
+        iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK;
+  } else {
+    // 中等亮度或未知状态：根据上一次状态判断
+    if (processed_lighting_condition_ == 
+        iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_UNKNOWN) {
+      // 如果还未初始化（第一次遇到不明确状态），默认设置为明亮（更安全的默认值）
+      processed_lighting_condition_ = 
+          iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT;
+    }
+    // 否则保持当前状态不变（继承上一次的处理结果）
+  }
+
   // 获取范围内是否有车
   dynamic_obstacle_check_ = DynamicObstacleCheck();
 
@@ -138,9 +161,11 @@ void IhcCore::RunOnce(void) {
   JSON_DEBUG_VALUE("ihc_function::low_beam_due_to_oncomming_cycle",
                    ihc_sys_.state.low_beam_due_to_oncomming_cycle);
 
-  // 输出环境光线条件（已在IHCRequest中设置）
+  // 输出环境光线条件（原始输入和处理后的状态）
   JSON_DEBUG_VALUE("ihc_function::lighting_condition",
                    int(ihc_sys_.input.lighting_condition));
+  JSON_DEBUG_VALUE("ihc_function::processed_lighting_condition",
+                   int(processed_lighting_condition_));
 }
 
 void IhcCore::GetInputInfo() {
@@ -284,8 +309,8 @@ uint16 IhcCore::UpdateIhcHighBeamCode() {
   // condition5: 转向灯关闭
   // 待确认
 
-  // condition6: 环境昏暗
-  if (ihc_sys_.input.lighting_condition !=
+  // condition6: 环境昏暗（使用处理后的光照状态）
+  if (processed_lighting_condition_ !=
       iflyauto::CameraPerceptionLightingCondition::
           CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
     ihc_enable_code_temp += uint16_bit[6];
@@ -348,8 +373,8 @@ uint16 IhcCore::UpdateIhcLowBeamCode() {
   // condition4：摄像头等关联键故障
   // TODO: thzhang5 0907 状态机还未给出
 
-  // 环境亮度过高
-  if (ihc_sys_.input.lighting_condition ==
+  // 环境亮度过高（使用处理后的光照状态）
+  if (processed_lighting_condition_ ==
       iflyauto::CameraPerceptionLightingCondition::
           CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     ihc_disable_code_temp += uint16_bit[4];
