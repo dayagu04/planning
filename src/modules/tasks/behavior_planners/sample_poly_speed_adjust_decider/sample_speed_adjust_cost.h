@@ -43,7 +43,7 @@ class MatchGapCost : public CurveCost {
   double anchor_t_;
 
   double safe_dis_penalty_factor_coef_ = 2.0;
-  double clip_dis_penalty_factor_coef_ = 2.5;
+  double clip_dis_penalty_factor_coef_ = 2.0;
   double rel_vel_penalty_factor_coef_ = 3.0;
   double narrow_gap_penalty_factor_coef_ = 1.8;
 

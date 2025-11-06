@@ -38,7 +38,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
                                         (safe_border_distance - dist_to_obj) /
                                         safe_border_distance)
                          : weight * std::exp(clip_dis_penalty_factor_coef *
-                                             (safe_border_distance -
+                                             (safe_border_distance +
                                               clip_border_distance) /
                                              safe_border_distance)
                    : 0.0;
@@ -147,7 +147,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         upper_st_point.s() - (poly_end_s + front_edge_to_rear_axle_);
     match_s_cost_ = calculate_gap_distance_match_cost(
         dist_to_upper_border, safe_border_distance_to_gap_front_obj,
-        kMinSafeDistanceFront, safe_dis_penalty_factor_coef_,
+        reliable_safe_distance_to_gap_front_obj, safe_dis_penalty_factor_coef_,
         clip_dis_penalty_factor_coef_, weight_match_s_);
 
     cost_ += match_s_cost_;
@@ -173,7 +173,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         poly_end_s - rear_edge_to_rear_axle_ - lower_st_point.s();
     match_s_cost_ = calculate_gap_distance_match_cost(
         dist_to_lower_border, safe_border_distance_to_gap_back_obj,
-        min_safe_distance_rear, safe_dis_penalty_factor_coef_,
+        reliable_safe_distance_to_gap_back_obj, safe_dis_penalty_factor_coef_,
         clip_dis_penalty_factor_coef_, weight_match_s_);
     cost_ += match_s_cost_;
 
@@ -201,11 +201,11 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
         upper_st_point.s() - (poly_end_s + front_edge_to_rear_axle_);
     double dist_to_lower_cost = calculate_gap_distance_match_cost(
         dist_to_lower_border, safe_border_distance_to_gap_back_obj,
-        min_safe_distance_rear, safe_dis_penalty_factor_coef_,
+        reliable_safe_distance_to_gap_back_obj, safe_dis_penalty_factor_coef_,
         clip_dis_penalty_factor_coef_, weight_match_s_);
     double dist_to_upper_cost = calculate_gap_distance_match_cost(
         dist_to_upper_border, safe_border_distance_to_gap_front_obj,
-        kMinSafeDistanceFront, safe_dis_penalty_factor_coef_,
+        reliable_safe_distance_to_gap_front_obj, safe_dis_penalty_factor_coef_,
         clip_dis_penalty_factor_coef_, weight_match_s_);
     double safe_gap_center =
         (upper_st_point.s() - safe_border_distance_to_gap_front_obj -
