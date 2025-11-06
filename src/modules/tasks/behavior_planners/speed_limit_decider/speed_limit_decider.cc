@@ -49,7 +49,7 @@ constexpr double kExitVruRoundLateralBufferThr = 1.0;
 constexpr double kExitVruRoundDistanceThr = 80.0;
 constexpr double kLowSpeedVruVelThr = 30 / 3.6;
 constexpr double kVRURoundDecelRatio = 0.7;
-constexpr double kTunnelVelLimitDisOffset = 50;
+constexpr double kTunnelVelLimitDisOffset = 100;
 constexpr double kCAInvadeLatDisDiffThr = 0.25;
 constexpr double kCAInvadeVaildLonDis = 80.0;
 constexpr double kCAInvadeLatMaxDis = 2.5;
@@ -612,12 +612,14 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
+  double v_limit_tencent = 0;
   if (current_segment == nullptr) {
     // get ego link failed, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   } else {
-    v_cruise_limit_ = current_segment->speed_limit();  // kph
-    JSON_DEBUG_VALUE("v_limit_tencent", v_cruise_limit_);
+    v_limit_tencent = current_segment->speed_limit();  // kph
+    v_cruise_limit_ = v_limit_tencent;  // kph
+    JSON_DEBUG_VALUE("v_limit_tencent", v_limit_tencent);
   }
 
   double v_limit_gaode = 0;
@@ -704,12 +706,13 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         }
       }
     }
-    v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
-    v_target_ramp = v_cruise_limit_ / 3.6;
-    if (v_target_ramp < v_target_) {
-      v_target_ = v_target_ramp;
-      v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
+    if (v_limit_tencent > (30.0 - kEpsilon) && v_limit_gaode > (30.0 - kEpsilon)) {
+      v_cruise_limit_ = std::max(std::min(v_limit_tencent, v_limit_gaode), 60.0);
+    } else {
+      v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
     }
+    v_target_ramp = v_cruise_limit_ / 3.6;
+
     ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -1025,7 +1028,13 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     return;
   } else {
     poi_v_limit_set_ = false;
-    double cur_link_v_limit = current_segment->speed_limit();
+    const auto &function_state_machine_info =
+      environmental_model.get_local_view().function_state_machine_info;
+    double v_cruise_fsm =
+      function_state_machine_info.pilot_req.acc_curise_real_spd;
+    double v_cruise_fsm_kph = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+    double cur_road_map_v_limit = current_segment->speed_limit();
+    double cur_link_v_limit = std::max(cur_road_map_v_limit, v_cruise_fsm_kph);
     double v_limit_dis = 10000.0;
     v_limit_dis =
         interp(cur_link_v_limit,
