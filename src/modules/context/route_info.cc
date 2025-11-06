@@ -2120,10 +2120,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         first_exchange_region_info;
   }
   // 判断当前处于的状态
-  double dis_to_last_split_point = 0.0;
-  double dis_to_last_merge_point = 0.0;
+  double dis_to_last_split_point = NL_NMAX;
+  double dis_to_last_merge_point = NL_NMAX;
   double dis_to_last_exchange_point = NL_NMAX;
-  double dis_to_last_specific_point = 0.0;
+  double dis_to_last_specific_point = NL_NMAX;
   const double passed_dis = route_info_output_.current_segment_passed_distance;
 
   if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis)) {
