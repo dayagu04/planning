@@ -323,13 +323,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
   for (const Eigen::Vector2d& pt :
        mirror_to_front_overhanging_rectangle_vertex_expand_front_) {
     vertex.x() = pt.x();
-    if (pt.x() > 0.0 && pt.x() < param.lon_dist_mirror_to_rear_axle + 0.68) {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
-                                  : pt.y() - mirror_lat_buffer_;
-    } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
-                                  : pt.y() - body_lat_buffer_;
-    }
+    vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
+                                : pt.y() - mirror_lat_buffer_;
     mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
         .emplace_back(vertex);
   }
@@ -340,13 +335,8 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
       mirror_to_rear_overhanging_polygon_vertex_.size());
   for (const Eigen::Vector2d& pt : mirror_to_rear_overhanging_polygon_vertex_) {
     vertex.x() = pt.x();
-    if (pt.x() > 0.0 && pt.x() < param.lon_dist_mirror_to_rear_axle + 0.68) {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + mirror_lat_buffer_
-                                  : pt.y() - mirror_lat_buffer_;
-    } else {
-      vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
+    vertex.y() = (pt.y() > 0.0) ? pt.y() + body_lat_buffer_
                                   : pt.y() - body_lat_buffer_;
-    }
     mirror_to_rear_overhanging_polygon_vertex_with_buffer_.emplace_back(vertex);
   }
 }

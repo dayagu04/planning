@@ -63,9 +63,10 @@ class ApaMeasureDataManager final {
   const double GetFrontWheelAngle() const { return front_wheel_angle_; }
   const bool GetBrakeFlag() const { return brake_flag_; }
   const bool GetFoldMirrorFlag() const { return fold_mirror_flag_; }
-
   const Pose2D GetPose() { return Pose2D(pos_[0], pos_[1], heading_); }
-
+  const pnc::geometry_lib::PathPoint GetPoseV2() {
+    return pnc::geometry_lib::PathPoint(pos_, heading_);
+  }
   const pnc::geometry_lib::PathSegGear GetGear() const { return gear_; }
 
  private:

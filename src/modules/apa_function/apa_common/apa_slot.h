@@ -200,6 +200,17 @@ class ApaSlot final {
     release_info_.Clear();
   }
 
+  const std::vector<Eigen::Vector2d> GetCustomSlotPolygonByCenter(
+      const double up_dist, const double down_dist, const double left_dist,
+      const double right_dist, const bool base_on_slot) const;
+
+  const bool IsPointInCustomSlotByCenter(const Eigen::Vector2d& pt,
+                                         const double up_dist,
+                                         const double down_dist,
+                                         const double left_dist,
+                                         const double right_dist,
+                                         const bool base_on_slot) const;
+
   const std::vector<Eigen::Vector2d> GetCustomSlotPolygon(
       const double slot_entrance_dist, const double slot_bottom_dist,
       const double left_move_dist, const double right_move_dist,
@@ -287,6 +298,8 @@ class ApaSlot final {
 
   geometry_lib::GlobalToLocalTf g2l_tf_;
   geometry_lib::LocalToGlobalTf l2g_tf_;
+
+  bool is_narrow_slot_ = false;
 };
 
 const std::string GetSlotTypeString(const SlotType type);

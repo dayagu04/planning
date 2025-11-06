@@ -292,10 +292,14 @@ struct ParkingLatLonSpeedBuffer {
 struct ParkingLatLonSlotReleaseBuffer {
   float lon_buffer;
 
-  float maximum_lat_buffer;
-  float accumulate_lat_buffer;
-  float hold_lat_buffer;
-  float subtract_lat_buffer;
+  float maximum_lat_body_buffer;
+  float maximum_lat_mirror_buffer;
+  float accumulate_lat_body_buffer;
+  float accumulate_lat_mirror_buffer;
+  float hold_lat_body_buffer;
+  float hold_lat_mirror_buffer;
+  float subtract_lat_body_buffer;
+  float subtract_lat_mirror_buffer;
 
   float channel_width;
   float channel_lat_offset;
@@ -306,9 +310,11 @@ struct ParkingLatLonSlotReleaseBuffer {
 struct ParkingLatLonTargetPoseBuffer {
   float lon_buffer;
 
-  float max_lat_buffer;
-  float min_lat_buffer;
-  float step;
+  float max_lat_body_buffer;
+  float max_lat_mirror_buffer;
+  float min_lat_body_buffer;
+  float min_lat_mirror_buffer;
+  int buf_size;
 
   float special_max_lat_buffer;
 

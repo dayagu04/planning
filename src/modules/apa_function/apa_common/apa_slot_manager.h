@@ -116,7 +116,8 @@ struct EgoInfoUnderSlot {
   double lon_move_dist_every_replan = 0.0;
 
   // 存在目标终点的安全buffer
-  double safe_lat_buffer = 0.15;
+  double safe_lat_body_buffer = 0.15;
+  double safe_lat_mirror_buffer = 0.15;
 
   TargetPoseDeciderResult tar_pose_result;
 
@@ -171,7 +172,8 @@ struct EgoInfoUnderSlot {
     lat_move_dist_every_replan = 0.0;
     lon_move_dist_every_replan = 0.0;
 
-    safe_lat_buffer = 0.15;
+    safe_lat_body_buffer = 0.15;
+    safe_lat_mirror_buffer = 0.15;
 
     pt_inside.setZero();
 
@@ -257,13 +259,13 @@ class ApaSlotManager final {
                              const double mirror_lat_buffer = 0.268,
                              const double lon_buffer = 0.1);
 
-  const bool IsSlotCoarseRelease(const ApaSlot& slot);
+  const bool IsSlotCoarseRelease(ApaSlot& slot);
 
   const SlotReleaseVoterType IsPerpendicularSlotAndPassageAreaOccupied(
-      const ApaSlot& slot);
+      ApaSlot& slot);
 
   const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
-      const ApaSlot& slot);
+      ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;

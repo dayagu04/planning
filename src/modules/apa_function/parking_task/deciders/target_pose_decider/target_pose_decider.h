@@ -9,7 +9,8 @@ namespace apa_planner {
 using namespace pnc;
 
 struct TargetPoseDeciderRequest {
-  std::vector<double> lat_buffer_vec;
+  std::vector<double> lat_body_buffer_vec;
+  std::vector<double> lat_mirror_buffer_vec;
   double lon_buffer = 0.0;
   ParkingScenarioType scenario_type;
   bool consider_obs = true;
@@ -22,15 +23,17 @@ struct TargetPoseDeciderRequest {
 
   TargetPoseDeciderRequest() {}
   TargetPoseDeciderRequest(
-      const std::vector<double>& _lat_buffer_vec, const double _lon_buffer,
-      const ParkingScenarioType _scenario_type, const bool _consider_obs = true,
-      const bool _base_on_slot = false,
+      const std::vector<double>& _lat_body_buffer_vec,
+      const std::vector<double>& _lat_mirror_buffer_vec,
+      const double _lon_buffer, const ParkingScenarioType _scenario_type,
+      const bool _consider_obs = true, const bool _base_on_slot = false,
       const ApaSlotLatPosPreference _slot_lat_pos_preference =
           ApaSlotLatPosPreference::MID,
       const bool _is_searching_stage = false,
       const geometry_lib::PathPoint ego_pose_local =
           geometry_lib::PathPoint(Eigen::Vector2d(100.0, 100.0), 90.0))
-      : lat_buffer_vec(_lat_buffer_vec),
+      : lat_body_buffer_vec(_lat_body_buffer_vec),
+        lat_mirror_buffer_vec(_lat_mirror_buffer_vec),
         lon_buffer(_lon_buffer),
         scenario_type(_scenario_type),
         consider_obs(_consider_obs),
@@ -52,7 +55,8 @@ struct TargetPoseDeciderResult {
   geometry_lib::PathPoint target_pose_global;
   double safe_lat_move_dist = 0.0;
   double safe_lon_move_dist = 0.0;
-  double safe_lat_buffer = 0.0;
+  double safe_lat_body_buffer = 0.0;
+  double safe_lat_mirror_buffer = 0.0;
   double exceed_allow_max_dx = 0.0;
 
   void Reset() {
@@ -61,7 +65,8 @@ struct TargetPoseDeciderResult {
     target_pose_global.Reset();
     safe_lat_move_dist = 0.0;
     safe_lon_move_dist = 0.0;
-    safe_lat_buffer = 0.0;
+    safe_lat_body_buffer = 0.0;
+    safe_lat_mirror_buffer = 0.0;
     exceed_allow_max_dx = 0.0;
   }
 };
@@ -95,7 +100,8 @@ class TargetPoseDecider final : public ParkingTask {
   std::shared_ptr<apa_planner::CollisionDetectorInterface>
       col_det_interface_ptr_;
   ApaSlot slot_;
-  std::vector<double> lat_buffer_vec_;
+  std::vector<double> lat_body_buffer_vec_;
+  std::vector<double> lat_mirror_buffer_vec_;
   ApaSlotLatPosPreference slot_lat_pos_preference_ =
       ApaSlotLatPosPreference::MID;
   double lon_buffer_ = 0.0;
