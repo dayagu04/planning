@@ -1679,7 +1679,20 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
     }
   }
   // consider avoid
+  size_t avoid_ratio = 2;
+  size_t min_avoid_index = 10;
+  size_t max_avoid_index = 20;
+  if (risk_level_ == planning::RiskLevel::HIGH_RISK) {
+    avoid_ratio = 1;
+    min_avoid_index = 7;
+  } else if (risk_level_ == planning::RiskLevel::LOW_RISK) {
+    min_avoid_index = 8;
+  }
   if (is_bound_avoid_ && std::fabs(avoid_dist_) > 0.1) {
+    // 避免过短，导致超调, 按照1：2的比例，放宽avoid_end_index_
+    avoid_end_index_ = std::fmax(min_avoid_index,
+        (avoid_end_index_ - weight_.proximal_index) * avoid_ratio + weight_.proximal_index);
+    avoid_end_index_ = std::fmin(max_avoid_index, avoid_end_index_);
     weight_.remotely_index = avoid_end_index_;
   }
   double lateral_dist =
