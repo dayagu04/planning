@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20251105/20251105-10-21-11/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-11-05-10-21-11_no_camera.bag.1762330897.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20251022/20251022-14-27-18/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-10-22-14-27-18_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -83,7 +83,7 @@ adas_json_value_list =  [ #adas_debug info
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_",
+                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_","ldp_handsoff_duration_",
                          ]
 
 json_vector_list = ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
@@ -334,12 +334,12 @@ fig_right_line_base_info.line('time', 'road_right_line_c3', source = adas_json_l
 
 #f_handsoff_warning_info = fig_handsoff_warning_info.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_state')
 f_handsoff_warning_info = fig_handsoff_warning_info.line('time', 'ldp_warning_audio_flag_', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
-fig_handsoff_warning_info.line('time', 'ldp_warning_audio_flag_', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
+fig_handsoff_warning_info.line('time', 'ldp_warning_audio_flag_', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
 fig_handsoff_warning_info.line('time', 'ldp_intervention_count', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_intervention_count')
-fig_handsoff_warning_info.line('time', 'lkas_intervention_rising_edge_', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'lkas_intervention_rising_edge_')
+fig_handsoff_warning_info.line('time', 'lkas_intervention_rising_edge_', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lkas_intervention_rising_edge_')
 fig_handsoff_warning_info.line('time', 'ldp_intervention_duration_', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_intervention_duration_')
-fig_handsoff_warning_info.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_state_')
-
+fig_handsoff_warning_info.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ldp_state_')
+fig_handsoff_warning_info.line('time', 'ldp_handsoff_duration_', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ldp_handsoff_duration_')
 
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'),('ldp_main_switch_', '@ldp_main_switch_'), ('ldp_enable_code_', '@ldp_enable_code_'),
                                                        ('ldp_disable_code_', '@ldp_disable_code_'), ('ldp_fault_code_', '@ldp_fault_code_')], mode='vline')
@@ -368,7 +368,7 @@ hover_right_line_base_info = HoverTool(renderers=[f_right_line_base_info], toolt
                                                          ('road_right_roadedge_begin_x', '@road_right_roadedge_begin_x'), ('road_right_roadedge_end_x', '@road_right_roadedge_end_x'),('road_right_line_c0', '@road_right_line_c0'),
                                                          ('road_right_line_c1', '@road_right_line_c1'),('road_right_line_c2', '@road_right_line_c2'),('road_right_line_c3', '@road_right_line_c3'),], mode='vline')
 hover_handsoff_warning_info = HoverTool(renderers=[f_handsoff_warning_info], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'),('ldp_warning_audio_flag_', '@ldp_warning_audio_flag_'),('ldp_intervention_count', '@ldp_intervention_count'),
-                                                                                       ('lkas_intervention_rising_edge_', '@lkas_intervention_rising_edge_'),('ldp_intervention_duration_', '@ldp_intervention_duration_'),], mode='vline')
+                                                                                       ('lkas_intervention_rising_edge_', '@lkas_intervention_rising_edge_'),('ldp_intervention_duration_', '@ldp_intervention_duration_'),('ldp_handsoff_duration_', '@ldp_handsoff_duration_'),], mode='vline')
 
 fig_machine.add_tools(hover_machine)
 fig_vehicle_state.add_tools(hover_vehicle_state)

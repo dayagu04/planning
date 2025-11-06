@@ -371,6 +371,7 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
       ldp_intervention_count_2_dur = 0.0;
       ldp_intervention_count_3_dur = 0.0;
       ldp_intervention_count_4_dur = 0.0;
+      ldp_intervention_count_5_dur = 0.0;
     }
 
   } else {
@@ -392,32 +393,36 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
       //第二次纠偏，小于3秒报警小于三秒，也会报3秒
       if (ldp_intervention_count_2_dur < 3.0) {
         ldp_warning_audio_flag_ = true;
+        ldp_handsoff_duration_ = 13.0;
         //超过三秒后，只有纠偏中止后才停止报警，
       } else if (ldp_intervention_count_2_dur > 3.0 &&
                  lkas_intervention == false) {
         ldp_warning_audio_flag_ = false;
         ldp_handsoff_duration_ = ldp_intervention_count_2_dur + 10.0;
       }
-
     } else if (ldp_intervention_count == 3) {
       ldp_intervention_count_3_dur += GetContext.get_param()->dt;
       if (ldp_intervention_count_3_dur < ldp_handsoff_duration_) {
         ldp_warning_audio_flag_ = true;
       } else {
         ldp_warning_audio_flag_ = false;
-        ldp_handsoff_duration_ += 10.0;
       }
     } else if (ldp_intervention_count == 4) {
+      if (lkas_intervention_rising_edge_ == true) {
+        ldp_handsoff_duration_ += 10.0;
+      }
       ldp_intervention_count_4_dur += GetContext.get_param()->dt;
 
       if (ldp_intervention_count_4_dur < ldp_handsoff_duration_) {
         ldp_warning_audio_flag_ = true;
       } else {
         ldp_warning_audio_flag_ = false;
-        ldp_handsoff_duration_ += 10.0;
       }
 
     } else if (ldp_intervention_count == 5) {
+      if (lkas_intervention_rising_edge_ == true) {
+        ldp_handsoff_duration_ += 10.0;
+      }
       ldp_intervention_count_5_dur += GetContext.get_param()->dt;
 
       if (ldp_intervention_count_5_dur < ldp_handsoff_duration_) {
@@ -1000,6 +1005,7 @@ void AdasFunction::Log(void) {
     JSON_DEBUG_VALUE("lkas_intervention_rising_edge_",
                      lkas_intervention_rising_edge_);
     JSON_DEBUG_VALUE("ldp_intervention_duration_", ldp_intervention_duration_);
+    JSON_DEBUG_VALUE("ldp_handsoff_duration_", ldp_handsoff_duration_);
   }
   // adas debug info
 
