@@ -519,17 +519,6 @@ void RouteInfo::CaculateMergeInfo(
   if (!merge_info.empty()) {
     const iflymapdata::sdpro::LinkInfo_Link* seg_of_first_road_merge;
     const iflymapdata::sdpro::LinkInfo_Link* next_seg_of_first_road_merge;
-    for (int i = 0; i < merge_info.size(); i++) {
-      const auto& merge_info_temp = merge_info[i];
-      if (merge_info_temp.second > kEpsilon) {
-        seg_of_first_road_merge = merge_info_temp.first;
-        next_seg_of_first_road_merge =
-            sdpro_map.GetNextLinkOnRoute(merge_info_temp.first->id());
-        break;
-      } else {
-        continue;
-      }
-    }
     int traverse_num = 0;
     bool is_find_first_merge_onfo = false;
     for (int i = 0; i < merge_info.size(); i++) {
@@ -599,10 +588,13 @@ void RouteInfo::CaculateMergeInfo(
           NOASplitRegionInfo first_merge_region_lane_tupo_info;
           const auto merge_region_lane_tupo_info =
               CalculateMergeRegionLaneTupoInfo(
-                  *seg_of_first_road_merge, sdpro_map, merge_info, split_info,
+                  *merge_seg, sdpro_map, merge_info, split_info,
                   route_info_output_.distance_to_first_road_merge);
           if (merge_region_lane_tupo_info.is_valid) {
             first_merge_region_lane_tupo_info = merge_region_lane_tupo_info;
+            seg_of_first_road_merge = merge_seg;
+            next_seg_of_first_road_merge =
+                sdpro_map.GetNextLinkOnRoute(seg_of_first_road_merge->id());
 
             first_merge_region_lane_tupo_info.distance_to_split_point =
                 merge_info_temp.second;
@@ -653,7 +645,8 @@ void RouteInfo::CaculateMergeInfo(
       }
     }
 
-    if (next_seg_of_first_road_merge != nullptr) {
+    if (next_seg_of_first_road_merge != nullptr &&
+        seg_of_first_road_merge != nullptr) {
       if (sdpro_map.isRamp(seg_of_first_road_merge->link_type()) &&
           sdpro_map.isRamp(next_seg_of_first_road_merge->link_type())) {
         route_info_output_.is_continuous_ramp = true;
@@ -808,7 +801,7 @@ void RouteInfo::CaculateSplitInfo(
                !sdpro_map.isSaPa(split_link->link_type()) &&
                !sdpro_map.isTollStation(split_link->link_type()) &&
                excluded_link_classes.find(other_link->link_class()) ==
-                  excluded_link_classes.end())) {
+                   excluded_link_classes.end())) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
