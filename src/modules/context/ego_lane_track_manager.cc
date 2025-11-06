@@ -329,6 +329,8 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
   auto lc_state = coarse_planning_info.target_state;
   int target_lane_vitrual_id =
       lane_change_decider_output.target_lane_virtual_id;
+  const int fix_lane_virtual_id =
+      lane_change_decider_output.fix_lane_virtual_id;
   int target_lane_order_id = 0;
   int origin_lane_virtual_id =
       lane_change_decider_output.origin_lane_virtual_id;
@@ -349,7 +351,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
             target_lane_vitrual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane, true);
+            virtual_id_mapped_lane, target_lane_vitrual_id == fix_lane_virtual_id);
         if (current_relative_id_lane_mapping_cost <
             target_lane_maping_diff_total) {
           target_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
@@ -388,7 +390,7 @@ void EgoLaneTrackManger::UpdateLaneVirtualId(
       if (relative_id_lane != nullptr) {
         current_relative_id_lane_mapping_cost = ComputeLanesMatchlaterakDisCost(
             origin_lane_virtual_id, relative_id_lane, relative_id_lanes,
-            virtual_id_mapped_lane, false);
+            virtual_id_mapped_lane, origin_lane_virtual_id == fix_lane_virtual_id);
         if (current_relative_id_lane_mapping_cost <
             origin_lane_maping_diff_total) {
           origin_lane_maping_diff_total = current_relative_id_lane_mapping_cost;
@@ -647,6 +649,10 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
     const std::vector<int>& order_ids,
     const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
         virtual_id_mapped_lane) {
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region =
+      ego_lane_road_right_decider_output.is_merge_region;
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto lc_request_direction = lane_change_decider_output.lc_request;
@@ -713,9 +719,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
           ? 0.01
           : kCumuLateralDistanceCostWeight;
   double k_lane_change_order_id_diff_wegiht =
-      (is_lc_change && origin_lane_order_id != -1)
-          ? kLaneChangeOrderidDiffWeight
-          : 0.0;
+      (is_lc_change && origin_lane_order_id != -1 && ego_in_split_region_) ? kLaneChangeOrderidDiffWeight : 0.0;
   int k_lane_change_order_id_diff = 0;
   if (is_lc_change) {
     if (lc_request_direction == LEFT_CHANGE) {
@@ -726,7 +730,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   }
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
-      order_ids.size() < 2) {
+      !ego_in_split_region_) {
     lateral_distance_cost_weight = 0.28;
   }
 
@@ -775,7 +779,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
         }
         int point_nums = 0;
         double total_lateral_offset = 0.0;
-        double target_ego_s = 0.0;
+        double begin_ego_s = 50.0;
         double target_ego_l = 0.0;
         Point2D ego_cart_target_frenet;
         auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
@@ -786,8 +790,13 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
                                            ego_cart_target_frenet)) {
           continue;
         } else {
-          target_ego_s = ego_cart_target_frenet.x;
+          if (is_merge_region) {
+            begin_ego_s = ego_cart_target_frenet.x - 20.0;
+            target_ego_l = ego_cart_target_frenet.y;
+          } else {
+          begin_ego_s = ego_cart_target_frenet.x;
           target_ego_l = ego_cart_target_frenet.y;
+          }
         }
         if (road_radius > kDefaultRoadRadius) {
           int select_lane_point_interval = 1;
@@ -809,13 +818,13 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
               s = cur_point_frenet.x;
               lateral_offset = cur_point_frenet.y;
             }
-            if (s < target_ego_s) {
+            if (s < begin_ego_s) {
               continue;
             }
             total_lateral_offset += lateral_offset;
             point_nums += 1;
             if (point_nums >= kDefaultPointNums ||
-                s > target_ego_s + kDefaultMappingConsiderLaneLength) {
+                s > ego_cart_target_frenet.x + kDefaultMappingConsiderLaneLength) {
               break;
             }
           }
@@ -837,11 +846,11 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
               s = cur_point_frenet.x;
               lateral_offset = cur_point_frenet.y;
             }
-            if (s < target_ego_s) {
+            if (s < begin_ego_s) {
               continue;
             }
             if (point_nums >= kDefaultPointNums ||
-                s > target_ego_s + kConsiderLaneLineLength) {
+                s > ego_cart_target_frenet.x + kConsiderLaneLineLength) {
               break;
             }
             total_lateral_offset += lateral_offset;
@@ -2035,6 +2044,10 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
   double average_curv = 0.0;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region =
+      ego_lane_road_right_decider_output.is_merge_region;
   for (const auto& relative_id_lane : relative_id_lanes) {
     if (relative_id_lane->get_relative_id() == 0) {
       average_curv = ComputeTargetLaneSpecifiedRangeCurvature(relative_id_lane);
@@ -2056,12 +2069,18 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
       double lane_mapping_cost = 0.0;
       double total_lateral_offset = 0.0;
       int point_nums = 0;
-      double target_ego_s = 0.0;
+      double target_ego_s = 50.0;
+      double begin_ego_s = 50.0;
       double target_ego_l = 0.0;
       if (!target_lane_frenet_coord->XYToSL(ego_state->ego_pose().x,
                                             ego_state->ego_pose().y,
                                             &target_ego_s, &target_ego_l)) {
         return default_lane_mapping_cost;
+      }
+      if (is_merge_region) {
+        begin_ego_s = target_ego_s - 20.0;
+      } else {
+        begin_ego_s = target_ego_s;
       }
 
       if (road_radius > kDefaultRoadRadius) {
@@ -2083,7 +2102,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
           } else {
             lateral_offset = l;
           }
-          if (s < target_ego_s) {
+          if (s < begin_ego_s) {
             continue;
           }
           if (s > target_ego_s + kDefaultMappingConsiderLaneLength) {
@@ -2112,7 +2131,7 @@ double EgoLaneTrackManger::ComputeLanesMatchlaterakDisCost(
           } else {
             lateral_offset = l;
           }
-          if (s < target_ego_s) {
+          if (s < begin_ego_s) {
             continue;
           }
           if (point_nums >= kDefaultPointNums ||
@@ -2909,22 +2928,48 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
   // }
   Point2D ego_point = {ego_state->planning_init_point().x,
                        ego_state->planning_init_point().y};
-  if (order_ids.size() < 2) {
-    ego_in_split_region_ = false;
-    return;
-  } else if (order_ids.size() > 2) {
+  // if (order_ids.size() < 2) {
+  //   ego_in_split_region_ = false;
+  //   return;
+  // }
+  if (order_ids.size() > 2) {
     ego_in_split_region_ = true;
     return;
   } else {
-    if (order_ids[0] < relative_id_lanes.size()) {
-      relative_left_lane = relative_id_lanes[order_ids[0]];
-    }
-    if (order_ids[1] < relative_id_lanes.size()) {
-      relative_right_lane = relative_id_lanes[order_ids[1]];
-    }
-
     bool has_left_lane = false;
     bool has_right_lane = false;
+    if (order_ids.size() == 2) {
+      if (order_ids[0] < relative_id_lanes.size()) {
+        relative_left_lane = relative_id_lanes[order_ids[0]];
+      }
+      if (order_ids[1] < relative_id_lanes.size()) {
+        relative_right_lane = relative_id_lanes[order_ids[1]];
+      }
+    } else {
+      double k_right_lane_lateral_distance = -std::numeric_limits<double>::max();
+      double k_left_lane_lateral_distance = std::numeric_limits<double>::max();
+      int left_lane_index = -1;
+      int right_lane_index = -1;
+
+      for (const auto& relative_id_lane : relative_id_lanes) {
+        double ego_to_lane_lateral_distance = relative_id_lane->get_ego_lateral_offset();
+        if (ego_to_lane_lateral_distance >= 0 && ego_to_lane_lateral_distance < k_left_lane_lateral_distance){
+          k_left_lane_lateral_distance = ego_to_lane_lateral_distance;
+          right_lane_index = relative_id_lane->get_order_id();
+        }
+        if (ego_to_lane_lateral_distance < 0 && ego_to_lane_lateral_distance > k_right_lane_lateral_distance){
+          k_right_lane_lateral_distance = ego_to_lane_lateral_distance;
+          left_lane_index = relative_id_lane->get_order_id();
+        }
+      }
+      if (left_lane_index != -1 && left_lane_index < relative_id_lanes.size()) {
+        relative_left_lane = relative_id_lanes[left_lane_index];
+      }
+      if (right_lane_index != -1 && right_lane_index < relative_id_lanes.size()) {
+        relative_right_lane = relative_id_lanes[right_lane_index];
+      }
+    }
+
     if (relative_left_lane != nullptr) {
       if (relative_left_lane->get_lane_frenet_coord() != nullptr) {
         has_left_lane = true;
@@ -2935,7 +2980,6 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
         has_right_lane = true;
       }
     }
-
     const auto& relative_left_lane_points = relative_left_lane->lane_points();
     if (!has_left_lane || !has_right_lane ||
         relative_left_lane_points.size() < 3) {
@@ -2986,7 +3030,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     far_average_l = std::fabs(far_pt_sum_l / far_pt_count);
 
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
-         near_average_l < kExistSplitEgoRearLateralDisThd) ||
+        near_average_l < kExistSplitEgoRearLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       ego_in_split_region_ = true;
       return;
