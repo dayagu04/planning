@@ -110,7 +110,9 @@ class HybridAStarInterface {
     return time_benchmark_;
   }
 
-  const SearchTrajectoryInfo& GetSearchTrajInfo() const { return search_traj_info_; }
+  const SearchTrajectoryInfo& GetSearchTrajInfo() const {
+    return search_traj_info_;
+  }
 
  private:
   int UpdateEDT();
@@ -133,9 +135,12 @@ class HybridAStarInterface {
   void PathSearchForScenarioTry(TargetPoseRegulator& regulator);
 
   // 基于搜索的路径生成API
-  void PathSearchForScenarioRunning(TargetPoseRegulator& regulator,
-                                    const float ego_obs_dist,
-                                    const bool is_ego_overlap_with_slot);
+  void ParkInPathSearchForScenarioRunning(TargetPoseRegulator& regulator,
+                                          const float ego_obs_dist,
+                                          const bool is_ego_overlap_with_slot);
+  void ParkOutPathSearchForScenarioRunning(TargetPoseRegulator& regulator,
+                                           const float ego_obs_dist,
+                                           const bool is_ego_overlap_with_slot);
 
   // todo: move it to safe buffer decider
   // return safe buffer when path is insidet slot.
@@ -146,11 +151,13 @@ class HybridAStarInterface {
                                         const float ego_obs_dist,
                                         const bool is_ego_overlap_with_slot);
 
-  void PathCandidateCompare();
+  void PathCandidateCompare(const size_t gear_num);
 
   void GenerateRefLine();
   void ParkingDirectionAttempt(const float& advised_lat_buffer_inside);
   const float GenLatBufferForCandidatePose();
+  void DebugSearchTraj(const size_t path_index);
+  const bool ShouldStopSearchEarly(double& search_time, const size_t path_index);
 
  private:
   // read vehicle param from file
@@ -163,7 +170,9 @@ class HybridAStarInterface {
   std::shared_ptr<GridSearch> dp_heuristic_generator_;
   // path = astar node path + rs path.
   HybridAStarResult* best_traj_;
-  std::array<HybridAStarResult, 3> traj_candidates_;
+  std::array<HybridAStarResult, 9> traj_candidates_;
+
+  size_t traj_candidates_size_;
 
   Pose2f ego_state_;
   // 对于垂直、平行车位，goal_state位于车位中心线上.
