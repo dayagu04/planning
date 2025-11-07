@@ -277,8 +277,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
 
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
-  bool target_left_boundary_exist_virtual_type = false;
-  bool target_right_boundary_exist_virtual_type = false;
+  bool target_left_boundary_exist_virtual_type = true;
+  bool target_right_boundary_exist_virtual_type = true;
 
   bool exist_left_direction_merge = false;
   bool exist_right_direction_merge = false;
