@@ -731,6 +731,8 @@ const bool ParallelParkInScenario::GenTlane() {
   obs_pt_local_vec_.clear();
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
+      CollisionDetector::Paramters(kDeletedObsDistOutSlot, true));
 
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
@@ -781,7 +783,7 @@ const bool ParallelParkInScenario::GenTlane() {
 
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pt_local, ego_info_under_slot.cur_pose,
-              kDeletedObsDistOutSlot)) {
+              0.0168)) {
         // in_ego_cnt++;
         continue;
       }

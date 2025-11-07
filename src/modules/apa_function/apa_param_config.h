@@ -247,6 +247,8 @@ struct ParkingLatLonPathBuffer {
   float in_slot_body_lat_buffer;
   float in_slot_mirror_lat_buffer;
   float in_slot_extra_turn_lat_buffer;
+  float parallel_col_buffer_in_slot;
+  float parallel_col_small_buffer_in_slot;
 };
 
 struct ParkingLatLonSpeedBuffer {

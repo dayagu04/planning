@@ -2099,7 +2099,7 @@ void ParallelPathGenerator::AddPathSegToOutPut(
 
 const bool ParallelPathGenerator::CheckEgoInSlot() const {
   // Todo: use slot occupied ratio
-  return input_.ego_info_under_slot.slot_occupied_ratio > 0.2;
+  return input_.ego_info_under_slot.slot_occupied_ratio > 0.0;
 }
 
 // search from the inside parking space to outside
@@ -2440,7 +2440,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
       // 计算路径中“短路径段”（长度 < 0.3m）的数量
       path.short_segment_count = 0;  // 初始化计数器
-      const double short_segment_threshold = 0.3;
+      const double short_segment_threshold = 0.16;
       bool heading_turned = false;
       double start_heading = path.path_segment_vec.front().GetStartHeading();
       for (const auto& seg : path.path_segment_vec) {
@@ -3014,6 +3014,27 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
   return success;
 }
 
+const bool ParallelPathGenerator::CheckShortToFirstPath(
+    std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+    const double short_threshold) {
+  if (path_seg_vec.empty()) {
+    ILOG_INFO << "path_seg_vec is empty";
+    return false;
+  }
+  if (short_threshold < kEps) {
+    ILOG_INFO << "short_threshold is too small short_threshold = "
+              << short_threshold;
+    return false;
+  }
+  const int first_idx = 0;
+  if (path_seg_vec[first_idx].GetLength() < short_threshold) {
+    ILOG_INFO << "path_seg_vec[" << first_idx
+              << "] = " << path_seg_vec[first_idx].GetLength();
+    return false;
+  }
+  return true;
+}
+
 const bool ParallelPathGenerator::InversedTrialsByGivenGear(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
     const pnc::geometry_lib::PathPoint& start_pose,
@@ -3173,8 +3194,8 @@ const bool ParallelPathGenerator::CalcArcStepLimitPose(
 
   pnc::geometry_lib::PathSegment arc_path(steer, gear, arc);
   const auto& col_res = TrimPathByCollisionDetection(arc_path, buffer);
-  // ILOG_INFO << "forward_col_pt =" << forward_col_pt.transpose() <<
-  // std::endl;
+  // ILOG_INFO << "TrimPathByCollisionDetection buffer =" << buffer;
+  // ILOG_INFO << "arc.length = " << arc_path.GetLength();
 
   arc.is_ignored = true;
   // get updated arc info of collision free
@@ -3951,6 +3972,21 @@ const bool ParallelPathGenerator::ParallelAdjustPlan() {
     }
     if (!success) {
       ILOG_INFO << "align body failed!";
+      pnc::geometry_lib::PathPoint target_pose(
+          input_.tlane.pt_terminal_pos, calc_params_.target_line.heading);
+      pnc::geometry_lib::LineSegment last_line;
+      last_line.pA = current_pose.pos;
+      last_line.heading = current_pose.heading;
+
+      if (OneLinePlanAlongEgoHeading(last_line, target_pose)) {
+        ILOG_INFO << "calc line success";
+        if (!last_line.is_ignored) {
+          AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
+              pnc::geometry_lib::CalLineSegGear(last_line), last_line));
+          ILOG_INFO << "last line exist";
+          return true;
+        }
+      }
       return false;
     }
   }

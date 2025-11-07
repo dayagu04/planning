@@ -14,6 +14,7 @@ namespace apa_planner {
 static const double kColBufferInSlot = 0.25;       // in slot
 static const double kColSmallBufferInSlot = 0.16;  // in slot
 static const double kLonBufferTrippleStep = 0.2;   // tripple step
+static const double MinLengthPath = 0.16;
 
 void ParallelOutPathGenerator::Reset() {
   output_.Reset();
@@ -49,9 +50,12 @@ void ParallelOutPathGenerator::Preprocess() {
 
   calc_params_.lat_outside_slot_buffer = 0.04;
   if (input_.tlane.pt_inside.x() - input_.tlane.pt_outside.x() >= 6.2) {
-    calc_params_.lon_buffer_rev_trials = kColBufferInSlot;
+    calc_params_.lon_buffer_rev_trials =
+        apa_param.GetParam().lat_lon_path_buffer.parallel_col_buffer_in_slot;
   } else {
-    calc_params_.lon_buffer_rev_trials = kColSmallBufferInSlot;
+    calc_params_.lon_buffer_rev_trials =
+        apa_param.GetParam()
+            .lat_lon_path_buffer.parallel_col_small_buffer_in_slot;
   }
 
   calc_params_.is_left_side =
@@ -107,8 +111,10 @@ const bool ParallelOutPathGenerator::Update() {
     success = InversedTrialsByGivenGear(inversed_path_seg_vec,
                                         input_.ego_info_under_slot.cur_pose,
                                         input_.ref_gear);
-    if (!success || std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
-                        (input_.tlane.slot_width * 0.5)) {
+    if (!success ||
+        std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
+            (input_.tlane.slot_width * 0.5) ||
+        !CheckShortToFirstPath(inversed_path_seg_vec, MinLengthPath)) {
       inversed_path_seg_vec.clear();
       success = AdvancedInversedTrialsInSlot(
           inversed_path_seg_vec, input_.ego_info_under_slot.cur_pose);
