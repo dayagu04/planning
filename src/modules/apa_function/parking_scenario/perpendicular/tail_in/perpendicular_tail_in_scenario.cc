@@ -1121,7 +1121,7 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   config.exceed_pre_search_box_penalty = 68.0f;
   config.exceed_intersting_box_penalty = 11.0f;
   config.borrow_slot_penalty = 3.68f;
-  config.expect_steer_penalty = 0.3f;
+  config.expect_steer_penalty = 1.68f;
 
   // gen request
   if (apa_world_ptr_->GetMeasureDataManagerPtr()->GetFoldMirrorFlag()) {
@@ -1169,6 +1169,8 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
                              param.max_real_gear_shift_number_parking -
                                  frame_.gear_change_count));
   }
+
+  request.max_scurve_number = 2;
 
   // now, when dynamic plan, the path should not shift gear, and the gear must
   // be reverse
@@ -1314,6 +1316,7 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnceHybridAstarThread() {
                                hybrid_astar_response_)) {
     ILOG_INFO << "response not reasonable";
     hybrid_astar_response_.Clear();
+    response.Clear();
   }
 
   FillPathPointGlobalFromHybridPath(response);
@@ -1797,6 +1800,7 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
       global_path_point.type = static_cast<int>(type_vec[j]);
       global_path_point.kappa = kappa_vec[j];
       global_path_point.s = s_vec[j];
+      global_path_point.gear = GetSegGearFromAstarGear(result.gear_vec[i]);
       if (i == 0) {
         current_path_point_global_vec_.emplace_back(global_path_point);
       }

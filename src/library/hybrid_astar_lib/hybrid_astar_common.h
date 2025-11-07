@@ -551,6 +551,12 @@ bool IsTurn(const AstarPathSteer steer);
 
 bool IsTurn(const uint8_t steer);
 
+bool IsSteerOpposite(const AstarPathSteer left, const AstarPathSteer right);
+
+bool IsSteerOpposite(const uint8_t left, const uint8_t right);
+
+bool IsSteerOpposite(const float left, const float right);
+
 AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear);
 
 uint8_t GetSegGearFromAstarGear(const AstarPathGear gear);
