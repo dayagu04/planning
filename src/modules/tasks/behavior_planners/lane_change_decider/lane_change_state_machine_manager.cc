@@ -2457,16 +2457,20 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (agent_s + target_lane_node->node_length() * 0.5 >= ego_sl_bd.s_end) {
       continue;  // 车头落后自车就是后车
     }
-    if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
-        agent_s + target_lane_node->node_length() * 0.5 >
-            ego_sl_bd.s_start - 5.0) {
-      continue;  // 过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。
+    // if (target_lane_virtual_id != nearest_lane->get_virtual_id() &&
+    //     agent_s + target_lane_node->node_length() * 0.5 >
+    //         ego_sl_bd.s_start - 5.0) {
+    //   continue;  // 过滤：预测轨迹进入目标车道，但是只是近距离跟随的后车。banned: 可变车道会分叉
+    // }
+    const double target_lane_width = target_lane->width_by_s(agent_s);
+    const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
+    const auto &agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
+    bool is_out_target_lane = agent_bd.l_start > target_lane_width * 0.5 
+                            || agent_bd.l_end < -target_lane_width * 0.5;
+    if(is_out_target_lane) {
+      continue;
     }
-    // const double target_lane_width = target_lane->width_by_s(agent_s);
-    // const auto agent =
-    // agent_mgr->GetAgent(target_lane_node->node_agent_id()); const auto
-    // &agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
-    const auto& agent_trajs =
+    const auto &agent_trajs =
         target_lane_node->node_trajectories_used_by_st_graph();
     if (agent_trajs.empty()) {
       continue;
@@ -4275,8 +4279,11 @@ bool LaneChangeStateMachineManager::IsFilterAgent(
     agent_prediction_traj.l = frenet_point.y;
     agent_prediction_traj.t = agent_traj_point.absolute_time();
     agent_prediction_traj.v = agent_traj_point.vel();
+    agent_prediction_traj.a = agent_traj_point.acc();
+    agent_prediction_traj.jerk = agent_traj_point.jerk();
     agent_prediction_traj.heading_angle =
         agent_traj_point.theta();  // add store heading angle
+    
     agent_prediction_trajs->emplace_back(agent_prediction_traj);
   }
 
