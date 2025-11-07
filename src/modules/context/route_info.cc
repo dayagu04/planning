@@ -1974,8 +1974,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       int ego_seq = left_lane_num + 1;
       std::vector<int> lc_num_task;
       if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
-          mlc_type = None_MLC;
-          lc_num_task.clear();
+        mlc_type = None_MLC;
+        lc_num_task.clear();
       } else if (ego_seq > maxVal_seq) {
         int err = ego_seq - maxVal_seq;
         for (int i = 0; i < err; i++) {
@@ -2891,6 +2891,13 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   double fp_start_length = 0;
   iflymapdata::sdpro::FeaturePoint start_fp;
   iflymapdata::sdpro::FeaturePoint end_fp;
+  const iflymapdata::sdpro::LinkInfo_Link* next_split_link;
+  for (const auto& split_info : split_info_vec) {
+    if (split_info.first->id() == split_segment.id()) {
+      next_split_link = split_info.first;
+      break;
+    }
+  }
 
   split_region_info.split_link_id = split_segment.id();
 
@@ -2928,12 +2935,12 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   double valid_dis = NL_NMAX;
 
   if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
-                                            split_info_vec[0].first)) {
+                                            next_split_link)) {
     valid_dis = std::min(valid_dis, dis_to_last_split_point);
   }
 
   if (CalculateDistanceNextToLastMergePoint(&dis_to_last_merge_point,
-                                            split_info_vec[0].first)) {
+                                            next_split_link)) {
     valid_dis = std::min(valid_dis, dis_to_last_merge_point);
   }
 
@@ -3224,14 +3231,20 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
   double dis_to_last_split_point = 0.0;
   double dis_to_last_merge_point = 0.0;
   double valid_dis = NL_NMAX;
-
+  const iflymapdata::sdpro::LinkInfo_Link* next_merge_link;
+  for (const auto& merge_info : merge_info_vec) {
+    if (merge_info.first->id() == merge_segment.id()) {
+      next_merge_link = merge_info.first;
+      break;
+    }
+  }
   if (CalculateDistanceNextToLastSplitPoint(&dis_to_last_split_point,
-                                            merge_info_vec[0].first)) {
+                                            next_merge_link)) {
     valid_dis = std::min(valid_dis, dis_to_last_split_point);
   }
 
   if (CalculateDistanceNextToLastMergePoint(&dis_to_last_merge_point,
-                                            merge_info_vec[0].first)) {
+                                            next_merge_link)) {
     valid_dis = std::min(valid_dis, dis_to_last_merge_point);
   }
 
