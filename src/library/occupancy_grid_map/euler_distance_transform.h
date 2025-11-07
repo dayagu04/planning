@@ -85,6 +85,8 @@ class EulerDistanceTransform : public OccupancyGridCoordinate {
   const bool IsCollisionForPoint(Transform2f *tf, const AstarPathGear gear,
                                  FootPrintCircleModel *footprint_model);
 
+  const float DistanceCheckForPoint(const Pose2f &pose, const float radius);
+
  private:
   EDTData data_;
 

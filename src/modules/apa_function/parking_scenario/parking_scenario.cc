@@ -754,9 +754,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     return;
   }
 
-  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
-  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
-  speed_debug->Clear();
+  ClearSpeedDebugInfo();
 
   // check planning status
   if (CheckPlanSkip()) {
@@ -809,10 +807,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
     double stop_s =
         std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
     stop_decider->AddStopDecisionByDistance(
-        stop_s,
-        frame_.remain_dist_obs < frame_.remain_dist_slot_jump
-            ? LonDecisionReason::REMAIN_DIST
-            : LonDecisionReason::SLOT_POSE_CHANGE,
+        stop_s, LonDecisionReason::REMAIN_DIST,
         traj_stitcher->GetConstStitchPath());
   }
 
@@ -832,8 +827,10 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   const ParkingSpeedMode& park_speed_mode =
       apa_world_ptr_->GetStateMachineManagerPtr()->GetParkingSpeedMode();
-  speed_limit_decider->Execute(traj_stitcher->GetMutableStitchPath(),
-                               &speed_decisions, park_speed_mode);
+  speed_limit_decider->Execute(
+      traj_stitcher->GetMutableStitchPath(),
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot,
+      park_speed_mode, &speed_decisions);
 
   // task: generate dp speed
   std::shared_ptr<DpSpeedOptimizer> dp_speed_optimizer =
@@ -1267,6 +1264,7 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
 
 void ParkingScenario::ScenarioSuspend() {
   ClearTimeBySuspendStatus();
+  ClearSpeedDebugInfo();
 
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
@@ -1279,6 +1277,13 @@ void ParkingScenario::ClearTimeBySuspendStatus() {
   frame_.stuck_obs_time = 0.0;
   frame_.dynamic_plan_time = 0.0;
   frame_.replan_fail_time = 0.0;
+  return;
+}
+
+void ParkingScenario::ClearSpeedDebugInfo() {
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
+  speed_debug->Clear();
   return;
 }
 

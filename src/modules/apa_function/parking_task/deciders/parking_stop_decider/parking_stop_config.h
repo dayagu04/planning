@@ -15,6 +15,15 @@ struct ParkStopConfig {
 
   double min_lon_buffer;
 
+  bool enable_uss;
+  bool enable_ground_line;
+  bool enable_occ;
+
+  // just consider moving obstacle (v > 0.1m/s). Static obstacle or low speed
+  // obstacle use remain distance for now.
+  bool enable_dynamic_od_veh;
+  bool enable_dynamic_od_living_things;
+
   void Init();
 };
 

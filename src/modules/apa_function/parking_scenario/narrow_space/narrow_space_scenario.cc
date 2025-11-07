@@ -30,6 +30,7 @@
 #include "spiral_typedefs.h"
 #include "transform2d.h"
 #include "utils_math.h"
+#include "src/modules/apa_function/util/apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -61,16 +62,12 @@ void NarrowSpaceScenario::Reset() {
 }
 
 void NarrowSpaceScenario::Init() {
-  const ApaParameters& params = apa_param.GetParam();
-
   // todo, system should use same vehicle parameter configuration file and
   // data structure.
+  VehicleParam vehicle_param;
+  UpdateVehicleParam(vehicle_param);
   ILOG_INFO << "init astar thread";
-
-  thread_.Init(params.rear_overhanging, params.car_length, params.car_width,
-               params.steer_ratio, params.wheel_base, params.min_turn_radius,
-               (params.max_car_width - params.car_width) * 0.5);
-
+  thread_.Init(vehicle_param);
   thread_.Start();
   response_.Clear();
 

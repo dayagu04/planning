@@ -60,6 +60,8 @@ class Trajectory : public std::vector<TrajectoryPoint> {
 
   void ExtendTraj(const double length);
 
+  void DebugString() const;
+
   bool traj_elements_vec_ready_flag_ = false;
   std::vector<double> x_vec_{};
   std::vector<double> y_vec_{};

@@ -35,10 +35,7 @@ class HybridAStarThreadSolver {
 
   ~HybridAStarThreadSolver();
 
-  int Init(const float back_edge_to_rear_axis, const float car_length,
-           const float car_width, const float steer_ratio,
-           const float wheel_base, const float min_turn_radius,
-           const float mirror_width);
+  int Init(const VehicleParam &veh_param);
 
   void SetRequest(const ParkObstacleList& obs_list,
                   const AstarRequest& request);
@@ -86,6 +83,9 @@ class HybridAStarThreadSolver {
 
   // for debug
   const Pose2f GetAstarTargetPose();
+
+  // for debug
+  void GetAstarRoundRobinTarget(std::vector<Pose2f>& candidates);
 
   // for debug
   void GetNodeListMessageInThread(

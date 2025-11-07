@@ -29,33 +29,11 @@ HybridAStarInterface::HybridAStarInterface() {}
 
 HybridAStarInterface::~HybridAStarInterface() {}
 
-int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
-                               const float car_length, const float car_width,
-                               const float steer_ratio, const float wheel_base,
-                               const float min_turn_radius,
-                               const float mirror_width) {
+int HybridAStarInterface::Init(const VehicleParam &veh_param) {
   config_.InitConfig();
 
   // read vehicle params
-  vehicle_param_.length = car_length;
-  vehicle_param_.width = car_width;
-  vehicle_param_.max_width = car_width + mirror_width * 2;
-  vehicle_param_.front_overhanging =
-      car_length - back_edge_to_rear_axis - wheel_base;
-  vehicle_param_.steer_ratio = steer_ratio;
-  vehicle_param_.wheel_base = wheel_base;
-  vehicle_param_.min_turn_radius =
-      min_turn_radius + config_.node_turn_radius_buffer;
-  vehicle_param_.mirror_width = mirror_width;
-  vehicle_param_.rear_edge_to_rear_axle = back_edge_to_rear_axis;
-  vehicle_param_.front_edge_to_rear_axle = car_length - back_edge_to_rear_axis;
-  float front_wheel =
-      std::atan(vehicle_param_.wheel_base /
-                std::max(0.001, vehicle_param_.min_turn_radius));
-
-  vehicle_param_.max_steer_angle =
-      std::fabs(front_wheel * vehicle_param_.steer_ratio);
-
+  vehicle_param_ = veh_param;
   search_state_ = AstarSearchState::NONE;
 
   ogm_.Init();
@@ -71,7 +49,7 @@ int HybridAStarInterface::Init(const float back_edge_to_rear_axis,
                                                 &edt_, &clear_zone_, &ref_line_,
                                                 dp_heuristic_generator_);
   hybrid_astar_->Init();
-  gear_switch_number_scenario_try_ = -1;
+  gear_switch_number_scenario_try_ = config_.max_gear_change_num;
   time_benchmark_.Clear();
   search_traj_info_.Clear();
 
@@ -158,6 +136,8 @@ void HybridAStarInterface::UpdateOutput() {
       gear_switch_number_scenario_try_ < 0) {
     request_.gear_switch_num = config_.max_gear_change_num;
   } else {
+    // compared to TRY_SEARCHING, use conservative gear switch strategy for
+    // ASTAR_SEARCHING
     request_.gear_switch_num = std::min(gear_switch_number_scenario_try_ + 8,
                                         config_.max_gear_change_num);
   }
@@ -1185,6 +1165,11 @@ const bool HybridAStarInterface::ShouldStopSearchEarly(double& search_time,
     return true;
   }
   return false;
+}
+
+void HybridAStarInterface::GetRoundRobinTarget(std::vector<Pose2f>& candidates) {
+  hybrid_astar_->GetRoundRobinTarget(candidates);
+  return;
 }
 
 }  // namespace planning

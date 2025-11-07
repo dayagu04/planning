@@ -24,10 +24,7 @@ class HybridAStarInterface {
 
   // todo: need to unify same vehicle chassis params for on lane driving and
   // parking
-  int Init(const float back_edge_to_rear_axis, const float car_length,
-           const float car_width, const float steer_ratio,
-           const float wheel_base, const float min_turn_radius,
-           const float mirror_width);
+  int Init(const VehicleParam& veh_param);
 
   // for now, use slot coordinate. you can call this API in one thread.
   void GeneratePath(const Eigen::Vector3d& start, const Eigen::Vector3d& end,
@@ -114,6 +111,9 @@ class HybridAStarInterface {
     return search_traj_info_;
   }
 
+  // for debug
+  void GetRoundRobinTarget(std::vector<Pose2f>& candidates);
+
  private:
   int UpdateEDT();
 
@@ -176,7 +176,7 @@ class HybridAStarInterface {
 
   Pose2f ego_state_;
   // 对于垂直、平行车位，goal_state位于车位中心线上.
-  // 位姿调节器依赖这个pose重新计算搜索目标点.
+  // 位姿调节器依赖这个pose重新计算搜索目标点 target_regulator_goal.
   Pose2f goal_state_;
   // 目标调节器会计算一个合适的目标
   Pose2f target_regulator_goal_;

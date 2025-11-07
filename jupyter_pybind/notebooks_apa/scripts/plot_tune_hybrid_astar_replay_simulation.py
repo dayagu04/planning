@@ -19,7 +19,7 @@ from jupyter_pybind import replay_simulation_hybrid_astar
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo,ControlOutput
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_82007/trigger/20251023/20251023-15-09-12/park_in_data_collection_CHERY_M32T_82007_EVENT_FILTER_2025-10-23-15-09-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_82007/trigger/20251109/20251109-13-32-34/park_in_data_collection_CHERY_M32T_82007_EVENT_FILTER_2025-11-09-13-32-34_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -113,7 +113,7 @@ replay_simulation_hybrid_astar.Init()
 
 # record包中的定位信息
 data_path_end = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
-data_astar_target_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
+data_astar_target_pos = ColumnDataSource(data = {'x_vec':[], 'y_vec':[]})
 data_astar_collision_pos = ColumnDataSource(data = {'car_xn':[], 'car_yn':[]})
 # 路径关键点处的圆
 data_anchor_point_circle = ColumnDataSource(data = {'car_circle_xn':[], 'car_circle_yn':[], 'car_circle_rn':[]})
@@ -163,7 +163,7 @@ fig1.line('plan_path_y', 'plan_path_x', source = optimizer_traj, line_width = 8,
 fig1.line('plan_path_y', 'plan_path_x', source = prepare_plan_path, line_width = 5, line_color = 'gray', line_dash = 'solid', line_alpha = 0.4, legend_label = 'prepare_plan_path')
 fig1.circle('y','x', source = data_coordinate_system, size=8, color='purple')
 fig1.patch('car_yn', 'car_xn', source = data_path_end, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'path_end', visible = False)
-fig1.patch('car_yn', 'car_xn', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, line_alpha = 0.5, legend_label = 'astar_target', visible = False)
+fig1.patches('y_vec', 'x_vec', source = data_astar_target_pos, fill_color = "blue",fill_alpha = 0.2, line_color = "black", line_width = 1, legend_label = 'astar_target', visible = False)
 fig1.multi_line('y_vec', 'x_vec', source=data_record_node_list, line_width=1.0, line_color='green', line_dash='solid', legend_label='record_node_list')
 fig1.multi_line('y_vec', 'x_vec', source=data_real_time_node_list, line_width=1.0, line_color='red', line_dash='solid', legend_label='real_time_node_list')
 fig1.patches('y_vec', 'x_vec', source = data_astar_path_envelop, fill_color = "#98FB98", fill_alpha = 0.0, line_color = "black", line_width = 1, legend_label = 'all_path_envelop', visible = False)
@@ -718,19 +718,23 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   print('time5, ms ', (end_time5 - end_time4) * 1000)
 
   # astar target
-  pose = replay_simulation_hybrid_astar.GetAstarEndPose()
-  car_xn = []
-  car_yn = []
-  for i in range(len(car_polygon_x)):
-      tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], pose[0], pose[1], pose[2])
+  candidates = replay_simulation_hybrid_astar.GetAstarEndPose()
+  candidates_x = []
+  candidates_y = []
+  for k in range(len(candidates)):
+    car_xn = []
+    car_yn = []
+    for i in range(len(car_polygon_x)):
+      tmp_x, tmp_y = local2global(car_polygon_x[i], car_polygon_y[i], \
+                                  candidates[k][0], candidates[k][1], candidates[k][2])
       car_xn.append(tmp_x)
       car_yn.append(tmp_y)
-  car_box_x_vec.append(car_xn)
-  car_box_y_vec.append(car_yn)
+    candidates_x.append(car_xn)
+    candidates_y.append(car_yn)
 
   data_astar_target_pos.data.update({
-    'car_xn': car_xn,
-    'car_yn': car_yn,
+    'x_vec': candidates_x,
+    'y_vec': candidates_y,
   })
 
   # anchor point circle

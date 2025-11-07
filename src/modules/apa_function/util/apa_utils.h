@@ -6,7 +6,7 @@
 #include "math/polygon2d.h"
 #include "planning_plan_c.h"
 #include "session.h"
-#include "src/library/hybrid_astar_lib/hybrid_astar_common.h"
+#include "src/modules/common/config/vehicle_param.h"
 
 namespace planning {
 
@@ -46,8 +46,8 @@ bool IsSlotSearchingOrParking(const iflyauto::FunctionalState& current_state);
 
 const bool IsTrajValid(const iflyauto::Trajectory& traj);
 
-const ParkingVehDirection GetParkDir(const int dir);
-
 bool IsActiveApaState(const iflyauto::FunctionalState& fsm);
+
+void UpdateVehicleParam(VehicleParam& vehicle_param);
 
 }  // namespace  planning

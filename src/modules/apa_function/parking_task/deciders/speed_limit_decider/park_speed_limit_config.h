@@ -24,6 +24,13 @@ struct ParkSpeedLimitConfig {
   double first_order_param_by_obs;
   double zero_order_param_by_obs;
 
+  // add speed limit if vehicle is inside slot.
+  bool enable_speed_limit_by_slot;
+  double speed_limit_by_inside_slot;
+
+  double terminal_speed_limit;
+  double terminal_speed_limit_zone;
+
   void Init(const ParkingSpeedMode& park_speed_mode);
 };
 

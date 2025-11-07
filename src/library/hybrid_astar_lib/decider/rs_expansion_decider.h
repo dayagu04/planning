@@ -4,21 +4,23 @@
 #include "hybrid_astar_request.h"
 #include "node3d.h"
 #include "pose2d.h"
+#include "euler_distance_transform.h"
 
 namespace planning {
+
+#define RS_MAX_ROUND_ROBIN_NUMBER (2)
 
 // todo: add all rs expansion related scenarios to this decider.
 class RSExpansionDecider : public AstarDecider {
  public:
   RSExpansionDecider() = default;
 
-  void Process(const float min_radius, const float slot_width,
-               const float slot_length, const Pose2f &ego_pose,
-               const Pose2f &astar_end, const float veh_width,
-               const ParkSpaceType slot_type,
-               const ParkingVehDirection park_dir);
-
   void Process(const Pose2f &start, const Pose2f &end) override;
+
+  // round robin strategy for fallback point
+  void UpdateRoundRobinStrategy(const Pose2f &end, const AstarRequest *request,
+                                EulerDistanceTransform *edt,
+                                const VehicleParam &veh_param);
 
   const Pose2f &GetRSEndPose();
 
@@ -29,8 +31,10 @@ class RSExpansionDecider : public AstarDecider {
    */
   static void UpdateRSPathRequest(AstarRequest *request);
 
+  // for debug
+  void GetRoundRobinTarget(std::vector<Pose2f> &candidates);
+
  private:
-  // 对于车辆在ref line，需要注意
   const bool NeedRsLinkByNodeHeadingForTailIn(const Node3d *node) const;
 
   const bool NeedRsLinkByNodeHeadingForHeadIn(const Node3d *node) const;
@@ -40,7 +44,17 @@ class RSExpansionDecider : public AstarDecider {
   const bool NeedRsLinkByRequestDist(const Node3d *node,
                                      const AstarRequest *request) const;
 
-  Pose2f rs_end_pose_;
+  Pose2f GenerateCandidatePoint(const AstarRequest *request,
+                                EulerDistanceTransform *edt,
+                                const VehicleParam &veh_param,
+                                const Pose2f &end);
+
+  void DebugDecider();
+
+ private:
+  Pose2f round_robin_end_[RS_MAX_ROUND_ROBIN_NUMBER];
+  int round_robin_num_;
+  int round_robin_id_;
 };
 
 }  // namespace planning

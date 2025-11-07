@@ -10,6 +10,8 @@ void JerkLimitedTrajConfig::Init() {
   const ParkingSpeedConfig& speed_config = apa_param.GetParam().speed_config;
   min_path_dist_for_veh_starting = speed_config.min_path_dist_for_veh_starting;
 
+  static_state_acc_upper = 0.5;
+  dynamic_state_acc_upper = 0.2;
   return;
 }
 }  // namespace apa_planner

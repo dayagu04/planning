@@ -21,8 +21,8 @@ struct DpSpeedConfig {
   double unit_v_for_long_path;
   double unit_s_for_long_path;
 
-  double unit_v_for_short_path;
-  double unit_s_for_short_path;
+  double unit_v_for_middle_path;
+  double unit_s_for_middle_path;
 
   double unit_v_for_extream_short_path;
   double unit_s_for_extream_short_path;
@@ -30,7 +30,8 @@ struct DpSpeedConfig {
   double unit_v;
   double unit_s;
 
-  double long_path_thresh;
+  double long_dist_path_thresh;
+  double middle_dist_path_thresh;
   double extreme_short_path_thresh;
 
   double stopover_penalty;

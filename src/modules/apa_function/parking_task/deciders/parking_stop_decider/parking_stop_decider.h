@@ -51,8 +51,6 @@ class ParkingStopDecider : public ParkingTask {
 
   const ParkLonDecision& GetStopDecision() const { return stop_decision_; }
 
-  const double GetStopDecisionS();
-
   const double GetTerminalS();
 
  private:
@@ -63,9 +61,8 @@ class ParkingStopDecider : public ParkingTask {
   void AddDecisionByPathTargetPoint(
       const std::vector<pnc::geometry_lib::PathPoint>& path);
 
-  void AddDecisionByObstacle(
-      const std::vector<pnc::geometry_lib::PathPoint>& path,
-      const bool check_extend_path);
+  void AddDecisionByObstaclePrediction(
+      const std::vector<pnc::geometry_lib::PathPoint>& path);
 
   void TaskDebug();
 
@@ -104,6 +101,15 @@ class ParkingStopDecider : public ParkingTask {
       const Polygon2D& obs_polygon, int* start_collision_index,
       int* end_collision_index);
 
+  const double GetStopDecisionS();
+
+  void ClearStopSignsDebugInfo();
+
+  LonDecisionReason GetLonDecisionType(
+      const apa_planner::ApaObsAttributeType type) const;
+
+  common::StopSignType GetStopSignType(const LonDecisionReason reason) const;
+
  private:
   std::shared_ptr<apa_planner::CollisionDetectorInterface>
       col_det_interface_ptr_;
@@ -122,6 +128,7 @@ class ParkingStopDecider : public ParkingTask {
   const ApaObstacle* stop_obstacle_ = nullptr;
   ParkLonDecision terminal_decision_;
   ParkLonDecision stop_decision_;
+  SpeedDecisions speed_decisions_;
   SVPoint init_point_;
 
   ParkStopConfig config_;

@@ -22,6 +22,8 @@ void TrajectoryStitchConfig::Init() {
     lon_stitch_type = LonStitchType::VEHICLE_STATE;
   }
 
+  enable_openloop_acc = false;
+
   return;
 };
 

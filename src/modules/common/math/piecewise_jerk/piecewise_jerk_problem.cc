@@ -592,7 +592,7 @@ void PiecewiseJerkProblem::CalculateAffineConstraint2(
   ++matrix_row_index;
   csc_matrix_valid_num++;
 
-  c_float ddx_slack_bound = 0.08f;
+  c_float ddx_slack_bound = 0.01f;
   matrix(matrix_row_index, 2 * n) = 1.0f;
   lower_bounds->at(matrix_row_index) = x_init_[2] - ddx_slack_bound;
   upper_bounds->at(matrix_row_index) = x_init_[2] + ddx_slack_bound;

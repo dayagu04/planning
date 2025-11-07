@@ -610,9 +610,9 @@ void TargetPoseRegulator::DebugString() {
             << y_check_bounday_.lower << ", num " << y_check_bounday_.number;
 
   ILOG_INFO << "path size = " << paths_.size();
-  for (size_t i = 0; i < paths_.size(); i++) {
-    DebugPath(paths_[i]);
-  }
+  // for (size_t i = 0; i < paths_.size(); i++) {
+  //   DebugPath(paths_[i]);
+  // }
 
   return;
 }
@@ -684,11 +684,15 @@ const TerminalCandidatePoint TargetPoseRegulator::GetCandidatePoseForParkIn(
   res.pose = best_path->points[0];
   res.lat_offset = res.pose.y;
   res.dist_to_obs = best_path->min_dist_to_obs;
-  res.pose.x = GetLonPosition(best_path, request_->real_goal.x + 0.5f,
-                              request_->goal.x, lat_buffer);
+
+  const float min_straight_line_len = 0.5f;
+  res.pose.x =
+      GetLonPosition(best_path, request_->real_goal.x + min_straight_line_len,
+                     request_->goal.x, lat_buffer);
 
 #if DEBUG_DECIDER
   DebugString();
+  DebugPath(*best_path);
 
   ILOG_INFO << "lateral " << res.lat_offset << ", dist " << res.dist_to_obs
             << ", lon x " << res.pose.x << ", init guess lon x "
@@ -740,10 +744,10 @@ float TargetPoseRegulator::GetLonPosition(const TerminalGuessPath *path,
   bool find_broad_space = false;
 
   for (int32_t i = path->size - 1; i >= 0; i--) {
-    if (path->points[i].x > lon_upper) {
+    if (path->points[i].x > lon_upper + 1e-3) {
       continue;
     }
-    if (path->points[i].x < lon_lower) {
+    if (path->points[i].x < lon_lower - 1e-3) {
       continue;
     }
 

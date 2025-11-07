@@ -16,8 +16,8 @@ namespace apa_planner {
 #define DECIDER_DEBUG (0)
 
 void ParkSpeedLimitDecider::Execute(
-    std::vector<pnc::geometry_lib::PathPoint>& path,
-    SpeedDecisions* speed_decisions, const ParkingSpeedMode& park_speed_mode) {
+    std::vector<pnc::geometry_lib::PathPoint>& path, const ApaSlot& slot,
+    const ParkingSpeedMode& park_speed_mode, SpeedDecisions* speed_decisions) {
   if (path.size() <= 1) {
     return;
   }
@@ -29,9 +29,9 @@ void ParkSpeedLimitDecider::Execute(
   col_det_interface_ptr_->GetPathSafeCheckPtr()->Excute(
       ego_pose, PathCheckRequest::DISTANCE_CHECK, 0.0, 0.0, path);
 
-  AddSpeedLimitDecisions(path, speed_decisions);
+  AddSpeedLimitDecisions(path, slot, speed_decisions);
 
-  PublishDebugInfo(path);
+  PublishDebugInfo();
 
   double opt_time_ms = IflyTime::Now_ms() - opt_start_time;
   TimeBenchmark::Instance().SetTime(
@@ -45,7 +45,7 @@ void ParkSpeedLimitDecider::Execute(
 }
 
 void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
-    const std::vector<pnc::geometry_lib::PathPoint>& path,
+    const std::vector<pnc::geometry_lib::PathPoint>& path, const ApaSlot& slot,
     SpeedDecisions* speed_decisions) {
   if (path.empty()) {
     return;
@@ -64,8 +64,15 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     has_control_error_speed_limit = true;
   }
 
-  double terminal_speed_limit = 0.5;
-  double terminal_speed_limit_s_range = path.back().s - 0.41;
+  double terminal_speed_limit_s_range =
+      path.back().s - config_.terminal_speed_limit_zone;
+
+  const SlotCoord& points = slot.GetProcessedCornerCoordGlobal();
+  Pose2D base_pose(points.pt_23_mid.x(), points.pt_23_mid.y(),
+              std::atan2(points.pt_23mid_01mid_unit_vec.y(),
+                         points.pt_23mid_01mid_unit_vec.x()));
+  Transform2d tf(base_pose);
+  Pose2D local_pose;
 
   speed_limit_profile_.Clear();
   size_t path_point_size = path.size();
@@ -130,10 +137,21 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
     }
 
     if (path_s > terminal_speed_limit_s_range) {
-      speed_limit = std::min(speed_limit, terminal_speed_limit);
+      speed_limit = std::min(speed_limit, config_.terminal_speed_limit);
       speed_limit_decision.decision_speed = speed_limit;
       speed_limit_decision.reason_code =
           LonDecisionReason::SPEED_LIMIT_BY_TERMINAL;
+      speed_limit_decision.path_s = path_s;
+
+      speed_decisions->decisions.emplace_back(speed_limit_decision);
+    }
+
+    tf.GlobalPoseToULFLocal(
+        &local_pose, Pose2D(point.pos.x(), point.pos.y(), point.GetTheta()));
+    if (IsPointInSlot(local_pose, slot)) {
+      speed_limit = std::min(speed_limit, config_.speed_limit_by_inside_slot);
+      speed_limit_decision.decision_speed = speed_limit;
+      speed_limit_decision.reason_code = LonDecisionReason::SPEED_LIMIT_BY_SLOT;
       speed_limit_decision.path_s = path_s;
 
       speed_decisions->decisions.emplace_back(speed_limit_decision);
@@ -145,8 +163,7 @@ void ParkSpeedLimitDecider::AddSpeedLimitDecisions(
   return;
 }
 
-void ParkSpeedLimitDecider::PublishDebugInfo(
-    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+void ParkSpeedLimitDecider::PublishDebugInfo() {
   auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
   common::ApaSpeedDebug* speed_debug = debug->mutable_apa_speed_debug();
   speed_debug->set_ref_cruise_speed(config_.default_cruise_speed);
@@ -227,6 +244,23 @@ void ParkSpeedLimitDecider::TaskDebug(
   }
 
   return;
+}
+
+const bool ParkSpeedLimitDecider::IsPointInSlot(const Pose2D& point,
+                                                const ApaSlot& slot) {
+  if (slot.slot_type_ == SlotType::PARALLEL) {
+    if (point.x < slot.slot_width_ && point.y < slot.slot_length_ / 2 &&
+        point.y > -slot.slot_length_ / 2) {
+      return true;
+    }
+  } else {
+    if (point.x < slot.slot_length_ && point.y < slot.slot_width_ / 2 &&
+        point.y > -slot.slot_width_ / 2) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace apa_planner

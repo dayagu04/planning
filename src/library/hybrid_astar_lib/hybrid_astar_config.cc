@@ -19,8 +19,6 @@ void PlannerOpenSpaceConfig::InitConfig() {
   next_node_num = 10;
   // todo:step 0.4,0.2,0.1. maybe 0.1 is better.
   node_step = 0.4;
-  // node_step = 0.3;
-  // node_step = 0.2;
 
   // node path sampling dist
   node_path_dist_resolution = 0.1;
@@ -50,7 +48,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   enable_dp_cost_for_vertical_park = true;
   enable_ref_line_h_cost_for_vertical_park = true;
   enable_rs_path_h_cost_for_vertical_park = true;
-  max_gear_change_num = 15;
+  max_gear_change_num = 14;
   ref_line_heading_penalty = 0.0;
 
   rs_path_seg_advised_dist = 0.35;
@@ -84,7 +82,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   safe_buffer.lat_safe_buffer_inside[0] = 0.2;
   safe_buffer.lat_safe_buffer_inside[1] = 0.15;
   safe_buffer.lat_safe_buffer_inside[2] = 0.08;
-  safe_buffer.circle_path_extra_buffer_inside = 0.05;
+  safe_buffer.circle_path_extra_buffer_inside = 0.03;
 
   safe_buffer.lon_safe_buffer[0] = 0.4;
   safe_buffer.lon_safe_buffer[1] = 0.35;

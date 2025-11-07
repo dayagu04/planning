@@ -6,6 +6,7 @@
 #include "parking_task.h"
 #include "point_cloud_obstacle.h"
 #include "speed_limit_profile.h"
+#include "apa_slot.h"
 
 namespace planning {
 namespace apa_planner {
@@ -38,8 +39,8 @@ class ParkSpeedLimitDecider : public ParkingTask {
    * [out]: path,speed_decisions;
    */
   void Execute(std::vector<pnc::geometry_lib::PathPoint>& path,
-               SpeedDecisions* speed_decisions,
-               const ParkingSpeedMode& park_speed_mode);
+               const ApaSlot& slot, const ParkingSpeedMode& park_speed_mode,
+               SpeedDecisions* speed_decisions);
 
   // Get minimum speed limit decision
   const ParkLonDecision* GetSpeedLimitDecisionBySRange(
@@ -65,11 +66,14 @@ class ParkSpeedLimitDecider : public ParkingTask {
   // use temporal-spatial information.
   void AddSpeedLimitDecisions(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
-      SpeedDecisions* speed_decisions);
+      const ApaSlot& slot, SpeedDecisions* speed_decisions);
 
-  void PublishDebugInfo(const std::vector<pnc::geometry_lib::PathPoint>& path);
+  void PublishDebugInfo();
 
+ private:
   void TaskDebug(const std::vector<pnc::geometry_lib::PathPoint>& path);
+
+  const bool IsPointInSlot(const Pose2D& point, const ApaSlot& slot);
 
  private:
   std::shared_ptr<apa_planner::CollisionDetectorInterface>

@@ -22,6 +22,7 @@ struct TrajectoryStitchConfig {
   // We depend on open loop control to stop, and we do not publish stopping traj
   // to control if terminal distance is small. This is not safe.
   bool enable_openloop_control;
+  bool enable_openloop_acc;
 
   // If traj dist is small, enter open loop control.
   double min_dist_for_open_loop_control;

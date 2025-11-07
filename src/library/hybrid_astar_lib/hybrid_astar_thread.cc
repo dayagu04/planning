@@ -33,19 +33,12 @@ void HybridAStarThreadSolver::HybridAStarThreadFunction() {
   return;
 }
 
-int HybridAStarThreadSolver::Init(const float back_edge_to_rear_axis,
-                                  const float car_length, const float car_width,
-                                  const float steer_ratio,
-                                  const float wheel_base,
-                                  const float min_turn_radius,
-                                  const float mirror_width) {
+int HybridAStarThreadSolver::Init(const VehicleParam &veh_param) {
   solver_interface_ = std::make_shared<HybridAStarInterface>();
 
   request_response_state_.store(RequestResponseState::NONE);
 
-  solver_interface_->Init(back_edge_to_rear_axis, car_length, car_width,
-                          steer_ratio, wheel_base, min_turn_radius,
-                          mirror_width);
+  solver_interface_->Init(veh_param);
 
   init_ = true;
   search_state_.store(AstarSearchState::NONE);
@@ -204,6 +197,17 @@ const Pose2f HybridAStarThreadSolver::GetAstarTargetPose() {
   }
 
   return Pose2f(0, 0, 0);
+}
+
+void HybridAStarThreadSolver::GetAstarRoundRobinTarget(
+    std::vector<Pose2f>& candidates) {
+  std::lock_guard<std::mutex> lock(mutex_);
+
+  if (solver_interface_ != nullptr) {
+    return solver_interface_->GetRoundRobinTarget(candidates);
+  }
+
+  return;
 }
 
 AstarRequest HybridAStarThreadSolver::GetAstarRequest() {

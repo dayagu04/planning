@@ -1398,6 +1398,13 @@ void SyncParkingParameters(const bool is_simulation) {
                   "target_pose_preference_lat_offset");
   JSON_READ_VALUE(param.lat_lon_target_pose_buffer.preference_lon_buffer, float,
                   "target_pose_preference_lon_buffer");
+
+  JSON_READ_VALUE(param.od_config.use_specificationer, bool,
+                  "use_specificationer");
+  JSON_READ_VALUE(param.od_config.use_dynamic_od_car, bool,
+                  "use_dynamic_od_car");
+  JSON_READ_VALUE(param.od_config.use_living_things, bool, "use_living_things");
+  JSON_READ_VALUE(param.od_config.use_speed_bump, bool, "use_speed_bump");
   return;
 }
 

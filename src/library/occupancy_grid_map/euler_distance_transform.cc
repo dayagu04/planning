@@ -448,4 +448,18 @@ const FootPrintCircleList EulerDistanceTransform::GetCircleFootPrint(
   return footprint_model_.GetLocalFootPrintCircleByGear(gear);
 }
 
+const float EulerDistanceTransform::DistanceCheckForPoint(const Pose2f &pose,
+                                                          const float radius) {
+  OgmIndex index;
+  index.x = std::round((pose.x - bound_.min_x) * ogm_resolution_inv_);
+  index.y = std::round((pose.y - bound_.min_y) * ogm_resolution_inv_);
+
+  // out of bound
+  if (!IsIndexValid(index)) {
+    return 0.0f;
+  }
+
+  return data_.dist[index.x][index.y] - radius;
+}
+
 }  // namespace planning

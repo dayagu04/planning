@@ -605,4 +605,6 @@ const bool HasGearRequest(const AstarPathGear type);
 const bool IsPathGearSameWithRequest(const AstarPathGear type,
                                      const AstarPathGear request);
 
+const ParkingVehDirection GetParkDir(const int dir);
+
 }  // namespace planning
