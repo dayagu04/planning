@@ -17,6 +17,6 @@
   "min_steer_angle_rate":0.0,
   "steer_ratio": 15.88,
   "wheel_base": 2.8,
-  "max_front_wheel_angle": 0.628,
+  "max_front_wheel_angle": 0.5378,
   "front_overhanging": 0.95
 }
