@@ -2480,7 +2480,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
         // pnc::geometry_lib::PrintSegmentsVecInfo(path.path_segment_vec); //
         // 打印路径段信息
 
-        const double corner_danger_threshold = 0.3;
+        const double corner_danger_threshold = 0.2;
         if (corner_dist < corner_danger_threshold) {
           path.dangerous_value +=
               10.0 * (corner_danger_threshold - corner_dist);
