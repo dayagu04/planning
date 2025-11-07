@@ -449,6 +449,10 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const double arc_length, const double line_length,
       const double park_out_target_heading);
 
+  const bool CheckShortToFirstPath(
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const double short_threshold);
+
   // fill output
   void AddPathSegToOutPut(
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg);

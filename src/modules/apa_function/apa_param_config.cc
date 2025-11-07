@@ -1273,6 +1273,10 @@ void SyncParkingParameters(const bool is_simulation) {
                   "in_slot_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_extra_turn_lat_buffer,
                   float, "in_slot_extra_turn_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_buffer_in_slot,
+                  float, "parallel_col_buffer_in_slot");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_small_buffer_in_slot,
+                  float, "parallel_col_small_buffer_in_slot");
 
   // lat lon speed buffer params
   JSON_READ_VALUE(param.lat_lon_speed_buffer.lon_buffer, float,
