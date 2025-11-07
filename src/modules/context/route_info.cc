@@ -3731,16 +3731,61 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
       other_split_link_id = successor_link_ids[0];
     }
   } else if (split_link->successor_link_ids_size() == 3) {
-    const auto& successor_link_ids = split_link->successor_link_ids();
-    if (successor_link_ids[0] == next_link->id() && is_split_left ||
-        successor_link_ids[1] == next_link->id() && is_split_middle ||
-        successor_link_ids[2] == next_link->id() && is_split_right) {
-      left_split_link_id = successor_link_ids[0];
-      middle_split_link_id = successor_link_ids[1];
-      right_split_link_id = successor_link_ids[2];
+    const auto successor_link_ids = split_link->successor_link_ids();
+    std::vector<uint64> other_link_ids;
+    for (int i = 0; i < successor_link_ids.size(); ++i) {
+      if (successor_link_ids[i] != next_link->id()) {
+        other_link_ids.emplace_back(successor_link_ids[i]);
+      }
+    }
+
+    const auto& other_link1 = sdpro_map_.GetLinkOnRoute(other_link_ids[0]);
+    const auto& other_link2 = sdpro_map_.GetLinkOnRoute(other_link_ids[1]);
+    if (other_link1 == nullptr || other_link2 == nullptr ||
+        other_link1->points().boot().points().size() < 2 ||
+        other_link2->points().boot().points().size() < 2) {
+      return false;
+    }
+
+    // 目标车道的point
+    Point2D O{next_link->points().boot().points()[0].x(),
+              next_link->points().boot().points()[0].y()};
+    Point2D L{next_link->points().boot().points()[1].x(),
+              next_link->points().boot().points()[1].y()};
+
+    // 另外两条link的point；
+    Point2D other1{other_link1->points().boot().points()[1].x(),
+                   other_link1->points().boot().points()[1].y()};
+    Point2D other2{other_link2->points().boot().points()[1].x(),
+                   other_link2->points().boot().points()[1].y()};
+
+    double OL = CalculateAngle(O, L);
+    double Oother1 = CalculateAngle(O, other1);
+    double Oother2 = CalculateAngle(O, other2);
+
+    std::vector<RayInfo> rays = {{'A', OL}, {'B', Oother1}, {'C', Oother2}};
+
+    const auto& result = SortRaysByDirection(rays);
+
+    std::vector<uint64> link_ids = {next_link->id(), other_link1->id(),
+                                    other_link2->id()};
+    std::vector<uint64*> split_links_id = {
+        &right_split_link_id, &middle_split_link_id, &left_split_link_id};
+
+    for (int i = 0; i < result.size(); i++) {
+      switch (result[i]) {
+        case 'A':
+          *split_links_id[i] = link_ids[0];
+          break;
+        case 'B':
+          *split_links_id[i] = link_ids[1];
+          break;
+        case 'C':
+          *split_links_id[i] = link_ids[2];
+          break;
+      }
     }
   }
-
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
   std::vector<int> succerssor_excr_feasible_lane;
