@@ -57,20 +57,14 @@ bool SpeedData::EvaluateByTime(const double t,
     double s = planning_math::lerp(p0.s, t0, p1.s, t1, t);
     res.s = s;
 
-    if (true) {
-      double v = planning_math::lerp(p0.v, t0, p1.v, t1, t);
-      res.v = v;
-    }
+    double v = planning_math::lerp(p0.v, t0, p1.v, t1, t);
+    res.v = v;
 
-    if (true) {
-      double a = planning_math::lerp(p0.a, t0, p1.a, t1, t);
-      res.a = a;
-    }
+    double a = planning_math::lerp(p0.a, t0, p1.a, t1, t);
+    res.a = a;
 
-    if (true) {
-      double da = planning_math::lerp(p0.da, t0, p1.da, t1, t);
-      res.da = da;
-    }
+    double da = planning_math::lerp(p0.da, t0, p1.da, t1, t);
+    res.da = da;
 
     *speed_point = res;
   }

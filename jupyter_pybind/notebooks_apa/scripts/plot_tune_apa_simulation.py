@@ -24,13 +24,13 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 # m32t-otomb10: 40735
 # m32t-otomb12: 40737
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52931/trigger/20251103/20251103-23-25-21/park_in_data_collection_CHERY_M32T_52931_EVENT_FILTER_2025-11-03-23-25-21_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74569/trigger/20251105/20251105-20-48-43/park_in_data_collection_CHERY_M32T_74569_EVENT_FILTER_2025-11-05-20-48-43_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
 last_plan_pose_ = []
-plot_speed_graph = False
+plot_speed_graph = True
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()

@@ -98,7 +98,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   }
 
   double opt_start_time = IflyTime::Now_us();
-  ILOG_INFO << "speed qp optimizer";
+  // ILOG_INFO << "speed qp optimizer";
 
   std::array<c_float, 3> init_state;
   GenerateInitState(init_point, init_state);
@@ -124,22 +124,26 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     return;
   }
 
-  // (6,+inf]
+  // (time_horizon,+inf]
+  bool terminal_hard_constraint = true;
   if (total_time > qp_config_.time_horizon) {
     delta_time_ = qp_config_.time_resolution;
-    num_of_knots_ = std::ceil(qp_config_.time_horizon / delta_time_);
+    num_of_knots_ = std::ceil(qp_config_.time_horizon / delta_time_) + 1;
     total_time = qp_config_.time_horizon;
+    terminal_hard_constraint = false;
   } else if (total_time > 1.0) {
-    // (1,6]
-    delta_time_ = qp_config_.time_resolution;
-    num_of_knots_ = std::ceil(total_time / delta_time_);
+    // (1,time_horizon]
+    double guess_delta_time = qp_config_.time_resolution;
+    num_of_knots_ = std::ceil(total_time / guess_delta_time) + 1;
+    num_of_knots_ = std::max(num_of_knots_, 2);
+    delta_time_ = total_time / (num_of_knots_ - 1);
   } else {
     // [0,1]
     num_of_knots_ = 20;
-    delta_time_ = total_time / num_of_knots_;
+    delta_time_ = total_time / (num_of_knots_ - 1);
   }
 
-  ILOG_INFO << "num_of_knots_ = " << num_of_knots_;
+  // ILOG_INFO << "num_of_knots_ = " << num_of_knots_;
 
   // model
   // f = 1/2 * x^T * H * x + Q * x
@@ -173,10 +177,12 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   // update ref v, ref_s.
   std::vector<c_float> x_ref;
   std::vector<c_float> dx_ref;
+  std::vector<c_float> ddx_ref;
   std::vector<c_float> t_ref;
   std::vector<std::pair<c_float, c_float>> ds_bounds;
   x_ref.reserve(num_of_knots_);
   dx_ref.reserve(num_of_knots_);
+  ddx_ref.reserve(num_of_knots_);
   t_ref.reserve(num_of_knots_);
   ds_bounds.reserve(num_of_knots_);
 
@@ -192,6 +198,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     t_ref.emplace_back(speed_point.t);
     x_ref.emplace_back(speed_point.s);
     dx_ref.emplace_back(speed_point.v);
+    ddx_ref.emplace_back(speed_point.a);
 
     // get v_upper_bound
     v_upper_bound =
@@ -220,12 +227,11 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
   // set dx boundary
   piecewise_jerk_problem.set_dx_bounds(ds_bounds);
 
-  // todo: set acc ref
-
   // set end state
-  if (dp_speed_data.back().t > qp_config_.time_horizon) {
-    std::array<c_float, 3> weight_end_state = {{0.1f, 5.0f, 0.0f}};
-    std::array<c_float, 3> end_state_ref = {{x_ref.back(), dx_ref.back(), 0.0}};
+  if (!terminal_hard_constraint) {
+    std::array<c_float, 3> weight_end_state = {{1.0f, 10.0f, 0.0f}};
+    std::array<c_float, 3> end_state_ref = {
+        {x_ref.back(), dx_ref.back(), ddx_ref.back()}};
     piecewise_jerk_problem.set_end_state_ref(weight_end_state, end_state_ref);
   } else {
     std::array<c_float, 3> end_state_ref = {
@@ -233,7 +239,7 @@ void PiecewiseJerkSpeedQPOptimizer::Execute(
     piecewise_jerk_problem.set_end_state_constriants(end_state_ref);
   }
 
-    // debug info
+  // debug info
 #if DECIDER_DEBUG
   DebugRef(t_ref, x_ref, dx_ref);
   DebugLinearConstraints(x_ref, ds_bounds);
