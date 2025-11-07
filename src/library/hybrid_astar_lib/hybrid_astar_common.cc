@@ -150,6 +150,44 @@ bool IsTurn(const uint8_t steer) {
   return false;
 }
 
+bool IsSteerOpposite(const AstarPathSteer left, const AstarPathSteer right) {
+  if (left == AstarPathSteer::LEFT && right == AstarPathSteer::RIGHT) {
+    return true;
+  }
+
+  if (left == AstarPathSteer::RIGHT && right == AstarPathSteer::LEFT) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsSteerOpposite(const uint8_t left, const uint8_t right) {
+  if (left == pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT &&
+      right == pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT) {
+    return true;
+  }
+
+  if (left == pnc::geometry_lib::PathSegSteer::SEG_STEER_RIGHT &&
+      right == pnc::geometry_lib::PathSegSteer::SEG_STEER_LEFT) {
+    return true;
+  }
+
+  return false;
+}
+
+bool IsSteerOpposite(const float left, const float right) {
+  if (left > 0.001f && right < -0.001f) {
+    return true;
+  }
+
+  if (left < -0.001f && right > 0.001f) {
+    return true;
+  }
+
+  return false;
+}
+
 AstarPathGear GetAstarGearFromSegGear(const uint8_t seg_gear) {
   switch (seg_gear) {
     case pnc::geometry_lib::PathSegGear::SEG_GEAR_DRIVE:

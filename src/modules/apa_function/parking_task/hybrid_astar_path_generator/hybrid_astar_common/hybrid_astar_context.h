@@ -46,7 +46,8 @@ struct HybridAStarRequest {
   ParkingScenarioType scenario_type = ParkingScenarioType::SCENARIO_UNKNOWN;
   AnalyticExpansionType analytic_expansion_type =
       AnalyticExpansionType::LINK_POSE_LINE;
-  int max_gear_shift_number = 0;
+  int max_gear_shift_number = 20;
+  int max_scurve_number = 5;
   float every_gear_length = 0.0;
   float sample_ds = 0.1;
   bool swap_start_goal = false;
