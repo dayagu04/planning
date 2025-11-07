@@ -6,11 +6,12 @@
 #include "apa_world.h"
 #include "parallel_out_path_generator.h"
 #include "parking_scenario.h"
+#include "parallel_park_in_scenario.h"
 
 namespace planning {
 namespace apa_planner {
 
-class ParallelParkOutScenario : public ParkingScenario {
+class ParallelParkOutScenario : public ParallelParkInScenario {
  public:
   ParallelParkOutScenario() = default;
   ParallelParkOutScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
@@ -65,6 +66,9 @@ class ParallelParkOutScenario : public ParkingScenario {
       multi_parkout_path_vec;
   ApaParkOutDirection parkout_direction_ = ApaParkOutDirection::INVALID;
   bool is_try_tlane_ = false;
+  std::vector<pnc::geometry_lib::PathPoint>
+      previous_current_path_point_global_vec_;
+  const bool PostProcessPathPara();
 };
 }  // namespace apa_planner
 }  // namespace planning

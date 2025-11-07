@@ -196,9 +196,14 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
       std::max(input_.tlane.obs_pt_inside.y() * slot_side_sgn,
                half_slot_width) *
       slot_side_sgn;
+  double prepare_line_starty_from_slot =
+      input_.ego_info_under_slot.slot.GetLimiter().valid
+          ? 0.5 * apa_param.GetParam().car_width +0.5
+          : 0.6;
   double rac_tlane_bound_ref_line =
       tlane_outer_y_ref_line +
-      slot_side_sgn * (0.5 * apa_param.GetParam().car_width + 0.6);
+      slot_side_sgn * (0.5 * apa_param.GetParam().car_width +
+                       prepare_line_starty_from_slot);
 
   ILOG_INFO << "obs_pt_inside y = " << input_.tlane.obs_pt_inside.y()
             << " half_slot_width = " << half_slot_width

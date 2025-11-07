@@ -497,7 +497,8 @@ const double ParkingScenario::CalRemainDistFromObs(
     const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
     const double dynamic_body_lat_buffer,
     const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
-    const UseObsHeightMethod use_obs_height_method) {
+    const UseObsHeightMethod use_obs_height_method,
+    const GJKrequestFrom gjk_request_from ) {
   const ApaParameters& param = apa_param.GetParam();
 
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -520,7 +521,7 @@ const double ParkingScenario::CalRemainDistFromObs(
         GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
                          CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC,
                          use_obs_height_method),
-        true, static_mirror_lat_buffer);
+        true, static_mirror_lat_buffer, gjk_request_from);
 
     return col_res.remain_dist - static_lon_buffer;
   }
@@ -541,7 +542,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      static_mirror_lat_buffer);
+      static_mirror_lat_buffer, gjk_request_from);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
@@ -555,7 +556,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      dynamic_mirror_lat_buffer);
+      dynamic_mirror_lat_buffer, gjk_request_from);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;

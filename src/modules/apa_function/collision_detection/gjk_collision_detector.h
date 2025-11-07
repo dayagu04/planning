@@ -14,6 +14,10 @@ enum class CarBodyType : uint8_t {
   ONLY_MIRROR,
   ONLY_MAX_POLYGAN,
 };
+enum class GJKrequestFrom : uint8_t {
+  OTHER,
+  PARALLEL,
+};
 
 struct GJKColDetRequest {
   bool use_obs_base_slot = true;
@@ -67,7 +71,8 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
                          const double body_lat_buffer, const double lon_buffer,
                          const GJKColDetRequest gjk_col_det_request,
                          const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08);
+                         const double mirror_lat_buffer = 0.08,
+                         const GJKrequestFrom gjk_request_from = GJKrequestFrom::OTHER);
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const GJKColDetRequest gjk_col_det_request);

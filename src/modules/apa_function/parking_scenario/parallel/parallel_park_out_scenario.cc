@@ -115,6 +115,23 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // check replan
   if (!CheckReplan(replan_params)) {
     ILOG_INFO << "replan is not required!";
+    if (apa_param.GetParam().is_trim_limter_parallel_enable ||
+          !apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+        GeometryPathInput path_planner_input;
+        const EgoInfoUnderSlot& ego_info_under_slot =
+            apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+        path_planner_input.ego_info_under_slot = ego_info_under_slot;
+        parallel_out_path_planner_.SetInput(path_planner_input);
+        std::vector<geometry_lib::PathPoint> tmp_path_point_vec;
+        tmp_path_point_vec = previous_current_path_point_global_vec_;
+        parallel_out_path_planner_.TrimPathByLimiterPathPoint(tmp_path_point_vec,
+                                                          true);
+        if (tmp_path_point_vec.size() < current_path_point_global_vec_.size()) {
+          current_path_point_global_vec_ = tmp_path_point_vec;
+        }
+        PostProcessPathPara();
+        // parallel_path_planner_.TrimPathByLimiterLastPathVec(false);
+      }
     SetParkingStatus(PARKING_RUNNING);
     return;
   }
@@ -304,7 +321,8 @@ const double ParallelParkOutScenario::CalRealTimeBrakeDist() {
 
   const double remain_dist_obs = CalRemainDistFromObs(
       safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
-      dynaminc_lat_buffer, dynaminc_lat_buffer);
+      dynaminc_lat_buffer, dynaminc_lat_buffer, false, UseObsHeightMethod::HIGH,
+      GJKrequestFrom::PARALLEL);
 
   ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
 
@@ -556,14 +574,18 @@ const bool ParallelParkOutScenario::GenTlane() {
     if (pair.second.GetObsMovementType() != ApaObsMovementType::STATIC) {
       continue;
     }
+    bool is_limiter = false;
+    if ( pair.second.GetObsScemanticType() == ApaObsScemanticType::LIMITER) {
+      is_limiter = true;
+    }
 
     const auto obs_scement = pair.second.GetObsScemanticType();
 
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
                            obs_scement == ApaObsScemanticType::COLUMN ||
                            obs_scement == ApaObsScemanticType::CAR);
-
-    for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
+    auto pair_obs = std::move(pair.second);
+    for ( auto& obs_pt_local : pair_obs.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
         continue;
       }
@@ -626,7 +648,17 @@ const bool ParallelParkOutScenario::GenTlane() {
         t_lane_.is_inside_rigid = true;
       }
 
-      obs_pt_local_vec_.emplace_back(std::move(obs_pt_local));
+      if (is_limiter) {
+
+        auto obs_pt_local_cp = obs_pt_local;
+        ILOG_INFO << "befor limiter obs = " << obs_pt_local_cp.x()  ;
+        obs_pt_local_cp.x() = obs_pt_local_cp.x()+ 0.8;
+        ILOG_INFO << "limiter obs = " << obs_pt_local_cp.x()  ;
+        obs_pt_local_vec_.emplace_back(obs_pt_local_cp);
+        continue;
+      }
+
+      obs_pt_local_vec_.emplace_back(obs_pt_local);
     }
   }
   ILOG_INFO << "after obs filter";
@@ -1197,7 +1229,12 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   frame_.gear_command =
       path_planner_output
           .gear_cmd_vec[path_planner_output.path_seg_index.first];
-
+  if (apa_param.GetParam().is_trim_limter_parallel_enable &&
+      !path_planner_input.is_searching_stage) {
+    // parallel_path_planner_.TrimPathByLimiterLastPathVec(true);
+    parallel_out_path_planner_.TrimPathByLimiterPathPoint(
+        current_path_point_global_vec_);
+  }
   parallel_out_path_planner_.SampleCurrentPathSeg();
 
   if (frame_.is_replan_first) {
@@ -1229,6 +1266,17 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
     global_point.kappa = path_point.kappa;
 
     current_path_point_global_vec_.emplace_back(global_point);
+  }
+  previous_current_path_point_global_vec_.clear();
+  previous_current_path_point_global_vec_ = current_path_point_global_vec_;
+  if (!apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
+    std::vector<geometry_lib::PathPoint> tmp_path_point_vec;
+    tmp_path_point_vec = current_path_point_global_vec_;
+    parallel_out_path_planner_.TrimPathByLimiterPathPoint(tmp_path_point_vec,
+                                                          true);
+    if (tmp_path_point_vec.size() < current_path_point_global_vec_.size()) {
+      current_path_point_global_vec_ = tmp_path_point_vec;
+    }
   }
   if (parkout_direction_ != ApaParkOutDirection::INVALID) {
     std::vector<pnc::geometry_lib::PathPoint> cur_dir_path_point_global_vec;
@@ -1436,6 +1484,59 @@ void ParallelParkOutScenario::Log() const {
 }
 
 const bool ParallelParkOutScenario::GenObstacles() { return true; };
+const bool ParallelParkOutScenario::PostProcessPathPara() {
+  const size_t origin_trajectory_size = current_path_point_global_vec_.size();
+  if (origin_trajectory_size < 2) {
+    frame_.spline_success = false;
+    ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
+    frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
+    return false;
+  }
+
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+  std::vector<double> heading_vec;
+  std::vector<double> s_vec;
+  std::vector<double> kappa_vec;
+  x_vec.reserve(origin_trajectory_size + 1);
+  y_vec.reserve(origin_trajectory_size + 1);
+  heading_vec.reserve(origin_trajectory_size + 1);
+  s_vec.reserve(origin_trajectory_size + 1);
+  kappa_vec.reserve(origin_trajectory_size + 1);
+  double s = 0.0;
+  double ds = 0.0;
+  for (size_t i = 0; i < origin_trajectory_size; ++i) {
+    pnc::geometry_lib::PathPoint pt = current_path_point_global_vec_[i];
+    if (i > 0) {
+      pnc::geometry_lib::PathPoint pt_ = current_path_point_global_vec_[i - 1];
+      ds = std::hypot(pt.pos.x() - pt_.pos.x(), pt.pos.y() - pt_.pos.y());
+      if (ds < 1e-3) {
+        continue;
+      }
+      s += ds;
+    }
+    x_vec.emplace_back(pt.pos.x());
+    y_vec.emplace_back(pt.pos.y());
+    heading_vec.emplace_back(pt.heading);
+    s_vec.emplace_back(s);
+    kappa_vec.emplace_back(pt.kappa);
+  }
+
+  size_t x_vec_size = x_vec.size();
+  if (x_vec_size < 2) {
+    frame_.spline_success = false;
+    ILOG_INFO << "error: x_vec_size = " << x_vec.size();
+    frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
+    return false;
+  }
+  frame_.current_path_length = s;
+  frame_.x_s_spline.set_points(s_vec, x_vec);
+  frame_.y_s_spline.set_points(s_vec, y_vec);
+
+  frame_.spline_success = true;
+  return true;
+
+}
 
 }  // namespace apa_planner
 }  // namespace planning

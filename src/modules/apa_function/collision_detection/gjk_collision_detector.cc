@@ -27,7 +27,8 @@ const ColResult GJKCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint>& pt_vec,
     const double body_lat_buffer, const double lon_buffer,
     const GJKColDetRequest gjk_col_det_request,
-    const bool special_process_mirror, const double mirror_lat_buffer) {
+    const bool special_process_mirror, const double mirror_lat_buffer,
+    const GJKrequestFrom gjk_request_from) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -166,6 +167,11 @@ const ColResult GJKCollisionDetector::Update(
 
       if (!CheckObsMovementTypeFeasible(obs.GetObsMovementType(),
                                         gjk_col_det_request.movement_type)) {
+        continue;
+      }
+
+      if(gjk_request_from == GJKrequestFrom::PARALLEL &&
+      obs.GetObsScemanticType() == ApaObsScemanticType::LIMITER){
         continue;
       }
 
