@@ -292,8 +292,8 @@ struct HybridAStarTrajPoint {
 
 // For astar, max search direction number is 6.
 struct SearchTimeBenchmark {
-  double time_ms[6];
-  int32_t node_pool_size[6];
+  double time_ms[9];
+  int32_t node_pool_size[9];
   int8_t size;
   double total_time_ms;
 
@@ -305,8 +305,8 @@ struct SearchTimeBenchmark {
 };
 
 struct SearchTrajectoryInfo {
-  int32_t first_action_gear[6];
-  int32_t first_action_gear_request[6];
+  int32_t first_action_gear[9];
+  int32_t first_action_gear_request[9];
   float first_seg_path_length;
   int8_t size;
 
