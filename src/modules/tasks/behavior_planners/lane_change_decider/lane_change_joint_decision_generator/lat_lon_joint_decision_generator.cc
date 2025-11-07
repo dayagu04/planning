@@ -126,7 +126,14 @@ void LatLonJointDecision::SetAgentTrajecTory() {
       1;
   const auto& dt =
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
-
+  // frenet 起点
+  const  auto& ref_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
+  double planning_init_s = 50.0;
+  if(ref_path != nullptr) {
+    const auto& ego_state = ref_path->get_frenet_ego_state();
+    const auto& planning_init_point = ego_state.planning_init_point();
+    planning_init_s = planning_init_point.frenet_state.s;
+  }
   // 处理后方障碍物轨迹
   if (lc_prior_info_.gap_rear_agent_id >= 0 && agent_manager != nullptr) {
     // 在 key_agent_ids 中找到 gap_rear_agent_id 对应的索引
@@ -148,7 +155,7 @@ void LatLonJointDecision::SetAgentTrajecTory() {
               i * dt,                     // absolute_time
               obs_opt_traj.omega_vec(i),  // heading_rate
               obs_opt_traj.jerk_vec(i),   // jerk
-              obs_opt_traj.s_vec(i));     // s
+              obs_opt_traj.s_vec(i) + planning_init_s);     // s
           rear_agent_trajectory.push_back(point);
         }
 
@@ -178,7 +185,7 @@ void LatLonJointDecision::SetAgentTrajecTory() {
               obs_opt_traj.x_vec(i), obs_opt_traj.y_vec(i),
               obs_opt_traj.theta_vec(i), obs_opt_traj.vel_vec(i),
               obs_opt_traj.acc_vec(i), i * dt, obs_opt_traj.omega_vec(i),
-              obs_opt_traj.jerk_vec(i), obs_opt_traj.s_vec(i));
+              obs_opt_traj.jerk_vec(i), obs_opt_traj.s_vec(i) + planning_init_s);
           front_agent_trajectory.push_back(point);
         }
 

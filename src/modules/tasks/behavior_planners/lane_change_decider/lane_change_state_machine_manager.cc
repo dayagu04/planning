@@ -2257,7 +2257,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
 
       // 输出检查
     const auto joint_decision_output = session_->planning_context().lat_lon_joint_decision_output();
-    bool joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
+    joint_decision_success_ = joint_decision_output.IsPlanningSuccess();
     if (joint_decision_success_) {
     const auto &ego_opt_traj = joint_decision_output.GetLaneChangeEgoTrajectory();
     ego_trajs_future_.clear();
