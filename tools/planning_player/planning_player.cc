@@ -2173,7 +2173,7 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
       uint8_t functional_state = func_state_machine_ros_msg.current_state;
       if (is_close_loop) {
-        functional_state = iflyauto::FunctionalState_MFunctionalState_MANUAL_DRIVINGANUAL;
+        functional_state = iflyauto::FunctionalState_MANUAL_PARKING;
       }
       auto cached_func_state_machine_ros_msg =
           find_ros_msg_with_header_time_upper_bound<
