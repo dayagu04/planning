@@ -3639,11 +3639,11 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
     const bool is_large_car_in_side =
         is_front_agent ? false : IsLargeAgent(after_filter_agent);
 
-    // lc_safety = CheckIfSafetyForPredictionTrajs(  // 安全检查函数 target  node
-    //     agent_prediction_trajs, after_filter_agent, is_large_car_in_side,
-    //     is_front_agent);
-    lc_safety = CheckIfSafetyForOptimizedTrajs(agent_prediction_trajs, 
-      after_filter_agent, is_large_car_in_side, is_front_agent);
+    lc_safety = CheckIfSafetyForPredictionTrajs(  // 安全检查函数 target  node
+        agent_prediction_trajs, after_filter_agent, is_large_car_in_side,
+        is_front_agent);
+    // lc_safety = CheckIfSafetyForOptimizedTrajs(agent_prediction_trajs, 
+    //   after_filter_agent, is_large_car_in_side, is_front_agent);
 
   }
 
@@ -4022,84 +4022,59 @@ bool LaneChangeStateMachineManager::
   // 根据目标车速度 调整速度阈值
   std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
   std::array<double, 6> fp{
-      2.0, 2.5, 4.0,
-      5.,  6.,  8.};  // 触发变道需要预留最小空间 下方 大车额外增加5m基础距离
+      1.0, 2.0, 3.5,
+      4.,  5.0,  5.5};  // 触发变道需要预留最小空间 下方 大车额外增加5m基础距离
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
-  bool is_deceleration_check =
-      is_executing && !is_front_agent && agent_traj.size() >= 3 &&
-      !agent_node->is_static_type() &&
-      (last_target_rear_agent_id_ == agent_node->node_agent_id() ||
-       ego_press_line_ratio > 0.01);
-  TrajectoryPoints agent_switch_traj;
-  double deceleration = -1.0;  // m/s^2, 后车减速
-  double jerk = -2.0;          // 后车假设的让行加加速度
-  if (is_large_car) {
-    deceleration = -0.5;  // 大车减速度小很多
-  }
-  // agent_node->is_reverse_type() 不太好用，暂时在GetDecelerationTraj 增加保护
-  if (is_deceleration_check) {
-    GetDecelerationTraj(agent_node->node_accel_fusion(), agent_traj,
-                        agent_switch_traj, deceleration, jerk,
-                        is_press_boundary);
-  } else {
-    agent_switch_traj = agent_traj;
-  }
+  // bool is_deceleration_check =
+  //     is_executing && !is_front_agent && agent_traj.size() >= 3 &&
+  //     !agent_node->is_static_type() &&
+  //     (last_target_rear_agent_id_ == agent_node->node_agent_id() ||
+  //      ego_press_line_ratio > 0.01);
   for (int i = 0; i < iter_count; i++) {
     double beyond_lane_time = std_beyond_lane_time - i * 0.2;
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
-      double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
+      double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       double ego_brake = 2.5;
       box_longitudinal_buff =
           (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
-      if(is_executing){
-        box_longitudinal_buff = std::min(box_longitudinal_buff, 2.0);
+      if (is_large_car) {
+        box_longitudinal_buff += 3.0;  // 大车额外增加3m基础距离
       }
       if (ego_press_line_ratio > 0.01) {
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
+      if(is_executing){
+        box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
+      }
     } else {
       // 后车参考安全距离
-      double agent_kph = agent_switch_traj[i].v * 3.6;
+      double agent_kph = agent_traj[i].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
       }
       // 预测轨迹点车速对应ttc
       double pred_ttc = interp(
-          3.6 * std::max(0., agent_switch_traj[i].v - ego_trajs_future_[i].v),
+          3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v),
           xpv, fpv);  // 后车轨迹差速<->ttc
       max_box_ttc_rear = std::min(max_box_ttc_rear, pred_ttc);
       // 预测时间衰减性
       box_ttc = std::max(max_box_ttc_rear - i * 0.2, 0.0);
-      if (is_deceleration_check) {  // 减速轨迹 -> 是否压线
-        double ego_ttc_s = ego_trajs_future_[i].v * box_ttc +
-                           0.5 * ego_trajs_future_[i].a * box_ttc * box_ttc;
-        if (is_press_boundary) {
-          double agent_vel_i = agent_switch_traj[i].v;
-          double back_agent_tts_s =
-              agent_vel_i * box_ttc + 0.5 * deceleration * box_ttc * box_ttc;
-          box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
-        } else {
-          double agent_vel_i = agent_switch_traj[i].v;
-          double a0 = agent_node->node_accel_fusion();
-          double back_agent_tts_s =
-              agent_vel_i * box_ttc + 0.5 * a0 * box_ttc * box_ttc +
-              (1.0 / 6.0) * jerk * box_ttc * box_ttc * box_ttc;
-          box_longitudinal_buff = std::max(back_agent_tts_s - ego_ttc_s, 0.);
-        }
-      } else {  // proposal, hold 阶段
-        double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
-        double dist_rel_vel =
-            (rel_vel > 0) ? rel_vel * box_ttc : -rel_vel * beyond_lane_time;
-        box_longitudinal_buff =
-            (rel_vel > 0)
-                ? std::max(dist_rel_vel, dis_buff)
-                : dis_buff - dist_rel_vel;  // 1.5s 到达边界(实际观察约为2.5s)
-        box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
+      if(is_executing){
+        box_ttc = box_ttc * 0.5; // 决策稳定性
+        dis_buff = dis_buff * 0.7;
       }
+      double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
+      double dist_rel_vel =
+          (rel_vel > 0) ? rel_vel * box_ttc : - rel_vel * beyond_lane_time;
+      box_longitudinal_buff =
+          (rel_vel > 0)
+              ? std::max(dist_rel_vel, dis_buff)
+              : dis_buff - dist_rel_vel;  // 1.5s 到达边界(实际观察约为2.5s)
+      box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
     }
     // check lon s safety
     double two_car_length = 0;
@@ -4111,7 +4086,7 @@ bool LaneChangeStateMachineManager::
     }
 
     const double focus_v =
-        is_front_agent ? ego_trajs_future_[i].v : agent_switch_traj[i].v;
+        is_front_agent ? ego_trajs_future_[i].v : agent_traj[i].v;
     // 考虑目前自车的执行器响应时间为0.5s，在换道时纵向的稳态跟车距离为1*v；
     // 为了提高变道变道成功率，纵向又不至于减速太猛，因此设自车前方的最小安全距离为0.7*v。
     // 在距离匝道或者split距离小于200m时，变道优先级较高，那么最小安全距离设为0.5*v。
@@ -4124,7 +4099,7 @@ bool LaneChangeStateMachineManager::
     }
 
     // 如果两车速度差大于2m/s，那么安全距离可以降低至当前的0.8倍
-    double rel_v = ego_trajs_future_[i].v - agent_switch_traj[i].v;
+    double rel_v = ego_trajs_future_[i].v - agent_traj[i].v;
     bool is_large_v_diff = is_front_agent ? rel_v < -2 : rel_v > 2;
     safety_dist =
         (is_large_v_diff && !is_large_car) ? safety_dist * 0.7 : safety_dist;
@@ -4141,13 +4116,6 @@ bool LaneChangeStateMachineManager::
       std::array<double, 2> index{0, iter_count_temp - 1 - 5};
       safety_dist = interp(i - 5, index, dynamic_safety_dis);
     }
-
-    // 如果在变道返回状态下，需要将安全距离减小
-    if (transition_info_.lane_change_status == kLaneChangeExecution) {
-      safety_dist = safety_dist * 0.7;
-      box_longitudinal_buff = box_longitudinal_buff * 0.7;  // 滞回
-    }
-
     // 在安全性判断阶段，把1s处的安全距离记录下来
     if (i == 5) {
       solid_safety_dist = safety_dist;
@@ -4194,8 +4162,8 @@ bool LaneChangeStateMachineManager::
                                  kEgoLength + box_longitudinal_buff,
                                  kEgoWidth + lat_buff);
     // agent box
-    Vec2d agent_rac(agent_switch_traj[i].x, agent_switch_traj[i].y);
-    double agent_theta = agent_switch_traj[i].heading_angle;
+    Vec2d agent_rac(agent_traj[i].x, agent_traj[i].y);
+    double agent_theta = agent_traj[i].heading_angle;
     // agent  risk buff
     double agent_lateral_buff =
         1.5;  // 根据agent 类型选择 或者根据agent 尺寸选择  根据不同时刻选择
