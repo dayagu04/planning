@@ -60,6 +60,7 @@ class SpeedLimitDecider : public Task {
   void CalculateAvoidAgentSpeedLimit();
 
   void CalculateFunctionFadingAwaySpeedLimit();
+
   void CalculateVRURoundSpeedLimit();
 
   void CalculateConstructionZoneSpeedLimit();
@@ -67,7 +68,10 @@ class SpeedLimitDecider : public Task {
   bool IsSSharpBend(const std::vector<CurvInfo> &preview_curv_info_vec);
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo> &vru_round_map);
+
   double JudgeCurvBySDProMap();
+
+  double GetRampVelLimit();
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
