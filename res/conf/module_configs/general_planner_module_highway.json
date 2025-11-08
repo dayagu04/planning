@@ -517,7 +517,7 @@
     "q_obs_ref_theta": 0.1,
     "q_obs_ref_delta": 0.1,
     "q_obs_ref_vel": 0.2,
-    "q_obs_ref_acc": 0.1,
+    "q_obs_ref_acc": 1.0,
     "curv_factor": 0.33,
     "three_disc_safe_dist": 0.5,
     "q_three_disc_safe_dist_weight": 2.0,
@@ -527,7 +527,7 @@
     "q_ego_jerk_weight": 100.0,
     "q_ego_omega_weight": 500.0,
     "q_ego_delta_weight": 200.0,
-    "q_obs_jerk_weight": 4.5,
+    "q_obs_jerk_weight": 30.0,
     "q_obs_omega_weight": 20.0,
     "q_ego_acc_bound_weight": 1600.0,
     "ego_acc_max": 1.2,
@@ -541,7 +541,7 @@
     "q_soft_halfplane_weight": 0.05,
     "soft_halfplane_s0": 3.5,
     "soft_halfplane_tau": 0.5,
-    "soft_halfplane_cost_allocation_ratio": 0.75
+    "soft_halfplane_cost_allocation_ratio": 0.8
   },
   "lat_motion_ilqr": {
     "pass_acc_mode": true,
