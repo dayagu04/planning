@@ -3873,8 +3873,10 @@ bool LaneChangeStateMachineManager::CheckIfSafetyForOptimizedTrajs(
     // front_margin = std::max(front_margin, 0.0);
     // double rear_margin = (agent_end_vel - ego_end_vel) * agent_end_vel  / (2.0 * std::sqrt(a_max * b_max));
     // rear_margin = std::max(rear_margin, 0.0);
-    double front_margin = 0.0;
-    double rear_margin = 0.0;
+    double front_margin = ego_end_vel * 0.3 +(ego_end_vel - agent_end_vel) / (2 * std::sqrt(1.5 * 2.5));
+    front_margin = std::max(front_margin, 2.0);
+    double rear_margin = ego_end_vel * 0.3 + (agent_end_vel - ego_end_vel) / (2 * std::sqrt(1.5 * 2.5));
+    rear_margin = std::max(rear_margin, 2.0);
     //加速度检查，遍历障碍物轨迹加速度数值，超过阈值则变道不合理
     const double max_agent_deacceleration = 2.0;
     bool is_agent_deacceleration_safe = true;
