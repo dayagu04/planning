@@ -4069,11 +4069,11 @@ bool LaneChangeStateMachineManager::
       }
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       double dist_rel_vel =
-          (rel_vel > 0) ? rel_vel * box_ttc : - rel_vel * beyond_lane_time;
+          (rel_vel > 0) ? rel_vel * box_ttc : 0.0;
       box_longitudinal_buff =
           (rel_vel > 0)
               ? std::max(dist_rel_vel, dis_buff)
-              : dis_buff - dist_rel_vel;  // 1.5s 到达边界(实际观察约为2.5s)
+              : dis_buff;
       box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
     }
     // check lon s safety
@@ -5254,6 +5254,9 @@ bool LaneChangeStateMachineManager::IsStartJointOpt(int front_agent_id, int rear
   const auto rear_agent = agent_mgr->GetAgent(rear_agent_id);
   const  auto& ref_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
   //自车boundary
+  if(ego_trajs_future_.empty()){
+    return false;
+  }
   if (front_agent != nullptr && ref_path != nullptr) {
       //前车sl boundary计算
       const auto& front_agent_bd = GetSLboundaryFromAgent(ref_path, front_agent->box());
