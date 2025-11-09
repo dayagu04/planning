@@ -901,6 +901,105 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     maximum_speed_adjustment = read_json_keys<int>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "maximum_speed_adjustment"});
+    kNormalSceneWeightMatchGapVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightMatchGapVel"});
+    kNormalSceneWeightMatchGapS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightMatchGapS"});
+    kNormalSceneWeightFollowVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightFollowVel"});
+    kNormalSceneWeightStopLine = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightStopLine"});
+    kNormalSceneWeightLeadingSafeS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightLeadingSafeS"});
+    kNormalSceneWeightLeadingSafeV = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightLeadingSafeV"});
+    kNormalSceneWeightVelVariable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightVelVariable"});
+    kNormalSceneWeightGapAvailable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightGapAvailable"});
+    kNormalSceneWeightAccLimit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightAccLimit"});
+    kNormalSceneWeightStopPenalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightStopPenalty"});
+    kNormalSceneWeightSpeedChange = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightSpeedChange"});
+    kPurseFlowVelSceneWeightMatchGapVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightMatchGapVel"});
+    kPurseFlowVelSceneWeightMatchGapS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightMatchGapS"});
+    kPurseFlowVelSceneWeightFollowVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightFollowVel"});
+    kPurseFlowVelSceneWeightStopLine = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightStopLine"});
+    kPurseFlowVelSceneWeightLeadingSafeS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightLeadingSafeS"});
+    kPurseFlowVelSceneWeightLeadingSafeV = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightLeadingSafeV"});
+    kPurseFlowVelSceneWeightVelVariable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightVelVariable"});
+    kPurseFlowVelSceneWeightGapAvailable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightGapAvailable"});
+    kPurseFlowVelSceneWeightAccLimit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightAccLimit"});
+    kPurseFlowVelSceneWeightStopPenalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightStopPenalty"});
+    kPurseFlowVelSceneWeightSpeedChange = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightSpeedChange"});
+    kDeclerationSceneWeightMatchGapVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightMatchGapVel"});
+    kDeclerationSceneWeightMatchGapS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightMatchGapS"});
+    kDeclerationSceneWeightFollowVel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightFollowVel"});
+    kDeclerationSceneWeightStopLine = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightStopLine"});
+    kDeclerationSceneWeightLeadingSafeS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightLeadingSafeS"});
+    kDeclerationSceneWeightLeadingSafeV = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightLeadingSafeV"});
+    kDeclerationSceneWeightVelVariable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightVelVariable"});
+    kDeclerationSceneWeightGapAvailable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightGapAvailable"});
+    kDeclerationSceneWeightAccLimit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightAccLimit"});
+    kDeclerationSceneWeightStopPenalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightStopPenalty"});
+    kDeclerationSceneWeightSpeedChange = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightSpeedChange"});
   }
 
   int sample_v_nums = 15;
@@ -910,6 +1009,42 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double sample_t_upper = 5.0;
   double sample_t_lower = 1.0;
   double maximum_speed_adjustment = 15.0 / 3.6;
+
+  double kNormalSceneWeightMatchGapVel = 6.5;
+  double kNormalSceneWeightMatchGapS = 4.5;
+  double kNormalSceneWeightFollowVel = 5.0;
+  double kNormalSceneWeightStopLine = 50.0;
+  double kNormalSceneWeightLeadingSafeS = 13.5;
+  double kNormalSceneWeightLeadingSafeV = 0.0;
+  double kNormalSceneWeightVelVariable = 3.5;
+  double kNormalSceneWeightGapAvailable = 2.5;
+  double kNormalSceneWeightAccLimit = 25.0;
+  double kNormalSceneWeightStopPenalty = 2.5;
+  double kNormalSceneWeightSpeedChange = 10.0;
+
+  double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
+  double kPurseFlowVelSceneWeightMatchGapS = 0.0;
+  double kPurseFlowVelSceneWeightFollowVel = 6.25;
+  double kPurseFlowVelSceneWeightStopLine = 50.0;
+  double kPurseFlowVelSceneWeightLeadingSafeS = 13.5;
+  double kPurseFlowVelSceneWeightLeadingSafeV = 0.0;
+  double kPurseFlowVelSceneWeightVelVariable = 2.0;
+  double kPurseFlowVelSceneWeightGapAvailable = 1.25;
+  double kPurseFlowVelSceneWeightAccLimit = 25.0;
+  double kPurseFlowVelSceneWeightStopPenalty = 2.5;
+  double kPurseFlowVelSceneWeightSpeedChange = 0.0;
+
+  double kDeclerationSceneWeightMatchGapVel = 4.5;
+  double kDeclerationSceneWeightMatchGapS = 2.5;
+  double kDeclerationSceneWeightFollowVel = 0.0;
+  double kDeclerationSceneWeightStopLine = 50.0;
+  double kDeclerationSceneWeightLeadingSafeS = 13.5;
+  double kDeclerationSceneWeightLeadingSafeV = 0.0;
+  double kDeclerationSceneWeightVelVariable = 0.5;
+  double kDeclerationSceneWeightGapAvailable = 2.5;
+  double kDeclerationSceneWeightAccLimit = 0.0;
+  double kDeclerationSceneWeightStopPenalty = 0.0;
+  double kDeclerationSceneWeightSpeedChange = 0.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -3560,13 +3695,13 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
                      "ca_invade_lat_dis_counter_thr");
     ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
-                     "construction_invade_speed_diff");           
+                     "construction_invade_speed_diff");
     ReadItem<double>(json, construction_lat_dist_entry, "speed_limit_decider",
                      "construction_lat_dist_entry");
     ReadItem<double>(json, construction_lat_dist_exit, "speed_limit_decider",
-                     "construction_lat_dist_exit"); 
+                     "construction_lat_dist_exit");
     ReadItem<double>(json, construction_speed_upper, "speed_limit_decider",
-                     "construction_speed_upper"); 
+                     "construction_speed_upper");
     ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit, "speed_limit_decider",
                      "enable_construction_avoid_agent_speed_limit");
 
@@ -3854,7 +3989,7 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double q_soft_halfplane_weight = 5.0;
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
-  double soft_halfplane_cost_allocation_ratio = 0.7;  
+  double soft_halfplane_cost_allocation_ratio = 0.7;
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
@@ -3941,7 +4076,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_acc_speed_adjust");
     ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
                      "q_jerk_speed_adjust");
-                     
+
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
