@@ -274,6 +274,7 @@ class LaneChangeStateMachineManager {
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
   CongestionDetectionConfig congestion_detection_config_;
+  LanChangeSafetyCheckConfig lc_safety_check_config_;
   const EgoPlanningConfigBuilder* config_builder_;
   framework::Session* session_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;

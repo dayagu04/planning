@@ -64,6 +64,7 @@ LaneChangeStateMachineManager::LaneChangeStateMachineManager(
   speed_planning_config_ = config_builder->cast<SpeedPlannerConfig>();
   congestion_detection_config_ =
       config_builder->cast<CongestionDetectionConfig>();
+  lc_safety_check_config_ = config_builder->cast<LanChangeSafetyCheckConfig>();
 }
 
 void LaneChangeStateMachineManager::Update() {
@@ -3996,9 +3997,12 @@ bool LaneChangeStateMachineManager::
   double box_ttc = lc_safety_check_time_;  // time 的计算已经有非零保护了
   // 根据与后车差速 调整起始ttc
   double max_box_ttc_rear = 4.0;
-  std::array<double, 7> xpv{0.0, 5.0,  10., 20.,
-                            25., 30.0, 40.};  // 后车 - 自车速度 kph
-  std::array<double, 7> fpv{3.0, 4.0, 5.0, 7.0, 8.0, 9.5, 10.};  // 起始ttc
+  // std::array<double, 7> xpv{0.0, 5.0,  10., 20.,
+  //                           25., 30.0, 40.};  // 后车 - 自车速度 kph
+  // std::array<double, 7> fpv{3.0, 4.0, 5.0, 7.0, 8.0, 9.5, 10.};  // 起始ttc
+  const auto &diff_speed_init_ttc_map = lc_safety_check_config_.diff_speed_init_ttc_map;
+  const auto& xpv = diff_speed_init_ttc_map.diff_kph_table;
+  const auto& fpv = diff_speed_init_ttc_map.ttc_table;
   double delta_kph =
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   max_box_ttc_rear = interp(delta_kph, xpv, fpv);  // 距离/ 时间
@@ -4064,7 +4068,7 @@ bool LaneChangeStateMachineManager::
       // 预测时间衰减性
       box_ttc = std::max(max_box_ttc_rear - i * 0.2, 0.0);
       if(is_executing){
-        box_ttc = box_ttc * 0.5; // 决策稳定性
+        box_ttc = box_ttc * lc_safety_check_config_.exe_ttc_ratio; // 决策稳定性 0.5 默认
         dis_buff = dis_buff * 0.7;
       }
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
