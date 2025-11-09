@@ -120,8 +120,10 @@ class GeneralLateralDecider : public Task {
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>>
+          &second_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>>
+          &first_soft_bounds_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
   void GenerateObstaclePreliminaryDecision(
@@ -133,21 +135,21 @@ class GeneralLateralDecider : public Task {
       bool &reset_conflict_decision, ObstacleDecision &obstacle_decision,
       LatObstacleDecisionType &lat_decision,
       LonObstacleDecisionType &lon_decision);
-  void AddObstacleDecisionBound(int id, double t, BoundType bound_type,
-                                double overlap_min_y, double overlap_max_y,
-                                double lat_buf_dis,
-                                LatObstacleDecisionType lat_decision,
-                                LonObstacleDecisionType lon_decision,
-                                ObstacleDecision &obstacle_decision,
-                                BoundHierarchy bound_hierarchy = BoundHierarchy::SECOND_SOFT_BOUND,
-                                bool is_avoid_side_ignore_obj = false,
-                                bool is_high_dangerous = false);
+  void AddObstacleDecisionBound(
+      int id, double t, BoundType bound_type, double overlap_min_y,
+      double overlap_max_y, double lat_buf_dis,
+      LatObstacleDecisionType lat_decision,
+      LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision,
+      BoundHierarchy bound_hierarchy = BoundHierarchy::SECOND_SOFT_BOUND,
+      bool is_avoid_side_ignore_obj = false, bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
-      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>>
+          &second_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>>
+          &first_soft_bounds_info,
       const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
@@ -166,8 +168,10 @@ class GeneralLateralDecider : public Task {
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
   void HandleLaneChangeScene(TrajectoryPoints &traj_points);
-  void HandleRefPathOffset(TrajectoryPoints &traj_points, std::vector<std::pair<double, double>> &front_axis_ref_path,
-                           double dynamic_ref_buffer);
+  void HandleRefPathOffset(
+      TrajectoryPoints &traj_points,
+      std::vector<std::pair<double, double>> &front_axis_ref_path,
+      double dynamic_ref_buffer);
   void CalcLateralBehaviorOutput();
   bool IsLonOverlap(const std::shared_ptr<FrenetObstacle> obstacle);
   bool IsFarObstacle(const std::shared_ptr<FrenetObstacle> obstacle);
@@ -199,17 +203,18 @@ class GeneralLateralDecider : public Task {
                                  double overlap_min_y, double overlap_max_y,
                                  bool is_side_obstacle,
                                  double extra_lane_type_decrease_buffer,
-                                 BoundHierarchy bound_hierarchy, double lane_width,
+                                 BoundHierarchy bound_hierarchy,
+                                 double lane_width,
                                  bool is_care_reverse_ignore_obj);
   double CalDynamicNudgeLatBufDis(
       const std::shared_ptr<FrenetObstacle> obstacle, bool in_intersection,
       bool is_nudge_left, double overlap_min_y, double overlap_max_y,
       double limit_overlap_min_y, double limit_overlap_max_y, double pred_ts,
       double extra_lane_type_decrease_buffer,
-      bool is_same_side_obstacle_during_lane_change, BoundHierarchy bound_hierarchy,
-      double extra_reverse_obj_decrease_buffer, bool is_care_reverse_ignore_obj,
-      double last_t_lat_buf_dis, double &updated_overlap_min_y,
-      double &updated_overlap_max_y);
+      bool is_same_side_obstacle_during_lane_change,
+      BoundHierarchy bound_hierarchy, double extra_reverse_obj_decrease_buffer,
+      bool is_care_reverse_ignore_obj, double last_t_lat_buf_dis,
+      double &updated_overlap_min_y, double &updated_overlap_max_y);
   bool IsSameSideObstacleDuringLaneChange(
       const std::shared_ptr<FrenetObstacle> obstacle);
   void PostProcessRoadSoftBoundary();
@@ -233,13 +238,14 @@ class GeneralLateralDecider : public Task {
   void LimitFrenetLateralSlope(
       std::vector<std::pair<double, double>> &frenet_bounds);
   void PostProcessBoundary();
-  void GenerateRecommendJerk(
-      const std::shared_ptr<FrenetObstacle> obstacle,
-      bool &is_high_dangerous);
+  void GenerateRecommendJerk(const std::shared_ptr<FrenetObstacle> obstacle,
+                             bool &is_high_dangerous);
   void CheckObstacleSideCutinNudgeCondition(
       const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
-      BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle);
-  bool FindNearestBoundPoint(const double current_index_s, WeightedBounds &last_bounds);
+      BoundType &bound_type, bool &is_avoid_side_ignore_obj,
+      bool &is_side_obstacle);
+  bool FindNearestBoundPoint(const double current_index_s,
+                             WeightedBounds &last_bounds);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -298,7 +304,6 @@ class GeneralLateralDecider : public Task {
   double last_compensation_buffer_ = 0.0;
   std::unordered_map<uint32_t, double> current_desire_final_nudge_l_map_;
   std::unordered_map<uint32_t, double> last_desire_final_nudge_l_map_;
-
 };
 
 }  // namespace planning

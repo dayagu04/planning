@@ -225,8 +225,8 @@ void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
         avoid_obstacle, avoid_info_.avoid_way, 0.5, lat_offset_compensate,
         config_.base_nudge_distance);
 
-
-    avoid_info_.desire_lat_offset = LimitDesireLateralOffsetHighSpeed(avoid_obstacle, desire_lat_offset);
+    avoid_info_.desire_lat_offset =
+        LimitDesireLateralOffsetHighSpeed(avoid_obstacle, desire_lat_offset);
 
     lat_offset = LimitLateralOffset(
         avoid_obstacle, avoid_info_.desire_lat_offset, avoid_info_.avoid_way);
@@ -474,11 +474,12 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
     nearest_avoid_obstacle = &avoid_obstacle_1;
     CalcMaxOppositeOffset(avoid_obstacle_1);
     lateral_offset = DesireLateralOffsetSideWay(
-        *nearest_avoid_obstacle, avoid_info_.avoid_way, 0.5, lat_offset_compensate_1,
-        config_.base_nudge_distance);
+        *nearest_avoid_obstacle, avoid_info_.avoid_way, 0.5,
+        lat_offset_compensate_1, config_.base_nudge_distance);
   }
 
-  lateral_offset = LimitDesireLateralOffsetHighSpeed(*nearest_avoid_obstacle, lateral_offset);
+  lateral_offset = LimitDesireLateralOffsetHighSpeed(*nearest_avoid_obstacle,
+                                                     lateral_offset);
 
   lateral_offset = LimitLateralOffset(*nearest_avoid_obstacle, lateral_offset,
                                       avoid_info_.avoid_way);
@@ -487,14 +488,17 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
   double smooth_lateral_offset = SmoothLateralOffset(
       *nearest_avoid_obstacle, lateral_offset, &avoid_info_.avoid_way);
 
-  // if (lateral_offset_decider::IsTruck(avoid_obstacle_1) || lateral_offset_decider::IsTruck(avoid_obstacle_2)) {
+  // if (lateral_offset_decider::IsTruck(avoid_obstacle_1) ||
+  // lateral_offset_decider::IsTruck(avoid_obstacle_2)) {
   //   if (last_avoid_info_.lat_offset * smooth_lateral_offset >= 0) {
   //     if (smooth_lateral_offset == 0) {
   //       smooth_lateral_offset = last_avoid_info_.lat_offset;
   //     } else if (smooth_lateral_offset > 0) {
-  //       smooth_lateral_offset = std::min(kMaxTrackAvoidOffset, std::max(smooth_lateral_offset, last_avoid_info_.lat_offset));
+  //       smooth_lateral_offset = std::min(kMaxTrackAvoidOffset,
+  //       std::max(smooth_lateral_offset, last_avoid_info_.lat_offset));
   //     } else {
-  //       smooth_lateral_offset = std::max(-kMaxTrackAvoidOffset, std::min(smooth_lateral_offset, last_avoid_info_.lat_offset));
+  //       smooth_lateral_offset = std::max(-kMaxTrackAvoidOffset,
+  //       std::min(smooth_lateral_offset, last_avoid_info_.lat_offset));
   //     }
   //   }
   // }
@@ -613,18 +617,20 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
           base_distance + 0.1 + config_.extra_truck_nudge_lat_offset;
       const std::vector<double> ttc_fp{0, 2, 3, 5};
       const std::vector<double> distance_compensation_fp{0, 0, 0.1, 0.12};
-      uncertainty_distance_compensation = planning::interp(pred_ts, ttc_fp, distance_compensation_fp);
+      uncertainty_distance_compensation =
+          planning::interp(pred_ts, ttc_fp, distance_compensation_fp);
     } else if (lateral_offset_decider::IsVRU(avoid_obstacle)) {
       base_distance += 0.1;
     } else if (lateral_offset_decider::IsCone(avoid_obstacle)) {
       base_distance = 0.7;
     }
 
-    double extra_buffer = interp(ego_cart_state_manager_->ego_v() * 3.6,
-                                config_.lateral_offset_obstacle_nudge_buffer_v_bp,
-                                config_.lateral_offset_nudge_buffer);
-    double distance_ego_to_obstacle = base_distance +
-                                      extra_buffer + uncertainty_distance_compensation;
+    double extra_buffer =
+        interp(ego_cart_state_manager_->ego_v() * 3.6,
+               config_.lateral_offset_obstacle_nudge_buffer_v_bp,
+               config_.lateral_offset_nudge_buffer);
+    double distance_ego_to_obstacle =
+        base_distance + extra_buffer + uncertainty_distance_compensation;
     lat_offset = half_ego_width + distance_ego_to_obstacle - nearest_l_to_ref;
   }
 
@@ -734,20 +740,24 @@ double LateralOffsetCalculatorV2::LimitLateralOffset(
   return lateral_offset;
 }
 
-double LateralOffsetCalculatorV2::LimitDesireLateralOffsetHighSpeed(const AvoidObstacleInfo &avoid_obstacle, const double in_desire_lat_offset) {
+double LateralOffsetCalculatorV2::LimitDesireLateralOffsetHighSpeed(
+    const AvoidObstacleInfo &avoid_obstacle,
+    const double in_desire_lat_offset) {
   double out_desire_lat_offset = in_desire_lat_offset;
   if (has_enough_speed_hysteresis_.IsValid()) {
-    const double ttc =
-      clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
-                std::max(-avoid_obstacle.vs_lon_relative, 1e-6),
-            5.0, 0.0);
+    const double ttc = clip(std::max(avoid_obstacle.s_to_ego - 4, 0.0) /
+                                std::max(-avoid_obstacle.vs_lon_relative, 1e-6),
+                            5.0, 0.0);
     const std::vector<double> ttc_fp{0, 1, 2, 3, 4, 5};
     const std::vector<double> slope_fp{0, 0, 0, 0.03, 0.1, 0.2};
     const double slope_limit = planning::interp(ttc, ttc_fp, slope_fp);
     if (last_avoid_info_.desire_lat_offset <= 1e-5) {
       out_desire_lat_offset = in_desire_lat_offset;
     } else {
-      out_desire_lat_offset = clip(in_desire_lat_offset, last_avoid_info_.desire_lat_offset + slope_limit, last_avoid_info_.desire_lat_offset - slope_limit);
+      out_desire_lat_offset =
+          clip(in_desire_lat_offset,
+               last_avoid_info_.desire_lat_offset + slope_limit,
+               last_avoid_info_.desire_lat_offset - slope_limit);
     }
   }
   return out_desire_lat_offset;
@@ -1208,7 +1218,8 @@ void LateralOffsetCalculatorV2::PostProcess(
         double lat_offset_compensate =
             LateralOffsetCompensate(avoid_obstacles[0]);
         double desire_lat_offset = 0.0;
-        if (avoid_obstacles[0].s_to_ego <= 0.0 && !config_.open_side_lat_offset_nudge) {
+        if (avoid_obstacles[0].s_to_ego <= 0.0 &&
+            !config_.open_side_lat_offset_nudge) {
           desire_lat_offset = fabs(last_avoid_info_.lat_offset);
         } else {
           desire_lat_offset = DesireLateralOffsetSideWay(

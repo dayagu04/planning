@@ -270,10 +270,12 @@ bool LateralObstacleDecider::Execute() {
       }
       if (history.side_car) {
         // 针对侧方->前方位置的转化，为了避免障碍物长时间在自车侧方导致不合理限制避让幅度从而引入记时操作
-        if (std:: fabs(frenet_obs->d_s_rel()) <= history.overlap_ego_head_thr) {
-          history.side_2_front_count = std::min(history.side_2_front_count + 1, side_2_front_max_count);
+        if (std::fabs(frenet_obs->d_s_rel()) <= history.overlap_ego_head_thr) {
+          history.side_2_front_count =
+              std::min(history.side_2_front_count + 1, side_2_front_max_count);
         } else {
-          history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
+          history.side_2_front_count =
+              std::max(history.side_2_front_count - 1, 0);
         }
         if (history.side_2_front_count > side_2_front_count_thr) {
           // history.front_car = true;
@@ -294,7 +296,8 @@ bool LateralObstacleDecider::Execute() {
         // continue;
       }
       if (frenet_obs->d_s_rel() <= 0 &&
-          (history.side_2_front_count <= side_2_front_count_thr || !config_.open_side_lat_offset_nudge)) {
+          (history.side_2_front_count <= side_2_front_count_thr ||
+           !config_.open_side_lat_offset_nudge)) {
         history.is_avd_car = false;
         if (frenet_obs->d_s_rel() <= -1 * (obs->length() + ego_length_)) {
           history.ncar_count = 0;
@@ -697,8 +700,8 @@ bool LateralObstacleDecider::IsPotentialAvoidingCar(
   // lower buffer for car
   if (!obstacle.is_static() &&
       (type == iflyauto::ObjectType::OBJECT_TYPE_COUPE ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_VAN) &&
+       type == iflyauto::ObjectType::OBJECT_TYPE_MINIBUS ||
+       type == iflyauto::ObjectType::OBJECT_TYPE_VAN) &&
       !IsTruck(frenet_obstacle)) {
     // near_car_d_lane_thr = near_car_d_lane_thr * car_addition_decre_factor;
     near_car_d_lane_thr = near_car_d_lane_thr - car_addition_decre_buffer;
@@ -2121,12 +2124,14 @@ void LateralObstacleDecider::IsPotentialFollowingObstacle(
       follow_info.follow_confidence =
           std::fmin(follow_info.follow_confidence + gap, follow_confidence_cnt);
     } else {
-      // 针对cut_out或者横穿的障碍物，即远离自车道的障碍物，v_lat > 0, 衰减需要加快
+      // 针对cut_out或者横穿的障碍物，即远离自车道的障碍物，v_lat > 0,
+      // 衰减需要加快
       std::array<double, 5> x_cut_factor{0.2, 0.3, 0.4, 0.6, 0.8};
       std::array<double, 5> f_cut_factor{0, 0, 2, 6, 11};
       double cut_factor = interp(v_lat, x_cut_factor, f_cut_factor);
       follow_info.follow_confidence = std::fmax(
-          follow_info.follow_confidence - cut_factor * planning_cycle_time, 0.0);
+          follow_info.follow_confidence - cut_factor * planning_cycle_time,
+          0.0);
 
       // 正常衰减
       follow_info.follow_confidence = std::fmax(

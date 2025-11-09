@@ -18,11 +18,11 @@
 #include "frenet_ego_state.h"
 #include "general_lateral_decider_utils.h"
 #include "log.h"
+#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 #include "utils/hysteresis_decision.h"
 #include "utils/kd_path.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane_manager.h"
-#include "modules/tasks/task_interface/potential_dangerous_agent_decider_output.h"
 
 namespace planning {
 
@@ -86,15 +86,15 @@ bool GeneralLateralDecider::InitInfo() {
   second_soft_bounds_.clear();
   hard_bounds_.clear();
   second_frenet_soft_bounds_.assign(second_frenet_soft_bounds_.size(),
-                             std::make_pair(0.0, 0.0));
+                                    std::make_pair(0.0, 0.0));
   first_frenet_soft_bounds_.assign(first_frenet_soft_bounds_.size(),
-                             std::make_pair(0.0, 0.0));
+                                   std::make_pair(0.0, 0.0));
   frenet_hard_bounds_.assign(frenet_hard_bounds_.size(),
                              std::make_pair(0.0, 0.0));
   second_soft_bounds_info_.assign(second_soft_bounds_info_.size(),
-                           std::make_pair(BoundInfo(), BoundInfo()));
+                                  std::make_pair(BoundInfo(), BoundInfo()));
   first_soft_bounds_info_.assign(first_soft_bounds_info_.size(),
-                           std::make_pair(BoundInfo(), BoundInfo()));
+                                 std::make_pair(BoundInfo(), BoundInfo()));
   hard_bounds_info_.assign(hard_bounds_info_.size(),
                            std::make_pair(BoundInfo(), BoundInfo()));
   is_blocked_obstacle_ = false;
@@ -168,20 +168,23 @@ bool GeneralLateralDecider::Execute() {
   if (config_.use_first_soft_bound) {
     CalculateAvoidObstacles(first_frenet_soft_bounds_, first_soft_bounds_info_);
   } else {
-    CalculateAvoidObstacles(second_frenet_soft_bounds_, second_soft_bounds_info_);
+    CalculateAvoidObstacles(second_frenet_soft_bounds_,
+                            second_soft_bounds_info_);
   }
 
-  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_,
+                                      first_frenet_soft_bounds_,
                                       general_lateral_decider_output);
 
-  GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
-                               frenet_hard_bounds_, second_soft_bounds_info_,
-                               first_soft_bounds_info_, hard_bounds_info_,
-                               general_lateral_decider_output);
+  GenerateLateralDeciderOutput(
+      second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+      frenet_hard_bounds_, second_soft_bounds_info_, first_soft_bounds_info_,
+      hard_bounds_info_, general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
-  SaveLatDebugInfo(second_frenet_soft_bounds_, first_frenet_soft_bounds_, frenet_hard_bounds_, second_soft_bounds_info_,
+  SaveLatDebugInfo(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                   frenet_hard_bounds_, second_soft_bounds_info_,
                    first_soft_bounds_info_, hard_bounds_info_);
 
   auto end_time = IflyTime::Now_ms();
@@ -456,7 +459,7 @@ void GeneralLateralDecider::UnitTest() {
 void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
-              ->mutable_general_lateral_decider_output();
+          ->mutable_general_lateral_decider_output();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info =
@@ -491,8 +494,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     lc_hold_offset = lane_change_decider_output.lc_hold_state_lat_offset;
   }
   // construct ref
-  const auto &coarse_traj_points =
-      coarse_planning_info.trajectory_points;
+  const auto &coarse_traj_points = coarse_planning_info.trajectory_points;
   // generate traj_points based on kMaxAcc or kMinAcc
   constexpr double kEps = 1e-4;
   double start_s = coarse_traj_points.front().s;
@@ -501,12 +503,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double kMaxAcc = 0.8;
   double kMinAcc = -5.5;
   double cruise_v = std::max(config_.min_v_cruise,
-                              session_->planning_context().v_ref_cruise());
-  double ego_v =
-      std::max(planning_init_point.v, config_.min_v_cruise);
+                             session_->planning_context().v_ref_cruise());
+  double ego_v = std::max(planning_init_point.v, config_.min_v_cruise);
   // get curve info
-  ref_curve_info_ =
-    reference_path_ptr_->GetReferencePathCurveInfo();
+  ref_curve_info_ = reference_path_ptr_->GetReferencePathCurveInfo();
   if (ref_curve_info_.s_vec.size() > 2) {
     general_lateral_decider_output.curve_s_spline.set_points(
         ref_curve_info_.s_vec, ref_curve_info_.curve_vec);
@@ -518,17 +518,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
       virtual_lane_manager->get_is_exist_split_on_ramp() ||
       virtual_lane_manager->get_is_exist_intersection_split()) {
     kMaxAcc = 0.2;
-  } else if (ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
-             ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
-             ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
-    const auto &route_info_output =
-        session_->environmental_model()
-                .get_route_info()
-                ->get_route_info_output();
-    if ((config_.ramp_limit_v_valid) &&
-        (route_info_output.is_on_ramp)) {
-      cruise_v =
-          std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
+  } else if (ref_curve_info_.curve_type ==
+                 ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
+             ref_curve_info_.curve_type ==
+                 ReferencePathCurveInfo::CurveType::S_CURVE ||
+             ref_curve_info_.curve_type ==
+                 ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+    const auto &route_info_output = session_->environmental_model()
+                                        .get_route_info()
+                                        ->get_route_info_output();
+    if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
+      cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
     }
     double road_speed_limit;
     bool is_exist_speed_limit =
@@ -579,10 +579,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   std::vector<double> fp_ref_len_diff{1.0, 0.5};
   double ref_length_change =
       planning::interp(last_ref_length_, xp_last_ref_len, fp_ref_len_diff);
-  if (ego_v <= 5.556 &&
-      (is_LC_CHANGE ||
-       is_LC_BACK ||
-       is_LC_HOLD)) {
+  if (ego_v <= 5.556 && (is_LC_CHANGE || is_LC_BACK || is_LC_HOLD)) {
     std::vector<double> xp_ego_v{2.0, 4.167, 5.556};
     std::vector<double> fp_length_diff{0.1, 0.3, 0.5};
     ref_length_change = planning::interp(ego_v, xp_ego_v, fp_length_diff);
@@ -631,9 +628,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         x_s_spline, y_s_spline, s_vec.front(), s_vec.back(), spatio_init_point);
     s_ref = spatio_projection_spline.GetOutput().s_proj;
   } else {
-      s_vec = cart_ref_info.s_vec;
-      x_s_spline = cart_ref_info.x_s_spline;
-      y_s_spline = cart_ref_info.y_s_spline;
+    s_vec = cart_ref_info.s_vec;
+    x_s_spline = cart_ref_info.x_s_spline;
+    y_s_spline = cart_ref_info.y_s_spline;
   }
   const double max_ref_length = std::max(
       std::min(s_vec.back(), frenet_coord->Length()) - s_ref - 0.01, 0.0);
@@ -642,14 +639,14 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   traj_points.clear();
   traj_points.reserve(config_.num_step + 1);
 
-  std::vector<std::pair<double, double>> front_axis_ref_path(config_.num_step + 1);
+  std::vector<std::pair<double, double>> front_axis_ref_path(config_.num_step +
+                                                             1);
   TrajectoryPoint point;
   TrajectoryPoint front_axle_point;
 
   const auto &vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   double front_axle_s_ref = s_ref + vehicle_param.wheel_base;
-
 
   for (size_t i = 0; i < config_.num_step + 1; ++i) {
     // cart info
@@ -670,11 +667,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
 
     if (front_axle_s_ref < s_vec.back() + kEps) {
       front_axis_ref_path[i].first = x_s_spline(front_axle_s_ref);
-      front_axis_ref_path[i].second= y_s_spline(front_axle_s_ref);
+      front_axis_ref_path[i].second = y_s_spline(front_axle_s_ref);
     } else {
       front_axis_ref_path[i].first =
           point.x + vehicle_param.wheel_base * std::cos(point.heading_angle);
-      front_axis_ref_path[i].second=
+      front_axis_ref_path[i].second =
           point.y + vehicle_param.wheel_base * std::sin(point.heading_angle);
     }
 
@@ -686,8 +683,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   // calculate lc ref buffer
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
-  bool lat_offset_is_valid =
-      lateral_offset_decider_output.is_valid;
+  bool lat_offset_is_valid = lateral_offset_decider_output.is_valid;
   double ref_lat_offset = 0.0;
   if (lat_offset_is_valid) {
     ref_lat_offset = lateral_offset_decider_output.lateral_offset;
@@ -737,8 +733,7 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   }
   general_lateral_decider_output.is_use_spatio_planner_result =
       is_use_spatio_planner_result;
-  general_lateral_decider_output.ramp_scene =
-      limit_ref_vel_on_ramp_valid;
+  general_lateral_decider_output.ramp_scene = limit_ref_vel_on_ramp_valid;
   JSON_DEBUG_VALUE("min_curve_radius", ref_curve_info_.min_radius);
   JSON_DEBUG_VALUE("curve_type", static_cast<int>(ref_curve_info_.curve_type))
 
@@ -768,22 +763,26 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         //   HandleRefPathOffset(traj_points,
         //       lane_change_decider_output.lateral_close_boundary_offset);
         // } else {
-        if (ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
-          double compensation_buffer = interp(ref_curve_info_.min_radius, config_.curv_bp,
-                config_.lat_compensation_buffer);
+        if (ref_curve_info_.curve_type ==
+            ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+          double compensation_buffer =
+              interp(ref_curve_info_.min_radius, config_.curv_bp,
+                     config_.lat_compensation_buffer);
           const double change_rate = 0.05;
           if (ref_curve_info_.is_left) {
             if (last_compensation_buffer_ < 0) {
               last_compensation_buffer_ = 0.0;
             }
-            compensation_buffer =
-              clip(compensation_buffer, last_compensation_buffer_ + change_rate, last_compensation_buffer_ - change_rate);
+            compensation_buffer = clip(compensation_buffer,
+                                       last_compensation_buffer_ + change_rate,
+                                       last_compensation_buffer_ - change_rate);
           } else if (ref_curve_info_.is_right) {
             if (last_compensation_buffer_ > 0) {
               last_compensation_buffer_ = 0.0;
             }
-            compensation_buffer =
-              clip(-compensation_buffer, last_compensation_buffer_ + change_rate, last_compensation_buffer_ - change_rate);
+            compensation_buffer = clip(-compensation_buffer,
+                                       last_compensation_buffer_ + change_rate,
+                                       last_compensation_buffer_ - change_rate);
           }
           ref_lat_offset += compensation_buffer;
           last_compensation_buffer_ = compensation_buffer;
@@ -798,16 +797,15 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     }
   }
 
-
-  general_lateral_decider_output.front_axis_enu_ref_path = std::move(front_axis_ref_path);
+  general_lateral_decider_output.front_axis_enu_ref_path =
+      std::move(front_axis_ref_path);
 }
 
 void GeneralLateralDecider::HandleRefPathOffset(
     TrajectoryPoints &traj_points,
     std::vector<std::pair<double, double>> &front_axis_ref_path,
     double dynamic_ref_buffer) {
-  const auto &frenet_coord =
-      reference_path_ptr_->get_frenet_coord();
+  const auto &frenet_coord = reference_path_ptr_->get_frenet_coord();
   if (std::fabs(dynamic_ref_buffer) > 1e-6) {
     Point2D first_offset_xy_point;
     if (frenet_coord->SLToXY(Point2D(traj_points[0].s, dynamic_ref_buffer),
@@ -842,8 +840,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto &k_s_spline =
-      reference_path_ptr_->GetRawCurveSpline();
+  const auto &k_s_spline = reference_path_ptr_->GetRawCurveSpline();
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
     if (!reference_path_ptr_->get_reference_point_by_lon(traj_point.s,
@@ -855,8 +852,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
         1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
     double road_radius2 = 10.0;
     if (k_s_spline.get_x().size() > 0) {
-      road_radius2 =
-          1 / std::max(std::fabs(k_s_spline(traj_point.s)), 1e-6);
+      road_radius2 = 1 / std::max(std::fabs(k_s_spline(traj_point.s)), 1e-6);
     }
     min_road_radius_ = std::max(
         std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_),
@@ -1037,8 +1033,9 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     map_obstacle_decision.tp.s = ref_traj_points_[i].s;
     map_obstacle_decision.tp.l = ref_traj_points_[i].l;
     if ((map_obstacle_decision.tp.s -
-            ego_frenet_state_.planning_init_point().frenet_state.s <
-        config_.care_lon_area_road_border) && map_obstacle_decision.tp.t < config_.max_care_time_for_roadborder) {
+             ego_frenet_state_.planning_init_point().frenet_state.s <
+         config_.care_lon_area_road_border) &&
+        map_obstacle_decision.tp.t < config_.max_care_time_for_roadborder) {
       hard_bound_road.upper =
           std::fmin(std::max(config_.hard_min_distance_road2center,
                              ref_path_points_[i].distance_to_left_road_border -
@@ -1110,8 +1107,9 @@ void GeneralLateralDecider::ExtendRoadSoftBound(
         index_dq.pop_front();
       }
       // 保证队列单调递减，弹出所有小于等于当前值的元素
-      while (!index_dq.empty() && second_soft_bounds_[index_dq.back()][0].lower <=
-                                      second_soft_bounds_[i][0].lower) {
+      while (!index_dq.empty() &&
+             second_soft_bounds_[index_dq.back()][0].lower <=
+                 second_soft_bounds_[i][0].lower) {
         index_dq.pop_back();
       }
       index_dq.push_back(i);
@@ -1122,7 +1120,8 @@ void GeneralLateralDecider::ExtendRoadSoftBound(
       if (i == bound_size - 1) {
         int start_index = std::max(i - num_rear_extended_points + 1, 0);
         for (int j = start_index; j < bound_size; ++j) {
-          second_soft_bounds_[j][0].lower = second_soft_bounds_[index_dq.front()][0].lower;
+          second_soft_bounds_[j][0].lower =
+              second_soft_bounds_[index_dq.front()][0].lower;
         }
       }
       // int max_lower_idx = i;
@@ -1144,8 +1143,9 @@ void GeneralLateralDecider::ExtendRoadSoftBound(
         index_dq.pop_front();
       }
       // 保持队列单调递增，弹出所有大于等于当前值的元素
-      while (!index_dq.empty() && second_soft_bounds_[index_dq.back()][0].upper >=
-                                      second_soft_bounds_[i][0].upper) {
+      while (!index_dq.empty() &&
+             second_soft_bounds_[index_dq.back()][0].upper >=
+                 second_soft_bounds_[i][0].upper) {
         index_dq.pop_back();
       }
       index_dq.push_back(i);
@@ -1156,7 +1156,8 @@ void GeneralLateralDecider::ExtendRoadSoftBound(
       if (i == bound_size - 1) {
         int start_index = std::max(i - num_rear_extended_points + 1, 0);
         for (int j = start_index; j < bound_size; ++j) {
-          second_soft_bounds_[j][0].upper = second_soft_bounds_[index_dq.front()][0].upper;
+          second_soft_bounds_[j][0].upper =
+              second_soft_bounds_[index_dq.front()][0].upper;
         }
       }
       // int min_upper_idx  = i;
@@ -1578,14 +1579,14 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
 
 void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   const auto last_fix_lane_id = session_->environmental_model()
-                              .get_virtual_lane_manager()
-                              ->get_last_fix_lane_id();
+                                    .get_virtual_lane_manager()
+                                    ->get_last_fix_lane_id();
   const auto current_fix_lane_id = session_->planning_context()
-                                 .lane_change_decider_output()
-                                 .fix_lane_virtual_id;
+                                       .lane_change_decider_output()
+                                       .fix_lane_virtual_id;
   const auto &lat_obstacle_position = session_->planning_context()
-                                    .lateral_obstacle_decider_output()
-                                      .lateral_obstacle_history_info;
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
   const auto &frenet_coord =
       session_->planning_context()
           .lane_change_decider_output()
@@ -1614,7 +1615,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
-    const auto& current_bounds = first_soft_bounds_[i];
+    const auto &current_bounds = first_soft_bounds_[i];
     WeightedBounds last_bounds;
     const double current_index_s = ref_traj_points_[i].s;
     if (!FindNearestBoundPoint(current_index_s, last_bounds)) {
@@ -1627,55 +1628,59 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
     // 对每个边界进行滞回处理
     WeightedBounds smoothed_bounds;
     smoothed_bounds.reserve(current_bounds.size());
-    for (const auto& current_bound : current_bounds) {
+    for (const auto &current_bound : current_bounds) {
       WeightedBound smoothed_bound = current_bound;
-      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
-          current_bound.bound_info.type == BoundType :: EGO_POSITION ||
-          current_bound.bound_info.type == BoundType :: LANE) {
+      if (current_bound.bound_info.type == BoundType ::ROAD_BORDER ||
+          current_bound.bound_info.type == BoundType ::EGO_POSITION ||
+          current_bound.bound_info.type == BoundType ::LANE) {
         smoothed_bounds.push_back(smoothed_bound);
         continue;
       }
       // 寻找上一帧中对应的边界（基于bound_info的id和type）
-      auto last_bound_it = std::find_if(last_bounds.begin(), last_bounds.end(),
-          [&current_bound](const WeightedBound& last_bound) {
+      auto last_bound_it = std::find_if(
+          last_bounds.begin(), last_bounds.end(),
+          [&current_bound](const WeightedBound &last_bound) {
             return last_bound.bound_info.id == current_bound.bound_info.id &&
                    last_bound.bound_info.type == current_bound.bound_info.type;
           });
 
       if (last_bound_it != last_bounds.end()) {
-        if (last_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
-            last_bound_it->bound_info.type == BoundType :: EGO_POSITION ||
-            last_bound_it->bound_info.type == BoundType :: LANE) {
+        if (last_bound_it->bound_info.type == BoundType ::ROAD_BORDER ||
+            last_bound_it->bound_info.type == BoundType ::EGO_POSITION ||
+            last_bound_it->bound_info.type == BoundType ::LANE) {
           smoothed_bounds.push_back(smoothed_bound);
           continue;
         }
         // 当前后帧障碍物避让方向相反时，清空历史避让值和方向，采用当前帧的避让
         if ((std::fabs(current_bound.lower + l_offset_limit) < kEps &&
              std::fabs(last_bound_it->lower + l_offset_limit) < kEps) ||
-             (std::fabs(current_bound.upper - l_offset_limit) < kEps &&
+            (std::fabs(current_bound.upper - l_offset_limit) < kEps &&
              std::fabs(last_bound_it->upper - l_offset_limit) < kEps)) {
-          const auto lat_obs_position_iter = lat_obstacle_position.find(last_bound_it->bound_info.id);
+          const auto lat_obs_position_iter =
+              lat_obstacle_position.find(last_bound_it->bound_info.id);
           if (lat_obs_position_iter != lat_obstacle_position.end() &&
               lat_obs_position_iter->second.side_car &&
               lat_obs_position_iter->second.front_car) {
-              // 来自前方的侧方障碍物增加稳定性，直接沿用上一帧bound
+            // 来自前方的侧方障碍物增加稳定性，直接沿用上一帧bound
             smoothed_bound.lower = last_bound_it->lower;
             smoothed_bound.upper = last_bound_it->upper;
           } else {
             // 找到对应的上一帧边界，进行滞回处理
-            const double hysteresis_threshold_up = 0.05;   // 向上变化的阈值
-            const double hysteresis_threshold_down = 0.05; // 向下变化的阈值
+            const double hysteresis_threshold_up = 0.05;  // 向上变化的阈值
+            const double hysteresis_threshold_down = 0.05;  // 向下变化的阈值
             // 对lower边界进行滞回处理
             double lower_diff = current_bound.lower - last_bound_it->lower;
             if (lower_diff > 0) {
               // 避让值变大
               if (lower_diff > hysteresis_threshold_up) {
-                smoothed_bound.lower = last_bound_it->lower + hysteresis_threshold_up;
+                smoothed_bound.lower =
+                    last_bound_it->lower + hysteresis_threshold_up;
               }
             } else {
               // 避让值变小
               if (std::abs(lower_diff) > hysteresis_threshold_down) {
-                smoothed_bound.lower = last_bound_it->lower - hysteresis_threshold_down;
+                smoothed_bound.lower =
+                    last_bound_it->lower - hysteresis_threshold_down;
               }
             }
             // 对upper边界进行滞回处理
@@ -1683,12 +1688,14 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
             if (upper_diff > 0) {
               // 避让值变小
               if (upper_diff > hysteresis_threshold_up) {
-                smoothed_bound.upper = last_bound_it->upper + hysteresis_threshold_up;
+                smoothed_bound.upper =
+                    last_bound_it->upper + hysteresis_threshold_up;
               }
             } else {
               // 避让值变大
               if (std::abs(upper_diff) > hysteresis_threshold_down) {
-                smoothed_bound.upper = last_bound_it->upper - hysteresis_threshold_down ;
+                smoothed_bound.upper =
+                    last_bound_it->upper - hysteresis_threshold_down;
               }
             }
           }
@@ -1702,23 +1709,25 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   // ROAD_BORDER、LANE、EGO_POSITION默认没有双层bound
   // 添加一个开关，表示是否使用双层Bound
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
-    auto& current_bounds = first_soft_bounds_[i];
-    for (auto& current_bound : current_bounds) {
-      if (current_bound.bound_info.type == BoundType :: ROAD_BORDER ||
-          current_bound.bound_info.type == BoundType :: EGO_POSITION ||
-          current_bound.bound_info.type == BoundType :: LANE ||
+    auto &current_bounds = first_soft_bounds_[i];
+    for (auto &current_bound : current_bounds) {
+      if (current_bound.bound_info.type == BoundType ::ROAD_BORDER ||
+          current_bound.bound_info.type == BoundType ::EGO_POSITION ||
+          current_bound.bound_info.type == BoundType ::LANE ||
           !config_.use_first_soft_bound) {
-        current_bound.upper = std::fmax(current_bound.upper, config_.first_soft_min_distance2center);
-        current_bound.lower = std::fmin(current_bound.lower, -config_.first_soft_min_distance2center);
-        current_bound.bound_info.type = BoundType :: DEFAULT;
+        current_bound.upper = std::fmax(current_bound.upper,
+                                        config_.first_soft_min_distance2center);
+        current_bound.lower = std::fmin(
+            current_bound.lower, -config_.first_soft_min_distance2center);
+        current_bound.bound_info.type = BoundType ::DEFAULT;
         current_bound.bound_info.id = -100;
       }
     }
   }
 }
 
-bool GeneralLateralDecider::FindNearestBoundPoint(
-    const double current_index_s, WeightedBounds &last_bounds) {
+bool GeneralLateralDecider::FindNearestBoundPoint(const double current_index_s,
+                                                  WeightedBounds &last_bounds) {
   const auto &frenet_coord =
       session_->planning_context()
           .lane_change_decider_output()
@@ -1730,7 +1739,7 @@ bool GeneralLateralDecider::FindNearestBoundPoint(
   Point2D last_ego_xy(ego_cart_state_manager_->last_ego_pose_raw().x,
                       ego_cart_state_manager_->last_ego_pose_raw().y);
   Point2D current_ego_xy(ego_cart_state_manager_->ego_pose_raw().x,
-                          ego_cart_state_manager_->ego_pose_raw().y);
+                         ego_cart_state_manager_->ego_pose_raw().y);
   Point2D last_ego_sl;
   Point2D current_ego_sl;
   if (!frenet_coord->XYToSL(last_ego_xy, last_ego_sl)) {
@@ -1787,9 +1796,12 @@ void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::HARD_BOUND);
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::SECOND_SOFT_BOUND);
-    GenerateStaticObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::FIRST_SOFT_BOUND);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision,
+                                   BoundHierarchy::HARD_BOUND);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision,
+                                   BoundHierarchy::SECOND_SOFT_BOUND);
+    GenerateStaticObstacleDecision(obstacle, obstacle_decision,
+                                   BoundHierarchy::FIRST_SOFT_BOUND);
     GenerateEmergencyObstacleDecision(obstacle, obstacle_decision);
     ExtractStaticObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -1893,8 +1905,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
   }
 
   if (is_find_lat_obs_position_iter &&
-      lat_obs_position_iter->second.emergency_avoid &&
-      !is_blocked_obstacle_ &&
+      lat_obs_position_iter->second.emergency_avoid && !is_blocked_obstacle_ &&
       (lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::IGNORE ||
        lat_obstacle_decision.at(obstacle->id()) ==
@@ -1902,8 +1913,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
     // 紧急避让不走正常避让逻辑
     return;
   }
-  if (is_potential_dangerous_obstacle_ &&
-      !is_blocked_obstacle_ &&
+  if (is_potential_dangerous_obstacle_ && !is_blocked_obstacle_ &&
       (lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::IGNORE ||
        lat_obstacle_decision.at(obstacle->id()) ==
@@ -2017,8 +2027,7 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
     AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                              overlap_max_y, lat_buf_dis, lat_decision,
-                             lon_decision, obstacle_decision,
-                             bound_hierarchy);
+                             lon_decision, obstacle_decision, bound_hierarchy);
   }
 }
 
@@ -2373,9 +2382,12 @@ void GeneralLateralDecider::GenerateDynamicObstaclesBoundary(
     auto obstacle_potential_decision =
         ObstaclePotentialDecision{obstacle_id, {}};
 
-    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::HARD_BOUND);
-    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::SECOND_SOFT_BOUND);
-    GenerateDynamicObstacleDecision(obstacle, obstacle_decision, BoundHierarchy::FIRST_SOFT_BOUND);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision,
+                                    BoundHierarchy::HARD_BOUND);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision,
+                                    BoundHierarchy::SECOND_SOFT_BOUND);
+    GenerateDynamicObstacleDecision(obstacle, obstacle_decision,
+                                    BoundHierarchy::FIRST_SOFT_BOUND);
     GenerateEmergencyObstacleDecision(obstacle, obstacle_decision);
     ExtractDynamicObstacleBound(obstacle_decision);
     obstacle_decisions[obstacle_id] = std::move(obstacle_decision);
@@ -2472,8 +2484,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   // judge maintain_avoid_direction
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.maintain_avoid &&
-      (lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::IGNORE ||
-       lat_obstacle_decision.at(obstacle->id()) == LatObstacleDecisionType::FOLLOW)) {
+      (lat_obstacle_decision.at(obstacle->id()) ==
+           LatObstacleDecisionType::IGNORE ||
+       lat_obstacle_decision.at(obstacle->id()) ==
+           LatObstacleDecisionType::FOLLOW)) {
     // if (obstacle->frenet_l() < 0) {
     //   is_nudge_left = false;
     // } else if (obstacle->frenet_l() > 0) {
@@ -2485,18 +2499,18 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
 
   // judge side cut_in nudge
   bool is_avoid_side_ignore_obj = false;
-  CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left,
-      bound_type, is_avoid_side_ignore_obj, is_side_obstacle);
+  CheckObstacleSideCutinNudgeCondition(obstacle, is_nudge_left, bound_type,
+                                       is_avoid_side_ignore_obj,
+                                       is_side_obstacle);
 
   if ((is_find_lat_obs_position_iter &&
-      lat_obs_position_iter->second.side_car &&
-      (!lat_obs_position_iter->second.front_car)) ||
-      is_care_rear_obstacle ||
-      is_avoid_side_ignore_obj) {
+       lat_obs_position_iter->second.side_car &&
+       (!lat_obs_position_iter->second.front_car)) ||
+      is_care_rear_obstacle || is_avoid_side_ignore_obj) {
     is_valid_first_soft_bound = false;
   }
 
-  if (bound_hierarchy == BoundHierarchy :: FIRST_SOFT_BOUND &&
+  if (bound_hierarchy == BoundHierarchy ::FIRST_SOFT_BOUND &&
       !is_valid_first_soft_bound) {
     // 侧方ignore障碍物的避让
     // 后方障碍物避让
@@ -2766,8 +2780,8 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       // }
       AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                                overlap_max_y, lat_buf_dis, lat_decision,
-                               lon_decision, obstacle_decision,
-                               bound_hierarchy, is_avoid_side_ignore_obj, is_high_dangerous);
+                               lon_decision, obstacle_decision, bound_hierarchy,
+                               is_avoid_side_ignore_obj, is_high_dangerous);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -2799,47 +2813,50 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
           has_lon_decision = has_lon_decision ||
                              lon_decision != LonObstacleDecisionType::IGNORE;
         }
-        AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
-                                 overlap_max_y, lat_buf_dis, lat_decision,
-                                 lon_decision, obstacle_decision,
-                                 bound_hierarchy, is_avoid_side_ignore_obj,
-                                 is_high_dangerous);
+        AddObstacleDecisionBound(
+            obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
+            lat_buf_dis, lat_decision, lon_decision, obstacle_decision,
+            bound_hierarchy, is_avoid_side_ignore_obj, is_high_dangerous);
       }
     }
   }
 }
 
 void GeneralLateralDecider::GenerateRecommendJerk(
-    const std::shared_ptr<FrenetObstacle> obstacle,
-    bool &is_high_dangerous) {
+    const std::shared_ptr<FrenetObstacle> obstacle, bool &is_high_dangerous) {
   const auto &potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
+      session_->planning_context().potential_dangerous_agent_decider_output();
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
   const auto &lat_obstacle_position = session_->planning_context()
-                                    .lateral_obstacle_decider_output()
-                                      .lateral_obstacle_history_info;
-  const auto lat_obs_position_iter =
-      lat_obstacle_position.find(obstacle->id());
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
+  const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   bool is_side_obj = false;
   if (lat_obs_position_iter != lat_obstacle_position.end() &&
       lat_obs_position_iter->second.side_car) {
     is_side_obj = true;
   }
-  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() && obstacle->id() ==
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().id && is_side_obj &&
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().recommended_maneuver.
-      lateral_maneuver != LateralManeuver :: IGNORE) {
-    const auto risk_level = potential_dangerous_agent_decider_output
-                                .dangerous_agent_info.front().risk_level;
+  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
+      obstacle->id() ==
+          potential_dangerous_agent_decider_output.dangerous_agent_info.front()
+              .id &&
+      is_side_obj &&
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front()
+              .recommended_maneuver.lateral_maneuver !=
+          LateralManeuver ::IGNORE) {
+    const auto risk_level =
+        potential_dangerous_agent_decider_output.dangerous_agent_info.front()
+            .risk_level;
     if (risk_level == RiskLevel::NO_RISK) {
       general_lateral_decider_output.recommended_bound_avoid_jerk = 0.4;
     } else if (risk_level == RiskLevel::LOW_RISK) {
-      general_lateral_decider_output.recommended_bound_avoid_jerk = config_.lower_risk_jerk_bound;
+      general_lateral_decider_output.recommended_bound_avoid_jerk =
+          config_.lower_risk_jerk_bound;
     } else if (risk_level == RiskLevel::HIGH_RISK) {
-      general_lateral_decider_output.recommended_bound_avoid_jerk = config_.high_risk_jerk_bound;
+      general_lateral_decider_output.recommended_bound_avoid_jerk =
+          config_.high_risk_jerk_bound;
       is_high_dangerous = true;
     }
     general_lateral_decider_output.risk_level = risk_level;
@@ -2870,8 +2887,8 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
   if (general_lateral_decider_output.lane_change_scene ||
-      is_blocked_obstacle_ || (obstacle->obstacle()->is_reverse() &&
-      !obstacle->is_static())) {
+      is_blocked_obstacle_ ||
+      (obstacle->obstacle()->is_reverse() && !obstacle->is_static())) {
     // 由于借道障碍物和变道过程中导致的大制动先忽略
     return;
   }
@@ -3066,31 +3083,35 @@ bool GeneralLateralDecider::HackYawSideObstacle(
 
 void GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
     const std::shared_ptr<FrenetObstacle> obstacle, bool &is_nudge_left,
-    BoundType &bound_type, bool &is_avoid_side_ignore_obj, bool &is_side_obstacle) {
+    BoundType &bound_type, bool &is_avoid_side_ignore_obj,
+    bool &is_side_obstacle) {
   const auto &lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
   const auto &lat_obstacle_position = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lateral_obstacle_history_info;
-  const auto lat_obs_position_iter =
-      lat_obstacle_position.find(obstacle->id());
+  const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
   const double care_lateral_distacle = 2;
   if (lat_obs_position_iter != lat_obstacle_position.end() &&
       lat_obs_position_iter->second.side_car) {
-    is_side_obstacle = (lat_obs_position_iter->second.side_car) &&
-                      (!lat_obs_position_iter->second.front_car) &&
-                      (!lat_obs_position_iter->second.is_potential_avoiding_side_car);
+    is_side_obstacle =
+        (lat_obs_position_iter->second.side_car) &&
+        (!lat_obs_position_iter->second.front_car) &&
+        (!lat_obs_position_iter->second.is_potential_avoiding_side_car);
     if (lat_obstacle_decision.at(obstacle->id()) ==
-        LatObstacleDecisionType::IGNORE ||
+            LatObstacleDecisionType::IGNORE ||
         lat_obstacle_decision.at(obstacle->id()) ==
-        LatObstacleDecisionType::FOLLOW) {
+            LatObstacleDecisionType::FOLLOW) {
       is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
       if (is_nudge_left && (care_lateral_distacle <
-          obstacle->frenet_obstacle_boundary().l_start - ego_frenet_state_.boundary().l_end)) {
+                            obstacle->frenet_obstacle_boundary().l_start -
+                                ego_frenet_state_.boundary().l_end)) {
         bound_type = BoundType::ADJACENT_AGENT;
-      } else if (!is_nudge_left && (care_lateral_distacle <
-          ego_frenet_state_.boundary().l_start - obstacle->frenet_obstacle_boundary().l_end)) {
+      } else if (!is_nudge_left &&
+                 (care_lateral_distacle <
+                  ego_frenet_state_.boundary().l_start -
+                      obstacle->frenet_obstacle_boundary().l_end)) {
         bound_type = BoundType::ADJACENT_AGENT;
       } else {
         // if (obstacle->frenet_l() < 0) {
@@ -3098,7 +3119,8 @@ void GeneralLateralDecider::CheckObstacleSideCutinNudgeCondition(
         // } else if (obstacle->frenet_l() > 0) {
         //   is_nudge_left = true;
         // }
-        bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT : BoundType::DYNAMIC_AGENT;
+        bound_type = is_side_obstacle ? BoundType::ADJACENT_AGENT
+                                      : BoundType::DYNAMIC_AGENT;
         is_avoid_side_ignore_obj = true;
       }
     }
@@ -3110,10 +3132,10 @@ double GeneralLateralDecider::CalDynamicNudgeLatBufDis(
     bool is_nudge_left, double overlap_min_y, double overlap_max_y,
     double limit_overlap_min_y, double limit_overlap_max_y, double pred_ts,
     double extra_lane_type_decrease_buffer,
-    bool is_same_side_obstacle_during_lane_change, BoundHierarchy bound_hierarchy,
-    double extra_reverse_obj_decrease_buffer, bool is_care_reverse_ignore_obj,
-    double last_t_lat_buf_dis, double &updated_overlap_min_y,
-    double &updated_overlap_max_y) {
+    bool is_same_side_obstacle_during_lane_change,
+    BoundHierarchy bound_hierarchy, double extra_reverse_obj_decrease_buffer,
+    bool is_care_reverse_ignore_obj, double last_t_lat_buf_dis,
+    double &updated_overlap_min_y, double &updated_overlap_max_y) {
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
@@ -3201,8 +3223,8 @@ double GeneralLateralDecider::CalEmergencyNudgeLatBufDis(
     bool is_same_side_obstacle_during_lane_change,
     double &updated_overlap_min_y, double &updated_overlap_max_y) {
   const auto &coarse_planning_info = session_->planning_context()
-                                          .lane_change_decider_output()
-                                          .coarse_planning_info;
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
   const auto lane_width =
       session_->environmental_model()
           .get_virtual_lane_manager()
@@ -3229,13 +3251,15 @@ double GeneralLateralDecider::CalEmergencyNudgeLatBufDis(
         config_.nudge_buffer2lane_boundary_buffer;
     if (is_nudge_left) {
       double nudge_position = overlap_min_y - lat_buf_dis - vehicle_param.width;
-      if (nudge_position < nudge_buffer2lane_boundary_buffer - half_lane_width) {
+      if (nudge_position <
+          nudge_buffer2lane_boundary_buffer - half_lane_width) {
         lat_buf_dis = overlap_min_y - vehicle_param.width + half_lane_width -
                       nudge_buffer2lane_boundary_buffer;
       }
     } else {
       double nudge_position = overlap_max_y + lat_buf_dis + vehicle_param.width;
-      if (nudge_position > half_lane_width - nudge_buffer2lane_boundary_buffer) {
+      if (nudge_position >
+          half_lane_width - nudge_buffer2lane_boundary_buffer) {
         lat_buf_dis = half_lane_width - nudge_buffer2lane_boundary_buffer -
                       vehicle_param.width - overlap_max_y;
       }
@@ -3440,7 +3464,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
   double limit_nudge_max_l = 20;
   double limit_nudge_min_l = -20;
   double limit_nudge_change_rate = config_.limit_nudge_change_rate;
-  limit_nudge_change_rate = is_high_dangerous ? limit_nudge_change_rate * 2 : limit_nudge_change_rate;
+  limit_nudge_change_rate =
+      is_high_dangerous ? limit_nudge_change_rate * 2 : limit_nudge_change_rate;
 
   if (lat_decision == LatObstacleDecisionType::LEFT) {
     bound.lower = overlap_max_y + lat_buf_dis + half_ego_width;
@@ -3450,25 +3475,33 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     //                                       lat_buf_dis + half_ego_width;
     bound_info.type = bound_type;
     bound_info.id = id;
-    if (is_avoid_side_ignore_obj && bound_hierarchy == BoundHierarchy :: SECOND_SOFT_BOUND) {
+    if (is_avoid_side_ignore_obj &&
+        bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
       // 渐进式增大避让幅度
-      if (last_desire_final_nudge_l_map_.find(id) != last_desire_final_nudge_l_map_.end()) {
-        limit_nudge_max_l = std::fmin(last_desire_final_nudge_l_map_[id] +
-            limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
+      if (last_desire_final_nudge_l_map_.find(id) !=
+          last_desire_final_nudge_l_map_.end()) {
+        limit_nudge_max_l = std::fmin(
+            last_desire_final_nudge_l_map_[id] + limit_nudge_change_rate,
+            config_.max_nudge_buffer2side_car);
         if (last_desire_final_nudge_l_map_[id] != 0) {
-          limit_nudge_min_l = last_desire_final_nudge_l_map_[id] - limit_nudge_change_rate;
+          limit_nudge_min_l =
+              last_desire_final_nudge_l_map_[id] - limit_nudge_change_rate;
         }
-        limit_nudge_max_l = std::fmax(limit_nudge_max_l, last_desire_final_nudge_l_map_[id]);
+        limit_nudge_max_l =
+            std::fmax(limit_nudge_max_l, last_desire_final_nudge_l_map_[id]);
       } else {
-        limit_nudge_max_l = std::fmin(limit_nudge_change_rate, config_.max_nudge_buffer2side_car);
+        limit_nudge_max_l = std::fmin(limit_nudge_change_rate,
+                                      config_.max_nudge_buffer2side_car);
       }
       limit_nudge_max_l = std::fmax(limit_nudge_max_l, planning_init_point_l);
       limit_nudge_min_l = std::fmin(limit_nudge_max_l, limit_nudge_min_l);
       bound.lower = clip(bound.lower, limit_nudge_max_l, limit_nudge_min_l);
     }
-    if (bound_hierarchy == BoundHierarchy :: SECOND_SOFT_BOUND) {
-      if (current_desire_final_nudge_l_map_.find(id) != current_desire_final_nudge_l_map_.end()) {
-        current_desire_final_nudge_l_map_[id] = std::fmax(bound.lower, current_desire_final_nudge_l_map_[id]);
+    if (bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
+      if (current_desire_final_nudge_l_map_.find(id) !=
+          current_desire_final_nudge_l_map_.end()) {
+        current_desire_final_nudge_l_map_[id] =
+            std::fmax(bound.lower, current_desire_final_nudge_l_map_[id]);
       } else {
         current_desire_final_nudge_l_map_[id] = std::fmax(bound.lower, 0);
       }
@@ -3481,25 +3514,33 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     //                                       lat_buf_dis - half_ego_width;
     bound_info.type = bound_type;
     bound_info.id = id;
-    if (is_avoid_side_ignore_obj && bound_hierarchy == BoundHierarchy :: SECOND_SOFT_BOUND) {
+    if (is_avoid_side_ignore_obj &&
+        bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
       // 渐进式增大避让幅度
-      if (last_desire_final_nudge_l_map_.find(id) != last_desire_final_nudge_l_map_.end()) {
-        limit_nudge_min_l = std::fmax(last_desire_final_nudge_l_map_[id] -
-            limit_nudge_change_rate, -config_.max_nudge_buffer2side_car);
+      if (last_desire_final_nudge_l_map_.find(id) !=
+          last_desire_final_nudge_l_map_.end()) {
+        limit_nudge_min_l = std::fmax(
+            last_desire_final_nudge_l_map_[id] - limit_nudge_change_rate,
+            -config_.max_nudge_buffer2side_car);
         if (last_desire_final_nudge_l_map_[id] != 0) {
-          limit_nudge_max_l = last_desire_final_nudge_l_map_[id] + limit_nudge_change_rate;
+          limit_nudge_max_l =
+              last_desire_final_nudge_l_map_[id] + limit_nudge_change_rate;
         }
-        limit_nudge_min_l = std::fmin(limit_nudge_min_l, last_desire_final_nudge_l_map_[id]);
+        limit_nudge_min_l =
+            std::fmin(limit_nudge_min_l, last_desire_final_nudge_l_map_[id]);
       } else {
-        limit_nudge_min_l = std::fmax(-limit_nudge_change_rate, -config_.max_nudge_buffer2side_car);
+        limit_nudge_min_l = std::fmax(-limit_nudge_change_rate,
+                                      -config_.max_nudge_buffer2side_car);
       }
       limit_nudge_min_l = std::fmin(limit_nudge_min_l, planning_init_point_l);
       limit_nudge_max_l = std::fmax(limit_nudge_max_l, limit_nudge_min_l);
       bound.upper = clip(bound.upper, limit_nudge_max_l, limit_nudge_min_l);
     }
-    if (bound_hierarchy == BoundHierarchy :: SECOND_SOFT_BOUND) {
-      if (current_desire_final_nudge_l_map_.find(id) != current_desire_final_nudge_l_map_.end()) {
-        current_desire_final_nudge_l_map_[id] = std::fmin(bound.upper, current_desire_final_nudge_l_map_[id]);
+    if (bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
+      if (current_desire_final_nudge_l_map_.find(id) !=
+          current_desire_final_nudge_l_map_.end()) {
+        current_desire_final_nudge_l_map_[id] =
+            std::fmin(bound.upper, current_desire_final_nudge_l_map_[id]);
       } else {
         current_desire_final_nudge_l_map_[id] = std::fmin(bound.upper, 0);
       }
@@ -3517,14 +3558,10 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
         bound.lower, bound.upper, config_.kHardBoundWeight, bound_info});
   } else if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
     position_decision.lat_bounds.push_back(WeightedBound{
-        bound.lower, bound.upper,
-        config_.kSecondSoftBoundWeight,
-        bound_info});
+        bound.lower, bound.upper, config_.kSecondSoftBoundWeight, bound_info});
   } else {
     position_decision.lat_bounds.push_back(WeightedBound{
-        bound.lower, bound.upper,
-        config_.kFirstSoftBoundWeight,
-        bound_info});
+        bound.lower, bound.upper, config_.kFirstSoftBoundWeight, bound_info});
   }
 
   position_decision.lat_decision = lat_decision;
@@ -3658,20 +3695,21 @@ void GeneralLateralDecider::ExtractBoundary(
   for (int i = 0; i < first_soft_bounds_.size(); i++) {
     std::pair<double, double> first_soft_bound{-20., 20.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> first_soft_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, first_soft_bounds_[i], first_soft_bound,
-                     first_soft_bound_info);
+    PostProcessBound(planning_init_point_l, first_soft_bounds_[i],
+                     first_soft_bound, first_soft_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(first_soft_bound, first_soft_bound_info);
     }
     // second_soft in first_soft
     // 满足特定场景的case，不进行比大小，例如默认关闭first_soft_bound
-    if (!(second_soft_bounds_info[i].first.type == BoundType :: ROAD_BORDER ||
-        second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION ||
-        second_soft_bounds_info[i].first.type == BoundType :: LANE ||
-        !config_.use_first_soft_bound)) {
+    if (!(second_soft_bounds_info[i].first.type == BoundType ::ROAD_BORDER ||
+          second_soft_bounds_info[i].first.type == BoundType ::EGO_POSITION ||
+          second_soft_bounds_info[i].first.type == BoundType ::LANE ||
+          !config_.use_first_soft_bound)) {
       // if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
       //   first_soft_bound.first = second_frenet_soft_bounds[i].second;
-      // } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+      // } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first)
+      // {
       //   first_soft_bound.first = second_frenet_soft_bounds[i].first;
       // }
       if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
@@ -3681,21 +3719,23 @@ void GeneralLateralDecider::ExtractBoundary(
         first_soft_bound.second = second_frenet_soft_bounds[i].first;
       }
       if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
-        if (second_soft_bounds_info[i].second.type == BoundType :: LANE ||
-            second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION) {
+        if (second_soft_bounds_info[i].second.type == BoundType ::LANE ||
+            second_soft_bounds_info[i].second.type ==
+                BoundType ::EGO_POSITION) {
           second_frenet_soft_bounds[i].second = first_soft_bound.first;
         } else {
           first_soft_bound.first = second_frenet_soft_bounds[i].second;
         }
       }
     }
-    if (!(second_soft_bounds_info[i].second.type == BoundType :: ROAD_BORDER ||
-        second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION ||
-        second_soft_bounds_info[i].second.type == BoundType :: LANE ||
-        !config_.use_first_soft_bound)) {
+    if (!(second_soft_bounds_info[i].second.type == BoundType ::ROAD_BORDER ||
+          second_soft_bounds_info[i].second.type == BoundType ::EGO_POSITION ||
+          second_soft_bounds_info[i].second.type == BoundType ::LANE ||
+          !config_.use_first_soft_bound)) {
       // if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
       //   first_soft_bound.second = second_frenet_soft_bounds[i].second;
-      // } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+      // } else if (first_soft_bound.second <
+      // second_frenet_soft_bounds[i].first) {
       //   first_soft_bound.second = second_frenet_soft_bounds[i].first;
       // }
       if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
@@ -3705,8 +3745,8 @@ void GeneralLateralDecider::ExtractBoundary(
         first_soft_bound.first = second_frenet_soft_bounds[i].second;
       }
       if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
-        if (second_soft_bounds_info[i].first.type == BoundType :: LANE ||
-            second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION) {
+        if (second_soft_bounds_info[i].first.type == BoundType ::LANE ||
+            second_soft_bounds_info[i].first.type == BoundType ::EGO_POSITION) {
           second_frenet_soft_bounds[i].first = first_soft_bound.second;
         } else {
           first_soft_bound.second = second_frenet_soft_bounds[i].first;
@@ -3740,17 +3780,21 @@ void GeneralLateralDecider::LimitFrenetLateralSlope(
       dl = frenet_bounds[i].second - frenet_bounds[i - 1].second;
       if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
         if (dl > 0) {
-          frenet_bounds[i].second = frenet_bounds[i - 1].second + dl_ds_ratio * ds;
+          frenet_bounds[i].second =
+              frenet_bounds[i - 1].second + dl_ds_ratio * ds;
         } else {
-          frenet_bounds[i - 1].second = frenet_bounds[i].second + dl_ds_ratio * ds;
+          frenet_bounds[i - 1].second =
+              frenet_bounds[i].second + dl_ds_ratio * ds;
         }
       }
       dl = frenet_bounds[i].first - frenet_bounds[i - 1].first;
       if (std::fabs(dl) > std::fabs(dl_ds_ratio * ds)) {
         if (dl > 0) {
-          frenet_bounds[i - 1].first = frenet_bounds[i].first - dl_ds_ratio * ds;
+          frenet_bounds[i - 1].first =
+              frenet_bounds[i].first - dl_ds_ratio * ds;
         } else {
-          frenet_bounds[i].first = frenet_bounds[i - 1].first - dl_ds_ratio * ds;
+          frenet_bounds[i].first =
+              frenet_bounds[i - 1].first - dl_ds_ratio * ds;
         }
       }
     }
@@ -3785,11 +3829,13 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
           1e-2) {
         auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
         for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < kEps) {
+          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) <
+              kEps) {
             for (auto index : match_index_map_[i]) {
               hard_bounds_[index].emplace_back(obstacle_pos_bound);
             }
-          } else if (std::fabs(obstacle_pos_bound.weight - config_.kSecondSoftBoundWeight) < kEps) {
+          } else if (std::fabs(obstacle_pos_bound.weight -
+                               config_.kSecondSoftBoundWeight) < kEps) {
             for (auto index : match_index_map_[i]) {
               second_soft_bounds_[index].emplace_back(obstacle_pos_bound);
             }
@@ -3817,9 +3863,11 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
           1e-2) {
         auto obstacle_pos_bounds = obstacle_position_decision.lat_bounds;
         for (auto &obstacle_pos_bound : obstacle_pos_bounds) {
-          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) < kEps) {
+          if (std::fabs(obstacle_pos_bound.weight - config_.kHardBoundWeight) <
+              kEps) {
             hard_bounds_[i].emplace_back(obstacle_pos_bound);
-          } else if (std::fabs(obstacle_pos_bound.weight - config_.kSecondSoftBoundWeight) < kEps) {
+          } else if (std::fabs(obstacle_pos_bound.weight -
+                               config_.kSecondSoftBoundWeight) < kEps) {
             second_soft_bounds_[i].emplace_back(obstacle_pos_bound);
           } else {
             first_soft_bounds_[i].emplace_back(obstacle_pos_bound);
@@ -4320,13 +4368,15 @@ void GeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
   const auto &potential_dangerous_agent_decider_output =
-      session_->planning_context()
-               .potential_dangerous_agent_decider_output();
+      session_->planning_context().potential_dangerous_agent_decider_output();
   if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
-      potential_dangerous_agent_decider_output.dangerous_agent_info.front().
-      recommended_maneuver.lateral_maneuver != LateralManeuver :: IGNORE) {
-    JSON_DEBUG_VALUE("potential_dangerous_agent_id",
-        potential_dangerous_agent_decider_output.dangerous_agent_info.front().id);
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front()
+              .recommended_maneuver.lateral_maneuver !=
+          LateralManeuver ::IGNORE) {
+    JSON_DEBUG_VALUE(
+        "potential_dangerous_agent_id",
+        potential_dangerous_agent_decider_output.dangerous_agent_info.front()
+            .id);
   } else {
     JSON_DEBUG_VALUE("potential_dangerous_agent_id", -0.01);
   }
@@ -4376,7 +4426,8 @@ void GeneralLateralDecider::SaveLatDebugInfo(
 
     auto second_soft_upper_bound_info =
         lat_debug_info_.mutable_second_soft_upper_bound_info_vec()->Add();
-    second_soft_upper_bound_info->set_upper(second_frenet_soft_bounds[i].second);
+    second_soft_upper_bound_info->set_upper(
+        second_frenet_soft_bounds[i].second);
     second_soft_upper_bound_info->mutable_bound_info()->set_id(
         second_soft_bounds_info[i].second.id);
     second_soft_upper_bound_info->mutable_bound_info()->set_type(
@@ -4432,12 +4483,12 @@ void GeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
     //     ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
     //   bound_avoid = true;
     // }
-    ref_traj_points_[i].l =
-        std::min(std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
-                 second_frenet_soft_bounds[i].second);
-    ref_traj_points_[i].l =
-        std::min(std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
-                 first_frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l = std::min(
+        std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+        second_frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l = std::min(
+        std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+        first_frenet_soft_bounds[i].second);
   }
   // general_lateral_decider_output.bound_avoid = bound_avoid;
 }
@@ -4450,12 +4501,14 @@ void GeneralLateralDecider::GenerateLateralDeciderOutput(
     const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
     const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  general_lateral_decider_output.second_soft_bounds = std::move(second_soft_bounds_);
-  general_lateral_decider_output.first_soft_bounds = std::move(first_soft_bounds_);
+  general_lateral_decider_output.second_soft_bounds =
+      std::move(second_soft_bounds_);
+  general_lateral_decider_output.first_soft_bounds =
+      std::move(first_soft_bounds_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  GenerateEnuBoundaryPoints(second_frenet_soft_bounds, first_frenet_soft_bounds, frenet_hard_bounds,
-                            general_lateral_decider_output);
+  GenerateEnuBoundaryPoints(second_frenet_soft_bounds, first_frenet_soft_bounds,
+                            frenet_hard_bounds, general_lateral_decider_output);
 
   GenerateEnuReferenceTheta(general_lateral_decider_output);
 
@@ -4960,15 +5013,17 @@ bool GeneralLateralDecider::IsFarObstacle(
   // 增加自车与障碍物ttc插值计算纵向距离，固定的60米在高速上不够用
   double lon_ttc = 5.0;
   if (obstacle->frenet_s() > ego_cur_s) {
-    lon_ttc = obstacle->frenet_relative_velocity_s() < 0 ?
-                   ((obstacle->frenet_s() - ego_cur_s) / (-obstacle->frenet_relative_velocity_s()))
-                   : lon_ttc;
+    lon_ttc = obstacle->frenet_relative_velocity_s() < 0
+                  ? ((obstacle->frenet_s() - ego_cur_s) /
+                     (-obstacle->frenet_relative_velocity_s()))
+                  : lon_ttc;
   }
   std::array<double, 6> x1{2, 2.5, 3, 4, 4.5, 5};
   std::array<double, 6> f1{100, 90, 80, 70, 60, 50};
   double care_object_lon_distance_threshold = interp(lon_ttc, x1, f1);
-  care_object_lon_distance_threshold = std::fmax(config_.care_obj_lon_distance_threshold,
-                                                 care_object_lon_distance_threshold);
+  care_object_lon_distance_threshold =
+      std::fmax(config_.care_obj_lon_distance_threshold,
+                care_object_lon_distance_threshold);
   if (std::fabs(obstacle->frenet_s() - ego_cur_s) >
           care_object_lon_distance_threshold or
       std::fabs(obstacle->frenet_l() - ego_cur_l) >
@@ -5178,18 +5233,20 @@ bool GeneralLateralDecider::CheckLateralEmergencyAvoidSpace(
               config_.emergency_avoid_safe_space_to_road_soft_bound_thr) {
         return false;
       }
-      max_lower_soft_bound_l = second_soft_bounds_[i][0].lower > max_lower_soft_bound_l
-                                   ? second_soft_bounds_[i][0].lower
-                                   : max_lower_soft_bound_l;
+      max_lower_soft_bound_l =
+          second_soft_bounds_[i][0].lower > max_lower_soft_bound_l
+              ? second_soft_bounds_[i][0].lower
+              : max_lower_soft_bound_l;
     } else {
       if (second_soft_bounds_[i][0].bound_info.type == BoundType::ROAD_BORDER &&
           second_soft_bounds_[i][0].upper - planning_init_point_l <
               config_.emergency_avoid_safe_space_to_road_soft_bound_thr) {
         return false;
       }
-      min_upper_soft_bound_l = second_soft_bounds_[i][0].upper < min_upper_soft_bound_l
-                                   ? second_soft_bounds_[i][0].upper
-                                   : min_upper_soft_bound_l;
+      min_upper_soft_bound_l =
+          second_soft_bounds_[i][0].upper < min_upper_soft_bound_l
+              ? second_soft_bounds_[i][0].upper
+              : min_upper_soft_bound_l;
     }
   }
   if (is_nudge_left) {

@@ -75,8 +75,8 @@ double CalDesireLonOverlapDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(
     const double base_distance, const double ego_vel, const double ego_l,
-    const std::shared_ptr<FrenetObstacle> obstacle, BoundHierarchy bound_hierarchy,
-    GeneralLateralDeciderConfig &config) {
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    BoundHierarchy bound_hierarchy, GeneralLateralDeciderConfig &config) {
   const double kStaticVRUMaxExtraLateralBuffer =
       config.static_vru_max_lateral_buffer;
   const double kConeMaxExtraLateralBuffer = 0.15;
@@ -110,9 +110,9 @@ double CalDesireStaticLateralDistance(
   if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
     return base_distance + lateral_extra_buffer;
   } else if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
-    return base_distance + lateral_extra_buffer + config.extra_static_nudge_buffer2first_bound;
+    return base_distance + lateral_extra_buffer +
+           config.extra_static_nudge_buffer2first_bound;
   }
-
 }
 
 double GetBoundWeight(

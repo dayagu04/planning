@@ -17,16 +17,15 @@ class LateralMotionPlanningProblem {
  public:
   void Init();
 
-  uint8_t Update(const double end_ratio_for_qxy,
-                 const double end_ratio_for_qtheta,
-                 const double end_ratio_for_qjerk,
-                 const double concerned_start_q_jerk,
-                 const double wheel_base,
-                 const std::vector<double>& virtual_ref_x,
-                 const std::vector<double>& virtual_ref_y,
-                 const std::vector<double>& virtual_ref_theta,
-                 const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight> &planning_weight,
-                 planning::common::LateralPlanningInput &planning_input);
+  uint8_t Update(
+      const double end_ratio_for_qxy, const double end_ratio_for_qtheta,
+      const double end_ratio_for_qjerk, const double concerned_start_q_jerk,
+      const double wheel_base, const std::vector<double>& virtual_ref_x,
+      const std::vector<double>& virtual_ref_y,
+      const std::vector<double>& virtual_ref_theta,
+      const std::shared_ptr<pnc::lateral_planning::LateralMotionPlanningWeight>&
+          planning_weight,
+      planning::common::LateralPlanningInput& planning_input);
 
   uint8_t Update(double expected_acc, double start_acc, double end_acc,
                  double end_ratio_for_qxy, double end_ratio_for_qtheta,
@@ -38,9 +37,9 @@ class LateralMotionPlanningProblem {
                  std::vector<double>& virtual_ref_x,
                  std::vector<double>& virtual_ref_y,
                  std::vector<double>& virtual_ref_theta,
-                 planning::common::LateralPlanningInput &planning_input);
+                 planning::common::LateralPlanningInput& planning_input);
 
-  const planning::common::LateralPlanningOutput &GetOutput() {
+  const planning::common::LateralPlanningOutput& GetOutput() {
     return planning_output_;
   }
   void Reset();

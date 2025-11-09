@@ -190,7 +190,8 @@ bool LateralMotionPlanner::AssembleInput() {
 
   const auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   const auto &enu_ref_theta = general_lateral_decider_output.enu_ref_theta;
-  const auto &front_axis_enu_ref_path = general_lateral_decider_output.front_axis_enu_ref_path;
+  const auto &front_axis_enu_ref_path =
+      general_lateral_decider_output.front_axis_enu_ref_path;
 
   bool complete_follow = general_lateral_decider_output.complete_follow;
   const bool &lane_change_scene =
@@ -234,11 +235,12 @@ bool LateralMotionPlanner::AssembleInput() {
       ref_theta_vec_[i] = enu_ref_theta[i];
     }
 
-
     // set reference trajectory
     for (size_t i = 0; i < front_axis_enu_ref_path.size(); ++i) {
-      planning_input_.mutable_front_axis_ref_x_vec()->Set(i, front_axis_enu_ref_path[i].first);
-      planning_input_.mutable_front_axis_ref_y_vec()->Set(i, front_axis_enu_ref_path[i].second);
+      planning_input_.mutable_front_axis_ref_x_vec()->Set(
+          i, front_axis_enu_ref_path[i].first);
+      planning_input_.mutable_front_axis_ref_y_vec()->Set(
+          i, front_axis_enu_ref_path[i].second);
     }
   }
 
@@ -322,7 +324,8 @@ bool LateralMotionPlanner::AssembleInput() {
   const auto &hard_bounds_cart_point =
       general_lateral_decider_output.hard_bounds_cart_point;
   assert(second_soft_bounds_cart_point.size() == hard_bounds_cart_point.size());
-  assert(second_soft_bounds_cart_point.size() == first_soft_bounds_cart_point.size());
+  assert(second_soft_bounds_cart_point.size() ==
+         first_soft_bounds_cart_point.size());
 
   for (size_t i = 0; i < second_soft_bounds_cart_point.size(); ++i) {
     size_t index = i;
@@ -333,47 +336,55 @@ bool LateralMotionPlanner::AssembleInput() {
       next_index = i;
     }
 
-    const auto &first_soft_lower_bound = first_soft_bounds_cart_point[index].first;
-    const auto &first_soft_upper_bound = first_soft_bounds_cart_point[index].second;
-    const auto &next_first_soft_lower_bound = first_soft_bounds_cart_point[next_index].first;
-    const auto &next_first_soft_upper_bound = first_soft_bounds_cart_point[next_index].second;
+    const auto &first_soft_lower_bound =
+        first_soft_bounds_cart_point[index].first;
+    const auto &first_soft_upper_bound =
+        first_soft_bounds_cart_point[index].second;
+    const auto &next_first_soft_lower_bound =
+        first_soft_bounds_cart_point[next_index].first;
+    const auto &next_first_soft_upper_bound =
+        first_soft_bounds_cart_point[next_index].second;
 
-    planning_input_.mutable_first_soft_lower_bound_x0_vec()->Set(i,
-                                                           first_soft_lower_bound.x);
-    planning_input_.mutable_first_soft_lower_bound_y0_vec()->Set(i,
-                                                           first_soft_lower_bound.y);
+    planning_input_.mutable_first_soft_lower_bound_x0_vec()->Set(
+        i, first_soft_lower_bound.x);
+    planning_input_.mutable_first_soft_lower_bound_y0_vec()->Set(
+        i, first_soft_lower_bound.y);
     planning_input_.mutable_first_soft_lower_bound_x1_vec()->Set(
         i, next_first_soft_lower_bound.x);
     planning_input_.mutable_first_soft_lower_bound_y1_vec()->Set(
         i, next_first_soft_lower_bound.y);
 
-    planning_input_.mutable_first_soft_upper_bound_x0_vec()->Set(i,
-                                                           first_soft_upper_bound.x);
-    planning_input_.mutable_first_soft_upper_bound_y0_vec()->Set(i,
-                                                           first_soft_upper_bound.y);
+    planning_input_.mutable_first_soft_upper_bound_x0_vec()->Set(
+        i, first_soft_upper_bound.x);
+    planning_input_.mutable_first_soft_upper_bound_y0_vec()->Set(
+        i, first_soft_upper_bound.y);
     planning_input_.mutable_first_soft_upper_bound_x1_vec()->Set(
         i, next_first_soft_upper_bound.x);
     planning_input_.mutable_first_soft_upper_bound_y1_vec()->Set(
         i, next_first_soft_upper_bound.y);
 
-    const auto &second_soft_lower_bound = second_soft_bounds_cart_point[index].first;
-    const auto &second_soft_upper_bound = second_soft_bounds_cart_point[index].second;
-    const auto &next_second_soft_lower_bound = second_soft_bounds_cart_point[next_index].first;
-    const auto &next_second_soft_upper_bound = second_soft_bounds_cart_point[next_index].second;
+    const auto &second_soft_lower_bound =
+        second_soft_bounds_cart_point[index].first;
+    const auto &second_soft_upper_bound =
+        second_soft_bounds_cart_point[index].second;
+    const auto &next_second_soft_lower_bound =
+        second_soft_bounds_cart_point[next_index].first;
+    const auto &next_second_soft_upper_bound =
+        second_soft_bounds_cart_point[next_index].second;
 
-    planning_input_.mutable_second_soft_lower_bound_x0_vec()->Set(i,
-                                                           second_soft_lower_bound.x);
-    planning_input_.mutable_second_soft_lower_bound_y0_vec()->Set(i,
-                                                           second_soft_lower_bound.y);
+    planning_input_.mutable_second_soft_lower_bound_x0_vec()->Set(
+        i, second_soft_lower_bound.x);
+    planning_input_.mutable_second_soft_lower_bound_y0_vec()->Set(
+        i, second_soft_lower_bound.y);
     planning_input_.mutable_second_soft_lower_bound_x1_vec()->Set(
         i, next_second_soft_lower_bound.x);
     planning_input_.mutable_second_soft_lower_bound_y1_vec()->Set(
         i, next_second_soft_lower_bound.y);
 
-    planning_input_.mutable_second_soft_upper_bound_x0_vec()->Set(i,
-                                                           second_soft_upper_bound.x);
-    planning_input_.mutable_second_soft_upper_bound_y0_vec()->Set(i,
-                                                           second_soft_upper_bound.y);
+    planning_input_.mutable_second_soft_upper_bound_x0_vec()->Set(
+        i, second_soft_upper_bound.x);
+    planning_input_.mutable_second_soft_upper_bound_y0_vec()->Set(
+        i, second_soft_upper_bound.y);
     planning_input_.mutable_second_soft_upper_bound_x1_vec()->Set(
         i, next_second_soft_upper_bound.x);
     planning_input_.mutable_second_soft_upper_bound_y1_vec()->Set(
@@ -465,17 +476,18 @@ bool LateralMotionPlanner::AssembleInput() {
                                          .coarse_planning_info;
 
   planning_weight_ptr_->CalculateExpectedLatAccAndSteerAngle(
-      planning_init_point.frenet_state.s, ref_vel,
-      vehicle_param.wheel_base, steer_ratio, curv_factor_,
-      general_lateral_decider_output.curve_s_spline,
+      planning_init_point.frenet_state.s, ref_vel, vehicle_param.wheel_base,
+      steer_ratio, curv_factor_, general_lateral_decider_output.curve_s_spline,
       expected_steer_vec_);
   JSON_DEBUG_VECTOR("expected_steer_vec", expected_steer_vec_, 2)
   const auto &second_soft_bounds_frenet_point =
       general_lateral_decider_output.second_soft_bounds_frenet_point;
   const auto &hard_bounds_frenet_point =
       general_lateral_decider_output.hard_bounds_frenet_point;
-  planning_weight_ptr_->CalculateLatAvoidDistance(second_soft_bounds_frenet_point);
-  const auto &second_soft_bounds = general_lateral_decider_output.second_soft_bounds;
+  planning_weight_ptr_->CalculateLatAvoidDistance(
+      second_soft_bounds_frenet_point);
+  const auto &second_soft_bounds =
+      general_lateral_decider_output.second_soft_bounds;
   const auto &hard_bounds = general_lateral_decider_output.hard_bounds;
   const auto &second_soft_bounds_info =
       general_lateral_decider_output.second_soft_bounds_info;
@@ -483,8 +495,8 @@ bool LateralMotionPlanner::AssembleInput() {
       general_lateral_decider_output.hard_bounds_info;
   planning_weight_ptr_->CalculateLatAvoidBoundPriority(
       second_soft_bounds_frenet_point, hard_bounds_frenet_point,
-      second_soft_bounds, hard_bounds,
-      second_soft_bounds_info, hard_bounds_info);
+      second_soft_bounds, hard_bounds, second_soft_bounds_info,
+      hard_bounds_info);
 
   if (session_->is_hpp_scene()) {
     // const bool &search_success = session_->mutable_planning_context()
@@ -562,8 +574,7 @@ bool LateralMotionPlanner::AssembleInput() {
       general_lateral_decider_output.bound_avoid);
   planning_weight_ptr_->SetExpectedAvoidJerk(
       general_lateral_decider_output.recommended_bound_avoid_jerk);
-  planning_weight_ptr_->SetRiskLevel(
-      general_lateral_decider_output.risk_level);
+  planning_weight_ptr_->SetRiskLevel(general_lateral_decider_output.risk_level);
 
   // lane change state
   const auto target_state =
@@ -603,8 +614,7 @@ bool LateralMotionPlanner::AssembleInput() {
   if (is_emergency_lc) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::EMERGENCY_LANE_CHANGE);
-  } else if (is_prevent_solid_line_lc ||
-             is_cone_lc ||
+  } else if (is_prevent_solid_line_lc || is_cone_lc ||
              (is_merge_lc && std::fabs(dist_to_merge_point) < ref_vel * 5.0)) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
@@ -628,21 +638,22 @@ bool LateralMotionPlanner::AssembleInput() {
   } else if (lane_borrow_scene) {
     complete_follow = true;
     planning_weight_ptr_->SetLateralMotionWeight(
-        pnc::lateral_planning::LateralMotionScene::LANE_BORROW, planning_input_);
+        pnc::lateral_planning::LateralMotionScene::LANE_BORROW,
+        planning_input_);
   } else if (split_scene) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::SPLIT, planning_input_);
   } else if ((ramp_scene) && (config_.ramp_valid)) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::RAMP, planning_input_);
-  // } else if (general_lateral_decider_output.bound_avoid ||
-  //            (!is_use_spatio_planner_result &&
-  //            (lateral_offset_decider_output.is_valid ||
-  //             (avoid_back_status &&
-  //              ((ref_vel > config_.avoid_high_vel) ||
-  //                is_in_intersection))))) {
-  //   planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
-  //                                                planning_input_);
+    // } else if (general_lateral_decider_output.bound_avoid ||
+    //            (!is_use_spatio_planner_result &&
+    //            (lateral_offset_decider_output.is_valid ||
+    //             (avoid_back_status &&
+    //              ((ref_vel > config_.avoid_high_vel) ||
+    //                is_in_intersection))))) {
+    //   planning_weight_ptr_->SetLateralMotionWeight(pnc::lateral_planning::LateralMotionScene::AVOID,
+    //                                                planning_input_);
   } else {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::LANE_KEEP, planning_input_);
@@ -670,21 +681,19 @@ bool LateralMotionPlanner::AssembleInput() {
       is_in_function, motion_planner_output.lat_init_flag,
       vehicle_param.wheel_base, steer_ratio, curv_factor_,
       planning_init_point.lat_init_state.x(),
-      planning_init_point.lat_init_state.y(),
-      history_steer_vec_);
+      planning_init_point.lat_init_state.y(), history_steer_vec_);
   JSON_DEBUG_VECTOR("history_steer_vec", history_steer_vec_, 2)
   planning_weight_ptr_->CalculateJerkBoundByLastJerk(
       is_high_priority_back, is_in_function, enter_lccnoa_time_,
       reference_path_ptr, planning_problem_ptr_->GetOutput(), planning_input_);
   // set motion_plan_concerned_end_index
   planning_weight_ptr_->SetMotionPlanConcernedEndIndex(
-      complete_follow, is_divide_lane_into_two_,
-      reference_path_ptr, planning_input_);
+      complete_follow, is_divide_lane_into_two_, reference_path_ptr,
+      planning_input_);
   // construct virtual ref
   planning_weight_ptr_->ConstructVirtualRef(
-      vehicle_param.wheel_base, curv_factor_,
-      reference_path_ptr, planning_input_,
-      virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_);
+      vehicle_param.wheel_base, curv_factor_, reference_path_ptr,
+      planning_input_, virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_);
   JSON_DEBUG_VECTOR("virtual_ref_x", virtual_ref_x_, 3)
   JSON_DEBUG_VECTOR("virtual_ref_y", virtual_ref_y_, 3)
   JSON_DEBUG_VECTOR("virtual_ref_theta", virtual_ref_theta_, 6)
@@ -725,10 +734,9 @@ bool LateralMotionPlanner::Update() {
   auto start_time = IflyTime::Now_ms();
   auto solver_condition = planning_problem_ptr_->Update(
       end_ratio_for_qrefxy, end_ratio_for_qreftheta,
-      config_.end_ratio_for_qjerk,
-      concerned_start_q_jerk, vehicle_param.wheel_base,
-      virtual_ref_x_, virtual_ref_y_, virtual_ref_theta_,
-      planning_weight_ptr_, planning_input_);
+      config_.end_ratio_for_qjerk, concerned_start_q_jerk,
+      vehicle_param.wheel_base, virtual_ref_x_, virtual_ref_y_,
+      virtual_ref_theta_, planning_weight_ptr_, planning_input_);
   JSON_DEBUG_VALUE("solver_condition", solver_condition);
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("iLqr_lat_update_time", end_time - start_time);
