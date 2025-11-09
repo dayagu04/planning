@@ -2889,7 +2889,7 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   double fp_start_length = 0;
   iflymapdata::sdpro::FeaturePoint start_fp;
   iflymapdata::sdpro::FeaturePoint end_fp;
-  const iflymapdata::sdpro::LinkInfo_Link* next_split_link;
+  const iflymapdata::sdpro::LinkInfo_Link* next_split_link = nullptr;
   for (const auto& split_info : split_info_vec) {
     if (split_info.first->id() == split_segment.id()) {
       next_split_link = split_info.first;
@@ -3229,7 +3229,7 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
   double dis_to_last_split_point = 0.0;
   double dis_to_last_merge_point = 0.0;
   double valid_dis = NL_NMAX;
-  const iflymapdata::sdpro::LinkInfo_Link* next_merge_link;
+  const iflymapdata::sdpro::LinkInfo_Link* next_merge_link = nullptr;
   for (const auto& merge_info : merge_info_vec) {
     if (merge_info.first->id() == merge_segment.id()) {
       next_merge_link = merge_info.first;
