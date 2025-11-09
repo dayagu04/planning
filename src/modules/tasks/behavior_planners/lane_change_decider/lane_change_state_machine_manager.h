@@ -259,6 +259,8 @@ class LaneChangeStateMachineManager {
   bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
   bool IsSuppressLCShortDis() const;
 
+  bool CheckTargetLaneValid();
+
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
   ScenarioStateMachineConfig config_;
@@ -329,5 +331,6 @@ class LaneChangeStateMachineManager {
   std::vector<double> agent_box_corners_y_{};
   std::vector<double> ego_box_corners_x_{};
   std::vector<double> ego_box_corners_y_{};
+  StateMachineLaneChangeStatus last_state_{StateMachineLaneChangeStatus::kLaneKeeping};
 };
 }  // namespace planning

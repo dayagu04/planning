@@ -142,8 +142,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   ProcessBlinkState(
       ego_blinker, static_cast<StateMachineLaneChangeStatus>(lc_status),
       static_cast<RequestType>(lane_change_decider_output.lc_request));
-
-  // todo(ldh): 使用工厂模式管理变道请求。
+  int_request_cancel_reason_ = NO_CANCEL;
+      // todo(ldh): 使用工厂模式管理变道请求。
   int_request_.SetLaneChangeCmd(lane_change_cmd_);
   int_request_.SetLaneChangeCancelFromTrigger(trigger_lane_change_cancel_);
   map_request_.SetLaneChangeCmd(lane_change_cmd_);
@@ -161,7 +161,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       trigger_lane_change_cancel_);
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
-    int_request_cancel_reason_ = int_request_.lc_request_cancel_reason();
+    // int_request_cancel_reason_ = int_request_.lc_request_cancel_reason();
     ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
     int_request_.reset_int_cnt();
@@ -372,22 +372,24 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     ILOG_DEBUG << "Front Vehicle Cutout->isCancelOverTakingLaneChange";
   }
 
-  if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
-    int target_lane_order_id =
-        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
-            ->get_order_id();
-    ILOG_DEBUG << "[LCRequestManager::update] final :target_lane_order_id: "
-               << target_lane_order_id
-               << " target_lane_virtual_id:" << target_lane_virtual_id_;
-  } else {
-    request_ = NO_CHANGE;
-    request_source_ = NO_REQUEST;
-    target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
-    ILOG_DEBUG << "[LCRequestManager::update] Target lane lost !!! final "
-                  "target_lane_virtual_id:"
-               << target_lane_virtual_id_;
+  // if (virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)) {
+  //   int target_lane_order_id =
+  //       virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_)
+  //           ->get_order_id();
+  //   ILOG_DEBUG << "[LCRequestManager::update] final :target_lane_order_id: "
+  //              << target_lane_order_id
+  //              << " target_lane_virtual_id:" << target_lane_virtual_id_;
+  // } else {
+  //   request_ = NO_CHANGE;
+  //   request_source_ = NO_REQUEST;
+  //   target_lane_virtual_id_ = virtual_lane_mgr_->current_lane_virtual_id();
+  //   ILOG_DEBUG << "[LCRequestManager::update] Target lane lost !!! final "
+  //                 "target_lane_virtual_id:"
+  //              << target_lane_virtual_id_;
+  // }
+  if (trigger_lane_change_cancel_) {
+    int_request_cancel_reason_ = MANUAL_CANCEL;
   }
-
   GenerateHMIInfo();
 
   ILOG_DEBUG << "[LCRequestManager::update] ===cur_state: " << lc_status

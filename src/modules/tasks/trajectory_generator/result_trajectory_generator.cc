@@ -22,9 +22,12 @@ namespace planning {
 using namespace std;
 using namespace planning::planning_math;
 using namespace pnc::mathlib;
+namespace {
+static constexpr int kHmiSendMsgCntThreshold = 5;
+}
 
 ResultTrajectoryGenerator::ResultTrajectoryGenerator(
-    const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
+    const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : Task(config_builder, session) {
   config_ = config_builder->cast<ResultTrajectoryGeneratorConfig>();
   name_ = "ResultTrajectoryGenerator";
@@ -73,18 +76,18 @@ bool ResultTrajectoryGenerator::Execute() {
 }
 
 bool ResultTrajectoryGenerator::TrajectoryGenerator() {
-  auto &ego_planning_result =
+  auto& ego_planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
   auto speed_limit_output = session_->mutable_planning_context()
-      ->mutable_speed_limit_decider_output();
+                                ->mutable_speed_limit_decider_output();
 
   // Step 1) get x,y of trajectory points
-  auto &traj_points = ego_planning_result.traj_points;
+  auto& traj_points = ego_planning_result.traj_points;
   ego_planning_result.raw_traj_points = traj_points;
   std::copy(traj_points.begin(), traj_points.end(),
             ego_planning_result.raw_traj_points.begin());
   // const auto &num_point = traj_points.size();
-  auto &motion_planner_output =
+  auto& motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
   double curv_factor = motion_planner_output.curv_factor;
   pnc::mathlib::spline s_t_spline;
@@ -100,10 +103,10 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   double traj_max_lon_acc = 0.0;
   double traj_max_lon_jerk = 0.0;
 
-  const auto &reference_path_ptr = session_->planning_context()
+  const auto& reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
                                        .coarse_planning_info.reference_path;
-  const auto &frenet_coord = reference_path_ptr->get_frenet_coord();
+  const auto& frenet_coord = reference_path_ptr->get_frenet_coord();
   const double tp_init_s = traj_points.front().s;
   for (size_t i = 0; i < traj_points.size(); i++) {
     if (config_.is_pwj_planning) {
@@ -155,13 +158,13 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
   dkappa_t_spline.set_points(t_vec_, dkappa_vec_);
   ddkappa_t_spline.set_points(t_vec_, ddkappa_vec_);
   double lat_jerk_thr = config_.lat_jerk_thr;
-  const bool &ramp_scene =
+  const bool& ramp_scene =
       session_->planning_context().general_lateral_decider_output().ramp_scene;
   if (ramp_scene) {
     lat_jerk_thr = config_.ramp_lat_jerk_thr;
   }
   // judge condition
-  auto &ad_info = session_->mutable_planning_context()
+  auto& ad_info = session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
                       ->ad_info;
   if ((traj_max_lat_acc > config_.lat_acc_thr) ||
@@ -173,7 +176,8 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
     ad_info.is_avaliable = true;
   }
 
-  if (ad_info.is_avaliable && speed_limit_output->function_inhibited_near_roundabout()) {
+  if (ad_info.is_avaliable &&
+      speed_limit_output->function_inhibited_near_roundabout()) {
     ad_info.is_avaliable = false;
   }
 
@@ -243,12 +247,12 @@ bool ResultTrajectoryGenerator::TrajectoryGenerator() {
 bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
   bool enable_lat_traj = config_.enable_lat_traj;
 
-  auto &ego_planning_result =
+  auto& ego_planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
 
   // Step 1) get x,y of trajectory points
-  auto &traj_points = ego_planning_result.traj_points;
-  auto &motion_planner_output =
+  auto& traj_points = ego_planning_result.traj_points;
+  auto& motion_planner_output =
       session_->mutable_planning_context()->mutable_motion_planner_output();
 
   pnc::mathlib::spline s_t_spline;
@@ -338,7 +342,7 @@ bool ResultTrajectoryGenerator::RealtimeTrajectoryGenerator() {
 }
 
 void ResultTrajectoryGenerator::UpdateTurnSignal() {
-  auto &planning_result =
+  auto& planning_result =
       session_->mutable_planning_context()->mutable_planning_result();
   planning_result.turn_signal = RequestType::NO_CHANGE;
   bool active = session_->environmental_model().GetVehicleDbwStatus();
@@ -346,14 +350,14 @@ void ResultTrajectoryGenerator::UpdateTurnSignal() {
     // planning_result.turn_signal = RequestType::NO_CHANGE;
     return;
   }
-  const auto &lane_borrow_decider_output =
+  const auto& lane_borrow_decider_output =
       session_->planning_context().lane_borrow_decider_output();
   bool turn_signal_on_from_lane_borrow =
       lane_borrow_decider_output.lane_borrow_state ==
           LaneBorrowStatus::kLaneBorrowDriving ||
       lane_borrow_decider_output.lane_borrow_state ==
           LaneBorrowStatus::kLaneBorrowCrossing;
-  const auto &lane_change_decider_output =
+  const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   bool turn_signal_from_ramp_direction =
       lane_change_decider_output.dir_turn_signal_road_to_ramp !=
@@ -388,20 +392,22 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   const auto tfl_manager =
       session_->environmental_model().get_traffic_light_decision_manager();
   const auto traffic_status = tfl_manager->GetTrafficStatus();
-  const auto &tfl_decider = session_->mutable_planning_context()
-                          ->mutable_traffic_light_decider_output();
+  const auto& tfl_decider = session_->mutable_planning_context()
+                                ->mutable_traffic_light_decider_output();
   planning::common::IntersectionState intersection_state =
-      session_->environmental_model().get_virtual_lane_manager()->GetIntersectionState();
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->GetIntersectionState();
   const auto cipv_info = session_->planning_context().cipv_decider_output();
 
-  const auto &lane_change_decider_output =
+  const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
-  const auto &route_info_output =
+  const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  auto &ad_info = session_->mutable_planning_context()
+  auto& ad_info = session_->mutable_planning_context()
                       ->mutable_planning_hmi_info()
                       ->ad_info;
-  const auto &ego_state_manager =
+  const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   // ad_info.cruise_speed = ego_state_manager->ego_v_cruise();
   ad_info.lane_change_direction =
@@ -414,11 +420,19 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   static double lc_complete_to_lk_time = 0.0;
   const auto dir_turn_signal_road_to_ramp =
       lane_change_decider_output.dir_turn_signal_road_to_ramp;
+  static int lane_change_complete_cnt = kHmiSendMsgCntThreshold;
   if (curr_state == kLaneKeeping) {
+    if (lane_change_complete_cnt < kHmiSendMsgCntThreshold) {
+      ad_info.lane_change_status =
+          iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+      lane_change_complete_cnt++;
+    }
     if (lasr_frame_state == kLaneChangeComplete) {
+      lane_change_complete_cnt = 1;
       lc_complete_to_lk_time = IflyTime::Now_ms();
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
+
     } else {
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
@@ -496,19 +510,24 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
       lane_change_decider_output.int_request_cancel_reason;
   const auto lc_invalid_reason = lane_change_decider_output.lc_invalid_reason;
   const auto lc_back_reason = lane_change_decider_output.lc_back_reason;
-  if (int_request_cancel_reason == SOLID_LC) {
+  static int proposal_time_out_cnt = kHmiSendMsgCntThreshold;
+  static int manual_cancle_cnt = kHmiSendMsgCntThreshold;
+  if (int_request_cancel_reason == MANUAL_CANCEL){
+    manual_cancle_cnt = 1;
+  }
+    if (lane_change_decider_output.lc_invalid_reason == "propose time out") {
+      proposal_time_out_cnt = 1;
+    }
+
+  if (proposal_time_out_cnt < kHmiSendMsgCntThreshold) {
+    ad_info.status_update_reason =
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
+    proposal_time_out_cnt++;
+  } else if (lc_back_reason == "dash line length not satisfy" ||
+             lane_change_decider_output.lc_invalid_reason ==
+                 "dash not enough") {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
-    // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
-    // 在此更新变道状态和变道方向的值！！！！！！！
-    //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
-    ad_info.lane_change_direction =
-        (iflyauto::LaneChangeDirection)
-            lane_change_decider_output.lc_request;  // LC_DIR_LEFT/RIGHT
-    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
-  } else if (int_request_cancel_reason == MANUAL_CANCEL) {
-    ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
   } else if (lc_invalid_reason == "side view invalid" ||
              lc_invalid_reason == "front view invalid" ||
              lc_back_reason == "side view back" ||
@@ -520,15 +539,20 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
     obstacle.id = lane_change_decider_output.lc_invalid_track.track_id;
     ad_info.obstacle_info[0] = obstacle;
     ad_info.obstacle_info_size = 1;
-  } else if (lc_back_reason == "dash line length not satisfy" ||
-             lane_change_decider_output.lc_invalid_reason ==
-                 "dash not enough") {
+  } else if (int_request_cancel_reason == SOLID_LC) {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_SOLID_LINE;
-  } else if (lane_change_decider_output.lc_invalid_reason ==
-             "propose time out") {
+    // 暂时为了满足实线变道时打灯合planing_hmi的提示需求
+    // 在此更新变道状态和变道方向的值！！！！！！！
+    //  TODO(fengwang31):在变道过程中，遇到实线取消了，是否需要发出方向？
+    ad_info.lane_change_direction =
+        (iflyauto::LaneChangeDirection)
+            lane_change_decider_output.lc_request;  // LC_DIR_LEFT/RIGHT
+    ad_info.lane_change_status = iflyauto::LaneChangeStatus::LC_STATE_NO_CHANGE;
+  } else if (manual_cancle_cnt < kHmiSendMsgCntThreshold) {
     ad_info.status_update_reason =
-        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_TIMEOUT;
+        iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_MANUAL_CANCEL;
+    manual_cancle_cnt++;
   } else {
     ad_info.status_update_reason =
         iflyauto::StatusUpdateReason::STATUS_UPDATE_REASON_NONE;
@@ -600,7 +624,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   const int ramp_direction = route_info_output.ramp_direction;
   ad_info.ramp_direction = (iflyauto::RampDirection)ramp_direction;
 
-  const auto &fix_reference_path =
+  const auto& fix_reference_path =
       lane_change_decider_output.coarse_planning_info.reference_path;
   if (fix_reference_path != nullptr) {
     ad_info.dis_to_reference_line =
@@ -662,7 +686,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   ad_info.landing_point.relative_pos.z = 0.0;
   JSON_DEBUG_VALUE("ramp_pass_sts", (int)ad_info.ramp_pass_sts)
   double lc_complete_time_period = IflyTime::Now_ms() - lc_complete_to_lk_time;
-  static constexpr double kMaxTimeToCompleteLaneChange = 5000.0;  // ms
+  static constexpr double kMaxTimeToCompleteLaneChange = 7000.0;  // ms
   bool is_lane_keeping = curr_state == kLaneKeeping;
   bool is_time_out = lc_complete_time_period > kMaxTimeToCompleteLaneChange;
   iflyauto::LandingPoint landing_point;
@@ -679,15 +703,18 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   }
   ad_info.landing_point = landing_point;
 
-  //update intersection traffic lights reminder hmi info
+  // update intersection traffic lights reminder hmi info
   constexpr uint8 kIntersectionStatusNone = 8;
-  ad_info.intersection_pass_sts = iflyauto::IntersectionPassSts(kIntersectionStatusNone);
-  if ((traffic_status.go_straight != 3 && traffic_status.go_straight != 43)
-      && intersection_state == planning::common::APPROACH_INTERSECTION
-      && (!tfl_decider.is_small_front_intersection || tfl_decider.is_tfl_match_intersection)
-      && (cipv_info.cipv_id() == -1 || cipv_info.relative_s() > config_.tfl_reminder_cipv_dis))
-  {
-    ad_info.intersection_pass_sts = iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
+  ad_info.intersection_pass_sts =
+      iflyauto::IntersectionPassSts(kIntersectionStatusNone);
+  if ((traffic_status.go_straight != 3 && traffic_status.go_straight != 43) &&
+      intersection_state == planning::common::APPROACH_INTERSECTION &&
+      (!tfl_decider.is_small_front_intersection ||
+       tfl_decider.is_tfl_match_intersection) &&
+      (cipv_info.cipv_id() == -1 ||
+       cipv_info.relative_s() > config_.tfl_reminder_cipv_dis)) {
+    ad_info.intersection_pass_sts =
+        iflyauto::IntersectionPassSts::INTERSECTION_RED_LIGHT_STOP;
   }
   JSON_DEBUG_VALUE("intersection_pass_sts", int(ad_info.intersection_pass_sts));
   return;
@@ -695,7 +722,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
 
 iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
     bool is_lane_keeping,
-    const LaneChangeDeciderOutput &lane_change_decider_output) {
+    const LaneChangeDeciderOutput& lane_change_decider_output) {
   iflyauto::LandingPoint landing_point;
   landing_point.relative_pos.x = 0.0;
   landing_point.relative_pos.y = 0.0;
@@ -736,7 +763,7 @@ iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
             cart_point)) {
       return landing_point;
     }
-    const auto &ego_pose = ego_state_manager->ego_pose();
+    const auto& ego_pose = ego_state_manager->ego_pose();
     const double theta_ori = ego_pose.theta;
     double landing_point_theta_global = 0;
     ReferencePathPoint reference_path_point{};
