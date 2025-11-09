@@ -5551,6 +5551,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
       EgoPlanningConfig::init(json);
       /* read config from json */
       ReadItem<double>(json, exe_ttc_ratio,"lane_change_safety_check", "exe_ttc_ratio");
+      ReadItem<double>(json, ttc_decay_factor,"lane_change_safety_check", "ttc_decay_factor");
       read_json_vec(
         json,
         std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
@@ -5563,9 +5564,10 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                                  diff_speed_init_ttc_map.ttc_table);
     }
     double exe_ttc_ratio = 0.5;
+    double ttc_decay_factor = 0.85;
     struct DiffSpeedInitTTCable {
-        std::vector<double> diff_kph_table{0.0, 5.0,  10.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
-        std::vector<double> ttc_table     {3.0, 4.0,  5.0, 7.0, 8.0, 9.5,  10.0};  // 起始ttc
+        std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
+        std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
     };
     DiffSpeedInitTTCable diff_speed_init_ttc_map;
 };
