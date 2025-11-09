@@ -517,8 +517,9 @@ void RouteInfo::CaculateMergeInfo(
       sdpro_map.GetSplitInfoList(link.id(), nearest_s, max_search_length);
 
   if (!merge_info.empty()) {
-    const iflymapdata::sdpro::LinkInfo_Link* seg_of_first_road_merge;
-    const iflymapdata::sdpro::LinkInfo_Link* next_seg_of_first_road_merge;
+    const iflymapdata::sdpro::LinkInfo_Link* seg_of_first_road_merge = nullptr;
+    const iflymapdata::sdpro::LinkInfo_Link* next_seg_of_first_road_merge =
+        nullptr;
     int traverse_num = 0;
     bool is_find_first_merge_onfo = false;
     for (int i = 0; i < merge_info.size(); i++) {
@@ -1813,30 +1814,27 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       route_info_output_.distance_to_second_road_merge =
           merge_region_info.distance_to_split_point;
     }
+
+    bool is_calculate_feasible_lane;
     if (merge_region_info.is_other_merge_to_road == true) {
-      bool is_calculate_feasible_lane =
+      is_calculate_feasible_lane =
           CalculateOtherMergeRoadFeasibleLane(&merge_region_info);
-      if (!is_calculate_feasible_lane) {
-        break;
-      }
-      mlc_request_info_list.emplace_back(
-          mlc_request_info_, merge_region_info.distance_to_split_point);
     } else {
-      bool is_calculate_feasible_lane =
+      is_calculate_feasible_lane =
           CalculateMergeRegionFeasibleLane(&merge_region_info);
-      if (!is_calculate_feasible_lane) {
-        break;
-      }
-      mlc_request_info_list.emplace_back(
-          mlc_request_info_, merge_region_info.distance_to_split_point);
     }
+    if (!is_calculate_feasible_lane) {
+      break;
+    }
+    mlc_request_info_list.emplace_back(
+        mlc_request_info_, merge_region_info.distance_to_split_point);
     exchange_region_info_list.emplace_back(merge_region_info);
   }
 
   // 将exchange_region_info_list中按照distance排序
   std::sort(exchange_region_info_list.begin(), exchange_region_info_list.end(),
-            [](NOASplitRegionInfo exchange_region_temp1,
-               NOASplitRegionInfo exchange_region_temp2) {
+            [](const NOASplitRegionInfo& exchange_region_temp1,
+               const NOASplitRegionInfo& exchange_region_temp2) {
               return exchange_region_temp1.distance_to_split_point <
                      exchange_region_temp2.distance_to_split_point;
             });
@@ -2052,7 +2050,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               is_need_cancel_avoide_mlc = valid_exchange_regions[i + 1]
                                                   .recommend_lane_num[0]
                                                   .feasible_lane_sequence[0] -
-                                              avoide_lane_num[0] >
+                                              avoide_lane_num[0] >=
                                           0;
             }
             // 把躲避分汇流的车道添加进去
