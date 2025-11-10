@@ -788,6 +788,7 @@
     "construction_lat_dist_entry": 4,
     "construction_lat_dist_exit": 4.5,
     "construction_speed_upper": 27.78,
+    "enable_construction_avoid_agent_speed_limit":false,
     "toll_station_vel_limit_kph": 60.0,
     "sapa_vel_limit_kph": 60.0,
     "non_express_vel_limit_kph": 60.0,

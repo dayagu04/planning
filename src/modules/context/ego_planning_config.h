@@ -3560,11 +3560,15 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
                      "ca_invade_lat_dis_counter_thr");
     ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
-                     "construciton_invade_speed_diff");
+                     "construction_invade_speed_diff");           
     ReadItem<double>(json, construction_lat_dist_entry, "speed_limit_decider",
                      "construction_lat_dist_entry");
     ReadItem<double>(json, construction_lat_dist_exit, "speed_limit_decider",
-                     "construction_lat_dist_exit");
+                     "construction_lat_dist_exit"); 
+    ReadItem<double>(json, construction_speed_upper, "speed_limit_decider",
+                     "construction_speed_upper"); 
+    ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit, "speed_limit_decider",
+                     "enable_construction_avoid_agent_speed_limit");
 
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
@@ -3712,6 +3716,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_lat_dist_entry = 4.0;
   double construction_lat_dist_exit = 4.5;
   double construction_speed_upper = 27.78;
+  bool enable_construction_avoid_agent_speed_limit = false;
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;

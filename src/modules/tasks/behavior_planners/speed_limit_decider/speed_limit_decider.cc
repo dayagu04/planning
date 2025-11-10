@@ -56,6 +56,7 @@ constexpr double kCAInvadeLatMaxDis = 2.5;
 constexpr double kCAInvadeLatMinDis = 2;
 constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
+constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -333,7 +334,8 @@ bool SpeedLimitDecider::Execute() {
     v_target_type_ = SpeedLimitType::NEAR_POI;
   }
   speed_limit_output->SetSpeedLimit(v_target_, v_target_type_);
-
+  JSON_DEBUG_VALUE("v_target_decider", v_target_);
+  JSON_DEBUG_VALUE("v_target_type_code",  std::underlying_type<SpeedLimitType>::type(v_target_type_));
   auto ad_info = &(session_->mutable_planning_context()
                        ->mutable_planning_hmi_info()
                        ->ad_info);
@@ -1332,6 +1334,14 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   if (current_lane_coord == nullptr) {
     return;
   }
+  bool is_exist_construction = false;
+  const auto &construction_scene =
+      session_->planning_context().construction_scene_decider_output();
+  if (construction_scene.is_exist_construction_area &&
+      !construction_scene.construction_agent_cluster_attribute_map.empty() &&
+      !speed_limit_config_.enable_construction_avoid_agent_speed_limit) {
+    is_exist_construction = true;
+  }
 
   std::vector<const agent::Agent *> avoid_agents;
   bool is_triggered_vru_in_avoid_agent = false;
@@ -1388,6 +1398,12 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
 
     if (!CheckLateralConflict(init_point, current_lane, current_lane_coord,
                               avoid_agent, 0.3)) {
+      continue;
+    }
+    if ((avoid_agent->type() == agent::AgentType::WATER_SAFETY_BARRIER ||
+         avoid_agent->type() == agent::AgentType::TRAFFIC_CONE ||
+         avoid_agent->type() == agent::AgentType::CTASH_BARREL) &&
+        is_exist_construction) {
       continue;
     }
 
@@ -1775,9 +1791,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   double v_target_construction = 50.0;
   double v_target_near_construction = 50.0;
   double dis_to_construction = std::numeric_limits<double>::max();
-  // bool construction_strong_deceleration_mode_ = false;
   int construction_strong_mode_reason = 0;
-  construction_v_limit_set_ = false;
 
   // Configuration flag: enable/disable construction zone speed limiting
   if (!speed_limit_config_.enable_construction_speed_limit) {
@@ -1801,6 +1815,9 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_strong_deceleration_mode_ = false;
     construction_strong_mode_frame_count_ = 0;
     construction_lat_dist_flag_ = false;
+    construction_v_limit_set_ = false;
+    construction_manual_intervention_detected_ = false;
+    last_v_cruise_fsm_ = 40.0;
     ILOG_DEBUG << "Construction scene is invalid or empty";
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
@@ -1812,6 +1829,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     JSON_DEBUG_VALUE("construction_strong_mode_frame_count",
                      construction_strong_mode_frame_count_);
     JSON_DEBUG_VALUE("construction_lat_dist_flag", construction_lat_dist_flag_);
+    JSON_DEBUG_VALUE("construction_manual_intervention_detected", construction_manual_intervention_detected_);
     return;
   }
 
@@ -1826,6 +1844,14 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   double v_ego = ego_state_mgr->ego_v();
   const auto init_point = ego_state_mgr->planning_init_point();
   double v_cruise = ego_state_mgr->ego_v_cruise();
+  // Construction manual intervention detected
+  double speed_increase = v_cruise_fsm - last_v_cruise_fsm_;
+  if (construction_v_limit_set_ && is_exist_construction &&
+      speed_increase > kCAManualInterventionSpeedDetected) {
+    construction_manual_intervention_detected_ = true;
+  }
+  last_v_cruise_fsm_ = v_cruise_fsm;
+  
   // get lateral path
   const auto &planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
@@ -1958,11 +1984,16 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     if (v_target_construction_kph < v_cruise_limit_) {
       v_cruise_limit_ = v_target_construction_kph;
       construction_v_limit_set_ = true;
-      if (v_target_ > speed_limit_config_.construction_speed_upper) {
-        v_target_ = speed_limit_config_.construction_speed_upper;
-        v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
-      }
     }
+    if (v_target_construction < v_target_ && !construction_manual_intervention_detected_) {
+      construction_v_limit_set_ = true;
+      v_target_ = v_target_construction;
+      v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
+    } else if(v_target_ > speed_limit_config_.construction_speed_upper && construction_manual_intervention_detected_){
+      v_target_ = speed_limit_config_.construction_speed_upper;
+      v_target_type_ = SpeedLimitType::ON_CONSTRUCTION;
+    }
+    JSON_DEBUG_VALUE("construction_manual_intervention_detected", construction_manual_intervention_detected_);
     ILOG_DEBUG << "v_target_construction :" << v_target_construction;
     JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
     JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
@@ -2007,13 +2038,28 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
       v_target_ = speed_limit_config_.construction_speed_upper;
       v_target_type_ = SpeedLimitType::NEAR_CONSTRUCTION;
     }
-    ILOG_DEBUG << "dis_to_construction :" << dis_to_construction;
-    ILOG_DEBUG << "v_target_near_construction :" << v_target_near_construction;
-    auto speed_limit_output = session_->mutable_planning_context()
-                                  ->mutable_speed_limit_decider_output();
-    speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
-                                             SpeedLimitType::NEAR_CONSTRUCTION);
+
+    if (v_target_near_construction < v_target_ &&
+        !construction_manual_intervention_detected_) {
+      construction_v_limit_set_ = true;
+      v_target_ = v_target_near_construction;
+      v_target_type_ = SpeedLimitType::NEAR_CONSTRUCTION;
+    } else if (v_target_ > speed_limit_config_.construction_speed_upper &&
+               construction_manual_intervention_detected_) {
+      v_target_ = speed_limit_config_.construction_speed_upper;
+      v_target_type_ = SpeedLimitType::NEAR_CONSTRUCTION;
+    }
+  } else {
+    construction_v_limit_set_ = false;
+    construction_manual_intervention_detected_ = false;
   }
+  JSON_DEBUG_VALUE("construction_manual_intervention_detected", construction_manual_intervention_detected_);
+  ILOG_DEBUG << "dis_to_construction :" << dis_to_construction;
+  ILOG_DEBUG << "v_target_near_construction :" << v_target_near_construction;
+  auto speed_limit_output = session_->mutable_planning_context()
+                                  ->mutable_speed_limit_decider_output();
+  speed_limit_output->SetSpeedLimitIntoMap(v_target_near_construction,
+                                             SpeedLimitType::NEAR_CONSTRUCTION);
   JSON_DEBUG_VALUE("v_target_construction", v_target_construction);
   JSON_DEBUG_VALUE("v_target_near_construction", v_target_near_construction);
   JSON_DEBUG_VALUE("dis_to_construction", dis_to_construction);

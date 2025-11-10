@@ -112,6 +112,8 @@ class SpeedLimitDecider : public Task {
   int construction_strong_mode_frame_count_ = 0;
   bool construction_lat_dist_flag_ = false;
   bool construction_v_limit_set_ = false;
+  bool construction_manual_intervention_detected_ = false;
+  double last_v_cruise_fsm_ = 0.0;
 };
 
 }  // namespace planning

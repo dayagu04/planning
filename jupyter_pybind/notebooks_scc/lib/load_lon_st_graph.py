@@ -233,7 +233,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
                               "lane_borrow_agent_id", "lane_borrow_agent_v_limit", \
-                              "lon_danger_agent_ids", \
+                              "lon_danger_agent_ids", "v_cruise_limit","v_target_decider","v_target_type_code","construction_manual_intervention_detected",\
                               "v_target_construction","v_target_near_construction","dis_to_construction","is_exist_construction_area","is_pass_construction_area","construction_lat_dist_flag",\
                               "construction_strong_deceleration_mode", "construction_strong_mode_reason","construction_strong_mode_frame_count","agents_headway_id", "agents_headway_value",\
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
