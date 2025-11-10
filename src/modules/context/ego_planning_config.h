@@ -5562,6 +5562,16 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
                                  "ttc_table"},
                                  diff_speed_init_ttc_map.ttc_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
+                                 "rear_speed_kph_table"},
+                                 rear_vehicle_speed_min_space_map.rear_speed_kph_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
+                                 "min_space_table"},
+                                 rear_vehicle_speed_min_space_map.min_space_table);
     }
     double exe_ttc_ratio = 0.5;
     double ttc_decay_factor = 0.85;
@@ -5570,5 +5580,10 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
     };
     DiffSpeedInitTTCable diff_speed_init_ttc_map;
+    struct RearVehicleSpeedMinSpaceMap {
+        std::vector<double> rear_speed_kph_table{0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0};  // 后车速度 kph
+        std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
+    };
+    RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
 };
 }  // namespace planning

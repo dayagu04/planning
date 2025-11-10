@@ -216,7 +216,7 @@ class LaneChangeStateMachineManager {
   SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(
       const double ego_v, const double target_v);
   double CalculateLCSafetyCheckTime() const;
-  double CalculateLCSafetyCheckTimeByDiffSpeed(double init_ttc) const;
+  double CalculateCheckTimeRatio() const;
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
       const std::array<double, 3> init_lon_state) const;
 

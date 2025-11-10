@@ -4008,7 +4008,9 @@ bool LaneChangeStateMachineManager::
       3.6 * std::max(0., agent_traj[0].v - ego_trajs_future_[0].v);
   double init_diff_speed_ttc = interp(delta_kph, xpv, fpv);
   // init_diff_speed_ttc -> 递减
-  double max_box_ttc_rear = CalculateLCSafetyCheckTimeByDiffSpeed(init_diff_speed_ttc);
+  // double max_box_ttc_rear = CalculateLCSafetyCheckTimeByDiffSpeed(init_diff_speed_ttc);
+  double check_time_ratio = CalculateCheckTimeRatio();
+  double max_box_ttc_rear = init_diff_speed_ttc * check_time_ratio;
   max_box_ttc_rear = std::min(max_box_ttc_rear, 10.0);
   max_box_ttc_rear = std::max(max_box_ttc_rear, 0.1);
   // 自车压线目标车道情况
@@ -4029,10 +4031,9 @@ bool LaneChangeStateMachineManager::
   double std_beyond_lane_time = std::max(
       0.0, std::min(2.0, lc_safety_check_time_ - 1.0));  // 实际初始在2.5 左右
   // 根据目标车速度 调整速度阈值
-  std::array<double, 6> xp{10., 40., 60., 80.0, 100., 120.};  // 后车速度kph
-  std::array<double, 6> fp{
-      0.8, 1.2, 2.5,
-      3.,  5.0,  5.5};  // 触发变道需要预留最小空间 下方 大车额外增加5m基础距离
+  const auto &rear_vehicle_speed_min_space_map = lc_safety_check_config_.rear_vehicle_speed_min_space_map;
+  const auto& xp = rear_vehicle_speed_min_space_map.rear_speed_kph_table;
+  const auto& fp = rear_vehicle_speed_min_space_map.min_space_table;
   bool is_executing =
       transition_info_.lane_change_status == kLaneChangeExecution;
   // bool is_deceleration_check =
@@ -4075,16 +4076,12 @@ bool LaneChangeStateMachineManager::
       double pred_ttc = interp(
           3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v),
           xpv, fpv);  // 后车轨迹差速<->ttc
+      pred_ttc = pred_ttc * check_time_ratio;
       max_box_ttc_rear = std::min(max_box_ttc_rear, pred_ttc);
       // 预测时间衰减性 - 指数衰减
       const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;  // 每步衰减系数
       double ttc_decay = std::pow(ttc_decay_factor, i);
-      box_ttc = max_box_ttc_rear * ttc_decay;
-      
-      if(is_executing){
-        box_ttc = box_ttc * lc_safety_check_config_.exe_ttc_ratio; // 决策稳定性 0.5 默认
-        dis_buff = dis_buff * 0.7;
-      }
+      box_ttc = max_box_ttc_rear;
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       double dist_rel_vel =
           (rel_vel > 0) ? rel_vel * box_ttc : 0.0;
@@ -4092,7 +4089,11 @@ bool LaneChangeStateMachineManager::
           (rel_vel > 0)
               ? std::max(dist_rel_vel, dis_buff)
               : dis_buff;
-      box_longitudinal_buff = std::max(box_longitudinal_buff, 2.0);
+      box_longitudinal_buff = std::max(box_longitudinal_buff, 0.1);
+      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
+      if(is_executing){
+        box_longitudinal_buff = box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
+      }
     }
     // check lon s safety
     double two_car_length = 0;
@@ -4550,8 +4551,8 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
 
   return reach_line_time;
 }
-double LaneChangeStateMachineManager::CalculateLCSafetyCheckTimeByDiffSpeed(double init_ttc) const {
-  double new_ttc = 0.1;
+double LaneChangeStateMachineManager::CalculateCheckTimeRatio() const {
+  double check_time_ratio = 1.0;
   const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
   const auto reference_path_manager =
       session_->environmental_model().get_reference_path_manager();
@@ -4561,7 +4562,7 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTimeByDiffSpeed(doub
       reference_path_manager->get_reference_path_by_lane(
           target_lane_virtual_id);
   if (target_reference_path == nullptr) {
-    return new_ttc;
+    return check_time_ratio;
   }
   const double ego_l_target = target_reference_path->get_frenet_ego_state().l();
   const auto origin_lane =
@@ -4569,14 +4570,14 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTimeByDiffSpeed(doub
   const auto target_lane =
       virtual_lane_manager->get_lane_with_virtual_id(target_lane_virtual_id);
   if (target_lane == nullptr || origin_lane == nullptr) {
-    return new_ttc;
+    return check_time_ratio;
   }
   const double width_by_target = target_lane->width();
   const double half_width_by_origin = origin_lane->width() * 0.5;
   double ego_dis_to_line =
       std::abs(ego_l_target) - std::abs(width_by_target) / 2;
-  new_ttc = init_ttc * ego_dis_to_line / (half_width_by_origin + 0.001);
-  return new_ttc;
+  check_time_ratio = ego_dis_to_line / (half_width_by_origin + 0.001);
+  return check_time_ratio;
 }
 std::unique_ptr<Trajectory1d>
 LaneChangeStateMachineManager::MakeVirtualZeroAccCurve(
