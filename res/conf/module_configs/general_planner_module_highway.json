@@ -816,34 +816,34 @@
     },
     "toll_station_vel_limit_dis_table": {
       "vel_limit_table": [
-        70, 80, 90, 100, 110, 120
+        70, 80, 90, 100, 110, 120, 130
       ],
       "dis_table": [
-        50, 100, 170, 250, 320, 400
+        50, 100, 170, 250, 320, 400, 500
       ]
     },
     "sapa_vel_limit_dis_table": {
       "vel_limit_table": [
-        70, 80, 90, 100, 110, 120
+        70, 80, 90, 100, 110, 120, 130
       ],
       "dis_table": [
-        50, 100, 170, 250, 320, 400
+        50, 100, 170, 250, 320, 400, 500
       ]
     },
     "non_express_vel_limit_dis_table": {
       "vel_limit_table": [
-        70, 80, 90, 100, 110, 120
+        70, 80, 90, 100, 110, 120, 130
       ],
       "dis_table": [
-        50, 100, 170, 250, 320, 400
+        50, 100, 170, 250, 320, 400, 500
       ]
     },
     "tunnel_vel_limit_dis_table": {
       "vel_limit_table": [
-        90, 100, 110, 120
+        90, 100, 110, 120, 130
       ],
       "dis_table": [
-        70, 140, 220, 300
+        70, 140, 220, 300, 400
       ]
     }
   },
@@ -1050,6 +1050,24 @@
         "acc_negative_lower": -1.0,
         "acc_negative_speed_lower": 5.0,
         "acc_negative_upper": -1.0,
+        "acc_negative_speed_upper": 20.0,
+        "jerk_positive_upper": 3.0,
+        "jerk_positive_speed_lower": 5.0,
+        "jerk_positive_lower": 2.0,
+        "jerk_positive_speed_upper": 25.0,
+        "jerk_negative_lower": -1.0,
+        "jerk_negative_speed_lower": 1.0,
+        "jerk_negative_upper": -1.0,
+        "jerk_negative_speed_upper": 25.0
+      },
+      "map_near_ramp_kinematic_param": {
+        "acc_positive_upper": 1.35,
+        "acc_positive_speed_lower": 4.2,
+        "acc_positive_lower": 0.5,
+        "acc_positive_speed_upper": 12.0,
+        "acc_negative_lower": -0.7,
+        "acc_negative_speed_lower": 5.0,
+        "acc_negative_upper": -0.7,
         "acc_negative_speed_upper": 20.0,
         "jerk_positive_upper": 3.0,
         "jerk_positive_speed_lower": 5.0,

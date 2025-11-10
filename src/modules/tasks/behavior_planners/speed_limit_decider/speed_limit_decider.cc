@@ -49,7 +49,7 @@ constexpr double kExitVruRoundLateralBufferThr = 1.0;
 constexpr double kExitVruRoundDistanceThr = 80.0;
 constexpr double kLowSpeedVruVelThr = 30 / 3.6;
 constexpr double kVRURoundDecelRatio = 0.7;
-constexpr double kTunnelVelLimitDisOffset = 50;
+constexpr double kTunnelVelLimitDisOffset = 100;
 constexpr double kCAInvadeLatDisDiffThr = 0.25;
 constexpr double kCAInvadeVaildLonDis = 80.0;
 constexpr double kCAInvadeLatMaxDis = 2.5;
@@ -429,6 +429,36 @@ double SpeedLimitDecider::JudgeCurvBySDProMap() {
   return min_curv_radius;
 }
 
+double SpeedLimitDecider::GetRampVelLimit() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto &route_info_output =
+      environmental_model.get_route_info()->get_route_info_output();
+  uint64_t ramp_link_id = -1;
+  double ramp_v_limit = 120;
+  double dis_to_ramp = route_info_output.dis_to_ramp;
+  const auto &split_region_info_list = route_info_output.split_region_info_list;
+  if (dis_to_ramp < 2000.0) {
+    for (int i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point -
+                    dis_to_ramp) < 1.0) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
+  if (environmental_model.get_route_info()->get_sdpromap_valid()) {
+    const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
+    const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
+    if (ramp_link == nullptr) {
+      ILOG_INFO << "ramp_link is null!!!";
+    } else {
+      ramp_v_limit = ramp_link->speed_limit();
+    }
+  }
+  return ramp_v_limit;
+
+}
+
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   ILOG_DEBUG << "----CalculateCurveSpeedLimit---";
   const auto &vehicle_param =
@@ -565,27 +595,19 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
   ILOG_DEBUG << "----CalculateMapSpeedLimit for ramp---";
   const auto &environmental_model = session_->environmental_model();
+
   const auto &function_state_machine_info =
       environmental_model.get_local_view().function_state_machine_info;
   double v_cruise_fsm =
       function_state_machine_info.pilot_req.acc_curise_real_spd;
+
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
-  uint64_t ramp_link_id = -1;
-  double ramp_v_limit = 120;
-  const auto &split_region_info_list = route_info_output.split_region_info_list;
-  if (dis_to_ramp < 2000.0) {
-    for (int i = 0; i < split_region_info_list.size(); ++i) {
-      if (std::fabs(split_region_info_list[i].distance_to_split_point -
-                    dis_to_ramp) < 1.0) {
-        ramp_link_id = split_region_info_list[i].split_link_id;
-        break;
-      }
-    }
-  }
+  double ramp_v_limit = GetRampVelLimit();
+
   // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
@@ -593,12 +615,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   }
   const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
-  const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
-  if (ramp_link == nullptr) {
-    ILOG_INFO << "ramp_link is null!!!";
-  } else {
-    ramp_v_limit = ramp_link->speed_limit();
-  }
+
   ad_common::math::Vec2d current_point;
   const auto &ego_state = environmental_model.get_ego_state_manager();
   const auto &pose = ego_state->location_enu();
@@ -612,12 +629,14 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
+  double v_limit_tencent = 0;
   if (current_segment == nullptr) {
     // get ego link failed, using fsm cruise speed
     v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   } else {
-    v_cruise_limit_ = current_segment->speed_limit();  // kph
-    JSON_DEBUG_VALUE("v_limit_tencent", v_cruise_limit_);
+    v_limit_tencent = current_segment->speed_limit();  // kph
+    v_cruise_limit_ = v_limit_tencent;  // kph
+    JSON_DEBUG_VALUE("v_limit_tencent", v_limit_tencent);
   }
 
   double v_limit_gaode = 0;
@@ -704,12 +723,39 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         }
       }
     }
-    v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
-    v_target_ramp = v_cruise_limit_ / 3.6;
-    if (v_target_ramp < v_target_) {
-      v_target_ = v_target_ramp;
-      v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
+
+    if (v_limit_tencent > (30.0 - kEpsilon) && v_limit_gaode > (30.0 - kEpsilon)) {
+      v_cruise_limit_ = std::max(std::min(v_limit_tencent, v_limit_gaode), 60.0);
+    } else {
+      v_cruise_limit_ = std::max(v_cruise_limit_, 60.0);
     }
+
+    if (dis_to_ramp < 1000.0) {
+      double ramp_in_ramp_v_limit = GetRampVelLimit();
+      if (ramp_in_ramp_v_limit < v_cruise_limit_) {
+        double pre_brake_dis_to_ramp_in_ramp = std::max(dis_to_ramp - 50, 0.0);
+        v_target_ramp = std::pow(
+            std::pow(std::max(speed_limit_config_.v_limit_ramp, ramp_in_ramp_v_limit / 3.6),
+                    2.0) -
+                2 * pre_brake_dis_to_ramp_in_ramp * speed_limit_config_.acc_to_ramp,
+            0.5);
+        if (v_target_ramp < v_target_) {
+          v_target_ = v_target_ramp;
+          v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
+        }
+        ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
+        JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
+        JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
+        JSON_DEBUG_VALUE("dis_to_merge", dis_to_merge);
+        auto speed_limit_output = session_->mutable_planning_context()
+                                  ->mutable_speed_limit_decider_output();
+        speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
+                                             SpeedLimitType::MAP_NEAR_RAMP);
+        return;
+      }
+    }
+    v_target_ramp = v_cruise_limit_ / 3.6;
+
     ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -1025,7 +1071,13 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
     return;
   } else {
     poi_v_limit_set_ = false;
-    double cur_link_v_limit = current_segment->speed_limit();
+    const auto &function_state_machine_info =
+      environmental_model.get_local_view().function_state_machine_info;
+    double v_cruise_fsm =
+      function_state_machine_info.pilot_req.acc_curise_real_spd;
+    double v_cruise_fsm_kph = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+    double cur_road_map_v_limit = current_segment->speed_limit();
+    double cur_link_v_limit = std::max(cur_road_map_v_limit, v_cruise_fsm_kph);
     double v_limit_dis = 10000.0;
     v_limit_dis =
         interp(cur_link_v_limit,
