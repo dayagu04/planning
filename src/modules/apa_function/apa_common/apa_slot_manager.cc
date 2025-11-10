@@ -720,7 +720,7 @@ const SlotReleaseVoterType ApaSlotManager::IsParallelSlotAndPassageAreaOccupied(
   const double lat_buffer = 0.1;
   double lon_buffer = 0.3;
   if (limiter.valid) {
-    lon_buffer = 0.7;
+    lon_buffer = 0.4;
   }
 
   for (const double lat_move_dist : lat_mov_dist_vec) {

@@ -23,6 +23,7 @@
 #include "func_state_machine_c.h"
 #include "geometry_math.h"
 #include "geometry_path_generator.h"
+#include "gjk_collision_detector.h"
 #include "ifly_time.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
@@ -480,7 +481,8 @@ const double ParallelParkInScenario::CalRealTimeBrakeDist() {
 
   const double remain_dist_obs = CalRemainDistFromObs(
       safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
-      dynaminc_lat_buffer, dynaminc_lat_buffer);
+      dynaminc_lat_buffer, dynaminc_lat_buffer, false,UseObsHeightMethod::HIGH,
+      GJKrequestFrom::PARALLEL);
 
   ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
 
@@ -728,18 +730,24 @@ const bool ParallelParkInScenario::GenTlane() {
   const double quarter_slot_width = 0.5 * half_slot_width;
   const double side_sgn = t_lane_.slot_side_sgn;
   const Eigen::Vector2d slot_center(0.5 * slot_length, 0.0);
+  const bool is_cur_pose_in_slot =
+      CalcSlotOccupiedRatio(ego_info_under_slot.cur_pose) >= 0.1;
   obs_pt_local_vec_.clear();
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
       CollisionDetector::Paramters(kDeletedObsDistOutSlot, true));
 
+
   for (const auto& pair :
        apa_world_ptr_->GetObstacleManagerPtr()->GetObstacles()) {
     if (pair.second.GetObsMovementType() != ApaObsMovementType::STATIC) {
       continue;
     }
-
+    bool is_limiter = false;
+    if ( pair.second.GetObsScemanticType() == ApaObsScemanticType::LIMITER) {
+      is_limiter = true;
+    }
     const auto obs_scement = pair.second.GetObsScemanticType();
 
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
@@ -798,7 +806,16 @@ const bool ParallelParkInScenario::GenTlane() {
                   << " type = " << static_cast<int>(obs_scement);
         t_lane_.is_inside_rigid = true;
       }
+      if (is_limiter && is_cur_pose_in_slot) {
 
+        auto obs_pt_local_cp = obs_pt_local;
+        ILOG_INFO << "befor limiter obs = " << obs_pt_local_cp.x()  ;
+        obs_pt_local_cp.x() = obs_pt_local_cp.x()+ 0.9;
+        ILOG_INFO << "limiter obs = " << obs_pt_local_cp.x()  ;
+        obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
+          std::move(obs_pt_local_cp));
+        continue;
+      }
       obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
           std::move(obs_pt_local));
     }
@@ -1820,7 +1837,6 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
       current_path_point_global_vec_.emplace_back(global_point);
     }
     previous_current_path_point_global_vec_.clear();
-
     previous_current_path_point_global_vec_ = current_path_point_global_vec_;
     if (!apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
       std::vector<geometry_lib::PathPoint> tmp_path_point_vec;
