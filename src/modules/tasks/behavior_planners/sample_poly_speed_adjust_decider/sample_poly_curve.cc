@@ -92,9 +92,10 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
   double differ_acc =
       std::fabs(ego_a - obj_a) < kZeroEpsilon ? 0.001 : (ego_a - obj_a);
   const double calculate_collision_time = (obj_v - ego_v) / differ_acc;
-  if (calculate_collision_time < 0.0 || calculate_collision_time > 4.0) {
+  if (calculate_collision_time < 0.0 || calculate_collision_time > prediction_time_) {
     double limit_distance =
-        (ego_v - obj_v) * 4.0 + 0.5 * differ_acc * 4.0 * 4.0;
+        (ego_v - obj_v) * prediction_time_ +
+        0.5 * differ_acc * prediction_time_ * prediction_time_;
     if (ego_v > obj_v) {
       return is_front_car ? limit_distance : 0.0;
     } else {
@@ -106,12 +107,12 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
         0.5 * differ_acc * calculate_collision_time * calculate_collision_time;
     if (ego_v > obj_v) {
       return is_front_car ? limit_distance
-                          : std::max((obj_v - ego_v) * 4.0 -
-                                         0.5 * differ_acc * 4.0 * 4.0,
+                          : std::max((obj_v - ego_v) * prediction_time_ -
+                                         0.5 * differ_acc * prediction_time_ * prediction_time_,
                                      0.0);
     } else {
-      return is_front_car ? std::max((ego_v - obj_v) * 4.0 +
-                                         0.5 * differ_acc * 4.0 * 4.0,
+      return is_front_car ? std::max((ego_v - obj_v) * prediction_time_ +
+                                         0.5 * differ_acc * prediction_time_ * prediction_time_,
                                      0.0)
                           : -limit_distance;
     }
@@ -123,7 +124,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const double ego_a, const double suggested_v, const double stop_line_s,
     const double leading_veh_s, const double leading_veh_v,
     int32_t leading_veh_id, bool enable_merge_decelaration,
-    double speed_differ_gain,double distance_to_stop_point) {
+    double speed_differ_gain,double distance_to_stop_point , const LanChangeSafetyCheckConfig& lc_safety_distance_config) {
   // anchor points cost
   STPoint end_point_lower_st_point;
   STPoint end_point_upper_st_point;
@@ -159,7 +160,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
         anchor_matched_upper_st_point, anchor_matched_lower_st_point,
         anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
         safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
-        enable_merge_decelaration);
+        enable_merge_decelaration,lc_safety_distance_config);
     if (anchor_points_match_gap_cost_vec_[i].cost() < kZeroEpsilon) {
       end_point_lower_st_point = anchor_matched_lower_st_point;
       end_point_upper_st_point = anchor_matched_upper_st_point;

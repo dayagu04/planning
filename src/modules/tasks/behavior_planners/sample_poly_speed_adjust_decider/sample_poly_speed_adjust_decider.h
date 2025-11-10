@@ -56,6 +56,7 @@ class SamplePolySpeedAdjustDecider : public Task {
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
+  LanChangeSafetyCheckConfig lc_safety_distance_config_;
 
   AgentInfo leading_veh_;
 
@@ -89,7 +90,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   std::vector<AgentInfo> agent_info_;
 
   double v_suggestted_{25.0};
-  double v_cruise_speed_{25.0};
+  double v_adjust_speed_limit_{25.0};
   double target_lane_objs_flow_vel_{25.0};
   double evaulation_t_{5.0};
 

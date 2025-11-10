@@ -62,7 +62,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
                 const double stop_line_s, const double leading_veh_s,
                 const double leading_veh_v, int32_t leading_veh_id,
                 bool enable_merge_decelaration, double speed_differ_gain,
-                double distance_to_stop_point);
+                double distance_to_stop_point, const LanChangeSafetyCheckConfig& lc_safety_distance_config);
   double CalcVelIntegral(const double t) const;
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,
@@ -127,6 +127,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
 
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;
+  double prediction_time_ = 3.0;
 
   // std::vector<double> anchor_points_checked_t_vec_;
   std::vector<MatchGapCost> anchor_points_match_gap_cost_vec_;

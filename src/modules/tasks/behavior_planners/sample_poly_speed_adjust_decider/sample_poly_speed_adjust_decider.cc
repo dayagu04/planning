@@ -61,6 +61,7 @@ namespace planning {
 SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = SamplePolySpeedAdjustDeciderConfig();
+  lc_safety_distance_config_ = LanChangeSafetyCheckConfig();
 
   front_edge_to_rear_axle_ = 4.025;
   rear_edge_to_rear_axle_ = 0.925;
@@ -76,6 +77,7 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     : Task(config_builder, session) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
+  lc_safety_distance_config_ = config_builder->cast<LanChangeSafetyCheckConfig>();
 
   front_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
                                  ->get_vehicle_param()
@@ -223,7 +225,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                            merge_stop_line_distance_, leading_veh_s,
                            leading_veh_v, leading_veh_.id,
-                           enable_merge_decelaration, speed_differ_gain, distance_to_stop_point_);
+                           enable_merge_decelaration, speed_differ_gain, distance_to_stop_point_ , lc_safety_distance_config_);
 
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
@@ -490,19 +492,20 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
   v_suggestted_ = ego_state_manager->ego_v_cruise();
-  v_cruise_speed_ = ego_state_manager->ego_v_cruise_upper();
-  if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA) &&
-      (v_cruise_speed_ < kZeroEpsilon)) {
+  auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
+  double v_sdmap_limit = 0.0;
+  if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
     if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
       const auto navi_road_info = session_->environmental_model()
                                       .get_route_info()
                                       ->get_sd_map()
                                       .GetNaviRoadInfo();
       if (navi_road_info != std::nullopt) {
-        v_cruise_speed_ = navi_road_info.value().cur_road_speed_limit() / 3.6;
+        v_sdmap_limit = navi_road_info.value().cur_road_speed_limit() / 3.6;
       }
     }
   }
+  v_adjust_speed_limit_ = std::fmax(v_cruise_speed, v_sdmap_limit);
   // init sample space
   st_sample_space_base_.Init(agent_info_, ego_s);
 
@@ -526,9 +529,11 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
-      v_cruise_speed_ * 1.05 > ego_v_
-          ? std::min(v_cruise_speed_ * 1.05, speed_adjust_range_.first)
+      v_adjust_speed_limit_ * 1.05 > ego_v_
+          ? std::fmin(v_adjust_speed_limit_ * 1.05, speed_adjust_range_.first)
           : ego_v_;
+  speed_adjust_range_.first = std::fmin(
+      speed_adjust_range_.first , 130.0/3.6);
   speed_adjust_range_.second =
       sample_scene_ == DecelerationPriorityScene &&
               merge_stop_line_distance_ <= 20.0
@@ -537,9 +542,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
                       ego_v_ - config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
       is_split_map_change
-          ? (v_cruise_speed_ / 2.0) > ego_v_
+          ? (v_cruise_speed / 2.0) > ego_v_
                 ? ego_v_
-                : fmax(v_cruise_speed_ / 2.0,
+                : fmax(v_cruise_speed / 2.0,
                        ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
