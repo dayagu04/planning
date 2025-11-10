@@ -2345,6 +2345,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         left_lane_num >= map_lane_num) {
       continue;
     }
+
+    // 感知车道数远小于地图车道数，且在下匝道，抑制MLC
+    if (perception_lane_num + 2 < current_link_->lane_num() &&
+        perception_lane_num + 2 < map_lane_num &&
+        mlc_decider_route_info_.first_static_split_region_info.is_ramp_split) {
+      continue;
+    }
     // const bool is_nearing_ramp_scenary =
     //     mlc_decider_route_info_.first_static_split_region_info.is_ramp_split;
     // if ((perception_lane_num != map_lane_num && is_nearing_ramp_scenary) ||
