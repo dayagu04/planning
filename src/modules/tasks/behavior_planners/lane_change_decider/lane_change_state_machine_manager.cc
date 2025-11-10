@@ -4048,7 +4048,7 @@ bool LaneChangeStateMachineManager::
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       double ego_brake = 2.5;
       box_longitudinal_buff =
-          (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
+          (- rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if (is_large_car) {
         box_longitudinal_buff += 3.0;  // 大车额外增加3m基础距离
@@ -4060,17 +4060,11 @@ bool LaneChangeStateMachineManager::
         box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
       }
     } else {
-      if (ego_press_line_ratio > 0.1) {
-        break;  // 对后车 已经压线以后，不再检查前车安全性
-      }
       // 后车参考安全距离
       double agent_kph = agent_traj[0].v * 3.6;
       double dis_buff = interp(agent_kph, xp, fp);
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
-      }
-      if(i > 0){
-        dis_buff = 0.0;
       }
       // 预测轨迹点车速对应ttc
       double pred_ttc = interp(
@@ -4082,15 +4076,15 @@ bool LaneChangeStateMachineManager::
       const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;  // 每步衰减系数
       double ttc_decay = std::pow(ttc_decay_factor, i);
       box_ttc = max_box_ttc_rear;
+      if (ego_press_line_ratio > 0.2) {
+        box_ttc = 0.0;  // 对后车 已经充分压线以后，不在按照ttc扩大buff
+      }
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;
       double dist_rel_vel =
           (rel_vel > 0) ? rel_vel * box_ttc : 0.0;
-      box_longitudinal_buff =
-          (rel_vel > 0)
-              ? std::max(dist_rel_vel, dis_buff)
-              : dis_buff;
+      box_longitudinal_buff  = std::max(dist_rel_vel, dis_buff);
+      box_longitudinal_buff  = box_longitudinal_buff  * ttc_decay;
       box_longitudinal_buff = std::max(box_longitudinal_buff, 0.1);
-      box_longitudinal_buff = box_longitudinal_buff * ttc_decay;
       if(is_executing){
         box_longitudinal_buff = box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
       }
@@ -4522,8 +4516,7 @@ double LaneChangeStateMachineManager::CalculateLCSafetyCheckTime() const {
   const double lc_gap_valid_check_time_execution = kEgoReachBoundaryTime - 1;
 
   double base_time =
-      (transition_info_.lane_change_status == kLaneChangeExecution ||
-       transition_info_.lane_change_status == kLaneChangeHold)
+      (transition_info_.lane_change_status == kLaneChangeExecution)
           ? lc_gap_valid_check_time_execution
           : kEgoReachBoundaryTime;
 
