@@ -145,11 +145,6 @@ class TsrCore {
   // 模式3: 输出解除限速80
   // 模式4: 辅助标识依次以2s为周期显示所有种类
   void TsrTestFunction(void);
-
-  // 测试功能相关成员变量
-  double test_timer_ = 0.0;  // 测试计时器，单位：s
-  int test_supp_sign_index_ = 0;  // 当前显示的辅助标识牌索引
-  double supp_sign_timer_ = 0.0;  // 辅助标识牌切换计时器，单位：s
 };
 
 }  // namespace tsr_core
