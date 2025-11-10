@@ -613,6 +613,8 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   ILOG_INFO << "enter single prepare plan";
   const double pre_start_time = IflyTime::Now_ms();
 
+  const ApaParameters& param = apa_param.GetParam();
+
   const double slot_side_sgn = calc_params_.slot_side_sgn;
 
   std::vector<double> x_offset_vec;
@@ -620,21 +622,19 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   x_offset_vec.reserve(5);
   heading_offset_vec.reserve(40);
 
-  double max_heading =
-      std::min(input_.ego_info_under_slot.slot.angle_,
-               apa_param.GetParam().prepare_line_max_heading_offset_slot_deg);
+  double max_heading = std::min(input_.ego_info_under_slot.slot.angle_,
+                                param.prepare_line_max_heading_offset_slot_deg);
   max_heading = slot_side_sgn *
                 (input_.ego_info_under_slot.slot.angle_ - max_heading) *
                 kDeg2Rad;
 
-  double min_heading =
-      apa_param.GetParam().prepare_line_min_heading_offset_slot_deg;
+  double min_heading = param.prepare_line_min_heading_offset_slot_deg;
   min_heading = slot_side_sgn *
                 (input_.ego_info_under_slot.slot.angle_ - min_heading) *
                 kDeg2Rad;
 
   const double dheading =
-      apa_param.GetParam().prepare_line_dheading_offset_slot_deg * kDeg2Rad;
+      param.prepare_line_dheading_offset_slot_deg * kDeg2Rad;
 
   double heading = max_heading;
   while (slot_side_sgn * heading < slot_side_sgn * min_heading) {
@@ -644,22 +644,21 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
 
   double min_x =
       input_.ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid.x() +
-      (apa_param.GetParam().max_car_width * 0.5 +
-       calc_params_.strict_car_lat_inflation + 0.05) /
+      (param.max_car_width * 0.5 + calc_params_.strict_car_lat_inflation +
+       0.05) /
           input_.ego_info_under_slot.slot.sin_angle_;
 
-  min_x =
-      std::max(min_x, cur_pose.pos.x() +
-                          apa_param.GetParam().prepare_line_min_x_offset_slot /
-                              input_.ego_info_under_slot.slot.sin_angle_);
+  min_x = std::max(
+      min_x, cur_pose.pos.x() + param.prepare_line_min_x_offset_slot /
+                                    input_.ego_info_under_slot.slot.sin_angle_);
 
   double max_x =
-      cur_pose.pos.x() + apa_param.GetParam().prepare_line_max_x_offset_slot /
+      cur_pose.pos.x() + param.prepare_line_max_x_offset_slot /
                              input_.ego_info_under_slot.slot.sin_angle_;
 
   max_x = std::max(max_x, min_x + 2.0);
 
-  const double dx = apa_param.GetParam().prepare_line_dx_offset_slot /
+  const double dx = param.prepare_line_dx_offset_slot /
                     input_.ego_info_under_slot.slot.sin_angle_;
   double x = min_x;
   while (x < max_x) {
@@ -735,7 +734,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         geometry_lib::PathPoint pose;
         pose.heading = line.heading;
 
-        if (i == 0 && apa_param.GetParam().actual_mono_plan_enable &&
+        if (i == 0 && param.actual_mono_plan_enable &&
             MonoPreparePlan(pose.pos, radius)) {
           cal_tang_pt_success = true;
         }
@@ -790,10 +789,10 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
             << IflyTime::Now_us() - pre_start_time * 1000.0 << "us";
 
   bool exceed_time_flag = false;
-  double max_allow_time = apa_param.GetParam().prepare_single_max_allow_time;
-  if (!calc_params_.is_searching_stage) {
-    max_allow_time = 999.9;
-  }
+  const double max_allow_time =
+      calc_params_.is_searching_stage
+          ? param.prepare_single_max_allow_time_searching
+          : param.prepare_single_max_allow_time_parking;
   pair_geometry_path_vec.clear();
   pair_geometry_path_vec.reserve(number);
   geometry_lib::GeometryPath dubins_geometry_path;
@@ -824,8 +823,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         std::make_pair(dubins_geometry_path, rough_geometry_path));
   }
   for (const auto& pair : pair_geometry_path_vec) {
-    if (!calc_params_.is_searching_stage &&
-        apa_param.GetParam().actual_mono_plan_enable &&
+    if (!calc_params_.is_searching_stage && param.actual_mono_plan_enable &&
         pair.second.gear_change_count < 1) {
       ILOG_INFO << "ego pose rough plan gear change count is 0, no need to "
                    "dubins plan";
@@ -959,7 +957,7 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
               if ((pair_geometry_path_vec.size() > max_path_count &&
                    fewer_gear_change_count > 3) ||
                   (fewer_gear_change_count > 10 &&
-                   apa_param.GetParam().actual_mono_plan_enable)) {
+                   param.actual_mono_plan_enable)) {
                 find_all_result = false;
               }
             }
