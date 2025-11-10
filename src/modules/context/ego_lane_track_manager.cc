@@ -107,6 +107,10 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto &mlc_decider_route_info = session_->environmental_model().get_route_info()->get_MLC_decider_route_info();
+
   const bool is_in_lane_borrow_status = session_->planning_context()
                                             .lane_borrow_decider_output()
                                             .is_in_lane_borrow_status;
