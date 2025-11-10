@@ -175,7 +175,7 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (!split_region_info_list.empty()) {
           distance_to_first_road_split =
               split_region_info_list[0].distance_to_split_point;
-          ego_dis_to_split_exchange_area_start = 
+          ego_dis_to_split_exchange_area_start =
               distance_to_first_road_split + split_region_info_list[0].start_fp_point.fp_distance_to_split_point;
         }
 
@@ -3079,7 +3079,8 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
         near_average_l < kExistSplitEgoRearLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
       ego_in_split_region_ = true;
-      return;
+    } else {
+      ego_in_split_region_ = false;
     }
   }
 
