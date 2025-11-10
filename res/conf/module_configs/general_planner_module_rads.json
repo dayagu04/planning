@@ -1157,7 +1157,7 @@
   "sample_v_nums": 15,
   "sample_t_nums": 10,
   "sample_v_upper": 35.0,
-  "sample_v_lower": 5.0,
+  "sample_v_lower": 0.0,
   "maximum_speed_adjustment": 4.0,
   "sample_t_upper": 5.0,
   "sample_t_lower": 1.0,

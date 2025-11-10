@@ -287,7 +287,7 @@ void MatchGapCost::GetCost(const STPoint& upper_st_point,
 void FollowVelCost::GetCost(const double poly_end_v, const double cruise_v,
                             const double follow_vel_penalty_benchmark) {
   cost_ = weight_ *
-          std::exp(std::fabs(poly_end_v - cruise_v) / kFollowSpeedBenchmark);
+          std::exp(std::fabs(poly_end_v - cruise_v) / cruise_v);
 }
 
 void StopLineCost::GetCost(const double stop_line_dis_to_ego,
@@ -353,14 +353,14 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
   cost_ = 0.0;
   auto calculate_poly_dis_to_lead_cost = [](double dist, double safe_distance,
                                             double weight) {
-    return (dist < safe_distance)
-               ? weight * std::exp((safe_distance - dist) / safe_distance)
+    return (dist < safe_distance * 1.5)
+               ? weight * std::exp(4.0 * (safe_distance - dist) / safe_distance)
                : 0.0;
   };
-
+  double thw = std::fmax(0.8 * poly_end_v,4.0);
   cost_ += calculate_poly_dis_to_lead_cost(
       leading_veh_pred_s - (poly_end_s + front_edge_to_rear_axle_),
-      kLeadOneSafeDistance, weight_);
+      thw, weight_);
 }
 
 void SpeedVariableCost::GetCost(const double vel_integral) {
