@@ -4,7 +4,9 @@
 #include "common_platform_type_soc.h"
 namespace adas_function {
 namespace preprocess {
-void Preprocess::Init(void) { SyncParameters(); }
+  void Preprocess::Init(const bool is_simulation) { 
+    SyncParameters(is_simulation); 
+  }
 std::string Preprocess::ReadJsonFile(const std::string &path) {
   FILE *file = fopen(path.c_str(), "r");
   assert(file != nullptr);
@@ -21,13 +23,6 @@ std::string Preprocess::ReadJsonFile(const std::string &path) {
   (void)read_bytes;
   read_json_file_ok_flag_ = true;
   return std::string(content.begin(), content.end());
-}
-
-namespace adas_function {
-namespace preprocess {
-
-void Preprocess::Init(const bool is_simulation) { 
-  SyncParameters(is_simulation); 
 }
 
 void Preprocess::SyncParameters(const bool is_simulation) {
