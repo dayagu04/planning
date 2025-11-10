@@ -109,13 +109,21 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   const std::vector<size_t> &release_slot_id_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
+  const std::unordered_map<size_t, ApaSlot> &slot_map =
+      apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
+
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
-    iflyauto::SuccessfulSlotsInfo slot_id;
-    slot_id.id = static_cast<uint32>(release_slot_id_vec[i]);
-    planning_output.successful_slot_info_list[i] = slot_id;
+    iflyauto::SuccessfulSlotsInfo slot_info;
+    slot_info.id = static_cast<uint32>(release_slot_id_vec[i]);
+    if (slot_map.find(slot_info.id) == slot_map.end()) {
+      continue;
+    }
+    slot_info.is_narrow_slot = slot_map.at(slot_info.id).is_narrow_slot_;
+    planning_output.successful_slot_info_list[i] = slot_info;
     planning_output.successful_slot_info_list_size++;
-    release_slot_id.append(std::string("[") + std::to_string(slot_id.id) +
+    release_slot_id.append(std::string("[") + std::to_string(slot_info.id) +
+                           "  " + std::to_string(slot_info.is_narrow_slot) +
                            std::string("]"));
   }
   ILOG_INFO << "plan release slot id = " << release_slot_id;
