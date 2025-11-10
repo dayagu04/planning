@@ -2333,18 +2333,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         continue;
       }
     }
-    const bool is_nearing_ramp_scenary =
-        mlc_decider_route_info_.first_static_split_region_info.is_ramp_split;
-    if ((perception_lane_num != map_lane_num && is_nearing_ramp_scenary) ||
-        is_triggle_continue_lc) {
-      mismatch_counter++;
-      if (mismatch_counter >= MISMATH_THRESHOLD) {
-        relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
-      }
-      continue;
-    } else {
-      mismatch_counter = 0;
-    }
+    // const bool is_nearing_ramp_scenary =
+    //     mlc_decider_route_info_.first_static_split_region_info.is_ramp_split;
+    // if ((perception_lane_num != map_lane_num && is_nearing_ramp_scenary) ||
+    //     is_triggle_continue_lc) {
+    //   mismatch_counter++;
+    //   if (mismatch_counter >= MISMATH_THRESHOLD) {
+    //     relative_id_lane->set_current_tasks(CalculateMLCTaskNoLaneNum());
+    //   }
+    //   continue;
+    // } else {
+    //   mismatch_counter = 0;
+    // }
 
     int ego_seq = left_lane_num + 1;
     std::vector<int> lc_num_task;

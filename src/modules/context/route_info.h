@@ -119,8 +119,8 @@ class RouteInfo {
     double angle;
     RayInfo(char n, double a) : name(n), angle(a) {}
   };
-  int mismatch_counter = 0;
-  const int MISMATH_THRESHOLD = 3;
+  // int mismatch_counter = 0;
+  // const int MISMATH_THRESHOLD = 3;
 
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);
