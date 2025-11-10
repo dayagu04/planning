@@ -2237,8 +2237,23 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
     target_lane_front_node_ ? target_lane_front_node_->node_agent_id() : -1;
   int gap_rear_agent_id =
     target_lane_rear_node_ ? target_lane_rear_node_->node_agent_id() : -1;
-  int origin_agent_id =
-    ego_lane_front_node_ ? ego_lane_front_node_->node_agent_id() : -1;
+  //原车道前车(可能切换)
+  const auto lead_one =
+      session_->environmental_model().get_lateral_obstacle()->leadone();
+        // 自车压线目标车道情况
+  const double ego_press_line_ratio =
+  lc_request_.CalculatePressLineRatioByTwoLanes(
+      lc_lane_mgr_->origin_lane_virtual_id(),
+      lc_lane_mgr_->target_lane_virtual_id(),
+      transition_info_.lane_change_direction);
+  // ptr 非空， 后轴中心没过线，与targt front 不同，压线较少，则原来取前车id
+  bool is_lead_one_valid = false;
+  if(lead_one != nullptr) {
+    is_lead_one_valid = lead_one->id() != gap_front_agent_id 
+           && transition_info_.lane_change_status != kLaneChangeComplete
+           && ego_press_line_ratio < 0.1;
+  }
+  int origin_agent_id = is_lead_one_valid ? lead_one->id() : -1;
   LaneChangeDecisionInfo lc_info;
   lc_info.gap_front_agent_id = gap_front_agent_id;
   lc_info.gap_rear_agent_id = gap_rear_agent_id;

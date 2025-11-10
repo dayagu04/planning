@@ -105,6 +105,22 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       }
     }
   }
+  if (lc_info.origin_agent_id != -1) {
+    const auto* origin_agent =
+        agent_manager->GetAgent(lc_info.origin_agent_id);
+    if (origin_agent != nullptr) {
+      const auto& all_agents = agent_manager->GetAllCurrentAgents();
+      for (const auto& agent : all_agents) {
+        if (agent != nullptr &&
+              agent->agent_id() == lc_info.origin_agent_id) {
+          key_obstacles_.emplace_back(CreateKeyObstacle(
+              agent, ego_lane_coord,
+              lane_change_joint_decision::LongitudinalLabel::YIELD));
+          break;
+        }
+      }
+    }
+  }
   return;
 }
 void JointDecisionObstaclesSelector::SelectObstacles(
