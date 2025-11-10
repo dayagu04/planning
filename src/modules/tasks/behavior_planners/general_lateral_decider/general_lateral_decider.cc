@@ -1071,6 +1071,8 @@ void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
   if (ref_traj_points_.size() <= 1) {
     return;
   }
+  const auto &vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   // 路沿与静态障碍物膨胀距离一致
   const double rear_lon_buf_dis =
       general_lateral_decider_utils::CalDesireLonDistance(
@@ -1082,8 +1084,13 @@ void GeneralLateralDecider::PostProcessRoadSoftBoundary() {
   if (delta_s <= 1e-6) {
     return;
   }
-  const int num_rear_extended_points =
+  const int pre_num_rear_extended_points =
+      static_cast<int>(std::ceil((vehicle_param.front_edge_to_rear_axle +
+      config_.sample_forward_distance) / delta_s));
+  const int tmp_num_rear_extended_points =
       static_cast<int>(std::ceil(rear_lon_buf_dis / delta_s));
+  const int num_rear_extended_points = std::max(tmp_num_rear_extended_points -
+      pre_num_rear_extended_points + 1, 0);
   // 先只延申靠近自车的一侧soft bound
   // 处理lower_bound
   ExtendRoadSoftBound(num_rear_extended_points, 0, true, bound_size);
