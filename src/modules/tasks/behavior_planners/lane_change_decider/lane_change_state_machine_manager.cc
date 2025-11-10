@@ -2251,7 +2251,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   if(lead_one != nullptr) {
     is_lead_one_valid = lead_one->id() != gap_front_agent_id 
            && transition_info_.lane_change_status != kLaneChangeComplete
-           && ego_press_line_ratio < 0.1;
+           && ego_press_line_ratio < lc_safety_check_config_.press_line_ratio_threshold;
   }
   int origin_agent_id = is_lead_one_valid ? lead_one->id() : -1;
   LaneChangeDecisionInfo lc_info;

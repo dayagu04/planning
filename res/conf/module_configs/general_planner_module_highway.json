@@ -541,7 +541,8 @@
     "q_soft_halfplane_weight": 0.05,
     "soft_halfplane_s0": 3.5,
     "soft_halfplane_tau": 0.5,
-    "soft_halfplane_cost_allocation_ratio": 0.8
+    "soft_halfplane_cost_allocation_ratio": 0.8,
+    "lc_thw": 0.5
   },
   "lat_motion_ilqr": {
     "pass_acc_mode": true,

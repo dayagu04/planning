@@ -23,7 +23,7 @@ JointDecisionInputBuilder::JointDecisionInputBuilder(
 
   comfort_params_.v0 = 33.5;
   comfort_params_.s0 = 3.5;
-  comfort_params_.T = 0.8;
+  comfort_params_.T = config_.lc_thw;
   comfort_params_.a = 1.5;
   comfort_params_.b_max = 2.0;
   comfort_params_.b = 1.0;

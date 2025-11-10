@@ -3803,6 +3803,8 @@ struct JointMotionPlannerConfig : public EgoPlanningConfig {
                      "soft_halfplane_tau");
     ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lat_lon_joint_planner",
                      "soft_halfplane_cost_allocation_ratio");
+    ReadItem<double>(json, lc_thw, "lat_lon_joint_planner",
+                     "lc_thw");
   }
 
   double q_ego_ref_x = 5.0;
@@ -3848,7 +3850,8 @@ struct JointMotionPlannerConfig : public EgoPlanningConfig {
   double q_soft_halfplane_weight = 5.0;
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
-  double soft_halfplane_cost_allocation_ratio = 0.7;
+  double soft_halfplane_cost_allocation_ratio = 0.7;  
+  double lc_thw = 0.5;  // lane change time headway, added by clzhao9
 };
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
