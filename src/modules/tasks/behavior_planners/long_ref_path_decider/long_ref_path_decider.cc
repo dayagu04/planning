@@ -154,6 +154,21 @@ void LongRefPathDecider::UpdateLonRefPath() {
                   << lane_change_info.st_search_vec.size();
       }
     }
+
+    const auto &lane_change_decider_output =
+        session_->planning_context().lane_change_decider_output();
+    const auto lane_change_state = lane_change_decider_output.curr_state;
+    const auto ego_trajs_future = lane_change_decider_output.ego_trajs_future;
+    const bool is_in_lane_change = (lane_change_state == kLaneChangeExecution ||
+                                    lane_change_state == kLaneChangeHold ||
+                                    lane_change_state == kLaneChangeComplete);
+    if (is_in_lane_change) {
+      for (size_t i = 0; i <= plan_points_num_; i++) {
+        double ego_trajs_future_init_point_s = ego_trajs_future[0].s;
+        lon_behavior_output_.s_refs[i].first =
+            ego_trajs_future[i].s - ego_trajs_future_init_point_s;
+      }
+    }
   }
 }
 

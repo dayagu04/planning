@@ -549,11 +549,22 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   // const auto& trajectories = agent.trajectories();
+  std::vector<trajectory::Trajectory> modified_trajectories;
+  const auto* front_agent_of_target = st_graph_input_->front_agent_of_target();
+  if (front_agent_of_target != nullptr &&
+      agent.agent_id() == front_agent_of_target->agent_id()) {
+    modified_trajectories.push_back(
+        front_agent_of_target->trajectory_optimized());
+    mutable_agent->set_trajectories_used_by_st_graph(modified_trajectories);
+  }
   const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
   if (rear_agent_of_target != nullptr &&
       agent.agent_id() == rear_agent_of_target->agent_id()) {
-    RecalculateTrajectoryForLcRearAgent(rear_agent_of_target);
+    modified_trajectories.push_back(
+        rear_agent_of_target->trajectory_optimized());
+    mutable_agent->set_trajectories_used_by_st_graph(modified_trajectories);
   }
+  
   bool is_need_truncate_traj_for_origin_front_agent = false;
   const auto* front_agent_of_origin = st_graph_input_->front_agent_of_origin();
   if (front_agent_of_origin != nullptr &&
