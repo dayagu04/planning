@@ -1406,6 +1406,7 @@
  "lane_change_safety_check": {
     "exe_ttc_ratio": 0.7,
     "ttc_decay_factor": 0.88,
+    "press_line_ratio_threshold": 0.1,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
       "ttc_table":      [0.8, 1.1,  1.8, 3.0,  4.0,  5.0,  8.0,  9.5,  10.0]

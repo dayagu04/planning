@@ -4091,7 +4091,7 @@ bool LaneChangeStateMachineManager::
       const double ttc_decay_factor = lc_safety_check_config_.ttc_decay_factor;  // 每步衰减系数
       double ttc_decay = std::pow(ttc_decay_factor, i);
       box_ttc = max_box_ttc_rear;
-      if (ego_press_line_ratio > 0.2) {
+      if (ego_press_line_ratio > lc_safety_check_config_.press_line_ratio_threshold) {
         box_ttc = 0.0;  // 对后车 已经充分压线以后，不在按照ttc扩大buff
       }
       double rel_vel = agent_traj[i].v - ego_trajs_future_[i].v;

@@ -5552,6 +5552,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
       /* read config from json */
       ReadItem<double>(json, exe_ttc_ratio,"lane_change_safety_check", "exe_ttc_ratio");
       ReadItem<double>(json, ttc_decay_factor,"lane_change_safety_check", "ttc_decay_factor");
+      ReadItem<double>(json, press_line_ratio_threshold,"lane_change_safety_check", "press_line_ratio_threshold");
       read_json_vec(
         json,
         std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
@@ -5575,6 +5576,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     }
     double exe_ttc_ratio = 0.5;
     double ttc_decay_factor = 0.85;
+    double press_line_ratio_threshold = 0.2;  // 充分压线阈值，超过此值后不再按照ttc扩大buff
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
