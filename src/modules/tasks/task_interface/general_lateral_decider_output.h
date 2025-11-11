@@ -34,6 +34,7 @@ struct GeneralLateralDeciderOutput {
   bool complete_follow = true;
   std::string lc_status;
   bool lane_change_scene = false;
+  bool is_low_speed_lane_change_scene = false;
   double v_cruise;
   bool ramp_scene = false;
   bool enable_ara_ref = false;
@@ -44,6 +45,7 @@ struct GeneralLateralDeciderOutput {
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
+    is_low_speed_lane_change_scene = false;
     ramp_scene = false;
     enable_ara_ref = false;
     bound_avoid = false;

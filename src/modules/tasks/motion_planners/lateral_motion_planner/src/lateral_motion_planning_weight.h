@@ -25,7 +25,8 @@ enum class EmergencyLevel { NONE = 0, P2, P1, P0 };
 enum class LaneChangeStyle {
   STANDARD_LANE_CHANGE = 0,
   QUICKLY_LANE_CHANGE,
-  EMERGENCY_LANE_CHANGE
+  EMERGENCY_LANE_CHANGE,
+  LOW_SPEED_LANE_CHANGE
 };
 
 struct PathWeight {  // temp
@@ -260,6 +261,10 @@ class LateralMotionPlanningWeight {
   const std::vector<planning::planning_math::PathPoint> &GetVirtualRef() const {
     return virtual_ref_;
   }
+
+  const double &GetAvoidDist() const { return avoid_dist_; }
+
+  const LaneChangeStyle &GetLaneChangeStyle() const { return lc_style_; }
 
  private:
   void SetAccJerkBoundAndWeight(

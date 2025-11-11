@@ -586,6 +586,7 @@
     "min_ego_vel": 1.5,
     "max_steer_angle_dot": 180.0,
     "max_steer_angle_dot_lc": 200.0,
+    "max_steer_angle_dot_low_speed_lc": 220.0,
     "max_steer_angle_dot_low_speed": 5.0,
     "acc_bound": 3.0,
     "jerk_bound": 0.2,

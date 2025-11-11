@@ -20,6 +20,8 @@
 
 static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
+static const double avoid_dist_thr = 0.1;
+
 namespace planning {
 LateralMotionPlanner::LateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -619,6 +621,26 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }
+    // 低速变道优先
+  bool is_low_speed_lane_change = false;
+  const auto avoid_dist = planning_weight_ptr_->GetAvoidDist();
+  if ((lane_change_scene && avoid_dist > avoid_dist_thr &&
+      general_lateral_decider_output.is_low_speed_lane_change_scene) ||
+      planning_weight_ptr_->GetLaneChangeStyle() ==
+      pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
+    is_low_speed_lane_change = true;
+  }
+  if (is_low_speed_lane_change) {
+    double max_steer_angle_rate_low_speed_lc =
+        std::min(vehicle_param.max_steer_angle_rate,
+                config_.max_steer_angle_dot_low_speed_lc / 57.3);
+    double max_wheel_angle_rate_low_speed_lc = max_steer_angle_rate_low_speed_lc / steer_ratio;
+    double limit_jerk_low_speed_lc = max_wheel_angle_rate_low_speed_lc * kv2;
+    planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
+  }
+
   if (target_state == kLaneKeeping) {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
