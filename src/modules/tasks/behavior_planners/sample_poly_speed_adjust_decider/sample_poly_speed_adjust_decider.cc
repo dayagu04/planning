@@ -860,7 +860,8 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_rel = std::min(std::max(ego_v - v_lead_clip, 0.0), 5.0);
   double distance_hysteresis = v_rel * 0.3;
   double fix_safe_distance = 3.5;
-  return fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis;
+  double object_rel_distance = leading_veh_.half_length + front_edge_to_rear_axle_;
+  return fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis + object_rel_distance;
 }
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
