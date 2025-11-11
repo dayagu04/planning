@@ -378,7 +378,6 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
       lc_request_.CalculatePressLineRatioByTwoLanes(
           lc_lane_mgr_->origin_lane_virtual_id(),
           lc_lane_mgr_->target_lane_virtual_id(), lane_change_direction);
-  JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
 
   // 当前box的一半宽超过车道边界线，认为变道进入complete状态 并且 持续时间超过1.5s
   if (ego_press_line_ratio > 0.5 && execution_state_frame_nums_ > 15) {
@@ -4036,6 +4035,7 @@ bool LaneChangeStateMachineManager::
           lc_lane_mgr_->origin_lane_virtual_id(),
           lc_lane_mgr_->target_lane_virtual_id(),
           transition_info_.lane_change_direction);
+  JSON_DEBUG_VALUE("lc_ego_press_line_ratio", ego_press_line_ratio);  // 压线率
   // 如果压线了， 重新映射起始ttc
   std::array<double, 3> x_press_ratio{0.0, 0.2};  // 后车 - 自车速度 kph
   std::array<double, 3> f_press_ttc{max_box_ttc_rear, 0.0};  // 起始ttc
@@ -4058,6 +4058,20 @@ bool LaneChangeStateMachineManager::
   //     !agent_node->is_static_type() &&
   //     (last_target_rear_agent_id_ == agent_node->node_agent_id() ||
   //      ego_press_line_ratio > 0.01);
+  //记录当前时刻压线率及安全检查数据
+  std::vector<double> box_longitudinal_buff_vec;
+  std::vector<double> box_ttc_vec;
+  std::vector<double> distance_vec;
+  std::vector<double> agent_vel_vec;  // 前车/后车速度
+  std::vector<double> ego_vel_vec;    // 自车速度
+  std::vector<double> rear_distance_vec;  // 后车到自车的纵向距离
+  box_longitudinal_buff_vec.reserve(iter_count);
+  box_ttc_vec.reserve(iter_count);
+  distance_vec.reserve(iter_count);
+  agent_vel_vec.reserve(iter_count);
+  ego_vel_vec.reserve(iter_count);
+  rear_distance_vec.reserve(iter_count);
+  
   for (int i = 0; i < iter_count; i++) {
     double beyond_lane_time = std_beyond_lane_time - i * 0.2;
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
@@ -4087,6 +4101,8 @@ bool LaneChangeStateMachineManager::
       double pred_ttc = interp(
           3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v),
           xpv, fpv);  // 后车轨迹差速<->ttc
+      //记录优化轨迹上的自车速度和后车速度
+      
       pred_ttc = pred_ttc * check_time_ratio;
       max_box_ttc_rear = std::min(max_box_ttc_rear, pred_ttc);
       // 预测时间衰减性 - 指数衰减
@@ -4105,6 +4121,8 @@ bool LaneChangeStateMachineManager::
       if(is_executing){
         box_longitudinal_buff = box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
       }
+      // 记录 ttc 
+      // 记录预测轨迹上的纵向buff
     }
     // check lon s safety
     double two_car_length = 0;
@@ -4203,6 +4221,14 @@ bool LaneChangeStateMachineManager::
                                    agent_length + box_longitudinal_buff,
                                    agent_width + lat_buff);
     double distance_i = ego_box.DistanceTo(agent_box);
+    //记录预测轨迹 box之间的距离
+    box_longitudinal_buff_vec.push_back(box_longitudinal_buff);
+    box_ttc_vec.push_back(box_ttc);
+    distance_vec.push_back(distance_i);
+    agent_vel_vec.push_back(agent_traj[i].v); 
+    ego_vel_vec.push_back(ego_trajs_future_[i].v);
+    rear_distance_vec.push_back(ego_trajs_future_[i].s - agent_traj[i].s - two_car_length);
+  
     distance = std::min(distance, distance_i);
     // 记录box
     if (distance < 0.1) {
@@ -4219,6 +4245,17 @@ bool LaneChangeStateMachineManager::
     }
    }
   }
+  
+  // 输出安全检查数据到 JSON（仅在后车检查时输出）
+  if (!is_front_agent) {
+    JSON_DEBUG_VECTOR("box_longitudinal_buff_vec", box_longitudinal_buff_vec, 2);
+    JSON_DEBUG_VECTOR("box_ttc_vec", box_ttc_vec, 2);
+    JSON_DEBUG_VECTOR("distance_vec", distance_vec, 2);
+    JSON_DEBUG_VECTOR("agent_vel_vec", agent_vel_vec, 2);  // 后车速度 m/s
+    JSON_DEBUG_VECTOR("ego_vel_vec", ego_vel_vec, 2);      // 自车速度 m/s
+    JSON_DEBUG_VECTOR("rear_distance_vec", rear_distance_vec, 2);  // 后车到自车的纵向距离 m
+  } 
+  
   if (distance < 0.01) {
     
     return false;

@@ -671,7 +671,7 @@ class LoadRosbag:
                           "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
                           "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
                           "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
-                          "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
+                          "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
                           "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel", "planning_fault_code",
                           "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
                           "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
@@ -779,6 +779,11 @@ class LoadRosbag:
                          "obj_fl_obj_loc_vec","obj_fm_obj_loc_vec","obj_fr_obj_loc_vec","obj_ml_obj_loc_vec",
                          "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec",
                          ]
+      # 安全检查相关的向量数据
+      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
+                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的标量数据
+      json_value_list += ["lc_ego_press_line_ratio"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
