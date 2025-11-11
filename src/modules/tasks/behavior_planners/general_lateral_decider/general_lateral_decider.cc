@@ -1395,21 +1395,40 @@ void GeneralLateralDecider::GetDesireRoadExtraBuffer(
   const double ego_v = planning_init_point.v;
   double max_collision_t, left_collision_t, right_collision_t;
   GetLateralTTCToRoad(&max_collision_t, &left_collision_t, &right_collision_t);
-  // 计算的ttc在有效值之外，不参与计算buffer
-  if (left_collision_t > max_collision_t) {
-    *left_road_extra_buffer = 0;
-  } else {
-    *left_road_extra_buffer =
-        interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-               config_.extra_collision_lateral_buffer);
-  }
-  if (right_collision_t > max_collision_t) {
-    *right_road_extra_buffer = 0;
-  } else {
-    *right_road_extra_buffer =
-        interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp,
-               config_.extra_collision_lateral_buffer);
-  }
+  auto smooth_interp_with_fade = [&](double collision_t, double max_collision_t,
+                                  double fade_margin) -> double {
+    if (collision_t > max_collision_t + fade_margin) {
+      return 0.0;
+    } else if (collision_t > max_collision_t) {
+      double ratio = (max_collision_t + fade_margin - collision_t) / fade_margin;
+      double interp_val =
+          interp(max_collision_t, config_.lateral_road_boader_collision_ttc_bp,
+                config_.extra_collision_lateral_buffer);
+      return ratio * interp_val;
+    } else {
+      return interp(collision_t, config_.lateral_road_boader_collision_ttc_bp,
+                    config_.extra_collision_lateral_buffer);
+    }
+  };
+  double fade_margin = 0.5;  // 避免在临界值之间跳动
+  *left_road_extra_buffer  = smooth_interp_with_fade(left_collision_t,  max_collision_t, fade_margin);
+  *right_road_extra_buffer = smooth_interp_with_fade(right_collision_t, max_collision_t, fade_margin);
+
+  // // 计算的ttc在有效值之外，不参与计算buffer
+  // if (left_collision_t > max_collision_t) {
+  //   *left_road_extra_buffer = 0;
+  // } else {
+  //   *left_road_extra_buffer =
+  //       interp(left_collision_t, config_.lateral_road_boader_collision_ttc_bp,
+  //              config_.extra_collision_lateral_buffer);
+  // }
+  // if (right_collision_t > max_collision_t) {
+  //   *right_road_extra_buffer = 0;
+  // } else {
+  //   *right_road_extra_buffer =
+  //       interp(right_collision_t, config_.lateral_road_boader_collision_ttc_bp,
+  //              config_.extra_collision_lateral_buffer);
+  // }
   // *left_road_extra_buffer =
   //     std::min(0.2, (max_collision_t - left_collision_t) * 0.1);
   // *right_road_extra_buffer =
@@ -1454,6 +1473,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
 
   bool is_left_overlap = false;
   bool is_right_overlap = false;
+  bool is_reach_care_lon_area_road_border = false;
   *left_collision_t = config_.max_lateral_ttc;
   *right_collision_t = config_.max_lateral_ttc;
   *max_collision_t = config_.max_lateral_ttc;
@@ -1464,11 +1484,12 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
     if (!frenet_coord->XYToSL(prediction_xy, prediction_sl)) {
       continue;
     }
-    if (prediction_sl.x -
+    if ((prediction_sl.x -
             ego_frenet_state_.planning_init_point().frenet_state.s >
-        config_.care_lon_area_road_border) {
+        config_.care_lon_area_road_border) && !is_reach_care_lon_area_road_border) {
+      is_reach_care_lon_area_road_border = true;
       *max_collision_t = t;
-      break;
+      // break;
     }
     const double ego_s_start =
         prediction_sl.x - vehicle_param.rear_edge_to_rear_axle;
