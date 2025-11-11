@@ -155,7 +155,7 @@ void LatLonJointDecision::SetAgentTrajecTory() {
               i * dt,                     // absolute_time
               obs_opt_traj.omega_vec(i),  // heading_rate
               obs_opt_traj.jerk_vec(i),   // jerk
-              obs_opt_traj.s_vec(i) + planning_init_s);     // s
+              obs_opt_traj.s_vec(i));     // s
           rear_agent_trajectory.push_back(point);
         }
 
@@ -185,7 +185,7 @@ void LatLonJointDecision::SetAgentTrajecTory() {
               obs_opt_traj.x_vec(i), obs_opt_traj.y_vec(i),
               obs_opt_traj.theta_vec(i), obs_opt_traj.vel_vec(i),
               obs_opt_traj.acc_vec(i), i * dt, obs_opt_traj.omega_vec(i),
-              obs_opt_traj.jerk_vec(i), obs_opt_traj.s_vec(i) + planning_init_s);
+              obs_opt_traj.jerk_vec(i), obs_opt_traj.s_vec(i));
           front_agent_trajectory.push_back(point);
         }
 
