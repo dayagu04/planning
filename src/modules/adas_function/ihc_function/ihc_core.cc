@@ -683,6 +683,26 @@ bool IhcCore::DynamicObstacleCheck(void) {
     if (has_camera && has_radar) {
       verified_obstacle_ids_.insert(track_id);
     }
+
+    // 融合障碍物不一定匹配的上。如果只有相机来源，则判断此障碍物10m范围内是否有雷达来源的障碍物，且motion_pattern相同
+    if (has_camera) {
+      for (int j = 0; j < fusion_objs_num; j++) {
+        if (fusion_objs[j].additional_info.track_id == track_id) {
+          continue;
+        }
+        if (fusion_objs[j].additional_info.motion_pattern_current != fusion_objs[i].additional_info.motion_pattern_current) {
+          continue;
+        }
+        double delta_x = abs(fusion_objs[j].common_info.relative_position.x - fusion_objs[i].common_info.relative_position.x);
+        double delta_y = abs(fusion_objs[j].common_info.relative_position.y - fusion_objs[i].common_info.relative_position.y);
+        double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
+        if (distance < 25.0f && delta_y < 10.0f) {
+          if (fusion_objs[j].additional_info.motion_pattern_current == fusion_objs[i].additional_info.motion_pattern_current) {
+            verified_obstacle_ids_.insert(track_id);
+          }
+        }
+      }
+    }
   }
   
   // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
