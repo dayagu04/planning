@@ -4006,8 +4006,10 @@ bool LaneChangeStateMachineManager::
   // 确认判断的时间
   double max_lat_buff = 2.5;
   double lat_buff = 2.5;
-  int iter_count = std::min(agent_traj.size(), ego_trajs_future_.size());
-  iter_count = std::min(iter_count, lc_safety_check_num_);
+  // int iter_count = std::min(agent_traj.size(), ego_trajs_future_.size());
+  // iter_count = std::max(16, lc_safety_check_num_);
+  int iter_count = 16;
+  iter_count = std::min(iter_count, static_cast<int>(ego_trajs_future_.size()));
   double distance = 100.0;
   double box_longitudinal_buff = 0.0;
   double box_ttc = lc_safety_check_time_;  // time 的计算已经有非零保护了
@@ -4041,7 +4043,7 @@ bool LaneChangeStateMachineManager::
       interp(ego_press_line_ratio, x_press_ratio, f_press_ttc);  // 距离/ 时间
   bool is_press_boundary = ego_press_line_ratio > 0.01;
   if (is_press_boundary) {
-    max_box_ttc_rear = press_ttc;
+    max_box_ttc_rear = press_ttc; //不压线时 不影响返回能力
   }
   double std_beyond_lane_time = std::max(
       0.0, std::min(2.0, lc_safety_check_time_ - 1.0));  // 实际初始在2.5 左右
