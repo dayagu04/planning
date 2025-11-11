@@ -1410,7 +1410,7 @@
     "press_line_ratio_threshold": 0.1,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
-      "ttc_table":      [0.8, 1.8,  2.5, 4.0,  5.0,  6.0,  7.5,  9.5,  10.0]
+      "ttc_table":      [0.8, 1.8,  4.0, 4.5,  5.0,  7.0,  7.5,  8.5,  10.0]
     },
     "rear_vehicle_speed_min_space_map": {
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
