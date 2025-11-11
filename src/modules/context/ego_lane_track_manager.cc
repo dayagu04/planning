@@ -172,11 +172,13 @@ void EgoLaneTrackManger::TrackEgoLane(
             route_info_output.split_region_info_list;
         const auto& merge_region_info_list =
             route_info_output.merge_region_info_list;
+        bool enable_process_road_to_ramp = true;
         if (!split_region_info_list.empty()) {
           distance_to_first_road_split =
               split_region_info_list[0].distance_to_split_point;
           ego_dis_to_split_exchange_area_start =
               distance_to_first_road_split + split_region_info_list[0].start_fp_point.fp_distance_to_split_point;
+          enable_process_road_to_ramp = split_region_info_list[0].is_ramp_split;
         }
 
         if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd &&
@@ -189,6 +191,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
           if (is_on_road_select_ramp_situation_ &&
               mlc_decider_route_info.is_process_split &&
+              enable_process_road_to_ramp &&
               lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
