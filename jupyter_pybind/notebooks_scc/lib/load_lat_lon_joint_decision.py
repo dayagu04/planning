@@ -469,22 +469,13 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     optimization_time = planner_json.get("JointDecisionOptimizationTime", 0.0)
     lat_lon_joint_planner_time = planner_json.get('LatLonJointDecisionTime', 0.0)
     
-    # Update planning info data for display - vertical layout
+    # Update planning info data for display - 仅优化器相关信息
     planning_info_data = {
-        'labels': ['Limit Speed', 
-                   'Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Lane Change State',
-                   'Target Lane - Origin Lane ID', 'Gap Front - Gap Rear Agent ID',
-                   'Front Agent Front - Rear Edge', 'Ego Front - Rear Edge', 'Rear Agent Front - Rear Edge'],
-        'values': [f"{joint_limit_speed:.2f}", 
-                   f"{round(lat_lon_joint_planner_time, 2)}ms", 
+        'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
+                   'Solver Condition', 'Planning Condition'],
+        'values': [f"{round(lat_lon_joint_planner_time, 2)}ms", 
                    f"{round(obstacle_selection_time, 2)}ms", f"{round(optimization_time, 2)}ms",
-                   solver_condition_name, "SUCCESS" if planning_success else "FAILED", lane_change_state_name, 
-                   str(target_lane_virtual_id) + " - " + str(origin_lane_virtual_id), 
-                   str(gap_front_agent_id) + " - " + str(gap_rear_agent_id),
-                   f"{front_agent_front_edge:.2f} - {front_agent_rear_edge:.2f}" if front_agent_front_edge != -99 else "N/A",
-                   f"{ego_front_edge:.2f} - {ego_rear_edge:.2f}" if ego_front_edge != -99 else "N/A",
-                   f"{rear_agent_front_edge:.2f} - {rear_agent_rear_edge:.2f}" if rear_agent_front_edge != -99 else "N/A"]
+                   solver_condition_name, "SUCCESS" if planning_success else "FAILED"]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
 
@@ -771,13 +762,11 @@ def load_joint_plan_figure(fig1, bag_loader):
     })
     joint_plan_data['data_key_agents'] = data_key_agents
 
-    # Add planning info data source - vertical layout with labels and values
+    # Add planning info data source - vertical layout with labels and values (仅优化器相关)
     data_planning_info = ColumnDataSource(data={
-        'labels': ['Lead One ID', 'Key Agent IDs', 'Limit Speed', 
-                   'Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition', 'Lane Change State',
-                   'Target Lane - Origin Lane ID', 'Gap Front - Gap Rear Agent ID'],
-        'values': ['', '', '', '', '', '', '', '', '', '', '']
+        'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
+                   'Solver Condition', 'Planning Condition'],
+        'values': ['', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 
@@ -902,14 +891,14 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig9 = bkp.figure(x_axis_label='time', y_axis_label='s',
                       x_range=fig8.x_range, width=525, height=330)
 
-    # Create planning info table - vertical layout with labels and values
+    # Create planning info table - vertical layout with labels and values (仅优化器相关)
     planning_info_table = DataTable(
         source=data_planning_info,
         columns=[
-            TableColumn(field='labels', title='Label', width=100),
-            TableColumn(field='values', title='Value', width=420)
+            TableColumn(field='labels', title='Label', width=180),
+            TableColumn(field='values', title='Value', width=340)
         ],
-        width=520, height=330, index_position=None,
+        width=520, height=180, index_position=None,  # 调整高度适应5行数据
         fit_columns=True,
         sortable=False,
         reorderable=False
@@ -1237,8 +1226,9 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig1.toolbar.active_scroll = fig1.select_one(WheelZoomTool)
     fig1.legend.click_policy = 'hide'
 
-    pan1 = Panel(child=row(column(fig3, fig4, fig5, fig9),
-                           column(fig6, fig7, fig8, planning_info_table)),
+    # 移除 omega、delta、theta 图表，保留 vel、acc、jerk、s 和优化器信息表
+    pan1 = Panel(child=row(column(fig9, fig6, fig7),
+                              column(fig8, planning_info_table)),
                 title="Longtime")
 
     pans = Tabs(tabs=[pan1])

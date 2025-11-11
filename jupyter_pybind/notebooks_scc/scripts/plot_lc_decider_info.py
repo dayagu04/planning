@@ -6,6 +6,7 @@ import inspect
 from lib.load_ros_bag import LoadRosbag
 from lib.load_local_view import *
 from lib.load_lc_st_graph import *
+from lib.load_lat_lon_joint_decision import *  # 新增：导入联合规划可视化
 sys.path.append('../..')
 sys.path.append('../../../')
 from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
@@ -14,7 +15,7 @@ from bokeh.resources import INLINE
 # bag path and frame dt
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-51-40/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-51-40_no_camera.bag"
 # bag_path = "/pnc_x86_data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250311/20250311-10-58-23/data_collection_CHERY_E0Y_04228_EVENT_MANUAL_2025-03-11-10-58-23_no_camera.bag"
-bag_path = "/data_cold/abu_zone/autoparse/bestune_e541_92137/trigger/20251009/20251009-11-19-36/data_collection_BESTUNE_E541_92137_EVENT_DOWNGRADE_2025-10-09-11-19-36_no_camera.bag"
+bag_path = bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_81748/trigger/20251024/20251024-09-41-52/data_collection_CHERY_M32T_81748_EVENT_MANUAL_2025-10-24-09-41-52_no_camera.bag.1762241683.close-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -36,6 +37,9 @@ ego_box_data_vec = ColumnDataSource(data = {'corners_y':[],
                                                'corners_x':[]})
 fig1.patches('corners_y', 'corners_x', source = agent_box_data_vec, fill_color = "grey", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'agent')
 fig1.patches('corners_y', 'corners_x', source = ego_box_data_vec, fill_color = "green", fill_alpha = 0.1, line_width = 1,  line_color = 'red', line_alpha = 1, legend_label = 'ego')
+
+# 新增：加载联合规划轨迹图
+pans, joint_plan_data = load_joint_plan_figure(fig1, bag_loader)
 
 plan_debug_msg_idx = 0
 obj_id = 0
@@ -65,8 +69,8 @@ columns = [
         TableColumn(field="name", title="name",),
         TableColumn(field="data", title="data"),
     ]
-data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=1000)
+data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=250, height=900)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=250, height=900)
 
 def update_data(lat_behavior_common, vo_lat_motion_plan):
   vars = ['fix_lane_virtual_id','target_lane_virtual_id','origin_lane_virtual_id',\
@@ -128,31 +132,46 @@ def update_lc_data (noa_info, plan_debug_json):
   })
   push_notebook()
 
+# 创建日志输出区域（需要在 slider_callback 之前定义）
+log_output = ipywidgets.Output(layout=ipywidgets.Layout(width='100%', height='200px', border='1px solid gray'))
+
 def slider_callback(bag_time):
   global plan_debug_msg_idx
-  local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
-  update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec, lc_path_data_vec, bag_loader, bag_time, local_view_data,
-                         ego_box_data_vec, agent_box_data_vec)
+  
+  # 将所有 print 输出重定向到日志区域
+  with log_output:
+    local_view_data_ = update_local_view_data(fig1, bag_loader, bag_time, local_view_data)
+    update_lc_path_figure (data_st, lat_data_vec, ori_lat_data_vec, lc_path_data_vec, bag_loader, bag_time, local_view_data,
+                           ego_box_data_vec, agent_box_data_vec)
+    
+    # 新增：更新联合规划轨迹数据
+    update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_data)
 
-  if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
-    plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
-    plan_debug_json_msg = local_view_data['data_msg']['plan_debug_json_msg']
-    planning_hmi_msg = local_view_data['data_msg']['planning_hmi_msg']
-    vo_lat_motion_plan = plan_debug_msg.vo_lat_motion_plan
-    lat_behavior_common = plan_debug_msg.lat_behavior_common
+    if bag_loader.plan_debug_msg['enable'] == True and bag_loader.planning_hmi_msg['enable'] == True:
+      plan_debug_msg = local_view_data['data_msg']['plan_debug_msg']
+      plan_debug_json_msg = local_view_data['data_msg']['plan_debug_json_msg']
+      planning_hmi_msg = local_view_data['data_msg']['planning_hmi_msg']
+      vo_lat_motion_plan = plan_debug_msg.vo_lat_motion_plan
+      lat_behavior_common = plan_debug_msg.lat_behavior_common
 
-    noa_info = planning_hmi_msg.ad_info
-    try:
-      update_data(lat_behavior_common, vo_lat_motion_plan)
-    except:
-      pass
-    update_lc_data(noa_info, plan_debug_json_msg)
+      noa_info = planning_hmi_msg.ad_info
+      try:
+        update_data(lat_behavior_common, vo_lat_motion_plan)
+      except:
+        pass
+      update_lc_data(noa_info, plan_debug_json_msg)
 
   push_notebook()
 
 # +
 
-bkp.show(row(fig1, column(data_behavior_table_1), column(data_lc_table_3), column(fig2, fig3)), notebook_handle=True)
+# 先创建并显示时间滑块（在图表上方）
 slider_class = LatBehaviorSlider(slider_callback)
+
+# 然后显示所有图表：主视图 + 表格 + 联合规划图表（表格在中间，图表在右侧）
+bkp.show(row(fig1, row(data_behavior_table_1, data_lc_table_3), pans), notebook_handle=True)
+
+# 最后显示日志输出区域（在最下方）
+display(log_output)
 
 # slider_class = ObjText(obj_id_handler)
