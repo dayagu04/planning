@@ -633,8 +633,10 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
   is_dash_enough = is_dash_enough && CheckTargetLaneValid();
   int lc_valid_thre = 4;
   if (transition_info_.lane_change_type == EMERGENCE_AVOID_REQUEST ||
-      transition_info_.lane_change_type == CONE_REQUEST ||
-      transition_info_.lane_change_type == MERGE_REQUEST) {
+      transition_info_.lane_change_type == CONE_REQUEST) {
+    lc_valid_thre = 1;
+    is_dash_enough = true; // 避让请求和锥桶请求不需要dash足够
+  }else if(transition_info_.lane_change_type == MERGE_REQUEST) {
     lc_valid_thre = 1;
   }
   // can lc if more than continue 4 frame gap_insertable
@@ -653,7 +655,7 @@ void LaneChangeStateMachineManager::CheckLaneChangeValid(
                << lane_change_stage_info_.lc_invalid_reason.c_str();
     lane_change_stage_info_.gap_insertable = false;
     lc_valid_cnt_ = 0;
-    if (!is_dash_enough && transition_info_.lane_change_type == INT_REQUEST) {
+    if (!is_dash_enough) {
       lane_change_stage_info_.lc_invalid_reason = "dash not enough";
     }
   }

@@ -165,6 +165,13 @@ class VirtualLane {
     current_tasks_ = current_tasks;
   };
 
+  const std::pair<bool, double> &get_feasible_lane_distance() const {
+    return feasible_lane_distance_;
+  };
+  void set_feasible_lane_distance(const std::pair<bool, double> &feasible_lane_distance) {
+    feasible_lane_distance_ = feasible_lane_distance;
+  }
+
   void update_speed_limit(double ego_vel, double ego_v_cruise);
   void save_context(VirtualLaneContext &context) const;
   void restore_context(const VirtualLaneContext &context);
@@ -230,6 +237,8 @@ class VirtualLane {
 
   double max_virtual_seg_ahead_x_ = 0.0;
   double max_virtual_seg_ahead_length_ = 0.0;
+
+  std::pair<bool, double> feasible_lane_distance_;
 };
 }  // namespace planning
 #endif

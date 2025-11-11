@@ -177,11 +177,14 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   }
 
   // 8、目标车道是否存在锥桶抑制MLC
-  auto target_lane_id = target_lane->get_virtual_id();
-  if (!IsTrafficConefeasibleInTargetLane(target_lane_id, request_type)) {
-    return false;
+  if (route_info_output.dis_to_ramp > 300.0) {
+    if (target_direction == LEFT_CHANGE && !ConeSituationJudgement(llane)) {
+      return false;
+    }
+    if (target_direction == RIGHT_CHANGE && !ConeSituationJudgement(rlane)) {
+      return false;
+    }
   }
-
   return true;
 }
 
@@ -398,123 +401,4 @@ bool MapRequest::CheckTargetLaneMergeDirection(RequestType request_type) {
   return true;
 }
 
-bool MapRequest::IsTrafficConefeasibleInTargetLane(
-    const int target_lane_virtual_id, const RequestType request_type) const {
-  const auto& reference_path_manager =
-      session_->environmental_model().get_reference_path_manager();
-  const auto& target_ref_path =
-      reference_path_manager->get_reference_path_by_lane(
-          target_lane_virtual_id);
-  const auto& dynamic_world =
-      session_->environmental_model().get_dynamic_world();
-
-  int64_t target_lane_front_node_id = planning_data::kInvalidId;
-  const planning_data::DynamicAgentNode* target_lane_front_node = nullptr;
-  if (request_type == LEFT_CHANGE) {
-    target_lane_front_node_id = dynamic_world->ego_left_front_node_id();
-  } else {
-    target_lane_front_node_id = dynamic_world->ego_right_front_node_id();
-  }
-  target_lane_front_node = dynamic_world->GetNode(target_lane_front_node_id);
-
-  if (target_lane_front_node == nullptr ||
-      (target_lane_front_node->type() != agent::AgentType::TRAFFIC_CONE &&
-       target_lane_front_node->type() !=
-           agent::AgentType::WATER_SAFETY_BARRIER &&
-       target_lane_front_node->type() != agent::AgentType::CTASH_BARREL &&
-       target_lane_front_node->type() != agent::AgentType::WARNING_TRIANGLE &&
-       !target_lane_front_node->is_static_type())) {
-    return true;
-  }
-
-  if (!target_ref_path) {
-    return false;
-  }
-
-  const auto& target_lane_coord = target_ref_path->get_frenet_coord();
-  if (!target_lane_coord) {
-    return false;
-  }
-
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
-  if (!ego_state) {
-    return false;
-  }
-
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double kEgoWidth = vehicle_param.width;
-  const double kEgoLength = vehicle_param.length;
-  const double kStandardLaneWidth = 3.7;
-  const double kEgoReachBoundaryTime = 4.0;
-
-  Point2D ego_frenet_point;
-  Point2D ego_pt{ego_state->ego_pose().x, ego_state->ego_pose().y};
-  if (!target_lane_coord->XYToSL(ego_pt, ego_frenet_point)) {
-    return false;
-  }
-
-  const planning_data::DynamicAgentNode* agent_front_node =
-      target_lane_front_node;
-  // 计算距离参数
-  double ego_need_dis = 0.0;
-  double cone_front_search_dis = 100.0;
-  double distance_allow_on_line_cone_lc = 0.0;
-  if (request_type == LEFT_CHANGE) {
-    distance_allow_on_line_cone_lc =
-        std::max((-kStandardLaneWidth / 2 - ego_frenet_point.y) *
-                         ego_state->ego_v() * kEgoReachBoundaryTime +
-                     kEgoLength,
-                 kEgoLength);
-  } else {
-    distance_allow_on_line_cone_lc =
-        std::max((-kStandardLaneWidth / 2 + ego_frenet_point.y) *
-                         ego_state->ego_v() * kEgoReachBoundaryTime +
-                     kEgoLength,
-                 kEgoLength);
-  }
-  double diatance_cone_to_ego = 0.0;
-  bool is_cone_encroaching = false;
-  bool is_cone_between_ego_and_target_lane = false;
-  // 向前搜寻search_dis
-  while (agent_front_node != nullptr) {
-    Point2D agent_front_node_frenet_pt;
-    Point2D agent_front_node_pt{agent_front_node->node_x(),
-                                agent_front_node->node_y()};
-    if (!target_lane_coord->XYToSL(agent_front_node_pt,
-                                   agent_front_node_frenet_pt)) {
-      return false;
-    }
-    diatance_cone_to_ego = agent_front_node->node_to_ego_distance();
-    if (diatance_cone_to_ego > cone_front_search_dis) {
-      break;
-    }
-    if (agent_front_node->is_static_type()) {
-      is_cone_encroaching =
-          agent_front_node_frenet_pt.y > -(kStandardLaneWidth / 2 - 0.3) &&
-          agent_front_node_frenet_pt.y < (kStandardLaneWidth / 2 - 0.3) &&
-          diatance_cone_to_ego > ego_need_dis;
-      if (request_type == LEFT_CHANGE) {
-        is_cone_between_ego_and_target_lane =
-            agent_front_node_frenet_pt.y < -(kStandardLaneWidth / 2 - 0.3) &&
-            agent_front_node_frenet_pt.y > -(kStandardLaneWidth / 2 + 0.3) &&
-            diatance_cone_to_ego > ego_need_dis &&
-            diatance_cone_to_ego < distance_allow_on_line_cone_lc;
-      } else {
-        is_cone_between_ego_and_target_lane =
-            agent_front_node_frenet_pt.y > (kStandardLaneWidth / 2 - 0.3) &&
-            agent_front_node_frenet_pt.y < (kStandardLaneWidth / 2 + 0.3) &&
-            diatance_cone_to_ego > ego_need_dis &&
-            diatance_cone_to_ego < distance_allow_on_line_cone_lc;
-      }
-      if (is_cone_encroaching || is_cone_between_ego_and_target_lane) {
-        return false;
-      }
-    }
-    agent_front_node =
-        dynamic_world->GetNode(agent_front_node->front_node_id());
-  }
-  return true;
-}
 }  // namespace planning
