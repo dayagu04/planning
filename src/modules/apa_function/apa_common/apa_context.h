@@ -51,6 +51,7 @@ enum class ParkingScenarioStatus {
   STATUS_TRY = 3,
   STATUS_FAIL = 4,
   STATUS_SUSPEND = 5,
+  STATUS_MANUAL = 6,
 };
 
 enum PathPlannerResult {

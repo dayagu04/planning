@@ -51,10 +51,10 @@ bool ApaFunction::Plan() {
       ->mutable_planning_hmi_info()
       ->apa_info.planning_park_dir =
       apa_plan_interface_->GetAPAHmi().planning_park_dir;
-  // session_->mutable_planning_context()
-  //     ->mutable_planning_hmi_info()
-  //     ->apa_info.planning_recommend_park_dir =
-  //     apa_plan_interface_->GetAPAHmi().planning_recommend_park_dir;
+  session_->mutable_planning_context()
+      ->mutable_planning_hmi_info()
+      ->apa_info.recommend_park_out =
+      apa_plan_interface_->GetAPAHmi().recommend_park_out;
   session_->mutable_planning_context()
       ->mutable_planning_hmi_info()
       ->apa_info.planning_recommend_park_dir =

@@ -75,8 +75,11 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
 
   const double start_timestamp_ms = IflyTime::Now_ms();
 
+  bool recommend_park_out = false;
+
   // run apa world, always run when enter apa
-  (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
+  (void)apa_world_ptr_->Update(local_view_ptr,
+                               planning_output_);
 
   // run planner
   scenario_manager_.UpdateScenarioType();
