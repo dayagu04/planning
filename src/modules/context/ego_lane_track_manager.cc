@@ -78,7 +78,7 @@ constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSurpressSplitSelectorDistance = 10.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
-constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 100.0;
+constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 200.0;
 constexpr double kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines = 0.6;
 
 
@@ -179,7 +179,7 @@ void EgoLaneTrackManger::TrackEgoLane(
               distance_to_first_road_split + split_region_info_list[0].start_fp_point.fp_distance_to_split_point;
         }
 
-        if (!is_in_lane_borrow_status && ego_in_split_region_ &&
+        if (!is_in_lane_borrow_status && ego_in_split_region_ && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ < kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
@@ -189,7 +189,7 @@ void EgoLaneTrackManger::TrackEgoLane(
 
           if (is_on_road_select_ramp_situation_ &&
               mlc_decider_route_info.is_process_split &&
-              lane_keep_status && ego_dis_to_split_exchange_area_start < kSplitSelectEgoToExchangeEreaDistanceThd) {
+              lane_keep_status) {
             // hack::针对分流 感知未提供分汇流点信息 作如下后处理
             PreprocessRoadSplit(relative_id_lanes,
                                 order_ids_of_same_zero_relative_id);
@@ -1206,7 +1206,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  if (!is_on_ramp_ && split_direction_dis_info_list_.size() > 1) {
+  if (split_direction_dis_info_list_.size() > 1) {
     if (distance_to_first_road_merge_ >
         split_direction_dis_info_list_[1].second) {
       is_exist_split_on_ramp_ = true;
@@ -2385,6 +2385,23 @@ bool EgoLaneTrackManger::CheckIfInRampSelectSplitForSdpro(
   double temp_nearest_s = 0;
   double nearest_l = 0;
 
+  ad_common::math::Vec2d current_point;
+  const auto& pose = ego_state->location_enu();
+  current_point.set_x(pose.position.x);
+  current_point.set_y(pose.position.y);
+
+  const iflymapdata::sdpro::LinkInfo_Link* current_link =
+      sdpro_map.GetNearestLinkWithHeading(current_point, search_distance,
+                                          ego_heading_angle, max_heading_diff,
+                                          temp_nearest_s, nearest_l);
+  if (current_link == nullptr) {
+    return false;
+  }
+  const bool current_is_on_ramp = sdpro_map.isRamp(current_link->link_type());
+  if (current_is_on_ramp) {
+    return true;
+  }
+
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> base_lane = relative_id_lanes[order_ids[i]];
@@ -2582,7 +2599,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
                     segment_target_point, search_distance, ego_heading_angle,
                     max_heading_diff, temp_nearest_s, nearest_l);
             if (next_link != nullptr) {
-              if (sdpro_map.isRamp(next_link->link_type())) {
+              if (!sdpro_map.isRamp(next_link->link_type())) {
                 return true;
               }
             }
@@ -2594,7 +2611,7 @@ bool EgoLaneTrackManger::CheckIfInRoadSelectRampForSdpro(
         }
       }
     }
-    return true;
+    return false;
   }
 
   return false;
