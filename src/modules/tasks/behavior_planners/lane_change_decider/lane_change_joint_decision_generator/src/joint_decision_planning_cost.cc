@@ -7,8 +7,8 @@ namespace pnc {
 namespace lane_change_joint_decision {
 static const double kEps = 1e-6;
 
-double EgoReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                     const ilqr_solver::Control &) {
+double EgoReferenceCostTerm::GetCost(const ilqr_solver::State& x,
+                                     const ilqr_solver::Control&) {
   const double ego_cost_x = 0.5 * cost_config_ptr_->at(W_EGO_REF_X) *
                             (x[EGO_X] - cost_config_ptr_->at(EGO_REF_X)) *
                             (x[EGO_X] - cost_config_ptr_->at(EGO_REF_X));
@@ -34,9 +34,9 @@ double EgoReferenceCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void EgoReferenceCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
   lx(EGO_X) += cost_config_ptr_->at(W_EGO_REF_X) *
                (x[EGO_X] - cost_config_ptr_->at(EGO_REF_X));
   lx(EGO_Y) += cost_config_ptr_->at(W_EGO_REF_Y) *
@@ -57,8 +57,8 @@ void EgoReferenceCostTerm::GetGradientHessian(
   lxx(EGO_ACC, EGO_ACC) += cost_config_ptr_->at(W_EGO_REF_ACC);
 }
 
-double ObsReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                     const ilqr_solver::Control &) {
+double ObsReferenceCostTerm::GetCost(const ilqr_solver::State& x,
+                                     const ilqr_solver::Control&) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
   double obs_cost = 0.0;
   for (int i = 0; i < obs_num; ++i) {
@@ -97,9 +97,9 @@ double ObsReferenceCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void ObsReferenceCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
   for (int i = 0; i < obs_num; ++i) {
     const int state_base_idx = EGO_STATE_SIZE + i * OBS_STATE_SIZE;
@@ -146,7 +146,7 @@ void ObsReferenceCostTerm::GetGradientHessian(
 
 EgoThreeDiscSafeCostTerm::ThreeDiscResult
 EgoThreeDiscSafeCostTerm::CalculateThreeDiscDistances(
-    const ilqr_solver::State &x) {
+    const ilqr_solver::State& x) {
   auto calc_three_centers = [](double x, double y, double theta, double length,
                                bool is_ego = true) {
     double L = length / 6;
@@ -250,9 +250,9 @@ EgoThreeDiscSafeCostTerm::CalculateThreeDiscDistances(
         calc_dynamic_radius(obs_length, obs_width, obs_disc_num);
 
     for (int ego_disc_idx = 0; ego_disc_idx < 3; ++ego_disc_idx) {
-      const auto &ego_c = ego_centers[ego_disc_idx];
+      const auto& ego_c = ego_centers[ego_disc_idx];
       for (int obs_disc_idx = 0; obs_disc_idx < obs_disc_num; ++obs_disc_idx) {
-        const auto &obs_c = obs_centers[obs_disc_idx];
+        const auto& obs_c = obs_centers[obs_disc_idx];
         double dist_squared =
             calc_distance_squared(ego_c.first, ego_c.second, obs_c.first,
                                   obs_c.second, ego_radius, obs_radius);
@@ -280,8 +280,8 @@ EgoThreeDiscSafeCostTerm::CalculateThreeDiscDistances(
           closest_obs_disc_y, closest_ego_disc_index};
 }
 
-double EgoThreeDiscSafeCostTerm::GetCost(const ilqr_solver::State &x,
-                                         const ilqr_solver::Control &u) {
+double EgoThreeDiscSafeCostTerm::GetCost(const ilqr_solver::State& x,
+                                         const ilqr_solver::Control& u) {
   auto result = CalculateThreeDiscDistances(x);
   if (cost_config_ptr_->at(OBS_NUM) == 0) {
     return 0.0;
@@ -299,9 +299,9 @@ double EgoThreeDiscSafeCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void EgoThreeDiscSafeCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   auto result = CalculateThreeDiscDistances(x);
   if (cost_config_ptr_->at(OBS_NUM) == 0) {
     return;
@@ -380,7 +380,7 @@ void EgoThreeDiscSafeCostTerm::GetGradientHessian(
 }
 
 void EgoRoadBoundaryCostTerm::CalculateBoundaryDistancesInfo(
-    const ilqr_solver::State &x) {
+    const ilqr_solver::State& x) {
   double ego_x = x[EGO_X];
   double ego_y = x[EGO_Y];
   double ego_theta = x[EGO_THETA];
@@ -417,8 +417,8 @@ void EgoRoadBoundaryCostTerm::CalculateBoundaryDistancesInfo(
   bool ego_left_valid = false;
   planning::planning_math::Vec2d ego_left_unit_vector(0, 0);
   if (dist_to_left < safe_distance + cost_config_ptr_->at(EGO_WIDTH) / 2.0) {
-    const auto &query_point = left_front_closer ? front_center : rear_center;
-    const auto &nearest_point =
+    const auto& query_point = left_front_closer ? front_center : rear_center;
+    const auto& nearest_point =
         left_front_closer ? front_nearest_left : rear_nearest_left;
     double dx = query_point.x() - nearest_point.x();
     double dy = query_point.y() - nearest_point.y();
@@ -432,8 +432,8 @@ void EgoRoadBoundaryCostTerm::CalculateBoundaryDistancesInfo(
   bool ego_right_valid = false;
   planning::planning_math::Vec2d ego_right_unit_vector(0, 0);
   if (dist_to_right < safe_distance + cost_config_ptr_->at(EGO_WIDTH) / 2.0) {
-    const auto &query_point = right_front_closer ? front_center : rear_center;
-    const auto &nearest_point =
+    const auto& query_point = right_front_closer ? front_center : rear_center;
+    const auto& nearest_point =
         right_front_closer ? front_nearest_right : rear_nearest_right;
     double dx = query_point.x() - nearest_point.x();
     double dy = query_point.y() - nearest_point.y();
@@ -456,8 +456,8 @@ void EgoRoadBoundaryCostTerm::CalculateBoundaryDistancesInfo(
   dist_result_.ego_right_unit_vector = ego_right_unit_vector;
 }
 
-double EgoRoadBoundaryCostTerm::GetCost(const ilqr_solver::State &x,
-                                        const ilqr_solver::Control &u) {
+double EgoRoadBoundaryCostTerm::GetCost(const ilqr_solver::State& x,
+                                        const ilqr_solver::Control& u) {
   if (!road_left_boundary_path_ || !road_right_boundary_path_ ||
       !road_left_boundary_path_->KdtreeValid() ||
       !road_right_boundary_path_->KdtreeValid()) {
@@ -485,9 +485,9 @@ double EgoRoadBoundaryCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void EgoRoadBoundaryCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &lxu, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT& lxu, ilqr_solver::LuuMT& luu) {
   if (!road_left_boundary_path_ || !road_right_boundary_path_ ||
       !road_left_boundary_path_->KdtreeValid() ||
       !road_right_boundary_path_->KdtreeValid()) {
@@ -657,17 +657,17 @@ void EgoRoadBoundaryCostTerm::GetGradientHessian(
   }
 }
 
-double EgoAccCostTerm::GetCost(const ilqr_solver::State &x,
-                               const ilqr_solver::Control &) {
+double EgoAccCostTerm::GetCost(const ilqr_solver::State& x,
+                               const ilqr_solver::Control&) {
   double ego_acc = x[EGO_ACC];
   double weight = cost_config_ptr_->at(W_EGO_ACC);
   return 0.5 * weight * ego_acc * ego_acc;
 }
 
 void EgoAccCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
   double ego_acc = x[EGO_ACC];
   double weight = cost_config_ptr_->at(W_EGO_ACC);
 
@@ -676,17 +676,17 @@ void EgoAccCostTerm::GetGradientHessian(
   lxx(EGO_ACC, EGO_ACC) += weight;
 }
 
-double EgoJerkCostTerm::GetCost(const ilqr_solver::State &x,
-                                const ilqr_solver::Control &u) {
+double EgoJerkCostTerm::GetCost(const ilqr_solver::State& x,
+                                const ilqr_solver::Control& u) {
   double ego_jerk = u[EGO_JERK];
   double weight = cost_config_ptr_->at(W_EGO_JERK);
   return 0.5 * weight * ego_jerk * ego_jerk;
 }
 
 void EgoJerkCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   double ego_jerk = u[EGO_JERK];
   double weight = cost_config_ptr_->at(W_EGO_JERK);
 
@@ -695,17 +695,17 @@ void EgoJerkCostTerm::GetGradientHessian(
   luu(EGO_JERK, EGO_JERK) += weight;
 }
 
-double EgoOmegaCostTerm::GetCost(const ilqr_solver::State &x,
-                                 const ilqr_solver::Control &u) {
+double EgoOmegaCostTerm::GetCost(const ilqr_solver::State& x,
+                                 const ilqr_solver::Control& u) {
   double ego_omega = u[EGO_OMEGA];
   double weight = cost_config_ptr_->at(W_EGO_OMEGA);
   return 0.5 * weight * ego_omega * ego_omega;
 }
 
 void EgoOmegaCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   double ego_omega = u[EGO_OMEGA];
   double weight = cost_config_ptr_->at(W_EGO_OMEGA);
 
@@ -714,17 +714,17 @@ void EgoOmegaCostTerm::GetGradientHessian(
   luu(EGO_OMEGA, EGO_OMEGA) += weight;
 }
 
-double EgoDeltaCostTerm::GetCost(const ilqr_solver::State &x,
-                                 const ilqr_solver::Control &) {
+double EgoDeltaCostTerm::GetCost(const ilqr_solver::State& x,
+                                 const ilqr_solver::Control&) {
   double ego_delta = x[EGO_DELTA];
   double weight = cost_config_ptr_->at(W_EGO_DELTA);
   return 0.5 * weight * ego_delta * ego_delta;
 }
 
 void EgoDeltaCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
   double ego_delta = x[EGO_DELTA];
   double weight = cost_config_ptr_->at(W_EGO_DELTA);
 
@@ -732,8 +732,8 @@ void EgoDeltaCostTerm::GetGradientHessian(
   lxx(EGO_DELTA, EGO_DELTA) += weight;
 }
 
-double ObsJerkCostTerm::GetCost(const ilqr_solver::State &x,
-                                const ilqr_solver::Control &u) {
+double ObsJerkCostTerm::GetCost(const ilqr_solver::State& x,
+                                const ilqr_solver::Control& u) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
   double obs_jerk_cost = 0.0;
 
@@ -748,9 +748,9 @@ double ObsJerkCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void ObsJerkCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
 
   for (int i = 0; i < obs_num; ++i) {
@@ -763,8 +763,8 @@ void ObsJerkCostTerm::GetGradientHessian(
   }
 }
 
-double ObsOmegaCostTerm::GetCost(const ilqr_solver::State &x,
-                                 const ilqr_solver::Control &u) {
+double ObsOmegaCostTerm::GetCost(const ilqr_solver::State& x,
+                                 const ilqr_solver::Control& u) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
   double obs_omega_cost = 0.0;
 
@@ -779,9 +779,9 @@ double ObsOmegaCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void ObsOmegaCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
 
   for (int i = 0; i < obs_num; ++i) {
@@ -794,8 +794,8 @@ void ObsOmegaCostTerm::GetGradientHessian(
   }
 }
 
-double EgoAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
-                                    const ilqr_solver::Control &) {
+double EgoAccBoundCostTerm::GetCost(const ilqr_solver::State& x,
+                                    const ilqr_solver::Control&) {
   double ego_acc = x[EGO_ACC];
   double weight = cost_config_ptr_->at(W_EGO_ACC_BOUND);
   double acc_max = cost_config_ptr_->at(EGO_ACC_MAX);
@@ -817,9 +817,9 @@ double EgoAccBoundCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void EgoAccBoundCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+    const ilqr_solver::State& x, const ilqr_solver::Control&,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT&, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT&) {
   double ego_acc = x[EGO_ACC];
   double weight = cost_config_ptr_->at(W_EGO_ACC_BOUND);
   double acc_max = cost_config_ptr_->at(EGO_ACC_MAX);
@@ -838,8 +838,8 @@ void EgoAccBoundCostTerm::GetGradientHessian(
   }
 }
 
-double EgoJerkBoundCostTerm::GetCost(const ilqr_solver::State &,
-                                     const ilqr_solver::Control &u) {
+double EgoJerkBoundCostTerm::GetCost(const ilqr_solver::State&,
+                                     const ilqr_solver::Control& u) {
   double ego_jerk = u[EGO_JERK];
   double weight = cost_config_ptr_->at(W_EGO_JERK_BOUND);
   double jerk_max = cost_config_ptr_->at(EGO_JERK_MAX);
@@ -861,9 +861,9 @@ double EgoJerkBoundCostTerm::GetCost(const ilqr_solver::State &,
 }
 
 void EgoJerkBoundCostTerm::GetGradientHessian(
-    const ilqr_solver::State &, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &,
-    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State&, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT&, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT&,
+    ilqr_solver::LxuMT&, ilqr_solver::LuuMT& luu) {
   double ego_jerk = u[EGO_JERK];
   double weight = cost_config_ptr_->at(W_EGO_JERK_BOUND);
   double jerk_max = cost_config_ptr_->at(EGO_JERK_MAX);
@@ -883,7 +883,7 @@ void EgoJerkBoundCostTerm::GetGradientHessian(
 }
 
 std::vector<HardHalfplaneCostTerm::HardHalfplaneResult>
-HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
+HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
   std::vector<HardHalfplaneResult> results;
 
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
@@ -978,8 +978,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State &x) {
   return results;
 }
 
-double HardHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
-                                      const ilqr_solver::Control &u) {
+double HardHalfplaneCostTerm::GetCost(const ilqr_solver::State& x,
+                                      const ilqr_solver::Control& u) {
   auto results = CalculateObsHardHalfplane(x);
 
   if (results.empty()) {
@@ -990,7 +990,7 @@ double HardHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
   constexpr double epsilon = 1e-3;
   double total_cost = 0.0;
 
-  for (const auto &result : results) {
+  for (const auto& result : results) {
     if (result.plane_dist < -epsilon) {
       const double violation = result.plane_dist;
       total_cost += weight * violation * violation;
@@ -1001,9 +1001,9 @@ double HardHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void HardHalfplaneCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &lxu, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT& lxu, ilqr_solver::LuuMT& luu) {
   auto results = CalculateObsHardHalfplane(x);
 
   if (results.empty()) {
@@ -1014,7 +1014,7 @@ void HardHalfplaneCostTerm::GetGradientHessian(
   const double alpha = cost_config_ptr_->at(HALFPLANE_COST_ALLOCATION_RATIO);
   constexpr double epsilon = 1e-3;
 
-  for (const auto &result : results) {
+  for (const auto& result : results) {
     if (result.plane_dist >= -epsilon) {
       continue;
     }
@@ -1114,8 +1114,9 @@ void HardHalfplaneCostTerm::GetGradientHessian(
       // const double ddist_dobs_x = normal_x;
       // const double ddist_dobs_y = normal_y;
 
-      // lx(state_base_idx + OBS_X) += obs_weight * gradient_coeff * ddist_dobs_x;
-      // lx(state_base_idx + OBS_Y) += obs_weight * gradient_coeff * ddist_dobs_y;
+      // lx(state_base_idx + OBS_X) += obs_weight * gradient_coeff *
+      // ddist_dobs_x; lx(state_base_idx + OBS_Y) += obs_weight * gradient_coeff
+      // * ddist_dobs_y;
 
       // lxx(state_base_idx + OBS_X, state_base_idx + OBS_X) +=
       //     obs_weight * hess_coeff * ddist_dobs_x * ddist_dobs_x;
@@ -1149,7 +1150,7 @@ void HardHalfplaneCostTerm::GetGradientHessian(
 }
 
 std::vector<SoftHalfplaneCostTerm::SoftHalfplaneResult>
-SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
+SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
   std::vector<SoftHalfplaneResult> results;
 
   const int obs_num = cost_config_ptr_->at(OBS_NUM);
@@ -1167,7 +1168,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
   const double ego_rear_edge_to_rear_axle =
       cost_config_ptr_->at(EGO_LENGTH) - ego_front_edge_to_rear_axle;
   const double a = 2.5;
-  const double b = 1.5;
+  const double b = 0.8;
 
   const double s0 = cost_config_ptr_->at(SOFT_HALFPLANE_S0);
   const double tau = cost_config_ptr_->at(SOFT_HALFPLANE_TAU);
@@ -1219,7 +1220,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       double v_rel = obs_vel - ego_vel;
       s_target = s0 + std::max(0.0, obs_vel * tau + obs_vel * v_rel /
                                                         (2 * std::sqrt(a * b)));
-
+      s_target += 3.0;
     } else if (label_value == 2) {
       // YIELD: 自车让行障碍物
       // s_current = 障碍物后端 → 自车前端 的距离
@@ -1244,6 +1245,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
       double v_rel = ego_vel - obs_vel;
       s_target = s0 + std::max(0.0, ego_vel * tau + ego_vel * v_rel /
                                                         (2 * std::sqrt(a * b)));
+      s_target = std::fmax(s_target - 2.0, 0.0);
     }
 
     SoftHalfplaneResult result;
@@ -1260,8 +1262,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State &x) {
   return results;
 }
 
-double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
-                                      const ilqr_solver::Control &u) {
+double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State& x,
+                                      const ilqr_solver::Control& u) {
   auto results = CalculateSoftHalfplane(x);
 
   if (results.empty()) {
@@ -1272,7 +1274,7 @@ double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
   constexpr double epsilon = 1e-3;
   double total_cost = 0.0;
 
-  for (const auto &result : results) {
+  for (const auto& result : results) {
     const double violation = result.s_current - result.s_target;
     if (violation < -epsilon) {
       total_cost += weight * violation * violation;
@@ -1283,9 +1285,9 @@ double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State &x,
 }
 
 void SoftHalfplaneCostTerm::GetGradientHessian(
-    const ilqr_solver::State &x, const ilqr_solver::Control &u,
-    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &lu, ilqr_solver::LxxMT &lxx,
-    ilqr_solver::LxuMT &lxu, ilqr_solver::LuuMT &luu) {
+    const ilqr_solver::State& x, const ilqr_solver::Control& u,
+    ilqr_solver::LxMT& lx, ilqr_solver::LuMT& lu, ilqr_solver::LxxMT& lxx,
+    ilqr_solver::LxuMT& lxu, ilqr_solver::LuuMT& luu) {
   auto results = CalculateSoftHalfplane(x);
 
   if (results.empty()) {
@@ -1301,7 +1303,7 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
   const double k = 1.0 / (2.0 * std::sqrt(a * b));
   constexpr double epsilon = 1e-3;
 
-  for (const auto &result : results) {
+  for (const auto& result : results) {
     const double violation = result.s_current - result.s_target;
     if (violation >= -epsilon) {
       continue;

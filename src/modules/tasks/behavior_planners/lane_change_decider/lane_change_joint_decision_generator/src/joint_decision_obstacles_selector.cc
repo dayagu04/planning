@@ -106,13 +106,11 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
     }
   }
   if (lc_info.origin_agent_id != -1) {
-    const auto* origin_agent =
-        agent_manager->GetAgent(lc_info.origin_agent_id);
+    const auto* origin_agent = agent_manager->GetAgent(lc_info.origin_agent_id);
     if (origin_agent != nullptr) {
       const auto& all_agents = agent_manager->GetAllCurrentAgents();
       for (const auto& agent : all_agents) {
-        if (agent != nullptr &&
-              agent->agent_id() == lc_info.origin_agent_id) {
+        if (agent != nullptr && agent->agent_id() == lc_info.origin_agent_id) {
           key_obstacles_.emplace_back(CreateKeyObstacle(
               agent, ego_lane_coord,
               lane_change_joint_decision::LongitudinalLabel::YIELD));
@@ -560,12 +558,24 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
   key_obstacle.longitudinal_label = longitudinal_label;
   key_obstacle.length = agent->length();
   key_obstacle.width = agent->width();
-
-  key_obstacle.init_x = agent->x();
-  key_obstacle.init_y = agent->y();
-  key_obstacle.init_theta = agent->theta();
-  key_obstacle.init_vel = agent->speed();
-  key_obstacle.init_acc = agent->accel_fusion();
+  // todo(ldh): use time delay
+  if (agent->trajectories_used_by_st_graph().empty() ||
+      agent->trajectories_used_by_st_graph().front().empty()) {
+    key_obstacle.init_x = agent->x();
+    key_obstacle.init_y = agent->y();
+    key_obstacle.init_theta = agent->theta();
+    key_obstacle.init_vel = agent->speed();
+  } else {
+    key_obstacle.init_x =
+        agent->trajectories_used_by_st_graph().front().front().x();
+    key_obstacle.init_y =
+        agent->trajectories_used_by_st_graph().front().front().y();
+    key_obstacle.init_theta =
+        agent->trajectories_used_by_st_graph().front().front().theta();
+    key_obstacle.init_vel =
+        agent->trajectories_used_by_st_graph().front().front().vel();
+    key_obstacle.init_acc = agent->accel_fusion();
+  }
 
   key_obstacle.init_s = 0.0;
   key_obstacle.init_l = 0.0;
@@ -607,7 +617,6 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
 
   key_obstacle.init_s = init_s;
   const double kPlanningTimeStep = 0.2;
-
   for (size_t i = 0; i < trajectory.size(); ++i) {
     const double relative_time = i * kPlanningTimeStep;
     const auto point = trajectory.Evaluate(relative_time);
@@ -615,7 +624,7 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     key_obstacle.ref_y_vec.emplace_back(point.y());
     key_obstacle.ref_vel_vec.emplace_back(point.vel());
     key_obstacle.ref_acc_vec.emplace_back(point.acc());
-    key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + point.s());
+    key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + point.s() - trajectory.front().s());
   }
 
   const double obs_wheel_base = key_obstacle.length * 0.75;
