@@ -2260,9 +2260,9 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   lc_info.ego_ref_traj = ego_trajs_future_;
   lc_info.target_lane_virtual_id = lc_lane_mgr_->target_lane_virtual_id();
   lc_info.origin_lane_virtual_id = lc_lane_mgr_->origin_lane_virtual_id();
-  bool is_start_joint_opt = IsStartJointOpt(gap_front_agent_id, gap_rear_agent_id); 
+  is_side_clear_ = IsSideClear(gap_front_agent_id, gap_rear_agent_id); 
   if (transition_info_.lane_change_status != StateMachineLaneChangeStatus::kLaneKeeping &&
-      is_start_joint_opt) {
+      is_side_clear_) {
     lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
     lc_joint_decision_generator_ ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
     JSON_DEBUG_VALUE("target_lane_virtual_id", lc_info.target_lane_virtual_id);
@@ -4121,6 +4121,9 @@ bool LaneChangeStateMachineManager::
       if(is_executing){
         box_longitudinal_buff = box_longitudinal_buff * lc_safety_check_config_.exe_ttc_ratio;
       }
+      if (ego_press_line_ratio > 0.3 && is_side_clear_) {
+        break;  // 已经压线过多，侧方无车 不返回
+      }
       // 记录 ttc 
       // 记录预测轨迹上的纵向buff
     }
@@ -5353,7 +5356,7 @@ bool LaneChangeStateMachineManager::CheckTargetLaneValid() {
 }
 
 // 输入前后车node_id，判断是否当前满足gap enough 条件
-bool LaneChangeStateMachineManager::IsStartJointOpt(int front_agent_id, int rear_agent_id) {
+bool LaneChangeStateMachineManager::IsSideClear(int front_agent_id, int rear_agent_id) {
   const auto &dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto &agent_mgr = dynamic_world->agent_manager();
