@@ -890,7 +890,8 @@ const bool ApaSlotManager::RecommendParkOut() {
       const bool condition_0 = LateralConditions(dot_product, slot);
       const bool condition_1 = LongitudinalConditions(dot_product, slot);
 
-      if (condition_0 && condition_1) {
+      if (condition_0 && condition_1 &&
+          slot.slot_type_ == SlotType::PERPENDICULAR) {
         return true;
       } else {
         return false;
