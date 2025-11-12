@@ -48,6 +48,7 @@ void STSampleSpaceBase::Clear() {
   agents_st_point_paris_.clear();
   st_points_table_.clear();
   sample_points_.clear();
+  gap_array_.clear();
 }
 
 void STSampleSpaceBase::SetInitS(const double s0) { init_s_ = s0; }
@@ -302,4 +303,48 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
   return true;
 }
 
+void STSampleSpaceBase::GetAvailableGap(const int index) {
+  gap_array_.clear();
+  if (index < 0 || index >= st_points_table_.size()) {
+    return;
+  }
+  double current_time = index * kEvaluationStep;
+  std::pair<STPoint, STPoint> current_gap;
+  const auto& intervals = st_points_table_.at(index);
+  if (intervals.empty()) {
+    current_gap.first.set_info(-kMaxPathLength, current_time, 0.0, kNoAgentId,
+                               -1);
+    current_gap.second.set_info(kMaxPathLength, current_time, 100.0, kNoAgentId,
+                                -1);
+    gap_array_.push_back(current_gap);
+  } else {
+    STPoint lower_st_point;
+    lower_st_point.set_info(-kMaxPathLength, current_time, 0.0, kNoAgentId, -1);
+    for (auto& interval : intervals) {
+      if (lower_st_point.s() == interval.first.s()) {
+        continue;
+      }
+      current_gap.first.set_info(lower_st_point.s(), current_time,
+                                 lower_st_point.velocity(),
+                                 lower_st_point.agent_id(), -1);
+      current_gap.second.set_info(interval.first.s(), current_time,
+                                  interval.first.velocity(),
+                                  interval.first.agent_id(), -1);
+      lower_st_point.set_info(interval.second.s(), current_time,
+                              interval.second.velocity(),
+                              interval.second.agent_id(), -1);
+      if (current_gap.second.s() - current_gap.first.s() < 5.0) {
+        gap_array_.push_back(current_gap);
+      }
+    }
+    if (lower_st_point.s() < kMaxPathLength) {
+      current_gap.first.set_info(lower_st_point.s(), current_time,
+                                 lower_st_point.velocity(),
+                                 lower_st_point.agent_id(), -1);
+      current_gap.second.set_info(kMaxPathLength, current_time, 100.0,
+                                  kNoAgentId, -1);
+      gap_array_.push_back(current_gap);
+    }
+  }
+}
 }  // namespace planning

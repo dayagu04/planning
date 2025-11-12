@@ -34,6 +34,7 @@ constexpr double kTimeResolution = 0.1;
 constexpr int32_t kSampleSpaceReserveNum =
     (kPlanningDuration) / kTimeResolution + 1;
 constexpr double kPlanningStep = 0.2;
+constexpr double kEvaluationStep = 0.5;
 constexpr double kMaxPathLength = 400.0;
 constexpr double kEgoHalfLength = 2.6;
 const int kPlanningHorizions = 26;

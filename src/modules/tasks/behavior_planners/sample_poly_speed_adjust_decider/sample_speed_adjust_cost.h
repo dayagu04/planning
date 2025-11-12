@@ -1,7 +1,7 @@
 #pragma once
 #include "curve_cost.h"
-#include "st_graph/st_point.h"
 #include "ego_planning_config.h"
+#include "st_graph/st_point.h"
 using planning::speed::STPoint;
 namespace planning {
 
@@ -13,7 +13,7 @@ class MatchGapCost : public CurveCost {
                const double poly_end_v,
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
-               const double ego_current_vel, const bool is_merge_change ,
+               const double ego_current_vel, const bool is_merge_change,
                const LanChangeSafetyCheckConfig& lc_safety_distance_config);
   void SetWeightMatchS(const double weight_s) { weight_match_s_ = weight_s; }
   void SetWeightMatchVel(const double weight_vel) {
@@ -112,7 +112,7 @@ class AccLimitCost : public CurveCost {
 class SpeedChangeCost : public CurveCost {
  public:
   SpeedChangeCost() = default;
-  void GetCost(const double end_v,const double ego_v,const double end_t);
+  void GetCost(const double end_v, const double ego_v, const double end_t);
 };
 
 class StopPointCost : public CurveCost {

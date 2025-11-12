@@ -53,6 +53,9 @@ class SamplePolySpeedAdjustDecider : public Task {
   void ClearStitchedPolyPtr();
   double GetStoplineSpdDifferGain();
   void CalcDistanceToStopPoint();
+  bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
+                          const int& index);
+
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -186,7 +189,6 @@ class SamplePolySpeedAdjustDecider : public Task {
     weight_speed_change_ = weight;
   }
   double weight_speed_change() const { return weight_speed_change_; };
-
 
   void set_ego_v(const double ego_v) { ego_v_ = ego_v; }
   double ego_v() const { return ego_v_; }

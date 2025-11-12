@@ -33,6 +33,8 @@ class STSampleSpaceBase {
                             STPoint* const upper_st_point);
   void Init(const std::vector<AgentInfo>& lane_change_veh_info,
             const double init_s);
+  void GetAvailableGap(const int index);
+
   void Clear();
   void SetInitS(const double s0);
 
@@ -74,9 +76,14 @@ class STSampleSpaceBase {
 
   const std::vector<STPoint>& sample_points() const { return sample_points_; }
 
+  std::vector<std::pair<STPoint, STPoint>>& get_gap_array() {
+    return gap_array_;
+  }
+
  private:
   std::vector<std::vector<std::pair<STPoint, STPoint>>> st_points_table_;
   std::vector<STPoint> sample_points_;  //(s, v)
+  std::vector<std::pair<STPoint, STPoint>> gap_array_;
 
   std::vector<std::vector<std::pair<STPoint, STPoint>>> agents_st_point_paris_;
   std::unordered_map<int64_t, std::unique_ptr<AgentInfo>> agent_id_veh_info_;

@@ -77,7 +77,8 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     : Task(config_builder, session) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
-  lc_safety_distance_config_ = config_builder->cast<LanChangeSafetyCheckConfig>();
+  lc_safety_distance_config_ =
+      config_builder->cast<LanChangeSafetyCheckConfig>();
 
   front_edge_to_rear_axle_ = VehicleConfigurationContext::Instance()
                                  ->get_vehicle_param()
@@ -129,7 +130,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
 
   if (ok) {
     if (min_cost_traj_ptr_ != nullptr) {
-       ok = BestTrajCheck();
+      ok = BestTrajCheck();
     }
   }
 
@@ -190,8 +191,9 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           quartic_sample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,weight_speed_change_,
-          front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
+          weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+          weight_speed_change_, front_edge_to_rear_axle_,
+          rear_edge_to_rear_axle_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -213,20 +215,32 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   double leading_veh_s = kMaxPathLength;
   double leading_veh_v = kAgentNoValidVel;
   if (leading_veh_.id != kNoAgentId) {
-    leading_veh_s =
-        ego_s_ + leading_veh_.center_s + leading_veh_.v * evaulation_t_;
+    leading_veh_s = ego_s_ + leading_veh_.center_s;
     leading_veh_v = leading_veh_.v;
   }
   double speed_differ_gain = GetStoplineSpdDifferGain();
+  int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
+  for (size_t i = 0; i < count; i++) {
+    st_sample_space_base_.GetAvailableGap(i);
+    for (size_t i = 0; i < sample_trajs_.size(); i++) {
+      auto& sample_traj_at_v = sample_trajs_[i];
+      for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+        auto& sample_traj = sample_traj_at_v[j];
+        if (CheckTrajAvailable(sample_traj, i)) {
+          sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                               v_suggestted_, merge_stop_line_distance_,
+                               leading_veh_s, leading_veh_v, leading_veh_.id,
+                               enable_merge_decelaration, speed_differ_gain,
+                               distance_to_stop_point_,
+                               lc_safety_distance_config_, i * kEvaluationStep);
+        }
+      }
+    }
+  }
   for (size_t i = 0; i < sample_trajs_.size(); i++) {
     auto& sample_traj_at_v = sample_trajs_[i];
     for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
       auto& sample_traj = sample_traj_at_v[j];
-      sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
-                           merge_stop_line_distance_, leading_veh_s,
-                           leading_veh_v, leading_veh_.id,
-                           enable_merge_decelaration, speed_differ_gain, distance_to_stop_point_ , lc_safety_distance_config_);
-
       if (sample_traj.cost_sum_ < min_cost) {
         min_cost_traj_ptr_ = &sample_traj;
         min_cost = sample_traj.cost_sum_;
@@ -532,8 +546,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       v_adjust_speed_limit_ * 1.05 > ego_v_
           ? std::fmin(v_adjust_speed_limit_ * 1.05, speed_adjust_range_.first)
           : ego_v_;
-  speed_adjust_range_.first = std::fmin(
-      speed_adjust_range_.first , 130.0/3.6);
+  speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
   speed_adjust_range_.second =
       sample_scene_ == DecelerationPriorityScene &&
               merge_stop_line_distance_ <= 20.0
@@ -734,8 +747,9 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             resample_polynomial, evaulation_t_, 0.5 * evaulation_t_,
             weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
-            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,weight_speed_change_,
-            front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
+            weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
+            weight_speed_change_, front_edge_to_rear_axle_,
+            rear_edge_to_rear_axle_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -860,8 +874,10 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_rel = std::min(std::max(ego_v - v_lead_clip, 0.0), 5.0);
   double distance_hysteresis = v_rel * 0.3;
   double fix_safe_distance = 3.5;
-  double object_rel_distance = leading_veh_.half_length + front_edge_to_rear_axle_;
-  return fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis + object_rel_distance;
+  double object_rel_distance =
+      leading_veh_.half_length + front_edge_to_rear_axle_;
+  return fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis +
+         object_rel_distance;
 }
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
@@ -991,19 +1007,21 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
   if (current_lane.get() == nullptr) {
     return;
   }
-  const auto& reference_points = current_lane->get_reference_path()->get_points();
-  if (!reference_points.empty()){
-    auto comp = [](const ReferencePathPoint &p, const double s) {
-        return p.path_point.s() < s;
-      };
-    auto p_first_point = std::lower_bound(
-        reference_points.begin(), reference_points.end(), ego_s_, comp);
+  const auto& reference_points =
+      current_lane->get_reference_path()->get_points();
+  if (!reference_points.empty()) {
+    auto comp = [](const ReferencePathPoint& p, const double s) {
+      return p.path_point.s() < s;
+    };
+    auto p_first_point = std::lower_bound(reference_points.begin(),
+                                          reference_points.end(), ego_s_, comp);
     if (p_first_point == reference_points.end()) {
       return;
-    }else{
-      for(auto current_point = p_first_point; current_point != reference_points.end(); current_point++){
+    } else {
+      for (auto current_point = p_first_point;
+           current_point != reference_points.end(); current_point++) {
         double lane_width = current_point->lane_width;
-        if(lane_width < 2.5){
+        if (lane_width < 2.5) {
           distance_to_stop_point_ = current_point->path_point.s() - ego_s_;
           return;
         }
@@ -1012,6 +1030,20 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
   }
 }
 
+bool SamplePolySpeedAdjustDecider::CheckTrajAvailable(
+    const SampleQuarticPolynomialCurve& current_traj, const int& index) {
+  double cur_s = current_traj.CalcS(index * kEvaluationStep);
+  if (st_sample_space_base_.get_gap_array().empty()) {
+    return false;
+  } else {
+    for (auto gap_array : st_sample_space_base_.get_gap_array()) {
+      if (gap_array.first.s() <= (cur_s - rear_edge_to_rear_axle_) && (cur_s + front_edge_to_rear_axle_)<= gap_array.second.s()) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
                                                 const double evaluate_cost_time,
                                                 const double all_cost_time) {
@@ -1126,16 +1158,14 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
     double match_gap_cost_s_sum = 0.0;
     double match_gap_cost_v_sum = 0.0;
     double match_gap_cost_center_sum = 0.0;
-    const auto& anchor_points_match_gap_cost_vec =
-        min_cost_traj_ptr_->anchor_points_match_gap_cost_vec();
-    for (size_t i = 0; i < anchor_points_match_gap_cost_vec.size(); i++) {
-      match_gap_cost_s_sum +=
-          anchor_points_match_gap_cost_vec[i].match_s_cost();
-      match_gap_cost_v_sum +=
-          anchor_points_match_gap_cost_vec[i].match_v_cost();
-      match_gap_cost_center_sum +=
-          anchor_points_match_gap_cost_vec[i].match_gap_center_cost();
-    }
+    const auto& anchor_points_match_gap_cost =
+        min_cost_traj_ptr_->anchor_points_match_gap_cost();
+    match_gap_cost_s_sum =
+        anchor_points_match_gap_cost.match_s_cost();
+    match_gap_cost_v_sum =
+        anchor_points_match_gap_cost.match_v_cost();
+    match_gap_cost_center_sum =
+        anchor_points_match_gap_cost.match_gap_center_cost();
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
         ->mutable_best_poly_cost_info()
         ->set_match_gap_cost_s_sum(match_gap_cost_s_sum);
