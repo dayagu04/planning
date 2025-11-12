@@ -110,7 +110,9 @@ const bool PerpendicularTailInPathGenerator::Update() {
       calc_params_.pre_plan_case != PrePlanCase::EGO_POSE &&
       calc_params_.should_prepare_second && !input_.is_replan_dynamic) {
     calc_params_.first_multi_plan = true;
-    PreparePathSecondPlan();
+    if (!PreparePathSecondPlan()) {
+      calc_params_.should_prepare_second = false;
+    }
   }
 
   bool set_multi_plan = true;
@@ -512,6 +514,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       return output_.path_segment_vec.size() > 0;
     }
 
+    calc_params_.should_prepare_second = false;
+
     if (optimal_dubins_geometry_path.path_count < 1) {
       ILOG_INFO << "use ego pose to multi_adjust plan";
       optimal_rough_geometry_path.PrintInfo();
@@ -521,11 +525,9 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       ILOG_INFO << "use mid point to multi_adjust plan";
       optimal_dubins_geometry_path.PrintInfo();
       optimal_rough_geometry_path.PrintInfo();
-      if (optimal_dubins_geometry_path.gear_change_count < 1 &&
-          optimal_dubins_geometry_path.cur_gear ==
+      if (optimal_dubins_geometry_path.gear_change_count > 0 ||
+          optimal_dubins_geometry_path.cur_gear !=
               geometry_lib::SEG_GEAR_REVERSE) {
-        calc_params_.should_prepare_second = false;
-      } else {
         calc_params_.should_prepare_second = true;
       }
       calc_params_.pre_plan_case = PrePlanCase::MID_POINT;
@@ -536,6 +538,9 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
     ILOG_INFO << "prepare path plan consume time = "
               << IflyTime::Now_ms() - pre_start_time << "ms";
+
+    ILOG_INFO << "calc_params_.should_prepare_second = "
+              << calc_params_.should_prepare_second;
 
     if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
       return true;
@@ -1954,6 +1959,7 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
     const geometry_lib::PathPoint& pose, const uint8_t ref_gear,
     geometry_lib::GeometryPath& optimal_geometry_path) {
   ILOG_INFO << "--- enter OptimalMultiAdjustPathPlan --- ";
+  ILOG_INFO << "ref_gear = " << geometry_lib::GetGearString(ref_gear);
   optimal_geometry_path.Reset();
   // plan all paths based on the current pose and select the optimal path
 
@@ -2520,7 +2526,10 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
   // 2. 只看1R阶段
   // 是否能一把入库，适用于正式泊车预规划阶段选择一个最优的切点
   // 3. 根据当前车辆位姿规划出所有路径，选择一条最优路径
-  ILOG_INFO << "ref_gear = " << geometry_lib::GetGearString(ref_gear);
+  ILOG_INFO << "ref_gear = " << geometry_lib::GetGearString(ref_gear)
+            << "  pre_plan_case = "
+            << static_cast<int>(calc_params_.pre_plan_case)
+            << "  multi plan = " << calc_params_.first_multi_plan;
   geometry_lib::GeometryPath geometry_path;
   if (plan_request == PlanRequest::ROUGH_PATH) {
     RoughMultiAdjustPathPlan(pose, ref_gear, geometry_path);
@@ -2565,7 +2574,8 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
         // 第一次规划 或第二次规划 或first multi plan 优先倒挡
         // 其他按照参考挡位来
         uint8_t pre_gear = ref_gear;
-        if (input_.is_replan_first || input_.is_replan_second ||
+        if (input_.is_replan_first ||
+            (input_.is_replan_second && calc_params_.should_prepare_second) ||
             calc_params_.first_multi_plan ||
             pre_gear == geometry_lib::SEG_GEAR_INVALID) {
           pre_gear = geometry_lib::SEG_GEAR_REVERSE;
