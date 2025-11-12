@@ -123,7 +123,7 @@ void MatchGapCost::GetCost(
       min_safe_distance_front =
           std::max(front_ttc_buffer, min_safe_distance_front);
     }
-    const double safe_border_distance_to_gap_front_obj =
+    safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
         linear_expand_extra_gap_distance_by_ego_vel(
             ego_current_vel, kEgoVelMax, kEgoVelMin, kExtraExpandDisMin,

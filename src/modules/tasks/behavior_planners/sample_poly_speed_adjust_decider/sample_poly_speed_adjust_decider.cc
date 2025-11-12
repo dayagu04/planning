@@ -222,8 +222,8 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
   for (size_t i = 0; i < count; i++) {
     st_sample_space_base_.GetAvailableGap(i);
-    for (size_t i = 0; i < sample_trajs_.size(); i++) {
-      auto& sample_traj_at_v = sample_trajs_[i];
+    for (size_t k = 0; k < sample_trajs_.size(); k++) {
+      auto& sample_traj_at_v = sample_trajs_[k];
       for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
         auto& sample_traj = sample_traj_at_v[j];
         if (CheckTrajAvailable(sample_traj, i)) {

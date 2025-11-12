@@ -123,6 +123,10 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const double cur_time) {
   // anchor points cost
   double last_cost = cost_sum_;
+  double last_arrived_s = arrived_s_;
+  double last_arrived_v = arrived_v_;
+  double last_arrived_a = arrived_a_;
+  double last_arrived_t = arrived_t_;
   cost_sum_ = 0.0;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
@@ -213,6 +217,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
                acc_limit_cost_.cost() + speed_change_cost_.cost() +
                stop_point_cost_.cost();
-  cost_sum_ = std::fmin(cost_sum_, last_cost);
+  if (cost_sum_ > last_cost) {
+    cost_sum_ = last_cost;
+    arrived_s_ = last_arrived_s;
+    arrived_v_ = last_arrived_v;
+    arrived_a_ = last_arrived_a;
+    arrived_t_ = last_arrived_t;
+  }
 }
 }  // namespace planning
