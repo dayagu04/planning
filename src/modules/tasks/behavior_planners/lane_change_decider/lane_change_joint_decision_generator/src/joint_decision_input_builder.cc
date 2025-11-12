@@ -22,7 +22,7 @@ JointDecisionInputBuilder::JointDecisionInputBuilder(
       std::make_unique<JointDecisionSpeedLimit>(config_builder, session);
 
   comfort_params_.v0 = 33.5;
-  comfort_params_.s0 = 3.5;
+  comfort_params_.s0 = 2.5;
   comfort_params_.T = config_.lc_thw;
   comfort_params_.a = 1.5;
   comfort_params_.b_max = 2.0;
