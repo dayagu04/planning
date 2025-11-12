@@ -46,6 +46,7 @@ constexpr double kCareLongDistance = 130;
 constexpr double kConstructionBucketSpacingThreshold = 8; // 国标是5m
 constexpr double kNumSatisfySonstructionAgent = 3;
 constexpr double kLaneAvailableLatPassThre = 0.5; // 锥桶侵入车道的距离阈值
+constexpr int kHysteresisFrames = 5;
 }  // namespace
 
 using namespace planning_math;
@@ -467,7 +468,7 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
     if (ego_rear_axis_to_front_edge + pass_buffer >= min_x) {
       is_pass_construction_area = true;
     }
-    if (points.size() < 2) {
+    if (points.size() < construction_agents_low_num) {
       continue;
     }
     // 计算相邻锥桶的纵向间距均值
@@ -495,9 +496,6 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
       right_avg_spacing <= kConstructionBucketSpacingThreshold)) {
     // 避免锥桶摆的较开，未聚成一类
     is_valid_construction_area = true;
-  }
-  if (!is_valid_construction_area) {
-    is_pass_construction_area = false;
   }
 
   if (is_valid_construction_area) {
@@ -532,8 +530,21 @@ void ConstructionSceneDecider::IsExistConstructionArea() {
     }
   }
 
-  is_exist_construction_area_ = is_valid_construction_area;
+  if (is_valid_construction_area) {
+    is_exist_construction_area_ = true;
+    no_construction_area_counter_ = 0;
+  } else {
+    no_construction_area_counter_ = std::min(kHysteresisFrames, no_construction_area_counter_ + 1);
+    if (no_construction_area_counter_ >= kHysteresisFrames) {
+      is_exist_construction_area_ = false;
+    } else {
+      is_exist_construction_area_ = true;
+    }
+  }
   is_pass_construction_area_ = is_pass_construction_area;
+  if (!is_exist_construction_area_) {
+    is_pass_construction_area_ = false;
+  }
   JSON_DEBUG_VALUE("is_exist_construction_area", is_exist_construction_area_);
   JSON_DEBUG_VALUE("is_pass_construction_area", is_pass_construction_area_);
 }
