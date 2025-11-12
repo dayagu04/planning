@@ -54,6 +54,7 @@ GriddedPathTimeGraph::GriddedPathTimeGraph(
   gridded_path_time_graph_config_ =
       config_builder->cast<DpStSpeedOptimizerConfig>();
   dp_poly_path_config_ = config_builder->cast<DpPolyPathConfig>();
+  normal_dp_poly_path_config_ = config_builder->cast<NormalDpPolyPathConfig>();
   speed_limit_config_ = config_builder->cast<SpeedLimitConfig>();
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -74,7 +75,8 @@ bool GriddedPathTimeGraph::Search(
     const std::vector<VirtualAgentSpatioTemporalInFo>& virtual_agents_info,
     const bool& last_enable_using_st_plan,
     planning::common::SpationTemporalUnionDpInput&
-        spatio_temporal_union_plan_input) {
+        spatio_temporal_union_plan_input,
+    bool& ego_in_intersection_state) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& virtual_lane_mgr =
@@ -179,49 +181,93 @@ bool GriddedPathTimeGraph::Search(
   auto lat_path_weight_params =
       spatio_temporal_union_plan_input.mutable_lat_path_weight_params();
   lat_path_weight_params->Clear();
-  lat_path_weight_params->set_path_l_cost_param_l0(
-      dp_poly_path_config_.path_l_cost_param_l0);
-  lat_path_weight_params->set_path_l_cost_param_k(
-      dp_poly_path_config_.path_l_cost_param_k);
-  lat_path_weight_params->set_path_l_cost_param_b(
-      dp_poly_path_config_.path_l_cost_param_b);
-  lat_path_weight_params->set_path_l_cost(dp_poly_path_config_.path_l_cost);
-  lat_path_weight_params->set_path_dl_cost(dp_poly_path_config_.path_dl_cost);
-  lat_path_weight_params->set_path_ddl_cost(dp_poly_path_config_.path_ddl_cost);
-  lat_path_weight_params->set_path_end_l_cost(
-      dp_poly_path_config_.path_end_l_cost);
-
   auto stitching_cost_params =
       spatio_temporal_union_plan_input.mutable_stitching_cost_params();
-  stitching_cost_params->set_path_l_stitching_cost_param(
-      dp_poly_path_config_.path_l_stitching_cost_param);
-  stitching_cost_params->set_stitching_cost_time_decay_factor(
-      dp_poly_path_config_.stitching_cost_time_decay_factor);
-  // lat_path_weight_params->set_path_l_stitching_cost_param(dp_poly_path_config_.path_l_stitching_cost_param);
-  // lat_path_weight_params->set_stitching_cost_time_decay_factor(dp_poly_path_config_.stitching_cost_time_decay_factor);
-
+  stitching_cost_params->Clear();
   auto dp_dynamic_agent_weight_params =
       spatio_temporal_union_plan_input.mutable_dp_dynamic_agent_weight_params();
   dp_dynamic_agent_weight_params->Clear();
-  dp_dynamic_agent_weight_params->set_obstacle_ignore_distance(
-      dp_poly_path_config_.obstacle_ignore_distance);
-  dp_dynamic_agent_weight_params->set_obstacle_longit_collision_distance(
-      dp_poly_path_config_.obstacle_longit_collision_distance);
-  dp_dynamic_agent_weight_params->set_obstacle_longit_risk_distance(
-      longit_risk_distance_between_obstacle);
-  dp_dynamic_agent_weight_params->set_obstacle_collision_cost(
-      dp_poly_path_config_.obstacle_collision_cost);
-  dp_dynamic_agent_weight_params->set_dynamic_obstacle_weight(
-      dp_poly_path_config_.dynamic_obstacle_weight);
-  dp_dynamic_agent_weight_params->set_default_obstacle_cost_weight(
-      dp_poly_path_config_.default_obstacle_cost_weight);
-  dp_dynamic_agent_weight_params->set_obstacle_lateral_risk_distance(
-      dp_poly_path_config_.obstacle_lateral_risk_distance);
-  dp_dynamic_agent_weight_params->set_obstacle_lateral_collision_distance(
-      dp_poly_path_config_.obstacle_lateral_collision_distance);
-  dp_dynamic_agent_weight_params
-      ->set_obstacle_collision_cost_without_lateral_overlap(
-          dp_poly_path_config_.obstacle_collision_cost_without_lateral_overlap);
+  if (ego_in_intersection_state) {
+    lat_path_weight_params->set_path_l_cost_param_l0(
+        dp_poly_path_config_.path_l_cost_param_l0);
+    lat_path_weight_params->set_path_l_cost_param_k(
+        dp_poly_path_config_.path_l_cost_param_k);
+    lat_path_weight_params->set_path_l_cost_param_b(
+        dp_poly_path_config_.path_l_cost_param_b);
+    lat_path_weight_params->set_path_l_cost(dp_poly_path_config_.path_l_cost);
+    lat_path_weight_params->set_path_dl_cost(dp_poly_path_config_.path_dl_cost);
+    lat_path_weight_params->set_path_ddl_cost(
+        dp_poly_path_config_.path_ddl_cost);
+    lat_path_weight_params->set_path_end_l_cost(
+        dp_poly_path_config_.path_end_l_cost);
+
+    stitching_cost_params->set_path_l_stitching_cost_param(
+        dp_poly_path_config_.path_l_stitching_cost_param);
+    stitching_cost_params->set_stitching_cost_time_decay_factor(
+        dp_poly_path_config_.stitching_cost_time_decay_factor);
+
+    dp_dynamic_agent_weight_params->set_obstacle_ignore_distance(
+        dp_poly_path_config_.obstacle_ignore_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_longit_collision_distance(
+        dp_poly_path_config_.obstacle_longit_collision_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_longit_risk_distance(
+        longit_risk_distance_between_obstacle);
+    dp_dynamic_agent_weight_params->set_obstacle_collision_cost(
+        dp_poly_path_config_.obstacle_collision_cost);
+    dp_dynamic_agent_weight_params->set_dynamic_obstacle_weight(
+        dp_poly_path_config_.dynamic_obstacle_weight);
+    dp_dynamic_agent_weight_params->set_default_obstacle_cost_weight(
+        dp_poly_path_config_.default_obstacle_cost_weight);
+    dp_dynamic_agent_weight_params->set_obstacle_lateral_risk_distance(
+        dp_poly_path_config_.obstacle_lateral_risk_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_lateral_collision_distance(
+        dp_poly_path_config_.obstacle_lateral_collision_distance);
+    dp_dynamic_agent_weight_params
+        ->set_obstacle_collision_cost_without_lateral_overlap(
+            dp_poly_path_config_
+                .obstacle_collision_cost_without_lateral_overlap);
+  } else {
+    lat_path_weight_params->set_path_l_cost_param_l0(
+        normal_dp_poly_path_config_.path_l_cost_param_l0);
+    lat_path_weight_params->set_path_l_cost_param_k(
+        normal_dp_poly_path_config_.path_l_cost_param_k);
+    lat_path_weight_params->set_path_l_cost_param_b(
+        normal_dp_poly_path_config_.path_l_cost_param_b);
+    lat_path_weight_params->set_path_l_cost(
+        normal_dp_poly_path_config_.path_l_cost);
+    lat_path_weight_params->set_path_dl_cost(
+        normal_dp_poly_path_config_.path_dl_cost);
+    lat_path_weight_params->set_path_ddl_cost(
+        normal_dp_poly_path_config_.path_ddl_cost);
+    lat_path_weight_params->set_path_end_l_cost(
+        normal_dp_poly_path_config_.path_end_l_cost);
+
+    stitching_cost_params->set_path_l_stitching_cost_param(
+        normal_dp_poly_path_config_.path_l_stitching_cost_param);
+    stitching_cost_params->set_stitching_cost_time_decay_factor(
+        normal_dp_poly_path_config_.stitching_cost_time_decay_factor);
+
+    dp_dynamic_agent_weight_params->set_obstacle_ignore_distance(
+        normal_dp_poly_path_config_.obstacle_ignore_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_longit_collision_distance(
+        normal_dp_poly_path_config_.obstacle_longit_collision_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_longit_risk_distance(
+        longit_risk_distance_between_obstacle);
+    dp_dynamic_agent_weight_params->set_obstacle_collision_cost(
+        normal_dp_poly_path_config_.obstacle_collision_cost);
+    dp_dynamic_agent_weight_params->set_dynamic_obstacle_weight(
+        normal_dp_poly_path_config_.dynamic_obstacle_weight);
+    dp_dynamic_agent_weight_params->set_default_obstacle_cost_weight(
+        normal_dp_poly_path_config_.default_obstacle_cost_weight);
+    dp_dynamic_agent_weight_params->set_obstacle_lateral_risk_distance(
+        normal_dp_poly_path_config_.obstacle_lateral_risk_distance);
+    dp_dynamic_agent_weight_params->set_obstacle_lateral_collision_distance(
+        normal_dp_poly_path_config_.obstacle_lateral_collision_distance);
+    dp_dynamic_agent_weight_params
+        ->set_obstacle_collision_cost_without_lateral_overlap(
+            normal_dp_poly_path_config_
+                .obstacle_collision_cost_without_lateral_overlap);
+  }
 
   auto long_weight_params =
       spatio_temporal_union_plan_input.mutable_long_weight_params();
