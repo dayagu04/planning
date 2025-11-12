@@ -415,4 +415,13 @@ void StopPointCost::GetCost(const double distance_to_stop_point) {
               ? 0.0
               : std::pow((-distance_to_stop_point + 10.0), 2.0);
 }
+
+void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
+                                   const double ego_v,
+                                   const double ego_pred_s) {
+  double follow_dis =
+      leading_veh_pred_s - (ego_pred_s + front_edge_to_rear_axle_);
+  double thw = follow_dis / std::fmax(ego_v, kZeroEpsilon);
+  cost_ = thw > 6.0 ? weight_ * std::exp((thw - 6.0) / 10.0) : 0.0;
+}
 }  // namespace planning

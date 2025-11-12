@@ -18,6 +18,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
+    const double weight_leading_veh_follow_s,
     const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
   poly_ = poly;
   arrived_t_ = arrived_t;
@@ -47,6 +48,8 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   anchor_points_match_gap_cost_.SetWeightMatchS(weight_match_gap_s);
   anchor_points_match_gap_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle,
                                                      back_edge_to_rear_axle);
+  leading_veh_follow_s_cost_.SetWeight(weight_leading_veh_follow_s);
+  leading_veh_follow_s_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
 };
 
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -155,8 +158,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_arrived_v, anchor_matched_lower_st_point.velocity(),
       anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false);
   if ((anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
-          safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj) <
-      5.0) {
+       safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj) < 5.0) {
     return;
   }
   cost_sum_ = 0.0;
@@ -190,6 +192,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
                                    leading_veh_v);
   }
 
+  if (leading_veh_id != kNoAgentId && leading_veh_id != -1 &&
+      anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
+    leading_veh_follow_s_cost_.GetCost(
+        leading_veh_s + leading_veh_v * arrived_t_, arrived_v_, arrived_s_);
+  }
+
   const double vel_integral = CalcVelIntegral(arrived_t_);
   speed_variable_cost_.GetCost(vel_integral);
 
@@ -217,12 +225,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  cost_sum_ += anchor_points_match_gap_cost_.cost() + follow_vel_cost_.cost() +
-               stop_line_cost_.cost() * speed_differ_gain +
-               leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
-               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
-               acc_limit_cost_.cost() + speed_change_cost_.cost() +
-               stop_point_cost_.cost();
+  cost_sum_ = anchor_points_match_gap_cost_.cost() + follow_vel_cost_.cost() +
+              stop_line_cost_.cost() * speed_differ_gain +
+              leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
+              gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
+              acc_limit_cost_.cost() + speed_change_cost_.cost() +
+              stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost();
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;
     arrived_s_ = last_arrived_s;

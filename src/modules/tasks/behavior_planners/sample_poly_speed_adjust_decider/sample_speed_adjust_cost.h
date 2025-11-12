@@ -120,4 +120,18 @@ class StopPointCost : public CurveCost {
   StopPointCost() = default;
   void GetCost(const double distance_to_stop_point);
 };
+
+class LeadingVehFollowCost : public CurveCost {
+ public:
+  LeadingVehFollowCost() = default;
+  void GetCost(const double leading_veh_pred_s, const double ego_v,
+               const double ego_pred_s);
+  void SetWeight(const double weight) { weight_ = weight; }
+  void SetRearAxleToBumpDis(const double& front_edge_to_rear_axle) {
+    front_edge_to_rear_axle_ = front_edge_to_rear_axle;
+  }
+
+ private:
+  double front_edge_to_rear_axle_;
+};
 }  // namespace planning

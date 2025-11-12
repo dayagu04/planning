@@ -1268,6 +1268,7 @@
     "kNormalSceneWeightAccLimit": 25.0,
     "kNormalSceneWeightStopPenalty": 2.5,
     "kNormalSceneWeightSpeedChange": 10.0,
+    "kNormalSceneWeightLeadingVehFollowS": 0.0,
     "kPurseFlowVelSceneWeightMatchGapVel": 0.0,
     "kPurseFlowVelSceneWeightMatchGapS": 0.0,
     "kPurseFlowVelSceneWeightFollowVel": 6.25,
@@ -1279,6 +1280,7 @@
     "kPurseFlowVelSceneWeightAccLimit": 25.0,
     "kPurseFlowVelSceneWeightStopPenalty": 2.5,
     "kPurseFlowVelSceneWeightSpeedChange": 0.0,
+    "kPurseFlowVelSceneWeightLeadingVehFollowS": 0.0,
     "kDeclerationSceneWeightMatchGapVel": 4.5,
     "kDeclerationSceneWeightMatchGapS": 2.5,
     "kDeclerationSceneWeightFollowVel": 0.0,
@@ -1289,7 +1291,8 @@
     "kDeclerationSceneWeightGapAvailable": 2.5,
     "kDeclerationSceneWeightAccLimit": 0.0,
     "kDeclerationSceneWeightStopPenalty": 0.0,
-    "kDeclerationSceneWeightSpeedChange": 0.0
+    "kDeclerationSceneWeightSpeedChange": 0.0,
+    "kDeclerationSceneWeightLeadingVehFollowS": 0.0
   },
   "dp_path_decider":{
     "coeff_l_cost":10.0,

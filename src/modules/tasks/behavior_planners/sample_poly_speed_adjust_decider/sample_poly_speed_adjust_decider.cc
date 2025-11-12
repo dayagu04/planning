@@ -192,8 +192,8 @@ bool SamplePolySpeedAdjustDecider::SamplePolys() {
           weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
           weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
           weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
-          weight_speed_change_, front_edge_to_rear_axle_,
-          rear_edge_to_rear_axle_);
+          weight_speed_change_, weight_leading_veh_follow_s_,
+          front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
 
       sample_traj_at_t.emplace_back(std::move(quartic_sample_traj));
     }
@@ -748,8 +748,8 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
             weight_match_gap_vel_, weight_match_gap_s_, weight_follow_vel_,
             weight_stop_line_, weight_leading_safe_s_, weight_vel_variable_,
             weight_gap_avaliable_, weight_acc_limit_, weight_stop_penalty_,
-            weight_speed_change_, front_edge_to_rear_axle_,
-            rear_edge_to_rear_axle_);
+            weight_speed_change_, weight_leading_veh_follow_s_,
+            front_edge_to_rear_axle_, rear_edge_to_rear_axle_);
     const double stitched_poly_checked_s =
         stitched_last_best_quartic_poly_ptr_->CalcS(evaulation_t_);
     planning::speed::STPoint stitched_poly_checked_lower_st_point,
@@ -834,6 +834,8 @@ void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
   weight_acc_limit_ = config_.kNormalSceneWeightAccLimit;
   weight_stop_penalty_ = config_.kNormalSceneWeightStopPenalty;
   weight_speed_change_ = config_.kNormalSceneWeightSpeedChange;
+  weight_leading_veh_follow_s_ =
+      config_.kDeclerationSceneWeightLeadingVehFollowS;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
@@ -848,6 +850,8 @@ void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
   weight_acc_limit_ = config_.kPurseFlowVelSceneWeightAccLimit;
   weight_stop_penalty_ = config_.kPurseFlowVelSceneWeightStopPenalty;
   weight_speed_change_ = config_.kPurseFlowVelSceneWeightSpeedChange;
+  weight_leading_veh_follow_s_ =
+      config_.kPurseFlowVelSceneWeightLeadingVehFollowS;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
@@ -862,6 +866,8 @@ void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
   weight_acc_limit_ = config_.kDeclerationSceneWeightAccLimit;
   weight_stop_penalty_ = config_.kDeclerationSceneWeightStopPenalty;
   weight_speed_change_ = config_.kDeclerationSceneWeightSpeedChange;
+  weight_leading_veh_follow_s_ =
+      config_.kDeclerationSceneWeightLeadingVehFollowS;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(

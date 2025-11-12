@@ -934,6 +934,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     kNormalSceneWeightSpeedChange = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "kNormalSceneWeightSpeedChange"});
+    kNormalSceneWeightLeadingVehFollowS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kNormalSceneWeightLeadingVehFollowS"});
     kPurseFlowVelSceneWeightMatchGapVel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "kPurseFlowVelSceneWeightMatchGapVel"});
@@ -967,6 +970,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     kPurseFlowVelSceneWeightSpeedChange = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "kPurseFlowVelSceneWeightSpeedChange"});
+    kPurseFlowVelSceneWeightLeadingVehFollowS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kPurseFlowVelSceneWeightLeadingVehFollowS"});
     kDeclerationSceneWeightMatchGapVel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "kDeclerationSceneWeightMatchGapVel"});
@@ -1000,6 +1006,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     kDeclerationSceneWeightSpeedChange = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "kDeclerationSceneWeightSpeedChange"});
+    kDeclerationSceneWeightLeadingVehFollowS = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "kDeclerationSceneWeightLeadingVehFollowS"});
   }
 
   int sample_v_nums = 15;
@@ -1021,6 +1030,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double kNormalSceneWeightAccLimit = 25.0;
   double kNormalSceneWeightStopPenalty = 2.5;
   double kNormalSceneWeightSpeedChange = 10.0;
+  double kNormalSceneWeightLeadingVehFollowS = 0.0;
 
   double kPurseFlowVelSceneWeightMatchGapVel = 0.0;
   double kPurseFlowVelSceneWeightMatchGapS = 0.0;
@@ -1033,6 +1043,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double kPurseFlowVelSceneWeightAccLimit = 25.0;
   double kPurseFlowVelSceneWeightStopPenalty = 2.5;
   double kPurseFlowVelSceneWeightSpeedChange = 0.0;
+  double kPurseFlowVelSceneWeightLeadingVehFollowS = 0.0;
 
   double kDeclerationSceneWeightMatchGapVel = 4.5;
   double kDeclerationSceneWeightMatchGapS = 2.5;
@@ -1045,6 +1056,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double kDeclerationSceneWeightAccLimit = 0.0;
   double kDeclerationSceneWeightStopPenalty = 0.0;
   double kDeclerationSceneWeightSpeedChange = 0.0;
+  double kDeclerationSceneWeightLeadingVehFollowS = 0.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
