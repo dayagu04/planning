@@ -531,6 +531,7 @@ void RouteInfo::CaculateMergeInfo(
     bool is_find_first_merge_onfo = false;
     for (int i = 0; i < merge_info.size(); i++) {
       const auto& merge_info_temp = merge_info[i];
+      bool is_road_merged_by_other_lane = false;
       if (merge_info_temp.second > kEpsilon) {
         const auto& merge_seg = merge_info_temp.first;
         if (!merge_seg) {
@@ -550,37 +551,30 @@ void RouteInfo::CaculateMergeInfo(
         if (!merge_seg_last_other_seg) {
           break;
         }
-
-        if (!is_find_first_merge_onfo) {
-          bool is_road_merged_by_other_lane = false;
-          if (sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
-              !sdpro_map.isRamp(merge_seg->link_type()) &&
-              route_info_output_.is_on_ramp) {
-            route_info_output_.is_ramp_merge_to_road_on_expressway = true;
-          }
-          // 对于other_merge/merge的判断
-          if (route_info_output_.is_ego_on_expressway) {
-            if (merge_seg_last_seg->lane_num() >
-                merge_seg_last_other_seg->lane_num()) {
+        // 对于other_merge/merge的判断
+        if (route_info_output_.is_ego_on_expressway) {
+          if (merge_seg_last_seg->lane_num() >
+              merge_seg_last_other_seg->lane_num()) {
+            route_info_output_.is_road_merged_by_other_lane = true;
+            is_road_merged_by_other_lane = true;
+          } else if (merge_seg_last_seg->lane_num() ==
+                     merge_seg_last_other_seg->lane_num()) {
+            if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
+                !sdpro_map.isRamp(merge_seg->link_type()) &&
+                !sdpro_map.isSaPa(merge_seg->link_type()) &&
+                !route_info_output_.is_on_ramp) {
               route_info_output_.is_road_merged_by_other_lane = true;
               is_road_merged_by_other_lane = true;
-            } else if (merge_seg_last_seg->lane_num() ==
-                       merge_seg_last_other_seg->lane_num()) {
-              if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
-                  !sdpro_map.isRamp(merge_seg->link_type()) &&
-                  !sdpro_map.isSaPa(merge_seg->link_type()) &&
-                  !route_info_output_.is_on_ramp) {
-                route_info_output_.is_road_merged_by_other_lane = true;
-                is_road_merged_by_other_lane = true;
-              } else {
-                route_info_output_.is_road_merged_by_other_lane = false;
-                is_road_merged_by_other_lane = false;
-              }
             } else {
               route_info_output_.is_road_merged_by_other_lane = false;
               is_road_merged_by_other_lane = false;
             }
+          } else {
+            route_info_output_.is_road_merged_by_other_lane = false;
+            is_road_merged_by_other_lane = false;
           }
+        }
+        if (!is_find_first_merge_onfo) {
           if (sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
               sdpro_map.isRamp(merge_seg->link_type()) &&
               route_info_output_.is_on_ramp) {
@@ -643,6 +637,8 @@ void RouteInfo::CaculateMergeInfo(
             second_merge_region_lane_tupo_info.split_direction =
                 static_cast<SplitDirection>(
                     route_info_output_.second_merge_direction);
+            second_merge_region_lane_tupo_info.is_other_merge_to_road =
+                is_road_merged_by_other_lane;
             route_info_output_.merge_region_info_list.emplace_back(
                 second_merge_region_lane_tupo_info);
           }
@@ -2028,7 +2024,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                       exchange_feasible_lane_distances[i],
                                       max_distances[i]);
 
-      if (i < valid_exchange_regions.size() - 1) {
+      if (i < iteration_num) {
         std::vector<int> missing_elements =
             findMissingElements(valid_exchange_regions[i]
                                     .recommend_lane_num[2]
