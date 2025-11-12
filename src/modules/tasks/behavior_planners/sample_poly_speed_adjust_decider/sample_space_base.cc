@@ -333,7 +333,7 @@ void STSampleSpaceBase::GetAvailableGap(const int index) {
       lower_st_point.set_info(interval.second.s(), current_time,
                               interval.second.velocity(),
                               interval.second.agent_id(), -1);
-      if (current_gap.second.s() - current_gap.first.s() < 5.0) {
+      if ((current_gap.second.s() - current_gap.first.s()) >= 5.0) {
         gap_array_.push_back(current_gap);
       }
     }
