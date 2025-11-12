@@ -159,7 +159,11 @@ const bool NarrowSpaceScenario::CheckVerticalSlotFinished() {
   }
 
   // for more wide slot, finish condition is easy.
-  if (lon_condition && static_condition && remain_s_condition) {
+  const bool heading_condition =
+      std::fabs(ego_info.terminal_err.heading) <=
+      apa_param.GetParam().astar_config.wide_slot_finish_heading_err * kDeg2Rad;
+  if (lon_condition && static_condition && remain_s_condition &&
+      heading_condition) {
     Polygon2D local;
     GetVehPolygonBy12Edge(0.08, 0.0, &local);
     Polygon2D global;
@@ -1337,7 +1341,7 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
   // no path
   size_t path_point_size = current_path_point_global_vec_.size();
   if (current_path_point_global_vec_.size() <= 1) {
-    return 0.0;
+    return remain_dist;
   }
 
   const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
@@ -1348,7 +1352,7 @@ const double NarrowSpaceScenario::CalRemainDistFromPath() {
   nearest_point_id =
       GetNearestPathPoint(current_path_point_global_vec_, ego_pose);
   if (nearest_point_id >= path_point_size) {
-    return 0.0;
+    return remain_dist;
   }
 
   // calc base vector
