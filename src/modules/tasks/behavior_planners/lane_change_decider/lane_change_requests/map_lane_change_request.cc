@@ -17,7 +17,7 @@ MapRequest::MapRequest(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
-void MapRequest::Update(int lc_status, double lc_map_tfinish) {
+void MapRequest::Update(int lc_status, double lc_map_tfinish, const RequestSource request_source) {
   ILOG_INFO << "MapRequest::update";
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
@@ -49,6 +49,14 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
 
   if (is_mlc_enable) {
     GenerateMLCRequest();
+  } else {
+    if (request_type_ != NO_CHANGE && !is_last_mlc_enable_ && request_source == MAP_REQUEST) {
+      Finish();
+      set_target_lane_virtual_id(
+          lane_change_lane_mgr_->origin_lane_virtual_id());
+      is_in_avoidance_mlc = false;
+      avoidance_MLC_counter = 0;
+    }
   }
   if (trigger_lane_change_cancel_) {
     lc_request_cancel_reason_ = IntCancelReasonType::MANUAL_CANCEL;
@@ -57,6 +65,7 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish) {
     is_in_avoidance_mlc = false;
     avoidance_MLC_counter = 0;
   }
+  is_last_mlc_enable_ = is_mlc_enable;
   ILOG_DEBUG << "MapRequest::update: finished";
 }
 
