@@ -46,7 +46,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   anchor_points_match_gap_cost_.SetWeightMatchVel(weight_match_gap_vel);
   anchor_points_match_gap_cost_.SetWeightMatchS(weight_match_gap_s);
   anchor_points_match_gap_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle,
-                                                    back_edge_to_rear_axle);
+                                                     back_edge_to_rear_axle);
 };
 
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -82,6 +82,8 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             bool is_front_car) {
   double differ_acc =
       std::fabs(ego_a - obj_a) < kZeroEpsilon ? 0.001 : (ego_a - obj_a);
+  differ_acc =
+      std::fabs(differ_acc) * std::max(0.5, std::fabs(differ_acc)) / differ_acc;
   const double calculate_collision_time = (obj_v - ego_v) / differ_acc;
   if (calculate_collision_time < 0.0 ||
       calculate_collision_time > prediction_time_) {
@@ -127,7 +129,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_v = arrived_v_;
   double last_arrived_a = arrived_a_;
   double last_arrived_t = arrived_t_;
-  cost_sum_ = 0.0;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
   const double& anchor_arrived_t = cur_time;
@@ -153,7 +154,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
   const double safe_distance_to_gap_back_obj = CalcGapVelSafeDistance(
       anchor_arrived_v, anchor_matched_lower_st_point.velocity(),
       anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false);
-
+  if ((anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
+          safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj) <
+      5.0) {
+    return;
+  }
+  cost_sum_ = 0.0;
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
@@ -211,7 +217,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  cost_sum_ += anchor_points_match_gap_cost_.cost()+ follow_vel_cost_.cost() +
+  cost_sum_ += anchor_points_match_gap_cost_.cost() + follow_vel_cost_.cost() +
                stop_line_cost_.cost() * speed_differ_gain +
                leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
                gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +

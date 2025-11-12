@@ -56,7 +56,6 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
                           const int& index);
 
-
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
   LanChangeSafetyCheckConfig lc_safety_distance_config_;

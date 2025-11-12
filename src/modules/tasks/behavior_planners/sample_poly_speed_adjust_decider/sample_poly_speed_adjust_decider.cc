@@ -1037,7 +1037,8 @@ bool SamplePolySpeedAdjustDecider::CheckTrajAvailable(
     return false;
   } else {
     for (auto gap_array : st_sample_space_base_.get_gap_array()) {
-      if (gap_array.first.s() <= (cur_s - rear_edge_to_rear_axle_) && (cur_s + front_edge_to_rear_axle_)<= gap_array.second.s()) {
+      if (gap_array.first.s() <= (cur_s - rear_edge_to_rear_axle_) &&
+          (cur_s + front_edge_to_rear_axle_) <= gap_array.second.s()) {
         return true;
       }
     }
@@ -1160,10 +1161,8 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
     double match_gap_cost_center_sum = 0.0;
     const auto& anchor_points_match_gap_cost =
         min_cost_traj_ptr_->anchor_points_match_gap_cost();
-    match_gap_cost_s_sum =
-        anchor_points_match_gap_cost.match_s_cost();
-    match_gap_cost_v_sum =
-        anchor_points_match_gap_cost.match_v_cost();
+    match_gap_cost_s_sum = anchor_points_match_gap_cost.match_s_cost();
+    match_gap_cost_v_sum = anchor_points_match_gap_cost.match_v_cost();
     match_gap_cost_center_sum =
         anchor_points_match_gap_cost.match_gap_center_cost();
     sample_poly_speed_pb_info->mutable_sample_print_table_info()
