@@ -762,6 +762,21 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE(
       "road_right_sideway_exist_flag",
       GetContext.get_road_info()->current_lane.right_sideway_exist_flag);
+  JSON_DEBUG_VALUE(
+      "sideway_relative_id_zero_nums",
+      GetContext.get_road_info()->current_lane.sideway_relative_id_zero_nums);
+  JSON_DEBUG_VALUE(
+      "left_lane_samedir_exist_flag",
+      GetContext.get_road_info()->current_lane.left_lane_samedir_exist_flag);
+  JSON_DEBUG_VALUE(
+      "right_lane_samedir_exist_flag",
+      GetContext.get_road_info()->current_lane.right_lane_samedir_exist_flag);
+  JSON_DEBUG_VALUE(
+      "left_sideway_near_gap_tmp",
+      GetContext.get_road_info()->current_lane.left_sideway_near_gap_tmp);
+  JSON_DEBUG_VALUE(
+      "right_sideway_near_gap_tmp",
+      GetContext.get_road_info()->current_lane.right_sideway_near_gap_tmp);
   //   JSON_DEBUG_VALUE("road_left_departure_permission_flag",
   //                    GetContext.get_road_info()
   //                        ->current_lane.left_safe_departure_permission_flag);

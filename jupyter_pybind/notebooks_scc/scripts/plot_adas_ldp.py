@@ -83,8 +83,9 @@ adas_json_value_list =  [ #adas_debug info
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_","ldp_handsoff_duration_",
-                         ]
+                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_",
+                         "sideway_relative_id_zero_nums","left_lane_samedir_exist_flag","left_sideway_near_gap_tmp","right_lane_samedir_exist_flag","right_sideway_near_gap_tmp",
+                        ]
 
 json_vector_list = ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                     "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
@@ -284,6 +285,9 @@ fig_left_line_info.line('time', 'road_left_line_line_type', source = adas_json_l
 fig_left_line_info.line('time', 'road_left_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'left_line_boundary_type')
 fig_left_line_info.line('time', 'road_left_sideway_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'left_sideway_exist_flag')
 fig_left_line_info.line('time', 'road_left_departure_permission_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'left_departure_permission_flag')
+fig_left_line_info.line('time', 'left_lane_samedir_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'left_lane_samedir_exist_flag')
+fig_left_line_info.line('time', 'sideway_relative_id_zero_nums', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'sideway_relative_id_zero_nums')
+fig_left_line_info.line('time', 'left_sideway_near_gap_tmp', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'left_sideway_near_gap_tmp')
 
 f_right_line_info = fig_right_line_info.line('time', 'road_right_line_valid', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'right_line_valid')
 fig_right_line_info.line('time', 'road_right_roadedge_valid', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'right_roadedge_valid')
@@ -291,6 +295,9 @@ fig_right_line_info.line('time', 'road_right_line_line_type', source = adas_json
 fig_right_line_info.line('time', 'road_right_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'right_line_boundary_type')
 fig_right_line_info.line('time', 'road_right_sideway_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'right_sideway_exist_flag')
 fig_right_line_info.line('time', 'road_right_departure_permission_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_departure_permission_flag')
+fig_right_line_info.line('time', 'right_lane_samedir_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_lane_samedir_exist_flag')
+fig_right_line_info.line('time', 'right_sideway_near_gap_tmp', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_sideway_near_gap_tmp')
+
 
 f_relative_line_info = fig_relative_line_info.line('time', 'road_lane_changed_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'lane_changed_flag')
 fig_relative_line_info.line('time', 'state_fl_wheel_distance_to_line', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fl_wheel_distance_to_line')
@@ -355,9 +362,10 @@ hover_right_machine = HoverTool(renderers=[f_right_machine], tooltips=[('time', 
 hover_trig_caculate = HoverTool(renderers=[f_trig_caculate], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'), ('ldp_preview_left_y_gap', '@ldp_preview_left_y_gap'),
                                                          ('ldp_preview_right_y_gap', '@ldp_preview_right_y_gap'), ('ldp_tlc_threshold_', '@ldp_tlc_threshold_'),('ldp_roadedge_tlc_threshold_', '@ldp_roadedge_tlc_threshold_'),], mode='vline')
 hover_left_line_info = HoverTool(renderers=[f_left_line_info], tooltips=[('time', '@time'), ('road_left_line_valid', '@road_left_line_valid'), ('road_left_roadedge_valid', '@road_left_roadedge_valid'),
-                                                         ('road_left_line_line_type', '@road_left_line_line_type'), ('road_left_line_boundary_type', '@road_left_line_boundary_type'),], mode='vline')
+                                                         ('road_left_line_line_type', '@road_left_line_line_type'), ('road_left_line_boundary_type', '@road_left_line_boundary_type'), ('left_lane_samedir_exist_flag', '@left_lane_samedir_exist_flag'),
+                                                         ('sideway_relative_id_zero_nums', '@sideway_relative_id_zero_nums'),('left_sideway_near_gap_tmp', '@left_sideway_near_gap_tmp'),], mode='vline')
 hover_right_line_info = HoverTool(renderers=[f_right_line_info], tooltips=[('time', '@time'), ('road_right_line_valid', '@road_right_line_valid'), ('road_right_roadedge_valid', '@road_right_roadedge_valid'),
-                                             ('road_right_line_line_type', '@road_right_line_line_type'), ('road_right_line_boundary_type', '@road_right_line_boundary_type'),], mode='vline')
+                                             ('road_right_line_line_type', '@road_right_line_line_type'), ('road_right_line_boundary_type', '@road_right_line_boundary_type'),('right_lane_samedir_exist_flag', '@right_lane_samedir_exist_flag'),('right_sideway_near_gap_tmp', '@right_sideway_near_gap_tmp'),], mode='vline')
 hover_relative_line_info = HoverTool(renderers=[f_relative_line_info], tooltips=[('time', '@time'), ('state_fl_wheel_distance_to_line', '@state_fl_wheel_distance_to_line'), ('state_fl_wheel_distance_to_roadedge', '@state_fl_wheel_distance_to_roadedge'),
                                              ('state_fr_wheel_distance_to_line', '@state_fr_wheel_distance_to_line'), ('state_fr_wheel_distance_to_roadedge', '@state_fr_wheel_distance_to_roadedge'), ('road_lane_width_valid', '@road_lane_width_valid'),
                                              ('road_lane_width', '@road_lane_width')], mode='vline')

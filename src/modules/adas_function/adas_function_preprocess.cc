@@ -165,8 +165,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "hmi_ldp_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_elk_state, int,
                        "hmi_elk_state");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch, int,
-                       "tsr_function_test_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch,
+                       int, "tsr_function_test_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_supp_sign_type_test, int,
                        "tsr_supp_sign_type_test");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_state, int,
@@ -1576,8 +1576,8 @@ void Preprocess::SidewayExistJudge(void) {
           }
           near_gap_tmp =
               fabs(current_left_car_point.y() - left_right_car_point.y());
-          // GetContext.mutable_road_info()
-          //     ->current_lane.left_sideway_near_gap_tmp = near_gap_tmp;
+          GetContext.mutable_road_info()
+              ->current_lane.left_sideway_near_gap_tmp = near_gap_tmp;
 
           if (near_gap_tmp > 0.6) {
             un_match_point_num++;
@@ -1637,6 +1637,8 @@ void Preprocess::SidewayExistJudge(void) {
           }
           near_gap_tmp =
               fabs(current_right_car_point.y() - right_lrft_car_point.y());
+          GetContext.mutable_road_info()
+              ->current_lane.right_sideway_near_gap_tmp = near_gap_tmp;
           if (near_gap_tmp > 0.6) {
             un_match_point_num++;
           }
@@ -1654,9 +1656,13 @@ void Preprocess::SidewayExistJudge(void) {
   //     left_sideway_exist_flag;
   // GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
   //     right_sideway_exist_flag;
-  // GetContext.mutable_road_info()->current_lane.sideway_relative_id_zero_nums
-  // =
-  //     ptr_virtual_lane_manager->origin_relative_id_zero_nums();
+  //新增可视化分析数据
+  GetContext.mutable_road_info()->current_lane.left_lane_samedir_exist_flag =
+      left_lane_samedir_exist_flag;
+  GetContext.mutable_road_info()->current_lane.right_lane_samedir_exist_flag =
+      right_lane_samedir_exist_flag;
+  GetContext.mutable_road_info()->current_lane.sideway_relative_id_zero_nums =
+      ptr_virtual_lane_manager->origin_relative_id_zero_nums();
   //以下是判断是否存在origin_relative_id_zero_nums车道不同的场景，两个车道的id相同，证明有交叉
   bool right_cross_sideway_exist_flag = false;
   bool left_cross_sideway_exist_flag = false;
@@ -1680,12 +1686,12 @@ void Preprocess::SidewayExistJudge(void) {
       no_sideway_exist_time_counts = 1.0;  // 防止溢出
     } else {
       if (
-        //ptr_virtual_lane_manager->get_left_lane() == nullptr &&
+          // ptr_virtual_lane_manager->get_left_lane() == nullptr &&
           relative_id_zero_nums > 1) {
         left_cross_sideway_exist_flag = true;
       }
       if (
-        //ptr_virtual_lane_manager->get_right_lane() == nullptr &&
+          // ptr_virtual_lane_manager->get_right_lane() == nullptr &&
           relative_id_zero_nums > 1) {
         right_cross_sideway_exist_flag = true;
       }

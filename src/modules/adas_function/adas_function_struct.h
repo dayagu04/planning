@@ -340,6 +340,12 @@ struct LaneInfo {
   bool lane_changed_flag;
   bool left_sideway_exist_flag;
   bool right_sideway_exist_flag;
+  int sideway_relative_id_zero_nums;
+  bool left_lane_samedir_exist_flag;
+  bool right_lane_samedir_exist_flag;
+  double left_sideway_near_gap_tmp;
+  double right_sideway_near_gap_tmp;
+
   // bool left_safe_departure_permission_flag = false;
   // bool right_safe_departure_permission_flag = false;
   bool left_parallel_car_flag = false;
@@ -363,10 +369,10 @@ struct LastCycleInfo {
   bool right_turn_light_state = false;  // 右转向灯状态  false:关闭 true:开启
   double yaw_rad = 0.0;                 // 定位yaw角
   double accelerator_pedal_pos = 0.0;  // 实际加速踏板开度百分比 范围:[0-100]
-  bool ldp_left_intervention=false;
-  bool ldp_right_intervention=false;
-  bool elk_left_intervention=false;
-  bool elk_right_intervention=false;
+  bool ldp_left_intervention = false;
+  bool ldp_right_intervention = false;
+  bool elk_left_intervention = false;
+  bool elk_right_intervention = false;
 };
 
 // 限速标识牌信息，包括限速，解除限速
