@@ -271,6 +271,7 @@ class ApaSlotManager final {
   const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
       ApaSlot& slot);
 
+  const bool IsNeedRecommendParkOut();
   const bool RecommendParkOut();
   const bool LongitudinalConditions(const double dot_product, ApaSlot& slot);
   const bool LateralConditions(double dot_product, ApaSlot& slot);

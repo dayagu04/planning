@@ -104,10 +104,10 @@ void ApaSlotManager::Update(
     }
   }
 
-  if (state_machine_ptr_->GetStateMachine() ==
-          ApaStateMachine::MANUAL_PARKING &&
-      measure_data_ptr_->GetStaticFlag()) {
+  if (IsNeedRecommendParkOut()) {
     recommend_park_out_ = RecommendParkOut();
+  } else {
+    recommend_park_out_ = false;
   }
 
   // 泊出
@@ -968,6 +968,14 @@ const bool ApaSlotManager::LateralConditions(double dot_product,
   constexpr double kCosineValueMaximumAngle = 0.9962;  // cos(5°)
 
   return cos_theta > kCosineValueMaximumAngle ? true : false;
+}
+
+const bool ApaSlotManager::IsNeedRecommendParkOut() {
+  const bool car_type = apa_param.GetParam().car_type == 4;
+  const bool current_state =
+      state_machine_ptr_->GetStateMachine() == ApaStateMachine::MANUAL_PARKING;
+  const bool car_static_flag = measure_data_ptr_->GetStaticFlag();
+  return current_state && car_static_flag && car_type;
 }
 
 }  // namespace apa_planner

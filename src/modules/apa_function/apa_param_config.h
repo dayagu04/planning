@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+
 #include "src/modules/common/speed/apa_speed_decision.h"
 
 #ifndef apa_param
@@ -47,10 +48,9 @@ const std::string GetAnalyticExpansionTypeString(
     const AnalyticExpansionType type);
 void PrintAnalyticExpansionType(const AnalyticExpansionType type,
                                 const bool enable_log = true);
-const std::string GetUseObsHeightMethodString(
-    const UseObsHeightMethod method);
+const std::string GetUseObsHeightMethodString(const UseObsHeightMethod method);
 void PrintUseObsHeightMethod(const UseObsHeightMethod method,
-                                const bool enable_log = true);
+                             const bool enable_log = true);
 
 struct AstarParkingConfig {
   bool perpendicular_slot_auto_switch_to_astar;
@@ -390,6 +390,7 @@ struct ApaParameters {
   double plan_time = 0.1;
 
   // car params
+  int car_type = 3;
   double front_overhanging = 0.924;
   // back edge to rear axis
   double rear_overhanging = 0.94;
@@ -793,7 +794,7 @@ class ApaParametersSetting {
   ApaParameters &SetParam() { return param_; }
 
  private:
-  ApaParametersSetting(){};
+  ApaParametersSetting() {};
 
   // apa parameters
   ApaParameters param_;

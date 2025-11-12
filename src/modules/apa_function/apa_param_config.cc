@@ -155,6 +155,8 @@ void SyncParkingParameters(const bool is_simulation) {
   } else {
     car_type_int = 0;
   }
+
+  param.car_type = car_type_int;
   JSON_DEBUG_VALUE("car_type", car_type_int);
   ILOG_INFO << "car_type_string = " << car_type_string
             << "  car_type = " << car_type_int;
@@ -1310,8 +1312,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "in_slot_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_path_buffer.in_slot_extra_turn_lat_buffer,
                   float, "in_slot_extra_turn_lat_buffer");
-  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_buffer_in_slot,
-                  float, "parallel_col_buffer_in_slot");
+  JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_buffer_in_slot, float,
+                  "parallel_col_buffer_in_slot");
   JSON_READ_VALUE(param.lat_lon_path_buffer.parallel_col_small_buffer_in_slot,
                   float, "parallel_col_small_buffer_in_slot");
 
