@@ -177,8 +177,7 @@ void ParkingScenarioManager::Process() {
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_SUSPEND) {
     ScenarioSuspend();
   } else if (scenario_status_ == ParkingScenarioStatus::STATUS_MANUAL) {
-    apa_hmi_data_.recommend_park_out =
-        apa_world_->GetSlotManagerPtr()->GetRecommendParkOut() ? TRUE : FALSE;
+    SetFunctionRecommendPark();
   }
 
   return;
@@ -560,6 +559,11 @@ void ParkingScenarioManager::ScenarioSuspend() {
   PubStopReason();
 
   return;
+}
+
+void ParkingScenarioManager::SetFunctionRecommendPark() {
+  apa_hmi_data_.recommend_park_out =
+      apa_world_->GetSlotManagerPtr()->GetRecommendParkOut() ? TRUE : FALSE;
 }
 
 }  // namespace apa_planner

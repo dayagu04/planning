@@ -77,6 +77,7 @@ class ParkingScenarioManager final {
   const bool PubPreparePathByStableStrategy();
 
   void ScenarioSuspend();
+  void SetFunctionRecommendPark();
 
  private:
   // reset if scenario is null or slot is not release.
