@@ -644,11 +644,11 @@ class LoadRosbag:
                          "is_cone_lane_change_situation_", "cone_alc_trigger_counter_", "cone_lane_change_direction_", "cone_nums_of_front_objects", "is_emergency_avoidance_situation_", "leading_vehicle_id_", \
                          "both_lane_line_exist_virtual_or_not_","is_merge_lane_change_situation_", "merge_alc_trigger_counter_", "left_boundary_exist_virtual_type", "right_boundary_exist_virtual_type", \
                          'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
-                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost", \
+                         "SccLonBehaviorCostTime", "SccLonMotionCostTime", "dynamic_world_cost","construction_manual_intervention_detected",\
                          "front_node_id", "rear_node_id","prohibit_acc_", "lane_borrow_agent_id", "lane_borrow_agent_v_limit", 'ego_ttc_to_front_invade_agent', 'avoid_agent_id', 'avoid_agent_v_limit', "construction_lat_dist_flag",\
                          "v_target_construction","v_target_near_construction","dis_to_construction","is_exist_construction_area","is_pass_construction_area","construction_strong_deceleration_mode","construction_strong_mode_reason","construction_strong_mode_frame_count",\
                          "ego_left_node", "ego_left_front_node", "ego_left_rear_node", "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", \
-                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
+                         "ego_right_node", "ego_right_front_node", "ego_right_rear_node", "v_cruise_limit","v_target_decider","v_target_type_code",\
                          "current_intersection_state", "last_intersection_state", "distance_to_stopline", "traffic_status_straight", "v_target_intersection", "v_target_virtual_obs", "distance_to_crosswalk", "v_target_for_dangerous_obs", "dangerous_obs_id",\
                          "lane_width", "smooth_lateral_offset", "normal_left_avoid_threshold","normal_right_avoid_threshold", "lat_offset","smooth_lateral_offset", "avoid_way", "allow_side_max_opposite_offset", "allow_side_max_opposite_offset_id", \
                          "allow_front_max_opposite_offset", "allow_front_max_opposite_offset_id", "ego_l", "avoid_car_id", "avoid_car_ids_1", "avoid_car_ids_2", \
