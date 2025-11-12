@@ -4967,6 +4967,8 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
                      "distance_to_go_threshold_behind_of_large_vehicle");
     ReadItem<double>(json, start_to_cruise_vel_threshold, "speed_planning",
                      "start_stop_decider", "start_to_cruise_vel_threshold");
+    ReadItem<double>(json, stop_destination_to_ego_distance, "speed_planning",
+                    "start_stop_decider", "stop_destination_to_ego_distance");
   }
   double large_vehicle_length = 8.0;
   double lower_speed_min_follow_distance_gap = 2.5;
@@ -4986,6 +4988,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
+  double stop_destination_to_ego_distance = 3.0;
 };
 
 struct EgoMotionPreplannerConfig : public EgoPlanningConfig {

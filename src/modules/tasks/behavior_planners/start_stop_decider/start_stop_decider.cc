@@ -44,7 +44,7 @@ bool StartStopDecider::Execute() {
       ego_start_stop_info_.state() == common::StartStopInfo::STOP &&
       cipv_is_destination_target &&
       cipv_relative_s_ <
-          config_.distance_start_between_ego_and_cipv_threshold) {
+          config_.stop_destination_to_ego_distance) {
     rads_scene_is_completed_ = true;
   }
 
