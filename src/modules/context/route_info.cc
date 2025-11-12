@@ -1779,7 +1779,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         task_num.emplace_back(1);
         route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
       }
-      relative_id_lane->set_current_tasks(task_num);
+      if (!task_num.empty()) {
+        relative_id_lane->set_current_tasks(task_num);
+      }
       feasible_lane_sequence.emplace_back(-1);
       feasible_lane_distance.clear();
       mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
@@ -2048,13 +2050,15 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           std::vector<int> avoide_lane_num;
           bool is_need_cancel_avoide_mlc = false;
           if (is_two_exchange_close) {
-            for (int n = 0; n < mlc_request_info_list[i].first.size(); n++) {
-              if (mlc_request_info_list[i].first[n].mlc_request_type ==
-                      AVOIDE_MERGE ||
-                  mlc_request_info_list[i].first[n].mlc_request_type ==
-                      AVOIDE_DIVERGE) {
-                avoide_lane_num.emplace_back(
-                    mlc_request_info_list[i].first[n].lane_num);
+            if (i < mlc_request_info_list.size()) {
+              for (int n = 0; n < mlc_request_info_list[i].first.size(); n++) {
+                if (mlc_request_info_list[i].first[n].mlc_request_type ==
+                        AVOIDE_MERGE ||
+                    mlc_request_info_list[i].first[n].mlc_request_type ==
+                        AVOIDE_DIVERGE) {
+                  avoide_lane_num.emplace_back(
+                      mlc_request_info_list[i].first[n].lane_num);
+                }
               }
             }
             if (!avoide_lane_num.empty()) {
@@ -2094,6 +2098,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
+  if (valid_exchange_regions.empty()) {
+    return;
+  }
   const auto first_exchange_region_info = valid_exchange_regions[0];
   if (first_exchange_region_info.split_link_id !=
           mlc_decider_route_info_.first_static_split_region_info
@@ -5866,6 +5873,9 @@ void RouteInfo::FindNextMergeExpandTypeFp(
 void RouteInfo::ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
     const std::map<int, double>& feasible_lane_distance) {
+  if (!relative_id_lane) {
+    return;
+  }
   const auto& lane_nums = relative_id_lane->get_lane_nums();
   int left_lane_num = 0;
 
