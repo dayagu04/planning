@@ -1770,10 +1770,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       std::vector<int> task_num;
       if (split_region_info_list[0].split_direction == SPLIT_LEFT) {
         task_num.emplace_back(-1);
-        route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
+        route_info_output_.mlc_request_type_route_info.mlc_request_type =
+            OTHER_TYPE_MLC;
+        route_info_output_.mlc_request_type_route_info
+            .distance_to_exchange_region =
+            split_region_info_list[0].distance_to_split_point;
       } else if (split_region_info_list[0].split_direction == SPLIT_RIGHT) {
         task_num.emplace_back(1);
-        route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
+        route_info_output_.mlc_request_type_route_info.mlc_request_type =
+            OTHER_TYPE_MLC;
+        route_info_output_.mlc_request_type_route_info
+            .distance_to_exchange_region =
+            split_region_info_list[0].distance_to_split_point;
       }
       if (!task_num.empty()) {
         relative_id_lane->set_current_tasks(task_num);
@@ -1904,6 +1912,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     bool is_exist_merge_fp = false;
     double distance_to_next_split = NL_NMAX;
     double distance_to_next_merge = NL_NMAX;
+    route_info_output_.merge_point_info.reset();
     if (!split_region_info_list.empty()) {
       distance_to_next_split =
           split_region_info_list[0].distance_to_split_point;
@@ -1996,7 +2005,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_type = RAMP_TO_MAIN;
         }
       }
-      route_info_output_.mlc_request_type_route_info = mlc_type;
+      route_info_output_.mlc_request_type_route_info.mlc_request_type =
+          mlc_type;
+      route_info_output_.mlc_request_type_route_info
+          .distance_to_exchange_region =
+          route_info_output_.merge_point_info.dis_to_merge_fp;
       relative_id_lane->set_current_tasks(lc_num_task);
       route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
       return;
@@ -2242,6 +2255,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             MLCRequestType{.lane_num = lane_num,
                            .mlc_request_type = RAMP_TO_MAIN,
                            .split_direction = split_dir});  // 使用map中的方向
+        mlc_request_info_list.emplace_back(
+            mlc_request_info_,
+            route_info_output_.merge_point_info.dis_to_merge_fp);
         feasible_lane_sequence.erase(it);
         is_exist_merge_fp = true;
       }
@@ -2274,7 +2290,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 向mlc_decider_route_info_赋值
   mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
 
-  route_info_output_.mlc_request_type_route_info = None_MLC;
+  route_info_output_.mlc_request_type_route_info.reset();
   int minVal_seq = feasible_lane_sequence[0];
   int maxVal_seq = feasible_lane_sequence[0];
   for (int num : feasible_lane_sequence) {
@@ -2382,6 +2398,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
     SplitDirection mlc_split_direction = SPLIT_NONE;
     EgoMLCRequestType mlc_type = None_MLC;
+    double distance_to_lc_exchange_region = NL_NMAX;
     if (!lc_num_task.empty()) {
       if (lc_num_task[0] == -1) {
         mlc_split_direction = SPLIT_LEFT;
@@ -2401,6 +2418,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           is_found = (it != mlc_request_info.end());
           if (is_found) {
             mlc_type = it->mlc_request_type;
+            distance_to_lc_exchange_region = mlc_request_info_list[i].second;
             break;
           }
         }
@@ -2410,7 +2428,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         mlc_type = OTHER_TYPE_MLC;
       }
     }
-    route_info_output_.mlc_request_type_route_info = mlc_type;
+    route_info_output_.mlc_request_type_route_info.mlc_request_type = mlc_type;
+    route_info_output_.mlc_request_type_route_info.distance_to_exchange_region =
+        distance_to_lc_exchange_region;
+
     relative_id_lane->set_current_tasks(lc_num_task);
   }
 
@@ -2891,7 +2912,8 @@ void RouteInfo::UpdateVisionInfo() const {
                    static_cast<int>(route_info_output_.is_miss_split_point));
   JSON_DEBUG_VALUE(
       "mlc_request_type",
-      static_cast<int>(route_info_output_.mlc_request_type_route_info));
+      static_cast<int>(
+          route_info_output_.mlc_request_type_route_info.mlc_request_type));
   JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
 }
 
@@ -4800,9 +4822,10 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() {
     }
   }
   if (!task_num.empty()) {
-    route_info_output_.mlc_request_type_route_info = OTHER_TYPE_MLC;
+    route_info_output_.mlc_request_type_route_info.mlc_request_type =
+        OTHER_TYPE_MLC;
   } else {
-    route_info_output_.mlc_request_type_route_info = None_MLC;
+    route_info_output_.mlc_request_type_route_info.mlc_request_type = None_MLC;
   }
   return task_num;
 }

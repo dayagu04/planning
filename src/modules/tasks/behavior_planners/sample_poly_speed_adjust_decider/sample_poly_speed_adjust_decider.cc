@@ -520,7 +520,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
-       route_info_output.mlc_request_type_route_info != RAMP_TO_MAIN);
+       route_info_output.mlc_request_type_route_info.mlc_request_type != RAMP_TO_MAIN);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
@@ -568,7 +568,7 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
   bool is_left_edge_side_lane = llane == nullptr;
   bool is_right_edge_side_lane = rlane == nullptr;
   bool is_split_lc_to_left =
-      route_info_output.mlc_request_type_route_info == KEEP_LEFT &&
+      route_info_output.mlc_request_type_route_info.mlc_request_type == KEEP_LEFT &&
       !is_left_edge_side_lane;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
@@ -631,11 +631,11 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       }
     }
   } else if (lane_change_source_ == MAP_REQUEST &&
-             (route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN ||
-              route_info_output.mlc_request_type_route_info == MAIN_TO_RAMP ||
+             (route_info_output.mlc_request_type_route_info.mlc_request_type == RAMP_TO_MAIN ||
+              route_info_output.mlc_request_type_route_info.mlc_request_type == MAIN_TO_RAMP ||
               is_split_lc_to_left)) {
     bool is_ramp_to_main =
-        route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN;
+        route_info_output.mlc_request_type_route_info.mlc_request_type == RAMP_TO_MAIN;
     if (boundary_merge_point_valid_) {
       const auto& boundary_merge_point =
           session_->planning_context()
