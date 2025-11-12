@@ -161,12 +161,6 @@ void RouteInfo::UpdateRouteInfoForNOA(
     }
   }
 
-  if (IsClosingIntersectionEntrance(
-          link, sdpro_map,
-          route_info_output_.current_segment_passed_distance)) {
-    route_info_output_.reset();
-    return;
-  }
   const iflymapdata::sdpro::LinkInfo_Link& current_link = *link;
   const auto& sdpro_map_info = local_view.sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
@@ -179,6 +173,13 @@ void RouteInfo::UpdateRouteInfoForNOA(
 
   // 计算split信息
   CaculateSplitInfo(sdpro_map, current_link, nearest_s, max_search_length);
+
+  if (IsClosingIntersectionEntrance(
+          link, sdpro_map,
+          route_info_output_.current_segment_passed_distance)) {
+    route_info_output_.reset();
+    return;
+  }
 
   // 计算距离上一个merge点的信息
   if (mlc_decider_route_info_.is_triggle_cal_dis_to_last_merge_point) {
@@ -4883,14 +4884,33 @@ bool RouteInfo::IsClosingIntersectionEntrance(
           if (!next_link) {
             return false;
           }
-          if ((current_link->link_class() !=
+          bool is_link_class_not_expressway =
+              (current_link->link_class() !=
                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
                current_link->link_class() !=
                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY) ||
               (next_link->link_class() !=
                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
                next_link->link_class() !=
-                   iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) {
+                   iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY);
+          bool is_exchange_region_before_intersection = false;
+          double distance_to_next_exchange_region = NL_NMAX;
+          if (!route_info_output_.split_region_info_list.empty()) {
+            distance_to_next_exchange_region =
+                std::min(distance_to_next_exchange_region,
+                         route_info_output_.split_region_info_list[0]
+                             .distance_to_split_point);
+          }
+          if (!route_info_output_.merge_region_info_list.empty()) {
+            distance_to_next_exchange_region =
+                std::min(distance_to_next_exchange_region,
+                         route_info_output_.merge_region_info_list[0]
+                             .distance_to_split_point);
+          }
+          is_exchange_region_before_intersection =
+              distance_to_next_exchange_region < distance_to_this_point;
+          if (is_link_class_not_expressway &&
+              !is_exchange_region_before_intersection) {
             return true;
           }
         }
