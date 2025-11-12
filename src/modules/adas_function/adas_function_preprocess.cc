@@ -1679,13 +1679,14 @@ void Preprocess::SidewayExistJudge(void) {
       right_cross_sideway_exist_flag = false;
       no_sideway_exist_time_counts = 1.0;  // 防止溢出
     } else {
-      if (ptr_virtual_lane_manager->get_left_lane() == nullptr &&
-          (relative_id_zero_nums > 1)) {
+      if (
+        //ptr_virtual_lane_manager->get_left_lane() == nullptr &&
+          relative_id_zero_nums > 1) {
         left_cross_sideway_exist_flag = true;
       }
-      if ((ptr_virtual_lane_manager->get_right_lane() == nullptr ||
-           right_lane_samedir_exist_flag == true) &&
-          (relative_id_zero_nums > 1)) {
+      if (
+        //ptr_virtual_lane_manager->get_right_lane() == nullptr &&
+          relative_id_zero_nums > 1) {
         right_cross_sideway_exist_flag = true;
       }
     }
