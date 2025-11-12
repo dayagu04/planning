@@ -63,6 +63,8 @@ message LongitudinalPlanningInput {
   optional double q_djerk_bound = 42;
   repeated double djerk_max_vec = 43;
   repeated double djerk_min_vec = 44;
+  optional double q_acc_start = 45;
+  optional double q_jerk_start = 46;
 }
 
 message LongitudinalPlanningOutput {

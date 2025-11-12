@@ -103,17 +103,26 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[JERK_MAX] = planning_input.jerk_max_vec(i);
     cost_config_vec.at(i)[JERK_MIN] = planning_input.jerk_min_vec(i);
 
-    // weights
+    const double start_increase_rate = 0.15;
+    double start_increase_factor = 1.0 - std::exp(-start_increase_rate * i);
+
     cost_config_vec.at(i)[W_REF_POS] =
         planning_input.s_weights(i);  // dynamic weight
-    // cost_config_vec.at(i)[W_REF_POS] = planning_input.q_ref_pos(); // fixed
-    // weight
+
     cost_config_vec.at(i)[W_REF_VEL] = planning_input.v_weights(i);
-    cost_config_vec.at(i)[W_ACC] = planning_input.q_acc();
-    cost_config_vec.at(i)[W_JERK] = planning_input.q_jerk();
+
+    cost_config_vec.at(i)[W_ACC] =
+        planning_input.q_acc_start() +
+        start_increase_factor *
+            (planning_input.q_acc() - planning_input.q_acc_start());
+
+    cost_config_vec.at(i)[W_JERK] =
+        planning_input.q_jerk_start() +
+        start_increase_factor *
+            (planning_input.q_jerk() - planning_input.q_jerk_start());
+
     cost_config_vec.at(i)[W_SNAP] = planning_input.q_snap();
 
-    // 软边界权重指数衰减
     double boundary_decay_rate = 0.15;
     double boundary_decay_factor = std::exp(-boundary_decay_rate * i);
     cost_config_vec.at(i)[W_POS_BOUND] =

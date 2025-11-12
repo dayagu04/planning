@@ -30,33 +30,28 @@ class ComfortTarget : public Target {
   ~ComfortTarget() = default;
 
   struct ComfortParameters {
-    double v0 = 33.5;
-    double s0 = 3.5;
-    double T = 1.0;
-    double a = 1.5;
-    double b_max = 2.0;
-    double b = 1.0;
-    double b_hard = 4.0;
-    double delta = 4.0;
-    double max_accel_jerk = 3.0;
-    double min_decel_jerk = 1.0;
-    double max_decel_jerk = 1.5;
-    double virtual_front_s = 200.0;
-    double cool_factor = 0.99;
-    double follow_consider_distance = 15.0;
-    double follow_consider_time_headway = 1.5;
-    double delay_time_buffer = 0.3;
-    double w_speed_low = 0.0;
-    double w_speed_high = 1.0;
-    double w_gap_low = 6.0;
-    double w_gap_high = 10.0;
-    double eps = 1e-3;
+    double v0;
+    double s0;
+    double T;
+    double a;
+    double b_max;
+    double b;
+    double b_hard;
+    double delta;
+    double max_accel_jerk;
+    double min_decel_jerk;
+    double max_decel_jerk;
+    double virtual_front_s;
+    double cool_factor;
+    double follow_consider_distance;
+    double follow_consider_time_headway;
+    double delay_time_buffer;
+    double w_speed_low;
+    double w_speed_high;
+    double w_gap_low;
+    double w_gap_high;
+    double eps;
   };
-
-  const std::vector<double> _L_SLOPE_BP{0.0, 40.0};
-  const std::vector<double> _L_SLOPE_V{0.35, 0.08};
-  const std::vector<double> _P_SLOPE_BP{0., 40.0};
-  const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 
   struct FollowAgentInfo {
     int32_t agent_id = 899999;
@@ -75,15 +70,8 @@ class ComfortTarget : public Target {
   double CalculateComfortAcceleration(
       const double current_acc, const double current_vel,
       const double current_s, const double front_vel, const double front_s,
-      const double tau, const double decel_jerk, const double zero_acc_vel,
-      double& v_target) const;
-
-  double CalcDesiredVelocity(const double d_rel, const double d_des,
-                             const double v_lead, const double v_ego) const;
-
-  double SmoothStep(const double x, const double edge0,
-                    const double edge1) const;
-
+      const double tau, const double decel_jerk, double& v_target) const;
+      
   void AddComfortTargetDataToProto();
 
  private:

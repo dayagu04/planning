@@ -3729,7 +3729,9 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<double>(json, q_ref_pos, "long_motion_ilqr", "q_ref_pos");
     ReadItem<double>(json, q_ref_vel, "long_motion_ilqr", "q_ref_vel");
     ReadItem<double>(json, q_acc, "long_motion_ilqr", "q_acc");
+    ReadItem<double>(json, q_acc_start, "long_motion_ilqr", "q_acc_start");
     ReadItem<double>(json, q_jerk, "long_motion_ilqr", "q_jerk");
+    ReadItem<double>(json, q_jerk_start, "long_motion_ilqr", "q_jerk_start");
     ReadItem<double>(json, q_djerk, "long_motion_ilqr", "q_djerk");
     ReadItem<double>(json, q_soft_pos_bound, "long_motion_ilqr",
                      "q_soft_pos_bound");
@@ -3801,11 +3803,14 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_acc_speed_adjust");
     ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
                      "q_jerk_speed_adjust");
+                     
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;
   double q_acc = 10.0;
+  double q_acc_start = 2.0;
   double q_jerk = 5.0;
+  double q_jerk_start = 10.0;
   double q_djerk = 5.0;
 
   double q_soft_pos_bound = 5.0;
@@ -4606,9 +4611,6 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, distance_stop_between_ego_and_cipv_threshold,
                      "speed_planning", "start_stop_decider",
                      "distance_stop_between_ego_and_cipv_threshold");
-    ReadItem<double>(json, distance_stop_between_ego_and_large_cipv_threshold,
-                     "speed_planning", "start_stop_decider",
-                     "distance_stop_between_ego_and_large_cipv_threshold");
     ReadItem<double>(json, distance_to_go_threshold, "speed_planning",
                      "start_stop_decider", "distance_to_go_threshold");
     ReadItem<double>(json, distance_to_go_threshold_behind_of_large_vehicle,
@@ -4632,7 +4634,6 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_start_between_ego_and_large_cipv_threshold = 0.5;
   double distance_start_between_ego_and_cipv_threshold = 0.4;
   double distance_stop_between_ego_and_cipv_threshold = 3.0;
-  double distance_stop_between_ego_and_large_cipv_threshold = 4.0;
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
