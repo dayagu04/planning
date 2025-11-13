@@ -1,7 +1,7 @@
 {
-  "car_type": "chery_m32t",
+  "car_type": "jac_s811",
   "mark_date": "20241114",
-  "lkas_version":"20251013",
+  "lkas_version":"20251023",
   "tsr_ihc_version":"20251015",
   "jac_s811": {
     "wheel_base": 2.72,
@@ -10,22 +10,6 @@
     "ego_width": 1.89,
     "origin_2_front_bumper": 3.67,
     "origin_2_rear_bumper": 0.950
-  },
-  "chery_e0x": {
-    "wheel_base": 3.0,
-    "steer_ratio": 13.04,
-    "ego_length": 4.955,
-    "ego_width": 1.975,
-    "origin_2_front_bumper": 4.05,
-    "origin_2_rear_bumper": 0.925
-  },
-  "chery_m32t": {
-    "wheel_base": 2.8,
-    "steer_ratio": 13.04,
-    "ego_length": 4.78,
-    "ego_width": 1.89,
-    "origin_2_front_bumper": 3.75,
-    "origin_2_rear_bumper": 1.03
   },
   "dt": 0.1,
   "lon_distance_buffer0": 0.0,
@@ -113,13 +97,12 @@
     3.50,
     3.50,
     3.50
-  ], 
+  ],
   "obj_relative_speed_tab ": [
     5.00,
     10.00,
     15.00
-  ], 
-
+  ],
   "elk_roadedge_supp_curv_r_thr":300.00,
   "elk_roadedge_supp_curv_r_dur":2.0,
   "ldw_enable_speed": 27.555,
@@ -152,7 +135,7 @@
   "hmi_elk_state": 0,
   "hmi_tsr_state": 0,
   "hmi_tsr_speed_limit": 0,
-  "ldp_fault_code_maskcode": 4294959039,
+  "ldp_fault_code_maskcode": 4294967231,
   "ldp_enable_code_maskcode": 4294967295,
   "ldp_disable_code_maskcode": 4294967295,
   "ldp_left_suppression_code_maskcode": 4294964223,
@@ -161,12 +144,12 @@
   "ldp_right_kickdown_code_maskcode": 4294967295,
   "ldw_enable_code_maskcode": 4294967295,
   "ldw_disable_code_maskcode": 4294967295,
-  "ldw_fault_code_maskcode": 4294959039,
+  "ldw_fault_code_maskcode": 4294967231,
   "ldw_left_suppression_code_maskcode": 4294967295,
   "ldw_left_kickdown_code_maskcode": 4294967295,
   "ldw_right_suppression_code_maskcode": 4294967295,
   "ldw_right_kickdown_code_maskcode": 4294967295,
-  "elk_fault_code_maskcode": 4294959039,
+  "elk_fault_code_maskcode": 4294967231,
   "elk_enable_code_maskcode": 4294967295,
   "elk_disable_code_maskcode": 4294967295,
   "elk_left_suppression_code_maskcode": 4294966271,
