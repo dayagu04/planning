@@ -395,7 +395,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       if (point.s < ego_base_s + 3.0) {
         continue;
       }
-      if (point.s > ego_base_s + 80.0) {
+      if (point.s > ego_base_s + 100.0) {
         break;
       }
 
@@ -411,7 +411,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       if (point.s < ego_base_s + 3.0) {
         continue;
       }
-      if (point.s > ego_base_s + 80.0) {
+      if (point.s > ego_base_s + 100.0) {
         break;
       }
       if (point.right_lane_border_type ==
@@ -555,7 +555,7 @@ void MergeRequest::MakesureVirtualLaneSideIsVirtual(
     if (point.s < ego_s + 3.0) {
       continue;
     }
-    if (point.s > ego_s + 65.0) {
+    if (point.s > ego_s + 100.0) {
       break;
     }
 
@@ -572,7 +572,7 @@ void MergeRequest::MakesureVirtualLaneSideIsVirtual(
     if (point.s < ego_s + 3.0) {
       continue;
     }
-    if (point.s > ego_s + 65.0) {
+    if (point.s > ego_s + 100.0) {
       break;
     }
     if (point.right_lane_border_type ==
