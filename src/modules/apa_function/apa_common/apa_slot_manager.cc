@@ -472,6 +472,15 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   const Eigen::Vector2d n =
       slot.origin_corner_coord_global_.pt_23mid_01mid_unit_vec;
 
+  const Eigen::Vector2d pt_23_unit_vec =
+      slot.origin_corner_coord_global_.pt_23_unit_vec;
+
+  const Eigen::Vector2d pM23_ego = measure_data_ptr_->GetPos() - pM23;
+  if (geometry_lib::GetCrossFromTwoVec2d(pt_23_unit_vec, pM23_ego) > 0.0) {
+    ILOG_INFO << "pt_23_unit_vec cross pM23_ego > 0.0, slot id = " << slot.id_;
+    return SlotReleaseVoterType::CLEAR;
+  }
+
   const auto& slot_release_buffer = param.lat_lon_slot_release_buffer;
 
   const std::vector<double> lat_body_buffer_vec{

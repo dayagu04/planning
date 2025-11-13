@@ -780,8 +780,11 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.prepare_adjust_reverse_max_length, double,
                   "prepare_adjust_reverse_max_length");
 
-  JSON_READ_VALUE(param.prepare_single_max_allow_time, double,
-                  "prepare_single_max_allow_time");
+  JSON_READ_VALUE(param.prepare_single_max_allow_time_searching, double,
+                  "prepare_single_max_allow_time_searching");
+
+  JSON_READ_VALUE(param.prepare_single_max_allow_time_parking, double,
+                  "prepare_single_max_allow_time_parking");
 
   JSON_READ_VALUE(param.prepare_max_try_count, int, "prepare_max_try_count");
 
