@@ -3854,6 +3854,133 @@ struct JointMotionPlannerConfig : public EgoPlanningConfig {
   double lc_thw = 0.5;  // lane change time headway, added by clzhao9
 };
 
+struct JointDecisionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, q_ego_ref_x, "lane_change_joint_decision", "q_ego_ref_x");
+    ReadItem<double>(json, q_ego_ref_y, "lane_change_joint_decision", "q_ego_ref_y");
+    ReadItem<double>(json, q_ego_ref_theta, "lane_change_joint_decision",
+                     "q_ego_ref_theta");
+    ReadItem<double>(json, q_ego_ref_delta, "lane_change_joint_decision",
+                     "q_ego_ref_delta");
+    ReadItem<double>(json, q_ego_ref_vel, "lane_change_joint_decision",
+                     "q_ego_ref_vel");
+    ReadItem<double>(json, q_ego_ref_acc, "lane_change_joint_decision",
+                     "q_ego_ref_acc");
+
+    ReadItem<double>(json, q_obs_ref_x, "lane_change_joint_decision", "q_obs_ref_x");
+    ReadItem<double>(json, q_obs_ref_y, "lane_change_joint_decision", "q_obs_ref_y");
+    ReadItem<double>(json, q_obs_ref_theta, "lane_change_joint_decision",
+                     "q_obs_ref_theta");
+    ReadItem<double>(json, q_obs_ref_delta, "lane_change_joint_decision",
+                     "q_obs_ref_delta");
+    ReadItem<double>(json, q_obs_ref_vel, "lane_change_joint_decision",
+                     "q_obs_ref_vel");
+    ReadItem<double>(json, q_obs_ref_acc, "lane_change_joint_decision",
+                     "q_obs_ref_acc");
+
+    ReadItem<double>(json, curv_factor, "lane_change_joint_decision", "curv_factor");
+
+    ReadItem<double>(json, three_disc_safe_dist, "lane_change_joint_decision",
+                     "three_disc_safe_dist");
+    ReadItem<double>(json, q_three_disc_safe_dist_weight,
+                     "lane_change_joint_decision", "q_three_disc_safe_dist_weight");
+
+    ReadItem<double>(json, road_boundary_safe_dist, "lane_change_joint_decision",
+                     "road_boundary_safe_dist");
+    ReadItem<double>(json, q_road_boundary_weight, "lane_change_joint_decision",
+                     "q_road_boundary_weight");
+
+    ReadItem<double>(json, q_ego_acc_weight, "lane_change_joint_decision",
+                     "q_ego_acc_weight");
+    ReadItem<double>(json, q_ego_jerk_weight, "lane_change_joint_decision",
+                     "q_ego_jerk_weight");
+    ReadItem<double>(json, q_ego_omega_weight, "lane_change_joint_decision",
+                     "q_ego_omega_weight");
+    ReadItem<double>(json, q_ego_delta_weight, "lane_change_joint_decision",
+                     "q_ego_delta_weight");
+    ReadItem<double>(json, q_obs_jerk_weight, "lane_change_joint_decision",
+                     "q_obs_jerk_weight");
+    ReadItem<double>(json, q_obs_omega_weight, "lane_change_joint_decision",
+                     "q_obs_omega_weight");
+
+    ReadItem<double>(json, q_ego_acc_bound_weight, "lane_change_joint_decision",
+                     "q_ego_acc_bound_weight");
+    ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision", "ego_acc_max");
+    ReadItem<double>(json, ego_acc_min, "lane_change_joint_decision", "ego_acc_min");
+
+    ReadItem<double>(json, q_ego_jerk_bound_weight, "lane_change_joint_decision",
+                     "q_ego_jerk_bound_weight");
+    ReadItem<double>(json, ego_jerk_max, "lane_change_joint_decision",
+                     "ego_jerk_max");
+    ReadItem<double>(json, ego_jerk_min, "lane_change_joint_decision",
+                     "ego_jerk_min");
+
+    ReadItem<double>(json, q_hard_halfplane_weight, "lane_change_joint_decision",
+                     "q_hard_halfplane_weight");
+    ReadItem<double>(json, hard_halfplane_dist, "lane_change_joint_decision",
+                     "hard_halfplane_dist");
+    ReadItem<double>(json, halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+                     "halfplane_cost_allocation_ratio");
+    ReadItem<double>(json, q_soft_halfplane_weight, "lane_change_joint_decision",
+                     "q_soft_halfplane_weight");
+    ReadItem<double>(json, soft_halfplane_s0, "lane_change_joint_decision",
+                     "soft_halfplane_s0");
+    ReadItem<double>(json, soft_halfplane_tau, "lane_change_joint_decision",
+                     "soft_halfplane_tau");
+    ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+                     "soft_halfplane_cost_allocation_ratio");
+    ReadItem<double>(json, lc_thw, "lane_change_joint_decision",
+                     "lc_thw");
+  }
+
+  double q_ego_ref_x = 5.0;
+  double q_ego_ref_y = 5.0;
+  double q_ego_ref_theta = 100.0;
+  double q_ego_ref_delta = 2.0;
+  double q_ego_ref_vel = 3.0;
+  double q_ego_ref_acc = 6.0;
+
+  double q_obs_ref_x = 0.5;
+  double q_obs_ref_y = 0.5;
+  double q_obs_ref_theta = 2.0;
+  double q_obs_ref_delta = 1.0;
+  double q_obs_ref_vel = 1.0;
+  double q_obs_ref_acc = 8.0;
+
+  double curv_factor = 0.33;
+
+  double three_disc_safe_dist = 0.4;
+  double q_three_disc_safe_dist_weight = 2.0;
+
+  double road_boundary_safe_dist = 0.75;
+  double q_road_boundary_weight = 2.0;
+
+  double q_ego_acc_weight = 10.0;
+  double q_ego_jerk_weight = 100.0;
+  double q_ego_omega_weight = 5.0;
+  double q_ego_delta_weight = 50.0;
+  double q_obs_jerk_weight = 30.0;
+  double q_obs_omega_weight = 5.0;
+
+  double q_ego_acc_bound_weight = 100.0;
+  double ego_acc_max = 1.35;
+  double ego_acc_min = -4.5;
+
+  double q_ego_jerk_bound_weight = 50.0;
+  double ego_jerk_max = 5.0;
+  double ego_jerk_min = -6.0;
+
+  double q_hard_halfplane_weight = 10.0;
+  double hard_halfplane_dist = 3.5;
+  double halfplane_cost_allocation_ratio = 0.7;
+  double q_soft_halfplane_weight = 5.0;
+  double soft_halfplane_s0 = 3.5;
+  double soft_halfplane_tau = 0.5;
+  double soft_halfplane_cost_allocation_ratio = 0.7;  
+  double lc_thw = 0.5;
+};
+
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);

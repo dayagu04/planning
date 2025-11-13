@@ -69,7 +69,7 @@ class JointDecisionInputBuilder {
 
  private:
   framework::Session* session_;
-  JointMotionPlannerConfig config_;
+  JointDecisionPlannerConfig config_;
   std::shared_ptr<JointDecisionObstaclesSelector> obstacles_selector_;
   std::unique_ptr<JointDecisionSpeedLimit> speed_limit_calculator_;
   std::vector<JointDecisionTrajectoryPoint> ref_trajectory_;

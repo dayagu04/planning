@@ -15,7 +15,7 @@ namespace lane_change_joint_decision {
 JointDecisionInputBuilder::JointDecisionInputBuilder(
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
     : session_(session) {
-  config_ = config_builder->cast<JointMotionPlannerConfig>();
+  config_ = config_builder->cast<JointDecisionPlannerConfig>();
   obstacles_selector_ =
       std::make_shared<JointDecisionObstaclesSelector>(session);
   speed_limit_calculator_ =
