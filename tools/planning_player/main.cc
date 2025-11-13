@@ -37,14 +37,24 @@ int run_planning_player(const std::string &bag_path, std::string &out_bag,
   return 0;
 }
 
+int GetCarTypeIndex(const std::string &bag_path) {
+  std::array<std::string, 5> car_types{"CHERY_E0Y", "CHERY_T26", "JAC_S811", "CHERY_M32T", "BESTUNE_E541"};
+  for (int i = 0; i < car_types.size(); ++i) {
+    auto it = std::search(bag_path.begin(), bag_path.end(), car_types[i].begin(), car_types[i].end());
+    if (it != bag_path.end()) {
+      return i;
+    }
+  }
+  return 0;
+}
+
 int main(int argc, char **argv) {
-  std::string bag_path, out_bag, log_file;
+  std::string bag_path, out_bag, log_file, car;
   bool is_close_loop = false;
   bool no_debug = false;
   bool play_in_loop = false;
   bool interface_check = false;
   bool no_version_check = false;
-  std::string car = "CHERY_E0X";
   std::string mileage_path = "";
   double auto_time_sec = 1.5;
   std::string scene_type = "scc";
@@ -149,8 +159,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  std::array<std::string, 4> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811",
-                                      "CHERY_M32T"};
+  std::array<std::string, 5> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811", "CHERY_M32T", "BESTUNE_E541"};
+  int car_type_index = GetCarTypeIndex(bag_path);
+  car = car_type[car_type_index];
   if (std::find(car_type.begin(), car_type.end(), car) == car_type.end()) {
     std::cerr << "Error car type!!!" << std::endl;
     return -1;

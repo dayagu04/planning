@@ -1823,6 +1823,10 @@ void PlanningPlayer::UpdateVehicleService(
     compensation_factor = 1;
     steer_ratio = 15.88;
     wheel_base = 2.8;
+  } else if (car_ == "BESTUNE_E541") {
+    compensation_factor = 1;
+    steer_ratio = 16.2;
+    wheel_base = 2.8835;
   }
   vehi_svc_msg->steering_wheel_angle =
       curvature * wheel_base * steer_ratio * compensation_factor;
