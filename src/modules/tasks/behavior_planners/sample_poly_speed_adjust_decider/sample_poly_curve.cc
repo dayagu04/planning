@@ -203,7 +203,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   // // poly curve cost
   speed_change_cost_.GetCost(arrived_v_, ego_v, arrived_t_);
 
-  follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
+  // follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
 
   stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,
                           enable_merge_decelaration);
@@ -216,6 +216,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1 &&
       anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
+    follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
     leading_veh_follow_s_cost_.GetCost(
         leading_veh_s + leading_veh_v * arrived_t_, arrived_v_, arrived_s_);
   }
