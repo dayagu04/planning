@@ -104,7 +104,7 @@ class RouteInfo {
   bool is_need_judge_miss_split_ = false;
   ad_common::math::Vec2d split_point_{0, 0};
   uint64 split_link_id_ = 1;
-  std::unique_ptr<RouteInfoStrategy> route_info_strategy_ = nullptr;
+  std::shared_ptr<RouteInfoStrategy> route_info_strategy_ = nullptr;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;

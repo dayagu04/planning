@@ -5896,13 +5896,11 @@ void RouteInfo::GetStrategy() {
   if (!map_updated) {
     if (local_view.sdpro_map_info.data_source() ==
         iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
-      route_info_strategy_.reset(
-          new LDRouteInfoStrategy(&mlc_decider_config_, session_));
+      route_info_strategy_ = std::make_shared<LDRouteInfoStrategy> (&mlc_decider_config_, session_);
       map_updated = true;
     } else if (local_view.sdpro_map_info.data_source() ==
                iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
-      route_info_strategy_.reset(
-          new SDProRouteInfoStrategy(&mlc_decider_config_, session_));
+      route_info_strategy_ = std::make_shared<SDProRouteInfoStrategy> (&mlc_decider_config_, session_);
       map_updated = true;
     }
   }
