@@ -64,7 +64,7 @@ static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
 static const double kMaxHeadingFirstStepForwardLine = 13.0;
 static const double kMaxFirstStepForwardInclinedLineLength = 2.56;
-static const double kVirtualObsDetaXMag = 0.1;
+static const double kVirtualObsDetaXMag = 0.0;
 static const double kVirtualObsDetaYMag = 0.2;
 static const double kMinTlaneAddedLength = 0.45;
 static const double kNarrowChannelLastArcCrossLength = 1.38;
@@ -2440,7 +2440,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
 
       // 计算路径中“短路径段”（长度 < 0.3m）的数量
       path.short_segment_count = 0;  // 初始化计数器
-      const double short_segment_threshold = 0.16;
+      const double short_segment_threshold = 0.2;
       bool heading_turned = false;
       double start_heading = path.path_segment_vec.front().GetStartHeading();
       for (const auto& seg : path.path_segment_vec) {
