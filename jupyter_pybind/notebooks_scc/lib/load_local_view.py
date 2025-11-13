@@ -1450,7 +1450,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     cur_pos_yn = loc_msg.position.position_boot.y
     cur_yaw = loc_msg.orientation.euler_boot.yaw
 
-    sdpromap_road_line_info = load_sdpro_map_segments(ehr_sdpro_map_msg.link_info.links, ehr_sdpro_map_msg.route.route_links,
+    sdpromap_road_line_info = load_sdpro_map_segments(ehr_sdpro_map_msg.link_info.links, ehr_sdpro_map_msg.route.route_links, ehr_sdpro_map_msg.lanes.lanes,
                                           cur_pos_xn,cur_pos_yn,cur_yaw,Max_sdmap_segment_size)
     local_view_data['data_sdpromap_road_line'].data.update({
       'data_sdpromap_road_line_x': sdpromap_road_line_info['sdpromap_road_line_x_vec'],

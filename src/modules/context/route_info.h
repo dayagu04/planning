@@ -11,6 +11,8 @@
 #include "session.h"
 #include "vec2d.h"
 #include "virtual_lane.h"
+#include "modules/context/route_info_strategy/route_info_strategy.h"
+
 
 namespace planning {
 struct SplitSegInfo {
@@ -48,8 +50,13 @@ class RouteInfo {
 
   void Update();
 
+  void GetStrategy();
+
   void UpdateMLCInfoDecider(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+      
+  void UpdateMLCInfoDeciderBaseBaidu(
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
   void UpdateMLCInfoDeciderBaseTencent(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
@@ -97,6 +104,7 @@ class RouteInfo {
   bool is_need_judge_miss_split_ = false;
   ad_common::math::Vec2d split_point_{0, 0};
   uint64 split_link_id_ = 1;
+  std::shared_ptr<RouteInfoStrategy> route_info_strategy_ = nullptr;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;
@@ -380,5 +388,6 @@ class RouteInfo {
                                    const std::vector<int>& vec2);
   void ProcessLaneDistance(const std::shared_ptr<VirtualLane>& relative_id_lane,
                            const std::map<int, double>& feasible_lane_distance);
+
 };
 }  // namespace planning

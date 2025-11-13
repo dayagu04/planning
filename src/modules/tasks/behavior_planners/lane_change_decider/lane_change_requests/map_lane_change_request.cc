@@ -250,13 +250,15 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
   const double lsl_length = route_info_output.lsl_length;
   if (route_info_output.map_vendor ==
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_BAIDU_LD) {
-    if (route_info_output.is_on_ramp ||
-        route_info_output.lc_nums_for_split != 0) {
-      lc_end_dis =
-          route_info_output.distance_to_first_road_split - kTmpRampLength;
-    } else {
-      lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
-    }
+    // if (route_info_output.is_on_ramp ||
+    //     route_info_output.lc_nums_for_split != 0) {
+    //   lc_end_dis =
+    //       route_info_output.distance_to_first_road_split - kTmpRampLength;
+    // } else {
+    //   lc_end_dis = route_info_output.dis_to_ramp - kTmpRampLength;
+    // }
+    lc_end_dis = 0.0;
+
   } else if (route_info_output.map_vendor ==
              iflymapdata::sdpro::MapVendorType::MAP_VENDOR_TENCENT_SD_PRO) {
     lc_end_dis =
@@ -271,7 +273,7 @@ bool MapRequest::IsTriggerMLCForRemainDistane() {
 
   double v_limit =
       session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
-  std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+  std::array<double, 3> xp{11.111, 22.222, 33.333};
   std::array<double, 3> fp{500.0, 800.0, 1200.0};
   const double adaptor_interval = interp(v_limit, xp, fp);
   const double map_response_dist =
