@@ -2005,7 +2005,7 @@ bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
   if (target_v <= leading_speed) {
     return false;
   }
-  double need_overtake_duration = need_s / (target_v - leading_speed) + 3.0;
+  double need_overtake_duration = need_s / (target_v - leading_speed) + 5.0;
   bool enable_lane_change =
       (need_overtake_duration * target_v) < feasible_lane_distance;
 
