@@ -9,6 +9,9 @@ class CurveCost {
   virtual ~CurveCost() = default;
   void SetWeight(const double weight) { weight_ = weight; };
   const double cost() const { return cost_; };
+  void Init() {
+    cost_ = 0.0;
+  };
 
  protected:
   double cost_ = 0.0;

@@ -54,6 +54,18 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   leading_veh_follow_s_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
 };
 
+void SampleQuarticPolynomialCurve::CostInit() {
+  follow_vel_cost_.Init();
+  stop_line_cost_.Init();
+  leading_veh_safe_cost_.Init();
+  speed_variable_cost_.Init();
+  gap_avaliable_cost_.Init();
+  acc_limit_cost_.Init();
+  stop_penalty_cost_.Init();
+  speed_change_cost_.Init();
+  anchor_points_match_gap_cost_.Init();
+  cost_sum_ = 0.0;
+}
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
   return t - poly_.T() >= 0
              ? poly_.CalculatePoint(poly_.T()) + arrived_v_ * (t - poly_.T())
@@ -166,12 +178,12 @@ void SampleQuarticPolynomialCurve::CalcCost(
   if (rest_changeable_distance < 2.0) {
     return;
   }
+  CostInit();
   safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
   safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
   rest_changeable_distance_ = rest_changeable_distance;
   end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
   end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
-  cost_sum_ = 0.0;
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,

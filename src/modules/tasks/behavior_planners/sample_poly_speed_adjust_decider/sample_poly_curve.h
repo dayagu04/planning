@@ -73,7 +73,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,
                                 bool is_front_car);
-
+  void CostInit();
   // interface:
   const QuarticPolynomial& poly() const { return poly_; };
   int32_t end_point_matched_gap_front_id() const {
