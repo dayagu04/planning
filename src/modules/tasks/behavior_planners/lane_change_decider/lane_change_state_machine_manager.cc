@@ -38,7 +38,7 @@ constexpr double kEgoReachBoundaryTime = 4.0;
 constexpr double kStandardLaneWidth = 3.7;
 constexpr double kLargeAgentLengthM = 8.0;
 constexpr double kPreTriggleHighPriorityMLCTime = 10.0;
-constexpr std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+constexpr std::array<double, 3> xp{11.111, 22.222, 33.333};
 constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
@@ -1409,7 +1409,7 @@ bool LaneChangeStateMachineManager::CalculateSideAreaIsSafetyExecution(
     const double obstacle_dist_remain =
         0.5 * a_node * t_remain_lc * t_remain_lc + v_node * t_remain_lc;
     const double ego_dist_remain = v_ego * t_remain_lc;
-    std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+    std::array<double, 3> xp{11.111, 22.222, 33.333};
     std::array<double, 3> buffer{1.0, 3.0, 5.0};
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =
@@ -1450,7 +1450,7 @@ void LaneChangeStateMachineManager::CalculateFrontAreaIfNeedBack(
     const double obstacle_dist_remain =
         0.5 * a_node * t_remain_lc * t_remain_lc + v_node * t_remain_lc;
     const double ego_dist_remain = v_ego * t_remain_lc;
-    std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+    std::array<double, 3> xp{11.111, 22.222, 33.333};
     std::array<double, 3> buffer{1.0, 3.0, 5.0};
     const double buffer_dist = interp(v_ego, xp, buffer);
     const double need_rel_dis =

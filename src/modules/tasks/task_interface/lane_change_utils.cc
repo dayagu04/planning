@@ -7,7 +7,7 @@ namespace planning {
 namespace {
 constexpr double kEps = 1e-6;
 constexpr double kEgoReachBoundaryTime = 4.0;
-constexpr std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+constexpr std::array<double, 3> xp{11.111, 22.222, 33.333};
 constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};

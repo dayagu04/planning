@@ -13,7 +13,7 @@ SDProRouteInfoStrategy(const MLCDeciderConfig* config_builder,
 void Update(RouteInfoOutput& route_info_output) override;
 
 void CalculateMLCDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     RouteInfoOutput& route_info_output) override;
 
 bool get_sdpromap_valid() override;

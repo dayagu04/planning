@@ -17,7 +17,7 @@ LDRouteInfoStrategy(const MLCDeciderConfig* config_builder,
 void Update(RouteInfoOutput& route_info_output) override;
 
 void CalculateMLCDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     RouteInfoOutput& route_info_output) override;
 
 bool get_sdpromap_valid() override;
@@ -46,11 +46,12 @@ protected:
  void CalculateSplitInfo();
  void CalculateRampInfo();
 
- bool IsIgnoreMerge(std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double> merge_info);
+ bool IsIgnoreMerge(const std::pair<const iflymapdata::sdpro::LinkInfo_Link*,
+                                    double>& merge_info);
 
  bool IsValidInputLanes(
      const iflymapdata::sdpro::LinkInfo_Link* link,
-     const std::vector<iflymapdata::sdpro::Lane> start_lane_vec);
+     const std::vector<iflymapdata::sdpro::Lane>& start_lane_vec);
 
  MLCSceneType MLCSceneTypeDecider();
 
@@ -63,8 +64,9 @@ protected:
 
  bool SortLaneBaseSeq(std::vector<iflymapdata::sdpro::Lane>& start_lane_vec);
 
- void UpdateLCNUMTask(std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
-    const TopoLinkGraph& feasible_lane_graph);
+ void UpdateLCNumTask(
+     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+     const TopoLinkGraph& feasible_lane_graph);
 
  bool CalculateFrontTargetLinkBaseFixDis(
      iflymapdata::sdpro::LinkInfo_Link* target_link,
@@ -89,7 +91,7 @@ protected:
  bool IsInvalidLane(const iflymapdata::sdpro::Lane* lane_info) const;
 
  ad_common::sdpromap::SDProMap ld_map_;
- LocalView local_view_;
+ const LocalView* local_view_ = nullptr;
  bool ldmap_valid_{false};
  uint64_t ld_map_info_updated_timestamp_ = 0;
 //  MLCDeciderRouteInfo mlc_decider_route_info_;

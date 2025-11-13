@@ -56,7 +56,7 @@ class RouteInfo {
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
       
   void UpdateMLCInfoDeciderBaseBaidu(
-      std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
+      const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
   void UpdateMLCInfoDeciderBaseTencent(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);

@@ -224,8 +224,7 @@ struct MLCDeciderRouteInfo {
 enum MLCSceneType {
   NORMAL_SCENE = 0,
   SPLIT_SCENE = 1,
-  MERGE_SCENE = 2,
-  SPLIT_SPLIT_SCENE = 3
+  MERGE_SCENE = 2
 };
 struct MLCDeciderInfoBaseBaidu {
   MLCSceneType mlc_scene_type = NORMAL_SCENE;

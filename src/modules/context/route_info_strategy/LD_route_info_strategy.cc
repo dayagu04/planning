@@ -1,11 +1,12 @@
-# include <iostream>
+#include "LD_route_info_strategy.h"
+
+#include <iostream>
 #include <utility>
-#include "LD_route_info_strategy.h"
+
 #include "config/basic_type.h"
-#include "local_view.h"
-#include "LD_route_info_strategy.h"
-#include "route_info_strategy.h"
 #include "environmental_model.h"
+#include "local_view.h"
+#include "route_info_strategy.h"
 
 namespace planning{
 namespace {
@@ -16,11 +17,11 @@ LDRouteInfoStrategy::LDRouteInfoStrategy(
     const MLCDeciderConfig* config_builder,
     const planning::framework::Session* session)
     : RouteInfoStrategy(config_builder, session) {
-  local_view_ = session_->environmental_model().get_local_view();
+  local_view_ = &session_->environmental_model().get_local_view();
 }
 
 void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
-  local_view_ = session_->environmental_model().get_local_view();
+  local_view_ = &session_->environmental_model().get_local_view();
   route_info_output_.reset();
 
   if (!UpdateLDMap()) {
@@ -35,7 +36,7 @@ void LDRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
 }
 
 bool LDRouteInfoStrategy::UpdateLDMap() {
-  const auto& ld_map_info = local_view_.sdpro_map_info;
+  const auto& ld_map_info = local_view_->sdpro_map_info;
   const auto ld_map_info_current_timestamp =
       ld_map_info.header().timestamp();
   if (ld_map_info_current_timestamp != ld_map_info_updated_timestamp_) {
@@ -49,8 +50,7 @@ bool LDRouteInfoStrategy::UpdateLDMap() {
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
     ldmap_valid_ = false;
-    std::cout << "error!!! because more than 20s no update hdmap!!!"
-              << std::endl;
+    ILOG_ERROR << "error!!! because more than 20s no update hdmap!!!";
   }
   JSON_DEBUG_VALUE("sdpromap_valid_", ldmap_valid_)
   ILOG_INFO << "ldmap_valid_:" << ldmap_valid_;
@@ -74,7 +74,7 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   route_info_output_.current_segment_passed_distance = ego_on_cur_link_s_;
   route_info_output_.is_update_segment_success = true;
 
-  const auto& sdpro_map_info = local_view_.sdpro_map_info;
+  const auto& sdpro_map_info = local_view_->sdpro_map_info;
   route_info_output_.map_vendor = sdpro_map_info.data_source();
 
   merge_info_vec_.clear();
@@ -142,7 +142,7 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
 }
 
 void LDRouteInfoStrategy::CalculateMLCDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     RouteInfoOutput& route_info_output) {
   mlc_decider_info_base_baidu_.reset();
 
@@ -225,7 +225,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
         return;
       }
 
-      UpdateLCNUMTask(relative_id_lanes, before_split_feasible_lane_graph);
+      UpdateLCNumTask(relative_id_lanes, before_split_feasible_lane_graph);
 
       break;
     }
@@ -250,7 +250,7 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
         return;
       }
 
-      UpdateLCNUMTask(relative_id_lanes, normal_feasible_lane_graph);
+      UpdateLCNumTask(relative_id_lanes, normal_feasible_lane_graph);
 
       break;
     }
@@ -312,13 +312,10 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
         return;
       }
 
-      UpdateLCNUMTask(relative_id_lanes, before_merge_feasible_lane_graph);
+      UpdateLCNumTask(relative_id_lanes, before_merge_feasible_lane_graph);
 
       break;
     }
-
-    case SPLIT_SPLIT_SCENE:
-      break;
   }
 
   route_info_output = route_info_output_;
@@ -423,7 +420,6 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
   // -------------------------- 1. 初始化与输入校验（强化边界检查） --------------------------
   feasible_lane_graph.lane_topo_groups.clear();
   if (start_lane_vec.empty()) {
-      LOG_ERROR("Start lane vector is empty.");
       return false;
   }
 
@@ -435,7 +431,6 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
 
   std::vector<iflymapdata::sdpro::Lane> current_lane_vec = start_lane_vec;
   if (!SortLaneBaseSeq(current_lane_vec)) {
-      LOG_ERROR("Failed to sort start lane vector.");
       return false;
   }
 
@@ -602,7 +597,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
 
 bool LDRouteInfoStrategy::IsValidInputLanes(
     const iflymapdata::sdpro::LinkInfo_Link* link,
-    const std::vector<iflymapdata::sdpro::Lane> start_lane_vec) {
+    const std::vector<iflymapdata::sdpro::Lane>& start_lane_vec) {
   if (start_lane_vec.empty()) {
     return false;
   }
@@ -654,7 +649,7 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
                               ->ego_v_cruise();
   const double kResponseOffset = 300.;
 
-  std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+  std::array<double, 3> xp{11.111, 22.222, 33.333};
   std::array<double, 3> fp{300.0, 600.0, 1000.0};
   const double adaptor_interval = interp(v_limit, xp, fp);
 
@@ -827,8 +822,8 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
   return true;
 }
 
-void LDRouteInfoStrategy::UpdateLCNUMTask(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+void LDRouteInfoStrategy::UpdateLCNumTask(
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     const TopoLinkGraph& feasible_lane_graph) {
   if (feasible_lane_graph.lane_topo_groups.empty()) {
     return;
@@ -1090,7 +1085,6 @@ bool LDRouteInfoStrategy::CalculateMergePreFeasibleLane(
     std::vector<std::pair<int, iflymapdata::sdpro::Lane>> first_merge_lane_info;
     first_merge_lane_info.reserve(merge_link->lane_ids().size());
     for (const auto& lane_id: merge_link->lane_ids()) {
-      std::pair<int, iflymapdata::sdpro::Lane> temp_lane_pair;
       const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
       if (temp_lane == nullptr) {
         continue;
@@ -1307,7 +1301,8 @@ bool LDRouteInfoStrategy::IsInvalidLane(const iflymapdata::sdpro::Lane* temp_lan
 }
 
 bool LDRouteInfoStrategy::IsIgnoreMerge(
-    std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double> merge_info) {
+    const std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>&
+        merge_info) {
   const auto& merge_link = merge_info.first;
   if (merge_link == nullptr) {
     return true;

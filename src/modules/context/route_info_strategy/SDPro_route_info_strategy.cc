@@ -11,14 +11,14 @@ SDProRouteInfoStrategy::SDProRouteInfoStrategy(
     : RouteInfoStrategy(config_builder, session) {}
 
 void SDProRouteInfoStrategy::Update(RouteInfoOutput& route_info_output) {
-  std::cout << "update" << std::endl;
+  ILOG_INFO << "update";
   return;
 }
 
 void SDProRouteInfoStrategy::CalculateMLCDecider(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
     RouteInfoOutput& route_info_output) {
-  std::cout << "update" << std::endl;
+  ILOG_INFO << "update";
   return;
 }
 

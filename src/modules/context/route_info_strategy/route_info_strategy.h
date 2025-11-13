@@ -1,10 +1,11 @@
 #pragma once
 
-# include <iostream>
+#include <iostream>
+
 #include "config/basic_type.h"
 #include "ego_planning_config.h"
-# include "local_view.h"
 #include "hdmap/hdmap.h"
+#include "local_view.h"
 #include "sdmap/sdmap.h"
 #include "sdpromap/sdpromap.h"
 #include "session.h"
@@ -19,7 +20,7 @@ public:
  virtual void Update(RouteInfoOutput& route_info_output) = 0;
 
  virtual void CalculateMLCDecider(
-     std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes,
+     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
      RouteInfoOutput& route_info_output) = 0;
 
   virtual bool get_sdpromap_valid() = 0;

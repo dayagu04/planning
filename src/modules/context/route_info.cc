@@ -48,17 +48,12 @@ void RouteInfo::Update() {
   const auto& local_view = session_->environmental_model().get_local_view();
   if (local_view.localization.status.status_info.mode ==
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR) {
-    std::cout << "localization invalid" << std::endl;
+    ILOG_INFO << "localization invalid";
     return;
   }
 
   bool is_hpp_scene = session_->is_hpp_scene();
   if (!is_hpp_scene) {
-    // if (UpdateSdMap(local_view)) {
-    //   UpdateRouteInfoForNOA(sd_map_);
-    // } else {
-    //   std::cout << "UpdateSdMap failed!!!" << std::endl;
-    // }
     if (local_view.sdpro_map_info.data_source() ==
         iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
       GetStrategy();
@@ -71,7 +66,7 @@ void RouteInfo::Update() {
         UpdateSdMap(local_view);
         UpdateRouteInfoForNOA(sdpro_map_);
       } else {
-        std::cout << "UpdateSdMap failed!!!" << std::endl;
+        ILOG_INFO << "UpdateSdMap failed!!!";
       }
     }
 
@@ -79,7 +74,7 @@ void RouteInfo::Update() {
     if (UpdateStaticMap(local_view)) {
       UpdateRouteInfoForHPP(hd_map_);
     } else {
-      std::cout << "UpdateHdMap failed!!!" << std::endl;
+      ILOG_INFO << "UpdateHdMap failed!!!";
     }
   }
 }
@@ -5718,7 +5713,7 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       exchange_region_info.recommend_lane_num[0].total_lane_num;
   const double kResponseOffset = 300.;
 
-  std::array<double, 3> xp{40.0 / 3.6, 80.0 / 3.6, 120.0 / 3.6};
+  std::array<double, 3> xp{11.111, 22.222, 33.333};
   std::array<double, 3> fp{300.0, 600.0, 1000.0};
   const double adaptor_interval = interp(v_limit, xp, fp);
 
@@ -5907,7 +5902,7 @@ void RouteInfo::GetStrategy() {
 }
 
 void RouteInfo::UpdateMLCInfoDeciderBaseBaidu(
-    std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes) {
+    const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   route_info_strategy_->CalculateMLCDecider(relative_id_lanes, route_info_output_);
 }
 }  // namespace planning
