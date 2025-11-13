@@ -2344,7 +2344,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             left_lane_num, right_lane_num - emergency_lane_num);
 
     // 刚经过split，感知车道数可能还带左侧主路车道，这种情况抑制MLC
-    if (left_lane_num >= current_link_->lane_num() &&
+    if (current_link_ != nullptr &&
+        left_lane_num >= current_link_->lane_num() &&
         left_lane_num >= map_lane_num) {
       continue;
     }
@@ -4853,6 +4854,9 @@ bool RouteInfo::IsClosingIntersectionEntrance(
                                  REGULAR_INTERSECTION_EXIT) {
           const iflymapdata::sdpro::LinkInfo_Link* next_link =
               sdpro_map.GetNextLinkOnRoute(current_link->id());
+          if (!next_link) {
+            return false;
+          }
           if ((current_link->link_class() !=
                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
                current_link->link_class() !=
