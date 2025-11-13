@@ -1862,23 +1862,48 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                const std::pair<std::vector<MLCRequestType>, double>& b) {
               return a.second < b.second;
             });
-  // 获取当前车道数（不含应急）
+
+  // 获取当前地图车道数（不含应急）
   std::vector<int> current_lane_vec;
   iflymapdata::sdpro::FeaturePoint last_fp;
-  int total_lane_num = 0;
+  int map_lane_num = 0;
+  int map_emergency_lane_num = 0;
   const double s = route_info_output_.current_segment_passed_distance;
   if (CalculateLastFPInCurrentLink(&last_fp, current_link_, s)) {
-    total_lane_num = last_fp.lane_ids().size();
+    map_lane_num = last_fp.lane_ids().size();
     for (const auto& lane_id : last_fp.lane_ids()) {
       if (IsEmergencyLane(lane_id, sdpro_map_)) {
-        total_lane_num--;
+        map_lane_num--;
+        map_emergency_lane_num++;
       }
     }
   } else {
     if (current_link_ != nullptr) {
-      total_lane_num = current_link_->lane_num();
+      map_lane_num = current_link_->lane_num();
     }
   }
+
+  // 获取当前感知车道数
+  int perceived_lane_num = 0;
+  for (auto& relative_id_lane : relative_id_lanes) {
+    if (relative_id_lane->get_relative_id() != 0) {
+      continue;
+    }
+    const auto& lane_nums = relative_id_lane->get_lane_nums();
+    int left_lane_num = 0;
+    int right_lane_num = 0;
+    for (const auto& lane_num : lane_nums) {
+      if (lane_num.end > kEpsilon) {
+        left_lane_num = lane_num.left_lane_num;
+        right_lane_num = lane_num.right_lane_num;
+        break;
+      }
+    }
+    perceived_lane_num = left_lane_num + right_lane_num + 1 - map_emergency_lane_num;
+  }
+
+  // 选取地图车道数与感知车道数中较大者
+  int total_lane_num = std::max(map_lane_num, perceived_lane_num);
   for (int i = 0; i < total_lane_num; ++i) {
     current_lane_vec.emplace_back(i + 1);
   }
