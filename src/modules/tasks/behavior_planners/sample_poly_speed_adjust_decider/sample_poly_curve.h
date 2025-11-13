@@ -135,6 +135,9 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;
   double prediction_time_ = 3.0;
+  double safe_border_distance_to_gap_back_obj_ = 0.0;
+  double safe_border_distance_to_gap_front_obj_ = 0.0;
+  double rest_changeable_distance_ = 0.0;
 
   // std::vector<double> anchor_points_checked_t_vec_;
   MatchGapCost anchor_points_match_gap_cost_;

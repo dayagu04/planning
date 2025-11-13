@@ -166,6 +166,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
   if (rest_changeable_distance < 2.0) {
     return;
   }
+  safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
+  safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
+  rest_changeable_distance_ = rest_changeable_distance;
   end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
   end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
   cost_sum_ = 0.0;

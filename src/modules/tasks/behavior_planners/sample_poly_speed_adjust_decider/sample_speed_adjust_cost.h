@@ -51,6 +51,9 @@ class MatchGapCost : public CurveCost {
 
   double acc_speed_weight_ = 3.0;
   double dec_speed_weight_ = 4.0;
+
+  double safe_border_distance_to_gap_front_obj_ = 0.0;
+  double safe_border_distance_to_gap_back_obj_ = 0.0;
 };
 
 class FollowVelCost : public CurveCost {
