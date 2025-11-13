@@ -179,7 +179,8 @@ bool TrafficLightDecider::Execute() {
                            .function_state_machine_info.current_state;
   if (cur_fsm_state == iflyauto::FunctionalState_ACC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
-      cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY) {
+      cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY ||
+      cur_fsm_state == iflyauto::FunctionalState_DRIVING_PASSIVE) {
     auto &tla_output_info = session_->mutable_planning_context()
                                 ->mutable_planning_hmi_info()
                                 ->tla_output_info;
