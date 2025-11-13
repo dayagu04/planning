@@ -121,7 +121,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   std::pair<double, double> acc_target;
   acc_upper_bound_.resize(plan_points_num_);
   acc_lower_bound_.resize(plan_points_num_);
-  
+
   auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agent_headway_decider_output =
       session_->planning_context().agent_headway_decider_output();
@@ -140,8 +140,10 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  const auto& lon_decision_decider_output = 
+  const auto& lon_decision_decider_output =
       session_->planning_context().longitudinal_decision_decider_output();
+  const auto &motion_planner_output =
+      session_->planning_context().motion_planner_output();
   bool can_increase_acc_upper_bound = false;
   can_increase_acc_upper_bound = lon_decision_decider_output.determined_cruise_bound().acc_positive_mps2 >
                                  1.0 - kEpsilon ? true : false;
@@ -178,7 +180,7 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       } else {
         acc_upper_bound_[i] = std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
       }
-      
+
       continue;
     }
 
@@ -218,6 +220,12 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
       acc_lower_bound_[i] = std::fmin(acc_lower_bound_[i], kAccMaxLowerBound);
+    }
+  }
+  if (motion_planner_output.is_limit_lon_acc_bound) {
+    // 目前仅针对低速变道使用,避免急加速导致方向盘打不过来
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], motion_planner_output.recommended_acc_bound);
     }
   }
   double min_acc_bound_val = 10.0;

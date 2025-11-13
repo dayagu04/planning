@@ -170,7 +170,8 @@ bool LateralMotionPlanner::AssembleInput() {
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
-
+  auto &mutable_motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
   JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
   JSON_DEBUG_VALUE("coarse_planning_info_ref_pnts_size",
@@ -639,6 +640,10 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
+    mutable_motion_planner_output.is_limit_lon_acc_bound = true;
+    mutable_motion_planner_output.recommended_acc_bound = config_.recommend_low_speed_lc_lon_acc;
+  } else {
+    mutable_motion_planner_output.is_limit_lon_acc_bound = false;
   }
 
   if (target_state == kLaneKeeping) {

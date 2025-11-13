@@ -2782,6 +2782,8 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
     ReadItem<int>(json, lc_style, "lat_motion_ilqr", "lc_style");
     ReadItem<double>(json, max_steer_angle_dot_low_speed_lc, "lat_motion_ilqr",
                      "max_steer_angle_dot_low_speed_lc");
+    ReadItem<double>(json, recommend_low_speed_lc_lon_acc, "lat_motion_ilqr",
+                     "recommend_low_speed_lc_lon_acc");
   }
 
   bool pass_acc_mode = false;
@@ -2794,6 +2796,7 @@ struct LateralMotionPlannerConfig : public EgoPlanningConfig {
   double max_steer_angle_dot = 200.0;
   double max_steer_angle_dot_lc = 200.0;
   double max_steer_angle_dot_low_speed_lc = 200.0;
+  double recommend_low_speed_lc_lon_acc = 2;
   double max_steer_angle_dot_low_speed = 10.0;
 
   double acc_bound = 1.5;
