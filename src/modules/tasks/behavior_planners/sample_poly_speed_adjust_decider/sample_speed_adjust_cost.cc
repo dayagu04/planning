@@ -351,7 +351,7 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
   cost_ = 0.0;
   auto calculate_poly_dis_to_lead_cost = [](double dist, double safe_distance,
                                             double weight) {
-    return (dist < safe_distance * 1.5)
+    return (dist < safe_distance)
                ? weight * std::exp(4.0 * (safe_distance - dist) / safe_distance)
                : 0.0;
   };
