@@ -690,16 +690,15 @@ bool IhcCore::DynamicObstacleCheck(void) {
         if (fusion_objs[j].additional_info.track_id == track_id) {
           continue;
         }
-        if (fusion_objs[j].additional_info.motion_pattern_current != fusion_objs[i].additional_info.motion_pattern_current) {
+        if (abs(fusion_objs[j].common_info.relative_velocity.x - fusion_objs[i].common_info.relative_velocity.x) > 7.0f
+          || abs(fusion_objs[j].common_info.relative_velocity.y - fusion_objs[i].common_info.relative_velocity.y) > 4.0f) {
           continue;
         }
         double delta_x = abs(fusion_objs[j].common_info.relative_position.x - fusion_objs[i].common_info.relative_position.x);
         double delta_y = abs(fusion_objs[j].common_info.relative_position.y - fusion_objs[i].common_info.relative_position.y);
         double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
         if (distance < 25.0f && delta_y < 10.0f) {
-          if (fusion_objs[j].additional_info.motion_pattern_current == fusion_objs[i].additional_info.motion_pattern_current) {
-            verified_obstacle_ids_.insert(track_id);
-          }
+          verified_obstacle_ids_.insert(track_id);
         }
       }
     }
