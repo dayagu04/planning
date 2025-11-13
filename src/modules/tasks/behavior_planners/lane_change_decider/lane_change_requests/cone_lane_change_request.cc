@@ -820,7 +820,11 @@ bool ConeRequest::CheckTargetLaneAvailable(
 
 bool ConeRequest::EnableTargetLane(
     bool is_left, const std::shared_ptr<VirtualLane> seach_lane) {
-  const double lane_occ_proportion = 0.75;
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region =
+      ego_lane_road_right_decider_output.is_merge_region;
+  const double lane_occ_proportion = 0.65;
   if (seach_lane == nullptr) {
     ILOG_DEBUG << "seach fail: seach lane is nullptr";
     return false;
@@ -871,7 +875,7 @@ bool ConeRequest::EnableTargetLane(
     average_l_origin = total_cone_l_origin / std::max(cone_num, 1);
     if ((average_cone_l < average_lane_width * lane_occ_proportion ||
           std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l ||
-          average_cone_l - average_l_origin < average_lane_width * 0.5) &&
+          (average_cone_l - average_l_origin < average_lane_width * 0.5 && !is_merge_region)) &&
         cone_num >= 5) {
       return false;
     }
