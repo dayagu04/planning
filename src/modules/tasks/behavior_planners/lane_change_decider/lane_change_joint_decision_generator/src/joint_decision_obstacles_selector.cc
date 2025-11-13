@@ -80,10 +80,15 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       const auto& all_agents = agent_manager->GetAllCurrentAgents();
       for (const auto& agent : all_agents) {
         if (agent != nullptr &&
-            agent->agent_id() == lc_info.gap_rear_agent_id) {
-          key_obstacles_.emplace_back(CreateKeyObstacle(
-              agent, ego_lane_coord,
-              lane_change_joint_decision::LongitudinalLabel::OVERTAKE));
+          agent->agent_id() == lc_info.gap_rear_agent_id) {
+          bool is_large_agent = (agent::AgentType::BUS == agent->type() ||
+                      agent::AgentType::TRUCK == agent->type() ||
+                      agent::AgentType::TRAILER == agent->type() ||
+                      agent->length() > 8.0);
+          lane_change_joint_decision::LongitudinalLabel label = is_large_agent ? 
+          lane_change_joint_decision::LongitudinalLabel::IGNORE 
+          : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
+          key_obstacles_.emplace_back(CreateKeyObstacle(agent, ego_lane_coord,  label));
           break;
         }
       }
