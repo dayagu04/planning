@@ -1310,7 +1310,8 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     }
 
     const int obs_idx = result.obs_index;
-    const int label_type = result.label_type;
+    // const int label_type = result.label_type;
+    const int label_type = alpha > 0.99 ? 1 : result.label_type;// 反应时间内主要靠自车
     const int state_base_idx = EGO_STATE_SIZE + obs_idx * OBS_STATE_SIZE;
 
     const double normal_x = result.normal_x;

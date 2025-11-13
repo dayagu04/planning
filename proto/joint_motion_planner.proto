@@ -143,6 +143,10 @@ message JointMotionPlanningInput {
   optional double soft_halfplane_tau = 50; 
   optional double soft_halfplane_cost_allocation_ratio = 51;
 
+  // 障碍物反应衰减参数
+  optional double obs_reaction_decay_time = 54;
+  optional double obs_keep_ref_factor = 55;
+
   // 自车尺寸参数
   optional double ego_length = 52;
   optional double ego_width = 53;

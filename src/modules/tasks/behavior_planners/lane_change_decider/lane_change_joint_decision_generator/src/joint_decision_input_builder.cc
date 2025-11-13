@@ -425,6 +425,9 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_soft_halfplane_tau(config_.soft_halfplane_tau);
   planning_input.set_soft_halfplane_cost_allocation_ratio(
       config_.soft_halfplane_cost_allocation_ratio);
+  
+  planning_input.set_obs_reaction_decay_time(config_.obs_reaction_decay_time);
+  planning_input.set_obs_keep_ref_factor(config_.obs_keep_ref_factor);
 }
 
 void JointDecisionInputBuilder::BuildObsInfo(
