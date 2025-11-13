@@ -4594,7 +4594,7 @@ bool RouteInfo::CalculateMergeFP(MergeType* merge_type,
   }
 
   double itera_dis = -s;
-  const double check_merge_fp_dis = std::min(500.0, search_distance);
+  const double check_merge_fp_dis = std::min(800.0, search_distance);
 
   while (itera_dis < check_merge_fp_dis) {
     for (const auto& fp : current_link->feature_points()) {
