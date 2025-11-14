@@ -6490,6 +6490,12 @@ void ParallelPathGenerator::TrimPathByLimiterPathPoint(
   if (!input_.ego_info_under_slot.slot.GetLimiter().valid) {
     return;
   }
+  if (sampled_path_seg.size() == 0) {
+    return;
+  }
+  if (sampled_path_seg[0].gear == 1) {
+    return;
+  }
 
   auto limiter = input_.ego_info_under_slot.slot.GetLimiter();
   Eigen::Vector2d limiter_start_pt = limiter.start_pt;
