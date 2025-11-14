@@ -2978,7 +2978,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
       step_size = std::min(step_size, max_size);
 
     } else {
-      line_length = std::min(line_length, 1.0);
+      line_length = std::min(line_length, 2.0);
       step_size = mathlib::Clamp(step_size, 2, 3);
       step_size = std::min(step_size, max_size);
     }
@@ -3117,7 +3117,7 @@ const bool ParallelPathGenerator::CalcLineStepLimitPose(
   }
 
   const double line_dist_limit =
-      input_.ego_info_under_slot.slot_occupied_ratio > 0.0 ? 1.5 : 4.0;
+      input_.ego_info_under_slot.slot_occupied_ratio > 0.0 ? 2.0 : 4.0;
 
   const Eigen::Vector2d rough_limit_pt =
       start_pose.pos + line_dist_limit * dirve_sgn *

@@ -321,8 +321,8 @@ const double ParallelParkOutScenario::CalRealTimeBrakeDist() {
 
   const double remain_dist_obs = CalRemainDistFromObs(
       safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
-      dynaminc_lat_buffer, dynaminc_lat_buffer, false, UseObsHeightMethod::HIGH,
-      GJKrequestFrom::PARALLEL);
+      dynaminc_lat_buffer, dynaminc_lat_buffer, false,
+      apa_param.GetParam().use_obs_height_method, GJKrequestFrom::PARALLEL);
 
   ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
 
@@ -679,6 +679,7 @@ const bool ParallelParkOutScenario::GenTlane() {
   // curb
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
+  double curb_y_limit_all = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
   ILOG_INFO << "obs_pt_local_vec_ size =" << obs_pt_local_vec_.size();
 
@@ -726,6 +727,19 @@ const bool ParallelParkOutScenario::GenTlane() {
 
       // ILOG_INFO<<"curb condition!");
     }
+
+    const bool curb_condition_all =
+        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.0,
+                                slot_length) &&
+        (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
+    if (curb_condition_all) {
+      if (side_sgn > 0.0) {
+        curb_y_limit_all = std::max(curb_y_limit_all, obstacle_point_slot.y());
+      } else {
+        curb_y_limit_all = std::min(curb_y_limit_all, obstacle_point_slot.y());
+      }
+    }
+
 
     const bool front_parallel_line_condition =
         pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
@@ -807,6 +821,12 @@ const bool ParallelParkOutScenario::GenTlane() {
 
   t_lane_.obs_pt_inside << front_min_x, front_y_limit;
   t_lane_.obs_pt_outside << rear_max_x, rear_parallel_line_y_limit;
+
+  if (rear_vacant) {
+    curb_y_limit = curb_y_limit_all;
+    ILOG_INFO << "curb_y_limit =" << curb_y_limit
+              << " curb_y_limit_all = " << curb_y_limit_all;
+  }
 
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
