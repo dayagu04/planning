@@ -89,8 +89,8 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     target_lane = virtual_lane_mgr_->get_right_lane();
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_DIVERGE;
   if (is_avoidance_MLC && suppression_counter > 0) {
     ILOG_INFO
         << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
@@ -310,8 +310,8 @@ void MapRequest::GenerateMLCRequest() {
     }
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info == AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_DIVERGE;
   if (is_avoidance_MLC && !is_in_avoidance_mlc) {
     is_in_avoidance_mlc = true;  // 设置状态标志
     avoidance_MLC_counter = 1;   // 启动超时计时器

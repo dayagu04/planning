@@ -97,7 +97,15 @@ enum EgoMLCRequestType {
   KEEP_LEFT = 5,
   OTHER_TYPE_MLC = 6,
 };
+struct EgoMLCRequestInfo {
+  EgoMLCRequestType mlc_request_type = None_MLC;
+  double distance_to_exchange_region = NL_NMAX;
 
+  void reset() {
+    mlc_request_type = None_MLC;
+    distance_to_exchange_region = NL_NMAX;
+  }
+};
 struct LaneChangeGapInfo {
   int front_node_id = -1;
   int rear_node_id = -1;
@@ -301,7 +309,7 @@ struct RouteInfoOutput {
   MLCDeciderRouteInfo mlc_decider_route_info;
   // double dis_to_merge_fp = NL_NMAX;
   MergePointInfo merge_point_info;
-  EgoMLCRequestType mlc_request_type_route_info;
+  EgoMLCRequestInfo mlc_request_type_route_info;
   MLCSceneType baidu_mlc_scene = NORMAL_SCENE;
 
   // for hpp output
@@ -377,7 +385,7 @@ struct RouteInfoOutput {
     sum_distance_driving = -1;
     distance_to_target_slot = NL_NMAX;
     distance_to_next_speed_bump = NL_NMAX;
-    mlc_request_type_route_info = None_MLC;
+    mlc_request_type_route_info.reset();
     baidu_mlc_scene = NORMAL_SCENE;
   }
 };
