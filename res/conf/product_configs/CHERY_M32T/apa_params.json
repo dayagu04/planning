@@ -487,7 +487,7 @@
   "in_slot_mirror_lat_buffer": 0.10,
   "in_slot_extra_turn_lat_buffer": 0.03,
   "parallel_col_buffer_in_slot": 0.25,
-  "parallel_col_small_buffer_in_slot": 0.06,
+  "parallel_col_small_buffer_in_slot": 0.16,
 
   "comment_23": "lat lon speed buffer",
   "speed_lon_buffer": 0.286,
