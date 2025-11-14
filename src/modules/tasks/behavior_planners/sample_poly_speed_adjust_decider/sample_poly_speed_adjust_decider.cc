@@ -210,7 +210,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   if (is_in_deceleartion_scene_) {
     if ((lane_change_source_ == MERGE_REQUEST) ||
         ((lane_change_source_ == MAP_REQUEST) &&
-         (route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN)) ||
+         (route_info_output.mlc_request_type_route_info.mlc_request_type == RAMP_TO_MAIN)) ||
         (merge_stop_line_distance_ <= 100.0)) {
       enable_merge_decelaration = true;
     }
