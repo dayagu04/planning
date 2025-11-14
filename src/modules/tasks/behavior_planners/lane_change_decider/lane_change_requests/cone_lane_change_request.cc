@@ -37,6 +37,7 @@ constexpr uint32_t kConeAlcHystereticCount = 1;
 constexpr int kConeAlcCountLowerThre = 0;
 constexpr double kLongClusterTimeGap = 4.0;
 constexpr double kDefaultLaneWidth = 4.5;
+constexpr double kConeMustLaneChangeDistance = 4.88;
 constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr uint32_t kConeDirecSize = 5;
 constexpr double kConeDirecThre = 0.5;
@@ -232,8 +233,6 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
         // if (!base_frenet_coord_->XYToSL(obs_cart_point, obs_frenet_point)) {
         //   continue;
         // }
-        // Point2D obs_frenet_point(front_vehicle_iter->second->frenet_s(),
-        // front_vehicle_iter->second->frenet_l());
 
         if (frenet_obstacles_map.find(obstacle_id) ==
                 frenet_obstacles_map.end() ||
@@ -294,13 +293,17 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
                                  lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_right = std::max(
       pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
+  double all_cone_cluster_max_distance = - std::numeric_limits<double>::max();
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
     double min_left_l, min_right_l;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
-
+    double max_l = std::max(min_left_l, min_right_l);
+    if (max_l > all_cone_cluster_max_distance) {
+      all_cone_cluster_max_distance = max_l;
+    }
     // if (left_lane_nums_ == 0 && right_lane_nums_ == 0) {
     //   pass_threshold_left =
     //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
@@ -343,6 +346,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       did_break = true;
       break;
     }
+  }
+  if (all_cone_cluster_max_distance > kConeMustLaneChangeDistance) {
+    is_cone_must_lane_change_situation_ = false;
   }
   // if all clusters is far away from cernter line, counter--
   if (!did_break) {
@@ -814,7 +820,11 @@ bool ConeRequest::CheckTargetLaneAvailable(
 
 bool ConeRequest::EnableTargetLane(
     bool is_left, const std::shared_ptr<VirtualLane> seach_lane) {
-  const double lane_occ_proportion = 0.75;
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region =
+      ego_lane_road_right_decider_output.is_merge_region;
+  const double lane_occ_proportion = 0.65;
   if (seach_lane == nullptr) {
     ILOG_DEBUG << "seach fail: seach lane is nullptr";
     return false;
@@ -846,6 +856,8 @@ bool ConeRequest::EnableTargetLane(
     double total_cone_l = 0.0;
     double average_l = 0.0;
     int cone_num = 0;
+    double total_cone_l_origin = 0.0;
+    double average_l_origin = 0.0;
     for (auto& p : serach_cone_points) {
       Point2D point(p.x, p.y);
       Point2D frenet_point;
@@ -854,13 +866,16 @@ bool ConeRequest::EnableTargetLane(
       } else {
         total_lane_width += QueryLaneWidth(frenet_point.x, lane_s_width);
         total_cone_l += std::fabs(frenet_point.y);
+        total_cone_l_origin += std::fabs(p.l); 
         cone_num++;
       }
     }
-    double average_lane_width = total_lane_width / cone_num;
-    double average_cone_l = total_cone_l / cone_num;
+    double average_lane_width = total_lane_width / std::max(cone_num, 1);
+    double average_cone_l = total_cone_l / std::max(cone_num, 1);
+    average_l_origin = total_cone_l_origin / std::max(cone_num, 1);
     if ((average_cone_l < average_lane_width * lane_occ_proportion ||
-          std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l) &&
+          std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l ||
+          (average_cone_l - average_l_origin < average_lane_width * 0.5 && !is_merge_region)) &&
         cone_num >= 5) {
       return false;
     }
