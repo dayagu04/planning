@@ -215,6 +215,25 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   init_point.acc = ego_acc;
   init_point.t = 0.0;
 
+  ApaSlot slot;
+  slot.slot_length_ = 5.0;
+  slot.slot_width_ = 2.0;
+  slot.slot_type_ = SlotType::PERPENDICULAR;
+
+  slot.processed_corner_coord_global_.pt_1 << 5.0, 1.0;
+  slot.processed_corner_coord_global_.pt_0 << 5.0, -1.0;
+  slot.processed_corner_coord_global_.pt_2 << 0.0, -1.0;
+  slot.processed_corner_coord_global_.pt_3 << 0.0, 1.0;
+  slot.processed_corner_coord_global_.pt_center << 2.5, 0.0;
+  slot.processed_corner_coord_global_.pt_01_mid << 5.0, 0.0;
+  slot.processed_corner_coord_global_.pt_23_mid << 0.0, 0.0;
+  slot.processed_corner_coord_global_.pt_23mid_01mid_vec << 5.0, 0.0;
+  slot.processed_corner_coord_global_.pt_01_vec << 0.0, 2.0;
+  slot.processed_corner_coord_global_.pt_23_vec << 0.0, 2.0;
+  slot.processed_corner_coord_global_.pt_01_unit_vec << 0.0, 1.0;
+  slot.processed_corner_coord_global_.pt_23_unit_vec << 0.0, 1.0;
+  slot.processed_corner_coord_global_.pt_23mid_01mid_unit_vec << 1.0, 0.0;
+
   planning::ParkingSpeedMode park_speed_mode = planning::ParkingSpeedMode::FAST;
 
   // collision check
@@ -226,7 +245,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
                        pnc::geometry_lib::SEG_GEAR_DRIVE);
   if (dist_to_obs < 0.06) {
     planning::LonDecisionReason decision_reason =
-        planning::LonDecisionReason::STATIC_OCC_COLLISION;
+        planning::LonDecisionReason::OCC_COLLISION;
     stop_decider.AddStopDecisionByDistance(obs_s, decision_reason, path2);
   }
   speed_decisions.decisions.emplace_back(stop_decider.GetStopDecision());
@@ -234,12 +253,12 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   // update speed limit decision
   ParkSpeedLimitDecider speed_limit_decider = ParkSpeedLimitDecider(
       col_det_interface_ptr, localization_ptr, obstacles, predict_path);
-  speed_limit_decider.Execute(path2, &speed_decisions, park_speed_mode);
+  speed_limit_decider.Execute(path2, slot, park_speed_mode, &speed_decisions);
 
   // use boken obs dist, need retire
   UpdatePathObsDistance(path2, obs_s, dist_to_obs);
-  speed_limit_decider.AddSpeedLimitDecisions(path2, &speed_decisions);
-  speed_limit_decider.PublishDebugInfo(path2);
+  speed_limit_decider.AddSpeedLimitDecisions(path2, slot, &speed_decisions);
+  speed_limit_decider.PublishDebugInfo();
   const SpeedLimitProfile &speed_limit =
       speed_limit_decider.GetSpeedLimitProfile();
 

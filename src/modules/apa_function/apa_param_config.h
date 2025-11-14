@@ -328,8 +328,8 @@ struct ParkingLatLonTargetPoseBuffer {
 
 struct ObjectDetectObsConfig {
   bool use_specificationer = true;
-  bool use_dynamic_od_car = false;
-  bool use_living_things = false;
+  bool use_dynamic_od_car = true;
+  bool use_living_things = true;
   bool use_speed_bump = false;
 };
 

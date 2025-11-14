@@ -420,7 +420,7 @@
   "slow_speed_limit_lower_by_kappa" : 0.7,
   "slow_speed_limit_by_kappa_switch" : 0.55,
   "slow_speed_limit_lower_by_obs_dist" : 0.4,
-  "min_path_dist_for_speed_optimizer" : 0.25,
+  "min_path_dist_for_speed_optimizer" : 0.1,
   "min_path_dist_for_veh_starting" : 0.1,
   "optimizer_time_limit" : 0.4,
   "use_remain_dist" : true,
@@ -567,5 +567,11 @@
   "cur_path_lon_buffer" : 0.5,
 
   "comment_27": "prepare path plan params",
-  "enable_stable_prepare_route": true
+  "enable_stable_prepare_route": true,
+
+  "comment_28": "od params",
+  "use_specificationer": true,
+  "use_dynamic_od_car": false,
+  "use_living_things": false,
+  "use_speed_bump": false
 }

@@ -538,6 +538,8 @@ class ParkingScenario {
   geometry_lib::PathPoint GetCurrentPathTerminal(const bool is_slot_coordinate);
 
   void ClearTimeBySuspendStatus();
+  void ClearSpeedDebugInfo();
+
   const bool CheckResponseReasonable(const HybridAStarRequest &cur_request,
                                      const HybridAstarResponse &cur_response);
 

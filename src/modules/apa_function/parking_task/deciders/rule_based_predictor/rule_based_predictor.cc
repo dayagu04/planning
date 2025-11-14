@@ -73,9 +73,6 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
     current_dist += delta_dist;
     current_time += delta_time;
 
-#if DEBUG_TASK
-    ILOG_INFO << "x " << point.x() << " y " << point.y();
-#endif
   }
 
   obs.SetPredictTraj(predict_traj);

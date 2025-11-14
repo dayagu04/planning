@@ -207,5 +207,13 @@ void Trajectory::ExtendTraj(const double length) {
   return;
 }
 
+void Trajectory::DebugString() const {
+  for (size_t i = 0; i < size(); i++) {
+    ILOG_INFO << data()[i].DebugString();
+  }
+
+  return;
+}
+
 }  // namespace trajectory
 }  // namespace planning

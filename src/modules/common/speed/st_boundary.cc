@@ -254,7 +254,7 @@ bool STBoundary::GetIndexRange(const std::vector<STPoint>& points,
 STBoundary STBoundary::CreateInstance(
     const std::vector<STPoint>& lower_points,
     const std::vector<STPoint>& upper_points) {
-  if (lower_points.size() != upper_points.size() || lower_points.size() < 2) {
+  if (lower_points.size() != upper_points.size() || lower_points.size() < 1) {
     return STBoundary();
   }
 
@@ -310,8 +310,8 @@ bool STBoundary::GetTimestampBeginWithS(double lower_s, double& t) const {
 }
 
 void STBoundary::DebugString() {
-  ILOG_INFO << "s = " << min_s_ << ", " << max_s_ << ", t = " << min_t_ << ", "
-            << max_t_;
+  ILOG_INFO << "min s = " << min_s_ << ", max s =  " << max_s_
+            << ", min t = " << min_t_ << ", max t = " << max_t_;
   return;
 }
 

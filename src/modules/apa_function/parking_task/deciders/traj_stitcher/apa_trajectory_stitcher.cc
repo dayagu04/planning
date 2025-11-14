@@ -80,10 +80,6 @@ void ApaTrajectoryStitcher::Execute(
 
       if (!lon_stitch_success || lon_stitch_point_.s() < 0.0 ||
           lon_stitch_point_.vel() <= 0.01) {
-        // ILOG_INFO << "lon_stitch_success = " << lon_stitch_success
-        //           << " lon stitch v = " << lon_stitch_point_.vel()
-        //           << ", a = " << lon_stitch_point_.acc()
-        //           << ", s = " << lon_stitch_point_.s();
         GeneSpeedPointFromVehicleState(ego_lon_state_);
       }
 
@@ -129,10 +125,14 @@ void ApaTrajectoryStitcher::SmoothLonDelay() {
   v = std::max(0.0, v);
   lon_stitch_point_.set_vel(v);
 
-  if (acc_error > acc_stitch_error) {
-    lon_stitch_point_.set_acc(ego_lon_state_.acc + acc_stitch_error);
-  } else if (acc_error < -acc_stitch_error) {
-    lon_stitch_point_.set_acc(ego_lon_state_.acc - acc_stitch_error);
+  // for PID controller, it will watch planning first state, so use openloop acc
+  // value.
+  if (!config_.enable_openloop_acc) {
+    if (acc_error > acc_stitch_error) {
+      lon_stitch_point_.set_acc(ego_lon_state_.acc + acc_stitch_error);
+    } else if (acc_error < -acc_stitch_error) {
+      lon_stitch_point_.set_acc(ego_lon_state_.acc - acc_stitch_error);
+    }
   }
   return;
 }
@@ -660,7 +660,7 @@ void ApaTrajectoryStitcher::TaskDebug(
     ILOG_INFO << "origin path s = " << path.back().s;
   }
 
-  ILOG_INFO << ", ego v = " << ego_lon_state_.v
+  ILOG_INFO << "ego v = " << ego_lon_state_.v
             << ", ego a = " << ego_lon_state_.acc;
   ILOG_INFO << "lon stitch v = " << lon_stitch_point_.vel()
             << ", a = " << lon_stitch_point_.acc()
@@ -669,6 +669,7 @@ void ApaTrajectoryStitcher::TaskDebug(
             << ", veh gear = " << static_cast<int>(veh_gear_);
 
   ILOG_INFO << "traj size = " << trajectory.size();
+  trajectory.DebugString();
 
   // for (auto& point : path) {
   //   ILOG_INFO << "s = " << point.s << ",x = " << point.pos.x()

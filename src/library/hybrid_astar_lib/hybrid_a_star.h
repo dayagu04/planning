@@ -130,6 +130,9 @@ class HybridAStar {
 
   const size_t NodePoolSize() const { return node_pool_.PoolSize(); }
 
+  // for debug
+  void GetRoundRobinTarget(std::vector<Pose2f>& candidates);
+
  private:
   // todo: select dubins/rs path by request gear to accelerate computation.
   bool AnalyticExpansionByRS(Node3d* current_node,

@@ -97,26 +97,28 @@ const bool JerkLimitedTrajOptimizer::GenerateJLTSpeed(const SVPoint& init_point,
   state_limit.v_min = -0.1;
 
   if (s_des > speed_config.path_thresh_for_acc_bound) {
-    state_limit.a_max = speed_config.long_path_acc_upper;
+    state_limit.a_max = speed_config.long_path_acc_upper - 0.2;
   } else {
-    state_limit.a_max = speed_config.short_path_acc_upper;
+    state_limit.a_max = speed_config.short_path_acc_upper - 0.2;
   }
-  state_limit.j_max = 10.0;
-  state_limit.j_min = -10.0;
+
+  if (init_point.v > 0.0) {
+    state_limit.a_max =
+        std::min(state_limit.a_max, config_.dynamic_state_acc_upper);
+  } else {
+    state_limit.a_max =
+        std::min(state_limit.a_max, config_.static_state_acc_upper);
+  }
+
+  state_limit.j_max = speed_config.jerk_upper;
+  state_limit.j_min = speed_config.jerk_lower;
   state_limit.p_desire = s_des;
   state_limit.v_desire = v_des;
   state_limit.a_min = -0.1;
 
   init_point_state.p = init_point.s;
   init_point_state.v = init_point.v;
-  // add acc slack variable.
-  double acc_slack_variable = 0.1;
-  if (init_point.acc > acc_slack_variable) {
-    init_point_state.a = init_point.acc - acc_slack_variable;
-  } else if (init_point.acc < -acc_slack_variable) {
-    init_point_state.a = init_point.acc + acc_slack_variable;
-  }
-  init_point_state.a = 0.0;
+  init_point_state.a = init_point.acc;
 
   // update min deceleration
   double dec_step = -0.03;

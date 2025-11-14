@@ -36,6 +36,14 @@ void ParkSpeedLimitConfig::Init(const ParkingSpeedMode& park_speed_mode) {
   zero_order_param_by_obs =
       speed_limit_lower_by_obs - first_order_param_by_obs * obs_dist_lower;
 
+  // speed limit by inside slot
+  enable_speed_limit_by_slot = true;
+  speed_limit_by_inside_slot = 0.56;
+
+  // 1.2kph
+  terminal_speed_limit = 0.33;
+  terminal_speed_limit_zone = 0.25;
+
   return;
 }
 }  // namespace apa_planner

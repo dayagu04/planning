@@ -561,5 +561,11 @@
   "cur_path_lon_buffer" : 0.5,
 
   "comment_27": "prepare path plan params",
-  "enable_stable_prepare_route": true
+  "enable_stable_prepare_route": true,
+
+  "comment_28": "od params",
+  "use_specificationer": true,
+  "use_dynamic_od_car": false,
+  "use_living_things": false,
+  "use_speed_bump": false
 }

@@ -31,6 +31,8 @@ struct VehicleParam {
   double front_overhanging = 1.0;
   double mirror_width = 0.15;
   std::string car_type = "";
+  double mirror_lon_dist_to_rear_axle = 3.0;
+  double mirror_lat_dist_to_center = 1.0;
 
   void InitParameters(std::string config_path) {
     std::string path = config_path;

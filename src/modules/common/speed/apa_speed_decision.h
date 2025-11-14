@@ -6,13 +6,11 @@ namespace planning {
 enum class LonDecisionReason {
   NONE = 0,
   USS_POINT_CLOUD_COLLISION = 1,
-  PATH_FINISH = 2,
-  STATIC_OCC_COLLISION = 3,
-  DYNAMIC_OCC_COLLISION = 4,
-  GROUD_LINE_COLLISION = 5,
-  // If object is human, need add a stop desion.
-  STATIC_POLYGON_OBJECT = 6,
-  DYNAMIC_POLYGON_OBJECT = 7,
+  PATH_TERMINAL = 2,
+  OCC_COLLISION = 3,
+  GROUD_LINE_COLLISION = 4,
+  // OD object.
+  POLYGON_OBJECT = 5,
   LIMITER_COLLISION = 8,
   // slot pose change too much, add stop decision.
   SLOT_POSE_CHANGE = 10,
@@ -28,6 +26,7 @@ enum class LonDecisionReason {
   // will be retired
   REMAIN_DIST = 16,
   SPEED_LIMIT_BY_TERMINAL = 17,
+  SPEED_LIMIT_BY_SLOT = 18,
 };
 
 enum class LonDecisionType {

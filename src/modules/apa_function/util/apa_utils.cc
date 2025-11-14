@@ -7,6 +7,7 @@
 #include "environmental_model.h"
 #include "planning_plan_c.h"
 #include "session.h"
+#include "src/modules/apa_function/apa_param_config.h"
 
 namespace planning {
 
@@ -150,44 +151,6 @@ const bool IsTrajValid(const iflyauto::Trajectory& traj) {
   return true;
 }
 
-const ParkingVehDirection GetParkDir(const int dir) {
-  ParkingVehDirection res;
-  switch (dir) {
-    case 0:
-      res = ParkingVehDirection::NONE;
-      break;
-    case 1:
-      res = ParkingVehDirection::TAIL_IN;
-      break;
-    case 2:
-      res = ParkingVehDirection::TAIL_OUT_TO_LEFT;
-      break;
-    case 3:
-      res = ParkingVehDirection::TAIL_OUT_TO_RIGHT;
-      break;
-    case 4:
-      res = ParkingVehDirection::TAIL_OUT_TO_MIDDLE;
-      break;
-    case 5:
-      res = ParkingVehDirection::HEAD_IN;
-      break;
-    case 6:
-      res = ParkingVehDirection::HEAD_OUT_TO_LEFT;
-      break;
-    case 7:
-      res = ParkingVehDirection::HEAD_OUT_TO_RIGHT;
-      break;
-    case 8:
-      res = ParkingVehDirection::HEAD_OUT_TO_MIDDLE;
-      break;
-    default:
-      res = ParkingVehDirection::NONE;
-      break;
-  }
-
-  return res;
-}
-
 bool IsActiveApaState(const iflyauto::FunctionalState& fsm) {
   if (fsm == iflyauto::FunctionalState_PARK_GUIDANCE ||
       fsm == iflyauto::FunctionalState_PARK_SUSPEND ||
@@ -196,6 +159,34 @@ bool IsActiveApaState(const iflyauto::FunctionalState& fsm) {
     return true;
   }
   return false;
+}
+
+void UpdateVehicleParam(VehicleParam& vehicle_param) {
+  const apa_planner::ApaParameters& params = apa_param.GetParam();
+
+  // read vehicle params
+  vehicle_param.length = params.car_length;
+  vehicle_param.width = params.car_width;
+  vehicle_param.max_width = params.max_car_width;
+  vehicle_param.front_overhanging =
+      params.car_length - params.rear_overhanging - params.wheel_base;
+  vehicle_param.steer_ratio = params.steer_ratio;
+  vehicle_param.wheel_base = params.wheel_base;
+  vehicle_param.min_turn_radius = params.min_turn_radius + 0.01;
+  vehicle_param.mirror_width = (params.max_car_width - params.car_width) * 0.5;
+  vehicle_param.rear_edge_to_rear_axle = params.rear_overhanging;
+  vehicle_param.front_edge_to_rear_axle =
+      params.car_length - params.rear_overhanging;
+  double front_wheel = std::atan(vehicle_param.wheel_base /
+                                std::max(0.001, vehicle_param.min_turn_radius));
+  vehicle_param.max_steer_angle =
+      std::fabs(front_wheel * vehicle_param.steer_ratio);
+
+  vehicle_param.mirror_lat_dist_to_center = params.lat_dist_mirror_to_center;
+  vehicle_param.mirror_lon_dist_to_rear_axle =
+      params.lon_dist_mirror_to_rear_axle;
+
+  return;
 }
 
 }  // namespace  planning

@@ -16,7 +16,7 @@ from lib.load_common import *
 # e0y9:  18049
 # e0y10: 20267
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_81859/trigger/20251105/20251105-20-44-13/park_in_data_collection_CHERY_M32T_81859_EVENT_FILTER_2025-11-05-20-44-13_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_81868/trigger/20251112/20251112-20-52-14/park_in_data_collection_CHERY_M32T_81868_EVENT_FILTER_2025-11-12-20-52-14_no_camera.bag'
 
 frame_dt = 0.1 # sec
 plot_ctrl_flag = True
@@ -32,6 +32,8 @@ fig1, local_view_data = load_local_view_figure_parking()
 
 source = ColumnDataSource(data=dict(x=[], y=[]))
 stop_signs = ColumnDataSource(data = {'x':[], 'y':[]})
+data_od_traj_point = ColumnDataSource(data = {'x':[], 'y':[]})
+data_od_traj = ColumnDataSource(data = {'x':[], 'y':[]})
 
 fig1.circle('x', 'y', size=10, source=source, color='red', legend_label='measure tool')
 line_source = ColumnDataSource(data=dict(x=[], y=[]))
@@ -42,6 +44,8 @@ fig1.text('x', 'y', 'text', source=text_source, text_color='red', text_align='ce
 data_obs_slm_filtered = ColumnDataSource(data=dict(x=[], y=[]))
 fig1.circle('x', 'y', size=2, source=data_obs_slm_filtered, color='blue', legend_label='obs after filtered by slm')
 fig1.multi_line('y', 'x',source = stop_signs, line_width = 4.0, line_color = 'purple', line_dash = 'solid',legend_label = 'stop_signs',visible = True)
+fig1.circle('y', 'x', source = data_od_traj_point, size = 4.0, color='purple', legend_label='OD_predictor', visible = True)
+fig1.multi_line('y', 'x',source = data_od_traj, line_width = 1.5, line_color = 'purple', line_dash = 'solid',legend_label = 'OD_predictor',visible = True)
 
 # Define the JavaScript callback code
 callback_code = """
@@ -310,6 +314,36 @@ def slider_callback(bag_time, vehicle_type, car_inflation, save_data):
           'x': stop_sign_lines_x,
           'y': stop_sign_lines_y,
       })
+
+    # plot od
+    traj_point_x = []
+    traj_point_y = []
+    traj_x = []
+    traj_y = []
+    start=[]
+    end=[]
+
+    trajs = GetProtoOdTrajs(planning_proto)
+    for k in range(len(trajs)):
+      traj = trajs[k]
+      for i in range(len(traj)):
+        traj_point_x.append(traj[i][0])
+        traj_point_y.append(traj[i][1])
+
+        if i+1 < len(traj):
+          start = traj[i]
+          end = traj[i+1]
+          traj_x.append([start[0], end[0]])
+          traj_y.append([start[1], end[1]])
+
+    data_od_traj_point.data.update({
+        'x': traj_point_x,
+        'y': traj_point_y,
+    })
+    data_od_traj.data.update({
+        'x': traj_x,
+        'y': traj_y,
+    })
 
     print("total time", planning_proto.frame_info.frame_duration_ms)
 

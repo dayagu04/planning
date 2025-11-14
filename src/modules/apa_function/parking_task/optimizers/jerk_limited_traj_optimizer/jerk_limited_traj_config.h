@@ -7,6 +7,9 @@ struct JerkLimitedTrajConfig {
 
   double min_path_dist_for_veh_starting;
 
+  double static_state_acc_upper;
+  double dynamic_state_acc_upper;
+
   void Init();
 };
 

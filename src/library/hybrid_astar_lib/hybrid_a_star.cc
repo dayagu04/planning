@@ -1276,10 +1276,9 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   // node shrink related
   node_shrink_decider_.Process(request_.start_pose, request_.real_goal,
                                grid_map_bound_, request_);
-  rs_expansion_decider_.Process(
-      vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, target, vehicle_param_.width, request_.space_type,
-      request_.direction_request);
+  rs_expansion_decider_.Process(start, target);
+  rs_expansion_decider_.UpdateRoundRobinStrategy(target, &request_, edt_,
+                                                 vehicle_param_);
 
   SetSamplingTarget(target);
 
@@ -1339,7 +1338,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
     }
 
 #if DEBUG_ONE_SHOT_PATH
-    if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+    if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
       ILOG_INFO << "****************************";
       ILOG_INFO << "cycle, explored_node_num " << explored_node_num
                 << " open set size for now " << open_pq_.size();
@@ -1422,7 +1421,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       if (!is_safe) {
 #if PLOT_CHILD_NODE
         // if node is unsafe, plot it also.
-        if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+        if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
           child_node_debug_.emplace_back(
               DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
         }
@@ -1432,7 +1431,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       }
 
 #if DEBUG_ONE_SHOT_PATH
-      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+      if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
         ILOG_INFO << "  ======================== ";
         ILOG_INFO << "  search child node cycle, open set size "
                   << open_pq_.size()
@@ -1461,7 +1460,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       GetSingleShotNodeGCost(current_node, &new_node);
 
 #if DEBUG_ONE_SHOT_PATH
-      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+      if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
         ILOG_INFO << "  vis type " << static_cast<int>(vis_type)
                   << " new node g " << new_node.GetGCost() << " pool node g "
                   << next_node_in_pool->GetGCost()
@@ -1485,7 +1484,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
 
 #if DEBUG_ONE_SHOT_PATH
-        if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+        if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
           ILOG_INFO << "new point";
           next_node_in_pool->DebugCost();
         }
@@ -1508,7 +1507,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
               next_node_in_pool->GetFCost(), next_node_in_pool)));
 
 #if DEBUG_ONE_SHOT_PATH
-          if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+          if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
             ILOG_INFO << "node has in open, open set size= " << open_pq_.size();
             next_node_in_pool->DebugCost();
           }
@@ -1539,7 +1538,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
               next_node_in_pool->GetFCost(), next_node_in_pool)));
 
 #if DEBUG_ONE_SHOT_PATH
-          if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+          if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
             ILOG_INFO << "node has in close";
             next_node_in_pool->DebugCost();
           }
@@ -1548,7 +1547,7 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
       }
 
 #if PLOT_CHILD_NODE
-      if (explored_node_num < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
+      if (node_pool_.PoolSize() < DEBUG_ONE_SHOT_PATH_MAX_NODE) {
         child_node_debug_.emplace_back(
             DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
       }
@@ -1717,11 +1716,9 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   node_shrink_decider_.Process(request_.start_pose, request_.real_goal,
                                grid_map_bound_, request_);
 
-  rs_expansion_decider_.Process(
-      vehicle_param_.min_turn_radius, request_.slot_width, request_.slot_length,
-      start, end, vehicle_param_.width, request_.space_type,
-      request_.direction_request);
-
+  rs_expansion_decider_.Process(start, end);
+  rs_expansion_decider_.UpdateRoundRobinStrategy(end, &request_, edt_,
+                                                 vehicle_param_);
   SetSamplingTarget(end);
 
   PathComparator path_comparator;
@@ -1773,7 +1770,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
     current_node->SetVisitedType(AstarNodeVisitedType::IN_CLOSE);
 
 #if DEBUG_CHILD_NODE
-    if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+    if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
       ILOG_INFO << "============== main cycle =========== ";
       ILOG_INFO << "explored_node_num " << explored_node_num
                 << " open set size for now " << open_pq_.size();
@@ -1847,7 +1844,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       explored_node_num++;
 
 #if DEBUG_CHILD_NODE
-      if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+      if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
         ILOG_INFO << "~~~~~~~~~~ child node cycle ~~~~~~~~~";
         ILOG_INFO << "open set size " << open_pq_.size()
                   << ", gear change num:" << current_node->GetGearSwitchNum();
@@ -1894,7 +1891,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 #if PLOT_CHILD_NODE
         // if node is unsafe, plot it also.
         int gear_switch_num = new_node.GetGearSwitchNum();
-        if (explored_node_num < DEBUG_NODE_MAX_NUM &&
+        if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM &&
             gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
           child_node_debug_.emplace_back(
               DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
@@ -1923,7 +1920,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       CalculateNodeGCost(current_node, &new_node);
 
 #if DEBUG_CHILD_NODE
-      if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+      if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
         ILOG_INFO << "  vis type " << static_cast<int>(vis_type)
                   << " new node g " << new_node.GetGCost() << " pool node g "
                   << next_node_in_pool->GetGCost()
@@ -1946,7 +1943,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
 
 #if DEBUG_CHILD_NODE
-        if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+        if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
           ILOG_INFO << "new point";
           next_node_in_pool->DebugCost();
         }
@@ -1969,7 +1966,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
               next_node_in_pool->GetFCost(), next_node_in_pool)));
 
 #if DEBUG_CHILD_NODE
-          if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+          if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
             ILOG_INFO << "node has in open";
             next_node_in_pool->DebugCost();
           }
@@ -2000,7 +1997,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
               next_node_in_pool->GetFCost(), next_node_in_pool)));
 
 #if DEBUG_CHILD_NODE
-          if (explored_node_num < DEBUG_NODE_MAX_NUM) {
+          if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM) {
             ILOG_INFO << "node has in close";
             next_node_in_pool->DebugCost();
           }
@@ -2010,7 +2007,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
 
 #if PLOT_CHILD_NODE
       int gear_switch_num = new_node.GetGearSwitchNum();
-      if (explored_node_num < DEBUG_NODE_MAX_NUM &&
+      if (node_pool_.PoolSize() < DEBUG_NODE_MAX_NUM &&
           gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
         child_node_debug_.emplace_back(
             DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
@@ -2046,9 +2043,6 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   double astar_end_time = IflyTime::Now_ms();
   result->time_ms = astar_end_time - astar_start_time;
   ILOG_INFO << "hybrid astar total time (ms) = " << result->time_ms;
-
-  // ILOG_INFO << "hybrid astar finished";
-  // ILOG_INFO << "child node size" << child_node_debug_.size();
 
 #if DEBUG_EDT
   DebugEDTCheck(result);
@@ -2620,6 +2614,11 @@ float HybridAStar::GenRefLineCost(Node3d* next_node) {
   float penalty = next_node->GetX() > request_.slot_length ? 0.5f : 10.0f;
 
   return heading_error * penalty;
+}
+
+void HybridAStar::GetRoundRobinTarget(std::vector<Pose2f>& candidates) {
+  rs_expansion_decider_.GetRoundRobinTarget(candidates);
+  return;
 }
 
 }  // namespace planning

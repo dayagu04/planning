@@ -97,7 +97,7 @@ std::vector<Eigen::Vector3d> anchor_points_;
 std::vector<double> global_path_s_;
 // record rs path in astar total path.
 std::vector<Eigen::Vector3d> static_rs_path_;
-Eigen::Vector3d astar_end_pose_;
+std::vector<Eigen::Vector3d> astar_end_pose_;
 Eigen::Vector2i path_collision_info_;
 ParkObstacleList hybrid_astar_obs_;
 EigenPath2d virtual_wall_points_;
@@ -206,6 +206,7 @@ int GetPathFromHybridAstar() {
   global_astar_path_.clear();
   anchor_points_.clear();
   current_path_.clear();
+  astar_end_pose_.clear();
 
   HybridAStarResult result;
 
@@ -259,12 +260,15 @@ int GetPathFromHybridAstar() {
 
   ILOG_INFO << "astar path size " << global_astar_path_.size();
 
-  const Pose2f target_local = thread_solver_->GetAstarTargetPose();
-  tf.ULFLocalPoseToGlobal(&global_position, target_local.ToPose2d());
+  std::vector<Pose2f> target_local;
+  thread_solver_->GetAstarRoundRobinTarget(target_local);
+  for (size_t i = 0; i < target_local.size(); i++) {
+    tf.ULFLocalPoseToGlobal(&global_position, target_local[i].ToPose2d());
 
-  astar_end_pose_[0] = global_position.x;
-  astar_end_pose_[1] = global_position.y;
-  astar_end_pose_[2] = global_position.theta;
+    Eigen::Vector3d tmp(global_position.x, global_position.y,
+                        global_position.theta);
+    astar_end_pose_.emplace_back(tmp);
+  }
 
   // node list
   real_time_node_list_.clear();
@@ -625,7 +629,7 @@ const std::vector<Eigen::Vector3d> &GetReedsShapePath() {
   return static_rs_path_;
 }
 
-const Eigen::Vector3d GetAstarEndPose() { return astar_end_pose_; }
+const std::vector<Eigen::Vector3d> GetAstarEndPose() { return astar_end_pose_; }
 
 const Eigen::Vector2i GetAstarPathCollisionID() { return path_collision_info_; }
 

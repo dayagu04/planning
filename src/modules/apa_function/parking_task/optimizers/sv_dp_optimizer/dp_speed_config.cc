@@ -13,14 +13,14 @@ void DpSpeedConfig::Init(const double path_length,
       speed_config.GetSpeedParams(park_speed_mode).default_cruise_speed;
   unit_v_for_long_path = 0.1;
   unit_s_for_long_path = 0.3;
+  long_dist_path_thresh = 1.5;
 
-  unit_v_for_short_path = 0.03;
-  unit_s_for_short_path = 0.1;
+  unit_v_for_middle_path = 0.03;
+  unit_s_for_middle_path = 0.1;
+  middle_dist_path_thresh = 0.3;
 
   unit_v_for_extream_short_path = 0.03;
   unit_s_for_extream_short_path = 0.02;
-
-  long_path_thresh = 1.5;
   extreme_short_path_thresh = speed_config.min_path_dist_for_speed_optimizer;
 
   // acc cost
@@ -50,16 +50,18 @@ void DpSpeedConfig::Init(const double path_length,
   s_interpolate_step = 0.02;
 
   // update resolution
-  if (path_length > long_path_thresh) {
+  if (path_length > long_dist_path_thresh) {
     unit_v = unit_v_for_long_path;
     unit_s = unit_s_for_long_path;
+  } else if (path_length > middle_dist_path_thresh) {
+    unit_v = unit_v_for_middle_path;
+    unit_s = unit_s_for_middle_path;
   } else if (path_length > extreme_short_path_thresh) {
-    unit_v = unit_v_for_short_path;
-    unit_s = unit_s_for_short_path;
+    unit_v = unit_v_for_extream_short_path;
+    unit_s = unit_s_for_extream_short_path;
   } else {
     unit_v = unit_v_for_extream_short_path;
     unit_s = unit_s_for_extream_short_path;
-
     // ILOG_INFO << "need use jlt speed profile";
   }
 
