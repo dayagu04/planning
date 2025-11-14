@@ -594,16 +594,11 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       !is_left_edge_side_lane;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
+    distance_to_road_split_ = route_info_output.mlc_request_type_route_info.distance_to_exchange_region;
     const auto& split_region_info_list =
         route_info_output.split_region_info_list;
     const auto& merge_region_info_list =
         route_info_output.merge_region_info_list;
-    if (!split_region_info_list.empty()) {
-      if (split_region_info_list[0].is_valid) {
-        distance_to_road_split_ =
-            split_region_info_list[0].distance_to_split_point;
-      }
-    }
     if (!merge_region_info_list.empty()) {
       if (merge_region_info_list[0].is_valid) {
         distance_to_road_merge_ =
