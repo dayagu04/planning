@@ -119,7 +119,7 @@ bool LateralObstacleDecider::Execute() {
   ego_v_l_ = reference_path_ptr->get_frenet_ego_state().velocity_l();
   ConstructPlanHistoryTraj(reference_path_ptr);
   ConstructUniformPlanHistoryTraj(reference_path_ptr);
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene()) {
     const auto &reference_path_ptr = session_->planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info.reference_path;
@@ -230,7 +230,6 @@ bool LateralObstacleDecider::Execute() {
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
           !frenet_obs->b_frenet_valid() ||
-          frenet_obs->b_frenet_polygon_sequence_invalid() ||
           last_fix_lane_id != current_fix_lane_id) {
         history.is_avd_car = false;
         history.ncar_count = 0;
@@ -331,8 +330,7 @@ bool LateralObstacleDecider::Execute() {
       FollowObstacleInfo &follow_info = follow_obstacle_info_[obs->id()];
       // ignore obj without camera source
       if (!(obs->fusion_source() & OBSTACLE_SOURCE_CAMERA) ||
-          !frenet_obs->b_frenet_valid() ||
-          frenet_obs->b_frenet_polygon_sequence_invalid()) {
+          !frenet_obs->b_frenet_valid()) {
         follow_info.is_need_folow = false;
         follow_info.follow_confidence = 0;
         output_[obs->id()] = LatObstacleDecisionType::NOT_SET;
@@ -1279,10 +1277,6 @@ void LateralObstacleDecider::LateralObstacleDecision(
             reference_path_ptr->get_frenet_ego_state().polygon().min_y();
         const double ego_l_end =
             reference_path_ptr->get_frenet_ego_state().polygon().max_y();
-        // const double obstacle_l_start =
-        //     frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
-        // const double obstacle_l_end =
-        //     frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
 
         const double obstacle_l_start =
             frenet_obstacle.frenet_obstacle_boundary().l_start;
@@ -1656,14 +1650,13 @@ bool LateralObstacleDecider::CheckEnableSearch(
   if (config_.enable_hybrid_ara) {
     for (auto &obstacle : reference_path_ptr->get_obstacles()) {
       if (obstacle->b_frenet_valid() &&
-          !obstacle->b_frenet_polygon_sequence_invalid() &&
-          obstacle->frenet_polygon_sequence()[0].second.max_x() >
+          obstacle->frenet_obstacle_boundary().s_end >
               ego_s - ego_rear_edge_to_rear_axle_ &&
-          obstacle->frenet_polygon_sequence()[0].second.min_x() - ego_s <
+          obstacle->frenet_obstacle_boundary().s_start - ego_s <
               config_.hybrid_ara_s_range) {
         auto min_abs_l = std::min(
-            std::fabs(obstacle->frenet_polygon_sequence()[0].second.min_y()),
-            std::fabs(obstacle->frenet_polygon_sequence()[0].second.max_y()));
+            std::fabs(obstacle->frenet_obstacle_boundary().l_start),
+            std::fabs(obstacle->frenet_obstacle_boundary().l_end));
         double l_threshold = 0.0;
         if (obstacle->type() ==
                 iflyauto::ObjectType::OBJECT_TYPE_OCC_GROUDING_WIRE ||
@@ -1734,16 +1727,15 @@ void LateralObstacleDecider::UpdateLatDecision(
   constexpr double kNearFrontThreshold = 7;
   constexpr double kHeadLBuffer = 0.5;
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid() &&
-        !obstacle->b_frenet_polygon_sequence_invalid()) {
+    if (obstacle->b_frenet_valid()) {
       const double obstacle_l_start =
-          obstacle->frenet_polygon_sequence()[0].second.min_y();
+          obstacle->frenet_obstacle_boundary().l_start;
       const double obstacle_l_end =
-          obstacle->frenet_polygon_sequence()[0].second.max_y();
+          obstacle->frenet_obstacle_boundary().l_end;
       const double obstacle_s_start =
-          obstacle->frenet_polygon_sequence()[0].second.min_x();
+          obstacle->frenet_obstacle_boundary().s_start;
       const double obstacle_s_end =
-          obstacle->frenet_polygon_sequence()[0].second.max_x();
+          obstacle->frenet_obstacle_boundary().s_end;
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_buffer = 0;
         if (obstacle->obstacle()->type() ==
@@ -1861,8 +1853,7 @@ void LateralObstacleDecider::UpdateLatDecisionWithARAStar(
                                     .lat_obstacle_decision;
   lat_obstacle_decision.clear();
   for (auto &obstacle : reference_path_ptr->get_obstacles()) {
-    if (obstacle->b_frenet_valid() &&
-        !obstacle->b_frenet_polygon_sequence_invalid()) {
+    if (obstacle->b_frenet_valid()) {
       if (EdtManager::FilterObstacleForAra(*obstacle)) {
         double l_ara = 0;
         if (obstacle->frenet_s() < s_vec.front()) {

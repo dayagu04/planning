@@ -252,9 +252,8 @@ bool EnvironmentalModelManager::Run() {
       (fsm_state >= iflyauto::FunctionalState_HPP_STANDBY) &&
       (fsm_state <=
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
-  bool rads_mode = fsm_state == iflyauto::FunctionalState_RADS_PRE_ACTIVE ||
-                   fsm_state == iflyauto::FunctionalState_RADS_TRACING ||
-                   fsm_state == iflyauto::FunctionalState_RADS_SUSPEND;
+  bool rads_mode = fsm_state >= iflyauto::FunctionalState_RADS_PASSIVE &&
+                   fsm_state <= iflyauto::FunctionalState_RADS_ERROR;
   static bool is_mrc_mode_hold = false;
   if (fsm_state == iflyauto::FunctionalState_MRC) {
     is_mrc_mode_hold = true;
@@ -476,7 +475,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
                                local_view.fusion_objects_info, timestamp,
                                prediction_obj_id_set);
     } else {
-      // hack:hpp暂时只用融合障碍物
+      // hack:hpp 、rads暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
            i++) {
         const auto &obj = local_view.fusion_objects_info.fusion_object[i];

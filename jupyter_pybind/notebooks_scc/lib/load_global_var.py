@@ -5,7 +5,7 @@ def init():  # 初始化
     'car_type': 'CHERY_E0X',
     'scene_type': 'HIGHWAY',
     'is_bag_main': True,  # False: main分支之前的包   True: main分支之后的包
-    'g_is_display_enu': False,  # True: local_view显示enu坐标系   False: local_view显示自车坐标系
+    'g_is_display_enu': True,  # True: local_view显示enu坐标系   False: local_view显示自车坐标系
     'is_new_loc': False,  #   True:新定位 False:老定位; 目前是自适应的，有新定位就用新定位，没有就用老定位
     'is_match_planning': True,  # True: topic按照planning接收的时间戳匹配；  False:按最近时间匹配
     'is_enu_to_car': True,

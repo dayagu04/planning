@@ -1267,6 +1267,7 @@ class LoadRosbag:
       print('missing /iflytek/camera_perception/parking_lane_line topic !!!')
 
     global_var.set_value_by_scene(scene_type)
+    global_var.set_value('is_vis_hpp',True);
     end_time = time.time()
     elapsed_time = end_time - start_time
     print("load bag 耗时：", elapsed_time, "秒")
