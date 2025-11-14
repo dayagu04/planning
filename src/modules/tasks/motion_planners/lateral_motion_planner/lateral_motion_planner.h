@@ -63,6 +63,8 @@ class LateralMotionPlanner : public Task {
   double enter_lccnoa_time_;
   bool is_divide_lane_into_two_;
   double curv_factor_;
+  int low_speed_lane_change_cd_timer_;
+  bool is_last_low_speed_lane_change_;
 
   std::vector<double> x_vec_;
   std::vector<double> y_vec_;

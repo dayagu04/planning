@@ -73,6 +73,7 @@ void LateralMotionPlanningWeight::Init() {
   history_path_points_.clear();
   weight_.Init();
   weight_.dt = config_.delta_t;
+  is_enter_low_speed_lane_change_cooldown_ = false;
 }
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
@@ -1037,7 +1038,11 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
     planning_input.set_q_continuity(q_continuity_lk);
   }
-  if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
+  if (is_enter_low_speed_lane_change_cooldown_) {
+    std::vector<double> xp_v_lc{4.167, 5.556};
+    std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
+    max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
+  } else if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
     std::vector<double> xp_v_lc{4.167, 5.556};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
     max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
@@ -1203,6 +1208,12 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     emergency_jerk_bound = P0_emergency_jerk_bound;
     extra_jerk_buffer = 1.0;
     emergency_level_ = EmergencyLevel::NONE;
+  }
+  // 避免jerk突然降低，导致超调
+  if (last_omega_to_jerk >= P1_emergency_jerk_bound) {
+    emergency_jerk_bound = P0_emergency_jerk_bound;
+  } else if (last_omega_to_jerk >= P2_emergency_jerk_bound) {
+    emergency_jerk_bound = P1_emergency_jerk_bound;
   }
   if (!is_in_function) {
     emergency_jerk_bound = config_.jerk_bound_inactivated_limit;

@@ -266,6 +266,10 @@ class LateralMotionPlanningWeight {
 
   const LaneChangeStyle &GetLaneChangeStyle() const { return lc_style_; }
 
+  void SetLowChangeCoolDown(const bool is_enter_low_speed_lane_change_cooldown) {
+    is_enter_low_speed_lane_change_cooldown_ = is_enter_low_speed_lane_change_cooldown;
+  }
+
  private:
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
@@ -354,6 +358,7 @@ class LateralMotionPlanningWeight {
   pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
+  bool is_enter_low_speed_lane_change_cooldown_;
 };
 
 }  // namespace lateral_planning
