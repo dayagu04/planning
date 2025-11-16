@@ -2390,8 +2390,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
 
     // 感知车道数远小于地图车道数，且在下匝道，抑制MLC
-    if (perception_lane_num + 2 < current_link_->lane_num() &&
-        perception_lane_num + 2 < map_lane_num &&
+    if (perception_lane_num + 1 < current_link_->lane_num() &&
+        perception_lane_num + 1 < map_lane_num &&
         mlc_decider_route_info_.first_static_split_region_info.is_ramp_split) {
       continue;
     }
