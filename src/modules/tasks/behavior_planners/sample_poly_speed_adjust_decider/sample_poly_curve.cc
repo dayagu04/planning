@@ -178,12 +178,19 @@ void SampleQuarticPolynomialCurve::CalcCost(
   if (rest_changeable_distance < 2.0) {
     return;
   }
+  cost_sum_ = 0.0;
+  auto anchor_points_match_gap_cost = anchor_points_match_gap_cost_;
+  auto speed_change_cost = speed_change_cost_;
+  auto stop_line_cost = stop_line_cost_;
+  auto leading_veh_safe_cost = leading_veh_safe_cost_;
+  auto stop_point_cost = stop_point_cost_;
+  auto follow_vel_cost = follow_vel_cost_;
+  auto leading_veh_follow_s_cost = leading_veh_follow_s_cost_;
+  auto speed_variable_cost = speed_variable_cost_;
+  auto stop_penalty_cost = stop_penalty_cost_;
+  auto gap_avaliable_cost = gap_avaliable_cost_;
+  auto acc_limit_cost = acc_limit_cost_;
   CostInit();
-  safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
-  safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
-  rest_changeable_distance_ = rest_changeable_distance;
-  end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
-  end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
@@ -261,6 +268,23 @@ void SampleQuarticPolynomialCurve::CalcCost(
     arrived_v_ = last_arrived_v;
     arrived_a_ = last_arrived_a;
     arrived_t_ = last_arrived_t;
+    anchor_points_match_gap_cost_ = std::move(anchor_points_match_gap_cost);
+    speed_change_cost_ = std::move(speed_change_cost);
+    stop_line_cost_ = std::move(stop_line_cost);
+    leading_veh_safe_cost_ = std::move(leading_veh_safe_cost);
+    stop_point_cost_ = std::move(stop_point_cost);
+    follow_vel_cost_ = std::move(follow_vel_cost);
+    leading_veh_follow_s_cost_ = std::move(leading_veh_follow_s_cost);
+    speed_variable_cost_ = std::move(speed_variable_cost);
+    stop_penalty_cost_ = std::move(stop_penalty_cost);
+    gap_avaliable_cost_ = std::move(gap_avaliable_cost_);
+    acc_limit_cost_ = std::move(acc_limit_cost_);
+  } else{
+    safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
+    safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
+    rest_changeable_distance_ = rest_changeable_distance;
+    end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
+    end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
   }
 }
 }  // namespace planning

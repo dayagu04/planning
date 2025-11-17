@@ -132,10 +132,10 @@ void MatchGapCost::GetCost(
     double abs_buffer = interp(lower_st_point.velocity() * 3.6, xp, fp);
     double dist_rel_vel = (rel_vel > 0)
                               ? rel_vel * interp(rel_vel * 3.6, xpv, fpv)
-                              : -rel_vel * 2.0;
-    min_safe_distance_rear = (rel_vel > 0) ? std::fmax(abs_buffer, dist_rel_vel)
-                                           : abs_buffer - dist_rel_vel;
-    min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1);
+                              : 0.0;
+    min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
+    min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
+    linear_expand_extra_gap_distance_by_ego_vel(poly_end_v, kEgoVelMax, kEgoVelMin, 0.0 , 2.0);
     safe_border_distance_to_gap_back_obj =
         std::max(reliable_safe_distance_to_gap_back_obj  + min_safe_distance_rear * 0.6, min_safe_distance_rear);
   }
@@ -355,8 +355,9 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
                ? weight * std::exp(4.0 * (safe_distance - dist) / safe_distance)
                : 0.0;
   };
-  double thw = std::fmax(0.8 * poly_end_v, 4.0);
-  cost_ += calculate_poly_dis_to_lead_cost(
+  double thw = poly_end_v * std::fabs(leading_veh_v - poly_end_v) / (2.0 * 2.0);
+  thw = std::fmax(thw, 3.0);
+  cost_ = calculate_poly_dis_to_lead_cost(
       leading_veh_pred_s - (poly_end_s + front_edge_to_rear_axle_), thw,
       weight_);
 }

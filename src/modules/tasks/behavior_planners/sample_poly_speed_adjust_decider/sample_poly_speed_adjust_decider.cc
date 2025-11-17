@@ -883,9 +883,10 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
   if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
-    const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(evaulation_t_);
+    double poly_arrived_t = min_cost_traj_ptr_->arrived_t();
+    const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
     if (ego_pred_end_s >
-        leading_veh_.center_s + ego_s_ + leading_veh_.v * evaulation_t_ -
+        leading_veh_.center_s + ego_s_ + leading_veh_.v * poly_arrived_t -
             CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
                                 t_gap_ego_v_)) {
       std::cout << "ego pred s is exceed upper" << std::endl;

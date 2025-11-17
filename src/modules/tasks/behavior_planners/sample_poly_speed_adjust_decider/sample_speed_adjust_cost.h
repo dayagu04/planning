@@ -25,7 +25,6 @@ class MatchGapCost : public CurveCost {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
     rear_edge_to_rear_axle_ = back_edge_to_rear_axle;
   }
-
   void SetAnchorT(const double& anchor_t) { anchor_t_ = anchor_t; }
   const double anchor_t() { return anchor_t_; };
   const double match_s_cost() const { return match_s_cost_; }
