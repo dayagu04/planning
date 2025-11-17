@@ -176,6 +176,22 @@ void read_json_vec(const Json &json, const std::vector<std::string> &keys,
 
 struct Config {
   virtual void init(const Json &json) = 0;
+  static Json merge_configs(const Json& base, const Json& overlay){
+    if (overlay.is_null() || overlay.empty()){
+        return base;
+    }
+    Json result = base;
+    for (auto it = overlay.begin(); it != overlay.end(); ++it) {
+        const auto& key = it.key();
+        if (result.find(key) != result.end() && result[key].is_object() && it.value().is_object()){
+            result[key] = merge_configs(result[key], it.value());
+        } else{
+            result[key] = it.value();
+        }
+    }
+    return result;
+  }
+
 };
 
 /***************************************************************************************/

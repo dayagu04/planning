@@ -48,7 +48,7 @@ class EnvironmentalModelManager {
  public:
   EnvironmentalModelManager();
   bool Run();
-  void Init(planning::framework::Session *session);
+  void Init(planning::framework::Session* session);
   void InitContext();
   ~EnvironmentalModelManager() = default;
   void setFaultcode(uint64_t faultcode);
@@ -61,38 +61,40 @@ class EnvironmentalModelManager {
   //   void ClearPlanningResult(common::PlanningResult &pnc_result);
 
  private:
-  bool ego_state_update(double current_time, const LocalView &local_view);
-  void vehicle_status_adaptor(double current_time, const LocalView &local_view,
-                              common::VehicleStatus &vehicle_status);
+  bool ego_state_update(double current_time, const LocalView& local_view);
+  void vehicle_status_adaptor(double current_time, const LocalView& local_view,
+                              common::VehicleStatus& vehicle_status);
   void truncate_prediction_info(
-      const iflyauto::PredictionResult &prediction_result,
-      const iflyauto::FusionObjectsInfo &fusion_objects_result,
-      double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set);
+      const iflyauto::PredictionResult& prediction_result,
+      const iflyauto::FusionObjectsInfo& fusion_objects_result,
+      double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set);
   bool transform_fusion_to_prediction(
-      const iflyauto::FusionObject &fusion_object, double timestamp,
-      std::vector<PredictionObject> &objects_infos);
+      const iflyauto::FusionObject& fusion_object, double timestamp,
+      std::vector<PredictionObject>& objects_infos);
   bool transform_fusion_to_prediction_longtime(
-      const iflyauto::FusionObject &fusion_object, double timestamp,
-      std::vector<PredictionObject> &objects_infos);
+      const iflyauto::FusionObject& fusion_object, double timestamp,
+      std::vector<PredictionObject>& objects_infos);
   bool obstacle_prediction_update(double current_time,
-                                  const LocalView &local_view);
+                                  const LocalView& local_view);
 
-  bool InputReady(double current_time, std::string &error_msg);
+  bool InputReady(double current_time, std::string& error_msg);
   PredictionTrajectoryPoint GetPointAtTime(
-      const std::vector<PredictionTrajectoryPoint> &trajectory_points,
+      const std::vector<PredictionTrajectoryPoint>& trajectory_points,
       const double relative_time) const;
 
-  EgoPlanningConfigBuilder *load_config_builder(const char *file_name);
+  EgoPlanningConfigBuilder* load_config_builder(const char* file_name);
+  EgoPlanningConfigBuilder* load_config_builder(
+      const char* file_name, const char* vehicle_specified_file_name);
   void RunBlinkState(
-      const iflyauto::VehicleServiceOutputInfo &vehicle_service_output_info);
+      const iflyauto::VehicleServiceOutputInfo& vehicle_service_output_info);
   bool CheckIfOversizeVehicle(const int type);
   bool CheckIfVru(const int type);
   bool CheckIfTrafficFacilities(const int type);
   bool CheckIfCar(const int type);
-  bool IsStatic(const PredictionObject &prediction_object);
+  bool IsStatic(const PredictionObject& prediction_object);
 
  private:
-  planning::framework::Session *session_ = nullptr;
+  planning::framework::Session* session_ = nullptr;
   //   std::shared_ptr<PlanningResultManager> planning_result_manager_ =
   //   nullptr; std::shared_ptr<EgoPoseManager> ego_pose_manager_ = nullptr;
   std::shared_ptr<planning::EgoStateManager> ego_state_manager_ptr_ = nullptr;

@@ -38,8 +38,8 @@
 namespace planning {
 
 PlanningScheduler::PlanningScheduler(
-    const LocalView *const local_view,
-    const common::EngineConfiguration *const engine_config_ptr)
+    const LocalView* const local_view,
+    const common::EngineConfiguration* const engine_config_ptr)
     : local_view_(local_view) {
   Init(engine_config_ptr);
 }
@@ -47,10 +47,10 @@ PlanningScheduler::PlanningScheduler(
 PlanningScheduler::~PlanningScheduler() {}
 
 void PlanningScheduler::Init(
-    const common::EngineConfiguration *const engine_config_ptr) {
+    const common::EngineConfiguration* const engine_config_ptr) {
   session_.Init();
   environmental_model_manager_.Init(&session_);
-  EnvironmentalModel *environmental_model =
+  EnvironmentalModel* environmental_model =
       session_.mutable_environmental_model();
   environmental_model->feed_local_view(local_view_);
   // TODO: 车辆配置文件从文件读取
@@ -83,31 +83,34 @@ void PlanningScheduler::Init(
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
-  std::string path;
-  auto engine_config =
-      common::ConfigurationContext::Instance()->engine_config();
-  switch (scene_type) {
-    case planning::common::SceneType::RADS:
-      path = engine_config.module_cfg_dir + "/general_planner_module_rads.json";
-      break;
-    case planning::common::SceneType::HIGHWAY:
-      path =
-          engine_config.module_cfg_dir + "/general_planner_module_highway.json";
-      break;
-    case planning::common::SceneType::PARKING_APA:
-      path =
-          engine_config.module_cfg_dir + "/general_planner_module_parking.json";
-      break;
-    case planning::common::SceneType::HPP:
-      path = engine_config.module_cfg_dir + "/general_planner_module_hpp.json";
-      break;
-    default:
-      path =
-          engine_config.module_cfg_dir + "/general_planner_module_highway.json";
-  }
+  // std::string path;
+  // auto engine_config =
+  //     common::ConfigurationContext::Instance()->engine_config();
+  // switch (scene_type) {
+  //   case planning::common::SceneType::RADS:
+  //     path = engine_config.module_cfg_dir +
+  //     "/general_planner_module_rads.json"; break;
+  //   case planning::common::SceneType::HIGHWAY:
+  //     path =
+  //         engine_config.module_cfg_dir +
+  //         "/general_planner_module_highway.json";
+  //     break;
+  //   case planning::common::SceneType::PARKING_APA:
+  //     path =
+  //         engine_config.module_cfg_dir +
+  //         "/general_planner_module_parking.json";
+  //     break;
+  //   case planning::common::SceneType::HPP:
+  //     path = engine_config.module_cfg_dir +
+  //     "/general_planner_module_hpp.json"; break;
+  //   default:
+  //     path =
+  //         engine_config.module_cfg_dir +
+  //         "/general_planner_module_highway.json";
+  // }
 
-  std::string config_file = common::util::ReadFile(path);
-  auto config = mjson::Reader(config_file);
+  // std::string config_file = common::util::ReadFile(path);
+  // auto config = mjson::Reader(config_file);
 
   auto config_builder =
       session_.environmental_model().config_builder(scene_type);
@@ -115,12 +118,13 @@ void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
   environmental_model_manager_.SetConfig(scene_type);
   // TODO: need to update rads param when switch to rads scene
   //  all parameters can be changed here
-  JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
-                  "planner_type");
+  GENERAL_PLANNING_CONTEXT.MutablePram().planner_type = config_.planner_type;
+  // JSON_READ_VALUE(GENERAL_PLANNING_CONTEXT.MutablePram().planner_type, int,
+  //                 "planner_type");
 }
 
 planning::common::SceneType PlanningScheduler::DetermineSceneType(
-    const iflyauto::FuncStateMachine &func_state_machine) {
+    const iflyauto::FuncStateMachine& func_state_machine) {
   auto scene_type = planning::common::SceneType::HIGHWAY;
 
   if (IsUndefinedScene(func_state_machine.current_state)) {
@@ -144,10 +148,10 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
 }
 
 bool PlanningScheduler::RunOnce(
-    iflyauto::PlanningOutput *const planning_output,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    iflyauto::PlanningOutput* const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
   ILOG_INFO << "PlanningScheduler::RunOnce";
-  auto &planning_result =
+  auto& planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   const double start_timestamp = IflyTime::Now_ms();
   bool planning_success = false;
@@ -155,7 +159,7 @@ bool PlanningScheduler::RunOnce(
   session_.mutable_planning_context()->feed_planning_hmi_info(
       planning_hmi_info);
 
-  const auto &state_machine = local_view_->function_state_machine_info;
+  const auto& state_machine = local_view_->function_state_machine_info;
   auto function_type = DetermineSceneType(state_machine);
   planning_result.scene_type = function_type;
   planning_result.timestamp = start_timestamp;
@@ -166,7 +170,7 @@ bool PlanningScheduler::RunOnce(
       planning_result.timestamp * 1000.0;  // 临时使用该字段
   // reset
   if (function_type == common::PARKING_APA || function_type == common::HPP) {
-    const auto &state_machine = local_view_->function_state_machine_info;
+    const auto& state_machine = local_view_->function_state_machine_info;
     if (GENERAL_PLANNING_CONTEXT.GetStatemachine().apa_reset_flag &&
         state_machine.current_state !=
             iflyauto::FunctionalState_PARK_GUIDANCE) {
@@ -216,7 +220,7 @@ void PlanningScheduler::SetFaultCode(uint64_t faultcode) {
 
 bool PlanningScheduler::FaultCanRecover() {
   using namespace framework;
-  const auto &fault_counter_vec = session_.fault_counter_info();
+  const auto& fault_counter_vec = session_.fault_counter_info();
   uint64_t fault_code = FaultCode();
   bool can_recover = false;
   switch (fault_code) {
@@ -306,9 +310,9 @@ bool PlanningScheduler::FaultCanRecover() {
 }
 
 void PlanningScheduler::FillPlanningTrajectory(
-    double start_time, iflyauto::PlanningOutput *const planning_output) {
+    double start_time, iflyauto::PlanningOutput* const planning_output) {
   // 获取LDP&&ELK功能干预状态
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto& GetContext = adas_function::context::AdasFunctionContext::GetInstance();
   bool lkas_intervention_flag;
   if ((GetContext.get_output_info()
            ->ldp_output_info_.ldp_left_intervention_flag_ == true) ||
@@ -324,19 +328,19 @@ void PlanningScheduler::FillPlanningTrajectory(
   }
 
   // 获取计算结果
-  const auto &lateral_output =
+  const auto& lateral_output =
       session_.planning_context().lateral_behavior_planner_output();
-  const auto &vision_only_longitudinal_outputs =
+  const auto& vision_only_longitudinal_outputs =
       session_.planning_context().vision_longitudinal_behavior_planner_output();
-  const auto &planning_context = session_.planning_context();
-  const auto &planning_result = planning_context.planning_result();
-  const auto &ego_state =
+  const auto& planning_context = session_.planning_context();
+  const auto& planning_result = planning_context.planning_result();
+  const auto& ego_state =
       session_.environmental_model().get_ego_state_manager();
-  const auto &function_info = session_.environmental_model().function_info();
+  const auto& function_info = session_.environmental_model().function_info();
   const bool active = session_.environmental_model().GetVehicleDbwStatus();
   auto virtual_lane_manager =
       session_.environmental_model().get_virtual_lane_manager();
-  const auto &speed_limit_decider_output =
+  const auto& speed_limit_decider_output =
       session_.planning_context().speed_limit_decider_output();
   const auto lane_borrow_decider_output =
       session_.planning_context().lane_borrow_decider_output();
@@ -420,7 +424,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     // 设置参考线为default
     auto target_ref = &trajectory->target_reference;
     // add polynomial
-    const auto &d_polynomial = lateral_output.d_poly;
+    const auto& d_polynomial = lateral_output.d_poly;
     for (size_t i = 0; i < d_polynomial.size(); i++) {
       target_ref->polynomial[i] = d_polynomial[i];
     }
@@ -454,7 +458,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     // clip the polynomial C_3
     const double lat_offset_rate = config_.d_poly_lat_offset_rate;
     const double max_lat_offset = config_.d_poly_max_lat_offset;
-    const auto &d_polynomial = lateral_output.d_poly;
+    const auto& d_polynomial = lateral_output.d_poly;
     double lat_offset_bound = max_lat_offset;
     static double limited_polynomial_3 = 0.0;
 
@@ -496,7 +500,7 @@ void PlanningScheduler::FillPlanningTrajectory(
     ILOG_DEBUG << "limited_polynomial_3: " << limited_polynomial_3;
     std::vector<double> polynomial_limited(4);
 
-    const auto &current_lane = session_.environmental_model()
+    const auto& current_lane = session_.environmental_model()
                                    .get_virtual_lane_manager()
                                    ->get_current_lane();
     if ((lkas_intervention_flag == true) && (current_lane != nullptr)) {
@@ -565,7 +569,7 @@ void PlanningScheduler::FillPlanningTrajectory(
   gear_command->available = true;
   // 需要获取目标挡位值
   gear_command->gear_command_value = iflyauto::GEAR_COMMAND_VALUE_DRIVE;
-  const auto &state_machine = local_view_->function_state_machine_info;
+  const auto& state_machine = local_view_->function_state_machine_info;
   const auto rads_scene_is_completed = session_.planning_context()
                                            .start_stop_decider_output()
                                            .rads_scene_is_completed();
@@ -667,7 +671,7 @@ void PlanningScheduler::FillPlanningTrajectory(
 }
 
 void PlanningScheduler::GenerateStopTrajectory(
-    double start_time, iflyauto::PlanningOutput *const planning_output) {
+    double start_time, iflyauto::PlanningOutput* const planning_output) {
   // 更新输出
   // planning_output->msg_header.stamp = IflyTime::Now_ms();
 
@@ -694,12 +698,12 @@ void PlanningScheduler::GenerateStopTrajectory(
 
 void PlanningScheduler::FillPlanningHmiInfo(
     double start_timestamp,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
-  const auto &lateral_output =
+    iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
+  const auto& lateral_output =
       session_.planning_context().lateral_behavior_planner_output();
-  const auto &lane_change_decider_output =
+  const auto& lane_change_decider_output =
       session_.planning_context().lane_change_decider_output();
-  const auto &lat_offset_decider_output =
+  const auto& lat_offset_decider_output =
       session_.planning_context().lateral_offset_decider_output();
   const auto &agent_longitudinal_decider_output =
       session_.planning_context().agent_longitudinal_decider_output();
@@ -723,13 +727,13 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
-  const auto &cipv_info =
+  const auto& cipv_info =
       session_.planning_context().planning_hmi_info().cipv_info;
   planning_hmi_info->cipv_info.has_cipv = cipv_info.has_cipv;
   planning_hmi_info->cipv_info.cipv_id = cipv_info.cipv_id;
 
   // HMI for ad_info
-  const auto &ad_info = session_.planning_context().planning_hmi_info().ad_info;
+  const auto& ad_info = session_.planning_context().planning_hmi_info().ad_info;
   // available
   planning_hmi_info->ad_info.is_avaliable = ad_info.is_avaliable;
   planning_hmi_info->ad_info.cruise_speed = ad_info.cruise_speed;
@@ -742,7 +746,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.obstacle_info_size = ad_info.obstacle_info_size;
   planning_hmi_info->ad_info.lane_change_reason = ad_info.lane_change_reason;
   planning_hmi_info->ad_info.is_curva = ad_info.is_curva;
-  planning_hmi_info->ad_info.intersection_pass_sts = ad_info.intersection_pass_sts;
+  planning_hmi_info->ad_info.intersection_pass_sts =
+      ad_info.intersection_pass_sts;
 
   planning_hmi_info->ad_info.distance_to_ramp = ad_info.distance_to_ramp;
   planning_hmi_info->ad_info.distance_to_split = ad_info.distance_to_split;
@@ -791,9 +796,9 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const bool is_reached_target_slot = session_.environmental_model()
                                           .get_parking_slot_manager()
                                           ->IsReachedTargetSlot();
-  const auto &ego_state_manager =
+  const auto& ego_state_manager =
       session_.environmental_model().get_ego_state_manager();
-  const auto &route_info_output =
+  const auto& route_info_output =
       session_.environmental_model().get_route_info()->get_route_info_output();
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
@@ -820,11 +825,11 @@ void PlanningScheduler::FillPlanningHmiInfo(
   const double kCheckTurnDistance = 15.0;
   const double kEgoIsOnTurnDistance1 = -3.0;
   const double kEgoIsOnTurnDistance2 = 5.0;
-  auto &frenet_ego_state = current_reference_path->get_frenet_ego_state();
-  auto &points = current_reference_path->get_points();
+  auto& frenet_ego_state = current_reference_path->get_frenet_ego_state();
+  auto& points = current_reference_path->get_points();
   double ego_s = frenet_ego_state.s();
   if (current_reference_path != nullptr) {
-    for (auto &point : points) {
+    for (auto& point : points) {
       double distance = point.path_point.s() - ego_s;
       if (distance > kEgoIsOnTurnDistance1 &&
           distance < kEgoIsOnTurnDistance2 &&
@@ -850,7 +855,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   // }
   // hpp状态切park_in状态
   if (session_.is_hpp_scene()) {
-    const auto &parking_switch_info = session_.planning_context()
+    const auto& parking_switch_info = session_.planning_context()
                                           .parking_switch_decider_output()
                                           .parking_switch_info;
     if (parking_switch_info.is_memory_slot_allowed_to_park) {
@@ -960,15 +965,15 @@ void PlanningScheduler::FillAdasPlanningHmiInfo(
 
 void PlanningScheduler::FillPlanningRequest(
     iflyauto::RequestLevel request,
-    iflyauto::PlanningOutput *const planning_output) {
+    iflyauto::PlanningOutput* const planning_output) {
   planning_output->planning_request.take_over_req_level = request;
   planning_output->planning_request.request_reason =
       iflyauto::REQUEST_REASON_NO_REASON;
 }
 
 void PlanningScheduler::ClearParkingInfo(
-    iflyauto::PlanningOutput *const planning_output,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    iflyauto::PlanningOutput* const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
   session_.mutable_planning_context()
       ->mutable_planning_output()
       .planning_status.apa_planning_status = iflyauto::APA_NONE;
@@ -990,13 +995,13 @@ bool PlanningScheduler::IsUndefinedScene(
 }
 
 bool PlanningScheduler::IsValidHppState(
-    const iflyauto::FunctionalState &current_state) {
+    const iflyauto::FunctionalState& current_state) {
   return current_state >= iflyauto::FunctionalState_HPP_STANDBY &&
          current_state <= iflyauto::FunctionalState_HPP_ERROR;
 }
 
 bool PlanningScheduler::IsValidRadsState(
-    const iflyauto::FunctionalState &current_state) {
+    const iflyauto::FunctionalState& current_state) {
   return current_state == iflyauto::FunctionalState_RADS_STANDBY ||
          current_state == iflyauto::FunctionalState_RADS_PRE_ACTIVE ||
          current_state == iflyauto::FunctionalState_RADS_TRACING ||
@@ -1026,13 +1031,13 @@ void PlanningScheduler::InitSccFunction() {
 }
 
 void PlanningScheduler::interpolate_with_last_trajectory_points() {
-  const auto &last_planning_result =
+  const auto& last_planning_result =
       session_.planning_context().last_planning_result();
 
   // interpolate traj points
   // todo @xbliu config
 
-  auto &planning_result =
+  auto& planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   auto start_time =
       (planning_result.timestamp - last_planning_result.timestamp) / 1000.0;
@@ -1040,7 +1045,7 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
   planning_result.traj_points.clear();
   auto backup_num_points = 201;
   auto delta_time = 0.025;
-  auto &last_traj_points = last_planning_result.traj_points;
+  auto& last_traj_points = last_planning_result.traj_points;
   assert(last_traj_points.size() >= 2);
 
   size_t idx = 0;
@@ -1056,8 +1061,8 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
     }
 
     auto pre_idx = std::min(idx, last_traj_points.size() - 2);
-    auto &pre_pt = last_traj_points[pre_idx];
-    auto &next_pt = last_traj_points[pre_idx + 1];
+    auto& pre_pt = last_traj_points[pre_idx];
+    auto& next_pt = last_traj_points[pre_idx + 1];
 
     traj_pt.t = t;
     traj_pt.x = planning_math::Interpolate(pre_pt.t, pre_pt.x, next_pt.t,
@@ -1085,12 +1090,12 @@ void PlanningScheduler::interpolate_with_last_trajectory_points() {
 }
 
 bool PlanningScheduler::UpdateFailedPlanningResult() {
-  const auto &coarse_planning_info = session_.planning_context()
+  const auto& coarse_planning_info = session_.planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  const auto &last_planning_result =
+  const auto& last_planning_result =
       session_.planning_context().last_planning_result();
-  auto &planning_result =
+  auto& planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   if (last_planning_result.scene_type != planning_result.scene_type) {
     return false;
@@ -1112,10 +1117,10 @@ bool PlanningScheduler::UpdateFailedPlanningResult() {
 }
 
 bool PlanningScheduler::UpdateSuccessfulPlanningResult() {
-  const auto &coarse_planning_info = session_.planning_context()
+  const auto& coarse_planning_info = session_.planning_context()
                                          .lane_change_decider_output()
                                          .coarse_planning_info;
-  auto &planning_result =
+  auto& planning_result =
       session_.mutable_planning_context()->mutable_planning_result();
   planning_result.use_backup_cnt = 0;
   planning_result.target_lane_id = coarse_planning_info.target_lane_id;
@@ -1193,7 +1198,7 @@ double PlanningScheduler::ComputeBoundOfReferenceIntercept() {
 
 bool PlanningScheduler::IsHppSlotSearchingByDistance() {
   // check state
-  const auto &state_machine = local_view_->function_state_machine_info;
+  const auto& state_machine = local_view_->function_state_machine_info;
   if (!IsHppSlotSearchingStage(state_machine.current_state)) {
     return false;
   }
@@ -1211,7 +1216,7 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
   }
 
   //  check speed
-  const auto &ego_state =
+  const auto& ego_state =
       session_.environmental_model().get_ego_state_manager();
   const double kspeed_thresh = 5.0;
   if (ego_state->ego_v() > kspeed_thresh) {
@@ -1241,8 +1246,8 @@ const bool PlanningScheduler::ExcuteParkingFunction(
 
 const bool PlanningScheduler::ExcuteNavigationFunction(
     const common::SceneType function_type, const double start_timestamp,
-    iflyauto::PlanningOutput *const planning_output,
-    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+    iflyauto::PlanningOutput* const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr* const planning_hmi_info) {
   // 行车规划部分
   // TODO(xjli32): 功能切换时，reset
   ClearParkingInfo(planning_output, planning_hmi_info);
@@ -1313,19 +1318,19 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
 void PlanningScheduler::CheckTrajectory() {
   using namespace framework;
-  const auto &traj_points =
+  const auto& traj_points =
       session_.planning_context().planning_result().traj_points;
-  const auto &motion_planner_output =
+  const auto& motion_planner_output =
       session_.planning_context().motion_planner_output();
   motion_planner_output.x_s_spline;
   const auto ego_state_mgr =
       session_.environmental_model().get_ego_state_manager();
-  const auto &ego_pose = ego_state_mgr->ego_pose();
+  const auto& ego_pose = ego_state_mgr->ego_pose();
   Eigen::Vector2d cur_pos(ego_pose.x, ego_pose.y);
   Eigen::Vector2d init_point(ego_state_mgr->planning_init_point().x,
                              ego_state_mgr->planning_init_point().y);
 
-  auto *fault_counter_info_ptr = session_.mutable_fault_counter_info();
+  auto* fault_counter_info_ptr = session_.mutable_fault_counter_info();
   for (FaultType type = FaultType::TRAJ_LENGTH_RANGE;
        type != static_cast<FaultType>(
                    static_cast<int>(FaultType::TRAJ_ROLL_CONSISTENCY) + 1);
@@ -1355,7 +1360,7 @@ void PlanningScheduler::CheckTrajectory() {
 
       case FaultType::TRAJ_CURVATURE_RANGE: {
         if (std::any_of(traj_points.begin(), traj_points.end(),
-                        [](const TrajectoryPoint &traj_point) {
+                        [](const TrajectoryPoint& traj_point) {
                           return std::fabs(traj_point.curvature) > 0.2;
                         })) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
@@ -1382,7 +1387,7 @@ void PlanningScheduler::CheckTrajectory() {
             motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
             motion_planner_output.s_lat_vec.front(),
             motion_planner_output.s_lat_vec.back(), cur_pos);
-        const auto &proj_point = projection_spline.GetOutput().point_proj;
+        const auto& proj_point = projection_spline.GetOutput().point_proj;
         const auto lon_err = std::hypot(init_point.x() - proj_point.x(),
                                         init_point.y() - proj_point.y());
         if (fabs(lon_err) > 1.5) {
@@ -1466,7 +1471,7 @@ void PlanningScheduler::CheckTrajectory() {
             motion_planner_output.x_s_spline, motion_planner_output.y_s_spline,
             motion_planner_output.s_lat_vec.front(),
             motion_planner_output.s_lat_vec.back(), cur_pos);
-        const auto &lat_err = projection_spline.GetOutput().dist_proj;
+        const auto& lat_err = projection_spline.GetOutput().dist_proj;
         if (fabs(lat_err) > 0.8) {
           (*fault_counter_info_ptr)[i].fault_recovery_counter = 0;
           (*fault_counter_info_ptr)[i].fault_trigger_counter++;

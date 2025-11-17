@@ -40,6 +40,7 @@
 #include "vehicle_service_c.h"
 #include "vehicle_status.pb.h"
 #include "virtual_lane_manager.h"
+#include "modules/common/config_context.h"
 
 #define TRAJ_POINT_NUM_USED 25
 
@@ -50,13 +51,13 @@ EnvironmentalModelManager::EnvironmentalModelManager() {
   ILOG_DEBUG << "EnvironmentalModelManager created";
 }
 
-void EnvironmentalModelManager::Init(planning::framework::Session *session) {
+void EnvironmentalModelManager::Init(planning::framework::Session* session) {
   session_ = session;
   InitContext();
 }
 
-EgoPlanningConfigBuilder *EnvironmentalModelManager::load_config_builder(
-    const char *file_name) {
+EgoPlanningConfigBuilder* EnvironmentalModelManager::load_config_builder(
+    const char* file_name) {
   auto config_file_dir =
       session_->environmental_model().get_module_config_file_dir();
   auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
@@ -72,6 +73,40 @@ EgoPlanningConfigBuilder *EnvironmentalModelManager::load_config_builder(
                                                    file_name);
 }
 
+EgoPlanningConfigBuilder* EnvironmentalModelManager::load_config_builder(
+    const char* file_name, const char* vehicle_specified_file_name) {
+  auto config_file_dir =
+      session_->environmental_model().get_module_config_file_dir();
+  auto ego_planning_config_json_file = config_file_dir + "/" + file_name;
+  ILOG_INFO << "ego_planning_config_json_file:"
+            << ego_planning_config_json_file.c_str();
+  Json ego_planning_config_json;
+  std::ifstream fin(ego_planning_config_json_file);
+  fin >> ego_planning_config_json;
+  fin.close();
+
+  Json ego_planning_config_json_vehicle_specified;
+  std::string path = "/asw/planning/res/conf/scc_params.json";
+  auto engine_config =
+      common::ConfigurationContext::Instance()->engine_config();
+  if (engine_config.vehicle_cfg_dir.empty()) {
+    std::string engine_config_path = PLANNING_ENGINE_CONFIG_PATH;
+    common::ConfigurationContext::Instance()->load_engine_config_from_json(
+        engine_config_path);
+    ILOG_INFO << "load vehicle config: " << engine_config_path;
+    engine_config = common::ConfigurationContext::Instance()->engine_config();
+    ILOG_INFO << "vehicle config path: " << engine_config.vehicle_cfg_dir;
+  }
+  path = engine_config.vehicle_cfg_dir + "/" + vehicle_specified_file_name;
+  std::ifstream vehicle_config_fin(path);
+  vehicle_config_fin >> ego_planning_config_json_vehicle_specified;
+  vehicle_config_fin.close();
+  Json result_config_json = Config::merge_configs(
+      ego_planning_config_json, ego_planning_config_json_vehicle_specified);
+  return session_->alloc<EgoPlanningConfigBuilder>(result_config_json,
+                                                   file_name);
+}
+
 void EnvironmentalModelManager::InitContext() {
   auto parking_config_builder =
       load_config_builder("general_planner_module_parking.json");
@@ -79,7 +114,7 @@ void EnvironmentalModelManager::InitContext() {
       parking_config_builder);
 
   auto highway_config_builder =
-      load_config_builder("general_planner_module_highway.json");
+      load_config_builder("general_planner_module_highway.json", "scc_params.json");
   session_->mutable_environmental_model()->set_highway_config_builder(
       highway_config_builder);
 
@@ -146,7 +181,7 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_history_obstacle_manager(
       history_obstacle_ptr_);
 
-  const std::string &config_file_dir =
+  const std::string& config_file_dir =
       session_->mutable_environmental_model()->get_module_config_file_dir();
   common::VehicleModel::LoadVehicleModelConfig(config_file_dir);
   // new agent manager
@@ -203,7 +238,7 @@ bool EnvironmentalModelManager::Run() {
     ILOG_DEBUG << "DBW_Disable, but EnvironmentalModelManager continue";
   }
 
-  const auto &local_view = session_->environmental_model().get_local_view();
+  const auto& local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
   bool localization_valid =
@@ -259,7 +294,7 @@ bool EnvironmentalModelManager::Run() {
     is_mrc_mode_hold = true;
   }
   if (is_mrc_mode_hold) {
-    const auto &vehicle_service_output = local_view.vehicle_service_output_info;
+    const auto& vehicle_service_output = local_view.vehicle_service_output_info;
     if (false == vehicle_service_output.right_turn_light_state &&
         false == vehicle_service_output.left_turn_light_state) {
       is_mrc_mode_hold = false;
@@ -452,18 +487,18 @@ bool EnvironmentalModelManager::Run() {
 }
 
 bool EnvironmentalModelManager::ego_state_update(double current_time,
-                                                 const LocalView &local_view) {
+                                                 const LocalView& local_view) {
   common::VehicleStatus vehicle_status;
   vehicle_status_adaptor(current_time, local_view, vehicle_status);
   return ego_state_manager_ptr_->update(vehicle_status);
 }
 
 bool EnvironmentalModelManager::obstacle_prediction_update(
-    double current_time, const LocalView &local_view) {
+    double current_time, const LocalView& local_view) {
   // fusion and prediction update
-  auto &prediction_info =
+  auto& prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
-  auto &fusion_objs_info =
+  auto& fusion_objs_info =
       session_->mutable_environmental_model()->get_mutable_fusion_info();
   prediction_info.clear();
   fusion_objs_info.clear();
@@ -478,7 +513,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
       // hack:hpp 、rads暂时只用融合障碍物
       for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
            i++) {
-        const auto &obj = local_view.fusion_objects_info.fusion_object[i];
+        const auto& obj = local_view.fusion_objects_info.fusion_object[i];
         transform_fusion_to_prediction_longtime(
             obj, (double)local_view.fusion_objects_info.msg_header.stamp,
             prediction_info);
@@ -495,7 +530,7 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
   } else {
     for (int i = 0; i < local_view.fusion_objects_info.fusion_object_size;
          i++) {
-      const auto &obj = local_view.fusion_objects_info.fusion_object[i];
+      const auto& obj = local_view.fusion_objects_info.fusion_object[i];
       transform_fusion_to_prediction(
           obj, (double)local_view.fusion_objects_info.msg_header.stamp,
           prediction_info);
@@ -509,13 +544,13 @@ bool EnvironmentalModelManager::obstacle_prediction_update(
 }
 
 void EnvironmentalModelManager::vehicle_status_adaptor(
-    double current_time, const LocalView &local_view,
-    common::VehicleStatus &vehicle_status) {
-  const auto &vehicle_service_output_info =
+    double current_time, const LocalView& local_view,
+    common::VehicleStatus& vehicle_status) {
+  const auto& vehicle_service_output_info =
       local_view.vehicle_service_output_info;
-  const auto &localization = local_view.localization;
+  const auto& localization = local_view.localization;
   bool new_local = true;
-  const auto &function_state_machine_info =
+  const auto& function_state_machine_info =
       local_view.function_state_machine_info;
   vehicle_status.mutable_header()->set_timestamp_us(
       vehicle_service_output_info.msg_header.stamp);
@@ -745,17 +780,17 @@ static inline float32 y_turn(float32 inputx, float32 inputy, float32 theta) {
 }
 
 void EnvironmentalModelManager::truncate_prediction_info(
-    const iflyauto::PredictionResult &prediction_result,
-    const iflyauto::FusionObjectsInfo &fusion_objects_result,
-    double cur_timestamp_us, std::unordered_set<uint> &prediction_obj_id_set) {
+    const iflyauto::PredictionResult& prediction_result,
+    const iflyauto::FusionObjectsInfo& fusion_objects_result,
+    double cur_timestamp_us, std::unordered_set<uint>& prediction_obj_id_set) {
   assert(session_ != nullptr);
   double current_time =
       session_->planning_context().planning_result().timestamp;
-  const auto &ego_state =
+  const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto init_relative_time =
       ego_state->planning_init_point().relative_time;
-  auto &prediction_info =
+  auto& prediction_info =
       session_->mutable_environmental_model()->get_mutable_prediction_info();
   prediction_info.clear();
 
@@ -767,7 +802,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
   // <key: Perception id, value: fusion obj theta>
   std::unordered_map<int32_t, double> fusion_objects_theta_map;
   for (int i = 0; i < fusion_objects_result.fusion_object_size; i++) {
-    const auto &fusion_obj = fusion_objects_result.fusion_object[i];
+    const auto& fusion_obj = fusion_objects_result.fusion_object[i];
     double obj_yaw = fusion_obj.common_info.heading_angle;
     double ego_yaw = ego_state->heading_angle();
     // double ego_yaw = ego_state->heading_angle();
@@ -801,7 +836,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
   }
 
   for (int i = 0; i < prediction_result.prediction_obstacle_list_size; i++) {
-    const auto &prediction_object =
+    const auto& prediction_object =
         prediction_result.prediction_obstacle_list[i];
 
     const auto trajectory_point_size =
@@ -849,8 +884,8 @@ void EnvironmentalModelManager::truncate_prediction_info(
         SimulationContext::Instance()->prediction_relative_time();
 #endif
 
-    auto &debug_info_manager = DebugInfoManager::GetInstance();
-    auto &planning_debug_data = debug_info_manager.GetDebugInfoPb();
+    auto& debug_info_manager = DebugInfoManager::GetInstance();
+    auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
     planning_debug_data->mutable_simulation_core_param()
         ->set_prediction_relative_time(cur_predicion_obj.delay_time);
 
@@ -1008,7 +1043,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     // cur_predicion_obj.top_polygon_points =
     // prediction_object.top_polygon_points();
 
-    const auto &prediction_traj = prediction_object.trajectory;
+    const auto& prediction_traj = prediction_object.trajectory;
     PredictionTrajectory cur_prediction_trajectory;
     size_t traj_index = 0;
     double step_time = prediction_traj.relative_time;
@@ -1019,7 +1054,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
     cur_predicion_obj.trajectory_valid =
         trajectory_point_size < 1 ? false : true;
     for (int j = 0; j < TRAJ_POINT_NUM_USED + 1; j++) {
-      const auto &point = prediction_traj.trajectory_point[j];
+      const auto& point = prediction_traj.trajectory_point[j];
       PredictionTrajectoryPoint trajectory_point;
       double point_relative_time =
           cur_predicion_obj.delay_time + step_time * traj_index;
@@ -1074,7 +1109,7 @@ void EnvironmentalModelManager::truncate_prediction_info(
 }
 
 PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
-    const std::vector<PredictionTrajectoryPoint> &trajectory_points,
+    const std::vector<PredictionTrajectoryPoint>& trajectory_points,
     const double relative_time) const {
   assert(trajectory_points.size() != 0);
 
@@ -1100,14 +1135,14 @@ PredictionTrajectoryPoint EnvironmentalModelManager::GetPointAtTime(
 }
 
 bool EnvironmentalModelManager::transform_fusion_to_prediction(
-    const iflyauto::FusionObject &fusion_object, double timestamp,
-    std::vector<PredictionObject> &objects_infos) {
+    const iflyauto::FusionObject& fusion_object, double timestamp,
+    std::vector<PredictionObject>& objects_infos) {
   assert(session_ != nullptr);
   if (session_ == nullptr) {
     return false;
   }
   bool object_is_slow = false;
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
 
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.additional_info.track_id;
@@ -1212,14 +1247,14 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction(
 }
 
 bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
-    const iflyauto::FusionObject &fusion_object, double timestamp,
-    std::vector<PredictionObject> &objects_infos) {
+    const iflyauto::FusionObject& fusion_object, double timestamp,
+    std::vector<PredictionObject>& objects_infos) {
   assert(session_ != nullptr);
   if (session_ == nullptr) {
     return false;
   }
   bool object_is_slow = false;
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
 
   PredictionObject prediction_object;
   prediction_object.id = fusion_object.additional_info.track_id;
@@ -1361,15 +1396,15 @@ bool EnvironmentalModelManager::transform_fusion_to_prediction_longtime(
 }
 
 bool EnvironmentalModelManager::IsStatic(
-    const PredictionObject &prediction_object) {
-  auto &ego_state = session_->environmental_model().get_ego_state_manager();
+    const PredictionObject& prediction_object) {
+  auto& ego_state = session_->environmental_model().get_ego_state_manager();
   double prediction_trajectory_length = -10.0;
   double prediction_duration = 0.0;
   if (prediction_object.trajectory_valid) {
-    const auto &trajectory_array = prediction_object.trajectory_array.at(0);
+    const auto& trajectory_array = prediction_object.trajectory_array.at(0);
     if (trajectory_array.trajectory.size() > 0) {
-      const auto &start_point = trajectory_array.trajectory.at(0);
-      const auto &end_point = trajectory_array.trajectory.at(
+      const auto& start_point = trajectory_array.trajectory.at(0);
+      const auto& end_point = trajectory_array.trajectory.at(
           trajectory_array.trajectory.size() - 1);
       prediction_trajectory_length = std::sqrt(
           (start_point.x - end_point.x) * (start_point.x - end_point.x) +
@@ -1402,9 +1437,9 @@ bool EnvironmentalModelManager::IsStatic(
 }
 
 bool EnvironmentalModelManager::InputReady(double current_time,
-                                           std::string &error_msg) {
+                                           std::string& error_msg) {
   using namespace framework;
-  auto to_string = [](FeedType feed_type) -> const char * {
+  auto to_string = [](FeedType feed_type) -> const char* {
     switch (feed_type) {
       case FEED_VEHICLE_DBW_STATUS:
         return "vehicle_dbw_status";
@@ -1472,7 +1507,7 @@ bool EnvironmentalModelManager::InputReady(double current_time,
   error_msg.clear();
 
   bool res = true;
-  const auto &input_list =
+  const auto& input_list =
       session_->environmental_model().get_route_info()->get_hdmap_valid()
           ? (session_->environmental_model().location_valid()
                  ? input_longtime_with_hdmap
@@ -1480,10 +1515,10 @@ bool EnvironmentalModelManager::InputReady(double current_time,
           : (session_->environmental_model().location_valid()
                  ? input_longtime_without_hdmap
                  : input_realtime_without_hdmap);
-  auto *fault_counter_info_ptr = session_->mutable_fault_counter_info();
+  auto* fault_counter_info_ptr = session_->mutable_fault_counter_info();
   for (int i : input_list) {
     auto feed_type = static_cast<FeedType>(i);
-    const char *feed_type_str = to_string(feed_type);
+    const char* feed_type_str = to_string(feed_type);
     ILOG_DEBUG << "(" << __FUNCTION__ << ")"
                << " topic latency: " << feed_type_str << ", "
                << current_time - last_feed_time_[i] << "ms";
