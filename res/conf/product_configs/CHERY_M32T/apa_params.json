@@ -571,7 +571,7 @@
 
   "comment_28": "od params",
   "use_specificationer": true,
-  "use_dynamic_od_car": false,
-  "use_living_things": false,
+  "use_dynamic_od_car": true,
+  "use_living_things": true,
   "use_speed_bump": false
 }

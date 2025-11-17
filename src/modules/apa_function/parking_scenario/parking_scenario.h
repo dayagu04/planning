@@ -199,6 +199,7 @@ class ParkingScenario {
       remain_dist_obs = 15.01;
       remain_dist_col_det = 15.01;
       remain_dist_slot_jump = 15.0;
+      remain_dist_by_od = 15.0;
       car_already_move_dist = 0.0;
       current_path_last_point_heading = 0.0;
       spline_success = false;
@@ -301,6 +302,8 @@ class ParkingScenario {
     // path remain dist by fusion dynamic occ check.
     double remain_dist_col_det = 15.01;
     double remain_dist_slot_jump = 15.0;
+    // moving od human, moving od vehicle
+    double remain_dist_by_od = 15.0;
     double car_already_move_dist = 0.0;
     double current_path_last_point_heading = 0.0;
     pnc::mathlib::spline x_s_spline;

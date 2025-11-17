@@ -129,6 +129,7 @@ message ApaRemainDist {
   optional double remain_static_obs_dist = 2;
   optional double remain_dynamic_obs_dist = 3;
   optional double remain_slot_jump_dist = 4;
+  optional double remain_dist_by_od = 5;
 }
 
 message ApaStuckTime {

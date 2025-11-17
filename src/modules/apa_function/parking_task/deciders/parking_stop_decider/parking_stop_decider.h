@@ -53,6 +53,8 @@ class ParkingStopDecider : public ParkingTask {
 
   const double GetTerminalS();
 
+  const double GetStopDistanceByOD();
+
  private:
   void AddStopDecisionByControlPath(
       const std::vector<pnc::geometry_lib::PathPoint>& path,
@@ -127,7 +129,9 @@ class ParkingStopDecider : public ParkingTask {
 
   const ApaObstacle* stop_obstacle_ = nullptr;
   ParkLonDecision terminal_decision_;
+  // minimum distance stop decision
   ParkLonDecision stop_decision_;
+  // all stop decision
   SpeedDecisions speed_decisions_;
   SVPoint init_point_;
 
