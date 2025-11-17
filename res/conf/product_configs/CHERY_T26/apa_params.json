@@ -424,6 +424,8 @@
   "long_path_acc_upper" : 0.61,
   "short_path_acc_upper" : 0.51,
   "lon_stitch_type": 0,
+  "jerk_upper": 7.0,
+  "jerk_lower": -7.0,
 
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,
