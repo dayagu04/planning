@@ -90,6 +90,7 @@ struct Parameters {
   double lon_distance_buffer1 = 60.0;
   double lat_buffer_to_line = 4.0;
   double tsr_reset_path_length = 10000.0;
+  double tsr_speed_limit_offset = 1.0;
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;

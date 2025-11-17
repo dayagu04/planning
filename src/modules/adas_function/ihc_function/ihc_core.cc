@@ -683,6 +683,34 @@ bool IhcCore::DynamicObstacleCheck(void) {
     if (has_camera && has_radar) {
       verified_obstacle_ids_.insert(track_id);
     }
+
+    // 融合障碍物不一定匹配的上。如果只有相机来源，则判断此障碍物10m范围内是否有雷达来源的障碍物，且运动趋势相同
+    if (has_camera) {
+      for (int j = 0; j < fusion_objs_num; j++) {
+        if (fusion_objs[j].additional_info.track_id == track_id) {
+          continue;
+        }
+        // 判断此障碍物来源为仅雷达
+        uint32_t fusion_source_j = fusion_objs[j].additional_info.fusion_source;
+        bool has_camera_j = (fusion_source_j & 0x01) != 0;
+        bool has_radar_j = (fusion_source_j & 0xFE) != 0;
+        if (!has_radar_j || has_camera_j) {
+          continue;
+        }
+        // 判断运动趋势是否相同
+        if (abs(fusion_objs[j].common_info.relative_velocity.x - fusion_objs[i].common_info.relative_velocity.x) > 7.0f
+          || abs(fusion_objs[j].common_info.relative_velocity.y - fusion_objs[i].common_info.relative_velocity.y) > 4.0f) {
+          continue;
+        }
+        // 判断距离是否能匹配在范围内
+        double delta_x = abs(fusion_objs[j].common_info.relative_position.x - fusion_objs[i].common_info.relative_position.x);
+        double delta_y = abs(fusion_objs[j].common_info.relative_position.y - fusion_objs[i].common_info.relative_position.y);
+        double distance = sqrt(pow(delta_x, 2) + pow(delta_y, 2));
+        if (distance < 25.0f && delta_y < 10.0f) {
+          verified_obstacle_ids_.insert(track_id);
+        }
+      }
+    }
   }
   
   // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物

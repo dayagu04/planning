@@ -122,6 +122,7 @@
   "tsr_use_json_code": false,
   "tsr_fault_code": 0,
   "tsr_reset_path_length": 2000.0,
+  "tsr_speed_limit_offset": 1.0,
   "tsr_function_test_switch": 0,
   "tsr_supp_sign_type_test": 0,
   "elk_tlc_thrd": 1.0,

@@ -728,8 +728,8 @@ void TsrCore::UpdateTsrWarning(void) {
   // 更新overspeed_status_
   if (tsr_speed_limit_ != 0 &&
       (vehicle_service_output_info_ptr->vehicle_speed_display * 3.6) >
-          tsr_speed_limit_ + 1) {
-    // +1是为了避免巡航速度正好与限速值一致, 导致超速报警
+          tsr_speed_limit_ + GetContext.get_param()->tsr_speed_limit_offset) {
+    // tsr_speed_limit_offset限速偏移，超过限速偏移才超速报警
     overspeed_status_ = true;
   } else {
     overspeed_status_ = false;
