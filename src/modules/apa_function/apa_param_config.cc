@@ -1105,6 +1105,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(apa_param.SetParam().speed_config.short_path_acc_upper,
                   double, "short_path_acc_upper");
   JSON_READ_VALUE(param.speed_config.lon_stitch_type, int, "lon_stitch_type");
+  JSON_READ_VALUE(param.speed_config.jerk_upper, double, "jerk_upper");
+  JSON_READ_VALUE(param.speed_config.jerk_lower, double, "jerk_lower");
 
   // hybrid a star params
   JSON_READ_VALUE(param.astar_config.tail_in_slot_virtual_wall_x_offset, float,
