@@ -34,6 +34,13 @@ HppGeneralLateralDecider::HppGeneralLateralDecider(
     : Task(config_builder, session) {
   config_ = config_builder->cast<HppGeneralLateralDeciderConfig>();
   name_ = "HppGeneralLateralDecider";
+
+  second_frenet_soft_bounds_.resize(config_.num_step + 1);
+  first_frenet_soft_bounds_.resize(config_.num_step + 1);
+  frenet_hard_bounds_.resize(config_.num_step + 1);
+  second_soft_bounds_info_.resize(config_.num_step + 1);
+  first_soft_bounds_info_.resize(config_.num_step + 1);
+  hard_bounds_info_.resize(config_.num_step + 1);
 }
 
 bool HppGeneralLateralDecider::InitInfo() {
@@ -63,14 +70,32 @@ bool HppGeneralLateralDecider::InitInfo() {
     // add logs
     return false;
   }
+
+  is_ego_reverse_ = false;
+  if (session_->is_rads_scene()) {
+    is_ego_reverse_ = true;
+  }
   static_obstacle_decisions_.clear();
   dynamic_obstacle_decisions_.clear();
   ref_traj_points_.clear();
   plan_history_traj_.clear();
   match_index_map_.clear();
   ref_path_points_.clear();
-  soft_bounds_.clear();
+  first_soft_bounds_.clear();
+  second_soft_bounds_.clear();
   hard_bounds_.clear();
+  second_frenet_soft_bounds_.assign(second_frenet_soft_bounds_.size(),
+                             std::make_pair(0.0, 0.0));
+  first_frenet_soft_bounds_.assign(first_frenet_soft_bounds_.size(),
+                             std::make_pair(0.0, 0.0));
+  frenet_hard_bounds_.assign(frenet_hard_bounds_.size(),
+                             std::make_pair(0.0, 0.0));
+  second_soft_bounds_info_.assign(second_soft_bounds_info_.size(),
+                           std::make_pair(BoundInfo(), BoundInfo()));
+  first_soft_bounds_info_.assign(first_soft_bounds_info_.size(),
+                           std::make_pair(BoundInfo(), BoundInfo()));
+  hard_bounds_info_.assign(hard_bounds_info_.size(),
+                           std::make_pair(BoundInfo(), BoundInfo()));
   // vehicle_dynamic_buffer_.clear();
   return true;
 }
@@ -89,6 +114,7 @@ bool HppGeneralLateralDecider::Execute() {
     return false;
   };
 
+  
   auto &traj_points = session_->mutable_planning_context()
                           ->mutable_planning_result()
                           .traj_points;
@@ -105,20 +131,25 @@ bool HppGeneralLateralDecider::Execute() {
   std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info;
   std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info;
 
-  ExtractBoundary(second_frenet_soft_bounds, frenet_hard_bounds, second_soft_bounds_info,
-                  hard_bounds_info);
+  ExtractBoundary(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                  frenet_hard_bounds_, second_soft_bounds_info_,
+                  first_soft_bounds_info_, hard_bounds_info_);
 
   auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds);
-  GenerateLateralDeciderOutput(second_frenet_soft_bounds, frenet_hard_bounds,
+  PostProcessReferenceTrajBySoftBound(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                                      general_lateral_decider_output);
+
+  GenerateLateralDeciderOutput(second_frenet_soft_bounds_, first_frenet_soft_bounds_,
+                               frenet_hard_bounds_, second_soft_bounds_info_,
+                               first_soft_bounds_info_, hard_bounds_info_,
                                general_lateral_decider_output);
 
   CalcLateralBehaviorOutput();
 
-  SaveLatDebugInfo(second_frenet_soft_bounds, frenet_hard_bounds, second_soft_bounds_info,
-                   hard_bounds_info, general_lateral_decider_output);
+  SaveLatDebugInfo(second_frenet_soft_bounds_, first_frenet_soft_bounds_, frenet_hard_bounds_, second_soft_bounds_info_,
+                   first_soft_bounds_info_, hard_bounds_info_);
 
   auto end_time = IflyTime::Now_ms();
   JSON_DEBUG_VALUE("HppGeneralLateralDeciderCostTime", end_time - start_time);
@@ -1122,10 +1153,14 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
 
-    const double care_area_s_start =
+    double care_area_s_start =
         ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
-    const double care_area_s_end =
+    double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
+    if (is_ego_reverse_) {
+      care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
+      care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
+    }    
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
@@ -1188,12 +1223,12 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
         // -kDefaultDistanceToRoad, hard_bound_parking_space.upper,
         // config_.kHardBoundWeight, BoundInfo{parking_space_border.obstacle_id,
         // BoundType::PARKING_SPACE}});
-        // soft_bounds_[i].emplace_back(WeightedBound{
+        // second_soft_bounds_[i].emplace_back(WeightedBound{
         // -kDefaultDistanceToRoad, soft_bound_groundline.upper,
         // config_.kPhysicalBoundWeight,
         // BoundInfo{groundline_obstacle_border.obstacle_id,
         // BoundType::GROUNDLINE}});
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             -kDefaultDistanceToRoad, soft_bound_parking_space.upper,
             config_.kPhysicalBoundWeight,
             BoundInfo{parking_space_border.obstacle_id,
@@ -1224,12 +1259,12 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
         // hard_bound_parking_space.lower, kDefaultDistanceToRoad,
         // config_.kHardBoundWeight, BoundInfo{parking_space_border.obstacle_id,
         // BoundType::PARKING_SPACE}});
-        // soft_bounds_[i].emplace_back(WeightedBound{
+        // second_soft_bounds_[i].emplace_back(WeightedBound{
         // soft_bound_groundline.lower,  kDefaultDistanceToRoad,
         // config_.kPhysicalBoundWeight,
         // BoundInfo{groundline_obstacle_border.obstacle_id,
         // BoundType::GROUNDLINE}});
-        soft_bounds_[i].emplace_back(
+        second_soft_bounds_[i].emplace_back(
             WeightedBound{soft_bound_parking_space.lower,
                           kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
                           BoundInfo{parking_space_border.obstacle_id,
@@ -1247,7 +1282,7 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
 
   const double kDefaultDistanceToRoad = 10.0;
   hard_bounds_.resize(ref_traj_points_.size());
-  soft_bounds_.resize(ref_traj_points_.size());
+  second_soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
     Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
     Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
@@ -1294,7 +1329,7 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
     hard_bounds_[i].emplace_back(WeightedBound{
         hard_bound_road.lower, hard_bound_road.upper, config_.kHardBoundWeight,
         BoundInfo{-100, BoundType::ROAD_BORDER}});
-    soft_bounds_[i].emplace_back(WeightedBound{
+    second_soft_bounds_[i].emplace_back(WeightedBound{
         soft_bound_road.lower, soft_bound_road.upper,
         config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::ROAD_BORDER}});
   }
@@ -1328,35 +1363,35 @@ void HppGeneralLateralDecider::GenerateLaneSoftBoundary() {
     const auto &ego_init_sl_info = ego_frenet_state_.ego_init_sl_info();
     if (is_lane_change && lc_request_direction == RequestType::LEFT_CHANGE) {
       if (ego_init_sl_info.min_l + half_ego_width < soft_bound_lane.lower) {
-        soft_bounds_[i].emplace_back(
+        second_soft_bounds_[i].emplace_back(
             WeightedBound{ego_init_sl_info.min_l + half_ego_width,
                           kDefaultDistanceToRoad, config_.kPhysicalBoundWeight,
                           BoundInfo{-100, BoundType::EGO_POSITION}});
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             -kDefaultDistanceToRoad, soft_bound_lane.upper,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       } else {
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             soft_bound_lane.lower, soft_bound_lane.upper,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       }
     } else if (is_lane_change &&
                lc_request_direction == RequestType::RIGHT_CHANGE) {
       if (ego_init_sl_info.max_l - half_ego_width > soft_bound_lane.upper) {
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             -kDefaultDistanceToRoad, ego_init_sl_info.max_l - half_ego_width,
             config_.kPhysicalBoundWeight,
             BoundInfo{-100, BoundType::EGO_POSITION}});
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             soft_bound_lane.lower, kDefaultDistanceToRoad,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       } else {
-        soft_bounds_[i].emplace_back(WeightedBound{
+        second_soft_bounds_[i].emplace_back(WeightedBound{
             soft_bound_lane.lower, soft_bound_lane.upper,
             config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
       }
     } else {
-      soft_bounds_[i].emplace_back(WeightedBound{
+      second_soft_bounds_[i].emplace_back(WeightedBound{
           soft_bound_lane.lower, soft_bound_lane.upper,
           config_.kPhysicalBoundWeight, BoundInfo{-100, BoundType::LANE}});
     }
@@ -1593,10 +1628,15 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
 
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
-    const double care_area_s_start =
+    double care_area_s_start =
         ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
-    const double care_area_s_end =
+    double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
+
+    if (is_ego_reverse_) {
+      care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
+      care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
+    }    
     // std::max((front_lon_buf_dis - std::fabs(traj_point.curvature *
     // config_.ref_curvature_factor)), 0.0);
     const auto care_area_center =
@@ -1624,7 +1664,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     double lat_buf_dis =
         hpp_general_lateral_decider_utils::CalDesireStaticLateralDistance(
             config_.hard_buffer2static_agent, ego_cart_state_manager_->ego_v(),
-            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound);
+            ego_frenet_state_.l(), obstacle->type(), is_update_hard_bound, config_);
 
     auto lat_decision = LatObstacleDecisionType::IGNORE;
     auto lon_decision = LonObstacleDecisionType::IGNORE;
@@ -1846,10 +1886,14 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
     const double ego_s = traj_point.s;
     const double ego_l = traj_point.l;
 
-    const double care_area_s_start =
+    double care_area_s_start =
         ego_s - vehicle_param.rear_edge_to_rear_axle - rear_lon_buf_dis;
-    const double care_area_s_end =
+    double care_area_s_end =
         ego_s + rear_axle_to_front_bumper + front_lon_buf_dis;
+    if (is_ego_reverse_) {
+      care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
+      care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
+    } 
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
@@ -2172,8 +2216,10 @@ void HppGeneralLateralDecider::RefineConflictLatDecisions(
 
 void HppGeneralLateralDecider::ExtractBoundary(
     std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
     std::vector<std::pair<double, double>> &frenet_hard_bounds,
     std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+    std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
     std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
   const double planning_init_point_l =
       ego_frenet_state_.planning_init_point().frenet_state.r;
@@ -2186,22 +2232,14 @@ void HppGeneralLateralDecider::ExtractBoundary(
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
-
-    // temp hack
-    if (i == hard_bounds_.size() - 1) {
-      hard_bound.first = frenet_hard_bounds.back().first;
-      hard_bound.second = frenet_hard_bounds.back().second;
-      hard_bound_info.first = hard_bounds_info.back().first;
-      hard_bound_info.second = hard_bounds_info.back().second;
-    }
-    frenet_hard_bounds.emplace_back(hard_bound);
-    hard_bounds_info.emplace_back(hard_bound_info);
+    frenet_hard_bounds[i] = hard_bound;
+    hard_bounds_info[i] = hard_bound_info;
   }
 
-  for (int i = 0; i < soft_bounds_.size(); i++) {
+  for (int i = 0; i < second_soft_bounds_.size(); i++) {
     std::pair<double, double> soft_bound{-10., 10.};  // <lower ,upper>
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
-    PostProcessBound(planning_init_point_l, soft_bounds_[i], soft_bound,
+    PostProcessBound(planning_init_point_l, second_soft_bounds_[i], soft_bound,
                      soft_bound_info);
     if (i == 0) {
       ProtectBoundByInitPoint(soft_bound, soft_bound_info);
@@ -2217,19 +2255,71 @@ void HppGeneralLateralDecider::ExtractBoundary(
     } else if (soft_bound.second < frenet_hard_bounds[i].first) {
       soft_bound.second = frenet_hard_bounds[i].first;
     }
-
-    // temp hack
-    if (i == soft_bounds_.size() - 1) {
-      soft_bound.first = second_frenet_soft_bounds.back().first;
-      soft_bound.second = second_frenet_soft_bounds.back().second;
-      soft_bound_info.first = second_soft_bounds_info.back().first;
-      soft_bound_info.second = second_soft_bounds_info.back().second;
-    }
-    second_frenet_soft_bounds.emplace_back(soft_bound);
-    second_soft_bounds_info.emplace_back(soft_bound_info);
+    second_frenet_soft_bounds[i] = soft_bound;
+    second_soft_bounds_info[i] = soft_bound_info;
   }
 
+  for (int i = 0; i < first_soft_bounds_.size(); i++) {
+    std::pair<double, double> first_soft_bound{-20., 20.};  // <lower ,upper>
+    std::pair<BoundInfo, BoundInfo> first_soft_bound_info;  // <lower ,upper>
+    PostProcessBound(planning_init_point_l, first_soft_bounds_[i], first_soft_bound,
+                     first_soft_bound_info);
+    if (i == 0) {
+      ProtectBoundByInitPoint(first_soft_bound, first_soft_bound_info);
+    }
+    // second_soft in first_soft
+    // 满足特定场景的case，不进行比大小，例如默认关闭first_soft_bound
+    if (!(second_soft_bounds_info[i].first.type == BoundType :: ROAD_BORDER ||
+        second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION ||
+        second_soft_bounds_info[i].first.type == BoundType :: LANE)) {
+      // if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+      //   first_soft_bound.first = second_frenet_soft_bounds[i].second;
+      // } else if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+      //   first_soft_bound.first = second_frenet_soft_bounds[i].first;
+      // }
+      if (first_soft_bound.first < second_frenet_soft_bounds[i].first) {
+        first_soft_bound.first = second_frenet_soft_bounds[i].first;
+      }
+      if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+        first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      }
+      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+        if (second_soft_bounds_info[i].second.type == BoundType :: LANE ||
+            second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION) {
+          second_frenet_soft_bounds[i].second = first_soft_bound.first;
+        } else {
+          first_soft_bound.first = second_frenet_soft_bounds[i].second;
+        }
+      }
+    }
+    if (!(second_soft_bounds_info[i].second.type == BoundType :: ROAD_BORDER ||
+        second_soft_bounds_info[i].second.type == BoundType :: EGO_POSITION ||
+        second_soft_bounds_info[i].second.type == BoundType :: LANE)) {
+      // if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
+      //   first_soft_bound.second = second_frenet_soft_bounds[i].second;
+      // } else if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+      //   first_soft_bound.second = second_frenet_soft_bounds[i].first;
+      // }
+      if (first_soft_bound.second > second_frenet_soft_bounds[i].second) {
+        first_soft_bound.second = second_frenet_soft_bounds[i].second;
+      }
+      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+        first_soft_bound.first = second_frenet_soft_bounds[i].second;
+      }
+      if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+        if (second_soft_bounds_info[i].first.type == BoundType :: LANE ||
+            second_soft_bounds_info[i].first.type == BoundType :: EGO_POSITION) {
+          second_frenet_soft_bounds[i].first = first_soft_bound.second;
+        } else {
+          first_soft_bound.second = second_frenet_soft_bounds[i].first;
+        }
+      }
+    }
+    first_frenet_soft_bounds[i] = first_soft_bound;
+    first_soft_bounds_info[i] = first_soft_bound_info;
+  }
   assert(frenet_hard_bounds.size() == ref_traj_points_.size());
+  assert(first_frenet_soft_bounds.size() == ref_traj_points_.size());
   assert(second_frenet_soft_bounds.size() == ref_traj_points_.size());
 }
 
@@ -2267,7 +2357,7 @@ void HppGeneralLateralDecider::ExtractDynamicObstacleBound(
             }
           } else {
             for (auto index : match_index_map_[i]) {
-              soft_bounds_[index].emplace_back(obstacle_pos_bound);
+              second_soft_bounds_[index].emplace_back(obstacle_pos_bound);
             }
           }
         }
@@ -2292,7 +2382,7 @@ void HppGeneralLateralDecider::ExtractStaticObstacleBound(
           if (obstacle_pos_bound.weight < 0.) {
             hard_bounds_[i].emplace_back(obstacle_pos_bound);
           } else {
-            soft_bounds_[i].emplace_back(obstacle_pos_bound);
+            second_soft_bounds_[i].emplace_back(obstacle_pos_bound);
           }
         }
       }
@@ -2538,29 +2628,39 @@ void HppGeneralLateralDecider::PostProcessBound(
 
 void HppGeneralLateralDecider::SaveLatDebugInfo(
     const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
-    std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
-    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info) {
+  const auto &potential_dangerous_agent_decider_output =
+      session_->planning_context()
+               .potential_dangerous_agent_decider_output();
+  if (!potential_dangerous_agent_decider_output.dangerous_agent_info.empty() &&
+      potential_dangerous_agent_decider_output.dangerous_agent_info.front().
+      recommended_maneuver.lateral_maneuver != LateralManeuver :: IGNORE) {
+    JSON_DEBUG_VALUE("potential_dangerous_agent_id",
+        potential_dangerous_agent_decider_output.dangerous_agent_info.front().id);
+  } else {
+    JSON_DEBUG_VALUE("potential_dangerous_agent_id", -0.01);
+  }
+
+#ifdef ENABLE_PROTO_LOG
   lat_debug_info_.Clear();
   lat_debug_info_.mutable_bound_s_vec()->Resize(ref_traj_points_.size(), 0.0);
   lat_debug_info_.mutable_hard_lower_bound_info_vec()->Reserve(
       ref_traj_points_.size());
   lat_debug_info_.mutable_hard_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_lower_bound_info_vec()->Reserve(
+  lat_debug_info_.mutable_second_soft_lower_bound_info_vec()->Reserve(
       ref_traj_points_.size());
-  lat_debug_info_.mutable_soft_upper_bound_info_vec()->Reserve(
+  lat_debug_info_.mutable_second_soft_upper_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_first_soft_lower_bound_info_vec()->Reserve(
+      ref_traj_points_.size());
+  lat_debug_info_.mutable_first_soft_upper_bound_info_vec()->Reserve(
       ref_traj_points_.size());
 
-  auto &hard_bounds_frenet_output =
-      general_lateral_decider_output.hard_bounds_frenet_point;
-  auto &soft_bounds_frenet_output =
-      general_lateral_decider_output.second_soft_bounds_frenet_point;
-  auto &hard_bounds_info_output =
-      general_lateral_decider_output.hard_bounds_info;
-  auto &soft_bounds_info_output =
-      general_lateral_decider_output.second_soft_bounds_info;
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     lat_debug_info_.mutable_bound_s_vec()->Set(i, ref_traj_points_[i].s);
 
@@ -2580,60 +2680,127 @@ void HppGeneralLateralDecider::SaveLatDebugInfo(
     hard_upper_bound_info->mutable_bound_info()->set_type(
         BoundType2String(hard_bounds_info[i].second.type));
 
-    auto soft_lower_bound_info =
-        lat_debug_info_.mutable_soft_lower_bound_info_vec()->Add();
-    soft_lower_bound_info->set_lower(second_frenet_soft_bounds[i].first);
-    soft_lower_bound_info->mutable_bound_info()->set_id(
+    auto second_soft_lower_bound_info =
+        lat_debug_info_.mutable_second_soft_lower_bound_info_vec()->Add();
+    second_soft_lower_bound_info->set_lower(second_frenet_soft_bounds[i].first);
+    second_soft_lower_bound_info->mutable_bound_info()->set_id(
         second_soft_bounds_info[i].first.id);
-    soft_lower_bound_info->mutable_bound_info()->set_type(
+    second_soft_lower_bound_info->mutable_bound_info()->set_type(
         BoundType2String(second_soft_bounds_info[i].first.type));
 
-    auto soft_upper_bound_info =
-        lat_debug_info_.mutable_soft_upper_bound_info_vec()->Add();
-    soft_upper_bound_info->set_upper(second_frenet_soft_bounds[i].second);
-    soft_upper_bound_info->mutable_bound_info()->set_id(
+    auto second_soft_upper_bound_info =
+        lat_debug_info_.mutable_second_soft_upper_bound_info_vec()->Add();
+    second_soft_upper_bound_info->set_upper(second_frenet_soft_bounds[i].second);
+    second_soft_upper_bound_info->mutable_bound_info()->set_id(
         second_soft_bounds_info[i].second.id);
-    soft_upper_bound_info->mutable_bound_info()->set_type(
+    second_soft_upper_bound_info->mutable_bound_info()->set_type(
         BoundType2String(second_soft_bounds_info[i].second.type));
 
-    hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
-    soft_bounds_frenet_output.emplace_back(second_frenet_soft_bounds[i]);
-    hard_bounds_info_output.emplace_back(second_soft_bounds_info[i]);
-    soft_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    auto first_soft_lower_bound_info =
+        lat_debug_info_.mutable_first_soft_lower_bound_info_vec()->Add();
+    first_soft_lower_bound_info->set_lower(first_frenet_soft_bounds[i].first);
+    first_soft_lower_bound_info->mutable_bound_info()->set_id(
+        first_soft_bounds_info[i].first.id);
+    first_soft_lower_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(first_soft_bounds_info[i].first.type));
+
+    auto first_soft_upper_bound_info =
+        lat_debug_info_.mutable_first_soft_upper_bound_info_vec()->Add();
+    first_soft_upper_bound_info->set_upper(first_frenet_soft_bounds[i].second);
+    first_soft_upper_bound_info->mutable_bound_info()->set_id(
+        first_soft_bounds_info[i].second.id);
+    first_soft_upper_bound_info->mutable_bound_info()->set_type(
+        BoundType2String(first_soft_bounds_info[i].second.type));
+  }
+
+  // 障碍物决策是否存在跳动
+  lat_debug_info_.mutable_obstacle_ids()->Resize(
+      dynamic_obstacle_decisions_.size() + static_obstacle_decisions_.size(),
+      0);
+  int i = 0;
+  for (const auto &dynamic_obstacle_decision : dynamic_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(
+        i, dynamic_obstacle_decision.first);
+    i++;
+  }
+  for (const auto &static_obstacle_decision : static_obstacle_decisions_) {
+    lat_debug_info_.mutable_obstacle_ids()->Set(i,
+                                                static_obstacle_decision.first);
+    i++;
   }
 
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
       ->mutable_lateral_behavior_debug_info()
       ->CopyFrom(lat_debug_info_);
+#endif
 }
 
 void HppGeneralLateralDecider::PostProcessReferenceTrajBySoftBound(
-    const std::vector<std::pair<double, double>> &frenet_soft_bounds) {
+    const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
+    GeneralLateralDeciderOutput &general_lateral_decider_output) {
+  // bool bound_avoid = false;
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
+    // if (ref_traj_points_[i].l < frenet_soft_bounds[i].first ||
+    //     ref_traj_points_[i].l > frenet_soft_bounds[i].second) {
+    //   bound_avoid = true;
+    // }
     ref_traj_points_[i].l =
-        std::min(std::max(ref_traj_points_[i].l, frenet_soft_bounds[i].first),
-                 frenet_soft_bounds[i].second);
+        std::min(std::max(ref_traj_points_[i].l, second_frenet_soft_bounds[i].first),
+                 second_frenet_soft_bounds[i].second);
+    ref_traj_points_[i].l =
+        std::min(std::max(ref_traj_points_[i].l, first_frenet_soft_bounds[i].first),
+                 first_frenet_soft_bounds[i].second);
   }
+  // general_lateral_decider_output.bound_avoid = bound_avoid;
 }
 
 void HppGeneralLateralDecider::GenerateLateralDeciderOutput(
     const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+    const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
-  general_lateral_decider_output.second_soft_bounds = std::move(soft_bounds_);
+  general_lateral_decider_output.second_soft_bounds = std::move(second_soft_bounds_);
+  general_lateral_decider_output.first_soft_bounds = std::move(first_soft_bounds_);
   general_lateral_decider_output.hard_bounds = std::move(hard_bounds_);
 
-  GenerateEnuBoundaryPoints(second_frenet_soft_bounds, frenet_hard_bounds,
+  GenerateEnuBoundaryPoints(second_frenet_soft_bounds, first_frenet_soft_bounds, frenet_hard_bounds,
                             general_lateral_decider_output);
 
   GenerateEnuReferenceTheta(general_lateral_decider_output);
 
   GenerateEnuReferenceTraj(general_lateral_decider_output);
+
+  auto &hard_bounds_frenet_output =
+      general_lateral_decider_output.hard_bounds_frenet_point;
+  auto &first_soft_bounds_frenet_output =
+      general_lateral_decider_output.first_soft_bounds_frenet_point;
+  auto &second_soft_bounds_frenet_output =
+      general_lateral_decider_output.second_soft_bounds_frenet_point;
+  auto &hard_bounds_info_output =
+      general_lateral_decider_output.hard_bounds_info;
+  auto &first_soft_bounds_info_output =
+      general_lateral_decider_output.first_soft_bounds_info;
+  auto &second_soft_bounds_info_output =
+      general_lateral_decider_output.second_soft_bounds_info;
+
+  for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
+    hard_bounds_frenet_output.emplace_back(frenet_hard_bounds[i]);
+    first_soft_bounds_frenet_output.emplace_back(first_frenet_soft_bounds[i]);
+    second_soft_bounds_frenet_output.emplace_back(second_frenet_soft_bounds[i]);
+    hard_bounds_info_output.emplace_back(hard_bounds_info[i]);
+    first_soft_bounds_info_output.emplace_back(first_soft_bounds_info[i]);
+    second_soft_bounds_info_output.emplace_back(second_soft_bounds_info[i]);
+  }
 }
 
 void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+    const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
     const std::vector<std::pair<double, double>> &frenet_hard_bounds,
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   auto &soft_bounds_output =
@@ -2681,6 +2848,9 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
     hard_bounds_output.emplace_back(std::pair<Point2D, Point2D>(
         tmp_hard_lower_point, tmp_hard_upper_point));
   }
+
+  // 临时 hack
+  general_lateral_decider_output.first_soft_bounds_cart_point = general_lateral_decider_output.second_soft_bounds_cart_point;
 };
 
 void HppGeneralLateralDecider::GenerateEnuReferenceTraj(

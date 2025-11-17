@@ -34,7 +34,7 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
 double CalDesireStaticLateralDistance(const double base_distance,
                                       const double ego_vel, const double ego_l,
                                       iflyauto::ObjectType type,
-                                      bool is_update_hard_bound) {
+                                      bool is_update_hard_bound, HppGeneralLateralDeciderConfig &config) {
   const double kStaticVRUMaxExtraLateralBuffer = 0.65;
   const double kConeMaxExtraLateralBuffer = 0.15;
   const double kStaticOtherMaxExtraLateralBuffer = 0.45;
@@ -46,11 +46,11 @@ double CalDesireStaticLateralDistance(const double base_distance,
 
   double max_extra_lateral_buffer = 0;
   if (IsVRU(type)) {
-    max_extra_lateral_buffer = kStaticVRUMaxExtraLateralBuffer;
+    max_extra_lateral_buffer = config.static_vru_max_extra_lateral_buffer;
   } else if (IsCone(type)) {
-    max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
+    max_extra_lateral_buffer = config.static_cone_max_extra_lateral_buffer;
   } else {
-    max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
+    max_extra_lateral_buffer = config.static_other_max_extra_lateral_buffer;
   }
 
   double min_extra_lateral_buffer =

@@ -165,7 +165,7 @@ void VirtualLaneManager::construct_reference_line_msg(
   const size_t points_size =
       std::min(points_size_rads_map, points_size_refline_default);
   // NOTE: points_rads_map start from the first point which is memorized in
-  for (size_t i = 1, j = points_size_rads_map - 1; i < points_size && j >= 0;
+  for (size_t i = 0, j = points_size_rads_map - 1; i < points_size && j >= 0;
        ++i, --j) {
     auto& current_lane_virtual_refline_point =
         (current_lane_virtual->lane_reference_line)
@@ -186,7 +186,7 @@ void VirtualLaneManager::construct_reference_line_msg(
     const auto& rads_map_points_boot = (rads_map.points[j]).boot;
     const auto& rads_map_points_enu = (rads_map.points[j]).enu;
     const auto& rads_map_points_llh = (rads_map.points[j]).llh;
-    // boot point update
+    // boot point update 
     current_lane_virtual_local_point.x = rads_map_points_boot.x;
     current_lane_virtual_local_point.y = rads_map_points_boot.y;
     current_lane_virtual_local_point.z = rads_map_points_boot.z;

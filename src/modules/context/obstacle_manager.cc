@@ -321,7 +321,9 @@ void ObstacleManager::UpdateOccObstacle() {
           (occupancy_objects[i].common_occupancy_info.type ==
                iflyauto::OBJECT_TYPE_OCC_WALL ||
            occupancy_objects[i].common_occupancy_info.type ==
-               iflyauto::OBJECT_TYPE_OCC_EMPTY)) {
+               iflyauto::OBJECT_TYPE_OCC_EMPTY || 
+           occupancy_objects[i].common_occupancy_info.type ==
+               iflyauto::OBJECT_TYPE_OCC_GENERAL_STATIC)) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points_2d,
                              polygon_points_size, frenet_coord, ego_point,
                              index_offset);
