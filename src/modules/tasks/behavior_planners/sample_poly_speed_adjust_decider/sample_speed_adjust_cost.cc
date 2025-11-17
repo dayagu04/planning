@@ -113,15 +113,14 @@ void MatchGapCost::GetCost(
   cost_ = 0.0;
 
   double safe_border_distance_to_gap_front_obj = 0.0;
-  double min_safe_distance_front = 0.0;
+  double min_safe_distance_front = 2.0;
   double safe_border_distance_to_gap_back_obj = 0.0;
-  double min_safe_distance_rear = 2.0;
+  double min_safe_distance_rear = 0.0;
   if (upper_st_point.agent_id() != kNoAgentId) {
     if (upper_st_point.velocity() < poly_end_v) {
       double rel_v = poly_end_v - upper_st_point.velocity();
       double front_ttc_buffer = (poly_end_v * rel_v) / (2.0 * 2.5);
-      min_safe_distance_front =
-          std::max(front_ttc_buffer, 2.0);
+      min_safe_distance_front = std::max(front_ttc_buffer, 2.0);
     }
     safe_border_distance_to_gap_front_obj =
         min_safe_distance_front + reliable_safe_distance_to_gap_front_obj;
@@ -130,16 +129,18 @@ void MatchGapCost::GetCost(
   if (lower_st_point.agent_id() != kNoAgentId) {
     double rel_vel = lower_st_point.velocity() - poly_end_v;
     double abs_buffer = interp(lower_st_point.velocity() * 3.6, xp, fp);
-    double dist_rel_vel = (rel_vel > 0)
-                              ? rel_vel * interp(rel_vel * 3.6, xpv, fpv)
-                              : 0.0;
+    double dist_rel_vel =
+        (rel_vel > 0) ? rel_vel * interp(rel_vel * 3.6, xpv, fpv) : 0.0;
     min_safe_distance_rear = std::fmax(abs_buffer, dist_rel_vel);
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
-    linear_expand_extra_gap_distance_by_ego_vel(poly_end_v, kEgoVelMax, kEgoVelMin, 0.0 , 2.0);
-    safe_border_distance_to_gap_back_obj =
-        std::max(reliable_safe_distance_to_gap_back_obj  + min_safe_distance_rear * 0.6, min_safe_distance_rear);
+                             linear_expand_extra_gap_distance_by_ego_vel(
+                                 poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
+    safe_border_distance_to_gap_back_obj = std::max(
+        reliable_safe_distance_to_gap_back_obj + min_safe_distance_rear * 0.6,
+        min_safe_distance_rear);
   }
-  safe_border_distance_to_gap_front_obj_ = safe_border_distance_to_gap_front_obj;
+  safe_border_distance_to_gap_front_obj_ =
+      safe_border_distance_to_gap_front_obj;
   safe_border_distance_to_gap_back_obj_ = safe_border_distance_to_gap_back_obj;
   // Case 1: Both upper and lower points are not present
   if (lower_st_point.agent_id() == kNoAgentId &&
@@ -239,10 +240,13 @@ void MatchGapCost::GetCost(
           std::fabs(0.5 * upper_st_point.s() + 0.5 * lower_st_point.s() -
                     poly_end_s) /
           (upper_st_point.s() - lower_st_point.s());
+      proportion_gap_center_distance =
+          std::fmin(proportion_gap_center_distance, 0.5);
       match_gap_center_cost_ = calculate_narrow_gap_center_attract_cost(
           kBasicSafeDistance + 1, kBasicSafeDistance,
           -(0.5 - proportion_gap_center_distance) * kBasicSafeDistance,
           narrow_gap_penalty_factor_coef_, weight_match_s_);
+      is_gap_changeable_ = false;
       // match_s_cost_ = weight_match_s_ * std::exp()
     }
     match_v_cost_ = calculate_gap_vel_match_cost(

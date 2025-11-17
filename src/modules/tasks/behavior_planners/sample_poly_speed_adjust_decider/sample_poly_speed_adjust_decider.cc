@@ -206,9 +206,15 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  const bool enable_merge_decelaration =
-      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
-       is_in_deceleartion_scene_);
+  bool enable_merge_decelaration = false;
+  if (is_in_deceleartion_scene_) {
+    if ((lane_change_source_ == MERGE_REQUEST) ||
+        ((lane_change_source_ == MAP_REQUEST) &&
+         (route_info_output.mlc_request_type_route_info == RAMP_TO_MAIN)) ||
+        (merge_stop_line_distance_ <= 100.0)) {
+      enable_merge_decelaration = true;
+    }
+  }
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -690,7 +696,6 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       }
     }
   }
-
   return false;
 }
 

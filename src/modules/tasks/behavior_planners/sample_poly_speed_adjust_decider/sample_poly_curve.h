@@ -39,6 +39,7 @@ class SamplePolyCurve {
 
   double cost_sum_ = 0.0;
   bool safe_valid_{false};
+  bool gap_valid_{true};
 };
 
 class SampleQuarticPolynomialCurve : public SamplePolyCurve {

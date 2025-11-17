@@ -30,6 +30,7 @@ class MatchGapCost : public CurveCost {
   const double match_s_cost() const { return match_s_cost_; }
   const double match_v_cost() const { return match_v_cost_; }
   const double match_gap_center_cost() const { return match_gap_center_cost_; }
+  const bool is_gap_changeable() const { return is_gap_changeable_; }
 
  private:
   double front_edge_to_rear_axle_;
@@ -53,6 +54,7 @@ class MatchGapCost : public CurveCost {
 
   double safe_border_distance_to_gap_front_obj_ = 0.0;
   double safe_border_distance_to_gap_back_obj_ = 0.0;
+  bool is_gap_changeable_ = true;
 };
 
 class FollowVelCost : public CurveCost {

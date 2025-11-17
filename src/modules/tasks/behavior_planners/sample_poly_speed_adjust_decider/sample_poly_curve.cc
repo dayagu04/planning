@@ -175,7 +175,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
       safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj -
       front_edge_to_rear_axle_ - back_edge_to_rear_axle_;
-  if (rest_changeable_distance < 2.0) {
+  if (rest_changeable_distance < 2.0 && !enable_merge_decelaration) {
     return;
   }
   cost_sum_ = 0.0;
@@ -207,25 +207,28 @@ void SampleQuarticPolynomialCurve::CalcCost(
       distance_to_stop_point = kMaxDistanceToStopPoint;
     }
   }
-  // // poly curve cost
-  speed_change_cost_.GetCost(arrived_v_, ego_v, arrived_t_);
-
-  // follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
-
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_,
-                          enable_merge_decelaration);
-
-  if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
-    leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_,
-                                   leading_veh_s + leading_veh_v * arrived_t_,
-                                   leading_veh_v);
-  }
 
   if (leading_veh_id != kNoAgentId && leading_veh_id != -1 &&
       anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
     follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
     leading_veh_follow_s_cost_.GetCost(
         leading_veh_s + leading_veh_v * arrived_t_, arrived_v_, arrived_s_);
+  }
+
+  gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
+               (leading_veh_follow_s_cost_.cost() < kZeroEpsilon);
+
+  // // poly curve cost
+  speed_change_cost_.GetCost(arrived_v_, ego_v, arrived_t_);
+
+  // follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
+
+  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, true);
+
+  if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
+    leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_,
+                                   leading_veh_s + leading_veh_v * arrived_t_,
+                                   leading_veh_v);
   }
 
   const double vel_integral = CalcVelIntegral(arrived_t_);
@@ -262,6 +265,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
               stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
               std::exp(arrived_t_ / 5.0);
+
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;
     arrived_s_ = last_arrived_s;
@@ -277,9 +281,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
     leading_veh_follow_s_cost_ = std::move(leading_veh_follow_s_cost);
     speed_variable_cost_ = std::move(speed_variable_cost);
     stop_penalty_cost_ = std::move(stop_penalty_cost);
-    gap_avaliable_cost_ = std::move(gap_avaliable_cost_);
-    acc_limit_cost_ = std::move(acc_limit_cost_);
-  } else{
+    gap_avaliable_cost_ = std::move(gap_avaliable_cost);
+    acc_limit_cost_ = std::move(acc_limit_cost);
+  } else {
     safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
     safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
     rest_changeable_distance_ = rest_changeable_distance;

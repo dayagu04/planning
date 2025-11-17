@@ -1268,7 +1268,7 @@
     "kNormalSceneWeightAccLimit": 25.0,
     "kNormalSceneWeightStopPenalty": 2.5,
     "kNormalSceneWeightSpeedChange": 10.0,
-    "kNormalSceneWeightLeadingVehFollowS": 0.0,
+    "kNormalSceneWeightLeadingVehFollowS": 1.0,
     "kPurseFlowVelSceneWeightMatchGapVel": 0.0,
     "kPurseFlowVelSceneWeightMatchGapS": 0.0,
     "kPurseFlowVelSceneWeightFollowVel": 6.25,
@@ -1292,7 +1292,7 @@
     "kDeclerationSceneWeightAccLimit": 0.0,
     "kDeclerationSceneWeightStopPenalty": 0.0,
     "kDeclerationSceneWeightSpeedChange": 0.0,
-    "kDeclerationSceneWeightLeadingVehFollowS": 0.0
+    "kDeclerationSceneWeightLeadingVehFollowS": 1.0
   },
   "dp_path_decider":{
     "coeff_l_cost":10.0,
