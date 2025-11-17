@@ -367,6 +367,8 @@ void ParkingScenario::SetPlanningPath() {
     // send obs remain dist to control
     publish_traj->trajectory_points[0].distance =
         std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
+    publish_traj->trajectory_points[0].distance = std::min(
+        publish_traj->trajectory_points[0].distance, frame_.remain_dist_by_od);
 
     // send slot occupation ratio to control
     publish_traj->trajectory_points[1].distance =
@@ -398,8 +400,10 @@ void ParkingScenario::SetPlanningPath() {
 
     planning_output_.trajectory.target_reference.polynomial[0] =
         trajectory_.GetTerminalS();
-    planning_output_.trajectory.target_reference.polynomial[1] =
+    double stop_dist =
         std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
+    stop_dist = std::min(stop_dist, frame_.remain_dist_by_od);
+    planning_output_.trajectory.target_reference.polynomial[1] = stop_dist;
   }
 
   // set plan gear cmd
@@ -811,6 +815,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
         traj_stitcher->GetConstStitchPath());
   }
 
+  frame_.remain_dist_by_od = stop_decider->GetStopDistanceByOD();
   SpeedDecisions speed_decisions;
   const ParkLonDecision stop_decision = stop_decider->GetStopDecision();
   if (stop_decision.decision_type == LonDecisionType::STOP) {

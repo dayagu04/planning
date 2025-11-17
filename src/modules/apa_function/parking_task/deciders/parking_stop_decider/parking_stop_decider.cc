@@ -457,13 +457,20 @@ void ParkingStopDecider::AddDecisionByObstaclePrediction(
     }
 
 #if DECIDER_DEBUG
-    ILOG_INFO << "type" << static_cast<int>(obstacle.GetObsScemanticType());
+    ILOG_INFO << "ObsScemanticType"
+              << static_cast<int>(obstacle.GetObsScemanticType());
 #endif
   }
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  common::ApaPathDebug* path_debug = debug->mutable_apa_path_debug();
+  path_debug->mutable_remain_dist()->clear_remain_dist_by_od();
 
   if (min_stop_s < stop_decision_.path_s - stop_decision_.lon_decision_buffer) {
     stop_decision_ = tmp_deicison;
     speed_decisions_.decisions.emplace_back(tmp_deicison);
+
+    path_debug->mutable_remain_dist()->set_remain_dist_by_od(min_stop_s);
   }
 
   return;
@@ -694,6 +701,33 @@ common::StopSignType ParkingStopDecider::GetStopSignType(
   }
 
   return type;
+}
+
+const double ParkingStopDecider::GetStopDistanceByOD() {
+  const ParkLonDecision* stop_decision = nullptr;
+  for (size_t i = 0; i < speed_decisions_.decisions.size(); i++) {
+    const ParkLonDecision* tmp_decision = &speed_decisions_.decisions[i];
+    if (tmp_decision->decision_type != LonDecisionType::STOP) {
+      continue;
+    }
+
+    if (tmp_decision->reason_code != LonDecisionReason::POLYGON_OBJECT) {
+      continue;
+    }
+
+    if (stop_decision == nullptr) {
+      stop_decision = tmp_decision;
+    } else if (tmp_decision->path_s - tmp_decision->lon_decision_buffer <
+               stop_decision->path_s - stop_decision->lon_decision_buffer) {
+      stop_decision = &speed_decisions_.decisions[i];
+    }
+  }
+
+  if (stop_decision != nullptr) {
+    return stop_decision->path_s - stop_decision->lon_decision_buffer;
+  }
+
+  return terminal_decision_.path_s;
 }
 
 }  // namespace apa_planner
