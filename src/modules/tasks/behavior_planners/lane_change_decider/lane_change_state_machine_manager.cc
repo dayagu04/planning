@@ -3904,10 +3904,16 @@ bool LaneChangeStateMachineManager::
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
       double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
-      double ego_brake = 4.0;
+      double ego_brake = 2.5;
       box_longitudinal_buff =
           (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
-      box_longitudinal_buff = std::max(2.0, box_longitudinal_buff);
+      double ego_delay_time = 0.25;
+      double ego_delay_distance = ego_delay_time * ego_trajs_future_[0].v;
+      box_longitudinal_buff = std::max(ego_delay_distance, box_longitudinal_buff);
+      box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
+      if(is_executing){
+        box_longitudinal_buff = std::min(box_longitudinal_buff, 2.0);
+      }
       if (ego_press_line_ratio > 0.01) {
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
