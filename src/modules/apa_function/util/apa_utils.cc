@@ -128,7 +128,8 @@ bool IsHppSlotSearchingStage(const iflyauto::FunctionalState& current_state) {
 bool IsHppParkingStage(const iflyauto::FunctionalState& current_state) {
   if (current_state == iflyauto::FunctionalState_HPP_PARKING_OUT ||
       current_state == iflyauto::FunctionalState_HPP_PARKING_IN ||
-      current_state == iflyauto::FunctionalState_HPP_SUSPEND) {
+      current_state == iflyauto::FunctionalState_HPP_SUSPEND ||
+      current_state == iflyauto::FunctionalState_HPP_PRE_ACTIVE_PARKING) {
     return true;
   }
 

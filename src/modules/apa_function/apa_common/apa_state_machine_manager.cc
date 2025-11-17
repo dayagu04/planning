@@ -140,6 +140,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_GUIDANCE:
     case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
     case iflyauto::FunctionalState_HPP_PARKING_IN:
+    case iflyauto::FunctionalState_HPP_PRE_ACTIVE_PARKING:
       if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
       } else {
