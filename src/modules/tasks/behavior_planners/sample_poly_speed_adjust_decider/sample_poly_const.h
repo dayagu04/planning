@@ -57,4 +57,5 @@ constexpr double kEgoVelMin = 1.0;
 constexpr double kEgoVelMax = 35.0;
 constexpr double kExtraExpandDisMax = 3.0;
 constexpr double kExtraExpandDisMin = 1.0;
+constexpr double kCongestionSpeedLimit = 40.0 / 3.6;
 }  // namespace planning

@@ -539,7 +539,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
-       route_info_output.mlc_request_type_route_info.mlc_request_type != RAMP_TO_MAIN);
+       route_info_output.mlc_request_type_route_info.mlc_request_type != RAMP_TO_MAIN &&
+       ego_v_ > kCongestionSpeedLimit);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
@@ -555,9 +556,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
                       ego_v_ - config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
       is_split_map_change
-          ? (v_cruise_speed / 2.0) > ego_v_
+          ? (v_cruise_speed / 1.4) > ego_v_
                 ? ego_v_
-                : fmax(v_cruise_speed / 2.0,
+                : fmax(v_cruise_speed / 1.4,
                        ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
