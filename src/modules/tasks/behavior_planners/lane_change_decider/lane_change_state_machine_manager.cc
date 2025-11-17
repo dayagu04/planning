@@ -4588,41 +4588,46 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   // 1、第一种情况，后角点和前保险杠的中点都没有超过车道线，自车返回原车道
   // 2、自车状态在第一种和complete状态之间，自车骑线行驶
 
-  const double l_front_left = ego_corners.l_front_left;
-  const double l_front_right = ego_corners.l_front_right;
-  const double l_front_middle = 0.5 * (l_front_left + l_front_right);
-  const double l_rear_left = ego_corners.l_rear_left;
-  const double l_rear_right = ego_corners.l_rear_right;
+  // const double l_front_left = ego_corners.l_front_left;
+  // const double l_front_right = ego_corners.l_front_right;
+  // const double l_front_middle = 0.5 * (l_front_left + l_front_right);
+  // const double l_rear_left = ego_corners.l_rear_left;
+  // const double l_rear_right = ego_corners.l_rear_right;
 
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double kEgoWidth = vehicle_param.width;
+  // const auto& vehicle_param =
+  //     VehicleConfigurationContext::Instance()->get_vehicle_param();
+  // const double kEgoWidth = vehicle_param.width;
 
+  // if (transition_info_.lane_change_direction == LEFT_CHANGE) {
+  //   if (std::abs(l_front_middle) > half_target_lane_width &&
+  //       std::abs(l_rear_left) > half_target_lane_width) {
+  //     lc_hold_state_lat_offset = fix_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
+  //   } else {
+  //     const double lat_error =
+  //         std::abs(target_ref_path->get_frenet_ego_state().l()) -
+  //         half_target_lane_width;
+  //     lc_hold_state_lat_offset =
+  //         lat_error + fix_ref_path->get_frenet_ego_state().l();
+  //   }
+
+  // } else {
+  //   if (std::abs(l_front_middle) > half_target_lane_width &&
+  //       std::abs(l_rear_right) > half_target_lane_width) {
+  //     lc_hold_state_lat_offset = -fix_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+  //   } else {
+  //     const double lat_error =
+  //         std::abs(target_ref_path->get_frenet_ego_state().l()) -
+  //         half_target_lane_width;
+  //     lc_hold_state_lat_offset =
+  //         -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
+  //   }
+  // }
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    if (std::abs(l_front_middle) > half_target_lane_width &&
-        std::abs(l_rear_left) > half_target_lane_width) {
-      lc_hold_state_lat_offset = fix_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
-    } else {
-      const double lat_error =
-          std::abs(target_ref_path->get_frenet_ego_state().l()) -
-          half_target_lane_width;
-      lc_hold_state_lat_offset =
-          lat_error + fix_ref_path->get_frenet_ego_state().l();
-    }
-
-  } else {
-    if (std::abs(l_front_middle) > half_target_lane_width &&
-        std::abs(l_rear_right) > half_target_lane_width) {
-      lc_hold_state_lat_offset = -fix_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
-    } else {
-      const double lat_error =
-          std::abs(target_ref_path->get_frenet_ego_state().l()) -
-          half_target_lane_width;
-      lc_hold_state_lat_offset =
-          -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
-    }
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + 0.1;
+  }else{
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - 0.1;
   }
-
+  return lc_hold_state_lat_offset;
   return lc_hold_state_lat_offset;
 }
 
