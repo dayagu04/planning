@@ -378,7 +378,7 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
   JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
 
   // 当前box的一半宽超过车道边界线，认为变道进入complete状态
-  if (ego_press_line_ratio > 0.5) {
+  if (ego_press_line_ratio > 0.5 && execution_state_frame_nums_ > 15) {
     return true;
   }
 
