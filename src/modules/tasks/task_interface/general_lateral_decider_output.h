@@ -12,8 +12,9 @@
 namespace planning {
 struct GeneralLateralDeciderOutput {
   planning::common::LateralInitState init_state;
-  std::vector<WeightedBounds> second_soft_bounds; // 默认和之前一样，为第二层软约束
-  std::vector<WeightedBounds> first_soft_bounds; // 稳定
+  std::vector<WeightedBounds>
+      second_soft_bounds;  // 默认和之前一样，为第二层软约束
+  std::vector<WeightedBounds> first_soft_bounds;  // 稳定
   std::vector<WeightedBounds> hard_bounds;
   std::vector<std::pair<double, double>> enu_ref_path;
   std::vector<std::pair<double, double>> front_axis_enu_ref_path;

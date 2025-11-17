@@ -35,18 +35,17 @@ void ReferenceCostTerm::GetGradientHessian(
   lxx(THETA, THETA) += cost_config_ptr_->at(W_REF_THETA);
 }
 
-double FrontReferenceCostTerm::GetCost(
-    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/) {
-  double head_x =
-      x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
-  double head_y =
-      x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
+double FrontReferenceCostTerm::GetCost(const ilqr_solver::State &x,
+                                       const ilqr_solver::Control & /*u*/) {
+  double head_x = x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
+  double head_y = x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
   const double cost_x = 0.5 * cost_config_ptr_->at(W_FRONT_REF_X) *
                         Square(head_x - cost_config_ptr_->at(FRONT_REF_X));
   const double cost_y = 0.5 * cost_config_ptr_->at(W_FRONT_REF_Y) *
                         Square(head_y - cost_config_ptr_->at(FRONT_REF_Y));
   // const double cost_theta = 0.5 * cost_config_ptr_->at(W_REF_THETA) *
-  //                           Square(x[THETA] - cost_config_ptr_->at(HEAD_REF_THETA));
+  //                           Square(x[THETA] -
+  //                           cost_config_ptr_->at(HEAD_REF_THETA));
 
   return cost_x + cost_y;
 }
@@ -55,14 +54,12 @@ void FrontReferenceCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  double head_x =
-      x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
-  double head_y =
-      x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
-  lx(X) +=
-      -cost_config_ptr_->at(W_FRONT_REF_X) * (cost_config_ptr_->at(FRONT_REF_X) - head_x);
-  lx(Y) +=
-      -cost_config_ptr_->at(W_FRONT_REF_Y) * (cost_config_ptr_->at(FRONT_REF_Y) - head_y);
+  double head_x = x[X] + cost_config_ptr_->at(WHEEL_BASE) * std::cos(x[THETA]);
+  double head_y = x[Y] + cost_config_ptr_->at(WHEEL_BASE) * std::sin(x[THETA]);
+  lx(X) += -cost_config_ptr_->at(W_FRONT_REF_X) *
+           (cost_config_ptr_->at(FRONT_REF_X) - head_x);
+  lx(Y) += -cost_config_ptr_->at(W_FRONT_REF_Y) *
+           (cost_config_ptr_->at(FRONT_REF_Y) - head_y);
   // lx(THETA) += -cost_config_ptr_->at(W_REF_THETA) *
   //              (cost_config_ptr_->at(REF_THETA) - x[THETA]);
 
@@ -101,13 +98,14 @@ void ContinuityCostTerm::GetGradientHessian(
 }
 
 double VirtualReferenceCostTerm::GetCost(const ilqr_solver::State &x,
-                                  const ilqr_solver::Control & /*u*/) {
+                                         const ilqr_solver::Control & /*u*/) {
   const double cost_x = 0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_X) *
                         Square(x[X] - cost_config_ptr_->at(VIRTUAL_REF_X));
   const double cost_y = 0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_Y) *
                         Square(x[Y] - cost_config_ptr_->at(VIRTUAL_REF_Y));
-  const double cost_theta = 0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_THETA) *
-                            Square(x[THETA] - cost_config_ptr_->at(VIRTUAL_REF_THETA));
+  const double cost_theta =
+      0.5 * cost_config_ptr_->at(W_VIRTUAL_REF_THETA) *
+      Square(x[THETA] - cost_config_ptr_->at(VIRTUAL_REF_THETA));
 
   return cost_x + cost_y + cost_theta;
 }
@@ -116,10 +114,10 @@ void VirtualReferenceCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT & /*lxu*/, ilqr_solver::LuuMT & /*luu*/) {
-  lx(X) +=
-      -cost_config_ptr_->at(W_VIRTUAL_REF_X) * (cost_config_ptr_->at(VIRTUAL_REF_X) - x[X]);
-  lx(Y) +=
-      -cost_config_ptr_->at(W_VIRTUAL_REF_Y) * (cost_config_ptr_->at(VIRTUAL_REF_Y) - x[Y]);
+  lx(X) += -cost_config_ptr_->at(W_VIRTUAL_REF_X) *
+           (cost_config_ptr_->at(VIRTUAL_REF_X) - x[X]);
+  lx(Y) += -cost_config_ptr_->at(W_VIRTUAL_REF_Y) *
+           (cost_config_ptr_->at(VIRTUAL_REF_Y) - x[Y]);
   lx(THETA) += -cost_config_ptr_->at(W_VIRTUAL_REF_THETA) *
                (cost_config_ptr_->at(VIRTUAL_REF_THETA) - x[THETA]);
 
@@ -246,8 +244,8 @@ void LatJerkBoundCostTerm::GetGradientHessian(const ilqr_solver::State &x,
   }
 }
 
-double PathFirstSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
-                                         const ilqr_solver::Control & /*u*/) {
+double PathFirstSoftCorridorCostTerm::GetCost(
+    const ilqr_solver::State &x, const ilqr_solver::Control & /*u*/) {
   double cost = 0.0;
   // upper bound
   const double a1 = cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y1) -
@@ -262,10 +260,10 @@ double PathFirstSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X0),
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X0),
+      cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -295,10 +293,10 @@ double PathFirstSoftCorridorCostTerm::GetCost(const ilqr_solver::State &x,
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X0),
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X0),
+      cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -336,10 +334,10 @@ void PathFirstSoftCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double ubound_result = 0;
   planning::planning_math::Vec2d cur_ubound_direction{
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X1) -
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X0),
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y1) -
-    cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y0)};
+      cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X1) -
+          cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_X0),
+      cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y1) -
+          cost_config_ptr_->at(FIRST_SOFT_UPPER_BOUND_Y0)};
   if (ubound_direction_.Length() > 0) {
     // ubound_result = cur_ubound_direction.InnerProd(ubound_direction_);
   }
@@ -354,8 +352,10 @@ void PathFirstSoftCorridorCostTerm::GetGradientHessian(
                (a1 * x[X] + b1 * x[Y] + c1) / d1;
       lx(Y) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * b1 *
                (a1 * x[X] + b1 * x[Y] + c1) / d1;
-      lxx(X, X) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(a1) / d1;
-      lxx(Y, Y) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(b1) / d1;
+      lxx(X, X) +=
+          cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(a1) / d1;
+      lxx(Y, Y) +=
+          cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(b1) / d1;
     }
   }
 
@@ -372,10 +372,10 @@ void PathFirstSoftCorridorCostTerm::GetGradientHessian(
   // check direction continuity
   double lbound_result = 0;
   planning::planning_math::Vec2d cur_lbound_direction{
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X1) -
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X0),
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y1) -
-    cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y0)};
+      cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X1) -
+          cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_X0),
+      cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y1) -
+          cost_config_ptr_->at(FIRST_SOFT_LOWER_BOUND_Y0)};
   if (lbound_direction_.Length() > 0) {
     // lbound_result = cur_lbound_direction.InnerProd(lbound_direction_);
   }
@@ -390,8 +390,10 @@ void PathFirstSoftCorridorCostTerm::GetGradientHessian(
                (a2 * x[X] + b2 * x[Y] + c2) / d2;
       lx(Y) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * b2 *
                (a2 * x[X] + b2 * x[Y] + c2) / d2;
-      lxx(X, X) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(a2) / d2;
-      lxx(Y, Y) += cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(b2) / d2;
+      lxx(X, X) +=
+          cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(a2) / d2;
+      lxx(Y, Y) +=
+          cost_config_ptr_->at(W_FIRST_SOFT_CORRIDOR) * Square(b2) / d2;
     }
   }
 }

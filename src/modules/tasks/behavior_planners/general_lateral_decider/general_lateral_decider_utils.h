@@ -24,8 +24,8 @@ double CalDesireLonDistance(double ego_vel, double agent_vel,
 
 double CalDesireStaticLateralDistance(
     const double base_distance, const double ego_vel, const double ego_l,
-    const std::shared_ptr<FrenetObstacle> obstacle, BoundHierarchy bound_hierarchy,
-    GeneralLateralDeciderConfig &config);
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    BoundHierarchy bound_hierarchy, GeneralLateralDeciderConfig &config);
 double GetBoundWeight(
     BoundType type,
     const std::unordered_map<BoundType, double> &map_bound_weight);
