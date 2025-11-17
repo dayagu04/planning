@@ -1807,8 +1807,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   if (!merge_region_info_list.empty()) {
     distance_to_next_merge = merge_region_info_list[0].distance_to_split_point;
   }
-  double search_dis =
-      std::min({distance_to_next_split, distance_to_next_merge, 3000.0});
+  double search_dis = std::min(
+      std::min(distance_to_next_split, distance_to_next_merge), 3000.0);
   if (!IsClosingTollStationEntrance(
           current_link_, sdpro_map_,
           route_info_output_.current_segment_passed_distance, search_dis)) {
