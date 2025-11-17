@@ -1798,54 +1798,70 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
-  for (int i = 0; i < split_region_info_list.size(); ++i) {
-    auto& split_region_info = split_region_info_list[i];
-    if (!split_region_info.is_valid) {
-      break;
-    }
-    mlc_request_info_.clear();
-    bool is_calculate_feasible_lane = CalculateFeasibleLane(&split_region_info);
-    if (i == 0) {
-      route_info_output_.distance_to_first_road_split =
-          split_region_info.distance_to_split_point;
-    } else {
-      route_info_output_.distance_to_second_road_split =
-          split_region_info.distance_to_split_point;
-    }
-
-    if (!is_calculate_feasible_lane) {
-      break;
-    }
-    mlc_request_info_list.emplace_back(
-        mlc_request_info_, split_region_info.distance_to_split_point);
-    exchange_region_info_list.emplace_back(split_region_info);
+  // 判断前方最近的是不是收费站
+  double distance_to_next_split = NL_NMAX;
+  double distance_to_next_merge = NL_NMAX;
+  if (!split_region_info_list.empty()) {
+    distance_to_next_split = split_region_info_list[0].distance_to_split_point;
   }
+  if (!merge_region_info_list.empty()) {
+    distance_to_next_merge = merge_region_info_list[0].distance_to_split_point;
+  }
+  double search_dis =
+      std::min({distance_to_next_split, distance_to_next_merge, 3000.0});
+  if (!IsClosingTollStationEntrance(
+          current_link_, sdpro_map_,
+          route_info_output_.current_segment_passed_distance, search_dis)) {
+    for (int i = 0; i < split_region_info_list.size(); ++i) {
+      auto& split_region_info = split_region_info_list[i];
+      if (!split_region_info.is_valid) {
+        break;
+      }
+      mlc_request_info_.clear();
+      bool is_calculate_feasible_lane =
+          CalculateFeasibleLane(&split_region_info);
+      if (i == 0) {
+        route_info_output_.distance_to_first_road_split =
+            split_region_info.distance_to_split_point;
+      } else {
+        route_info_output_.distance_to_second_road_split =
+            split_region_info.distance_to_split_point;
+      }
 
-  for (int i = 0; i < merge_region_info_list.size(); ++i) {
-    auto& merge_region_info = merge_region_info_list[i];
-    mlc_request_info_.clear();
-    if (i == 0) {
-      route_info_output_.distance_to_first_road_merge =
-          merge_region_info.distance_to_split_point;
-    } else {
-      route_info_output_.distance_to_second_road_merge =
-          merge_region_info.distance_to_split_point;
+      if (!is_calculate_feasible_lane) {
+        break;
+      }
+      mlc_request_info_list.emplace_back(
+          mlc_request_info_, split_region_info.distance_to_split_point);
+      exchange_region_info_list.emplace_back(split_region_info);
     }
 
-    bool is_calculate_feasible_lane;
-    if (merge_region_info.is_other_merge_to_road == true) {
-      is_calculate_feasible_lane =
-          CalculateOtherMergeRoadFeasibleLane(&merge_region_info);
-    } else {
-      is_calculate_feasible_lane =
-          CalculateMergeRegionFeasibleLane(&merge_region_info);
+    for (int i = 0; i < merge_region_info_list.size(); ++i) {
+      auto& merge_region_info = merge_region_info_list[i];
+      mlc_request_info_.clear();
+      if (i == 0) {
+        route_info_output_.distance_to_first_road_merge =
+            merge_region_info.distance_to_split_point;
+      } else {
+        route_info_output_.distance_to_second_road_merge =
+            merge_region_info.distance_to_split_point;
+      }
+
+      bool is_calculate_feasible_lane;
+      if (merge_region_info.is_other_merge_to_road == true) {
+        is_calculate_feasible_lane =
+            CalculateOtherMergeRoadFeasibleLane(&merge_region_info);
+      } else {
+        is_calculate_feasible_lane =
+            CalculateMergeRegionFeasibleLane(&merge_region_info);
+      }
+      if (!is_calculate_feasible_lane) {
+        break;
+      }
+      mlc_request_info_list.emplace_back(
+          mlc_request_info_, merge_region_info.distance_to_split_point);
+      exchange_region_info_list.emplace_back(merge_region_info);
     }
-    if (!is_calculate_feasible_lane) {
-      break;
-    }
-    mlc_request_info_list.emplace_back(
-        mlc_request_info_, merge_region_info.distance_to_split_point);
-    exchange_region_info_list.emplace_back(merge_region_info);
   }
 
   // 将exchange_region_info_list中按照distance排序
@@ -1936,19 +1952,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     std::map<int, SplitDirection> merge_lane;
     std::vector<int> merge_lane_sequence;
     bool is_exist_merge_fp = false;
-    double distance_to_next_split = NL_NMAX;
-    double distance_to_next_merge = NL_NMAX;
-    route_info_output_.merge_point_info.reset();
-    if (!split_region_info_list.empty()) {
-      distance_to_next_split =
-          split_region_info_list[0].distance_to_split_point;
-    }
-    if (!merge_region_info_list.empty()) {
-      distance_to_next_merge =
-          merge_region_info_list[0].distance_to_split_point;
-    }
-    double search_dis =
-        std::min(distance_to_next_split, distance_to_next_merge);
     if (CalculateMergeLaneInfo(merge_lane, search_dis) && !merge_lane.empty()) {
       for (const auto& [lane_num, split_dir] : merge_lane) {
         merge_lane_sequence.emplace_back(lane_num);
@@ -6034,5 +6037,63 @@ void RouteInfo::UpdateMLCInfoDeciderBaseBaidu(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
   route_info_strategy_->CalculateMLCDecider(relative_id_lanes,
                                             route_info_output_);
+}
+// 向前搜索有没有收费站进入点
+bool RouteInfo::IsClosingTollStationEntrance(
+    const iflymapdata::sdpro::LinkInfo_Link* link,
+    const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link,
+    double max_search_distance) {
+  const iflymapdata::sdpro::LinkInfo_Link* current_link = link;
+  double search_distance = 0.0 - distance_on_link;
+
+  while (current_link != nullptr) {
+    if (search_distance > max_search_distance) {
+      return false;
+    }
+
+    const double current_link_length =
+        static_cast<double>(current_link->length());
+
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+    for (const auto& fp : current_link->feature_points()) {
+      fp_vec.emplace_back(fp);
+    }
+
+    // 2、按照距离排序后，由近向远判断当前link上的fp是否有TOLL_BOOTH_ENTRANCE
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+
+    const int fp_point_size = fp_vec.size();
+    for (int i = 0; i < fp_point_size; i++) {
+      const auto& fp_point = fp_vec[i];
+
+      const double distance_to_this_point =
+          search_distance +
+          current_link_length * fp_point.projection_percent() * 0.01;
+
+      if (distance_to_this_point > max_search_distance) {
+        return false;
+      } else if (distance_to_this_point < 0.0) {
+        // 说明当前fp点在自车之前，直接跳过
+        continue;
+      }
+
+      for (const auto fp_point_type : fp_point.type()) {
+        if (fp_point_type ==
+                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_ENTRANCE ||
+            fp_point_type ==
+                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_EXIT) {
+          return true;
+        }
+      }
+    }
+    search_distance += current_link_length * 0.01;
+    current_link = sdpro_map.GetNextLinkOnRoute(current_link->id());
+  }
+
+  return false;
 }
 }  // namespace planning
