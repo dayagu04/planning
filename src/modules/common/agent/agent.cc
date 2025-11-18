@@ -110,13 +110,12 @@ Agent::Agent(const PredictionObject& prediction_object, bool is_static,
     // TODO：绝对时间 or 相对时间?
     tp.set_absolute_time(traj_point.relative_time);
     tp.set_theta(traj_point.yaw);
-    tp.set_s(cumulative_s);
     // tp.set_kappa(const double kappa)
-
     if (i >= 1) {
       cumulative_s += planning_math::fast_hypot(trajectory[i - 1].x() - tp.x(),
                                                 trajectory[i - 1].y() - tp.y());
     }
+    tp.set_s(cumulative_s);
     trajectory.emplace_back(tp);
     trajectory.x_vec_.emplace_back(traj_point.x);
     trajectory.y_vec_.emplace_back(traj_point.y);

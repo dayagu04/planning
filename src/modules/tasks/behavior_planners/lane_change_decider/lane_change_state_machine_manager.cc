@@ -378,7 +378,7 @@ bool LaneChangeStateMachineManager::CheckIfLaneChangeComplete(
   JSON_DEBUG_VALUE("ego_press_line_ratio", ego_press_line_ratio)
 
   // 当前box的一半宽超过车道边界线，认为变道进入complete状态
-  if (ego_press_line_ratio > 0.5) {
+  if (ego_press_line_ratio > 0.5 && execution_state_frame_nums_ > 15) {
     return true;
   }
 
@@ -3904,10 +3904,13 @@ bool LaneChangeStateMachineManager::
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
       double rel_vel = agent_switch_traj[i].v - ego_trajs_future_[i].v;
-      double ego_brake = 4.0;
+      double ego_brake = 2.5;
       box_longitudinal_buff =
           (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
-      box_longitudinal_buff = std::max(2.0, box_longitudinal_buff);
+      box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
+      if(is_executing){
+        box_longitudinal_buff = std::min(box_longitudinal_buff, 2.0);
+      }
       if (ego_press_line_ratio > 0.01) {
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
@@ -4582,41 +4585,46 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   // 1、第一种情况，后角点和前保险杠的中点都没有超过车道线，自车返回原车道
   // 2、自车状态在第一种和complete状态之间，自车骑线行驶
 
-  const double l_front_left = ego_corners.l_front_left;
-  const double l_front_right = ego_corners.l_front_right;
-  const double l_front_middle = 0.5 * (l_front_left + l_front_right);
-  const double l_rear_left = ego_corners.l_rear_left;
-  const double l_rear_right = ego_corners.l_rear_right;
+  // const double l_front_left = ego_corners.l_front_left;
+  // const double l_front_right = ego_corners.l_front_right;
+  // const double l_front_middle = 0.5 * (l_front_left + l_front_right);
+  // const double l_rear_left = ego_corners.l_rear_left;
+  // const double l_rear_right = ego_corners.l_rear_right;
 
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  const double kEgoWidth = vehicle_param.width;
+  // const auto& vehicle_param =
+  //     VehicleConfigurationContext::Instance()->get_vehicle_param();
+  // const double kEgoWidth = vehicle_param.width;
 
+  // if (transition_info_.lane_change_direction == LEFT_CHANGE) {
+  //   if (std::abs(l_front_middle) > half_target_lane_width &&
+  //       std::abs(l_rear_left) > half_target_lane_width) {
+  //     lc_hold_state_lat_offset = fix_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
+  //   } else {
+  //     const double lat_error =
+  //         std::abs(target_ref_path->get_frenet_ego_state().l()) -
+  //         half_target_lane_width;
+  //     lc_hold_state_lat_offset =
+  //         lat_error + fix_ref_path->get_frenet_ego_state().l();
+  //   }
+
+  // } else {
+  //   if (std::abs(l_front_middle) > half_target_lane_width &&
+  //       std::abs(l_rear_right) > half_target_lane_width) {
+  //     lc_hold_state_lat_offset = -fix_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
+  //   } else {
+  //     const double lat_error =
+  //         std::abs(target_ref_path->get_frenet_ego_state().l()) -
+  //         half_target_lane_width;
+  //     lc_hold_state_lat_offset =
+  //         -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
+  //   }
+  // }
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    if (std::abs(l_front_middle) > half_target_lane_width &&
-        std::abs(l_rear_left) > half_target_lane_width) {
-      lc_hold_state_lat_offset = fix_lane_width / 2.0 - kEgoWidth / 2.0 - 0.2;
-    } else {
-      const double lat_error =
-          std::abs(target_ref_path->get_frenet_ego_state().l()) -
-          half_target_lane_width;
-      lc_hold_state_lat_offset =
-          lat_error + fix_ref_path->get_frenet_ego_state().l();
-    }
-
-  } else {
-    if (std::abs(l_front_middle) > half_target_lane_width &&
-        std::abs(l_rear_right) > half_target_lane_width) {
-      lc_hold_state_lat_offset = -fix_lane_width / 2.0 + kEgoWidth / 2.0 + 0.2;
-    } else {
-      const double lat_error =
-          std::abs(target_ref_path->get_frenet_ego_state().l()) -
-          half_target_lane_width;
-      lc_hold_state_lat_offset =
-          -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
-    }
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + 0.1;
+  }else{
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - 0.1;
   }
-
+  return lc_hold_state_lat_offset;
   return lc_hold_state_lat_offset;
 }
 
@@ -4955,12 +4963,19 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
   std::vector<double> s_vec(point_size);
   std::vector<double> x_vec(point_size);
   std::vector<double> y_vec(point_size);
-  for (int i = 0; i < point_size; ++i) {
-    s_vec[i] = agent_traj[i].s;
+  s_vec[0] = agent_traj[0].s;
+  x_vec[0] = agent_traj[0].x;
+  y_vec[0] = agent_traj[0].y;
+  const double min_ds = 0.01;  // 最小增量
+  for (int i = 1; i < point_size; ++i) {
     x_vec[i] = agent_traj[i].x;
     y_vec[i] = agent_traj[i].y;
+    double dx = x_vec[i] - x_vec[i-1];
+    double dy = y_vec[i] - y_vec[i-1];
+    double ds = std::hypot(dx, dy);
+    ds = std::max(ds, min_ds);
+    s_vec[i] = s_vec[i-1] + ds;
   }
-
   pnc::mathlib::spline x_s_spline;
   pnc::mathlib::spline y_s_spline;
   x_s_spline.set_points(s_vec, x_vec);
@@ -4989,7 +5004,7 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
     // 确保位移不小于前一个点
     if (i > 0) {
       dec_s = std::max(dec_s,
-                       agent_deceleration_traj[i - 1].s + 0.1);  // 最小前进距离
+                      agent_deceleration_traj[i - 1].s + 0.1);  // 最小前进距离
     }
     dec_s = std::clamp(dec_s, 0.0, s_vec.back());
     double dec_x = x_s_spline(dec_s);
