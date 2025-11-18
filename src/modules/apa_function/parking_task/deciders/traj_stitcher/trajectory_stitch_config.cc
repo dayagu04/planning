@@ -6,7 +6,7 @@ namespace apa_planner {
 
 void TrajectoryStitchConfig::Init() {
   traj_min_dist = 0.2;
-  enable_openloop_control = true;
+  enable_openloop_control_for_short_traj = true;
   min_dist_for_open_loop_control = 0.1;
 
   low_vel_thresh_for_speed_smooth = 0.6;
@@ -22,7 +22,21 @@ void TrajectoryStitchConfig::Init() {
     lon_stitch_type = LonStitchType::VEHICLE_STATE;
   }
 
-  enable_openloop_acc = false;
+  if (apa_param.GetParam().speed_config.speed_stitch_type == 0) {
+    speed_stitch_type = SpeedStitchType::PLANNING_TRAJ;
+  } else if (apa_param.GetParam().speed_config.speed_stitch_type == 1) {
+    speed_stitch_type = SpeedStitchType::LOCALIZATION;
+  } else {
+    speed_stitch_type = SpeedStitchType::SPEED_ERROR;
+  }
+
+  if (apa_param.GetParam().speed_config.acc_stitch_type == 0) {
+    acc_stitch_type = AccStitchType::PLANNING_TRAJ;
+  } else if (apa_param.GetParam().speed_config.acc_stitch_type == 1) {
+    acc_stitch_type = AccStitchType::LOCALIZATION;
+  } else {
+    acc_stitch_type = AccStitchType::ACC_ERROR;
+  }
 
   return;
 };

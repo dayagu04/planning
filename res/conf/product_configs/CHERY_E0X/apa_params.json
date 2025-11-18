@@ -431,6 +431,8 @@
   "lon_stitch_type": 0,
   "jerk_upper": 7.0,
   "jerk_lower": -7.0,
+  "speed_stitch_type": 2,
+  "acc_stitch_type": 2,
 
   "comment_18": "hybrid a star params",
   "tail_in_slot_virtual_wall_x_offset" : 4.5,
