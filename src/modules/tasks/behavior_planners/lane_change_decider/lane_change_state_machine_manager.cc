@@ -1001,12 +1001,12 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
     }
   }
 
-  if (!risk_agents_nodes_.empty() || !risk_side_agents_nodes_.empty()) {
-    CheckOtherAgents(&lc_state_info);
-    if (!lc_state_info.gap_insertable) {
-      return lc_state_info;
-    }
-  }
+  // if (!risk_agents_nodes_.empty() || !risk_side_agents_nodes_.empty()) {
+  //   CheckOtherAgents(&lc_state_info);
+  //   if (!lc_state_info.gap_insertable) {
+  //     return lc_state_info;
+  //   }
+  // }
   // if(merging_rear_agent_id_ > 0){
   //   CheckMergingRearAgent(&lc_state_info);
   //   if (!lc_state_info.gap_insertable) {
