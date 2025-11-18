@@ -109,6 +109,8 @@ class ConstructionSceneDecider : public Task {
   int origin_lane_virtual_id_;
   bool is_exist_construction_area_ = false;
   bool is_pass_construction_area_ = false;
+  int no_construction_area_counter_ = std::numeric_limits<int>::max() / 2;
+  // hysteresis for is_exist_construction_area_
 };
 
 }  // namespace planning
