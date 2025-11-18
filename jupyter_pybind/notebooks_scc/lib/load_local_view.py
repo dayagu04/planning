@@ -463,6 +463,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'traj_x': rads_traj_x,
     })
   if bag_loader.plan_msg['enable'] == True and  plan_msg != None:
+    print("trajectory.available: ", plan_msg.trajectory.available)
     if plan_msg.trajectory.trajectory_type == 0: # 实时轨迹
       is_enu_to_car = False
       # global_var.set_value('is_enu_to_car', False)
