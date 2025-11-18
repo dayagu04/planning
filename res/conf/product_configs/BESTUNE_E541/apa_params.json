@@ -400,6 +400,10 @@
   "heading_err_for_fix_slot" : 3,
   "lon_err_for_fix_slot" : 1.0,
   "wide_slot_finish_heading_err" : 3.0,
+  "static_occ_lat_buffer" : 0.06,
+  "static_occ_lon_buffer" : 0.3,
+  "moving_occ_lat_buffer" : 0.8,
+  "moving_occ_lon_buffer" : 1.2,
 
   "enable_apa_speed_plan" : true,
   "default_cruise_speed" : 1.0,

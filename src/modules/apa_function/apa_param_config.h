@@ -103,6 +103,12 @@ struct AstarParkingConfig {
   double lat_err_for_fix_slot;
   double heading_err_for_fix_slot;
   double lon_err_for_fix_slot;
+
+  // occ
+  double static_occ_lat_buffer = 0.06;
+  double static_occ_lon_buffer = 0.3;
+  double moving_occ_lat_buffer = 0.6;
+  double moving_occ_lon_buffer = 1.0;
 };
 
 struct ParkingSpeedBound {

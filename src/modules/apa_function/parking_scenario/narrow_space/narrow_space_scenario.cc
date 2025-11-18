@@ -358,7 +358,12 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 }
 
 const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
-  return CalRemainDistFromObs(0.3);
+  const AstarParkingConfig& param = apa_param.GetParam().astar_config;
+  return CalRemainDistFromObs(
+      param.static_occ_lon_buffer, param.static_occ_lat_buffer,
+      param.static_occ_lat_buffer, param.moving_occ_lon_buffer,
+      param.moving_occ_lat_buffer, param.moving_occ_lat_buffer, false,
+      UseObsHeightMethod::HIGH);
 }
 
 void NarrowSpaceScenario::Log() const {
