@@ -25,9 +25,12 @@ output_notebook(resources=INLINE)
 bag_loader = LoadRosbag(bag_path)
 max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
-global_var.set_value('car_type', 'CHERY_E0X')
+# global_var.set_value('car_type', 'CHERY_E0X')
+# global_var.set_value('is_vis_hpp', True)
 # global_var.set_value('g_is_display_enu', False)
 # global_var.set_value('is_vis_map', True)
+car_type = global_var.get_value('car_type')
+steer_ratio = load_steer_ratio(car_type)
 fig1, local_view_data = load_local_view_figure()
 
 # load lateral planning (behavior and motion)
@@ -235,8 +238,8 @@ for t in np.arange(0.0, max_time, frame_dt):
   try:
     plan_debug_msg_idx = get_plan_debug_msg_idx(bag_loader, t)
     lateral_motion_planning_output = bag_loader.plan_debug_msg['data'][plan_debug_msg_idx].lateral_motion_planning_output
-    plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * 13 * 57.3)
-    plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * 13 * 57.3)
+    plan_steer_deg.append(lateral_motion_planning_output.delta_vec[0] * steer_ratio * 57.3)
+    plan_steer_dot_deg.append(lateral_motion_planning_output.omega_vec[0] * steer_ratio * 57.3)
   except:
     plan_steer_deg.append(0.0)
     plan_steer_dot_deg.append(0.0)
@@ -314,5 +317,7 @@ if global_fig_plot:
 else:
   bkp.show(row(fig1, column(fig2, fig9, fig3, fig4, fig5, fig6, fig_lat_offset)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)
+
+print(steer_ratio)
 
 

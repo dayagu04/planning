@@ -36,6 +36,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
   is_vis_map = global_var.get_value('is_vis_map')
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
   car_type = global_var.get_value('car_type')
+  steer_ratio = load_steer_ratio(car_type)
   car_xb, car_yb = load_car_params_patch(car_type)
   # get msg
   road_msg = find_nearest(bag_loader.road_msg, bag_time)
@@ -538,8 +539,8 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       delta_bound = lat_motion_plan_input.acc_bound / (lat_motion_plan_input.curv_factor * speed * speed)
       omega_bound = lat_motion_plan_input.jerk_bound / (lat_motion_plan_input.curv_factor * speed * speed)
     except:
-      delta_bound = 360.0 / 13.0 / 57.3
-      omega_bound = 240.0 / 13.0 / 57.3
+      delta_bound = 360.0 / steer_ratio / 57.3
+      omega_bound = 240.0 / steer_ratio / 57.3
       print("use default delta & omega bound")
 
     for i in range(len(time_vec)):
@@ -547,16 +548,16 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       ref_y_vec.append(lat_motion_plan_input.ref_y_vec[i])
       ref_theta_deg_vec.append(lat_motion_plan_input.ref_theta_vec[i] * 57.3)
       theta_deg_vec.append(lat_motion_plan_output.theta_vec[i] * 57.3)
-      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * 13.0)
-      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * 13.0)
+      steer_deg_vec.append(lat_motion_plan_output.delta_vec[i] * 57.3 * steer_ratio)
+      steer_dot_deg_vec.append(lat_motion_plan_output.omega_vec[i] * 57.3 * steer_ratio)
       acc_upper_bound.append(lat_motion_plan_input.acc_bound)
       acc_lower_bound.append(-lat_motion_plan_input.acc_bound)
       jerk_upper_bound.append(lat_motion_plan_input.jerk_bound)
       jerk_lower_bound.append(-lat_motion_plan_input.jerk_bound)
-      steer_deg_upper_bound.append((delta_bound * 57.3 * 13.0))
-      steer_deg_lower_bound.append(-(delta_bound * 57.3 * 13.0))
-      steer_dot_deg_upper_bound.append((omega_bound * 57.3 * 13.0))
-      steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * 13.0))
+      steer_deg_upper_bound.append((delta_bound * 57.3 * steer_ratio))
+      steer_deg_lower_bound.append(-(delta_bound * 57.3 * steer_ratio))
+      steer_dot_deg_upper_bound.append((omega_bound * 57.3 * steer_ratio))
+      steer_dot_deg_lower_bound.append(-(omega_bound * 57.3 * steer_ratio))
 
     if not g_is_display_enu:
       ref_x_vec, ref_y_vec = coord_tf.global_to_local(ref_x_vec, ref_y_vec)

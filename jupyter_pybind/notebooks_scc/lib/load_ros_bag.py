@@ -939,6 +939,8 @@ class LoadRosbag:
           scene_type = 'HIGHWAY'
         elif msg.current_state >= 50 and msg.current_state <= 62:
           scene_type = 'HPP'
+        elif msg.current_state >= 70 and msg.current_state <= 76:
+          scene_type = 'RADS'
       self.soc_state_msg['t'] = [tmp - self.soc_state_msg['t'][0]  for tmp in self.soc_state_msg['t']]
       max_time = max(max_time, self.soc_state_msg['t'][-1])
       print('soc_state_msg time:',self.soc_state_msg['t'][-1])

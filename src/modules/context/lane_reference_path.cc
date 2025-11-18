@@ -61,7 +61,8 @@ void LaneReferencePath::update(planning::framework::Session *session) {
           session_->environmental_model()
                   .get_virtual_lane_manager()
                   ->current_lane_virtual_id();
-      if (current_lane_virtual_id == lane_virtual_id_) {
+      if (current_lane_virtual_id == lane_virtual_id_ &&
+          !session_->is_rads_scene()) {
         is_need_smooth = true;
       }
       update_refpath_points(raw_reference_path_points, is_need_smooth);

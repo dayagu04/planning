@@ -45,3 +45,17 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
+  elif scene == 'RADS':
+    global_dict['scene_type'] = 'RADS'
+    global_dict['is_vis_hpp'] = True
+    global_dict['is_vis_map'] = False
+    global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_lane_mark'] = False
+    global_dict['is_vis_merge_point'] = False
+  elif scene == 'NRA':
+    global_dict['scene_type'] = 'NRA'
+    global_dict['is_vis_hpp'] = True
+    global_dict['is_vis_map'] = False
+    global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_lane_mark'] = False
+    global_dict['is_vis_merge_point'] = False
