@@ -807,8 +807,22 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     std::vector<int> lc_num_task;
 
+
+    bool is_nearing_ramp = false;
+    const bool is_exist_ramp = !ramp_info_vec_.empty() && !split_info_vec_.empty();
+    if (is_exist_ramp) {
+      const auto& first_ramp = ramp_info_vec_[0].first;
+      const auto& first_split = split_info_vec_[0].first;
+
+      if (first_ramp && first_split) {
+        is_nearing_ramp = (route_info_output_.baidu_mlc_scene == SPLIT_SCENE) &&
+                          (first_ramp->id() == first_split->id());
+      }
+    }
+
     if (maxVal_seq == minVal_seq &&
-        maxVal_seq == real_lane_num) {
+        maxVal_seq == real_lane_num &&
+        is_nearing_ramp) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
       if (!cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane) {
@@ -822,7 +836,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
 
     } else if (maxVal_seq == minVal_seq &&
-               maxVal_seq == 1) {
+               maxVal_seq == 1 && is_nearing_ramp) {
       //split场景，目标车道在最左边的情况，一直向左变道
       lc_num_task.emplace_back(-1);
     } else {
