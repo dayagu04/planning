@@ -153,7 +153,9 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
         scene_type_ = "rads";
         auto_timestamp_ = fsm_msg->msg_header.stamp;
         break;
-      } else if (current_state == iflyauto::FunctionalState_NRA_GUIDANCE) {
+      } else if ((current_state == iflyauto::FunctionalState_NRA_GUIDANCE) ||
+                 (current_state == iflyauto::FunctionalState_NRA_SUSPEND) ||
+                 (current_state == iflyauto::FunctionalState_NRA_COMPLETED)) {
         find_scene_type = true;
         scene_type_ = "nsa";
         auto_timestamp_ = fsm_msg->msg_header.stamp;
@@ -1136,8 +1138,7 @@ void PlanningPlayer::PlayOneFrame(
         if (is_close_loop) {
           functional_state = iflyauto::FunctionalState_NRA_GUIDANCE;
         } else {
-          // functional_state = func_state_machine_ros_msg.current_state;
-          functional_state = iflyauto::FunctionalState_NRA_GUIDANCE;  // todo: nsa active
+          functional_state = func_state_machine_ros_msg.current_state;
         }
       }
     }
