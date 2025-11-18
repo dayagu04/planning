@@ -36,7 +36,7 @@ def get_value(key):
     return False
 
 def set_value_by_scene(scene):
-  if scene == 'HPP' or scene == 'PARKING_APA' or scene == 'NSA':
+  if scene == 'HPP' or scene == 'PARKING_APA':
     global_dict['scene_type'] = 'HPP'
     global_dict['g_is_display_enu'] = True
     global_dict['is_vis_hpp'] = True
@@ -45,15 +45,17 @@ def set_value_by_scene(scene):
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
-  elif scene == 'RADS':
-    global_dict['scene_type'] = 'RADS'
+  elif scene == 'NSA':
+    global_dict['scene_type'] = 'NSA'
+    global_dict['g_is_display_enu'] = False
     global_dict['is_vis_hpp'] = True
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
-  elif scene == 'NRA':
-    global_dict['scene_type'] = 'NRA'
+  elif scene == 'RADS':
+    global_dict['scene_type'] = 'RADS'
     global_dict['is_vis_hpp'] = True
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
