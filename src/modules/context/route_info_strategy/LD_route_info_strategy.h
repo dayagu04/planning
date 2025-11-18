@@ -90,6 +90,10 @@ protected:
 
  bool IsInvalidLane(const iflymapdata::sdpro::Lane* lane_info) const;
 
+ bool RampMLCDecider(TopoLinkGraph& feasible_lane_graph);
+ bool MergeMLCDecider(TopoLinkGraph& feasible_lane_graph);
+ bool NormalMLCDecider(TopoLinkGraph& feasible_lane_graph);
+
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
  bool ldmap_valid_{false};
