@@ -3907,9 +3907,6 @@ bool LaneChangeStateMachineManager::
       double ego_brake = 2.5;
       box_longitudinal_buff =
           (-rel_vel * ego_trajs_future_[i].v) / (2.0 * ego_brake);
-      double ego_delay_time = 0.25;
-      double ego_delay_distance = ego_delay_time * ego_trajs_future_[0].v;
-      box_longitudinal_buff = std::max(ego_delay_distance, box_longitudinal_buff);
       box_longitudinal_buff = std::max(3.5, box_longitudinal_buff);
       if(is_executing){
         box_longitudinal_buff = std::min(box_longitudinal_buff, 2.0);
