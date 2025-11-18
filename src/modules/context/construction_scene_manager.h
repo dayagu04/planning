@@ -162,7 +162,6 @@ class ConstructionSceneManager {
  private:
   planning::framework::Session* session_;
   ConstructionAgentPoints construction_agent_points_;
-  std::vector<int32_t> construction_agent_cluster_size_;
   ConstructionAgentPoints construction_agent_cluster_;
   std::vector<std::pair<double, double>> origin_lane_s_width_;
   bool is_construction_agent_cluster_success_ = false;

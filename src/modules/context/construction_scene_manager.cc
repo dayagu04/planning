@@ -71,7 +71,6 @@ bool ConstructionSceneManager::update() {
 bool ConstructionSceneManager::InitInfo() {
   is_construction_agent_cluster_success_ = false;
   construction_agent_points_.clear();
-  construction_agent_cluster_size_.clear();
   construction_agent_cluster_.clear();
   construction_agent_cluster_attribute_map_.clear();
   construction_scene_output_.Clear();
@@ -780,6 +779,10 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
     std::vector<double> construction_agent_clusters;
     std::vector<double> construction_agent_clusters_length;
     std::vector<double> construction_agent_clusters_driection;
+    construction_agent_cluster_attribute_ids.reserve(20);
+    construction_agent_clusters.reserve(20);
+    construction_agent_clusters_length.reserve(20);
+    construction_agent_clusters_driection.reserve(20);
     for (const auto& cluster_attribute_iter :
          construction_agent_cluster_attribute_map_) {
       const ConstructionAgentPoints& points =
@@ -790,7 +793,7 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
       construction_agent_clusters.emplace_back(cluster_attribute_iter.first);
       construction_agent_clusters_length.emplace_back(points.size());
       construction_agent_clusters_driection.emplace_back(
-          static_cast<uint32_t>(cluster_attribute_iter.second.direction));
+          static_cast<double>(cluster_attribute_iter.second.direction));
     }
     JSON_DEBUG_VECTOR("construction_agent_clusters",
                       construction_agent_clusters, 0);
