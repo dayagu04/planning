@@ -330,7 +330,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
         for (const auto& pre_lane_id: lane.predecessor_lane_ids()) {
           const auto& pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
           if (pre_lane == nullptr ||
-              pre_lane->lane_transiton() == iflymapdata::sdpro::LTS_MERGE) {
+              IsAccelerateLane(pre_lane)) {
             continue;
           }
 
