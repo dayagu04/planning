@@ -218,6 +218,25 @@ void SampleQuarticPolynomialCurve::CalcCost(
   gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
                (leading_veh_follow_s_cost_.cost() < kZeroEpsilon);
 
+  if (!gap_valid_ && !enable_merge_decelaration) {
+    cost_sum_ = last_cost;
+    arrived_s_ = last_arrived_s;
+    arrived_v_ = last_arrived_v;
+    arrived_a_ = last_arrived_a;
+    arrived_t_ = last_arrived_t;
+    anchor_points_match_gap_cost_ = std::move(anchor_points_match_gap_cost);
+    speed_change_cost_ = std::move(speed_change_cost);
+    stop_line_cost_ = std::move(stop_line_cost);
+    leading_veh_safe_cost_ = std::move(leading_veh_safe_cost);
+    stop_point_cost_ = std::move(stop_point_cost);
+    follow_vel_cost_ = std::move(follow_vel_cost);
+    leading_veh_follow_s_cost_ = std::move(leading_veh_follow_s_cost);
+    speed_variable_cost_ = std::move(speed_variable_cost);
+    stop_penalty_cost_ = std::move(stop_penalty_cost);
+    gap_avaliable_cost_ = std::move(gap_avaliable_cost);
+    acc_limit_cost_ = std::move(acc_limit_cost);
+    return;
+  }
   // // poly curve cost
   speed_change_cost_.GetCost(arrived_v_, ego_v, arrived_t_);
 
