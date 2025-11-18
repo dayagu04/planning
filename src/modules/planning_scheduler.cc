@@ -1274,10 +1274,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
 
   // update environment model
   if (!environmental_model_manager_.Run()) {
-
-    // hack
-    // session_.mutable_planning_context()->Clear();
-    // return false;
+    session_.mutable_planning_context()->Clear();
+    return false;
   }
 
   bool planning_success;
