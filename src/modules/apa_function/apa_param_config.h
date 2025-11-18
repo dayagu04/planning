@@ -150,6 +150,8 @@ struct ParkingSpeedConfig {
   bool use_remain_dist;
 
   int lon_stitch_type;
+  int speed_stitch_type;
+  int acc_stitch_type;
 
   const SpeedModeParams &GetSpeedParams(
       const ParkingSpeedMode &park_speed_mode) const;

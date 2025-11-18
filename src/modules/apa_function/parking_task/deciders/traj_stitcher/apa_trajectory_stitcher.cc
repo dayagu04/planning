@@ -115,25 +115,28 @@ void ApaTrajectoryStitcher::SmoothLonDelay() {
     acc_stitch_error = config_.normal_stitch_error.acc_stitch_error;
   }
 
-  if (v_error > vel_stitch_error) {
-    lon_stitch_point_.set_vel(ego_lon_state_.v + vel_stitch_error);
-  } else if (v_error < -vel_stitch_error) {
-    lon_stitch_point_.set_vel(ego_lon_state_.v - vel_stitch_error);
+  if (config_.speed_stitch_type == SpeedStitchType::LOCALIZATION) {
+    lon_stitch_point_.set_vel(ego_lon_state_.v);
+  } else if (config_.speed_stitch_type == SpeedStitchType::SPEED_ERROR) {
+    if (v_error > vel_stitch_error) {
+      lon_stitch_point_.set_vel(ego_lon_state_.v + vel_stitch_error);
+    } else if (v_error < -vel_stitch_error) {
+      lon_stitch_point_.set_vel(ego_lon_state_.v - vel_stitch_error);
+    }
   }
 
-  double v = lon_stitch_point_.vel();
-  v = std::max(0.0, v);
-  lon_stitch_point_.set_vel(v);
-
-  // for PID controller, it will watch planning first state, so use openloop acc
-  // value.
-  if (!config_.enable_openloop_acc) {
+  // for PID controller, it will watch planning first state, you can use
+  // openloop acc value.
+  if (config_.acc_stitch_type == AccStitchType::LOCALIZATION) {
+    lon_stitch_point_.set_acc(ego_lon_state_.acc);
+  } else if (config_.acc_stitch_type == AccStitchType::ACC_ERROR) {
     if (acc_error > acc_stitch_error) {
       lon_stitch_point_.set_acc(ego_lon_state_.acc + acc_stitch_error);
     } else if (acc_error < -acc_stitch_error) {
       lon_stitch_point_.set_acc(ego_lon_state_.acc - acc_stitch_error);
     }
   }
+
   return;
 }
 
@@ -628,7 +631,7 @@ void ApaTrajectoryStitcher::CombineTrajBasedOnTime(
   }
 
   // todo: open loop control.
-  if (config_.enable_openloop_control && is_traj_overshoot &&
+  if (config_.enable_openloop_control_for_short_traj && is_traj_overshoot &&
       trajectory_.back().s() < config_.min_dist_for_open_loop_control) {
     for (size_t i = 0; i < trajectory_.size(); i++) {
       if (path_data.back().s() - trajectory_[i].s() <

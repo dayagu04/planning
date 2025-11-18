@@ -13,6 +13,18 @@ enum class LonStitchType {
   VEHICLE_STATE,
 };
 
+enum class SpeedStitchType {
+  PLANNING_TRAJ,
+  LOCALIZATION,
+  SPEED_ERROR,
+};
+
+enum class AccStitchType {
+  PLANNING_TRAJ,
+  LOCALIZATION,
+  ACC_ERROR,
+};
+
 struct TrajectoryStitchConfig {
   // If remain traj is not long enough, use history traj to fill the remain
   // traj, to let the remain traj has a minimum distance.
@@ -21,8 +33,11 @@ struct TrajectoryStitchConfig {
   // TODO:
   // We depend on open loop control to stop, and we do not publish stopping traj
   // to control if terminal distance is small. This is not safe.
-  bool enable_openloop_control;
-  bool enable_openloop_acc;
+  bool enable_openloop_control_for_short_traj;
+
+  LonStitchType lon_stitch_type;
+  SpeedStitchType speed_stitch_type;
+  AccStitchType acc_stitch_type;
 
   // If traj dist is small, enter open loop control.
   double min_dist_for_open_loop_control;
@@ -32,8 +47,6 @@ struct TrajectoryStitchConfig {
   LonStitchError low_stitch_error;
   // [0.6, +inf]
   LonStitchError normal_stitch_error;
-
-  LonStitchType lon_stitch_type;
 
   void Init();
 };
