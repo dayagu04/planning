@@ -343,12 +343,14 @@ bool RSSampling::SamplingByRSPath(Node3d* current_node,
   node_path.path_dist = std::fabs(rs_path_.total_length);
   node_path.point_size = 1;
   // use first path end point to fill astar node
-  RSPoint rs_end_point;
-  rs_path_.FirstPathEndPoint(&rs_end_point);
+  const RSPoint * rs_end_point = rs_path_.FirstPathEndPoint();
+  if (rs_end_point == nullptr) {
+    return false;
+  }
 
-  node_path.points[0].x = rs_end_point.x;
-  node_path.points[0].y = rs_end_point.y;
-  node_path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
+  node_path.points[0].x = rs_end_point->x;
+  node_path.points[0].y = rs_end_point->y;
+  node_path.points[0].theta = IflyUnifyTheta(rs_end_point->theta, M_PIf32);
 
   rs_node_to_goal->Set(node_path, *grid_map_bound_, *config_,
                        node_path.path_dist);

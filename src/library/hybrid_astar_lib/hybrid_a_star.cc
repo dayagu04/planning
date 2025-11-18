@@ -212,12 +212,13 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   path.path_dist = std::fabs(rs_path_.total_length);
   path.point_size = 1;
   // use first path end point to fill astar node
-  RSPoint rs_end_point;
-  rs_path_.FirstPathEndPoint(&rs_end_point);
-
-  path.points[0].x = rs_end_point.x;
-  path.points[0].y = rs_end_point.y;
-  path.points[0].theta = IflyUnifyTheta(rs_end_point.theta, M_PIf32);
+  const RSPoint* rs_end_point = rs_path_.FirstPathEndPoint();
+  if (rs_end_point == nullptr) {
+    return false;
+  }
+  path.points[0].x = rs_end_point->x;
+  path.points[0].y = rs_end_point->y;
+  path.points[0].theta = IflyUnifyTheta(rs_end_point->theta, M_PIf32);
 
   rs_node_to_goal->Set(path, grid_map_bound_, config_, path.path_dist);
   if (!NodeInSearchBound(rs_node_to_goal->GetIndex())) {
@@ -253,6 +254,11 @@ bool HybridAStar::AnalyticExpansionByRS(Node3d* current_node,
   rs_node_to_goal->SetGCost(current_node->GetGCost() + gcost);
   rs_node_to_goal->SetHeuCost(0.0f);
   rs_node_to_goal->SetFCost();
+
+  const RSPoint* rs_end = rs_path_.EndPathEndPoint();
+  if (rs_end != nullptr) {
+    rs_node_to_goal->SetStraightDistToGoal(rs_end->x - request_.real_goal.x);
+  }
 
 #if PLOT_RS_EXNTEND_TO_END
   if (rs_path_h_cost_debug_.size() < RS_H_COST_MAX_NUM &&

@@ -19,7 +19,7 @@ from jupyter_pybind import replay_simulation_hybrid_astar
 from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerceptionInfo, FusionObjectsInfo, FusionOccupancyObjectsInfo,ParkingFusionInfo,ControlOutput
 
 # bag path and frame dt
-bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_82007/trigger/20251109/20251109-13-32-34/park_in_data_collection_CHERY_M32T_82007_EVENT_FILTER_2025-11-09-13-32-34_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74574/trigger/20251115/20251115-15-10-01/park_in_data_collection_CHERY_M32T_74574_EVENT_FILTER_2025-11-15-15-10-01_no_camera.bag'
 
 frame_dt = 0.1 # sec
 parking_flag = True
@@ -239,8 +239,8 @@ def slider_callback(bag_time, select_id,sim_to_target, search_sequence_num, forc
   # vehicle_type = 'JAC_S811'
   # vehicle_type = 'CHERY_E0X'
   # vehicle_type = 'CHERY_T26'
-  vehicle_type = 'CHERY_M32T'
-  # vehicle_type = 'BESTUNE_E541'
+  # vehicle_type = 'CHERY_M32T'
+  vehicle_type = 'BESTUNE_E541'
   update_local_view_data_parking(fig1, bag_loader, bag_time, vehicle_type,0, local_view_data,False)
   car_polygon_x, car_polygon_y, wheel_base = load_car_params_patch_parking(
       vehicle_type, 0.0)
