@@ -118,6 +118,8 @@ def load_steer_ratio(car_type = 'CHERY_E0X'):
     steer_ratio = 13.0
   elif car_type == 'CHERY_M32T':
     steer_ratio = 15.88
+  elif car_type == "BESTUNE_E541":
+    steer_ratio = 16.2
   return steer_ratio
 
 def load_wheel_base(car_type = 'CHERY_E0X'):
@@ -130,6 +132,8 @@ def load_wheel_base(car_type = 'CHERY_E0X'):
     wheel_base = 3.0
   elif car_type == 'CHERY_M32T':
     wheel_base = 2.8
+  elif car_type == "BESTUNE_E541":
+    wheel_base = 2.8835
   return wheel_base
 
 def load_car_uss_patch():
