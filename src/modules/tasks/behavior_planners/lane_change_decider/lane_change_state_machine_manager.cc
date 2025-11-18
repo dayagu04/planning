@@ -4948,82 +4948,82 @@ bool LaneChangeStateMachineManager::PassInLane(
   }
 }
 bool LaneChangeStateMachineManager::GetDecelerationTraj(
-  double a0, const TrajectoryPoints& agent_traj,
-  TrajectoryPoints& agent_deceleration_traj, const double deceleration,
-  const double j, bool is_press_line) {
-is_press_line = false;  // 暂时不修饰-a轨迹
-const int point_size = agent_traj.size();
-if (point_size < 2) {
-  return false;
-}
-if (agent_traj.back().s <= agent_traj.front().s) {
-  agent_deceleration_traj = agent_traj;
-  return false;
-}
-std::vector<double> s_vec(point_size);
-std::vector<double> x_vec(point_size);
-std::vector<double> y_vec(point_size);
-s_vec[0] = agent_traj[0].s;
-x_vec[0] = agent_traj[0].x;
-y_vec[0] = agent_traj[0].y;
-const double min_ds = 0.01;  // 最小增量
-for (int i = 1; i < point_size; ++i) {
-  x_vec[i] = agent_traj[i].x;
-  y_vec[i] = agent_traj[i].y;
-  double dx = x_vec[i] - x_vec[i-1];
-  double dy = y_vec[i] - y_vec[i-1];
-  double ds = std::hypot(dx, dy);
-  ds = std::max(ds, min_ds);
-  s_vec[i] = s_vec[i-1] + ds;
-}
-pnc::mathlib::spline x_s_spline;
-pnc::mathlib::spline y_s_spline;
-x_s_spline.set_points(s_vec, x_vec);
-y_s_spline.set_points(s_vec, y_vec);
-agent_deceleration_traj.clear();
-agent_deceleration_traj.resize(point_size);
-const double s0 = agent_traj.front().s;
-const double v0 = agent_traj.front().v;
-const double dt = 0.2;  // 时间步长
-double dec_a = 0.0;
-double dec_v = 0.0;
-double dec_s = 0.0;
-for (int i = 0; i < point_size; ++i) {
-  double t = i * dt;
-  if (is_press_line) {
-    // 匀减速 s,v 公式
-    dec_v = std::max(0.0, v0 + deceleration * t);
-    dec_s = s0 + v0 * t + 0.5 * deceleration * t * t;
-  } else {
-    // 匀jerk
-    //  double j = -2.0;  // 恒定 jerk
-    dec_a = a0 + j * t;  // 当前加速度
-    dec_v = std::max(0.1, v0 + a0 * t + 0.5 * j * t * t);
-    dec_s = s0 + v0 * t + 0.5 * a0 * t * t + (1.0 / 6.0) * j * t * t * t;
+    double a0, const TrajectoryPoints& agent_traj,
+    TrajectoryPoints& agent_deceleration_traj, const double deceleration,
+    const double j, bool is_press_line) {
+  is_press_line = false;  // 暂时不修饰-a轨迹
+  const int point_size = agent_traj.size();
+  if (point_size < 2) {
+    return false;
   }
-  // 确保位移不小于前一个点
-  if (i > 0) {
-    dec_s = std::max(dec_s,
-                     agent_deceleration_traj[i - 1].s + 0.1);  // 最小前进距离
+  if (agent_traj.back().s <= agent_traj.front().s) {
+    agent_deceleration_traj = agent_traj;
+    return false;
   }
-  dec_s = std::clamp(dec_s, 0.0, s_vec.back());
-  double dec_x = x_s_spline(dec_s);
-  double dec_y = y_s_spline(dec_s);
-  // heading 由 dx/ds, dy/ds 求，不插值
-  double dx = x_s_spline.deriv(1, dec_s);
-  double dy = y_s_spline.deriv(1, dec_s);
-  double dec_theta = std::atan2(dy, dx);
-  auto& pt = agent_deceleration_traj[i];
-  pt.x = dec_x;
-  pt.y = dec_y;
-  pt.s = dec_s;
-  pt.v = dec_v;
-  pt.a = deceleration;
-  pt.t = t;
-  pt.heading_angle = dec_theta;
-}
+  std::vector<double> s_vec(point_size);
+  std::vector<double> x_vec(point_size);
+  std::vector<double> y_vec(point_size);
+  s_vec[0] = agent_traj[0].s;
+  x_vec[0] = agent_traj[0].x;
+  y_vec[0] = agent_traj[0].y;
+  const double min_ds = 0.01;  // 最小增量
+  for (int i = 1; i < point_size; ++i) {
+    x_vec[i] = agent_traj[i].x;
+    y_vec[i] = agent_traj[i].y;
+    double dx = x_vec[i] - x_vec[i-1];
+    double dy = y_vec[i] - y_vec[i-1];
+    double ds = std::hypot(dx, dy);
+    ds = std::max(ds, min_ds);
+    s_vec[i] = s_vec[i-1] + ds;
+  }
+  pnc::mathlib::spline x_s_spline;
+  pnc::mathlib::spline y_s_spline;
+  x_s_spline.set_points(s_vec, x_vec);
+  y_s_spline.set_points(s_vec, y_vec);
+  agent_deceleration_traj.clear();
+  agent_deceleration_traj.resize(point_size);
+  const double s0 = agent_traj.front().s;
+  const double v0 = agent_traj.front().v;
+  const double dt = 0.2;  // 时间步长
+  double dec_a = 0.0;
+  double dec_v = 0.0;
+  double dec_s = 0.0;
+  for (int i = 0; i < point_size; ++i) {
+    double t = i * dt;
+    if (is_press_line) {
+      // 匀减速 s,v 公式
+      dec_v = std::max(0.0, v0 + deceleration * t);
+      dec_s = s0 + v0 * t + 0.5 * deceleration * t * t;
+    } else {
+      // 匀jerk
+      //  double j = -2.0;  // 恒定 jerk
+      dec_a = a0 + j * t;  // 当前加速度
+      dec_v = std::max(0.1, v0 + a0 * t + 0.5 * j * t * t);
+      dec_s = s0 + v0 * t + 0.5 * a0 * t * t + (1.0 / 6.0) * j * t * t * t;
+    }
+    // 确保位移不小于前一个点
+    if (i > 0) {
+      dec_s = std::max(dec_s,
+                      agent_deceleration_traj[i - 1].s + 0.1);  // 最小前进距离
+    }
+    dec_s = std::clamp(dec_s, 0.0, s_vec.back());
+    double dec_x = x_s_spline(dec_s);
+    double dec_y = y_s_spline(dec_s);
+    // heading 由 dx/ds, dy/ds 求，不插值
+    double dx = x_s_spline.deriv(1, dec_s);
+    double dy = y_s_spline.deriv(1, dec_s);
+    double dec_theta = std::atan2(dy, dx);
+    auto& pt = agent_deceleration_traj[i];
+    pt.x = dec_x;
+    pt.y = dec_y;
+    pt.s = dec_s;
+    pt.v = dec_v;
+    pt.a = deceleration;
+    pt.t = t;
+    pt.heading_angle = dec_theta;
+  }
 
-return true;
+  return true;
 }
 
 bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
