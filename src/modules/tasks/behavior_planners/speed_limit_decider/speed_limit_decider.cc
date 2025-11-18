@@ -1470,7 +1470,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   }
   bool is_exist_construction = false;
   const auto &construction_scene =
-      session_->planning_context().construction_scene_decider_output();
+      session_->environmental_model()
+          .get_construction_scene_manager()
+          ->get_construction_scene_output();
   if (construction_scene.is_exist_construction_area &&
       !construction_scene.construction_agent_cluster_attribute_map.empty() &&
       !speed_limit_config_.enable_construction_avoid_agent_speed_limit) {
@@ -1943,7 +1945,9 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   }
   // Check if the construction zone is valid
   const auto &construction_scene =
-      session_->planning_context().construction_scene_decider_output();
+      session_->environmental_model()
+          .get_construction_scene_manager()
+          ->get_construction_scene_output();
   if (!construction_scene.is_exist_construction_area ||
       construction_scene.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode_ = false;

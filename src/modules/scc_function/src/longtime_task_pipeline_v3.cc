@@ -13,8 +13,8 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
     : BaseTaskPipeline(config_builder, session) {
   ego_lane_road_right_decider_ =
       std::make_unique<EgoLaneRoadRightDecider>(config_builder, session);
-  construction_scene_decider_ =
-      std::make_unique<ConstructionSceneDecider>(config_builder, session);
+  // construction_scene_decider_ =
+  //     std::make_unique<ConstructionSceneDecider>(config_builder, session);
   spatio_temporal_planner_ =
       std::make_unique<SpatioTemporalPlanner>(config_builder, session);
   lane_change_decider_ =
@@ -114,11 +114,11 @@ bool LongTimeTaskPipelineV3::Run() {
     return false;
   }
 
-  ok = construction_scene_decider_->Execute();
-  if (!ok) {
-    AddErrorInfo(construction_scene_decider_->Name());
-    return false;
-  }
+  // ok = construction_scene_decider_->Execute();
+  // if (!ok) {
+  //   AddErrorInfo(construction_scene_decider_->Name());
+  //   return false;
+  // }
 
   ok = lane_change_decider_->Execute();
   if (!ok) {
@@ -334,7 +334,7 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(scc_longitudinal_motion_planner_->Name());
     return false;
   }
-  
+
   hmi_decider_->Execute();
 
   ok = result_trajectory_generator_->Execute();
@@ -342,7 +342,7 @@ bool LongTimeTaskPipelineV3::Run() {
     AddErrorInfo(result_trajectory_generator_->Name());
     return false;
   }
-  
+
   return true;
 }
 
