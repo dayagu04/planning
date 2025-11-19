@@ -2299,6 +2299,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
   // 根据前方merge_fp优化feasible_lane
   std::map<int, SplitDirection> merge_lane;
+  SplitDirection merge_point_direction = SPLIT_NONE;
   std::vector<int> merge_lane_sequence;
   bool is_exist_merge_fp = false;
   if (CalculateMergeLaneInfo(
@@ -2306,6 +2307,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       !merge_lane.empty()) {
     for (const auto& [lane_num, split_dir] : merge_lane) {
       merge_lane_sequence.emplace_back(lane_num);
+      merge_point_direction = split_dir;
     }
 
     for (const auto& [lane_num, split_dir] : merge_lane) {
@@ -2443,7 +2445,17 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     //   mismatch_counter = 0;
     // }
 
-    int ego_seq = left_lane_num + 1;
+    // 根据前方交换区split的方向，改变使用的感知车道数是左侧还是右侧
+    int ego_seq = 0;
+    if (merge_point_direction == SPLIT_NONE) {
+      ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
+                    ? left_lane_num + 1
+                    : map_lane_num - right_lane_num;
+    } else {
+      ego_seq = merge_point_direction == SPLIT_LEFT
+                    ? left_lane_num + 1
+                    : map_lane_num - right_lane_num;
+    }
     std::vector<int> lc_num_task;
     if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
       continue;
