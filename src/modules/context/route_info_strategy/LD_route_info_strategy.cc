@@ -1278,6 +1278,16 @@ void LDRouteInfoStrategy::CalculateSplitInfo() {
       std::make_pair(static_cast<SplitRelativeDirection>(
                          route_info_output_.first_split_direction),
                      route_info_output_.distance_to_first_road_split);
+
+  // 增加输出split_region_info_list，给纵向做接近匝道预减速
+  route_info_output_.split_region_info_list.reserve(split_info_vec_.size());
+  for (const auto& split_info: split_info_vec_) {
+    NOASplitRegionInfo split_region_info;
+    split_region_info.distance_to_split_point = split_info.second;
+    split_region_info.split_link_id = split_info.first->id();
+    route_info_output_.split_region_info_list.emplace_back(split_region_info);
+  }
+
 }
 
 void LDRouteInfoStrategy::CalculateRampInfo() {
