@@ -2177,14 +2177,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   double dis_to_last_merge_point = NL_NMAX;
   double dis_to_last_exchange_point = NL_NMAX;
   double dis_to_last_specific_point = NL_NMAX;
+  uint64 last_split_link_id = -1;
+  uint64 last_merge_link_id = -1;
   const double passed_dis = route_info_output_.current_segment_passed_distance;
 
-  if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis)) {
+  if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis,
+                                        &last_split_link_id)) {
     dis_to_last_exchange_point =
         std::min(dis_to_last_exchange_point, dis_to_last_split_point);
   }
 
-  if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point, passed_dis)) {
+  if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point, passed_dis,
+                                        &last_merge_link_id)) {
     dis_to_last_exchange_point =
         std::min(dis_to_last_exchange_point, dis_to_last_merge_point);
   }
@@ -2196,14 +2200,20 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   bool is_entery_exchange_region_rear = false;
   if (last_exchange_region_info_.is_process_split) {
     is_entery_exchange_region_rear =
-        dis_to_last_split_point < last_exchange_region_info_.last_exchange_info
-                                      .end_fp_point.fp_distance_to_split_point;
+        dis_to_last_split_point <
+            last_exchange_region_info_.last_exchange_info.end_fp_point
+                .fp_distance_to_split_point &&
+        last_split_link_id ==
+            last_exchange_region_info_.last_exchange_info.split_link_id;
     dis_to_last_specific_point = dis_to_last_split_point;
   } else if (last_exchange_region_info_.is_process_merge ||
              last_exchange_region_info_.is_process_other_merge) {
     is_entery_exchange_region_rear =
-        dis_to_last_merge_point < last_exchange_region_info_.last_exchange_info
-                                      .end_fp_point.fp_distance_to_split_point;
+        dis_to_last_merge_point <
+            last_exchange_region_info_.last_exchange_info.end_fp_point
+                .fp_distance_to_split_point &&
+        last_merge_link_id ==
+            last_exchange_region_info_.last_exchange_info.split_link_id;
     dis_to_last_specific_point = dis_to_last_merge_point;
   }
 
@@ -5642,8 +5652,8 @@ bool RouteInfo::SortFPBaseProjection(
   return true;
 }
 
-bool RouteInfo::CalculateDistanceToLastSplitPoint(double* dis,
-                                                  const double s) const {
+bool RouteInfo::CalculateDistanceToLastSplitPoint(double* dis, const double s,
+                                                  uint64* split_link_id) const {
   // 计算在匝道上距离上一个split点的信息
   if (current_link_ == nullptr) {
     return false;
@@ -5674,6 +5684,7 @@ bool RouteInfo::CalculateDistanceToLastSplitPoint(double* dis,
   if (temp_last_split_seg &&
       temp_last_split_seg->successor_link_ids().size() >= 2) {
     *dis = accumulate_dis_ego_to_last_split_point;
+    *split_link_id = temp_last_split_seg->id();
 
     return true;
   }
@@ -5681,8 +5692,8 @@ bool RouteInfo::CalculateDistanceToLastSplitPoint(double* dis,
   return false;
 }
 
-bool RouteInfo::CalculateDistanceToLastMergePoint(double* dis,
-                                                  const double s) const {
+bool RouteInfo::CalculateDistanceToLastMergePoint(double* dis, const double s,
+                                                  uint64* merge_link_id) const {
   if (current_link_ == nullptr) {
     return false;
   }
@@ -5704,6 +5715,7 @@ bool RouteInfo::CalculateDistanceToLastMergePoint(double* dis,
 
   if (last_merge_link && last_merge_link->predecessor_link_ids().size() == 2) {
     *dis = sum_dis_to_last_merge_point;
+    *merge_link_id = last_merge_link->id();
     return true;
   }
 

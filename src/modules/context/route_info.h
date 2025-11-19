@@ -293,9 +293,9 @@ class RouteInfo {
 
   std::vector<int> CalculateMLCTaskNoLaneNum();
 
-  bool CalculateDistanceToLastSplitPoint(double* dis, const double s) const;
+  bool CalculateDistanceToLastSplitPoint(double* dis, const double s, uint64* split_link_id) const;
 
-  bool CalculateDistanceToLastMergePoint(double* dis, const double s) const;
+  bool CalculateDistanceToLastMergePoint(double* dis, const double s, uint64* merge_link_id) const;
 
   bool CalculateDistanceNextToLastSplitPoint(
       double* dis,
