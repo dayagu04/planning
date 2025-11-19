@@ -87,6 +87,10 @@ class StGraphHelper {
     return st_graph_.overtake_agents_ids_periods_in_st_pass_corridor();
   }
 
+  const std::shared_ptr<planning_math::KDPath> processed_path() const {
+    return st_graph_.processed_path();
+  }
+
  private:
   bool IsTimeInRange(double t) const;
   void MakeSpeedLimitedConeBucketStBoundary(

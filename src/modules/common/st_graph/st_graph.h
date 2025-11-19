@@ -115,6 +115,9 @@ class STGraph {
   overtake_agents_ids_periods_in_st_pass_corridor() const {
     return overtake_agents_ids_periods_in_st_pass_corridor_;
   }
+  const std::shared_ptr<planning_math::KDPath> processed_path() const {
+    return st_graph_input_->processed_path();
+  }
   /*******st_graph_helper* functions(end)*******/
  private:
   void MakeAgentStBoundaries();
