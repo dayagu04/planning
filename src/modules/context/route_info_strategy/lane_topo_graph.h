@@ -28,6 +28,7 @@ struct TopoLane {
   iflymapdata::sdpro::LaneBoundary left_boundary;     // 左侧边界类型
   iflymapdata::sdpro::LaneBoundary right_boundary;  // 右侧边界类型
   TopoLaneTransitionType transition_type;             // 车道转换类型
+  double front_feasible_distance;
 };
 
 struct LaneTopoGroup {

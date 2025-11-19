@@ -296,12 +296,23 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
   bool is_target_found = false;
   const uint64_t target_link_id = target_link.id();
 
+  // 增加计算front feasible distance
+  double front_sum_distance = 0;
+
   // -------------------------- 2. 遍历拓扑构建车道图（替换while(1)，明确终止条件） --------------------------
   const iflymapdata::sdpro::LinkInfo_Link* current_link = start_link;
   while (current_link != nullptr) {
     if (processed_link_ids.count(current_link->id()) > 0) {
         return false;
     }
+
+    if (current_link->id() == current_link_->id()) {
+        front_sum_distance = front_sum_distance +
+                             current_link->length() * 0.01 - ego_on_cur_link_s_;
+    } else {
+        front_sum_distance = front_sum_distance + current_link->length() * 0.01;
+    }
+
     processed_link_ids.insert(current_link->id());
 
     // -------------------------- 3. 构建当前link的车道拓扑组（拆分重复逻辑，增加注释） --------------------------
@@ -319,6 +330,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       topo_lane.link_id = lane.link_id();
       topo_lane.order_id = lane.sequence();
       topo_lane.length = lane.length() * 0.01;
+      topo_lane.front_feasible_distance = front_sum_distance;
 
       // -------------------------- 4. 处理前继车道（优化merge场景逻辑，增加容错） --------------------------
       const int pre_lane_count = lane.predecessor_lane_ids_size();
@@ -663,6 +675,7 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
       topo_lane.link_id = temp_lane->link_id();
       topo_lane.order_id = temp_lane->sequence();
       topo_lane.length = temp_lane->length() * 0.01;  // cm to m
+      topo_lane.front_feasible_distance = link_sum_dis - lc_need_dis;
 
       // 把符合条件的lane更新到车道组里面去
       before_split_feasible_lane_graph
@@ -686,6 +699,88 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     return;
   }
 
+  const auto& cur_link_feasible_lane =
+      feasible_lane_graph.lane_topo_groups.back();
+  if (cur_link_feasible_lane.topo_lanes.empty()) {
+    return;
+  }
+
+  // 计算出原始的order
+  std::vector<std::pair<int, double>> origin_order_id_seq;
+  origin_order_id_seq.reserve(cur_link_feasible_lane.topo_lanes.size());
+  for (const auto& topo_lane : cur_link_feasible_lane.topo_lanes) {
+    origin_order_id_seq.emplace_back(topo_lane.order_id, topo_lane.front_feasible_distance);
+  }
+  if (origin_order_id_seq.empty()) {
+    return;
+  }
+
+  // 继续判断是否有导流区车道，如果有的话，需要更新origin_order_id_seq
+  int diversion_lane_num = 0;
+  const int cur_lane_size = current_link_->lane_ids_size();
+  for (int i = cur_lane_size - 1; i >= 0; i--) {
+    const auto& lane_id = current_link_->lane_ids()[i];
+    const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (temp_lane == nullptr) {
+      continue;
+    }
+
+    if (IsDiversionLane(temp_lane)) {
+      diversion_lane_num++;
+      const int origin_order_size = origin_order_id_seq.size();
+      for (int j = origin_order_size - 1; j >= 0; j--) {
+        if (origin_order_id_seq[j].first > temp_lane->sequence()) {
+          origin_order_id_seq[j].first = origin_order_id_seq[j].first - 1;
+        }
+      }
+    }
+  }
+
+  const int link_total_lane_num =
+      cur_link_feasible_lane.lane_nums - diversion_lane_num;
+
+  if (link_total_lane_num < 1) {
+    return;
+  }
+
+  std::vector<std::pair<int, double>> feasible_lane_seq;
+  for (const auto& order_id: origin_order_id_seq) {
+    // 把从右向左的顺序转换成从左向右的顺序
+    const int seq = link_total_lane_num - order_id.first + 1;
+    if (seq > 0) {
+      feasible_lane_seq.emplace_back(seq, order_id.second);
+    }
+  }
+
+  if (feasible_lane_seq.empty()) {
+    return;
+  }
+  int minVal_seq = feasible_lane_seq[0].first;
+  int maxVal_seq = feasible_lane_seq[0].first;
+
+  for (const auto& num : feasible_lane_seq) {
+    if (num.first < minVal_seq) {
+      minVal_seq = num.first;
+    }
+    if (num.first > maxVal_seq) {
+      maxVal_seq = num.first;
+    }
+  }
+
+  route_info_output_.maxVal_seq = maxVal_seq;
+  route_info_output_.minVal_seq = minVal_seq;
+
+  std::map<int, double> feasible_lane_seq_map;
+  for (const auto& temp_feasible_lane_seq : feasible_lane_seq) {
+    feasible_lane_seq_map.insert(
+        {temp_feasible_lane_seq.first, temp_feasible_lane_seq.second});
+  }
+
+  for (auto relative_id_lane: relative_id_lanes) {
+    // （fengwang31）TODO:后面把这个函数与route_info中的统一起来
+    ProcessLaneDistance(relative_id_lane, feasible_lane_seq_map);
+  }
+
   for (auto relative_id_lane: relative_id_lanes) {
     if (relative_id_lane->get_relative_id() != 0) {
       continue;
@@ -705,76 +800,6 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     route_info_output_.left_lane_num = left_lane_num;
     route_info_output_.right_lane_num = right_lane_num;
-
-    const auto& cur_link_feasible_lane =
-        feasible_lane_graph.lane_topo_groups.back();
-    if (cur_link_feasible_lane.topo_lanes.empty()) {
-      return;
-    }
-
-    // 计算出原始的order
-    std::vector<int> origin_order_id_seq;
-    for (const auto& topo_lane : cur_link_feasible_lane.topo_lanes) {
-      origin_order_id_seq.emplace_back(topo_lane.order_id);
-    }
-    if (origin_order_id_seq.empty()) {
-      return;
-    }
-
-    // 继续判断是否有导流区车道，如果有的话，需要更新origin_order_id_seq
-    int diversion_lane_num = 0;
-    const int cur_lane_size = current_link_->lane_ids_size();
-    for (int i = cur_lane_size - 1; i >= 0; i--) {
-      const auto& lane_id = current_link_->lane_ids()[i];
-      const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
-      if (temp_lane == nullptr) {
-        continue;
-      }
-
-      if (IsDiversionLane(temp_lane)) {
-        diversion_lane_num++;
-        const int origin_order_size = origin_order_id_seq.size();
-        for (int j = origin_order_size - 1; j >= 0; j--) {
-          if (origin_order_id_seq[j] > temp_lane->sequence()) {
-            origin_order_id_seq[j] = origin_order_id_seq[j] - 1;
-          }
-        }
-      }
-    }
-
-    const int link_total_lane_num =
-        cur_link_feasible_lane.lane_nums - diversion_lane_num;
-
-    if (link_total_lane_num < 1) {
-      return;
-    }
-
-    std::vector<int> feasible_lane_seq;
-    for (const auto& order_id: origin_order_id_seq) {
-      // 把从右向左的顺序转换成从左向右的顺序
-      const int seq = link_total_lane_num - order_id + 1;
-      if (seq > 0) {
-        feasible_lane_seq.emplace_back(seq);
-      }
-    }
-
-    if (feasible_lane_seq.empty()) {
-      return;
-    }
-    int minVal_seq = feasible_lane_seq[0];
-    int maxVal_seq = feasible_lane_seq[0];
-
-    for (int num : feasible_lane_seq) {
-      if (num < minVal_seq) {
-        minVal_seq = num;
-      }
-      if (num > maxVal_seq) {
-        maxVal_seq = num;
-      }
-    }
-
-    route_info_output_.maxVal_seq = maxVal_seq;
-    route_info_output_.minVal_seq = minVal_seq;
 
     int real_lane_num = link_total_lane_num;
     // 判断是否有应急车道、加速车道、入口车道
@@ -875,10 +900,11 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
     return false;
   }
 
-  const double kFrontSearchDis = 500;
+  double kFrontSearchDis = 500.0;
   double sum_dis;
   if (scene == NORMAL_SCENE) {
     sum_dis = cur_link->length() * 0.01 - ego_on_cur_link_s_;
+    kFrontSearchDis = 2000.0;
   } else {
     sum_dis = cur_link->length() * 0.01;
   }
@@ -1321,7 +1347,7 @@ const ad_common::sdpromap::SDProMap& LDRouteInfoStrategy::get_sdpro_map() {
 }
 
 bool LDRouteInfoStrategy::RampMLCDecider(TopoLinkGraph& feasible_lane_graph) {
-  TopoLinkGraph before_split_feasible_lane_graph;
+  // TopoLinkGraph before_split_feasible_lane_graph;
   TopoLinkGraph after_feasible_lane_graph;
   std::vector<iflymapdata::sdpro::Lane> start_lane_vec;
 
@@ -1377,22 +1403,22 @@ bool LDRouteInfoStrategy::RampMLCDecider(TopoLinkGraph& feasible_lane_graph) {
 
   // 反向遍历得到从当前link的lane能直达split_link上targte_lane的feasible
   // lane
-  if (!CalculateFeasibleLaneGraph(before_split_feasible_lane_graph,
+  if (!CalculateFeasibleLaneGraph(feasible_lane_graph,
                                   split_link_lane_vec, *current_link_)) {
     return false;
   }
 
-  if (before_split_feasible_lane_graph.lane_topo_groups.empty()) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
     return false;
   }
 
   // 再次反向遍历横向上扩展feasible lane
   // 根据距离把可行驶车道加上
-  if (!CalculateExtenedFeasibleLane(before_split_feasible_lane_graph)) {
+  if (!CalculateExtenedFeasibleLane(feasible_lane_graph)) {
     return false;
   }
 
-  if (before_split_feasible_lane_graph.lane_topo_groups.empty()) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
     return false;
   }
 
@@ -1440,24 +1466,24 @@ bool LDRouteInfoStrategy::MergeMLCDecider(TopoLinkGraph& feasible_lane_graph) {
   }
 
   // 4、反向遍历至自车当前位置，计算feasible lane
-  TopoLinkGraph before_merge_feasible_lane_graph;
-  if (!CalculateFeasibleLaneGraph(before_merge_feasible_lane_graph,
+  // TopoLinkGraph before_merge_feasible_lane_graph;
+  if (!CalculateFeasibleLaneGraph(feasible_lane_graph,
                                   merge_pre_link_feasible_lane,
                                   *current_link_)) {
     return false;
   }
 
-  if (before_merge_feasible_lane_graph.lane_topo_groups.empty()) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
     return false;
   }
 
   // 5、再次反向遍历横向上扩展feasible lane
   // 根据距离把可行驶车道加上
-  if (!CalculateExtenedFeasibleLane(before_merge_feasible_lane_graph)) {
+  if (!CalculateExtenedFeasibleLane(feasible_lane_graph)) {
     return false;
   }
 
-  if (before_merge_feasible_lane_graph.lane_topo_groups.empty()) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
     return false;
   }
 
@@ -1476,18 +1502,44 @@ bool LDRouteInfoStrategy::NormalMLCDecider(TopoLinkGraph& feasible_lane_graph) {
   }
 
   // 2、计算feasible lane
-  TopoLinkGraph normal_feasible_lane_graph;
-  if (!CalculateFeasibleLaneGraph(normal_feasible_lane_graph,
+  // TopoLinkGraph normal_feasible_lane_graph;
+  if (!CalculateFeasibleLaneGraph(feasible_lane_graph,
                                   start_lane_vec, *current_link_)) {
     return false;
   }
 
-  if (normal_feasible_lane_graph.lane_topo_groups.empty()) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
     return false;
   }
 
   return true;
 }
+
+void LDRouteInfoStrategy::ProcessLaneDistance(
+    const std::shared_ptr<VirtualLane>& relative_id_lane,
+    const std::map<int, double>& feasible_lane_distance) {
+  const auto& lane_nums = relative_id_lane->get_lane_nums();
+  int left_lane_num = 0;
+
+  for (const auto& lane_num : lane_nums) {
+    if (lane_num.end > kEpsilon) {
+      left_lane_num = lane_num.left_lane_num;
+      break;
+    }
+  }
+
+  auto it = feasible_lane_distance.find(left_lane_num + 1);
+  std::pair<bool, double> virtual_lane_distance;
+
+  if (it != feasible_lane_distance.end()) {
+    virtual_lane_distance = std::make_pair(true, it->second);
+  } else {
+    virtual_lane_distance = std::make_pair(false, 0.0);
+  }
+
+  relative_id_lane->set_feasible_lane_distance(virtual_lane_distance);
+}
+
 }
 
 

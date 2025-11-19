@@ -93,6 +93,9 @@ protected:
  bool RampMLCDecider(TopoLinkGraph& feasible_lane_graph);
  bool MergeMLCDecider(TopoLinkGraph& feasible_lane_graph);
  bool NormalMLCDecider(TopoLinkGraph& feasible_lane_graph);
+ void ProcessLaneDistance(
+    const std::shared_ptr<VirtualLane>& relative_id_lane,
+    const std::map<int, double>& feasible_lane_distance);
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
