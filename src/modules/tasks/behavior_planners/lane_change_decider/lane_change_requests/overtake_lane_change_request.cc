@@ -594,8 +594,12 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                                            need_overtake_distance)) {
       if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent,
                                          true)) {
-        last_request_type_ = request_type_;
-        return;
+        if (IsDashEnoughForRepeatSegments(
+              LEFT_CHANGE, lc_request_source, origin_lane_virtual_id_,
+              static_cast<StateMachineLaneChangeStatus>(lc_status))) {
+          last_request_type_ = request_type_;
+          return;
+        }
       }
     } else if (request_type_ == RIGHT_CHANGE && ConeSituationJudgement(rlane) &&
                FeasibleLaneDistanceEnoughJudgment(
@@ -603,10 +607,15 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                    false, need_overtake_distance)) {
       if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent,
                                          false)) {
-        last_request_type_ = request_type_;
-        return;
+        if (IsDashEnoughForRepeatSegments(
+          RIGHT_CHANGE, lc_request_source, origin_lane_virtual_id_,
+          static_cast<StateMachineLaneChangeStatus>(lc_status))) {
+          last_request_type_ = request_type_;
+          return;
+        }
       }
     }
+
     Finish();
     set_target_lane_virtual_id(current_lane_virtual_id);
     ILOG_DEBUG << "[OvertakeRequest::update] " << __FUNCTION__ << ":"
