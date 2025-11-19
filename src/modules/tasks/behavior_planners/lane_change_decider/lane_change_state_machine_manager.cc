@@ -2237,8 +2237,9 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   int gap_rear_agent_id =
     target_lane_rear_node_ ? target_lane_rear_node_->node_agent_id() : -1;
   //原车道前车(可能切换)
-  const auto lead_one =
-      session_->environmental_model().get_lateral_obstacle()->leadone();
+  // const auto lead_one =
+  //     session_->environmental_model().get_lateral_obstacle()->leadone();
+  const auto cipv_decider_output = session_->planning_context().cipv_decider_output();
         // 自车压线目标车道情况
   const double ego_press_line_ratio =
   lc_request_.CalculatePressLineRatioByTwoLanes(
@@ -2247,12 +2248,12 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
       transition_info_.lane_change_direction);
   // ptr 非空， 后轴中心没过线，与targt front 不同，压线较少，则原来取前车id
   bool is_lead_one_valid = false;
-  if(lead_one != nullptr) {
-    is_lead_one_valid = lead_one->id() != gap_front_agent_id 
+  if(cipv_decider_output.cipv_id() != -1) {
+    is_lead_one_valid = cipv_decider_output.cipv_id() != gap_front_agent_id 
            && transition_info_.lane_change_status != kLaneChangeComplete
            && ego_press_line_ratio < lc_safety_check_config_.press_line_ratio_threshold;
   }
-  int origin_agent_id = is_lead_one_valid ? lead_one->id() : -1;
+  int origin_agent_id = is_lead_one_valid ? cipv_decider_output.cipv_id()  : -1;
   LaneChangeDecisionInfo lc_info;
   lc_info.gap_front_agent_id = gap_front_agent_id;
   lc_info.gap_rear_agent_id = gap_rear_agent_id;
