@@ -4503,7 +4503,9 @@ bool RouteInfo::CalculateOtherMergeRoadFeasibleLane(
       } else {
         before_excr_feasible_lane.emplace_back(1);
       }
-      on_excr_feasible_lane = before_excr_feasible_lane;
+      for (int i = predecessor_other_exclnum; i < successor_exclnum; i++) {
+        on_excr_feasible_lane.emplace_back(i + 1);
+      }
     }
   }
   for (int i = 0; i < successor_exclnum; ++i) {
