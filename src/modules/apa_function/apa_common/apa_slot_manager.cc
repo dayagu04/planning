@@ -22,8 +22,8 @@ namespace apa_planner {
 
 static const uint8_t kSlotReleaseVoteCount = 6;
 static const uint8_t kMaxSlotReleaseCount = 8;
-static const double kMaxEgoSlotAbsoluteDist = 10.68;
-static const double kMaxEgoSlotRelativeDist = 7.2;
+static const double kMaxEgoSlotAbsoluteDist = 8.68;
+static const double kMaxEgoSlotRelativeDist = 3.86;
 static const int kMaxSlotObserveFrameCount = 30;
 
 void ApaSlotManager::Update(
