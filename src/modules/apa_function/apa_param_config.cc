@@ -547,6 +547,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.curb_offset_when_ego_outside_slot, double,
                   "curb_offset_when_ego_outside_slot");
 
+  JSON_READ_VALUE(param.curb_offset_by_height, double, "curb_offset_by_height");
+
   // construce obstacles params
   JSON_READ_VALUE(param.channel_width, double, "channel_width");
 

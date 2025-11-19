@@ -237,6 +237,8 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
       std::fabs(input_.tlane.channel_y) - half_slot_width;
 
   double dy = channel_width > 4.0 ? 0.1 : 0.05;
+  ILOG_INFO << "dy = " << dy << " y_bound = " << y_bound
+            << " channel_width = " << channel_width;
 
   int nums = static_cast<int>(y_bound / dy);
   nums = pnc::mathlib::Clamp(nums, 5, 16);

@@ -569,6 +569,7 @@ struct ApaParameters {
   double parallel_occupied_pt_inside_dy = 0.3;
   double curb_offset = 3.0;
   double curb_offset_when_ego_outside_slot = 0.0;
+  double curb_offset_by_height = 0.16;
 
   // construce obstacles params
   double channel_width = 12.28;
