@@ -87,6 +87,59 @@ void LaneReferencePath::update(planning::framework::Session *session) {
   }
 }
 
+void LaneReferencePath::Update(planning::framework::Session *session, ReferencePathPoints &raw_reference_path_points) {
+  ILOG_DEBUG << "update LaneReferencePath";
+  session_ = session;
+  // Step 1) import reference_path pointer to virtual_lane
+  auto virtual_lane = session->mutable_environmental_model()
+                             ->mutable_virtual_lane_manager()
+                             ->mutable_lane_with_virtual_id(lane_virtual_id_);
+  if (virtual_lane == nullptr) {
+    std::cout << "virtual_lane == nullptr!!!:" << lane_virtual_id_ << std::endl;
+    return;
+  }
+  std::cout << "get id " << lane_virtual_id_ << std::endl;
+  virtual_lane->update_reference_path(shared_from_this());
+
+  // Step 2) get reference_points
+  bool ok = false;
+  ok = ExtendConstructionRefPathPoints(raw_reference_path_points);
+
+  // Step 3) update
+  if (ok) {
+    // Step 3-1) update ref path
+    auto current_time = IflyTime::Now_ms();
+    is_construction_scene_ref_path_ = true;
+    bool is_need_smooth = false;
+    int current_lane_virtual_id =
+        session_->environmental_model()
+                .get_virtual_lane_manager()
+                ->current_lane_virtual_id();
+    if (current_lane_virtual_id == lane_virtual_id_) {
+      is_need_smooth = true;
+    }
+    update_refpath_points(raw_reference_path_points, is_need_smooth);
+    valid_ = refined_ref_path_points_.size() >= 3;
+    if (!valid_) {
+      return;
+    }
+    auto end_time = IflyTime::Now_ms();
+    ILOG_INFO << "update_refpath_points time:" << end_time - current_time;
+    // Step 3-2) update frenet ego state
+    frenet_ego_state_.update(
+        frenet_coord_,
+        *session_->mutable_environmental_model()->get_ego_state_manager());
+    // Step 3-3) update obstacles
+    update_obstacles();
+    // Step 3-4) update virtual_lane speed_limit
+    virtual_lane->update_speed_limit(
+        session->environmental_model().get_ego_state_manager()->ego_v(),
+        session->environmental_model().get_ego_state_manager()->ego_v_cruise());
+  } else {
+    ILOG_ERROR << "LaneReferencePath::update failed";
+  }
+};
+
 // TODO:clren   这个函数还没有使用   判断逻辑可以更改
 bool LaneReferencePath::is_obstacle_ignorable(
     const std::shared_ptr<FrenetObstacle> obstacle) {
@@ -366,6 +419,45 @@ bool LaneReferencePath::get_ref_points_hpp(
             extend_length);
         ref_path_points.emplace_back(std::move(extend_point));
       }
+    }
+  }
+  return ref_path_points.size() >= 3;
+}
+
+bool LaneReferencePath::ExtendConstructionRefPathPoints(ReferencePathPoints &ref_path_points) {
+  // 判断参考线的长度是否大于自车5s的行驶距离，如果不够的话，则延长参考线
+  //  calculate reference path origin total length
+  double origin_reference_path_total_length = 0;
+  for (int i = 1; i < ref_path_points.size(); i++) {
+    const auto &cur_point = ref_path_points[i].path_point;
+    const auto &pre_point = ref_path_points[i - 1].path_point;
+    origin_reference_path_total_length += std::hypotf(
+        pre_point.x() - cur_point.x(), pre_point.y() - cur_point.y());
+  }
+  origin_reference_path_length_ = origin_reference_path_total_length;
+  const bool is_highway =
+      session_->get_scene_type() == planning::common::SceneType::HIGHWAY;
+  if (ref_path_points.size() >= 2 && is_highway) {
+    const std::shared_ptr<EgoStateManager> ego_state_mgr =
+        session_->mutable_environmental_model()->get_ego_state_manager();
+    const double ego_v = ego_state_mgr->ego_v();
+    const double cruise_v = ego_state_mgr->ego_v_cruise();
+    const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
+    const double extend_buff = 5;
+    const double ego_projection_length_in_reference_path =
+        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    // if need to extend reference path length
+    if (preview_dis + ego_projection_length_in_reference_path + extend_buff >
+        origin_reference_path_total_length) {
+      const double extend_length =
+          preview_dis + ego_projection_length_in_reference_path -
+          origin_reference_path_total_length + extend_buff;
+      ReferencePathPoint extend_point;
+      const int point_nums = ref_path_points.size();
+      extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[point_nums - 2], ref_path_points[point_nums - 1],
+          extend_length);
+      ref_path_points.emplace_back(std::move(extend_point));
     }
   }
   return ref_path_points.size() >= 3;

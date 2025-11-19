@@ -97,10 +97,15 @@ struct SmootherData {
 class ReferencePath {
  public:
   ReferencePath();
+
   virtual ~ReferencePath() = default;
 
   bool valid() { return valid_; }
+
   virtual void update(planning::framework::Session *session);
+
+  // virtual void Update(planning::framework::Session *session, ReferencePathPoints &raw_reference_path_points);
+
   virtual void update_obstacles();
 
   const std::vector<ReferencePathPoint> &get_points() const {
@@ -293,6 +298,7 @@ class ReferencePath {
 
  protected:
   bool valid_;
+  bool is_construction_scene_ref_path_ = false;
   ReferencePathPoints refined_ref_path_points_;
   // frenet coord system
   // FrenetCoordinateSystemParameters frenet_parameters_;

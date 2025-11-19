@@ -8,11 +8,14 @@ class LaneReferencePath
       public std::enable_shared_from_this<LaneReferencePath> {
  public:
   LaneReferencePath(int target_lane_virtual_id);
+
   virtual ~LaneReferencePath() = default;
 
   int get_lane_id() { return lane_virtual_id_; }
 
   virtual void update(planning::framework::Session *session) override;
+
+  void Update(planning::framework::Session *session, ReferencePathPoints &raw_reference_path_points);
 
   virtual bool is_obstacle_ignorable(
       const std::shared_ptr<FrenetObstacle> obstacle) override;
@@ -60,6 +63,9 @@ class LaneReferencePath
   bool get_ref_points(ReferencePathPoints &points);
   bool get_ref_points_hpp(ReferencePathPoints &points);
 
+  bool ExtendConstructionRefPathPoints(ReferencePathPoints &ref_path_points);
+
+ private:
   int lane_virtual_id_ = 0;
   std::vector<int> lane_obstacles_id_;
   int lane_leadone_obstacle_;

@@ -40,6 +40,9 @@ class ReferencePathManager {
   }
 
  private:
+  bool GetReferencePathByConstructionScene();
+
+ private:
   planning::framework::Session* session_;
   std::map<ReferencePathKeyType, std::shared_ptr<ReferencePath>>
       reference_paths_;
