@@ -85,7 +85,8 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
                       agent::AgentType::TRUCK == agent->type() ||
                       agent::AgentType::TRAILER == agent->type() ||
                       agent->length() > 8.0);
-          lane_change_joint_decision::LongitudinalLabel label = is_large_agent ? 
+          bool is_accelerating = agent->accel_fusion() > 0.30;
+          lane_change_joint_decision::LongitudinalLabel label = (is_large_agent || is_accelerating) ? 
           lane_change_joint_decision::LongitudinalLabel::IGNORE 
           : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(CreateKeyObstacle(agent, ego_lane_coord,  label));
