@@ -2447,14 +2447,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     // 根据前方交换区split的方向，改变使用的感知车道数是左侧还是右侧
     int ego_seq = 0;
-    if (merge_point_direction == SPLIT_NONE) {
-      ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
-                    ? left_lane_num + 1
-                    : map_lane_num - right_lane_num;
+    if (emergency_lane_num == 0) {
+      if (merge_point_direction == SPLIT_NONE) {
+        ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
+                      ? left_lane_num + 1
+                      : map_lane_num - right_lane_num;
+      } else {
+        ego_seq = merge_point_direction == SPLIT_LEFT
+                      ? left_lane_num + 1
+                      : map_lane_num - right_lane_num;
+      }
     } else {
-      ego_seq = merge_point_direction == SPLIT_LEFT
-                    ? left_lane_num + 1
-                    : map_lane_num - right_lane_num;
+      ego_seq = left_lane_num + 1;
     }
     std::vector<int> lc_num_task;
     if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
