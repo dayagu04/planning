@@ -206,16 +206,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  bool enable_merge_decelaration = false;
-  if (is_in_deceleartion_scene_) {
-    if ((lane_change_source_ == MERGE_REQUEST) ||
-        ((lane_change_source_ == MAP_REQUEST) &&
-         (route_info_output.mlc_request_type_route_info.mlc_request_type ==
-          RAMP_TO_MAIN)) ||
-        (merge_stop_line_distance_ <= 100.0)) {
-      enable_merge_decelaration = true;
-    }
-  }
+  bool is_not_use_gap_select = IsNotUseGapSelect();
   std::chrono::time_point<std::chrono::high_resolution_clock> start_time =
       std::chrono::high_resolution_clock::now();
   double min_cost = std::numeric_limits<double>::max();
@@ -227,19 +218,35 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = GetStoplineSpdDifferGain();
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  for (size_t i = 0; i <= count; i++) {
-    st_sample_space_base_.GetAvailableGap(i * kEvaluationStep / 0.1);
+  if(sample_scene_ == PurseFlowVelScene && is_not_use_gap_select){
     for (size_t k = 0; k < sample_trajs_.size(); k++) {
       auto& sample_traj_at_v = sample_trajs_[k];
       for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
         auto& sample_traj = sample_traj_at_v[j];
-        if (is_in_deceleartion_scene_ || CheckTrajAvailable(sample_traj, i)) {
-          sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
-                               v_suggestted_, merge_stop_line_distance_,
-                               leading_veh_s, leading_veh_v, leading_veh_.id,
-                               enable_merge_decelaration, speed_differ_gain,
-                               distance_to_stop_point_,
-                               lc_safety_distance_config_, i * kEvaluationStep);
+        sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                              v_suggestted_, merge_stop_line_distance_,
+                              leading_veh_s, leading_veh_v, leading_veh_.id,
+                              is_not_use_gap_select, speed_differ_gain,
+                              distance_to_stop_point_,
+                              lc_safety_distance_config_, 3.0);
+      }
+    }
+  }
+  else{
+    for (size_t i = 0; i <= count; i++) {
+      st_sample_space_base_.GetAvailableGap(i * kEvaluationStep / 0.1);
+      for (size_t k = 0; k < sample_trajs_.size(); k++) {
+        auto& sample_traj_at_v = sample_trajs_[k];
+        for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
+          auto& sample_traj = sample_traj_at_v[j];
+          if (is_not_use_gap_select || CheckTrajAvailable(sample_traj, i)) {
+            sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                                v_suggestted_, merge_stop_line_distance_,
+                                leading_veh_s, leading_veh_v, leading_veh_.id,
+                                is_not_use_gap_select, speed_differ_gain,
+                                distance_to_stop_point_,
+                                lc_safety_distance_config_, i * kEvaluationStep);
+          }
         }
       }
     }
@@ -386,18 +393,18 @@ void SamplePolySpeedAdjustDecider::CalcTargetLaneVehDensity() {
 
   int total_vehicles = 0;
   double total_length = 0.0;
-
   for (const auto& veh : agent_info_) {
     if (std::fabs(veh.center_s) > kVehDensityDistanceThreshold) {
       continue;
     }
 
-    total_length += std::fabs(veh.center_s);
     total_vehicles += 1;
   }
-
-  traffic_density_ = total_vehicles / total_length;
-  if (traffic_density_ >= kJudgeCongestedSceneDensity) {
+  if(total_vehicles == 0){
+    return;
+  }
+  traffic_density_ = 2 * kVehDensityDistanceThreshold / total_vehicles;
+  if (traffic_density_ < kJudgeCongestedSceneDensity) {
     traffic_density_status_ = Congested;
   }
   return;
@@ -564,9 +571,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
                       ego_v_ - config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
       is_split_map_change
-          ? (v_cruise_speed / 1.4) > ego_v_
+          ? (target_lane_objs_flow_vel_ / 1.4) > ego_v_
                 ? ego_v_
-                : fmax(v_cruise_speed / 1.4,
+                : std::fmax(target_lane_objs_flow_vel_ / 1.4,
                        ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
@@ -795,8 +802,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
       ClearStitchedPolyPtr();
     }
   } else if (sample_scene_ == PurseFlowVelScene) {
-    if (std::fabs(target_lane_objs_flow_vel_ - ego_v_) <
-        kJudePurseFlowVelValue) {
+    if (traffic_density_status_ != Congested) {
       count_hover_to_normal_state_ =
           std::min(count_hover_to_normal_state_ + 2, kHoverToNormalThreshold);
     } else {
@@ -812,21 +818,25 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
   }
 
   if (IsInDeceleartionScene()) {
-    sample_scene_ = DecelerationPriorityScene;
-    count_hover_to_normal_state_ = 0;
-    count_normal_to_hover_state_ = 0;
-    CalcDistanceToStopPoint();
-    SetDeclerationSceneWeight();
-    ClearStitchedPolyPtr();
-    is_in_deceleartion_scene_ = true;
-  } else {
-    if (sample_scene_ == NormalSampleScene) {
-      SetNormalSceneWeight();
-    } else if (sample_scene_ == PurseFlowVelScene) {
+    bool is_not_use_gap_select = IsNotUseGapSelect();
+    if(sample_scene_ == PurseFlowVelScene && is_not_use_gap_select){
       v_suggestted_ = target_lane_objs_flow_vel_;
       SetPurseFlowVelSceneWeight();
+    }else{
+      sample_scene_ = DecelerationPriorityScene;
+      count_hover_to_normal_state_ = 0;
+      count_normal_to_hover_state_ = 0;
+      CalcDistanceToStopPoint();
+      SetDeclerationSceneWeight();
+      ClearStitchedPolyPtr();
+      is_in_deceleartion_scene_ = true;
     }
+  } else {
+    SetNormalSceneWeight();
     is_in_deceleartion_scene_ = false;
+    if(sample_scene_ = DecelerationPriorityScene){
+      sample_scene_ = NormalSampleScene;
+    }
   }
 }
 
@@ -1055,6 +1065,20 @@ bool SamplePolySpeedAdjustDecider::CheckTrajAvailable(
         return true;
       }
     }
+  }
+  return false;
+}
+
+bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
+  const auto& function_info = session_->environmental_model().function_info();
+  const auto& route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  if ((lane_change_source_ == MERGE_REQUEST) ||
+      ((lane_change_source_ == MAP_REQUEST) &&
+      (route_info_output.mlc_request_type_route_info.mlc_request_type ==
+        RAMP_TO_MAIN)) ||
+      (merge_stop_line_distance_ <= 200.0)) {
+        return true;
   }
   return false;
 }

@@ -55,6 +55,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   void CalcDistanceToStopPoint();
   bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
                           const int& index);
+  bool IsNotUseGapSelect();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
