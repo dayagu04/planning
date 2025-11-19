@@ -9,8 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "route_info_strategy/LD_route_info_strategy.h"
-#include "route_info_strategy/SDPro_route_info_strategy.h"
 #include "common_platform_type_soc.h"
 #include "config/basic_type.h"
 #include "debug_info_log.h"
@@ -18,6 +16,8 @@
 #include "environmental_model.h"
 #include "google/protobuf/arena.h"
 #include "planning_context.h"
+#include "route_info_strategy/LD_route_info_strategy.h"
+#include "route_info_strategy/SDPro_route_info_strategy.h"
 #include "sdmap/sdmap.h"
 namespace planning {
 
@@ -1478,7 +1478,6 @@ bool RouteInfo::UpdateSdProMap(const LocalView& local_view) {
   return sdpromap_valid_;
 }
 
-
 bool RouteInfo::UpdateStaticMap(const LocalView& local_view) {
   const auto& static_map_info = local_view.static_map_info;
   const auto static_map_info_current_timestamp =
@@ -2217,6 +2216,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     case ON_MAIN: {
       feasible_lane_sequence = first_exchange_region_info.recommend_lane_num[0]
                                    .feasible_lane_sequence;
+      const auto exchange_region_feasible_lane =
+          first_exchange_region_info.recommend_lane_num[1]
+              .feasible_lane_sequence;
       // 根据当前车道数来优化feasible_lane_sequence
       feasible_lane_sequence =
           GetIntersection(current_lane_vec, feasible_lane_sequence);
@@ -2226,10 +2228,20 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         if (it != exchange_feasible_lane_distances[0].end()) {
           feasible_lane_distance[feasible_lane_sequence[i]] = it->second;
         } else {
-          feasible_lane_distance[feasible_lane_sequence[i]] =
-              first_exchange_region_info.distance_to_split_point +
-              first_exchange_region_info.start_fp_point
-                  .fp_distance_to_split_point;
+          if (std::find(exchange_region_feasible_lane.begin(),
+                        exchange_region_feasible_lane.end(),
+                        feasible_lane_sequence[i]) !=
+              exchange_region_feasible_lane.end()) {
+            feasible_lane_distance[feasible_lane_sequence[i]] =
+                first_exchange_region_info.distance_to_split_point +
+                first_exchange_region_info.end_fp_point
+                    .fp_distance_to_split_point;
+          } else {
+            feasible_lane_distance[feasible_lane_sequence[i]] =
+                first_exchange_region_info.distance_to_split_point +
+                first_exchange_region_info.start_fp_point
+                    .fp_distance_to_split_point;
+          }
         }
       }
       break;
@@ -2243,7 +2255,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       for (int i = 0; i < feasible_lane_sequence.size(); i++) {
         feasible_lane_distance[feasible_lane_sequence[i]] =
             mlc_decider_route_info_.first_static_split_region_info
-                .distance_to_split_point;
+                .distance_to_split_point +
+            first_exchange_region_info.end_fp_point.fp_distance_to_split_point;
+        ;
       }
       break;
     }
@@ -6004,11 +6018,13 @@ void RouteInfo::GetStrategy() {
   if (!map_updated) {
     if (local_view.sdpro_map_info.data_source() ==
         iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
-      route_info_strategy_ = std::make_shared<LDRouteInfoStrategy> (&mlc_decider_config_, session_);
+      route_info_strategy_ =
+          std::make_shared<LDRouteInfoStrategy>(&mlc_decider_config_, session_);
       map_updated = true;
     } else if (local_view.sdpro_map_info.data_source() ==
                iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
-      route_info_strategy_ = std::make_shared<SDProRouteInfoStrategy> (&mlc_decider_config_, session_);
+      route_info_strategy_ = std::make_shared<SDProRouteInfoStrategy>(
+          &mlc_decider_config_, session_);
       map_updated = true;
     }
   }
@@ -6016,6 +6032,7 @@ void RouteInfo::GetStrategy() {
 
 void RouteInfo::UpdateMLCInfoDeciderBaseBaidu(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes) {
-  route_info_strategy_->CalculateMLCDecider(relative_id_lanes, route_info_output_);
+  route_info_strategy_->CalculateMLCDecider(relative_id_lanes,
+                                            route_info_output_);
 }
 }  // namespace planning
