@@ -937,7 +937,13 @@ bool ParallelLongitudinalAvoidDecider::CheckIfNeedYield(
     return false;
   }
 
-  // 7.检查让行轨迹
+    // 7. 检查横向距离
+    const double lateral_distance = std::fabs(agent_l);
+    if (lateral_distance > 0.5 * ego_lane->width_by_s(ego_s)) {
+      return false;
+    }
+
+  // 8.检查让行轨迹
   std::shared_ptr<VariableCoordinateTimeOptimalTrajectory> ptr_yield_trajectory;
   return CalculateYieldReachingTrajectory(
       ego_init_point, agent, session_->planning_context().st_graph_helper(),
@@ -1014,7 +1020,13 @@ bool ParallelLongitudinalAvoidDecider::IsSatisfiedYieldExitCondition(
     return true;
   }
 
-  // 5.如果不是大车，检查横向TTC冲突, 如果存在横向TTC冲突，退出让行
+  // 5.检查横向距离，如果横向距离过大，退出让行
+  const double lateral_distance = std::fabs(agent_l);
+  if (lateral_distance > 0.6 * ego_lane->width_by_s(ego_s)) {
+    return true;
+  }
+
+  // 6.如果不是大车，检查横向TTC冲突, 如果存在横向TTC冲突，退出让行
   if (!IsDynamicTruckOrBus(agent) &&
       CheckLateralTTC(agent, kStopYieldLateralTTCThresholdS)) {
     return true;
@@ -1023,7 +1035,7 @@ bool ParallelLongitudinalAvoidDecider::IsSatisfiedYieldExitCondition(
   const double target_agent_speed_kmh = agent->speed() * kMpsToKmh;
   const double speed_diff = ego_speed_kmh - target_agent_speed_kmh;
 
-  // 6.检查速度差小于负阈值且大车车尾位置 - 自车车头位置 > 阈值，
+  // 7.检查速度差小于负阈值且大车车尾位置 - 自车车头位置 > 阈值，
   // 如果满足让行条件，退出让行
   const double agent_back_position =
       agent_s - agent->length() * kVehicleLengthRatio;
