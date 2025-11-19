@@ -2036,6 +2036,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_type = RAMP_TO_MAIN;
         }
       }
+      route_info_output_.ego_seq = ego_seq;
       route_info_output_.mlc_request_type_route_info.mlc_request_type =
           mlc_type;
       route_info_output_.mlc_request_type_route_info
@@ -2460,6 +2461,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     } else {
       ego_seq = left_lane_num + 1;
     }
+    route_info_output_.ego_seq = ego_seq;
     std::vector<int> lc_num_task;
     if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
       continue;
@@ -2994,6 +2996,7 @@ void RouteInfo::UpdateVisionInfo() const {
           route_info_output_.mlc_request_type_route_info.mlc_request_type));
   JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
   JSON_DEBUG_VALUE("bd_mlc_scene", static_cast<int>(route_info_output_.baidu_mlc_scene));
+  JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(

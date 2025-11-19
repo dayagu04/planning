@@ -257,6 +257,7 @@ struct RouteInfoOutput {
   int emergency_lane_num = 0;
   int minVal_seq = 0;
   int maxVal_seq = 0;
+  int ego_seq = 0;
   bool is_update_segment_success = false;
   bool is_on_ramp = false;
   bool is_in_sdmaproad = false;
