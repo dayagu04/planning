@@ -59,6 +59,47 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
 
   uint16 disable_code = 0;
 
+  // bit 0
+  // TSR感知模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->tsr_info_node_valid == false) {
+    disable_code += uint16_bit[0];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 1
+  // 判断vehicle_service模块节点通讯丢失,持续0.5s
+  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
+    disable_code += uint16_bit[1];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 判断仪表车速信号有效性
+  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+    disable_code += uint16_bit[2];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // 判断仪表车速信号有效性
+  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+       false)) {
+    disable_code += uint16_bit[3];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 判断横摆角速度信号有效性
+  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+    disable_code += uint16_bit[4];
+  } else {
+    /*do nothing*/
+  }
+
   return disable_code;
 }
 
@@ -76,55 +117,6 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
   uint16 fault_code = 0;
 
   // bit 0
-  // 前视摄像头有故障(信号没有给出)
-  // if (vehicle_service_output_info_ptr->... == false) {
-  //   fault_code += uint16_bit[0];
-  // } else {
-  //   /*do nothing*/
-  // }
-
-  // bit 1
-  // TSR感知模块节点通讯丢失，持续0.5s
-  if (GetContext.mutable_state_info()->tsr_info_node_valid == false) {
-    fault_code += uint16_bit[1];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 2
-  // 判断vehicle_service模块节点通讯丢失,持续0.5s
-  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
-    fault_code += uint16_bit[2];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 3
-  // 判断仪表车速信号有效性
-  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    fault_code += uint16_bit[3];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 4
-  // 判断仪表车速信号有效性
-  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
-       false)) {
-    fault_code += uint16_bit[4];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 5
-  // 判断横摆角速度信号有效性
-  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    fault_code += uint16_bit[5];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 6
   // 故障降级
   auto degraded_driving_function_info_ptr =
       &GetContext.mutable_session()
@@ -139,7 +131,7 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
            iflyauto::ERROR_SAFE_STOP) ||
        (degraded_driving_function_info_ptr->tsr.degraded ==
            iflyauto::MCU_COMM_SHUTDOWN)) {
-    fault_code += uint16_bit[6];
+    fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
