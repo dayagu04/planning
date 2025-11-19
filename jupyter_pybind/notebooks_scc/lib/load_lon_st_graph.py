@@ -246,7 +246,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["comfort_follow_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+  st_search_value_list = ["joint_danger_agent_ids", "comfort_follow_agent_ids", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet", 
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -841,6 +841,26 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'lat_lon_opt_traj_x': [],
     })
 
+  # Extract and update joint motion planner output (s, v, a, j)
+  if (len(jp_out.time_vec) > 0 and len(jp_out.s_vec) > 0 and
+      len(jp_out.vel_vec) > 0 and len(jp_out.acc_vec) > 0 and
+      len(jp_out.jerk_vec) > 0):
+    lon_plan_data['data_joint_motion_plan'].data.update({
+      'time_vec': list(jp_out.time_vec),
+      's_vec': list(jp_out.s_vec),
+      'vel_vec': list(jp_out.vel_vec),
+      'acc_vec': list(jp_out.acc_vec),
+      'jerk_vec': list(jp_out.jerk_vec),
+    })
+  else:
+    lon_plan_data['data_joint_motion_plan'].data.update({
+      'time_vec': [],
+      's_vec': [],
+      'vel_vec': [],
+      'acc_vec': [],
+      'jerk_vec': [],
+    })
+
 
 def update_lon_ref_path(lon_ref_path, lon_plan_data):
   # behavior planning
@@ -1385,6 +1405,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_lat_lon_opt_trajectory = ColumnDataSource(data = {'lat_lon_opt_traj_y':[],
                                                          'lat_lon_opt_traj_x':[],})
 
+  # Lat-Lon joint motion planner output (s, v, a, j)
+  data_joint_motion_plan = ColumnDataSource(data = {'time_vec': [],
+                                                    's_vec': [],
+                                                    'vel_vec': [],
+                                                    'acc_vec': [],
+                                                    'jerk_vec': [],
+                                                    })
+
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
@@ -1397,6 +1425,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning, \
                    'data_lat_lon_opt_trajectory': data_lat_lon_opt_trajectory, \
+                   'data_joint_motion_plan': data_joint_motion_plan, \
                    'data_st_searcher':data_st_searcher, \
                    'data_st_search_nodes' : data_st_search_nodes, \
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
@@ -1496,6 +1525,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig2.line('time_vec', 'ref_pos_vec', source = data_lon_motion_plan, line_width = 2.5, line_color = 'red', line_dash = 'dashed', legend_label = 's_ref')
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
+  # Plot joint motion planner s on fig2
+  fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt')
   fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb')
   fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub')
   fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb_point')
@@ -1557,6 +1588,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
   f3 = fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
+  # Plot joint motion planner s on fig3
+  fig3.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt')
   fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes')
   fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes')
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3, line_color = 'blue', alpha = 1, line_dash = 'solid', legend_label = 's_final_target')
@@ -1614,6 +1647,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
   fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'comfort_target_vel')
   fig5.line('time_vec', 'zero_acc_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'cyan', line_dash = 'dotted', legend_label = 'zero_acc_vel')
+  # Plot joint motion planner v on fig5
+  fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'solid', legend_label = 'v_joint_opt')
 
   # acc
   f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
@@ -1625,6 +1660,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
   fig6.inverted_triangle ('time_vec', 'acc_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_ub')
   fig6.line('time_vec', 'zero_acc_acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'coral', line_dash = 'dotted', legend_label = 'zero_acc_acc')
+  # Plot joint motion planner a on fig6
+  fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 'a_joint_opt')
 
   # jerk
   f7 = fig7.line('time_vec', 'jerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'j_plan')
@@ -1633,6 +1670,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
   fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'comfort_min_jerk')
+  # Plot joint motion planner j on fig7
+  fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt')
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')
