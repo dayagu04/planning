@@ -102,10 +102,10 @@ const ColResult GJKCollisionDetector::Update(
       low_polygon_vec = high_polygon_vec;
     } else if (use_obs_height_method_ == UseObsHeightMethod::HIGH_LOW) {
       mid_polygon_vec = high_polygon_vec;
-      low_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+      low_polygon_vec = {};
     } else {
-      mid_polygon_vec = {&polygon_foot_print_global_.max_polygon};
-      low_polygon_vec = {&polygon_foot_print_global_.max_polygon};
+      mid_polygon_vec = {};
+      low_polygon_vec = {};
     }
   } else {
     high_polygon_vec = {&polygon_foot_print_global_.max_polygon,

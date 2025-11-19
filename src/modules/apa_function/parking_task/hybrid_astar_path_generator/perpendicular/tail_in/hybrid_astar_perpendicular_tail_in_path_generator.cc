@@ -124,7 +124,7 @@ void HybridAStarPerpendicularTailInPathGenerator::CalcNodeGCost(
     length_cost += config_.expect_dist_penalty;
   }
 
-  // safe dist cost  可以细分库内库外障碍物距离
+  // safe dist cost
   // weight: 15
   // [0-0.15], cost: 1000;
   // [0.15-0.5],cost: (1/dist -2) * weight;
@@ -236,7 +236,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   const bool swap_start_goal = request_.swap_start_goal;
   const float traj_kappa_change_penalty = config_.traj_kappa_change_penalty;
 
-  // 用自车中心位置和车位位置构建两个感兴趣区域，搜索位置尽量在其中某一个区域内
   const Eigen::Vector2d& interesting_pos_ego =
       cur_pose.pos +
       (0.5 * param.car_length - param.rear_overhanging) * cur_pose.heading_vec;
@@ -272,7 +271,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
   request_.analytic_expansion_type = AnalyticExpansionType::REEDS_SHEEP;
   config_.traj_kappa_change_penalty = 0.0;
 
-  // 通过搜索来判断是否为断头路
   if (request_.decide_cul_de_sac &&
       ego_info_under_slot.slot_type == SlotType::PERPENDICULAR &&
       ego_info_under_slot.slot_occupied_ratio < 1e-3 &&
@@ -423,15 +421,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   open_pq_.clear();
   node_set_.clear();
   result_.Clear();
-
-  // debug info
-  // child_node_debug: 所有扩展有效的子节点坐标，同时也包含了第一个换挡点坐标
-  // 以及若干个碰撞点坐标
-  // queue_path_debug: 主循环按顺序搜索的父节点坐标
-  // delete_queue_path_debug: 所有扩展被删除的子节点坐标
-  // all_curve_path_debug: 所有无碰撞连接到终点的曲线路径
-  // all_success_path_first_gear_switch_pose_debug:
-  // 所有成功路径的第一个换挡点位姿
   child_node_debug_.clear();
   queue_path_debug_.clear();
   delete_queue_path_debug_.clear();
@@ -455,7 +444,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
   UpdatePoseBoundary();
 
-  // 检查所设的坐标边界是否超过了网格边界
   // NodeGridIndex grid_index;
   // Node3d::CoordinateToGridIndex(
   //     search_map_boundary_.x_max, search_map_boundary_.y_max,
@@ -1088,24 +1076,13 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     ObsToPathDistRelativeSlot obs_dist_relative_slot;
     const CurveNode& temp_node = curve_node_to_goal_vec[i];
 
-    // 所有的单体代价必须单次换挡的代价  除非特殊情况情愿多换一次或两次挡
-    // 需要遵循这个代价设计原则
-    // 当前单体代价有: 换挡代价 换挡点代价 路径长度代价 路径曲率变化代价
-    // 障碍物距离代价 最后一段直线代价
-    // 其中换挡点代价又需要考虑第一次换挡点的航向(前进挡)，第二次换挡点的横向和航向和纵向(倒退挡)，第一次换挡点朝向车位中心，
-    // 过于远离车位代价，换挡点纵向离障碍物距离的代价
-
-    // 换挡代价
     cost.gear_change_cost = gear_change_penalty * temp_node.GetGearSwitchNum();
 
-    // 长度代价
     cost.length_cost = length_penalty * temp_node.GetDistToStart();
 
-    // 误差代价
     cost.lat_err_cost = temp_node.GetLatErr() * lat_err_penalty;
     cost.heading_err_cost = temp_node.GetThetaErr() * heading_err_penalty;
 
-    // 最后一段直线代价  曲率变化代价
     if (analytic_expansion_type == AnalyticExpansionType::LINK_POSE_LINE) {
       const auto& lpl_path = temp_node.GetLPLPath();
       if (lpl_path.seg_num < 1) {
@@ -1143,10 +1120,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       // todo: 单段路径长度如果过短是不是也可以施加惩罚
     }
 
-    // 障碍物距离代价
     if (consider_obs_dist) {
       CalcObsDistRelativeSlot(temp_node, obs_dist_relative_slot);
-      // 暂时只考虑库外里障碍物距离
       const float out_slot_straight_diff =
           obs_dist_relative_slot.obs_dist_out_slot_straight -
           safe_buffer.out_slot_body_lat_buffer;
@@ -1377,7 +1352,6 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
   }
 
   if (gear == AstarPathGear::DRIVE) {
-    // 对于前进挡的换挡点 其不管怎样X都不应该过低
     const float idex_x = target_pose.GetX() + 3.0f;
     if (gear_switch_pose.GetX() < idex_x) {
       gear_switch_pose_cost += (idex_x - gear_switch_pose.GetX()) * 2.0f;

@@ -205,7 +205,6 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
 
   const ApaParameters& param = apa_param.GetParam();
 
-  // 建立车位坐标系 根据23角点或者限位器角点确定规划终点位姿
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
 
@@ -274,7 +273,6 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
             measures_ptr->GetHeadingVec(),
             ego_info_under_slot.origin_pose_global.heading_vec);
 
-    // 这个初始参考挡位对迭代式路径规划已经没有什么意义
     frame_.current_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
     if (cross_ego_to_slot_heading > 0.0 && cross_ego_to_slot_center < 0.0) {
       ego_info_under_slot.slot_side = geometry_lib::SLOT_SIDE_RIGHT;
@@ -424,7 +422,6 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
   }
 
   apa_param.SetParam().actual_mono_plan_enable = param.mono_plan_enable;
-  // 如果保守的话  两侧全空才开启一把进 无意义 这个保守泊入已关闭
   frame_.is_left_empty = left_pq_for_x.empty();
   frame_.is_right_empty = right_pq_for_x.empty();
   if (param.conservative_mono_enable &&
@@ -432,7 +429,6 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
     apa_param.SetParam().actual_mono_plan_enable = false;
   }
 
-  // 加入左右侧的虚拟障碍物
   const Eigen::Vector2d pt_01_unit_vec =
       ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_unit_vec;
 
@@ -462,13 +458,11 @@ const bool PerpendicularTailInScenario::CalcPtInside() {
   right_pq_for_y.emplace(virtual_right_obs);
   right_pq_for_x.emplace(virtual_right_obs);
 
-  // 找到左侧和右侧障碍物极限位置
   const Eigen::Vector2d left_obs(left_pq_for_x.top().x(),
                                  left_pq_for_y.top().y());
   const Eigen::Vector2d right_obs(right_pq_for_x.top().x(),
                                   right_pq_for_y.top().y());
 
-  // 计算内侧安全圆切点
   if (ego_info_under_slot.slot_side == geometry_lib::SLOT_SIDE_RIGHT) {
     ego_info_under_slot.pt_inside = right_obs;
     ego_info_under_slot.pt_inside.x() =
@@ -648,7 +642,6 @@ const bool PerpendicularTailInScenario::GenTlane() {
     }
   } else {
     ego_info_under_slot.target_pose = ego_info_under_slot.origin_target_pose;
-    // 根据上次重规划成功的移动距离来移动终点位置
     ego_info_under_slot.target_pose.pos.x() +=
         ego_info_under_slot.lon_move_dist_replan_success;
     ego_info_under_slot.target_pose.pos.y() +=
@@ -800,7 +793,6 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
   else {
     if (path_plan_success) {
       ILOG_INFO << "path plan success";
-      // 必须可以再次尝试删除障碍物的情况下 此时才能设置为失败
       if (frame_.process_obs_method == ProcessObsMethod::DO_NOTHING &&
           !frame_.is_replan_first &&
           per_path_planner_ptr->GetOutput().current_gear !=
@@ -1181,7 +1173,6 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
 
-  // 如果是处于库内向库外搜索
   if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
     if (ego_info_under_slot.slot.IsPointInCustomSlot(
             ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
@@ -1401,7 +1392,6 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
       frame_.replan_flag = false;
       break;
     case PathGenRequestResponseState::HAS_PUBLISHED_RESPONSE:
-      // 如果是HAS_PUBLISHED_RESPONSE状态，说明已经从线程里获取路径，可以正常触发重规划
       ILOG_INFO << "thread request response state is has_published_response, "
                    "use last path and can trigger plan";
       break;
@@ -1421,7 +1411,6 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
   HybridAstarResponse response;
   if (frame_.path_gen_request_response_state ==
       PathGenRequestResponseState::HAS_RESPONSE) {
-    // 从线程里拿取路径规划结果  success or fail
     path_generator_thread_ptr->PublishResponseData(response);
     const HybridAStarRequest& last_request = response.request;
 
@@ -1588,7 +1577,6 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
   if (frame_.replan_flag) {
     SetParkingStatus(PARKING_PLANNING);
 
-    // 终点不存在 直接返回
     if (!exist_target_pose) {
       frame_.pathplan_result = PathPlannerResult::PLAN_FAILED;
       frame_.plan_fail_reason = ParkingFailReason::NO_TARGET_POSE;
@@ -1599,8 +1587,7 @@ void PerpendicularTailInScenario::PathPlanByHybridAstarThread() {
       SwitchProcessObsMethod();
       return;
     }
-    // 触发重规划 通知路径规划线程开始规划路径 但是并不检查规划结果
-    // 也不获取规划路径 只是设置请求 通知线程干活
+
     ILOG_INFO << "replan is required, set request to path generate thread!";
     PathGenThreadRequest request;
     request.col_det_interface_ptr = apa_world_ptr_->GetColDetInterfacePtr();
@@ -1645,7 +1632,6 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
     return;
   }
 
-  // 如果动态规划 从路径上往后取dt的点当做投影点
   ILOG_INFO << "decide ego pose or proj pt for dynamic path plan";
 
   if (apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()) {
@@ -1657,8 +1643,6 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
       std::min({frame_.remain_dist_path, frame_.remain_dist_obs,
                 frame_.remain_dist_slot_jump});
 
-  // 根据剩余距离选择一个dt,
-  // 剩余距离越长，可以选择更大的dt来给控制更大的反映时间
   std::vector<double> dist_vec{1.0, 2.0, 3.0, 4.0, 5.0, 6.0};
   const double delta_t =
       (param.max_dynamic_plan_proj_dt - param.min_dynamic_plan_proj_dt) /
@@ -1718,7 +1702,6 @@ void PerpendicularTailInScenario::CalcProjPtForDynamicPlan(
   proj_pt.pos = ego_info_under_slot.g2l_tf.GetPos(fur_proj_pt.pos);
   proj_pt.heading = ego_info_under_slot.g2l_tf.GetHeading(fur_proj_pt.heading);
 
-  // 存储当前位置点到投影点之前的所有点
   splicing_pt_vec.reserve(fur_proj_index - ego_proj_index + 1);
   for (size_t i = ego_proj_index + 1; i < fur_proj_index; ++i) {
     splicing_pt_vec.emplace_back(current_path_point_global_vec_[i]);
@@ -2310,7 +2293,6 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     }
   }
 
-  // 如果在库外 或者 在库内且车位跳动较大时 横向buffer要更大
   const bool increase_lat_err_flag =
       (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
        ego_info_under_slot.cur_pose.pos.x() >
@@ -2476,7 +2458,6 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
     return false;
   }
 
-  // 计算上一次规划终点
   geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().g2l_tf);
@@ -2484,7 +2465,6 @@ const bool PerpendicularTailInScenario::CheckShouldStopWhenSlotJumpsMuch() {
   const geometry_lib::PathPoint front_tar_pose_bef =
       GetCarFrontPoseFromCarPose(tar_pose_bef);
 
-  // 计算当前的真实车位终点位置
   geometry_lib::PathPoint tar_pose_now = ego_info_under_slot.origin_target_pose;
   tar_pose_now.pos.x() += ego_info_under_slot.lon_move_dist_every_replan;
   tar_pose_now.pos.y() += ego_info_under_slot.lat_move_dist_every_replan;
@@ -2563,7 +2543,6 @@ void PerpendicularTailInScenario::CalSlotJumpErr() {
   geometry_lib::PathPoint front_last_time_pose =
       GetCarFrontPoseFromCarPose(last_time_pose);
 
-  // 计算两次终点位置误差
   const double lat_err = std::max(
       std::fabs(real_time_pose.pos.y() - last_time_pose.pos.y()),
       std::fabs(front_real_time_pose.pos.y() - front_last_time_pose.pos.y()));
@@ -2615,11 +2594,9 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
     return 5.01;
   }
 
-  // 上一帧自车沿路径已经行驶的距离
   const double car_already_move_dist_last =
       frame_.current_path_length - frame_.remain_dist_path_last;
 
-  // 当前帧自车沿路径已经行驶的距离
   const double car_already_move_dist =
       frame_.current_path_length - frame_.remain_dist_path;
 
@@ -2643,11 +2620,9 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
         std::max(std::min(lon_stop_dist, heading_stop_dist), 1.268);
   }
 
-  // 车位跳动剩余距离等于停止距离减去从应该停车时刻到现在行驶的累计距离
   const double remain_dist_slot_jump =
       frame_.ego_should_stop_dist_by_slot_jump - frame_.car_already_move_dist;
 
-  // 计算从应该停车时刻到现在行驶的累计距离
   frame_.car_already_move_dist +=
       std::fabs(car_already_move_dist - car_already_move_dist_last);
 
@@ -2757,13 +2732,11 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingRemainDist(
 
 const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
   const ApaParameters& param = apa_param.GetParam();
-  // 拿到之前的路径 并转换到如今的车位坐标系下
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
   geometry_lib::GeometryPath geometry_path_bef(all_plan_path_vec_);
   geometry_path_bef.GlobalToLocal(ego_info_under_slot.g2l_tf);
 
-  // 拿到现在的路径
   const geometry_lib::GeometryPath geometry_path_now(
       apa_world_ptr_->GetParkingTaskInterfacePtr()
           ->GetPerpendicularTailInPathGeneratorPtr()
@@ -2788,29 +2761,24 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return true;
   }
 
-  // 拿到之前的规划终点
   const geometry_lib::PathPoint tar_pose_bef = geometry_path_bef.end_pose;
   const geometry_lib::PathPoint front_pose_bef =
       GetCarFrontPoseFromCarPose(tar_pose_bef);
 
-  // 拿到现在的规划终点
   const geometry_lib::PathPoint tar_pose_now = geometry_path_now.end_pose;
   const geometry_lib::PathPoint front_pose_now =
       GetCarFrontPoseFromCarPose(tar_pose_now);
 
-  // 拿到实际终点
   const geometry_lib::PathPoint tar_pose_real = ego_info_under_slot.target_pose;
   const geometry_lib::PathPoint front_pose_real =
       GetCarFrontPoseFromCarPose(tar_pose_real);
 
-  // 计算之前规划终点与当前实际终点的横纵航向误差
   const double lat_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).y();
   const double front_lat_err_bef = (front_pose_bef.pos - tar_pose_real.pos).y();
   const double lon_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).x();
   const double heading_err_bef =
       (tar_pose_bef.heading - tar_pose_real.heading) * kRad2Deg;
 
-  // 计算现在规划终点与当前实际终点的横纵航向误差
   const double lat_err_now = (tar_pose_now.pos - tar_pose_real.pos).y();
   const double front_lat_err_now = (front_pose_now.pos - tar_pose_real.pos).y();
   const double lon_err_now = (tar_pose_now.pos - tar_pose_real.pos).x();
@@ -2878,7 +2846,6 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal() {
     return false;
   }
 
-  // 如果之前路径误差越小 那么对现在路径的最后一段直线长度要求就越高
   double line_length = 0.0;
   for (int i = geometry_path_now.path_segment_vec.size() - 1; i >= 0; i--) {
     const auto& seg = geometry_path_now.path_segment_vec[i];
@@ -2987,37 +2954,33 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
 
   const ApaParameters& param = apa_param.GetParam();
 
-  // 拿到之前的规划终点
   geometry_lib::PathPoint tar_pose_bef = complete_path_point_global_vec_.back();
   tar_pose_bef.GlobalToLocal(ego_info_under_slot.g2l_tf);
   geometry_lib::PathPoint front_pose_bef =
       GetCarFrontPoseFromCarPose(tar_pose_bef);
 
-  // 拿到现在的规划终点
   geometry_lib::PathPoint tar_pose_now;
   tar_pose_now.pos << res.x_vec_vec.back().back(), res.y_vec_vec.back().back();
   tar_pose_now.heading = res.phi_vec_vec.back().back();
-  // 在多线程情况下 这个是在触发规划那一帧的车位坐标  并非现在的车位坐标
+
   if (param.park_path_plan_type == ParkPathPlanType::HYBRID_ASTAR_THREAD) {
     tar_pose_now.LocalToGlobal(req.ego_info_under_slot.l2g_tf);
     tar_pose_now.GlobalToLocal(ego_info_under_slot.g2l_tf);
   }
+
   geometry_lib::PathPoint front_pose_now =
       GetCarFrontPoseFromCarPose(tar_pose_now);
 
-  // 拿到实际终点
   const geometry_lib::PathPoint tar_pose_real = ego_info_under_slot.target_pose;
   const geometry_lib::PathPoint front_pose_real =
       GetCarFrontPoseFromCarPose(tar_pose_real);
 
-  // 计算之前规划终点与当前实际终点的横纵航向误差
   const double lat_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).y();
   const double front_lat_err_bef = (front_pose_bef.pos - tar_pose_real.pos).y();
   const double lon_err_bef = (tar_pose_bef.pos - tar_pose_real.pos).x();
   const double heading_err_bef =
       (tar_pose_bef.heading - tar_pose_real.heading) * kRad2Deg;
 
-  // 计算现在规划终点与当前实际终点的横纵航向误差
   const double lat_err_now = (tar_pose_now.pos - tar_pose_real.pos).y();
   const double front_lat_err_now = (front_pose_now.pos - tar_pose_real.pos).y();
   const double lon_err_now = (tar_pose_now.pos - tar_pose_real.pos).x();
@@ -3079,7 +3042,6 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
     return false;
   }
 
-  // 如果之前路径误差越小 那么对现在路径的最后一段直线长度要求就越高
   const std::vector<double> lat_err_tab{0.01, 0.03, 0.05, 0.07, 0.09, 0.10};
   const std::vector<double> line_length_tab{1.3, 1.1, 0.9, 0.7, 0.5, 0.368};
   const double min_line_length = mathlib::Interp1(
@@ -3254,7 +3216,6 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
       optimal_path_vec.emplace_back(tmp_pt);
     }
 
-    // 可能没采样到终点
     if (optimal_path_vec.size() > 0) {
       tmp_pt = optimal_path_vec.back();
       if (s_vec.back() - optimal_path_vec.back().s > 1e-2) {
@@ -3272,14 +3233,12 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
     return false;
   }
 
-  // 检查路径长度是否有较大变化
   if (std::fabs(cur_gear_length - optimal_path_vec.back().s) > 5e-2) {
     ILOG_INFO << "length is not the same, cur_gear_length = " << cur_gear_length
               << "  optimized_path length = " << optimal_path_vec.back().s;
     return false;
   }
 
-  // 检查起点终点是否一致
   if (!pnc::geometry_lib::CheckTwoPoseIsSame(
           optimal_path_vec.front(), pt_vec.front(), 0.02, 0.3 / 57.3) ||
       !pnc::geometry_lib::CheckTwoPoseIsSame(optimal_path_vec.back(),
@@ -3288,9 +3247,6 @@ const bool PerpendicularTailInScenario::LateralPathOptimize(
     return false;
   }
 
-  // 检查优化后的路径是否很奇怪
-
-  // 检查是否碰撞
   if (apa_world_ptr_->GetColDetInterfacePtr()
           ->GetGJKColDetPtr()
           ->Update(optimal_path_vec, 0.08, 0.0, GJKColDetRequest())
@@ -3312,31 +3268,23 @@ const PerpendicularTailInScenario::SlotObsType
 PerpendicularTailInScenario::CalSlotObsType(const Eigen::Vector2d& obs_slot) {
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
-  // 2米2的车位重规划考虑的障碍物单侧最多入侵车位20厘米
-  // 给障碍物跳动留下些许余量
+
   const std::vector<double> slot_width_tab{2.2, 2.4, 2.6, 2.8, 3.0, 3.2};
   const std::vector<double> invasion_dist_tab{0.20, 0.25, 0.30, 0.35, 0.40};
   const double dy1 = mathlib::Interp1(slot_width_tab, invasion_dist_tab,
                                       ego_info_under_slot.slot.slot_width_);
 
-  // 内外侧障碍物往远离车位的一遍考虑1.68米就可以
   const double dy2 = 1.68;
 
-  // 最多高于车位3.468米的障碍物可以当做内外侧障碍物
   double dx1 = 3.468;
-  // 但是如果自车位置本身较低 那么内外侧障碍物考虑的x值也应该降低
   dx1 = std::min(dx1, ego_info_under_slot.cur_pose.pos.x() -
                           apa_param.GetParam().car_width * 0.5 -
                           ego_info_under_slot.slot.slot_length_);
-  // 也需要有个最低考虑位置
+
   dx1 = std::max(dx1, 0.368);
 
-  // 对于5米长的车位 从车位线往内延长3.86米当做内外侧障碍物即可
-  // 这个时候可以参考当做根据障碍物移动车位的标准， 再深就无需横向移动
   double dx2 = 4.86 / 5.0 * ego_info_under_slot.slot.slot_length_;
 
-  // 对于5米长的车位 最多往后5.2米的障碍物可以在重规划的时候不考虑
-  // 再往后就要考虑
   double dx3 = 5.2 / 5.0 * ego_info_under_slot.slot.slot_length_ - dx2;
 
   Eigen::Vector2d slot_left_pt =
@@ -3520,7 +3468,6 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
     const geometry_lib::PathPoint& cur_pose) {
   const ApaParameters& params = apa_param.GetParam();
   const CheckFinishParams& finish_params = params.check_finish_params;
-  // 暂且需要输入的pt航向误差都比较小, 输入的点需要为车位坐标系
   if (std::fabs(cur_pose.heading * kRad2Deg) > finish_params.heading_err) {
     return CarSlotRelationship::TOUCHING;
   }
@@ -3531,7 +3478,6 @@ const CarSlotRelationship PerpendicularTailInScenario::CalCarSlotRelationship(
   const geometry_lib::PathPoint front_pose =
       GetCarFrontPoseFromCarPose(cur_pose);
 
-  // 暂且简易化计算  忽略航向误差
   const std::vector<double> car_border_ys = {
       cur_pose.pos.y() + 0.5 * params.car_width,
       cur_pose.pos.y() - 0.5 * params.car_width,
