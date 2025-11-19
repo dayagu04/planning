@@ -39,6 +39,9 @@ std::vector<double> left_tire_point_global_vec_x;
 std::vector<double> left_tire_point_global_vec_y;
 #endif
 
+using namespace pnc::geometry_lib;
+using namespace pnc::mathlib;
+
 namespace planning {
 namespace apa_planner {
 class ParallelOutPathGenerator;   // 前向声明，供 dynamic_cast 使用
@@ -4698,6 +4701,33 @@ const bool ParallelPathGenerator::CalcLineDirAllValidPose(
   return true;
 }
 
+const bool ParallelPathGenerator::CheckPathInTlane(
+    const std::vector<pnc::geometry_lib::PathSegment>& path_vec,
+    const TlaneCorner& tlane_corner) const {
+  if (path_vec.empty()) {
+    ILOG_INFO << "path_vec empty!";
+    return false;
+  }
+
+  for (int i = 0; i < path_vec.size(); i++) {
+    std::vector<PathPoint> pt_set;
+    SamplePointSetInPathSeg(pt_set, path_vec[i], 0.2);
+    for (int i = 0; i < pt_set.size(); i++) {
+      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x(),
+                       tlane_corner.F.x()) &&
+             IsInBound(pt_set[i].GetY(), tlane_corner.A.y(),
+                       tlane_corner.channel_point_1.y())) ||
+            (IsInBound(pt_set[i].GetX(), tlane_corner.B.x(),
+                       tlane_corner.E.x()) &&
+             IsInBound(pt_set[i].GetY(), tlane_corner.B.y(),
+                       tlane_corner.C.y())))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 const bool ParallelPathGenerator::GenerateCandidatePath() {
   return StartNodeGenerator();
 }
@@ -4882,6 +4912,11 @@ const bool ParallelPathGenerator::StartNodeGenerator() {
   }
 
   ILOG_INFO << "best idx = " << best_path_idx;
+  if (!CheckPathInTlane(geo_path_vec[best_path_idx].path_segment_vec,
+                       input_.tlane.tlane_corner)) {
+    ILOG_INFO << "path not in tlane";
+    return false;
+  }
 
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
   debug_info_.debug_all_path_vec = geo_path_vec;

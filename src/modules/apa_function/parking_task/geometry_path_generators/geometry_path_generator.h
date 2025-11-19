@@ -20,6 +20,45 @@ namespace apa_planner {
 
 // only use for parallel parking, If parallel parking is unified behind, Tlane
 // can be deleted
+
+struct TlaneCorner {
+  Eigen::Vector2d A = Eigen::Vector2d::Zero();
+  Eigen::Vector2d B = Eigen::Vector2d::Zero();
+  Eigen::Vector2d C = Eigen::Vector2d::Zero();
+  Eigen::Vector2d D = Eigen::Vector2d::Zero();
+  Eigen::Vector2d E = Eigen::Vector2d::Zero();
+  Eigen::Vector2d F = Eigen::Vector2d::Zero();
+  Eigen::Vector2d channel_point_1 = Eigen::Vector2d::Zero();
+  Eigen::Vector2d channel_point_2 = Eigen::Vector2d::Zero();
+
+  TlaneCorner() = default;
+
+  TlaneCorner(const Eigen::Vector2d& A_, const Eigen::Vector2d& B_,
+              const Eigen::Vector2d& C_, const Eigen::Vector2d& D_,
+              const Eigen::Vector2d& E_, const Eigen::Vector2d& F_,
+              const Eigen::Vector2d& channel_point_1_,
+              const Eigen::Vector2d& channel_point_2_)
+      : A(A_),
+        B(B_),
+        C(C_),
+        D(D_),
+        E(E_),
+        F(F_),
+        channel_point_1(channel_point_1_),
+        channel_point_2(channel_point_2_) {}
+
+  void Reset() {
+    A.setZero();
+    B.setZero();
+    C.setZero();
+    D.setZero();
+    E.setZero();
+    F.setZero();
+    channel_point_1.setZero();
+    channel_point_2.setZero();
+  }
+};
+
 struct Tlane {
   Eigen::Vector2d corner_outside_slot = Eigen::Vector2d::Zero();
   Eigen::Vector2d corner_inside_slot = Eigen::Vector2d::Zero();
@@ -27,6 +66,7 @@ struct Tlane {
   Eigen::Vector2d pt_inside = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_terminal_pos = Eigen::Vector2d::Zero();
   Eigen::Vector2d pt_lower_boundry_pos = Eigen::Vector2d::Zero();
+  TlaneCorner tlane_corner;
 
   Limiter limiter;
   bool is_inside_rigid = false;
@@ -54,6 +94,7 @@ struct Tlane {
     pt_inside.setZero();
     pt_terminal_pos.setZero();
     pt_lower_boundry_pos.setZero();
+    tlane_corner.Reset();
     pt_terminal_heading = 0.0;
     slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;
 

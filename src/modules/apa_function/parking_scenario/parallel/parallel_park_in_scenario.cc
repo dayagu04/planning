@@ -309,11 +309,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   }
 
   // generate t-lane
-  if (!GenTlane()) {
-    ILOG_INFO << "GenTlane failed!";
-    CheckEgoPoseWhenPlanFaild(ParkingFailReason::NO_TARGET_POSE);
-    return;
-  }
+  const bool tlane_res = GenTlane();
 
   // check finish
   if (enable_pa_park_) {
@@ -369,6 +365,14 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       return;
     }
   }
+
+  // checkout tlane result
+  if (!tlane_res) {
+    ILOG_INFO << "GenTlane failed!";
+    CheckEgoPoseWhenPlanFaild(ParkingFailReason::NO_TARGET_POSE);
+    return;
+  }
+
   // check finish
   if (enable_pa_park_) {
     if (CheckPAFinished()) {
@@ -2001,6 +2005,9 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   const pnc::geometry_lib::LineSegment channel_line(channel_point_1,
                                                     channel_point_2);
+
+  t_lane_.tlane_corner =
+      TlaneCorner(A, B, C, D, E, F, channel_point_1, channel_point_2);
 
   // sample channel boundary line
   std::vector<Eigen::Vector2d> channel_line_obs_vec;

@@ -290,6 +290,10 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const pnc::geometry_lib::PathPoint &ego_pose,
       const pnc::geometry_lib::LineSegment &prepare_line);
 
+  const bool CheckPathInTlane(
+      const std::vector<pnc::geometry_lib::PathSegment>& path_vec,
+      const TlaneCorner& tlane_corner) const;
+
  protected:
   virtual void Preprocess() override;
 
