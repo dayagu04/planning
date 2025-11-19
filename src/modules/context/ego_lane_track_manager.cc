@@ -78,7 +78,7 @@ constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSurpressSplitSelectorDistance = 10.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
-constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 200.0;
+constexpr double kSplitSelectEgoToExchangeEreaDistanceThd = 150.0;
 constexpr double kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines = 0.6;
 
 
