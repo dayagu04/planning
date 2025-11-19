@@ -79,10 +79,8 @@ struct Parameters {
   bool elk_main_switch = false;
   iflyauto::NotificationMainSwitch tsr_main_switch =
       iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
-  bool ihc_use_json_code = false;
   bool ihc_set_main_switch = false;
   bool ihc_high_beam_switch = false;
-  bool tsr_use_json_code = false;
   double elk_tlc_thrd = 1.0;
   double elk_roadedge_tlc_thrd = 1.0;
   // double elk_roadedge_offset = 0.15;
@@ -175,15 +173,20 @@ struct Parameters {
   // test value
   int meb_request_status_const = 0;
   // IHC远光灯码
-  uint16 ihc_high_beam_code = 0;
+  uint16 ihc_high_beam_code_maskcode = 65535;
   // IHC近光灯码
-  uint16 ihc_low_beam_code = 0;
+  uint16 ihc_low_beam_code_maskcode = 65535;
   // IHC故障码
-  uint16 ihc_fault_code = 0;
+  uint16 ihc_fault_code_maskcode = 65535;
   // IHC激活码
-  uint16 ihc_active_code = 0;
+  uint16 ihc_active_code_maskcode = 65535;
+
+  // TSR使能码
+  uint16 tsr_enable_code_maskcode = 65535;
+  // TSR禁用码
+  uint16 tsr_disable_code_maskcode = 65535;
   // TSR故障码
-  uint16 tsr_fault_code = 0;
+  uint16 tsr_fault_code_maskcode = 65535;
   // TSR测试模式
   uint16 tsr_function_test_switch = 0;
   // TSR辅助标识牌测试

@@ -43,7 +43,7 @@ uint16 TsrCore::UpdateTsrEnableCode(void) {
 
   uint16 enable_code = 0;
 
-  return enable_code;
+  return enable_code & GetContext.get_param()->tsr_enable_code_maskcode;
 }
 
 // Disable Code
@@ -100,7 +100,7 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
     /*do nothing*/
   }
 
-  return disable_code;
+  return disable_code & GetContext.get_param()->tsr_disable_code_maskcode;
 }
 
 // Fault Code
@@ -136,7 +136,7 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
     /*do nothing*/
   }
 
-  return fault_code;
+  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode;
 }
 
 iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
@@ -898,11 +898,6 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
-
-  if (GetContext.get_param()->tsr_use_json_code) {
-    // 如果使用json，则使用配置文件中的故障码
-    tsr_fault_code_ = GetContext.get_param()->tsr_fault_code;
-  }
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();

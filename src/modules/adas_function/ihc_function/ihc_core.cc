@@ -81,16 +81,6 @@ void IhcCore::RunOnce(void) {
   ihc_sys_.state.ihc_fault_code = UpdateIhcFaultCode();
   ihc_sys_.state.ihc_active_code = IhcActiveCode();
 
-  if (GetContext.get_param()->ihc_use_json_code) {
-    // 如果使用json，则使用配置文件中的使能码、禁用码、故障码
-    ihc_sys_.state.ihc_high_beam_code =
-        GetContext.get_param()->ihc_high_beam_code;
-    ihc_sys_.state.ihc_low_beam_code =
-        GetContext.get_param()->ihc_low_beam_code;
-    ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code;
-    ihc_sys_.state.ihc_active_code = GetContext.get_param()->ihc_active_code;
-  }
-
   ihc_sys_.state.ihc_state = IHCStateMachine();
 
   // 记录上次远光灯请求状态
@@ -306,7 +296,7 @@ uint16 IhcCore::IhcActiveCode() {
     /*do nothing*/
   }
 
-  return ihc_active_code_temp;
+  return ihc_active_code_temp & GetContext.get_param()->ihc_active_code_maskcode;
 }
 
 // 远光灯使能码: 0: 使能, 其他: 禁用 (全部满足)
@@ -376,7 +366,7 @@ uint16 IhcCore::UpdateIhcHighBeamCode() {
     // do nothing
   }
 
-  return ihc_enable_code_temp;
+  return ihc_enable_code_temp & GetContext.get_param()->ihc_high_beam_code_maskcode;
 }
 
 // 近光灯使能码: 0: 禁用, 其他: 使能 (任一满足)
@@ -440,7 +430,7 @@ uint16 IhcCore::UpdateIhcLowBeamCode() {
     // do nothing
   }
 
-  return ihc_disable_code_temp;
+  return ihc_disable_code_temp & GetContext.get_param()->ihc_low_beam_code_maskcode;
 }
 
 // 故障码: 0: 无故障, 其他: 故障 (任一满足)
@@ -470,7 +460,7 @@ uint16 IhcCore::UpdateIhcFaultCode() {
     /*do nothing*/
   }
 
-  return fault_code;
+  return fault_code & GetContext.get_param()->ihc_fault_code_maskcode;
 }
 
 iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {
