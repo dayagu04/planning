@@ -823,6 +823,25 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
       'plan_traj_x' : plan_traj_x,
       })
 
+  # Extract and update lat-lon joint planner optimized trajectory
+  plan_debug = local_view_data['data_msg']['plan_debug_msg']
+  jp_out = plan_debug.joint_motion_planning_output
+  if len(jp_out.x_vec) > 0 and len(jp_out.y_vec) > 0:
+    lat_lon_opt_x = list(jp_out.x_vec)
+    lat_lon_opt_y = list(jp_out.y_vec)
+    lat_lon_opt_x_local, lat_lon_opt_y_local = coord_tf.global_to_local(lat_lon_opt_x, lat_lon_opt_y)
+    
+    lon_plan_data['data_lat_lon_opt_trajectory'].data.update({
+      'lat_lon_opt_traj_y': lat_lon_opt_y_local,
+      'lat_lon_opt_traj_x': lat_lon_opt_x_local,
+    })
+  else:
+    lon_plan_data['data_lat_lon_opt_trajectory'].data.update({
+      'lat_lon_opt_traj_y': [],
+      'lat_lon_opt_traj_x': [],
+    })
+
+
 def update_lon_ref_path(lon_ref_path, lon_plan_data):
   # behavior planning
   t_vec = list(lon_ref_path.t_list)
@@ -1132,14 +1151,21 @@ def load_lon_global_figure(bag_loader):
   EnvironmentalAverageCostTime = sum(EnvironmentalModelManagerCost_vec) / len(t_plan_vec)
   # GeneralPlannerAverageCostTime = sum(GeneralPlannerModuleCostTime_vec) / len(t_plan_vec)
   DynamicWorldAverageCostTime = sum(DynamicWorldAverageCostTime_vec) / len(t_plan_vec)
-  # print('lat_bahavior_average_cost', LateralBahaviorAverageCostTime)
-  print('lat_motion_average_cost', LateralMotionAverageCostTime)
-  # print('lon_bahavior_average_cost', LonBahaviorAverageCostTime)
-  print('lon_motion_average_cost', LonMotionAverageCostTime)
-  print('Environmental_average_cost', EnvironmentalAverageCostTime)
-  # print('GeneralPlanner_average_cost', GeneralPlannerAverageCostTime)
-  print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
 
+  lat_lon_joint_cost_vec = []
+  for ind in range(len(bag_loader.plan_debug_msg['json'])):
+    lat_lon_joint_cost = round(bag_loader.plan_debug_msg['json'][ind].get('LatLonJointPlannerDeciderTime', 0.0), 2)
+    lat_lon_joint_cost_vec.append(lat_lon_joint_cost)
+  
+  # Print average cost times for lateral and longitudinal planners
+  print('lat_motion_average_cost', LateralMotionAverageCostTime)
+  print('lon_motion_average_cost', LonMotionAverageCostTime)
+  if lat_lon_joint_cost_vec:
+    lat_lon_joint_average_cost = sum(lat_lon_joint_cost_vec) / len(lat_lon_joint_cost_vec)
+    print('lat_lon_motion_average_cost: ', lat_lon_joint_average_cost)
+  print('Environmental_average_cost', EnvironmentalAverageCostTime)
+  print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
+  
   #get longtime obstacle id list in st-graph
   obs_st_ids = []
   for ind in range(len(bag_loader.plan_debug_msg['data'])):
@@ -1355,6 +1381,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
                                     'plan_traj_x':[],})
 
+  # Lat-Lon joint planner optimized trajectory
+  data_lat_lon_opt_trajectory = ColumnDataSource(data = {'lat_lon_opt_traj_y':[],
+                                                         'lat_lon_opt_traj_x':[],})
+
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
@@ -1366,6 +1396,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_obs_st':data_obs_st, \
                    'data_lon_motion_plan': data_lon_motion_plan, \
                    'data_planning':data_planning, \
+                   'data_lat_lon_opt_trajectory': data_lat_lon_opt_trajectory, \
                    'data_st_searcher':data_st_searcher, \
                    'data_st_search_nodes' : data_st_search_nodes, \
                    'data_st_search_history_cur_nodes' : data_st_search_history_cur_nodes, \
@@ -1439,6 +1470,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   ])
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
+  
+  # Lat-Lon joint planner optimized trajectory
+  fig1.line('lat_lon_opt_traj_y', 'lat_lon_opt_traj_x', source = data_lat_lon_opt_trajectory, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'lat_lon_opt_trajectory', visible=False)
+  
   for i, source in enumerate(processed_trajectories):
     x_vec = f'x_vec_{i}'
     y_vec = f'y_vec_{i}'

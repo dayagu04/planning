@@ -681,14 +681,13 @@ class LoadRosbag:
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
-                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
-                          "joint_lead_one_id", "joint_key_agent_ids", "joint_cut_in_agent_ids", "joint_limit_speed",
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", 
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed",
                           "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_need_sharp_deceleration", "joint_cruise_speed",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
                           'is_current_lane_available', 'is_right_lane_available', 'is_left_lane_available', 'is_left_left_lane_available', 'is_right_right_lane_available',
                           'construction_intrusion_level', 'traj_available', "rads_planning_status",
-                          "JointPlannerSpeedLimitTime", "JointPlannerObstacleSelectionTime", "JointPlannerOptimizationTime",
                           "LatLonJointDecisionTime", "JointDecisionObstacleSelectionTime", "JointDecisionOptimizationTime",
                           "target_lane_virtual_id", "origin_lane_virtual_id", "lc_gap_front_agent_id", "lc_gap_rear_agent_id",
                           "ego_front_edge", "ego_rear_edge",
@@ -763,7 +762,7 @@ class LoadRosbag:
                          'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
                          'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
                          'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec",
-                         "joint_target_v0_vec", "joint_v_zero_acc_vec", "joint_s_max_decel_vec","joint_v_max_decel_vec","joint_a_max_decel_vec","joint_s_zero_acc_vec","joint_v_zero_acc_vec","joint_a_zero_acc_vec",]
+                         "joint_target_v0_vec", "joint_v_zero_acc_vec", "joint_s_max_decel_vec","joint_v_max_decel_vec","joint_a_max_decel_vec","joint_s_zero_acc_vec","joint_v_zero_acc_vec","joint_a_zero_acc_vec", "joint_collision_obstacle_ids"]
 
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\

@@ -91,6 +91,9 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
 
   hmi_decider_=
       std::make_unique<HMIDecider>(config_builder, session);
+      
+  lat_lon_joint_planner_decider_ =
+      std::make_unique<LatLonJointPlannerDecider>(config_builder, session);
 }
 
 bool LongTimeTaskPipelineV3::Run() {
@@ -120,6 +123,12 @@ bool LongTimeTaskPipelineV3::Run() {
   ok = lane_change_decider_->Execute();
   if (!ok) {
     AddErrorInfo(lane_change_decider_->Name());
+    return false;
+  }
+
+  ok = lat_lon_joint_planner_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(lat_lon_joint_planner_decider_->Name());
     return false;
   }
 

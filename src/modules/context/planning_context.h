@@ -5,6 +5,7 @@
 #include "../tasks/behavior_planners/agent_headway_decider/agent_headway_decider_output.h"
 #include "../tasks/behavior_planners/closest_in_path_vehicle_decider/closest_in_path_vehicle_decider_output.h"
 #include "../tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_output.h"
+#include "../tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider_output.h"
 #include "../tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider_output.h"
 #include "../tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider_output.h"
 #include "../tasks/behavior_planners/mrc_brake_decider/mrc_brake_decider_output.h"
@@ -423,6 +424,16 @@ class PlanningContext {
     return lat_lon_joint_decision_output_;
   }
 
+  const LatLonJointPlannerDeciderOutput &lat_lon_joint_planner_decider_output()
+      const {
+    return lat_lon_joint_planner_decider_output_;
+  }
+
+  LatLonJointPlannerDeciderOutput &
+  mutable_lat_lon_joint_planner_decider_output() {
+    return lat_lon_joint_planner_decider_output_;
+  }
+
   const LongitudinalDecisionDeciderOutput &
   longitudinal_decision_decider_output() const {
     return longitudinal_decision_decider_output_;
@@ -610,6 +621,9 @@ class PlanningContext {
   // LaneChangeJointDecisionGenerator
   lane_change_joint_decision::LatLonJointDecisionOutput
       lat_lon_joint_decision_output_;
+
+  // LatLonJointPlannerDecider
+  LatLonJointPlannerDeciderOutput lat_lon_joint_planner_decider_output_;
 };
 
 }  // namespace planning

@@ -4,8 +4,8 @@ import numpy as np
 import warnings
 import logging
 
-warnings.filterwarnings('ignore', category=UserWarning, module='bokeh')
-warnings.filterwarnings('ignore', category=UserWarning, message='.*ColumnDataSource.*')
+# warnings.filterwarnings('ignore', category=UserWarning, module='bokeh')
+# warnings.filterwarnings('ignore', category=UserWarning, message='.*ColumnDataSource.*')
 logging.getLogger('bokeh').setLevel(logging.ERROR)
 
 from bokeh.io import output_notebook, push_notebook
@@ -15,7 +15,7 @@ from bokeh.models import (
     WheelZoomTool, HoverTool,
     Label, LabelSet, DataTable, DateFormatter, TableColumn,
     Panel, Tabs, CustomJS, CustomJSHover, Legend,
-    Range1d, LinearAxis, HTMLTemplateFormatter
+    Range1d, LinearAxis
 )
 import ipywidgets as widgets
 from ipywidgets import Button, HBox
@@ -61,8 +61,49 @@ def calc_three_centers(x, y, theta, length, is_ego=True):
 
 
 def calc_radius(length, width):
-    """Calculate disc radius."""
+    """Calculate disc radius for ego vehicle (fixed 3-disc model)."""
     return math.sqrt((length / 6.0) ** 2 + (width / 2.0) ** 2)
+
+
+def calc_disc_num(length, width):
+    """Calculate dynamic disc number based on aspect ratio.
+    
+    与 C++ 中的计算方式保持一致。
+    disc_num = max(2, int(aspect_ratio * 2))，最多6个
+    """
+    aspect_ratio = length / width if width > 0 else 1.0
+    disc_num = max(2, int(aspect_ratio * 2))
+    return min(disc_num, 6)
+
+
+def calc_dynamic_centers(x, y, theta, length, disc_num, is_ego=False):
+    """Calculate dynamic disc centers based on disc number.
+    
+    与 C++ 中的 calc_dynamic_centers 计算方式保持一致。
+    """
+    segment_length = length / disc_num
+    backcenter = segment_length / 2.0 if is_ego else length / 2.0
+    
+    centers = []
+    cos_theta = math.cos(theta)
+    sin_theta = math.sin(theta)
+    
+    for i in range(disc_num):
+        offset = (i + 0.5) * segment_length - backcenter
+        center_x = x + offset * cos_theta
+        center_y = y + offset * sin_theta
+        centers.append((center_x, center_y))
+    
+    return centers
+
+
+def calc_dynamic_radius(length, width, disc_num):
+    """Calculate dynamic disc radius based on disc number.
+    
+    与 C++ 中的 calc_dynamic_radius 计算方式保持一致。
+    """
+    return math.sqrt((length / (2.0 * disc_num)) ** 2 + 
+                     (width / 2.0) ** 2)
 
 
 def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_data):
@@ -148,10 +189,15 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
             'right_y': right_y_local
         })
 
+    # Extract collision obstacle IDs from JSON
+    collision_obstacle_ids = planner_json.get("joint_collision_obstacle_ids", [])
+    # Convert to int for display
+    collision_ids_int = [int(id_val) for id_val in collision_obstacle_ids] if collision_obstacle_ids else []
+    collision_ids_str = str(collision_ids_int) if collision_ids_int else "None"
+    
     # Extract planning info from JSON
     planning_json_value_list = ["joint_lead_one_id", "joint_key_agent_ids", "joint_cruise_speed", "joint_limit_speed", 
-                                "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_need_sharp_deceleration",
-                                "JointPlannerSpeedLimitTime", "JointPlannerObstacleSelectionTime", "JointPlannerOptimizationTime"]
+                                "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_need_sharp_deceleration"]
     vision_lon_attr_vec = []
     for attr in planning_json_value_list:
         if attr == "joint_key_agent_ids":
@@ -291,62 +337,42 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
                 'obs_id': [], 'longitudinal_label': []
             })
 
-    # Update obstacle opt trajectories
-    obs_opt_trajectory = jp_out.obs_opt_trajectory
+    # Obstacles use reference trajectories only, no optimized trajectories.
+    # Clear all obstacle opt trajectory data sources
     for i in range(10):
-        if i < len(obs_opt_trajectory):
-            obs_traj = obs_opt_trajectory[i]
-            x_vec_local, y_vec_local = coord_tf.global_to_local(obs_traj.x_vec, obs_traj.y_vec)
+        joint_plan_data[f'data_obs_opt_{i}'].data.update({
+            'time_vec': [], 'x_vec': [], 'y_vec': [], 'x_local_vec': [], 'y_local_vec': [],
+            'theta_vec': [], 'delta_vec': [], 'omega_vec': [],
+            'vel_vec': [], 'acc_vec': [], 'jerk_vec': [], 's_vec': [], 'obs_id': [],
+            # Add empty segment data fields
+            'obs_opt_seg0_x': [], 'obs_opt_seg0_y': [],
+            'obs_opt_seg1_x': [], 'obs_opt_seg1_y': [],
+            'obs_opt_seg2_x': [], 'obs_opt_seg2_y': [],
+            'obs_opt_seg3_x': [], 'obs_opt_seg3_y': [],
+            'obs_opt_seg4_x': [], 'obs_opt_seg4_y': []
+        })
 
-            # 为障碍物优化轨迹创建分段数据
-            obs_opt_segments = create_bokeh_segments(x_vec_local, y_vec_local, len(time_vec))
+        # Calculate obstacle three-disc data from reference trajectory
+        obs_three_disc_data = {
+            'center_x': [], 'center_y': [], 'center_x_local': [], 'center_y_local': [],
+            'radius': [], 'obs_id': [],
+            'circle_x': [], 'circle_y': [], 'circle_x_local': [], 'circle_y_local': [],
+            'decision_label': []
+        }
 
-            joint_plan_data[f'data_obs_opt_{i}'].data.update({
-                'time_vec': [round(t, 2) for t in time_vec],
-                'x_vec': list(obs_traj.x_vec),
-                'y_vec': list(obs_traj.y_vec),
-                'x_local_vec': x_vec_local,
-                'y_local_vec': y_vec_local,
-                'theta_vec': list(obs_traj.theta_vec),
-                'delta_vec': list(obs_traj.delta_vec),
-                'omega_vec': list(obs_traj.omega_vec),
-                'vel_vec': list(obs_traj.vel_vec),
-                'acc_vec': list(obs_traj.acc_vec),
-                'jerk_vec': list(obs_traj.jerk_vec),
-                's_vec': list(obs_traj.s_vec),
-                'obs_id': [obs_ref_trajectories[i].obs_id] * len(time_vec),
-                # 添加分段轨迹数据 - 障碍物opt轨迹
-                'obs_opt_seg0_x': obs_opt_segments['seg_0_x'],
-                'obs_opt_seg0_y': obs_opt_segments['seg_0_y'],
-                'obs_opt_seg1_x': obs_opt_segments['seg_1_x'],
-                'obs_opt_seg1_y': obs_opt_segments['seg_1_y'],
-                'obs_opt_seg2_x': obs_opt_segments['seg_2_x'],
-                'obs_opt_seg2_y': obs_opt_segments['seg_2_y'],
-                'obs_opt_seg3_x': obs_opt_segments['seg_3_x'],
-                'obs_opt_seg3_y': obs_opt_segments['seg_3_y'],
-                'obs_opt_seg4_x': obs_opt_segments['seg_4_x'],
-                'obs_opt_seg4_y': obs_opt_segments['seg_4_y']
-            })
+        if i < len(obs_ref_trajectories):
+            obs_traj = obs_ref_trajectories[i]
+            if len(obs_traj.ref_x_vec) > 0 and len(obs_traj.ref_y_vec) > 0 and len(obs_traj.ref_theta_vec) > 0:
+                # Use first point of reference trajectory
+                obs_x, obs_y, obs_theta = obs_traj.ref_x_vec[0], obs_traj.ref_y_vec[0], obs_traj.ref_theta_vec[0]
+                obs_length = obs_traj.length if obs_traj.HasField('length') else 4.5
+                obs_width = obs_traj.width if obs_traj.HasField('width') else 2.0
 
-            # Calculate obstacle three-disc data
-            obs_three_disc_data = {
-                'center_x': [], 'center_y': [], 'center_x_local': [], 'center_y_local': [],
-                'radius': [], 'obs_id': [],
-                'circle_x': [], 'circle_y': [], 'circle_x_local': [], 'circle_y_local': [],
-                'decision_label': []
-            }
-
-            if len(obs_traj.x_vec) > 0 and len(obs_traj.y_vec) > 0 and len(obs_traj.theta_vec) > 0:
-                obs_x, obs_y, obs_theta = obs_traj.x_vec[0], obs_traj.y_vec[0], obs_traj.theta_vec[0]
-                if i < len(obs_ref_trajectories):
-                    obs_length = obs_ref_trajectories[i].length
-                    obs_width = obs_ref_trajectories[i].width
-                else:
-                    obs_length = 4.5
-                    obs_width = 2.0
-
-                obs_centers = calc_three_centers(obs_x, obs_y, obs_theta, obs_length, is_ego=False)
-                obs_radius = calc_radius(obs_length, obs_width)
+                # Use dynamic disc calculation
+                obs_disc_num = calc_disc_num(obs_length, obs_width)
+                obs_centers = calc_dynamic_centers(obs_x, obs_y, obs_theta, obs_length,
+                                                   obs_disc_num, is_ego=False)
+                obs_radius = calc_dynamic_radius(obs_length, obs_width, obs_disc_num)
 
                 for j, (center_x, center_y) in enumerate(obs_centers):
                     center_x_local, center_y_local = coord_tf.global_to_local([center_x], [center_y])
@@ -358,14 +384,14 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
                     obs_three_disc_data['center_x_local'].append(center_x_local[0])
                     obs_three_disc_data['center_y_local'].append(center_y_local[0])
                     obs_three_disc_data['radius'].append(obs_radius)
-                    obs_three_disc_data['obs_id'].append(obs_ref_trajectories[i].obs_id)
+                    obs_three_disc_data['obs_id'].append(obs_traj.obs_id)
                     obs_three_disc_data['circle_x'].append(circle_x_global)
                     obs_three_disc_data['circle_y'].append(circle_y_global)
                     obs_three_disc_data['circle_x_local'].append(circle_x_local)
                     obs_three_disc_data['circle_y_local'].append(circle_y_local)
                     # Use longitudinal_label from obs_ref_trajectory if available
-                    if i < len(obs_ref_trajectories) and obs_ref_trajectories[i].HasField('longitudinal_label'):
-                        longitudinal_label = obs_ref_trajectories[i].longitudinal_label
+                    if obs_traj.HasField('longitudinal_label'):
+                        longitudinal_label = obs_traj.longitudinal_label
                         # Convert longitudinal_label to meaningful text
                         if longitudinal_label == 0:
                             label_text = 'IGNORE'
@@ -379,32 +405,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
                     else:
                         obs_three_disc_data['decision_label'].append(f'obstacle_{i}')
 
-            joint_plan_data[f'data_obs_three_disc_{i}'].data.update(obs_three_disc_data)
-        else:
-            # 为空数据创建分段字段
-            empty_segments = create_bokeh_segments([], [], 0)
-            joint_plan_data[f'data_obs_opt_{i}'].data.update({
-                'time_vec': [], 'x_vec': [], 'y_vec': [], 'x_local_vec': [], 'y_local_vec': [],
-                'theta_vec': [], 'delta_vec': [], 'omega_vec': [],
-                'vel_vec': [], 'acc_vec': [], 'jerk_vec': [], 's_vec': [], 'obs_id': [],
-                # 添加空的分段数据字段
-                'obs_opt_seg0_x': empty_segments['seg_0_x'],
-                'obs_opt_seg0_y': empty_segments['seg_0_y'],
-                'obs_opt_seg1_x': empty_segments['seg_1_x'],
-                'obs_opt_seg1_y': empty_segments['seg_1_y'],
-                'obs_opt_seg2_x': empty_segments['seg_2_x'],
-                'obs_opt_seg2_y': empty_segments['seg_2_y'],
-                'obs_opt_seg3_x': empty_segments['seg_3_x'],
-                'obs_opt_seg3_y': empty_segments['seg_3_y'],
-                'obs_opt_seg4_x': empty_segments['seg_4_x'],
-                'obs_opt_seg4_y': empty_segments['seg_4_y']
-            })
-            joint_plan_data[f'data_obs_three_disc_{i}'].data.update({
-                'center_x': [], 'center_y': [], 'center_x_local': [], 'center_y_local': [],
-                'radius': [], 'obs_id': [],
-                'circle_x': [], 'circle_y': [], 'circle_x_local': [], 'circle_y_local': [],
-                'decision_label': []
-            })
+        joint_plan_data[f'data_obs_three_disc_{i}'].data.update(obs_three_disc_data)
 
     # Update key agents data
     key_agent_x_local = []
@@ -440,7 +441,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
     cost_list = ["EgoReferenceCost", "EgoThreeDiscSafeCost", "HardHalfplaneCost",
                  "SoftHalfplaneCost", "EgoRoadBoundaryCost", "EgoAccCost", "EgoJerkCost", "EgoDeltaCost", 
-                 "EgoOmegaCost", "EgoAccBoundCost", "EgoJerkBoundCost", "ObsReferenceCost", "ObsJerkCost", "ObsOmegaCost"]
+                 "EgoOmegaCost", "EgoAccBoundCost", "EgoJerkBoundCost"]
     
     lat_lon_joint_planner_time = planner_json.get('LatLonJointPlannerDeciderTime', 0.0)
     
@@ -475,20 +476,14 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     joint_use_spatio_result = "YES" if joint_use_spatio_result else "NO"
     need_sharp_decel_str = "YES" if joint_need_sharp_deceleration else "NO"
     joint_cruise_speed = planner_json.get("joint_cruise_speed", 0)
-    
-    # Extract module cost times
-    speed_limit_time = planner_json.get("JointPlannerSpeedLimitTime", 0.0)
-    obstacle_selection_time = planner_json.get("JointPlannerObstacleSelectionTime", 0.0)
-    optimization_time = planner_json.get("JointPlannerOptimizationTime", 0.0)
 
     planning_info_data = {
         'labels': [
             'Lead One ID', 'Key Agent IDs', 'Cruise Speed', 'Limit Speed', 'Target Tau', 'Current Tau', 'Use Spatio Result', 'Need Sharp Decel',
-            'Total Planner Time', 'Speed Limit Time', 'Obstacle Select Time', 'Optimization Time', 'Solver Condition', 'Planning Condition', 'Lane Change State'],
+            'Motion Planner Time', 'Solver Condition', 'Planning Condition', 'Lane Change State', 'Collision Obstacle IDs'],
         'values': [str(joint_lead_one_id), str(joint_key_agent_ids), f"{joint_cruise_speed:.2f}", f"{joint_limit_speed:.2f}", f"{joint_target_tau:.2f}", 
             f"{joint_current_tau:.2f}", joint_use_spatio_result, need_sharp_decel_str, f"{round(lat_lon_joint_planner_time, 2)}ms", 
-            f"{round(speed_limit_time, 2)}ms", f"{round(obstacle_selection_time, 2)}ms", f"{round(optimization_time, 2)}ms",
-            solver_condition_name, "SUCCESS" if planning_success else "FAILED", lane_change_state_name]
+            solver_condition_name, "SUCCESS" if planning_success else "FAILED", lane_change_state_name, collision_ids_str]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
 
@@ -743,7 +738,7 @@ def load_joint_plan_figure(fig1, bag_loader):
     data_obs_opt = []
     data_obs_three_disc = []
     for i in range(10):
-        # 障碍物参考轨迹数据源
+        # Obstacle reference trajectory data source
         obs_ref_data = {
             'time_vec': [], 'ref_x_vec': [], 'ref_y_vec': [],
             'ref_x_local_vec': [], 'ref_y_local_vec': [],
@@ -754,7 +749,7 @@ def load_joint_plan_figure(fig1, bag_loader):
         }
         data_obs_ref.append(ColumnDataSource(data=obs_ref_data))
 
-        # 障碍物输出轨迹数据源
+        # Obstacle optimized trajectory data source (now empty, obstacles use reference only)
         obs_opt_data = {
             'time_vec': [], 'x_vec': [], 'y_vec': [],
             'x_local_vec': [], 'y_local_vec': [],
@@ -762,12 +757,13 @@ def load_joint_plan_figure(fig1, bag_loader):
             'vel_vec': [], 'acc_vec': [], 'jerk_vec': [], 's_vec': [],
             'obs_id': []
         }
-        # 为障碍物实际轨迹添加五段圆分段字段
+        # Add empty segment data fields for consistency
         for j in range(5):
             obs_opt_data[f'obs_opt_seg{j}_x'] = []
             obs_opt_data[f'obs_opt_seg{j}_y'] = []
         data_obs_opt.append(ColumnDataSource(data=obs_opt_data))
 
+        # Obstacle three-disc data source (now empty)
         data_obs_three_disc.append(ColumnDataSource(data={
             'center_x': [], 'center_y': [], 'center_x_local': [], 'center_y_local': [],
             'radius': [], 'obs_id': [],
@@ -796,9 +792,8 @@ def load_joint_plan_figure(fig1, bag_loader):
 
     # Add planning info data source - vertical layout with labels and values
     data_planning_info = ColumnDataSource(data={
-        'labels': ['Lead One ID', 'Key Agent IDs', 'Cruise Speed', 'Limit Speed', 'Target Tau', 'Current Tau', 'Use Spatio Result', 'Need Sharp Decel',
-                   'Total Planner Time', 'Speed Limit Time', 'Obstacle Select Time', 'Optimization Time', 'Solver Condition', 'Planning Condition', 'Lane Change State'],
-        'values': ['', '', '', '', '', '', '', '', '', '', '', '', '', '', '']
+        'labels': ['Lead One ID', 'Key Agent IDs', 'Limit Speed', 'Target Tau', 'Current Tau', 'Use Spatio Result', 'Need Sharp Decel', 'Motion Planner Time', 'Solver Condition', 'Planning Condition', 'Lane Change State', 'Collision Obstacle IDs'],
+        'values': ['', '', '', '', '', '', '', '', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 
@@ -814,7 +809,7 @@ def load_joint_plan_figure(fig1, bag_loader):
     # 自车参考轨迹 - 使用线条绘制（实线）
     ego_ref_renderer = fig1.line('ref_y_local_vec', 'ref_x_local_vec', source=data_joint_motion_plan,
                      line_width=5, line_color='purple', line_alpha=0.6,
-                     line_dash='solid', legend_label='ego_ref_traj', visible=False)  # 初始不可见
+                     line_dash='solid', legend_label='ego_ref_traj')
 
     # 使用五段空心圆绘制自车实际轨迹（实线边框）- 多色系高对比度
     ego_act_colors = ['purple', 'magenta', 'orange', 'green', 'cyan']
@@ -851,6 +846,7 @@ def load_joint_plan_figure(fig1, bag_loader):
     obs_circle_renderers = []
 
     for i in range(10):
+        # Plot obstacle three-disc from reference trajectory
         circle_renderer = fig1.multi_line('circle_y_local', 'circle_x_local',
                                          source=data_obs_three_disc[i],
                                          line_width=2, line_color=colors[i], line_alpha=0.6,
@@ -865,37 +861,26 @@ def load_joint_plan_figure(fig1, bag_loader):
             name=f'obs_{i}_disc_hover')
         fig1.add_tools(obs_disc_hover)
 
-    # 为每个障碍物创建单独的渲染器
+    # Create separate renderers for each obstacle
     obs_ref_renderers = []
-    obs_opt_renderers = []
 
     for i in range(10):
-        # 障碍物参考轨迹 - 使用线条绘制（虚线）
+        # Obstacle reference trajectory - using lines (dotted style)
         ref_renderer = fig1.line('ref_y_local_vec', 'ref_x_local_vec',
                                 source=data_obs_ref[i],
                                 line_width=5, line_color=colors[i], line_dash='dotted', line_alpha=0.6,
                                 legend_label='obs_ref_traj')
         obs_ref_renderers.append(ref_renderer)
 
-        # 障碍物输出轨迹 - 使用五段空心圆绘制，所有段都使用相同图例标签（实线边框）
-        obs_opt_segment_renderers = []
-        for j in range(5):
-            opt_segment_renderer = fig1.circle(f'obs_opt_seg{j}_y', f'obs_opt_seg{j}_x',
-                     source=data_obs_opt[i],
-                     radius=0.4, color=colors[i], alpha=0.9, line_width=2,
-                     fill_alpha=0,  # 空心圆
-                     line_dash='solid',  # 实线边框
-                     legend_label='obs_opt_traj')
-            obs_opt_segment_renderers.append(opt_segment_renderer)
-        obs_opt_renderers.append(obs_opt_segment_renderers)
+        # Obstacle optimized trajectory rendering removed (obstacles use reference only)
 
-        # 为每个障碍物创建独立的hover tool
+        # Create hover tool for each obstacle
         obs_hover = HoverTool(
             tooltips=[
                 ('obs_id', '@obs_id')
             ],
             mode='vline',
-            renderers=[ref_renderer],  # 使用参考轨迹渲染器作为hover目标
+            renderers=[ref_renderer],  # Use reference trajectory renderer as hover target
             name=f'obs_{i}_hover')
         fig1.add_tools(obs_hover)
 
@@ -924,14 +909,11 @@ def load_joint_plan_figure(fig1, bag_loader):
                       x_range=fig8.x_range, width=525, height=330)
 
     # Create planning info table - vertical layout with labels and values
-    label_formatter = HTMLTemplateFormatter(template='<span style="font-size: 10pt;"> <%= value %></span>')
-    value_formatter = HTMLTemplateFormatter(template='<span style="font-size: 10pt;"> <%= value %></span>')
-    
     planning_info_table = DataTable(
         source=data_planning_info,
         columns=[
-            TableColumn(field='labels', title='Label', width=100, formatter=label_formatter),
-            TableColumn(field='values', title='Value', width=420, formatter=value_formatter)
+            TableColumn(field='labels', title='Label', width=100),
+            TableColumn(field='values', title='Value', width=420)
         ],
         width=520, height=330, index_position=None,
         fit_columns=True,
@@ -950,17 +932,11 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig3.legend.visible = False
 
     obs_ref_renderers = []
-    obs_opt_renderers = []
     for i in range(10):
         ref_theta_renderer = fig3.line('time_vec', 'ref_theta_vec',
                                       source=data_obs_ref[i],
                                       line_width=2, line_color=colors[i], line_dash='dotted')
         obs_ref_renderers.append(ref_theta_renderer)
-
-        opt_theta_renderer = fig3.line('time_vec', 'theta_vec',
-                                         source=data_obs_opt[i],
-                                         line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_theta_renderer)
 
         theta_hover = HoverTool(
             tooltips=[('obs_id', '@obs_id')],
@@ -973,8 +949,7 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig3_combined_legend = Legend(items=[
         ('ego_theta_opt', [theta_plan_renderer]),
         ('ego_theta_ref', [theta_ref_renderer]),
-        ('obs_theta_ref', obs_ref_renderers),
-        ('obs_theta_opt', obs_opt_renderers)
+        ('obs_theta_ref', obs_ref_renderers)
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
@@ -990,17 +965,11 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig4.legend.visible = False
 
     obs_ref_renderers = []
-    obs_opt_renderers = []
     for i in range(10):
         ref_delta_renderer = fig4.line('time_vec', 'ref_delta_vec',
                                       source=data_obs_ref[i],
                                       line_width=2, line_color=colors[i], line_dash='dotted')
         obs_ref_renderers.append(ref_delta_renderer)
-
-        opt_delta_renderer = fig4.line('time_vec', 'delta_vec',
-                                       source=data_obs_opt[i],
-                                       line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_delta_renderer)
 
         delta_hover = HoverTool(
             tooltips=[('obs_id', '@obs_id')],
@@ -1013,8 +982,7 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig4_combined_legend = Legend(items=[
         ('ego_delta_opt', [delta_plan_renderer]),
         ('ego_delta_ref', [delta_ref_renderer]),
-        ('obs_delta_ref', obs_ref_renderers),
-        ('obs_delta_opt', obs_opt_renderers)
+        ('obs_delta_ref', obs_ref_renderers)
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
@@ -1027,24 +995,9 @@ def load_joint_plan_figure(fig1, bag_loader):
 
     fig5.legend.visible = False
 
-    obs_opt_renderers = []
-    for i in range(10):
-        opt_omega_renderer = fig5.line('time_vec', 'omega_vec',
-                                       source=data_obs_opt[i],
-                                       line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_omega_renderer)
-
-        omega_hover = HoverTool(
-            tooltips=[('obs_id', '@obs_id')],
-            mode='vline',
-            renderers=[opt_omega_renderer],
-            name=f'obs_{i}_omega_hover')
-        fig5.add_tools(omega_hover)
-
-    # Combined legend for fig5
+    # Combined legend for fig5 (obstacles use reference trajectories only)
     fig5_combined_legend = Legend(items=[
-        ('ego_omega_opt', [omega_plan_renderer]),
-        ('obs_omega_opt', obs_opt_renderers)
+        ('ego_omega_opt', [omega_plan_renderer])
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
@@ -1092,17 +1045,11 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig6.legend.visible = False
 
     obs_ref_renderers = []
-    obs_opt_renderers = []
     for i in range(10):
         ref_vel_renderer = fig6.line('time_vec', 'ref_vel_vec',
                                     source=data_obs_ref[i],
                                     line_width=2, line_color=colors[i], line_dash='dotted')
         obs_ref_renderers.append(ref_vel_renderer)
-
-        opt_vel_renderer = fig6.line('time_vec', 'vel_vec',
-                                       source=data_obs_opt[i],
-                                       line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_vel_renderer)
 
         vel_hover = HoverTool(
             tooltips=[('obs_id', '@obs_id')],
@@ -1120,8 +1067,7 @@ def load_joint_plan_figure(fig1, bag_loader):
         ('max_decel_vel', [joint_v_max_decel_renderer]),
         ('vel_max_bound', [vel_max_bound_renderer]),
         ('vel_min_bound', [vel_min_bound_renderer]),
-        ('obs_vel_ref', obs_ref_renderers),
-        ('obs_vel_opt', obs_opt_renderers)
+        ('obs_vel_ref', obs_ref_renderers)
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
@@ -1164,17 +1110,11 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig7.legend.visible = False
 
     obs_ref_renderers = []
-    obs_opt_renderers = []
     for i in range(10):
         ref_acc_renderer = fig7.line('time_vec', 'ref_acc_vec',
                                     source=data_obs_ref[i],
                                     line_width=2, line_color=colors[i], line_dash='dotted')
         obs_ref_renderers.append(ref_acc_renderer)
-
-        opt_acc_renderer = fig7.line('time_vec', 'acc_vec',
-                                       source=data_obs_opt[i],
-                                       line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_acc_renderer)
 
     # Combined legend for fig7
     fig7_combined_legend = Legend(items=[
@@ -1184,8 +1124,7 @@ def load_joint_plan_figure(fig1, bag_loader):
         ('zero_acc_acc', [joint_a_zero_acc_renderer]),
         ('acc_max_bound', [acc_max_bound_renderer]),
         ('acc_min_bound', [acc_min_bound_renderer]),
-        ('obs_acc_ref', obs_ref_renderers),
-        ('obs_acc_opt', obs_opt_renderers)
+        ('obs_acc_ref', obs_ref_renderers)
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
@@ -1215,26 +1154,11 @@ def load_joint_plan_figure(fig1, bag_loader):
 
     fig8.legend.visible = False
 
-    obs_opt_renderers = []
-    for i in range(10):
-        opt_jerk_renderer = fig8.line('time_vec', 'jerk_vec',
-                                      source=data_obs_opt[i],
-                                      line_width=2, line_color=colors[i], line_dash='solid')
-        obs_opt_renderers.append(opt_jerk_renderer)
-
-        jerk_hover = HoverTool(
-            tooltips=[('obs_id', '@obs_id')],
-            mode='vline',
-            renderers=[opt_jerk_renderer],
-            name=f'obs_{i}_jerk_hover')
-        fig8.add_tools(jerk_hover)
-
-    # Combined legend for fig8
+    # Combined legend for fig8 (obstacles use reference trajectories only)
     fig8_combined_legend = Legend(items=[
         ('ego_jerk_opt', [jerk_plan_renderer]),
         ('jerk_max_bound', [jerk_max_bound_renderer]),
-        ('jerk_min_bound', [jerk_min_bound_renderer]),
-        ('obs_jerk_opt', obs_opt_renderers)
+        ('jerk_min_bound', [jerk_min_bound_renderer])
     ], location="top_right", orientation="vertical",
        label_text_font_size='10pt', label_text_align='left',
        glyph_height=10, glyph_width=18)
