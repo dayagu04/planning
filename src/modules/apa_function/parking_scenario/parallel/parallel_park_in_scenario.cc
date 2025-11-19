@@ -1276,18 +1276,24 @@ const bool ParallelParkInScenario::GeneralPASlot() {
 
   // calc slot occupied ratio
   double slot_occupied_ratio = 0.0;
-  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -3.0,
-                              4.0)) {
-    const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
+  const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
                                (0.5 * ego_info_under_slot.slot.slot_width_);
-
-    if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+  if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
     } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
     }
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -4.0,
+                              4.0)) {
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
   }
-  ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -5.0,
+                              4.0) &&
+                              slot_occupied_ratio > 0.75) {
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  }
+
+
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
 
