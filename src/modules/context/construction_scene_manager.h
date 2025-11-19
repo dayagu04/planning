@@ -4,12 +4,8 @@
 #include <utility>
 
 #include "config/basic_type.h"
-#include "ego_planning_config.h"
-#include "lane_reference_path.h"
 #include "session.h"
 #include "virtual_lane.h"
-#include "virtual_lane_manager.h"
-
 
 namespace planning {
 
@@ -68,9 +64,15 @@ struct ConstructionAgentClusterArea {
   ConstructionDirection direction = ConstructionDirection :: DEFAULT;
 };
 
+struct RoadBoundaryCluster {
+  std::vector<Point2d> points;
+  ConstructionDirection direction = ConstructionDirection :: DEFAULT;
+};
+
 struct ConstructionSceneOutput {
   std::map<int, ConstructionAgentClusterArea>
       construction_agent_cluster_attribute_map;  // 施工区域聚类结果
+  std::map<int, RoadBoundaryCluster> road_boundaries_clusters_map; // 路沿决策结果
   bool is_exist_construction_area = false;       // 是否存在施工区域
   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
   ConstructionIntrusionLevel construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
@@ -142,13 +144,17 @@ class ConstructionSceneManager {
 
   void UpdateDriveArea();
 
-  std::pair<bool, int> CalIntersectionRefAndCone(
+  std::pair<bool, int> CalIntersectionRefAndObstacle(
       std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
       const std::vector<Point2d>& ref_points,
-      const std::vector<Point2d>& cone_points);
+      const std::vector<Point2d>& obstacle_points);
 
   void UpdateResult(
-      const std::map<int, std::map<int, std::vector<int>>>& results);
+      const std::map<int, std::map<int, std::vector<int>>>& results,
+      const std::map<int, std::map<int, std::vector<int>>>&
+          road_boundary_results);
+
+  void RoadBoundaryPreProcess();
 
   void GenerateConstructionSceneOutput();
 
@@ -169,6 +175,7 @@ class ConstructionSceneManager {
   // hysteresis for is_exist_construction_area_
   std::map<int, ConstructionAgentClusterArea>
       construction_agent_cluster_attribute_map_;
+  std::map<int, RoadBoundaryCluster> road_boundaries_clusters_map_;
   bool is_exist_construction_area_ = false;
   bool is_pass_construction_area_ = false;
   ConstructionSceneOutput construction_scene_output_;

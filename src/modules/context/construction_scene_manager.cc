@@ -1,9 +1,5 @@
 #include "construction_scene_manager.h"
 
-#include "config/basic_type.h"
-#include "environmental_model.h"
-#include "lane_reference_path.h"
-#include "session.h"
 #include "obstacle_manager.h"
 #include "utils/geometry_utils.h"
 
@@ -54,10 +50,10 @@ bool ConstructionSceneManager::update() {
   // 施工障碍物聚类
   UpdateConstructionAgentClusters();
 
-  // UpdateDriveArea();
-
   // 依据聚类结果判定施工区域场景
   IdentifyConstructionScene();
+
+  UpdateDriveArea();
 
   GenerateConstructionSceneOutput();
 
@@ -73,6 +69,7 @@ bool ConstructionSceneManager::InitInfo() {
   construction_agent_points_.clear();
   construction_agent_cluster_.clear();
   construction_agent_cluster_attribute_map_.clear();
+  road_boundaries_clusters_map_.clear();
   construction_scene_output_.Clear();
   return true;
 }
@@ -248,7 +245,7 @@ void ConstructionSceneManager::GetOriginLaneWidthByConstructionAgent(
   if (base_lane == nullptr) {
     return;
   }
-  const auto origin_refline =
+  const auto origin_refline =  // (bsniu): need to replace ref path manager
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(base_lane->get_virtual_id(), false);
@@ -563,7 +560,7 @@ bool ConstructionSceneManager::CheckLaneAvailable(
   const auto ego_v = ego_state->ego_v();
   const auto care_ego_time = 3; // 后续需要考虑自车通行速度
   const auto care_length = care_ego_time * ego_v;
-  std::shared_ptr<ReferencePath> target_refline =
+  std::shared_ptr<ReferencePath> target_refline =  // (bsniu): need to replace ref path manager
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(seach_lane->get_virtual_id(), false);
@@ -630,16 +627,30 @@ void ConstructionSceneManager::UpdateDriveArea() {
     return;
   }
 
+  RoadBoundaryPreProcess();
+
+  const auto& ego_point =
+      session_->environmental_model().get_ego_state_manager()->ego_carte();
+
   const std::vector<std::shared_ptr<VirtualLane>> lanes =
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->get_virtual_lanes();
 
-  std::map<int, std::map<int, std::vector<int>>> results;
+  std::map<int, std::map<int, std::vector<int>>> cone_results;
+  std::map<int, std::map<int, std::vector<int>>> road_boundary_results;
   for (const auto& lane : lanes) {
     if (lane == nullptr) {
       continue;
     }
+
+    auto it = std::find(construction_scene_output_.available_virtual_lane_ids.begin(),
+                        construction_scene_output_.available_virtual_lane_ids.end(),
+                        lane->get_virtual_id());
+    if (it == construction_scene_output_.available_virtual_lane_ids.end()) {
+      continue;
+    }
+
     const auto& lane_frenet_coord = lane->get_lane_frenet_coord();
     if (lane_frenet_coord == nullptr) {
       continue;
@@ -654,6 +665,7 @@ void ConstructionSceneManager::UpdateDriveArea() {
           Point2d(lane_point.local_point.x, lane_point.local_point.y)));
     }
 
+    // 锥桶
     for (const auto construction_agent_cluster_iter :
          construction_agent_cluster_attribute_map_) {
       if (construction_agent_cluster_iter.second.points.size() <= 1) {
@@ -670,38 +682,57 @@ void ConstructionSceneManager::UpdateDriveArea() {
       }
 
       const auto result =
-          CalIntersectionRefAndCone(lane_frenet_coord, ref_points, cone_points);
+          CalIntersectionRefAndObstacle(lane_frenet_coord, ref_points, cone_points);
 
-      results[construction_agent_cluster_iter.first][result.second]
+      cone_results[construction_agent_cluster_iter.first][result.second]
           .emplace_back(lane->get_virtual_id());
-      ILOG_DEBUG << "result: "
-                 << "lane id:" << lane->get_virtual_id() << "   ***  "
-                 << "cone cluster id" << construction_agent_cluster_iter.first
-                 << "intersection :" << result.second;
+      std::cout << "result: "
+                << "lane id:" << lane->get_virtual_id() << "   ***  "
+                << "cone cluster id" << construction_agent_cluster_iter.first
+                << "intersection :" << result.second << std::endl;
+    }
+
+    // 路沿
+    for (const auto road_boundaries_cluster_iter :
+         road_boundaries_clusters_map_) {
+      if (road_boundaries_cluster_iter.second.points.size() < 1) {
+        continue;
+      }
+
+      const auto result = CalIntersectionRefAndObstacle(
+          lane_frenet_coord, ref_points,
+          road_boundaries_cluster_iter.second.points);
+
+      road_boundary_results[road_boundaries_cluster_iter.first][result.second]
+          .emplace_back(lane->get_virtual_id());
+      std::cout << "result: "
+                << "lane id:" << lane->get_virtual_id() << "   ***  "
+                << "road boundary id" << road_boundaries_cluster_iter.first
+                << "intersection :" << result.second << std::endl;
     }
   }
 
-  UpdateResult(results);
+  UpdateResult(cone_results, road_boundary_results);
 }
 
-std::pair<bool, int> ConstructionSceneManager::CalIntersectionRefAndCone(
+std::pair<bool, int> ConstructionSceneManager::CalIntersectionRefAndObstacle(
     const std::shared_ptr<planning_math::KDPath> lane_frenet_coord,
     const std::vector<Point2d>& ref_points,
-    const std::vector<Point2d>& cone_points) {
+    const std::vector<Point2d>& obstacle_points) {
   if (!lane_frenet_coord) {
     return {false, -1};
   }
 
-  if (cone_points.size() < 1) {
+  if (obstacle_points.size() < 1) {
     return {false, -1};
   }
 
-  if (PolylinesIntersect(ref_points, cone_points)) {
+  if (PolylinesIntersect(ref_points, obstacle_points)) {
     return {true, 0};
   }
 
   Point2D frenet_point;
-  if (!lane_frenet_coord->XYToSL(Point2D(cone_points[0].x, cone_points[0].y),
+  if (!lane_frenet_coord->XYToSL(Point2D(obstacle_points[0].x, obstacle_points[0].y),
                                  frenet_point)) {
     return {false, -1};
   }
@@ -716,8 +747,9 @@ std::pair<bool, int> ConstructionSceneManager::CalIntersectionRefAndCone(
 }
 
 void ConstructionSceneManager::UpdateResult(
-    const std::map<int, std::map<int, std::vector<int>>>& results) {
-  for (auto result : results) {
+    const std::map<int, std::map<int, std::vector<int>>>& cone_results,
+    const std::map<int, std::map<int, std::vector<int>>>& road_boundary_results) {
+  for (auto result : cone_results) {
     if (result.second.count(1) && result.second.count(2)) {
       construction_agent_cluster_attribute_map_[result.first].direction =
           ConstructionDirection::UNSURE;
@@ -736,15 +768,69 @@ void ConstructionSceneManager::UpdateResult(
       std::cout << "colinear_or_facing ref" << std::endl;
     }
   }
+
+  for (auto result : road_boundary_results) {
+    if (result.second.count(1) && result.second.count(2)) {
+      std::cout << "abnormal ref" << std::endl;
+      road_boundaries_clusters_map_[result.first].direction =
+          ConstructionDirection::UNSURE;
+    } else if (result.second.count(1)) {
+      road_boundaries_clusters_map_[result.first].direction =
+          ConstructionDirection::LEFT;
+    } else if (result.second.count(2)) {
+      road_boundaries_clusters_map_[result.first].direction =
+          ConstructionDirection::RIGHT;
+    }
+
+    if (result.second.count(-1)) {
+      road_boundaries_clusters_map_[result.first].direction =
+          ConstructionDirection::UNSURE;
+      std::cout << "colinear_or_facing ref" << std::endl;
+    }
+  }
+}
+
+void ConstructionSceneManager::RoadBoundaryPreProcess() {
+  const auto ego_v =
+      session_->environmental_model().get_ego_state_manager()->ego_v();
+  const auto& road_boundaries = session_->environmental_model()
+                                    .get_virtual_lane_manager()
+                                    ->GetRoadboundary();
+  const double care_front_lon_distance = 80;
+  const double care_rear_lon_distance = 0;
+  for (size_t i = 0; i < road_boundaries.size(); i++) {
+    const auto& road_boundary = road_boundaries[i];
+    if (road_boundary.size() < 1) {
+      continue;
+    }
+
+    RoadBoundaryCluster road_boundary_cluster;
+    for (size_t j = 0; j < road_boundary.size(); j++) {
+      const auto& car_point = road_boundary[j].first;
+      const auto& local_point = road_boundary[j].second;
+      if (car_point.x < care_rear_lon_distance) {
+        continue;
+      }
+
+      if (car_point.x > care_front_lon_distance) {
+        break;
+      }
+
+      road_boundary_cluster.points.emplace_back(local_point);
+    }
+    road_boundaries_clusters_map_[i] = std::move(road_boundary_cluster);
+  }
 }
 
 void ConstructionSceneManager::GenerateConstructionSceneOutput() {
   construction_scene_output_.is_exist_construction_area =
       is_exist_construction_area_;
-  construction_scene_output_.construction_agent_cluster_attribute_map =
-      construction_agent_cluster_attribute_map_;
   construction_scene_output_.is_pass_construction_area =
       is_pass_construction_area_;
+  construction_scene_output_.construction_agent_cluster_attribute_map =
+      construction_agent_cluster_attribute_map_;
+  construction_scene_output_.road_boundaries_clusters_map =
+      road_boundaries_clusters_map_;
 }
 
 void ConstructionSceneManager::SaveLatDebugInfo() {
