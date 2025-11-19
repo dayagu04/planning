@@ -36,9 +36,8 @@ class MergeRequest : public LaneChangeRequest {
   void MakesureLaneMergeDirection(const int origin_lane_id);
 
   void MakesureVirtualLaneSideIsVirtual(
-    const std::shared_ptr<VirtualLane> base_lane,
-    bool& virtual_lane_exist_virtual,
-    const int lane_index);
+      const std::shared_ptr<VirtualLane> base_lane,
+      bool& virtual_lane_exist_virtual, const int lane_index);
 
  private:
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;

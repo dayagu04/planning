@@ -368,8 +368,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const double ego_front_edge = vehicle_param.front_edge_to_rear_axle;
   const double long_diff =
       cipv_info.relative_s() - ego_front_edge - agent->length() * 0.5;
-  const double need_overtake_distance =
-      cipv_info.relative_s() + agent->length() * 0.5 + vehicle_param.rear_edge_to_rear_axle;
+  const double need_overtake_distance = cipv_info.relative_s() +
+                                        agent->length() * 0.5 +
+                                        vehicle_param.rear_edge_to_rear_axle;
 
   const double ego_speed = ego_state->ego_v();
   const double reference_speed = ego_state->ego_v_cruise();
@@ -424,9 +425,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
                                          left_route_traffic_speed, agent, true)
                 : false;
   const bool is_right_overtake =
-      enable_r_ ? isCouldOvertakeByRoute(origin_refline, rlane,
-                                         right_route_traffic_speed, agent, false)
-                : false;
+      enable_r_
+          ? isCouldOvertakeByRoute(origin_refline, rlane,
+                                   right_route_traffic_speed, agent, false)
+          : false;
   JSON_DEBUG_VALUE("is_left_overtake", is_left_overtake);
   JSON_DEBUG_VALUE("is_right_overtake", is_right_overtake);
 
@@ -521,9 +523,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       (last_request_type_ != RIGHT_CHANGE || !trigger_right_overtake) &&
       request_type_ != LEFT_CHANGE) {
     if (ConeSituationJudgement(llane) &&
-        FeasibleLaneDistanceEnoughJudgment(
-        left_route_traffic_speed, leading_vehicle_speed,
-        llane, true, need_overtake_distance)) {
+        FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+                                           leading_vehicle_speed, llane, true,
+                                           need_overtake_distance)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -554,9 +556,9 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
              (last_request_type_ != LEFT_CHANGE || !trigger_left_overtake) &&
              request_type_ != RIGHT_CHANGE) {
     if (ConeSituationJudgement(rlane) &&
-        FeasibleLaneDistanceEnoughJudgment(
-        right_route_traffic_speed, leading_vehicle_speed,
-        rlane, false, need_overtake_distance)) {
+        FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
+                                           leading_vehicle_speed, rlane, false,
+                                           need_overtake_distance)) {
       target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
@@ -586,18 +588,18 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
              (lane_change_lane_mgr_->has_origin_lane() &&
               lane_change_lane_mgr_->is_ego_on(olane))) {
     if (request_type_ == LEFT_CHANGE && ConeSituationJudgement(llane) &&
-      FeasibleLaneDistanceEnoughJudgment(
-      left_route_traffic_speed, leading_vehicle_speed,
-      llane, true, need_overtake_distance)) {
+        FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+                                           leading_vehicle_speed, llane, true,
+                                           need_overtake_distance)) {
       if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent,
                                          true)) {
         last_request_type_ = request_type_;
         return;
       }
     } else if (request_type_ == RIGHT_CHANGE && ConeSituationJudgement(rlane) &&
-      FeasibleLaneDistanceEnoughJudgment(
-      right_route_traffic_speed, leading_vehicle_speed,
-      rlane, false, need_overtake_distance)) {
+               FeasibleLaneDistanceEnoughJudgment(
+                   right_route_traffic_speed, leading_vehicle_speed, rlane,
+                   false, need_overtake_distance)) {
       if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent,
                                          false)) {
         last_request_type_ = request_type_;
@@ -1985,8 +1987,9 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
 }
 
 bool OvertakeRequest::FeasibleLaneDistanceEnoughJudgment(
-    const double &lane_traffic_speed, const double &leading_speed,
-    const std::shared_ptr<VirtualLane>& target_lane, bool is_left, const double need_s) {
+    const double& lane_traffic_speed, const double& leading_speed,
+    const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
+    const double need_s) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   double ego_v = ego_state->ego_v();

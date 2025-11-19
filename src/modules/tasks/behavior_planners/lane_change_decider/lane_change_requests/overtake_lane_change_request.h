@@ -65,8 +65,9 @@ class OvertakeRequest : public LaneChangeRequest {
                                       const bool is_left);
 
   bool FeasibleLaneDistanceEnoughJudgment(
-    const double &lane_traffic_speed, const double &leading_speed,
-    const std::shared_ptr<VirtualLane>& target_lane, bool is_left, const double need_s);
+      const double& lane_traffic_speed, const double& leading_speed,
+      const std::shared_ptr<VirtualLane>& target_lane, bool is_left,
+      const double need_s);
 
   void updateLaneChangeSafety(
       const std::shared_ptr<ReferencePath>& left_ref_line,

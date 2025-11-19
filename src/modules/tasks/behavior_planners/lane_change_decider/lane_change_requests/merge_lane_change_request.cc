@@ -326,7 +326,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums + 1;
       int target_lane_order_num = current_lane_order_num - 1;
-      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+      if (std::find(feasible_lane_sequence.begin(),
+                    feasible_lane_sequence.end(),
                     target_lane_order_num) == feasible_lane_sequence.end()) {
         left_lane_is_on_navigation_route = false;
       }
@@ -335,7 +336,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums + 1;
       int target_lane_order_num = current_lane_order_num + 1;
-      if (std::find(feasible_lane_sequence.begin(), feasible_lane_sequence.end(),
+      if (std::find(feasible_lane_sequence.begin(),
+                    feasible_lane_sequence.end(),
                     target_lane_order_num) == feasible_lane_sequence.end()) {
         right_lane_is_on_navigation_route = false;
       }
@@ -447,7 +449,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
 
     if (llane != nullptr) {
-      MakesureVirtualLaneSideIsVirtual(llane, target_right_boundary_exist_virtual_type, 0);
+      MakesureVirtualLaneSideIsVirtual(
+          llane, target_right_boundary_exist_virtual_type, 0);
     }
 
     // 根据地面标识判断是否向左汇流
@@ -467,7 +470,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     }
 
     if (rlane != nullptr) {
-      MakesureVirtualLaneSideIsVirtual(rlane, target_left_boundary_exist_virtual_type, 1);
+      MakesureVirtualLaneSideIsVirtual(
+          rlane, target_left_boundary_exist_virtual_type, 1);
     }
 
     // 根据地面标识判断是否向右汇流
@@ -512,13 +516,11 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
     merge_lane_change_direction_ = NO_CHANGE;
     both_lane_line_exist_virtual_or_not_ = true;
   } else if (left_boundary_exist_virtual_type &&
-             !target_right_boundary_exist_virtual_type &&
-             is_merge_region &&
+             !target_right_boundary_exist_virtual_type && is_merge_region &&
              left_lane_is_on_navigation_route) {
     merge_lane_change_direction_ = LEFT_CHANGE;
   } else if (right_boundary_exist_virtual_type &&
-             !target_left_boundary_exist_virtual_type &&
-             is_merge_region &&
+             !target_left_boundary_exist_virtual_type && is_merge_region &&
              right_lane_is_on_navigation_route) {
     merge_lane_change_direction_ = RIGHT_CHANGE;
   } else if (!right_boundary_exist_virtual_type &&
@@ -537,8 +539,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
 
 void MergeRequest::MakesureVirtualLaneSideIsVirtual(
     const std::shared_ptr<VirtualLane> base_lane,
-    bool& virtual_lane_exist_virtual,
-    const int lane_index) {
+    bool& virtual_lane_exist_virtual, const int lane_index) {
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const auto& plannig_init_point = ego_state->planning_init_point();

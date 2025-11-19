@@ -218,9 +218,11 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       if (obstacle_id == kInvalidAgentId) {
         continue;
       }
-      if (front_vehicle_iter->second->type() == iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
-          (front_vehicle_iter->second->type() == iflyauto::OBJECT_TYPE_CTASH_BARREL &&
-            function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+      if (front_vehicle_iter->second->type() ==
+              iflyauto::OBJECT_TYPE_TRAFFIC_CONE ||
+          (front_vehicle_iter->second->type() ==
+               iflyauto::OBJECT_TYPE_CTASH_BARREL &&
+           function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
         if (front_vehicle_iter->second->d_s_rel() < -ego_rear_edge ||
             front_vehicle_iter->second->d_s_rel() >
                 base_frenet_coord_->Length() - ego_frenet_point.x) {
@@ -294,7 +296,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
                                  lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_right = std::max(
       pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
-  double all_cone_cluster_max_distance = - std::numeric_limits<double>::max();
+  double all_cone_cluster_max_distance = -std::numeric_limits<double>::max();
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
@@ -553,8 +555,7 @@ void ConeRequest::ConeDir() {
       route_info_output.mlc_decider_route_info.feasible_lane_sequence;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
-  if (distance_to_first_road_split < 300.0 ||
-      dis_to_merge_point < 200.0) {
+  if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0) {
     if (feasible_lane_sequence.size() > 0) {
       int current_lane_order_num = left_lane_nums_ + 1;
       int target_lane_order_num = current_lane_order_num - 1;
@@ -649,7 +650,8 @@ void ConeRequest::ConeDir() {
   }
 
   // scc优先利用锥桶分布判断变道方向
-  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC && ConesDirection(cone_dir)) {
+  if (function_info.function_mode() == common::DrivingFunctionInfo::SCC &&
+      ConesDirection(cone_dir)) {
     if (cone_dir == LEFT_CHANGE && llane && cone_distribution_enable_left) {
       cone_lane_change_direction_ = LEFT_CHANGE;
       return;
@@ -867,7 +869,7 @@ bool ConeRequest::EnableTargetLane(
       } else {
         total_lane_width += QueryLaneWidth(frenet_point.x, lane_s_width);
         total_cone_l += std::fabs(frenet_point.y);
-        total_cone_l_origin += std::fabs(p.l); 
+        total_cone_l_origin += std::fabs(p.l);
         cone_num++;
       }
     }
@@ -875,8 +877,9 @@ bool ConeRequest::EnableTargetLane(
     double average_cone_l = total_cone_l / std::max(cone_num, 1);
     average_l_origin = total_cone_l_origin / std::max(cone_num, 1);
     if ((average_cone_l < average_lane_width * lane_occ_proportion ||
-          std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l ||
-          (average_cone_l - average_l_origin < average_lane_width * 0.5 && !is_merge_region)) &&
+         std::fabs(seach_lane->get_ego_lateral_offset()) > average_cone_l ||
+         (average_cone_l - average_l_origin < average_lane_width * 0.5 &&
+          !is_merge_region)) &&
         cone_num >= 5) {
       return false;
     }
