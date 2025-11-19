@@ -2160,15 +2160,21 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           merge_region_info_list[0].split_link_id) {
     if (first_exchange_region_info.is_other_merge_to_road) {
       mlc_decider_route_info_.is_process_other_merge = true;
+      mlc_decider_route_info_.is_process_merge = false;
+      mlc_decider_route_info_.is_process_split = false;
       mlc_decider_route_info_.static_merge_region_info =
           first_exchange_region_info;
     } else {
       mlc_decider_route_info_.is_process_merge = true;
+      mlc_decider_route_info_.is_process_split = false;
+      mlc_decider_route_info_.is_process_other_merge = false;
       mlc_decider_route_info_.static_merge_region_info =
           first_exchange_region_info;
     }
   } else {
     mlc_decider_route_info_.is_process_split = true;
+    mlc_decider_route_info_.is_process_merge = false;
+    mlc_decider_route_info_.is_process_other_merge = false;
     mlc_decider_route_info_.static_split_region_info =
         first_exchange_region_info;
   }
