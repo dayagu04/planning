@@ -29,7 +29,7 @@ constexpr double kMinSafeDistanceFront = 5.0;
 constexpr double kSafeVelEpsion = 0.5;
 constexpr double kPenaltyVel = 1.0;
 constexpr double kPlanningDuration = 5.0;
-constexpr double kStaticObjVel = 1.2;
+constexpr double kStaticObjVel = 0.1;
 constexpr double kTimeResolution = 0.1;
 constexpr int32_t kSampleSpaceReserveNum =
     (kPlanningDuration) / kTimeResolution + 1;

@@ -528,7 +528,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   }
   v_adjust_speed_limit_ = std::fmax(v_cruise_speed, v_sdmap_limit);
   // init sample space
-  st_sample_space_base_.Init(agent_info_, ego_s);
+  st_sample_space_base_.Init(target_lane_nodes, ego_s);
 
   // calc flow vel
   StitchLastBestPoly();
@@ -885,23 +885,21 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_lead_clip = std::max(headway_v, 0.0);
   double t_gap = interp(ego_v, t_gap_ego_v_bp, t_gap_ego_v);
   t_gap = t_gap * (0.6 * ego_v * 0.01);  // why?
-  double v_rel = std::min(std::max(ego_v - v_lead_clip, 0.0), 5.0);
-  double distance_hysteresis = v_rel * 0.3;
-  double fix_safe_distance = std::fmax(3.5, v_rel * ego_v / 2.0 * 4.0);
-  double object_rel_distance =
-      leading_veh_.half_length + front_edge_to_rear_axle_;
-  return fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis +
-         object_rel_distance;
+  double v_rel = std::max(ego_v - v_lead_clip, 0.0);
+  double distance_hysteresis = ego_v * 0.3;
+  double fix_safe_distance = v_rel * ego_v / (2.0 * 3.0);
+  return std::max(fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis, 3.0);
 }
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
   if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
     double poly_arrived_t = min_cost_traj_ptr_->arrived_t();
     const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
+    double buffer_distance =  CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
+                                t_gap_ego_v_);
     if (ego_pred_end_s >
         leading_veh_.center_s + ego_s_ + leading_veh_.v * poly_arrived_t -
-            CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
-                                t_gap_ego_v_)) {
+            buffer_distance) {
       std::cout << "ego pred s is exceed upper" << std::endl;
       min_cost_traj_ptr_ = nullptr;
       sample_status_ = kEgoPredSExceedLeadOne;

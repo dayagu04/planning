@@ -8,16 +8,17 @@
 #include "st_graph/st_point.h"
 #include "vec2d.h"
 
+using planning::planning_data::DynamicAgentNode;
 using planning::speed::STPoint;
-
 namespace planning {
 
 STSampleSpaceBase::STSampleSpaceBase(
-    const std::vector<AgentInfo>& lane_change_veh_info, const double init_s,
-    const double front_edge_to_rear_axle, const double rear_edge_to_rear_axle) {
+    const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+    const double init_s, const double front_edge_to_rear_axle,
+    const double rear_edge_to_rear_axle) {
   Clear();
   init_s_ = init_s;
-  for (auto& agent : lane_change_veh_info) {
+  for (auto& agent : target_lane_nodes) {
     LinearExtendAgentStBoundary(agent);
   }
 
@@ -31,15 +32,13 @@ STSampleSpaceBase::STSampleSpaceBase(const double front_edge_to_rear_axle,
   rear_edge_to_rear_axle_ = rear_edge_to_rear_axle;
 }
 
-void STSampleSpaceBase::Init(const std::vector<AgentInfo>& lane_change_veh_info,
-                             const double init_s) {
+void STSampleSpaceBase::Init(
+    const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+    const double init_s) {
   Clear();
   init_s_ = init_s;
-  for (auto& agent : lane_change_veh_info) {
-    if (agent.v < kStaticObjVel) {
-      continue;
-    }
-    LinearExtendAgentStBoundary(agent);
+  for (const auto* agent_node : target_lane_nodes) {
+    LinearExtendAgentStBoundary(agent_node);
   }
   ConstructStPointsTable();
 }
@@ -55,30 +54,77 @@ void STSampleSpaceBase::SetInitS(const double s0) { init_s_ = s0; }
 
 const double STSampleSpaceBase::init_s() const { return init_s_; }
 
-void STSampleSpaceBase::LinearExtendAgentStBoundary(const AgentInfo& agent) {
+void STSampleSpaceBase::LinearExtendAgentStBoundary(
+    const DynamicAgentNode* agent_node) {
+  const auto& primary_trajectories =
+      agent_node->node_trajectories_used_by_st_graph();
+  const auto& fallback_trajectories = agent_node->node_trajectories();
+  const auto& selected_trajectories = primary_trajectories.empty()
+                                          ? fallback_trajectories
+                                          : primary_trajectories;
+  if (selected_trajectories.empty() || selected_trajectories.front().empty()) {
+    return;
+  }
+  const auto& current_trajectory = selected_trajectories.front();
   std::vector<std::pair<STPoint, STPoint>> st_points_pairs;
   st_points_pairs.reserve(kSampleSpaceReserveNum);
-  const double agent_s_start = init_s_ + agent.center_s;
-  const double& v = agent.v;
-  const double& agent_half_length = agent.half_length;
+  const double agent_s_start = agent_node->node_s();
+  const double& agent_half_length = agent_node->node_length() / 2.0;
   const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
-  for (size_t i = 0; i < TimeHorizion; ++i) {
-    const double time_start = i * kPlanningStep;
-    double time_end = (i + 1) * kPlanningStep;
-    if (i == TimeHorizion - 1) {
-      time_end = kPlanningDuration + 2 * planning_math::kMathEpsilon;
+  const size_t PredictionHorizon = current_trajectory.size() - 1;
+  size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
+  double end_v = 0.0;
+  double end_s = 0.0;
+  for (size_t i = 0; i <= min_horizion; ++i) {
+    double t = i * kPlanningStep;
+    end_s = agent_s_start + current_trajectory[i].s();
+    end_v = current_trajectory[i].vel();
+    double acc = current_trajectory[i].acc();
+    STPoint lower_point(end_s - agent_half_length, t);
+    STPoint upper_point(end_s + agent_half_length, t);
+    lower_point.set_agent_id(agent_node->node_agent_id());
+    upper_point.set_agent_id(agent_node->node_agent_id());
+    lower_point.set_velocity(end_v);
+    upper_point.set_velocity(end_v);
+    lower_point.set_acceleration(acc);
+    upper_point.set_acceleration(acc);
+    st_points_pairs.emplace_back(std::move(lower_point),
+                                 std::move(upper_point));
+    if (i == min_horizion) {
+      break;
     }
-    for (double t = time_start; t < time_end - planning_math::kMathEpsilon;
-         t += kTimeResolution) {
-      double s = agent_s_start + t * v;
-      STPoint lower_point(s - agent_half_length, t);
-      STPoint upper_point(s + agent_half_length, t);
-      lower_point.set_agent_id(agent.id);
-      upper_point.set_agent_id(agent.id);
-      lower_point.set_velocity(v);
-      upper_point.set_velocity(v);
-      st_points_pairs.emplace_back(std::move(lower_point),
-                                   std::move(upper_point));
+    t += kTimeResolution;
+    end_s += kTimeResolution * end_v;
+    end_v += kTimeResolution * acc;
+    lower_point.set_t(t);
+    upper_point.set_t(t);
+    lower_point.set_s(end_s - agent_half_length);
+    upper_point.set_s(end_s + agent_half_length);
+    lower_point.set_agent_id(agent_node->node_agent_id());
+    upper_point.set_agent_id(agent_node->node_agent_id());
+    lower_point.set_velocity(end_v);
+    upper_point.set_velocity(end_v);
+    lower_point.set_acceleration(acc);
+    upper_point.set_acceleration(acc);
+    st_points_pairs.emplace_back(std::move(lower_point),
+                                 std::move(upper_point));
+  }
+  if (PredictionHorizon < TimeHorizion) {
+    for (size_t i = PredictionHorizon; i < TimeHorizion; ++i) {
+      const double time_start = i * kPlanningStep + kTimeResolution;
+      double time_end = (i + 1) * kPlanningStep;
+      for (double t = time_start; t < time_end + planning_math::kMathEpsilon;
+           t += kTimeResolution) {
+        end_s += end_v * kTimeResolution;
+        STPoint lower_point(end_s - agent_half_length, t);
+        STPoint upper_point(end_s + agent_half_length, t);
+        lower_point.set_agent_id(agent_node->node_agent_id());
+        upper_point.set_agent_id(agent_node->node_agent_id());
+        lower_point.set_velocity(end_v);
+        upper_point.set_velocity(end_v);
+        st_points_pairs.emplace_back(std::move(lower_point),
+                                     std::move(upper_point));
+      }
     }
   }
   agents_st_point_paris_.emplace_back(std::move(st_points_pairs));
@@ -96,15 +142,22 @@ void STSampleSpaceBase::ConstructStPointsTable() {
       STPoint lower_point(st_point_paris[i].first.s(),
                           st_point_paris[i].first.t(),
                           st_point_paris[i].first.agent_id(), -1,
-                          st_point_paris[i].first.velocity(), 0.0);
+                          st_point_paris[i].first.velocity(),
+                          st_point_paris[i].first.acceleration());
       STPoint upper_point(st_point_paris[i].second.s(),
                           st_point_paris[i].second.t(),
                           st_point_paris[i].second.agent_id(), -1,
-                          st_point_paris[i].second.velocity(), 0.0);
+                          st_point_paris[i].second.velocity(),
+                          st_point_paris[i].second.acceleration());
       std::pair<STPoint, STPoint> points_pair(std::move(lower_point),
                                               std::move(upper_point));
       st_points_table_[index].emplace_back(std::move(points_pair));
     }
+  }
+  for(auto& current_st_point : st_points_table_) {
+    std::sort(current_st_point.begin(), current_st_point.end(),
+          [](std::pair<STPoint, STPoint>& a, std::pair<STPoint, STPoint>& b)
+              -> bool { return a.first.s() < b.first.s(); });
   }
 
   auto cmp = [](const std::pair<STPoint, STPoint> ele1,

@@ -3,18 +3,20 @@
 #include <unordered_map>
 #include <vector>
 
+#include "dynamic_world/dynamic_agent_node.h"
 #include "math/aabox2d.h"
 #include "sample_poly_const.h"
 // #include "speed/st_boundary.h"
 #include "st_graph/st_point.h"
+using planning::planning_data::DynamicAgentNode;
 using planning::speed::STPoint;
-
 namespace planning {
 struct AgentInfo {
   int32_t id = kNoAgentId;
   double center_s;
   double half_length;
   double v;
+  double a;
 };
 
 class STSampleSpaceBase {
@@ -23,15 +25,16 @@ class STSampleSpaceBase {
   STSampleSpaceBase(const double front_edge_to_rear_axle,
                     const double rear_edge_to_rear_axle);
 
-  STSampleSpaceBase(const std::vector<AgentInfo>& lane_change_veh_info,
-                    const double init_s, const double front_edge_to_rear_axle,
-                    const double rear_edge_to_rear_axle);
+  STSampleSpaceBase(
+      const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+      const double init_s, const double front_edge_to_rear_axle,
+      const double rear_edge_to_rear_axle);
 
-  void LinearExtendAgentStBoundary(const AgentInfo& agent);
+  void LinearExtendAgentStBoundary(const DynamicAgentNode* agent_node);
   void ConstructStPointsTable();
   bool GetBorderByAvailable(double s, double t, STPoint* const lower_st_point,
                             STPoint* const upper_st_point);
-  void Init(const std::vector<AgentInfo>& lane_change_veh_info,
+  void Init(const std::vector<const DynamicAgentNode*>& target_lane_nodes,
             const double init_s);
   void GetAvailableGap(const int index);
 
