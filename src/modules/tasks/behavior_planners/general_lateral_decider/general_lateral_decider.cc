@@ -3523,7 +3523,9 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       }
       limit_nudge_max_l = std::fmax(limit_nudge_max_l, planning_init_point_l);
       limit_nudge_min_l = std::fmin(limit_nudge_max_l, limit_nudge_min_l);
-      bound.lower = clip(bound.lower, limit_nudge_max_l, limit_nudge_min_l);
+      if (bound.lower > limit_nudge_max_l) {
+        bound.lower = limit_nudge_max_l;
+      }
     }
     if (bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
       if (current_desire_final_nudge_l_map_.find(id) !=
@@ -3562,7 +3564,9 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
       }
       limit_nudge_min_l = std::fmin(limit_nudge_min_l, planning_init_point_l);
       limit_nudge_max_l = std::fmax(limit_nudge_max_l, limit_nudge_min_l);
-      bound.upper = clip(bound.upper, limit_nudge_max_l, limit_nudge_min_l);
+      if (bound.upper < limit_nudge_min_l) {
+        bound.upper = limit_nudge_min_l;
+      }
     }
     if (bound_hierarchy == BoundHierarchy ::SECOND_SOFT_BOUND) {
       if (current_desire_final_nudge_l_map_.find(id) !=
