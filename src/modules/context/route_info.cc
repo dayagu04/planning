@@ -803,20 +803,15 @@ void RouteInfo::CaculateSplitInfo(
               out_link[0] == split_next_link->id() ? out_link[1] : out_link[0];
           const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
 
-          std::set<iflymapdata::sdpro::LinkClass> excluded_link_classes = {
-              iflymapdata::sdpro::LinkClass::LC_OTHER_ROAD,
-              iflymapdata::sdpro::LinkClass::LC_TOWN_ROAD,
-              iflymapdata::sdpro::LinkClass::LC_SPECIAL_ROAD,
-              iflymapdata::sdpro::LinkClass::LC_WALK_ROAD,
-              iflymapdata::sdpro::LinkClass::LC_PEOPLE_FERRY,
-              iflymapdata::sdpro::LinkClass::LC_FERRY};
           if (split_region_lane_tupo_info.is_valid == true ||
               (split_link != nullptr && other_link != nullptr &&
                split_link->has_link_type() &&
                !sdpro_map.isSaPa(split_link->link_type()) &&
                !sdpro_map.isTollStation(split_link->link_type()) &&
-               excluded_link_classes.find(other_link->link_class()) ==
-                   excluded_link_classes.end())) {
+               (other_link->link_class() ==
+                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+                other_link->link_class() ==
+                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY))) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
