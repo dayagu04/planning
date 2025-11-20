@@ -5916,17 +5916,18 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
 void RouteInfo::OptimizeFeasibleLanesByDistance(
     NOASplitRegionInfo& exchange_region_info,
     std::map<int, double>& feasible_lane_distance, double max_distance) {
-  const double v_limit = session_->environmental_model()
-                             .get_ego_state_manager()
-                             ->ego_v_cruise_upper() *
-                         0.8;
   const int total_lane_num =
       exchange_region_info.recommend_lane_num[0].total_lane_num;
-  const double kResponseOffset = 300.;
 
-  std::array<double, 3> xp{11.111, 22.222, 33.333};
-  std::array<double, 3> fp{300.0, 600.0, 1000.0};
-  const double adaptor_interval = interp(v_limit, xp, fp);
+  double opt_distance = 1200.0;
+  if (!current_link_) {
+    opt_distance = 1200.0;
+  } else {
+    opt_distance = current_link_->link_class() ==
+                           iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
+                       ? 1200.0
+                       : 600.0;
+  }
 
   std::vector<int> temp_feasible_lane_seq;
   std::vector<double> temp_feasible_lane_dis;
@@ -5951,8 +5952,7 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
       const int lc_num = feasible_lane_sequence[0] - i;
-      const double lc_need_dis =
-          kResponseOffset + adaptor_interval * std::fabs(lc_num);
+      const double lc_need_dis = opt_distance * std::fabs(lc_num);
       if (max_distance > lc_need_dis) {
         temp_feasible_lane_seq.emplace_back(i);
         temp_feasible_lane_dis.emplace_back(max_distance - lc_need_dis);
@@ -5971,8 +5971,7 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
   } else if (exchange_region_info.split_direction == SPLIT_LEFT) {
     for (int i = total_lane_num; i > feasible_lane_sequence.back(); i--) {
       const int lc_num = i - feasible_lane_sequence.back();
-      const double lc_need_dis =
-          kResponseOffset + adaptor_interval * std::fabs(lc_num);
+      const double lc_need_dis = opt_distance * std::fabs(lc_num);
       if (max_distance > lc_need_dis) {
         temp_feasible_lane_seq.insert(temp_feasible_lane_seq.begin(), i);
         temp_feasible_lane_dis.insert(temp_feasible_lane_dis.begin(),
