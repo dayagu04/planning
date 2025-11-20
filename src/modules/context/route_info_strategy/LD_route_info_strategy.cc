@@ -88,6 +88,10 @@ bool LDRouteInfoStrategy::CalculateRouteInfo() {
   // 一定要先计算split info，再计算ramp info
   CalculateRampInfo();
 
+  CaculateDistanceToRoadEnd(current_link_, ego_on_cur_link_s_);
+
+  CaculateDistanceToTollStation(current_link_, ego_on_cur_link_s_);
+
   return true;
 }
 
@@ -1540,6 +1544,38 @@ void LDRouteInfoStrategy::ProcessLaneDistance(
   relative_id_lane->set_feasible_lane_distance(virtual_lane_distance);
 }
 
+void LDRouteInfoStrategy::CaculateDistanceToRoadEnd(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+
+  double dis_to_end = NL_NMAX;
+  int result =
+      ld_map_.GetDistanceToRouteEnd(segment->id(), nearest_s, dis_to_end);
+  if (result == 0) {
+    route_info_output_.distance_to_route_end = dis_to_end;
+  } else {
+    route_info_output_.distance_to_route_end = NL_NMAX;
+  }
+}
+
+void LDRouteInfoStrategy::CaculateDistanceToTollStation(
+    const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s) {
+  if (segment == nullptr) {
+    return;
+  }
+  
+  const auto& toll_station_info =
+      ld_map_.GetTollStationInfo(segment->id(), nearest_s, kMaxSearchLength);
+  if (toll_station_info.first != nullptr) {
+    route_info_output_.distance_to_toll_station = toll_station_info.second;
+    route_info_output_.is_exist_toll_station = true;
+  } else {
+    route_info_output_.distance_to_toll_station = NL_NMAX;
+    route_info_output_.is_exist_toll_station = false;
+  }
+}
 }
 
 
