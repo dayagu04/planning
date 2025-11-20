@@ -58,7 +58,6 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
 
     pose_bound_.heading_down_bound = -1e-6;
 
-    // 搜索时,heading 尽量不超过150度
     const double heading_check_bound = ifly_deg2rad(150.0);
     const double heading_buffer = ifly_deg2rad(20.0);
 
@@ -102,7 +101,6 @@ const bool NodeDeleteDecider::CheckShouldBeDeleted(NodeDeleteRequest request) {
   request_ = request;
   reason_ = NodeDeleteReason::UNKNOWN;
 
-  // 要么cur_node为空 要么curve_node为空
   if (request.current_node == nullptr && request.curve_node == nullptr) {
     return true;
   }

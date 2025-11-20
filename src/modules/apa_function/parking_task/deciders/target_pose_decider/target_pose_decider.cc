@@ -112,9 +112,7 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
 
   geometry_lib::PathPoint tar_pose_local;
   geometry_lib::PathPoint tar_pose_global;
-  // 人为设定偏左偏右 该值一般为0 后续可以根据HMI输入进行改变
   tar_pose_local.pos << virtual_tar_x, offset_y;
-  // 人为设定航向 该值一般为0
   tar_pose_local.heading = param.terminal_target_heading * kDeg2Rad;
 
   tar_pose_global =
@@ -151,7 +149,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
       CarBodyType::EXPAND_MIRROR_TO_FRONT, consider_obs_movement_type,
       param.use_obs_height_method);
 
-  // 检查终点位置是否碰撞
   const std::shared_ptr<GJKCollisionDetector>& gjl_det_ptr =
       col_det_interface_ptr_->GetGJKColDetPtr();
 
@@ -190,7 +187,8 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   // calc max_lat_move_dist and max_lon_move_dist
   double max_lat_move_dist{0.};
   max_lat_move_dist = 0.5 * (slot_.slot_width_ - param.car_width);
-  // 车轮离车位线的距离 正数表示不能越过线 负数表示可以越过
+  // The distance between the body and the slot line: positive value indicates
+  // the line cannot be crossed, negative value means crossing is allowed
   double car2line_dist_threshold = param.car2line_dist_threshold;
   if (!is_searching_stage_) {
     car2line_dist_threshold -= 0.03;
@@ -198,7 +196,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   max_lat_move_dist -= param.car2line_dist_threshold;
   max_lat_move_dist = std::max(max_lat_move_dist, 0.0001);
   double max_lon_move_dist{0.};
-  // 首先计算不移动时车头到车位前两个角点中点距离
   double dx = slot_.origin_corner_coord_local_.pt_01_mid.x() -
               (virtual_tar_x + param.wheel_base + param.front_overhanging);
   double front_exceed_line_dx = apa_param.GetParam().max_front_exceed_line_dx;
@@ -242,7 +239,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
             << "  lat_move_step = " << lat_move_step
             << "  lon_move_step = " << lon_move_step;
 
-  // 车位内的核心区域不能有障碍物  有就直接失败
   Polygon2D polygon;
   polygon.FillTangentCircleParams(slot_.GetCustomSlotPolygon(
       2.68, -slot_.slot_length_ * 0.3, -slot_.slot_width_ * 0.25,
@@ -254,7 +250,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     return result_;
   }
 
-  // 生成纵向移动距离数组
   std::vector<double> small_lon_dist_vec;
   std::vector<double> big_lon_dist_vec;
   std::vector<std::vector<double>> all_lon_dist_vec;
@@ -277,7 +272,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     all_lon_dist_vec.emplace_back(big_lon_dist_vec);
   }
 
-  // 生成横向移动距离数组
   std::vector<double> lat_dist_vec{0.0};
   for (double lat_move_dist = lat_move_step;
        lat_move_dist < max_lat_move_dist + lat_move_step * 0.5;
@@ -304,7 +298,6 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
       for (const double lat_move_dist : lat_dist_vec) {
         for (const double lon_move_dist : lon_dist_vec) {
           std::vector<geometry_lib::PathPoint> tmp_pose_vec;
-          // 考虑车辆纵向行驶路径上 如果有障碍物 则也视为不安全
           std::vector<double> lon_path_vec{lon_move_dist - lon_buffer_,
                                            lon_move_dist, lon_move_dist + 1.0,
                                            lon_move_dist + 2.0};

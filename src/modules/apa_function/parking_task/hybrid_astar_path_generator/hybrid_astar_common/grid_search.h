@@ -33,7 +33,6 @@ struct GridMotion {
   ~GridMotion() = default;
 };
 
-// 在搜索的过程中，为了减少删除或者拷贝操作，通过标签来确认搜索层是父节点层还是子节点层
 struct NodeLayer {
   Node2d* node_layer[GS_NODE_LAYER_MAX_NUMBER];
   int32_t size = 0;

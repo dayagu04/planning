@@ -70,7 +70,6 @@ void GridSearch::GenerateNextNodes(Node2dChildSet* next_nodes,
   motion_vec.emplace_back(GridMotion(-1, 0, edge_distance));
   motion_vec.emplace_back(GridMotion(-1, 1, diagonal_distance));
 
-  // 这里的cost指到起点的距离
   for (const GridMotion& motion : motion_vec) {
     Node2d node(current_node_x + motion.move_x, current_node_y + motion.move_y,
                 XYbounds_, heuristic_grid_resolution_);
@@ -139,7 +138,7 @@ void GridSearch::DebugNodePool() {
     }
   }
 
-  cv::imwrite("/asw/planning/glog/dp_cost.png", map_matrix);
+  // cv::imwrite("/asw/planning/glog/dp_cost.png", map_matrix);
 
   return;
 }

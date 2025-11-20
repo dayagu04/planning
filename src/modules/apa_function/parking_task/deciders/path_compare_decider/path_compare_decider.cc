@@ -73,7 +73,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
     return true;
   }
 
-  // 两者换挡次数相等或者差距仅为两次 这时考虑其他因素
   const AstarPathGear challenging_cur_gear = challenging_node_->GetCurGear();
   const AstarPathGear best_cur_gear = best_node_->GetCurGear();
 
@@ -88,7 +87,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
   const SlotCoord& slot_coord =
       request_->ego_info_under_slot.slot.processed_corner_coord_local_;
 
-  // 考虑障碍物
   ObsToPathDistRelativeSlot challenging_obs_info =
       challenging_node_->GetObsDistRelativeSlot();
   ObsToPathDistRelativeSlot best_obs_info =
@@ -103,7 +101,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
     return false;
   }
 
-  // 考虑换挡点位置远离车位
   const double challenging_gear_switch_pose_dist_to_slot =
       common_math::CalTwoPosDist(challenging_gear_switch_pose.pos,
                                  slot_coord.pt_center);
@@ -120,7 +117,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
   }
 
   const AstarPathGear ref_gear = request_->inital_action_request.ref_gear;
-  // 优先选择当前挡位与参考挡位相同的路径
   if (IsGearDifferent(best_cur_gear, ref_gear) &&
       !IsGearDifferent(challenging_cur_gear, ref_gear)) {
 #if DEBUG_CHALLENGING_SUCCESS
@@ -129,11 +125,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
     return true;
   }
 
-  // 暂时根据当前挡位路径进行比较
-  // 自车在库外  路径越短越好
-  // 自车在库内  如果当前挡位是前进挡， 需要将自车位置往前至少走到库口
-
-  // 先看自车是不是在库内且准备进行前进挡揉库， 若是， 则换挡点往前至少走到库口
   const ApaSlot& slot = request_->ego_info_under_slot.slot;
   const geometry_lib::PathPoint& ego_pose =
       request_->ego_info_under_slot.cur_pose;
@@ -153,7 +144,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
     }
   }
 
-  // 换挡点最好不要过于借入太多库内空间和通道空间
   const double x_upper = 11.68;
   const double x_lower = 2.68;
   if (best_gear_switch_pose.GetX() > x_upper) {
@@ -179,7 +169,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
     }
   }
 
-  // 换挡点航向正对着车位前两个角点中间点会更容易进库？
   const double challenging_dist = CalcHeuristicPointDistance(
       challenging_gear_switch_pose.pos, challenging_gear_switch_pose.GetTheta(),
       slot.processed_corner_coord_local_.pt_01_mid);
@@ -199,8 +188,6 @@ const bool PathCompareDecider::CompareForPerpendicularTailIn() {
   }
 
   if (challenging_dist < best_dist + 1.0) {
-    // 换挡点处的航向和横向误差越小越好 但是在航向误差相差不大的情况下
-    // 选择路径更短的路径
     const double challenging_heading_err =
         std::fabs(challenging_gear_switch_pose.GetTheta());
     const double best_heading_err = std::fabs(best_gear_switch_pose.GetTheta());
