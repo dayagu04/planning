@@ -44,7 +44,7 @@ void JointDecisionInputBuilder::SetObstaclesSelector(
 }
 
 void JointDecisionInputBuilder::BuildLaneChangeInput(
-    planning::common::JointMotionPlanningInput& planning_input,
+    planning::common::JointDecisionPlanningInput& planning_input,
     std::shared_ptr<
         pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
         planning_problem_ptr,
@@ -142,7 +142,7 @@ double JointDecisionInputBuilder::CalculateComfortAcceleration(
 }
 
 void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
-    planning::common::JointMotionPlanningInput& planning_input,
+    planning::common::JointDecisionPlanningInput& planning_input,
     const LaneChangeDecisionInfo& lc_info) {
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -360,7 +360,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
 }
 
 void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
-    planning::common::JointMotionPlanningInput& planning_input) {
+    planning::common::JointDecisionPlanningInput& planning_input) {
   planning_input.set_q_ego_ref_x(lc_decision_config_.q_ego_ref_x);
   planning_input.set_q_ego_ref_y(lc_decision_config_.q_ego_ref_y);
   planning_input.set_q_ego_ref_theta(lc_decision_config_.q_ego_ref_theta);
@@ -431,7 +431,7 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
 }
 
 void JointDecisionInputBuilder::BuildObsInfo(
-    planning::common::JointMotionPlanningInput& planning_input,
+    planning::common::JointDecisionPlanningInput& planning_input,
     const LaneChangeDecisionInfo& lc_info) {
   planning_input.clear_obs_init_state();
   planning_input.clear_obs_ref_trajectory();
@@ -483,7 +483,7 @@ void JointDecisionInputBuilder::BuildObsInfo(
 }
 
 void JointDecisionInputBuilder::BuildRoadInfo(
-    planning::common::JointMotionPlanningInput& planning_input,
+    planning::common::JointDecisionPlanningInput& planning_input,
     std::shared_ptr<
         pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
         planning_problem_ptr) {

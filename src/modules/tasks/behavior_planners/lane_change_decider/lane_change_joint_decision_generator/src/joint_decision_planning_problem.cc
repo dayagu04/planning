@@ -64,7 +64,7 @@ void JointDecisionPlanningProblem::SetBoundaryPaths(
 }
 
 uint8_t JointDecisionPlanningProblem::Update(
-    planning::common::JointMotionPlanningInput &planning_input) {
+    planning::common::JointDecisionPlanningInput &planning_input) {
   obs_num_ = planning_input.obs_num();
 
   double min_tol = 0.004 * (1 + obs_num_);

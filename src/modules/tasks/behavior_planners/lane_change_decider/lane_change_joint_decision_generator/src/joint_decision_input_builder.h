@@ -8,7 +8,7 @@
 #include "joint_decision_obstacles_selector.h"
 #include "joint_decision_planning_problem.h"
 #include "joint_decision_speed_limit.h"
-#include "joint_motion_planner.pb.h"
+#include "joint_decision_planner.pb.h"
 #include "session.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_output.h"
 namespace planning {
@@ -20,7 +20,7 @@ class JointDecisionInputBuilder {
   ~JointDecisionInputBuilder() = default;
 
   void BuildLaneChangeInput(
-      planning::common::JointMotionPlanningInput& planning_input,
+      planning::common::JointDecisionPlanningInput& planning_input,
       std::shared_ptr<
           pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
           planning_problem_ptr,
@@ -32,16 +32,16 @@ class JointDecisionInputBuilder {
 
  private:
   void BuildLaneChangeWeightInfo(
-      planning::common::JointMotionPlanningInput& planning_input);
+      planning::common::JointDecisionPlanningInput& planning_input);
   void BuildLaneChangeEgoInfo(
-      planning::common::JointMotionPlanningInput& planning_input,
+      planning::common::JointDecisionPlanningInput& planning_input,
       const LaneChangeDecisionInfo& lc_info);
 
-  void BuildObsInfo(planning::common::JointMotionPlanningInput& planning_input,
+  void BuildObsInfo(planning::common::JointDecisionPlanningInput& planning_input,
                     const LaneChangeDecisionInfo& lc_info);
 
   void BuildRoadInfo(
-      planning::common::JointMotionPlanningInput& planning_input,
+      planning::common::JointDecisionPlanningInput& planning_input,
       std::shared_ptr<
           pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
           planning_problem_ptr);

@@ -6,7 +6,7 @@
 #include "ilqr_core.h"
 #include "joint_decision_planning_cost.h"
 #include "joint_decision_planning_model.h"
-#include "joint_motion_planner.pb.h"
+#include "joint_decision_planner.pb.h"
 #include "math_lib.h"
 #include "utils/kd_path.h"
 namespace pnc {
@@ -17,8 +17,8 @@ class JointDecisionPlanningProblem {
   JointDecisionPlanningProblem() = default;
   virtual ~JointDecisionPlanningProblem() = default;
   void Init();
-  uint8_t Update(planning::common::JointMotionPlanningInput& planning_input);
-  const planning::common::JointMotionPlanningOutput& GetOutput() const {
+  uint8_t Update(planning::common::JointDecisionPlanningInput& planning_input);
+  const planning::common::JointDecisionPlanningOutput& GetOutput() const {
     return planning_output_;
   }
   void SetBoundaryPaths(
@@ -34,7 +34,7 @@ class JointDecisionPlanningProblem {
 
  private:
   std::shared_ptr<ilqr_solver::iLqr> ilqr_core_ptr_;
-  planning::common::JointMotionPlanningOutput planning_output_;
+  planning::common::JointDecisionPlanningOutput planning_output_;
   ilqr_solver::State init_state_;
   ilqr_solver::ControlVec u_vec_;
   int32_t obs_num_ = 0;

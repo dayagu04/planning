@@ -4,7 +4,7 @@
 #include <string>
 
 #include "context/planning_context.h"
-#include "joint_motion_planner.pb.h"
+#include "joint_decision_planner.pb.h"
 #include "lat_lon_joint_decision_output.h"
 #include "src/joint_decision_input_builder.h"
 #include "src/joint_decision_obstacles_selector.h"
@@ -28,7 +28,7 @@ class LatLonJointDecision : public Task {
   std::string name_;
   std::shared_ptr<pnc::lane_change_joint_decision::JointDecisionPlanningProblem>
       planning_problem_ptr_;
-  planning::common::JointMotionPlanningInput planning_input_;
+  planning::common::JointDecisionPlanningInput planning_input_;
   std::unique_ptr<
       planning::lane_change_joint_decision::JointDecisionInputBuilder>
       input_builder_;

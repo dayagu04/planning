@@ -39,6 +39,7 @@ import "spatio_temporal_union_dp_input.proto";
 import "simlulation_param.proto";
 import "potential_dangerous_agent_decider_info.proto";
 import "reference_path_smooth.proto";
+import "joint_decision_planner.proto";
 
 message TopicTimeList {
   optional uint64 fusion_object = 1;
@@ -153,6 +154,6 @@ message PlanningDebugInfo {
   optional ReferencePathSmoothInfo reference_path_smooth_info = 47;
   optional JointMotionPlanningInput joint_motion_planning_input = 48;
   optional JointMotionPlanningOutput joint_motion_planning_output = 49;
-  optional JointMotionPlanningInput joint_decision_input = 50;
-  optional JointMotionPlanningOutput joint_decision_output = 51;
+  optional JointDecisionPlanningInput joint_decision_input = 50;
+  optional JointDecisionPlanningOutput joint_decision_output = 51;
 }
