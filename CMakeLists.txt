@@ -7,14 +7,17 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+# 取消debug_info裁剪
 # 量产版本，裁剪debuginfo记录
-if(PRODUCTION_BUILD)
-  message("production platform, disable json and proto debug !!!")
-else()
-  add_definitions(-DENABLE_PROTO_LOG)
-  add_definitions(-DENABLE_JSON_LOG)
-  message("enable json and proto debug")
-endif()
+# if(PRODUCTION_BUILD)
+#   message("production platform, disable json and proto debug !!!")
+# else()
+#   add_definitions(-DENABLE_PROTO_LOG)
+#   add_definitions(-DENABLE_JSON_LOG)
+#   message("enable json and proto debug")
+# endif()
+add_definitions(-DENABLE_PROTO_LOG)
+add_definitions(-DENABLE_JSON_LOG)
 
 if(PP_ENABLE OR PYBIND_TOOL_ENABLE OR THIRDPARTY_ENABLE OR INTERFACE_ENABLE OR AD_ENABLE)
   set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_LIST_DIR}/install")
