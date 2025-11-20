@@ -190,9 +190,9 @@ void EgoLaneTrackManger::TrackEgoLane(
 
         if (!is_in_lane_borrow_status && ego_in_split_region_ &&
             ego_dis_to_split_exchange_area_start <
-                kSplitSelectEgoToExchangeEreaDistanceThd &&
+                kSplitSelectEgoToExchangeAreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
           bool is_on_road_select_ramp = CheckIfInRoadSelectRampForSdpro(
               relative_id_lanes, order_ids_of_same_zero_relative_id);
           is_on_road_select_ramp_situation_ = is_on_road_select_ramp;
@@ -246,9 +246,9 @@ void EgoLaneTrackManger::TrackEgoLane(
 
         if (ego_in_split_region_ &&
             ego_dis_to_split_exchange_area_start >=
-                kSplitSelectEgoToExchangeEreaDistanceThd &&
+                kSplitSelectEgoToExchangeAreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
@@ -320,7 +320,7 @@ void EgoLaneTrackManger::TrackEgoLane(
         if (zero_relative_id_nums > 1 && lane_keep_status &&
             ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBosthLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
           if (enable_use_ground_mark) {
             ProcessSplitWithGroundMark(relative_id_lanes,
                                        order_ids_of_same_zero_relative_id);
