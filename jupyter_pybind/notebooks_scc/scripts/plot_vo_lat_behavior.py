@@ -10,7 +10,7 @@ from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 from bokeh.resources import INLINE
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_04228/trigger/20250707/20250707-20-32-53/data_collection_CHERY_E0Y_04228_EVENT_FILTER_2025-07-07-20-32-53_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20251118/20251118-11-17-51/data_collection_CHERY_M32T_40735_EVENT_KEY_2025-11-18-11-17-51_no_camera.bag"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))

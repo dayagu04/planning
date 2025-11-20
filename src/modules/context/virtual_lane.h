@@ -168,7 +168,8 @@ class VirtualLane {
   const std::pair<bool, double> &get_feasible_lane_distance() const {
     return feasible_lane_distance_;
   };
-  void set_feasible_lane_distance(const std::pair<bool, double> &feasible_lane_distance) {
+  void set_feasible_lane_distance(
+      const std::pair<bool, double> &feasible_lane_distance) {
     feasible_lane_distance_ = feasible_lane_distance;
   }
 

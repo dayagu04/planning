@@ -63,6 +63,7 @@ class RouteInfo {
 
   void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }
+  const MLCDeciderRouteInfo& get_MLC_decider_route_info() { return mlc_decider_route_info_; }
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool get_sdmap_valid() const { return sdmap_valid_; }
   const ad_common::sdmap::SDMap& get_sd_map() const { return sd_map_; }
