@@ -4259,12 +4259,28 @@ bool LaneChangeStateMachineManager::
     JSON_DEBUG_VECTOR("ego_vel_vec", ego_vel_vec, 2);      // 自车速度 m/s
     JSON_DEBUG_VECTOR("rear_distance_vec", rear_distance_vec, 2);  // 后车到自车的纵向距离 m
   } 
-  
   if (distance < 0.01) {
-    
     return false;
   }
-
+  if(!is_front_agent){
+    // 近距离尾随的后车，发起变道安全感需要距离持续拉开
+    bool is_rear_close = false;
+    double rear_close_distance_threshold = lc_safety_check_config_.rear_close_distance_threshold;// exe 后放大
+    double rear_close_speed_diff_threshold = lc_safety_check_config_.rear_close_speed_diff_threshold;
+    if(is_executing){
+      rear_close_distance_threshold = rear_close_distance_threshold * lc_safety_check_config_.exe_rear_distance_ratio;;
+      rear_close_speed_diff_threshold = rear_close_speed_diff_threshold * lc_safety_check_config_.exe_rear_speed_ratio;
+    }
+    double rear_distance = ego_trajs_future_[0].s - agent_node->node_s()
+                          - agent_node->node_length() * 0.5 - kEgoBackEdgeToRearAxleDistance;
+    is_rear_close = rear_distance < rear_close_distance_threshold;
+    if(is_rear_close && ego_press_line_ratio < 0.001){
+      // 如果后方安全距离没有充分拉大的趋势，且后车速度大于自车速度减去阈值，不允许变道
+      if(agent_traj[0].v > ego_trajs_future_[0].v + rear_close_speed_diff_threshold){
+        return false;
+      }
+    }
+  }
   return true;
 }
 
