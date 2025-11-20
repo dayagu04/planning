@@ -240,6 +240,7 @@ fig_vehicle_state.line('time', 'state_driver_hand_trq', source = adas_json_list_
 fig_vehicle_state.line('time', 'state_ego_curvature', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ego_curvature')
 fig_vehicle_state.line('time', 'state_ctrl_output_steering_angle', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ctrl_output_steering_angle')
 fig_vehicle_state.line('time', 'state_steer_wheel_angle_degree', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'steer_wheel_angle_degree')
+fig_vehicle_state.line('time', 'state_dispaly_vehicle_speed', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'state_dispaly_vehicle_speed')
 
 f_dynamic_state = fig_dynamic_state.line('time', 'state_left_departure_speed', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'left_departure_speed')
 fig_dynamic_state.line('time', 'state_right_departure_speed', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'right_departure_speed')

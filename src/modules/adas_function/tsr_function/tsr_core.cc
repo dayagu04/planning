@@ -30,22 +30,6 @@ iflyauto::NotificationMainSwitch TsrCore::UpdateTsrMainSwitch(void) {
   return function_state_machine_info_ptr->switch_sts.tsr_main_switch;
 }
 
-// Enable Code
-// 0: 正常
-// >0: 异常
-uint16 TsrCore::UpdateTsrEnableCode(void) {
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
-
-  uint16 enable_code = 0;
-
-  return enable_code;
-}
-
 // Disable Code
 // 0: 正常
 // >0: 异常
@@ -59,7 +43,48 @@ uint16 TsrCore::UpdateTsrDisableCode(void) {
 
   uint16 disable_code = 0;
 
-  return disable_code;
+  // bit 0
+  // TSR感知模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->tsr_info_node_valid == false) {
+    disable_code += uint16_bit[0];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 1
+  // 判断vehicle_service模块节点通讯丢失,持续0.5s
+  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
+    disable_code += uint16_bit[1];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 判断仪表车速信号有效性
+  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+    disable_code += uint16_bit[2];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // 判断仪表车速信号有效性
+  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+       false)) {
+    disable_code += uint16_bit[3];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 判断横摆角速度信号有效性
+  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+    disable_code += uint16_bit[4];
+  } else {
+    /*do nothing*/
+  }
+
+  return disable_code & GetContext.get_param()->tsr_disable_code_maskcode;
 }
 
 // Fault Code
@@ -76,55 +101,6 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
   uint16 fault_code = 0;
 
   // bit 0
-  // 前视摄像头有故障(信号没有给出)
-  // if (vehicle_service_output_info_ptr->... == false) {
-  //   fault_code += uint16_bit[0];
-  // } else {
-  //   /*do nothing*/
-  // }
-
-  // bit 1
-  // TSR感知模块节点通讯丢失，持续0.5s
-  if (GetContext.mutable_state_info()->tsr_info_node_valid == false) {
-    fault_code += uint16_bit[1];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 2
-  // 判断vehicle_service模块节点通讯丢失,持续0.5s
-  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
-    fault_code += uint16_bit[2];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 3
-  // 判断仪表车速信号有效性
-  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    fault_code += uint16_bit[3];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 4
-  // 判断仪表车速信号有效性
-  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
-       false)) {
-    fault_code += uint16_bit[4];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 5
-  // 判断横摆角速度信号有效性
-  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    fault_code += uint16_bit[5];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 6
   // 故障降级
   auto degraded_driving_function_info_ptr =
       &GetContext.mutable_session()
@@ -139,12 +115,12 @@ uint16 TsrCore::UpdateTsrFaultCode(void) {
            iflyauto::ERROR_SAFE_STOP) ||
        (degraded_driving_function_info_ptr->tsr.degraded ==
            iflyauto::MCU_COMM_SHUTDOWN)) {
-    fault_code += uint16_bit[6];
+    fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
 
-  return fault_code;
+  return fault_code & GetContext.get_param()->tsr_fault_code_maskcode;
 }
 
 iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
@@ -167,23 +143,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
-                             TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
-    // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
-    if (tsr_main_switch_ ==
-            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
-        tsr_main_switch_ ==
-            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
-      tsr_state =
-          iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
-    } else if (tsr_fault_code_ == 0) {
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-    } else {
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
-    }
-  } else if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
-                                    TSR_FUNCTION_FSM_WORK_STATE_OFF) {
+                             TSR_FUNCTION_FSM_WORK_STATE_OFF) {
     // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_OFF状态
     if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::
                                        NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
@@ -214,7 +174,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
     } else if (tsr_fault_code_) {
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
-    } else if (tsr_enable_code_ == 0) {
+    } else if (!tsr_disable_code_) {
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
     } else {
@@ -898,19 +858,11 @@ void TsrCore::RunOnce(void) {
   // 更新tsr开关状态
   tsr_main_switch_ = UpdateTsrMainSwitch();
 
-  // 更新tsr_enable_code_
-  tsr_enable_code_ = UpdateTsrEnableCode();
-
   // 更新tsr_disable_code_
   tsr_disable_code_ = UpdateTsrDisableCode();
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
-
-  if (GetContext.get_param()->tsr_use_json_code) {
-    // 如果使用json，则使用配置文件中的故障码
-    tsr_fault_code_ = GetContext.get_param()->tsr_fault_code;
-  }
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();
@@ -956,7 +908,6 @@ void TsrCore::RunOnce(void) {
 
   // log
   JSON_DEBUG_VALUE("tsr_main_switch_", (int)tsr_main_switch_);
-  JSON_DEBUG_VALUE("tsr_enable_code_", tsr_enable_code_);
   JSON_DEBUG_VALUE("tsr_disable_code_", tsr_disable_code_);
   JSON_DEBUG_VALUE("tsr_fault_code_", tsr_fault_code_);
   JSON_DEBUG_VALUE("tsr_state_", (int)tsr_state_);

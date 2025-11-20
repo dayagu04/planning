@@ -200,9 +200,9 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
       GetContext.get_road_info()->current_lane.right_line.c2;
 
   if (((fabs(left_line_C2_temp) < 0.5 / 220) &&
-       ((GetContext.get_road_info()->current_lane.left_line.valid == true))) ||
-      (fabs(right_line_C2_temp) < 0.5 / 220) &&
-          (GetContext.get_road_info()->current_lane.right_line.valid == true)) {
+       (GetContext.get_road_info()->current_lane.left_line.valid == true)) ||
+      ((fabs(right_line_C2_temp) < 0.5 / 220) &&
+       (GetContext.get_road_info()->current_lane.right_line.valid == true))) {
     curve_C2_supp_recover_duration_ += GetContext.get_param()->dt;
     if (curve_C2_supp_recover_duration_ > 60.0) {
       curve_C2_supp_recover_duration_ = 60.0;
@@ -236,6 +236,98 @@ uint32 LdwCore::UpdateLdwEnableCode(void) {
     /*do nothing*/
   }
 
+  // bit 0
+  // 实际车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+    enable_code += uint16_bit[15];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 1
+  // 仪表车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+       false)) {
+    enable_code += uint16_bit[16];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 横摆角速度信号无效
+  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+    enable_code += uint16_bit[17];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // 方向盘转角速度信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
+       false)) {
+    enable_code += uint16_bit[18];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 方向盘转速信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
+       false)) {
+    enable_code += uint16_bit[19];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 5
+  // 油门踏板信号无效
+  if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
+       false)) {
+    enable_code += uint16_bit[19];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
+  if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
+    enable_code += uint16_bit[20];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 转向灯信号无效
+  if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
+    enable_code += uint16_bit[21];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 车道线融合模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
+    enable_code += uint16_bit[22];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 9
+  // vehicle_service模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
+    enable_code += uint16_bit[23];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 10
+  // 定位模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->localization_info_node_valid ==
+       false)) {
+    enable_code += uint16_bit[24];
+  } else {
+    /*do nothing*/
+  }
   return enable_code & GetContext.get_param()->ldw_enable_code_maskcode;
 }
 
@@ -450,28 +542,11 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
   } else {
     /*do nothing*/
   }
-  return disable_code & GetContext.get_param()->ldw_disable_code_maskcode;
-}
-
-uint32 LdwCore::UpdateLdwFaultCode(void) {
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
-  auto degraded_driving_function_info_ptr =
-      &GetContext.mutable_session()
-           ->mutable_environmental_model()
-           ->get_local_view()
-           .degraded_driving_function_info;
-
-  uint32 ldw_fault_code = 0;
 
   // bit 0
   // 实际车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    ldw_fault_code += uint16_bit[0];
+    disable_code += uint16_bit[15];
   } else {
     /*do nothing*/
   }
@@ -480,7 +555,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // 仪表车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
        false)) {
-    ldw_fault_code += uint16_bit[1];
+    disable_code += uint16_bit[16];
   } else {
     /*do nothing*/
   }
@@ -488,7 +563,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 2
   // 横摆角速度信号无效
   if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    ldw_fault_code += uint16_bit[2];
+    disable_code += uint16_bit[17];
   } else {
     /*do nothing*/
   }
@@ -497,7 +572,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // 方向盘转角速度信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
        false)) {
-    ldw_fault_code += uint16_bit[3];
+    disable_code += uint16_bit[18];
   } else {
     /*do nothing*/
   }
@@ -506,7 +581,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // 方向盘转速信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
        false)) {
-    ldw_fault_code += uint16_bit[4];
+    disable_code += uint16_bit[19];
   } else {
     /*do nothing*/
   }
@@ -515,7 +590,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // 油门踏板信号无效
   if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
        false)) {
-    ldw_fault_code += uint16_bit[5];
+    disable_code += uint16_bit[19];
   } else {
     /*do nothing*/
   }
@@ -523,7 +598,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 6
   // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
   if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    ldw_fault_code += uint16_bit[6];
+    disable_code += uint16_bit[20];
   } else {
     /*do nothing*/
   }
@@ -531,7 +606,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 7
   // 转向灯信号无效
   if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    ldw_fault_code += uint16_bit[7];
+    disable_code += uint16_bit[21];
   } else {
     /*do nothing*/
   }
@@ -539,7 +614,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 8
   // 车道线融合模块节点通讯丢失
   if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    ldw_fault_code += uint16_bit[8];
+    disable_code += uint16_bit[22];
   } else {
     /*do nothing*/
   }
@@ -547,7 +622,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // bit 9
   // vehicle_service模块节点通讯丢失
   if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    ldw_fault_code += uint16_bit[9];
+    disable_code += uint16_bit[23];
   } else {
     /*do nothing*/
   }
@@ -556,20 +631,33 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
   // 定位模块节点通讯丢失
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
-    ldw_fault_code += uint16_bit[10];
+    disable_code += uint16_bit[24];
   } else {
     /*do nothing*/
   }
+  return disable_code & GetContext.get_param()->ldw_disable_code_maskcode;
+}
+
+uint32 LdwCore::UpdateLdwFaultCode(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+
+  uint32 ldw_fault_code = 0;
+
   // bit 13
   // 故障降级
   if ((degraded_driving_function_info_ptr->ldw.degraded == iflyauto::INHIBIT) ||
-       (degraded_driving_function_info_ptr->ldw.degraded ==
-           iflyauto::ERROR_DEGRADED) ||
-       (degraded_driving_function_info_ptr->ldw.degraded ==
-           iflyauto::ERROR_SAFE_STOP) ||
-       (degraded_driving_function_info_ptr->ldw.degraded ==
-           iflyauto::MCU_COMM_SHUTDOWN)) {
-    ldw_fault_code += uint16_bit[13];
+      (degraded_driving_function_info_ptr->ldw.degraded ==
+       iflyauto::ERROR_DEGRADED) ||
+      (degraded_driving_function_info_ptr->ldw.degraded ==
+       iflyauto::ERROR_SAFE_STOP) ||
+      (degraded_driving_function_info_ptr->ldw.degraded ==
+       iflyauto::MCU_COMM_SHUTDOWN)) {
+    ldw_fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }

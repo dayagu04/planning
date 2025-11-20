@@ -40,9 +40,6 @@ class TsrCore {
       iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
   iflyauto::NotificationMainSwitch UpdateTsrMainSwitch(void);
 
-  uint16 tsr_enable_code_ = 255;
-  uint16 UpdateTsrEnableCode(void);
-
   uint16 tsr_disable_code_ = 255;
   uint16 UpdateTsrDisableCode(void);
 

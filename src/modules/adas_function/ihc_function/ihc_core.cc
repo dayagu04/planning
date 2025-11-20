@@ -81,16 +81,6 @@ void IhcCore::RunOnce(void) {
   ihc_sys_.state.ihc_fault_code = UpdateIhcFaultCode();
   ihc_sys_.state.ihc_active_code = IhcActiveCode();
 
-  if (GetContext.get_param()->ihc_use_json_code) {
-    // 如果使用json，则使用配置文件中的使能码、禁用码、故障码
-    ihc_sys_.state.ihc_high_beam_code =
-        GetContext.get_param()->ihc_high_beam_code;
-    ihc_sys_.state.ihc_low_beam_code =
-        GetContext.get_param()->ihc_low_beam_code;
-    ihc_sys_.state.ihc_fault_code = GetContext.get_param()->ihc_fault_code;
-    ihc_sys_.state.ihc_active_code = GetContext.get_param()->ihc_active_code;
-  }
-
   ihc_sys_.state.ihc_state = IHCStateMachine();
 
   // 记录上次远光灯请求状态
@@ -230,25 +220,83 @@ void IhcCore::GetInputInfo() {
 // IHC standby->active码: 0: 使能, 其他: 禁用 (全部满足)
 uint16 IhcCore::IhcActiveCode() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  uint16 ihc_active_code_temp = 0;
-  // condition0: IGN ON
-  // 待补充
 
-  // condition1: 大灯开关挡位在AUTO档 (auto_light_state一直为false)
+  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
+                                              ->mutable_environmental_model()
+                                              ->get_local_view()
+                                              .vehicle_service_output_info;
+
+  uint16 ihc_active_code_temp = 0;
+
+  // bit 0: 大灯开关挡位在AUTO档 (auto_light_state一直为false)
   if (ihc_sys_.input.auto_light_state != true) {
     ihc_active_code_temp += uint16_bit[0];
   } else {
     // do nothing
   }
 
-  // condition2: 近光灯点亮
-  // if (ihc_sys_.input.low_beam_state != true) {
-  //   ihc_active_code_temp += uint16_bit[2];
-  // } else {
-  //   // do nothing
-  // }
+  // bit 1
+  // IHC感知模块节点通讯丢失，持续5s
+  if (GetContext.mutable_state_info()->ihc_info_node_valid == false) {
+    ihc_active_code_temp += uint16_bit[1];
+  } else {
+    /*do nothing*/
+  }
 
-  return ihc_active_code_temp;
+  // bit 2
+  // 障碍物融合模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->obstacle_fusion_info_node_valid ==
+      false) {
+    ihc_active_code_temp += uint16_bit[2];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // vehicle_service模块节点通讯丢失，持续0.5s
+  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
+    ihc_active_code_temp += uint16_bit[3];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 实际车速信号无效
+  if (vehicle_service_output_info_ptr->vehicle_speed_available == false) {
+    ihc_active_code_temp += uint16_bit[4];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 5
+  // 仪表车速信号无效
+  if (vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+      false) {
+    ihc_active_code_temp += uint16_bit[5];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 雾灯信号无效
+  if (vehicle_service_output_info_ptr->front_fog_light_state_available ==
+          false ||
+      vehicle_service_output_info_ptr->front_fog_light_state_available ==
+          false) {
+    ihc_active_code_temp += uint16_bit[6];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 雨刮信号无效
+  if (vehicle_service_output_info_ptr->wiper_state_available == false) {
+    ihc_active_code_temp += uint16_bit[7];
+  } else {
+    /*do nothing*/
+  }
+
+  return ihc_active_code_temp & GetContext.get_param()->ihc_active_code_maskcode;
 }
 
 // 远光灯使能码: 0: 使能, 其他: 禁用 (全部满足)
@@ -318,7 +366,7 @@ uint16 IhcCore::UpdateIhcHighBeamCode() {
     // do nothing
   }
 
-  return ihc_enable_code_temp;
+  return ihc_enable_code_temp & GetContext.get_param()->ihc_high_beam_code_maskcode;
 }
 
 // 近光灯使能码: 0: 禁用, 其他: 使能 (任一满足)
@@ -382,90 +430,17 @@ uint16 IhcCore::UpdateIhcLowBeamCode() {
     // do nothing
   }
 
-  return ihc_disable_code_temp;
+  return ihc_disable_code_temp & GetContext.get_param()->ihc_low_beam_code_maskcode;
 }
 
 // 故障码: 0: 无故障, 其他: 故障 (任一满足)
 uint16 IhcCore::UpdateIhcFaultCode() {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
 
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
-
   uint16 fault_code = 0;
 
   // bit 0
-  // 前视摄像头有故障(信号没有给出)
-  // if (vehicle_service_output_info_ptr->... == false) {
-  //   fault_code += uint16_bit[0];
-  // } else {
-  //   /*do nothing*/
-  // }
 
-  // bit 1
-  // IHC感知模块节点通讯丢失，持续5s
-  if (GetContext.mutable_state_info()->ihc_info_node_valid == false) {
-    fault_code += uint16_bit[1];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 2
-  // 障碍物融合模块节点通讯丢失，持续0.5s
-  if (GetContext.mutable_state_info()->obstacle_fusion_info_node_valid ==
-      false) {
-    fault_code += uint16_bit[2];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 3
-  // vehicle_service模块节点通讯丢失，持续0.5s
-  if (GetContext.mutable_state_info()->vehicle_service_node_valid == false) {
-    fault_code += uint16_bit[3];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 4
-  // 实际车速信号无效
-  if (vehicle_service_output_info_ptr->vehicle_speed_available == false) {
-    fault_code += uint16_bit[4];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 5
-  // 仪表车速信号无效
-  if (vehicle_service_output_info_ptr->vehicle_speed_display_available ==
-      false) {
-    fault_code += uint16_bit[5];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 6
-  // 雾灯信号无效
-  if (vehicle_service_output_info_ptr->front_fog_light_state_available ==
-          false ||
-      vehicle_service_output_info_ptr->rear_fog_light_state_available ==
-          false) {
-    fault_code += uint16_bit[6];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 7
-  // 雨刮信号无效
-  if (vehicle_service_output_info_ptr->wiper_state_available == false) {
-    fault_code += uint16_bit[7];
-  } else {
-    /*do nothing*/
-  }
-
-  // bit 8
   // 故障降级
   auto degraded_driving_function_info_ptr =
       &GetContext.mutable_session()
@@ -480,12 +455,12 @@ uint16 IhcCore::UpdateIhcFaultCode() {
            iflyauto::ERROR_SAFE_STOP) ||
        (degraded_driving_function_info_ptr->ihc.degraded ==
            iflyauto::MCU_COMM_SHUTDOWN)) {
-    fault_code += uint16_bit[8];
+    fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
 
-  return fault_code;
+  return fault_code & GetContext.get_param()->ihc_fault_code_maskcode;
 }
 
 iflyauto::IHCFunctionFSMWorkState IhcCore::IHCStateMachine() {

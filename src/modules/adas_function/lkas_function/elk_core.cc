@@ -267,6 +267,116 @@ uint16 ElkCore::UpdateElkEnableCode(void) {
   } else {
     /*do nothing*/
   }
+  // bit 0
+  // 实际车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+    enable_code += uint16_bit[16];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 1
+  // 仪表车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+       false)) {
+    enable_code += uint16_bit[17];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 横摆角速度信号无效
+  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+    enable_code += uint16_bit[18];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // 方向盘转角速度信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
+       false)) {
+    enable_code += uint16_bit[19];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 方向盘转速信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
+       false)) {
+    enable_code += uint16_bit[20];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 5
+  // 油门踏板信号无效
+  if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
+       false)) {
+    enable_code += uint16_bit[21];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
+  if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
+    enable_code += uint16_bit[22];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 转向灯信号无效
+  if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
+    enable_code += uint16_bit[23];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 驾驶员手力矩信号无效
+  if ((vehicle_service_output_info_ptr->driver_hand_torque_available ==
+       false)) {
+    enable_code += uint16_bit[24];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 9
+  // 横向控制执行器状态异常
+  if ((vehicle_service_output_info_ptr
+           ->pilot_lat_control_actuator_status_available == false)) {
+    enable_code += uint16_bit[25];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 10
+  // 车道线融合模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
+    enable_code += uint16_bit[26];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 11
+  // vehicle_service模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
+    enable_code += uint16_bit[27];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 12
+  // 定位模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->localization_info_node_valid ==
+       false)) {
+    enable_code += uint16_bit[28];
+  } else {
+    /*do nothing*/
+  }
 
   return enable_code & GetContext.get_param()->elk_enable_code_maskcode;
 }
@@ -503,29 +613,10 @@ uint16 ElkCore::UpdateElkDisableCode(void) {
   // } else {
   //   /*do nothing*/
   // }
-
-  return disable_code & GetContext.get_param()->elk_disable_code_maskcode;
-}
-
-uint16 ElkCore::UpdateElkFaultCode(void) {
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
-
-  auto degraded_driving_function_info_ptr =
-      &GetContext.mutable_session()
-           ->mutable_environmental_model()
-           ->get_local_view()
-           .degraded_driving_function_info;
-
-  uint16 elk_fault_code = 0;
   // bit 0
   // 实际车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    elk_fault_code += uint16_bit[0];
+    disable_code += uint16_bit[16];
   } else {
     /*do nothing*/
   }
@@ -534,7 +625,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 仪表车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
        false)) {
-    elk_fault_code += uint16_bit[1];
+    disable_code += uint16_bit[17];
   } else {
     /*do nothing*/
   }
@@ -542,7 +633,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 2
   // 横摆角速度信号无效
   if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    elk_fault_code += uint16_bit[2];
+    disable_code += uint16_bit[18];
   } else {
     /*do nothing*/
   }
@@ -551,7 +642,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 方向盘转角速度信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
        false)) {
-    elk_fault_code += uint16_bit[3];
+    disable_code += uint16_bit[19];
   } else {
     /*do nothing*/
   }
@@ -560,7 +651,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 方向盘转速信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
        false)) {
-    elk_fault_code += uint16_bit[4];
+    disable_code += uint16_bit[20];
   } else {
     /*do nothing*/
   }
@@ -569,7 +660,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 油门踏板信号无效
   if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
        false)) {
-    elk_fault_code += uint16_bit[5];
+    disable_code += uint16_bit[21];
   } else {
     /*do nothing*/
   }
@@ -577,7 +668,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 6
   // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
   if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    elk_fault_code += uint16_bit[6];
+    disable_code += uint16_bit[22];
   } else {
     /*do nothing*/
   }
@@ -585,7 +676,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 7
   // 转向灯信号无效
   if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    elk_fault_code += uint16_bit[7];
+    disable_code += uint16_bit[23];
   } else {
     /*do nothing*/
   }
@@ -594,7 +685,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 驾驶员手力矩信号无效
   if ((vehicle_service_output_info_ptr->driver_hand_torque_available ==
        false)) {
-    elk_fault_code += uint16_bit[8];
+    disable_code += uint16_bit[24];
   } else {
     /*do nothing*/
   }
@@ -603,7 +694,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 横向控制执行器状态异常
   if ((vehicle_service_output_info_ptr
            ->pilot_lat_control_actuator_status_available == false)) {
-    elk_fault_code += uint16_bit[9];
+    disable_code += uint16_bit[25];
   } else {
     /*do nothing*/
   }
@@ -611,7 +702,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 10
   // 车道线融合模块节点通讯丢失
   if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    elk_fault_code += uint16_bit[10];
+    disable_code += uint16_bit[26];
   } else {
     /*do nothing*/
   }
@@ -619,7 +710,7 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // bit 11
   // vehicle_service模块节点通讯丢失
   if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    elk_fault_code += uint16_bit[11];
+    disable_code += uint16_bit[27];
   } else {
     /*do nothing*/
   }
@@ -628,17 +719,34 @@ uint16 ElkCore::UpdateElkFaultCode(void) {
   // 定位模块节点通讯丢失
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
-    elk_fault_code += uint16_bit[12];
+    disable_code += uint16_bit[28];
   } else {
     /*do nothing*/
   }
 
+  return disable_code & GetContext.get_param()->elk_disable_code_maskcode;
+}
+
+uint16 ElkCore::UpdateElkFaultCode(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto degraded_driving_function_info_ptr =
+      &GetContext.mutable_session()
+           ->mutable_environmental_model()
+           ->get_local_view()
+           .degraded_driving_function_info;
+
+  uint16 elk_fault_code = 0;
+
   // bit 13
   // 故障降级
-  if ((degraded_driving_function_info_ptr->elk.degraded == iflyauto::INHIBIT ||
-       degraded_driving_function_info_ptr->elk.degraded ==
-           iflyauto::ERROR_DEGRADED)) {
-    elk_fault_code += uint16_bit[13];
+  if ((degraded_driving_function_info_ptr->elk.degraded == iflyauto::INHIBIT) ||
+      (degraded_driving_function_info_ptr->elk.degraded ==
+       iflyauto::ERROR_DEGRADED) ||
+      (degraded_driving_function_info_ptr->elk.degraded ==
+       iflyauto::ERROR_SAFE_STOP) ||
+      (degraded_driving_function_info_ptr->elk.degraded ==
+       iflyauto::MCU_COMM_SHUTDOWN)) {
+    elk_fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }

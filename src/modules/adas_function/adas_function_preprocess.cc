@@ -181,22 +181,20 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "lane_line_width");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_switch, bool,
                        "ihc_high_beam_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_use_json_code, bool,
-                       "ihc_use_json_code");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_set_main_switch, bool,
                        "ihc_set_main_switch");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_code, int,
-                       "ihc_high_beam_code");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_low_beam_code, int,
-                       "ihc_low_beam_code");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code, int,
-                       "ihc_fault_code");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code, int,
-                       "ihc_active_code");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_use_json_code, bool,
-                       "tsr_use_json_code");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code, int,
-                       "tsr_fault_code");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_code_maskcode, int,
+                       "ihc_high_beam_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_low_beam_code_maskcode, int,
+                       "ihc_low_beam_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_fault_code_maskcode, int,
+                       "ihc_fault_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code_maskcode, int,
+                       "ihc_active_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_disable_code_maskcode, int,
+                       "tsr_disable_code_maskcode");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code_maskcode, int,  
+                       "tsr_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_vel_vector,
                        std::vector<double>, "lka_vel_vector");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lka_tlc_vector,

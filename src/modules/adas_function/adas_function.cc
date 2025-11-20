@@ -502,7 +502,7 @@ void AdasFunction::TestLkasForHmi(void) {
         iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
   } else {
     GetContext.mutable_output_info()->tsr_output_info_.tsr_state_ = iflyauto::
-        TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+        TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
   }
   GetContext.mutable_output_info()->tsr_output_info_.tsr_warning_ = false;
   GetContext.mutable_output_info()->tsr_output_info_.tsr_speed_limit_ = 0;
