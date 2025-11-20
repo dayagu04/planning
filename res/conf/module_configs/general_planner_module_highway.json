@@ -1450,8 +1450,8 @@
     "ttc_decay_factor": 0.90,
     "press_line_ratio_threshold": 0.1,
     "rear_close_distance_threshold": 6.0,
-    "rear_close_speed_diff_threshold": 1.0,
-    "exe_rear_speed_ratio": 1.2,
+    "rear_close_speed_diff_threshold": 1.5,
+    "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
