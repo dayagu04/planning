@@ -61,7 +61,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   SamplePolySpeedAdjustDeciderConfig config_;
   LanChangeSafetyCheckConfig lc_safety_distance_config_;
 
-  AgentInfo leading_veh_;
+  LeadingAgentInfo leading_veh_;
 
   double ego_v_;
   double ego_a_;

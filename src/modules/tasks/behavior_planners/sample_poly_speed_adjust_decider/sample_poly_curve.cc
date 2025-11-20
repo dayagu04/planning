@@ -135,8 +135,7 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
 void SampleQuarticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
-    const double leading_veh_s, const double leading_veh_v,
-    int32_t leading_veh_id, bool enable_merge_decelaration,
+    const LeadingAgentInfo& leading_veh, bool enable_merge_decelaration,
     double speed_differ_gain, double distance_to_stop_point,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config,
     const double cur_time) {
@@ -208,11 +207,22 @@ void SampleQuarticPolynomialCurve::CalcCost(
     }
   }
 
-  if (leading_veh_id != kNoAgentId && leading_veh_id != -1 &&
+  int temp_index = static_cast<int>(arrived_t_ / kTimeResolution + 0.51);
+  double traveled_distance = 0.0;
+  double leading_end_v = 0.0;
+  if(temp_index < leading_veh.prediction_path.size()){
+    traveled_distance = leading_veh.prediction_path[temp_index].first;
+    leading_end_v = leading_veh.prediction_path[temp_index].second;
+  }else{
+    traveled_distance = leading_veh.v * arrived_t_;
+    leading_end_v = leading_veh.v;
+  }
+
+  if (leading_veh.id != kNoAgentId && leading_veh.id != -1 &&
       anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
     follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
     leading_veh_follow_s_cost_.GetCost(
-        leading_veh_s + leading_veh_v * arrived_t_, arrived_v_, arrived_s_);
+        leading_veh.center_s + traveled_distance, arrived_v_, arrived_s_);
   }
 
   gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
@@ -244,10 +254,10 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, true);
 
-  if (leading_veh_id != kNoAgentId && leading_veh_id != -1) {
+  if (leading_veh.id != kNoAgentId && leading_veh.id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_,
-                                   leading_veh_s + leading_veh_v * arrived_t_,
-                                   leading_veh_v);
+                                   leading_veh.center_s + traveled_distance,
+                                   leading_end_v);
   }
 
   const double vel_integral = CalcVelIntegral(arrived_t_);

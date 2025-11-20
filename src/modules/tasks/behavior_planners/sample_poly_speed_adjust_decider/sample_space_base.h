@@ -16,7 +16,11 @@ struct AgentInfo {
   double center_s;
   double half_length;
   double v;
-  double a;
+};
+
+struct LeadingAgentInfo : public AgentInfo {
+  std::vector<std::pair<double, double>> prediction_path;//first is traveled_distance second is speed
+  bool prediction_path_valid = false;
 };
 
 class STSampleSpaceBase {
