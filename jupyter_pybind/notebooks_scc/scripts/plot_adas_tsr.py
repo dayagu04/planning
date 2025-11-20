@@ -9,7 +9,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20251103/20251103-21-28-56/data_collection_CHERY_M32T_40737_EVENT_MANUAL_2025-11-03-21-28-56_no_camera.bag.1762328611.open-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_51408/trigger/20251118/20251118-21-33-49/data_collection_CHERY_M32T_51408_EVENT_KEY_2025-11-18-21-33-49_no_camera.bag.1763608566.open-loop.scc.plan"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -60,7 +60,7 @@ counter = 0
 # +
 tsr_json_value_list = [
                          #tsr debug info
-                         "tsr_main_switch_","tsr_enable_code_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
+                         "tsr_main_switch_","tsr_disable_code_","tsr_fault_code_","tsr_state_","tsr_speed_limit_",
                          "has_perception_speed_limit_","has_perception_end_of_speed_limit_","end_of_speed_limit_out_flag_","speed_limit_out_flag_","speed_limit_renew_flag_",
                          "current_map_speed_limit_", "current_map_speed_limit_valid_", "current_map_type_", "current_road_type_", "speed_limit_suppression_flag_",
                          "tsr_warning_flag_","tsr_overspeed_status_","tsr_accumulated_path_length_", "tsr_output_supp_sign_info_", "supp_sign_in_suppression_flag_", "end_of_speed_sign_value_",
@@ -191,7 +191,6 @@ fig_path_info.yaxis.axis_label_text_font_style = 'bold'
 # 状态机
 f_machine = fig_machine.line('time', 'tsr_state_', source = tsr_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'tsr_state U,O,S,A,F')
 fig_machine.line('time', 'tsr_main_switch_', source = tsr_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'tsr_main_switch')
-fig_machine.line('time', 'tsr_enable_code_', source = tsr_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'tsr_enable_code')
 fig_machine.line('time', 'tsr_disable_code_', source = tsr_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'tsr_disable_code')
 fig_machine.line('time', 'tsr_fault_code_', source = tsr_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'tsr_fault_code')
 
@@ -220,7 +219,7 @@ fig_dynamic_state.line('time', 'speed_limit_out_flag_', source = tsr_json_list_d
 f_path_info = fig_path_info.line('time', 'tsr_accumulated_path_length_', source = tsr_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'accumulated_path_length')
 fig_path_info.line('time', 'speed_limit_renew_flag_', source = tsr_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'speed_limit_renew_flag')
 
-hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('tsr_state_', '@tsr_state_'),('tsr_main_switch_', '@tsr_main_switch_'), ('tsr_enable_code_', '@tsr_enable_code_'),
+hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('tsr_state_', '@tsr_state_'),('tsr_main_switch_', '@tsr_main_switch_'),
                                                        ('tsr_disable_code_', '@tsr_disable_code_'), ('tsr_fault_code_', '@tsr_fault_code_')], mode='vline')
 hover_speed_info_vehicle = HoverTool(renderers=[f_speed_info], tooltips=[('time', '@time'), ('state_dispaly_vehicle_speed', '@state_dispaly_vehicle_speed')], mode='vline')
 hover_speed_info_tsr = HoverTool(renderers=[f_tsr_speed_limit, f_map_speed_limit, f_map_type, f_road_type, f_end_of_speed_sign], tooltips=[('time', '@time'), ('tsr_speed_limit_', '@tsr_speed_limit_'), ('current_map_speed_limit_', '@current_map_speed_limit_'), ('current_map_type_', '@current_map_type_'), ('current_road_type_', '@current_road_type_'), ('end_of_speed_sign_value_', '@end_of_speed_sign_value_')], mode='vline')
