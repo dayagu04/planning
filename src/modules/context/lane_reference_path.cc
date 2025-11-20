@@ -109,7 +109,6 @@ void LaneReferencePath::Update(planning::framework::Session *session, ReferenceP
   if (ok) {
     // Step 3-1) update ref path
     auto current_time = IflyTime::Now_ms();
-    is_construction_scene_ref_path_ = true;
     bool is_need_smooth = false;
     int current_lane_virtual_id =
         session_->environmental_model()
@@ -135,6 +134,7 @@ void LaneReferencePath::Update(planning::framework::Session *session, ReferenceP
     virtual_lane->update_speed_limit(
         session->environmental_model().get_ego_state_manager()->ego_v(),
         session->environmental_model().get_ego_state_manager()->ego_v_cruise());
+    is_construction_scene_ref_path_ = true;
   } else {
     ILOG_ERROR << "LaneReferencePath::update failed";
   }
