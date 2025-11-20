@@ -59,6 +59,11 @@ class JointDecisionObstaclesSelector {
       bool* is_in_front = nullptr);
 
   std::vector<LaneChangeKeyObstacle> GetKeyObstacles() const;
+  // 检查后车行为
+  void UpdateRearAgentConfidence(const std::shared_ptr<agent::Agent>& agent);
+  bool ShouldIgnoreRearAgent(
+      const std::shared_ptr<agent::Agent>& agent,
+      const std::shared_ptr<ReferencePath>& ego_reference_path);
 
  private:
   LaneChangeKeyObstacle CreateKeyObstacle(
@@ -74,6 +79,10 @@ class JointDecisionObstaclesSelector {
   framework::Session* session_;
   std::vector<LaneChangeKeyObstacle> key_obstacles_;
   std::vector<std::shared_ptr<agent::Agent>> surrounding_agents_;
+  // 记录后车id
+  int rear_agent_id_;
+  // 记录后车运动趋势 置信度
+  double rear_agent_confidence_{1.0};
 };
 
 }  // namespace lane_change_joint_decision

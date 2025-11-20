@@ -85,15 +85,19 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
                       agent::AgentType::TRUCK == agent->type() ||
                       agent::AgentType::TRAILER == agent->type() ||
                       agent->length() > 8.0);
-          bool is_accelerating = agent->accel_fusion() > 0.30;
-          lane_change_joint_decision::LongitudinalLabel label = (is_large_agent || is_accelerating) ? 
+          UpdateRearAgentConfidence(agent);// 检查意图，更新置信度
+          bool should_ignore_rear = ShouldIgnoreRearAgent(agent, ego_reference_path);
+          lane_change_joint_decision::LongitudinalLabel label = (is_large_agent || should_ignore_rear) ? 
           lane_change_joint_decision::LongitudinalLabel::IGNORE 
           : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(CreateKeyObstacle(agent, ego_lane_coord,  label));
+          rear_agent_id_ = lc_info.gap_rear_agent_id; // 更新后车历史记录
           break;
         }
       }
     }
+  }else{
+    rear_agent_confidence_ = 1.0; // 无后车，置信度恢复
   }
   if (lc_info.gap_front_agent_id != -1) {
     const auto* front_agent =
@@ -712,6 +716,57 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
 std::vector<LaneChangeKeyObstacle>
 JointDecisionObstaclesSelector::GetKeyObstacles() const {
   return key_obstacles_;
+}
+
+bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图修饰忽略，更保守的考虑
+    const std::shared_ptr<agent::Agent>& agent,
+    const std::shared_ptr<ReferencePath>& ego_reference_path) {
+  // 判断是否在加速
+  constexpr double kAccelerationThreshold = 0.30;  // m/s^2
+  if(agent == nullptr || ego_reference_path == nullptr){
+    return false;
+  }
+  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold;
+  if (is_accelerating) {
+    return true;
+  }
+  double s = 0;
+  double l = 0;
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord->XYToSL(agent->x(), agent->y(), &s, &l)) {
+    constexpr double kCloseRearDistanceThreshold = 10.0;  // m
+    double rear_distance = ego_reference_path->get_ego_frenet_boundary().s_start 
+                          - s - agent->length() * 0.5;
+    if (rear_distance < kCloseRearDistanceThreshold && rear_agent_confidence_ < 0.2) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(const std::shared_ptr<agent::Agent>& agent) {
+  if(rear_agent_id_ != agent->agent_id()){ // 后车更换
+    rear_agent_confidence_ = 1.0;
+    return;
+  }
+  const auto& last_trajectory = agent->trajectory_optimized();
+  const auto& current_trajectories = agent->trajectories_used_by_st_graph();
+  if(current_trajectories.empty() || last_trajectory.empty()){
+    return ;
+  }
+  const auto& current_trajectory = current_trajectories.front();
+  if(current_trajectory.empty()){
+    return ;
+  }
+  for(size_t i = 0; i < 15; ++i){ // checke 3s
+    const auto& current_point = current_trajectory[i];
+    const auto& last_point = last_trajectory[i];
+    if(current_point.vel() - last_point.vel() > 1.0){ //实际运动趋势快
+      rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2, 0.0);
+      break;
+    }
+  }
+  return;
 }
 
 }  // namespace lane_change_joint_decision

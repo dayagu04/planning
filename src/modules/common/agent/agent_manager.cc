@@ -173,6 +173,18 @@ void AgentManager::Append(
     if (nullptr == agent) {
       continue;
     }
+    // 从历史数据中恢复 trajectory_optimized_
+    if (historical_agents_info_.find(agent->agent_id()) !=
+        historical_agents_info_.end()) {
+      const auto& history_list = historical_agents_info_[agent->agent_id()];
+      if (!history_list.empty()) {
+        // 从最新的历史 agent 中恢复 trajectory_optimized_
+        const auto& latest_history_agent = history_list.back();
+        if (!latest_history_agent->trajectory_optimized().empty()) {
+          agent->set_trajectory_optimized(latest_history_agent->trajectory_optimized());
+        }
+      }
+    }
     current_agents_.emplace_back(agent);
     current_agents_ids_.insert(agent->agent_id());
 

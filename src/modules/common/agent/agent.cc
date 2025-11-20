@@ -54,6 +54,7 @@ Agent::Agent(const Agent& agent)
   trajectories_.clear();
   trajectories_ = agent.trajectories();
   trajectories_used_by_st_graph_ = agent.trajectories_used_by_st_graph();
+  trajectory_optimized_ = agent.trajectory_optimized();
 }
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
