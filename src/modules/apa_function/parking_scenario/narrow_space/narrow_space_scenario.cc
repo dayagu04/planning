@@ -1188,34 +1188,35 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
 
   // find nearby limiter point, but not cross limiter
   int path_size = current_path_point_global_vec_.size();
-  int path_end_point_id = path_size;
+  int valid_point_id = path_size;
   double dist_to_limiter = 0.0;
 
   for (int i = 0; i < path_size; i++) {
     const Eigen::Vector2d& point_global = current_path_point_global_vec_[i].pos;
     point_local = ego_info.g2l_tf.GetPos(point_global);
     dist_to_limiter = point_local[0] - limiter_x;
-    path_end_point_id = i;
     if (dist_to_limiter < 0.0) {
       break;
     }
+
+    valid_point_id = i;
   }
 
   // delete cross limiter points
-  if (path_end_point_id < path_size - 1 &&
-      current_path_point_global_vec_.size() > 1) {
+  if (valid_point_id < path_size - 1) {
     const pnc::geometry_lib::PathPoint& path_end_point =
-        current_path_point_global_vec_[path_end_point_id];
+        current_path_point_global_vec_[valid_point_id];
 
     point_local = ego_info.g2l_tf.GetPos(path_end_point.pos);
     dist_to_limiter = point_local[0] - limiter_x;
 
-    // If point distance to limiter is big, add an extra point in limiter.
+    // If point distance to limiter is big, replace valid_point_id+1 point by
+    // limiter point.
     if (dist_to_limiter > 0.01) {
-      path_end_point_id++;
+      valid_point_id++;
 
       pnc::geometry_lib::PathPoint& limit_point =
-          current_path_point_global_vec_[path_end_point_id];
+          current_path_point_global_vec_[valid_point_id];
       // get local
       point_local = ego_info.g2l_tf.GetPos(limit_point.pos);
       point_local[0] = limiter_x;
@@ -1225,7 +1226,7 @@ void NarrowSpaceScenario::PathShrinkBySlotLimiter() {
           path_end_point.s + (limit_point.pos - path_end_point.pos).norm();
     }
 
-    for (int i = path_end_point_id + 1; i < path_size; i++) {
+    for (int i = valid_point_id + 1; i < path_size; i++) {
       current_path_point_global_vec_.pop_back();
     }
   }
