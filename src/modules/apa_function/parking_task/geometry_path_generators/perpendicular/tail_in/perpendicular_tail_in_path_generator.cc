@@ -1567,10 +1567,17 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
     path_seg.obs_dist_info.integrated = res.pt_closest2obs;
     path_seg.pt_obs_dist_info_vec = res.pt_obs_dist_info_vec;
 
-    const bool need_use_accurate =
-        init_pose_near_obs ||
-        (!res.col_flag && lat_inflation < 0.171 &&
-         res.pt_closest2obs.first < 0.071 + lat_inflation);
+    bool need_use_accurate = init_pose_near_obs ||
+                             (!res.col_flag && lat_inflation < 0.171 &&
+                              res.pt_closest2obs.first < 0.071 + lat_inflation);
+
+    if (!need_use_accurate && res.col_flag &&
+        res.pt_closest2obs.first < 0.3 + lat_inflation &&
+        path_seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
+        path_seg.GetEndPos().x() <
+            input_.ego_info_under_slot.target_pose.GetX() + 0.368) {
+      need_use_accurate = true;
+    }
 
     ILOG_INFO_IF(enable_log) << "need_use_accurate = " << need_use_accurate;
 
