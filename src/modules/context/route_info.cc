@@ -1938,12 +1938,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   if (valid_exchange_regions.empty()) {
     // 认为前方所有车道均可通行，车道数大于3时去除最右侧车道
     feasible_lane_sequence.clear();
-    if (current_lane_vec.size() > 3) {
-      feasible_lane_sequence.assign(current_lane_vec.begin(),
-                                    current_lane_vec.end() - 1);
-    } else {
-      feasible_lane_sequence = current_lane_vec;
-    }
+    feasible_lane_sequence = current_lane_vec;
     for (int i = 0; i < feasible_lane_sequence.size(); i++) {
       feasible_lane_distance[feasible_lane_sequence[i]] = 3000.0;
     }
