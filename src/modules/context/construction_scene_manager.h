@@ -201,6 +201,7 @@ class ConstructionSceneManager {
   bool is_pass_construction_area_ = false;
   ConstructionSceneOutput construction_scene_output_;
   bool enable_construction_passage_ = false;
+  int disable_construction_passage_counter_ = std::numeric_limits<int>::max() / 2;
   bool is_lane_blocked_ = false;
 };
 

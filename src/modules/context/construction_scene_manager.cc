@@ -26,6 +26,8 @@ constexpr double kCareLongDistance = 130;
 constexpr double kConstructionBucketSpacingThreshold = 8; // 国标是5m
 constexpr double kNumSatisfySonstructionAgent = 2;
 constexpr int kHysteresisFrames = 5;
+constexpr int kDisableConstructionPassageHysteresisFrames = 5;
+
 }  // namespace
 
 using namespace planning_math;
@@ -537,11 +539,12 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
   // 如果存在施工区域，判定上游给的参考车道是否能够通行
   // 如果一条都不能满足通行，则走通行空间的生成（完全占道）
   // 否则走车道内或者变道（轻微占道和中等变道）
+  bool enable_construction_passage = false;
   if (!is_exist_construction_area_) {
     // 不存在施工区域
     construction_intrusion_level =
         ConstructionIntrusionLevel :: NONE;
-    enable_construction_passage_ = false;
+    enable_construction_passage = false;
   } else if ((!is_current_lane_available || is_current_lane_blocked) &&
              (!is_right_lane_available || is_right_lane_blocked) &&
              (!is_left_lane_available || is_left_lane_blocked) &&
@@ -550,12 +553,30 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
     // 可能需要做一下滞回操作
     construction_intrusion_level =
         ConstructionIntrusionLevel :: HIGH;
-    enable_construction_passage_ = true;
+    enable_construction_passage = true;
   } else {
     construction_intrusion_level =
         ConstructionIntrusionLevel :: MEDIUM;
+    enable_construction_passage = false;
+  }
+
+  if (enable_construction_passage) {
+    enable_construction_passage_ = true;
+    disable_construction_passage_counter_ = 0;
+  } else {
+    disable_construction_passage_counter_ = std::min(disable_construction_passage_counter_ + 1,
+        kDisableConstructionPassageHysteresisFrames);
+    if (disable_construction_passage_counter_ >=
+        kDisableConstructionPassageHysteresisFrames) {
+      enable_construction_passage_ = false;
+    } else {
+      enable_construction_passage_ = true;
+    }
+  }
+  if (!is_exist_construction_area_) {
     enable_construction_passage_ = false;
   }
+
   construction_scene_output_.construction_intrusion_level =
       construction_intrusion_level;
   construction_scene_output_.is_current_lane_available =
@@ -619,7 +640,7 @@ void ConstructionSceneManager::CheckLaneAvailableAndBlocked(
       seach_lane->get_lane_frenet_coord();
   double lane_blocked_pass_thre = 0.3; // 锥桶侵入距离阈值
   if (is_lane_blocked_) {
-    lane_blocked_pass_thre = 0.1;
+    lane_blocked_pass_thre = 0.0;
   }
   if (target_lane_frenet_coord == nullptr) {
     ILOG_DEBUG << "target_lane_frenet_coord is nullptr";
