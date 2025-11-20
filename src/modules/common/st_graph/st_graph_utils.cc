@@ -34,6 +34,8 @@ constexpr double kVRUHeadingRelieveJerkMaxThreshold = 135 / 57.3;
 constexpr double kPerceptionLaneRangeM = 120.0;
 constexpr int32_t kNumNots = 25;
 constexpr double kStepTime = 0.2;
+constexpr double kCrossLonDangerTTC = 2.0;
+constexpr double kCrossLatPassSafeDis = 2.0;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -344,7 +346,8 @@ void StGraphUtils::DetermineRelieveJerkDecision(
       bool vru_lat_passed_before_intersection = false;
       double vru_lat_passed_time = std::numeric_limits<double>::max();
       int32_t vru_lat_passed_index = -1;
-      if (vru_pred_last_point_l * vru_current_l < 0.0) {
+      if (vru_pred_last_point_l * vru_current_l < 0.0 ||
+          std::fabs(vru_current_l) < 0.5 * ego_lane->width_by_s(vru_current_s)) {
         const auto& first_point = agt->trajectories_used_by_st_graph().front().at(0);
         const double trajectory_start_time = first_point.absolute_time();
         for (int32_t i = 0; i <= kNumNots; ++i) {
@@ -356,7 +359,8 @@ void StGraphUtils::DetermineRelieveJerkDecision(
                                       &pred_point_l)) {
             continue;
           }
-          if (std::fabs(pred_point_l) > 2.0 && pred_point_l * vru_current_l < 0.0) {
+          if ((std::fabs(pred_point_l) > kCrossLatPassSafeDis && pred_point_l * vru_current_l < 0.0) ||
+              (std::fabs(vru_current_l) < kCrossLatPassSafeDis && std::fabs(pred_point_l) > kCrossLatPassSafeDis)) {
             vru_lat_passed_time = releative_t;
             vru_lat_passed_index = i;
             break;
@@ -393,7 +397,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
         }
 
       }
-      if (cross_vru_ttc < 2.0 && !vru_lat_passed_before_intersection) {
+      if (cross_vru_ttc < kCrossLonDangerTTC && !vru_lat_passed_before_intersection) {
         continue;
       }
       relieve_jerk_agent_ids.emplace_back(vru_crossing_agent_id);
