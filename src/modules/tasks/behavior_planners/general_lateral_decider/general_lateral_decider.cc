@@ -2643,6 +2643,9 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_care_reverse_ignore_obj = false;
   bool is_care_lon_overtake_obj = false;
   bool is_care_intersection_scene = false;
+
+  double trust_prediction_t_threshold = config_.trust_prediction_t_threshold;
+  GenerateTrustPredictionTimeThreshold(trust_prediction_t_threshold);
   if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
       !is_avoid_lon_overtake_obj &&
       (lat_obstacle_decision.at(obstacle->id()) ==
@@ -2675,7 +2678,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   } else {
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(
         obstacle_id, is_use_recurrence_,
-        int(config_.trust_prediction_t_threshold * 10),
+        int(trust_prediction_t_threshold * 10),
         trusted_predicted_sl_polygon);
   }
   // 对向车ignore减少buffer
@@ -2724,7 +2727,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       // TBD add log
       return;
     }
-    double care_t = config_.trust_prediction_t_threshold;
+    double care_t = trust_prediction_t_threshold;
     if (is_care_reverse_ignore_obj || is_care_lon_overtake_obj) {
       care_t = 0;
     } else if (is_care_intersection_scene) {
@@ -2894,6 +2897,43 @@ void GeneralLateralDecider::GenerateRecommendJerk(
     }
     general_lateral_decider_output.risk_level = risk_level;
   }
+}
+
+void GeneralLateralDecider::GenerateTrustPredictionTimeThreshold(
+    double &trust_prediction_t_threshold) {
+  // 平均曲率插值预测使用时间（主要考虑的是曲率场景下的预测不准）
+  const auto &general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
+  const auto &planning_init_point = ego_frenet_state_.planning_init_point();
+  const auto &curve_s_spline = general_lateral_decider_output.curve_s_spline;
+  ref_curve_info_ = reference_path_ptr_->GetReferencePathCurveInfo();
+  double init_s = planning_init_point.frenet_state.s;
+  const double dt = 0.2;
+  int steps = config_.trust_prediction_t_threshold / dt;
+  double pt_kappa = 1e-6;
+  size_t kappa_gap = 0;
+  double sum_kappa = 0;
+  bool is_k_s_spline_valid = false;
+  if (!curve_s_spline.get_x().empty() && !curve_s_spline.get_y().empty()) {
+    is_k_s_spline_valid = true;
+  }
+  for (int i = 0; i <= steps; ++i) {
+    init_s = i * dt * ego_cart_state_manager_->ego_v();
+    if (is_k_s_spline_valid) {
+      pt_kappa = curve_s_spline(init_s);
+    } else {
+      continue;
+    }
+    kappa_gap += 1;
+    sum_kappa += std::fabs(pt_kappa);
+  }
+  double average_kappa = sum_kappa / kappa_gap;
+  double average_radius = 1 / average_kappa;
+  std::vector<double> xp_radius{400, 700, 1000, 1500, 2000, 3000};
+  std::vector<double> fp_t{0, 0.5, 1.0, 1.5, 2.0, 2.5};
+  trust_prediction_t_threshold = interp(
+      average_radius, xp_radius, fp_t);
 }
 
 void GeneralLateralDecider::GenerateEmergencyObstacleDecision(

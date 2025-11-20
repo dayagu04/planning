@@ -249,7 +249,9 @@ class GeneralLateralDecider : public Task {
       bool &is_side_obstacle);
   bool FindNearestBoundPoint(const double current_index_s,
                              WeightedBounds &last_bounds);
-
+  void GenerateTrustPredictionTimeThreshold(
+    double &trust_prediction_t_threshold);
+    
  private:
   GeneralLateralDeciderConfig config_;
 
