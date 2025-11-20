@@ -2065,7 +2065,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     int iteration_num = 0;
     for (int i = 0; i < std::min<int>(valid_exchange_regions.size() - 1, 2);
          ++i) {
-      if (valid_exchange_regions[i].is_ramp_split) {
+      if (valid_exchange_regions[i].is_ramp_split ||
+          valid_exchange_regions[i].split_direction == SPLIT_RIGHT &&
+              valid_exchange_regions[i].recommend_lane_num[4].total_lane_num >
+                  valid_exchange_regions[i]
+                      .recommend_lane_num[3]
+                      .total_lane_num) {
         iteration_num = i;
       }
     }
