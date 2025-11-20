@@ -1,13 +1,12 @@
 #include "construction_scene_refline.h"
 
 namespace planning {
-static constexpr double kSamplingBackwardDistance = 5.0;
 static constexpr double kSamplingBoundaryLonGap = 5.0;
 static constexpr double kSamplingBoundaryLatGap = 0.3;
 static constexpr double kSamplingLineLonGap = 2.0;
 static constexpr double kLateralDistanceDiff = 0.05;
 static constexpr double kAgentForwardDistance = 2.0;
-static constexpr double kAgentBackwardDistance = 5.0;
+static constexpr double kAgentBackwardDistance = 6.0;
 static constexpr double kMinLaneWidthBuffer = 0.4;
 
 ConstructionSceneRefline::ConstructionSceneRefline() {
@@ -216,6 +215,7 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
     }
   }
   // spline
+  double max_lane_width = 10.0;
   if (left_s_vec.size() < 4 &&
       right_s_vec.size() < 4) {
     return false;
@@ -224,14 +224,14 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
     left_l_vec.clear();
     left_s_vec = right_s_vec;
     for (size_t i = 0; i < right_l_vec.size(); ++i) {
-      left_l_vec.emplace_back(right_l_vec[i] + min_lane_width_);
+      left_l_vec.emplace_back(right_l_vec[i] + max_lane_width);
     }
   } else if (right_s_vec.size() < 4) {
     right_s_vec.clear();
     right_l_vec.clear();
     right_s_vec = left_s_vec;
     for (size_t i = 0; i < left_l_vec.size(); ++i) {
-      right_l_vec.emplace_back(left_l_vec[i] - min_lane_width_);
+      right_l_vec.emplace_back(left_l_vec[i] - max_lane_width);
     }
   }
   left_boundary_spline_.set_points(left_s_vec, left_l_vec);
@@ -295,15 +295,15 @@ bool ConstructionSceneRefline::GenerateCenterLines(
     double half_lane_width = 0.5 * lane_width;
     double left_boundary_l = left_boundary_spline_(line_s);
     if (line_s < left_boundary_start) {
-      left_boundary_l = std::max(left_boundary_spline_.get_y().front(), half_lane_width);
+      left_boundary_l = left_boundary_spline_.get_y().front();
     } else if (line_s > left_boundary_end) {
-      left_boundary_l = std::max(left_boundary_spline_.get_y().back(), half_lane_width);
+      left_boundary_l = left_boundary_spline_.get_y().back();
     }
     double right_boundary_l = right_boundary_spline_(line_s);
     if (line_s < right_boundary_start) {
-      right_boundary_l = std::min(right_boundary_spline_.get_y().front(), -half_lane_width);
+      right_boundary_l = right_boundary_spline_.get_y().front();
     } else if (line_s > right_boundary_end) {
-      right_boundary_l = std::min(right_boundary_spline_.get_y().back(), -half_lane_width);
+      right_boundary_l = right_boundary_spline_.get_y().back();
     }
     if (left_boundary_l > last_left_boundary_l &&
         right_boundary_l < last_right_boundary_l) {
@@ -350,8 +350,8 @@ bool ConstructionSceneRefline::GenerateCenterLines(
     }
     if (!frenet_refline.empty()) {
       double last_line_l = frenet_refline.back().y;
-      if (last_line_l < left_boundary_l - 0.5 * min_lane_width_ &&
-          last_line_l > right_boundary_l + 0.5 * min_lane_width_) {
+      if (last_line_l < left_boundary_l &&
+          last_line_l > right_boundary_l) {
         if (pt.y - last_line_l > kLateralDistanceDiff) {
           pt.y = last_line_l + kLateralDistanceDiff;
         } else if (last_line_l - pt.y > kLateralDistanceDiff) {
