@@ -34,6 +34,8 @@ class SamplePolyCurve {
   double mid_s_;
   double mid_t_;
   double mid_v_;
+  double front_edge_to_rear_axle_;
+  double back_edge_to_rear_axle_;
 
   double cost_sum_ = 0.0;
   bool safe_valid_{false};

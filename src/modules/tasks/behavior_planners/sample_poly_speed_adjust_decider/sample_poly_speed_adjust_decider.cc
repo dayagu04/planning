@@ -220,13 +220,13 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = GetStoplineSpdDifferGain();
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  for (size_t i = 0; i < count; i++) {
-    st_sample_space_base_.GetAvailableGap(i);
+  for (size_t i = 0; i <= count; i++) {
+    st_sample_space_base_.GetAvailableGap(i * kEvaluationStep / 0.1);
     for (size_t k = 0; k < sample_trajs_.size(); k++) {
       auto& sample_traj_at_v = sample_trajs_[k];
       for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
         auto& sample_traj = sample_traj_at_v[j];
-        if (CheckTrajAvailable(sample_traj, i)) {
+        if (is_in_deceleartion_scene_ || CheckTrajAvailable(sample_traj, i)) {
           sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
                                v_suggestted_, merge_stop_line_distance_,
                                leading_veh_s, leading_veh_v, leading_veh_.id,

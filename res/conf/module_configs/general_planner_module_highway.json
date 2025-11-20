@@ -1259,7 +1259,7 @@
     "sample_t_lower": 1.0,
     "kNormalSceneWeightMatchGapVel": 6.5,
     "kNormalSceneWeightMatchGapS": 4.5,
-    "kNormalSceneWeightFollowVel": 15.0,
+    "kNormalSceneWeightFollowVel": 10.0,
     "kNormalSceneWeightStopLine": 50.0,
     "kNormalSceneWeightLeadingSafeS": 13.5,
     "kNormalSceneWeightLeadingSafeV": 0.0,
