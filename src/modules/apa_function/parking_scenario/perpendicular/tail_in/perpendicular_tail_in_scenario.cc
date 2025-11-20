@@ -1855,7 +1855,7 @@ const bool PerpendicularTailInScenario::CheckFinished() {
     return false;
   }
 
-  const double gain = auto_fold_mirror ? 1.8 : 1.0;
+  const double gain = auto_fold_mirror ? 3.0 : 1.0;
 
   const double finish_lon_err = finish_params.lon_err;
 
@@ -2154,11 +2154,11 @@ const bool PerpendicularTailInScenario::PostProcessPathAccordingLimiter() {
     extend_length = col_res.remain_dist;
 
     const double total_length = s + extend_length;
-    while (s < total_length - 1e-3) {
-      // if (x_vec.size() > PLANNING_TRAJ_POINTS_MAX_NUM - 1) {
-      //   break;
-      // }
+    while (s < total_length - 1e-2) {
       s += temp_ds;
+      if (s > total_length) {
+        s = total_length;
+      }
       x_vec.emplace_back(frame_.x_s_spline(s));
       y_vec.emplace_back(frame_.y_s_spline(s));
       heading_vec.emplace_back(heading_vec.back());
