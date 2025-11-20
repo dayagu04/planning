@@ -693,7 +693,8 @@ class LoadRosbag:
                           "target_lane_virtual_id", "origin_lane_virtual_id", "lc_gap_front_agent_id", "lc_gap_rear_agent_id",
                           "ego_front_edge", "ego_rear_edge", 
                           "front_agent_front_edge", "front_agent_rear_edge",
-                          "rear_agent_front_edge", "rear_agent_rear_edge"]
+                          "rear_agent_front_edge", "rear_agent_rear_edge",
+                          "rear_agent_longitudinal_label"]
 
 
       json_value_list += [#new_ldw debug info:

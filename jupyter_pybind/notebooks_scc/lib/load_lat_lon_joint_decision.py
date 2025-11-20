@@ -469,13 +469,23 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     optimization_time = planner_json.get("JointDecisionOptimizationTime", 0.0)
     lat_lon_joint_planner_time = planner_json.get('LatLonJointDecisionTime', 0.0)
     
+    # Extract rear agent longitudinal label from JSON
+    rear_agent_label = planner_json.get("rear_agent_longitudinal_label", -1)
+    label_dict = {
+        0: "IGNORE",
+        1: "OVERTAKE",
+        2: "YIELD"
+    }
+    rear_agent_label_name = label_dict.get(rear_agent_label, f"UNKNOWN_{rear_agent_label}")
+    
     # Update planning info data for display - 仅优化器相关信息
     planning_info_data = {
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition'],
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label'],
         'values': [f"{round(lat_lon_joint_planner_time, 2)}ms", 
                    f"{round(obstacle_selection_time, 2)}ms", f"{round(optimization_time, 2)}ms",
-                   solver_condition_name, "SUCCESS" if planning_success else "FAILED"]
+                   solver_condition_name, "SUCCESS" if planning_success else "FAILED",
+                   rear_agent_label_name]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
 
@@ -765,8 +775,8 @@ def load_joint_plan_figure(fig1, bag_loader):
     # Add planning info data source - vertical layout with labels and values (仅优化器相关)
     data_planning_info = ColumnDataSource(data={
         'labels': ['Total Decision Time', 'Obstacle Selection Time', 'Optimization Time',
-                   'Solver Condition', 'Planning Condition'],
-        'values': ['', '', '', '', '']
+                   'Solver Condition', 'Planning Condition', 'Rear Agent Label'],
+        'values': ['', '', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 
@@ -898,7 +908,7 @@ def load_joint_plan_figure(fig1, bag_loader):
             TableColumn(field='labels', title='Label', width=180),
             TableColumn(field='values', title='Value', width=340)
         ],
-        width=520, height=180, index_position=None,  # 调整高度适应5行数据
+        width=520, height=220, index_position=None,  # 调整高度适应6行数据
         fit_columns=True,
         sortable=False,
         reorderable=False

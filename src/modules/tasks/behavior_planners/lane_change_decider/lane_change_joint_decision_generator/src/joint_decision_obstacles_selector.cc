@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "agent/agent.h"
+#include "debug_info_log.h"
 #include "environmental_model.h"
 #include "lateral_obstacle.h"
 #include "math/box2d.h"
@@ -91,6 +92,8 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
           lane_change_joint_decision::LongitudinalLabel::IGNORE 
           : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(CreateKeyObstacle(agent, ego_lane_coord,  label));
+          // 输出 label 到 JSON 用于可视化
+          JSON_DEBUG_VALUE("rear_agent_longitudinal_label", static_cast<int>(label))
           rear_agent_id_ = lc_info.gap_rear_agent_id; // 更新后车历史记录
           break;
         }
