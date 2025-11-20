@@ -470,11 +470,22 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     const bool is_reverse = IsPredictionReverseAgent(agent, ego_lane);
     bool is_within_ego_lane = false;
     bool is_within_ego_neighbor_lane = false;
+    double min_l_ego_lane = std::numeric_limits<double>::max();
+    for (const auto &point : agent->box().GetAllCorners()) {
+      double s = 0.0;
+      double l = 0.0;
+      if (!ego_lane_coord->XYToSL(point.x(), point.y(), &s, &l)) {
+        continue;
+      }
+      min_l_ego_lane = std::fmin(min_l_ego_lane, std::fabs(l));
+    }
+
     double nearest_s = 0.0;
     double nearest_l = 0.0;
     const auto& ptr_obj_lane = virtual_lane_manager->GetNearestLane(
         {agent->x(), agent->y()}, &nearest_s, &nearest_l);
     const double half_ego_lane_width = 0.5 * ego_lane->width_by_s(nearest_s);
+    bool is_corner_inside_ego_lane = min_l_ego_lane < half_ego_lane_width? true: false;
     if (nullptr != ptr_obj_lane) {
       is_within_ego_lane =
           ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
@@ -486,7 +497,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     }
     const bool is_relieve_jerk_reverse_agent =
         is_not_in_intersection && is_reverse &&
-        (is_within_ego_lane || is_within_ego_neighbor_lane);
+        (is_within_ego_lane || is_within_ego_neighbor_lane || is_corner_inside_ego_lane);
     if (is_relieve_jerk_reverse_agent) {
       relieve_jerk_agent_ids.emplace_back(agent->agent_id());
       continue;
