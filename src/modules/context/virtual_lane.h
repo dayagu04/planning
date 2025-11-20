@@ -239,7 +239,7 @@ class VirtualLane {
   double max_virtual_seg_ahead_x_ = 0.0;
   double max_virtual_seg_ahead_length_ = 0.0;
 
-  std::pair<bool, double> feasible_lane_distance_;
+  std::pair<bool, double> feasible_lane_distance_ = {true, 1000.0};
 };
 }  // namespace planning
 #endif

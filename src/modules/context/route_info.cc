@@ -5876,8 +5876,10 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
 void RouteInfo::OptimizeFeasibleLanesByDistance(
     NOASplitRegionInfo& exchange_region_info,
     std::map<int, double>& feasible_lane_distance, double max_distance) {
-  const double v_limit =
-      session_->environmental_model().get_ego_state_manager()->ego_v_cruise();
+  const double v_limit = session_->environmental_model()
+                             .get_ego_state_manager()
+                             ->ego_v_cruise_upper() *
+                         0.8;
   const int total_lane_num =
       exchange_region_info.recommend_lane_num[0].total_lane_num;
   const double kResponseOffset = 300.;
