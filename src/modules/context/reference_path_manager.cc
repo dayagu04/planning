@@ -116,7 +116,7 @@ bool ReferencePathManager::update() {
   // step3 construction refline
   const auto& construction_scene_output =
       session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
-  if (construction_scene_output.is_exist_construction_area) {
+  if (construction_scene_output.enable_construction_passage) {
     GetReferencePathByConstructionScene();
   }
   time_end = IflyTime::Now_ms();
