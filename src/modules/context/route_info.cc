@@ -2464,6 +2464,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     route_info_output_.ego_seq = ego_seq;
     std::vector<int> lc_num_task;
     if (ego_seq >= minVal_seq && ego_seq <= maxVal_seq) {
+      lc_task_count_ = 0;
+      last_lc_num_task_.clear();
       continue;
     } else if (ego_seq > maxVal_seq) {
       int err = ego_seq - maxVal_seq;
@@ -2476,36 +2478,47 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         lc_num_task.emplace_back(1);
       }
     }
+
+    // 检查是否与上一帧相同
+    if (!lc_num_task.empty() && !last_lc_num_task_.empty() &&
+        lc_num_task[0] == last_lc_num_task_[0]) {
+      lc_task_count_++;
+    } else {
+      lc_task_count_ = 0;
+      last_lc_num_task_ = lc_num_task;
+    }
     SplitDirection mlc_split_direction = SPLIT_NONE;
     EgoMLCRequestType mlc_type = None_MLC;
     double distance_to_lc_exchange_region = NL_NMAX;
-    if (!lc_num_task.empty()) {
-      if (lc_num_task[0] == -1) {
-        mlc_split_direction = SPLIT_LEFT;
-      } else {
-        mlc_split_direction = SPLIT_RIGHT;
-      }
-      bool is_found = false;
-      for (int i = 0; i < mlc_request_info_list.size() && !is_found; i++) {
-        const auto& mlc_request_info = mlc_request_info_list[i].first;
-        for (int n = 0; n < mlc_request_info.size(); n++) {
-          auto it = std::find_if(
-              mlc_request_info.begin(), mlc_request_info.end(),
-              [ego_seq, mlc_split_direction](const MLCRequestType& item) {
-                return item.lane_num == ego_seq &&
-                       item.split_direction == mlc_split_direction;
-              });
-          is_found = (it != mlc_request_info.end());
-          if (is_found) {
-            mlc_type = it->mlc_request_type;
-            distance_to_lc_exchange_region = mlc_request_info_list[i].second;
-            break;
+    if (lc_task_count_ >= 2) {
+      if (!lc_num_task.empty()) {
+        if (lc_num_task[0] == -1) {
+          mlc_split_direction = SPLIT_LEFT;
+        } else {
+          mlc_split_direction = SPLIT_RIGHT;
+        }
+        bool is_found = false;
+        for (int i = 0; i < mlc_request_info_list.size() && !is_found; i++) {
+          const auto& mlc_request_info = mlc_request_info_list[i].first;
+          for (int n = 0; n < mlc_request_info.size(); n++) {
+            auto it = std::find_if(
+                mlc_request_info.begin(), mlc_request_info.end(),
+                [ego_seq, mlc_split_direction](const MLCRequestType& item) {
+                  return item.lane_num == ego_seq &&
+                         item.split_direction == mlc_split_direction;
+                });
+            is_found = (it != mlc_request_info.end());
+            if (is_found) {
+              mlc_type = it->mlc_request_type;
+              distance_to_lc_exchange_region = mlc_request_info_list[i].second;
+              break;
+            }
           }
         }
-      }
-      // 搜索完后仍未找到对应的MLC类型
-      if (mlc_type == None_MLC) {
-        mlc_type = OTHER_TYPE_MLC;
+        // 搜索完后仍未找到对应的MLC类型
+        if (mlc_type == None_MLC) {
+          mlc_type = OTHER_TYPE_MLC;
+        }
       }
     }
     route_info_output_.mlc_request_type_route_info.mlc_request_type = mlc_type;

@@ -6,13 +6,12 @@
 #include "ego_planning_config.h"
 #include "hdmap/hdmap.h"
 #include "local_view.h"
+#include "modules/context/route_info_strategy/route_info_strategy.h"
 #include "sdmap/sdmap.h"
 #include "sdpromap/sdpromap.h"
 #include "session.h"
 #include "vec2d.h"
 #include "virtual_lane.h"
-#include "modules/context/route_info_strategy/route_info_strategy.h"
-
 
 namespace planning {
 struct SplitSegInfo {
@@ -63,7 +62,9 @@ class RouteInfo {
 
   void UpdateVisionInfo() const;
   const RouteInfoOutput& get_route_info_output() { return route_info_output_; }
-  const MLCDeciderRouteInfo& get_MLC_decider_route_info() { return mlc_decider_route_info_; }
+  const MLCDeciderRouteInfo& get_MLC_decider_route_info() {
+    return mlc_decider_route_info_;
+  }
   bool get_hdmap_valid() const { return hdmap_valid_; }
   bool get_sdmap_valid() const { return sdmap_valid_; }
   const ad_common::sdmap::SDMap& get_sd_map() const { return sd_map_; }
@@ -128,8 +129,8 @@ class RouteInfo {
     double angle;
     RayInfo(char n, double a) : name(n), angle(a) {}
   };
-  // int mismatch_counter = 0;
-  // const int MISMATH_THRESHOLD = 3;
+  std::vector<int> last_lc_num_task_;
+  int lc_task_count_ = 0;
 
   // for NOA function
   void UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sdmap);
@@ -293,9 +294,11 @@ class RouteInfo {
 
   std::vector<int> CalculateMLCTaskNoLaneNum();
 
-  bool CalculateDistanceToLastSplitPoint(double* dis, const double s, uint64* split_link_id) const;
+  bool CalculateDistanceToLastSplitPoint(double* dis, const double s,
+                                         uint64* split_link_id) const;
 
-  bool CalculateDistanceToLastMergePoint(double* dis, const double s, uint64* merge_link_id) const;
+  bool CalculateDistanceToLastMergePoint(double* dis, const double s,
+                                         uint64* merge_link_id) const;
 
   bool CalculateDistanceNextToLastSplitPoint(
       double* dis,
