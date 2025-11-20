@@ -120,7 +120,6 @@
   "elk_main_switch": false,
   "tsr_main_switch": 0,
   "tsr_use_json_code": false,
-  "tsr_enable_code_maskcode": 65535,
   "tsr_disable_code_maskcode": 65535,
   "tsr_fault_code_maskcode": 65535,
   "tsr_reset_path_length": 2000.0,

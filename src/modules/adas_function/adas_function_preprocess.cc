@@ -191,8 +191,6 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ihc_fault_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_active_code_maskcode, int,
                        "ihc_active_code_maskcode");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_enable_code_maskcode, int,
-                       "tsr_enable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_disable_code_maskcode, int,
                        "tsr_disable_code_maskcode");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_fault_code_maskcode, int,  

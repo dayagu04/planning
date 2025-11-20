@@ -30,22 +30,6 @@ iflyauto::NotificationMainSwitch TsrCore::UpdateTsrMainSwitch(void) {
   return function_state_machine_info_ptr->switch_sts.tsr_main_switch;
 }
 
-// Enable Code
-// 0: 正常
-// >0: 异常
-uint16 TsrCore::UpdateTsrEnableCode(void) {
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
-
-  uint16 enable_code = 0;
-
-  return enable_code & GetContext.get_param()->tsr_enable_code_maskcode;
-}
-
 // Disable Code
 // 0: 正常
 // >0: 异常
@@ -159,23 +143,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
 
   // 状态机处于完成过初始化的状态
   if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
-                             TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE) {
-    // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE状态
-    if (tsr_main_switch_ ==
-            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_OFF ||
-        tsr_main_switch_ ==
-            iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE) {
-      tsr_state =
-          iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_OFF;
-    } else if (tsr_fault_code_ == 0) {
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_STANDBY;
-    } else {
-      tsr_state = iflyauto::TSRFunctionFSMWorkState::
-          TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
-    }
-  } else if (tsr_state_delay == iflyauto::TSRFunctionFSMWorkState::
-                                    TSR_FUNCTION_FSM_WORK_STATE_OFF) {
+                             TSR_FUNCTION_FSM_WORK_STATE_OFF) {
     // 上一时刻处于TSR_FUNCTION_FSM_WORK_STATE_OFF状态
     if (tsr_main_switch_ == iflyauto::NotificationMainSwitch::
                                        NOTIFICATION_MAIN_SWITCH_VISUAL_ONLY ||
@@ -206,7 +174,7 @@ iflyauto::TSRFunctionFSMWorkState TsrCore::TsrStateMachine(void) {
     } else if (tsr_fault_code_) {
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_FAULT;
-    } else if (tsr_enable_code_ == 0) {
+    } else if (!tsr_disable_code_) {
       tsr_state =
           iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE;
     } else {
@@ -890,9 +858,6 @@ void TsrCore::RunOnce(void) {
   // 更新tsr开关状态
   tsr_main_switch_ = UpdateTsrMainSwitch();
 
-  // 更新tsr_enable_code_
-  tsr_enable_code_ = UpdateTsrEnableCode();
-
   // 更新tsr_disable_code_
   tsr_disable_code_ = UpdateTsrDisableCode();
 
@@ -943,7 +908,6 @@ void TsrCore::RunOnce(void) {
 
   // log
   JSON_DEBUG_VALUE("tsr_main_switch_", (int)tsr_main_switch_);
-  JSON_DEBUG_VALUE("tsr_enable_code_", tsr_enable_code_);
   JSON_DEBUG_VALUE("tsr_disable_code_", tsr_disable_code_);
   JSON_DEBUG_VALUE("tsr_fault_code_", tsr_fault_code_);
   JSON_DEBUG_VALUE("tsr_state_", (int)tsr_state_);

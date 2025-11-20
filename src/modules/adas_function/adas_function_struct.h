@@ -181,8 +181,6 @@ struct Parameters {
   // IHC激活码
   uint16 ihc_active_code_maskcode = 65535;
 
-  // TSR使能码
-  uint16 tsr_enable_code_maskcode = 65535;
   // TSR禁用码
   uint16 tsr_disable_code_maskcode = 65535;
   // TSR故障码
