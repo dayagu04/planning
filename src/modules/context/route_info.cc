@@ -5884,6 +5884,27 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
         lane_sequence.erase(lane_sequence.begin(), lane_sequence.end() - 1);
       }
     }
+
+    if (first_split_region_info.split_direction == SplitDirection::SPLIT_LEFT &&
+        second_split_region_info.split_direction ==
+            SplitDirection::SPLIT_LEFT) {
+      for (int i = 0; i < 3; ++i) {
+        auto& first_lane_sequence =
+            first_split_region_info.recommend_lane_num[i]
+                .feasible_lane_sequence;
+        if (first_lane_sequence[0] >
+            second_split_region_info.recommend_lane_num[0]
+                .feasible_lane_sequence.back()) {
+          int num_to_add = first_lane_sequence[0] -
+                           second_split_region_info.recommend_lane_num[0]
+                               .feasible_lane_sequence.back();
+          for (int n = num_to_add - 1; n >= 0; --n) {
+            first_lane_sequence.insert(first_lane_sequence.begin(),
+                                       first_lane_sequence[0] - n - 1);
+          }
+        }
+      }
+    }
   }
 }
 void RouteInfo::OptimizeFeasibleLanesByDistance(
