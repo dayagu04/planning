@@ -24,8 +24,7 @@ constexpr double kConeSlopeThre = 1;
 constexpr int kInvalidAgentId = -1;
 constexpr double kCareLongDistance = 130;
 constexpr double kConstructionBucketSpacingThreshold = 8; // 国标是5m
-constexpr double kNumSatisfySonstructionAgent = 3;
-constexpr double kLaneAvailableLatPassThre = 0.5; // 锥桶侵入车道的距离阈值
+constexpr double kNumSatisfySonstructionAgent = 2;
 constexpr int kHysteresisFrames = 5;
 }  // namespace
 
@@ -134,7 +133,7 @@ void ConstructionSceneManager::UpdateConstructionAgentClusters() {
           obstacle.id(), obs_cart_point.x, obs_cart_point.y,
           obs_car_point.x, obs_car_point.y, construction_agent_s,
           construction_agent_l, dist_to_left_boundary,
-          dist_to_right_boundary);
+          dist_to_right_boundary, obstacle.length(), obstacle.width());
       construction_agent_points_.push_back(point);
     }
   }
@@ -464,6 +463,8 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
   ConstructionIntrusionLevel construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
   std::vector<int> available_virtual_lane_ids;
   available_virtual_lane_ids.reserve(5);
+  std::vector<int> blocked_virtual_lane_ids;
+  blocked_virtual_lane_ids.reserve(5);
   const auto virtual_lane_mgr =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   const auto& current_lane = virtual_lane_mgr->get_current_lane();
@@ -477,15 +478,20 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
   bool is_left_lane_available = true;
   bool is_right_right_lane_available = true;
   bool is_right_lane_available = true;
+  bool is_current_lane_blocked = false;
+  bool is_left_left_lane_blocked = false;
+  bool is_left_lane_blocked = false;
+  bool is_right_right_lane_blocked = false;
+  bool is_right_lane_blocked = false;
   const auto& left_left_lane = virtual_lane_mgr->get_lane_with_virtual_id(left_left_virtual_lane_id);
   const auto& left_lane = virtual_lane_mgr->get_lane_with_virtual_id(left_virtual_lane_id);
   const auto& right_right_lane = virtual_lane_mgr->get_lane_with_virtual_id(right_right_virtual_lane_id);
   const auto& right_lane = virtual_lane_mgr->get_lane_with_virtual_id(right_virtual_lane_id);
-  is_current_lane_available = CheckLaneAvailable(current_lane, false, false);
-  is_left_left_lane_available = CheckLaneAvailable(left_left_lane, true, false);
-  is_left_lane_available = CheckLaneAvailable(left_lane, true, false);
-  is_right_right_lane_available = CheckLaneAvailable(right_right_lane, false, true);
-  is_right_lane_available = CheckLaneAvailable(right_lane, false, true);
+  CheckLaneAvailableAndBlocked(current_lane, false, false, is_current_lane_available, is_current_lane_blocked);
+  CheckLaneAvailableAndBlocked(left_left_lane, true, false, is_left_left_lane_available,is_left_left_lane_blocked);
+  CheckLaneAvailableAndBlocked(left_lane, true, false, is_left_lane_available, is_left_lane_blocked);
+  CheckLaneAvailableAndBlocked(right_right_lane, false, true, is_right_right_lane_available, is_right_right_lane_blocked);
+  CheckLaneAvailableAndBlocked(right_lane, false, true, is_right_lane_available, is_right_lane_blocked);
   if (is_current_lane_available) {
     available_virtual_lane_ids.emplace_back(current_virtual_lane_id);
   }
@@ -501,7 +507,32 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
   if (is_right_lane_available) {
     available_virtual_lane_ids.emplace_back(right_virtual_lane_id);
   }
-  // 判定车道是否是真实的
+  if (is_current_lane_blocked) {
+    blocked_virtual_lane_ids.emplace_back(current_virtual_lane_id);
+  }
+  if (is_left_left_lane_blocked) {
+    blocked_virtual_lane_ids.emplace_back(left_left_virtual_lane_id);
+  }
+  if (is_left_lane_blocked) {
+    blocked_virtual_lane_ids.emplace_back(left_virtual_lane_id);
+  }
+  if (is_right_right_lane_blocked) {
+    blocked_virtual_lane_ids.emplace_back(right_right_virtual_lane_id);
+  }
+  if (is_right_lane_blocked) {
+    blocked_virtual_lane_ids.emplace_back(right_virtual_lane_id);
+  }
+
+  // 是否有车道被占用
+  if ((is_current_lane_blocked && current_lane != nullptr) ||
+      (is_left_left_lane_blocked && right_right_lane != nullptr) ||
+      (is_left_lane_blocked && left_lane != nullptr) ||
+      (is_right_right_lane_blocked && right_right_lane != nullptr) ||
+      (is_right_lane_blocked && right_lane != nullptr)) {
+    is_lane_blocked_ = true;
+  } else {
+    is_lane_blocked_ = false;
+  }
 
   // 如果存在施工区域，判定上游给的参考车道是否能够通行
   // 如果一条都不能满足通行，则走通行空间的生成（完全占道）
@@ -510,15 +541,20 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
     // 不存在施工区域
     construction_intrusion_level =
         ConstructionIntrusionLevel :: NONE;
-  } else if (!is_current_lane_available && !is_right_lane_available &&
-             !is_left_lane_available && !is_left_left_lane_available &&
-             !is_right_right_lane_available) {
+    enable_construction_passage_ = false;
+  } else if ((!is_current_lane_available || is_current_lane_blocked) &&
+             (!is_right_lane_available || is_right_lane_blocked) &&
+             (!is_left_lane_available || is_left_lane_blocked) &&
+             (!is_left_left_lane_available || is_left_left_lane_blocked) &&
+             (!is_right_right_lane_available || is_right_right_lane_blocked)) {
     // 可能需要做一下滞回操作
     construction_intrusion_level =
         ConstructionIntrusionLevel :: HIGH;
+    enable_construction_passage_ = true;
   } else {
     construction_intrusion_level =
         ConstructionIntrusionLevel :: MEDIUM;
+    enable_construction_passage_ = false;
   }
   construction_scene_output_.construction_intrusion_level =
       construction_intrusion_level;
@@ -534,18 +570,37 @@ void ConstructionSceneManager::JudgeConstructionIntrusionLevel() {
       is_right_lane_available;
   construction_scene_output_.available_virtual_lane_ids =
       available_virtual_lane_ids;
+  construction_scene_output_.is_current_lane_blocked =
+      is_current_lane_blocked;
+  construction_scene_output_.is_left_left_lane_blocked =
+      is_left_left_lane_blocked;
+  construction_scene_output_.is_left_lane_blocked =
+      is_left_lane_blocked;
+  construction_scene_output_.is_right_right_lane_blocked =
+      is_right_right_lane_blocked;
+  construction_scene_output_.is_right_lane_blocked =
+      is_right_lane_blocked;
+  construction_scene_output_.blocked_virtual_lane_ids =
+      blocked_virtual_lane_ids;
+  construction_scene_output_.enable_construction_passage =
+      enable_construction_passage_;
 }
 
-bool ConstructionSceneManager::CheckLaneAvailable(
+void ConstructionSceneManager::CheckLaneAvailableAndBlocked(
     const std::shared_ptr<VirtualLane> seach_lane,
-    bool is_left, bool is_right) {
+    bool is_left, bool is_right,
+    bool &is_available, bool &is_blocked) {
   if (seach_lane == nullptr) {
     ILOG_DEBUG << "seach fail: seach lane is nullptr";
-    return false;
+    is_available = false;
+    is_blocked = true;
+    return;
   }
   if (!is_exist_construction_area_) {
     // 不存在施工区域
-    return true;
+    is_available = true;
+    is_blocked = false;
+    return;
   }
   const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
@@ -560,27 +615,27 @@ bool ConstructionSceneManager::CheckLaneAvailable(
   const auto ego_v = ego_state->ego_v();
   const auto care_ego_time = 3; // 后续需要考虑自车通行速度
   const auto care_length = care_ego_time * ego_v;
-  std::shared_ptr<ReferencePath> target_refline =  // (bsniu): need to replace ref path manager
-      session_->mutable_environmental_model()
-          ->get_reference_path_manager()
-          ->get_reference_path_by_lane(seach_lane->get_virtual_id(), false);
-  if (target_refline == nullptr) {
-    ILOG_DEBUG << "target_refline is nullptr";
-    return false;
-  }
   std::shared_ptr<planning_math::KDPath> target_lane_frenet_coord =
-      target_refline->get_frenet_coord();
+      seach_lane->get_lane_frenet_coord();
+  double lane_blocked_pass_thre = 0.3; // 锥桶侵入距离阈值
+  if (is_lane_blocked_) {
+    lane_blocked_pass_thre = 0.1;
+  }
   if (target_lane_frenet_coord == nullptr) {
     ILOG_DEBUG << "target_lane_frenet_coord is nullptr";
-    return false;
+    is_available = false;
+    is_blocked = true;
+    return;
   }
   Point2D ego_cart_point{planning_init_point.lat_init_state.x(),
                          planning_init_point.lat_init_state.y()};
   Point2D ego_frenet_point;
   if (!target_lane_frenet_coord->XYToSL(ego_cart_point, ego_frenet_point)) {
-    return false;
+    is_available = false;
+    is_blocked = true;
+    return;
   }
-  double lane_width = 3.5;
+  double lane_width = seach_lane->width();
   double half_lane_width = lane_width * 0.5;
   int num_satisfy_construction_agent = 0;
   double pass_thre = vehicle_param.width + kLatPassThre;
@@ -594,8 +649,6 @@ bool ConstructionSceneManager::CheckLaneAvailable(
       if (!target_lane_frenet_coord->XYToSL(agent_cart_point, agent_frenet_point)) {
         continue;
       }
-      lane_width = seach_lane->width_by_s(agent_frenet_point.x);
-      half_lane_width = lane_width * 0.5;
       // 判定自车3s内自车横向是否可达
       bool is_lat_available = true;
       if (agent_frenet_point.x < care_length + ego_frenet_point.x &&
@@ -604,10 +657,10 @@ bool ConstructionSceneManager::CheckLaneAvailable(
         is_lat_available = false;
       }
       if (!is_lat_available) {
-        return false;
+        is_available = false;
       }
-      if (half_lane_width - std::fabs(agent_frenet_point.y) >
-          kLaneAvailableLatPassThre) {
+      if (half_lane_width - std::fabs(agent_frenet_point.y) + 0.5 * p.width >
+          lane_blocked_pass_thre) {
           // 需要考虑距离自车远近的影响
         num_satisfy_construction_agent++;
       }
@@ -615,11 +668,10 @@ bool ConstructionSceneManager::CheckLaneAvailable(
   }
   if (num_satisfy_construction_agent >= kNumSatisfySonstructionAgent) {
     // 满足一定数量侵占当车道，则该车道不可用
-    return false;
+    is_blocked = true;
   } else {
-    return true;
+    is_blocked = false;
   }
-  return false;
 }
 
 void ConstructionSceneManager::UpdateDriveArea() {
@@ -858,8 +910,30 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
                  [](int id) { return static_cast<double>(id); });
   JSON_DEBUG_VECTOR("construction_available_virtual_lane_ids",
                     available_virtual_lane_ids_double, 0);
+  JSON_DEBUG_VALUE("is_current_lane_blocked",
+                    construction_scene_output_.is_current_lane_blocked);
+  JSON_DEBUG_VALUE("is_right_lane_blocked",
+                    construction_scene_output_.is_right_lane_blocked);
+  JSON_DEBUG_VALUE("is_left_lane_blocked",
+                    construction_scene_output_.is_left_lane_blocked);
+  JSON_DEBUG_VALUE("is_left_left_lane_blocked",
+                    construction_scene_output_.is_left_left_lane_blocked);
+  JSON_DEBUG_VALUE("is_right_right_lane_blocked",
+                    construction_scene_output_.is_right_right_lane_blocked);
+  // 转成 double 类型
+  std::vector<double> blockes_virtual_lane_ids_double;
+  blockes_virtual_lane_ids_double.reserve(construction_scene_output_
+      .blocked_virtual_lane_ids.size());
+  std::transform(construction_scene_output_.blocked_virtual_lane_ids.begin(),
+                 construction_scene_output_.blocked_virtual_lane_ids.end(),
+                 std::back_inserter(blockes_virtual_lane_ids_double),
+                 [](int id) { return static_cast<double>(id); });
+  JSON_DEBUG_VECTOR("construction_blocked_virtual_lane_ids",
+                    blockes_virtual_lane_ids_double, 0);
   JSON_DEBUG_VALUE("is_construction_agent_cluster_success",
                    is_construction_agent_cluster_success_);
+  JSON_DEBUG_VALUE("enable_construction_passage",
+                   construction_scene_output_.enable_construction_passage);
   if (is_construction_agent_cluster_success_) {
     std::vector<double> construction_agent_cluster_attribute_ids;
     std::vector<double> construction_agent_clusters;

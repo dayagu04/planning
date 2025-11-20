@@ -27,6 +27,7 @@ struct ConstructionAgentPoint {
   int32_t id;
   int cluster;
   bool visited;
+  double length, width;
 
   // Default constructor
   ConstructionAgentPoint()
@@ -44,7 +45,7 @@ struct ConstructionAgentPoint {
   // Parameterized constructor
   ConstructionAgentPoint(int32_t id, double x, double y, double car_x,
                          double car_y, double s, double l, double left_dist,
-                         double right_dist)
+                         double right_dist, double length, double width)
       : x(x),
         y(y),
         car_x(car_x),
@@ -55,6 +56,8 @@ struct ConstructionAgentPoint {
         right_dist(right_dist),
         id(id),
         cluster(-1),
+        length(length),
+        width(width),
         visited(false) {}
 };
 using ConstructionAgentPoints = std::vector<ConstructionAgentPoint>;
@@ -76,12 +79,22 @@ struct ConstructionSceneOutput {
   bool is_exist_construction_area = false;       // 是否存在施工区域
   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
   ConstructionIntrusionLevel construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
+  // 车道是否被堵塞
+  bool is_current_lane_blocked = false;
+  bool is_left_left_lane_blocked = false;
+  bool is_left_lane_blocked = false;
+  bool is_right_right_lane_blocked = false;
+  bool is_right_lane_blocked = false;
+  std::vector<int> blocked_virtual_lane_ids;
+  // 车道是否可达
   bool is_current_lane_available = true;
   bool is_left_left_lane_available = true;
   bool is_left_lane_available = true;
   bool is_right_right_lane_available = true;
   bool is_right_lane_available = true;
   std::vector<int> available_virtual_lane_ids;
+  // 是否启用通行空间
+  bool enable_construction_passage = false;
   void Clear() {
     construction_agent_cluster_attribute_map.clear();
     is_exist_construction_area = false;
@@ -93,6 +106,13 @@ struct ConstructionSceneOutput {
     is_right_right_lane_available = true;
     is_right_lane_available = true;
     available_virtual_lane_ids.clear();
+    is_current_lane_blocked = false;
+    is_left_left_lane_blocked = false;
+    is_left_lane_blocked = false;
+    is_right_right_lane_blocked = false;
+    is_right_lane_blocked = false;
+    blocked_virtual_lane_ids.clear();
+    enable_construction_passage = false;
   }
 };
 
@@ -138,9 +158,10 @@ class ConstructionSceneManager {
 
   void JudgeConstructionIntrusionLevel();
 
-  bool CheckLaneAvailable(
+  void CheckLaneAvailableAndBlocked(
       const std::shared_ptr<VirtualLane> seach_lane,
-      bool is_left, bool is_right);
+      bool is_left, bool is_right,
+      bool &is_available, bool &is_blocked);
 
   void UpdateDriveArea();
 
@@ -179,6 +200,8 @@ class ConstructionSceneManager {
   bool is_exist_construction_area_ = false;
   bool is_pass_construction_area_ = false;
   ConstructionSceneOutput construction_scene_output_;
+  bool enable_construction_passage_ = false;
+  bool is_lane_blocked_ = false;
 };
 
 }  // namespace planning

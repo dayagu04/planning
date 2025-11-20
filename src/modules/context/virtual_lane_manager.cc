@@ -1095,7 +1095,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   UpdateEgoCurrentPoseLaneMark();
 
   // 更新道路边界信息
-  UpdateRoadBoundary(roads_ptr);
+  // UpdateRoadBoundary(roads_ptr);
 
   LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
@@ -2068,28 +2068,28 @@ void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
                    (ego_front_edge_s_on_lane_marks_pos->second).end)
 }
 
-void VirtualLaneManager::UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr) {
-  if (roads_ptr == nullptr) {
-    return;
-  }
+// void VirtualLaneManager::UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr) {
+//   if (roads_ptr == nullptr) {
+//     return;
+//   }
 
-  const auto ego_state_manager = session_->environmental_model().get_ego_state_manager();
-  Pose2D base_pose(ego_state_manager->ego_pose().x,
-                   ego_state_manager->ego_pose().y,
-                   ego_state_manager->ego_pose().theta);
-  Transform2d ego_base;
-  ego_base.SetBasePose(base_pose);
+//   const auto ego_state_manager = session_->environmental_model().get_ego_state_manager();
+//   Pose2D base_pose(ego_state_manager->ego_pose().x,
+//                    ego_state_manager->ego_pose().y,
+//                    ego_state_manager->ego_pose().theta);
+//   Transform2d ego_base;
+//   ego_base.SetBasePose(base_pose);
 
-  Pose2D obs_car_point;
-  road_boundray_.resize(roads_ptr->fusion_polyline_size);
-  for (size_t i = 0; i < roads_ptr->fusion_polyline_size; i++) {
-    road_boundray_[i].resize(roads_ptr->fusion_polyline[i].local_points_size);
-    for (size_t j = 0; j < roads_ptr->fusion_polyline[i].local_points_size; j++) {
-      ego_base.GlobalPointToULFLocal(
-          &obs_car_point, Pose2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y, 0));
-      road_boundray_[i][j].first= Point2d(obs_car_point.x, obs_car_point.y);    
-      road_boundray_[i][j].second = Point2d(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
-    }
-  }
-}
+//   Pose2D obs_car_point;
+//   road_boundray_.resize(roads_ptr->fusion_polyline_size);
+//   for (size_t i = 0; i < roads_ptr->fusion_polyline_size; i++) {
+//     road_boundray_[i].resize(roads_ptr->fusion_polyline[i].local_points_size);
+//     for (size_t j = 0; j < roads_ptr->fusion_polyline[i].local_points_size; j++) {
+//       ego_base.GlobalPointToULFLocal(
+//           &obs_car_point, Pose2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y, 0));
+//       road_boundray_[i][j].first= Point2d(obs_car_point.x, obs_car_point.y);
+//       road_boundray_[i][j].second = Point2d(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
+//     }
+//   }
+// }
 }  // namespace planning
