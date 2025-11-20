@@ -21,6 +21,13 @@ void RSExpansionDecider::Process(const Pose2f &start,
 void RSExpansionDecider::UpdateRoundRobinStrategy(
     const Pose2f &end, const AstarRequest *request, EulerDistanceTransform *edt,
     const VehicleParam &veh_param) {
+  if (request->swap_start_goal) {
+    round_robin_num_ = 1;
+    round_robin_id_ = 0;
+    round_robin_end_[0] = end;
+    return;
+  }
+
   if (request->direction_request == ParkingVehDirection::TAIL_IN) {
     round_robin_num_ = 2;
     round_robin_id_ = 0;
@@ -28,10 +35,18 @@ void RSExpansionDecider::UpdateRoundRobinStrategy(
     round_robin_end_[0] = end;
     round_robin_end_[1] = GenerateCandidatePoint(request, edt, veh_param, end);
 
+  } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
+    round_robin_num_ = 3;
+    round_robin_id_ = 0;
+
+    round_robin_end_[0] = end;
+    round_robin_end_[1] = end;
+    round_robin_end_[1].x = end.x + 0.8f;
+    round_robin_end_[2] = end;
+    round_robin_end_[2].x = end.x + 1.6f;
   } else {
     round_robin_num_ = 1;
     round_robin_id_ = 0;
-
     round_robin_end_[0] = end;
   }
 
@@ -151,7 +166,7 @@ Pose2f RSExpansionDecider::GenerateCandidatePoint(const AstarRequest *request,
   Pose2f candidate = end;
   candidate.x = request->slot_length - veh_param.mirror_lon_dist_to_rear_axle;
   // candidate must away from end.
-  candidate.x = std::max(end.x + 0.2f, candidate.x);
+  candidate.x = std::max(end.x + 0.4f, candidate.x);
 
   Pose2f left_mirror;
   left_mirror.x = candidate.x + veh_param.mirror_lon_dist_to_rear_axle;

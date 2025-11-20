@@ -8,7 +8,7 @@
 
 namespace planning {
 
-#define RS_MAX_ROUND_ROBIN_NUMBER (2)
+#define RS_MAX_ROUND_ROBIN_NUMBER (3)
 
 // todo: add all rs expansion related scenarios to this decider.
 class RSExpansionDecider : public AstarDecider {

@@ -61,18 +61,29 @@ struct RSPath {
     return;
   }
 
-  void FirstPathEndPoint(RSPoint *point) {
-    if (size < 1) {
-      return;
+  const RSPoint *FirstPathEndPoint() const {
+    if (size < 1 || size > MAX_RS_PATH_NUM) {
+      return nullptr;
     }
 
-    RSPathSegment *seg = &paths[0];
+    const RSPathSegment *seg = &paths[0];
     if (seg->size < 1) {
-      return;
+      return nullptr;
     }
-    *point = seg->points[seg->size - 1];
+    return &seg->points[seg->size - 1];
+  }
 
-    return;
+  const RSPoint *EndPathEndPoint() const {
+    if (size < 1 || size > MAX_RS_PATH_NUM) {
+      return nullptr;
+    }
+
+    const RSPathSegment *seg = &paths[size - 1];
+    if (seg->size < 1 || seg->size > RS_PATH_MAX_POINT) {
+      return nullptr;
+    }
+
+    return &seg->points[seg->size - 1];
   }
 
   float GetFirstGearLength() const {

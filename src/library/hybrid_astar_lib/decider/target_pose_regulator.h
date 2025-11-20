@@ -54,6 +54,8 @@ struct TerminalGuessPath {
 
   // integral strategy
   float safe_width_integral;
+  // analyze all points minimum dist to obs, but if one path point dist is
+  // collision, do not consider this point dist.
   float min_dist_to_obs;
 
   void AddPoint(const Pose2f &point, const float dist);

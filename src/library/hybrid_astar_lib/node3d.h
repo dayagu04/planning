@@ -196,6 +196,12 @@ class Node3d {
 
   const float GetDistToStart() const { return dist_to_start_; }
 
+  void SetStraightDistToGoal(const float dist) {
+    straight_dist_to_goal_ = dist;
+  }
+
+  const float GetStraightDistToGoal() const { return straight_dist_to_goal_; }
+
   const AstarPathGear GetGearType() const { return gear_type_; }
   const AstarPathSteer GetSteerType() const { return steer_type_; }
 
@@ -314,6 +320,7 @@ class Node3d {
   float DistToPose(const Pose2f& pose);
 
   Node3d* GearSwitchNode() const { return gear_switch_node_; }
+  const Node3d* ConstGearSwitchNode() const { return gear_switch_node_; }
 
   void SetGearSwitchNode(Node3d* node) {
     gear_switch_node_ = node;
@@ -354,6 +361,12 @@ class Node3d {
   }
 
   const int GetScurveNum() const { return s_curve_num_; }
+
+  const bool IsSameGearSwitchNode(const Node3d* other) const;
+
+  const bool NoGearSwitchNode() const {
+    return gear_switch_node_ == nullptr ? true : false;
+  }
 
  protected:
   // path point size
@@ -407,6 +420,7 @@ class Node3d {
 
   // is positive
   float dist_to_start_;
+  float straight_dist_to_goal_;
 
   AstarPathType path_type_;
 

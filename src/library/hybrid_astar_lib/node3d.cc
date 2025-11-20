@@ -133,6 +133,7 @@ void Node3d::Set(const NodePath& path, const MapBound& XYbounds,
   kappa_ = 0.0f;
   gear_type_ = AstarPathGear::NONE;
   path_type_ = AstarPathType::NONE;
+  straight_dist_to_goal_ = 0.0;
 
 #if DEBUG_NODE3D
   ILOG_INFO << "new index " << index_;
@@ -515,6 +516,18 @@ const bool Node3d::IsReturnPath(const bool is_gear_switch,
                                 const AstarPathSteer steer) {
   if (is_gear_switch) {
     return IsSameSteerDir(steer);
+  }
+
+  return false;
+}
+
+const bool Node3d::IsSameGearSwitchNode(const Node3d* other) const {
+  if (gear_switch_node_ == nullptr || other == nullptr) {
+    return false;
+  }
+
+  if (gear_switch_node_->GetGlobalID() == other->GetGlobalID()) {
+    return true;
   }
 
   return false;

@@ -629,13 +629,7 @@ FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModel(
 
 FootPrintCircleModel* NodeCollisionDetect::GetCircleFootPrintModelForParkIn(
     const Pose2f& pose, const bool is_circle_path) {
-  bool inside_slot = slot_box_.contain(pose);
-  // 40 degree
-  bool theta_condition =
-      std::fabs(IflyUnifyTheta(pose.theta - request_->goal.theta, M_PIf32)) <
-      0.7f;
-
-  if (inside_slot && theta_condition) {
+  if (slot_box_.contain(pose)) {
     return &hierachy_circle_model_.footprint_model
                 [is_circle_path
                      ? HierarchySafeBuffer::CIRCLE_PATH_INSIDE_SLOT_BUFFER

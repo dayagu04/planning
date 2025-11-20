@@ -34,7 +34,10 @@ class PathComparator : public AstarDecider {
   const bool PolynomialPathBetter(const PolynomialPathCost &path,
                                   const PolynomialPathCost &base);
 
-  // 比较准则：5厘米以外，距离越近越好；5厘米以内，heading越接近越好;
+  // node choose rule. 1. distance to ref line; 2. heading
+  // if distance is smaller than 0.05 meter, choose minimum heading with ref
+  // line;
+  // or else we choose minimum distance node;
   const bool NodeCompare(const Pose2f &goal, const Node3d *best_node,
                          const Node3d *node_challenger);
 
@@ -58,6 +61,10 @@ class PathComparator : public AstarDecider {
 
   bool IsGearSwitchNodeNice(const Node3d *node);
 
+  const bool IsStraightDistBigger(const Node3d *best_node,
+                                  const Node3d *node_challenger);
+
+ private:
   PathWinReason win_reason_;
 
   /**

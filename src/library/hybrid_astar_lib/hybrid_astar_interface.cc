@@ -153,7 +153,6 @@ void HybridAStarInterface::UpdateOutput() {
       ParkInPathSearchForScenarioRunning(target_pose_regulator, ego_obs_dist,
                                          is_ego_overlap_with_slot);
     }
-
   } else if (request_.path_generate_method ==
              AstarPathGenerateType::TRY_SEARCHING) {
     PathSearchForScenarioTry(target_pose_regulator);

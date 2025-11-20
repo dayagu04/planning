@@ -631,18 +631,15 @@ const void TargetPoseRegulator::GetSafeIntegralForPath(
   float min_width = 10.0f;
   bool find_valid_point = false;
 
-  // if path point is not safe, break.
   for (int32_t i = path.size - 1; i >= 0; i--) {
     width = path.points[i].dist_to_obs;
-    if (width < min_lateral_buffer) {
-      break;
+    if (width > min_lateral_buffer) {
+      min_width = std::min(min_width, width);
+      // Normalize to [0, buffer]
+      width = std::min(buffer, width);
+      integral += width * x_check_bounday_.step;
+      find_valid_point = true;
     }
-
-    min_width = std::min(min_width, width);
-    // Normalize to [0, buffer]
-    width = std::min(buffer, width);
-    integral += width * x_check_bounday_.step;
-    find_valid_point = true;
   }
 
   if (find_valid_point) {
