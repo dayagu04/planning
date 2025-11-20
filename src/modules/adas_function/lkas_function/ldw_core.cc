@@ -542,16 +542,104 @@ uint32 LdwCore::UpdateLdwDisableCode(void) {
   } else {
     /*do nothing*/
   }
+
+  // bit 0
+  // 实际车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
+    disable_code += uint16_bit[15];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 1
+  // 仪表车速信号无效
+  if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
+       false)) {
+    disable_code += uint16_bit[16];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 2
+  // 横摆角速度信号无效
+  if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
+    disable_code += uint16_bit[17];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 3
+  // 方向盘转角速度信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
+       false)) {
+    disable_code += uint16_bit[18];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 4
+  // 方向盘转速信号无效
+  if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
+       false)) {
+    disable_code += uint16_bit[19];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 5
+  // 油门踏板信号无效
+  if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
+       false)) {
+    disable_code += uint16_bit[19];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 6
+  // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
+  if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
+    disable_code += uint16_bit[20];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 7
+  // 转向灯信号无效
+  if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
+    disable_code += uint16_bit[21];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 8
+  // 车道线融合模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
+    disable_code += uint16_bit[22];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 9
+  // vehicle_service模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
+    disable_code += uint16_bit[23];
+  } else {
+    /*do nothing*/
+  }
+
+  // bit 10
+  // 定位模块节点通讯丢失
+  if ((GetContext.mutable_state_info()->localization_info_node_valid ==
+       false)) {
+    disable_code += uint16_bit[24];
+  } else {
+    /*do nothing*/
+  }
   return disable_code & GetContext.get_param()->ldw_disable_code_maskcode;
 }
 
 uint32 LdwCore::UpdateLdwFaultCode(void) {
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-
-  auto vehicle_service_output_info_ptr = &GetContext.mutable_session()
-                                              ->mutable_environmental_model()
-                                              ->get_local_view()
-                                              .vehicle_service_output_info;
   auto degraded_driving_function_info_ptr =
       &GetContext.mutable_session()
            ->mutable_environmental_model()
@@ -569,7 +657,7 @@ uint32 LdwCore::UpdateLdwFaultCode(void) {
        iflyauto::ERROR_SAFE_STOP) ||
       (degraded_driving_function_info_ptr->ldw.degraded ==
        iflyauto::MCU_COMM_SHUTDOWN)) {
-    ldw_fault_code += uint16_bit[1];
+    ldw_fault_code += uint16_bit[0];
   } else {
     /*do nothing*/
   }
