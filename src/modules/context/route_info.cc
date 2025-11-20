@@ -2061,8 +2061,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
 
     // 从最后一个exchange region开始向前优化
-    // 限制最多仅优化连续3个
-    int iteration_num = std::min<int>(valid_exchange_regions.size() - 1, 2);
+    // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
+    int iteration_num = 0;
+    for (int i = 0; i < std::min<int>(valid_exchange_regions.size() - 1, 2);
+         ++i) {
+      if (valid_exchange_regions[i].is_ramp_split) {
+        iteration_num = i;
+      }
+    }
     for (int i = iteration_num; i >= 0; --i) {
       // 先根据距离优化当前exchange region的可行车道
       OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
