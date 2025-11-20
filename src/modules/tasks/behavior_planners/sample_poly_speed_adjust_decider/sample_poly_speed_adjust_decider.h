@@ -97,6 +97,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double v_adjust_speed_limit_{25.0};
   double target_lane_objs_flow_vel_{25.0};
   double evaulation_t_{5.0};
+  double evaluation_congest_t_{3.0};
 
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
 

@@ -218,34 +218,36 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = GetStoplineSpdDifferGain();
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  if(sample_scene_ == PurseFlowVelScene && is_not_use_gap_select){
+  if(traffic_density_status_ == Congested){
+    count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
+  }
+  if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
     for (size_t k = 0; k < sample_trajs_.size(); k++) {
       auto& sample_traj_at_v = sample_trajs_[k];
       for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
         auto& sample_traj = sample_traj_at_v[j];
         sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
-                              v_suggestted_, merge_stop_line_distance_,
-                              leading_veh_,
-                              is_not_use_gap_select, speed_differ_gain,
-                              distance_to_stop_point_,
-                              lc_safety_distance_config_, 3.0);
+                             v_suggestted_, merge_stop_line_distance_,
+                             leading_veh_, is_not_use_gap_select,
+                             speed_differ_gain, distance_to_stop_point_,
+                             lc_safety_distance_config_, 3.0);
       }
     }
-  }
-  else{
+  } else {
     for (size_t i = 0; i <= count; i++) {
-      st_sample_space_base_.GetAvailableGap(i * kEvaluationStep / 0.1);
+      st_sample_space_base_.GetAvailableGap(
+          i * kEvaluationStep / 0.1,
+          ego_s_ + speed_adjust_range_.second * i * 0.5);
       for (size_t k = 0; k < sample_trajs_.size(); k++) {
         auto& sample_traj_at_v = sample_trajs_[k];
         for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
           auto& sample_traj = sample_traj_at_v[j];
           if (is_not_use_gap_select || CheckTrajAvailable(sample_traj, i)) {
-            sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
-                                v_suggestted_, merge_stop_line_distance_,
-                                leading_veh_,
-                                is_not_use_gap_select, speed_differ_gain,
-                                distance_to_stop_point_,
-                                lc_safety_distance_config_, i * kEvaluationStep);
+            sample_traj.CalcCost(
+                st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
+                merge_stop_line_distance_, leading_veh_, is_not_use_gap_select,
+                speed_differ_gain, distance_to_stop_point_,
+                lc_safety_distance_config_, i * kEvaluationStep);
           }
         }
       }
@@ -400,7 +402,7 @@ void SamplePolySpeedAdjustDecider::CalcTargetLaneVehDensity() {
 
     total_vehicles += 1;
   }
-  if(total_vehicles == 0){
+  if (total_vehicles == 0) {
     return;
   }
   traffic_density_ = 2 * kVehDensityDistanceThreshold / total_vehicles;
@@ -493,52 +495,54 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       leading_veh_.v = lead_one->velocity();
       leading_veh_.center_s = lead_one->d_s_rel();
       const auto& lead_one_agent = dynamic_world->GetNode(leading_veh_.id);
-      if(lead_one_agent != nullptr){
-          const auto& primary_trajectories =
-                  lead_one_agent->node_trajectories_used_by_st_graph();
-          const auto& fallback_trajectories = lead_one_agent->node_trajectories();
-          const auto& selected_trajectories = primary_trajectories.empty()
-                                                  ? fallback_trajectories
-                                                  : primary_trajectories;
-          if (selected_trajectories.empty() || selected_trajectories.front().empty()) {
-            leading_veh_.prediction_path_valid = false;
-          }else{
-            leading_veh_.prediction_path_valid = true;
-            const auto& current_trajectory = selected_trajectories.front();
-            std::pair<double, double> path_point;
-            const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
-            const size_t PredictionHorizon = current_trajectory.size() - 1;
-            size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
-            double end_v = 0.0;
-            double end_s = 0.0;
-            for (size_t i = 0; i <= min_horizion; ++i) {
-              end_s = current_trajectory[i].s();
-              end_v = current_trajectory[i].vel();
-              path_point.first = end_s ;
-              path_point.second = end_v;
-              leading_veh_.prediction_path.emplace_back(path_point);
-              if (i == min_horizion) {
-                break;
-              }
-              end_s += kTimeResolution * end_v;
-              path_point.first = end_s ;
-              path_point.second = end_v;
-              leading_veh_.prediction_path.emplace_back(path_point);
+      if (lead_one_agent != nullptr) {
+        const auto& primary_trajectories =
+            lead_one_agent->node_trajectories_used_by_st_graph();
+        const auto& fallback_trajectories = lead_one_agent->node_trajectories();
+        const auto& selected_trajectories = primary_trajectories.empty()
+                                                ? fallback_trajectories
+                                                : primary_trajectories;
+        if (selected_trajectories.empty() ||
+            selected_trajectories.front().empty()) {
+          leading_veh_.prediction_path_valid = false;
+        } else {
+          leading_veh_.prediction_path_valid = true;
+          const auto& current_trajectory = selected_trajectories.front();
+          std::pair<double, double> path_point;
+          const size_t TimeHorizion = kPlanningDuration / kPlanningStep;
+          const size_t PredictionHorizon = current_trajectory.size() - 1;
+          size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
+          double end_v = 0.0;
+          double end_s = 0.0;
+          for (size_t i = 0; i <= min_horizion; ++i) {
+            end_s = current_trajectory[i].s();
+            end_v = current_trajectory[i].vel();
+            path_point.first = end_s;
+            path_point.second = end_v;
+            leading_veh_.prediction_path.emplace_back(path_point);
+            if (i == min_horizion) {
+              break;
             }
-            if (PredictionHorizon < TimeHorizion) {
-              for (size_t i = PredictionHorizon; i < TimeHorizion; ++i) {
-                const double time_start = i * kPlanningStep + kTimeResolution;
-                double time_end = (i + 1) * kPlanningStep;
-                for (double t = time_start; t < time_end + planning_math::kMathEpsilon;
-                    t += kTimeResolution) {
-                  end_s += end_v * kTimeResolution;
-                  path_point.first = end_s ;
-                  path_point.second = end_v;
-                  leading_veh_.prediction_path.emplace_back(path_point);
-                }
+            end_s += kTimeResolution * end_v;
+            path_point.first = end_s;
+            path_point.second = end_v;
+            leading_veh_.prediction_path.emplace_back(path_point);
+          }
+          if (PredictionHorizon < TimeHorizion) {
+            for (size_t i = PredictionHorizon; i < TimeHorizion; ++i) {
+              const double time_start = i * kPlanningStep + kTimeResolution;
+              double time_end = (i + 1) * kPlanningStep;
+              for (double t = time_start;
+                   t < time_end + planning_math::kMathEpsilon;
+                   t += kTimeResolution) {
+                end_s += end_v * kTimeResolution;
+                path_point.first = end_s;
+                path_point.second = end_v;
+                leading_veh_.prediction_path.emplace_back(path_point);
               }
             }
           }
+        }
       }
     }
   }
@@ -624,7 +628,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           ? (target_lane_objs_flow_vel_ / 1.4) > ego_v_
                 ? ego_v_
                 : std::fmax(target_lane_objs_flow_vel_ / 1.4,
-                       ego_v_ - config_.maximum_speed_adjustment)
+                            ego_v_ - config_.maximum_speed_adjustment)
           : speed_adjust_range_.second;
   return !agent_info_.empty();
 }
@@ -869,10 +873,10 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
 
   if (IsInDeceleartionScene()) {
     bool is_not_use_gap_select = IsNotUseGapSelect();
-    if(sample_scene_ == PurseFlowVelScene && is_not_use_gap_select){
+    if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
       v_suggestted_ = target_lane_objs_flow_vel_;
       SetPurseFlowVelSceneWeight();
-    }else{
+    } else {
       sample_scene_ = DecelerationPriorityScene;
       count_hover_to_normal_state_ = 0;
       count_normal_to_hover_state_ = 0;
@@ -884,7 +888,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
   } else {
     SetNormalSceneWeight();
     is_in_deceleartion_scene_ = false;
-    if(sample_scene_ == DecelerationPriorityScene){
+    if (sample_scene_ == DecelerationPriorityScene) {
       sample_scene_ = NormalSampleScene;
     }
   }
@@ -948,25 +952,25 @@ double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
   double v_rel = std::max(ego_v - v_lead_clip, 0.0);
   double distance_hysteresis = ego_v * 0.3;
   double fix_safe_distance = v_rel * ego_v / (2.0 * 3.0);
-  return std::max(fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis, 3.0);
+  return std::max(fix_safe_distance + t_gap * v_lead_clip + distance_hysteresis,
+                  3.0);
 }
 
 bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
   if (leading_veh_.id != kNoAgentId && leading_veh_.id != -1) {
     double poly_arrived_t = min_cost_traj_ptr_->arrived_t();
     const double ego_pred_end_s = min_cost_traj_ptr_->CalcS(poly_arrived_t);
-    double buffer_distance =  CalcHeadwayDistance(leading_veh_.v, ego_v_, t_gap_ego_v_bp_,
-                                t_gap_ego_v_);
+    double buffer_distance = CalcHeadwayDistance(leading_veh_.v, ego_v_,
+                                                 t_gap_ego_v_bp_, t_gap_ego_v_);
     int dex = static_cast<int>(poly_arrived_t / kTimeResolution + 0.51);
     double traveled_distance = 0.0;
-    if(dex < leading_veh_.prediction_path.size()){
+    if (dex < leading_veh_.prediction_path.size()) {
       traveled_distance = leading_veh_.prediction_path[dex].first;
-    }else{
+    } else {
       traveled_distance = leading_veh_.v * poly_arrived_t;
     }
     if (ego_pred_end_s >
-        leading_veh_.center_s + ego_s_ + traveled_distance -
-            buffer_distance) {
+        leading_veh_.center_s + ego_s_ + traveled_distance - buffer_distance) {
       std::cout << "ego pred s is exceed upper" << std::endl;
       min_cost_traj_ptr_ = nullptr;
       sample_status_ = kEgoPredSExceedLeadOne;
@@ -1132,10 +1136,10 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
       session_->environmental_model().get_route_info()->get_route_info_output();
   if ((lane_change_source_ == MERGE_REQUEST) ||
       ((lane_change_source_ == MAP_REQUEST) &&
-      (route_info_output.mlc_request_type_route_info.mlc_request_type ==
+       (route_info_output.mlc_request_type_route_info.mlc_request_type ==
         RAMP_TO_MAIN)) ||
       (merge_stop_line_distance_ <= 200.0)) {
-        return true;
+    return true;
   }
   return false;
 }

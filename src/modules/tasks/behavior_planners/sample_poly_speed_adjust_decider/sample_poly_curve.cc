@@ -210,10 +210,10 @@ void SampleQuarticPolynomialCurve::CalcCost(
   int temp_index = static_cast<int>(arrived_t_ / kTimeResolution + 0.51);
   double traveled_distance = 0.0;
   double leading_end_v = 0.0;
-  if(temp_index < leading_veh.prediction_path.size()){
+  if (temp_index < leading_veh.prediction_path.size()) {
     traveled_distance = leading_veh.prediction_path[temp_index].first;
     leading_end_v = leading_veh.prediction_path[temp_index].second;
-  }else{
+  } else {
     traveled_distance = leading_veh.v * arrived_t_;
     leading_end_v = leading_veh.v;
   }
@@ -221,8 +221,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   if (leading_veh.id != kNoAgentId && leading_veh.id != -1 &&
       anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
     follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
-    leading_veh_follow_s_cost_.GetCost(
-        leading_veh.center_s + traveled_distance, arrived_v_, arrived_s_);
+    leading_veh_follow_s_cost_.GetCost(leading_veh.center_s + traveled_distance + CalcS(0),
+                                       arrived_v_, arrived_s_);
   }
 
   gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
@@ -255,7 +255,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, true);
 
   if (leading_veh.id != kNoAgentId && leading_veh.id != -1) {
-    leading_veh_safe_cost_.GetCost(arrived_s_, arrived_v_,
+    leading_veh_safe_cost_.GetCost(arrived_s_ - CalcS(0), arrived_v_,
                                    leading_veh.center_s + traveled_distance,
                                    leading_end_v);
   }

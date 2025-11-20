@@ -154,10 +154,10 @@ void STSampleSpaceBase::ConstructStPointsTable() {
       st_points_table_[index].emplace_back(std::move(points_pair));
     }
   }
-  for(auto& current_st_point : st_points_table_) {
+  for (auto& current_st_point : st_points_table_) {
     std::sort(current_st_point.begin(), current_st_point.end(),
-          [](std::pair<STPoint, STPoint>& a, std::pair<STPoint, STPoint>& b)
-              -> bool { return a.first.s() < b.first.s(); });
+              [](std::pair<STPoint, STPoint>& a, std::pair<STPoint, STPoint>& b)
+                  -> bool { return a.first.s() < b.first.s(); });
   }
 
   auto cmp = [](const std::pair<STPoint, STPoint> ele1,
@@ -356,11 +356,12 @@ bool STSampleSpaceBase::GetBorderByAvailable(double s, double t,
   return true;
 }
 
-void STSampleSpaceBase::GetAvailableGap(const int index) {
+void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
   gap_array_.clear();
   if (index < 0 || index >= st_points_table_.size()) {
     return;
   }
+  std::vector<std::pair<STPoint, STPoint>> temp_gap_array;
   double current_time = index * kEvaluationStep;
   std::pair<STPoint, STPoint> current_gap;
   const auto& intervals = st_points_table_.at(index);
@@ -369,7 +370,7 @@ void STSampleSpaceBase::GetAvailableGap(const int index) {
                                -1);
     current_gap.second.set_info(kMaxPathLength, current_time, 100.0, kNoAgentId,
                                 -1);
-    gap_array_.push_back(current_gap);
+    gap_array_.emplace_back(std::move(current_gap));
   } else {
     STPoint lower_st_point;
     lower_st_point.set_info(-kMaxPathLength, current_time, 0.0, kNoAgentId, -1);
@@ -388,7 +389,7 @@ void STSampleSpaceBase::GetAvailableGap(const int index) {
                               interval.second.agent_id(), -1);
       if ((current_gap.second.s() - current_gap.first.s()) >=
           (front_edge_to_rear_axle_ + rear_edge_to_rear_axle_ + 4.0)) {
-        gap_array_.push_back(current_gap);
+        temp_gap_array.emplace_back(std::move(current_gap));
       }
     }
     if (lower_st_point.s() < kMaxPathLength) {
@@ -397,7 +398,16 @@ void STSampleSpaceBase::GetAvailableGap(const int index) {
                                  lower_st_point.agent_id(), -1);
       current_gap.second.set_info(kMaxPathLength, current_time, 100.0,
                                   kNoAgentId, -1);
-      gap_array_.push_back(current_gap);
+      temp_gap_array.emplace_back(std::move(current_gap));
+    }
+    auto it =
+        std::upper_bound(temp_gap_array.begin(), temp_gap_array.end(), ego_s,
+                         [](double val,const std::pair<STPoint, STPoint>& elem) {
+                           return val < elem.second.s();
+                         });
+    if (it != temp_gap_array.begin()) {
+      it--;
+      gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());
     }
   }
 }

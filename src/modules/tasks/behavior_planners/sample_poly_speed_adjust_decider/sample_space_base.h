@@ -19,7 +19,8 @@ struct AgentInfo {
 };
 
 struct LeadingAgentInfo : public AgentInfo {
-  std::vector<std::pair<double, double>> prediction_path;//first is traveled_distance second is speed
+  std::vector<std::pair<double, double>>
+      prediction_path;  // first is traveled_distance second is speed
   bool prediction_path_valid = false;
 };
 
@@ -40,7 +41,7 @@ class STSampleSpaceBase {
                             STPoint* const upper_st_point);
   void Init(const std::vector<const DynamicAgentNode*>& target_lane_nodes,
             const double init_s);
-  void GetAvailableGap(const int index);
+  void GetAvailableGap(const int index, double s);
 
   void Clear();
   void SetInitS(const double s0);

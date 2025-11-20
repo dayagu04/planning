@@ -359,12 +359,12 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
                ? weight * std::exp(4.0 * (safe_distance - dist) / safe_distance)
                : 0.0;
   };
-  double follow_distance = poly_end_v * std::fabs(leading_veh_v - poly_end_v) / (2.0 * 2.0);
+  double follow_distance =
+      poly_end_v * std::fabs(leading_veh_v - poly_end_v) / (2.0 * 2.0);
   double thw = 0.3 * poly_end_v;
   double safe_distance = std::fmax(thw + follow_distance, 3.5);
-  cost_ = calculate_poly_dis_to_lead_cost(
-      leading_veh_pred_s - poly_end_s, safe_distance,
-      weight_);
+  cost_ = calculate_poly_dis_to_lead_cost(leading_veh_pred_s - poly_end_s,
+                                          safe_distance, weight_);
 }
 
 void SpeedVariableCost::GetCost(const double vel_integral) {
@@ -420,8 +420,7 @@ void StopPointCost::GetCost(const double distance_to_stop_point) {
 void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
                                    const double ego_v,
                                    const double ego_pred_s) {
-  double follow_dis =
-      leading_veh_pred_s - (ego_pred_s);
+  double follow_dis = leading_veh_pred_s - (ego_pred_s);
   double thw = follow_dis / std::fmax(ego_v, kZeroEpsilon);
   cost_ = thw > 1.5 ? thw > 11.5 ? weight_ * std::exp(1.0)
                                  : weight_ * std::exp((thw - 1.5) / 10.0)
