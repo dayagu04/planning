@@ -57,8 +57,9 @@ constexpr double kCAInvadeLatMinDis = 2;
 constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
-constexpr double kSamplingStep = 2.0;  
-constexpr double kEWMAAlpha = 0.15;  
+constexpr double kSamplingStep = 2.0;
+constexpr double kEWMAAlpha = 0.3;
+constexpr double kSSharpBendCount = 3;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -513,26 +514,12 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       reference_path_ptr->GetRawCurveSpline();
   bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
   std::vector<CurvInfo> preview_curv_info_vec;
-  if (raw_spline.get_x().size() > 0) {
-    double max_x = raw_spline.get_x_max();
-    double min_x = raw_spline.get_x_min();
-    for (int idx = 0; idx * kSamplingStep < preview_x; idx++) {
-      if (idx * kSamplingStep < max_x && idx * kSamplingStep >=  min_x + kEpsilon) {
-        CurvInfo one_curv_info;
-        one_curv_info.s = idx * kSamplingStep;
-        one_curv_info.curv = std::fabs(raw_spline(one_curv_info.s));
-        one_curv_info.curv_sign = raw_spline(one_curv_info.s) > 0 ? 1 : -1;
-        preview_curv_info_vec.emplace_back(one_curv_info);
-      }
-    }
-  }
-
-  /*for (int idx = 0; idx * 2.0 < preview_x; idx++) {
+  for (int idx = 0; idx * 2.0 < preview_x; idx++) {
     CurvInfo one_curv_info;
     if (is_ref_path_smoothed) {
       ReferencePathPoint refpath_pt;
-      if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + idx * 2.0,
-                                                        refpath_pt)) {
+      if (reference_path_ptr->get_reference_point_by_lon(
+              ego_start_s + idx * 2.0, refpath_pt)) {
         // calc curv
         one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
         // calc curv direction(-1 or 1, 0 for except)
@@ -567,7 +554,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     }
     one_curv_info.s = idx * 2.0;
     preview_curv_info_vec.emplace_back(one_curv_info);
-  }*/
+  }
   /* double curv_sum = 0.0;
   for (int ind = 0; ind < curv_window_vec.size(); ++ind) {
     curv_sum = curv_sum + curv_window_vec[ind];
@@ -584,18 +571,11 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       max_curv = preview_curv_info_vec[idx].curv;
     }
   }
-  //double road_radius_origin = 1 / std::max(max_curv, 0.0001);*/
+  double road_radius_origin = 1 / std::max(max_curv, 0.0001);
 
-  //reference_path平滑后的结果
-  //const auto &curve_info = reference_path_ptr->GetReferencePathCurveInfo();
-  //double max_curvature = curve_info.max_curve;
-  //double road_radius_average = 1 / std::max(max_curvature, 0.0001);
-  
-  // 获取原始的感知的参考线的曲率
-  
-  //double cur_max_cur = 0.0001;
-
-  /*if (raw_spline.get_x().size() > 0) {
+  // 获取基于10m一个点计算的曲率
+  double cur_max_cur = 0.0001;
+  if (raw_spline.get_x().size() > 0) {
     double min_x = raw_spline.get_x_min();
     double max_x = raw_spline.get_x_max();
     double start_s = std::clamp(ego_start_s, min_x, max_x);
@@ -608,16 +588,16 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         }
       }
     }
-  }*/
-  //EWMA 
-  if (raw_curv_spline_ < kEpsilon){
-      raw_curv_spline_ = max_curv;
-  }else{
-    raw_curv_spline_ = kEWMAAlpha * max_curv + (1 - kEWMAAlpha) * raw_curv_spline_;
+  }
+  // EWMA
+  if (raw_curv_spline_ < kEpsilon) {
+    raw_curv_spline_ = cur_max_cur;
+  } else {
+    raw_curv_spline_ =
+        kEWMAAlpha * cur_max_cur + (1 - kEWMAAlpha) * raw_curv_spline_;
   }
   road_radius = 1 / std::max(raw_curv_spline_, 0.0001);
-
-  //if (road_radius < 400) {
+  // if (road_radius < 400) {
   acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
   //}
   v_limit_road = std::sqrt(acc_lat_max * road_radius);
@@ -634,8 +614,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
-//  JSON_DEBUG_VALUE("road_radius_average", road_radius_average);
-//  JSON_DEBUG_VALUE("road_radius_raw_ewma", road_radius_origin);
+  JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = SpeedLimitType::CURVATURE;
