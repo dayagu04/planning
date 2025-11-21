@@ -811,7 +811,8 @@ void RouteInfo::CaculateSplitInfo(
                (other_link->link_class() ==
                     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
                 other_link->link_class() ==
-                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY))) {
+                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) &&
+                  split_link->lane_num() <= other_link->lane_num()) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
@@ -2334,6 +2335,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       }
     }
   }
+  // 将mlc_request_info_list中按照distance排序
+  std::sort(mlc_request_info_list.begin(), mlc_request_info_list.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });
 
   // 在优化feasible lane后，过滤first_feasible_lane_distance
   for (auto it = feasible_lane_distance.begin();
