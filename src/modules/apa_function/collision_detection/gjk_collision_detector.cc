@@ -27,8 +27,7 @@ const ColResult GJKCollisionDetector::Update(
     const std::vector<geometry_lib::PathPoint>& pt_vec,
     const double body_lat_buffer, const double lon_buffer,
     const GJKColDetRequest gjk_col_det_request,
-    const bool special_process_mirror, const double mirror_lat_buffer,
-    const GJKrequestFrom gjk_request_from) {
+    const bool special_process_mirror, const double mirror_lat_buffer) {
   // 输入PathPoint的s必须赋值
   col_res_.Reset();
   size_t N = pt_vec.size();
@@ -170,11 +169,6 @@ const ColResult GJKCollisionDetector::Update(
         continue;
       }
 
-      if(gjk_request_from == GJKrequestFrom::PARALLEL &&
-      obs.GetObsScemanticType() == ApaObsScemanticType::LIMITER){
-        continue;
-      }
-
       for (size_t i = 0; i < polygon_vec.size(); ++i) {
         col_flag = IsPolygonCollision(*polygon_vec[i], obs, gjk_col_det_request,
                                       dangerous_pt);
@@ -252,6 +246,11 @@ const bool GJKCollisionDetector::IsPolygonCollision(
 
   if (!gjk_col_det_request.use_uss_pt &&
       obs.GetObsAttributeType() == ApaObsAttributeType::USS_POINT_CLOUD) {
+    return false;
+  }
+
+  if (!gjk_col_det_request.use_limiter &&
+      obs.GetObsScemanticType() == ApaObsScemanticType::LIMITER) {
     return false;
   }
 
