@@ -85,7 +85,7 @@ void ParallelParkInScenario::Reset() {
   first_line_coeffs_ << 0.0, 0.0;
   first_plan_cur_pos.Reset();
   multi_parkin_path_vec_.clear();
-  relative_loc_observer_maneger_.Reset();
+  relative_loc_observer_manager_.Reset();
   try_bound_map_.clear();
 
   ParkingScenario::Reset();
@@ -1855,7 +1855,7 @@ const bool ParallelParkInScenario::GenTlane() {
   if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
     const size_t need_size = 8;
     if (ego_info_under_slot.slot_occupied_ratio < 0.1) {
-      double ref_angle = relative_loc_observer_maneger_.CalCameraOberserveAngel(
+      double ref_angle = relative_loc_observer_manager_.CalCameraOberserveAngel(
           apa_world_ptr_->GetMeasureDataManagerPtr(),
           ego_info_under_slot.slot.origin_corner_coord_global_.pt_01_mid);
       // try_bound_map_[ego_info_under_slot.id].emplace_back(ref_angle);

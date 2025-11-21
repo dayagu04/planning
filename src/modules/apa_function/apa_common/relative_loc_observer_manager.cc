@@ -11,7 +11,7 @@
 #include "geometry_math.h"
 #include "log_glog.h"
 
-#include "relative_loc_observer_maneger.h"
+#include "relative_loc_observer_manager.h"
 
 
 
@@ -19,31 +19,31 @@
 namespace planning {
 namespace apa_planner {
 
-RelativeLocObserverManeger::RelativeLocObserverManeger() { Reset(); }
+RelativeLocObserverManager::RelativeLocObserverManager() { Reset(); }
 
-RelativeLocObserverManeger::~RelativeLocObserverManeger() {}
+RelativeLocObserverManager::~RelativeLocObserverManager() {}
 
-void RelativeLocObserverManeger::Reset() {
+void RelativeLocObserverManager::Reset() {
   relative_loc_.Reset();
   angle_changed_flag_ = false;
 }
 
-void RelativeLocObserverManeger::SetRelativeLoc(
+void RelativeLocObserverManager::SetRelativeLoc(
     const RelativeLoc& relative_loc) {
   relative_loc_ = relative_loc;
 }
 
-RelativeLoc RelativeLocObserverManeger::GetRelativeLoc() const {
+RelativeLoc RelativeLocObserverManager::GetRelativeLoc() const {
   return relative_loc_;
 }
 
 
-bool RelativeLocObserverManeger::RelativeApproachFlag() const {
+bool RelativeLocObserverManager::RelativeApproachFlag() const {
   return angle_changed_flag_;
 }
 
 std::vector<Eigen::Vector2d>
-RelativeLocObserverManeger::CalculateCameraDirections() const {
+RelativeLocObserverManager::CalculateCameraDirections() const {
   std::vector<Eigen::Vector2d> camera_directions;
   camera_directions.reserve(camera_positions_.size());
 
@@ -78,7 +78,7 @@ RelativeLocObserverManeger::CalculateCameraDirections() const {
 }
 
 std::vector<Eigen::Vector2d>
-RelativeLocObserverManeger::BuildCameraCoordinateSystems(
+RelativeLocObserverManager::BuildCameraCoordinateSystems(
     const Eigen::Matrix2d& rotation) const {
   std::vector<Eigen::Matrix2d> camera_coords_transforms;
   camera_coords_transforms.reserve(camera_positions_.size());
@@ -94,7 +94,7 @@ RelativeLocObserverManeger::BuildCameraCoordinateSystems(
 }
 
 std::vector<Eigen::Vector2d>
-RelativeLocObserverManeger::CalculateCamsInSlotCoords(
+RelativeLocObserverManager::CalculateCamsInSlotCoords(
     const pnc::geometry_lib::PathPoint& pose,
     const std::vector<Eigen::Vector2d>& cam_positions,
     const Eigen::Matrix2d& rotation) const {
@@ -114,7 +114,7 @@ RelativeLocObserverManeger::CalculateCamsInSlotCoords(
   return cameras_in_slot;
 }
 
-double RelativeLocObserverManeger::CalculateAngleDiffFrom180(
+double RelativeLocObserverManager::CalculateAngleDiffFrom180(
     const Eigen::Vector2d& vec_a, const Eigen::Vector2d& vec_b) const {
   double dot_product = vec_a.dot(vec_b);
 
@@ -128,7 +128,7 @@ double RelativeLocObserverManeger::CalculateAngleDiffFrom180(
   return diff_from_180;
 }
 
-double RelativeLocObserverManeger::CalculateAngleDiffInSlotCoord(
+double RelativeLocObserverManager::CalculateAngleDiffInSlotCoord(
     const Eigen::Vector2d& camera_to_slot_global,
     const Eigen::Vector2d& cam_norm_in_global)  {
   Eigen::Vector2d camera_to_slot = cam_norm_in_global;
@@ -150,12 +150,12 @@ ILOG_INFO << "Camera to slot global: ";
   return diff;
 }
 
-double RelativeLocObserverManeger::CalCameraOberserveAngel(
+double RelativeLocObserverManager::CalCameraOberserveAngel(
     const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr,
               Eigen::Vector2d& slot_loc_in_world ) {
 
 
-//   ILOG_INFO << "Update RelativeLocObserverManeger";
+//   ILOG_INFO << "Update RelativeLocObserverManager";
 
 
 

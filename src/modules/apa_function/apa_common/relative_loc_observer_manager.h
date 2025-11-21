@@ -22,10 +22,10 @@ struct RelativeLoc {
   void Reset() { last_min_angle_diff = 180.0; }
 };
 
-class RelativeLocObserverManeger {
+class RelativeLocObserverManager {
  public:
-  RelativeLocObserverManeger();
-  ~RelativeLocObserverManeger();
+  RelativeLocObserverManager();
+  ~RelativeLocObserverManager();
 
   double CalCameraOberserveAngel(
 

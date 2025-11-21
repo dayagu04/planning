@@ -10,7 +10,7 @@
 #include "dubins_lib.h"
 #include "parallel_path_generator.h"
 #include "src/modules/apa_function/parking_scenario/parking_scenario.h"
-#include "src/modules/apa_function/apa_common/relative_loc_observer_maneger.h"
+#include "src/modules/apa_function/apa_common/relative_loc_observer_manager.h"
 
 namespace planning {
 namespace apa_planner {
@@ -121,7 +121,7 @@ class ParallelParkInScenario : public ParkingScenario {
   std::unordered_map<size_t, std::vector<pnc::geometry_lib::PathPoint>>
       multi_parkin_path_vec_;
 
-  RelativeLocObserverManeger relative_loc_observer_maneger_;
+  RelativeLocObserverManager relative_loc_observer_manager_;
   std::unordered_map<size_t, std::set<AngleResult>> try_bound_map_;
 };
 
