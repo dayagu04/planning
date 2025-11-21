@@ -564,7 +564,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   double v_limit_road = 40.0;
   double road_radius = 10000.0;
-  bool is_s_bend = IsSSharpBend(preview_curv_info_vec);
+  const auto &ref_curve_info = reference_path_ptr->GetReferencePathCurveInfo();
+  bool is_s_bend = (ref_curve_info.curve_type ==
+                    ReferencePathCurveInfo::CurveType::SHARP_CURVE) &&
+                   IsSSharpBend(preview_curv_info_vec);
   double max_curv = 0.0001;
   for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
     if (preview_curv_info_vec[idx].curv > max_curv) {
