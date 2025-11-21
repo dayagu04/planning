@@ -181,7 +181,8 @@ void AgentManager::Append(
         // 从最新的历史 agent 中恢复 trajectory_optimized_
         const auto& latest_history_agent = history_list.back();
         if (!latest_history_agent->trajectory_optimized().empty()) {
-          agent->set_trajectory_optimized(latest_history_agent->trajectory_optimized());
+          agent->set_trajectory_optimized(
+              latest_history_agent->trajectory_optimized());
         }
       }
     }

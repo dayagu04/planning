@@ -81,26 +81,30 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       const auto& all_agents = agent_manager->GetAllCurrentAgents();
       for (const auto& agent : all_agents) {
         if (agent != nullptr &&
-          agent->agent_id() == lc_info.gap_rear_agent_id) {
+            agent->agent_id() == lc_info.gap_rear_agent_id) {
           bool is_large_agent = (agent::AgentType::BUS == agent->type() ||
-                      agent::AgentType::TRUCK == agent->type() ||
-                      agent::AgentType::TRAILER == agent->type() ||
-                      agent->length() > 8.0);
-          UpdateRearAgentConfidence(agent);// 检查意图，更新置信度
-          bool should_ignore_rear = ShouldIgnoreRearAgent(agent, ego_reference_path);
-          lane_change_joint_decision::LongitudinalLabel label = (is_large_agent || should_ignore_rear) ? 
-          lane_change_joint_decision::LongitudinalLabel::IGNORE 
-          : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
-          key_obstacles_.emplace_back(CreateKeyObstacle(agent, ego_lane_coord,  label));
+                                 agent::AgentType::TRUCK == agent->type() ||
+                                 agent::AgentType::TRAILER == agent->type() ||
+                                 agent->length() > 8.0);
+          UpdateRearAgentConfidence(agent);  // 检查意图，更新置信度
+          bool should_ignore_rear =
+              ShouldIgnoreRearAgent(agent, ego_reference_path);
+          lane_change_joint_decision::LongitudinalLabel label =
+              (is_large_agent || should_ignore_rear)
+                  ? lane_change_joint_decision::LongitudinalLabel::IGNORE
+                  : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
+          key_obstacles_.emplace_back(
+              CreateKeyObstacle(agent, ego_lane_coord, label));
           // 输出 label 到 JSON 用于可视化
-          JSON_DEBUG_VALUE("rear_agent_longitudinal_label", static_cast<int>(label))
-          rear_agent_id_ = lc_info.gap_rear_agent_id; // 更新后车历史记录
+          JSON_DEBUG_VALUE("rear_agent_longitudinal_label",
+                           static_cast<int>(label))
+          rear_agent_id_ = lc_info.gap_rear_agent_id;  // 更新后车历史记录
           break;
         }
       }
     }
-  }else{
-    rear_agent_confidence_ = 1.0; // 无后车，置信度恢复
+  } else {
+    rear_agent_confidence_ = 1.0;  // 无后车，置信度恢复
   }
   if (lc_info.gap_front_agent_id != -1) {
     const auto* front_agent =
@@ -230,7 +234,7 @@ void JointDecisionObstaclesSelector::SelectObstacles(
                               ? kLCConsiderRearLonDistance
                               : kConsiderRearLonDistance;
 
-  const auto [lat_left, lat_right] = [&]() {
+  const auto[lat_left, lat_right] = [&]() {
     if (!is_in_lane_change_execution) {
       return std::pair{kConsiderLeftLatDistance, kConsiderRightLatDistance};
     }
@@ -637,7 +641,8 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     key_obstacle.ref_y_vec.emplace_back(point.y());
     key_obstacle.ref_vel_vec.emplace_back(point.vel());
     key_obstacle.ref_acc_vec.emplace_back(point.acc());
-    key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + point.s() - trajectory.front().s());
+    key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + point.s() -
+                                        trajectory.front().s());
   }
 
   const double obs_wheel_base = key_obstacle.length * 0.75;
@@ -721,15 +726,17 @@ JointDecisionObstaclesSelector::GetKeyObstacles() const {
   return key_obstacles_;
 }
 
-bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图修饰忽略，更保守的考虑
-    const std::shared_ptr<agent::Agent>& agent,
-    const std::shared_ptr<ReferencePath>& ego_reference_path) {
+bool JointDecisionObstaclesSelector::
+    ShouldIgnoreRearAgent(  // 忽略是意图修饰忽略，更保守的考虑
+        const std::shared_ptr<agent::Agent>& agent,
+        const std::shared_ptr<ReferencePath>& ego_reference_path) {
   // 判断是否在加速
   constexpr double kAccelerationThreshold = 0.30;  // m/s^2
-  if(agent == nullptr || ego_reference_path == nullptr){
+  if (agent == nullptr || ego_reference_path == nullptr) {
     return false;
   }
-  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold *3.0; //明显加速 不论阈值
+  bool is_accelerating =
+      agent->accel_fusion() > kAccelerationThreshold * 3.0;  //明显加速 不论阈值
   if (is_accelerating) {
     return true;
   }
@@ -738,36 +745,40 @@ bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图�
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord->XYToSL(agent->x(), agent->y(), &s, &l)) {
     constexpr double kCloseRearDistanceThreshold = 7.0;  // m
-    double rear_distance = ego_reference_path->get_ego_frenet_boundary().s_start 
-                          - s - agent->length() * 0.5;
-    if (rear_distance < kCloseRearDistanceThreshold && rear_agent_confidence_ < 0.2) {
+    double rear_distance =
+        ego_reference_path->get_ego_frenet_boundary().s_start - s -
+        agent->length() * 0.5;
+    if (rear_distance < kCloseRearDistanceThreshold &&
+        rear_agent_confidence_ < 0.2) {
       return true;
     }
-    if (rear_distance < kCloseRearDistanceThreshold && agent->accel_fusion() > kAccelerationThreshold) {
-      return true; // 近距离轻微加速
+    if (rear_distance < kCloseRearDistanceThreshold &&
+        agent->accel_fusion() > kAccelerationThreshold) {
+      return true;  // 近距离轻微加速
     }
   }
   return false;
 }
 
-void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(const std::shared_ptr<agent::Agent>& agent) {
-  if(rear_agent_id_ != agent->agent_id()){ // 后车更换
+void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
+    const std::shared_ptr<agent::Agent>& agent) {
+  if (rear_agent_id_ != agent->agent_id()) {  // 后车更换
     rear_agent_confidence_ = 1.0;
     return;
   }
   const auto& last_trajectory = agent->trajectory_optimized();
   const auto& current_trajectories = agent->trajectories_used_by_st_graph();
-  if(current_trajectories.empty() || last_trajectory.empty()){
-    return ;
+  if (current_trajectories.empty() || last_trajectory.empty()) {
+    return;
   }
   const auto& current_trajectory = current_trajectories.front();
-  if(current_trajectory.empty()){
-    return ;
+  if (current_trajectory.empty()) {
+    return;
   }
-  for(size_t i = 0; i < 15; ++i){ // checke 3s
+  for (size_t i = 0; i < 15; ++i) {  // checke 3s
     const auto& current_point = current_trajectory[i];
     const auto& last_point = last_trajectory[i];
-    if(current_point.vel() - last_point.vel() > 1.0){ //实际运动趋势快
+    if (current_point.vel() - last_point.vel() > 1.0) {  //实际运动趋势快
       rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2, 0.0);
       break;
     }

@@ -386,12 +386,15 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
     planning_input.mutable_curv_factor_vec()->Add(curv_factor);
   }
 
-  planning_input.set_three_disc_safe_dist(lc_decision_config_.three_disc_safe_dist);
+  planning_input.set_three_disc_safe_dist(
+      lc_decision_config_.three_disc_safe_dist);
   planning_input.set_q_three_disc_safe_dist_weight(
       lc_decision_config_.q_three_disc_safe_dist_weight);
 
-  planning_input.set_road_boundary_safe_dist(lc_decision_config_.road_boundary_safe_dist);
-  planning_input.set_q_road_boundary_weight(lc_decision_config_.q_road_boundary_weight);
+  planning_input.set_road_boundary_safe_dist(
+      lc_decision_config_.road_boundary_safe_dist);
+  planning_input.set_q_road_boundary_weight(
+      lc_decision_config_.q_road_boundary_weight);
   planning_input.set_q_ego_acc_weight(lc_decision_config_.q_ego_acc_weight);
   planning_input.set_q_ego_jerk_weight(lc_decision_config_.q_ego_jerk_weight);
   planning_input.set_q_ego_omega_weight(lc_decision_config_.q_ego_omega_weight);
@@ -399,7 +402,8 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
   planning_input.set_q_obs_jerk_weight(lc_decision_config_.q_obs_jerk_weight);
   planning_input.set_q_obs_omega_weight(lc_decision_config_.q_obs_omega_weight);
 
-  planning_input.set_q_ego_acc_bound_weight(lc_decision_config_.q_ego_acc_bound_weight);
+  planning_input.set_q_ego_acc_bound_weight(
+      lc_decision_config_.q_ego_acc_bound_weight);
   planning_input.clear_ego_acc_max();
   planning_input.clear_ego_acc_min();
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
@@ -407,7 +411,8 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
     planning_input.add_ego_acc_min(lc_decision_config_.ego_acc_min);
   }
 
-  planning_input.set_q_ego_jerk_bound_weight(lc_decision_config_.q_ego_jerk_bound_weight);
+  planning_input.set_q_ego_jerk_bound_weight(
+      lc_decision_config_.q_ego_jerk_bound_weight);
   planning_input.clear_ego_jerk_max();
   planning_input.clear_ego_jerk_min();
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
@@ -415,19 +420,24 @@ void JointDecisionInputBuilder::BuildLaneChangeWeightInfo(
     planning_input.add_ego_jerk_min(lc_decision_config_.ego_jerk_min);
   }
 
-  planning_input.set_q_hard_halfplane_weight(lc_decision_config_.q_hard_halfplane_weight);
-  planning_input.set_hard_halfplane_dist(lc_decision_config_.hard_halfplane_dist);
+  planning_input.set_q_hard_halfplane_weight(
+      lc_decision_config_.q_hard_halfplane_weight);
+  planning_input.set_hard_halfplane_dist(
+      lc_decision_config_.hard_halfplane_dist);
   planning_input.set_halfplane_cost_allocation_ratio(
       lc_decision_config_.halfplane_cost_allocation_ratio);
 
-  planning_input.set_q_soft_halfplane_weight(lc_decision_config_.q_soft_halfplane_weight);
+  planning_input.set_q_soft_halfplane_weight(
+      lc_decision_config_.q_soft_halfplane_weight);
   planning_input.set_soft_halfplane_s0(lc_decision_config_.soft_halfplane_s0);
   planning_input.set_soft_halfplane_tau(lc_decision_config_.soft_halfplane_tau);
   planning_input.set_soft_halfplane_cost_allocation_ratio(
       lc_decision_config_.soft_halfplane_cost_allocation_ratio);
-  
-  planning_input.set_obs_reaction_decay_time(lc_decision_config_.obs_reaction_decay_time);
-  planning_input.set_obs_keep_ref_factor(lc_decision_config_.obs_keep_ref_factor);
+
+  planning_input.set_obs_reaction_decay_time(
+      lc_decision_config_.obs_reaction_decay_time);
+  planning_input.set_obs_keep_ref_factor(
+      lc_decision_config_.obs_keep_ref_factor);
 }
 
 void JointDecisionInputBuilder::BuildObsInfo(

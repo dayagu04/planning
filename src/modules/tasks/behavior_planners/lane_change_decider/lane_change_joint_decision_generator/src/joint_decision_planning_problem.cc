@@ -113,13 +113,13 @@ uint8_t JointDecisionPlanningProblem::Update(
     const double dt = 0.2;  // 时间步长
     const double reaction_time = planning_input.obs_reaction_decay_time();
     const double keep_factor = planning_input.obs_keep_ref_factor();
-    
+
     // 计算权重因子
     // 在反应时间内从 keep_factor 平滑衰减到 1.0
     double obs_ref_decay_factor = 1.0;
     if (reaction_time > 1e-6 && keep_factor > 1.0) {
       const int reaction_steps = static_cast<int>(reaction_time / dt);
-      
+
       if (i <= reaction_steps) {
         // 反应时间窗口内：从 keep_factor 指数衰减到 1.0
         // weight(0) = keep_factor, weight(reaction_steps) = 1.0
@@ -225,16 +225,18 @@ uint8_t JointDecisionPlanningProblem::Update(
         planning_input.soft_halfplane_s0();
     cost_config_vec.at(i)[SOFT_HALFPLANE_TAU] =
         planning_input.soft_halfplane_tau();
-    
+
     // 软半平面代价分配：反应时间内全部给自车，之后按配置分配
-    double soft_halfplane_allocation = planning_input.soft_halfplane_cost_allocation_ratio();
+    double soft_halfplane_allocation =
+        planning_input.soft_halfplane_cost_allocation_ratio();
     if (reaction_time > 1e-6) {
       const int reaction_steps = static_cast<int>(reaction_time / dt);
       if (i < reaction_steps) {
         soft_halfplane_allocation = 1.0;  // 反应时间内：自车承担100%
       }
     }
-    cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] = soft_halfplane_allocation;
+    cost_config_vec.at(i)[SOFT_HALFPLANE_COST_ALLOCATION_RATIO] =
+        soft_halfplane_allocation;
 
     const auto &vehicle_param =
         planning::VehicleConfigurationContext::Instance()->get_vehicle_param();

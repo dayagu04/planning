@@ -6,9 +6,9 @@
 
 #include "ego_planning_config.h"
 #include "joint_decision_obstacles_selector.h"
+#include "joint_decision_planner.pb.h"
 #include "joint_decision_planning_problem.h"
 #include "joint_decision_speed_limit.h"
-#include "joint_decision_planner.pb.h"
 #include "session.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_output.h"
 namespace planning {
@@ -37,8 +37,9 @@ class JointDecisionInputBuilder {
       planning::common::JointDecisionPlanningInput& planning_input,
       const LaneChangeDecisionInfo& lc_info);
 
-  void BuildObsInfo(planning::common::JointDecisionPlanningInput& planning_input,
-                    const LaneChangeDecisionInfo& lc_info);
+  void BuildObsInfo(
+      planning::common::JointDecisionPlanningInput& planning_input,
+      const LaneChangeDecisionInfo& lc_info);
 
   void BuildRoadInfo(
       planning::common::JointDecisionPlanningInput& planning_input,

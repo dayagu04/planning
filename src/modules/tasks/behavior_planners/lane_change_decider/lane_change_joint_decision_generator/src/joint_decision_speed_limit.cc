@@ -21,7 +21,7 @@ bool CheckClustersConsecutiveDiffSlidingWindowImpl(
     const std::map<int, ConstructionAgentClusterArea>& cluster_map,
     const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
     bool entering) {
-  for (const auto& [cluster_id, construction_area] : cluster_map) {
+  for (const auto & [ cluster_id, construction_area ] : cluster_map) {
     const auto& pts = construction_area.points;
     if (pts.size() < 3) {
       continue;
@@ -688,7 +688,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
   double construction_l = 0.0;
   double construction_s_nearest = std::numeric_limits<double>::max();
 
-  for (const auto& [cluster_id, construction_area] :
+  for (const auto & [ cluster_id, construction_area ] :
        construction_scene.construction_agent_cluster_attribute_map) {
     auto agent_info = construction_area.points.front();
     if (!planned_kd_path->XYToSL(agent_info.x, agent_info.y, &construction_s,
@@ -705,7 +705,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
   sl_construction_points_all.reserve(20);
   double construction_nearest_l = std::numeric_limits<double>::max();
 
-  for (const auto& [cluster_id, construction_area] :
+  for (const auto & [ cluster_id, construction_area ] :
        construction_scene.construction_agent_cluster_attribute_map) {
     for (const auto& pt : construction_area.points) {
       double s = 0.0, l = 0.0;

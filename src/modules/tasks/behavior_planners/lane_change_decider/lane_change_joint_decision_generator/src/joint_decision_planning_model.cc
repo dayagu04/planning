@@ -112,13 +112,11 @@ void JointDecisionPlanningModel::GetDynamicsDerivatives(
   f_x.block(0, 0, EGO_STATE_SIZE, EGO_STATE_SIZE) <<
       // dx/d[x,y,θ,δ,v,a]
       1.0,
-      0.0, -d_s * sin_theta,
-      -d_s * sin_theta * kHalf * k * x0_vel * dt,
+      0.0, -d_s * sin_theta, -d_s * sin_theta * kHalf * k * x0_vel * dt,
       dt * cos_theta - dt * x0_vel * k_delta_t * sin_theta,
       kHalf * dt2 * cos_theta,
       // dy/d[x,y,θ,δ,v,a]
-      0.0, 1.0, d_s * cos_theta,
-      d_s * cos_theta * kHalf * k * x0_vel * dt,
+      0.0, 1.0, d_s * cos_theta, d_s * cos_theta * kHalf * k * x0_vel * dt,
       dt * sin_theta + dt * x0_vel * k_delta_t * cos_theta,
       kHalf * dt2 * sin_theta,
       // dθ/d[x,y,θ,δ,v,a]

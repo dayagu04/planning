@@ -127,9 +127,11 @@ void LatLonJointDecision::SetAgentTrajecTory() {
   const auto& dt =
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
   // frenet 起点
-  const  auto& ref_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
+  const auto& ref_path = session_->environmental_model()
+                             .get_reference_path_manager()
+                             ->get_reference_path_by_current_lane();
   double planning_init_s = 50.0;
-  if(ref_path != nullptr) {
+  if (ref_path != nullptr) {
     const auto& ego_state = ref_path->get_frenet_ego_state();
     const auto& planning_init_point = ego_state.planning_init_point();
     planning_init_s = planning_init_point.frenet_state.s;
@@ -225,16 +227,19 @@ void LatLonJointDecision::Update() {
   }
   lat_lon_decision_output_.SetSelectedObstacleIds(obstacle_ids);
   if (!motion_failed) {
-    auto& ego_trajectory = lat_lon_decision_output_.GetLaneChangeEgoTrajectory();
+    auto& ego_trajectory =
+        lat_lon_decision_output_.GetLaneChangeEgoTrajectory();
     ego_trajectory.resize(N);
-    const  auto& ref_path = session_->environmental_model().get_reference_path_manager()->get_reference_path_by_current_lane();
+    const auto& ref_path = session_->environmental_model()
+                               .get_reference_path_manager()
+                               ->get_reference_path_by_current_lane();
     double planning_init_s = 50.0;
-    if(ref_path != nullptr) {
+    if (ref_path != nullptr) {
       const auto& ego_state = ref_path->get_frenet_ego_state();
       const auto& planning_init_point = ego_state.planning_init_point();
       planning_init_s = planning_init_point.frenet_state.s;
     }
-      
+
     for (size_t i = 0; i < N; ++i) {
       auto& point = ego_trajectory[i];
       point.t = i * dt;
@@ -249,7 +254,6 @@ void LatLonJointDecision::Update() {
       point.s = planning_output.s_vec(i) + planning_init_s;
     }
   }
-
 }
 
 }  // namespace planning

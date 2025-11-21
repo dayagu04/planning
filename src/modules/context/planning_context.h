@@ -413,8 +413,8 @@ class PlanningContext {
     return ego_motion_preplanner_output_;
   }
 
-  const lane_change_joint_decision::LatLonJointDecisionOutput &lat_lon_joint_decision_output()
-      const {
+  const lane_change_joint_decision::LatLonJointDecisionOutput &
+  lat_lon_joint_decision_output() const {
     return lat_lon_joint_decision_output_;
   }
 
@@ -606,9 +606,10 @@ class PlanningContext {
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
 
   EgoMotionPreplannerOutput ego_motion_preplanner_output_;
-  
+
   // LaneChangeJointDecisionGenerator
-  lane_change_joint_decision::LatLonJointDecisionOutput lat_lon_joint_decision_output_;
+  lane_change_joint_decision::LatLonJointDecisionOutput
+      lat_lon_joint_decision_output_;
 };
 
 }  // namespace planning

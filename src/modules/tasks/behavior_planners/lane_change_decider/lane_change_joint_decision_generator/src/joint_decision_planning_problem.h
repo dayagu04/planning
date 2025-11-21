@@ -4,9 +4,9 @@
 
 #include "config/basic_type.h"
 #include "ilqr_core.h"
+#include "joint_decision_planner.pb.h"
 #include "joint_decision_planning_cost.h"
 #include "joint_decision_planning_model.h"
-#include "joint_decision_planner.pb.h"
 #include "math_lib.h"
 #include "utils/kd_path.h"
 namespace pnc {
