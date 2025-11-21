@@ -895,51 +895,51 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
 }
 
 void SamplePolySpeedAdjustDecider::SetNormalSceneWeight() {
-  weight_match_gap_vel_ = config_.kNormalSceneWeightMatchGapVel;
-  weight_match_gap_s_ = config_.kNormalSceneWeightMatchGapS;
-  weight_follow_vel_ = config_.kNormalSceneWeightFollowVel;
-  weight_stop_line_ = config_.kNormalSceneWeightStopLine;
-  weight_leading_safe_s_ = config_.kNormalSceneWeightLeadingSafeS;
-  weight_leading_safe_v_ = config_.kNormalSceneWeightLeadingSafeV;
-  weight_vel_variable_ = config_.kNormalSceneWeightVelVariable;
-  weight_gap_avaliable_ = config_.kNormalSceneWeightGapAvailable;
-  weight_acc_limit_ = config_.kNormalSceneWeightAccLimit;
-  weight_stop_penalty_ = config_.kNormalSceneWeightStopPenalty;
-  weight_speed_change_ = config_.kNormalSceneWeightSpeedChange;
+  weight_match_gap_vel_ = config_.normal_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.normal_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.normal_scene_weight_follow_vel;
+  weight_stop_line_ = config_.normal_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.normal_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.normal_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.normal_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.normal_scene_weight_gap_available;
+  weight_acc_limit_ = config_.normal_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.normal_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.normal_scene_weight_speed_change;
   weight_leading_veh_follow_s_ =
-      config_.kDeclerationSceneWeightLeadingVehFollowS;
+      config_.normal_scene_weight_leading_veh_follow_s;
 }
 
 void SamplePolySpeedAdjustDecider::SetPurseFlowVelSceneWeight() {
-  weight_match_gap_vel_ = config_.kPurseFlowVelSceneWeightMatchGapVel;
-  weight_match_gap_s_ = config_.kPurseFlowVelSceneWeightMatchGapS;
-  weight_follow_vel_ = config_.kPurseFlowVelSceneWeightFollowVel;
-  weight_stop_line_ = config_.kPurseFlowVelSceneWeightStopLine;
-  weight_leading_safe_s_ = config_.kPurseFlowVelSceneWeightLeadingSafeS;
-  weight_leading_safe_v_ = config_.kPurseFlowVelSceneWeightLeadingSafeV;
-  weight_vel_variable_ = config_.kPurseFlowVelSceneWeightVelVariable;
-  weight_gap_avaliable_ = config_.kPurseFlowVelSceneWeightGapAvailable;
-  weight_acc_limit_ = config_.kPurseFlowVelSceneWeightAccLimit;
-  weight_stop_penalty_ = config_.kPurseFlowVelSceneWeightStopPenalty;
-  weight_speed_change_ = config_.kPurseFlowVelSceneWeightSpeedChange;
+  weight_match_gap_vel_ = config_.purse_flow_vel_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.purse_flow_vel_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.purse_flow_vel_scene_weight_follow_vel;
+  weight_stop_line_ = config_.purse_flow_vel_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.purse_flow_vel_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.purse_flow_vel_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.purse_flow_vel_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.purse_flow_vel_scene_weight_gap_available;
+  weight_acc_limit_ = config_.purse_flow_vel_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.purse_flow_vel_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.purse_flow_vel_scene_weight_speed_change;
   weight_leading_veh_follow_s_ =
-      config_.kPurseFlowVelSceneWeightLeadingVehFollowS;
+      config_.purse_flow_vel_scene_weight_leading_veh_follow_s;
 }
 
 void SamplePolySpeedAdjustDecider::SetDeclerationSceneWeight() {
-  weight_match_gap_vel_ = config_.kDeclerationSceneWeightMatchGapVel;
-  weight_match_gap_s_ = config_.kDeclerationSceneWeightMatchGapS;
-  weight_follow_vel_ = config_.kDeclerationSceneWeightFollowVel;
-  weight_stop_line_ = config_.kDeclerationSceneWeightStopLine;
-  weight_leading_safe_s_ = config_.kDeclerationSceneWeightLeadingSafeS;
-  weight_leading_safe_v_ = config_.kDeclerationSceneWeightLeadingSafeV;
-  weight_vel_variable_ = config_.kDeclerationSceneWeightVelVariable;
-  weight_gap_avaliable_ = config_.kDeclerationSceneWeightGapAvailable;
-  weight_acc_limit_ = config_.kDeclerationSceneWeightAccLimit;
-  weight_stop_penalty_ = config_.kDeclerationSceneWeightStopPenalty;
-  weight_speed_change_ = config_.kDeclerationSceneWeightSpeedChange;
+  weight_match_gap_vel_ = config_.decleration_scene_weight_match_gap_vel;
+  weight_match_gap_s_ = config_.decleration_scene_weight_match_gap_s;
+  weight_follow_vel_ = config_.decleration_scene_weight_follow_vel;
+  weight_stop_line_ = config_.decleration_scene_weight_stop_line;
+  weight_leading_safe_s_ = config_.decleration_scene_weight_leading_safe_s;
+  weight_leading_safe_v_ = config_.decleration_scene_weight_leading_safe_v;
+  weight_vel_variable_ = config_.decleration_scene_weight_vel_variable;
+  weight_gap_avaliable_ = config_.decleration_scene_weight_gap_available;
+  weight_acc_limit_ = config_.decleration_scene_weight_acc_limit;
+  weight_stop_penalty_ = config_.decleration_scene_weight_stop_penalty;
+  weight_speed_change_ = config_.decleration_scene_weight_speed_change;
   weight_leading_veh_follow_s_ =
-      config_.kDeclerationSceneWeightLeadingVehFollowS;
+      config_.decleration_scene_weight_leading_veh_follow_s;
 }
 
 double SamplePolySpeedAdjustDecider::CalcHeadwayDistance(
