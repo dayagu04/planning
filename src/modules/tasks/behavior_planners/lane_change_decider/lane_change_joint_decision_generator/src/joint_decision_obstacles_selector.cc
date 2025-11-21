@@ -729,7 +729,7 @@ bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图�
   if(agent == nullptr || ego_reference_path == nullptr){
     return false;
   }
-  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold;
+  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold * 0.3; //明显加速 不论阈值
   if (is_accelerating) {
     return true;
   }
@@ -737,11 +737,14 @@ bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图�
   double l = 0;
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord->XYToSL(agent->x(), agent->y(), &s, &l)) {
-    constexpr double kCloseRearDistanceThreshold = 10.0;  // m
+    constexpr double kCloseRearDistanceThreshold = 7.0;  // m
     double rear_distance = ego_reference_path->get_ego_frenet_boundary().s_start 
                           - s - agent->length() * 0.5;
     if (rear_distance < kCloseRearDistanceThreshold && rear_agent_confidence_ < 0.2) {
       return true;
+    }
+    if (rear_distance < kCloseRearDistanceThreshold && agent->accel_fusion() > kAccelerationThreshold) {
+      return true; // 近距离轻微加速
     }
   }
   return false;
