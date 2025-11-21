@@ -571,7 +571,13 @@
   "comment_27": "prepare path plan params",
   "enable_stable_prepare_route": true,
 
-  "comment_28": "parallel pa plan params",
+  "comment_28": "od params",
+  "use_specificationer": true,
+  "use_dynamic_od_car": true,
+  "use_living_things": true,
+  "use_speed_bump": false,
+
+  "comment_29": "parallel pa plan params",
   "finish_parallel_pa_lat_err": 0.14,
   "finish_parallel_pa_lon_err": 0.40,
   "finish_parallel_pa_heading_err": 5.0,
