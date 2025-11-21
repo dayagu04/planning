@@ -228,7 +228,8 @@ void Node3d::DebugString() const {
             << " , size " << path_.point_size << " ,safe dist " << dist_to_obs_
             << ", gear switch num: " << gear_switch_num_ << ", s curve num "
             << s_curve_num_ << ", path type "
-            << GetNodeCurveDebugString(path_type_);
+            << GetNodeCurveDebugString(path_type_) << ", striaght dist "
+            << straight_dist_to_goal_;
 
   if (gear_switch_node_ != nullptr) {
     ILOG_INFO << "gear switch node dist to start = "

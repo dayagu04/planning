@@ -20,7 +20,8 @@ void RSExpansionDecider::Process(const Pose2f &start,
 
 void RSExpansionDecider::UpdateRoundRobinStrategy(
     const Pose2f &end, const AstarRequest *request, EulerDistanceTransform *edt,
-    const VehicleParam &veh_param) {
+    const VehicleParam &veh_param,
+    std::shared_ptr<NodeCollisionDetect> &collision_detect) {
   if (request->swap_start_goal) {
     round_robin_num_ = 1;
     round_robin_id_ = 0;
@@ -28,22 +29,42 @@ void RSExpansionDecider::UpdateRoundRobinStrategy(
     return;
   }
 
+  Pose2f pose;
   if (request->direction_request == ParkingVehDirection::TAIL_IN) {
-    round_robin_num_ = 2;
+    round_robin_num_ = 0;
     round_robin_id_ = 0;
-
     round_robin_end_[0] = end;
-    round_robin_end_[1] = GenerateCandidatePoint(request, edt, veh_param, end);
+    round_robin_num_++;
 
+    pose = GenerateCandidatePoint(request, edt, veh_param, end);
+    if (!collision_detect->IsCircleFootPrintCollision(pose)) {
+      round_robin_end_[1] = pose;
+      round_robin_num_++;
+
+      pose.x += 0.8f;
+      if (!collision_detect->IsCircleFootPrintCollision(pose)) {
+        round_robin_end_[2] = pose;
+        round_robin_num_++;
+      }
+    }
   } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
-    round_robin_num_ = 3;
+    round_robin_num_ = 0;
     round_robin_id_ = 0;
-
     round_robin_end_[0] = end;
-    round_robin_end_[1] = end;
-    round_robin_end_[1].x = end.x + 0.8f;
-    round_robin_end_[2] = end;
-    round_robin_end_[2].x = end.x + 1.6f;
+    round_robin_num_++;
+
+    pose = end;
+    pose.x += 0.8f;
+    if (!collision_detect->IsCircleFootPrintCollision(pose)) {
+      round_robin_end_[1] = pose;
+      round_robin_num_++;
+    }
+
+    pose.x += 0.8f;
+    if (!collision_detect->IsCircleFootPrintCollision(pose)) {
+      round_robin_end_[2] = pose;
+      round_robin_num_++;
+    }
   } else {
     round_robin_num_ = 1;
     round_robin_id_ = 0;
@@ -191,9 +212,9 @@ Pose2f RSExpansionDecider::GenerateCandidatePoint(const AstarRequest *request,
   float best_x = 0;
   for (int i = 0; i < size; i++) {
     safe_dist = std::min(edt->DistanceCheckForPoint(left_mirror, radius),
-                    edt->DistanceCheckForPoint(right_mirror, radius));
+                         edt->DistanceCheckForPoint(right_mirror, radius));
 
-    if (safe_dist > 0.5f) {
+    if (safe_dist > 0.8f) {
       best_safe_dist = safe_dist;
       candidate.x = left_mirror.x - veh_param.mirror_lon_dist_to_rear_axle;
       break;
