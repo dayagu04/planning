@@ -127,6 +127,7 @@ class TsrCore {
   bool tsr_warning_flag_ = false;  // 超速报警标志位
   bool overspeed_status_ = false;  // false:未处于超速状态 true:处于超速状态
   double overspeed_duration_time_ = 0.0;  // 处于超速状态持续的时间 单位:s
+  double tsr_reset_path_length_ = 1000.0;  // 限速重置行驶距离 单位:m
   void UpdateTsrWarning(void);
   // 输出限速结果
   void SetTsrOutputInfo();

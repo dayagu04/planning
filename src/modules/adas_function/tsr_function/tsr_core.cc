@@ -587,9 +587,39 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   }
 
+  // 根据当前感知限速速度，更改tsr_reset_path_length
+  tsr_reset_path_length_ = GetContext.get_param()->tsr_reset_path_length;
+  if (speed_limit_renew_flag_ == true) {
+    // bestune_e541
+    if (GetContext.get_param()->car_type == "bestune_e541") {
+      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
+        tsr_reset_path_length_ = 150.0;
+      } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
+        tsr_reset_path_length_ = 200.0;
+      } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
+        tsr_reset_path_length_ = 350.0;
+      } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
+        tsr_reset_path_length_ = 400.0;
+      } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
+        tsr_reset_path_length_ = 700.0;
+      } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
+        tsr_reset_path_length_ = 900.0;
+      } else {
+        tsr_reset_path_length_ = 1100.0;
+      }
+    }
+    else {
+      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
+        tsr_reset_path_length_ = 1500.0;
+      } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
+        tsr_reset_path_length_ = 2000.0;
+      } else {
+        tsr_reset_path_length_ = 4000.0;
+      }
+    }
+  }
   // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
-  if (accumulated_path_length_ >
-      GetContext.get_param()->tsr_reset_path_length) {
+  if (accumulated_path_length_ > tsr_reset_path_length_) {
     // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
     tsr_speed_limit_ = current_map_speed_limit_;
     // 重置限速牌和解除限速牌相关标志
