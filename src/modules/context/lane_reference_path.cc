@@ -227,6 +227,28 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
       ref_path_points.emplace_back(std::move(extend_point));
     }
   }
+  if (ref_path_points.size() >= 2 && session_->is_rads_scene()) {
+    const std::shared_ptr<EgoStateManager> ego_state_mgr =
+        session_->mutable_environmental_model()->get_ego_state_manager();
+    const double ego_v = ego_state_mgr->ego_v();
+    const double cruise_v = ego_state_mgr->ego_v_cruise();
+    const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
+    const double extend_buff = 2;
+    const double ego_projection_length_in_reference_path =
+        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    // if need to extend reference path length
+    if (ego_projection_length_in_reference_path - extend_buff <
+        0) {
+      const double extend_length =
+          extend_buff -
+          ego_projection_length_in_reference_path;
+      ReferencePathPoint extend_point;
+      extend_point = CalculateExtendedReferencePathPoint(
+          ref_path_points[1], ref_path_points[0],
+          extend_length);
+      ref_path_points.emplace(ref_path_points.begin(), std::move(extend_point));
+    }
+  }
   return ref_path_points.size() >= 3;
 }
 
