@@ -217,7 +217,7 @@
   "processed_trajectory_acc_thr": 0.5,
   "max_heading_diff_threshold_deg": 45.0,
   "left_right_turn_func_fading_away_switch": false,
-  "ls_short_dis_thr": 8,
+  "ls_short_dis_thr": 7,
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
