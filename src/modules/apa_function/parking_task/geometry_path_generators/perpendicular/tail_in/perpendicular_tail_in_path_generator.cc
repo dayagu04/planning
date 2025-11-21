@@ -183,13 +183,8 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
 
       cost = 0.0;
 
-      // 怎么设置较为合理的代价来使得第一段路径走的比较合理
-      // 根据测试数据不断更新代价计算 使得越来越合理
-
       double ego_pose_cost = 0.0;
-      // 当换挡次数大于1的时候尽量不从自车位置直接规划
       if (dubins_path.path_count < 1) {
-        // 只允许0次换挡 即直接倒挡进库 或者1次换挡 D->R进库
         if (rough_path.gear_change_count > 2) {
           ego_pose_cost += 168.0;
         } else if (rough_path.gear_change_count == 2) {
@@ -201,7 +196,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
             }
           }
         } else if (rough_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
-          // 拿到前进挡的终点  D->R路径
           for (const auto& path_seg : rough_path.path_segment_vec) {
             if (path_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
               ego_pose_cost += (std::fabs(path_seg.GetStartPos().y()) * 36.8 +
@@ -213,7 +207,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
       }
 
       double dubins_path_cost = 0.0;
-      // dubins路径如果换挡 施加惩罚
       if (dubins_path.gear_change_count > 0 &&
           dubins_path.gear_change_pose.size() > 0) {
         dubins_path_cost += 20.0;
@@ -226,7 +219,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // dubins路径如果不换挡 那对其终点位置的航向误差施加惩罚
       if (dubins_path.path_count > 0 && dubins_path.gear_change_count < 1) {
         double weight = 0.0;
         if (dubins_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
@@ -250,7 +242,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         dubins_path_cost += 680.0;
       }
 
-      // rough路径 对其当前挡位路径终点的航向和横向误差施加惩罚
       double fist_reverse_path_err_cost = 0.0;
       for (const auto& path_seg : rough_path.path_segment_vec) {
         if (path_seg.seg_gear != rough_path.cur_gear) {
@@ -262,7 +253,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 障碍物距离代价
       double obs_dist_cost = 0.0;
       const double obs_dist_out_slot =
           std::min(dubins_path.obs_dist_info.out_slot.first,
@@ -301,7 +291,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         obs_dist_cost = obs_dist_cost_in_slot + obs_dist_cost_out_slot;
       }
 
-      // 当前挡位最小长度代价
       double cur_gear_path_length_cost = 0.0;
       if (complete_path.cur_gear_length <
           apa_param.GetParam().min_one_step_path_length) {
@@ -311,7 +300,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         cur_gear_path_length_cost += 100.0;
       }
 
-      // 增加一把进的代价
       double one_step_cost = 0.0;
       if (!apa_param.GetParam().actual_mono_plan_enable &&
           rough_path.gear_change_count < 2) {
@@ -320,7 +308,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         one_step_cost += 200.0;
       }
 
-      // 最后一段直线长度的代价
       double last_line_length_cost = 0.0;
       const auto& last_seg = rough_path.path_segment_vec.back();
       if (last_seg.seg_type != geometry_lib::SEG_TYPE_LINE) {
@@ -340,7 +327,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 库内换挡的代价
       double gear_change_in_slot_cost = 0.0;
       for (const geometry_lib::PathPoint& pose : rough_path.gear_change_pose) {
         const double ratio = CalOccupiedRatio(pose);
@@ -349,7 +335,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 第一次和第二次换挡时距离车位过远代价
       double far_to_slot_cost = 0.0;
       for (size_t i = 0; i < complete_path.gear_change_pose.size() && i < 2;
            ++i) {
@@ -362,7 +347,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 路径超过目标终点代价
       double path_out_target_cost = 0.0;
       for (const auto& seg : complete_path.path_segment_vec) {
         if (seg.GetStartPos().x() <
@@ -372,14 +356,12 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 再次尝试first plan时与参考挡位不同的代价
       double ref_gear_cost = 0.0;
       if (!input_.can_first_plan_again &&
           complete_path.cur_gear != input_.ref_gear) {
         ref_gear_cost += 999.9;
       }
 
-      // 增加 如果不是最后一段直线 直线较长的话施加惩罚代价
       for (const auto& seg : complete_path.path_segment_vec) {
         if (seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
             std::fabs(seg.GetEndPose().heading) * kRad2Deg > 3.68 &&
@@ -388,8 +370,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // 如果1D的终点处自车横向误差比较小  但是航向误差比较大
-      // 那么需要施加惩罚代价
       if (complete_path.cur_gear == geometry_lib::SEG_GEAR_DRIVE) {
         for (const auto& seg : complete_path.path_segment_vec) {
           if (seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE &&
@@ -400,13 +380,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
         }
       }
 
-      // cur_gear_path_length_cost = 0.0;
-      // fist_reverse_path_err_cost = 0.0;
-      // ego_pose_cost = 0.0;
-      // dubins_path_cost = 0.0;
-      // gear_change_in_slot_cost = 0.0;
-      // last_line_length_cost = 0.0;
-      // 整条路径的换挡、换向和长度代价
       cost +=
           (complete_path.cost + one_step_cost + cur_gear_path_length_cost +
            obs_dist_cost + fist_reverse_path_err_cost + ego_pose_cost +
@@ -566,7 +539,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathPlan() {
           last_seg.seg_gear == geometry_lib::SEG_GEAR_REVERSE) {
         // directly multi_adjust to target line
       } else {
-        // 延长一条直线 方便控制跟踪以及后续规划
         geometry_lib::PathSegment line_seg;
         geometry_lib::CalLineFromPt(last_seg.seg_gear,
                                     apa_param.GetParam().insert_line_after_arc,
@@ -810,7 +782,6 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
   const uint8_t max_dubins_gear_change_count = 1;
 
   calc_params_.pre_plan_case = PrePlanCase::EGO_POSE;
-  // 先尝试用自车位置规划一下 看是否能规划成功
   if (RoughMultiAdjustPathPlan(input_.ego_info_under_slot.cur_pose,
                                geometry_lib::SEG_GEAR_REVERSE,
                                rough_geometry_path, false, true)) {
@@ -1029,7 +1000,6 @@ const bool PerpendicularTailInPathGenerator::PrepareSinglePathPlan(
         seg_vec.emplace_back(rough_geometry_path.path_segment_vec[i]);
       }
     }
-    // seg_vec存储着包含障碍物离轨迹的距离 但是需要考虑库内和库外
     geometry_lib::ObsDistConsiderSlot obs_dist_info;
     for (geometry_lib::PathSegment& seg : seg_vec) {
       CalcObsDistConsiderSlotForPathSeg(seg);
@@ -1204,11 +1174,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
       DubinsPathPlan(start_pose, target_pose, calc_params_.turn_radius,
                      min_length, 0, ref_gear, true, geometry_path);
 
-  // 如果失败， 分为两种，参考挡位是前进挡还是倒退档
-  // 如果是倒退档， 不再尝试，直接以当前位置接着后续规划
-  // 如果是前进挡，是否可以再找其他的目标点相连，
-  // 但是这样目标点怎么确定也是个问题， 能不能把原先成功规划的目标点都试一次
-
   if (result != DubinsPlanResult::SUCCESS &&
       ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
     ILOG_INFO << "try dubins to connect first tang pose fail, and gear is "
@@ -1236,7 +1201,6 @@ const bool PerpendicularTailInPathGenerator::PreparePathSecondPlan() {
     geometry_lib::Arc arc;
     arc.pA = target_pose.pos;
     arc.headingA = target_pose.heading;
-    // 如果当前挡位是前进挡 延长一条直线便于控制跟踪
     if (ref_gear == geometry_lib::SEG_GEAR_DRIVE && input_.is_replan_second &&
         geometry_lib::CalOneArcWithLineAndGear(
             arc, calc_params_.target_line, geometry_lib::SEG_GEAR_REVERSE)) {
@@ -1303,7 +1267,6 @@ PerpendicularTailInPathGenerator::DubinsPathPlan(
     return DubinsPlanResult::NO_PATH;
   }
 
-  // 筛选出满足挡位的output
   std::vector<dubins_lib::DubinsLibrary::Output> temp_output_vec;
   temp_output_vec.reserve(dubins_output_vec.size());
 
@@ -1316,8 +1279,6 @@ PerpendicularTailInPathGenerator::DubinsPathPlan(
           (output.gear_change_count == 0 && output.length > min_length + 1e-3);
 
       if (!length_conditon && output.gear_change_count == 1) {
-        // 如果当前挡位是倒挡  即是由倒挡到前进挡的切换，
-        // 那么倒挡长度和前进挡长度都需要满足长度要求
         double first_length = 0.0;
         double second_length = 0.0;
         for (size_t i = 0; i < output.gear_cmd_vec.size(); ++i) {
@@ -1606,16 +1567,17 @@ PerpendicularTailInPathGenerator::TrimPathByObs(
     path_seg.obs_dist_info.integrated = res.pt_closest2obs;
     path_seg.pt_obs_dist_info_vec = res.pt_obs_dist_info_vec;
 
-    // EDT碰撞检测有误差 即有碰撞也可能显示无碰撞 无碰撞也可能显示有碰撞
-    // 在初始离障碍物较近的时候
-    // 在横向buffer相对较小 虽无碰撞但障碍物距离自车很近的时候
-    // 需要做一次精确的碰撞检测 来绝对确保路径的安全性
-    // 5 * 1.414  = 7.07 目前是edt碰撞检测的最大横向误差
+    bool need_use_accurate = init_pose_near_obs ||
+                             (!res.col_flag && lat_inflation < 0.171 &&
+                              res.pt_closest2obs.first < 0.071 + lat_inflation);
 
-    const bool need_use_accurate =
-        init_pose_near_obs ||
-        (!res.col_flag && lat_inflation < 0.171 &&
-         res.pt_closest2obs.first < 0.071 + lat_inflation);
+    if (!need_use_accurate && res.col_flag &&
+        res.pt_closest2obs.first < 0.3 + lat_inflation &&
+        path_seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
+        path_seg.GetEndPos().x() <
+            input_.ego_info_under_slot.target_pose.GetX() + 0.368) {
+      need_use_accurate = true;
+    }
 
     ILOG_INFO_IF(enable_log) << "need_use_accurate = " << need_use_accurate;
 
@@ -2344,7 +2306,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 100.0;
     }
 
-    // 最后一段直线长度的代价
     const auto& last_seg = complete_path.path_segment_vec.back();
     if (last_seg.seg_type != geometry_lib::SEG_TYPE_LINE) {
       cost += 100.0;
@@ -2363,7 +2324,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 增加 如果不是最后一段直线 直线较长的话施加惩罚代价
     for (const auto& seg : complete_path.path_segment_vec) {
       if (seg.seg_type == geometry_lib::SEG_TYPE_LINE &&
           std::fabs(seg.GetEndPose().heading) * kRad2Deg > 6.8 &&
@@ -2372,18 +2332,15 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 规划终点离目标终点距离代价
     cost += (last_seg.GetEndPos() - input_.ego_info_under_slot.target_pose.pos)
                 .norm() *
             46.8;
 
-    // 规划终点离目标终点横向误差代价
     cost += std::fabs((last_seg.GetEndPos() -
                        input_.ego_info_under_slot.target_pose.pos)
                           .y()) *
             4006.8;
 
-    // 库内换挡的代价
     for (const auto& pose : complete_path.gear_change_pose) {
       const double ratio = CalOccupiedRatio(pose);
       if (ratio > 0.468) {
@@ -2391,7 +2348,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 加上一个障碍物距离代价
     CalcObsDistConsiderSlotForGeometryPath(temp_path);
     if (apa_param.GetParam().use_average_obs_dist) {
       cost += 16.8 / temp_path.average_obs_dist;
@@ -2400,7 +2356,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       cost += 18.68 / temp_path.obs_dist_info.in_slot.first;
     }
 
-    // 增加当前挡位路径横向和航向误差代价
     cost +=
         (26.8 *
              std::max(std::fabs(complete_path.cur_gear_path_segments_vec.back()
@@ -2412,7 +2367,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
                                     .y()),
                       0.028));
 
-    // 前进挡 尽量x值不要太大 否则增加代价
     for (const auto& drive_seg : complete_path.drive_seg_vec) {
       const double slot_max_x =
           std::min(std::max(drive_seg.front().GetStartPos().x() + 2.08,
@@ -2426,7 +2380,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 路径超过目标终点代价
     for (const auto& seg : complete_path.path_segment_vec) {
       if (seg.GetStartPos().x() <
           input_.ego_info_under_slot.target_pose.pos.x()) {
@@ -2435,7 +2388,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 如果当前挡位路径的整体趋势只是增加航向误差 那么需要施加惩罚代价
     if (temp_path.cur_gear_path_segments_vec.size() > 0) {
       if (std::fabs(
               temp_path.cur_gear_path_segments_vec.back().GetEndHeading()) *
@@ -2448,8 +2400,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 如果当前挡位路径的整体趋势 没有减小横向误差 也没有减小航向误差
-    // 那么需要施加惩罚代价
     if (temp_path.cur_gear_path_segments_vec.size() > 0) {
       const double yaw_err =
           std::fabs(
@@ -2466,12 +2416,8 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
       }
     }
 
-    // 整条路径的换挡、换向和长度代价
     cost += complete_path.cost;
 
-    // 针对1R路径 如果在库外有S弯可能导致控制跟不上
-    // 在外侧有障碍物的情况下可能导致碰撞风险 因此 增大此路径的代价
-    // 情愿多换一次挡
     if ((input_.is_left_empty && !calc_params_.is_left_side) ||
         (input_.is_right_empty && calc_params_.is_left_side) &&
             calc_params_.first_multi_plan && complete_path.path_count > 1) {
@@ -2497,7 +2443,6 @@ const bool PerpendicularTailInPathGenerator::OptimalMultiAdjustPathPlan(
 
   optimal_geometry_path = success_geometry_path_vec[optimal_path_index];
 
-  // 当前挡位路径超过目标终点直接失败
   if (optimal_geometry_path.cur_gear_path_segments_vec.size() > 0 &&
       optimal_geometry_path.cur_gear_path_segments_vec.back().GetEndPos().x() <
           input_.ego_info_under_slot.target_pose.pos.x() - 0.068) {
@@ -2521,11 +2466,6 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
     const geometry_lib::PathPoint& pose, const uint8_t ref_gear,
     const PlanRequest plan_request) {
   ILOG_INFO << "\n\n --- enter MultiAdjustPathPlan --- ";
-  // 根据 plan_request 有三种情况
-  // 1. 规划出一条成功路径即退出， 适用于寻库阶段
-  // 2. 只看1R阶段
-  // 是否能一把入库，适用于正式泊车预规划阶段选择一个最优的切点
-  // 3. 根据当前车辆位姿规划出所有路径，选择一条最优路径
   ILOG_INFO << "ref_gear = " << geometry_lib::GetGearString(ref_gear)
             << "  pre_plan_case = "
             << static_cast<int>(calc_params_.pre_plan_case)
@@ -2543,7 +2483,6 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
       geometry_lib::GeometryPath geometry_path_r;
       geometry_lib::GeometryPath geometry_path_d;
       if (calc_params_.pre_plan_case == PrePlanCase::EGO_POSE) {
-        // 除了第一次规划两个挡位 其他按照参考挡位来
         if (input_.is_replan_first ||
             ref_gear == geometry_lib::SEG_GEAR_INVALID) {
           OptimalMultiAdjustPathPlan(pose, geometry_lib::SEG_GEAR_REVERSE,
@@ -2571,8 +2510,6 @@ const bool PerpendicularTailInPathGenerator::MultiAdjustPathPlan(
           }
         }
       } else if (calc_params_.pre_plan_case == PrePlanCase::MID_POINT) {
-        // 第一次规划 或第二次规划 或first multi plan 优先倒挡
-        // 其他按照参考挡位来
         uint8_t pre_gear = ref_gear;
         if (input_.is_replan_first ||
             (input_.is_replan_second && calc_params_.should_prepare_second) ||
@@ -2731,7 +2668,7 @@ const bool PerpendicularTailInPathGenerator::OneArcPathPlan(
     ILOG_INFO_IF(enable_log) << "one arc gear radius is too big, err\n";
     return false;
   }
-  // 如果半径较小的时候 尝试用最小半径去规划一下
+
   if (arc.circle_info.radius <
       calc_params_.turn_radius - apa_param.GetParam().target_radius_err) {
     geometry_lib::Arc current_arc;
@@ -2999,7 +2936,6 @@ const bool PerpendicularTailInPathGenerator::LineArcPathPlan(
 
         if (col_res2 == PathColDetRes::NORMAL) {
           ILOG_INFO_IF(enable_log) << "arc col is normal, add line to path";
-          // 沿着直线遍历 看是否能反向TwoArc成功 且确保两个Arc都没有撞
           CalcObsDistConsiderSlotForPathSeg(arc_seg);
           arc_seg.PrintInfo(enable_log);
           double init_length = line_seg.GetLength() * 0.268;
@@ -3757,7 +3693,6 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
     const double lat_buffer, const double lon_buffer,
     geometry_lib::GeometryPath& geometry_path, const bool enable_log) {
   ILOG_INFO_IF(enable_log) << "\n----enter dubins path plan----";
-  // 根据目标终点计算出一个终点
   geometry_path.Reset();
   geometry_lib::PathPoint tar_pose;
   tar_pose.heading = calc_params_.target_line.heading;
@@ -3789,7 +3724,6 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
     return false;
   }
 
-  // 初筛掉不满足挡位和长度的路径
   std::vector<dubins_lib::DubinsLibrary::Output> temp_output_vec;
   temp_output_vec.reserve(dubins_output_vec.size());
 
@@ -3817,7 +3751,6 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
     return false;
   }
 
-  // 筛选出不碰撞的路径
   std::vector<geometry_lib::GeometryPath> temp_geometry_path_vec;
   temp_geometry_path_vec.reserve(temp_output_vec.size());
   for (auto& output : temp_output_vec) {
@@ -3892,7 +3825,6 @@ const bool PerpendicularTailInPathGenerator::DubinsPathPlan(
         geometry_lib::GeometryPath(path_seg_vec));
   }
 
-  // 选一条较优的路径
   double min_cost = std::numeric_limits<double>::infinity();
   int optimal_index = -1;
   for (int i = 0; i < temp_geometry_path_vec.size(); ++i) {
@@ -3998,8 +3930,6 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
         }
 
         else {
-          // 智能折叠后视镜
-          // 高于upper_x的部分继续特殊使用展开后视镜参数
           if (mirror_x > upper_x) {
             const double length = mirror_x - upper_x + redundant_x;
             geometry_lib::PathSegment line_seg_up(
@@ -4023,7 +3953,6 @@ const bool PerpendicularTailInPathGenerator::OneLinePathPlan(
 
         if (ref_gear == geometry_lib::SEG_GEAR_DRIVE) {
           if (line_seg.GetLength() < kMinSingleGearPathLength + 1e-3) {
-            // 强制往前规划使长度满足要求
             end_pos = start_pos +
                       (kMinSingleGearPathLength + 1e-3) * line.heading_vec;
             end_pos.x() = std::max(end_pos.x(), 4.68);

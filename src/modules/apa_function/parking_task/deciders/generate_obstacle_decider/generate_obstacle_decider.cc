@@ -84,7 +84,6 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
     del_obs_bound.PrintInfo();
   }
 
-  // 筛选真实的障碍物 并进行替换添加
   for (auto& pair : obstacles) {
     std::vector<Eigen::Vector2d>& pt_clout_2d =
         pair.second.GetMutablePtClout2dLocal();

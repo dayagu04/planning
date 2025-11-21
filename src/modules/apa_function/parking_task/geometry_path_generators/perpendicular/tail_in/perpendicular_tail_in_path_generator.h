@@ -52,11 +52,10 @@ class PerpendicularTailInPathGenerator : public PerpendicularPathGenerator {
     COUNT,
   };
 
-  /// @brief 车辆姿态相对于泊车位的状态枚举
   enum class PoseTypeRelativeToSlot : uint8_t {
-    OUT_SLOT,     ///< 完全在泊车位外部的状态
-    IN_SLOT,      ///< 完全进入泊车位内部的状态
-    OUT_IN_SLOT,  ///< 横跨泊车位内外的临界状态（部分在内外）
+    OUT_SLOT,
+    IN_SLOT,
+    OUT_IN_SLOT,
   };
 
   enum class ColDetMethod : uint8_t {

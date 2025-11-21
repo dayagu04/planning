@@ -65,18 +65,15 @@ const double InitalActionDecider::GenerateRefPathLength(
   const double lon_buffer = param.gen_ref_length_lon_buffer;
 
   ColResult res;
-  // 生成直线路径
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward, 0.0, true, path);
   res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
   ref_length = std::min(ref_length, res.remain_dist);
 
-  // 生成左转路径
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward,
                apa_param.GetParam().min_turn_radius, true, path);
   res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
   ref_length = std::min(ref_length, res.remain_dist);
 
-  // 生成右转路径
   GeneratePath(ego_pose, sample_dist, traj_length, is_forward,
                -apa_param.GetParam().min_turn_radius, true, path);
   res = edt_col_det_ptr->Update(path, lat_buffer, lon_buffer);
