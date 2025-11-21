@@ -28,6 +28,10 @@ struct OpenSpaceSafeBuffer {
   float scenario_try_lat_buffer_outside;
   float scenario_try_lat_buffer_inside;
   float scenario_try_lon_buffer;
+
+  // distance to obstacle for terminal pose.
+  // you need to search a pose to obey this distance.
+  float lat_dist_to_obs_for_target_pose;
 };
 
 struct PlannerOpenSpaceConfig {
