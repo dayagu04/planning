@@ -729,7 +729,7 @@ bool JointDecisionObstaclesSelector::ShouldIgnoreRearAgent( // 忽略是意图�
   if(agent == nullptr || ego_reference_path == nullptr){
     return false;
   }
-  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold * 0.3; //明显加速 不论阈值
+  bool is_accelerating = agent->accel_fusion() > kAccelerationThreshold *3.0; //明显加速 不论阈值
   if (is_accelerating) {
     return true;
   }
