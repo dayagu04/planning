@@ -50,6 +50,7 @@ static const double kLonBufferTrippleStep = 0.2;   // tripple step
 static const double kColBufferInSlot = 0.25;       // in slot
 static const double kColSmallBufferInSlot = 0.12;  // in slot
 static const double kColTinyBufferInSlot = 0.0;
+static const double kColPABuffer = 0.2;
 
 static const double kColBufferOutSlot = 0.3;           // out slot
 static const double kColLargeLatBufferOutSlot = 0.3;   // out slot
@@ -59,6 +60,7 @@ static const size_t kMaxParallelParkInSegmentNums = 15;
 static const size_t kMaxPathNumsInSlot = 8;
 static const size_t kMaxMultiStepNums = 8;
 static const size_t kMaxParallelShiftNums = 6;
+static const size_t kMaxParallelShiftNumsToPA = 4;
 
 static const double kChannelYMoveDist = 0.15;
 static const double kCornerSafeBufferWithChannel = 0.15;
@@ -258,6 +260,16 @@ const bool ParallelPathGenerator::Update() {
   }
 
   const double start_time = IflyTime::Now_ms();
+
+  if (enable_pa_park_) {
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.0, false));
+    if (!PAParallelAdjustPlan()) {
+      ILOG_INFO << "PAParallelAdjustPlan failed!";
+      return false;
+    }
+    ILOG_INFO << "PAParallelAdjustPlan success!";
+    return true;
+  }
 
   // judge if ego is out of slot
   if (!CheckEgoInSlot()) {
@@ -3891,6 +3903,335 @@ const bool ParallelPathGenerator::AdjustPlan() {
   return success;
 }
 
+const bool ParallelPathGenerator::PAParallelAdjustPlan() {
+  ILOG_INFO << "Enter PAParallelAdjustPlan";
+  // set init state
+  input_.ego_info_under_slot.cur_pose.heading =
+      pnc::geometry_lib::NormalizeAngle(
+          input_.ego_info_under_slot.cur_pose.heading);
+
+  auto current_gear = input_.ref_gear;
+  auto current_pose = input_.ego_info_under_slot.cur_pose;
+  pnc::geometry_lib::PrintPose("input pose =",
+                               input_.ego_info_under_slot.cur_pose);
+
+  // dirve backward directly if can park near target pose
+  pnc::geometry_lib::LineSegment first_line;
+  first_line.pA = input_.ego_info_under_slot.cur_pose.pos;
+  first_line.heading = input_.ego_info_under_slot.cur_pose.heading;
+
+  if (OneLinePlan(first_line, calc_params_.target_pose)) {
+    ILOG_INFO << "firstly calc line success";
+    AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
+        pnc::geometry_lib::CalLineSegGear(first_line), first_line));
+    return true;
+  }
+
+  ILOG_INFO << "current pose x =" << current_pose.pos.x()
+            << " y = " << current_pose.pos.y() << ", "
+            << current_pose.heading * kRad2Deg;
+
+  // check gear and steer
+  if (!pnc::geometry_lib::IsValidGear(current_gear)) {
+    ILOG_INFO << "ref_gear or ref_arc_steer error";
+    return false;
+  }
+
+  ILOG_INFO << "input gear =" << static_cast<int>(current_gear);
+
+  // ILOG_INFO <<"try adjust plan to target point");
+  std::vector<pnc::geometry_lib::PathSegment> tmp_path_seg_vec;
+  tmp_path_seg_vec.reserve(5);
+  // 1. try one arc
+  //  Todo: target line should changed to be in range of +- 0.03cm
+  bool success = OneArcPlan(tmp_path_seg_vec, current_pose, current_gear);
+
+  if (success) {
+    // ILOG_INFO << "calc one success!";
+    if (!CheckPathSegCollided(tmp_path_seg_vec.back(), kColSmallBufferInSlot)) {
+      ILOG_INFO << "only one arc success!";
+      AddPathSegVecToOutput(tmp_path_seg_vec);
+      return true;
+    }
+  }
+  success = false;
+  ILOG_INFO << "One arc failed!";
+
+  // 2. check if should align body
+  const double debug_param =
+      apa_param.GetParam().debug_parallel_angle_threshold;
+  ILOG_INFO << "debug_param =" << debug_param;
+  if (std::fabs(pnc::geometry_lib::NormalizeAngle(
+          current_pose.heading - calc_params_.target_line.heading)) >=
+      debug_param * kDeg2Rad) {
+    // need align body
+    tmp_path_seg_vec.clear();
+    tmp_path_seg_vec.reserve(5);
+    if (AlignBodyPlan(tmp_path_seg_vec, current_pose, current_gear)) {
+      if (!CheckPathSegCollided(tmp_path_seg_vec.back(),
+                                kColSmallBufferInSlot)) {
+        success = true;
+      }
+      if (!success) {
+        tmp_path_seg_vec.clear();
+        tmp_path_seg_vec.reserve(5);
+        current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+        if (AlignBodyPlan(tmp_path_seg_vec, current_pose, current_gear)) {
+          if (!CheckPathSegCollided(tmp_path_seg_vec.back(),
+                                    kColSmallBufferInSlot)) {
+            success = true;
+          }
+        }
+      }
+    }
+    if (!success) {
+      ILOG_INFO << "align body Collided failed!";
+      return false;
+    }
+    AddPathSegToOutPut(tmp_path_seg_vec.back());
+    pnc::geometry_lib::PrintPose("align body success! start pose",
+                                 current_pose);
+    current_pose = tmp_path_seg_vec.back().GetEndPose();
+    pnc::geometry_lib::PrintPose("align body success! end pose", current_pose);
+    pnc::geometry_lib::PrintSegmentsVecInfo(tmp_path_seg_vec);
+  }
+
+  ILOG_INFO << "body already align";
+
+  if (!success && !pnc::mathlib::IsDoubleEqual(
+                      current_pose.heading, calc_params_.target_line.heading)) {
+    tmp_path_seg_vec.clear();
+    if (AlignBodyPlan(tmp_path_seg_vec, current_pose, current_gear)) {
+      if (!CheckPathSegCollided(tmp_path_seg_vec.back(),
+                                kColSmallBufferInSlot)) {
+        ILOG_INFO << "second align body success!";
+        AddPathSegToOutPut(tmp_path_seg_vec.back());
+        current_pose = tmp_path_seg_vec.back().GetEndPose();
+      }
+    }
+  }
+  if (IsOnTargetLinePA(current_pose, 0.05)) {
+    pnc::geometry_lib::LineSegment last_line;
+    last_line.pA = current_pose.pos;
+    last_line.heading = current_pose.heading;
+
+    if (OneLinePlanAlongEgoHeading(last_line, calc_params_.target_pose)) {
+      AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
+          pnc::geometry_lib::CalLineSegGear(last_line), last_line));
+      return true;
+    }
+  }
+
+  pnc::geometry_lib::LineSegment update_target_line =
+      pnc::geometry_lib::BuildLineSegByPose(calc_params_.target_line.pA,
+                                            current_pose.heading);
+
+  double kSTurnSampleValue = 0.01;
+  bool loop_success = false;
+  std::vector<pnc::geometry_lib::PathSegment> parallel_shift_path_vec;
+  parallel_shift_path_vec.clear();
+  parallel_shift_path_vec.reserve(12);
+  for (size_t i = 0; i < kMaxParallelShiftNumsToPA; ++i) {
+    ILOG_INFO << "-------- No." << i << " in paralle adjust-plan--------";
+
+    bool s_turn_success = false;
+    std::vector<pnc::geometry_lib::PathSegment> s_turn_vec;
+    double ratio = 1.0;
+    for (; ratio > kSTurnSampleValue; ratio -= kSTurnSampleValue) {
+      s_turn_vec.clear();
+      s_turn_vec.reserve(2);
+      if (STurnParallelPlan(s_turn_vec, current_pose, update_target_line,
+                            current_gear, ratio,
+                            apa_param.GetParam().min_turn_radius)) {
+        if (!CheckPathSegVecCollided(
+                s_turn_vec, apa_param.GetParam().s_turn_plan_pa_buffer)) {
+          s_turn_success = true;
+          parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
+                                         s_turn_vec.begin(), s_turn_vec.end());
+          ILOG_INFO << "s turn not Collided! ratio = " << ratio;
+          pnc::geometry_lib::PrintPose(s_turn_vec[0].GetStartPose());
+          pnc::geometry_lib::PrintPose(s_turn_vec[1].GetEndPose());
+          current_pose = s_turn_vec[1].GetEndPose();
+          for (double i = 0.25; i > 0.05; i -= 0.05) {
+            pnc::geometry_lib::LineSegment a_line;
+            a_line.pA = current_pose.pos;
+            a_line.heading = current_pose.heading;
+            pnc::geometry_lib::PathPoint r_point(current_pose.GetPos(),
+                                                 a_line.heading);
+            if (current_gear ==
+                static_cast<int>(pnc::geometry_lib::SEG_GEAR_REVERSE)) {
+              r_point.pos.x() -= i;
+            } else {
+              r_point.pos.x() += i;
+            }
+            if (OneLinePlan(a_line, r_point)) {
+              pnc::geometry_lib::PathSegment a_path_line(
+                  pnc::geometry_lib::CalLineSegGear(a_line), a_line);
+              if (!CheckPathSegCollided(
+                      a_path_line, apa_param.GetParam().line_plan_pa_buffer)) {
+                ILOG_INFO << "calc line success length: " << a_line.length;
+                // AddPathSegToOutPut(a_path_line);
+                parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
+                                               a_path_line);
+                current_pose = a_path_line.GetEndPose();
+                break;
+              }
+            }
+            ILOG_INFO << "calc line failed length: " << a_line.length;
+          }
+          break;
+        }
+        // ILOG_INFO << "s turn Collided!";
+        // pnc::geometry_lib::PrintPose(s_turn_vec[0].GetStartPose());
+        // pnc::geometry_lib::PrintPose(s_turn_vec[1].GetEndPose());
+      }
+    }
+    // Todo: need reverse gear and check s turn again
+    if (!s_turn_success) {
+      current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+      ratio = 1.0;
+      for (; ratio > kSTurnSampleValue; ratio -= kSTurnSampleValue) {
+        s_turn_vec.clear();
+        s_turn_vec.reserve(2);
+        if (STurnParallelPlan(s_turn_vec, current_pose, update_target_line,
+                              current_gear, ratio,
+                              apa_param.GetParam().min_turn_radius)) {
+          if (!CheckPathSegVecCollided(
+                  s_turn_vec,
+                  apa_param.GetParam()
+                      .s_turn_plan_pa_buffer)) {  // calc_params_.lon_buffer_rev_trials
+            s_turn_success = true;
+            parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
+                                           s_turn_vec.begin(),
+                                           s_turn_vec.end());
+            ILOG_INFO << "s turn not Collided! ratio = " << ratio;
+            pnc::geometry_lib::PrintPose(s_turn_vec[0].GetStartPose());
+            pnc::geometry_lib::PrintPose(s_turn_vec[1].GetEndPose());
+            current_pose = s_turn_vec[1].GetEndPose();
+            for (double i = 0.25; i > 0.05; i -= 0.05) {
+              pnc::geometry_lib::LineSegment a_line;
+              a_line.pA = current_pose.pos;
+              a_line.heading = current_pose.heading;
+              pnc::geometry_lib::PathPoint r_point(current_pose.GetPos(),
+                                                   a_line.heading);
+              if (current_gear ==
+                  static_cast<int>(pnc::geometry_lib::SEG_GEAR_REVERSE)) {
+                r_point.pos.x() -= i;
+              } else {
+                r_point.pos.x() += i;
+              }
+              if (OneLinePlan(a_line, r_point)) {
+                pnc::geometry_lib::PathSegment a_path_line(
+                    pnc::geometry_lib::CalLineSegGear(a_line), a_line);
+                if (!CheckPathSegCollided(
+                        a_path_line,
+                        apa_param.GetParam().line_plan_pa_buffer)) {
+                  ILOG_INFO << "calc line success length: " << a_line.length;
+                  // AddPathSegToOutPut(a_path_line);
+                  parallel_shift_path_vec.insert(parallel_shift_path_vec.end(),
+                                                 a_path_line);
+                  current_pose = a_path_line.GetEndPose();
+                  break;
+                }
+              }
+              ILOG_INFO << "calc line failed length: " << a_line.length;
+            }
+            break;
+          }
+          // ILOG_INFO << "s turn Collided!";
+          // pnc::geometry_lib::PrintPose(s_turn_vec[0].GetStartPose());
+          // pnc::geometry_lib::PrintPose(s_turn_vec[1].GetEndPose());
+        }
+      }
+      if (!s_turn_success) {
+        loop_success = false;
+        ILOG_INFO << "shift plan fail with current gear";
+        break;
+      }
+    }
+
+    // sturn success
+    if (ratio == 1.0) {
+      loop_success = true;
+      ILOG_INFO << "shift loop success, try last line!";
+      break;
+    } else if (!s_turn_vec.empty() &&
+               IsOnTargetLinePA(s_turn_vec.back().GetEndPose(), 0.05)) {
+      loop_success = true;
+      ILOG_INFO << "close to target line, try last line!";
+      break;
+    }
+    if (i == (kMaxParallelShiftNumsToPA - 1) &&
+        IsOnTargetLinePA(s_turn_vec.back().GetEndPose(), 0.5)) {
+      loop_success = true;
+      ILOG_INFO << "loop over, clost to line";
+      break;
+    }
+    // ratio is less than 1.0
+    current_gear = pnc::geometry_lib::ReverseGear(current_gear);
+    current_pose.Set(s_turn_vec.back().GetEndPos(),
+                     s_turn_vec.back().GetEndHeading());
+  }
+
+  pnc::geometry_lib::PathPoint loop_end_pose;
+  if (loop_success && !parallel_shift_path_vec.empty()) {
+    AddPathSegVecToOutput(parallel_shift_path_vec);
+    loop_end_pose = parallel_shift_path_vec.back().GetEndPose();
+  } else if (!tmp_path_seg_vec.empty()) {
+    if (std::fabs(pnc::geometry_lib::NormalizeAngle(
+            input_.ego_info_under_slot.cur_pose.heading -
+            calc_params_.target_line.heading)) < 2.0 * kDeg2Rad) {
+      ILOG_INFO << "s turn fail and align plan success";
+      return false;
+    }
+    current_pose = tmp_path_seg_vec.back().GetEndPose();
+    for (double i = 0.25; i > 0.05; i -= 0.05) {
+      pnc::geometry_lib::LineSegment a_line;
+      a_line.pA = current_pose.pos;
+      a_line.heading = current_pose.heading;
+      pnc::geometry_lib::PathPoint r_point(current_pose.GetPos(),
+                                           a_line.heading);
+      if (current_gear ==
+          static_cast<int>(pnc::geometry_lib::SEG_GEAR_REVERSE)) {
+        r_point.pos.x() -= i;
+      } else {
+        r_point.pos.x() += i;
+      }
+      if (OneLinePlan(a_line, r_point)) {
+        pnc::geometry_lib::PathSegment a_path_line(
+            pnc::geometry_lib::CalLineSegGear(a_line), a_line);
+        if (!CheckPathSegCollided(a_path_line,
+                                  apa_param.GetParam().line_plan_pa_buffer)) {
+          ILOG_INFO << "calc line success length: " << a_line.length;
+          current_pose = a_path_line.GetEndPose();
+          AddPathSegToOutPut(a_path_line);
+          break;
+        }
+      }
+      ILOG_INFO << "calc line failed length: " << a_line.length;
+    }
+    loop_end_pose = current_pose;
+  }
+  pnc::geometry_lib::PathPoint target_pose(input_.tlane.pt_terminal_pos,
+                                           calc_params_.target_line.heading);
+  if (!CheckSamePose(current_pose, target_pose)) {
+    pnc::geometry_lib::LineSegment last_line;
+    last_line.pA = loop_end_pose.pos;
+    last_line.heading = loop_end_pose.heading;
+
+    if (OneLinePlanAlongEgoHeading(last_line, target_pose)) {
+      ILOG_INFO << "calc line success";
+      if (!last_line.is_ignored) {
+        AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
+            pnc::geometry_lib::CalLineSegGear(last_line), last_line));
+        ILOG_INFO << "last line exist";
+      }
+    }
+  }
+
+  return true;
+}
+
 // adjust plan start
 const bool ParallelPathGenerator::ParallelAdjustPlan() {
   ILOG_INFO << "-----prallel adjust plan-----";
@@ -5454,7 +5795,7 @@ const bool ParallelPathGenerator::STurnParallelPlan(
   arc_s_1.circle_info.radius = radius;
 
   const auto steer_change_ratio =
-      pnc::mathlib::Clamp(steer_change_ratio1, 0.1, 1.0);
+      pnc::mathlib::Clamp(steer_change_ratio1, 0.01, 1.0);
 
   // cal current line
   const auto current_line =
@@ -5489,7 +5830,8 @@ const bool ParallelPathGenerator::STurnParallelPlan(
                steer_1 != steer_2);
 
     if (success) {
-      ILOG_INFO << "s turn parallel plan success!";
+      ILOG_INFO << "s turn parallel plan success! ratio: "
+                << steer_change_ratio1;
 
       path_seg_vec.emplace_back(
           pnc::geometry_lib::PathSegment(steer_1, gear_1, arc_s_1));
@@ -5500,7 +5842,7 @@ const bool ParallelPathGenerator::STurnParallelPlan(
   }
 
   if (!success) {
-    ILOG_INFO << "s turn parallel plan fail!";
+    ILOG_INFO << "s turn parallel plan fail! ratio: " << steer_change_ratio1;
   }
   return success;
 }
@@ -5711,11 +6053,12 @@ const bool ParallelPathGenerator::CheckPathSegCollided(
   const double safe_remain_dist =
       std::min(remain_car_dist, remain_obs_dist - buffer);
 
-  if (safe_remain_dist <= 0.0) {
-    return true;
-  }
-
-  if (remain_car_dist > safe_remain_dist) {
+  if (safe_remain_dist <= 0.0 || remain_car_dist > safe_remain_dist) {
+    // ILOG_INFO << " remain_car_dist: " << col_res.remain_car_dist
+    //           << " remain_obstacle_dist: " << col_res.remain_obstacle_dist
+    //           << " col_pt_obs_global: " << col_res.col_pt_obs_global.transpose()
+    //           << " col_pt_ego_global: "
+    //           << col_res.col_pt_ego_global.transpose();
     return true;
   }
 
@@ -6238,6 +6581,23 @@ const bool ParallelPathGenerator::IsOnTargetLine(
                       (front_out_wheel.y() >= wheel_limit_y);
   }
   const bool lat_condition = lat_condition_1 || lat_condition_2;
+
+  return (lat_condition && heading_condition);
+}
+
+const bool ParallelPathGenerator::IsOnTargetLinePA(
+    const pnc::geometry_lib::PathPoint& current_pose, const double lat_buffer) {
+  const auto& target_pose = calc_params_.target_pose;
+
+  const bool heading_condition =
+      (std::fabs(pnc::geometry_lib::NormalizeAngle(current_pose.heading -
+                                                   target_pose.heading)) <=
+       apa_param.GetParam().finish_parallel_heading_err * kDeg2Rad);
+
+  bool lat_condition = false;
+  const double lat_err_mag =
+      std::fabs(current_pose.pos.y() - target_pose.pos.y());
+  lat_condition = (lat_err_mag <= lat_buffer);
 
   return (lat_condition && heading_condition);
 }

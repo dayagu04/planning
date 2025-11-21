@@ -243,7 +243,14 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   void InsertLineSegAfterCurrentFollowLastPath(double extend_distance,
                                                double lon_buffer = 0.2);
 
+  const bool PAParallelAdjustPlan();
+
   const PlannerParams &GetPlannerParams() const { return calc_params_; }
+
+  void EnablePAPark() {
+    enable_pa_park_ = true;
+    return;
+  }
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
@@ -610,7 +617,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool CheckLonToTarget(
       const pnc::geometry_lib::PathPoint &current_pose) const;
 
-  const bool IsOnTargetLine(const pnc::geometry_lib::PathPoint &current_pose);
+  const bool IsOnTargetLine(const pnc::geometry_lib::PathPoint& current_pose);
+  const bool IsOnTargetLinePA(const pnc::geometry_lib::PathPoint& current_pose,
+                              const double lat_buffer);
 
   const bool CheckSamePose(const pnc::geometry_lib::PathPoint &pose1,
                            const pnc::geometry_lib::PathPoint &pose2) const;
@@ -624,6 +633,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
  protected:
   PlannerParams calc_params_;
   DebugInfo debug_info_;
+  bool enable_pa_park_ = false;
 };
 
 }  // namespace apa_planner

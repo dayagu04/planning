@@ -9,6 +9,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40737/trigger/20251101/20251101-22-48-32/data_collection_CHERY_M32T_40737_EVENT_MANUAL_2025-11-01-22-48-32_no_camera.bag.1762416967.open-loop.scc.plan"
+frame_dt = 0.02  # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -43,7 +44,7 @@ ihc_json_value_list = [
                          #ihc debug info:
                          "ihc_function::ihc_high_beam_code", "ihc_function::ihc_fault_code", "ihc_function::ihc_state","ihc_function::ihc_request_status",
                          "ihc_function::ihc_request","ihc_function::ihc_main_switch","ihc_function::auto_light_state",
-                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle", 
+                         "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle",
                          "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition", "ihc_function::processed_lighting_condition",
                          "ihc_function::ihc_low_beam_code", "ihc_function::ihc_active_code",
                         ]
@@ -85,7 +86,7 @@ fig_machine.yaxis.axis_label_text_font_style = 'bold'
 # lighting_condition数值含义:
 # 0: UNKNOWN (未知)
 # 1: BRIGHT (明亮环境)
-# 2: MEDIUM (中等亮度环境)  
+# 2: MEDIUM (中等亮度环境)
 # 3: DARK (昏暗环境)
 
 fig_state_code = bkp.figure(x_axis_label='time', y_axis_label='ihc code',x_range = [adas_t_debug[0], adas_t_debug[-1]], width=500, height=200)
@@ -120,7 +121,7 @@ hover_state_code = HoverTool(renderers=[f_state_code], tooltips=[('time', '@time
                                                        ('ihc_fault_code', '@{ihc_function::ihc_fault_code}'), ('ihc_low_beam_code', '@{ihc_function::ihc_low_beam_code}'),
                                                        ('ihc_active_code', '@{ihc_function::ihc_active_code}')], mode='vline')
 hover_low_beam_reason = HoverTool(renderers=[f_low_beam_reason], tooltips=[('time', '@time'), ('same_direction_vehicle', '@{ihc_function::low_beam_due_to_same_dir_vehicle}'),
-                                                       ('oncoming_motor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_vehicle}'), ('oncoming_nonmotor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_cycle}'), 
+                                                       ('oncoming_motor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_vehicle}'), ('oncoming_nonmotor_vehicle', '@{ihc_function::low_beam_due_to_oncomming_cycle}'),
                                                        ('lighting_condition', '@{ihc_function::lighting_condition}'), ('processed_lighting_condition', '@{ihc_function::processed_lighting_condition}')], mode='vline')
 
 

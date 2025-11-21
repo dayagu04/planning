@@ -27,6 +27,7 @@
 #include "uss_perception_info_c.h"
 #include "uss_wave_info_c.h"
 #include "vehicle_service_c.h"
+#include "ifly_phm_c.h"
 
 namespace iflyauto {
 namespace interface {
@@ -90,6 +91,9 @@ class PlanningInterface : public ComponentInterface {
 
   virtual void RegFmWriter_IflytekAlarmInfoPlanning(
       const std::function<void(const iflyauto::FmInfo &)> &fm_writer) = 0;
+
+  virtual void RegWriter_IflytekPlanningPhmReport(
+      const std::function<void(const iflyauto::IflyPhmReport &)> &phm_report_writer) = 0;
 };
 }  // namespace interface
 }  // namespace iflyauto

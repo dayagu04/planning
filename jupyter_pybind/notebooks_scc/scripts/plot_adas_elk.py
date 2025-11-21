@@ -10,7 +10,11 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
+<<<<<<< HEAD
 bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20250821/20250821-10-47-20/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-08-21-10-47-20_no_camera.bag.1756103100.open-loop.scc.plan"
+=======
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20250821/20250821-10-52-36/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-08-21-10-52-36_no_camera.bag"
+>>>>>>> 3aa5bad6c9... lka handoff warning no finish0825
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
@@ -66,7 +70,7 @@ lka_json_value_list = [#new_ldw debug info:
                          "ldp_main_switch_","ldp_enable_code_", "ldp_disable_code_", "ldp_fault_code_", "ldp_left_suppression_code_","ldp_left_kickdown_code_",
                          "ldp_right_suppression_code_","ldp_right_kickdown_code_","ldp_tlc_threshold_","ldp_roadedge_tlc_threshold_","ldp_left_intervention_","ldp_right_intervention_","ldp_state_",
                          "ldp_preview_left_y_gap","ldp_preview_right_y_gap","ldp_left_intervention_by_line","ldp_left_intervention_by_roadedge",
-                         "ldp_right_intervention_by_line","ldp_right_intervention_by_roadedge","ldp_roadedge_offset",
+                         "ldp_right_intervention_by_line","ldp_right_intervention_by_roadedge",
                          #new_elk debug info:
                          "elk_main_switch_","elk_enable_code_", "elk_disable_code_", "elk_fault_code_", "elk_left_suppression_code_","elk_left_kickdown_code_",
                          "elk_right_suppression_code_","elk_right_kickdown_code_","elk_tlc_threshold_","elk_roadedge_tlc_threshold_","elk_left_intervention_","elk_right_intervention_","elk_state_",
@@ -90,7 +94,7 @@ adas_json_value_list =  [ #adas_debug info
                          "road_left_line_segement2_length","road_left_line_segement2_type","road_left_line_segement3_length","road_left_line_segement3_type",
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type","road_left_roadedge_c0","road_left_roadedge_c1","road_left_roadedge_c2","road_left_roadedge_c3",
-                         "road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3",]
+                         "road_right_roadedge_c0","road_right_roadedge_c1","road_right_roadedge_c2","road_right_roadedge_c3","ldp_roadedge_offset","ldp_warning_audio_flag_","ldp_intervention_count",]
 
 json_vector_list = ["road_left_roadedge_all_dx_vec_","road_left_roadedge_all_dy_vec_","road_right_roadedge_all_dx_vec_","road_right_roadedge_all_dy_vec_"]
 
@@ -345,6 +349,8 @@ fig_elk_obj_tlc.line('time', 'elk_obj_rl_tlc_', source = lkas_json_list_dict, li
 fig_elk_obj_tlc.line('time', 'elk_obj_fr_tlc_', source = lkas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'elk_obj_fr_tlc_')
 fig_elk_obj_tlc.line('time', 'elk_obj_mr_tlc_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'elk_obj_mr_tlc_')
 fig_elk_obj_tlc.line('time', 'elk_obj_rr_tlc_', source = lkas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'elk_obj_rr_tlc_')
+fig_elk_obj_tlc.line('time', 'ldp_warning_audio_flag_', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
+fig_elk_obj_tlc.line('time', 'ldp_intervention_count', source = lkas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_intervention_count')
 
 
 
@@ -378,7 +384,7 @@ hover_right_line_base_info = HoverTool(renderers=[f_right_line_base_info], toolt
                                                          ('road_right_line_c1', '@road_right_line_c1'),('road_right_line_c2', '@road_right_line_c2'),('road_right_line_c3', '@road_right_line_c3'),], mode='vline')
 hover_elk_obj_tlc = HoverTool(renderers=[f_fig_elk_obj_tlc], tooltips=[('elk_state_', '@elk_state_'), ('elk_obj_fl_tlc_', '@elk_obj_fl_tlc_'), ('elk_obj_ml_tlc_', '@elk_obj_ml_tlc_'),
                                              ('elk_obj_rl_tlc_', '@elk_obj_rl_tlc_'), ('elk_obj_fr_tlc_', '@elk_obj_fr_tlc_'), ('elk_obj_mr_tlc_', '@elk_obj_mr_tlc_'),
-                                             ('elk_obj_rr_tlc_', '@elk_obj_rr_tlc_')], mode='vline')
+                                             ('elk_obj_rr_tlc_', '@elk_obj_rr_tlc_'),('ldp_warning_audio_flag_', '@ldp_warning_audio_flag_'),('ldp_intervention_count', '@ldp_intervention_count')], mode='vline')
 
 fig_machine.add_tools(hover_machine)
 fig_vehicle_state.add_tools(hover_vehicle_state)

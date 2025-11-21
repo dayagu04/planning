@@ -46,6 +46,9 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate;
 
   switch (fun_state_machine_info.current_state) {
+    case iflyauto::FunctionalState_MANUAL_PARKING:
+      state_machine_ = ApaStateMachine::MANUAL_PARKING;
+      break;
     case iflyauto::FunctionalState_PARK_STANDBY:
       state_machine_ = ApaStateMachine::STANDBY;
       break;
@@ -70,6 +73,10 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       if (fun_state_machine_info.parking_req.apa_free_slot_info
               .free_slot_activate) {
         state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
+        break;
+      }
+      if (fun_state_machine_info.running_mode == iflyauto::RUNNING_MODE_PA) {
+        state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
         break;
       }
       if (parking_fusion_info.select_slot_id == 0) {
@@ -110,6 +117,10 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_GUIDANCE:
     case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
     case iflyauto::FunctionalState_HPP_PARKING_IN:
+      if (fun_state_machine_info.running_mode == iflyauto::RUNNING_MODE_PA) {
+        state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+        break;
+      }
       if (fun_state_machine_info.parking_req.apa_work_mode ==
               iflyauto::APA_WORK_MODE_PARKING_IN ||
           fun_state_machine_info.parking_req.apa_work_mode ==
@@ -224,10 +235,30 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       break;
   }
 
+  switch (fun_state_machine_info.running_mode) {
+    case iflyauto::RUNNING_MODE_PA:
+      running_mode_ = ApaRunningMode::RUNNING_PA;
+      if (fun_state_machine_info.parking_req.pa_direction ==
+          iflyauto::PA_DIRECTION_RIGHT) {
+        pa_direction_ = ApaPADirection::PA_RIGHT;
+      } else if (fun_state_machine_info.parking_req.pa_direction ==
+                 iflyauto::PA_DIRECTION_LEFT) {
+        pa_direction_ = ApaPADirection::PA_LEFT;
+      } else {
+        pa_direction_ = ApaPADirection::PA_INVALID;
+      }
+      break;
+    default:
+      running_mode_ = ApaRunningMode::RUNNING_INVALID;
+      break;
+  }
+
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
   PrintApaSlotLatPosPreference(slot_lat_pos_preference_);
   PrintParkingSpeedMode(parking_speed_mode_);
+  PrintParkingRunningMode(running_mode_);
+  PrintParkingPADirection(pa_direction_);
 
   JSON_DEBUG_VALUE("apa_state_machine", static_cast<int>(state_machine_))
   JSON_DEBUG_VALUE("apa_out_direction", static_cast<int>(out_direction_))
@@ -355,6 +386,9 @@ std::string ApaStateMachineManager::GetApaStateMachineString(
     case ApaStateMachine::COMPLETE:
       state = "COMPLETE";
       break;
+    case ApaStateMachine::MANUAL_PARKING:
+      state = "MANUAL_PARKING";
+      break;
     case ApaStateMachine::STANDBY:
       state = "STANDBY";
       break;
@@ -454,6 +488,48 @@ void ApaStateMachineManager::PrintParkingSpeedMode(
     const ParkingSpeedMode parking_speed_mode) {
   ILOG_INFO << "speed_mode = " << GetParkingSpeedModeString(parking_speed_mode);
 };
+
+std::string ApaStateMachineManager::GetParkingRunningModelString(
+    const ApaRunningMode running_mode) {
+  std::string mode = "RUNNING_INVALID";
+  switch (running_mode) {
+    case ApaRunningMode::RUNNING_PA:
+      mode = "RUNNING_PA";
+      break;
+    default:
+      mode = "RUNNING_INVALID";
+      break;
+  }
+  return mode;
+};
+
+void ApaStateMachineManager::PrintParkingRunningMode(
+    const ApaRunningMode running_mode) {
+  ILOG_INFO << "running_mode = " << GetParkingRunningModelString(running_mode);
+};
+
+std::string ApaStateMachineManager::GetParkingPADirectionString(
+    const ApaPADirection pa_direction) {
+  std::string direction = "RUNNING_INVALID";
+  switch (pa_direction) {
+    case ApaPADirection::PA_LEFT:
+      direction = "PA_LEFT";
+      break;
+    case ApaPADirection::PA_RIGHT:
+      direction = "PA_RIGHT";
+      break;
+    default:
+      direction = "RUNNING_INVALID";
+      break;
+  }
+  return direction;
+};
+
+void ApaStateMachineManager::PrintParkingPADirection(
+    const ApaPADirection pa_direction) {
+  ILOG_INFO << "PA direction = " << GetParkingPADirectionString(pa_direction);
+};
+
 
 const bool ApaStateMachineManager::IsParkSuspendStatus() const {
   if (state_machine_ == ApaStateMachine::SUSPEND) {

@@ -157,6 +157,7 @@ struct Parameters {
   double elk_roadedge_supp_curv_r_dur = 2.0;
   //临时测试，记得删
   bool elk_roadedge_testswitch_temp_ = false;
+  bool ldp_handoff_state_switch_test_ = false;
   //以下定义了enable/disable条件中油门踏板变化率的阈值条件
   double elk_enable_accel_pedal_pos_rate = 30.0;
   double elk_disable_accel_pedal_pos_rate = 70.0;
@@ -339,6 +340,12 @@ struct LaneInfo {
   bool lane_changed_flag;
   bool left_sideway_exist_flag;
   bool right_sideway_exist_flag;
+  int sideway_relative_id_zero_nums;
+  bool left_lane_samedir_exist_flag;
+  bool right_lane_samedir_exist_flag;
+  double left_sideway_near_gap_tmp;
+  double right_sideway_near_gap_tmp;
+
   // bool left_safe_departure_permission_flag = false;
   // bool right_safe_departure_permission_flag = false;
   bool left_parallel_car_flag = false;
@@ -362,6 +369,10 @@ struct LastCycleInfo {
   bool right_turn_light_state = false;  // 右转向灯状态  false:关闭 true:开启
   double yaw_rad = 0.0;                 // 定位yaw角
   double accelerator_pedal_pos = 0.0;  // 实际加速踏板开度百分比 范围:[0-100]
+  bool ldp_left_intervention = false;
+  bool ldp_right_intervention = false;
+  bool elk_left_intervention = false;
+  bool elk_right_intervention = false;
 };
 
 // 限速标识牌信息，包括限速，解除限速
@@ -417,6 +428,9 @@ Intervention) 5:Active(Right Intervention) */
   bool ldp_right_intervention_flag_{
       false}; /* LDP功能触发右侧报警标志位 0:No Intervention 1:Rirht
                  Intervention */
+  bool ldp_warning_audio_flag_{false}; /* LDP功能报警音信号*/
+  iflyauto::LDPDriverhandsoffWarning ldp_driver_handsoff_warning_{
+      iflyauto::LDP_DRIVER_HANDSOFF_WARNING_OFF};
 };
 
 typedef struct {

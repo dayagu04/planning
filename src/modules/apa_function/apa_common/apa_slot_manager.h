@@ -251,6 +251,10 @@ class ApaSlotManager final {
   const size_t GetEgoSlotInfoID() const;
 
   const bool GetFreeSlotActivate() const { return free_slot_activate_; }
+  const std::unordered_map<size_t, ApaSlot>& GetSlotsMap() const {
+    return slots_map_;
+  }
+  const bool GetRecommendParkOut() const { return recommend_park_out_; }
 
  private:
   void ParkingLotCruiseProcess();
@@ -266,6 +270,11 @@ class ApaSlotManager final {
 
   const SlotReleaseVoterType IsParallelSlotAndPassageAreaOccupied(
       ApaSlot& slot);
+
+  const bool IsNeedRecommendParkOut();
+  const bool RecommendParkOut();
+  const bool LongitudinalConditions(const double dot_product, ApaSlot& slot);
+  const bool LateralConditions(double dot_product, ApaSlot& slot);
 
  private:
   std::map<double, size_t> dist_id_map_;
@@ -292,6 +301,7 @@ class ApaSlotManager final {
   iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;
   int parallel_slot_release_count_ = 0;
   int parallel_slot_not_release_count_ = 0;
+  bool recommend_park_out_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

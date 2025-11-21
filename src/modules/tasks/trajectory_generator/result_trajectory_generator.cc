@@ -680,6 +680,7 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
                                    .get_virtual_lane_manager()
                                    ->get_current_lane()
                                    ->get_reference_line_msg();
+  ad_info.landing_point.is_avaliable = false;
   ad_info.landing_point.heading = 0.0;
   ad_info.landing_point.relative_pos.x = 0.0;
   ad_info.landing_point.relative_pos.y = 0.0;
@@ -692,14 +693,17 @@ void ResultTrajectoryGenerator::UpdateHMIInfo() {
   iflyauto::LandingPoint landing_point;
   if (!is_time_out && is_lane_keeping) {
     landing_point = CalculateLandingPoint(true, lane_change_decider_output);
+    landing_point.is_avaliable = true;
   } else if (curr_state == kLaneChangePropose ||
              curr_state == kLaneChangeExecution ||
              curr_state == kLaneChangeComplete ||
              curr_state == kLaneChangeCancel || curr_state == kLaneChangeHold) {
     landing_point = CalculateLandingPoint(false, lane_change_decider_output);
+    landing_point.is_avaliable = true;
     // }
   } else {
     landing_point = CalculateLandingPoint(true, lane_change_decider_output);
+    landing_point.is_avaliable = false;
   }
   ad_info.landing_point = landing_point;
 
@@ -773,16 +777,16 @@ iflyauto::LandingPoint ResultTrajectoryGenerator::CalculateLandingPoint(
       landing_point_theta_global = reference_path_point.path_point.theta();
     }
     Eigen::Vector2d pos_n_ori(ego_pose.x, ego_pose.y);
-    pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori, theta_ori);
-    Eigen::Vector2d p_n(cart_point.x, cart_point.y);
-    Eigen::Vector2d landing_point_body = global_to_local_tf.GetPos(p_n);
-    const double landing_point_theta_local =
-        global_to_local_tf.GetHeading(landing_point_theta_global);
+    // pnc::geometry_lib::GlobalToLocalTf global_to_local_tf(pos_n_ori, theta_ori);
+    // Eigen::Vector2d p_n(cart_point.x, cart_point.y);
+    // Eigen::Vector2d landing_point_body = global_to_local_tf.GetPos(p_n);
+    // const double landing_point_theta_local =
+    //     global_to_local_tf.GetHeading(landing_point_theta_global);
 
-    landing_point.relative_pos.x = landing_point_body.x();
-    landing_point.relative_pos.y = landing_point_body.y();
+    landing_point.relative_pos.x = cart_point.x;
+    landing_point.relative_pos.y = cart_point.y;
     landing_point.relative_pos.z = 0;
-    landing_point.heading = landing_point_theta_local;
+    landing_point.heading = landing_point_theta_global;
   }
   return landing_point;
 }

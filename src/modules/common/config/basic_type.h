@@ -1019,7 +1019,13 @@ struct LateralMotionPlanningOutput {
   // ilqr_solver::iLqr::iLqrSolverInfo solver_info;  // to be removed
 };
 
+struct CutinAgentTtcInfo {
+  int32_t agent_id = -1;
+  double ttc = -1.0;
+};
+
 struct AgentLongitudinalDeciderOutput {
   std::vector<int32_t> cutin_agent_ids;
+  CutinAgentTtcInfo closest_cutin_ttc_info;
 };
 }  // namespace planning

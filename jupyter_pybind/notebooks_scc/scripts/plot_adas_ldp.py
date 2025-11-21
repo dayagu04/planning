@@ -10,7 +10,7 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_81865/trigger/20250916/20250916-18-08-24/data_collection_CHERY_M32T_81865_EVENT_KEY_2025-09-16-18-08-24_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20251022/20251022-14-27-18/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-10-22-14-27-18_no_camera.bag"
 frame_dt = 0.02 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -83,7 +83,9 @@ adas_json_value_list =  [ #adas_debug info
                          "road_right_line_segement0_length","road_right_line_segement0_type","road_right_line_segement1_length","road_right_line_segement1_type",
                          "road_right_line_segement2_length","road_right_line_segement2_type","road_right_line_segement3_length","road_right_line_segement3_type",
                          "road_lane_changed_flag","road_left_sideway_exist_flag","road_right_sideway_exist_flag","road_left_departure_permission_flag","road_right_departure_permission_flag",
-                         ]
+                         "ldp_warning_audio_flag_","ldp_intervention_count","lkas_intervention_rising_edge_","ldp_intervention_duration_",
+                         "sideway_relative_id_zero_nums","left_lane_samedir_exist_flag","left_sideway_near_gap_tmp","right_lane_samedir_exist_flag","right_sideway_near_gap_tmp",
+                        ]
 
 json_vector_list = ["road_left_line_all_dx_vec_","road_left_line_all_dy_vec_",
                     "road_right_line_all_dx_vec_","road_right_line_all_dy_vec_",
@@ -225,6 +227,11 @@ fig_left_line_base_info.yaxis.axis_label_text_font_style = 'bold'
 fig_right_line_base_info = bkp.figure(x_axis_label='time', y_axis_label='right line base info',x_range = [lka_t_ldp_debug[0], lka_t_ldp_debug[-1]], width=700, height=280)
 fig_right_line_base_info.yaxis.axis_label_text_font_style = 'bold'
 
+
+fig_handsoff_warning_info = bkp.figure(x_axis_label='time', y_axis_label='handsoff warning info',x_range = [lka_t_ldp_debug[0], lka_t_ldp_debug[-1]], width=700, height=280)
+fig_handsoff_warning_info.yaxis.axis_label_text_font_style = 'bold'
+
+
 f_machine = fig_machine.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_state')
 fig_machine.line('time', 'ldp_main_switch_', source = lkas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ldp_main_switch')
 fig_machine.line('time', 'ldp_enable_code_', source = lkas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ldp_enable_code')
@@ -247,6 +254,7 @@ fig_dynamic_state.line('time', 'state_right_departure_speed', source = adas_json
 fig_dynamic_state.line('time', 'state_lat_departure_acc', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'state_lat_departure_acc')
 fig_dynamic_state.line('time', 'state_left_turn_light_off_time', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'left_turn_light_off_time')
 fig_dynamic_state.line('time', 'state_right_turn_light_off_time', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'right_turn_light_off_time')
+
 
 f_left_machine = fig_left_machine.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_state')
 fig_left_machine.line('time', 'ldp_left_suppression_code_', source = lkas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'ldp_left_suppression_code')
@@ -277,6 +285,9 @@ fig_left_line_info.line('time', 'road_left_line_line_type', source = adas_json_l
 fig_left_line_info.line('time', 'road_left_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'left_line_boundary_type')
 fig_left_line_info.line('time', 'road_left_sideway_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'left_sideway_exist_flag')
 fig_left_line_info.line('time', 'road_left_departure_permission_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'left_departure_permission_flag')
+fig_left_line_info.line('time', 'left_lane_samedir_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'left_lane_samedir_exist_flag')
+fig_left_line_info.line('time', 'sideway_relative_id_zero_nums', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'sideway_relative_id_zero_nums')
+fig_left_line_info.line('time', 'left_sideway_near_gap_tmp', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'left_sideway_near_gap_tmp')
 
 f_right_line_info = fig_right_line_info.line('time', 'road_right_line_valid', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'right_line_valid')
 fig_right_line_info.line('time', 'road_right_roadedge_valid', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'right_roadedge_valid')
@@ -284,6 +295,9 @@ fig_right_line_info.line('time', 'road_right_line_line_type', source = adas_json
 fig_right_line_info.line('time', 'road_right_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'right_line_boundary_type')
 fig_right_line_info.line('time', 'road_right_sideway_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'right_sideway_exist_flag')
 fig_right_line_info.line('time', 'road_right_departure_permission_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_departure_permission_flag')
+fig_right_line_info.line('time', 'right_lane_samedir_exist_flag', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_lane_samedir_exist_flag')
+fig_right_line_info.line('time', 'right_sideway_near_gap_tmp', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'right_sideway_near_gap_tmp')
+
 
 f_relative_line_info = fig_relative_line_info.line('time', 'road_lane_changed_flag', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'lane_changed_flag')
 fig_relative_line_info.line('time', 'state_fl_wheel_distance_to_line', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'fl_wheel_distance_to_line')
@@ -325,13 +339,21 @@ fig_right_line_base_info.line('time', 'road_right_line_c3', source = adas_json_l
 # fig_right_line_info.line('time', 'road_right_line_boundary_type', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'right_line_boundary_type')
 # fig_right_line_info.line('time', 'state_fr_wheel_distance_to_roadedge', source = adas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'right_roadedge_distance')
 
+#f_handsoff_warning_info = fig_handsoff_warning_info.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_state')
+f_handsoff_warning_info = fig_handsoff_warning_info.line('time', 'ldp_warning_audio_flag_', source = adas_json_list_dict, line_width = 1, line_color = 'black', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
+fig_handsoff_warning_info.line('time', 'ldp_warning_audio_flag_', source = adas_json_list_dict, line_width = 1, line_color = 'blue', line_dash = 'solid', legend_label = 'ldp_warning_audio_flag_')
+fig_handsoff_warning_info.line('time', 'ldp_intervention_count', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_intervention_count')
+fig_handsoff_warning_info.line('time', 'lkas_intervention_rising_edge_', source = adas_json_list_dict, line_width = 1, line_color = 'red', line_dash = 'solid', legend_label = 'lkas_intervention_rising_edge_')
+fig_handsoff_warning_info.line('time', 'ldp_intervention_duration_', source = adas_json_list_dict, line_width = 1, line_color = 'purple', line_dash = 'solid', legend_label = 'ldp_intervention_duration_')
+fig_handsoff_warning_info.line('time', 'ldp_state_', source = lkas_json_list_dict, line_width = 1, line_color = 'orange', line_dash = 'solid', legend_label = 'ldp_state_')
+fig_handsoff_warning_info.line('time', 'ldp_handsoff_duration_', source = adas_json_list_dict, line_width = 1, line_color = 'green', line_dash = 'solid', legend_label = 'ldp_handsoff_duration_')
 
 hover_machine = HoverTool(renderers=[f_machine], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'),('ldp_main_switch_', '@ldp_main_switch_'), ('ldp_enable_code_', '@ldp_enable_code_'),
                                                        ('ldp_disable_code_', '@ldp_disable_code_'), ('ldp_fault_code_', '@ldp_fault_code_')], mode='vline')
 hover_vehicle_state = HoverTool(renderers=[f_vehicle_state], tooltips=[('time', '@time'), ('state_vehicle_speed', '@state_vehicle_speed'), ('state_yaw_rate', '@state_yaw_rate'), ('state_yaw_rate_observer', '@state_yaw_rate_observer'),
                                                ('state_driver_hand_trq', '@state_driver_hand_trq'), ('state_ego_curvature', '@state_ego_curvature'), ('state_steer_wheel_angle_degree', '@state_steer_wheel_angle_degree')], mode='vline')
 hover_dynamic_state = HoverTool(renderers=[f_dynamic_state], tooltips=[('time', '@time'), ('state_left_departure_speed', '@state_left_departure_speed'), ('state_right_departure_speed', '@state_right_departure_speed'), ('state_left_turn_light_off_time', '@state_left_turn_light_off_time'),
-                                               ('state_right_turn_light_off_time', '@state_right_turn_light_off_time')], mode='vline')
+                                               ('state_right_turn_light_off_time', '@state_right_turn_light_off_time'),], mode='vline')
 hover_left_machine = HoverTool(renderers=[f_left_machine], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'),('ldp_left_suppression_code_', '@ldp_left_suppression_code_'), ('ldp_left_kickdown_code_', '@ldp_left_kickdown_code_'),
                                                        ('ldp_left_intervention_', '@ldp_left_intervention_'),('ldp_left_intervention_by_line', '@ldp_left_intervention_by_line'),('ldp_left_intervention_by_roadedge', '@ldp_left_intervention_by_roadedge')], mode='vline')
 hover_right_machine = HoverTool(renderers=[f_right_machine], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'), ('ldp_right_suppression_code_', '@ldp_right_suppression_code_'),
@@ -340,9 +362,10 @@ hover_right_machine = HoverTool(renderers=[f_right_machine], tooltips=[('time', 
 hover_trig_caculate = HoverTool(renderers=[f_trig_caculate], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'), ('ldp_preview_left_y_gap', '@ldp_preview_left_y_gap'),
                                                          ('ldp_preview_right_y_gap', '@ldp_preview_right_y_gap'), ('ldp_tlc_threshold_', '@ldp_tlc_threshold_'),('ldp_roadedge_tlc_threshold_', '@ldp_roadedge_tlc_threshold_'),], mode='vline')
 hover_left_line_info = HoverTool(renderers=[f_left_line_info], tooltips=[('time', '@time'), ('road_left_line_valid', '@road_left_line_valid'), ('road_left_roadedge_valid', '@road_left_roadedge_valid'),
-                                                         ('road_left_line_line_type', '@road_left_line_line_type'), ('road_left_line_boundary_type', '@road_left_line_boundary_type'),], mode='vline')
+                                                         ('road_left_line_line_type', '@road_left_line_line_type'), ('road_left_line_boundary_type', '@road_left_line_boundary_type'), ('left_lane_samedir_exist_flag', '@left_lane_samedir_exist_flag'),
+                                                         ('sideway_relative_id_zero_nums', '@sideway_relative_id_zero_nums'),('left_sideway_near_gap_tmp', '@left_sideway_near_gap_tmp'),], mode='vline')
 hover_right_line_info = HoverTool(renderers=[f_right_line_info], tooltips=[('time', '@time'), ('road_right_line_valid', '@road_right_line_valid'), ('road_right_roadedge_valid', '@road_right_roadedge_valid'),
-                                             ('road_right_line_line_type', '@road_right_line_line_type'), ('road_right_line_boundary_type', '@road_right_line_boundary_type'),], mode='vline')
+                                             ('road_right_line_line_type', '@road_right_line_line_type'), ('road_right_line_boundary_type', '@road_right_line_boundary_type'),('right_lane_samedir_exist_flag', '@right_lane_samedir_exist_flag'),('right_sideway_near_gap_tmp', '@right_sideway_near_gap_tmp'),], mode='vline')
 hover_relative_line_info = HoverTool(renderers=[f_relative_line_info], tooltips=[('time', '@time'), ('state_fl_wheel_distance_to_line', '@state_fl_wheel_distance_to_line'), ('state_fl_wheel_distance_to_roadedge', '@state_fl_wheel_distance_to_roadedge'),
                                              ('state_fr_wheel_distance_to_line', '@state_fr_wheel_distance_to_line'), ('state_fr_wheel_distance_to_roadedge', '@state_fr_wheel_distance_to_roadedge'), ('road_lane_width_valid', '@road_lane_width_valid'),
                                              ('road_lane_width', '@road_lane_width')], mode='vline')
@@ -352,7 +375,8 @@ hover_left_line_base_info = HoverTool(renderers=[f_left_line_base_info], tooltip
 hover_right_line_base_info = HoverTool(renderers=[f_right_line_base_info], tooltips=[('time', '@time'), ('road_right_line_begin', '@road_right_line_begin'), ('road_right_line_end', '@road_right_line_end'),
                                                          ('road_right_roadedge_begin_x', '@road_right_roadedge_begin_x'), ('road_right_roadedge_end_x', '@road_right_roadedge_end_x'),('road_right_line_c0', '@road_right_line_c0'),
                                                          ('road_right_line_c1', '@road_right_line_c1'),('road_right_line_c2', '@road_right_line_c2'),('road_right_line_c3', '@road_right_line_c3'),], mode='vline')
-
+hover_handsoff_warning_info = HoverTool(renderers=[f_handsoff_warning_info], tooltips=[('time', '@time'), ('ldp_state_', '@ldp_state_'),('ldp_warning_audio_flag_', '@ldp_warning_audio_flag_'),('ldp_intervention_count', '@ldp_intervention_count'),
+                                                                                       ('lkas_intervention_rising_edge_', '@lkas_intervention_rising_edge_'),('ldp_intervention_duration_', '@ldp_intervention_duration_'),('ldp_handsoff_duration_', '@ldp_handsoff_duration_'),], mode='vline')
 
 fig_machine.add_tools(hover_machine)
 fig_vehicle_state.add_tools(hover_vehicle_state)
@@ -365,7 +389,7 @@ fig_right_line_info.add_tools(hover_right_line_info)
 fig_relative_line_info.add_tools(hover_relative_line_info)
 fig_left_line_base_info.add_tools(hover_left_line_base_info)
 fig_right_line_base_info.add_tools(hover_right_line_base_info)
-
+fig_handsoff_warning_info.add_tools(hover_handsoff_warning_info)
 
 fig_machine.toolbar.active_scroll = fig_machine.select_one(WheelZoomTool)
 fig_vehicle_state.toolbar.active_scroll = fig_vehicle_state.select_one(WheelZoomTool)
@@ -378,7 +402,7 @@ fig_right_line_info.toolbar.active_scroll = fig_right_line_info.select_one(Wheel
 fig_relative_line_info.toolbar.active_scroll = fig_relative_line_info.select_one(WheelZoomTool)
 fig_left_line_base_info.toolbar.active_scroll = fig_left_line_base_info.select_one(WheelZoomTool)
 fig_right_line_base_info.toolbar.active_scroll = fig_right_line_base_info.select_one(WheelZoomTool)
-
+fig_handsoff_warning_info.toolbar.active_scroll= fig_handsoff_warning_info.select_one(WheelZoomTool)
 
 fig_machine.legend.click_policy = 'hide'
 fig_vehicle_state.legend.click_policy = 'hide'
@@ -391,6 +415,7 @@ fig_right_line_info.legend.click_policy = 'hide'
 fig_relative_line_info.legend.click_policy = 'hide'
 fig_left_line_base_info.legend.click_policy = 'hide'
 fig_right_line_base_info.legend.click_policy = 'hide'
+fig_handsoff_warning_info.legend.click_policy = 'hide'
 
 ### sliders config
 class LocalViewSlider:
@@ -609,5 +634,5 @@ def slider_callback(bag_time):
   push_notebook()
 
 bkp.show(row(fig1, column(fig_machine, fig_vehicle_state, fig_dynamic_state, fig_left_machine, fig_right_machine,fig_trig_caculate),
-             column( fig_left_line_info, fig_right_line_info,fig_relative_line_info, fig_left_line_base_info, fig_right_line_base_info)), notebook_handle=True)
+             column( fig_left_line_info, fig_right_line_info,fig_relative_line_info, fig_left_line_base_info, fig_right_line_base_info,fig_handsoff_warning_info)), notebook_handle=True)
 slider_class = LocalViewSlider(slider_callback)

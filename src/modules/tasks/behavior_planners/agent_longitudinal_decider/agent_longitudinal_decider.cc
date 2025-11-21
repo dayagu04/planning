@@ -239,6 +239,14 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   cut_in_distance_range_m =
       std::fmin(cut_in_distance_range_m, kMaxCutInDistanceM);
 
+  auto* agent_longitudinal_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_agent_longitudinal_decider_output();
+  if (agent_longitudinal_decider_output != nullptr) {
+    agent_longitudinal_decider_output->closest_cutin_ttc_info.agent_id = -1;
+    agent_longitudinal_decider_output->closest_cutin_ttc_info.ttc = -1.0;
+  }
+
   for (const auto agent : agents) {
     if (nullptr == agent) {
       continue;
@@ -252,7 +260,8 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
     DeciderCutInAgent(is_in_lane_change, *agent, ego_speed_mps, ego_theta,
                       ego_half_length, ego_half_width, init_point,
                       road_curvature_radius, cut_in_distance_range_m,
-                      cut_in_lateral_threshold_m, mutable_agent_manager);
+                      cut_in_lateral_threshold_m, mutable_agent_manager,
+                      agent_longitudinal_decider_output);
   }
   DeciderCutOutAgent(mutable_agent_manager);
 
@@ -272,7 +281,8 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     const PlanningInitPoint init_point, const double road_curvature_radius,
     const double cut_in_distance_range_m,
     const double cut_in_lateral_threshold_m,
-    agent::AgentManager* const mutable_agent_manager) {
+    agent::AgentManager* const mutable_agent_manager,
+    AgentLongitudinalDeciderOutput* output) {
   const double large_agent_lower_small_heading_diff =
       road_curvature_radius < kLargeCurvRadius
           ? kLargeAgentLowerSmallHeadingDiffInLargeCurv
@@ -369,7 +379,6 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   // current kappa
   const double current_kappa = ego_lane_coord->GetPathPointByS(max_s).kappa();
 
-  // ttc: time to collison
   double small_lateral_ttc = std::numeric_limits<double>::max();
   if (object_l_speed_mps * small_lateral_distance < 0.0) {
     small_lateral_ttc =
@@ -483,6 +492,26 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
   }
   if (cut_in_agent_count_[agent_id] > 0) {
     mutable_agent->set_is_cutin(true);
+
+    double longitudinal_ttc = std::numeric_limits<double>::max();
+    const double longitudinal_distance = min_s - ego_s - ego_half_length;
+    const double relative_speed = object_s_speed_mps - ego_speed_mps;
+
+    if (longitudinal_distance > 0.0 && relative_speed < 0.0) {
+      longitudinal_ttc = longitudinal_distance / std::fabs(relative_speed);
+    }
+
+    constexpr double kLongitudinalTtcLowerThreshold = 1.5;
+    constexpr double kLongitudinalTtcUpperThreshold = 3.0;
+    if (output != nullptr &&
+        longitudinal_ttc <= kLongitudinalTtcUpperThreshold &&
+        longitudinal_ttc >= kLongitudinalTtcLowerThreshold) {
+      if (output->closest_cutin_ttc_info.agent_id == -1 ||
+          longitudinal_ttc < output->closest_cutin_ttc_info.ttc) {
+        output->closest_cutin_ttc_info.agent_id = agent_id;
+        output->closest_cutin_ttc_info.ttc = longitudinal_ttc;
+      }
+    }
   }
 }
 

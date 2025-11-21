@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+
 #include "src/modules/common/speed/apa_speed_decision.h"
 
 #ifndef apa_param
@@ -47,10 +48,9 @@ const std::string GetAnalyticExpansionTypeString(
     const AnalyticExpansionType type);
 void PrintAnalyticExpansionType(const AnalyticExpansionType type,
                                 const bool enable_log = true);
-const std::string GetUseObsHeightMethodString(
-    const UseObsHeightMethod method);
+const std::string GetUseObsHeightMethodString(const UseObsHeightMethod method);
 void PrintUseObsHeightMethod(const UseObsHeightMethod method,
-                                const bool enable_log = true);
+                             const bool enable_log = true);
 
 struct AstarParkingConfig {
   bool perpendicular_slot_auto_switch_to_astar;
@@ -390,6 +390,7 @@ struct ApaParameters {
   double plan_time = 0.1;
 
   // car params
+  int car_type = 3;
   double front_overhanging = 0.924;
   // back edge to rear axis
   double rear_overhanging = 0.94;
@@ -441,6 +442,15 @@ struct ApaParameters {
   double parallel_max_ego_x_offset_with_invasion = 0.5;
   double parallel_ego_ac_x_offset_with_limiter = 0.3;
   double parallel_terminal_x_offset_with_obs = 0.35;
+
+  // parallel pa params
+  double finish_parallel_pa_lat_err = 0.12;
+  double finish_parallel_pa_lon_err = 0.15;
+  double finish_parallel_pa_heading_err = 5.0;
+  double debug_parallel_angle_threshold = 3.0;
+  double s_turn_plan_pa_buffer = 0.2;
+  double line_plan_pa_buffer = 0.15;
+  double pa_slot_move_distance = 0.15;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -784,7 +794,7 @@ class ApaParametersSetting {
   ApaParameters &SetParam() { return param_; }
 
  private:
-  ApaParametersSetting(){};
+  ApaParametersSetting() {};
 
   // apa parameters
   ApaParameters param_;

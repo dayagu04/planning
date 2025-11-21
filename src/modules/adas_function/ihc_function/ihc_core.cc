@@ -48,22 +48,22 @@ void IhcCore::RunOnce(void) {
 
   // 处理环境光照状态：将中等亮度状态根据上一次状态进行转换
   // 根据当前输入的光照条件进行处理
-  if (ihc_sys_.input.lighting_condition == 
+  if (ihc_sys_.input.lighting_condition ==
       iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT) {
     // 明亮状态：直接设置为明亮
-    processed_lighting_condition_ = 
+    processed_lighting_condition_ =
         iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT;
-  } else if (ihc_sys_.input.lighting_condition == 
+  } else if (ihc_sys_.input.lighting_condition ==
              iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK) {
     // 昏暗状态：直接设置为昏暗
-    processed_lighting_condition_ = 
+    processed_lighting_condition_ =
         iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_DARK;
   } else {
     // 中等亮度或未知状态：根据上一次状态判断
-    if (processed_lighting_condition_ == 
+    if (processed_lighting_condition_ ==
         iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_UNKNOWN) {
       // 如果还未初始化（第一次遇到不明确状态），默认设置为明亮（更安全的默认值）
-      processed_lighting_condition_ = 
+      processed_lighting_condition_ =
           iflyauto::CameraPerceptionLightingCondition::CAMERA_PERCEPTION_LIGHTING_CONDITION_BRIGHT;
     }
     // 否则保持当前状态不变（继承上一次的处理结果）
@@ -638,22 +638,22 @@ bool IhcCore::DynamicObstacleCheck(void) {
 
   // 步骤1: 收集当前帧所有障碍物ID，用于后续清理
   std::set<uint16> current_frame_ids;
-  
+
   // 步骤2: 第一次遍历，更新verified_obstacle_ids_（同时被相机和雷达检测到的障碍物）
   for (int i = 0; i < fusion_objs_num; i++) {
     uint16 track_id = fusion_objs[i].additional_info.track_id;
     current_frame_ids.insert(track_id);
-    
+
     // 判断障碍物的track_age
     if (fusion_objs[i].additional_info.track_age < 500) {
       continue;  // 跳过track_age小于500ms的障碍物
     }
-    
+
     // 判断障碍物数据来源, 必须是视觉和雷达都检测出才行, 使用fusion_source判断
     uint32_t fusion_source = fusion_objs[i].additional_info.fusion_source;
     bool has_camera = (fusion_source & 0x01) != 0;  // 第1位：前相机来源
     bool has_radar = (fusion_source & 0xFE) != 0;   // 第2-8位：雷达来源（前毫米波、左前、右前、左后、右后、超声波、激光雷达）
-    
+
     // 如果同时有相机和雷达来源，则加入到可信障碍物集合中
     if (has_camera && has_radar) {
       verified_obstacle_ids_.insert(track_id);
@@ -687,16 +687,16 @@ bool IhcCore::DynamicObstacleCheck(void) {
       }
     }
   }
-  
+
   // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
   for (int i = 0; i < fusion_objs_num; i++) {
     uint16 track_id = fusion_objs[i].additional_info.track_id;
-    
+
     // 只有在verified_obstacle_ids_中的障碍物才被认为是真实障碍物
     if (verified_obstacle_ids_.find(track_id) == verified_obstacle_ids_.end()) {
       continue;  // 跳过不在可信列表中的障碍物
     }
-    
+
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
@@ -789,7 +789,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
   if (detected_oncoming_cycle) {
     ihc_sys_.state.low_beam_due_to_oncomming_cycle = true;
   }
-  
+
   // 返回是否检测到稳定的障碍物
   return (ihc_sys_.state.low_beam_due_to_same_dir_vehicle ||
           ihc_sys_.state.low_beam_due_to_oncomming_vehicle ||

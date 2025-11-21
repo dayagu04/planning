@@ -188,7 +188,8 @@ bool PlanningScheduler::RunOnce(
 
   bool is_hpp_slot_searching = IsHppSlotSearchingByDistance();
   if (function_type == common::PARKING_APA || is_hpp_slot_searching) {
-    planning_success = ExcuteParkingFunction(function_type, planning_output);
+    planning_success = ExcuteParkingFunction(
+        function_type, start_timestamp, planning_output, planning_hmi_info);
   }
 
   if (function_type == common::HIGHWAY || function_type == common::HPP ||
@@ -356,11 +357,16 @@ void PlanningScheduler::FillPlanningTrajectory(
 
   // 根据定位有效性决定实时、长时
   auto location_valid = session_.environmental_model().location_valid();
-
+  const auto &function_state_machine_info_ptr =
+      session_.environmental_model()
+          .get_local_view()
+          .function_state_machine_info;
   if (location_valid) {
     trajectory->trajectory_type = iflyauto::TRAJECTORY_TYPE_TRAJECTORY_POINTS;
     auto lkas_trajectory = GetContext.get_lka_trajectory_info();
-    if (lkas_intervention_flag) {
+    if (lkas_intervention_flag &&
+        function_state_machine_info_ptr.current_state !=
+            iflyauto::FunctionalState_ACC_ACTIVATE) {
       for (size_t i = 0; i < PLANNING_TRAJ_POINTS_MAX_NUM; i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = lkas_trajectory->trajectory_points[i].x;
@@ -375,7 +381,27 @@ void PlanningScheduler::FillPlanningTrajectory(
         path_point->jerk = lkas_trajectory->trajectory_points[i].jerk;
         ++(trajectory->trajectory_points_size);
       }
-    } else {
+    } else if (
+        lkas_intervention_flag &&
+        function_state_machine_info_ptr.current_state ==
+            iflyauto::
+                FunctionalState_ACC_ACTIVATE) {  // 以下新增acc和ldp共同开启的工况
+      for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
+        auto path_point = &trajectory->trajectory_points[i];
+        path_point->x = planning_result.traj_points[i].x;
+        path_point->y = lkas_trajectory->trajectory_points[i].y;
+        path_point->heading_yaw = planning_result.traj_points[i].heading_angle;
+        path_point->curvature = planning_result.traj_points[i].curvature;
+        path_point->t = planning_result.traj_points[i].t;
+        path_point->v = planning_result.traj_points[i].v;
+        path_point->a = planning_result.traj_points[i].a;
+        path_point->distance = planning_result.traj_points[i].s;
+        path_point->jerk = planning_result.traj_points[i].jerk;
+        ++(trajectory->trajectory_points_size);
+      }
+    }
+
+    else {
       for (size_t i = 0; i < planning_result.traj_points.size(); i++) {
         auto path_point = &trajectory->trajectory_points[i];
         path_point->x = planning_result.traj_points[i].x;
@@ -675,6 +701,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.planning_context().lane_change_decider_output();
   const auto &lat_offset_decider_output =
       session_.planning_context().lateral_offset_decider_output();
+  const auto &agent_longitudinal_decider_output =
+      session_.planning_context().agent_longitudinal_decider_output();
 
   planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
   // HMI for alc
@@ -692,74 +720,6 @@ void PlanningScheduler::FillPlanningHmiInfo(
   iflyauto::strcpy_array(
       alc_output_pb->lc_back_reason,
       lane_change_decider_output.lc_back_invalid_reason.c_str());
-
-  /*new adas*/
-  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
-  planning_hmi_info->ldw_output_info.ldw_state =
-      GetContext.get_output_info()->ldw_output_info_.ldw_state_;
-  planning_hmi_info->ldw_output_info.ldw_left_warning =
-      GetContext.get_output_info()->ldw_output_info_.ldw_left_warning_;
-  planning_hmi_info->ldw_output_info.ldw_right_warning =
-      GetContext.get_output_info()->ldw_output_info_.ldw_right_warning_;
-  // HMI for ldp
-  planning_hmi_info->ldp_output_info.ldp_state =
-      GetContext.get_output_info()->ldp_output_info_.ldp_state_;
-  planning_hmi_info->ldp_output_info.ldp_left_intervention_flag =
-      GetContext.get_output_info()
-          ->ldp_output_info_.ldp_left_intervention_flag_;
-  planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
-      GetContext.get_output_info()
-          ->ldp_output_info_.ldp_right_intervention_flag_;
-  // HMI for elk
-  planning_hmi_info->elk_output_info.elk_state =
-      GetContext.get_output_info()->elk_output_info_.elk_state_;
-  planning_hmi_info->elk_output_info.elk_left_intervention_flag =
-      GetContext.get_output_info()
-          ->elk_output_info_.elk_left_intervention_flag_;
-  planning_hmi_info->elk_output_info.elk_right_intervention_flag =
-      GetContext.get_output_info()
-          ->elk_output_info_.elk_right_intervention_flag_;
-
-  planning_hmi_info->elk_output_info.elk_risk_obj.obj_valid =
-      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.obj_valid;
-  planning_hmi_info->elk_output_info.elk_risk_obj.id =
-      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.id;
-
-  // HMI for ihc
-
-  planning_hmi_info->ihc_output_info.ihc_state =
-      GetContext.get_output_info()->ihc_output_info_.ihc_state_;
-  planning_hmi_info->ihc_output_info.ihc_request =
-      GetContext.get_output_info()->ihc_output_info_.ihc_request_;
-  planning_hmi_info->ihc_output_info.ihc_request_status =
-      GetContext.get_output_info()->ihc_output_info_.ihc_request_status_;
-  // HMI for tsr
-  planning_hmi_info->tsr_output_info.tsr_state =
-      GetContext.get_output_info()->tsr_output_info_.tsr_state_;
-  planning_hmi_info->tsr_output_info.tsr_warning =
-      GetContext.get_output_info()->tsr_output_info_.tsr_warning_;
-  planning_hmi_info->tsr_output_info.tsr_speed_unlimit_warning =
-      GetContext.get_output_info()->tsr_output_info_.isli_display_type_;
-  planning_hmi_info->tsr_output_info.tsr_speed_limit =
-      GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
-  planning_hmi_info->tsr_output_info.tsr_supp_sign_type =
-      GetContext.get_output_info()->tsr_output_info_.supp_sign_type;
-
-  // HMI for meb
-  planning_hmi_info->meb_output_info.meb_state =
-      GetContext.get_output_info()->meb_output_info_.meb_state;
-  planning_hmi_info->meb_output_info.meb_request_status =
-      GetContext.get_output_info()->meb_output_info_.meb_request_status;
-  planning_hmi_info->meb_output_info.meb_request_value =
-      GetContext.get_output_info()->meb_output_info_.meb_request_value;
-
-  // HMI for amap
-  planning_hmi_info->amap_output_info.amap_state =
-      GetContext.get_output_info()->amap_output_info_.amap_state;
-  planning_hmi_info->amap_output_info.amap_request_flag =
-      GetContext.get_output_info()->amap_output_info_.amap_request_flag;
-  planning_hmi_info->amap_output_info.amap_trq_limit_max =
-      GetContext.get_output_info()->amap_output_info_.amap_trq_limit_max;
 
   // HMI for CIPV
   // TBD: 后续需要丰富障碍物的信息，后车、侧方车辆等
@@ -821,6 +781,12 @@ void PlanningScheduler::FillPlanningHmiInfo(
           .ad_info.reference_line_msg;
   planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
   // planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  
+  const auto& cutin_ttc_info = 
+      agent_longitudinal_decider_output.closest_cutin_ttc_info;
+  planning_hmi_info->ad_info.cutin_track_id = cutin_ttc_info.agent_id;
+  planning_hmi_info->ad_info.cutin_ttc = static_cast<float>(cutin_ttc_info.ttc);
+
   // HMI for hpp
   const bool is_reached_target_slot = session_.environmental_model()
                                           .get_parking_slot_manager()
@@ -902,6 +868,85 @@ void PlanningScheduler::FillPlanningHmiInfo(
       hpp_info->is_new_parking_space_found = true;
     }
   }
+  return;
+}
+
+void PlanningScheduler::FillAdasPlanningHmiInfo(
+    double start_timestamp,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
+  planning_hmi_info->msg_header.stamp = IflyTime::Now_us();
+
+  /*new adas*/
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  planning_hmi_info->ldw_output_info.ldw_state =
+      GetContext.get_output_info()->ldw_output_info_.ldw_state_;
+  planning_hmi_info->ldw_output_info.ldw_left_warning =
+      GetContext.get_output_info()->ldw_output_info_.ldw_left_warning_;
+  planning_hmi_info->ldw_output_info.ldw_right_warning =
+      GetContext.get_output_info()->ldw_output_info_.ldw_right_warning_;
+  // HMI for ldp
+  planning_hmi_info->ldp_output_info.ldp_state =
+      GetContext.get_output_info()->ldp_output_info_.ldp_state_;
+  planning_hmi_info->ldp_output_info.ldp_left_intervention_flag =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_left_intervention_flag_;
+  planning_hmi_info->ldp_output_info.ldp_right_intervention_flag =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_right_intervention_flag_;
+  planning_hmi_info->ldp_output_info.ldp_warning_audio_flag =
+      GetContext.get_output_info()->ldp_output_info_.ldp_warning_audio_flag_;
+  planning_hmi_info->ldp_output_info.ldp_driver_handsoff_warning =
+      GetContext.get_output_info()
+          ->ldp_output_info_.ldp_driver_handsoff_warning_;
+  // HMI for elk
+  planning_hmi_info->elk_output_info.elk_state =
+      GetContext.get_output_info()->elk_output_info_.elk_state_;
+  planning_hmi_info->elk_output_info.elk_left_intervention_flag =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_left_intervention_flag_;
+  planning_hmi_info->elk_output_info.elk_right_intervention_flag =
+      GetContext.get_output_info()
+          ->elk_output_info_.elk_right_intervention_flag_;
+
+  planning_hmi_info->elk_output_info.elk_risk_obj.obj_valid =
+      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.obj_valid;
+  planning_hmi_info->elk_output_info.elk_risk_obj.id =
+      GetContext.get_output_info()->elk_output_info_.elk_risk_obj_.id;
+
+  // HMI for ihc
+
+  planning_hmi_info->ihc_output_info.ihc_state =
+      GetContext.get_output_info()->ihc_output_info_.ihc_state_;
+  planning_hmi_info->ihc_output_info.ihc_request =
+      GetContext.get_output_info()->ihc_output_info_.ihc_request_;
+  planning_hmi_info->ihc_output_info.ihc_request_status =
+      GetContext.get_output_info()->ihc_output_info_.ihc_request_status_;
+  // HMI for tsr
+  planning_hmi_info->tsr_output_info.tsr_state =
+      GetContext.get_output_info()->tsr_output_info_.tsr_state_;
+  planning_hmi_info->tsr_output_info.tsr_warning =
+      GetContext.get_output_info()->tsr_output_info_.tsr_warning_;
+  planning_hmi_info->tsr_output_info.tsr_speed_unlimit_warning =
+      GetContext.get_output_info()->tsr_output_info_.isli_display_type_;
+  planning_hmi_info->tsr_output_info.tsr_speed_limit =
+      GetContext.get_output_info()->tsr_output_info_.tsr_speed_limit_;
+  planning_hmi_info->tsr_output_info.tsr_supp_sign_type =
+      GetContext.get_output_info()->tsr_output_info_.supp_sign_type;
+
+  // HMI for meb
+  planning_hmi_info->meb_output_info.meb_state =
+      GetContext.get_output_info()->meb_output_info_.meb_state;
+  planning_hmi_info->meb_output_info.meb_request_status =
+      GetContext.get_output_info()->meb_output_info_.meb_request_status;
+  planning_hmi_info->meb_output_info.meb_request_value =
+      GetContext.get_output_info()->meb_output_info_.meb_request_value;
+  // HMI for amap
+  planning_hmi_info->amap_output_info.amap_state =
+      GetContext.get_output_info()->amap_output_info_.amap_state;
+  planning_hmi_info->amap_output_info.amap_request_flag =
+      GetContext.get_output_info()->amap_output_info_.amap_request_flag;
+  planning_hmi_info->amap_output_info.amap_trq_limit_max =
+      GetContext.get_output_info()->amap_output_info_.amap_trq_limit_max;
 
   JSON_DEBUG_VALUE("planning_hmi_ldw_state",
                    (int)planning_hmi_info->ldw_output_info.ldw_state);
@@ -939,7 +984,7 @@ void PlanningScheduler::ClearParkingInfo(
 
 bool PlanningScheduler::IsUndefinedScene(
     const iflyauto::FunctionalState &current_state) {
-  return current_state == iflyauto::FunctionalState_MANUAL ||
+  return current_state == iflyauto::FunctionalState_MANUAL_DRIVING ||
          current_state == iflyauto::FunctionalState_SYSTEM_ERROR ||
          current_state == iflyauto::FunctionalState_MRC;
 }
@@ -1177,8 +1222,9 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
 }
 
 const bool PlanningScheduler::ExcuteParkingFunction(
-    const common::SceneType function_type,
-    iflyauto::PlanningOutput *const planning_output) {
+    const common::SceneType function_type, const double start_timestamp,
+    iflyauto::PlanningOutput *const planning_output,
+    iflyauto::PlanningHMIOutputInfoStr *const planning_hmi_info) {
   // 泊车规划部分
   bool planning_success = apa_function_->Plan();
 
@@ -1189,7 +1235,7 @@ const bool PlanningScheduler::ExcuteParkingFunction(
   planning_output->msg_header = msg_header;
   planning_output->msg_meta = msg_meta;
   planning_output->meta = meta;
-
+  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
   return planning_success;
 }
 
@@ -1257,6 +1303,7 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
   JSON_DEBUG_VALUE("planning_time_cost", time_consumption);
   FillPlanningTrajectory(start_timestamp, planning_output);
   FillPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
   // can not active lcc/noa function if current planning failed
   if (!planning_success) {
     planning_hmi_info->ad_info.is_avaliable = false;

@@ -133,7 +133,7 @@ class PlanningPlayer {
   uint64_t local_time_ = 0;
   int frame_num_before_enter_auto_ = 0;
   std::string scene_type_ = "";
-  uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL;
+  uint8_t last_functional_state = iflyauto::FunctionalState_MANUAL_DRIVING;
   pnc::mathlib::spline x_t_spline_;
   pnc::mathlib::spline y_t_spline_;
   pnc::mathlib::spline theta_t_spline_;

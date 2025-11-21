@@ -165,8 +165,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "hmi_ldp_state");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_elk_state, int,
                        "hmi_elk_state");
-  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch, int,
-                       "tsr_function_test_switch");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_function_test_switch,
+                       int, "tsr_function_test_switch");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_supp_sign_type_test, int,
                        "tsr_supp_sign_type_test");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->hmi_tsr_state, int,
@@ -348,6 +348,9 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->elk_roadedge_testswitch_temp_, bool,
       "elk_roadedge_testswitch_temp_");
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->ldp_handoff_state_switch_test_, bool,
+      "ldp_handoff_state_switch_test_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->kickdown_warning_time,
                        double, "kickdown_warning_time");
   ADAS_JSON_READ_VALUE(
@@ -1528,9 +1531,10 @@ void Preprocess::SidewayExistJudge(void) {
   auto ptr_virtual_lane_manager = GetContext.mutable_session()
                                       ->mutable_environmental_model()
                                       ->get_virtual_lane_manager();
+
   bool left_sideway_exist_flag = false;
-  if (GetContext.get_road_info()->current_lane.left_line.valid == false ||
-      ptr_virtual_lane_manager != nullptr) {
+  bool left_lane_samedir_exist_flag = false;
+  if (ptr_virtual_lane_manager == nullptr) {
     // 当前车道的左侧道线无效，默认左侧分岔口不存在
   } else {
     if (ptr_virtual_lane_manager->get_left_lane() == nullptr) {
@@ -1539,6 +1543,7 @@ void Preprocess::SidewayExistJudge(void) {
       auto &current_lane_left_boundary =
           ptr_virtual_lane_manager->get_current_lane()
               ->get_left_lane_boundary();
+
       auto &left_lane_right_boundary =
           ptr_virtual_lane_manager->get_left_lane()->get_right_lane_boundary();
 
@@ -1569,8 +1574,12 @@ void Preprocess::SidewayExistJudge(void) {
               current_left_car_point.x() > 50.0) {
             continue;
           }
-          near_gap_tmp = current_left_car_point.y() - left_right_car_point.y();
-          if (near_gap_tmp > GetContext.get_param()->sideway_exist_gap_thrd) {
+          near_gap_tmp =
+              fabs(current_left_car_point.y() - left_right_car_point.y());
+          GetContext.mutable_road_info()
+              ->current_lane.left_sideway_near_gap_tmp = near_gap_tmp;
+
+          if (near_gap_tmp > 0.6) {
             un_match_point_num++;
           }
           if (un_match_point_num > un_match_point_num_max) {
@@ -1578,12 +1587,15 @@ void Preprocess::SidewayExistJudge(void) {
           }
         }
         if (un_match_point_num > un_match_point_num_max) {
-          left_sideway_exist_flag = true;
+          left_lane_samedir_exist_flag = true;
         }
       }
     }
   }
+  // GetContext.mutable_road_info()->current_lane.left_lane_samedir_exist_flag =
+  //     left_lane_samedir_exist_flag;
 
+  bool right_lane_samedir_exist_flag = false;
   bool right_sideway_exist_flag = false;
   if (GetContext.get_road_info()->current_lane.right_line.valid == false ||
       ptr_virtual_lane_manager != nullptr) {
@@ -1623,9 +1635,11 @@ void Preprocess::SidewayExistJudge(void) {
               current_right_car_point.x() > 50.0) {
             continue;
           }
-          near_gap_tmp = current_right_car_point.y() - right_lrft_car_point.y();
-          if (near_gap_tmp <
-              (-1.0 * GetContext.get_param()->sideway_exist_gap_thrd)) {
+          near_gap_tmp =
+              fabs(current_right_car_point.y() - right_lrft_car_point.y());
+          GetContext.mutable_road_info()
+              ->current_lane.right_sideway_near_gap_tmp = near_gap_tmp;
+          if (near_gap_tmp > 0.6) {
             un_match_point_num++;
           }
           if (un_match_point_num > un_match_point_num_max) {
@@ -1633,25 +1647,33 @@ void Preprocess::SidewayExistJudge(void) {
           }
         }
         if (un_match_point_num > un_match_point_num_max) {
-          right_sideway_exist_flag = true;
+          right_lane_samedir_exist_flag = true;
         }
       }
     }
   }
-
   // GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
   //     left_sideway_exist_flag;
   // GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
   //     right_sideway_exist_flag;
+  //新增可视化分析数据
+  GetContext.mutable_road_info()->current_lane.left_lane_samedir_exist_flag =
+      left_lane_samedir_exist_flag;
+  GetContext.mutable_road_info()->current_lane.right_lane_samedir_exist_flag =
+      right_lane_samedir_exist_flag;
+  GetContext.mutable_road_info()->current_lane.sideway_relative_id_zero_nums =
+      ptr_virtual_lane_manager->origin_relative_id_zero_nums();
+  //以下是判断是否存在origin_relative_id_zero_nums车道不同的场景，两个车道的id相同，证明有交叉
+  bool right_cross_sideway_exist_flag = false;
+  bool left_cross_sideway_exist_flag = false;
 
   if (ptr_virtual_lane_manager == nullptr) {
-    GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
-        false;
-    GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
-        false;
+    left_cross_sideway_exist_flag = false;
+    right_cross_sideway_exist_flag = false;
   } else {
     auto relative_id_zero_nums =
         ptr_virtual_lane_manager->origin_relative_id_zero_nums();
+
     if (relative_id_zero_nums == 1 || relative_id_zero_nums == 0) {
       no_sideway_exist_time_counts += GetContext.get_param()->dt;
     } else {
@@ -1659,24 +1681,38 @@ void Preprocess::SidewayExistJudge(void) {
     }
 
     if (no_sideway_exist_time_counts > 1.0) {
-      GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
-          false;
-      GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
-          false;
+      left_cross_sideway_exist_flag = false;
+      right_cross_sideway_exist_flag = false;
       no_sideway_exist_time_counts = 1.0;  // 防止溢出
     } else {
-      if ((ptr_virtual_lane_manager->get_left_lane() == nullptr) &&
-          (relative_id_zero_nums > 1)) {
-        GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
-            true;
+      if (
+          // ptr_virtual_lane_manager->get_left_lane() == nullptr &&
+          relative_id_zero_nums > 1) {
+        left_cross_sideway_exist_flag = true;
       }
-      if ((ptr_virtual_lane_manager->get_right_lane() == nullptr) &&
-          (relative_id_zero_nums > 1)) {
-        GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
-            true;
+      if (
+          // ptr_virtual_lane_manager->get_right_lane() == nullptr &&
+          relative_id_zero_nums > 1) {
+        right_cross_sideway_exist_flag = true;
       }
     }
   }
+  if (left_cross_sideway_exist_flag == true ||
+      left_lane_samedir_exist_flag == true) {
+    GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag = true;
+  } else {
+    GetContext.mutable_road_info()->current_lane.left_sideway_exist_flag =
+        false;
+  }
+  if (right_cross_sideway_exist_flag == true ||
+      right_lane_samedir_exist_flag == true) {
+    GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
+        true;
+  } else {
+    GetContext.mutable_road_info()->current_lane.right_sideway_exist_flag =
+        false;
+  }
+
   return;
 }
 
