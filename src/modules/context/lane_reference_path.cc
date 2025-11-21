@@ -233,9 +233,9 @@ bool LaneReferencePath::get_ref_points(ReferencePathPoints &ref_path_points) {
     const double ego_v = ego_state_mgr->ego_v();
     const double cruise_v = ego_state_mgr->ego_v_cruise();
     const double preview_dis = std::fmax(ego_v, cruise_v) * 6.0;
-    const double extend_buff = 2;
-    const double ego_projection_length_in_reference_path =
-        CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
+    const double extend_buff = 5;
+    const double ego_projection_length_in_reference_path = 0.0;
+        // CalculateEgoProjectionDistanceInReferencePath(ref_path_points);
     // if need to extend reference path length
     if (ego_projection_length_in_reference_path - extend_buff <
         0) {
