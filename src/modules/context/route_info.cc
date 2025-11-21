@@ -175,8 +175,9 @@ void RouteInfo::UpdateRouteInfoForNOA(
   CaculateSplitInfo(sdpro_map, current_link, nearest_s, max_search_length);
 
   if (IsClosingIntersectionEntrance(
-          link, sdpro_map,
-          route_info_output_.current_segment_passed_distance)) {
+          link, sdpro_map, route_info_output_.current_segment_passed_distance,
+          250.0)) {
+    ILOG_ERROR << "Trigger exit NOA for closing intersection!!!";
     route_info_output_.reset();
     return;
   }
@@ -1813,6 +1814,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   double search_dis = std::min(
       std::min(distance_to_next_split, distance_to_next_merge), 3000.0);
   if (!IsClosingTollStationEntrance(
+          current_link_, sdpro_map_,
+          route_info_output_.current_segment_passed_distance, search_dis) &&
+      !IsClosingIntersectionEntrance(
           current_link_, sdpro_map_,
           route_info_output_.current_segment_passed_distance, search_dis)) {
     for (int i = 0; i < split_region_info_list.size(); ++i) {
@@ -4964,10 +4968,10 @@ std::vector<int> RouteInfo::CalculateMLCTaskNoLaneNum() {
 // 搜寻当前link上有没有REGULAR_INTERSECTION_ENTRANCE（普通路口进入点）
 bool RouteInfo::IsClosingIntersectionEntrance(
     const iflymapdata::sdpro::LinkInfo_Link* link,
-    const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link) {
+    const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link,
+    double max_search_distance) {
   const iflymapdata::sdpro::LinkInfo_Link* current_link = link;
   double search_distance = 0.0 - distance_on_link;
-  const double max_search_distance = 250.0;  // 搜索250米
 
   while (current_link != nullptr) {
     if (search_distance > max_search_distance) {
