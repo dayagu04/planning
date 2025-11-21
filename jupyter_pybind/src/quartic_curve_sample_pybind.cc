@@ -80,6 +80,7 @@ int ProcessInput(py::bytes& sample_poly_input_bytes) {
 
   // agent info
   std::vector<AgentInfo> agent_infos;
+  std::vector<const planning::planning_data::DynamicAgentNode*> dynamic_agent_infos;
   agent_infos.reserve((agent_info_input.size()));
   for (auto& agent_input : agent_info_input) {
     AgentInfo agent{agent_input.id(), agent_input.center_s(),
@@ -108,7 +109,7 @@ int ProcessInput(py::bytes& sample_poly_input_bytes) {
       sample_poly_input.sample_print_table_info().v_suggestted());
 
   pSamplePolySpeedAdjustDecider->mutable_st_sample_space_base().Init(
-      agent_infos, sample_poly_input.sample_print_table_info().ego_s());
+      dynamic_agent_infos, sample_poly_input.sample_print_table_info().ego_s());
 
   pSamplePolySpeedAdjustDecider->set_delta_t(
       sample_poly_input.sample_param().sample_delta_t());
@@ -300,20 +301,18 @@ py::bytes get_print_table_string() {
         traj_ptr->acc_limit_cost().cost());
     sample_print_table_info.mutable_best_poly_cost_info()->set_stop_line_cost(
         traj_ptr->stop_line_cost().cost());
-    const auto& anchor_points_match_gap_vec =
+    const auto& anchor_points_match_gap_cost =
         pSamplePolySpeedAdjustDecider->min_cost_traj_ptr()
-            ->anchor_points_match_gap_cost_vec();
+            ->anchor_points_match_gap_cost();
     double cost_anchor_points_match_gap_s_sum = 0.0;
     double cost_anchor_points_match_gap_v_sum = 0.0;
     double cost_anchor_points_match_gap_center_sum = 0.0;
-    for (size_t i = 0; i < anchor_points_match_gap_vec.size(); i++) {
-      cost_anchor_points_match_gap_s_sum +=
-          anchor_points_match_gap_vec[i].match_s_cost();
-      cost_anchor_points_match_gap_v_sum +=
-          anchor_points_match_gap_vec[i].match_v_cost();
-      cost_anchor_points_match_gap_center_sum +=
-          anchor_points_match_gap_vec[i].match_gap_center_cost();
-    }
+    cost_anchor_points_match_gap_s_sum +=
+          anchor_points_match_gap_cost.match_s_cost();
+    cost_anchor_points_match_gap_v_sum +=
+          anchor_points_match_gap_cost.match_v_cost();
+    cost_anchor_points_match_gap_center_sum +=
+          anchor_points_match_gap_cost.match_gap_center_cost();
     sample_print_table_info.mutable_best_poly_cost_info()
         ->set_match_gap_cost_s_sum(cost_anchor_points_match_gap_s_sum);
     sample_print_table_info.mutable_best_poly_cost_info()
