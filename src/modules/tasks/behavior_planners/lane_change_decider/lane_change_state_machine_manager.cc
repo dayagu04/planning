@@ -81,6 +81,9 @@ void LaneChangeStateMachineManager::Update() {
 void LaneChangeStateMachineManager::RunStateMachine() {
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
+      if (IsSuppressLCShortDis()) {
+        break;
+      }
       // clear_lc_stage_info();
       RequestType lane_change_direction = NO_CHANGE;
       RequestSource lane_change_type = NO_REQUEST;
@@ -5321,9 +5324,9 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
   const double ego_v =
       session_->environmental_model().get_ego_state_manager()->ego_v();
 
-  if (ego_v > 1.0) {
-    return false;
-  }
+  // if (ego_v > 1.0) {
+  //   return false;
+  // }
 
   // 获取自车道前方障碍物车辆
   const auto& dynamic_world =
@@ -5338,7 +5341,7 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
 
   bool is_suppress =
       ego_front_node->is_static_type() &&
-      ego_front_node->node_back_edge_to_ego_front_edge_distance() < 10.0;
+      ego_front_node->node_back_edge_to_ego_front_edge_distance() < config_.ls_short_dis_thr;
 
   if (!is_suppress) {
     return false;
@@ -5371,12 +5374,17 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
 
   const double buffer = 0.5;
 
+  bool is_lat_overlap = std::max(ego_boundary.l_start, frenet_point.y - agent_half_width) <
+                        std::min(ego_boundary.l_end, frenet_point.y + agent_half_width);
+
   if (lc_req_mgr_->request() == LEFT_CHANGE) {
-    if (ego_boundary.l_start < frenet_point.y + agent_half_width - buffer) {
+    if (ego_boundary.l_start < frenet_point.y + agent_half_width - buffer &&
+        is_lat_overlap) {
       return true;
     }
   } else if (lc_req_mgr_->request() == RIGHT_CHANGE) {
-    if (ego_boundary.l_end > frenet_point.y - agent_half_width + buffer) {
+    if (ego_boundary.l_end > frenet_point.y - agent_half_width + buffer &&
+        is_lat_overlap) {
       return true;
     }
   }
