@@ -561,6 +561,9 @@ const bool ParallelParkOutScenario::GenTlane() {
   const double quarter_slot_width = 0.5 * half_slot_width;
   const double side_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
   ILOG_INFO << "frame_.is_park_out_left = " << frame_.is_park_out_left;
+  double is_low_curb = false;
+  int curb_obs_num = 0;
+  int low_curb_obs_num = 0;
 
   const Eigen::Vector2d slot_center(0.5 * slot_length, 0.0);
   obs_pt_local_vec_.clear();
@@ -580,6 +583,8 @@ const bool ParallelParkOutScenario::GenTlane() {
     }
 
     const auto obs_scement = pair.second.GetObsScemanticType();
+
+    ApaObsHeightType obs_height = pair.second.GetObsHeightType();
 
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
                            obs_scement == ApaObsScemanticType::COLUMN ||
@@ -658,10 +663,20 @@ const bool ParallelParkOutScenario::GenTlane() {
         continue;
       }
 
+      if (mathlib::IsInBound(obs_pt_local.x(), 0.5, slot_length - 0.5) &&
+          (obs_pt_local.y() * side_sgn <= -quarter_slot_width)) {
+        curb_obs_num++;
+        if ((obs_height == ApaObsHeightType::RUN_OVER ||
+             obs_height == ApaObsHeightType::LOW)) {
+          low_curb_obs_num++;
+        }
+      }
+
       obs_pt_local_vec_.emplace_back(obs_pt_local);
     }
   }
   ILOG_INFO << "after obs filter";
+  is_low_curb = (low_curb_obs_num > (curb_obs_num / 2)) ? true : false;
 
   // set initial x coordination for front and rear tlane obs
   double front_min_x = slot_length + kFrontDetaXMagWhenFrontVacant;
@@ -828,6 +843,18 @@ const bool ParallelParkOutScenario::GenTlane() {
               << " curb_y_limit_all = " << curb_y_limit_all;
   }
 
+  if (is_low_curb) {
+    ILOG_INFO << "curb_y_limit = " << curb_y_limit;
+    curb_y_limit =
+        std::fabs(curb_y_limit) >
+                std::fabs(half_slot_width +
+                          apa_param.GetParam().curb_offset_by_height)
+            ? curb_y_limit
+            : -side_sgn * (half_slot_width +
+                           apa_param.GetParam().curb_offset_by_height);
+    ILOG_INFO << "is_low_curb update curb_y_limit = " << curb_y_limit;
+  }
+
   curb_y_limit = pnc::mathlib::Clamp(
       curb_y_limit, -side_sgn * (half_slot_width + kCurbInitialOffset),
       -side_sgn * (half_slot_width - kCurbInitialOffset));
@@ -952,7 +979,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
                                 kMinChannelYMagIdentification * slot_side_sgn,
                                 channel_point_1.y());
 
-    if (is_try_tlane_ && !channel_y_condition) {
+    if (!channel_y_condition) {
       const bool channel_y_condition_try =
           pnc::mathlib::IsInBound(obstacle_point_slot.x(), B.x(), E.x()) &&
           pnc::mathlib::IsInBound(

@@ -85,6 +85,8 @@ void ParallelParkInScenario::Reset() {
   first_line_coeffs_ << 0.0, 0.0;
   first_plan_cur_pos.Reset();
   multi_parkin_path_vec_.clear();
+  relative_loc_observer_manager_.Reset();
+  try_bound_map_.clear();
 
   ParkingScenario::Reset();
 }
@@ -369,6 +371,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
       return;
     }
   }
+
   // check finish
   if (enable_pa_park_) {
     if (CheckPAFinished()) {
@@ -1275,18 +1278,24 @@ const bool ParallelParkInScenario::GeneralPASlot() {
 
   // calc slot occupied ratio
   double slot_occupied_ratio = 0.0;
-  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -3.0,
-                              4.0)) {
-    const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
+  const double y_err_ratio = ego_info_under_slot.terminal_err.pos.y() /
                                (0.5 * ego_info_under_slot.slot.slot_width_);
-
-    if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
+  if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_RIGHT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1 - y_err_ratio, 0.0, 1.0);
     } else if (t_lane_.slot_side == pnc::geometry_lib::SLOT_SIDE_LEFT) {
       slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
     }
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -4.0,
+                              4.0)) {
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
   }
-  ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  if (pnc::mathlib::IsInBound(ego_info_under_slot.terminal_err.pos.x(), -5.0,
+                              4.0) &&
+                              slot_occupied_ratio > 0.75) {
+    ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
+  }
+
+
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
 
@@ -1844,6 +1853,39 @@ const bool ParallelParkInScenario::GenTlane() {
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
   if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
+    const size_t need_size = 8;
+    if (ego_info_under_slot.slot_occupied_ratio < 0.1) {
+      double ref_angle = relative_loc_observer_manager_.CalCameraOberserveAngel(
+          apa_world_ptr_->GetMeasureDataManagerPtr(),
+          ego_info_under_slot.slot.origin_corner_coord_global_.pt_01_mid);
+      // try_bound_map_[ego_info_under_slot.id].emplace_back(ref_angle);
+      try_bound_map_[ego_info_under_slot.id].insert(
+          AngleResult(ref_angle, (upper_bound > lower_bound)));
+      while (try_bound_map_[ego_info_under_slot.id].size() > need_size) {
+        auto it = try_bound_map_[ego_info_under_slot.id].end();
+        --it;
+        try_bound_map_[ego_info_under_slot.id].erase(it);
+      }
+      for (const auto& ar : try_bound_map_[ego_info_under_slot.id]) {
+        ILOG_INFO << "calc debug ang: " << ar.ang << ", res: " << ar.res
+                  << " id: " << ego_info_under_slot.id;
+      }
+    }
+    int count_valid = -1;
+    if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+      if (try_bound_map_.find(ego_info_under_slot.id) != try_bound_map_.end()) {
+        if (try_bound_map_[ego_info_under_slot.id].size() >= 4) {
+          count_valid = 0;
+          for (const auto& it : try_bound_map_[ego_info_under_slot.id]) {
+            double ang = it.ang;
+            bool res = it.res;
+            ILOG_INFO << "park debug ang: " << ang << ", res: " << res
+                      << " id: " << ego_info_under_slot.id;
+            count_valid += res ? 1 : 0;
+          }
+        }
+      }
+    }
     if (lower_bound > upper_bound) {
       const double small_obs_buffer = 0.2;
       lower_bound = ori_lower_bound + (rear_vacant ? 0.0 : small_obs_buffer);
@@ -1852,12 +1894,15 @@ const bool ParallelParkInScenario::GenTlane() {
       ILOG_INFO << "new lowwer bound = " << lower_bound;
 
       if (lower_bound > upper_bound) {
-        ILOG_ERROR << "lower_bound > upper_bound, too much failed!";
-        return false;
-      } else {
-        ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
-            ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
+        if (count_valid >= 0 && count_valid > (need_size / 2)) {
+          ILOG_INFO << "based on the results of multiple frames, go!";
+        } else {
+          ILOG_ERROR << "lower_bound > upper_bound, too much failed!";
+          return false;
+        }
       }
+      ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
+          ego_info_under_slot.target_pose.pos.x(), lower_bound, upper_bound);
 
     } else {
       ego_info_under_slot.target_pose.pos.x() = pnc::mathlib::Clamp(
@@ -2001,6 +2046,9 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
 
   const pnc::geometry_lib::LineSegment channel_line(channel_point_1,
                                                     channel_point_2);
+
+  t_lane_.tlane_corner =
+      TlaneCorner(A, B, C, D, E, F, channel_point_1, channel_point_2);
 
   // sample channel boundary line
   std::vector<Eigen::Vector2d> channel_line_obs_vec;

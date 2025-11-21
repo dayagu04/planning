@@ -39,6 +39,9 @@ std::vector<double> left_tire_point_global_vec_x;
 std::vector<double> left_tire_point_global_vec_y;
 #endif
 
+using namespace pnc::geometry_lib;
+using namespace pnc::mathlib;
+
 namespace planning {
 namespace apa_planner {
 class ParallelOutPathGenerator;   // 前向声明，供 dynamic_cast 使用
@@ -2440,126 +2443,129 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
   sorted_path_vec = total_path_vec;
 
   // 为每个路径计算停车时的航向角（度）
-  for (auto& path : sorted_path_vec) {
+  // for (auto& path : sorted_path_vec) {
+
+  // }
+  for (size_t i = 0; i < sorted_path_vec.size(); ++i) {
+    auto& path = sorted_path_vec[i];
     path.park_out_heading_deg =
         std::fabs(path.path_segment_vec.back().GetStartHeading() * kRad2Deg);
+
+    // 计算路径中“短路径段”（长度 < 0.3m）的数量
+    path.short_segment_count = 0;  // 初始化计数器
+    const double short_segment_threshold = 0.2;
+    bool heading_turned = false;
+    double start_heading = path.path_segment_vec.front().GetStartHeading();
+    for (const auto& seg : path.path_segment_vec) {
+      if (seg.GetLength() < short_segment_threshold) {
+        path.short_segment_count++;
+      }
+      if (std::abs(seg.GetStartHeading() - start_heading) > M_PI_2 &&
+          path.path_segment_vec.front().seg_gear == seg.seg_gear &&
+          !heading_turned) {
+        heading_turned = true;
+      }
+    }
+    if (heading_turned && sorted_path_vec.size() == 1) {
+      return false;
+    }
+
+    // 计算危险值
+    path.dangerous_value = 0.0;  // 初始化危险值
+
+    double corner_dist = 100.0;  // 用于ILOG
+    if (!path.path_segment_vec.empty() &&
+        path.path_segment_vec.back().seg_type ==
+            pnc::geometry_lib::SEG_TYPE_ARC) {
+      // 计算出库轨迹段距离障碍物最近的距离
+      corner_dist = path.path_segment_vec.back().GetArcSeg().dis_ObsPin;
+
+      // ===============[ 新增日志 ]========
+      std::stringstream ss;
+      ss << "Path [" << i << "] All Arc dis_ObsPin values -> ";
+      for (size_t j = 0; j < path.path_segment_vec.size(); ++j) {
+        const auto& seg = path.path_segment_vec[j];
+        // 只处理圆弧段
+        if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+          ss << "seg[" << j << "]:" << std::fixed << std::setprecision(3)
+             << seg.GetArcSeg().dis_ObsPin << "; ";
+        }
+      }
+      ILOG_INFO << ss.str();
+
+      // pnc::geometry_lib::PrintSegmentsVecInfo(path.path_segment_vec); //
+      // 打印路径段信息
+
+      const double corner_danger_threshold = 0.2;
+      if (corner_dist < corner_danger_threshold) {
+        path.dangerous_value += 10.0 * (corner_danger_threshold - corner_dist);
+      }
+    }
+    if (heading_turned) {
+      path.dangerous_value += 100.0;
+    }
+
+    // ====================================================================
+    // 基于在所有倒车过程中，与障碍物的最小距离来计算危险值
+    double min_opening_dist = 100.0;  // 初始化一个很大的最小距离值
+    if (!path.path_segment_vec.empty()) {
+      // 遍历这条路径的每一段
+      for (const auto& seg : path.path_segment_vec) {
+        if (seg.seg_gear ==
+            pnc::geometry_lib::
+                SEG_GEAR_REVERSE) {  // 只关心档位为倒车(REVERSE)的路径段
+          const auto& end_pose =
+              seg.GetEndPose();  // 获取这段倒车动作结束后的位置
+          const double current_dist =
+              end_pose.pos.x() - input_.tlane.obs_pt_outside.x();
+          min_opening_dist = std::min(min_opening_dist, current_dist);
+        }
+      }
+
+      const double opening_danger_threshold = 0.2;
+      if (min_opening_dist < opening_danger_threshold) {
+        path.dangerous_value +=
+            10.0 * (opening_danger_threshold - min_opening_dist);
+      }
+    }
+
+    // double opening_dist = 100.0; // 用于ILOG
+    // if (!path.path_segment_vec.empty()) {
+    //   opening_dist =
+    //       path.path_segment_vec.front().GetEndPose().pos.x() -
+    //       input_.tlane.obs_pt_outside.x();
+    //   const double opening_danger_threshold = 0.2;
+    //   if (opening_dist < opening_danger_threshold) {
+    //     path.dangerous_value += 10.0 * (opening_danger_threshold -
+    //     opening_dist);
+    //   }
+    // }
+    if (path.path_segment_vec.front().seg_type ==
+        pnc::geometry_lib::SEG_TYPE_ARC) {
+      ILOG_INFO << "path [" << i << "] -> start_position_x:"
+                << path.path_segment_vec.front().GetStartPose().pos.x()
+                << " | gear_change_count:" << path.gear_change_count
+                << " | dangerous_value:" << path.dangerous_value
+                << " | short_segment_count:" << path.short_segment_count
+                << " | park_out_heading_deg:" << path.park_out_heading_deg
+                << " | length:" << path.length
+                << " | (detail: corner_dist=" << corner_dist
+                << ", min_opening_dist=" << min_opening_dist << ")";
+    } else {
+      ILOG_INFO << "path [" << i << "] -> start_position_x:"
+                << path.path_segment_vec.front().GetEndPose().pos.x()
+                << " | gear_change_count:" << path.gear_change_count
+                << " | dangerous_value:" << path.dangerous_value
+                << " | short_segment_count:" << path.short_segment_count
+                << " | park_out_heading_deg:" << path.park_out_heading_deg
+                << " | length:" << path.length
+                << " | (detail: corner_dist=" << corner_dist
+                << ", min_opening_dist=" << min_opening_dist << ")";
+    }
   }
 
   if (is_park_out) {
     ILOG_INFO << "!!!! park out Sort PATH !!!!";
-    for (size_t i = 0; i < sorted_path_vec.size(); ++i) {
-      auto& path = sorted_path_vec[i];
-
-      // 计算路径中“短路径段”（长度 < 0.3m）的数量
-      path.short_segment_count = 0;  // 初始化计数器
-      const double short_segment_threshold = 0.2;
-      bool heading_turned = false;
-      double start_heading = path.path_segment_vec.front().GetStartHeading();
-      for (const auto& seg : path.path_segment_vec) {
-        if (seg.GetLength() < short_segment_threshold) {
-          path.short_segment_count++;
-        }
-        if (std::abs(seg.GetStartHeading() - start_heading) > M_PI_2 &&
-            path.path_segment_vec.front().seg_gear == seg.seg_gear &&
-            ! heading_turned) {
-          heading_turned = true;
-        }
-      }
-
-      // 计算危险值
-      path.dangerous_value = 0.0;  // 初始化危险值
-
-      double corner_dist = 100.0;  // 用于ILOG
-      if (!path.path_segment_vec.empty() &&
-          path.path_segment_vec.back().seg_type ==
-              pnc::geometry_lib::SEG_TYPE_ARC) {
-        // 计算出库轨迹段距离障碍物最近的距离
-        corner_dist = path.path_segment_vec.back().GetArcSeg().dis_ObsPin;
-
-        // ===============[ 新增日志 ]========
-        std::stringstream ss;
-        ss << "Path [" << i << "] All Arc dis_ObsPin values -> ";
-        for (size_t j = 0; j < path.path_segment_vec.size(); ++j) {
-          const auto& seg = path.path_segment_vec[j];
-          // 只处理圆弧段
-          if (seg.seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
-            ss << "seg[" << j << "]:" << std::fixed << std::setprecision(3)
-               << seg.GetArcSeg().dis_ObsPin << "; ";
-          }
-        }
-        ILOG_INFO << ss.str();
-
-        // pnc::geometry_lib::PrintSegmentsVecInfo(path.path_segment_vec); //
-        // 打印路径段信息
-
-        const double corner_danger_threshold = 0.2;
-        if (corner_dist < corner_danger_threshold) {
-          path.dangerous_value +=
-              10.0 * (corner_danger_threshold - corner_dist);
-        }
-      }
-      if(heading_turned){
-        path.dangerous_value += 100.0;
-      }
-
-      // ====================================================================
-      // 基于在所有倒车过程中，与障碍物的最小距离来计算危险值
-      double min_opening_dist = 100.0;  // 初始化一个很大的最小距离值
-      if (!path.path_segment_vec.empty()) {
-        // 遍历这条路径的每一段
-        for (const auto& seg : path.path_segment_vec) {
-          if (seg.seg_gear ==
-              pnc::geometry_lib::
-                  SEG_GEAR_REVERSE) {  // 只关心档位为倒车(REVERSE)的路径段
-            const auto& end_pose =
-                seg.GetEndPose();  // 获取这段倒车动作结束后的位置
-            const double current_dist =
-                end_pose.pos.x() - input_.tlane.obs_pt_outside.x();
-            min_opening_dist = std::min(min_opening_dist, current_dist);
-          }
-        }
-
-        const double opening_danger_threshold = 0.2;
-        if (min_opening_dist < opening_danger_threshold) {
-          path.dangerous_value +=
-              10.0 * (opening_danger_threshold - min_opening_dist);
-        }
-      }
-
-      // double opening_dist = 100.0; // 用于ILOG
-      // if (!path.path_segment_vec.empty()) {
-      //   opening_dist =
-      //       path.path_segment_vec.front().GetEndPose().pos.x() -
-      //       input_.tlane.obs_pt_outside.x();
-      //   const double opening_danger_threshold = 0.2;
-      //   if (opening_dist < opening_danger_threshold) {
-      //     path.dangerous_value += 10.0 * (opening_danger_threshold -
-      //     opening_dist);
-      //   }
-      // }
-      if (path.path_segment_vec.front().seg_type ==
-          pnc::geometry_lib::SEG_TYPE_ARC) {
-        ILOG_INFO << "path [" << i << "] -> start_position_x:"
-                  << path.path_segment_vec.front().GetStartPose().pos.x()
-                  << " | gear_change_count:" << path.gear_change_count
-                  << " | dangerous_value:" << path.dangerous_value
-                  << " | short_segment_count:" << path.short_segment_count
-                  << " | park_out_heading_deg:" << path.park_out_heading_deg
-                  << " | length:" << path.length
-                  << " | (detail: corner_dist=" << corner_dist
-                  << ", min_opening_dist=" << min_opening_dist << ")";
-      } else {
-        ILOG_INFO << "path [" << i << "] -> start_position_x:"
-                  << path.path_segment_vec.front().GetEndPose().pos.x()
-                  << " | gear_change_count:" << path.gear_change_count
-                  << " | dangerous_value:" << path.dangerous_value
-                  << " | short_segment_count:" << path.short_segment_count
-                  << " | park_out_heading_deg:" << path.park_out_heading_deg
-                  << " | length:" << path.length
-                  << " | (detail: corner_dist=" << corner_dist
-                  << ", min_opening_dist=" << min_opening_dist << ")";
-      }
-    }
     ILOG_INFO << "==================================================";
     ILOG_INFO << "++++SORT PATH++++";
     std::sort(
@@ -2600,7 +2606,7 @@ const bool ParallelPathGenerator::SortPathByGearShiftHeadingAndLength(
                 << " | park_out_heading_deg:" << best_path.park_out_heading_deg
                 << " | length:" << best_path.length;
     }
-    return true;
+    // return true;
   } else {
     const double empty_threshold =
         input_.tlane.slot_length + kFrontDetaXMagWhenFrontVacant;
@@ -4698,6 +4704,33 @@ const bool ParallelPathGenerator::CalcLineDirAllValidPose(
   return true;
 }
 
+const bool ParallelPathGenerator::CheckPathInTlane(
+    const std::vector<pnc::geometry_lib::PathSegment>& path_vec,
+    const TlaneCorner& tlane_corner) const {
+  if (path_vec.empty()) {
+    ILOG_INFO << "path_vec empty!";
+    return false;
+  }
+
+  for (int i = 0; i < path_vec.size(); i++) {
+    std::vector<PathPoint> pt_set;
+    SamplePointSetInPathSeg(pt_set, path_vec[i], 0.2);
+    for (int i = 0; i < pt_set.size(); i++) {
+      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x(),
+                       tlane_corner.F.x()) &&
+             IsInBound(pt_set[i].GetY(), tlane_corner.A.y(),
+                       tlane_corner.channel_point_1.y())) ||
+            (IsInBound(pt_set[i].GetX(), tlane_corner.B.x(),
+                       tlane_corner.E.x()) &&
+             IsInBound(pt_set[i].GetY(), tlane_corner.B.y(),
+                       tlane_corner.C.y())))) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
 const bool ParallelPathGenerator::GenerateCandidatePath() {
   return StartNodeGenerator();
 }
@@ -4882,6 +4915,11 @@ const bool ParallelPathGenerator::StartNodeGenerator() {
   }
 
   ILOG_INFO << "best idx = " << best_path_idx;
+  if (!CheckPathInTlane(geo_path_vec[best_path_idx].path_segment_vec,
+                       input_.tlane.tlane_corner)) {
+    ILOG_INFO << "path not in tlane";
+    return false;
+  }
 
   AddPathSegToOutPut(geo_path_vec[best_path_idx].path_segment_vec);
   debug_info_.debug_all_path_vec = geo_path_vec;

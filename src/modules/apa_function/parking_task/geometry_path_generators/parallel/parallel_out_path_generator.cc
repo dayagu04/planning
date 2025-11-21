@@ -145,7 +145,7 @@ const bool ParallelOutPathGenerator::Update() {
 
   std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
   for (const auto &prepare_pose : preparing_pose_vec) {
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
+    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, true));
     if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
       continue;
     }
@@ -179,9 +179,6 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   const double slot_side_sgn = input_.tlane.slot_side_sgn;
 
   const double pin_y = input_.tlane.obs_pt_inside.y();
-
-  const bool front_vacant =
-      input_.tlane.obs_pt_inside.x() > input_.tlane.slot_length + 2.8;
 
   const double tlane_outer_y =
       std::fabs(pin_y) > half_slot_width - 1e-5
@@ -240,6 +237,8 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
       std::fabs(input_.tlane.channel_y) - half_slot_width;
 
   double dy = channel_width > 4.0 ? 0.1 : 0.05;
+  ILOG_INFO << "dy = " << dy << " y_bound = " << y_bound
+            << " channel_width = " << channel_width;
 
   int nums = static_cast<int>(y_bound / dy);
   nums = pnc::mathlib::Clamp(nums, 5, 16);
@@ -251,28 +250,25 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   const auto y_vec =
       pnc::geometry_lib::Linspace(rac_tlane_bound_near, rac_channel_bound, dy);
 
-  if (front_vacant) {
-    for (int i = 0; i < y_vec.size(); ++i) {
-      prepare_pose.pos.y() = y_vec[i];
-      preparing_pose_vec.emplace_back(prepare_pose);
-    }
-  } else {
-    int idx = 0;
-    for (int i = 0; i < y_vec.size(); ++i) {
-      if (std::fabs(y_vec[i]) < std::fabs(rac_tlane_bound_far)) {
-        idx = i;
-        continue;
-      }
-      prepare_pose.pos.y() = y_vec[i];
-      preparing_pose_vec.emplace_back(prepare_pose);
-    }
-    for (int i = 0; i < idx; ++i) {
-      prepare_pose.pos.y() = y_vec[i];
-      preparing_pose_vec.emplace_back(prepare_pose);
-    }
-  }
+  const double start_y =
+      slot_side_sgn *
+      (0.5 * (apa_param.GetParam().car_width) + half_slot_width + 0.4);
   ILOG_INFO << "rac_tlane_bound_near = " << rac_tlane_bound_near
-            << " rac_tlane_bound_far = " << rac_tlane_bound_far;
+            << " rac_tlane_bound_far = " << rac_tlane_bound_far
+            << " start_y = " << start_y;
+  int idx = 0;
+  for (int i = 0; i < y_vec.size(); ++i) {
+    if (std::fabs(y_vec[i]) < std::fabs(start_y)) {
+      idx = i;
+      continue;
+    }
+    prepare_pose.pos.y() = y_vec[i];
+    preparing_pose_vec.emplace_back(prepare_pose);
+  }
+  for (int i = 0; i <= idx; ++i) {
+    prepare_pose.pos.y() = y_vec[i];
+    preparing_pose_vec.emplace_back(prepare_pose);
+  }
 
   return true;
 }
