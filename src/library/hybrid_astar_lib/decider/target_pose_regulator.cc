@@ -130,7 +130,7 @@ void TargetPoseRegulator::GenerateYboundary(const AstarRequest *request,
 
   y_check_bounday_.upper = y_upper;
   y_check_bounday_.lower = y_lower;
-  y_check_bounday_.step = 0.03f;
+  y_check_bounday_.step = 0.025f;
   y_check_bounday_.number =
       std::ceil(y_upper / y_check_bounday_.step) +
       std::ceil(std::fabs(y_lower) / y_check_bounday_.step);

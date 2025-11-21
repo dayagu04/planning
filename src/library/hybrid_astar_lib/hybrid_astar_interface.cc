@@ -858,8 +858,8 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   if (request_.direction_request_size > 1) {
     ParkingDirectionAttempt(advised_lat_buffer_inside);
   } else {
-    const TerminalCandidatePoint target_pose =
-        regulator.GetCandidatePose(0.15f);
+    const TerminalCandidatePoint target_pose = regulator.GetCandidatePose(
+        config_.safe_buffer.lat_dist_to_obs_for_target_pose);
     if (target_pose.dist_to_obs < advised_lat_buffer_inside) {
       ILOG_INFO << "goal_point dist to obs = " << target_pose.dist_to_obs;
     }
@@ -1125,7 +1125,7 @@ const float HybridAStarInterface::GenLatBufferForCandidatePose() {
       lat_buffer = 0.50f;
       break;
     default:
-      lat_buffer = 0.15f;
+      lat_buffer = config_.safe_buffer.lat_dist_to_obs_for_target_pose;
       break;
   }
 
