@@ -85,6 +85,8 @@ void ParallelParkInScenario::Reset() {
   first_line_coeffs_ << 0.0, 0.0;
   first_plan_cur_pos.Reset();
   multi_parkin_path_vec_.clear();
+  relative_loc_observer_maneger_.Reset();
+  try_bound_map_.clear();
 
   ParkingScenario::Reset();
 }
