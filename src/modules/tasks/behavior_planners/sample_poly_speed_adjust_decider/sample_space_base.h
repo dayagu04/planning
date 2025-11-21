@@ -3,12 +3,13 @@
 #include <unordered_map>
 #include <vector>
 
+#include "dynamic_world/dynamic_agent_node.h"
 #include "math/aabox2d.h"
 #include "sample_poly_const.h"
 // #include "speed/st_boundary.h"
 #include "st_graph/st_point.h"
+using planning::planning_data::DynamicAgentNode;
 using planning::speed::STPoint;
-
 namespace planning {
 struct AgentInfo {
   int32_t id = kNoAgentId;
@@ -17,22 +18,31 @@ struct AgentInfo {
   double v;
 };
 
+struct LeadingAgentInfo : public AgentInfo {
+  std::vector<std::pair<double, double>>
+      prediction_path;  // first is traveled_distance second is speed
+  bool prediction_path_valid = false;
+};
+
 class STSampleSpaceBase {
  public:
   STSampleSpaceBase() = default;
   STSampleSpaceBase(const double front_edge_to_rear_axle,
                     const double rear_edge_to_rear_axle);
 
-  STSampleSpaceBase(const std::vector<AgentInfo>& lane_change_veh_info,
-                    const double init_s, const double front_edge_to_rear_axle,
-                    const double rear_edge_to_rear_axle);
+  STSampleSpaceBase(
+      const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+      const double init_s, const double front_edge_to_rear_axle,
+      const double rear_edge_to_rear_axle);
 
-  void LinearExtendAgentStBoundary(const AgentInfo& agent);
+  void LinearExtendAgentStBoundary(const DynamicAgentNode* agent_node);
   void ConstructStPointsTable();
   bool GetBorderByAvailable(double s, double t, STPoint* const lower_st_point,
                             STPoint* const upper_st_point);
-  void Init(const std::vector<AgentInfo>& lane_change_veh_info,
+  void Init(const std::vector<const DynamicAgentNode*>& target_lane_nodes,
             const double init_s);
+  void GetAvailableGap(const int index, double s);
+
   void Clear();
   void SetInitS(const double s0);
 
@@ -74,9 +84,14 @@ class STSampleSpaceBase {
 
   const std::vector<STPoint>& sample_points() const { return sample_points_; }
 
+  std::vector<std::pair<STPoint, STPoint>>& get_gap_array() {
+    return gap_array_;
+  }
+
  private:
   std::vector<std::vector<std::pair<STPoint, STPoint>>> st_points_table_;
   std::vector<STPoint> sample_points_;  //(s, v)
+  std::vector<std::pair<STPoint, STPoint>> gap_array_;
 
   std::vector<std::vector<std::pair<STPoint, STPoint>>> agents_st_point_paris_;
   std::unordered_map<int64_t, std::unique_ptr<AgentInfo>> agent_id_veh_info_;

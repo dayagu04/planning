@@ -901,15 +901,162 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     maximum_speed_adjustment = read_json_keys<int>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "maximum_speed_adjustment"});
+    normal_scene_weight_match_gap_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_match_gap_vel"});
+    normal_scene_weight_match_gap_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_match_gap_s"});
+    normal_scene_weight_follow_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_follow_vel"});
+    normal_scene_weight_stop_line = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_stop_line"});
+    normal_scene_weight_leading_safe_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_leading_safe_s"});
+    normal_scene_weight_leading_safe_v = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_leading_safe_v"});
+    normal_scene_weight_vel_variable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_vel_variable"});
+    normal_scene_weight_gap_available = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_gap_available"});
+    normal_scene_weight_acc_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_acc_limit"});
+    normal_scene_weight_stop_penalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_stop_penalty"});
+    normal_scene_weight_speed_change = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_speed_change"});
+    normal_scene_weight_leading_veh_follow_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_leading_veh_follow_s"});
+    purse_flow_vel_scene_weight_match_gap_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_match_gap_vel"});
+    purse_flow_vel_scene_weight_match_gap_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_match_gap_s"});
+    purse_flow_vel_scene_weight_follow_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_follow_vel"});
+    purse_flow_vel_scene_weight_stop_line = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_stop_line"});
+    purse_flow_vel_scene_weight_leading_safe_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_leading_safe_s"});
+    purse_flow_vel_scene_weight_leading_safe_v = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_leading_safe_v"});
+    purse_flow_vel_scene_weight_vel_variable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_vel_variable"});
+    purse_flow_vel_scene_weight_gap_available = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_gap_available"});
+    purse_flow_vel_scene_weight_acc_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_acc_limit"});
+    purse_flow_vel_scene_weight_stop_penalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_stop_penalty"});
+    purse_flow_vel_scene_weight_speed_change = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_speed_change"});
+    purse_flow_vel_scene_weight_leading_veh_follow_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_leading_veh_follow_s"});
+    decleration_scene_weight_match_gap_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_match_gap_vel"});
+    decleration_scene_weight_match_gap_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_match_gap_s"});
+    decleration_scene_weight_follow_vel = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_follow_vel"});
+    decleration_scene_weight_stop_line = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_stop_line"});
+    decleration_scene_weight_leading_safe_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_leading_safe_s"});
+    decleration_scene_weight_leading_safe_v = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_leading_safe_v"});
+    decleration_scene_weight_vel_variable = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_vel_variable"});
+    decleration_scene_weight_gap_available = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_gap_available"});
+    decleration_scene_weight_acc_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_acc_limit"});
+    decleration_scene_weight_stop_penalty = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_stop_penalty"});
+    decleration_scene_weight_speed_change = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_speed_change"});
+    decleration_scene_weight_leading_veh_follow_s = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_leading_veh_follow_s"});
   }
 
   int sample_v_nums = 15;
   int sample_t_nums = 10;
   double sample_v_upper = 35.0;
-  double sample_v_lower = 0.0;
+  double sample_v_lower = 5.0;
   double sample_t_upper = 5.0;
   double sample_t_lower = 1.0;
   double maximum_speed_adjustment = 15.0 / 3.6;
+
+  double normal_scene_weight_match_gap_vel = 6.5;
+  double normal_scene_weight_match_gap_s = 4.5;
+  double normal_scene_weight_follow_vel = 10.0;
+  double normal_scene_weight_stop_line = 50.0;
+  double normal_scene_weight_leading_safe_s = 13.5;
+  double normal_scene_weight_leading_safe_v = 0.0;
+  double normal_scene_weight_vel_variable = 3.5;
+  double normal_scene_weight_gap_available = 2.5;
+  double normal_scene_weight_acc_limit = 25.0;
+  double normal_scene_weight_stop_penalty = 2.5;
+  double normal_scene_weight_speed_change = 10.0;
+  double normal_scene_weight_leading_veh_follow_s = 1.0;
+
+  double purse_flow_vel_scene_weight_match_gap_vel = 0.2;
+  double purse_flow_vel_scene_weight_match_gap_s = 0.2;
+  double purse_flow_vel_scene_weight_follow_vel = 6.25;
+  double purse_flow_vel_scene_weight_stop_line = 50.0;
+  double purse_flow_vel_scene_weight_leading_safe_s = 13.5;
+  double purse_flow_vel_scene_weight_leading_safe_v = 0.0;
+  double purse_flow_vel_scene_weight_vel_variable = 2.0;
+  double purse_flow_vel_scene_weight_gap_available = 1.25;
+  double purse_flow_vel_scene_weight_acc_limit = 25.0;
+  double purse_flow_vel_scene_weight_stop_penalty = 2.5;
+  double purse_flow_vel_scene_weight_speed_change = 0.0;
+  double purse_flow_vel_scene_weight_leading_veh_follow_s = 0.0;
+  
+  double decleration_scene_weight_match_gap_vel = 4.5;
+  double decleration_scene_weight_match_gap_s = 2.5;
+  double decleration_scene_weight_follow_vel = 0.0;
+  double decleration_scene_weight_stop_line = 50.0;
+  double decleration_scene_weight_leading_safe_s = 13.5;
+  double decleration_scene_weight_leading_safe_v = 0.0;
+  double decleration_scene_weight_vel_variable = 0.5;
+  double decleration_scene_weight_gap_available = 2.5;
+  double decleration_scene_weight_acc_limit = 0.0;
+  double decleration_scene_weight_stop_penalty = 0.0;
+  double decleration_scene_weight_speed_change = 0.0;
+  double decleration_scene_weight_leading_veh_follow_s = 1.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
@@ -3560,13 +3707,13 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
     ReadItem<int>(json, ca_invade_lat_dis_counter_thr, "speed_limit_decider",
                      "ca_invade_lat_dis_counter_thr");
     ReadItem<double>(json, construction_invade_speed_diff, "speed_limit_decider",
-                     "construction_invade_speed_diff");           
+                     "construction_invade_speed_diff");
     ReadItem<double>(json, construction_lat_dist_entry, "speed_limit_decider",
                      "construction_lat_dist_entry");
     ReadItem<double>(json, construction_lat_dist_exit, "speed_limit_decider",
-                     "construction_lat_dist_exit"); 
+                     "construction_lat_dist_exit");
     ReadItem<double>(json, construction_speed_upper, "speed_limit_decider",
-                     "construction_speed_upper"); 
+                     "construction_speed_upper");
     ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit, "speed_limit_decider",
                      "enable_construction_avoid_agent_speed_limit");
 
@@ -3854,7 +4001,7 @@ struct JointDecisionPlannerConfig : public EgoPlanningConfig {
   double q_soft_halfplane_weight = 5.0;
   double soft_halfplane_s0 = 3.5;
   double soft_halfplane_tau = 0.5;
-  double soft_halfplane_cost_allocation_ratio = 0.7;  
+  double soft_halfplane_cost_allocation_ratio = 0.7;
   double lc_thw = 0.5;
   double obs_reaction_decay_time = 1.0;
   double obs_keep_ref_factor = 10.0;
@@ -3941,7 +4088,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_acc_speed_adjust");
     ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
                      "q_jerk_speed_adjust");
-                     
+
   }
   double q_ref_pos = 1.0;
   double q_ref_vel = 0.05;

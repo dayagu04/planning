@@ -52,11 +52,16 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool IsInDeceleartionScene();
   void ClearStitchedPolyPtr();
   double GetStoplineSpdDifferGain();
+  void CalcDistanceToStopPoint();
+  bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
+                          const int& index);
+  bool IsNotUseGapSelect();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
+  LanChangeSafetyCheckConfig lc_safety_distance_config_;
 
-  AgentInfo leading_veh_;
+  LeadingAgentInfo leading_veh_;
 
   double ego_v_;
   double ego_a_;
@@ -80,6 +85,8 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_gap_avaliable_;
   double weight_acc_limit_;
   double weight_stop_penalty_;
+  double weight_speed_change_;
+  double weight_leading_veh_follow_s_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -87,9 +94,10 @@ class SamplePolySpeedAdjustDecider : public Task {
   std::vector<AgentInfo> agent_info_;
 
   double v_suggestted_{25.0};
-  double v_cruise_speed_{25.0};
+  double v_adjust_speed_limit_{25.0};
   double target_lane_objs_flow_vel_{25.0};
   double evaulation_t_{5.0};
+  double evaluation_congest_t_{3.0};
 
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
 
@@ -124,6 +132,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double distance_to_road_split_ = kMaxMergeDistance;
   double distance_to_ramp_ = kMaxMergeDistance;
   double distance_to_merge_point_ = kMaxMergeDistance;
+  double distance_to_stop_point_ = kMaxDistanceToStopPoint;
 
   double front_edge_to_rear_axle_ = 4.025;
   double rear_edge_to_rear_axle_ = 0.925;
@@ -177,6 +186,11 @@ class SamplePolySpeedAdjustDecider : public Task {
     weight_stop_penalty_ = weight;
   }
   double weight_stop_penalty() const { return weight_stop_penalty_; };
+
+  void set_weight_speed_change(const double weight) {
+    weight_speed_change_ = weight;
+  }
+  double weight_speed_change() const { return weight_speed_change_; };
 
   void set_ego_v(const double ego_v) { ego_v_ = ego_v; }
   double ego_v() const { return ego_v_; }
@@ -267,6 +281,10 @@ class SamplePolySpeedAdjustDecider : public Task {
     distance_to_ramp_ = distance;
   }
   double distance_to_ramp() const { return distance_to_ramp_; }
+  void set_distance_to_stop_point(const double distance) {
+    distance_to_stop_point_ = distance;
+  }
+  double distance_to_stop_point() const { return distance_to_stop_point_; }
 
   void set_boundary_merge_point_valid(const bool is_valid) {
     boundary_merge_point_valid_ = is_valid;

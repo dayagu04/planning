@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 
+#include <limits>
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_poly_const.h"
 #include "behavior_planners/sample_poly_speed_adjust_decider/sample_space_base.h"
 #include "sample_speed_adjust_cost.h"
@@ -33,9 +34,12 @@ class SamplePolyCurve {
   double mid_s_;
   double mid_t_;
   double mid_v_;
+  double front_edge_to_rear_axle_;
+  double back_edge_to_rear_axle_;
 
   double cost_sum_ = 0.0;
   bool safe_valid_{false};
+  bool gap_valid_{true};
 };
 
 class SampleQuarticPolynomialCurve : public SamplePolyCurve {
@@ -48,6 +52,8 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
       const double weight_leading_veh_safe_s,
       const double weight_speed_variable, const double weight_gap_avaliable,
       const double weight_acc_limit, const double weight_stop_penalty,
+      const double weight_speed_change,
+      const double weight_leading_veh_follow_s,
       const double front_edge_to_rear_axle,
       const double back_edge_to_rear_axle);
 
@@ -58,14 +64,16 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
 
   void CalcCost(STSampleSpaceBase& sample_space_base, const double ego_v,
                 const double ego_a, const double suggested_v,
-                const double stop_line_s, const double leading_veh_s,
-                const double leading_veh_v, int32_t leading_veh_id,
-                bool enable_merge_decelaration, double speed_differ_gain);
+                const double stop_line_s, const LeadingAgentInfo& leading_veh,
+                bool enable_merge_decelaration, double speed_differ_gain,
+                double distance_to_stop_point,
+                const LanChangeSafetyCheckConfig& lc_safety_distance_config,
+                const double cur_time);
   double CalcVelIntegral(const double t) const;
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,
                                 bool is_front_car);
-
+  void CostInit();
   // interface:
   const QuarticPolynomial& poly() const { return poly_; };
   int32_t end_point_matched_gap_front_id() const {
@@ -105,8 +113,8 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
     return stop_penalty_cost_;
   };
 
-  const std::vector<MatchGapCost>& anchor_points_match_gap_cost_vec() const {
-    return anchor_points_match_gap_cost_vec_;
+  const MatchGapCost& anchor_points_match_gap_cost() const {
+    return anchor_points_match_gap_cost_;
   };
 
   const AccLimitCost& acc_limit_cost() const { return acc_limit_cost_; }
@@ -120,12 +128,19 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   GapAvaliableCost gap_avaliable_cost_;
   StopPenaltyCost stop_penalty_cost_;
   AccLimitCost acc_limit_cost_;
+  SpeedChangeCost speed_change_cost_;
+  StopPointCost stop_point_cost_;
+  LeadingVehFollowCost leading_veh_follow_s_cost_;
 
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;
+  double prediction_time_ = 3.0;
+  double safe_border_distance_to_gap_back_obj_ = 0.0;
+  double safe_border_distance_to_gap_front_obj_ = 0.0;
+  double rest_changeable_distance_ = 0.0;
 
   // std::vector<double> anchor_points_checked_t_vec_;
-  std::vector<MatchGapCost> anchor_points_match_gap_cost_vec_;
+  MatchGapCost anchor_points_match_gap_cost_;
 };
 
 }  // namespace planning

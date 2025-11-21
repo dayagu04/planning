@@ -1,5 +1,6 @@
 #pragma once
 #include "curve_cost.h"
+#include "ego_planning_config.h"
 #include "st_graph/st_point.h"
 using planning::speed::STPoint;
 namespace planning {
@@ -12,7 +13,8 @@ class MatchGapCost : public CurveCost {
                const double poly_end_v,
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
-               const double ego_current_vel, const bool is_merge_change);
+               const double ego_current_vel, const bool is_merge_change,
+               const LanChangeSafetyCheckConfig& lc_safety_distance_config);
   void SetWeightMatchS(const double weight_s) { weight_match_s_ = weight_s; }
   void SetWeightMatchVel(const double weight_vel) {
     weight_match_v_ = weight_vel;
@@ -23,12 +25,12 @@ class MatchGapCost : public CurveCost {
     front_edge_to_rear_axle_ = front_edge_to_rear_axle;
     rear_edge_to_rear_axle_ = back_edge_to_rear_axle;
   }
-
   void SetAnchorT(const double& anchor_t) { anchor_t_ = anchor_t; }
   const double anchor_t() { return anchor_t_; };
   const double match_s_cost() const { return match_s_cost_; }
   const double match_v_cost() const { return match_v_cost_; }
   const double match_gap_center_cost() const { return match_gap_center_cost_; }
+  const bool is_gap_changeable() const { return is_gap_changeable_; }
 
  private:
   double front_edge_to_rear_axle_;
@@ -43,12 +45,16 @@ class MatchGapCost : public CurveCost {
   double anchor_t_;
 
   double safe_dis_penalty_factor_coef_ = 2.0;
-  double clip_dis_penalty_factor_coef_ = 2.5;
+  double clip_dis_penalty_factor_coef_ = 2.0;
   double rel_vel_penalty_factor_coef_ = 3.0;
   double narrow_gap_penalty_factor_coef_ = 1.8;
 
   double acc_speed_weight_ = 3.0;
   double dec_speed_weight_ = 4.0;
+
+  double safe_border_distance_to_gap_front_obj_ = 0.0;
+  double safe_border_distance_to_gap_back_obj_ = 0.0;
+  bool is_gap_changeable_ = true;
 };
 
 class FollowVelCost : public CurveCost {
@@ -105,5 +111,31 @@ class AccLimitCost : public CurveCost {
  public:
   AccLimitCost() = default;
   void GetCost(const double acc_extrema);
+};
+
+class SpeedChangeCost : public CurveCost {
+ public:
+  SpeedChangeCost() = default;
+  void GetCost(const double end_v, const double ego_v, const double end_t);
+};
+
+class StopPointCost : public CurveCost {
+ public:
+  StopPointCost() = default;
+  void GetCost(const double distance_to_stop_point);
+};
+
+class LeadingVehFollowCost : public CurveCost {
+ public:
+  LeadingVehFollowCost() = default;
+  void GetCost(const double leading_veh_pred_s, const double ego_v,
+               const double ego_pred_s);
+  void SetWeight(const double weight) { weight_ = weight; }
+  void SetRearAxleToBumpDis(const double& front_edge_to_rear_axle) {
+    front_edge_to_rear_axle_ = front_edge_to_rear_axle;
+  }
+
+ private:
+  double front_edge_to_rear_axle_;
 };
 }  // namespace planning
