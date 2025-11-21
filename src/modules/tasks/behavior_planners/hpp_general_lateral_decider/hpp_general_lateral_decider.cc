@@ -75,6 +75,7 @@ bool HppGeneralLateralDecider::InitInfo() {
   if (session_->is_rads_scene()) {
     is_ego_reverse_ = true;
   }
+  min_road_radius_ = 10000.0;
   static_obstacle_decisions_.clear();
   dynamic_obstacle_decisions_.clear();
   ref_traj_points_.clear();
@@ -114,7 +115,7 @@ bool HppGeneralLateralDecider::Execute() {
     return false;
   };
 
-  
+
   auto &traj_points = session_->mutable_planning_context()
                           ->mutable_planning_result()
                           .traj_points;
@@ -778,6 +779,7 @@ void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
 
 bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
+  min_road_radius_ = 10.0;
   ref_path_points_.reserve(traj_points.size());
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
@@ -791,6 +793,11 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
       ILOG_ERROR
           << "ConstructReferencePathPoints: Get reference point by lon failed!";
     }
+    double road_radius =
+        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
+    min_road_radius_ = std::max(
+        std::min(road_radius - 1.0, min_road_radius_),
+        0.2);
     ref_path_points_.emplace_back(refpath_pt);
   }
 
@@ -1160,7 +1167,7 @@ void HppGeneralLateralDecider::GenerateGroundLineAndParkingSpaceBoundary() {
     if (is_ego_reverse_) {
       care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
       care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
-    }    
+    }
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;
@@ -1281,21 +1288,12 @@ void HppGeneralLateralDecider::GenerateRoadHardSoftBoundary() {
   GetDesireRoadExtraBuffer(&left_road_extra_buffer, &right_road_extra_buffer);
 
   const double kDefaultDistanceToRoad = 10.0;
+  min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    Bound hard_bound_road{-kDefaultDistanceToRoad, kDefaultDistanceToRoad};
-    double road_radius = 1 / std::fabs(ref_path_points_[i].path_point.kappa());
-    if (road_radius < kDefaultDistanceToRoad) {
-      if (ref_path_points_[i].path_point.kappa() > 0.0) {
-        soft_bound_road.upper = road_radius;
-        hard_bound_road.upper = road_radius;
-      } else {
-        soft_bound_road.lower = -road_radius;
-        hard_bound_road.lower = -road_radius;
-      }
-    }
+    Bound soft_bound_road{-min_road_radius_, min_road_radius_};
+    Bound hard_bound_road{-min_road_radius_, min_road_radius_};
     MapObstaclePositionDecision map_obstacle_decision;
 
     map_obstacle_decision.tp.t = ref_traj_points_[i].t;
@@ -1636,7 +1634,7 @@ void HppGeneralLateralDecider::GenerateStaticObstacleDecision(
     if (is_ego_reverse_) {
       care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
       care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
-    }    
+    }
     // std::max((front_lon_buf_dis - std::fabs(traj_point.curvature *
     // config_.ref_curvature_factor)), 0.0);
     const auto care_area_center =
@@ -1893,7 +1891,7 @@ void HppGeneralLateralDecider::GenerateDynamicObstacleDecision(
     if (is_ego_reverse_) {
       care_area_s_start = ego_s - rear_axle_to_front_bumper - rear_lon_buf_dis;
       care_area_s_end = ego_s + vehicle_param.rear_edge_to_rear_axle + front_lon_buf_dis;
-    } 
+    }
     const auto care_area_center =
         Vec2d((care_area_s_start + care_area_s_end) * 0.5, ego_l);
     const double care_area_length = care_area_s_end - care_area_s_start;

@@ -178,6 +178,7 @@ class HppGeneralLateralDecider : public Task {
  private:
   HppGeneralLateralDeciderConfig config_;
   bool is_ego_reverse_;
+  double min_road_radius_;
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
