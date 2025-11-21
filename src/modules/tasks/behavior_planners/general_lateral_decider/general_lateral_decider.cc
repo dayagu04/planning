@@ -1686,6 +1686,8 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   const double l_offset_limit = config_.first_soft_min_distance2center + 1;
   constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
+  WeightedBounds last_smoothed_bounds;
+  last_smoothed_bounds.reserve(first_soft_bounds_[0].size());
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
     const auto &current_bounds = first_soft_bounds_[i];
     WeightedBounds last_bounds;
@@ -1772,10 +1774,28 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
             }
           }
         }
+      } else {
+        // 如果当前帧与上一帧找不到对应的,则找上一个点
+        auto last_smoothed_bound_it = std::find_if(last_smoothed_bounds.begin(), last_smoothed_bounds.end(),
+            [&current_bound](const WeightedBound& last_smoothed_bound) {
+              return last_smoothed_bound.bound_info.id == current_bound.bound_info.id &&
+                    last_smoothed_bound.bound_info.type == current_bound.bound_info.type;
+            });
+        if (last_smoothed_bound_it != last_smoothed_bounds.end()) {
+          if (last_smoothed_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
+              last_smoothed_bound_it->bound_info.type == BoundType :: EGO_POSITION ||
+              last_smoothed_bound_it->bound_info.type == BoundType :: LANE) {
+            smoothed_bounds.push_back(smoothed_bound);
+            continue;
+          }
+          smoothed_bound.lower = last_smoothed_bound_it->lower;
+          smoothed_bound.upper = last_smoothed_bound_it->upper;
+        }
       }
       smoothed_bounds.push_back(smoothed_bound);
     }
     first_soft_bounds_[i] = std::move(smoothed_bounds);
+    last_smoothed_bounds = first_soft_bounds_[i];
   }
 
   // ROAD_BORDER、LANE、EGO_POSITION默认没有双层bound
