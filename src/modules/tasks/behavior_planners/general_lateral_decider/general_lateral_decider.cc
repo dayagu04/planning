@@ -1479,7 +1479,7 @@ void GeneralLateralDecider::GetLateralTTCToRoad(
   *right_collision_t = config_.max_lateral_ttc;
   *max_collision_t = config_.max_lateral_ttc;
   for (double t = 0.0; t < config_.max_lateral_ttc; t += time_diff) {
-    if (t > max_collision_t + fade_margin) {
+    if (t > *max_collision_t + fade_margin) {
       break;
     }
     Point2D prediction_xy(planning_init_point.x + ego_vx * t,
