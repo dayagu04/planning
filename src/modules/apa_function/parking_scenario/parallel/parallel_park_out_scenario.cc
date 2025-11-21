@@ -838,7 +838,7 @@ const bool ParallelParkOutScenario::GenTlane() {
   t_lane_.obs_pt_outside << rear_max_x, rear_parallel_line_y_limit;
 
   if (rear_vacant) {
-    curb_y_limit = curb_y_limit_all - 0.15;
+    curb_y_limit = curb_y_limit_all;
     ILOG_INFO << "curb_y_limit =" << curb_y_limit
               << " curb_y_limit_all = " << curb_y_limit_all;
   }

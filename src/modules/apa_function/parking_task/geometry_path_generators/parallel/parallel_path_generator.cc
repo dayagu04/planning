@@ -2990,8 +2990,6 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
 
     int step_size = static_cast<int>(line_length / kLineStepLength);
     int max_size = static_cast<int>(line_length / 0.1);
-    ILOG_INFO << "1 step_size = " << step_size
-              << " line_length = " << line_length;
     if (gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       line_length = std::min(line_length, 0.6);
       step_size = mathlib::Clamp(step_size, 2, 3);
@@ -3002,8 +3000,6 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
       step_size = mathlib::Clamp(step_size, 2, 3);
       step_size = std::min(step_size, max_size);
     }
-    ILOG_INFO << "2 step_size = " << step_size
-              << " line_length = " << line_length;
 
     const double step = line_length / step_size;
     // double length_diff = step;
