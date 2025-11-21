@@ -5,6 +5,7 @@
 #include "node3d.h"
 #include "pose2d.h"
 #include "euler_distance_transform.h"
+#include "./../node_collision_detect.h"
 
 namespace planning {
 
@@ -18,9 +19,10 @@ class RSExpansionDecider : public AstarDecider {
   void Process(const Pose2f &start, const Pose2f &end) override;
 
   // round robin strategy for fallback point
-  void UpdateRoundRobinStrategy(const Pose2f &end, const AstarRequest *request,
-                                EulerDistanceTransform *edt,
-                                const VehicleParam &veh_param);
+  void UpdateRoundRobinStrategy(
+      const Pose2f &end, const AstarRequest *request,
+      EulerDistanceTransform *edt, const VehicleParam &veh_param,
+      std::shared_ptr<NodeCollisionDetect> &collision_detect);
 
   const Pose2f &GetRSEndPose();
 

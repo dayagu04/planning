@@ -30,7 +30,8 @@ const bool NodeCollisionDetect::IsPointOutOfGridMapBound(const float x,
   return false;
 }
 
-const bool NodeCollisionDetect::IsFootPrintCollision(const Transform2d& tf) {
+const bool NodeCollisionDetect::IsPolygonFootPrintCollision(
+    const Transform2d& tf) {
   Polygon2D veh_global_polygon;
   bool is_collision = false;
   ULFLocalPolygonToGlobal(&veh_global_polygon,
@@ -121,7 +122,7 @@ bool NodeCollisionDetect::IsValidByConvexHull(Node3d* node) {
       tf.SetBasePose(global_pose);
     }
 
-    if (IsFootPrintCollision(tf)) {
+    if (IsPolygonFootPrintCollision(tf)) {
       return false;
     }
   }
@@ -286,6 +287,12 @@ const bool NodeCollisionDetect::IsValidByEDT(Node3d* node) {
   return true;
 }
 
+const bool NodeCollisionDetect::IsCircleFootPrintCollision(const Pose2f& pose) {
+  Transform2f tf(pose);
+  FootPrintCircleModel* footprint_model = GetCircleFootPrintModel(pose, false);
+  return edt_->IsCollisionForPoint(&tf, AstarPathGear::NONE, footprint_model);
+}
+
 bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
     const RSPath* reeds_shepp_path, Node3d* node) {
   if (reeds_shepp_path == nullptr) {
@@ -343,7 +350,7 @@ bool NodeCollisionDetect::IsRSPathSafeByConvexHull(
         tf.SetBasePose(global_pose);
       }
 
-      if (IsFootPrintCollision(tf)) {
+      if (IsPolygonFootPrintCollision(tf)) {
         return false;
       }
     }
@@ -497,7 +504,7 @@ int NodeCollisionDetect::GetPathCollisionIndex(HybridAStarResult* result) {
     global_pose.y = result->y[i];
     global_pose.theta = result->phi[i];
     tf.SetBasePose(global_pose);
-    if (IsFootPrintCollision(tf)) {
+    if (IsPolygonFootPrintCollision(tf)) {
       return i;
     }
   }

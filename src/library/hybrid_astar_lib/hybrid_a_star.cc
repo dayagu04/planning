@@ -1283,8 +1283,8 @@ void HybridAStar::OneShotPathAttempt(const MapBound& XYbounds,
   node_shrink_decider_.Process(request_.start_pose, request_.real_goal,
                                grid_map_bound_, request_);
   rs_expansion_decider_.Process(start, target);
-  rs_expansion_decider_.UpdateRoundRobinStrategy(target, &request_, edt_,
-                                                 vehicle_param_);
+  rs_expansion_decider_.UpdateRoundRobinStrategy(
+      target, &request_, edt_, vehicle_param_, collision_detect_);
 
   SetSamplingTarget(target);
 
@@ -1665,7 +1665,7 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
   double check_start_time = IflyTime::Now_ms();
   if (!collision_detect_->IsValidByEDT(start_node_)) {
     // second check
-    if (collision_detect_->IsFootPrintCollision(
+    if (collision_detect_->IsPolygonFootPrintCollision(
             Transform2d(start_node_->GetPose()))) {
       ILOG_INFO << "start_node in collision with obstacles "
                 << static_cast<int>(start_node_->GetConstCollisionType());
@@ -1723,8 +1723,8 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
                                grid_map_bound_, request_);
 
   rs_expansion_decider_.Process(start, end);
-  rs_expansion_decider_.UpdateRoundRobinStrategy(end, &request_, edt_,
-                                                 vehicle_param_);
+  rs_expansion_decider_.UpdateRoundRobinStrategy(
+      end, &request_, edt_, vehicle_param_, collision_detect_);
   SetSamplingTarget(end);
 
   PathComparator path_comparator;

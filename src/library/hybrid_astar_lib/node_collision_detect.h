@@ -38,6 +38,8 @@ class NodeCollisionDetect {
   // check collision and validity
   const bool IsValidByEDT(Node3d* node);
 
+  const bool IsCircleFootPrintCollision(const Pose2f& pose);
+
   // check Reeds Shepp path collision and validity
   bool RSPathCollisionCheck(const RSPath* reeds_shepp_to_end,
                             Node3d* rs_node_to_goal);
@@ -57,7 +59,7 @@ class NodeCollisionDetect {
 
   const bool IsPolygonCollision(const Polygon2D* polygon);
 
-  const bool IsFootPrintCollision(const Transform2d& tf);
+  const bool IsPolygonFootPrintCollision(const Transform2d& tf);
 
   void DebugEDTCheck(HybridAStarResult* path);
 
