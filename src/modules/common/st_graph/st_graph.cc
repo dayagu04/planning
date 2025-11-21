@@ -549,18 +549,26 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   // const auto& trajectories = agent.trajectories();
+  const auto* front_agent_of_target = st_graph_input_->front_agent_of_target();
   const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
-  if (rear_agent_of_target != nullptr &&
-      agent.agent_id() == rear_agent_of_target->agent_id()) {
-    RecalculateTrajectoryForLcRearAgent(rear_agent_of_target);
+
+  auto trajectories = agent.trajectories_used_by_st_graph();
+
+  if (front_agent_of_target != nullptr &&
+      agent.agent_id() == front_agent_of_target->agent_id()) {
+    trajectories = {front_agent_of_target->trajectory_optimized()};
+  } else if (rear_agent_of_target != nullptr &&
+             agent.agent_id() == rear_agent_of_target->agent_id()) {
+    trajectories = {rear_agent_of_target->trajectory_optimized()};
   }
+
   bool is_need_truncate_traj_for_origin_front_agent = false;
   const auto* front_agent_of_origin = st_graph_input_->front_agent_of_origin();
   if (front_agent_of_origin != nullptr &&
       agent.agent_id() == front_agent_of_origin->agent_id()) {
     is_need_truncate_traj_for_origin_front_agent = true;
   }
-  const auto& trajectories = agent.trajectories_used_by_st_graph();
+  
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   bool is_need_truncate_traj =

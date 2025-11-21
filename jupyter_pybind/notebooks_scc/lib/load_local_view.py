@@ -2087,7 +2087,7 @@ def load_local_view_figure():
                                         'obs_label':[]})
   data_prediction_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
-                                        'obs_label':[], 'color':[]})
+                                        'obs_label':[], 'color':[], 'text_color':[]})
   data_radar_fm_obj = ColumnDataSource(data = {'obstacles_y':[], 'obstacles_x':[],
                                         'pos_y':[], 'pos_x':[],
                                         'obs_label':[]})

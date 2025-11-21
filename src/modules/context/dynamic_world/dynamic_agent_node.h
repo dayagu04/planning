@@ -72,6 +72,8 @@ class DynamicAgentNode {
   const std::vector<trajectory::Trajectory>& node_trajectories() const;
   const std::vector<trajectory::Trajectory>&
   node_trajectories_used_by_st_graph() const;
+  // Optimized trajectory for this node (single trajectory)
+  const trajectory::Trajectory& node_trajectory_optimized() const;
   const agent::AgentType type() const;
 
   bool is_agent_within_lane() const;

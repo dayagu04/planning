@@ -565,6 +565,7 @@ struct TrajectoryPoint {
   double v = 0;
   double a = 0;
   double jerk = 0;
+  double delta = 0.;
 
   // frenet
   double s = 0;

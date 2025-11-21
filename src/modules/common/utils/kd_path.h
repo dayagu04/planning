@@ -75,6 +75,10 @@ class KDPath {
 
   double DistanceTo(const Vec2d& point) const;
 
+  double DistanceTo(const Vec2d& point, Vec2d* nearest_point) const;
+
+  double DistanceSquareTo(const Vec2d& point, Vec2d* nearest_point) const;
+
   double DistanceSquareTo(const Vec2d& point) const;
 
   double max_x() const { return max_x_; }

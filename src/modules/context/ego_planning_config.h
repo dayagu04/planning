@@ -3727,6 +3727,138 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   POIVelLimitDisTable non_express_vel_limit_dis_table;
   POIVelLimitDisTable tunnel_vel_limit_dis_table;
 };
+struct JointDecisionPlannerConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, q_ego_ref_x, "lane_change_joint_decision", "q_ego_ref_x");
+    ReadItem<double>(json, q_ego_ref_y, "lane_change_joint_decision", "q_ego_ref_y");
+    ReadItem<double>(json, q_ego_ref_theta, "lane_change_joint_decision",
+                     "q_ego_ref_theta");
+    ReadItem<double>(json, q_ego_ref_delta, "lane_change_joint_decision",
+                     "q_ego_ref_delta");
+    ReadItem<double>(json, q_ego_ref_vel, "lane_change_joint_decision",
+                     "q_ego_ref_vel");
+    ReadItem<double>(json, q_ego_ref_acc, "lane_change_joint_decision",
+                     "q_ego_ref_acc");
+
+    ReadItem<double>(json, q_obs_ref_x, "lane_change_joint_decision", "q_obs_ref_x");
+    ReadItem<double>(json, q_obs_ref_y, "lane_change_joint_decision", "q_obs_ref_y");
+    ReadItem<double>(json, q_obs_ref_theta, "lane_change_joint_decision",
+                     "q_obs_ref_theta");
+    ReadItem<double>(json, q_obs_ref_delta, "lane_change_joint_decision",
+                     "q_obs_ref_delta");
+    ReadItem<double>(json, q_obs_ref_vel, "lane_change_joint_decision",
+                     "q_obs_ref_vel");
+    ReadItem<double>(json, q_obs_ref_acc, "lane_change_joint_decision",
+                     "q_obs_ref_acc");
+
+    ReadItem<double>(json, curv_factor, "lane_change_joint_decision", "curv_factor");
+
+    ReadItem<double>(json, three_disc_safe_dist, "lane_change_joint_decision",
+                     "three_disc_safe_dist");
+    ReadItem<double>(json, q_three_disc_safe_dist_weight,
+                     "lane_change_joint_decision", "q_three_disc_safe_dist_weight");
+
+    ReadItem<double>(json, road_boundary_safe_dist, "lane_change_joint_decision",
+                     "road_boundary_safe_dist");
+    ReadItem<double>(json, q_road_boundary_weight, "lane_change_joint_decision",
+                     "q_road_boundary_weight");
+
+    ReadItem<double>(json, q_ego_acc_weight, "lane_change_joint_decision",
+                     "q_ego_acc_weight");
+    ReadItem<double>(json, q_ego_jerk_weight, "lane_change_joint_decision",
+                     "q_ego_jerk_weight");
+    ReadItem<double>(json, q_ego_omega_weight, "lane_change_joint_decision",
+                     "q_ego_omega_weight");
+    ReadItem<double>(json, q_ego_delta_weight, "lane_change_joint_decision",
+                     "q_ego_delta_weight");
+    ReadItem<double>(json, q_obs_jerk_weight, "lane_change_joint_decision",
+                     "q_obs_jerk_weight");
+    ReadItem<double>(json, q_obs_omega_weight, "lane_change_joint_decision",
+                     "q_obs_omega_weight");
+
+    ReadItem<double>(json, q_ego_acc_bound_weight, "lane_change_joint_decision",
+                     "q_ego_acc_bound_weight");
+    ReadItem<double>(json, ego_acc_max, "lane_change_joint_decision", "ego_acc_max");
+    ReadItem<double>(json, ego_acc_min, "lane_change_joint_decision", "ego_acc_min");
+
+    ReadItem<double>(json, q_ego_jerk_bound_weight, "lane_change_joint_decision",
+                     "q_ego_jerk_bound_weight");
+    ReadItem<double>(json, ego_jerk_max, "lane_change_joint_decision",
+                     "ego_jerk_max");
+    ReadItem<double>(json, ego_jerk_min, "lane_change_joint_decision",
+                     "ego_jerk_min");
+
+    ReadItem<double>(json, q_hard_halfplane_weight, "lane_change_joint_decision",
+                     "q_hard_halfplane_weight");
+    ReadItem<double>(json, hard_halfplane_dist, "lane_change_joint_decision",
+                     "hard_halfplane_dist");
+    ReadItem<double>(json, halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+                     "halfplane_cost_allocation_ratio");
+    ReadItem<double>(json, q_soft_halfplane_weight, "lane_change_joint_decision",
+                     "q_soft_halfplane_weight");
+    ReadItem<double>(json, soft_halfplane_s0, "lane_change_joint_decision",
+                     "soft_halfplane_s0");
+    ReadItem<double>(json, soft_halfplane_tau, "lane_change_joint_decision",
+                     "soft_halfplane_tau");
+    ReadItem<double>(json, soft_halfplane_cost_allocation_ratio, "lane_change_joint_decision",
+                     "soft_halfplane_cost_allocation_ratio");
+    ReadItem<double>(json, lc_thw, "lane_change_joint_decision",
+                     "lc_thw");
+    ReadItem<double>(json, obs_reaction_decay_time, "lane_change_joint_decision",
+                     "obs_reaction_decay_time");
+    ReadItem<double>(json, obs_keep_ref_factor, "lane_change_joint_decision",
+                     "obs_keep_ref_factor");
+  }
+
+  double q_ego_ref_x = 5.0;
+  double q_ego_ref_y = 5.0;
+  double q_ego_ref_theta = 100.0;
+  double q_ego_ref_delta = 2.0;
+  double q_ego_ref_vel = 3.0;
+  double q_ego_ref_acc = 6.0;
+
+  double q_obs_ref_x = 0.5;
+  double q_obs_ref_y = 0.5;
+  double q_obs_ref_theta = 2.0;
+  double q_obs_ref_delta = 1.0;
+  double q_obs_ref_vel = 1.0;
+  double q_obs_ref_acc = 8.0;
+
+  double curv_factor = 0.33;
+
+  double three_disc_safe_dist = 0.4;
+  double q_three_disc_safe_dist_weight = 2.0;
+
+  double road_boundary_safe_dist = 0.75;
+  double q_road_boundary_weight = 2.0;
+
+  double q_ego_acc_weight = 10.0;
+  double q_ego_jerk_weight = 100.0;
+  double q_ego_omega_weight = 5.0;
+  double q_ego_delta_weight = 50.0;
+  double q_obs_jerk_weight = 30.0;
+  double q_obs_omega_weight = 5.0;
+
+  double q_ego_acc_bound_weight = 100.0;
+  double ego_acc_max = 1.35;
+  double ego_acc_min = -4.5;
+
+  double q_ego_jerk_bound_weight = 50.0;
+  double ego_jerk_max = 5.0;
+  double ego_jerk_min = -6.0;
+
+  double q_hard_halfplane_weight = 10.0;
+  double hard_halfplane_dist = 3.5;
+  double halfplane_cost_allocation_ratio = 0.7;
+  double q_soft_halfplane_weight = 5.0;
+  double soft_halfplane_s0 = 3.5;
+  double soft_halfplane_tau = 0.5;
+  double soft_halfplane_cost_allocation_ratio = 0.7;  
+  double lc_thw = 0.5;
+  double obs_reaction_decay_time = 1.0;
+  double obs_keep_ref_factor = 10.0;
+};
 
 struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
@@ -5422,5 +5554,55 @@ struct LaneChangeDeciderConfig : public EgoPlanningConfig {
   }
 
   double lookahead_time = 3.0;
+};
+struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
+    void init(const Json &json) override {
+      EgoPlanningConfig::init(json);
+      /* read config from json */
+      ReadItem<double>(json, exe_ttc_ratio,"lane_change_safety_check", "exe_ttc_ratio");
+      ReadItem<double>(json, ttc_decay_factor,"lane_change_safety_check", "ttc_decay_factor");
+      ReadItem<double>(json, press_line_ratio_threshold,"lane_change_safety_check", "press_line_ratio_threshold");
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
+                                 "diff_kph_table"},
+                                 diff_speed_init_ttc_map.diff_kph_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "diff_speed_init_ttc_map",
+                                 "ttc_table"},
+                                 diff_speed_init_ttc_map.ttc_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
+                                 "rear_speed_kph_table"},
+                                 rear_vehicle_speed_min_space_map.rear_speed_kph_table);
+      read_json_vec(
+        json,
+        std::vector<std::string>{"lane_change_safety_check", "rear_vehicle_speed_min_space_map",
+                                 "min_space_table"},
+                                 rear_vehicle_speed_min_space_map.min_space_table);
+      ReadItem<double>(json, rear_close_distance_threshold, "lane_change_safety_check", "rear_close_distance_threshold");
+      ReadItem<double>(json, rear_close_speed_diff_threshold, "lane_change_safety_check", "rear_close_speed_diff_threshold");
+      ReadItem<double>(json, exe_rear_distance_ratio, "lane_change_safety_check", "exe_rear_distance_ratio");
+      ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check", "exe_rear_speed_ratio");
+    }
+    double exe_ttc_ratio = 0.5;
+    double exe_rear_speed_ratio = 1.1;
+    double exe_rear_distance_ratio = 0.8;
+    double ttc_decay_factor = 0.85;
+    double press_line_ratio_threshold = 0.2;  // 充分压线阈值，超过此值后不再按照ttc扩大buff
+    double rear_close_distance_threshold = 6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
+    double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
+    struct DiffSpeedInitTTCable {
+        std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
+        std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc
+    };
+    DiffSpeedInitTTCable diff_speed_init_ttc_map;
+    struct RearVehicleSpeedMinSpaceMap {
+        std::vector<double> rear_speed_kph_table{0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0};  // 后车速度 kph
+        std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
+    };
+    RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
 };
 }  // namespace planning

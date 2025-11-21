@@ -671,7 +671,7 @@ class LoadRosbag:
                           "can_right_borrow", "maintain_avoid", "lateral_emergency_level", "goal_point_x", "goal_point_y",
                           "pp_init_x", "pp_init_y", "lon_decision_to_invade_ego_motion_sim_path", "invade_neighbor_front_agent_id_ego_motion_sim_path", "ego_ttc_to_front_invade_agent_ego_motion_sim_path",
                           "left_road_extra_buffer", "right_road_extra_buffer", "target_lane_congestion_level", "lat_offset_propose", "lat_offset_lc_hold",
-                          "ego_press_line_ratio", "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
+                          "invade_neighbor_decision_ego_motion_sim_path", "invade_neighbor_decision", "ego_delta", "soft_bound_distance",
                           "safety_target_vel", "cruise_speed", "limit_speed", "safety_dynamic_vel", "planning_fault_code",
                           "ego_status_on_route", "left_lane_num", "minVal_seq", "maxVal_seq", "cross_vru_agent_ids",
                           "average_lon_acc", "potential_hard_break_count", "emergency_avoid_obstacle_ids", "lon_overtake_avoid",
@@ -681,9 +681,20 @@ class LoadRosbag:
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
-                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", "joint_lead_one_id", "joint_key_agent_ids", "joint_cut_in_agent_ids",
-                          "ego_jerk","merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost", "is_construction_agent_cluster_success",'is_exist_construction_area','is_pass_construction_area',
-                          'is_current_lane_available','is_right_lane_available','is_left_lane_available','is_left_left_lane_available','is_right_right_lane_available','construction_intrusion_level','traj_available',"rads_planning_status"]
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", 
+                          "joint_lead_one_id", "joint_key_agent_ids", "joint_cut_in_agent_ids", "joint_limit_speed",
+                          "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_need_sharp_deceleration", "joint_cruise_speed",
+                          "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost", 
+                          "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
+                          'is_current_lane_available', 'is_right_lane_available', 'is_left_lane_available', 'is_left_left_lane_available', 'is_right_right_lane_available', 
+                          'construction_intrusion_level', 'traj_available', "rads_planning_status",
+                          "JointPlannerSpeedLimitTime", "JointPlannerObstacleSelectionTime", "JointPlannerOptimizationTime", 
+                          "LatLonJointDecisionTime", "JointDecisionObstacleSelectionTime", "JointDecisionOptimizationTime",
+                          "target_lane_virtual_id", "origin_lane_virtual_id", "lc_gap_front_agent_id", "lc_gap_rear_agent_id",
+                          "ego_front_edge", "ego_rear_edge", 
+                          "front_agent_front_edge", "front_agent_rear_edge",
+                          "rear_agent_front_edge", "rear_agent_rear_edge",
+                          "rear_agent_longitudinal_label"]
 
 
       json_value_list += [#new_ldw debug info:
@@ -751,7 +762,8 @@ class LoadRosbag:
                          'ego_ref_sim_x_vec', 'ego_ref_sim_y_vec', 'ld_actual_length_vec', 'agent_box_corners_x', 'agent_box_corners_y', 'ego_box_corners_x', 'ego_box_corners_y', 'lat_path_v',
                          'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
                          'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
-                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec"]
+                         'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec",
+                         "joint_target_v0_vec", "joint_v_zero_acc_vec", "joint_s_max_decel_vec","joint_v_max_decel_vec","joint_a_max_decel_vec","joint_s_zero_acc_vec","joint_v_zero_acc_vec","joint_a_zero_acc_vec",]
 
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
@@ -768,6 +780,11 @@ class LoadRosbag:
                          "obj_fl_obj_loc_vec","obj_fm_obj_loc_vec","obj_fr_obj_loc_vec","obj_ml_obj_loc_vec",
                          "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec",
                          ]
+      # 安全检查相关的向量数据
+      json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
+                           "agent_vel_vec", "ego_vel_vec", "rear_distance_vec"]
+      # 安全检查相关的标量数据
+      json_value_list += ["lc_ego_press_line_ratio"]
 
       plan_debug_msg_dict = {}
       for topic, msg, t in self.bag.read_messages("/iflytek/planning/debug_info"):
@@ -783,6 +800,12 @@ class LoadRosbag:
         #       print(field.name, '异常')
         plan_debug_msg_dict[planning_debug_output.timestamp / 1e6] = planning_debug_output
       plan_debug_msg_dict = {key: val for key, val in sorted(plan_debug_msg_dict.items(), key = lambda ele: ele[0])}
+      try:
+        if plan_debug_msg_dict:
+          version_commit = plan_debug_msg_dict[next(iter(plan_debug_msg_dict))].version_commit
+          print("planning_commit = ", version_commit.planning_commit, "  interface_commit = ", version_commit.interface_commit, "  ad_common_commit = ", version_commit.adcommon_commit)
+      except:
+        print('planning debug not have version commit')
       for t, msg in plan_debug_msg_dict.items():
         self.plan_debug_msg['t'].append(t)
         self.plan_debug_msg['data'].append(msg)

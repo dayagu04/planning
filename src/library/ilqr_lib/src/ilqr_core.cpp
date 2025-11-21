@@ -131,6 +131,58 @@ void iLqr::InitSolverConfig() {
   ilqr_model_ptr_->InitControlVar();
 }
 
+void iLqr::InitSolverConfig(size_t state_size, size_t input_size) {
+  const auto horizon = solver_config_ptr_->horizon;
+
+  xk_vec_.resize(horizon + 1);
+  ResetVectorElemFromEigen(xk_vec_);
+
+  uk_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenVec(uk_vec_, input_size);
+  ResetVectorElemFromEigen(uk_vec_);
+
+  lx_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenVec(lx_vec_, state_size);
+  ResetVectorElemFromEigen(lx_vec_);
+
+  lu_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenVec(lu_vec_, input_size);
+  ResetVectorElemFromEigen(lu_vec_);
+
+  lxx_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenMat(lxx_vec_, state_size, state_size);
+  ResetVectorElemFromEigen(lxx_vec_);
+
+  lxu_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenMat(lxu_vec_, state_size, input_size);
+  ResetVectorElemFromEigen(lxu_vec_);
+
+  luu_vec_.resize(horizon + 1);
+  ResizeVectorElemFromEigenMat(luu_vec_, input_size, input_size);
+  ResetVectorElemFromEigen(luu_vec_);
+
+  fx_vec_.resize(horizon);
+  ResizeVectorElemFromEigenMat(fx_vec_, state_size, state_size);
+  ResetVectorElemFromEigen(fx_vec_);
+
+  fu_vec_.resize(horizon);
+  ResizeVectorElemFromEigenMat(fu_vec_, state_size, input_size);
+  ResetVectorElemFromEigen(fu_vec_);
+
+  k_vec_.resize(horizon);
+  ResizeVectorElemFromEigenVec(k_vec_, input_size);
+  ResetVectorElemFromEigen(k_vec_);
+
+  K_vec_.resize(horizon);
+  ResizeVectorElemFromEigenMat(K_vec_, state_size, state_size);
+  ResetVectorElemFromEigen(K_vec_);
+
+  Quu_eye_ = Eigen::MatrixXd::Identity(input_size, input_size);
+
+  // for ilqr_model
+  ilqr_model_ptr_->InitControlVar();
+}
+
 void iLqr::AddCost(std::shared_ptr<BaseCostTerm> cost_term) {
   ilqr_model_ptr_->AddCost(cost_term);
   solver_info_.cost_size++;

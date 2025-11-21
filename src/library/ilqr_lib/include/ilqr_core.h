@@ -126,7 +126,15 @@ class iLqr {
 
   void SetWarmStart(bool flag) { solver_config_ptr_->warm_start_enable = flag; }
 
+  void SetDuTol(double du_tol) { solver_config_ptr_->du_tol = du_tol; }
+
   void SetMaxIter(size_t max_iter);
+
+  void SetStateAndInputSize(size_t state_size, size_t input_size) {
+    solver_config_ptr_->state_size = state_size;
+    solver_config_ptr_->input_size = input_size;
+    InitSolverConfig(state_size, input_size);
+  }
 
   void GetOutput(StateVec &xk, ControlVec &uk) const {
     uk = uk_vec_;
@@ -163,6 +171,8 @@ class iLqr {
   }
 
   void InitSolverConfig();
+
+  void InitSolverConfig(size_t state_size, size_t input_size);
 
   std::shared_ptr<iLqrModel> GetiLqrModelPtr() const { return ilqr_model_ptr_; }
 

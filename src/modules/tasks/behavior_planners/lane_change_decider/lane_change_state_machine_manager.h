@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <memory>
 #include <unordered_map>
+
+#include "behavior_planners/lane_change_decider/lane_change_joint_decision_generator/lat_lon_joint_decision_generator.h"
 #include "behavior_planners/lane_change_decider/lane_change_path_generate.h"
 #include "behavior_planners/lane_change_decider/lane_change_request_manager.h"
 #include "config/basic_type.h"
@@ -16,6 +18,7 @@
 #include "virtual_lane.h"
 namespace planning {
 using namespace planning_math;  // fix
+using namespace lane_change_joint_decision;
 struct StateTransitionInfo {
   StateMachineLaneChangeStatus lane_change_status = kLaneKeeping;
   RequestType lane_change_direction = NO_CHANGE;
@@ -88,7 +91,6 @@ struct LaneChangeStageInfo {
     is_cancel_to_hold = false;
   }
 };
-
 class LaneChangeStateMachineManager {
  public:
   LaneChangeStateMachineManager(
@@ -105,6 +107,7 @@ class LaneChangeStateMachineManager {
 
  private:
   void PreProcess();
+  void JointLaneChangeDecisionGeneration();
   void RunStateMachine();
   bool CheckIfProposeLaneChange(RequestType* const lane_change_direction,
                                 RequestSource* const lane_change_type) const;
@@ -129,7 +132,7 @@ class LaneChangeStateMachineManager {
   bool CheckIfCompleteToCancel();
   bool CheckIfCancelTimeOut();
 
-  void LaneChangeInfoReset();
+  void LaneChangeDecisionInfoReset();
 
   void CheckLaneChangeValid(RequestType direction);
   LaneChangeStageInfo CheckLCGapFeasible(RequestType direction);
@@ -197,6 +200,10 @@ class LaneChangeStateMachineManager {
       const TrajectoryPoints& agent_traj,
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
       const bool is_front_agent);
+  bool CheckIfSafetyForOptimizedTrajs(
+      const TrajectoryPoints& agent_traj,
+      const planning_data::DynamicAgentNode* agent_node, bool is_large_car,
+      const bool is_front_agent);
   bool IsFilterAgent(
       const planning_data::DynamicAgentNode* agent_node,
       const std::shared_ptr<planning_math::KDPath> target_lane_coor,
@@ -209,6 +216,7 @@ class LaneChangeStateMachineManager {
   SecondOrderTimeOptimalTrajectory GenerateEgoMaxDecelerationCurve(
       const double ego_v, const double target_v);
   double CalculateLCSafetyCheckTime() const;
+  double CalculateCheckTimeRatio() const;
   std::unique_ptr<Trajectory1d> MakeVirtualZeroAccCurve(
       const std::array<double, 3> init_lon_state) const;
 
@@ -258,6 +266,7 @@ class LaneChangeStateMachineManager {
   void CheckMergingRearAgent(LaneChangeStageInfo* const lc_state_info);
   bool CheckMergingRearAgentTraj(const int merging_rear_agent_id);
   bool IsSuppressLCShortDis() const;
+  bool IsSideClear(int front_agent_id, int rear_agent_id);
 
   bool CheckTargetLaneValid();
 
@@ -266,9 +275,12 @@ class LaneChangeStateMachineManager {
   ScenarioStateMachineConfig config_;
   SpeedPlannerConfig speed_planning_config_;
   CongestionDetectionConfig congestion_detection_config_;
+  LanChangeSafetyCheckConfig lc_safety_check_config_;
+  const EgoPlanningConfigBuilder* config_builder_;
   framework::Session* session_;
   std::shared_ptr<LaneChangeRequestManager> lc_req_mgr_;
   std::shared_ptr<LaneChangeLaneManager> lc_lane_mgr_;
+  std::shared_ptr<LatLonJointDecision> lc_joint_decision_generator_;
   LaneChangeRequest lc_request_;
   StateTransitionInfo transition_info_;
   LaneChangeTimer lc_timer_;
@@ -318,11 +330,13 @@ class LaneChangeStateMachineManager {
 
   TrajectoryPoints ego_trajs_future_;
   TrajectoryPoints front_node_trajs_future_;
+  bool joint_decision_success_ = false;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
   std::vector<std::shared_ptr<FrenetObstacle>> risk_side_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;
+  bool is_side_clear_{false};
 
   CongestionResult fix_lane_congestion_level_;
 
@@ -331,6 +345,7 @@ class LaneChangeStateMachineManager {
   std::vector<double> agent_box_corners_y_{};
   std::vector<double> ego_box_corners_x_{};
   std::vector<double> ego_box_corners_y_{};
-  StateMachineLaneChangeStatus last_state_{StateMachineLaneChangeStatus::kLaneKeeping};
+  StateMachineLaneChangeStatus last_state_{
+      StateMachineLaneChangeStatus::kLaneKeeping};
 };
 }  // namespace planning

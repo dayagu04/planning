@@ -54,6 +54,7 @@ Agent::Agent(const Agent& agent)
   trajectories_.clear();
   trajectories_ = agent.trajectories();
   trajectories_used_by_st_graph_ = agent.trajectories_used_by_st_graph();
+  trajectory_optimized_ = agent.trajectory_optimized();
 }
 
 Agent::Agent(const PredictionObject& prediction_object, bool is_static,
@@ -212,9 +213,15 @@ void Agent::set_trajectories_used_by_st_graph(
     const std::vector<trajectory::Trajectory>& trajectories_used_by_st_graph) {
   trajectories_used_by_st_graph_ = trajectories_used_by_st_graph;
 }
+const trajectory::Trajectory& Agent::trajectory_optimized() const {
+  return trajectory_optimized_;
+}
 void Agent::add_trajectories_used_by_st_graph(
     const trajectory::Trajectory& trajectory) {
   trajectories_used_by_st_graph_.emplace_back(trajectory);
+}
+void Agent::set_trajectory_optimized(const trajectory::Trajectory& trajectory) {
+  trajectory_optimized_ = trajectory;
 }
 
 const AgentDecision& Agent::agent_decision() const { return agent_decision_; }

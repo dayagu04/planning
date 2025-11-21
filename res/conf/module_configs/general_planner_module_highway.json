@@ -505,6 +505,47 @@
     "time_distance_moderate_conservative": 2.5,
     "enable_navi_time_distance_control": false
   },
+  "lane_change_joint_decision": {
+    "q_ego_ref_x": 0.2,
+    "q_ego_ref_y": 0.2,
+    "q_ego_ref_theta": 20.0,
+    "q_ego_ref_delta": 1.0,
+    "q_ego_ref_vel": 0.3,
+    "q_ego_ref_acc": 0.05,
+    "q_obs_ref_x": 0.2,
+    "q_obs_ref_y": 0.2,
+    "q_obs_ref_theta": 0.1,
+    "q_obs_ref_delta": 0.3,
+    "q_obs_ref_vel": 0.1,
+    "q_obs_ref_acc": 1.0,
+    "obs_reaction_decay_time": 1.0,
+    "obs_keep_ref_factor": 10.0,
+    "curv_factor": 0.33,
+    "three_disc_safe_dist": 0.7,
+    "q_three_disc_safe_dist_weight": 2.0,
+    "road_boundary_safe_dist": 0.5,
+    "q_road_boundary_weight": 2.0,
+    "q_ego_acc_weight": 4.0,
+    "q_ego_jerk_weight": 20.0,
+    "q_ego_omega_weight": 100.0,
+    "q_ego_delta_weight": 100.0,
+    "q_obs_jerk_weight": 30.0,
+    "q_obs_omega_weight": 80.0,
+    "q_ego_acc_bound_weight": 1600.0,
+    "ego_acc_max": 1.2,
+    "ego_acc_min": -3.0,
+    "q_ego_jerk_bound_weight": 800.0,
+    "ego_jerk_max": 2.0,
+    "ego_jerk_min": -2.5,
+    "q_hard_halfplane_weight": 0.0,
+    "hard_halfplane_dist": 3.5,
+    "halfplane_cost_allocation_ratio": 0.6,
+    "q_soft_halfplane_weight": 0.5,
+    "soft_halfplane_s0": 5.5,
+    "soft_halfplane_tau": 0.5,
+    "lc_thw": 0.5,
+    "soft_halfplane_cost_allocation_ratio": 0.8
+  },
   "lat_motion_ilqr": {
     "pass_acc_mode": true,
     "warm_start_enable": true,
@@ -1363,6 +1404,23 @@
       "lateral_brake_min": 2.5,
       "lateral_brake_max": 1.1,
       "lateral_miu": 0.8
+    }
+ },
+ "lane_change_safety_check": {
+    "exe_ttc_ratio": 0.7,
+    "ttc_decay_factor": 0.90,
+    "press_line_ratio_threshold": 0.1,
+    "rear_close_distance_threshold": 6.0,
+    "rear_close_speed_diff_threshold": 1.5,
+    "exe_rear_speed_ratio": 1.6,
+    "exe_rear_distance_ratio": 0.8,
+    "diff_speed_init_ttc_map": {
+      "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
+      "ttc_table":      [0.8, 1.8,  2.5, 4.0,  5.0,  7.0,  7.5,  8.5,  10.0]
+    },
+    "rear_vehicle_speed_min_space_map": {
+      "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
+      "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
     }
   }
 }
