@@ -174,9 +174,21 @@ void RouteInfo::UpdateRouteInfoForNOA(
   // 计算split信息
   CaculateSplitInfo(sdpro_map, current_link, nearest_s, max_search_length);
 
+  double distance_to_next_exchange_region = NL_NMAX;
+  if (!route_info_output_.split_region_info_list.empty()) {
+    distance_to_next_exchange_region = std::min(
+        distance_to_next_exchange_region,
+        route_info_output_.split_region_info_list[0].distance_to_split_point);
+  }
+  if (!route_info_output_.merge_region_info_list.empty()) {
+    distance_to_next_exchange_region = std::min(
+        distance_to_next_exchange_region,
+        route_info_output_.merge_region_info_list[0].distance_to_split_point);
+  }
+  double intersection_search_distance = std::min(distance_to_next_exchange_region, 250.0);
   if (IsClosingIntersectionEntrance(
           link, sdpro_map, route_info_output_.current_segment_passed_distance,
-          250.0)) {
+          intersection_search_distance)) {
     ILOG_ERROR << "Trigger exit NOA for closing intersection!!!";
     route_info_output_.reset();
     return;
@@ -2063,14 +2075,27 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // 从最后一个exchange region开始向前优化
     // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
     int iteration_num = 0;
+    bool is_need_optimize = true;
     for (int i = 0; i < std::min<int>(valid_exchange_regions.size() - 1, 2);
          ++i) {
+      is_need_optimize =
+          !IsClosingTollStationEntrance(
+              current_link_, sdpro_map_,
+              route_info_output_.current_segment_passed_distance,
+              valid_exchange_regions[i].distance_to_split_point) &&
+          !IsClosingIntersectionEntrance(
+              current_link_, sdpro_map_,
+              route_info_output_.current_segment_passed_distance,
+              valid_exchange_regions[i].distance_to_split_point);
       if (valid_exchange_regions[i].is_ramp_split ||
           valid_exchange_regions[i].split_direction == SPLIT_RIGHT &&
               valid_exchange_regions[i].recommend_lane_num[4].total_lane_num >
                   valid_exchange_regions[i]
                       .recommend_lane_num[3]
                       .total_lane_num) {
+        if (!is_need_optimize) {
+          break;
+        }
         iteration_num = i;
       }
     }
@@ -5027,24 +5052,7 @@ bool RouteInfo::IsClosingIntersectionEntrance(
                    iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY &&
                next_link->link_class() !=
                    iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY);
-          bool is_exchange_region_before_intersection = false;
-          double distance_to_next_exchange_region = NL_NMAX;
-          if (!route_info_output_.split_region_info_list.empty()) {
-            distance_to_next_exchange_region =
-                std::min(distance_to_next_exchange_region,
-                         route_info_output_.split_region_info_list[0]
-                             .distance_to_split_point);
-          }
-          if (!route_info_output_.merge_region_info_list.empty()) {
-            distance_to_next_exchange_region =
-                std::min(distance_to_next_exchange_region,
-                         route_info_output_.merge_region_info_list[0]
-                             .distance_to_split_point);
-          }
-          is_exchange_region_before_intersection =
-              distance_to_next_exchange_region < distance_to_this_point;
-          if (is_link_class_not_expressway &&
-              !is_exchange_region_before_intersection) {
+          if (is_link_class_not_expressway) {
             return true;
           }
         }
