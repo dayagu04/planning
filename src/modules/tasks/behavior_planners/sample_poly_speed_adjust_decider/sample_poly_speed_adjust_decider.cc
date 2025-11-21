@@ -218,7 +218,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   }
   double speed_differ_gain = GetStoplineSpdDifferGain();
   int count = static_cast<int>(evaulation_t_ / kEvaluationStep);
-  if(traffic_density_status_ == Congested){
+  if(traffic_density_status_ == Congested || is_not_use_gap_select){
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
   if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
@@ -702,8 +702,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
                      boundary_merge_point.y - ego_cart_point_.second);
       return true;
     } else {
-      if (distance_to_merge_point_ < distance_to_road_merge_ &&
-          distance_to_merge_point_ < distance_to_road_split_ &&
+      if (distance_to_merge_point_ < (distance_to_road_merge_ + kZeroEpsilon) &&
+          distance_to_merge_point_ < (distance_to_road_split_ + kZeroEpsilon) &&
           distance_to_merge_point_ < kDistanceToMapRequestPoint &&
           ((is_left_edge_side_lane &&
             merge_point_info.merge_type == LEFT_MERGE) ||
@@ -743,8 +743,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       return true;
     } else {
       if (is_ramp_to_main) {
-        if (distance_to_merge_point_ < distance_to_road_merge_ &&
-            distance_to_merge_point_ < distance_to_road_split_ &&
+        if (distance_to_merge_point_ < (distance_to_road_merge_ + kZeroEpsilon) &&
+            distance_to_merge_point_ < (distance_to_road_split_ + kZeroEpsilon) &&
             distance_to_merge_point_ < kDistanceToMapRequestPoint &&
             ((is_left_edge_side_lane &&
               merge_point_info.merge_type == LEFT_MERGE) ||
