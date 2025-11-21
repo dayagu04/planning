@@ -356,6 +356,14 @@ void Preprocess::SyncParameters(const bool is_simulation) {
   ADAS_JSON_READ_VALUE(
       GetContext.mutable_param()->kickdown_warning_distance_thr, double,
       "kickdown_warning_distance_thr");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_tlc_far_, double,
+                       "ldw_tlc_far_");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_tlc_medium_, double,
+                       "ldw_tlc_medium_");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ldw_tlc_near_, double,
+                       "ldw_tlc_near_");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_soildline_switch, bool,
+                       "elk_soildline_switch");    
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }

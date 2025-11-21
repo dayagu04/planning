@@ -158,6 +158,8 @@ struct Parameters {
   //临时测试，记得删
   bool elk_roadedge_testswitch_temp_ = false;
   bool ldp_handoff_state_switch_test_ = false;
+  bool elk_soildline_switch = true;  // elk仅实线场景功能开关
+
   //以下定义了enable/disable条件中油门踏板变化率的阈值条件
   double elk_enable_accel_pedal_pos_rate = 30.0;
   double elk_disable_accel_pedal_pos_rate = 70.0;
@@ -170,6 +172,11 @@ struct Parameters {
   double ldw_enable_accel_pedal_pos_rate_dur = 1.0;
   double kickdown_warning_time = 5.0;  // 打断条件单次最大报警时长，单位：s
   double kickdown_warning_distance_thr = 0.8;  // 打断条件的最晚报警线，单位：m
+
+  //
+  double ldw_tlc_far_ = 1.0;  // 针对道线触发报警的高灵敏度阈值，单位：s
+  double ldw_tlc_medium_ = 0.6;  // 针对道线触发报警的中灵敏度阈值，单位：s
+  double ldw_tlc_near_ = 0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
 
   // test value
   int meb_request_status_const = 0;

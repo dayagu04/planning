@@ -2141,7 +2141,8 @@ void ElkCore::RunOnce(void) {
              (GetContext.get_road_info()->current_lane.left_line.line_type ==
               context::Enum_LineType::Enum_LineType_Solid) &&
              (vehicle_service_output_info_ptr->left_turn_light_state ==
-              false)) {
+              false) &&
+             (GetContext.get_param()->elk_soildline_switch == true)) {
     elk_left_intervention_ = true;
   } else {
     elk_left_intervention_ = false;
@@ -2217,7 +2218,8 @@ void ElkCore::RunOnce(void) {
              (GetContext.get_road_info()->current_lane.right_line.line_type ==
               context::Enum_LineType::Enum_LineType_Solid) &&
              (vehicle_service_output_info_ptr->right_turn_light_state ==
-              false)) {
+              false) &&
+             (GetContext.get_param()->elk_soildline_switch == true)) {
     elk_right_intervention_ = true;
   } else {
     elk_right_intervention_ = false;

@@ -177,5 +177,10 @@
   "ihc_fault_code_maskcode": 65535,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
-  "elk_roadedge_testswitch_temp_":false
+  "elk_roadedge_testswitch_temp_":false,
+  "ldp_handoff_state_switch_test_":true,
+  "elk_soildline_switch": true,
+  "ldw_tlc_far_":1.0,
+  "ldw_tlc_medium_":0.6,
+  "ldw_tlc_near_":0.2
 }

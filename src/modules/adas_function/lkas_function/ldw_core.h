@@ -91,9 +91,9 @@ class LdwCore {
   uint32 ldw_right_kickdown_code_ = 255;
   uint32 UpdateLdwRightKickDownCode(void);
 
-  double ldw_tlc_far_ = 1.0;  // 针对道线触发报警的高灵敏度阈值，单位：s
-  double ldw_tlc_medium_ = 0.6;  // 针对道线触发报警的中灵敏度阈值，单位：s
-  double ldw_tlc_near_ = 0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
+//   double ldw_tlc_far_ = 1.0;  // 针对道线触发报警的高灵敏度阈值，单位：s
+//   double ldw_tlc_medium_ = 0.6;  // 针对道线触发报警的中灵敏度阈值，单位：s
+//   double ldw_tlc_near_ = 0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
   double ldw_tlc_threshold_ = 0.6;
   double UpdateTlcThreshold(void);
 
