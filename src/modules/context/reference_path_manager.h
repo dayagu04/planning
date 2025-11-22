@@ -7,6 +7,7 @@
 #include "ego_planning_config.h"
 #include "lane_reference_path.h"
 #include "session.h"
+#include "src/modules/common/math/filter/mean_filter.h"
 
 namespace planning {
 
@@ -34,10 +35,17 @@ class ReferencePathManager {
   std::shared_ptr<ReferencePath> make_map_lane_reference_path(
       int virtual_lane_id);
 
+  std::shared_ptr<planning::planning_math::MeanFilter> &MutableSmoothBoundFilter() {
+    return smooth_bound_filter_;
+  }
+
  private:
   planning::framework::Session* session_;
   std::map<ReferencePathKeyType, std::shared_ptr<ReferencePath>>
       reference_paths_;
+  // smooth
+  int last_current_lane_virtual_id_ = INT_MAX;
+  std::shared_ptr<planning::planning_math::MeanFilter> smooth_bound_filter_ = nullptr;
 };
 
 }  // namespace planning

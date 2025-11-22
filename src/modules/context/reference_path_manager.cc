@@ -8,9 +8,12 @@
 
 namespace planning {
 
+static constexpr int kSmoothBoundFilterWindowSize = 10;
+
 ReferencePathManager::ReferencePathManager(
     planning::framework::Session *session) {
   session_ = session;
+  smooth_bound_filter_ = std::make_shared<planning::planning_math::MeanFilter>(kSmoothBoundFilterWindowSize);
 }
 
 ReferencePathManager::~ReferencePathManager() {}
@@ -54,6 +57,10 @@ bool ReferencePathManager::update() {
   auto &fix_lane = virtual_lane_manager->get_last_fix_lane();
   assert(current_lane != nullptr);
   auto lane_virtual_id = current_lane->get_virtual_id();
+  if (last_current_lane_virtual_id_ != lane_virtual_id) {
+    smooth_bound_filter_->Reset();
+  }
+  last_current_lane_virtual_id_ = lane_virtual_id;
   if (!get_reference_path_by_lane(lane_virtual_id, true)) {
     ILOG_INFO << "--------- for current_lane: update" << lane_virtual_id;
     return false;

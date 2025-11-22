@@ -46,15 +46,19 @@ struct ReferencePathCurveInfo {
   };
 
   CurveType curve_type = CurveType::STRAIGHT;
-  bool is_left = false;                 // 是否大曲率左弯
-  bool is_right = false;                // 是否大曲率右弯
-  double start_s = 0.0;                 // 大曲率起始纵向位置
-  double end_s = 0.0;                   // 大曲率结束纵向位置
-  double min_radius = 1e4;              // 最小曲率半径
-  double max_curve = 1e-4;              // 最大曲率值
-  double max_curve_s = 0.0;             // 最大曲率对应的纵向位置
-  std::vector<double> curve_vec;        // 曲率序列
-  std::vector<double> s_vec;            // 对应的纵向距离序列
+  bool is_left = false;                                  // 是否左弯
+  bool is_right = false;                                 // 是否右弯
+  double start_s = 0.0;                                  // 大曲率起始纵向位置
+  double end_s = 0.0;                                    // 大曲率结束纵向位置
+  double max_curve = 1e-4;                               // 最大曲率值
+  double max_curve_s = 0.0;                              // 最大曲率对应的纵向位置
+  double min_radius = 1e4;                               // 最小曲率半径
+  std::pair<double, double> left_s_range{0.0, 0.0};      // 左弯<起始 - 结束>纵向位置
+  std::pair<double, double> right_s_range{0.0, 0.0};     // 右弯<起始 - 结束>纵向位置
+  std::pair<double, double> left_max_curve{1e-4, 0.0};   // 左弯<最大曲率 - 对应纵向位置>
+  std::pair<double, double> right_max_curve{1e-4, 0.0};  // 右弯<最大曲率 - 对应纵向位置>
+  std::vector<double> curve_vec;                         // 曲率序列
+  std::vector<double> s_vec;                             // 对应的纵向距离序列
 
   void Clear() {
     curve_type = CurveType::STRAIGHT;
@@ -65,6 +69,10 @@ struct ReferencePathCurveInfo {
     min_radius = 1e4;
     max_curve = 1e-4;
     max_curve_s = 0.0;
+    left_s_range = std::make_pair(0.0, 0.0);
+    right_s_range = std::make_pair(0.0, 0.0);
+    left_max_curve = std::make_pair(1e-4, 0.0);
+    right_max_curve = std::make_pair(1e-4, 0.0);
     curve_vec.clear();
     s_vec.clear();
   }
@@ -210,7 +218,7 @@ class ReferencePath {
   // smooth
   void InitReferencePathSmoother();
 
-  bool UpdateReferencePath();
+  bool UpdateReferencePath(const bool is_need_smooth);
 
   void CalculateValidLaneLineLength();
 

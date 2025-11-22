@@ -759,12 +759,11 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
         //   HandleRefPathOffset(traj_points,
         //       lane_change_decider_output.lateral_close_boundary_offset);
         // } else {
-        if (ref_curve_info_.curve_type ==
-            ReferencePathCurveInfo::CurveType::BIG_CURVE) {
-          double compensation_buffer =
-              interp(ref_curve_info_.min_radius, config_.curv_bp,
-                     config_.lat_compensation_buffer);
-          const double change_rate = 0.05;
+        const double change_rate = 0.05;
+        double compensation_buffer = 0.0;
+        if (ref_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+          compensation_buffer = interp(ref_curve_info_.min_radius, config_.curv_bp,
+              config_.lat_compensation_buffer);
           if (ref_curve_info_.is_left) {
             if (last_compensation_buffer_ < 0) {
               last_compensation_buffer_ = 0.0;
@@ -780,11 +779,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
                                        last_compensation_buffer_ + change_rate,
                                        last_compensation_buffer_ - change_rate);
           }
-          ref_lat_offset += compensation_buffer;
-          last_compensation_buffer_ = compensation_buffer;
         } else {
-          last_compensation_buffer_ = 0.0;
+          if (last_compensation_buffer_ > 1e-6) {
+            compensation_buffer = std::max(last_compensation_buffer_ - change_rate, 0.);
+          } else if (last_compensation_buffer_ < -1e-6) {
+            compensation_buffer = std::min(last_compensation_buffer_ + change_rate, 0.);
+          } else {
+            compensation_buffer = 0.0;
+          }
         }
+        ref_lat_offset += compensation_buffer;
+        last_compensation_buffer_ = compensation_buffer;
         HandleRefPathOffset(traj_points, front_axis_ref_path, ref_lat_offset);
         // }
       } else {
