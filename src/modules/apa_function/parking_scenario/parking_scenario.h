@@ -341,6 +341,17 @@ class ParkingScenario {
     int gear_change_count = 0;
   };
 
+  struct CalRemainDistParams {
+    double static_lon_buffer = 0.3;
+    double static_body_lat_buffer = 0.06;
+    double static_mirror_lat_buffer = 0.06;
+    double dynamic_lon_buffer = 1.168;
+    double dynamic_body_lat_buffer = 1.168;
+    double dynamic_mirror_lat_buffer = 1.168;
+    bool only_check_mirror = false;
+    UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
+  };
+
   enum ParkingStatus {
     PARKING_IDLE,        // not in control
     PARKING_RUNNING,     // in control and no replan
@@ -476,9 +487,10 @@ class ParkingScenario {
       const double dynamic_body_lat_buffer = 1.168,
       const double dynamic_mirror_lat_buffer = 1.168,
       const bool only_check_mirror = false,
-      const UseObsHeightMethod use_obs_height_method =
-          UseObsHeightMethod::HIGH,
+      const UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH,
       const GJKrequestFrom gjk_request_from = GJKrequestFrom::OTHER);
+
+  virtual const double CalRemainDistFromObs(const CalRemainDistParams &params);
 
   virtual const double CalRemainDistFromPlanPathDangerous(
       const double static_lon_buffer = 0.0,

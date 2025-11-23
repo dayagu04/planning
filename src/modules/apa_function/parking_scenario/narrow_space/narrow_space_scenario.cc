@@ -28,9 +28,9 @@
 #include "polygon_base.h"
 #include "pose2d.h"
 #include "spiral_typedefs.h"
+#include "src/modules/apa_function/util/apa_utils.h"
 #include "transform2d.h"
 #include "utils_math.h"
-#include "src/modules/apa_function/util/apa_utils.h"
 
 namespace planning {
 namespace apa_planner {
@@ -358,12 +358,15 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 }
 
 const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
-  const AstarParkingConfig& param = apa_param.GetParam().astar_config;
-  return CalRemainDistFromObs(
-      param.static_occ_lon_buffer, param.static_occ_lat_buffer,
-      param.static_occ_lat_buffer, param.moving_occ_lon_buffer,
-      param.moving_occ_lat_buffer, param.moving_occ_lat_buffer, false,
-      UseObsHeightMethod::HIGH);
+  CalRemainDistParams params;
+  EgoInfoUnderSlot& ego_info_under_slot =
+      apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
+      ego_info_under_slot.slot_occupied_ratio > 0.5) {
+    params.use_obs_height_method = UseObsHeightMethod::HIGH_MID_LOW;
+    return CalRemainDistFromObs(params);
+  }
+  return CalRemainDistFromObs(params);
 }
 
 void NarrowSpaceScenario::Log() const {

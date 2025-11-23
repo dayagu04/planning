@@ -284,7 +284,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 5;           // 行数
+  constexpr size_t kNumberRows = 8;           // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
@@ -369,7 +369,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 5;           // 行数
+  constexpr size_t kNumberRows = 8;           // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
