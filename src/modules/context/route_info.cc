@@ -185,7 +185,8 @@ void RouteInfo::UpdateRouteInfoForNOA(
         distance_to_next_exchange_region,
         route_info_output_.merge_region_info_list[0].distance_to_split_point);
   }
-  double intersection_search_distance = std::min(distance_to_next_exchange_region, 250.0);
+  double intersection_search_distance =
+      std::min(distance_to_next_exchange_region, 250.0);
   if (IsClosingIntersectionEntrance(
           link, sdpro_map, route_info_output_.current_segment_passed_distance,
           intersection_search_distance)) {
@@ -2475,6 +2476,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
 
     const auto& lane_nums = relative_id_lane->get_lane_nums();
+    if (lane_nums.empty()) {
+      continue;
+    }
     // TODO(fengwang31):需要考虑这个车道数的准确性
     // 现在基于感知车道数不准的情况下：当感知车道数与地图车道数对不上时，就往一个方向变道。
 
