@@ -789,6 +789,26 @@ void RouteInfo::CaculateSplitInfo(
     for (int i = 0; i < split_info.size(); i++) {
       const auto split_link = split_info[i].first;
       if (split_link && split_info[i].second > 0) {
+        if (!split_link) {
+          break;
+        }
+        const auto split_next_link =
+            sdpro_map.GetNextLinkOnRoute(split_link->id());
+        if (!split_next_link) {
+          break;
+        }
+        const auto split_last_link =
+            sdpro_map.GetPreviousLinkOnRoute(split_link->id());
+        if (!split_last_link) {
+          break;
+        }
+        const auto& out_link = split_link->successor_link_ids();
+        auto other_link_id =
+            out_link[0] == split_next_link->id() ? out_link[1] : out_link[0];
+        const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
+        if (!other_link) {
+          break;
+        }
         if (!is_find_first_split_info) {
           route_info_output_.distance_to_first_road_split =
               split_info[i].second;
@@ -806,15 +826,6 @@ void RouteInfo::CaculateSplitInfo(
               CalculateSplitRegionLaneTupoInfo(
                   *split_link, sdpro_map, split_info,
                   route_info_output_.distance_to_first_road_split);
-          const auto split_next_link =
-              sdpro_map.GetNextLinkOnRoute(split_link->id());
-          if (!split_next_link) {
-            break;
-          }
-          const auto& out_link = split_link->successor_link_ids();
-          auto other_link_id =
-              out_link[0] == split_next_link->id() ? out_link[1] : out_link[0];
-          const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
 
           if (split_region_lane_tupo_info.is_valid == true ||
               (split_link != nullptr && other_link != nullptr &&
@@ -893,7 +904,25 @@ void RouteInfo::CaculateSplitInfo(
                   route_info_output_.split_region_info_list[1]
                       .distance_to_split_point;
             }
-
+            // 在存在至少1个交换区fp的情况下，猜测完整的交换区信息
+            if (!route_info_output_.split_region_info_list[0]
+                     .start_fp_point.isEmpty() ||
+                !route_info_output_.split_region_info_list[0]
+                     .end_fp_point.isEmpty()) {
+              route_info_output_.split_region_info_list[0]
+                  .recommend_lane_num[0]
+                  .total_lane_num = split_last_link->lane_num();
+              route_info_output_.split_region_info_list[0]
+                  .recommend_lane_num[1]
+                  .total_lane_num = split_link->lane_num();
+              route_info_output_.split_region_info_list[0]
+                  .recommend_lane_num[2]
+                  .total_lane_num = split_next_link->lane_num();
+              route_info_output_.split_region_info_list[0]
+                  .recommend_lane_num[3]
+                  .total_lane_num = other_link->lane_num();
+              route_info_output_.split_region_info_list[0].is_valid = true;
+            }
             if (route_info_output_.split_region_info_list[0]
                     .start_fp_point.isEmpty()) {
               route_info_output_.split_region_info_list[0]
