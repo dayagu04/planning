@@ -69,9 +69,11 @@ class SpeedLimitDecider : public Task {
 
   bool HasTriggeredVRU(const std::map<int32_t, VRURoundInfo> &vru_round_map);
 
-  double JudgeCurvBySDProMap();
+  double JudgeCurvBySDProMap(double search_dis);
 
   double GetRampVelLimit();
+
+  bool IsNearMergeCancelRampVelLimit();
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
@@ -88,6 +90,11 @@ class SpeedLimitDecider : public Task {
   pnc::filters::SlopeFilter vel_slope_filter_function_fading_away_;
   double last_vel_function_fading_away_;
   double v_cruise_limit_;  // kph
+
+  std::deque<double> dis_to_merge_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
+  double distance_to_merge_ = NL_NMAX;
+  int pass_merge_counter_ = 0;
+  bool pass_merge_counter_has_set_ = false;
 
   // used in intersection speed limit
   planning::common::IntersectionState last_intersection_state_ =

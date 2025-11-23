@@ -60,6 +60,11 @@ constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 constexpr double kEWMAAlpha = 0.3;
 constexpr double kSSharpBendCount = 3;
+constexpr double kFarEnoughDisToMerge = 500.0;
+constexpr double kCloseDisToMergeCancelVLimit = 200.0;
+constexpr double kNearMergeCancelVLimitCurvRadius = 900.0;
+constexpr double kFarAwayMergeCounterNums = 50;
+constexpr double kShortDisReachMerge = 3.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -391,7 +396,7 @@ bool SpeedLimitDecider::IsSSharpBend(
   return false;
 }
 
-double SpeedLimitDecider::JudgeCurvBySDProMap() {
+double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
   if (!speed_limit_config_.enable_sdmap_curv_v_adjust) {
     return 300.0;
   }
@@ -423,8 +428,7 @@ double SpeedLimitDecider::JudgeCurvBySDProMap() {
   }
   std::vector<std::pair<double, double>> curv_list;
   curv_list =
-      sdpro_map.GetCurvatureList(current_segment->id(), nearest_s,
-                                 speed_limit_config_.search_sdmap_curv_dis);
+      sdpro_map.GetCurvatureList(current_segment->id(), nearest_s, search_dis);
   double min_curv_radius = 10000.0;
   for (int i = 0; i < curv_list.size(); i++) {
     double one_curv_radius = 1.0 / (std::abs(curv_list[i].second));
@@ -464,6 +468,59 @@ double SpeedLimitDecider::GetRampVelLimit() {
   }
   return ramp_v_limit;
 
+}
+
+bool SpeedLimitDecider::IsNearMergeCancelRampVelLimit() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto &route_info_output =
+      environmental_model.get_route_info()->get_route_info_output();
+  double dis_to_merge =
+      route_info_output.merge_region_info_list.empty()
+          ? NL_NMAX
+          : route_info_output.merge_region_info_list[0].distance_to_split_point;
+  if (!route_info_output.is_ramp_merge_to_road_on_expressway) {
+    dis_to_merge = NL_NMAX;
+  }
+  dis_to_merge_window_.pop_front();
+  dis_to_merge_window_.push_back(dis_to_merge);
+  if (dis_to_merge_window_[0] < kFarEnoughDisToMerge && dis_to_merge_window_[1] < kFarEnoughDisToMerge &&
+      dis_to_merge_window_[2] < kFarEnoughDisToMerge) {
+    distance_to_merge_ = dis_to_merge;
+  } else if (dis_to_merge_window_[0] > kFarEnoughDisToMerge && dis_to_merge_window_[1] > kFarEnoughDisToMerge &&
+    dis_to_merge_window_[2] > kFarEnoughDisToMerge) {
+    distance_to_merge_ = NL_NMAX;
+  }
+  JSON_DEBUG_VALUE("distance_to_merge", distance_to_merge_);
+  if (route_info_output.is_on_ramp) {
+    if (distance_to_merge_ < kCloseDisToMergeCancelVLimit &&
+      JudgeCurvBySDProMap(distance_to_merge_) > kNearMergeCancelVLimitCurvRadius) {
+      pass_merge_counter_ = 0;
+      pass_merge_counter_has_set_ = false;
+      return true;
+    }
+  } else {
+    //ego is going to pass merge point
+    if (distance_to_merge_ < kShortDisReachMerge && dis_to_merge > kFarEnoughDisToMerge) {
+      //this counter mainly solve the problem of gaode vlimit update late
+      if (pass_merge_counter_has_set_) {
+        pass_merge_counter_--;
+      } else {
+        pass_merge_counter_has_set_ = true;
+        pass_merge_counter_ = kFarAwayMergeCounterNums;
+      }
+      return true;
+    } else if (distance_to_merge_ > kFarEnoughDisToMerge && pass_merge_counter_ > 0) {
+      pass_merge_counter_--;
+      return true;
+    } else {
+      pass_merge_counter_ = 0;
+      pass_merge_counter_has_set_ = false;
+      return false;
+    }
+  }
+  pass_merge_counter_ = 0;
+  pass_merge_counter_has_set_ = false;
+  return false;
 }
 
 void SpeedLimitDecider::CalculateCurveSpeedLimit() {
@@ -704,6 +761,31 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     v_cruise_limit_ = v_limit_gaode;
   }
 
+  if (IsNearMergeCancelRampVelLimit() && current_segment != nullptr) {
+    if (!(current_segment->link_type() & iflymapdata::sdpro::LinkType::LT_IC) &&
+        !(current_segment->link_type() & iflymapdata::sdpro::LinkType::LT_JCT)) {
+        v_cruise_limit_ = current_segment->speed_limit();
+    } else {
+      auto link_id_prev = current_segment->id();
+      const iflymapdata::sdpro::LinkInfo_Link* next_link = nullptr;
+      do {
+        next_link = sdpro_map.GetNextLinkOnRoute(link_id_prev);
+        if (next_link == nullptr) {
+          break;
+        } else if (!(next_link->link_type() & iflymapdata::sdpro::LinkType::LT_IC) &&
+                   !(next_link->link_type() & iflymapdata::sdpro::LinkType::LT_JCT)) {
+          v_cruise_limit_ = next_link->speed_limit();
+          break;
+        } else {
+          link_id_prev = next_link->id();
+        }
+
+      } while (true);
+
+    }
+    return;
+  }
+
   const auto virtual_lane_manager =
       environmental_model.get_virtual_lane_manager();
   bool is_continuous_ramp = virtual_lane_manager->is_continuous_ramp();
@@ -711,8 +793,8 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_target_ramp = 40;
   double v_target_near_ramp_zone = 40;
   double pre_acc_dis = speed_limit_config_.pre_accelerate_distance_for_merge;
-  // bool sdmap_has_curv = JudgeCurvBySDProMap();
-  double sdpro_min_curv = JudgeCurvBySDProMap();
+  double search_sdmap_curv_dis = speed_limit_config_.search_sdmap_curv_dis;
+  double sdpro_min_curv = JudgeCurvBySDProMap(search_sdmap_curv_dis);
   // 通过接口获取是否在匝道的信息
   if (is_on_ramp) {
     if (dis_to_merge > pre_acc_dis || is_continuous_ramp) {
@@ -1885,7 +1967,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
     construction_manual_intervention_detected_ = true;
   }
   last_v_cruise_fsm_ = v_cruise_fsm;
-  
+
   // get lateral path
   const auto &planned_kd_path =
       session_->planning_context().motion_planner_output().lateral_path_coord;
