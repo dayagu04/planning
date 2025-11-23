@@ -1847,8 +1847,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             merge_region_info.distance_to_split_point;
       }
 
-      bool is_calculate_feasible_lane;
-      if (merge_region_info.is_other_merge_to_road == true) {
+      bool is_calculate_feasible_lane = false;
+      if (merge_region_info.is_other_merge_to_road) {
         is_calculate_feasible_lane =
             CalculateOtherMergeRoadFeasibleLane(&merge_region_info);
       } else {
