@@ -17,7 +17,8 @@ MapRequest::MapRequest(
     std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
     std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr)
     : LaneChangeRequest(session, virtual_lane_mgr, lane_change_lane_mgr) {}
-void MapRequest::Update(int lc_status, double lc_map_tfinish, const RequestSource request_source) {
+void MapRequest::Update(int lc_status, double lc_map_tfinish,
+                        const RequestSource request_source) {
   ILOG_INFO << "MapRequest::update";
   // 检查是否有拨杆信息
   lc_request_cancel_reason_ = IntCancelReasonType::NO_CANCEL;
@@ -50,7 +51,8 @@ void MapRequest::Update(int lc_status, double lc_map_tfinish, const RequestSourc
   if (is_mlc_enable) {
     GenerateMLCRequest();
   } else {
-    if (request_type_ != NO_CHANGE && !is_last_mlc_enable_ && request_source == MAP_REQUEST) {
+    if (request_type_ != NO_CHANGE && !is_last_mlc_enable_ &&
+        request_source == MAP_REQUEST && lc_status <= kLaneChangePropose) {
       Finish();
       set_target_lane_virtual_id(
           lane_change_lane_mgr_->origin_lane_virtual_id());
@@ -98,8 +100,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     target_lane = virtual_lane_mgr_->get_right_lane();
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_DIVERGE;
   if (is_avoidance_MLC && suppression_counter > 0) {
     ILOG_INFO
         << "[MapRequest::update] Suppressing avoidance MLC due to timeout";
@@ -319,8 +323,10 @@ void MapRequest::GenerateMLCRequest() {
     }
   }
   const bool is_avoidance_MLC =
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_MERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_DIVERGE;
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_MERGE ||
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_DIVERGE;
   if (is_avoidance_MLC && !is_in_avoidance_mlc) {
     is_in_avoidance_mlc = true;  // 设置状态标志
     avoidance_MLC_counter = 1;   // 启动超时计时器
