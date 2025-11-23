@@ -61,10 +61,10 @@ constexpr double kSamplingStep = 2.0;
 constexpr double kEWMAAlpha = 0.3;
 constexpr double kSSharpBendCount = 3;
 constexpr double kFarEnoughDisToMerge = 500.0;
-constexpr double kCloseDisToMergeCancelVLimit = 200.0;
+constexpr double kCloseDisToMergeCancelVLimit = 120.0;
 constexpr double kNearMergeCancelVLimitCurvRadius = 900.0;
 constexpr double kFarAwayMergeCounterNums = 50;
-constexpr double kShortDisReachMerge = 3.0;
+constexpr double kShortDisReachMerge = 6.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -492,8 +492,7 @@ bool SpeedLimitDecider::IsNearMergeCancelRampVelLimit() {
   }
   JSON_DEBUG_VALUE("distance_to_merge", distance_to_merge_);
   if (route_info_output.is_on_ramp) {
-    if (distance_to_merge_ < kCloseDisToMergeCancelVLimit &&
-      JudgeCurvBySDProMap(distance_to_merge_) > kNearMergeCancelVLimitCurvRadius) {
+    if (distance_to_merge_ < kCloseDisToMergeCancelVLimit) {
       pass_merge_counter_ = 0;
       pass_merge_counter_has_set_ = false;
       return true;
