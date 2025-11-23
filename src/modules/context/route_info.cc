@@ -541,6 +541,7 @@ void RouteInfo::CaculateMergeInfo(
     const iflymapdata::sdpro::LinkInfo_Link* seg_of_first_road_merge = nullptr;
     const iflymapdata::sdpro::LinkInfo_Link* next_seg_of_first_road_merge =
         nullptr;
+    const iflymapdata::sdpro::LinkInfo_Link* merge_seg_last_other_seg = nullptr;
     int traverse_num = 0;
     bool is_find_first_merge_onfo = false;
     for (int i = 0; i < merge_info.size(); i++) {
@@ -556,12 +557,29 @@ void RouteInfo::CaculateMergeInfo(
         if (!merge_seg_last_seg) {
           break;
         }
-        const auto& merge_seg_last_other_seg_id =
-            merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
-                ? merge_seg->predecessor_link_ids()[1]
-                : merge_seg->predecessor_link_ids()[0];
-        const auto& merge_seg_last_other_seg =
-            sdpro_map.GetLinkOnRoute(merge_seg_last_other_seg_id);
+        if (merge_seg->predecessor_link_ids().size() == 2) {
+          const auto& merge_seg_last_other_seg_id =
+              merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
+                  ? merge_seg->predecessor_link_ids()[1]
+                  : merge_seg->predecessor_link_ids()[0];
+          merge_seg_last_other_seg =
+              sdpro_map.GetLinkOnRoute(merge_seg_last_other_seg_id);
+        } else if (merge_seg->predecessor_link_ids().size() >= 3) {
+          for (int i = 0; i < merge_seg->predecessor_link_ids().size(); i++) {
+            if (merge_seg->predecessor_link_ids()[i] !=
+                merge_seg_last_seg->id()) {
+              merge_seg_last_other_seg = sdpro_map.GetLinkOnRoute(
+                  merge_seg->predecessor_link_ids()[i]);
+              if (merge_seg_last_other_seg != nullptr &&
+                  (merge_seg_last_other_seg->link_class() ==
+                       iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+                   merge_seg_last_other_seg->link_class() ==
+                       iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) {
+                break;
+              }
+            }
+          }
+        }
         if (!merge_seg_last_other_seg) {
           break;
         }
@@ -1274,56 +1292,70 @@ RampDirection RouteInfo::MakesureMergeDirection(
   const auto in_link_size = merge_link.predecessor_link_ids().size();
   RampDirection merge_direction = RAMP_NONE;
   const auto& in_link = merge_link.predecessor_link_ids();
+  const iflymapdata::sdpro::LinkInfo_Link* other_link = nullptr;
   // fengwang31(TODO):暂时假设在merge处只有两个方向
-  if (in_link_size == 2) {
-    const auto merge_last_segment =
-        sdpro_map.GetPreviousLinkOnRoute(merge_link.id());
-    if (!merge_last_segment) {
-      std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
-      return merge_direction;
-    }
-    ad_common::math::Vec2d segment_in_route_dir_vec;
-    ad_common::math::Vec2d segment_not_in_route_dir_vec;
-    Point2D anchor_point_of_cur_seg_to_last_seg = {
-        merge_link.points().boot().points().begin()->x(),
-        merge_link.points().boot().points().begin()->y()};
+  const auto merge_last_segment =
+      sdpro_map.GetPreviousLinkOnRoute(merge_link.id());
+  if (!merge_last_segment) {
+    std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
+    return merge_direction;
+  }
+  ad_common::math::Vec2d segment_in_route_dir_vec;
+  ad_common::math::Vec2d segment_not_in_route_dir_vec;
+  Point2D anchor_point_of_cur_seg_to_last_seg = {
+      merge_link.points().boot().points().begin()->x(),
+      merge_link.points().boot().points().begin()->y()};
 
+  if (in_link_size == 2) {
     auto other_link_id =
         in_link[0] == merge_last_segment->id() ? in_link[1] : in_link[0];
-    const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
+    other_link = sdpro_map.GetLinkOnRoute(other_link_id);
     if (other_link == nullptr) {
       return merge_direction;
     }
-
-    const auto& merge_last_segment_enu_point =
-        merge_last_segment->points().boot().points();
-    const auto& other_segment_enu_point = other_link->points().boot().points();
-    const int point_num = merge_last_segment_enu_point.size();
-    const int other_point_num = other_segment_enu_point.size();
-    if (point_num > 1 && other_point_num > 1) {
-      segment_in_route_dir_vec.set_x(
-          merge_last_segment_enu_point[point_num - 2].x() -
-          anchor_point_of_cur_seg_to_last_seg.x);
-      segment_in_route_dir_vec.set_y(
-          merge_last_segment_enu_point[point_num - 2].y() -
-          anchor_point_of_cur_seg_to_last_seg.y);
-      segment_not_in_route_dir_vec.set_x(
-          other_segment_enu_point[other_point_num - 2].x() -
-          anchor_point_of_cur_seg_to_last_seg.x);
-      segment_not_in_route_dir_vec.set_y(
-          other_segment_enu_point[other_point_num - 2].y() -
-          anchor_point_of_cur_seg_to_last_seg.y);
-      if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) >
-          0.0) {
-        merge_direction = RampDirection::RAMP_ON_LEFT;
-      } else {
-        merge_direction = RampDirection::RAMP_ON_RIGHT;
+  } else if (in_link_size >= 3) {
+    for (int i = 0; i < in_link_size; i++) {
+      if (in_link[i] != merge_last_segment->id()) {
+        other_link = sdpro_map.GetLinkOnRoute(in_link[i]);
+        if (other_link != nullptr &&
+            (other_link->link_class() ==
+                 iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
+             other_link->link_class() ==
+                 iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) {
+          break;
+        }
       }
+    }
+  }
+  if (other_link == nullptr) {
+    return merge_direction;
+  }
+  const auto& merge_last_segment_enu_point =
+      merge_last_segment->points().boot().points();
+  const auto& other_segment_enu_point = other_link->points().boot().points();
+  const int point_num = merge_last_segment_enu_point.size();
+  const int other_point_num = other_segment_enu_point.size();
+  if (point_num > 1 && other_point_num > 1) {
+    segment_in_route_dir_vec.set_x(
+        merge_last_segment_enu_point[point_num - 2].x() -
+        anchor_point_of_cur_seg_to_last_seg.x);
+    segment_in_route_dir_vec.set_y(
+        merge_last_segment_enu_point[point_num - 2].y() -
+        anchor_point_of_cur_seg_to_last_seg.y);
+    segment_not_in_route_dir_vec.set_x(
+        other_segment_enu_point[other_point_num - 2].x() -
+        anchor_point_of_cur_seg_to_last_seg.x);
+    segment_not_in_route_dir_vec.set_y(
+        other_segment_enu_point[other_point_num - 2].y() -
+        anchor_point_of_cur_seg_to_last_seg.y);
+    if (segment_in_route_dir_vec.CrossProd(segment_not_in_route_dir_vec) >
+        0.0) {
+      merge_direction = RampDirection::RAMP_ON_LEFT;
     } else {
-      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+      merge_direction = RampDirection::RAMP_ON_RIGHT;
     }
   } else {
-    std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+    std::cout << "enu points error!!!!!!!!!!" << std::endl;
   }
   return merge_direction;
 }
