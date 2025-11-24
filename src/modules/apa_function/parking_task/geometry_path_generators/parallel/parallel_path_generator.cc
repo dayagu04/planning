@@ -542,13 +542,15 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       }
 
       auto col_res = collision_detector_ptr_->UpdateByObsMap(
-          diverse_arc_2, diverse_arc_2.headingA);
+          diverse_arc_2, diverse_arc_2.headingA, true);
       if (col_res.collision_flag ||
           col_res.remain_car_dist >
               col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
         ILOG_INFO << "arc2 collided!";
         continue;
       }
+      diverse_arc_2.dis_ObsPin = col_res.safe_min_dist;
+      ILOG_INFO << "arc2_radius_dis_ObsPin" << arc2_radius;
       ILOG_INFO << "arc2_radius = " << arc2_radius << "calc success!";
       success = true;
       diverse_radius_success = true;

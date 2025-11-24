@@ -67,6 +67,7 @@ class CollisionDetector {
     double remain_dist = 25.0;
     double remain_car_dist = 25.0;
     double remain_obstacle_dist = 25.0;
+    double safe_min_dist = 100.0;
     Eigen::Vector2d col_pt_ego_global;
     Eigen::Vector2d col_pt_ego_local;
     Eigen::Vector2d col_pt_obs_global;
@@ -119,8 +120,8 @@ class CollisionDetector {
   const CollisionResult Update(const pnc::geometry_lib::Arc &arc,
                                const double heading_start);
 
-  const CollisionResult UpdateByObsMap(const pnc::geometry_lib::Arc &arc,
-                                       const double heading_start);
+  const CollisionResult UpdateByObsMap( const pnc::geometry_lib::Arc &arc,
+                                       const double heading_start, bool is_cal_obs_min_distance=false);
 
   const CollisionResult Update(
       const pnc::geometry_lib::LineSegment &line_seg,
