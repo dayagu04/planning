@@ -2394,8 +2394,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
                                    &l_end)) {
       continue;
     }
-    if (s_end < s_start) {
-      continue;
+    bool is_reverse = false;
+    if (s_end < s_start && target_lane_node->node_speed() > 2.0) {
+      is_reverse = true;
     }
     // 静态-动态： cut in - no cut in
     // 创建agent 3个 box 对应的 sl_bd
@@ -2422,7 +2423,14 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
 
     const double target_lane_width = target_lane->width_by_s(agent_s);
     double safety_buff = 0.8;
-    if (target_lane_node->is_static_type()) {  // 静止
+    if(is_reverse){
+      safety_buff = 1.4;//对向车道压线 约剩余空间 3.4 m则忽略
+      bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
+                                     car_width, safety_buff, direction);
+      if (pass_in_lane) {
+        continue;
+      }
+    } else if (target_lane_node->is_static_type()) {  // 静止
       safety_buff = 0.7;
       bool pass_in_lane = PassInLane(target_lane_width, agent_start_bd,
                                      car_width, safety_buff, direction);
@@ -2441,6 +2449,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
         continue;  // 不压线先过滤了
       }
     }
+    bool pass_by_reverse = PassInLane(target_lane_width, agent_start_bd,
+      car_width, safety_buff, direction);
+
     if (agent_s < target_front_s) {
       target_front_node_id = target_lane_node->node_id();
       target_front_s = agent_s;
@@ -4104,6 +4115,10 @@ bool LaneChangeStateMachineManager::
   agent_vel_vec.reserve(iter_count);
   ego_vel_vec.reserve(iter_count);
   rear_distance_vec.reserve(iter_count);
+  bool is_front_reverse = false;
+  if (agent_traj.back().s < agent_traj.front().s && agent_node->node_speed() > 2.0) {
+    is_front_reverse = true;
+  }
 
   for (int i = 0; i < iter_count; i++) {
     double beyond_lane_time = std_beyond_lane_time - i * 0.2;
@@ -4122,6 +4137,10 @@ bool LaneChangeStateMachineManager::
       }
       if (is_executing) {
         box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
+      }
+      if(is_front_reverse){
+        double max_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.back();
+        box_longitudinal_buff = max_check_time * (agent_traj[i].v - ego_trajs_future_[i].v);
       }
     } else {
       // 后车参考安全距离
