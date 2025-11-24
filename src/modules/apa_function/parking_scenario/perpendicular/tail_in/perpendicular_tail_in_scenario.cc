@@ -2398,6 +2398,7 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     } else {
       // keep stuck place logic to let cat stuck and replan reverse path
       if (speed_buffer.enable_keep_stuck_place &&
+          !frame_.stuck_by_dynamic_obs &&
           (frame_.stuck_obs_time > 0.0 ||
            frame_.stuck_dynamic_obs_time > 0.0)) {
         special_stop_flag = true;
