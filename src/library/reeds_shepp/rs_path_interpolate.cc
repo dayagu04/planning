@@ -44,6 +44,9 @@ int RSPathInterpolator::CalcShortestRSPathKappa(
   if (is_same) {
     ILOG_INFO << "same point";
 
+    path->Clear();
+    return 0;
+
     if (!path_info->is_path_valid) {
       CalcRSPathKappa(&path_info->kappa_param, path, inverse_radius);
 
