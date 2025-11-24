@@ -2527,8 +2527,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     // 刚经过split，感知车道数可能还带左侧主路车道，这种情况抑制MLC
     if (current_link_ != nullptr &&
-        left_lane_num >= current_link_->lane_num() &&
-        left_lane_num >= map_lane_num) {
+        left_lane_num > current_link_->lane_num() &&
+        left_lane_num > map_lane_num) {
       continue;
     }
 
