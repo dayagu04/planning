@@ -48,6 +48,8 @@ class TsrCore {
 
   iflyauto::TSRFunctionFSMWorkState tsr_state_ = iflyauto::
       TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+  iflyauto::TSRFunctionFSMWorkState tsr_state_prev_ = iflyauto::
+      TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;  // 上一时刻的状态
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);

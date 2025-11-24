@@ -835,6 +835,37 @@ void TsrCore::SetTsrOutputInfo() {
 }
 
 void TsrCore::ResetRealTimeTsrInfo(void) {
+  // 当状态切换到STANDBY时，清除限速信息、辅助标识牌信息和累计距离
+  if (tsr_state_ == iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY &&
+      tsr_state_prev_ != iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY) {
+    // 清除限速信息
+    tsr_speed_limit_ = 0;
+    speed_limit_set_.clear();
+    end_of_speed_limit_set_.clear();
+    speed_limit_out_flag_ = false;
+    end_of_speed_limit_out_flag_ = false;
+    end_of_speed_sign_value_ = 0;
+    end_of_speed_sign_display_time_ = 0.0;
+    speed_limit_ever_appeared_ = false;
+    end_of_speed_limit_ever_appeared_ = false;
+    has_perception_speed_limit_ = false;
+    has_perception_end_of_speed_limit_ = false;
+    no_speed_limit_duration_time_ = 0.0;
+    no_end_of_speed_limit_duration_time_ = 0.0;
+    speed_limit_renew_flag_ = false;
+    
+    // 清除辅助标识牌信息
+    output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+    realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+    supp_sign_valid_flag_ = false;
+    supp_sign_change_flag_ = false;
+    supp_sign_hold_time_ = 0.0;
+    supp_sign_code_ = 0;
+    
+    // 清除累计距离
+    accumulated_path_length_ = 0.0;
+  }
+  
   // 如果没有检测到实时辅助标识牌，且当前有输出，且持续时间超过2s，则清空输出
   if (realtime_supp_sign_info_ ==
           iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN &&
@@ -863,6 +894,9 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
+
+  // 保存上一时刻的状态
+  tsr_state_prev_ = tsr_state_;
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();
