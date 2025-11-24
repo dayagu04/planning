@@ -924,10 +924,11 @@ void RouteInfo::CaculateSplitInfo(
                       .distance_to_split_point;
             }
             // 在存在至少1个交换区fp的情况下，猜测完整的交换区信息
-            if (!route_info_output_.split_region_info_list[0]
-                     .start_fp_point.isEmpty() ||
-                !route_info_output_.split_region_info_list[0]
-                     .end_fp_point.isEmpty()) {
+            if ((!route_info_output_.split_region_info_list[0]
+                      .start_fp_point.isEmpty() ||
+                 !route_info_output_.split_region_info_list[0]
+                      .end_fp_point.isEmpty()) &&
+                !route_info_output_.split_region_info_list[0].is_valid) {
               route_info_output_.split_region_info_list[0]
                   .recommend_lane_num[0]
                   .total_lane_num = split_last_link->lane_num();
