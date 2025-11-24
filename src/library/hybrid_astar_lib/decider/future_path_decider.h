@@ -46,6 +46,9 @@ class FuturePathDecider : public AstarDecider {
                        const float radius, const bool is_forward,
                        std::vector<Pose2f> *path);
 
+  void Init(const float min_turn_radius, const float sampling_lon_resolution,
+            const AstarRequest &request);
+
  private:
   void CalcDriveDistByLineModel(const Pose2f &ego_pose,
                                 EulerDistanceTransform *edt,
@@ -76,8 +79,6 @@ class FuturePathDecider : public AstarDecider {
 
   void CalcDriveDistByCircleModel(const Pose2f &ego_pose,
                                   EulerDistanceTransform *edt);
-
-  void Clear();
 
   int32_t SearchIdByS(const float s, const std::vector<Eigen::Vector2f> &path);
 
