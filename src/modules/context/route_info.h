@@ -54,7 +54,7 @@ class RouteInfo {
 
   void UpdateMLCInfoDecider(
       std::vector<std::shared_ptr<VirtualLane>> relative_id_lanes);
-      
+
   void UpdateMLCInfoDeciderBaseBaidu(
       const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes);
 
@@ -293,9 +293,9 @@ class RouteInfo {
 
   std::vector<int> CalculateMLCTaskNoLaneNum();
 
-  bool CalculateDistanceToLastSplitPoint(double* dis, const double s) const;
+  bool CalculateDistanceToLastSplitPoint(double* dis, const double s, uint64* split_link_id) const;
 
-  bool CalculateDistanceToLastMergePoint(double* dis, const double s) const;
+  bool CalculateDistanceToLastMergePoint(double* dis, const double s, uint64* merge_link_id) const;
 
   bool CalculateDistanceNextToLastSplitPoint(
       double* dis,
@@ -389,6 +389,9 @@ class RouteInfo {
                                    const std::vector<int>& vec2);
   void ProcessLaneDistance(const std::shared_ptr<VirtualLane>& relative_id_lane,
                            const std::map<int, double>& feasible_lane_distance);
-
+  bool IsClosingTollStationEntrance(
+      const iflymapdata::sdpro::LinkInfo_Link* link,
+      const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link,
+      double max_search_distance);
 };
 }  // namespace planning
