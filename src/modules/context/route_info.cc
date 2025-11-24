@@ -1839,42 +1839,49 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
        (!merge_region_info_list.empty() &&
         split_region_info_list[0].distance_to_split_point <
             merge_region_info_list[0].distance_to_split_point))) {
+    // 判断前方最近的是不是收费站
+    bool is_tollstation_exchange_region = IsClosingTollStationEntrance(
+        current_link_, sdpro_map_,
+        route_info_output_.current_segment_passed_distance,
+        split_region_info_list[0].distance_to_split_point);
     // 处理split信息缺失，向一侧变道的场景
-    for (auto& relative_id_lane : relative_id_lanes) {
-      ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
-    }
-    for (auto& relative_id_lane : relative_id_lanes) {
-      if (relative_id_lane->get_relative_id() != 0) {
-        continue;
+    if (!is_tollstation_exchange_region) {
+      for (auto& relative_id_lane : relative_id_lanes) {
+        ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
       }
-      std::vector<int> task_num;
-      if (split_region_info_list[0].split_direction == SPLIT_LEFT) {
-        task_num.emplace_back(-1);
-        route_info_output_.mlc_request_type_route_info.mlc_request_type =
-            OTHER_TYPE_MLC;
-        route_info_output_.mlc_request_type_route_info
-            .distance_to_exchange_region =
-            split_region_info_list[0].distance_to_split_point;
-      } else if (split_region_info_list[0].split_direction == SPLIT_RIGHT) {
-        task_num.emplace_back(1);
-        route_info_output_.mlc_request_type_route_info.mlc_request_type =
-            OTHER_TYPE_MLC;
-        route_info_output_.mlc_request_type_route_info
-            .distance_to_exchange_region =
-            split_region_info_list[0].distance_to_split_point;
+      for (auto& relative_id_lane : relative_id_lanes) {
+        if (relative_id_lane->get_relative_id() != 0) {
+          continue;
+        }
+        std::vector<int> task_num;
+        if (split_region_info_list[0].split_direction == SPLIT_LEFT) {
+          task_num.emplace_back(-1);
+          route_info_output_.mlc_request_type_route_info.mlc_request_type =
+              OTHER_TYPE_MLC;
+          route_info_output_.mlc_request_type_route_info
+              .distance_to_exchange_region =
+              split_region_info_list[0].distance_to_split_point;
+        } else if (split_region_info_list[0].split_direction == SPLIT_RIGHT) {
+          task_num.emplace_back(1);
+          route_info_output_.mlc_request_type_route_info.mlc_request_type =
+              OTHER_TYPE_MLC;
+          route_info_output_.mlc_request_type_route_info
+              .distance_to_exchange_region =
+              split_region_info_list[0].distance_to_split_point;
+        }
+        if (!task_num.empty()) {
+          relative_id_lane->set_current_tasks(task_num);
+        }
+        feasible_lane_sequence.emplace_back(-1);
+        feasible_lane_distance.clear();
+        mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
+        mlc_decider_route_info_.is_process_split = true;
+        mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
+        mlc_decider_route_info_.static_split_region_info =
+            split_region_info_list[0];
+        route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
+        return;
       }
-      if (!task_num.empty()) {
-        relative_id_lane->set_current_tasks(task_num);
-      }
-      feasible_lane_sequence.emplace_back(-1);
-      feasible_lane_distance.clear();
-      mlc_decider_route_info_.ego_status_on_route = ON_MAIN;
-      mlc_decider_route_info_.is_process_split = true;
-      mlc_decider_route_info_.feasible_lane_sequence = feasible_lane_sequence;
-      mlc_decider_route_info_.static_split_region_info =
-          split_region_info_list[0];
-      route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
-      return;
     }
   }
 
