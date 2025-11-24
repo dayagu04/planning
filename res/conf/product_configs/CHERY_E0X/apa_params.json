@@ -481,13 +481,13 @@
   "mirror_lat_buffer": 0.08,
   "extra_lat_buffer": 0.0,
 
-  "out_slot_body_lat_buffer": 0.20,
+  "out_slot_body_lat_buffer": 0.17,
   "out_slot_mirror_lat_buffer": 0.15,
-  "out_slot_extra_turn_lat_buffer": 0.06,
+  "out_slot_extra_turn_lat_buffer": 0.03,
 
-  "entrance_slot_body_lat_buffer": 0.16,
-  "entrance_slot_mirror_lat_buffer": 0.12,
-  "entrance_slot_extra_turn_lat_buffer": 0.04,
+  "entrance_slot_body_lat_buffer": 0.15,
+  "entrance_slot_mirror_lat_buffer": 0.13,
+  "entrance_slot_extra_turn_lat_buffer": 0.03,
 
   "in_slot_body_lat_buffer": 0.13,
   "in_slot_mirror_lat_buffer": 0.10,
@@ -586,5 +586,18 @@
   "use_specificationer": true,
   "use_dynamic_od_car": false,
   "use_living_things": false,
-  "use_speed_bump": false
+  "use_speed_bump": false,
+
+  "comment_29": "parallel pa plan params",
+  "finish_parallel_pa_lat_err": 0.14,
+  "finish_parallel_pa_lon_err": 0.40,
+  "finish_parallel_pa_heading_err": 5.0,
+  "debug_parallel_angle_threshold": 10.0,
+  "s_turn_plan_pa_buffer": 0.15,
+  "line_plan_pa_buffer": 0.10,
+  "pa_slot_move_distance": 0.25,
+
+  "comment_30": "parallel plan params",
+  "parallel_col_buffer_in_slot": 0.25,
+  "parallel_col_small_buffer_in_slot": 0.16
 }
