@@ -353,21 +353,24 @@ class ParkingScenario {
     bool use_limiter = true;
 
     CalObsRemainDistParams() = default;
-    CalObsRemainDistParams(
-        const double static_lon_buffer, const double static_body_lat_buffer,
-        const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
-        const double dynamic_body_lat_buffer,
-        const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
-        const UseObsHeightMethod use_obs_height_method, const bool use_limiter)
-        : static_lon_buffer(static_lon_buffer),
-          static_body_lat_buffer(static_body_lat_buffer),
-          static_mirror_lat_buffer(static_mirror_lat_buffer),
-          dynamic_lon_buffer(dynamic_lon_buffer),
-          dynamic_body_lat_buffer(dynamic_body_lat_buffer),
-          dynamic_mirror_lat_buffer(dynamic_mirror_lat_buffer),
-          only_check_mirror(only_check_mirror),
-          use_obs_height_method(use_obs_height_method),
-          use_limiter(use_limiter) {}
+    CalObsRemainDistParams(const double _static_lon_buffer,
+                           const double _static_body_lat_buffer,
+                           const double _static_mirror_lat_buffer,
+                           const double _dynamic_lon_buffer,
+                           const double _dynamic_body_lat_buffer,
+                           const double _dynamic_mirror_lat_buffer,
+                           const bool _only_check_mirror,
+                           const UseObsHeightMethod _use_obs_height_method,
+                           const bool _use_limiter)
+        : static_lon_buffer(_static_lon_buffer),
+          static_body_lat_buffer(_static_body_lat_buffer),
+          static_mirror_lat_buffer(_static_mirror_lat_buffer),
+          dynamic_lon_buffer(_dynamic_lon_buffer),
+          dynamic_body_lat_buffer(_dynamic_body_lat_buffer),
+          dynamic_mirror_lat_buffer(_dynamic_mirror_lat_buffer),
+          only_check_mirror(_only_check_mirror),
+          use_obs_height_method(_use_obs_height_method),
+          use_limiter(_use_limiter) {}
     void Set(const double _static_lon_buffer,
              const double _static_body_lat_buffer,
              const double _static_mirror_lat_buffer,
