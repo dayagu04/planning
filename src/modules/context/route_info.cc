@@ -1832,12 +1832,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   std::map<int, double> feasible_lane_distance;
   std::vector<std::pair<std::vector<MLCRequestType>, double>>
       mlc_request_info_list;
-  if ((!split_region_info_list.empty() && !merge_region_info_list.empty() &&
-       split_region_info_list[0].distance_to_split_point <
-           merge_region_info_list[0].distance_to_split_point &&
-       !split_region_info_list[0].is_valid) ||
-      (!split_region_info_list.empty() && merge_region_info_list.empty() &&
-       !split_region_info_list[0].is_valid)) {
+  if (!split_region_info_list.empty() &&
+      split_region_info_list[0].distance_to_split_point < 500.0 &&
+      !split_region_info_list[0].is_valid &&
+      (merge_region_info_list.empty() ||
+       (!merge_region_info_list.empty() &&
+        split_region_info_list[0].distance_to_split_point <
+            merge_region_info_list[0].distance_to_split_point))) {
     // 处理split信息缺失，向一侧变道的场景
     for (auto& relative_id_lane : relative_id_lanes) {
       ProcessLaneDistance(relative_id_lane, feasible_lane_distance);
@@ -1880,12 +1881,15 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 判断前方最近的是不是收费站
   double distance_to_next_split = NL_NMAX;
   double distance_to_next_merge = NL_NMAX;
+  double distance_to_next_exchange_region = NL_NMAX;
   if (!split_region_info_list.empty()) {
     distance_to_next_split = split_region_info_list[0].distance_to_split_point;
   }
   if (!merge_region_info_list.empty()) {
     distance_to_next_merge = merge_region_info_list[0].distance_to_split_point;
   }
+  distance_to_next_exchange_region =
+      std::min(distance_to_next_split, distance_to_next_merge);
   double search_dis = std::min(
       std::min(distance_to_next_split, distance_to_next_merge), 3000.0);
   if (!IsClosingTollStationEntrance(
@@ -2623,6 +2627,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         // 搜索完后仍未找到对应的MLC类型
         if (mlc_type == None_MLC) {
           mlc_type = OTHER_TYPE_MLC;
+          distance_to_lc_exchange_region = distance_to_next_exchange_region;
         }
       }
     }
