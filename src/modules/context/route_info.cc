@@ -4768,8 +4768,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
       return true;
     } else if (lane_info->change_type() ==
                iflymapdata::sdpro::LaneChangeType::BothDirectionMergingLane) {
-      merge_lane_sequence_vec.emplace(1, SPLIT_RIGHT);
-      merge_lane_sequence_vec.emplace(find_fp_lane_num + 1, SPLIT_LEFT);
+      merge_lane_sequence_vec.emplace(find_fp_lane_num, SPLIT_LEFT);
       return true;
     }
   }
