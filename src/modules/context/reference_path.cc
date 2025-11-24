@@ -16,7 +16,6 @@ namespace planning {
 const static double kLaneDropLength = 20.0;
 const static double kEgoBehindLength = -10.0;
 const static double kEgoAheadLength = 90.0;
-const static double kSampleGap = 5.0;
 const static double kDefaultPointsGapLength = 2.0;
 const static double kMinRefVel = 2.0;
 
@@ -65,6 +64,7 @@ void ReferencePath::InitReferencePathSmoother() {
   auto &smoother_config =
       ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
   smoother_config = std::move(smoother_param);
+  sample_gap_ = 5.0;
 }
 
 void ReferencePath::update(planning::framework::Session *session) {
@@ -1248,7 +1248,10 @@ bool ReferencePath::SamplingRefPoints(
       std::min(std::max(init_s + kEgoAheadLength, valid_lane_line_length_ - kLaneDropLength), raw_points_s.back());
   behind_partition_length = start_s;
   ahead_partition_length = raw_points_s.back() - end_s;
-  double ds = kSampleGap;
+  if (session_->is_rads_scene()) {
+    sample_gap_ = 1.0;
+  }
+  double ds = sample_gap_;
   refined_x_vec.reserve(raw_points_x.size());
   refined_y_vec.reserve(raw_points_y.size());
   for (double pt_s = start_s; pt_s < (end_s + 1e-3); pt_s += ds) {
@@ -1276,31 +1279,38 @@ bool ReferencePath::HandleInputData(
   raw_y_vec->Reserve(refined_y_vec.size());
   raw_points_vec.reserve(refined_x_vec.size());
   // set bound
-  auto &reference_path_manager =
-      session_->mutable_environmental_model()->get_reference_path_manager();
-  auto &smooth_bound_filter =
-      reference_path_manager->MutableSmoothBoundFilter();
-  std::vector<double> xp_road_radius{400.0, 1500.0, 3000.0};
-  double bound_val =
-      planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_bound_val_);
-  // double weight_fem_pos_deviation =
-  //     planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_weight_fem_pos_deviation_);
-  // if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::NORMAL_CURVE) {
-  //   bound_val = map_bound_val_[1];
-  //   weight_fem_pos_deviation = map_weight_fem_pos_deviation_[1];
-  // }
-  if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
-      ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
-      ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
-    smooth_bound_filter->Reset();
-    bound_val = map_bound_val_[0];
-    // weight_fem_pos_deviation = map_weight_fem_pos_deviation_[0];
+  if (session_->is_rads_scene()) {
+    double bound_val = map_bound_val_[0];
+    ref_path_smoother_info_.set_bound_val(bound_val);
+    bounds.resize(refined_x_vec.size(), bound_val);
+    SetSmoothBounds(bound_val, bounds);
+  } else {
+    auto &reference_path_manager =
+        session_->mutable_environmental_model()->get_reference_path_manager();
+    auto &smooth_bound_filter =
+        reference_path_manager->MutableSmoothBoundFilter();
+    std::vector<double> xp_road_radius{400.0, 1500.0, 3000.0};
+    double bound_val =
+        planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_bound_val_);
+    // double weight_fem_pos_deviation =
+    //     planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_weight_fem_pos_deviation_);
+    // if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::NORMAL_CURVE) {
+    //   bound_val = map_bound_val_[1];
+    //   weight_fem_pos_deviation = map_weight_fem_pos_deviation_[1];
+    // }
+    if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
+        ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
+        ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+      smooth_bound_filter->Reset();
+      bound_val = map_bound_val_[0];
+      // weight_fem_pos_deviation = map_weight_fem_pos_deviation_[0];
+    }
+    smooth_bound_filter->Update(bound_val);
+    const double mean_bound_val = smooth_bound_filter->GetMeanValue();
+    ref_path_smoother_info_.set_bound_val(mean_bound_val);
+    bounds.resize(refined_x_vec.size(), mean_bound_val);
+    SetSmoothBounds(mean_bound_val, bounds);
   }
-  smooth_bound_filter->Update(bound_val);
-  const double mean_bound_val = smooth_bound_filter->GetMeanValue();
-  ref_path_smoother_info_.set_bound_val(mean_bound_val);
-  bounds.resize(refined_x_vec.size(), mean_bound_val);
-  SetSmoothBounds(mean_bound_val, bounds);
   // update param
   // auto &smoother_config =
   //     ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
@@ -1425,7 +1435,7 @@ void ReferencePath::StraightExtendedRefPoints(
   // smooth_output_.points_y.emplace_back(extend_pt_y);
   double extend_pt_x = smooth_output_.points_x[start_idx + 1];
   double extend_pt_y = smooth_output_.points_y[start_idx + 1];
-  const double ds = kSampleGap;
+  const double ds = sample_gap_;
   for (double s = ds; s < extend_length + ds; s += ds) {
     extend_pt_x += dx * ds;
     extend_pt_y += dy * ds;
@@ -1474,7 +1484,7 @@ void ReferencePath::ClothoidExtendedRefPoints(
   double extend_pt_theta = std::atan2(dy2, dx2);
   double extend_pt_curv = curvature;
   // 使用clothoid积分生成延长点
-  const double ds = kSampleGap;  // 积分步长
+  const double ds = sample_gap_;  // 积分步长
   for (double s = ds; s < extend_length + ds; s += ds) {
     if (std::fabs(extend_pt_curv - target_curv) > 1e-4) {
       extend_pt_curv += curv_rate * ds;
