@@ -2627,4 +2627,6 @@ void HybridAStar::GetRoundRobinTarget(std::vector<Pose2f>& candidates) {
   return;
 }
 
+CompactNodePool HybridAStar::node_pool_;
+
 }  // namespace planning
