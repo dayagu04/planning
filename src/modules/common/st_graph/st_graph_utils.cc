@@ -32,6 +32,10 @@ constexpr double kStaticAgentSpeedThrMps = 0.2;
 constexpr double kVRUHeadingRelieveJerkMinThreshold = 45 / 57.3;
 constexpr double kVRUHeadingRelieveJerkMaxThreshold = 135 / 57.3;
 constexpr double kPerceptionLaneRangeM = 120.0;
+constexpr int32_t kNumNots = 25;
+constexpr double kStepTime = 0.2;
+constexpr double kCrossLonDangerTTC = 2.0;
+constexpr double kCrossLatPassSafeDis = 2.0;
 }  // namespace
 
 bool StGraphUtils::IsStaticAgent(const agent::Agent& agent) {
@@ -285,7 +289,23 @@ void StGraphUtils::DetermineRelieveJerkDecision(
         boundary_id_st_boundaries_map,
     std::vector<int32_t>& relieve_jerk_agent_ids) {
   relieve_jerk_agent_ids.clear();
+  const auto& ego_lane = st_graph_input->ego_lane();
+  if (ego_lane == nullptr) {
+    return;
+  }
+  // get reference path from ego lane
+  const auto& ego_reference_path = ego_lane->get_reference_path();
+  if (ego_reference_path == nullptr) {
+    return;
+  }
+  const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
+  if (ego_lane_coord == nullptr) {
+    return;
+  }
   const auto& agents = st_graph_input->filtered_agents();
+  auto init_point = st_graph_input->planning_init_point();
+  const auto& veh_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
   for (const auto agent : agents) {
     if (agent == nullptr) {
       continue;
@@ -297,9 +317,90 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     // 1. select cross vru
     if (agent->is_vru_crossing_virtual_obs()) {
       int32_t vru_crossing_agent_id = agent->agent_id();
-      relieve_jerk_agent_ids.emplace_back(vru_crossing_agent_id);
+
       // vru crossing virtual obs id calc by vru origin id +10000
       int32_t vru_origin_id = vru_crossing_agent_id - 10000;
+      auto agt = st_graph_input->mutable_agent_manager()->GetAgent(vru_origin_id);
+      if (agt == nullptr || agt->trajectories_used_by_st_graph().empty() ||
+          agt->trajectories_used_by_st_graph().front().empty()) {
+        continue;
+      }
+      const auto& ego_lane_coord = st_graph_input->ego_lane()->get_reference_path()->get_frenet_coord();
+      auto vru_pred_last_point = agt->trajectories_used_by_st_graph().front().back();
+      double vru_current_s, vru_current_l;
+      double vru_pred_last_point_s, vru_pred_last_point_l;
+      if (!ego_lane_coord->XYToSL(agt->x(), agt->y(), &vru_current_s,
+                                  &vru_current_l)) {
+        continue;
+      }
+      if (!ego_lane_coord->XYToSL(vru_pred_last_point.x(),
+                                vru_pred_last_point.y(), &vru_pred_last_point_s,
+                                &vru_pred_last_point_l)) {
+        continue;
+      }
+      auto vru_matched_point = ego_lane_coord->GetPathPointByS(vru_current_s);
+      const double heading_normal = planning_math::NormalizeAngle(agt->theta() - vru_matched_point.theta());
+      double v_ego = init_point.vel();
+      double agt_v_s = agt->speed() * std::cos(heading_normal);
+      double cross_vru_ttc = agt->d_rel() / std::fabs(agt_v_s - v_ego);
+      bool vru_lat_passed_before_intersection = false;
+      double vru_lat_passed_time = std::numeric_limits<double>::max();
+      int32_t vru_lat_passed_index = -1;
+      if (vru_pred_last_point_l * vru_current_l < 0.0 ||
+          std::fabs(vru_current_l) < 0.5 * ego_lane->width_by_s(vru_current_s)) {
+        const auto& first_point = agt->trajectories_used_by_st_graph().front().at(0);
+        const double trajectory_start_time = first_point.absolute_time();
+        for (int32_t i = 0; i <= kNumNots; ++i) {
+          double releative_t = i * kStepTime;
+          double absolute_t = trajectory_start_time + releative_t;
+          auto pred_point = agt->trajectories_used_by_st_graph().front().Evaluate(absolute_t);
+          double pred_point_s, pred_point_l;
+          if (!ego_lane_coord->XYToSL(pred_point.x(), pred_point.y(), &pred_point_s,
+                                      &pred_point_l)) {
+            continue;
+          }
+          if ((std::fabs(pred_point_l) > kCrossLatPassSafeDis && pred_point_l * vru_current_l < 0.0) ||
+              (std::fabs(vru_current_l) < kCrossLatPassSafeDis && std::fabs(pred_point_l) > kCrossLatPassSafeDis)) {
+            vru_lat_passed_time = releative_t;
+            vru_lat_passed_index = i;
+            break;
+          }
+        }
+        if (vru_lat_passed_time < kNumNots * kStepTime && init_point.acc() < 0.0 &&
+            std::fabs(init_point.vel() / init_point.acc()) > vru_lat_passed_time) {
+          double min_safe_base_dis = 3.0;
+          bool vru_crossing_safe = true;
+          double ego_s, ego_l;
+          if (!ego_lane_coord->XYToSL(init_point.x(), init_point.y(), &ego_s,
+                                      &ego_l)) {
+            continue;
+          }
+          for (int32_t i = 0; i <= vru_lat_passed_index; ++i) {
+            double releative_t = i * kStepTime;
+            double absolute_t = trajectory_start_time + releative_t;
+            auto pred_point = agt->trajectories_used_by_st_graph().front().Evaluate(absolute_t);
+            double pred_point_s, pred_point_l;
+            if (!ego_lane_coord->XYToSL(pred_point.x(), pred_point.y(), &pred_point_s,
+                                        &pred_point_l)) {
+              vru_crossing_safe = false;
+              continue;
+            }
+            double ego_relative_s = init_point.vel() * releative_t + 0.5 * init_point.acc() * releative_t * releative_t;
+            double ego_vru_safe_dis = (init_point.vel() + init_point.acc() * releative_t) * (vru_lat_passed_time - releative_t) + min_safe_base_dis;
+            if (ego_s + ego_relative_s + ego_vru_safe_dis + veh_param.front_edge_to_rear_axle > pred_point_s) {
+              vru_crossing_safe = false;
+              break;
+            }
+          }
+          vru_lat_passed_before_intersection = vru_crossing_safe;
+
+        }
+
+      }
+      if (cross_vru_ttc < kCrossLonDangerTTC && !vru_lat_passed_before_intersection) {
+        continue;
+      }
+      relieve_jerk_agent_ids.emplace_back(vru_crossing_agent_id);
       if (std::find(relieve_jerk_agent_ids.begin(),
                     relieve_jerk_agent_ids.end(),
                     vru_origin_id) == relieve_jerk_agent_ids.end()) {
@@ -312,19 +413,6 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     if (agent->is_cutin()) {
       continue;
     }
-    const auto& ego_lane = st_graph_input->ego_lane();
-    if (ego_lane == nullptr) {
-      return;
-    }
-    // get reference path from ego lane
-    const auto& ego_reference_path = ego_lane->get_reference_path();
-    if (ego_reference_path == nullptr) {
-      return;
-    }
-    const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
-    if (ego_lane_coord == nullptr) {
-      return;
-    }
 
     if (agent->trajectories_used_by_st_graph().empty()) {
       continue;
@@ -332,9 +420,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     if (agent->trajectories_used_by_st_graph().front().empty()) {
       continue;
     }
-    auto init_point = st_graph_input->planning_init_point();
-    const auto& veh_param =
-        VehicleConfigurationContext::Instance()->get_vehicle_param();
+
     const auto ego_half_width = veh_param.width * 0.5;
     auto vru_pred_last_point =
         agent->trajectories_used_by_st_graph().front().back();
@@ -388,11 +474,22 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     const bool is_reverse = IsPredictionReverseAgent(agent, ego_lane);
     bool is_within_ego_lane = false;
     bool is_within_ego_neighbor_lane = false;
+    double min_l_ego_lane = std::numeric_limits<double>::max();
+    for (const auto &point : agent->box().GetAllCorners()) {
+      double s = 0.0;
+      double l = 0.0;
+      if (!ego_lane_coord->XYToSL(point.x(), point.y(), &s, &l)) {
+        continue;
+      }
+      min_l_ego_lane = std::fmin(min_l_ego_lane, std::fabs(l));
+    }
+
     double nearest_s = 0.0;
     double nearest_l = 0.0;
     const auto& ptr_obj_lane = virtual_lane_manager->GetNearestLane(
         {agent->x(), agent->y()}, &nearest_s, &nearest_l);
     const double half_ego_lane_width = 0.5 * ego_lane->width_by_s(nearest_s);
+    bool is_corner_inside_ego_lane = min_l_ego_lane < half_ego_lane_width? true: false;
     if (nullptr != ptr_obj_lane) {
       is_within_ego_lane =
           ego_lane->get_virtual_id() == ptr_obj_lane->get_virtual_id() &&
@@ -404,7 +501,7 @@ void StGraphUtils::DetermineRelieveJerkDecision(
     }
     const bool is_relieve_jerk_reverse_agent =
         is_not_in_intersection && is_reverse &&
-        (is_within_ego_lane || is_within_ego_neighbor_lane);
+        (is_within_ego_lane || is_within_ego_neighbor_lane || is_corner_inside_ego_lane);
     if (is_relieve_jerk_reverse_agent) {
       relieve_jerk_agent_ids.emplace_back(agent->agent_id());
       continue;
