@@ -10,7 +10,7 @@ from bokeh.models import ColumnDataSource, DataTable, DateFormatter, TableColumn
 from bokeh.models import TextInput
 from bokeh.resources import INLINE
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_40735/trigger/20251118/20251118-11-17-51/data_collection_CHERY_M32T_40735_EVENT_KEY_2025-11-18-11-17-51_no_camera.bag"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_52927/trigger/20251112/20251112-16-26-41/data_collection_CHERY_M32T_52927_EVENT_KEY_2025-11-12-16-26-41_no_camera.bag.1763974075.open-loop.noa.plan"
 frame_dt = 0.1 # sec
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
@@ -87,7 +87,7 @@ columns = [
 data_obstacle_table = DataTable(source=obstacle_data, columns=columns, width=350, height=600)
 data_behavior_table_1 = DataTable(source=behavior_data_1, columns=columns, width=350, height=900)
 data_behavior_table_2 = DataTable(source=behavior_data_2, columns=columns, width=350, height=100)
-data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=1000)
+data_lc_table_3 = DataTable(source=lc_data_3, columns=columns, width=350, height=1100)
 data_overtake_lc_table = DataTable(source=overtake_lc_data,columns=columns, width=350, height=600)
 data_cone_lc_table = DataTable(source=cone_lc_data,columns=columns, width=350, height=200)
 data_merge_lc_table = DataTable(source=merge_lc_data,columns=columns, width=350, height=200)
@@ -221,7 +221,8 @@ def update_lc_data (noa_info, plan_debug_json):
              'current_segment_passed_distance','is_in_ramp_select_split_situation','is_on_road_select_ramp_situation',
              'select_ego_lane_without_plan', 'select_ego_lane_with_plan', 'forward_lane_num',
              'is_ego_on_split_region', 'last_split_seg_dir', 'need_continue_lc_num_on_off_ramp_region',
-             'ramp_pass_sts','HPP turn signal']
+             'ramp_pass_sts', 'HPP turn signal', 'lane_change_reason',
+             'status_update_reason', 'lane_change_status', 'lane_change_direction']
   for name in vars_lc:
     try:
       datas.append((plan_debug_json[name]))

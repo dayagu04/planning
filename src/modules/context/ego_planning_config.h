@@ -1060,7 +1060,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double purse_flow_vel_scene_weight_stop_penalty = 2.5;
   double purse_flow_vel_scene_weight_speed_change = 0.0;
   double purse_flow_vel_scene_weight_leading_veh_follow_s = 0.0;
-  
+
   double decleration_scene_weight_match_gap_vel = 4.5;
   double decleration_scene_weight_match_gap_s = 2.5;
   double decleration_scene_weight_follow_vel = 0.0;
@@ -4229,8 +4229,6 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
                      "lon_acc_thr");
     ReadItem<double>(json, lon_jerk_thr, "result_trajectory_generator",
                      "lon_jerk_thr");
-    ReadItem<double>(json, tfl_reminder_cipv_dis, "result_trajectory_generator",
-                     "tfl_reminder_cipv_dis");
   }
   bool use_dynamic_lat_jerk_thr = false;
   double planning_result_delta_time = 0.025;
@@ -4241,7 +4239,6 @@ struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
   double ramp_lat_jerk_thr = 0.65;
   double lon_acc_thr = 3.0;
   double lon_jerk_thr = 0.3;
-  double tfl_reminder_cipv_dis = 8.0;
 };
 
 struct TrafficLightDeciderConfig : public EgoPlanningConfig {
@@ -5818,5 +5815,14 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
         std::vector<double> min_space_table     {0.1, 0.8,  1.2,  2.5,  3.5,  5.0,   6.5};   // 触发变道需要预留最小空间
     };
     RearVehicleSpeedMinSpaceMap rear_vehicle_speed_min_space_map;
+};
+
+struct HmiDeciderConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<double>(json, tfl_reminder_cipv_dis, "hmi_decider",
+                   "tfl_reminder_cipv_dis");
+  }
+  double tfl_reminder_cipv_dis = 8.0;
 };
 }  // namespace planning
