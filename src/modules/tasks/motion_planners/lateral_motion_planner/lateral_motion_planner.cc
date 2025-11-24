@@ -698,7 +698,7 @@ bool LateralMotionPlanner::AssembleInput() {
   JSON_DEBUG_VECTOR("virtual_ref_y", virtual_ref_y_, 3)
   JSON_DEBUG_VECTOR("virtual_ref_theta", virtual_ref_theta_, 6)
   // set continuity protection
-  if (!motion_planner_output.lat_init_flag) {
+  if (!motion_planner_output.lat_init_flag || !is_ref_consistent) {
     planning_input_.set_q_continuity(0.0);
   }
   // spatio
