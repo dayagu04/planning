@@ -502,96 +502,15 @@ const double ParkingScenario::CalRemainDistFromObs(
     const double dynamic_body_lat_buffer,
     const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
     const UseObsHeightMethod use_obs_height_method, const bool use_limiter) {
-  const ApaParameters& param = apa_param.GetParam();
-
-  if (apa_world_ptr_->GetSlotManagerPtr()
-          ->GetEgoInfoUnderSlot()
-          .slot_disappear_flag) {
-    ILOG_INFO << "slot disappear, should stop, set remain dist obs = 0.0168";
-    return 0.0168;
-  }
-
-  const std::shared_ptr<UssObstacleAvoidance>& uss_obstacle_avoider_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetUssObsAvoidancePtr();
-
-  const std::shared_ptr<GJKCollisionDetector>& gjk_col_det_ptr =
-      apa_world_ptr_->GetColDetInterfacePtr()->GetGJKColDetPtr();
-
-  if (only_check_mirror) {
-    ColResult col_res = gjk_col_det_ptr->Update(
-        apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-        static_body_lat_buffer, 0.0,
-        GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
-                         CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC,
-                         use_obs_height_method, use_limiter),
-        true, static_mirror_lat_buffer);
-
-    return col_res.remain_dist - static_lon_buffer;
-  }
-
-  if (param.enable_corner_uss_process) {
-    uss_obstacle_avoider_ptr->Update();
-  }
-
-  const double uss_remain_dist =
-      uss_obstacle_avoider_ptr->GetRemainDistInfo().remain_dist -
-      static_lon_buffer;
-
-  // check static obs, it can be radical
-  GJKColDetRequest gjl_col_det_request(
-      false, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
-      ApaObsMovementType::STATIC, use_obs_height_method, use_limiter);
-
-  ColResult col_res = gjk_col_det_ptr->Update(
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-      static_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      static_mirror_lat_buffer);
-
-  if (!col_res.col_flag) {
-    col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
-  }
-
-  const double obs_pt_remain_dist_static =
-      col_res.remain_dist_static - static_lon_buffer;
-
-  // check dynamic obs, it should be conservative
-  gjl_col_det_request.movement_type = ApaObsMovementType::MOTION;
-  col_res = gjk_col_det_ptr->Update(
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-      dynamic_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      dynamic_mirror_lat_buffer);
-
-  if (!col_res.col_flag) {
-    col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;
-  }
-
-  const double obs_pt_remain_dist_dynamic =
-      col_res.remain_dist_dynamic - dynamic_lon_buffer;
-
-  JSON_DEBUG_VALUE("car_real_time_col_lat_buffer", static_body_lat_buffer)
-
-  ILOG_INFO << "  enable_corner_uss_process = "
-            << param.enable_corner_uss_process
-            << "  uss remain dist = " << uss_remain_dist
-            << "  obs_pt_remain_dist_static = " << obs_pt_remain_dist_static
-            << "  obs_pt_remain_dist_dynamic = " << obs_pt_remain_dist_dynamic;
-
-  if (param.enable_corner_uss_process) {
-    frame_.stuck_by_dynamic_obs = false;
-    return uss_remain_dist;
-  } else {
-    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
-      frame_.stuck_by_dynamic_obs = true;
-      return obs_pt_remain_dist_dynamic;
-    } else {
-      frame_.stuck_by_dynamic_obs = false;
-      return obs_pt_remain_dist_static;
-    }
-  }
+  CalObsRemainDistParams params(
+      static_lon_buffer, static_body_lat_buffer, static_mirror_lat_buffer,
+      dynamic_lon_buffer, dynamic_body_lat_buffer, dynamic_mirror_lat_buffer,
+      only_check_mirror, use_obs_height_method, use_limiter);
+  return CalRemainDistFromObs(params);
 }
 
 const double ParkingScenario::CalRemainDistFromObs(
-    const CalRemainDistParams& params) {
+    const CalObsRemainDistParams& params) {
   const ApaParameters& param = apa_param.GetParam();
 
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -630,7 +549,8 @@ const double ParkingScenario::CalRemainDistFromObs(
   // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(
       false, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
-      ApaObsMovementType::STATIC, params.use_obs_height_method);
+      ApaObsMovementType::STATIC, params.use_obs_height_method,
+      params.use_limiter);
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
@@ -682,7 +602,7 @@ const double ParkingScenario::CalRemainDistFromObs(
 }
 
 const double ParkingScenario::CalRealTimeBrakeDist() {
-  CalRemainDistParams params;
+  CalObsRemainDistParams params;
   return CalRemainDistFromObs(params);
 }
 
@@ -1245,7 +1165,7 @@ const bool ParkingScenario::CheckDynamicGearSwitch(
   }
 
   // check around obs
-  CalRemainDistParams remain_dist_params;
+  CalObsRemainDistParams remain_dist_params;
   remain_dist_params.static_lon_buffer = param.cur_path_lon_buffer;
   remain_dist_params.static_body_lat_buffer = param.cur_path_lat_buffer;
   remain_dist_params.static_mirror_lat_buffer = param.cur_path_lat_buffer;
