@@ -358,7 +358,7 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 }
 
 const double NarrowSpaceScenario::CalRealTimeBrakeDist() {
-  CalRemainDistParams params;
+  CalObsRemainDistParams params;
   EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
   if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkOutStatus() &&
