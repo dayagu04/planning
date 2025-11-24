@@ -426,4 +426,9 @@ void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
                                  : weight_ * std::exp((thw - 1.5) / 10.0)
                     : 0.0;
 }
-}  // namespace planning
+
+void JerkLimitCost::GetCost(const double jerk_extrema) {
+  cost_ = jerk_extrema > 1.5
+              ? weight_ * std::exp((jerk_extrema - 1.5) / 2.0) : 0.0;
+}
+} // namespace planning

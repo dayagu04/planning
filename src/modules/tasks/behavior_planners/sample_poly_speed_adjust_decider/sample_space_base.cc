@@ -400,11 +400,11 @@ void STSampleSpaceBase::GetAvailableGap(const int index, double ego_s) {
                                   kNoAgentId, -1);
       temp_gap_array.emplace_back(std::move(current_gap));
     }
-    auto it =
-        std::upper_bound(temp_gap_array.begin(), temp_gap_array.end(), ego_s,
-                         [](double val,const std::pair<STPoint, STPoint>& elem) {
-                           return val < elem.second.s();
-                         });
+    auto it = std::upper_bound(
+        temp_gap_array.begin(), temp_gap_array.end(), ego_s,
+        [](double val, const std::pair<STPoint, STPoint>& elem) {
+          return val < elem.second.s();
+        });
     if (it != temp_gap_array.begin()) {
       it--;
       gap_array_.insert(gap_array_.end(), it, temp_gap_array.end());

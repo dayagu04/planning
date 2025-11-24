@@ -138,4 +138,9 @@ class LeadingVehFollowCost : public CurveCost {
  private:
   double front_edge_to_rear_axle_;
 };
+class JerkLimitCost : public CurveCost {
+ public:
+  JerkLimitCost() = default;
+  void GetCost(const double jerk_extrema);
+};
 }  // namespace planning

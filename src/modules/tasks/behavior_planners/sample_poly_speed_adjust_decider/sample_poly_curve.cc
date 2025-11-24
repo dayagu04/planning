@@ -18,7 +18,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
-    const double weight_leading_veh_follow_s,
+    const double weight_leading_veh_follow_s, const double weight_jerk_limit,
     const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
   poly_ = poly;
   arrived_t_ = arrived_t;
@@ -52,6 +52,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
                                                      back_edge_to_rear_axle);
   leading_veh_follow_s_cost_.SetWeight(weight_leading_veh_follow_s);
   leading_veh_follow_s_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
+  jerk_limit_cost_.SetWeight(weight_jerk_limit);
 };
 
 void SampleQuarticPolynomialCurve::CostInit() {
@@ -64,6 +65,7 @@ void SampleQuarticPolynomialCurve::CostInit() {
   stop_penalty_cost_.Init();
   speed_change_cost_.Init();
   anchor_points_match_gap_cost_.Init();
+  jerk_limit_cost_.Init();
   cost_sum_ = 0.0;
 }
 double SampleQuarticPolynomialCurve::CalcS(const double t) const {
@@ -80,6 +82,25 @@ double SampleQuarticPolynomialCurve::CalcAcc(const double t) const {
 
 double SampleQuarticPolynomialCurve::CalcJerk(const double t) const {
   return t - poly_.T() >= 0 ? 0.0 : poly_.CalculateThirdDerivative(t);
+}
+
+double SampleQuarticPolynomialCurve::CalcRef(const double t, const double decay_coffi) const {
+  double s = 0.0;
+  if (arrived_t_ < poly_.T()) {
+    double acc =
+        std::max(arrived_a_, -arrived_v_ / std::fmax(5.0 - arrived_t_, 0.1));
+    double left_t = t - arrived_t_;
+    s = left_t > 0.1
+            ? poly_.CalculatePoint(arrived_t_) + (arrived_v_ - acc/decay_coffi) * left_t +
+                  acc * std::exp(decay_coffi * left_t) / (decay_coffi * decay_coffi) -
+                  acc /(decay_coffi * decay_coffi)
+            : poly_.CalculatePoint(t);
+  } else {
+    s = t - poly_.T() > 0
+            ? poly_.CalculatePoint(poly_.T()) + arrived_v_ * (t - poly_.T())
+            : poly_.CalculatePoint(t);
+  }
+  return s;
 }
 
 double SampleQuarticPolynomialCurve::CalcVelIntegral(
@@ -189,6 +210,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   auto stop_penalty_cost = stop_penalty_cost_;
   auto gap_avaliable_cost = gap_avaliable_cost_;
   auto acc_limit_cost = acc_limit_cost_;
+  auto jerk_limit_cost = jerk_limit_cost_;
   CostInit();
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
@@ -221,8 +243,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
   if (leading_veh.id != kNoAgentId && leading_veh.id != -1 &&
       anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
     follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
-    leading_veh_follow_s_cost_.GetCost(leading_veh.center_s + traveled_distance + CalcS(0),
-                                       arrived_v_, arrived_s_);
+    leading_veh_follow_s_cost_.GetCost(
+        leading_veh.center_s + traveled_distance + CalcS(0), arrived_v_,
+        arrived_s_);
   }
 
   gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
@@ -245,6 +268,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     stop_penalty_cost_ = std::move(stop_penalty_cost);
     gap_avaliable_cost_ = std::move(gap_avaliable_cost);
     acc_limit_cost_ = std::move(acc_limit_cost);
+    jerk_limit_cost_ = std::move(jerk_limit_cost);
     return;
   }
   // // poly curve cost
@@ -284,6 +308,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_);
 
+  jerk_limit_cost_.GetCost(std::fabs(poly_.CalculateThirdDerivative(0.0)));
+
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
@@ -293,7 +319,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
               stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
-              std::exp(arrived_t_ / 5.0);
+              jerk_limit_cost_.cost() + std::exp(arrived_t_ / 5.0);
 
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;
@@ -312,6 +338,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     stop_penalty_cost_ = std::move(stop_penalty_cost);
     gap_avaliable_cost_ = std::move(gap_avaliable_cost);
     acc_limit_cost_ = std::move(acc_limit_cost);
+    jerk_limit_cost_ = std::move(jerk_limit_cost);
   } else {
     safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
     safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;

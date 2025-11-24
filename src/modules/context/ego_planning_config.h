@@ -917,9 +917,15 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     sample_t_lower = read_json_keys<double>(
         json,
         std::vector<std::string>{"sample_poly_speed_adjust", "sample_t_lower"});
-    maximum_speed_adjustment = read_json_keys<int>(
+    maximum_speed_adjustment = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "maximum_speed_adjustment"});
+    stop_point_buffer = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "stop_point_buffer"});
+    decay_coffi = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decay_coffi"});
     normal_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_match_gap_vel"});
@@ -956,6 +962,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     normal_scene_weight_leading_veh_follow_s = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "normal_scene_weight_leading_veh_follow_s"});
+    normal_scene_weight_jerk_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "normal_scene_weight_jerk_limit"});
     purse_flow_vel_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "purse_flow_vel_scene_weight_match_gap_vel"});
@@ -992,6 +1001,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     purse_flow_vel_scene_weight_leading_veh_follow_s = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "purse_flow_vel_scene_weight_leading_veh_follow_s"});
+    purse_flow_vel_scene_weight_jerk_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "purse_flow_vel_scene_weight_jerk_limit"});
     decleration_scene_weight_match_gap_vel = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_match_gap_vel"});
@@ -1028,6 +1040,9 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
     decleration_scene_weight_leading_veh_follow_s = read_json_keys<double>(
         json, std::vector<std::string>{"sample_poly_speed_adjust",
                                        "decleration_scene_weight_leading_veh_follow_s"});
+    decleration_scene_weight_jerk_limit = read_json_keys<double>(
+        json, std::vector<std::string>{"sample_poly_speed_adjust",
+                                       "decleration_scene_weight_jerk_limit"});
   }
 
   int sample_v_nums = 15;
@@ -1037,6 +1052,8 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double sample_t_upper = 5.0;
   double sample_t_lower = 1.0;
   double maximum_speed_adjustment = 15.0 / 3.6;
+  double stop_point_buffer = 0.2;
+  double decay_coffi = -0.2;
 
   double normal_scene_weight_match_gap_vel = 6.5;
   double normal_scene_weight_match_gap_s = 4.5;
@@ -1050,6 +1067,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double normal_scene_weight_stop_penalty = 2.5;
   double normal_scene_weight_speed_change = 10.0;
   double normal_scene_weight_leading_veh_follow_s = 1.0;
+  double normal_scene_weight_jerk_limit = 2.0;
 
   double purse_flow_vel_scene_weight_match_gap_vel = 0.2;
   double purse_flow_vel_scene_weight_match_gap_s = 0.2;
@@ -1063,6 +1081,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double purse_flow_vel_scene_weight_stop_penalty = 2.5;
   double purse_flow_vel_scene_weight_speed_change = 0.0;
   double purse_flow_vel_scene_weight_leading_veh_follow_s = 0.0;
+  double purse_flow_vel_scene_weight_jerk_limit = 2.0;
 
   double decleration_scene_weight_match_gap_vel = 4.5;
   double decleration_scene_weight_match_gap_s = 2.5;
@@ -1076,6 +1095,7 @@ struct SamplePolySpeedAdjustDeciderConfig : public EgoPlanningConfig {
   double decleration_scene_weight_stop_penalty = 0.0;
   double decleration_scene_weight_speed_change = 0.0;
   double decleration_scene_weight_leading_veh_follow_s = 1.0;
+  double decleration_scene_weight_jerk_limit = 2.0;
 };
 
 struct ActRequestConfig : public EgoPlanningConfig {
