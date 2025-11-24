@@ -2327,84 +2327,62 @@ struct ConstructionSceneDeciderConfig : public EgoPlanningConfig {
 struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
-    hard_buffer2static_agent = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "hard_buffer2static_agent"},
-        hard_buffer2static_agent);
-    soft_buffer2lane = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "soft_buffer2lane"},
-        soft_buffer2lane);
-    extra_soft_buffer2road = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "extra_soft_buffer2road"},
-        extra_soft_buffer2road);
-    hard_buffer2lane = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "hard_buffer2lane"},
-        hard_buffer2lane);
-    hard_buffer2road = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "hard_buffer2road"},
-        hard_buffer2road);
-    extra_soft_buffer2groundline = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "extra_soft_buffer2groundline"},
-        extra_soft_buffer2groundline);
-    extra_hard_buffer2groundline = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "extra_hard_buffer2groundline"},
-        extra_hard_buffer2groundline);
-    lateral_ref_traj_type =
-        read_json_keys<bool>(json,
-                             std::vector<std::string>{"general_lateral_decider",
-                                                      "lateral_ref_traj_type"},
-                             lateral_ref_traj_type);
-    care_dynamic_object_t_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "care_dynamic_object_t_threshold"},
-        care_dynamic_object_t_threshold);
-    care_static_object_t_threshold = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "care_static_object_t_threshold"},
-        care_static_object_t_threshold);
+    ReadItem<double>(json, hard_buffer2static_agent, "general_lateral_decider",
+                     "hard_buffer2static_agent");
+    ReadItem<double>(json, soft_buffer2lane, "general_lateral_decider",
+                     "soft_buffer2lane");
+    ReadItem<double>(json, extra_soft_buffer2road, "general_lateral_decider",
+                     "extra_soft_buffer2road");
+    ReadItem<double>(json, hard_buffer2lane, "general_lateral_decider",
+                     "hard_buffer2lane");
+    ReadItem<double>(json, hard_buffer2road, "general_lateral_decider",
+                     "hard_buffer2road");
+    ReadItem<double>(json, extra_soft_buffer2groundline, "general_lateral_decider",
+                     "extra_soft_buffer2groundline");
+    ReadItem<double>(json, extra_hard_buffer2groundline, "general_lateral_decider",
+                     "extra_hard_buffer2groundline");
+    ReadItem<bool>(json, lateral_ref_traj_type, "general_lateral_decider",
+                     "lateral_ref_traj_type");                                              
+    
+    ReadItem<double>(json, care_dynamic_object_t_threshold, "general_lateral_decider",
+                     "care_dynamic_object_t_threshold");
+    ReadItem<double>(json, care_static_object_t_threshold, "general_lateral_decider",
+                     "care_static_object_t_threshold");
+    ReadItem<double>(json, soft_min_distance_road2center, "general_lateral_decider",
+                     "soft_min_distance_road2center");
+    ReadItem<double>(json, hard_min_distance_road2center, "general_lateral_decider",
+                     "hard_min_distance_road2center");
+    ReadItem<double>(json, care_lon_area_road_border, "general_lateral_decider",
+                     "care_lon_area_road_border");
+    ReadItem<double>(json, ramp_limit_v, "general_lateral_decider",
+                     "ramp_limit_v");
+    ReadItem<bool>(json, ramp_limit_v_valid, "general_lateral_decider",
+                     "ramp_limit_v_valid");
+    ReadItem<double>(json, min_v_cruise, "general_lateral_decider",
+                     "min_v_cruise");  
+                 
+    ReadItem<double>(json, nudge_extra_buffer_in_intersection, "general_lateral_decider",
+                     "nudge_extra_buffer_in_intersection");
+    ReadItem<double>(json, map_bound_weight[BoundType::AGENT],
+                     "general_lateral_decider", "bound_static_agent_weight");
+    ReadItem<double>(json, map_bound_weight[BoundType::DYNAMIC_AGENT],
+                     "general_lateral_decider", "bound_dynamic_agent_weight");
+    ReadItem<double>(json, map_bound_weight[BoundType::ADJACENT_AGENT],
+                     "general_lateral_decider", "bound_adjacent_agent_weight");
+    ReadItem<double>(json, map_bound_weight[BoundType::ROAD_BORDER],
+                     "general_lateral_decider", "bound_road_border_weight");
+    ReadItem<double>(json, map_bound_weight[BoundType::REAR_AGENT],
+                     "general_lateral_decider", "bound_rear_agent_weight");
 
-    soft_min_distance_road2center = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "soft_min_distance_road2center"},
-        soft_min_distance_road2center);
-    hard_min_distance_road2center = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "hard_min_distance_road2center"},
-        hard_min_distance_road2center);
 
-    care_lon_area_road_border = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "care_lon_area_road_border"},
-        care_lon_area_road_border);
-
-    ramp_limit_v = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "ramp_limit_v"},
-        ramp_limit_v);
-    ramp_limit_v_valid =
-        read_json_keys<bool>(json,
-                             std::vector<std::string>{"general_lateral_decider",
-                                                      "ramp_limit_v_valid"},
-                             ramp_limit_v_valid);
-    min_v_cruise = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider", "min_v_cruise"},
-        min_v_cruise);
+    ReadItem<double>(json, truck_decrease_extra_buffer, "general_lateral_decider",
+                     "truck_decrease_extra_buffer");
+    ReadItem<double>(json, ref_curvature_factor, "general_lateral_decider",
+                     "ref_curvature_factor");
+    ReadItem<bool>(json, enable_ara_ref, "general_lateral_decider",
+                     "enable_ara_ref");
+    ReadItem<bool>(json, enable_last_lat_path, "general_lateral_decider",
+                     "enable_last_lat_path");
 
     read_json_vec<double>(
         json,
@@ -2425,33 +2403,6 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                                                    "extra_lateral_buffer"},
                           extra_lateral_buffer);
 
-    nudge_extra_buffer_in_intersection = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "nudge_extra_buffer_in_intersection"},
-        nudge_extra_buffer_in_intersection);
-
-    map_bound_weight[BoundType::AGENT] = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "bound_static_agent_weight"},
-        0.1);
-    map_bound_weight[BoundType::DYNAMIC_AGENT] = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "bound_dynamic_agent_weight"},
-        0.1);
-    map_bound_weight[BoundType::ADJACENT_AGENT] = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "bound_adjacent_agent_weight"},
-        0.1);
-    map_bound_weight[BoundType::ROAD_BORDER] = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "bound_road_border_weight"},
-        0.1);
-
     read_json_vec<double>(json,
                           std::vector<std::string>{"general_lateral_decider",
                                                    "relative_positon_bp"},
@@ -2471,21 +2422,15 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
         std::vector<std::string>{"general_lateral_decider",
                                  "relative_v_decrease_extra_buffer"},
         _relative_v_decrease_extra_buffer);
-
-    truck_decrease_extra_buffer = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "truck_decrease_extra_buffer"},
-        truck_decrease_extra_buffer);
-    ref_curvature_factor = read_json_keys<double>(
-        json,
-        std::vector<std::string>{"general_lateral_decider",
-                                 "ref_curvature_factor"},
-        ref_curvature_factor);
-    enable_ara_ref =
-        read_json_key<bool>(json, "enable_ara_ref", enable_ara_ref);
-    enable_last_lat_path =
-        read_json_key<bool>(json, "enable_last_lat_path", enable_last_lat_path);
+    ReadItem<double>(json, static_vru_max_extra_lateral_buffer,
+                     "general_lateral_decider",
+                     "static_vru_max_extra_lateral_buffer");
+    ReadItem<double>(json, static_cone_max_extra_lateral_buffer,
+                     "general_lateral_decider",
+                     "static_cone_max_extra_lateral_buffer");
+    ReadItem<double>(json, static_other_max_extra_lateral_buffer,
+                     "general_lateral_decider",
+                     "static_other_max_extra_lateral_buffer");  
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -2548,6 +2493,10 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
   double ref_length_thr = 0.01;
   double ref_curvature_factor = 0.0;
   bool enable_last_lat_path = false;
+
+  double static_vru_max_extra_lateral_buffer = 0.65;
+  double static_cone_max_extra_lateral_buffer = 0.15;
+  double static_other_max_extra_lateral_buffer = 0.45;
 };
 
 struct HppParkingSwitchConfig : public EgoPlanningConfig {

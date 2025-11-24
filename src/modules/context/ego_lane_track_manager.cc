@@ -2222,6 +2222,9 @@ double EgoLaneTrackManger::ComputeTargetLaneSpecifiedRangeCurvature(
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   std::shared_ptr<KDPath> frenet_coord = virtual_lane->get_lane_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return average_curv;
+  }
   double ego_s = 0.0;
   double ego_l = 0.0;
   if (!frenet_coord->XYToSL(ego_state->ego_pose().x, ego_state->ego_pose().y,

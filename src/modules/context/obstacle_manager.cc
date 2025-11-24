@@ -91,7 +91,7 @@ void ObstacleManager::update() {
     }
 
     // hpp中过滤近处的OD
-    if (session_->is_hpp_scene()) {
+    if (session_->is_hpp_scene() || session_->is_rads_scene()) {
       if (reference_path != nullptr) {
         if (frenet_coord != nullptr) {
           bool in_range = true;
@@ -138,41 +138,7 @@ void ObstacleManager::update() {
     }
   }
 
-  if (!session_->is_hpp_scene()) {
-    // add gs care obstacles
-    for (int i = 0;
-         i < session_->environmental_model().get_prediction_info().size();
-         i++) {
-      const auto &prediction_object = prediction_objects[i];
-      const bool is_static = prediction_object.speed < 0.1 ||
-                             prediction_object.trajectory_array.size() == 0;
-      const double prediction_relative_time =
-          prediction_object.delay_time - ego_init_relative_time;
-
-      // add gs care obstacles
-      const bool gs_care_fusion_source =
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_CAMERA) ||
-          (prediction_object.fusion_source == OBSTACLE_SOURCE_F_RADAR_CAMERA) ||
-          (prediction_object.fusion_source ==
-           OBSTACLE_SOURCE_CAMERA_AND_FLRADAR) ||
-          (prediction_object.fusion_source ==
-           OBSTACLE_SOURCE_CAMERA_AND_FRRADAR) ||
-          (prediction_object.fusion_source ==
-           OBSTACLE_SOURCE_CAMERA_AND_RLRADAR) ||
-          (prediction_object.fusion_source ==
-           OBSTACLE_SOURCE_CAMERA_AND_RRRADAR);
-
-      if (gs_care_fusion_source &&
-          prediction_object.type != iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN &&
-          prediction_object.length > 0. && prediction_object.width > 0. &&
-          std::fabs(prediction_object.relative_position_y) < 10. &&
-          std::fabs(prediction_object.relative_position_x) < 100.) {
-        auto obstacle = Obstacle(prediction_object.id, prediction_object,
-                                 is_static, prediction_relative_time);
-        add_gs_care_obstacles(obstacle);
-      }
-    }
-  } else {
+  if (session_->is_hpp_scene() || session_->is_rads_scene()) {
     // ground line
     double time_start = IflyTime::Now_ms();
     UpdateGroundLineObstacle();
@@ -355,7 +321,9 @@ void ObstacleManager::UpdateOccObstacle() {
           (occupancy_objects[i].common_occupancy_info.type ==
                iflyauto::OBJECT_TYPE_OCC_WALL ||
            occupancy_objects[i].common_occupancy_info.type ==
-               iflyauto::OBJECT_TYPE_OCC_EMPTY)) {
+               iflyauto::OBJECT_TYPE_OCC_EMPTY || 
+           occupancy_objects[i].common_occupancy_info.type ==
+               iflyauto::OBJECT_TYPE_OCC_GENERAL_STATIC)) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points_2d,
                              polygon_points_size, frenet_coord, ego_point,
                              index_offset);
@@ -803,7 +771,7 @@ void ObstacleManager::generate_frenet_obstacles(ReferencePath &reference_path) {
   frenet_obstacles.clear();
   frenet_obstacles_map.clear();
 
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene() ) {
     frenet_obstacles.reserve(obstacles_.Items().size() +
                              groundline_obstacles_.Items().size() +
                              occupancy_obstacles_.Items().size() +

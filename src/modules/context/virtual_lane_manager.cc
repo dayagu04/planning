@@ -165,7 +165,7 @@ void VirtualLaneManager::construct_reference_line_msg(
   const size_t points_size =
       std::min(points_size_rads_map, points_size_refline_default);
   // NOTE: points_rads_map start from the first point which is memorized in
-  for (size_t i = 1, j = points_size_rads_map - 1; i < points_size && j >= 0;
+  for (size_t i = 0, j = points_size_rads_map - 1; i < points_size && j >= 0;
        ++i, --j) {
     auto& current_lane_virtual_refline_point =
         (current_lane_virtual->lane_reference_line)
@@ -186,7 +186,7 @@ void VirtualLaneManager::construct_reference_line_msg(
     const auto& rads_map_points_boot = (rads_map.points[j]).boot;
     const auto& rads_map_points_enu = (rads_map.points[j]).enu;
     const auto& rads_map_points_llh = (rads_map.points[j]).llh;
-    // boot point update
+    // boot point update 
     current_lane_virtual_local_point.x = rads_map_points_boot.x;
     current_lane_virtual_local_point.y = rads_map_points_boot.y;
     current_lane_virtual_local_point.z = rads_map_points_boot.z;
@@ -227,29 +227,33 @@ void VirtualLaneManager::construct_reference_line_msg(
         false;  // no update in this function
     current_lane_virtual_refline_point.lane_type = iflyauto::LANETYPE_VIRTUAL;
 
-    const auto pre_refline_point_s = (current_lane_virtual->lane_reference_line)
-                                         .virtual_lane_refline_points[i - 1]
-                                         .s;
-    const auto pre_refline_point_local_x =
-        (current_lane_virtual->lane_reference_line)
-            .virtual_lane_refline_points[i - 1]
-            .local_point.x;
-    const auto pre_refline_point_local_y =
-        (current_lane_virtual->lane_reference_line)
-            .virtual_lane_refline_points[i - 1]
-            .local_point.y;
-    current_lane_virtual_refline_point.s =
-        pre_refline_point_s +
-        planning_math::fast_hypot(
-            current_lane_virtual_refline_point.local_point.x -
-                pre_refline_point_local_x,
-            current_lane_virtual_refline_point.local_point.y -
-                pre_refline_point_local_y);
-
+    if (i > 0) {
+      const auto pre_refline_point_s = (current_lane_virtual->lane_reference_line)
+                                          .virtual_lane_refline_points[i - 1]
+                                          .s;
+      const auto pre_refline_point_local_x =
+          (current_lane_virtual->lane_reference_line)
+              .virtual_lane_refline_points[i - 1]
+              .local_point.x;
+      const auto pre_refline_point_local_y =
+          (current_lane_virtual->lane_reference_line)
+              .virtual_lane_refline_points[i - 1]
+              .local_point.y;
+      current_lane_virtual_refline_point.s =
+          pre_refline_point_s +
+          planning_math::fast_hypot(
+              current_lane_virtual_refline_point.local_point.x -
+                  pre_refline_point_local_x,
+              current_lane_virtual_refline_point.local_point.y -
+                  pre_refline_point_local_y);
+    } else {
+      current_lane_virtual_refline_point.s = 0;
+    }
     current_lane_virtual_refline_point.confidence = 1.0;
     (current_lane_virtual->lane_reference_line)
         .virtual_lane_refline_points_size = i + 1;
   }
+
 
   // lane merge split point, random value
   current_lane_virtual->lane_merge_split_point =

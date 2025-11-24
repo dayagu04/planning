@@ -38,6 +38,7 @@
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
+#include "tasks/behavior_planners/hpp_general_lateral_decider/hpp_general_lateral_decider.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
 namespace planning {
 class TaskPipelineRADS : public BaseTaskPipeline {
@@ -55,7 +56,7 @@ class TaskPipelineRADS : public BaseTaskPipeline {
   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
-  std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;
+  std::unique_ptr<HppGeneralLateralDecider> hpp_general_lateral_decider_;
   std::unique_ptr<TrafficLightDecider> traffic_light_decider_;
   std::unique_ptr<SpeedAdjustDecider> speed_adjust_decider_;
   std::unique_ptr<lane_borrow_deciderV2::LaneBorrowDecider>

@@ -99,7 +99,7 @@ OccupancyGridBound EdtManager::GenerateOGM(const Pose2D &base_pose) {
   const PlanningInitPoint &planning_init_point = session_->environmental_model()
                                                      .get_ego_state_manager()
                                                      ->planning_init_point();
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene()) {
     const auto &reference_path = session_->planning_context()
                                      .lane_change_decider_output()
                                      .coarse_planning_info.reference_path;
@@ -201,8 +201,8 @@ bool EdtManager::FilterObstacleForAra(
     const planning::FrenetObstacle &frenet_obstacle) {
   constexpr double kLVelocity = 0.4;
   constexpr double kVruLThreshold = 1.1;
-  double min_l = frenet_obstacle.frenet_polygon_sequence()[0].second.min_y();
-  double max_l = frenet_obstacle.frenet_polygon_sequence()[0].second.max_y();
+  double min_l = frenet_obstacle.frenet_obstacle_boundary().l_start;
+  double max_l = frenet_obstacle.frenet_obstacle_boundary().l_end;
   if (frenet_obstacle.is_static() ||
       (frenet_obstacle.obstacle()->is_VRU() &&
        std::fabs(frenet_obstacle.frenet_velocity_l()) < kLVelocity) ||
@@ -221,7 +221,7 @@ bool EdtManager::FilterObstacleForAra(
 }
 
 void EdtManager::update() {
-  if (!session_->is_hpp_scene() ||
+  if (!session_->is_hpp_scene() || !session_->is_rads_scene() ||
       !session_->planning_context().last_planning_success()) {
     return;
   }
@@ -237,8 +237,7 @@ void EdtManager::update() {
                                        ->get_reference_path_by_current_lane();
   if (reference_path_ptr != nullptr) {
     for (auto &frenet_obstacle : reference_path_ptr->get_obstacles()) {
-      if (!frenet_obstacle->b_frenet_valid() ||
-          frenet_obstacle->b_frenet_polygon_sequence_invalid()) {
+      if (!frenet_obstacle->b_frenet_valid()) {
         continue;
       }
       if (frenet_obstacle->source_type() == SourceType::OD) {

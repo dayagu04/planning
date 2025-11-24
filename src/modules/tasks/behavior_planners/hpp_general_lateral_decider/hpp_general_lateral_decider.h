@@ -95,11 +95,15 @@ class HppGeneralLateralDecider : public Task {
   bool IsCutoutSideObstacle(const std::shared_ptr<FrenetObstacle> obstacle,
                             Polygon2d &overlap_polygon);
   void PostProcessReferenceTrajBySoftBound(
-      const std::vector<std::pair<double, double>> &frenet_soft_bounds);
+      const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
+      GeneralLateralDeciderOutput &general_lateral_decider_output);
   void ExtractBoundary(
       std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       std::vector<std::pair<double, double>> &frenet_hard_bounds,
       std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+      std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
       std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
   void ProtectBoundByInitPoint(std::pair<double, double> &bound,
                                std::pair<BoundInfo, BoundInfo> &bound_info);
@@ -112,10 +116,11 @@ class HppGeneralLateralDecider : public Task {
                         std::pair<BoundInfo, BoundInfo> &bound_info);
   void SaveLatDebugInfo(
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
-      std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
-      GeneralLateralDeciderOutput &general_lateral_decider_output);
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info);
 
   void GenerateObstaclePreliminaryDecision(
       double ego_l, double distance_to_right_lane_border,
@@ -134,10 +139,15 @@ class HppGeneralLateralDecider : public Task {
       bool is_static, bool is_update_hard_bound = false);
   void GenerateLateralDeciderOutput(
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &second_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &first_soft_bounds_info,
+      const std::vector<std::pair<BoundInfo, BoundInfo>> &hard_bounds_info,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
   void GenerateEnuBoundaryPoints(
       const std::vector<std::pair<double, double>> &second_frenet_soft_bounds,
+      const std::vector<std::pair<double, double>> &first_frenet_soft_bounds,
       const std::vector<std::pair<double, double>> &frenet_hard_bounds,
       GeneralLateralDeciderOutput &general_lateral_decider_output);
 
@@ -167,7 +177,8 @@ class HppGeneralLateralDecider : public Task {
 
  private:
   HppGeneralLateralDeciderConfig config_;
-
+  bool is_ego_reverse_;
+  double min_road_radius_;
   // VelocityLimitInfo vel_limit_info_;
   // LatIgnoreType lat_ignore_type_;
   TrajectoryPoints ref_traj_points_;
@@ -178,8 +189,20 @@ class HppGeneralLateralDecider : public Task {
   ObstacleDecisions static_obstacle_decisions_;
   ObstacleDecisions dynamic_obstacle_decisions_;
 
+  std::vector<WeightedBounds> second_soft_bounds_;
+  std::vector<WeightedBounds> first_soft_bounds_;
+
   std::vector<WeightedBounds> soft_bounds_;
   std::vector<WeightedBounds> hard_bounds_;
+
+  std::vector<std::pair<double, double>> second_frenet_soft_bounds_;
+  std::vector<std::pair<double, double>> first_frenet_soft_bounds_;
+  std::vector<std::pair<double, double>> frenet_hard_bounds_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> second_soft_bounds_info_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> first_soft_bounds_info_;
+  std::vector<std::pair<BoundInfo, BoundInfo>> hard_bounds_info_;
+
+
   std::vector<std::pair<double, double>>
       vehicle_dynamic_buffer_;  // <left, right>
   pnc::mathlib::spline lbuffer_s_spline_;

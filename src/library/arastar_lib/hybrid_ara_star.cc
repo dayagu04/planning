@@ -979,21 +979,21 @@ void HybridARAStar::ChooseDirection() {
   for (const auto& frenet_obstacle : nudge_agents_) {
     if ((!no_right_ || !no_left_) &&
         frenet_obstacle->source_type() != SourceType::OCC) {
-      const auto& polygon_sequence =
-          frenet_obstacle->frenet_polygon_sequence()[0].second;
-      double min_s = polygon_sequence.min_x();
-      double max_s = polygon_sequence.max_x();
-      double min_l = polygon_sequence.min_y();
-      double max_l = polygon_sequence.max_y();
+      const auto& frenet_obstacle_boundary =
+          frenet_obstacle->frenet_obstacle_boundary();
+      double min_s = frenet_obstacle_boundary.s_start;
+      double max_s = frenet_obstacle_boundary.s_end;
+      double min_l = frenet_obstacle_boundary.l_start;
+      double max_l = frenet_obstacle_boundary.l_end;
       if (min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle &&
           min_l < 0 && max_l > 0) {
         for (const auto& another_frenet_obstacle : nudge_agents_) {
-          const auto& another_polygon_sequence =
-              another_frenet_obstacle->frenet_polygon_sequence()[0].second;
-          double another_min_s = another_polygon_sequence.min_x();
-          double another_max_s = another_polygon_sequence.max_x();
-          double another_min_l = another_polygon_sequence.min_y();
-          double another_max_l = another_polygon_sequence.max_y();
+          const auto& another_frenet_obstacle_boundary =
+              another_frenet_obstacle->frenet_obstacle_boundary();
+          double another_min_s = another_frenet_obstacle_boundary.s_start;
+          double another_max_s = another_frenet_obstacle_boundary.s_end;
+          double another_min_l = another_frenet_obstacle_boundary.l_start;
+          double another_max_l = another_frenet_obstacle_boundary.l_end;
           double start_s = std::max(min_s, another_min_s - 0.5);
           double end_s = std::min(max_s, another_max_s + 0.5);
           bool lon_overlap = start_s < end_s;
@@ -1038,14 +1038,13 @@ bool HybridARAStar::ProcessStaticAgents() {
   constexpr double kLBuffer = 4.5;
   constexpr double kCareLBuffer = 1.5;
   for (const auto& frenet_obstacle : reference_path_ptr_->get_obstacles()) {
-    if (frenet_obstacle->b_frenet_valid() &&
-        !frenet_obstacle->b_frenet_polygon_sequence_invalid()) {
-      const auto& polygon =
-          frenet_obstacle->frenet_polygon_sequence()[0].second;
-      double min_s = polygon.min_x();
-      double max_s = polygon.max_x();
-      double min_l = polygon.min_y();
-      double max_l = polygon.max_y();
+    if (frenet_obstacle->b_frenet_valid()) {
+      const auto& frenet_obstacle_boundary =
+          frenet_obstacle->frenet_obstacle_boundary();
+      double min_s = frenet_obstacle_boundary.s_start;
+      double max_s = frenet_obstacle_boundary.s_end;
+      double min_l = frenet_obstacle_boundary.l_start;
+      double max_l = frenet_obstacle_boundary.l_end;
       if (min_s < end_s_ + vehicle_param_.front_edge_to_rear_axle &&
           max_s > ego_s_ + rear_obs_s_ &&
           (std::abs(min_l) < kLBuffer || std::abs(max_l) < kLBuffer) &&
@@ -1154,8 +1153,7 @@ void HybridARAStar::MergeCloseAgent() {
     std::unordered_set<size_t> erased_indices;
     std::vector<std::shared_ptr<planning::FrenetObstacle>> new_nudge_agents;
     for (size_t i = 0; i < nudge_agents_.size(); ++i) {
-      if (!nudge_agents_[i]->b_frenet_valid() ||
-          nudge_agents_[i]->b_frenet_polygon_sequence_invalid()) {
+      if (!nudge_agents_[i]->b_frenet_valid()) {
         continue;
       }
       if (erased_indices.count(i)) {
@@ -1164,9 +1162,7 @@ void HybridARAStar::MergeCloseAgent() {
       auto current = nudge_agents_[i];
       for (size_t j = i + 1; j < nudge_agents_.size(); ++j) {
         if (!nudge_agents_[j]->b_frenet_valid() ||
-            nudge_agents_[j]->b_frenet_polygon_sequence_invalid() ||
-            !current->b_frenet_valid() ||
-            current->b_frenet_polygon_sequence_invalid()) {
+            !current->b_frenet_valid()) {
           continue;
         }
         if (erased_indices.count(j)) {
@@ -1190,17 +1186,17 @@ bool HybridARAStar::IsClose(
     const std::shared_ptr<planning::FrenetObstacle>& another_frenet_obstacle) {
   const double DistanceThreshold = ego_half_width_ * 2 + 0.15 * 2;
   constexpr double kMinDistance = 1.0;
-  const auto& sequence = frenet_obstacle->frenet_polygon_sequence()[0].second;
-  const auto& another_sequence =
-      another_frenet_obstacle->frenet_polygon_sequence()[0].second;
-  double min_s = sequence.min_x();
-  double max_s = sequence.max_x();
-  double min_l = sequence.min_y();
-  double max_l = sequence.max_y();
-  double another_min_s = another_sequence.min_x();
-  double another_max_s = another_sequence.max_x();
-  double another_min_l = another_sequence.min_y();
-  double another_max_l = another_sequence.max_y();
+  const auto& frenet_obstacle_boundary = frenet_obstacle->frenet_obstacle_boundary();
+  const auto& another_frenet_obstacle_boundary =
+      another_frenet_obstacle->frenet_obstacle_boundary();
+  double min_s = frenet_obstacle_boundary.s_start;
+  double max_s = frenet_obstacle_boundary.s_end;
+  double min_l = frenet_obstacle_boundary.l_start;
+  double max_l = frenet_obstacle_boundary.l_end;
+  double another_min_s = another_frenet_obstacle_boundary.s_start;
+  double another_max_s = another_frenet_obstacle_boundary.s_end;
+  double another_min_l = another_frenet_obstacle_boundary.l_start;
+  double another_max_l = another_frenet_obstacle_boundary.l_end;
   double start_s = std::max(min_s, another_min_s - 0.5);
   double end_s = std::min(max_s, another_max_s + 0.5);
   bool lon_overlap = start_s < end_s;
@@ -1259,12 +1255,12 @@ void HybridARAStar::FindClosestUncoveredInterval() {
   std::vector<std::pair<double, double>> intervals;
   intervals.reserve(nudge_agents_.size());
   for (const auto& frenet_obstacle : nudge_agents_) {
-    double min_s = frenet_obstacle->frenet_polygon_sequence()[0].second.min_x();
+    double min_s = frenet_obstacle->frenet_obstacle_boundary().s_start;
     if (min_s > ego_s_ + vehicle_param_.front_edge_to_rear_axle + 0.3 &&
         min_s < ego_s_ + kConsiderS) {
       intervals.emplace_back(
-          frenet_obstacle->frenet_polygon_sequence()[0].second.min_y(),
-          frenet_obstacle->frenet_polygon_sequence()[0].second.max_y());
+          frenet_obstacle->frenet_obstacle_boundary().l_start,
+          frenet_obstacle->frenet_obstacle_boundary().l_end);
     }
   }
 
