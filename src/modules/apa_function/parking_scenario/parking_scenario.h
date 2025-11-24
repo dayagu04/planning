@@ -488,7 +488,7 @@ class ParkingScenario {
       const double dynamic_mirror_lat_buffer = 1.168,
       const bool only_check_mirror = false,
       const UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH,
-      const GJKrequestFrom gjk_request_from = GJKrequestFrom::OTHER);
+      const bool use_limiter = true);
 
   virtual const double CalRemainDistFromObs(const CalRemainDistParams &params);
 

@@ -501,8 +501,7 @@ const double ParkingScenario::CalRemainDistFromObs(
     const double static_mirror_lat_buffer, const double dynamic_lon_buffer,
     const double dynamic_body_lat_buffer,
     const double dynamic_mirror_lat_buffer, const bool only_check_mirror,
-    const UseObsHeightMethod use_obs_height_method,
-    const GJKrequestFrom gjk_request_from ) {
+    const UseObsHeightMethod use_obs_height_method, const bool use_limiter) {
   const ApaParameters& param = apa_param.GetParam();
 
   if (apa_world_ptr_->GetSlotManagerPtr()
@@ -524,8 +523,8 @@ const double ParkingScenario::CalRemainDistFromObs(
         static_body_lat_buffer, 0.0,
         GJKColDetRequest(false, param.uss_config.use_uss_pt_cloud,
                          CarBodyType::ONLY_MIRROR, ApaObsMovementType::STATIC,
-                         use_obs_height_method),
-        true, static_mirror_lat_buffer, gjk_request_from);
+                         use_obs_height_method, use_limiter),
+        true, static_mirror_lat_buffer);
 
     return col_res.remain_dist - static_lon_buffer;
   }
@@ -541,12 +540,12 @@ const double ParkingScenario::CalRemainDistFromObs(
   // check static obs, it can be radical
   GJKColDetRequest gjl_col_det_request(
       false, param.uss_config.use_uss_pt_cloud, CarBodyType::NORMAL,
-      ApaObsMovementType::STATIC, use_obs_height_method);
+      ApaObsMovementType::STATIC, use_obs_height_method, use_limiter);
 
   ColResult col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       static_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      static_mirror_lat_buffer, gjk_request_from);
+      static_mirror_lat_buffer);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_static = frame_.remain_dist_path + 1.68;
@@ -560,7 +559,7 @@ const double ParkingScenario::CalRemainDistFromObs(
   col_res = gjk_col_det_ptr->Update(
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
       dynamic_body_lat_buffer, 0.0, gjl_col_det_request, true,
-      dynamic_mirror_lat_buffer, gjk_request_from);
+      dynamic_mirror_lat_buffer);
 
   if (!col_res.col_flag) {
     col_res.remain_dist_dynamic = frame_.remain_dist_path + 3.68;

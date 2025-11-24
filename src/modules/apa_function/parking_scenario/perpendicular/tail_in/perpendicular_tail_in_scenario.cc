@@ -2347,16 +2347,28 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
 
   real_time_brake_info_vec[0].Set(
       RealTimeBrakeType::STOP, stop_body_lat_inflation,
-      stop_mirror_lat_inflation, stop_lon_dist, lon_buffer);
+      stop_mirror_lat_inflation, stop_lon_dist, lon_buffer,
+      speed_buffer.dynamic_stop_body_lat_buffer,
+      speed_buffer.dynamic_stop_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
   real_time_brake_info_vec[1].Set(
       RealTimeBrakeType::HEAVY_BRAKE, heavy_brake_body_lat_inflation,
-      heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer);
+      heavy_brake_mirror_lat_inflation, heavy_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_low_speed_body_lat_buffer,
+      speed_buffer.dynamic_low_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
   real_time_brake_info_vec[2].Set(
       RealTimeBrakeType::MODERATE_BRAKE, moderate_brake_body_lat_inflation,
-      moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist, lon_buffer);
+      moderate_brake_mirror_lat_inflation, moderate_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_mid_speed_body_lat_buffer,
+      speed_buffer.dynamic_mid_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
   real_time_brake_info_vec[3].Set(
       RealTimeBrakeType::SLIGHT_BRAKE, slight_brake_body_lat_inflation,
-      slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer);
+      slight_brake_mirror_lat_inflation, slight_brake_lon_dist, lon_buffer,
+      speed_buffer.dynamic_high_speed_body_lat_buffer,
+      speed_buffer.dynamic_high_speed_mirror_lat_buffer,
+      speed_buffer.dynamic_lon_buffer);
 
   bool special_stop_flag = false;
   double special_stop_body_lat_buffer =
@@ -2403,14 +2415,19 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
     real_time_brake_info_vec[0].Set(
         RealTimeBrakeType::STOP, special_stop_body_lat_buffer,
         special_stop_mirror_lat_buffer, special_stop_lon_dist,
-        special_stop_lon_buffer);
+        special_stop_lon_buffer, speed_buffer.dynamic_stop_body_lat_buffer,
+        speed_buffer.dynamic_stop_mirror_lat_buffer,
+        speed_buffer.dynamic_lon_buffer);
   }
 
   double safe_remain_dist = std::numeric_limits<double>::infinity();
   for (const auto& real_time_brake_info : real_time_brake_info_vec) {
     double remain_dist = CalRemainDistFromObs(
         real_time_brake_info.lon_buffer, real_time_brake_info.body_lat_buffer,
-        real_time_brake_info.mirror_lat_buffer, 1.168, 0.86, 0.86, false,
+        real_time_brake_info.mirror_lat_buffer,
+        real_time_brake_info.dynamic_lon_buffer,
+        real_time_brake_info.dynamic_body_lat_buffer,
+        real_time_brake_info.dynamic_mirror_lat_buffer, false,
         param.use_obs_height_method);
     remain_dist = std::max(remain_dist, real_time_brake_info.min_lon_dist);
     safe_remain_dist = std::min(safe_remain_dist, remain_dist);
@@ -3596,10 +3613,17 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
                              ego_info_under_slot.target_pose.GetX() + 0.068}),
                0.068);
 
-  if (CalRemainDistFromObs(folding_mirror_consume_dist,
-                           folding_mirror_safe_lat_buffer,
-                           folding_mirror_safe_lat_buffer, 1.0, 1.168, 1.168,
-                           true, param.use_obs_height_method) < 0.0) {
+  const double dynamic_lon_buffer =
+      param.lat_lon_speed_buffer.dynamic_lon_buffer + 0.015;
+
+  const double dynamic_stop_body_lat_buffer =
+      param.lat_lon_speed_buffer.dynamic_stop_body_lat_buffer + 0.015;
+
+  if (CalRemainDistFromObs(
+          folding_mirror_consume_dist, folding_mirror_safe_lat_buffer,
+          folding_mirror_safe_lat_buffer, dynamic_lon_buffer,
+          dynamic_stop_body_lat_buffer, dynamic_stop_body_lat_buffer, true,
+          param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe when folding mirror, "
                  "should not fold mirror";
     return;
@@ -3626,7 +3650,8 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
                0.068);
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, lat_buffer, lat_buffer,
-                           1.0, 1.168, 1.168, true,
+                           dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+                           dynamic_stop_body_lat_buffer, true,
                            param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
@@ -3645,10 +3670,11 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
            : param.lat_lon_speed_buffer.lon_buffer) +
       0.015;
 
-  if (CalRemainDistFromObs(stop_body_lon_buffer, stop_body_lat_buffer,
-                           lat_buffer, 1.0, 1.168, 1.168, false,
-                           param.use_obs_height_method) <
-      frame_.remain_dist_path - 0.2) {
+  if (CalRemainDistFromObs(
+          stop_body_lon_buffer, stop_body_lat_buffer, lat_buffer,
+          dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
+          dynamic_stop_body_lat_buffer, false,
+          param.use_obs_height_method) < frame_.remain_dist_path - 0.2) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
@@ -3657,7 +3683,9 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   const double min_safe_obs2mirror_dist = smart_fold_mirror_params.lat_buffer;
 
   if (CalRemainDistFromObs(folded_mirror_consume_dist, min_safe_obs2mirror_dist,
-                           min_safe_obs2mirror_dist, 1.0, 1.168, 1.168, true,
+                           min_safe_obs2mirror_dist, dynamic_lon_buffer,
+                           dynamic_stop_body_lat_buffer,
+                           dynamic_stop_body_lat_buffer, true,
                            param.use_obs_height_method) < 0.0) {
     ILOG_INFO << "decide fold mirror, need send fold mirror msg";
     frame_.mirror_command = MirrorCommand::FOLD;

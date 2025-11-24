@@ -661,7 +661,7 @@ const double ParallelParkInScenario::CalRealTimeBrakeDist() {
   const double remain_dist_obs = CalRemainDistFromObs(
       safe_uss_remain_dist, lat_buffer, lat_buffer, dynamic_lon_buffer,
       dynaminc_lat_buffer, dynaminc_lat_buffer, false,
-      apa_param.GetParam().use_obs_height_method, GJKrequestFrom::PARALLEL);
+      apa_param.GetParam().use_obs_height_method, false);
 
   ILOG_INFO << "final remain_dist_obs = " << remain_dist_obs;
 

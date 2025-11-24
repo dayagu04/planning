@@ -1322,10 +1322,16 @@ void SyncParkingParameters(const bool is_simulation) {
   // lat lon speed buffer params
   JSON_READ_VALUE(param.lat_lon_speed_buffer.lon_buffer, float,
                   "speed_lon_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_lon_buffer, float,
+                  "speed_dynamic_lon_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_body_lat_buffer, float,
                   "stop_body_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_mirror_lat_buffer, float,
                   "stop_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_stop_body_lat_buffer,
+                  float, "dynamic_stop_body_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_stop_mirror_lat_buffer,
+                  float, "dynamic_stop_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.stop_min_lon_dist, float,
                   "stop_min_lon_dist");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.special_stop_body_lat_buffer,
@@ -1338,18 +1344,33 @@ void SyncParkingParameters(const bool is_simulation) {
                   "low_speed_body_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_mirror_lat_buffer, float,
                   "low_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_low_speed_body_lat_buffer,
+                  float, "dynamic_low_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_low_speed_mirror_lat_buffer, float,
+      "dynamic_low_speed_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.low_speed_min_lon_dist, float,
                   "low_speed_min_lon_dist");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_body_lat_buffer, float,
                   "mid_speed_body_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_mirror_lat_buffer, float,
                   "mid_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_mid_speed_body_lat_buffer,
+                  float, "dynamic_mid_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_mid_speed_mirror_lat_buffer, float,
+      "dynamic_mid_speed_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.mid_speed_min_lon_dist, float,
                   "mid_speed_min_lon_dist");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_body_lat_buffer, float,
                   "high_speed_body_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_mirror_lat_buffer,
                   float, "high_speed_mirror_lat_buffer");
+  JSON_READ_VALUE(param.lat_lon_speed_buffer.dynamic_high_speed_body_lat_buffer,
+                  float, "dynamic_high_speed_body_lat_buffer");
+  JSON_READ_VALUE(
+      param.lat_lon_speed_buffer.dynamic_high_speed_mirror_lat_buffer, float,
+      "dynamic_high_speed_mirror_lat_buffer");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.high_speed_min_lon_dist, float,
                   "high_speed_min_lon_dist");
   JSON_READ_VALUE(param.lat_lon_speed_buffer.extreme_case_lon_buffer, float,

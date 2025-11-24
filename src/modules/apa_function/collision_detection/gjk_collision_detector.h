@@ -14,14 +14,11 @@ enum class CarBodyType : uint8_t {
   ONLY_MIRROR,
   ONLY_MAX_POLYGAN,
 };
-enum class GJKrequestFrom : uint8_t {
-  OTHER,
-  PARALLEL,
-};
 
 struct GJKColDetRequest {
   bool use_obs_base_slot = true;
   bool use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud;
+  bool use_limiter = true;
   CarBodyType car_body_type = CarBodyType::NORMAL;
   ApaObsMovementType movement_type = ApaObsMovementType::ALL;
   UseObsHeightMethod use_obs_height_method = UseObsHeightMethod::HIGH;
@@ -33,9 +30,11 @@ struct GJKColDetRequest {
       const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
       const CarBodyType _car_body_type = CarBodyType::NORMAL,
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
-      const UseObsHeightMethod _use_obs_height_method = UseObsHeightMethod::HIGH) {
-    Set(_use_obs_base_slot, _use_uss_pt, _car_body_type,
-        _movement_type, _use_obs_height_method);
+      const UseObsHeightMethod _use_obs_height_method =
+          UseObsHeightMethod::HIGH,
+      const bool _use_limiter = true) {
+    Set(_use_obs_base_slot, _use_uss_pt, _car_body_type, _movement_type,
+        _use_obs_height_method, _use_limiter);
   }
 
   void Set(
@@ -43,12 +42,15 @@ struct GJKColDetRequest {
       const bool _use_uss_pt = apa_param.GetParam().uss_config.use_uss_pt_cloud,
       const CarBodyType _car_body_type = CarBodyType::NORMAL,
       const ApaObsMovementType _movement_type = ApaObsMovementType::ALL,
-      const UseObsHeightMethod _use_obs_height_method = UseObsHeightMethod::HIGH) {
+      const UseObsHeightMethod _use_obs_height_method =
+          UseObsHeightMethod::HIGH,
+      const bool _use_limiter = true) {
     use_obs_base_slot = _use_obs_base_slot;
     use_uss_pt = _use_uss_pt;
     car_body_type = _car_body_type;
     movement_type = _movement_type;
     use_obs_height_method = _use_obs_height_method;
+    use_limiter = _use_limiter;
   }
 };
 
@@ -71,8 +73,7 @@ class GJKCollisionDetector final : public BaseCollisionDetector {
                          const double body_lat_buffer, const double lon_buffer,
                          const GJKColDetRequest gjk_col_det_request,
                          const bool special_process_mirror = false,
-                         const double mirror_lat_buffer = 0.08,
-                         const GJKrequestFrom gjk_request_from = GJKrequestFrom::OTHER);
+                         const double mirror_lat_buffer = 0.08);
 
   const bool IsPolygonCollision(const Polygon2D& polygon,
                                 const GJKColDetRequest gjk_col_det_request);

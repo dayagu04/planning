@@ -262,9 +262,12 @@ struct ParkingLatLonPathBuffer {
 
 struct ParkingLatLonSpeedBuffer {
   float lon_buffer;
+  float dynamic_lon_buffer;
 
   float stop_body_lat_buffer;
   float stop_mirror_lat_buffer;
+  float dynamic_stop_body_lat_buffer;
+  float dynamic_stop_mirror_lat_buffer;
   float stop_min_lon_dist;
 
   float special_stop_body_lat_buffer;
@@ -273,14 +276,20 @@ struct ParkingLatLonSpeedBuffer {
 
   float low_speed_body_lat_buffer;
   float low_speed_mirror_lat_buffer;
+  float dynamic_low_speed_body_lat_buffer;
+  float dynamic_low_speed_mirror_lat_buffer;
   float low_speed_min_lon_dist;
 
   float mid_speed_body_lat_buffer;
   float mid_speed_mirror_lat_buffer;
+  float dynamic_mid_speed_body_lat_buffer;
+  float dynamic_mid_speed_mirror_lat_buffer;
   float mid_speed_min_lon_dist;
 
   float high_speed_body_lat_buffer;
   float high_speed_mirror_lat_buffer;
+  float dynamic_high_speed_body_lat_buffer;
+  float dynamic_high_speed_mirror_lat_buffer;
   float high_speed_min_lon_dist;
 
   float extreme_case_lon_buffer;
