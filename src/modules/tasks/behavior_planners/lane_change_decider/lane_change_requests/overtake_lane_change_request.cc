@@ -265,14 +265,13 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       dis_to_first_merge = NL_NMAX;
       first_merge_direction = SplitDirection::SPLIT_NONE;
     }
+  } else if (route_info_output.map_vendor ==
+             iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
+    if (route_info_output.dis_to_ramp <
+        minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu) {
+      return;
+    }
   }
-  // else if (route_info_output.map_vendor ==
-  //            iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
-  //   if (route_info_output.dis_to_ramp <
-  //       minimum_distance_nearby_ramp_to_surpress_overtake_for_baidu) {
-  //     return;
-  //   }
-  // }
 
   int base_lane_virtual_id{current_lane_virtual_id};
 
