@@ -90,9 +90,9 @@ protected:
 
  bool IsInvalidLane(const iflymapdata::sdpro::Lane* lane_info) const;
 
- bool RampMLCDecider(TopoLinkGraph& feasible_lane_graph);
- bool MergeMLCDecider(TopoLinkGraph& feasible_lane_graph);
- bool NormalMLCDecider(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInMergeScene(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feasible_lane_graph);
  void ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
     const std::map<int, double>& feasible_lane_distance);

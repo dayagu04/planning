@@ -159,19 +159,19 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
   TopoLinkGraph feasible_lane_graph;
   switch (mlc_scene_type) {
     case SPLIT_SCENE: {
-      if (!RampMLCDecider(feasible_lane_graph)) {
+      if (!CalculateFeasibleLaneInRampScene(feasible_lane_graph)) {
         return;
       }
       break;
     }
     case NORMAL_SCENE: {
-      if (!NormalMLCDecider(feasible_lane_graph)) {
+      if (!CalculateFeasibleLaneInNormalScene(feasible_lane_graph)) {
         return;
       }
       break;
     }
     case MERGE_SCENE:{
-      if (!MergeMLCDecider(feasible_lane_graph)) {
+      if (!CalculateFeasibleLaneInMergeScene(feasible_lane_graph)) {
         return;
       }
       break;
@@ -1350,7 +1350,7 @@ const ad_common::sdpromap::SDProMap& LDRouteInfoStrategy::get_sdpro_map() {
   return ld_map_;
 }
 
-bool LDRouteInfoStrategy::RampMLCDecider(TopoLinkGraph& feasible_lane_graph) {
+bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasible_lane_graph) {
   // TopoLinkGraph before_split_feasible_lane_graph;
   TopoLinkGraph after_feasible_lane_graph;
   std::vector<iflymapdata::sdpro::Lane> start_lane_vec;
@@ -1429,7 +1429,7 @@ bool LDRouteInfoStrategy::RampMLCDecider(TopoLinkGraph& feasible_lane_graph) {
   return true;
 }
 
-bool LDRouteInfoStrategy::MergeMLCDecider(TopoLinkGraph& feasible_lane_graph) {
+bool LDRouteInfoStrategy::CalculateFeasibleLaneInMergeScene(TopoLinkGraph& feasible_lane_graph) {
   // 1、计算target link
   if (merge_info_vec_.empty()) {
     return false;
@@ -1494,7 +1494,7 @@ bool LDRouteInfoStrategy::MergeMLCDecider(TopoLinkGraph& feasible_lane_graph) {
   return true;
 }
 
-bool LDRouteInfoStrategy::NormalMLCDecider(TopoLinkGraph& feasible_lane_graph) {
+bool LDRouteInfoStrategy::CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feasible_lane_graph) {
   // 1、 确定target_link
   iflymapdata::sdpro::LinkInfo_Link current_link = *current_link_;
   iflymapdata::sdpro::LinkInfo_Link* target_link = &current_link;
