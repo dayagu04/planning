@@ -106,9 +106,9 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   GenerateComfortTarget();
 
   comfort_jerk_min_vec_[0] = comfort_jerk_min_vec_[1];
-  JSON_DEBUG_VECTOR("comfort_jerk_min_vec", comfort_jerk_min_vec_, 0);
+  JSON_DEBUG_VECTOR("comfort_jerk_min_vec", comfort_jerk_min_vec_, 1);
   comfort_v_target_vec_[0] = comfort_v_target_vec_[1];
-  JSON_DEBUG_VECTOR("comfort_v_target_vec", comfort_v_target_vec_, 0);
+  JSON_DEBUG_VECTOR("comfort_v_target_vec", comfort_v_target_vec_, 1);
 
   zero_acc_vel_vec_.clear();
   zero_acc_vel_vec_.resize(plan_points_num_, 0.0);
@@ -121,8 +121,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
     zero_acc_acc_vec_[i] = virtual_zero_acc_curve_->Evaluate(2, t);
   }
 
-  JSON_DEBUG_VECTOR("zero_acc_vel_vec", zero_acc_vel_vec_, 0);
-  JSON_DEBUG_VECTOR("zero_acc_acc_vec", zero_acc_acc_vec_, 0);
+  JSON_DEBUG_VECTOR("zero_acc_vel_vec", zero_acc_vel_vec_, 1);
+  JSON_DEBUG_VECTOR("zero_acc_acc_vec", zero_acc_acc_vec_, 1);
 
   auto mutable_lon_ref_path_decider_output =
       session_->mutable_planning_context()

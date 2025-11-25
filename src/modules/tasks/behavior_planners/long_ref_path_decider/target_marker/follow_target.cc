@@ -153,8 +153,18 @@ void FollowTarget::GenerateFollowTarget() {
     if (iter != agents_headway_map.end()) {
       follow_time_gap = iter->second.current_headway;
     }
-    double target_s_disatnce = std::max(
-        vel * follow_time_gap + min_follow_distance_m_, min_follow_distance_m_);
+
+    double delta_v = vel - upper_bound_infos_[i].v;
+
+    constexpr double a = 1.5;
+    constexpr double b_max = 2.0;
+
+    double relative_vel_dis =
+        std::min(0.0, vel * delta_v) / (2.0 * std::sqrt(a * b_max));
+
+    double target_s_disatnce =
+        min_follow_distance_m_ +
+        std::max(0.0, vel * follow_time_gap + relative_vel_dis);
 
     double upper_bound_s =
         std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);

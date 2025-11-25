@@ -46,7 +46,7 @@ class FollowTarget : public Target {
  private:
   std::vector<UpperBoundInfo> upper_bound_infos_;
   planning::common::FollowTarget follow_target_pb_;
-  double min_follow_distance_m_ = 3.0;
+  double min_follow_distance_m_ = 3.5;
 };
 
 }  // namespace planning
