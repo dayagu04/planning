@@ -127,6 +127,7 @@ bool GeneralLateralDecider::Execute() {
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
     last_desire_final_nudge_l_map_.clear();
+    trust_prediction_t_threshold_ = 2.5;
     ResetIsExceedObstacleHysteresisMap();
     ILOG_DEBUG << "PreCheck failed";
     return false;
@@ -140,6 +141,7 @@ bool GeneralLateralDecider::Execute() {
     last_ref_traj_points_.clear();
     extra_lane_width_decrease_buffer_ = 0.0;
     is_agent_current_pred_lonoverlap_ = false;
+    trust_prediction_t_threshold_ = 2.5;
     ResetIsExceedObstacleHysteresisMap();
     return false;
   };
@@ -1559,6 +1561,7 @@ void GeneralLateralDecider::GenerateObstaclesBoundary() {
   const LateralOffsetDeciderOutput &lateral_offset_decider_output =
       session_->mutable_planning_context()->lateral_offset_decider_output();
   CalculateExtraLaneWidthDecreaseBuffer();
+  GenerateTrustPredictionTimeThreshold(trust_prediction_t_threshold_);
 
   std::unordered_map<int, HysteresisDecision> is_exceed_obstacle_map;
   is_exceed_obstacle_map = is_exceed_obstacle_hysteresis_map_;
@@ -2643,9 +2646,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   bool is_care_reverse_ignore_obj = false;
   bool is_care_lon_overtake_obj = false;
   bool is_care_intersection_scene = false;
-
-  double trust_prediction_t_threshold = config_.trust_prediction_t_threshold;
-  GenerateTrustPredictionTimeThreshold(trust_prediction_t_threshold);
   if (obstacle->obstacle()->is_reverse() && !is_blocked_obstacle_ &&
       !is_avoid_lon_overtake_obj &&
       (lat_obstacle_decision.at(obstacle->id()) ==
@@ -2678,7 +2678,7 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   } else {
     has_trusted_predicted_polygon = reference_path_ptr_->get_polygon_at_time(
         obstacle_id, is_use_recurrence_,
-        int(trust_prediction_t_threshold * 10),
+        int(trust_prediction_t_threshold_ * 10),
         trusted_predicted_sl_polygon);
   }
   // 对向车ignore减少buffer
@@ -2697,6 +2697,12 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
   last_overlap_min_y_ = -1000;
   last_overlap_max_y_ = 1000;
   double last_t_lat_buf_dis = 0.0;
+  double care_t = trust_prediction_t_threshold_;
+  if (is_care_reverse_ignore_obj || is_care_lon_overtake_obj) {
+    care_t = 0;
+  } else if (is_care_intersection_scene) {
+    care_t = config_.trust_prediction_t_threshold_in_intersection;
+  }
   for (size_t i = 0; i < plan_history_traj_.size(); i++) {
     auto &traj_point = plan_history_traj_[i];
     const auto &t = traj_point.t;
@@ -2726,12 +2732,6 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
     if (!ok) {
       // TBD add log
       return;
-    }
-    double care_t = trust_prediction_t_threshold;
-    if (is_care_reverse_ignore_obj || is_care_lon_overtake_obj) {
-      care_t = 0;
-    } else if (is_care_intersection_scene) {
-      care_t = config_.trust_prediction_t_threshold_in_intersection;
     }
     if (t <= care_t || !has_trusted_predicted_polygon) {
       obstacle_sl_polygon = obstacle_sl_polygon_t;
@@ -2905,6 +2905,8 @@ void GeneralLateralDecider::GenerateTrustPredictionTimeThreshold(
   static const double kPreviewRangeMin = 31.0;      // 最小预览范围(m)
   static const double kMaxSamplingRange = 81.0;  // 最大采样范围(自车位置向前，m)
   static const double kPreviewRangeVelCoeff = 2.5;  // 预览范围与车速的系数
+  static const double KTrusTPredictionThresholdChangeRate = 0.4;  // 预测使用时间变化率
+
   // 平均曲率插值预测使用时间（主要考虑的是曲率场景下的预测不准）
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
@@ -2915,39 +2917,44 @@ void GeneralLateralDecider::GenerateTrustPredictionTimeThreshold(
   const auto &planning_init_point = ego_frenet_state_.planning_init_point();
   const auto &curve_s_spline = general_lateral_decider_output.curve_s_spline;
   ref_curve_info_ = reference_path_ptr_->GetReferencePathCurveInfo();
-  trust_prediction_t_threshold = config_.trust_prediction_t_threshold;
-  if (in_intersection) {
-    return;
-  }
-  double init_s = planning_init_point.frenet_state.s;
-  double init_v = ego_cart_state_manager_->ego_v();
-  double sampling_range = init_s + kMaxSamplingRange;
-  double preview_range =
-      std::min(std::max(init_s + init_v * kPreviewRangeVelCoeff,
-               init_s + kPreviewRangeMin), sampling_range);
-  double pt_kappa = 1e-6;
-  size_t kappa_gap = 0;
-  double sum_kappa = 0;
-  bool is_k_s_spline_valid = false;
-  if (!curve_s_spline.get_x().empty() && !curve_s_spline.get_y().empty()) {
-    is_k_s_spline_valid = true;
-  }
-  for (double sampling_s = init_s - kSamplingGap;
-       sampling_s <= preview_range; sampling_s += kSamplingGap) {
-    if (is_k_s_spline_valid) {
-      pt_kappa = curve_s_spline(sampling_s);
-    } else {
-      continue;
+  double trust_prediction_t_threshold_tmp = config_.trust_prediction_t_threshold;
+  if (!in_intersection) {
+    double init_s = planning_init_point.frenet_state.s;
+    double init_v = ego_cart_state_manager_->ego_v();
+    double sampling_range = init_s + kMaxSamplingRange;
+    double preview_range =
+        std::min(std::max(init_s + init_v * kPreviewRangeVelCoeff,
+                init_s + kPreviewRangeMin), sampling_range);
+    double pt_kappa = 1e-6;
+    size_t kappa_gap = 0;
+    double sum_kappa = 0;
+    bool is_k_s_spline_valid = false;
+    if (!curve_s_spline.get_x().empty() && !curve_s_spline.get_y().empty()) {
+      is_k_s_spline_valid = true;
     }
-    kappa_gap += 1;
-    sum_kappa += std::fabs(pt_kappa);
+    for (double sampling_s = init_s - kSamplingGap;
+        sampling_s <= preview_range; sampling_s += kSamplingGap) {
+      if (is_k_s_spline_valid) {
+        pt_kappa = curve_s_spline(sampling_s);
+      } else {
+        continue;
+      }
+      kappa_gap += 1;
+      sum_kappa += std::fabs(pt_kappa);
+    }
+    double average_kappa = sum_kappa / kappa_gap;
+    double average_radius = 1 / average_kappa;
+    std::vector<double> xp_radius{400, 700, 1000, 1500, 2000, 3000};
+    std::vector<double> fp_t{0, 0.5, 1.0, 1.5, 2.0, 2.5};
+    trust_prediction_t_threshold_tmp = interp(
+        average_radius, xp_radius, fp_t);
   }
-  double average_kappa = sum_kappa / kappa_gap;
-  double average_radius = 1 / average_kappa;
-  std::vector<double> xp_radius{400, 700, 1000, 1500, 2000, 3000};
-  std::vector<double> fp_t{0, 0.5, 1.0, 1.5, 2.0, 2.5};
-  trust_prediction_t_threshold = interp(
-      average_radius, xp_radius, fp_t);
+  trust_prediction_t_threshold_tmp =
+      clip(trust_prediction_t_threshold_tmp,
+      trust_prediction_t_threshold + KTrusTPredictionThresholdChangeRate,
+      trust_prediction_t_threshold - KTrusTPredictionThresholdChangeRate);
+  trust_prediction_t_threshold = std::fmax(trust_prediction_t_threshold_tmp, 0);
+  JSON_DEBUG_VALUE("trust_prediction_t_threshold", trust_prediction_t_threshold);
 }
 
 void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
