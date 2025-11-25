@@ -46,6 +46,7 @@ ReferencePathManager::get_reference_path_by_current_lane() {
 bool ReferencePathManager::update() {
   double time_start = IflyTime::Now_ms();
   reference_paths_.clear();
+  is_switch_ref_path_ = false;
   auto &virtual_lane_manager =
       session_->mutable_environmental_model()->get_virtual_lane_manager();
   // step1 construct current/left/right reference_path
@@ -122,6 +123,10 @@ bool ReferencePathManager::update() {
   time_end = IflyTime::Now_ms();
   ILOG_DEBUG << "ReferencePathManager update cost 2:" << time_end - time_start;
 
+  if (current_ref_path_source_ != current_lane->get_reference_path()->GetReferencePathSource()) {
+    is_switch_ref_path_ = true;
+  }
+  current_ref_path_source_ = current_lane->get_reference_path()->GetReferencePathSource();
   return true;
 }
 

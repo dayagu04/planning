@@ -135,6 +135,7 @@ void LaneReferencePath::Update(planning::framework::Session *session, ReferenceP
         session->environmental_model().get_ego_state_manager()->ego_v(),
         session->environmental_model().get_ego_state_manager()->ego_v_cruise());
     is_construction_scene_ref_path_ = true;
+    ref_path_source_ = ReferencePathSource::CONSTRUCTION_SCENE;
   } else {
     ILOG_ERROR << "LaneReferencePath::update failed";
   }

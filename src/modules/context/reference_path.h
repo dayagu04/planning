@@ -15,6 +15,13 @@
 // class ObstacleManager;
 namespace planning {
 
+enum class ReferencePathSource {
+  FUSION_ROAD,
+  FUNCTIONAL_STATE_MACHINE,
+  CONSTRUCTION_SCENE,
+  NARROW_SPACE_SCENE
+};
+
 enum class ReferencePathPointType { MAP, TRAJ, INTERPOLATE };
 
 struct ReferencePathPoint {
@@ -186,6 +193,11 @@ class ReferencePath {
   const bool GetIsSmoothed() const { return is_smoothed_; }
 
   const bool GetIsConstructionScene() const { return is_construction_scene_ref_path_; }
+
+  const ReferencePathSource& GetReferencePathSource() const {
+    return ref_path_source_;
+  }
+  
  public:
   // 用在sort函数中，应使用全局量或Lambda函数
   inline static bool compare_obstacle_s_descend(
@@ -348,6 +360,8 @@ class ReferencePath {
   SmootherData smooth_output_;
   planning::planning_math::FemPosDeviationSmoother ref_path_smoother_;
   planning::common::ReferencePathSmoothInfo ref_path_smoother_info_;
+
+  ReferencePathSource ref_path_source_ = ReferencePathSource::FUSION_ROAD;
 };
 
 }  // namespace planning

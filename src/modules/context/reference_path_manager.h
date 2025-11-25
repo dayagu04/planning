@@ -39,6 +39,10 @@ class ReferencePathManager {
     return smooth_bound_filter_;
   }
 
+  const bool GetIsSwitchRefPath() const {
+    return is_switch_ref_path_;
+  }
+
  private:
   bool GetReferencePathByConstructionScene();
 
@@ -49,6 +53,8 @@ class ReferencePathManager {
   // smooth
   int last_current_lane_virtual_id_ = INT_MAX;
   std::shared_ptr<planning::planning_math::MeanFilter> smooth_bound_filter_ = nullptr;
+  bool is_switch_ref_path_ = false;
+  ReferencePathSource current_ref_path_source_ = ReferencePathSource::FUSION_ROAD;
 };
 
 }  // namespace planning
