@@ -145,9 +145,7 @@ void ReferencePath::update_refpath_points(
       refined_ref_path_points_.emplace_back(pt);
     }
   }
-  if (is_need_smooth) {
-    UpdateReferencePath();
-  }
+  UpdateReferencePath(is_need_smooth);
 }
 
 void ReferencePath::update_refpath_points_in_hpp(
@@ -569,7 +567,7 @@ bool ReferencePath::get_polygon_at_time(
   }
 }
 
-bool ReferencePath::UpdateReferencePath() {
+bool ReferencePath::UpdateReferencePath(const bool is_need_smooth) {
   // Step 1) Check points size
   if (refined_ref_path_points_.size() < 3) {
     ILOG_ERROR << "UpdateReferencePath: points size < 3";
@@ -599,16 +597,18 @@ bool ReferencePath::UpdateReferencePath() {
   // Step 4) Update road curve info
   HandleRoadCurvature(init_s);
   // Step 5) Smooth ref path
-  std::vector<planning_math::PathPoint> smoothed_path_points;
-  auto start_smooth_time = IflyTime::Now_us();
-  is_smoothed_ = SmoothReferencePath(init_s, x_s_spline, y_s_spline, smoothed_path_points);
-  auto end_smooth_time = IflyTime::Now_us();
-  JSON_DEBUG_VALUE("smooth_refpath_points_cost", end_smooth_time - start_smooth_time)
-  SaveSmootherDebugInfo();
-  if (is_smoothed_) {
-    // Step 6) Update path info
-    UpdateReferencePathInfo(smoothed_path_points);
-    return true;
+  if (is_need_smooth) {
+    std::vector<planning_math::PathPoint> smoothed_path_points;
+    auto start_smooth_time = IflyTime::Now_us();
+    is_smoothed_ = SmoothReferencePath(init_s, x_s_spline, y_s_spline, smoothed_path_points);
+    auto end_smooth_time = IflyTime::Now_us();
+    JSON_DEBUG_VALUE("smooth_refpath_points_cost", end_smooth_time - start_smooth_time)
+    SaveSmootherDebugInfo();
+    if (is_smoothed_) {
+      // Step 6) Update path info
+      UpdateReferencePathInfo(smoothed_path_points);
+      return true;
+    }
   }
   return false;
 }
@@ -744,6 +744,7 @@ bool ReferencePath::HandleRoadCurvature(
     const double init_s) {
   // 1. 曲率半径阈值
   static const double kStraightRadiusDefault = 2000.0;      // 默认直道判断半径阈值(m)
+  static const double kSharpRadiusThreshold = 300.0;        // 急弯场景的曲率半径阈值(m)
   static const double kIntersectionRadiusThreshold = 50.0;  // 路口场景的曲率半径阈值(m)
   // 2. 采样与窗口参数
   static const size_t kMaxSamplingSize = 20;     // 最大采样点数
@@ -756,11 +757,13 @@ bool ReferencePath::HandleRoadCurvature(
   static const double kPreviewRangeVelCoeff = 5.0;  // 预览范围与车速的系数(5.0*v)
   static const double kPreviewRangeOffset = 20.0;   // 预览范围偏移量(m)
   // 4. 弯道长度判断阈值
-  static const double kMinContinuousCurveLength = 21.0;     // 持续弯道判断的最小长度(m)
-  static const double kMinCurveLength = 6.0;                // 最小有效弯道长度(m)
-  static const double kMinMidCurveLength = 11.0;            // 中等弯道的最小长度(m)
-  static const double kMinBigCurveContinuousLength = 31.0;  // 大弯道的最小持续长度(m)
-  static const double kMinConnectionLength = 21.0;          // 连续弯道段的最大间隔(m)
+  static const double kMinContinuousCurveLength = 21.0;      // 持续弯道判断的最小长度(m)
+  static const double kAverageContinuousCurveLength = 41.0;  // 持续弯道判断的平均长度(m)
+  static const double kMinCurveGapLength = 31.0;                 // 最小连续弯道间隔长度(m)
+  static const double kMinCurveLength = 6.0;                 // 最小有效弯道长度(m)
+  static const double kMinMidCurveLength = 11.0;             // 中等弯道的最小长度(m)
+  static const double kMinBigCurveContinuousLength = 31.0;   // 大弯道的最小持续长度(m)
+  static const double kMinConnectionLength = 21.0;           // 连续弯道段的最大间隔(m)
   // 5. 近/远距范围参数
   static const double kNearRangeStartOffset = -1.0;  // 近距范围起始偏移(自车位置向后，m)
   static const double kNearRangeEndOffset = 11.0;    // 近距范围结束偏移(自车位置向前，m)
@@ -837,6 +840,8 @@ bool ReferencePath::HandleRoadCurvature(
   int near_count = 0;
   int far_count = 0;
   bool is_big_curve = false;
+  std::pair<double, double> left_max_curve_s{1e-4, 0.0};
+  std::pair<double, double> right_max_curve_s{1e-4, 0.0};
   for (double sampling_s = init_s - kSamplingGap; sampling_s <= sampling_range; sampling_s += kSamplingGap) {
     std::vector<double> curv_window_vec;
     for (int j = -kCurvatureWindowSize; j <= kCurvatureWindowSize; ++j) {
@@ -862,14 +867,40 @@ bool ReferencePath::HandleRoadCurvature(
         if (avg_curv > 1e-6) {
           left_curve_length += kSamplingGap;
           right_curve_length = 0.0;
+          if (std::fabs(avg_curv) > left_max_curve_s.first) {
+            left_max_curve_s.first = std::fabs(avg_curv);
+            left_max_curve_s.second = sampling_s;
+          }
+          right_max_curve_s.first = 1e-4;
+          right_max_curve_s.second = 0.0;
         } else {
           left_curve_length = 0.0;
           right_curve_length += kSamplingGap;
+          left_max_curve_s.first = 1e-4;
+          left_max_curve_s.second = 0.0;
+          if (std::fabs(avg_curv) > right_max_curve_s.first) {
+            right_max_curve_s.first = std::fabs(avg_curv);
+            right_max_curve_s.second = sampling_s;
+          }
         }
         if (left_curve_length > kMinContinuousCurveLength) {
           ref_path_curve_info_.is_left = true;
+          double last_left_length =
+              ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first;
+          if (left_curve_length > last_left_length) {
+            ref_path_curve_info_.left_s_range.first = sampling_s - left_curve_length;
+            ref_path_curve_info_.left_s_range.second = sampling_s;
+            ref_path_curve_info_.left_max_curve = left_max_curve_s;
+          }
         } else if (right_curve_length > kMinContinuousCurveLength) {
           ref_path_curve_info_.is_right = true;
+          double last_right_length =
+              ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first;
+          if (right_curve_length > last_right_length) {
+            ref_path_curve_info_.right_s_range.first = sampling_s - right_curve_length;
+            ref_path_curve_info_.right_s_range.second = sampling_s;
+            ref_path_curve_info_.right_max_curve = right_max_curve_s;
+          }
         }
         // big
         if (std::fabs(avg_curv) > big_curve_thr) {
@@ -896,6 +927,10 @@ bool ReferencePath::HandleRoadCurvature(
       } else {
         left_curve_length = 0.0;
         right_curve_length = 0.0;
+        left_max_curve_s.first = 1e-4;
+        left_max_curve_s.second = 0.0;
+        right_max_curve_s.first = 1e-4;
+        right_max_curve_s.second = 0.0;
         if (is_big_curve) {
           double curve_seg_length = sampling_s - segment_start - (kSamplingGap * 0.5);
           if (curve_seg_length > kMinMidCurveLength ||
@@ -909,6 +944,10 @@ bool ReferencePath::HandleRoadCurvature(
     } else {
       left_curve_length = 0.0;
       right_curve_length = 0.0;
+      left_max_curve_s.first = 1e-4;
+      left_max_curve_s.second = 0.0;
+      right_max_curve_s.first = 1e-4;
+      right_max_curve_s.second = 0.0;
       if (is_big_curve) {
         double curve_seg_length = sampling_s - segment_start - (kSamplingGap * 0.5);
         if (curve_seg_length > kMinMidCurveLength ||
@@ -953,10 +992,15 @@ bool ReferencePath::HandleRoadCurvature(
   if (large_curvature_segments.empty()) {
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
-    } else if (!ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right) {
-      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
-    } else {
+    } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
+                kAverageContinuousCurveLength) ||
+               (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
+                kAverageContinuousCurveLength)) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
+    } else {
+      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
     }
     return true;
   }
@@ -994,10 +1038,15 @@ bool ReferencePath::HandleRoadCurvature(
       seg_start_s > cureve_max_start_s) {
     if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
-    } else if (!ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right) {
-      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
-    } else {
+    } else if ((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
+                ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
+                kAverageContinuousCurveLength) ||
+               (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
+                ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
+                kAverageContinuousCurveLength)) {
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
+    } else {
+      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
     }
     return true;
   }
@@ -1009,7 +1058,7 @@ bool ReferencePath::HandleRoadCurvature(
   //     (init_dist_to_seg < kMinMidCurveLength ||
   //      seg_length > kMinMidCurveLength) &&
   //     ref_path_curve_info_.min_radius < curve_radius_thr) {
-  if (ref_path_curve_info_.min_radius < curve_radius_thr &&
+  if (ref_path_curve_info_.min_radius < kSharpRadiusThreshold &&
       (aver_near_radius - ref_path_curve_info_.min_radius > kMinRadiusChangeDiff ||
        aver_far_radius - ref_path_curve_info_.min_radius > kMinRadiusChangeDiff) &&
       (init_dist_to_seg < kMinMidCurveLength ||
@@ -1018,7 +1067,14 @@ bool ReferencePath::HandleRoadCurvature(
   } else if (ref_path_curve_info_.is_left &&
              ref_path_curve_info_.is_right &&
              seg_length > kMinMidCurveLength) {
-    ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
+    if ((ref_path_curve_info_.left_max_curve.first > 1.0 / kSharpRadiusThreshold ||
+         ref_path_curve_info_.right_max_curve.first > 1.0 / kSharpRadiusThreshold) &&
+        (std::fabs(ref_path_curve_info_.left_max_curve.second -
+                   ref_path_curve_info_.right_max_curve.second) < kMinCurveGapLength)) {
+      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::SHARP_CURVE;
+    } else {
+      ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
+    }
   } else {
     if ((init_dist_to_seg < kMinMidCurveLength ||
          seg_length > kMinConnectionLength) &&
@@ -1026,11 +1082,23 @@ bool ReferencePath::HandleRoadCurvature(
       ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::BIG_CURVE;
     } else {
       if (ref_path_curve_info_.is_left && ref_path_curve_info_.is_right) {
-        ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
-      } else if (!ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right) {
-        ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
-      } else {
+        if ((ref_path_curve_info_.left_max_curve.first > 1.0 / kSharpRadiusThreshold ||
+            ref_path_curve_info_.right_max_curve.first > 1.0 / kSharpRadiusThreshold) &&
+            (std::fabs(ref_path_curve_info_.left_max_curve.second -
+                      ref_path_curve_info_.right_max_curve.second) < kMinCurveGapLength)) {
+          ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::SHARP_CURVE;
+        } else {
+          ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::S_CURVE;
+        }
+      } else if (((ref_path_curve_info_.is_left && !ref_path_curve_info_.is_right &&
+                   ref_path_curve_info_.left_s_range.second - ref_path_curve_info_.left_s_range.first >
+                   kAverageContinuousCurveLength) ||
+                  (!ref_path_curve_info_.is_left && ref_path_curve_info_.is_right &&
+                   ref_path_curve_info_.right_s_range.second - ref_path_curve_info_.right_s_range.first >
+                   kAverageContinuousCurveLength))) {
         ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::NORMAL_CURVE;
+      } else {
+        ref_path_curve_info_.curve_type = ReferencePathCurveInfo::CurveType::STRAIGHT;
       }
     }
   }
@@ -1177,7 +1245,7 @@ bool ReferencePath::SamplingRefPoints(
   // sampling
   double start_s = std::max(init_s + kEgoBehindLength, 0.0);
   double end_s =
-      std::max(init_s + kEgoAheadLength, valid_lane_line_length_ - kLaneDropLength);
+      std::min(std::max(init_s + kEgoAheadLength, valid_lane_line_length_ - kLaneDropLength), raw_points_s.back());
   behind_partition_length = start_s;
   ahead_partition_length = raw_points_s.back() - end_s;
   double ds = kSampleGap;
@@ -1207,27 +1275,36 @@ bool ReferencePath::HandleInputData(
   raw_x_vec->Reserve(refined_x_vec.size());
   raw_y_vec->Reserve(refined_y_vec.size());
   raw_points_vec.reserve(refined_x_vec.size());
-  std::vector<double> xp_road_radius{200.0, 2000.0, 5000.0};
-  double bound_val = map_bound_val_[2];
-      // planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_bound_val_);
+  // set bound
+  auto &reference_path_manager =
+      session_->mutable_environmental_model()->get_reference_path_manager();
+  auto &smooth_bound_filter =
+      reference_path_manager->MutableSmoothBoundFilter();
+  std::vector<double> xp_road_radius{400.0, 1500.0, 3000.0};
+  double bound_val =
+      planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_bound_val_);
   // double weight_fem_pos_deviation =
   //     planning::interp(ref_path_curve_info_.min_radius, xp_road_radius, map_weight_fem_pos_deviation_);
-  if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::NORMAL_CURVE) {
-    bound_val = map_bound_val_[1];
-    // weight_fem_pos_deviation = map_weight_fem_pos_deviation_[1];
-  } else if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
-             ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
-             ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+  // if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::NORMAL_CURVE) {
+  //   bound_val = map_bound_val_[1];
+  //   weight_fem_pos_deviation = map_weight_fem_pos_deviation_[1];
+  // }
+  if (ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::SHARP_CURVE ||
+      ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::S_CURVE ||
+      ref_path_curve_info_.curve_type == ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+    smooth_bound_filter->Reset();
     bound_val = map_bound_val_[0];
     // weight_fem_pos_deviation = map_weight_fem_pos_deviation_[0];
   }
+  smooth_bound_filter->Update(bound_val);
+  const double mean_bound_val = smooth_bound_filter->GetMeanValue();
+  ref_path_smoother_info_.set_bound_val(mean_bound_val);
+  bounds.resize(refined_x_vec.size(), mean_bound_val);
+  SetSmoothBounds(mean_bound_val, bounds);
   // update param
   // auto &smoother_config =
   //     ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
   // smoother_config.set_weight_fem_pos_deviation(weight_fem_pos_deviation);
-  ref_path_smoother_info_.set_bound_val(bound_val);
-  bounds.resize(refined_x_vec.size(), bound_val);
-  SetSmoothBounds(bound_val, bounds);
   for (size_t i = 0; i < refined_x_vec.size(); ++i) {
     raw_points_vec.emplace_back(refined_x_vec[i] - init_point.first,
                                 refined_y_vec[i] - init_point.second);
