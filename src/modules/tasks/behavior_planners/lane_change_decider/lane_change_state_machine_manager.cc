@@ -5346,7 +5346,7 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
 
   // bool is_suppress =
   //     ego_front_node->is_static_type() &&
-  //     ego_front_node->node_back_edge_to_ego_front_edge_distance() < config_.ls_short_dis_thr;
+  //     ego_front_node->node_back_edge_to_ego_front_edge_distance() < config_.lc_short_dis_thr;
 
   // if (!is_suppress) {
   //   return false;
@@ -5392,7 +5392,7 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
     }
     is_suppress =
         fix_lane_node->is_static_type() &&
-        fix_lane_node->node_back_edge_to_ego_front_edge_distance() < config_.ls_short_dis_thr;
+        fix_lane_node->node_back_edge_to_ego_front_edge_distance() < config_.lc_short_dis_thr;
     if (!is_suppress) {
       continue;
     }

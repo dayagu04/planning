@@ -410,7 +410,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
         read_json_key<double>(json, "lc_finish_heading_deg_thr");
     read_json_vec<double>(json, "lc_finished_dist_thr", lc_finished_dist_thr);
     min_ego_v_cruise = read_json_key<double>(json, "min_ego_v_cruise");
-    ls_short_dis_thr = read_json_key<double>(json, "ls_short_dis_thr");
+    lc_short_dis_thr = read_json_key<double>(json, "lc_short_dis_thr");
   }
   double lc_t_actuator_delay = 0.03;
   double lc_back_available_thr = 1.5;
@@ -420,7 +420,7 @@ struct ScenarioStateMachineConfig : public EgoPlanningConfig {
   double lc_finish_heading_deg_thr = 1.0;
   std::vector<double> lc_finished_dist_thr{0.1, 0.15, 0.2, 0.3};
   double min_ego_v_cruise = 2.0;
-  double ls_short_dis_thr = 5.0;
+  double lc_short_dis_thr = 5.0;
 
 };
 
