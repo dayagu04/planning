@@ -21,19 +21,19 @@
 #include "log_glog.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
-#include "math_utils.h"
 #include "narrow_space_decider.h"
 #include "parking_scenario.h"
 #include "point_cloud_obstacle.h"
 #include "polygon_base.h"
 #include "pose2d.h"
-#include "spiral_typedefs.h"
 #include "src/modules/apa_function/util/apa_utils.h"
 #include "transform2d.h"
 #include "utils_math.h"
 
 namespace planning {
 namespace apa_planner {
+
+#define DEBUG_SCENARIO (0)
 
 NarrowSpaceScenario::NarrowSpaceScenario(
     const std::shared_ptr<ApaWorld>& apa_world_ptr)
@@ -306,11 +306,6 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
 
   // check replan
   if (is_replan || update_thread_path) {
-    ILOG_INFO << "plan reason = " << GetRePlanReasonString(frame_.replan_reason)
-              << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
-              << ",thread update = " << update_thread_path
-              << ",is_replan = " << is_replan;
-
     frame_.replan_flag = true;
     path_plan_result = PlanBySearchBasedMethod(false);
     frame_.pathplan_result = static_cast<uint8_t>(path_plan_result);
@@ -352,7 +347,16 @@ void NarrowSpaceScenario::ExcutePathPlanningTask() {
     frame_.remain_dist_obs = CalRealTimeBrakeDist();
   }
 
+#if DEBUG_SCENARIO
+  ILOG_INFO << "plan reason = " << GetRePlanReasonString(frame_.replan_reason)
+            << ",force replan = " << apa_world_ptr_->GetSimuParam().force_plan
+            << ",thread update = " << update_thread_path
+            << ",is_replan = " << is_replan << ", path search state = "
+            << static_cast<int>(frame_.pathplan_result)
+            << ",remain dist obs = " << frame_.remain_dist_obs;
+
   // DebugPathString(current_path_point_global_vec_);
+#endif
 
   return;
 }
@@ -1770,14 +1774,17 @@ const bool NarrowSpaceScenario::ReplanBySlotRefresh() {
                                     param.pose_slot_occupied_ratio_3);
 
   // check path remain dist
-  bool path_dist_flag = false;
-  if (frame_.remain_dist_path > 1.5) {
-    path_dist_flag = true;
+  if (frame_.remain_dist_path < 1.5) {
+    return false;
+  }
+
+  if (frame_.remain_dist_obs < 0.5) {
+    return false;
   }
 
   const bool dynamic_replan_flag = car_motion_flag && car_pos_flag &&
                                    occupied_ratio_flag &&
-                                   is_path_connected_to_goal_ && path_dist_flag;
+                                   is_path_connected_to_goal_;
   if (!dynamic_replan_flag) {
     return false;
   }
@@ -2259,7 +2266,8 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
       // publish fallback path
       // GenerateFallBackPath();
 
-      ILOG_INFO << "path planning fail number = " << path_planning_fail_num_;
+      ILOG_INFO << "path planning fail number = " << path_planning_fail_num_
+                << ",fail time = " << frame_.replan_fail_time;
     }
 
     // if planning success, update gear
@@ -2277,15 +2285,13 @@ const PathPlannerResult NarrowSpaceScenario::PubResponseForScenarioRunning(
     thread_.SetRequest(obs, cur_request);
     res = PathPlannerResult::WAIT_PATH;
 
-    ILOG_INFO << "set input";
+    // ILOG_INFO << "set input";
   } else if (thread_state_ == RequestResponseState::HAS_REQUEST) {
-    res = PathPlannerResult::WAIT_PATH;
-
     // publish fallback path
-    // GenerateFallBackPath();
+    res = PathPlannerResult::WAIT_PATH;
     HybridAstarDebugInfoClear();
 
-    ILOG_INFO << "has input";
+    // ILOG_INFO << "has input";
   }
 
   return res;

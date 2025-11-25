@@ -120,10 +120,10 @@ void RSExpansionDecider::UpdateRSPathRequest(AstarRequest *request) {
       request->space_type == ParkSpaceType::SLANTING) {
     if (request->direction_request == ParkingVehDirection::TAIL_IN) {
       request->rs_request = RSPathRequestType::LAST_PATH_FORBID_FORWARD;
-      ILOG_INFO << "last rs path forbid forward";
+      // ILOG_INFO << "last rs path forbid forward";
     } else if (request->direction_request == ParkingVehDirection::HEAD_IN) {
       request->rs_request = RSPathRequestType::LAST_PATH_FORBID_REVERSE;
-      ILOG_INFO << "last rs path forbid reverse";
+      // ILOG_INFO << "last rs path forbid reverse";
     }
   }
 

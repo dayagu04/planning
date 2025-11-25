@@ -758,7 +758,7 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
     }
   }
 
-  constexpr size_t kGearNum = 2;
+  constexpr int kGearNum = 2;
   PathCandidateCompare(kGearNum);
 
   return;
@@ -830,7 +830,7 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
     }
   }
 
-  constexpr size_t kGearNum = 1;
+  constexpr int kGearNum = 1;
   PathCandidateCompare(kGearNum);
 
   return;
@@ -993,7 +993,8 @@ const float HybridAStarInterface::GetLatBufferForInsideSlot(
   return safe_buffer;
 }
 
-void HybridAStarInterface::PathCandidateCompare(const size_t gear_num) {
+void HybridAStarInterface::PathCandidateCompare(
+    const int gear_change_num_buffer) {
   best_traj_ = &traj_candidates_[0];
   for (size_t i = 1; i < traj_candidates_size_; i++) {
     // best traj is invalid, update
@@ -1008,7 +1009,7 @@ void HybridAStarInterface::PathCandidateCompare(const size_t gear_num) {
 
     // current traj is better
     if ((traj_candidates_[i].gear_change_num <=
-         best_traj_->gear_change_num - gear_num) &&
+         best_traj_->gear_change_num - gear_change_num_buffer) &&
         IsPathGearSameWithRequest(traj_candidates_[i].gear[0],
                                   request_.first_action_request.gear_request)) {
       best_traj_ = &traj_candidates_[i];

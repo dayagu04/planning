@@ -151,7 +151,7 @@ class HybridAStarInterface {
                                         const float ego_obs_dist,
                                         const bool is_ego_overlap_with_slot);
 
-  void PathCandidateCompare(const size_t gear_num);
+  void PathCandidateCompare(const int gear_change_num_buffer);
 
   void GenerateRefLine();
   void ParkingDirectionAttempt(const float& advised_lat_buffer_inside);
