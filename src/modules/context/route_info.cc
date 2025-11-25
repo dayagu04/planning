@@ -131,7 +131,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
   //   std::cout << "ego link not in expressway failed!!!" << std::endl;
   //   return;
   // }
-
+  const SdMapSwtx::Segment& current_segment = *segment;
   const iflymapdata::sdpro::LinkInfo_Link* link =
       UpdateEgoLinkInfo(sdpro_map, &nearest_s, &nearest_l);
   if (!link) {
@@ -211,11 +211,11 @@ void RouteInfo::UpdateRouteInfoForNOA(
                                    max_search_length);
 
   // 计算到路线终点的距离
-  CaculateDistanceToRoadEnd(sdpro_map, current_link, nearest_s,
+  CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s,
                             max_search_length);
 
   // 计算到最近收费站的距离
-  CaculateDistanceToTollStation(sdpro_map, current_link, nearest_s,
+  CaculateDistanceToTollStation(sd_map_, current_segment, nearest_s,
                                 max_search_length);
 }
 
@@ -2537,8 +2537,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             left_lane_num, right_lane_num - emergency_lane_num);
 
     // 刚经过split，感知车道数可能还带左侧主路车道，这种情况抑制MLC
-    if (current_link_ != nullptr &&
-        left_lane_num > current_link_->lane_num() &&
+    if (current_link_ != nullptr && left_lane_num > current_link_->lane_num() &&
         left_lane_num > map_lane_num) {
       continue;
     }
