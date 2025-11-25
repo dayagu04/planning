@@ -5810,6 +5810,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
       ReadItem<double>(json, rear_close_speed_diff_threshold, "lane_change_safety_check", "rear_close_speed_diff_threshold");
       ReadItem<double>(json, exe_rear_distance_ratio, "lane_change_safety_check", "exe_rear_distance_ratio");
       ReadItem<double>(json, exe_rear_speed_ratio, "lane_change_safety_check", "exe_rear_speed_ratio");
+      ReadItem<double>(json, faster_rear_delay_time, "lane_change_safety_check",
+                       "faster_rear_delay_time");
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -5818,6 +5820,7 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double press_line_ratio_threshold = 0.2;  // 充分压线阈值，超过此值后不再按照ttc扩大buff
     double rear_close_distance_threshold = 6.0;  // 近距离后车距离阈值（米），小于此值认为是近距离尾随
     double rear_close_speed_diff_threshold = 1.0;  // 近距离后车速度差阈值（m/s），后车速度大于自车速度此值时不允许变道
+    double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc

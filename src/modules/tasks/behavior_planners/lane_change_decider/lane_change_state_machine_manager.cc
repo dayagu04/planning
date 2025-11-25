@@ -4249,6 +4249,10 @@ bool LaneChangeStateMachineManager::
       if (is_large_car) {
         dis_buff += 5.0;  // 大车额外增加5m基础距离
       }
+      if(agent_traj[0].v > ego_trajs_future_[0].v + 1.0){ // 后车减速让行需要反应时间
+        dis_buff += agent_traj[0].v *
+                    lc_safety_check_config_.faster_rear_delay_time;
+      }
       // 预测轨迹点车速对应ttc
       double pred_ttc =
           interp(3.6 * std::max(0., agent_traj[i].v - ego_trajs_future_[i].v),
