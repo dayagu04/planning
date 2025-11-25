@@ -80,6 +80,7 @@ class ComfortTarget : public Target {
   common::ComfortTarget comfort_target_pb_;
   std::vector<double> acc_values_;
   std::vector<int32_t> follow_agent_ids_;
+  std::vector<int32_t> joint_danger_agent_ids_;
   bool is_lat_follow_ = false;
   bool is_lon_cut_in_ = false;
   std::vector<double> comfort_jerk_min_vec_;

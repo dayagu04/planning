@@ -25,6 +25,7 @@
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv1.h"
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
+#include "tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider.h"
 #include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
@@ -76,6 +77,8 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
       sample_poly_speed_adjust_decider_;
   std::unique_ptr<PotentialDangerousAgentDecider>
       potential_dangerous_agent_decider_;
+
+  std::unique_ptr<LatLonJointPlannerDecider> lat_lon_joint_planner_decider_;
   std::unique_ptr<StopDestinationDecider> stop_destination_decider_;
   std::unique_ptr<MRCBrakeDecider> mrc_brake_decider_;
   std::unique_ptr<AgentLongitudinalDecider> agent_longitudinal_decider_;

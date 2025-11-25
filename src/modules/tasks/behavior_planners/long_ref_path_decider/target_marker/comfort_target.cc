@@ -80,12 +80,18 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   follow_agent_ids_.clear();
 
+  joint_danger_agent_ids_.clear();
+
   GenerateUpperBoundInfo();
 
   std::vector<double> follow_agent_ids_double(follow_agent_ids_.begin(),
                                               follow_agent_ids_.end());
 
+  std::vector<double> joint_danger_agent_ids_double(joint_danger_agent_ids_.begin(),
+                                                  joint_danger_agent_ids_.end());
+
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
+  JSON_DEBUG_VECTOR("joint_danger_agent_ids", joint_danger_agent_ids_double, 0);
 
   acc_values_ = std::vector<double>(plan_points_num_, 0.0);
 
@@ -225,6 +231,37 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       if (dis_relative <= dis_lon_consider) {
         follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
         added_agent_ids.insert(cutin_id);
+      }
+    }
+  }
+
+  const auto& lat_lon_joint_planner_output =
+      session_->planning_context().lat_lon_joint_planner_decider_output();
+  const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
+
+  for (const int32_t danger_id : danger_ids) {
+    joint_danger_agent_ids_.push_back(danger_id);
+    if (forbidden_ids.find(danger_id) != forbidden_ids.end() ||
+        added_agent_ids.find(danger_id) != added_agent_ids.end()) {
+      continue;
+    }
+
+    auto agent = session_->environmental_model().get_agent_manager()->GetAgent(
+        danger_id);
+    if (agent != nullptr) {
+      double agent_s = 0.0, agent_l = 0.0;
+      if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+        continue;
+      }
+      const double dis_relative =
+          agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
+      const double dis_lon_consider = std::max(
+          ego_init_point.v * comfort_params_.follow_consider_time_headway,
+          comfort_params_.follow_consider_distance);
+
+      if (dis_relative <= dis_lon_consider) {
+        follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
+        added_agent_ids.insert(danger_id);
       }
     }
   }
