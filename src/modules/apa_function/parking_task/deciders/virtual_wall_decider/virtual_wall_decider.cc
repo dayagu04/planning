@@ -102,7 +102,6 @@ void VirtualWallDecider::Process(std::vector<Position2D>& points,
     }
   }
 
-  ILOG_INFO << "slot virtual wall";
   return;
 }
 

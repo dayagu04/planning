@@ -53,17 +53,17 @@ void HybridAStarThreadSolver::SetRequest(const ParkObstacleList& obs_list,
   std::lock_guard<std::mutex> lock(mutex_);
 
   if (search_state_ == AstarSearchState::SEARCHING) {
-    ILOG_INFO << "searching";
+    // ILOG_INFO << "searching";
     return;
   }
 
   if (request_response_state_ == RequestResponseState::HAS_REQUEST) {
-    ILOG_INFO << "has path request, please use it and wait result";
+    // ILOG_INFO << "has path request, please use it and wait result";
     return;
   }
 
   if (request_response_state_ == RequestResponseState::HAS_RESPONSE) {
-    ILOG_INFO << "has path, please get it ";
+    // ILOG_INFO << "has path, please get it ";
     return;
   }
 
@@ -74,7 +74,7 @@ void HybridAStarThreadSolver::SetRequest(const ParkObstacleList& obs_list,
   search_state_.store(AstarSearchState::NONE);
   request_response_state_.store(RequestResponseState::HAS_REQUEST);
 
-  ILOG_INFO << "thread, set input";
+  // ILOG_INFO << "thread, set input";
 
   return;
 }
