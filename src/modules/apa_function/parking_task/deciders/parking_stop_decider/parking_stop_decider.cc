@@ -239,11 +239,11 @@ void ParkingStopDecider::GeneratePathFootPrint(
   // generate veh local polygon
   PolygonFootPrint foot_print_little_buffer;
   PolygonFootPrint foot_print_big_buffer;
-  GenerateVehCompactPolygon(config_.lat_buffer_to_static_agent, lon_buffer,
-                            config_.lat_buffer_to_static_agent,
+  GenerateVehCompactPolygon(config_.static_obs_buffer.lat_buffer, lon_buffer,
+                            config_.static_obs_buffer.lat_buffer,
                             &foot_print_little_buffer);
-  GenerateVehCompactPolygon(config_.lat_buffer_to_dynamic_agent, lon_buffer,
-                            config_.lat_buffer_to_dynamic_agent,
+  GenerateVehCompactPolygon(config_.slow_speed_buffer.lat_buffer, lon_buffer,
+                            config_.slow_speed_buffer.lat_buffer,
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();
@@ -377,9 +377,15 @@ void ParkingStopDecider::ComputeSTBoundary(
   decision.decision_speed = 0.0;
   decision.decision_type = LonDecisionType::STOP;
   if (obstacle.GetObsMovementType() == ApaObsMovementType::STATIC) {
-    decision.lon_decision_buffer = config_.lon_buffer_to_static_agent;
+    decision.lon_decision_buffer = config_.static_obs_buffer.lon_buffer;
   } else {
-    decision.lon_decision_buffer = config_.lon_buffer_to_dynamic_agent;
+    if (obstacle.Speed() < config_.slow_speed_thresh) {
+      decision.lon_decision_buffer = config_.slow_speed_buffer.lon_buffer;
+    } else if (obstacle.Speed() < config_.middle_speed_thresh) {
+      decision.lon_decision_buffer = config_.middle_speed_buffer.lon_buffer;
+    } else {
+      decision.lon_decision_buffer = config_.high_speed_buffer.lon_buffer;
+    }
   }
   decision.path_s = boundary.min_s();
   decision.perception_id = obstacle.GetId();
