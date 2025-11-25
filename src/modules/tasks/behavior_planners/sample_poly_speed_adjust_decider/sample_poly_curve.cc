@@ -84,17 +84,19 @@ double SampleQuarticPolynomialCurve::CalcJerk(const double t) const {
   return t - poly_.T() >= 0 ? 0.0 : poly_.CalculateThirdDerivative(t);
 }
 
-double SampleQuarticPolynomialCurve::CalcRef(const double t, const double decay_coffi) const {
+double SampleQuarticPolynomialCurve::CalcRef(const double t,
+                                             const double decay_coffi) const {
   double s = 0.0;
   if (arrived_t_ < poly_.T()) {
     double acc =
         std::max(arrived_a_, -arrived_v_ / std::fmax(5.0 - arrived_t_, 0.1));
     double left_t = t - arrived_t_;
-    s = left_t > 0.1
-            ? poly_.CalculatePoint(arrived_t_) + (arrived_v_ - acc/decay_coffi) * left_t +
-                  acc * std::exp(decay_coffi * left_t) / (decay_coffi * decay_coffi) -
-                  acc /(decay_coffi * decay_coffi)
-            : poly_.CalculatePoint(t);
+    s = left_t > 0.1 ? poly_.CalculatePoint(arrived_t_) +
+                           (arrived_v_ - acc / decay_coffi) * left_t +
+                           acc * std::exp(decay_coffi * left_t) /
+                               (decay_coffi * decay_coffi) -
+                           acc / (decay_coffi * decay_coffi)
+                     : poly_.CalculatePoint(t);
   } else {
     s = t - poly_.T() > 0
             ? poly_.CalculatePoint(poly_.T()) + arrived_v_ * (t - poly_.T())

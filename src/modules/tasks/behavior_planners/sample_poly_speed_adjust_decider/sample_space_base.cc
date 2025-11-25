@@ -88,6 +88,8 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
     upper_point.set_velocity(end_v);
     lower_point.set_acceleration(acc);
     upper_point.set_acceleration(acc);
+    lower_point.set_extreme_l(2 * agent_half_length);
+    upper_point.set_extreme_l(2 * agent_half_length);
     st_points_pairs.emplace_back(std::move(lower_point),
                                  std::move(upper_point));
     if (i == min_horizion) {
@@ -106,6 +108,8 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
     upper_point.set_velocity(end_v);
     lower_point.set_acceleration(acc);
     upper_point.set_acceleration(acc);
+    lower_point.set_extreme_l(2 * agent_half_length);
+    upper_point.set_extreme_l(2 * agent_half_length);
     st_points_pairs.emplace_back(std::move(lower_point),
                                  std::move(upper_point));
   }
@@ -122,6 +126,10 @@ void STSampleSpaceBase::LinearExtendAgentStBoundary(
         upper_point.set_agent_id(agent_node->node_agent_id());
         lower_point.set_velocity(end_v);
         upper_point.set_velocity(end_v);
+        lower_point.set_acceleration(0.0);
+        upper_point.set_acceleration(0.0);
+        lower_point.set_extreme_l(2 * agent_half_length);
+        upper_point.set_extreme_l(2 * agent_half_length);
         st_points_pairs.emplace_back(std::move(lower_point),
                                      std::move(upper_point));
       }

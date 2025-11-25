@@ -122,8 +122,10 @@ void MatchGapCost::GetCost(
       double front_ttc_buffer = (poly_end_v * rel_v) / (2.0 * 2.5);
       min_safe_distance_front = std::max(front_ttc_buffer, 2.0);
     }
+    double large_car_buffer = upper_st_point.extreme_l() > 8.0 ? 3.0 : 0.0;
     safe_border_distance_to_gap_front_obj =
-        min_safe_distance_front + reliable_safe_distance_to_gap_front_obj;
+        min_safe_distance_front + reliable_safe_distance_to_gap_front_obj +
+        large_car_buffer;
   }
 
   if (lower_st_point.agent_id() != kNoAgentId) {
@@ -135,9 +137,12 @@ void MatchGapCost::GetCost(
     min_safe_distance_rear = std::fmax(min_safe_distance_rear, 0.1) +
                              linear_expand_extra_gap_distance_by_ego_vel(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
-    safe_border_distance_to_gap_back_obj = std::max(
-        reliable_safe_distance_to_gap_back_obj + min_safe_distance_rear * 0.6,
-        min_safe_distance_rear);
+    double large_car_buffer = lower_st_point.extreme_l() > 8.0 ? 5.0 : 0.0;
+    safe_border_distance_to_gap_back_obj =
+        std::max(reliable_safe_distance_to_gap_back_obj +
+                     min_safe_distance_rear * 0.6,
+                 min_safe_distance_rear) +
+        large_car_buffer;
   }
   safe_border_distance_to_gap_front_obj_ =
       safe_border_distance_to_gap_front_obj;
@@ -355,8 +360,12 @@ void LeadingVehSafeCost::GetCost(const double poly_end_s,
   cost_ = 0.0;
   auto calculate_poly_dis_to_lead_cost = [](double dist, double safe_distance,
                                             double weight) {
-    return (dist < safe_distance)
-               ? weight * std::exp(4.0 * (safe_distance - dist) / safe_distance)
+    return (dist < 1.2 * safe_distance)
+               ? (dist < safe_distance)
+                     ? weight * std::exp(4.0 * (safe_distance - dist) /
+                                         safe_distance)
+                     : weight * std::exp(10.0 * (safe_distance - dist) /
+                                         safe_distance)
                : 0.0;
   };
   double follow_distance =
@@ -428,7 +437,7 @@ void LeadingVehFollowCost::GetCost(const double leading_veh_pred_s,
 }
 
 void JerkLimitCost::GetCost(const double jerk_extrema) {
-  cost_ = jerk_extrema > 1.5
-              ? weight_ * std::exp((jerk_extrema - 1.5) / 2.0) : 0.0;
+  cost_ =
+      jerk_extrema > 1.5 ? weight_ * std::exp((jerk_extrema - 1.5) / 2.0) : 0.0;
 }
-} // namespace planning
+}  // namespace planning
