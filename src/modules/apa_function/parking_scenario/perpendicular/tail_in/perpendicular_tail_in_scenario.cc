@@ -928,6 +928,24 @@ const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
     complete_path_point_global_vec_.emplace_back(global_point);
   }
 
+  // correct target pose
+  if (!complete_path_point_global_vec_.empty()) {
+    EgoInfoUnderSlot& mutable_ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+    geometry_lib::PathPoint real_target_pose =
+        complete_path_point_global_vec_.back();
+    real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
+    const geometry_lib::PathPoint& origin_target_pose =
+        mutable_ego_info_under_slot.origin_target_pose;
+    geometry_lib::PathPoint& target_pose =
+        mutable_ego_info_under_slot.target_pose;
+    mutable_ego_info_under_slot.lat_move_dist_replan_success =
+        real_target_pose.GetY() - origin_target_pose.GetY();
+    mutable_ego_info_under_slot.lon_move_dist_replan_success =
+        real_target_pose.GetX() - origin_target_pose.GetX();
+    target_pose = real_target_pose;
+  }
+
   perferred_geometry_path_vec_ = planner_output.perferred_geometry_path_vec;
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
@@ -1789,6 +1807,24 @@ void PerpendicularTailInScenario::FillPathPointGlobalFromHybridPath(
       }
       complete_path_point_global_vec_.emplace_back(global_path_point);
     }
+  }
+
+  // correct target pose
+  if (!complete_path_point_global_vec_.empty()) {
+    EgoInfoUnderSlot& mutable_ego_info_under_slot =
+        apa_world_ptr_->GetSlotManagerPtr()->GetMutableEgoInfoUnderSlot();
+    geometry_lib::PathPoint real_target_pose =
+        complete_path_point_global_vec_.back();
+    real_target_pose.GlobalToLocal(mutable_ego_info_under_slot.g2l_tf);
+    const geometry_lib::PathPoint& origin_target_pose =
+        mutable_ego_info_under_slot.origin_target_pose;
+    geometry_lib::PathPoint& target_pose =
+        mutable_ego_info_under_slot.target_pose;
+    mutable_ego_info_under_slot.lat_move_dist_replan_success =
+        real_target_pose.GetY() - origin_target_pose.GetY();
+    mutable_ego_info_under_slot.lon_move_dist_replan_success =
+        real_target_pose.GetX() - origin_target_pose.GetX();
+    target_pose = real_target_pose;
   }
 
   ILOG_INFO << "current_path_point_global_vec_.size() = "
