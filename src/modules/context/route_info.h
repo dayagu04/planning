@@ -41,10 +41,9 @@ struct LastExchangeRegionInfo {
 
 struct LSLInfo {
   int lane_seq = -1;
-  bool is_left_lsl = false;
   bool is_right_lsl = false;
-  double left_lsl_length = 0.0;
-  double right_lsl_length = 0.0;
+  double lsl_start_distance = 0.0;
+  double lsl_end_distance = 0.0;
 };
 class RouteInfo {
  public:
@@ -407,6 +406,8 @@ class RouteInfo {
       double max_search_distance);
   bool CalculateLSLDistance(const iflymapdata::sdpro::LinkInfo_Link* link,
                             double distance_on_link, double max_search_distance,
-                            std::vector<std::vector<LSLInfo>>* lane_lsl_length);
+                            std::vector<std::vector<LSLInfo>>& lane_lsl_length);
+  bool CalculateFpLSLInfo(const iflymapdata::sdpro::FeaturePoint& fp,
+                          std::vector<LSLInfo>& fp_lsl_info);
 };
 }  // namespace planning
