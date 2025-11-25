@@ -688,7 +688,7 @@ class LoadRosbag:
                           "is_construction_agent_cluster_success", 'is_exist_construction_area', 'is_pass_construction_area',
                           'is_current_lane_available', 'is_right_lane_available', 'is_left_lane_available', 'is_left_left_lane_available', 'is_right_right_lane_available',
                           'construction_intrusion_level', 'traj_available', "rads_planning_status",
-                          "LatLonJointDecisionTime", "JointDecisionObstacleSelectionTime", "JointDecisionOptimizationTime",
+                          "LatLonJointDecisionTime", "JointDecisionObstacleSelectionTime", "JointDecisionOptimizationTime", "LatLonJointPlannerDeciderTime",
                           "target_lane_virtual_id", "origin_lane_virtual_id", "lc_gap_front_agent_id", "lc_gap_rear_agent_id",
                           "ego_front_edge", "ego_rear_edge",
                           "front_agent_front_edge", "front_agent_rear_edge",
