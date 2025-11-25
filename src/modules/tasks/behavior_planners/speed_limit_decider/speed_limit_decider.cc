@@ -57,6 +57,9 @@ constexpr double kCAInvadeLatMinDis = 2;
 constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
+constexpr double kSamplingStep = 2.0;
+constexpr double kEWMAAlpha = 0.3;
+constexpr double kSSharpBendCount = 3;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -507,14 +510,16 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   const auto &frenet_ego_state = reference_path_ptr->get_frenet_ego_state();
   double ego_start_s = frenet_ego_state.s();
+  const pnc::mathlib::spline &raw_spline =
+      reference_path_ptr->GetRawCurveSpline();
   bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
   std::vector<CurvInfo> preview_curv_info_vec;
   for (int idx = 0; idx * 2.0 < preview_x; idx++) {
     CurvInfo one_curv_info;
     if (is_ref_path_smoothed) {
       ReferencePathPoint refpath_pt;
-      if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + idx * 2.0,
-                                                        refpath_pt)) {
+      if (reference_path_ptr->get_reference_point_by_lon(
+              ego_start_s + idx * 2.0, refpath_pt)) {
         // calc curv
         one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
         // calc curv direction(-1 or 1, 0 for except)
@@ -559,17 +564,45 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
   double v_limit_road = 40.0;
   double road_radius = 10000.0;
-  bool is_s_bend = IsSSharpBend(preview_curv_info_vec);
+  const auto &ref_curve_info = reference_path_ptr->GetReferencePathCurveInfo();
+  bool is_s_bend = (ref_curve_info.curve_type ==
+                    ReferencePathCurveInfo::CurveType::SHARP_CURVE) &&
+                   IsSSharpBend(preview_curv_info_vec);
   double max_curv = 0.0001;
   for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
     if (preview_curv_info_vec[idx].curv > max_curv) {
       max_curv = preview_curv_info_vec[idx].curv;
     }
   }
-  road_radius = 1 / std::max(max_curv, 0.0001);
-  if (road_radius < 400) {
-    acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+  double road_radius_origin = 1 / std::max(max_curv, 0.0001);
+
+  // 获取基于10m一个点计算的曲率
+  double cur_max_cur = 0.0001;
+  if (raw_spline.get_x().size() > 0) {
+    double min_x = raw_spline.get_x_min();
+    double max_x = raw_spline.get_x_max();
+    double start_s = std::clamp(ego_start_s, min_x, max_x);
+    double end_s = std::clamp(ego_start_s + preview_x, min_x, max_x);
+    if (start_s <= end_s) {
+      for (double s = start_s; s <= end_s + kEpsilon; s += kSamplingStep) {
+        double curv = std::abs(raw_spline(s));
+        if (curv > cur_max_cur) {
+          cur_max_cur = curv;
+        }
+      }
+    }
   }
+  // EWMA
+  if (raw_curv_spline_ < kEpsilon) {
+    raw_curv_spline_ = cur_max_cur;
+  } else {
+    raw_curv_spline_ =
+        kEWMAAlpha * cur_max_cur + (1 - kEWMAAlpha) * raw_curv_spline_;
+  }
+  road_radius = 1 / std::max(raw_curv_spline_, 0.0001);
+  // if (road_radius < 400) {
+  acc_lat_max = interp(road_radius, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+  //}
   v_limit_road = std::sqrt(acc_lat_max * road_radius);
   if (is_s_bend) {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
@@ -584,6 +617,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
+  JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = SpeedLimitType::CURVATURE;
