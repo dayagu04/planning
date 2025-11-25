@@ -1836,7 +1836,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       split_region_info_list.empty()
           ? NL_NMAX
           : split_region_info_list[0].distance_to_split_point;
-
+  std::vector<std::vector<LSLInfo>> lsl_info_vec;
+  bool is_lsl = CalculateLSLDistance(
+      current_link_, route_info_output_.current_segment_passed_distance,
+      split_region_info_list[0].distance_to_split_point, &lsl_info_vec);
   // 计算出当前所有交换区的feasible lane
   std::vector<NOASplitRegionInfo> exchange_region_info_list;
   std::vector<int> feasible_lane_sequence;
@@ -6350,5 +6353,153 @@ bool RouteInfo::IsClosingTollStationEntrance(
   }
 
   return false;
+}
+bool RouteInfo::CalculateLSLDistance(
+    const iflymapdata::sdpro::LinkInfo_Link* link, double distance_on_link,
+    double max_search_distance,
+    std::vector<std::vector<LSLInfo>>* lane_lsl_length) {
+  const iflymapdata::sdpro::LinkInfo_Link* current_link = link;
+  double search_distance = 0.0 - distance_on_link;
+  std::vector<LSLInfo> lsl_info_vec;
+
+  double distance_to_first_marking_change_point = 0.0;
+  double distance_to_second_marking_change_point = 0.0;
+  bool is_found_marking_change_point = false;
+  while (current_link != nullptr) {
+    if (search_distance > max_search_distance) {
+      if (is_found_marking_change_point) {
+        distance_to_second_marking_change_point = max_search_distance;
+        for (int n = 0; n < lsl_info_vec.size(); n++) {
+          if (lsl_info_vec[n].is_left_lsl == true) {
+            lsl_info_vec[n].left_lsl_length =
+                distance_to_second_marking_change_point -
+                distance_to_first_marking_change_point;
+          }
+          if (lsl_info_vec[n].is_right_lsl == true) {
+            lsl_info_vec[n].right_lsl_length =
+                distance_to_second_marking_change_point -
+                distance_to_first_marking_change_point;
+          }
+        }
+        is_found_marking_change_point = false;
+        lane_lsl_length->emplace_back(lsl_info_vec);
+      }
+      break;
+    }
+
+    const double current_link_length =
+        static_cast<double>(current_link->length());
+
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+    for (const auto& fp : current_link->feature_points()) {
+      fp_vec.emplace_back(fp);
+    }
+
+    // 2、按照距离排序后，由近向远判断当前link上的fp是否有MARKING_LINE_CHANGE_POINT
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+
+    const int fp_point_size = fp_vec.size();
+    for (int i = 0; i < fp_point_size; i++) {
+      const auto& fp_point = fp_vec[i];
+
+      const double distance_to_this_point =
+          search_distance +
+          current_link_length * fp_point.projection_percent() * 0.01;
+
+      if (distance_to_this_point > max_search_distance) {
+        if (is_found_marking_change_point) {
+          distance_to_second_marking_change_point = max_search_distance;
+          for (int n = 0; n < lsl_info_vec.size(); n++) {
+            if (lsl_info_vec[n].is_left_lsl == true) {
+              lsl_info_vec[n].left_lsl_length =
+                  distance_to_second_marking_change_point -
+                  distance_to_first_marking_change_point;
+            }
+            if (lsl_info_vec[n].is_right_lsl == true) {
+              lsl_info_vec[n].right_lsl_length =
+                  distance_to_second_marking_change_point -
+                  distance_to_first_marking_change_point;
+            }
+          }
+          is_found_marking_change_point = false;
+          lane_lsl_length->emplace_back(lsl_info_vec);
+        }
+        break;
+      } else if (distance_to_this_point < 0.0) {
+        // 说明当前fp点在自车之前，直接跳过
+        continue;
+      }
+
+      for (const auto fp_point_type : fp_point.type()) {
+        if (fp_point_type ==
+            iflymapdata::sdpro::FeaturePointType::MARKING_LINE_CHANGE_POINT) {
+          if (!is_found_marking_change_point) {
+            for (const auto& lane_id : fp_point.lane_ids()) {
+              const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
+              if (lane_info == nullptr) {
+                continue;
+              }
+              int lane_seq = 0;
+              for (const auto& lane_id_temp : fp_point.lane_ids()) {
+                if (!IsEmergencyLane(lane_id_temp, sdpro_map_)) {
+                  lane_seq++;
+                }
+                if (lane_id_temp == lane_id) {
+                  break;
+                }
+              }
+              LSLInfo lane_seq_lsl_info;
+              if (lane_info->lsl_type() ==
+                  iflymapdata::sdpro::Lane_LslType::Lane_LslType_LSL_LEFT) {
+                lane_seq_lsl_info.lane_seq = lane_seq;
+                lane_seq_lsl_info.is_left_lsl = true;
+              } else if (lane_info->lsl_type() ==
+                         iflymapdata::sdpro::Lane_LslType::
+                             Lane_LslType_LSL_RIGHT) {
+                lane_seq_lsl_info.lane_seq = lane_seq;
+                lane_seq_lsl_info.is_right_lsl = true;
+              } else if (lane_info->lsl_type() ==
+                         iflymapdata::sdpro::Lane_LslType::
+                             Lane_LslType_LSL_BOTH) {
+                lane_seq_lsl_info.lane_seq = lane_seq;
+                lane_seq_lsl_info.is_left_lsl = true;
+                lane_seq_lsl_info.is_right_lsl = true;
+              }
+              lsl_info_vec.emplace_back(lane_seq_lsl_info);
+              is_found_marking_change_point = true;
+              distance_to_first_marking_change_point = distance_to_this_point;
+            }
+          } else {
+            distance_to_second_marking_change_point = distance_to_this_point;
+            for (int n = 0; n < lsl_info_vec.size(); n++) {
+              if (lsl_info_vec[n].is_left_lsl == true) {
+                lsl_info_vec[n].left_lsl_length =
+                    distance_to_second_marking_change_point -
+                    distance_to_first_marking_change_point;
+              }
+              if (lsl_info_vec[n].is_right_lsl == true) {
+                lsl_info_vec[n].right_lsl_length =
+                    distance_to_second_marking_change_point -
+                    distance_to_first_marking_change_point;
+              }
+            }
+            is_found_marking_change_point = false;
+            lane_lsl_length->emplace_back(lsl_info_vec);
+          }
+        }
+      }
+    }
+    search_distance += current_link_length * 0.01;
+    current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
+  }
+  if (!lane_lsl_length->empty()) {
+    return true;
+  } else {
+    return false;
+  }
 }
 }  // namespace planning

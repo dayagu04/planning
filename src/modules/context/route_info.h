@@ -39,6 +39,13 @@ struct LastExchangeRegionInfo {
   NOASplitRegionInfo last_exchange_info;
 };
 
+struct LSLInfo {
+  int lane_seq = -1;
+  bool is_left_lsl = false;
+  bool is_right_lsl = false;
+  double left_lsl_length = 0.0;
+  double right_lsl_length = 0.0;
+};
 class RouteInfo {
  public:
   RouteInfo(const EgoPlanningConfigBuilder* config_builder,
@@ -398,5 +405,8 @@ class RouteInfo {
       const iflymapdata::sdpro::LinkInfo_Link* link,
       const ad_common::sdpromap::SDProMap& sdpro_map, double distance_on_link,
       double max_search_distance);
+  bool CalculateLSLDistance(const iflymapdata::sdpro::LinkInfo_Link* link,
+                            double distance_on_link, double max_search_distance,
+                            std::vector<std::vector<LSLInfo>>* lane_lsl_length);
 };
 }  // namespace planning
