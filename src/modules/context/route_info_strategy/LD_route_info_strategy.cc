@@ -360,14 +360,17 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
           topo_lane.successor_lane_ids.emplace(lane.successor_lane_ids()[i]);
       }
 
-      current_topo_group.topo_lanes.emplace_back(topo_lane);
+      current_topo_group.topo_lanes.emplace_back(std::move(topo_lane));
     }
 
     // -------------------------- 6. 检查目标link并更新输出 --------------------------
     if (current_link->id() == target_link_id) {
         is_target_found = true;
     }
-    feasible_lane_graph.lane_topo_groups.emplace_back(current_topo_group);
+    if (current_topo_group.topo_lanes.empty()) {
+      return false;
+    }
+    feasible_lane_graph.lane_topo_groups.emplace_back(std::move(current_topo_group));
 
     if (is_target_found) {
         return true;
@@ -380,7 +383,10 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
     }
 
     std::vector<iflymapdata::sdpro::Lane> next_lane_vec;
-    for (const auto& topo_lane : current_topo_group.topo_lanes) {
+    if (feasible_lane_graph.lane_topo_groups.empty()) {
+      return false;
+    }
+    for (const auto& topo_lane : feasible_lane_graph.lane_topo_groups.back().topo_lanes) {
       if (topo_lane.predecessor_lane_ids.empty()) {
           continue;
       }
@@ -748,6 +754,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   }
 
   std::vector<std::pair<int, double>> feasible_lane_seq;
+  feasible_lane_seq.reserve(origin_order_id_seq.size());
   for (const auto& order_id: origin_order_id_seq) {
     // 把从右向左的顺序转换成从左向右的顺序
     const int seq = link_total_lane_num - order_id.first + 1;
@@ -774,7 +781,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   route_info_output_.maxVal_seq = maxVal_seq;
   route_info_output_.minVal_seq = minVal_seq;
 
-  std::map<int, double> feasible_lane_seq_map;
+  std::unordered_map<int, double> feasible_lane_seq_map;
   for (const auto& temp_feasible_lane_seq : feasible_lane_seq) {
     feasible_lane_seq_map.insert(
         {temp_feasible_lane_seq.first, temp_feasible_lane_seq.second});
@@ -786,6 +793,10 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   }
 
   for (auto relative_id_lane: relative_id_lanes) {
+    if (relative_id_lane == nullptr) {
+      continue;
+    }
+
     if (relative_id_lane->get_relative_id() != 0) {
       continue;
     }
@@ -1315,7 +1326,7 @@ void LDRouteInfoStrategy::CalculateSplitInfo() {
     NOASplitRegionInfo split_region_info;
     split_region_info.distance_to_split_point = split_info.second;
     split_region_info.split_link_id = split_info.first->id();
-    route_info_output_.split_region_info_list.emplace_back(split_region_info);
+    route_info_output_.split_region_info_list.emplace_back(std::move(split_region_info));
   }
 
 }
@@ -1394,6 +1405,9 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasib
   const auto& split_next_link_lane_info =
       after_feasible_lane_graph.lane_topo_groups.back();
   for (const auto& topo_lane : split_next_link_lane_info.topo_lanes) {
+    if (topo_lane.predecessor_lane_ids.empty()) {
+      continue;
+    }
     const auto lane_info =
         ld_map_.GetLaneInfoByID(*topo_lane.predecessor_lane_ids.begin());
     if (lane_info == nullptr) {
@@ -1521,7 +1535,11 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feas
 
 void LDRouteInfoStrategy::ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
-    const std::map<int, double>& feasible_lane_distance) {
+    const std::unordered_map<int, double>& feasible_lane_distance) {
+  if (relative_id_lane == nullptr) {
+    return;
+  }
+
   const auto& lane_nums = relative_id_lane->get_lane_nums();
   int left_lane_num = 0;
 
@@ -1565,7 +1583,7 @@ void LDRouteInfoStrategy::CaculateDistanceToTollStation(
   if (segment == nullptr) {
     return;
   }
-  
+
   const auto& toll_station_info =
       ld_map_.GetTollStationInfo(segment->id(), nearest_s, kMaxSearchLength);
   if (toll_station_info.first != nullptr) {

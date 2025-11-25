@@ -95,7 +95,7 @@ protected:
  bool CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feasible_lane_graph);
  void ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
-    const std::map<int, double>& feasible_lane_distance);
+    const std::unordered_map<int, double>& feasible_lane_distance);
 
  void CaculateDistanceToRoadEnd(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
