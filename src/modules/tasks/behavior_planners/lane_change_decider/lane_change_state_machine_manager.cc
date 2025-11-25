@@ -2283,8 +2283,7 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   lc_info.origin_lane_virtual_id = lc_lane_mgr_->origin_lane_virtual_id();
   is_side_clear_ = IsSideClear(gap_front_agent_id, gap_rear_agent_id);
   if (transition_info_.lane_change_status !=
-          StateMachineLaneChangeStatus::kLaneKeeping &&
-      is_side_clear_) {
+          StateMachineLaneChangeStatus::kLaneKeeping) {
     lc_joint_decision_generator_->SetLaneChangeDecisionInfo(lc_info);
     lc_joint_decision_generator_
         ->Execute();  // 生成联合优化轨迹(内部修饰障碍物轨迹)
