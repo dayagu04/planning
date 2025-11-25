@@ -2565,9 +2565,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     int ego_seq = 0;
     if (emergency_lane_num == 0) {
       if (merge_point_direction == SPLIT_NONE) {
-        ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
-                      ? left_lane_num + 1
-                      : map_lane_num - right_lane_num;
+        if (mlc_decider_route_info_.ego_status_on_route ==
+            IN_EXCHANGE_AREA_REAR) {
+          ego_seq =
+              last_exchange_region_info_.last_exchange_info.split_direction ==
+                      SPLIT_LEFT
+                  ? left_lane_num + 1
+                  : map_lane_num - right_lane_num;
+        } else {
+          ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
+                        ? left_lane_num + 1
+                        : map_lane_num - right_lane_num;
+        }
       } else {
         ego_seq = merge_point_direction == SPLIT_LEFT
                       ? left_lane_num + 1
