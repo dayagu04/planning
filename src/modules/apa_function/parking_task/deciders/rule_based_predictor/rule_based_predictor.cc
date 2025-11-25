@@ -9,6 +9,7 @@
 #include "log_glog.h"
 #include "math/vec2d.h"
 #include "pose2d.h"
+#include "predictor_config.h"
 
 namespace planning {
 namespace apa_planner {
@@ -43,12 +44,10 @@ void RuleBasedPredictor::Execute(
 void RuleBasedPredictor::Predict(ApaObstacle& obs) {
   trajectory::Trajectory predict_traj;
   trajectory::TrajectoryPoint traj_point;
-  double predict_time = 4.0;
-
-  // TODO: prediction traj need space continous.
-  double delta_time = 0.4;
-  double delta_dist = obs.Speed() * delta_time;
-
+  RuleBasedPredictorConfig config;
+  config.predict_time = 4.0;
+  config.time_resolution = 0.2;
+  double dist_resolution = obs.Speed() * config.time_resolution;
   double current_time = 0.0;
   double current_dist = 0.0;
 
@@ -57,7 +56,7 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
   double obs_heading = obs.GetCenterPose().heading;
 
   Eigen::Vector2d point;
-  int size = std::ceil(predict_time / delta_time);
+  int size = std::ceil(config.predict_time / config.time_resolution);
   predict_traj.reserve(size);
   for (int i = 0; i < size; i++) {
     point = start + dir * current_dist;
@@ -70,9 +69,8 @@ void RuleBasedPredictor::Predict(ApaObstacle& obs) {
 
     predict_traj.emplace_back(traj_point);
 
-    current_dist += delta_dist;
-    current_time += delta_time;
-
+    current_dist += dist_resolution;
+    current_time += config.time_resolution;
   }
 
   obs.SetPredictTraj(predict_traj);

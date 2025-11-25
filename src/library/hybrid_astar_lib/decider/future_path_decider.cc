@@ -15,23 +15,33 @@
 
 namespace planning {
 
-void FuturePathDecider::Clear() {
+#define DEBUG_TASK (0)
+
+void FuturePathDecider::Init(const float min_turn_radius,
+                             const float sampling_lon_resolution,
+                             const AstarRequest &request) {
   path_check_dist_ = 3.0;
   point_resolution_ = 0.1;
   future_drive_dist_info_.dist_to_ref_line = 0.0;
-  future_drive_dist_info_.gear_drive_path.clear();
+  min_turn_radius_ = min_turn_radius;
+  swap_start_goal_ = request.swap_start_goal;
+  gear_request_ = request.first_action_request.gear_request;
+  sampling_lon_resolution_ = sampling_lon_resolution;
+  path_inference_lat_buffer_ = 0.2;
 
   float s = 0.0;
   int32_t size = std::ceil(path_check_dist_ / point_resolution_);
+  future_drive_dist_info_.gear_drive_path.clear();
+  future_drive_dist_info_.gear_drive_path.reserve(size);
   for (int32_t i = 0; i < size; i++) {
     future_drive_dist_info_.gear_drive_path.emplace_back(
         Eigen::Vector2f(s, 10.0));
     s += point_resolution_;
   }
 
-  future_drive_dist_info_.gear_reverse_path.clear();
-
   s = 0.0;
+  future_drive_dist_info_.gear_reverse_path.clear();
+  future_drive_dist_info_.gear_reverse_path.reserve(size);
   for (int32_t i = 0; i < size; i++) {
     future_drive_dist_info_.gear_reverse_path.emplace_back(
         Eigen::Vector2f(s, 10.0));
@@ -51,14 +61,8 @@ void FuturePathDecider::Process(const ParkReferenceLine *ref_line,
     return;
   }
 
-  min_turn_radius_ = min_turn_radius;
-  swap_start_goal_ = request.swap_start_goal;
-  gear_request_ = request.first_action_request.gear_request;
-  sampling_lon_resolution_ = sampling_lon_resolution;
-  path_inference_lat_buffer_ = 0.1;
-  Clear();
-
-  edt->UpdateSafeBuffer(0.01, 0.01, 0.4);
+  Init(min_turn_radius, sampling_lon_resolution, request);
+  edt->UpdateSafeBuffer(0.01, 0.4, 0.01, 0.35);
 
   CalcDriveDistByLineModel(request.start_pose, edt, ref_line);
   // use circle model to estimate path length.
@@ -142,7 +146,15 @@ void FuturePathDecider::CalcDriveDistByLineModel(
     s += point_resolution_;
   }
 
+#if DEBUG_TASK
   ILOG_INFO << "dist to ref line=" << future_drive_dist_info_.dist_to_ref_line;
+  for (size_t i = 0; i < future_drive_dist_info_.gear_reverse_path.size();
+       i++) {
+    ILOG_INFO << "s, " << future_drive_dist_info_.gear_reverse_path[i][0]
+              << ",dist " << future_drive_dist_info_.gear_reverse_path[i][1];
+  }
+
+#endif
 
   return;
 }
@@ -173,6 +185,15 @@ void FuturePathDecider::CalcDriveDistByCircleModel(
   UpdatePathDistInfo(path, AstarPathGear::REVERSE, edt,
                      future_drive_dist_info_.gear_reverse_path);
 
+#if DEBUG_TASK
+  for (size_t i = 0; i < future_drive_dist_info_.gear_reverse_path.size();
+       i++) {
+    ILOG_INFO << "s, " << future_drive_dist_info_.gear_reverse_path[i][0]
+              << ",dist " << future_drive_dist_info_.gear_reverse_path[i][1];
+  }
+
+#endif
+
   return;
 }
 
@@ -194,10 +215,12 @@ void FuturePathDecider::UpdateFuturePathRequest(
   future_drive_dist_info_.advised_gear_reverse_dist = SearchAdvisedDriveDist(
       path_inference_lat_buffer_, future_drive_dist_info_.gear_reverse_path);
 
+#if DEBUG_TASK
   ILOG_INFO << "drive gear dist = "
             << future_drive_dist_info_.advised_gear_drive_dist
             << ", reverse gear dist = "
             << future_drive_dist_info_.advised_gear_reverse_dist;
+#endif
 
   if (future_path_request->gear_request == AstarPathGear::DRIVE) {
     if (future_drive_dist_info_.advised_gear_drive_dist <
@@ -249,8 +272,7 @@ void FuturePathDecider::GetPathByCircle(const Pose2f *start_point_pose,
                                         const float arc, const float radius,
                                         const bool is_forward,
                                         std::vector<Pose2f> *path) {
-  float delta_s = 0.1;
-  int path_point_num = std::ceil(arc / delta_s);
+  int path_point_num = std::ceil(arc / point_resolution_);
 
   // get vehicle circle
   VehicleCircle veh_circle;
@@ -269,15 +291,16 @@ void FuturePathDecider::GetPathByCircle(const Pose2f *start_point_pose,
   float acc_s = 0.0;
 
   path->clear();
-  path->push_back(*start_point_pose);
+  path->reserve(path_point_num + 1);
+  path->emplace_back(*start_point_pose);
 
   for (int i = 0; i < path_point_num; ++i) {
-    acc_s += delta_s;
+    acc_s += point_resolution_;
 
     InterpolateByArcOffset(&veh_circle, start_point_pose, acc_s, inv_radius,
                            &next_pose);
 
-    path->push_back(next_pose);
+    path->emplace_back(next_pose);
   }
 
   return;

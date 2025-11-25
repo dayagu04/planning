@@ -9,8 +9,8 @@ namespace planning {
 namespace apa_planner {
 
 void ParkStopConfig::Init() {
-  lat_buffer_to_dynamic_agent = 0.9;
-  lon_buffer_to_dynamic_agent = 1.2;
+  lat_buffer_to_dynamic_agent = 1.0;
+  lon_buffer_to_dynamic_agent = 2.0;
   lat_buffer_to_static_agent = 0.06;
   lon_buffer_to_static_agent = 0.3;
   extra_check_dist = 1.2;
