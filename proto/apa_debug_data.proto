@@ -161,6 +161,19 @@ message ApaPlanningSLotInfo {
   repeated Point2d virtual_limiters = 12;
 }
 
+enum PaCategory {
+  UNKNOWN_CATEGORY = 0;
+  LINE = 1;
+  SLOT = 2;
+  OBSTACLE = 3;
+}
+
+message PaObject {
+  optional PaCategory category = 1;
+  repeated TrajectoryPoint points = 2;
+  optional string object_id = 3;
+}
+
 message ApaPathDebug {
   optional AstarNodeList astar_node_list = 1;
   optional ObstacleListDebug obs_list = 2;
@@ -172,4 +185,5 @@ message ApaPathDebug {
   optional ApaStuckTime stuck_time = 9;
   optional ApaTerminalErr terminal_err = 10;
   optional ApaPlanningSLotInfo slot_info = 11;
+  repeated PaObject pa_objects = 12;
 }

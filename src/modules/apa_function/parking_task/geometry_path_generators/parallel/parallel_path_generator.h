@@ -50,6 +50,14 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     LineArcMultiPlan,
     MultiPlanMethodCount,
   };
+
+  enum PaPlanMethod {
+    PaSturnPlan,
+    ApaInSlotPlan,
+    ApaOutSlotPlan,
+    PaPlanMethodCount,
+  };
+
   typedef enum {
     COST_WEIGHT_GEAR_SWITCH,
     COST_WEIGHT_GEAR_FIRST,
@@ -251,6 +259,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     enable_pa_park_ = true;
     return;
   }
+
+  const PaPlanMethod CheckPaParkCondition();
 
   const DebugInfo &GetDebugInfo() const { return debug_info_; };
 
@@ -593,6 +603,16 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
       const double buffer = 0.3) const;
 
+  const bool CheckSTurnPathSegVecCollided(
+      const std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const double first_buffer, const double second_buffer) const;
+
+  const bool OneLinePlanToPA(pnc::geometry_lib::PathSegment& out_path_line,
+                             pnc::geometry_lib::PathPoint& current_pose,
+                             const double max_line_length,
+                             const double min_line_length, const uint8_t gear,
+                             const double lon_buffer);
+
   const bool OneLinePlan(
       pnc::geometry_lib::LineSegment &line,
       std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
@@ -638,6 +658,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   PlannerParams calc_params_;
   DebugInfo debug_info_;
   bool enable_pa_park_ = false;
+  PaPlanMethod first_pa_plan_method_;
+  bool had_park_out = false;
 };
 
 }  // namespace apa_planner

@@ -457,9 +457,12 @@ struct ApaParameters {
   double finish_parallel_pa_lon_err = 0.15;
   double finish_parallel_pa_heading_err = 5.0;
   double debug_parallel_angle_threshold = 3.0;
-  double s_turn_plan_pa_buffer = 0.2;
+  double s_turn_plan_pa_buffer_1 = 0.1;
+  double s_turn_plan_pa_buffer_2 = 0.2;
   double line_plan_pa_buffer = 0.15;
   double pa_slot_move_distance = 0.15;
+  double pa_slot_length_for_park_in = 1.7;
+  double pa_to_curb_dis = 0.8;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -513,6 +516,7 @@ struct ApaParameters {
   double safe_lat_buffer_in_1r_parallel_slot = 0.1;
   double safe_remain_dist_in_1r_parallel_slot = 0.3;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
+  double safe_uss_remain_dist_in_parallel_slot_pa = 0.15;
   double safe_uss_remain_dist_out_slot = 0.55;
   double obs_stuck_replan_wait_time = 2.0;
   double uss_scan_angle_deg = 60;
