@@ -22,8 +22,7 @@ class ResultTrajectoryGenerator : public Task {
   bool RealtimeTrajectoryGenerator();
 
   void Init();
-  void UpdateHMIInfo();
-  void UpdateTurnSignal();
+
 
   inline bool is_abnormal_number(double number) {
     return (std::isnan(number) == 1) || (std::isinf(number) != 0);

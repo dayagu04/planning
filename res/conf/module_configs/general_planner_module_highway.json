@@ -929,8 +929,7 @@
     "lat_jerk_thr": 0.45,
     "ramp_lat_jerk_thr": 0.65,
     "lon_acc_thr": 2.0,
-    "lon_jerk_thr": 1.5,
-    "tfl_reminder_cipv_dis": 8.0
+    "lon_jerk_thr": 1.5
   },
   "traffic_light_decider": {
     "enable_tfl_decider": false,
@@ -1488,5 +1487,8 @@
       "rear_speed_kph_table": [0.0, 10.0, 40.0, 60.0, 80.0, 100.0, 120.0],
       "min_space_table":      [0.2, 1.5,  4.0,  5.5,  6.5,  7.0,   8.5]
     }
+  },
+  "hmi_decider": {
+    "tfl_reminder_cipv_dis": 8.0
   }
 }
