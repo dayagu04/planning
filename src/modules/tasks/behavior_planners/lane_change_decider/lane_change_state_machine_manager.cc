@@ -123,7 +123,8 @@ void LaneChangeStateMachineManager::RunStateMachine() {
 
         // 在propose阶段计算靠近车道线的横向偏移量
         // CalculateLatCloseValue();
-        lat_close_boundary_offset_ = 0.0;
+        CalculateCongestionLatOffsetValue();
+        // lat_close_boundary_offset_ = 0.0;
 
         if (IsSuppressLCShortDis()) {
           propose_state_frame_nums_ = 0;
@@ -136,10 +137,14 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           lc_lane_mgr_->set_fix_lane_to_target();
           lc_timer_.Reset();
           propose_state_frame_nums_ = 0;
+          is_pre_move_ = false;
+          lat_close_boundary_offset_ = 0.0;
         } else if (is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
           // ResetStateMachine();
+          is_pre_move_ = false;
+          lat_close_boundary_offset_ = 0.0;
         }
       }
       break;
@@ -2228,7 +2233,7 @@ void LaneChangeStateMachineManager::PreProcess() {
                              ->get_reference_path_by_lane(fix_lane_virtual_id);
   const auto& virtual_lane_mgr =
       session_->environmental_model().get_virtual_lane_manager();
-  // 初始化拥堵检测器并进行检测
+  // 初始化拥堵检测器并进行检测 检测目标车道
   CongestionDetector congestion_detector(&congestion_detection_config_,
                                          session_, fix_lane_virtual_id);
   fix_lane_congestion_level_ = congestion_detector.DetectLaneCongestion();
@@ -3202,7 +3207,17 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
     lat_close_boundary_offset_ = 0.0;  // 如果当前车道不存在，设置偏移为0
     return;
   }
-
+  //前车或者后车不存在
+  if(target_lane_front_node_ == nullptr || target_lane_rear_node_ == nullptr) {
+    lat_close_boundary_offset_ = 0.0;
+    return ;
+  }
+  // 自车 速度较快
+  double ego_v = env_model.get_ego_state_manager()->ego_v();
+  if(ego_v > 8.33) {
+    lat_close_boundary_offset_ = 0.0;
+    return ;
+  }
   // 计算当前车道半宽
   const double cur_lane_half_width = current_lane->width() / 2.0;
 
@@ -3215,7 +3230,7 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
   const double v_ego = env_model.get_ego_state_manager()->ego_v();
 
   // 定义连续通过的安全帧数阈值
-  constexpr int SAFETY_FRAME_THRESHOLD = 10;
+  constexpr int SAFETY_FRAME_THRESHOLD = 6;
 
   // 判断是否满足安全条件并设置横向偏移值
   if (fix_lane_congestion_level_.level == CongestionLevel::CONGESTION &&
@@ -3229,7 +3244,6 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
     lat_close_boundary_offset_ = 0.0;  // 不满足安全条件时，设置偏移为0
   }
 }
-
 void LaneChangeStateMachineManager::IsEgoOnSideLane() {
   const auto& virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
@@ -3246,6 +3260,92 @@ void LaneChangeStateMachineManager::IsEgoOnSideLane() {
     is_ego_on_rightmost_lane_ = true;
   } else {
     is_ego_on_rightmost_lane_ = false;
+  }
+}
+void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
+  if(is_pre_move_){ // 已经判定提前移动则保持 lat_close_boundary_offset_ ，直到变道执行,避免蛇形
+    return;
+  }
+  // is_pre_move_ = false:
+  lat_close_boundary_offset_ = 0.0;
+  const auto& virtual_lane_mgr = session_->environmental_model().get_virtual_lane_manager();
+  int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+  const auto& current_lane = virtual_lane_mgr->get_current_lane();
+  const auto& target_lane = virtual_lane_mgr->get_lane_with_virtual_id(target_lane_virtual_id);
+  if (!target_lane) {
+    return;
+  }
+  // 排除不应该触发贴变行为的case：
+  //自车速度较快
+  double ego_vel = session_->environmental_model().get_ego_state_manager()->ego_v();
+  if(ego_vel > 8.33){
+    return;
+  }
+  // 前方或者后方无车，可调速
+  if(target_lane_front_node_ == nullptr || target_lane_rear_node_ == nullptr){
+    return;
+  }
+  // proposed state 帧数不多，可以变道只是正常计数：正常5 帧安全候触发
+  if(propose_state_frame_nums_ < 7){
+    return;
+  }
+  //目标车道附近平均速度
+  const auto& target_lane_nodes =
+  session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
+      target_lane_virtual_id);
+  std::vector<const planning_data::DynamicAgentNode *> target_lane_nodes_vec;
+  for(const auto& node : target_lane_nodes){
+      target_lane_nodes_vec.push_back(node);
+  }
+  if(target_lane_nodes_vec.size() < 3){
+    return;
+  }
+  const auto& ref_path = target_lane->get_reference_path();
+  if (!ref_path) {
+    return;
+  }
+  const double ego_s = ref_path->get_frenet_ego_state().s();
+  std::sort(target_lane_nodes_vec.begin(), target_lane_nodes_vec.end(),
+            [ego_s](const auto* a, const auto* b) {
+              return std::fabs(a->node_s() - ego_s) <
+                     std::fabs(b->node_s() - ego_s);
+            });
+  double target_lane_avg_speed = 0.0;
+  double sum_speed = 0.0;
+  int valid_cnt = 0;
+  for (const auto* node : target_lane_nodes_vec) {
+    sum_speed += node->node_speed();
+    ++valid_cnt;
+    if (valid_cnt >= 4) {
+      break;
+    } 
+  }
+  valid_cnt = std::min(valid_cnt, 4);
+  target_lane_avg_speed = valid_cnt > 1 ? sum_speed / valid_cnt : 0.0;
+  if(target_lane_avg_speed > 7.0 || target_lane_avg_speed < 1.0){
+    return; // 快速或者停车场景
+  }
+  if (!current_lane) {
+    return;
+  }
+  const double cur_lane_half_width = current_lane->width() / 2.0;
+  const double ego_half_width =
+      VehicleConfigurationContext::Instance()->get_vehicle_param().width / 2.0;
+  constexpr double LAT_OFFSET_BUFFER = 0.35;
+  const double lat_offset_value =
+      cur_lane_half_width - ego_half_width - LAT_OFFSET_BUFFER;
+  if (lat_offset_value <= 0.0) {
+    return;
+  }
+
+  if (transition_info_.lane_change_direction == LEFT_CHANGE) {
+    lat_close_boundary_offset_ = lat_offset_value;
+    is_pre_move_ = true;
+  } else if (transition_info_.lane_change_direction == RIGHT_CHANGE) {
+    lat_close_boundary_offset_ = -lat_offset_value;
+    is_pre_move_ = true;
+  } else {
+    return;
   }
 }
 
