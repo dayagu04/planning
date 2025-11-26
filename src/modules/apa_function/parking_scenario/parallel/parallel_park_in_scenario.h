@@ -85,6 +85,10 @@ class ParallelParkInScenario : public ParkingScenario {
     enable_pa_park_ = true;
     return;
   }
+  void RecordDebugPaInfo(const Eigen::Vector2d& line_coeffs,
+                         const SlotCoord& slot,
+                         const std::vector<Eigen::Vector2d>& pa_curb_obs);
+  void UpdatePARemainDistance();
   SlotCoord slot_new_;
   Eigen::Vector2d line_coeffs_out_;
 

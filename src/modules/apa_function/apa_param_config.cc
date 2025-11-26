@@ -256,11 +256,18 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.debug_parallel_angle_threshold, double,
                   "debug_parallel_angle_threshold");
 
-  JSON_READ_VALUE(param.s_turn_plan_pa_buffer, double, "s_turn_plan_pa_buffer");
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_1, double, "s_turn_plan_pa_buffer_1");
+
+  JSON_READ_VALUE(param.s_turn_plan_pa_buffer_2, double, "s_turn_plan_pa_buffer_2");
 
   JSON_READ_VALUE(param.line_plan_pa_buffer, double, "line_plan_pa_buffer");
 
   JSON_READ_VALUE(param.pa_slot_move_distance, double, "pa_slot_move_distance");
+
+  JSON_READ_VALUE(param.pa_slot_length_for_park_in, double,
+                  "pa_slot_length_for_park_in");
+
+  JSON_READ_VALUE(param.pa_to_curb_dis, double, "pa_to_curb_dis");
 
   // check finish params
   JSON_READ_VALUE(param.finish_lat_err, double, "finish_lat_err");
@@ -402,6 +409,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.safe_uss_remain_dist_in_parallel_slot, double,
                   "safe_uss_remain_dist_in_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_uss_remain_dist_in_parallel_slot_pa, double,
+                  "safe_uss_remain_dist_in_parallel_slot_pa");
 
   JSON_READ_VALUE(param.safe_uss_remain_dist_out_slot, double,
                   "safe_uss_remain_dist_out_slot");

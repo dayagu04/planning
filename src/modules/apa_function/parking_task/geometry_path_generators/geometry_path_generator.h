@@ -87,6 +87,10 @@ struct Tlane {
   double channel_x_limit = 16.6;
   bool is_short_channel = false;
 
+  double car_to_curb_dis = 0.0;
+  double first_occupied_ratio = 0.0;
+  bool use_sturn_plan = false;
+
   void Reset() {
     corner_outside_slot.setZero();
     corner_inside_slot.setZero();
@@ -110,6 +114,9 @@ struct Tlane {
     limiter.Reset();
     is_inside_rigid = false;
     is_short_channel = false;
+    car_to_curb_dis = 0.0;
+    first_occupied_ratio = 0.0;
+    use_sturn_plan = false;
   }
 };
 

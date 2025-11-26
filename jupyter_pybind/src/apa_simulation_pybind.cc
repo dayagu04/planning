@@ -429,6 +429,146 @@ std::vector<Eigen::VectorXd> GetJLTSpeedData() {
   return speed_profile;
 }
 
+bool ComputeLineIntersection(const Eigen::Vector2d& A, const Eigen::Vector2d& B,
+                             double k, double b, Eigen::Vector2d& res) {
+  // AB line: a1*x + b1*y + c1 = 0
+  double a1 = A.y() - B.y();
+  double b1 = B.x() - A.x();
+  double c1 = A.x() * B.y() - B.x() * A.y();
+
+  // L line: a2*x + b2*y + c2 = 0 => kx - y + b = 0
+  double a2 = k;
+  double b2 = -1.0;
+  double c2 = b;
+
+  // Calculate the determinant
+  double det = a1 * b2 - a2 * b1;
+
+  if (std::abs(det) < 1e-10) {
+    // line parallel
+    return false;
+  }
+
+  // Calculate intersection point
+  double x = (b1 * c2 - b2 * c1) / det;
+  double y = (a2 * c1 - a1 * c2) / det;
+
+  res << x, y;
+  return true;
+}
+
+std::vector<std::vector<double>> GetPASlot() {
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_vec, y_vec};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::SLOT &&
+        pa_object.object_id() == "slot_1") {
+      // 提取车位角点用于可视化或其他处理
+      std::vector<Eigen::Vector2d> slot_corners;
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        slot_corners.emplace_back(point.x(), point.y());
+        // std::cout << "slot j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+      }
+      x_vec.emplace_back(slot_corners[0].x());
+      x_vec.emplace_back(slot_corners[3].x());
+      x_vec.emplace_back(slot_corners[2].x());
+      x_vec.emplace_back(slot_corners[1].x());
+
+      y_vec.emplace_back(slot_corners[0].y());
+      y_vec.emplace_back(slot_corners[3].y());
+      y_vec.emplace_back(slot_corners[2].y());
+      y_vec.emplace_back(slot_corners[1].y());
+      break;
+    }
+  }
+  return {x_vec, y_vec};
+}
+
+std::vector<std::vector<double>> GetPAObs() {
+  // const SimuDebugInfo& debug_info = apa_interface_ptr->GetSimuDebugInfo();
+  std::vector<double> x_vec;
+  std::vector<double> y_vec;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_vec, y_vec};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::OBSTACLE &&
+        pa_object.object_id() == "obstacle_1") {
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        // std::cout << "obstacle j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+        x_vec.emplace_back(point.x());
+        y_vec.emplace_back(point.y());
+      }
+      break;
+    }
+  }
+  return {x_vec, y_vec};
+}
+
+std::vector<std::vector<double>> GetPALine() {
+  std::vector<std::vector<double>> slot_point = GetPASlot();
+  std::vector<double> x_line;
+  std::vector<double> y_line;
+
+  auto& debug = DebugInfoManager::GetInstance().GetDebugInfoPb();
+  if (!debug->has_apa_path_debug()) {
+    return {x_line, y_line};
+  }
+  const auto& apa_path_debug = debug->apa_path_debug();
+
+  double k = 0.0;
+  double b = 0.0;
+  for (int i = 0; i < apa_path_debug.pa_objects_size(); ++i) {
+    const auto& pa_object = apa_path_debug.pa_objects(i);
+
+    if (pa_object.category() == planning::common::PaCategory::LINE &&
+        pa_object.object_id() == "line_1") {
+      for (int j = 0; j < pa_object.points_size(); ++j) {
+        const auto& point = pa_object.points(j);
+        // std::cout << "line j = " << j << " point.x = " << point.x()
+        //           << " point.y = " << point.y() << std::endl;
+        k = point.x();
+        b = point.y();
+      }
+      break;
+    }
+  }
+
+  Eigen::Vector2d A;
+  if (ComputeLineIntersection(
+          Eigen::Vector2d(slot_point[0][0], slot_point[1][0]),
+          Eigen::Vector2d(slot_point[0][1], slot_point[1][1]), k, b, A)) {
+    x_line.emplace_back(A.x());
+    y_line.emplace_back(A.y());
+  }
+  Eigen::Vector2d B;
+  if (ComputeLineIntersection(
+          Eigen::Vector2d(slot_point[0][3], slot_point[1][3]),
+          Eigen::Vector2d(slot_point[0][2], slot_point[1][2]), k, b, B)) {
+    x_line.emplace_back(B.x());
+    y_line.emplace_back(B.y());
+  }
+  return {x_line, y_line};
+}
+
 PYBIND11_MODULE(apa_simulation_py, m) {
   m.doc() = "m";
 
@@ -447,5 +587,8 @@ PYBIND11_MODULE(apa_simulation_py, m) {
       .def("GetQPSpeedOptimizationData", &GetQPSpeedOptimizationData)
       .def("GetJLTSpeedData", &GetJLTSpeedData)
       .def("GetStopSigns", &GetStopSigns)
-      .def("GetDynamicState", &GetDynamicState);
+      .def("GetDynamicState", &GetDynamicState)
+      .def("GetPASlot", &GetPASlot)
+      .def("GetPAObs", &GetPAObs)
+      .def("GetPALine", &GetPALine);
 }

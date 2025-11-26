@@ -87,5 +87,12 @@ class ApaPAStateGeneral {
                                      float32 percentage) {
     state.remain_distance_percentage = percentage;
   }
+  void SetRecommendPADirectionFlag(iflyauto::APAHMIData& state,
+                             const uint16_t state_bit) {
+    state.planning_recommend_pa_dir |= PADirectionMask(state_bit);
+  }
+  void ClearRecommendPADirectionFlag(iflyauto::APAHMIData &state) {
+    state.planning_recommend_pa_dir = 0;
+  }
 };
 }

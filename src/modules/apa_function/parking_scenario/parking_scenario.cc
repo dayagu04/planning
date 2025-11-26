@@ -265,12 +265,17 @@ void ParkingScenario::TansformPreparePlanningTraj() {
 }
 
 void ParkingScenario::GenPlanningHmiOutput() {
+  const float32 pa_remain_distance = apa_hmi_.pa_remain_distance;
+  const float32 remain_distance_percentage =
+      apa_hmi_.remain_distance_percentage;
   memset(&apa_hmi_, 0, sizeof(apa_hmi_));
 
   if (frame_.plan_stm.planning_status == PARKING_PLANNING ||
       frame_.plan_stm.planning_status == PARKING_GEARCHANGE ||
       frame_.plan_stm.planning_status == PARKING_RUNNING) {
     apa_hmi_.remain_dist = frame_.remain_dist_path;
+    apa_hmi_.pa_remain_distance = pa_remain_distance;
+    apa_hmi_.remain_distance_percentage = remain_distance_percentage;
   }
   return;
 }
