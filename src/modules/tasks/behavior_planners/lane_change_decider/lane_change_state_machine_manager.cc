@@ -4220,6 +4220,10 @@ bool LaneChangeStateMachineManager::
   }
 
   for (int i = 0; i < iter_count; i++) {
+    //执行后缩短预测轨迹检查
+    if(is_executing && i > 10){ 
+      break;
+    }
     double beyond_lane_time = std_beyond_lane_time - i * 0.2;
     beyond_lane_time = std::max(beyond_lane_time, 0.0);
     if (is_front_agent) {
