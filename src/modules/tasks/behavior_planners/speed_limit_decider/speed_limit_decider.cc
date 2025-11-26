@@ -60,6 +60,12 @@ constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 constexpr double kEWMAAlpha = 0.3;
 constexpr double kSSharpBendCount = 3;
+constexpr double kSharpCurveEnterThreshold = 100.0;  // 进入距离阈值
+constexpr double kSharpCurveExitThreshold = 130.0;   // 退出距离阈值
+constexpr double kMinDistanceForDecel = 1;  // 最小距离阈值，避免除以0
+constexpr double kCurvatureDecelThreshold = -1.0;  // CURVATURE配置的减速度阈值（m/s²）
+constexpr double kCurvSpeedDifference = 3 / 3.6;
+constexpr int kSharpCurveMinFrames = 5;  // 急弯状态最少维持帧数
 constexpr double kFarEnoughDisToMerge = 500.0;
 constexpr double kCloseDisToMergeCancelVLimit = 120.0;
 constexpr double kNearMergeCancelVLimitCurvRadius = 900.0;
@@ -350,7 +356,8 @@ bool SpeedLimitDecider::Execute() {
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
 
-  if (SpeedLimitType::CURVATURE == v_target_type_) {
+  if (SpeedLimitType::CURVATURE == v_target_type_ || 
+      SpeedLimitType::SHARP_CURVATURE == v_target_type_) {
     ad_info->is_curva = true;
   } else {
     ad_info->is_curva = false;
@@ -539,7 +546,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double acc_lon_allowed = std::sqrt(
       std::max(std::pow(acc_total_max, 2) - std::pow(acc_lat, 2), 0.0));
 
-  // And limit the logitudinal velocity for a safe turn
+  // Limit the longitudinal velocity for a safe turn
   double acc_lat_max =
       interp(std::fabs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
   // HACK: close v_limit_steering in high vel
@@ -632,8 +639,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   }
   double road_radius_origin = 1 / std::max(max_curv, 0.0001);
 
-  // 获取基于10m一个点计算的曲率
+  // Get curvature based on 10m interval points
   double cur_max_cur = 0.0001;
+  double max_curv_s = ego_start_s;  // s value corresponding to the maximum curvature point
   if (raw_spline.get_x().size() > 0) {
     double min_x = raw_spline.get_x_min();
     double max_x = raw_spline.get_x_max();
@@ -644,11 +652,14 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
         double curv = std::abs(raw_spline(s));
         if (curv > cur_max_cur) {
           cur_max_cur = curv;
+          max_curv_s = s;  // Record the s value corresponding to the maximum curvature point
         }
       }
     }
   }
-  // EWMA
+  // Calculate the distance from the current position to the maximum curvature point
+  double dist_to_max_curv = max_curv_s - ego_start_s;
+  // Exponentially Weighted Moving Average (EWMA)
   if (raw_curv_spline_ < kEpsilon) {
     raw_curv_spline_ = cur_max_cur;
   } else {
@@ -664,26 +675,111 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
+
   ILOG_DEBUG << "road_radius is :" << road_radius
              << ", acc_lat_max:" << acc_lat_max;
 
   ILOG_DEBUG << "angle_steers :" << angle_steers
              << ", angle_steers_deg:" << angle_steers_deg
-             << ", v_limit_road:" << v_limit_road;
+             << ", v_limit_road:" << v_limit_road
+             << ", dist_to_max_curv:" << dist_to_max_curv;
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
   JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
+  JSON_DEBUG_VALUE("dist_to_max_curv", dist_to_max_curv);
+
+  // Determine if it is a sharp curve: entry less than 100m, exit greater than 130m
+  bool is_sharp_curve = false;
+  // Use hysteresis logic to determine sharp curve status, avoiding frequent switching
+  if (last_is_sharp_curve_) {
+    // If currently in a sharp curve state, only exit sharp curve state when radius >= 130m
+    if (road_radius >= kSharpCurveExitThreshold) {
+      is_sharp_curve = false;
+    } else {
+      is_sharp_curve = true;
+    }
+  } else {
+    // If not currently in a sharp curve state, enter sharp curve state when radius < 100m
+    if (road_radius < kSharpCurveEnterThreshold) {
+      is_sharp_curve = true;
+    } else {
+      is_sharp_curve = false;
+    }
+  }
+  // Update the previous sharp curve status
+  last_is_sharp_curve_ = is_sharp_curve;
+
+  // Calculate required deceleration: based on current speed, target speed, and distance
+  double required_deceleration = 0.0;
+  if (dist_to_max_curv > kMinDistanceForDecel && v_ego > v_limit_road) {
+    // Need to decelerate: current speed is greater than target speed
+    required_deceleration = (std::pow(v_limit_road, 2) - std::pow(v_ego, 2)) /
+                            (2.0 * dist_to_max_curv);
+  } else if (dist_to_max_curv <= kMinDistanceForDecel &&
+             (v_ego - v_limit_road) > kCurvSpeedDifference) {
+    required_deceleration = -2.0; 
+  }
+
+  // Condition: deceleration greater than threshold && is_sharp_curve set && is_s_bend not set
+  bool is_sharp_curve_by_decel = false;
+  
+  bool should_enter_sharp_curve =
+      (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve &&
+      !is_s_bend;
+  if (last_is_sharp_curve_by_decel_) {
+    // If currently in a sharp curve state (based on deceleration), need to determine whether to exit
+    if (should_enter_sharp_curve) {
+      // Conditions met, maintain sharp curve state
+      is_sharp_curve_by_decel = true;
+      sharp_curve_frame_count_ = 0;  // Reset counter
+    } else {
+      // Conditions not met, but need to maintain at least 5 frames
+      if (sharp_curve_frame_count_ < kSharpCurveMinFrames) {
+        // Minimum frame count not reached, continue maintaining sharp curve state
+        is_sharp_curve_by_decel = true;
+        sharp_curve_frame_count_++;
+      } else {
+        // Minimum frame count reached, can exit sharp curve state
+        is_sharp_curve_by_decel = false;
+        sharp_curve_frame_count_ = 0;
+      }
+    }
+  } else {
+    // If not currently in a sharp curve state (based on deceleration), determine whether to enter
+    if (should_enter_sharp_curve) {
+      // Conditions met, enter sharp curve state
+      is_sharp_curve_by_decel = true;
+      sharp_curve_frame_count_ = 0;
+    } else {
+      // Conditions not met, maintain non-sharp curve state
+      is_sharp_curve_by_decel = false;
+      sharp_curve_frame_count_ = 0;
+    }
+  }
+  // Update the previous sharp curve status based on deceleration
+  last_is_sharp_curve_by_decel_ = is_sharp_curve_by_decel;
+
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
-    v_target_type_ = SpeedLimitType::CURVATURE;
+    if (is_sharp_curve_by_decel) {
+      v_target_type_ = SpeedLimitType::SHARP_CURVATURE;
+    } else {
+      v_target_type_ = SpeedLimitType::CURVATURE;
+    }
   }
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
+  JSON_DEBUG_VALUE("is_sharp_curve", is_sharp_curve ? 1 : 0);
+  JSON_DEBUG_VALUE("is_sharp_curve_by_decel", is_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_frame_count", sharp_curve_frame_count_);
+  JSON_DEBUG_VALUE("required_deceleration", required_deceleration);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
-  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
-                                           SpeedLimitType::CURVATURE);
+  SpeedLimitType output_type = is_sharp_curve_by_decel
+                                   ? SpeedLimitType::SHARP_CURVATURE
+                                   : SpeedLimitType::CURVATURE;
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns, output_type);
 }
 
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
@@ -2200,3 +2296,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
 }
 
 }  // namespace planning
+
+
+
+

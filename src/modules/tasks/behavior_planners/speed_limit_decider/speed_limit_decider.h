@@ -126,6 +126,9 @@ class SpeedLimitDecider : public Task {
   bool construction_manual_intervention_detected_ = false;
   double last_v_cruise_fsm_ = 0.0;
   double raw_curv_spline_ = 0.0;
+  bool last_is_sharp_curve_ = false;
+  bool last_is_sharp_curve_by_decel_ = false;  // 上一次基于减速度的急弯状态
+  int sharp_curve_frame_count_ = 0;  // 急弯状态维持帧数计数器
 };
 
 }  // namespace planning

@@ -5169,6 +5169,71 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
                        "speed_planning", "cruise_target",
                        "kappa_kinematic_param", "jerk_negative_speed_upper");
     }
+    // sharp_curvature_kinematic_param
+    {
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_positive_upper");
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_positive_speed_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_positive_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_positive_speed_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_negative_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_negative_speed_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_negative_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.acc_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "acc_negative_speed_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_positive_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_positive_speed_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_positive_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_positive_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_positive_speed_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_negative_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_speed_lower,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_negative_speed_lower");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_negative_upper");
+
+      ReadItem<double>(json, sharp_curvature_kinematic_param.jerk_negative_speed_upper,
+                       "speed_planning", "cruise_target",
+                       "sharp_curvature_kinematic_param", "jerk_negative_speed_upper");
+    }
     // construction_kinematic_param
     {
       ReadItem<double>(json, construction_kinematic_param.acc_positive_upper,
@@ -5716,6 +5781,7 @@ struct SpeedPlannerConfig : public EgoPlanningConfig {
 
   KinematicParam comfort_kinematic_param;
   KinematicParam kappa_kinematic_param;
+  KinematicParam sharp_curvature_kinematic_param;
   KinematicParam avoid_agent_kinematic_param;
   KinematicParam near_poi_kinematic_param;
   KinematicParam map_near_ramp_kinematic_param;
