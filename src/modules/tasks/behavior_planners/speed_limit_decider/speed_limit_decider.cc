@@ -447,6 +447,159 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
   return min_curv_radius;
 }
 
+// 使用 SDProMap 在匝道上基于几何三点法计算最大曲率（带平滑）
+double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap() {
+  const auto &environmental_model = session_->environmental_model();
+  const auto &route_info =
+      environmental_model.get_route_info();
+  if (!route_info->get_sdpromap_valid()) {
+    return 0.0;
+  }
+
+  const auto &route_info_output = route_info->get_route_info_output();
+
+  // 通过与 GetRampVelLimit 相同的逻辑定位 ramp_link_id
+  uint64_t ramp_link_id = static_cast<uint64_t>(-1);
+  double dis_to_ramp = route_info_output.dis_to_ramp;
+  const auto &split_region_info_list = route_info_output.split_region_info_list;
+  if (dis_to_ramp < 2000.0) {
+    for (int i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point -
+                    dis_to_ramp) < 1.0) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
+
+  const auto &sdpro_map = route_info->get_sdpro_map();
+  if (ramp_link_id == static_cast<uint64_t>(-1)) {
+    return 0.0;
+  }
+
+  const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
+  if (ramp_link == nullptr) {
+    return 0.0;
+  }
+
+  // 收集匝道上的 ENU 点，直到累计长度 >= 150m 或离开匝道
+  std::vector<ad_common::math::Vec2d> enu_points;
+  enu_points.reserve(200);
+  double total_len = 0.0;
+  const double kMinRampSampleLength = 150.0;
+
+  const auto is_ramp = [&sdpro_map](const iflymapdata::sdpro::LinkInfo_Link &link) {
+    return sdpro_map.isRamp(link.link_type());
+  };
+
+  const iflymapdata::sdpro::LinkInfo_Link *cur_link = ramp_link;
+  while (cur_link != nullptr && is_ramp(*cur_link) &&
+         total_len < kMinRampSampleLength) {
+    const auto &pts = cur_link->points().boot().points();
+    if (pts.size() < 2) {
+       break;
+    }
+    for (size_t i = 0; i < pts.size(); ++i) {
+      ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+      if (!enu_points.empty()) {
+        const auto &last = enu_points.back();
+        double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+        total_len += ds;
+      }
+      enu_points.emplace_back(p);
+      if (total_len >= kMinRampSampleLength) {
+        break;
+      }
+    }
+    if (total_len >= kMinRampSampleLength) {
+      break;
+    }
+    cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
+  }
+
+  if (enu_points.size() < 3) {
+    return 0.0;
+  }
+
+  // 构造沿程 s 和几何三点曲率
+  std::vector<double> s_vec;
+  s_vec.reserve(enu_points.size());
+  s_vec.emplace_back(0.0);
+  for (size_t i = 1; i < enu_points.size(); ++i) {
+    double ds = std::hypot(enu_points[i].x() - enu_points[i - 1].x(),
+                           enu_points[i].y() - enu_points[i - 1].y());
+    s_vec.emplace_back(s_vec.back() + ds);
+  }
+
+  const double total_s = s_vec.back();
+  JSON_DEBUG_VALUE("ramp_curv_sample_total_s", total_s);
+  JSON_DEBUG_VALUE("ramp_curv_sample_points_num",
+                   static_cast<int>(enu_points.size()));
+
+  if (total_s < 1.0) {
+    return 0.0;
+  }
+
+  std::vector<double> k_raw;
+  k_raw.reserve(enu_points.size());
+  k_raw.emplace_back(0.0);  // 第一个点不计算
+  for (size_t i = 1; i + 1 < enu_points.size(); ++i) {
+    const auto &p0 = enu_points[i - 1];
+    const auto &p1 = enu_points[i];
+    const auto &p2 = enu_points[i + 1];
+
+    const double a = std::hypot(p1.x() - p0.x(), p1.y() - p0.y());
+    const double b = std::hypot(p2.x() - p1.x(), p2.y() - p1.y());
+    const double c = std::hypot(p2.x() - p0.x(), p2.y() - p0.y());
+
+    const double denom = a * b * c;
+    if (denom < 1e-3) {
+      k_raw.emplace_back(0.0);
+      continue;
+    }
+
+    const double cross =
+        (p1.x() - p0.x()) * (p2.y() - p0.y()) -
+        (p1.y() - p0.y()) * (p2.x() - p0.x());
+    const double area = 0.5 * std::fabs(cross);
+    const double k = 4.0 * area / denom;
+    k_raw.emplace_back(k);
+  }
+  k_raw.emplace_back(0.0);  // 最后一个点不计算
+
+  // 简单滑动窗口平均平滑曲率，窗口约 10m
+  std::vector<double> k_smooth(k_raw.size(), 0.0);
+  const double window_len = 10.0;
+  for (size_t i = 0; i < k_raw.size(); ++i) {
+    const double center_s = s_vec[i];
+    double sum_k = 0.0;
+    int cnt = 0;
+    for (size_t j = 0; j < k_raw.size(); ++j) {
+      if (std::fabs(s_vec[j] - center_s) <= window_len * 0.5) {
+        sum_k += k_raw[j];
+        ++cnt;
+      }
+    }
+    if (cnt > 0) {
+      k_smooth[i] = sum_k / static_cast<double>(cnt);
+    }
+  }
+
+  double max_k = 0.0;
+  for (size_t i = 0; i < k_smooth.size(); ++i) {
+    if (k_smooth[i] > max_k) {
+      max_k = k_smooth[i];
+    }
+  }
+
+  JSON_DEBUG_VALUE("ramp_curv_max_k", max_k);
+  if (max_k > 1e-6) {
+    double min_radius = 1.0 / max_k;
+    JSON_DEBUG_VALUE("ramp_curv_min_radius", min_radius);
+  }
+  return max_k;
+}
+
 double SpeedLimitDecider::GetRampVelLimit() {
   const auto &environmental_model = session_->environmental_model();
   const auto &route_info_output =
@@ -797,6 +950,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
   double ramp_v_limit = GetRampVelLimit();
+  double ramp_max_curv = CalcRampMaxCurvFromSDProMap();
 
   // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
