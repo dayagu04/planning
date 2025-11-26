@@ -274,6 +274,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       ego_lane_road_right_decider_output.is_split_region;
   const bool cur_lane_is_continue =
       ego_lane_road_right_decider_output.cur_lane_is_continue;
+  const int merge_lane_virtual_id =
+      ego_lane_road_right_decider_output.merge_lane_virtual_id;
 
   bool left_boundary_exist_virtual_type = false;
   bool right_boundary_exist_virtual_type = false;
@@ -448,7 +450,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    if (llane != nullptr) {
+    if (llane != nullptr && merge_lane_virtual_id == llane->get_virtual_id()) {
       MakesureVirtualLaneSideIsVirtual(
           llane, target_right_boundary_exist_virtual_type, 0);
     }
@@ -469,7 +471,7 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       }
     }
 
-    if (rlane != nullptr) {
+    if (rlane != nullptr && merge_lane_virtual_id == rlane->get_virtual_id()) {
       MakesureVirtualLaneSideIsVirtual(
           rlane, target_left_boundary_exist_virtual_type, 1);
     }
