@@ -3221,9 +3221,8 @@ void LaneChangeStateMachineManager::CalculateLatCloseValue() {
   const double cur_lane_half_width = current_lane->width() / 2.0;
 
   // 定义缓冲区和最小横向偏移值
-  constexpr double LAT_OFFSET_BUFFER = 0.35;
   const double lat_offset_value =
-      cur_lane_half_width - ego_half_width - LAT_OFFSET_BUFFER;
+      cur_lane_half_width - ego_half_width - lc_safety_check_config_.lat_offset_buffer;
 
   // 获取自车速度
   const double v_ego = env_model.get_ego_state_manager()->ego_v();
@@ -3330,9 +3329,8 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   const double cur_lane_half_width = current_lane->width() / 2.0;
   const double ego_half_width =
       VehicleConfigurationContext::Instance()->get_vehicle_param().width / 2.0;
-  constexpr double LAT_OFFSET_BUFFER = 0.35;
   const double lat_offset_value =
-      cur_lane_half_width - ego_half_width - LAT_OFFSET_BUFFER;
+      cur_lane_half_width - ego_half_width - lc_safety_check_config_.lat_offset_buffer;
   if (lat_offset_value <= 0.0) {
     return;
   }
