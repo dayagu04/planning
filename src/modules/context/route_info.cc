@@ -1836,10 +1836,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       split_region_info_list.empty()
           ? NL_NMAX
           : split_region_info_list[0].distance_to_split_point;
-  std::vector<std::vector<LSLInfo>> lsl_info_vec;
-  bool is_lsl = CalculateLSLDistance(
-      current_link_, route_info_output_.current_segment_passed_distance,
-      split_region_info_list[0].distance_to_split_point, lsl_info_vec);
   // 计算出当前所有交换区的feasible lane
   std::vector<NOASplitRegionInfo> exchange_region_info_list;
   std::vector<int> feasible_lane_sequence;
@@ -6106,23 +6102,21 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       exchange_region_info.recommend_lane_num[0].feasible_lane_sequence;
   // 判断是不是下匝道的exchange，是则需要考虑长实线
   double lsl_length = 0;
-  if (exchange_region_info.split_direction == SPLIT_RIGHT &&
-      exchange_region_info.recommend_lane_num[4].total_lane_num >
-          exchange_region_info.recommend_lane_num[3].total_lane_num) {
-    if (exchange_region_info.is_valid) {
-      const auto start_fp = exchange_region_info.start_fp_point;
-      lsl_length =
-          LengthSolidLineJudge(start_fp.link_id, start_fp.fp,
-                               exchange_region_info.distance_to_split_point);
-      route_info_output_.lsl_length = lsl_length;
-    }
-  }
-  max_distance = std::max(0.0, max_distance - lsl_length);
   if (exchange_region_info.split_direction == SPLIT_RIGHT) {
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
       const int lc_num = feasible_lane_sequence[0] - i;
       const double lc_need_dis = opt_distance * std::fabs(lc_num);
+      std::vector<std::vector<LSLInfo>> lsl_info_vec;
+      bool is_lsl = CalculateLSLDistance(
+          current_link_, route_info_output_.current_segment_passed_distance,
+          exchange_region_info.distance_to_split_point, lsl_info_vec);
+      if (is_lsl) {
+        lsl_length = CalculateLSLTotalLength(
+            i, lsl_info_vec, exchange_region_info.split_direction);
+        route_info_output_.lsl_length = lsl_length;
+        max_distance = std::max(0.0, max_distance - lsl_length);
+      }
       if (max_distance > lc_need_dis) {
         temp_feasible_lane_seq.emplace_back(i);
         temp_feasible_lane_dis.emplace_back(max_distance - lc_need_dis);
@@ -6142,6 +6136,16 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
     for (int i = total_lane_num; i > feasible_lane_sequence.back(); i--) {
       const int lc_num = i - feasible_lane_sequence.back();
       const double lc_need_dis = opt_distance * std::fabs(lc_num);
+      std::vector<std::vector<LSLInfo>> lsl_info_vec;
+      bool is_lsl = CalculateLSLDistance(
+          current_link_, route_info_output_.current_segment_passed_distance,
+          exchange_region_info.distance_to_split_point, lsl_info_vec);
+      if (is_lsl) {
+        lsl_length = CalculateLSLTotalLength(
+            i, lsl_info_vec, exchange_region_info.split_direction);
+        route_info_output_.lsl_length = lsl_length;
+        max_distance = std::max(0.0, max_distance - lsl_length);
+      }
       if (max_distance > lc_need_dis) {
         temp_feasible_lane_seq.insert(temp_feasible_lane_seq.begin(), i);
         temp_feasible_lane_dis.insert(temp_feasible_lane_dis.begin(),
@@ -6364,6 +6368,9 @@ bool RouteInfo::CalculateLSLDistance(
   double distance_to_second_marking_change_point = 0.0;
   bool is_found_marking_change_point = false;
 
+  if (link == nullptr) {
+    return false;
+  }
   // 1. 用上一个fp来判断当前的虚实线状态
   iflymapdata::sdpro::FeaturePoint last_fp;
   std::vector<LSLInfo> last_fp_lsl_info_vec;
@@ -6372,15 +6379,17 @@ bool RouteInfo::CalculateLSLDistance(
       for (auto& lsl_info : last_fp_lsl_info_vec) {
         lsl_info.lsl_start_distance = 0.0;
       }
+      lane_lsl_length.emplace_back(last_fp_lsl_info_vec);
     }
   }
-  lane_lsl_length.emplace_back(last_fp_lsl_info_vec);
 
   // 2. 遍历当前link上的fp，判断虚实变化并记录
   while (current_link != nullptr) {
     if (search_distance > max_search_distance) {
-      for (auto& lsl_info : lane_lsl_length.back()) {
-        lsl_info.lsl_end_distance = max_search_distance;
+      if (!lane_lsl_length.empty()) {
+        for (auto& lsl_info : lane_lsl_length.back()) {
+          lsl_info.lsl_end_distance = max_search_distance;
+        }
       }
       break;
     }
@@ -6409,8 +6418,10 @@ bool RouteInfo::CalculateLSLDistance(
           current_link_length * fp_point.projection_percent() * 0.01;
 
       if (distance_to_this_point > max_search_distance) {
-        for (auto& lsl_info : lane_lsl_length.back()) {
-          lsl_info.lsl_end_distance = max_search_distance;
+        if (!lane_lsl_length.empty()) {
+          for (auto& lsl_info : lane_lsl_length.back()) {
+            lsl_info.lsl_end_distance = max_search_distance;
+          }
         }
         break;
       } else if (distance_to_this_point < 0.0) {
@@ -6477,5 +6488,50 @@ bool RouteInfo::CalculateFpLSLInfo(const iflymapdata::sdpro::FeaturePoint& fp,
   } else {
     return false;
   }
+}
+double RouteInfo::CalculateLSLTotalLength(
+    int lane_seq, const std::vector<std::vector<LSLInfo>>& lane_lsl_length,
+    bool direction) {
+  std::map<int, double> total_length;
+
+  if (lane_lsl_length.empty()) {
+    return 0.0;
+  }
+  for (const auto& lsl_info : lane_lsl_length) {
+    // 匹配指定的lane_seq和方向
+    if (direction == SPLIT_LEFT) {
+      // 最左侧车道不用计算
+      if (lane_seq == 1) {
+        continue;
+      }
+      for (int i = std::min(lane_seq, static_cast<int>(lsl_info.size())) - 1;
+           i > 0; i--) {
+        if (lsl_info[i].is_right_lsl) {
+          double lsl_length =
+              lsl_info[i].lsl_end_distance - lsl_info[i].lsl_start_distance;
+          total_length[i] += lsl_length;
+        }
+      }
+    } else {
+      // 最右侧车道不用计算
+      if (lane_seq == lsl_info.size()) {
+        continue;
+      }
+      for (int i = lane_seq; i < lsl_info.size(); i++) {
+        if (lsl_info[i].is_right_lsl) {
+          double lsl_length =
+              lsl_info[i].lsl_end_distance - lsl_info[i].lsl_start_distance;
+          total_length[i] += lsl_length;
+        }
+      }
+    }
+  }
+
+  double max_lsl_length = 0.0;
+  for (const auto& length : total_length) {
+    max_lsl_length = std::max(max_lsl_length, length.second);
+  }
+
+  return max_lsl_length;
 }
 }  // namespace planning

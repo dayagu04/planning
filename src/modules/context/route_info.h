@@ -409,5 +409,8 @@ class RouteInfo {
                             std::vector<std::vector<LSLInfo>>& lane_lsl_length);
   bool CalculateFpLSLInfo(const iflymapdata::sdpro::FeaturePoint& fp,
                           std::vector<LSLInfo>& fp_lsl_info);
+  double CalculateLSLTotalLength(
+      int lane_seq, const std::vector<std::vector<LSLInfo>>& lane_lsl_length,
+      bool direction);
 };
 }  // namespace planning
