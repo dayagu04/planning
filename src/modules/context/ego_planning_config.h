@@ -2358,8 +2358,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, extra_hard_buffer2groundline, "general_lateral_decider",
                      "extra_hard_buffer2groundline");
     ReadItem<bool>(json, lateral_ref_traj_type, "general_lateral_decider",
-                     "lateral_ref_traj_type");                                              
-    
+                     "lateral_ref_traj_type");
+
     ReadItem<double>(json, care_dynamic_object_t_threshold, "general_lateral_decider",
                      "care_dynamic_object_t_threshold");
     ReadItem<double>(json, care_static_object_t_threshold, "general_lateral_decider",
@@ -2375,8 +2375,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<bool>(json, ramp_limit_v_valid, "general_lateral_decider",
                      "ramp_limit_v_valid");
     ReadItem<double>(json, min_v_cruise, "general_lateral_decider",
-                     "min_v_cruise");  
-                 
+                     "min_v_cruise");
+
     ReadItem<double>(json, nudge_extra_buffer_in_intersection, "general_lateral_decider",
                      "nudge_extra_buffer_in_intersection");
     ReadItem<double>(json, map_bound_weight[BoundType::AGENT],
@@ -2446,7 +2446,7 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
                      "static_cone_max_extra_lateral_buffer");
     ReadItem<double>(json, static_other_max_extra_lateral_buffer,
                      "general_lateral_decider",
-                     "static_other_max_extra_lateral_buffer");  
+                     "static_other_max_extra_lateral_buffer");
     /* read config from json */
   }
   double desired_vel = 11.11;                    // KPH_40;
@@ -4346,7 +4346,8 @@ struct EgoPlanningEgoStateManagerConfig : public EgoPlanningConfig {
                                                  cruise_routing_speed);
     cruise_searching_speed = read_json_key<double>(
         json, "cruise_searching_speed", cruise_searching_speed);
-    ReadItem<double>(json, rads_cruise_speed, "rads_cruise_speed");
+    rads_cruise_speed = read_json_key<double>(
+        json, "rads_cruise_speed", rads_cruise_speed);
     max_replan_lat_err =
         read_json_key<double>(json, "max_replan_lat_err", max_replan_lat_err);
     max_replan_theta_err = read_json_key<double>(json, "max_replan_theta_err",
@@ -4967,6 +4968,8 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
                      "distance_to_go_threshold_behind_of_large_vehicle");
     ReadItem<double>(json, start_to_cruise_vel_threshold, "speed_planning",
                      "start_stop_decider", "start_to_cruise_vel_threshold");
+    ReadItem<double>(json, stop_destination_to_ego_distance, "speed_planning",
+                    "start_stop_decider", "stop_destination_to_ego_distance");
   }
   double large_vehicle_length = 8.0;
   double lower_speed_min_follow_distance_gap = 2.5;
@@ -4986,6 +4989,7 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_to_go_threshold = 6.5;
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
+  double stop_destination_to_ego_distance = 3.0;
 };
 
 struct EgoMotionPreplannerConfig : public EgoPlanningConfig {

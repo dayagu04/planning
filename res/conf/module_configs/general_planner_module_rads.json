@@ -55,6 +55,7 @@
   "parking_space_release_dis_max": 2.0,
   "cruise_routing_speed": 1.5,
   "cruise_searching_speed": 1.5,
+  "rads_cruise_speed": 1.0,
   "kEpsilon_v": 0.1,
   "kEpsilon_vel_stop": 0.01,
   "kEpsilon_a": 0.4,
@@ -918,7 +919,8 @@
       "distance_stop_between_ego_and_cipv_threshold": 3.0,
       "distance_to_go_threshold": 6.5,
       "distance_to_go_threshold_behind_of_large_vehicle": 7.5,
-      "start_to_cruise_vel_threshold": 5.5
+      "start_to_cruise_vel_threshold": 5.5,
+      "stop_destination_to_ego_distance": 5.0
     },
 
     "cruise_target": {

@@ -75,6 +75,14 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   comfort_params_.v0 = desired_speed;
 
+  const auto& cipv_info = session_->planning_context().cipv_decider_output();
+  const auto& stop_destination_decider_output =
+      session_->planning_context().stop_destination_decider_output();
+  if (session_->is_rads_scene() && cipv_info.cipv_id() ==
+        stop_destination_decider_output.stop_destination_virtual_agent_id()) {
+    comfort_params_.s0 = 0.0;
+  }
+
   upper_bound_infos_ =
       std::vector<UpperBoundInfo>(plan_points_num_, UpperBoundInfo());
 

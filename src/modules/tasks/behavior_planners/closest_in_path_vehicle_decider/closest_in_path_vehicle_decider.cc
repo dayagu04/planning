@@ -149,7 +149,8 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   if (nullptr == agent) {
     return;
   }
-  const auto &planned_kd_path =
+  const auto &planned_kd_path = session_->is_rads_scene()?
+      session_->planning_context().st_graph_helper()->processed_path():
       session_->planning_context().motion_planner_output().lateral_path_coord;
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
