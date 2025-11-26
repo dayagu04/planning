@@ -835,9 +835,8 @@ void TsrCore::SetTsrOutputInfo() {
 }
 
 void TsrCore::ResetRealTimeTsrInfo(void) {
-  // 当状态切换到STANDBY时，清除限速信息、辅助标识牌信息和累计距离
-  if (tsr_state_ == iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY &&
-      tsr_state_prev_ != iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_STANDBY) {
+  // 当状态切换到非active时，清除限速信息、辅助标识牌信息和累计距离
+  if (tsr_state_prev_ != iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE) {
     // 清除限速信息
     tsr_speed_limit_ = 0;
     speed_limit_set_.clear();
