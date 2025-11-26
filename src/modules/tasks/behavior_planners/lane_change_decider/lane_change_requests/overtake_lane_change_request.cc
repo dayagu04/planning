@@ -1820,11 +1820,13 @@ bool OvertakeRequest::isCancelOverTakingLaneChange(int lc_state) {
          ((request_type_ == LEFT_CHANGE &&
            leading_vehicle_lateral_speed >
                kCancelOverTakeLnChgLeadVehLatSpdThold &&
+           front_leading_vehivle_long_distance > 150.0 &&
            leading_vehicle_lateral_dis >=
                kCancelOverTakeLnChgLeadVehLatDstThold) ||
           (request_type_ == RIGHT_CHANGE &&
            leading_vehicle_lateral_speed >
                kCancelOverTakeLnChgLeadVehLatSpdThold &&
+           front_leading_vehivle_long_distance > 150.0 &&
            leading_vehicle_lateral_dis <=
                -kCancelOverTakeLnChgLeadVehLatDstThold))) ||
         (((lc_state == kLaneChangeExecution ||
