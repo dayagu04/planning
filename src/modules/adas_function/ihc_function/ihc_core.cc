@@ -639,6 +639,9 @@ bool IhcCore::DynamicObstacleCheck(void) {
   // 步骤1: 收集当前帧所有障碍物ID，用于后续清理
   std::set<uint16> current_frame_ids;
 
+  // 步骤1.5: 保存上一帧已验证的障碍物ID集合，用于判断新加入的障碍物
+  last_verified_obstacle_ids_ = verified_obstacle_ids_;
+
   // 步骤2: 第一次遍历，更新verified_obstacle_ids_（同时被相机和雷达检测到的障碍物）
   for (int i = 0; i < fusion_objs_num; i++) {
     uint16 track_id = fusion_objs[i].additional_info.track_id;
@@ -660,7 +663,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
     }
 
     // 融合障碍物不一定匹配的上。如果只有相机来源，则判断此障碍物10m范围内是否有雷达来源的障碍物，且运动趋势相同
-    if (has_camera) {
+    else if (has_camera) {
       for (int j = 0; j < fusion_objs_num; j++) {
         if (fusion_objs[j].additional_info.track_id == track_id) {
           continue;
@@ -711,12 +714,18 @@ bool IhcCore::DynamicObstacleCheck(void) {
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车
-          // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
-          if (distance_x +
-                  fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
-              0) {
-            // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
-            continue;
+          // 只对新加入候选的车辆进行1s后位置判断，防止因为对向来车误检,导致频繁闪灯
+          // 对于已经稳定存在的车辆，不进行此判断，避免车辆还没在车后就切远光灯
+          bool is_new_obstacle = (last_verified_obstacle_ids_.find(track_id) == 
+                                  last_verified_obstacle_ids_.end());
+          if (is_new_obstacle) {
+            // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
+            if (distance_x +
+                    fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
+                0) {
+              // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
+              continue;
+            }
           }
           // 滞回控制，200m~230m为滞回区间
           if (distance_x < 200.0f) {
