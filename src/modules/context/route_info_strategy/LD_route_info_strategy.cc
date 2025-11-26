@@ -777,6 +777,8 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
   int minVal_seq = feasible_lane_seq[0].first;
   int maxVal_seq = feasible_lane_seq[0].first;
 
+  std::vector<int> feasible_lane_seq_vec;
+  feasible_lane_seq_vec.reserve(feasible_lane_seq.size());
   for (const auto& num : feasible_lane_seq) {
     if (num.first < minVal_seq) {
       minVal_seq = num.first;
@@ -784,10 +786,13 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     if (num.first > maxVal_seq) {
       maxVal_seq = num.first;
     }
+    feasible_lane_seq_vec.emplace_back(num.first);
   }
 
   route_info_output_.maxVal_seq = maxVal_seq;
   route_info_output_.minVal_seq = minVal_seq;
+  route_info_output_.mlc_decider_route_info.feasible_lane_sequence =
+      std::move(feasible_lane_seq_vec);
 
   std::unordered_map<int, double> feasible_lane_seq_map;
   for (const auto& temp_feasible_lane_seq : feasible_lane_seq) {
