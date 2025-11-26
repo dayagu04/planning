@@ -6430,15 +6430,23 @@ bool RouteInfo::CalculateLSLDistance(
       }
       std::vector<LSLInfo> lsl_info_vec;
       if (CalculateFpLSLInfo(fp_point, lsl_info_vec)) {
-        for (int n = 0;
-             n < std::min(lsl_info_vec.size(), lane_lsl_length.back().size());
-             n++) {
-          if (lane_lsl_length.back()[n].is_right_lsl !=
-              lsl_info_vec[n].is_right_lsl) {
-            lane_lsl_length.back()[n].lsl_end_distance = distance_to_this_point;
-            lsl_info_vec[n].lsl_start_distance = distance_to_this_point;
-            is_found_marking_change_point = true;
+        if (!lane_lsl_length.empty()) {
+          for (int n = 0;
+               n < std::min(lsl_info_vec.size(), lane_lsl_length.back().size());
+               n++) {
+            if (lane_lsl_length.back()[n].is_right_lsl !=
+                lsl_info_vec[n].is_right_lsl) {
+              lane_lsl_length.back()[n].lsl_end_distance =
+                  distance_to_this_point;
+              lsl_info_vec[n].lsl_start_distance = distance_to_this_point;
+              is_found_marking_change_point = true;
+            }
           }
+        } else {
+          for (auto& lsl_info : lsl_info_vec) {
+            lsl_info.lsl_start_distance = distance_to_this_point;
+          }
+          lane_lsl_length.emplace_back(lsl_info_vec);
         }
         if (is_found_marking_change_point) {
           lane_lsl_length.emplace_back(lsl_info_vec);
