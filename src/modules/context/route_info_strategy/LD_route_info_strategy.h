@@ -90,6 +90,18 @@ protected:
 
  bool IsInvalidLane(const iflymapdata::sdpro::Lane* lane_info) const;
 
+ bool CalculateFeasibleLaneInRampScene(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInMergeScene(TopoLinkGraph& feasible_lane_graph);
+ bool CalculateFeasibleLaneInNormalScene(TopoLinkGraph& feasible_lane_graph);
+ void ProcessLaneDistance(
+    const std::shared_ptr<VirtualLane>& relative_id_lane,
+    const std::unordered_map<int, double>& feasible_lane_distance);
+
+ void CaculateDistanceToRoadEnd(
+     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+ void CaculateDistanceToTollStation(
+     const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
  bool ldmap_valid_{false};

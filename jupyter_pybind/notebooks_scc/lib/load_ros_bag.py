@@ -694,7 +694,7 @@ class LoadRosbag:
                           "front_agent_front_edge", "front_agent_rear_edge",
                           "rear_agent_front_edge", "rear_agent_rear_edge",
                           "rear_agent_longitudinal_label", "lane_change_reason",
-                          "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold']
+                          "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene']
 
 
       json_value_list += [#new_ldw debug info:

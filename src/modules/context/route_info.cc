@@ -2970,6 +2970,7 @@ void RouteInfo::UpdateVisionInfo() const {
       static_cast<int>(
           route_info_output_.mlc_request_type_route_info.mlc_request_type));
   JSON_DEBUG_VALUE("lsl_length", route_info_output_.lsl_length);
+  JSON_DEBUG_VALUE("bd_mlc_scene", static_cast<int>(route_info_output_.baidu_mlc_scene));
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
