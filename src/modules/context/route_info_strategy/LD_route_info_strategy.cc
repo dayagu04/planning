@@ -872,22 +872,18 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
       }
     }
 
-    if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
-        is_nearing_ramp) {
-      // split场景，目标车道在最右边的情况，一直向右变道
-      //  右边有加速车道或入口车道则需要至少留一个车道
-      if (!cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane) {
-        lc_num_task.emplace_back(1);
-      } else {
-        if (cur_link_is_exist_emergency_lane && right_lane_num > 2) {
-          lc_num_task.emplace_back(1);
-        } else if (!cur_link_is_exist_emergency_lane && right_lane_num > 1) {
-          lc_num_task.emplace_back(1);
-        }
-      }
-
-    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp) {
-      // split场景，目标车道在最左边的情况，一直向左变道
+    const bool lane_type_condition =
+        !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
+    if (maxVal_seq == minVal_seq &&
+        maxVal_seq == real_lane_num &&
+        is_nearing_ramp &&
+        lane_type_condition) {
+      //split场景，目标车道在最右边的情况，一直向右变道
+      // 右边有加速车道或入口车道则需要至少留一个车道
+      lc_num_task.emplace_back(1);
+    } else if (maxVal_seq == minVal_seq &&
+               maxVal_seq == 1 && is_nearing_ramp) {
+      //split场景，目标车道在最左边的情况，一直向左变道
       lc_num_task.emplace_back(-1);
     } else {
       int ego_seq = left_lane_num + 1;
