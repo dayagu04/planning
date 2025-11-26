@@ -602,5 +602,9 @@
   "line_plan_pa_buffer": 0.13,
   "pa_slot_move_distance": 0.25,
   "pa_slot_length_for_park_in": 1.5,
-  "pa_to_curb_dis": 0.86
+  "pa_to_curb_dis": 0.86,
+
+  "comment_30": "parallel plan params",
+  "parallel_col_buffer_in_slot": 0.25,
+  "parallel_col_small_buffer_in_slot": 0.16
 }
