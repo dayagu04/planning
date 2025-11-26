@@ -5210,8 +5210,6 @@ bool GeneralLateralDecider::IsFilterForStaticObstacle(
                                                                 // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     return false;
@@ -5267,8 +5265,6 @@ bool GeneralLateralDecider::IsFilterForDynamicObstacle(
                                                                 // obstacle type
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_MOVABLE or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN_IMMOVABLE or
-      obs_type == iflyauto::ObjectType::OBJECT_TYPE_VAN or
-      obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER or
       obs_type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_TEM_SIGN) {
     // add logs;
     ResetIsExceedObstacleHysteresisMap(obstacle->id());
