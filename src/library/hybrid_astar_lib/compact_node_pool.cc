@@ -57,7 +57,4 @@ Node3d* CompactNodePool::GetNode(const size_t id) {
   return nullptr;
 }
 
-size_t CompactNodePool::pool_size_ = 0;
-Node3d CompactNodePool::pool_[NODE_POOL_MAX_NUM];
-
 }  // namespace planning

@@ -16,24 +16,24 @@ class CompactNodePool {
  public:
   CompactNodePool() { pool_size_ = 0; }
 
-  static void Clear();
+  void Clear();
 
-  static void Init();
+  void Init();
 
-  static void AddNode();
+  void AddNode();
 
-  static Node3d* GetBackNode();
+  Node3d* GetBackNode();
 
-  static void PopNode();
+  void PopNode();
 
-  static Node3d* AllocateNode();
+  Node3d* AllocateNode();
 
-  static Node3d* GetNode(const size_t id);
+  Node3d* GetNode(const size_t id);
 
-  static size_t PoolSize() { return pool_size_; }
+  size_t PoolSize() { return pool_size_; }
 
  private:
-  static size_t pool_size_;
-  static Node3d pool_[NODE_POOL_MAX_NUM];
+  size_t pool_size_ = 0;
+  Node3d pool_[NODE_POOL_MAX_NUM];
 };
 }  // namespace planning

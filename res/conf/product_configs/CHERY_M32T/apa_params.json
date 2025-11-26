@@ -485,19 +485,17 @@
   "mirror_lat_buffer": 0.08,
   "extra_lat_buffer": 0.0,
 
-  "out_slot_body_lat_buffer": 0.20,
+  "out_slot_body_lat_buffer": 0.17,
   "out_slot_mirror_lat_buffer": 0.15,
-  "out_slot_extra_turn_lat_buffer": 0.06,
+  "out_slot_extra_turn_lat_buffer": 0.03,
 
-  "entrance_slot_body_lat_buffer": 0.16,
-  "entrance_slot_mirror_lat_buffer": 0.12,
-  "entrance_slot_extra_turn_lat_buffer": 0.04,
+  "entrance_slot_body_lat_buffer": 0.15,
+  "entrance_slot_mirror_lat_buffer": 0.13,
+  "entrance_slot_extra_turn_lat_buffer": 0.03,
 
   "in_slot_body_lat_buffer": 0.13,
   "in_slot_mirror_lat_buffer": 0.10,
   "in_slot_extra_turn_lat_buffer": 0.03,
-  "parallel_col_buffer_in_slot": 0.25,
-  "parallel_col_small_buffer_in_slot": 0.16,
 
   "comment_23": "lat lon speed buffer",
   "speed_lon_buffer": 0.286,
@@ -604,5 +602,9 @@
   "line_plan_pa_buffer": 0.13,
   "pa_slot_move_distance": 0.25,
   "pa_slot_length_for_park_in": 1.5,
-  "pa_to_curb_dis": 0.86
+  "pa_to_curb_dis": 0.86,
+
+  "comment_30": "parallel plan params",
+  "parallel_col_buffer_in_slot": 0.25,
+  "parallel_col_small_buffer_in_slot": 0.16
 }

@@ -52,9 +52,9 @@ void PathGeneratorThread::Start() {
     return;
   }
 
-  thread_ = std::thread(&PathGeneratorThread::PathGenThreadFunc, this);
-
   thread_state_.store(PathGenThreadState::RUNNING, std::memory_order_seq_cst);
+
+  thread_ = std::thread(&PathGeneratorThread::PathGenThreadFunc, this);
 
   ILOG_INFO << "PathGenerator start thread success";
 

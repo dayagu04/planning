@@ -304,7 +304,7 @@ class HybridAStar {
 
   EulerDistanceTransform* edt_;
 
-  CompactNodePool node_pool_;
+  static CompactNodePool node_pool_;
 
   // std::priority_queue<QueuePoint, std::vector<QueuePoint>, QueueCompare>
   //     open_pq_;
