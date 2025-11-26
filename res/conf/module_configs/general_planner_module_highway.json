@@ -1484,7 +1484,7 @@
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
     "faster_rear_delay_time": 0.2,
-    "lat_offset_buffer": 0.35,
+    "lat_offset_buffer": 0.30,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
       "ttc_table":      [0.8, 1.8,  2.5, 4.0,  5.0,  7.0,  7.5,  8.5,  10.0]
