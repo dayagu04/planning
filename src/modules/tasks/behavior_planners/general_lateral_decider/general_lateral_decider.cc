@@ -691,12 +691,16 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double lc_propose_offset = 0;
   if (is_LC_PROPOSE) {
     lc_propose_offset = lane_change_decider_output.lateral_close_boundary_offset;
-    if (lc_propose_offset > 1e-6 && ref_lat_offset > 1e-6) {
-      ref_lat_offset = std::max(lc_propose_offset, ref_lat_offset);
-    } else if (lc_propose_offset < -1e-6 && ref_lat_offset < -1e-6) {
-      ref_lat_offset = std::min(lc_propose_offset, ref_lat_offset);
-    // } else {
-    //   ref_lat_offset += lc_propose_offset;
+    if (std::fabs(ref_lat_offset) > 1e-6) {
+      if (lc_propose_offset > 1e-6 && ref_lat_offset > 1e-6) {
+        ref_lat_offset = std::max(lc_propose_offset, ref_lat_offset);
+      } else if (lc_propose_offset < -1e-6 && ref_lat_offset < -1e-6) {
+        ref_lat_offset = std::min(lc_propose_offset, ref_lat_offset);
+      // } else {
+      //   ref_lat_offset += lc_propose_offset;
+      }
+    } else {
+      ref_lat_offset = lc_propose_offset;
     }
   }
   // calculate lc ref buffer
