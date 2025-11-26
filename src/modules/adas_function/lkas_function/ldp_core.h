@@ -112,6 +112,8 @@ class LdpCore {
 
   iflyauto::LDPFunctionFSMWorkState ldp_state_ = iflyauto::
       LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+  iflyauto::ELKFunctionFSMWorkState elk_state_ = iflyauto::
+      ELKFunctionFSMWorkState::ELK_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
 
   bool ldp_state_machine_init_flag_ = false;
   iflyauto::LDPFunctionFSMWorkState LdpStateMachine(void);

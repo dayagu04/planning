@@ -10,11 +10,8 @@ sys.path.append('../../../')
 
 # bag path and frame dt
 #bag_path = "/home/xlwang71/Downloads/0721/long_tme_9.00000"
-<<<<<<< HEAD
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20250821/20250821-10-47-20/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-08-21-10-47-20_no_camera.bag.1756103100.open-loop.scc.plan"
-=======
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20250821/20250821-10-52-36/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-08-21-10-52-36_no_camera.bag"
->>>>>>> 3aa5bad6c9... lka handoff warning no finish0825
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74572/trigger/20251209/20251209-14-43-30/data_collection_CHERY_M32T_74572_EVENT_MANUAL_2025-12-09-14-43-30_no_camera.bag"
+
 
 display(HTML("<style>.container { width:95% !important;  }</style>"))
 output_notebook()
