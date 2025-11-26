@@ -226,6 +226,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
   if (traffic_density_status_ == Congested || is_not_use_gap_select) {
     count = static_cast<int>(evaluation_congest_t_ / kEvaluationStep);
   }
+  size_t start_index = traffic_density_status_ == Congested ? 1 : 3;
   if (sample_scene_ == PurseFlowVelScene && is_not_use_gap_select) {
     for (size_t k = 0; k < sample_trajs_.size(); k++) {
       auto& sample_traj_at_v = sample_trajs_[k];
@@ -239,7 +240,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
       }
     }
   } else {
-    for (size_t i = 3; i <= count; i++) {
+    for (size_t i = start_index; i <= count; i++) {
       st_sample_space_base_.GetAvailableGap(
           i * kEvaluationStep / 0.1,
           ego_s_ + speed_adjust_range_.second * i * 0.5);
