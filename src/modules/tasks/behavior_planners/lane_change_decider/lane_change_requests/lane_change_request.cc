@@ -883,8 +883,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
-  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
-  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
+  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.45;
+  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.45;
   double k_default_ego_pass_buffer = kLatPassThre;
   int left_lane_nums = 0;
   int right_lane_nums = 0;
@@ -1015,12 +1015,12 @@ bool LaneChangeRequest::ConeSituationJudgement(
 
   double lane_width = QueryLaneMinWidth(
       target_lane_cone_points_, target_lane_s_width, ego_frenet_point.x);
-  double pass_threshold_left = vehicle_param.width + k_default_ego_pass_buffer;
-  double pass_threshold_right = vehicle_param.width + k_default_ego_pass_buffer;
-  pass_threshold_left = std::max(pass_threshold_left,
+  double pass_threshold_left = std::max(vehicle_param.width + k_default_ego_pass_buffer,
                                  lane_width + k_left_cone_occ_lane_line_buffer);
-  pass_threshold_right = std::max(
-      pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
+  pass_threshold_left = std::min(pass_threshold_left, kDefaultLaneWidth - 0.1);
+  double pass_threshold_right = std::max(vehicle_param.width + k_default_ego_pass_buffer,
+                                     lane_width + k_right_cone_occ_lane_line_buffer);
+  pass_threshold_right = std::min(pass_threshold_right, kDefaultLaneWidth - 0.1);
   for (const auto &cluster_attribute_iter :
        target_lane_cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
