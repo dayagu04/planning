@@ -862,6 +862,9 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
           v_target_ = v_target_ramp;
           v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
         }
+        ramp_v_limit_set_ = false;
+        ramp_manual_intervention_detected_ = false;
+        last_v_cruise_fsm_ramp_ = 40.0;
         ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
         JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
         JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -873,8 +876,20 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         return;
       }
     }
-    v_target_ramp = v_cruise_limit_ / 3.6;
 
+    double speed_increase = v_cruise_fsm - last_v_cruise_fsm_ramp_;
+    if (ramp_v_limit_set_ && speed_increase > kCAManualInterventionSpeedDetected) {
+      ramp_manual_intervention_detected_ = true;
+    }
+
+    v_target_ramp = v_cruise_limit_ / 3.6;
+    if (v_target_ramp < v_target_ && !ramp_manual_intervention_detected_) {
+      ramp_v_limit_set_ = true;
+      v_target_ = v_target_ramp;
+      v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
+    }
+
+    last_v_cruise_fsm_ramp_ = v_cruise_fsm;
     ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
     JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
     JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -905,6 +920,10 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
     v_target_ = v_target_ramp;
     v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
   }
+
+  ramp_v_limit_set_ = false;
+  ramp_manual_intervention_detected_ = false;
+  last_v_cruise_fsm_ramp_ = 40.0;
   ILOG_DEBUG << "dis_to_ramp :" << dis_to_ramp;
   ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
   JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);

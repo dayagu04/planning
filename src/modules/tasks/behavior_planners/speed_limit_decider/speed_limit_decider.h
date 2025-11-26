@@ -91,6 +91,10 @@ class SpeedLimitDecider : public Task {
   double last_vel_function_fading_away_;
   double v_cruise_limit_;  // kph
 
+  bool ramp_v_limit_set_ = false;
+  bool ramp_manual_intervention_detected_ = false;
+  double last_v_cruise_fsm_ramp_ = 40.0;
+
   std::deque<double> dis_to_merge_window_ = {NL_NMAX, NL_NMAX, NL_NMAX};
   double distance_to_merge_ = NL_NMAX;
   int pass_merge_counter_ = 0;
