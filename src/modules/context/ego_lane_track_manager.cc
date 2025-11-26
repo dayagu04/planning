@@ -779,7 +779,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   }
 
   if ((lc_state == kLaneKeeping || lc_state == kLaneChangePropose) &&
-      !ego_in_split_region_) {
+      !ego_in_split_region_ && !enable_using_st_plan) {
     lateral_distance_cost_weight = 0.28;
   }
 
