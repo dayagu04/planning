@@ -774,11 +774,11 @@ void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
   if (current_trajectory.empty()) {
     return;
   }
-  for (size_t i = 0; i < 15; ++i) {  // checke 3s
+  for (size_t i = 15; i > 0; --i) {  // checke 3s
     const auto& current_point = current_trajectory[i];
     const auto& last_point = last_trajectory[i];
     double vel_diff = current_point.vel() - last_point.vel();
-    if (vel_diff > 0.6) {  //实际运动趋势快, 越快越容易失信
+    if (vel_diff > 1.0) {  //实际运动趋势快, 越快越容易失信
       rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2 * vel_diff, 0.0);
       break;
     }
