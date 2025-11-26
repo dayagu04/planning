@@ -2911,7 +2911,7 @@ void GeneralLateralDecider::GenerateTrustPredictionTimeThreshold(
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
-  const bool &in_intersection = session_->planning_context()
+  const bool in_intersection = session_->planning_context()
                                    .lateral_obstacle_decider_output()
                                    .in_intersection;
   const auto &planning_init_point = ego_frenet_state_.planning_init_point();
