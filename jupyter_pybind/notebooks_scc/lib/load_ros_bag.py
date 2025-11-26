@@ -681,7 +681,7 @@ class LoadRosbag:
                           "cur_lane_mark_plan", "cur_lane_mark_origin", "right_lane_num", "emergency_lane_num",
                           "front_other_id", "side_id", "FeedDataTime", "FeedDataTimeSD", "comfort_follow_agent_ids",
                           "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
-                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length", 
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", "lsl_length",
                           "joint_lead_one_id", "joint_key_agent_ids", "joint_danger_agent_ids", "joint_limit_speed",
                           "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_lane_change_state", "joint_need_sharp_deceleration", "joint_cruise_speed",
                           "ego_jerk", "merging_rear_id", "min_curve_radius", "curve_type", "smooth_refpath_points_cost",
@@ -694,7 +694,7 @@ class LoadRosbag:
                           "front_agent_front_edge", "front_agent_rear_edge",
                           "rear_agent_front_edge", "rear_agent_rear_edge",
                           "rear_agent_longitudinal_label", "lane_change_reason",
-                          "status_update_reason", "lane_change_status", "lane_change_direction"]
+                          "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold']
 
 
       json_value_list += [#new_ldw debug info:

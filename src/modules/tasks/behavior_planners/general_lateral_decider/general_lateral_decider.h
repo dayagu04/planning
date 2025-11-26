@@ -249,6 +249,8 @@ class GeneralLateralDecider : public Task {
       bool &is_side_obstacle);
   bool FindNearestBoundPoint(const double current_index_s,
                              WeightedBounds &last_bounds);
+  void GenerateTrustPredictionTimeThreshold(
+    double &trust_prediction_t_threshold);
 
  private:
   GeneralLateralDeciderConfig config_;
@@ -307,6 +309,8 @@ class GeneralLateralDecider : public Task {
   double last_compensation_buffer_ = 0.0;
   std::unordered_map<uint32_t, double> current_desire_final_nudge_l_map_;
   std::unordered_map<uint32_t, double> last_desire_final_nudge_l_map_;
+  double trust_prediction_t_threshold_ = 2.5;
+
 };
 
 }  // namespace planning

@@ -603,6 +603,7 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     except:
       print("no plan debug json: raw_refline_k_vec")
 
+    print("trust_prediction_t_threshold = ", planning_json['trust_prediction_t_threshold'])
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
     print("lat_err = ", planning_json['lat_err'])
