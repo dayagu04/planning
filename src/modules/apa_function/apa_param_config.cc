@@ -1472,6 +1472,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "use_dynamic_od_car");
   JSON_READ_VALUE(param.od_config.use_living_things, bool, "use_living_things");
   JSON_READ_VALUE(param.od_config.use_speed_bump, bool, "use_speed_bump");
+  JSON_READ_VALUE(param.od_config.moving_veh_speed_thresh, double,
+                  "moving_veh_speed_thresh");
   return;
 }
 

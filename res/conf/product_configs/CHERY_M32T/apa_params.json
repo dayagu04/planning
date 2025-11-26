@@ -591,6 +591,7 @@
   "use_dynamic_od_car": true,
   "use_living_things": true,
   "use_speed_bump": false,
+  "moving_veh_speed_thresh": 0.1,
 
   "comment_29": "parallel pa plan params",
   "finish_parallel_pa_lat_err": 0.14,
