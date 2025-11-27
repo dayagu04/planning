@@ -8,8 +8,6 @@
 #include "sample_poly_const.h"
 // #include "speed/st_boundary.h"
 #include "st_graph/st_point.h"
-using planning::planning_data::DynamicAgentNode;
-using planning::speed::STPoint;
 namespace planning {
 struct AgentInfo {
   int32_t id = kNoAgentId;
@@ -31,15 +29,15 @@ class STSampleSpaceBase {
                     const double rear_edge_to_rear_axle);
 
   STSampleSpaceBase(
-      const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+      const std::vector<const planning_data::DynamicAgentNode*>& target_lane_nodes,
       const double init_s, const double front_edge_to_rear_axle,
       const double rear_edge_to_rear_axle);
 
-  void LinearExtendAgentStBoundary(const DynamicAgentNode* agent_node);
+  void LinearExtendAgentStBoundary(const planning_data::DynamicAgentNode* agent_node);
   void ConstructStPointsTable();
-  bool GetBorderByAvailable(double s, double t, STPoint* const lower_st_point,
-                            STPoint* const upper_st_point);
-  void Init(const std::vector<const DynamicAgentNode*>& target_lane_nodes,
+  bool GetBorderByAvailable(double s, double t, planning::speed::STPoint* const lower_st_point,
+                            planning::speed::STPoint* const upper_st_point);
+  void Init(const std::vector<const planning_data::DynamicAgentNode*>& target_lane_nodes,
             const double init_s);
   void GetAvailableGap(const int index, double s);
 
@@ -50,8 +48,8 @@ class STSampleSpaceBase {
     return s > start && s < end;
   };
   bool IsInInterval(double s, double front_edge_offset, double rear_edge_offset,
-                    const STPoint& interval_start,
-                    const STPoint& interval_end) {
+                    const planning::speed::STPoint& interval_start,
+                    const planning::speed::STPoint& interval_end) {
     double front_s = s + front_edge_offset;
     double rear_s = s - rear_edge_offset;
     return (front_s > interval_start.s() && front_s < interval_end.s()) ||
@@ -70,30 +68,30 @@ class STSampleSpaceBase {
     return agent_id_veh_info_;
   }
 
-  std::vector<std::vector<std::pair<STPoint, STPoint>>>&
+  std::vector<std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>>&
   mutable_st_points_table() {
     return st_points_table_;
   }
 
-  const std::vector<std::vector<std::pair<STPoint, STPoint>>>& st_points_table()
+  const std::vector<std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>>& st_points_table()
       const {
     return st_points_table_;
   }
 
-  std::vector<STPoint>& mutable_sample_points() { return sample_points_; }
+  std::vector<planning::speed::STPoint>& mutable_sample_points() { return sample_points_; }
 
-  const std::vector<STPoint>& sample_points() const { return sample_points_; }
+  const std::vector<planning::speed::STPoint>& sample_points() const { return sample_points_; }
 
-  std::vector<std::pair<STPoint, STPoint>>& get_gap_array() {
+  std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>& get_gap_array() {
     return gap_array_;
   }
 
  private:
-  std::vector<std::vector<std::pair<STPoint, STPoint>>> st_points_table_;
-  std::vector<STPoint> sample_points_;  //(s, v)
-  std::vector<std::pair<STPoint, STPoint>> gap_array_;
+  std::vector<std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>> st_points_table_;
+  std::vector<planning::speed::STPoint> sample_points_;  //(s, v)
+  std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>> gap_array_;
 
-  std::vector<std::vector<std::pair<STPoint, STPoint>>> agents_st_point_paris_;
+  std::vector<std::vector<std::pair<planning::speed::STPoint, planning::speed::STPoint>>> agents_st_point_paris_;
   std::unordered_map<int64_t, std::unique_ptr<AgentInfo>> agent_id_veh_info_;
   double init_s_{0.0};
 

@@ -74,7 +74,7 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
 
 SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
-    : Task(config_builder, session) {
+    : Task(config_builder, session), config_builder_(config_builder) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
   lc_safety_distance_config_ =
@@ -105,9 +105,9 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   ok = ProcessEnvInfos();
 
   if (ok) {
-    speed::STPoint current_matched_upper_st_point;
-    speed::STPoint current_matched_lower_st_point;
-    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0,
+    planning::speed::STPoint current_matched_upper_st_point;
+    planning::speed::STPoint current_matched_lower_st_point;
+    st_sample_space_base_.GetBorderByAvailable(ego_s_, 0.0,
                                                &current_matched_lower_st_point,
                                                &current_matched_upper_st_point);
     ok = (current_matched_upper_st_point.agent_id() != kNoAgentId ||
@@ -426,7 +426,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->mutable_sample_poly_speed_info()
       ->Clear();
   agent_info_.clear();
-
+  speed_limit_calculator_.reset();
   leading_veh_ = LeadingAgentInfo();
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
@@ -579,21 +579,29 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.first = ego_state_manager->ego_pose().x;
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
+  speed_limit_calculator_ =
+      std::make_unique<JointMotionSpeedLimit>(config_builder_, session_);
+  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
+  const double current_limit_speed = speed_limit_result.speed_limit;
   v_suggestted_ = ego_state_manager->ego_v_cruise();
   auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
-  double v_sdmap_limit = 0.0;
-  if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
-    if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
-      const auto navi_road_info = session_->environmental_model()
-                                      .get_route_info()
-                                      ->get_sd_map()
-                                      .GetNaviRoadInfo();
-      if (navi_road_info != std::nullopt) {
-        v_sdmap_limit = navi_road_info.value().cur_road_speed_limit() / 3.6;
-      }
-    }
+  // double v_sdmap_limit = 0.0;
+  // if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
+  //   if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
+  //     const auto navi_road_info = session_->environmental_model()
+  //                                     .get_route_info()
+  //                                     ->get_sd_map()
+  //                                     .GetNaviRoadInfo();
+  //     if (navi_road_info != std::nullopt) {
+  //       v_sdmap_limit = navi_road_info.value().cur_road_speed_limit() / 3.6;
+  //     }
+  //   }
+  // }
+  if(v_suggestted_ == v_cruise_speed){
+    v_adjust_speed_limit_ =  current_limit_speed;
+  }else{
+    v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed ? v_suggestted_ : current_limit_speed;
   }
-  v_adjust_speed_limit_ = std::fmax(v_cruise_speed, v_sdmap_limit);
   // init sample space
   st_sample_space_base_.Init(target_lane_nodes, ego_s);
 

@@ -8,10 +8,9 @@
 #include "st_graph/st_point.h"
 #include "vec2d.h"
 
+namespace planning {
 using planning::planning_data::DynamicAgentNode;
 using planning::speed::STPoint;
-namespace planning {
-
 STSampleSpaceBase::STSampleSpaceBase(
     const std::vector<const DynamicAgentNode*>& target_lane_nodes,
     const double init_s, const double front_edge_to_rear_axle,
