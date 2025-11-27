@@ -75,6 +75,8 @@ class SpeedLimitDecider : public Task {
 
   bool IsNearMergeCancelRampVelLimit();
 
+  double CalcRampMaxCurvFromSDProMap();
+
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
@@ -129,6 +131,7 @@ class SpeedLimitDecider : public Task {
   bool last_is_sharp_curve_ = false;
   bool last_is_sharp_curve_by_decel_ = false;  // 上一次基于减速度的急弯状态
   int sharp_curve_frame_count_ = 0;  // 急弯状态维持帧数计数器
+  bool last_is_map_sharp_curve_ramp_ = false;  // 上一次地图急弯状态（用于滞回，匝道相关）
 };
 
 }  // namespace planning

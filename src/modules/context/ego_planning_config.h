@@ -3690,6 +3690,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "construction_speed_upper");
     ReadItem<bool>(json, enable_construction_avoid_agent_speed_limit, "speed_limit_decider",
                      "enable_construction_avoid_agent_speed_limit");
+    ReadItem<bool>(json, enable_map_sharp_curve_speed_limit, "speed_limit_decider",
+                   "enable_map_sharp_curve_speed_limit");
+    ReadItem<bool>(json, enable_sharp_curve_by_decel, "speed_limit_decider",
+                   "enable_sharp_curve_by_decel");
+    ReadItem<double>(json, map_sharp_curve_dis_to_ramp, "speed_limit_decider",
+                     "map_sharp_curve_dis_to_ramp");
+    ReadItem<double>(json, map_sharp_curve_speed_limit, "speed_limit_decider",
+                     "map_sharp_curve_speed_limit");
 
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
@@ -3838,6 +3846,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   double construction_lat_dist_exit = 4.5;
   double construction_speed_upper = 27.78;
   bool enable_construction_avoid_agent_speed_limit = false;
+  bool enable_map_sharp_curve_speed_limit = true;  // 是否启用地图急弯限速
+  bool enable_sharp_curve_by_decel = true;  // 是否启用基于减速度的急弯判断（默认true）
+  double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
+  double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;
