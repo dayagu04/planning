@@ -529,7 +529,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
   bool is_process_split = route_info_output.mlc_decider_route_info
-                          .first_static_split_region_info.is_ramp_split;
+                          .first_static_split_region_info.is_ramp_split ||
+                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
