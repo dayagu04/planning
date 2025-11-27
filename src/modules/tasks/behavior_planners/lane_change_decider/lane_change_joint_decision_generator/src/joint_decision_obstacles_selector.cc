@@ -91,7 +91,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
               ShouldIgnoreRearAgent(agent, ego_reference_path);
           lane_change_joint_decision::LongitudinalLabel label =
               (is_large_agent || should_ignore_rear)
-                  ? lane_change_joint_decision::LongitudinalLabel::IGNORE
+                  ? lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE
                   : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(
               CreateKeyObstacle(agent, ego_lane_coord, label));

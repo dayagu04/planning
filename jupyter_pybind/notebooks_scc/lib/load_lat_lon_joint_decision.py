@@ -369,6 +369,8 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
                             label_text = 'OVERTAKE'
                         elif longitudinal_label == 2:
                             label_text = 'YIELD'
+                        elif longitudinal_label == 3:
+                            label_text = 'EGO_OVERTAKE'
                         else:
                             label_text = f'UNKNOWN_{longitudinal_label}'
                         obs_three_disc_data['decision_label'].append(label_text)
@@ -474,7 +476,8 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     label_dict = {
         0: "IGNORE",
         1: "OVERTAKE",
-        2: "YIELD"
+        2: "YIELD",
+        3: "EGO_OVERTAKE"
     }
     rear_agent_label_name = label_dict.get(rear_agent_label, f"UNKNOWN_{rear_agent_label}")
     
