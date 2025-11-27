@@ -548,6 +548,15 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
         continue;
       }
 
+      auto col_res_1 = collision_detector_ptr_->UpdateByObsMap(
+          arc_1, arc_1.headingA, false);
+      if (col_res_1.collision_flag ||
+          col_res_1.remain_car_dist >
+              col_res_1.remain_obstacle_dist - 0.1) {
+        ILOG_INFO << "arc1 collided!";
+        continue;
+      }
+
       if (i == 0) {
         narrow_arc_2 = diverse_arc_2;
         is_arc_2_set = true;

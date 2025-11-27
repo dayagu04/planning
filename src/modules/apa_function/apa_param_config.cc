@@ -306,6 +306,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.finish_parallel_out_heading_mag, double,
                   "finish_parallel_out_heading_mag");
 
+  JSON_READ_VALUE(param.finish_parallel_out_lat_wheel_y, double,
+                  "finish_parallel_out_lat_wheel_y");
+
   CheckFinishParams& finish_param = param.check_finish_params;
   JSON_READ_VALUE(finish_param.lon_err, float, "check_finish_lon_err");
   JSON_READ_VALUE(finish_param.lat_err, float, "check_finish_lat_err");

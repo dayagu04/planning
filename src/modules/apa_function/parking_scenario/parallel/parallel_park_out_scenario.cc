@@ -516,6 +516,40 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 }
 
 const bool ParallelParkOutScenario::CheckFinished() {
+  const EgoInfoUnderSlot& ego_slot_info =
+      apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
+
+  const double side_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
+
+  pnc::geometry_lib::LocalToGlobalTf ego2slot;
+  ego2slot.Init(ego_slot_info.cur_pose.pos, ego_slot_info.cur_pose.heading);
+
+  const auto& front_in_wheel = ego2slot.GetPos(
+      Eigen::Vector2d(apa_param.GetParam().wheel_base,
+                      0.5 * apa_param.GetParam().car_width * (-side_sgn)));
+
+  const auto& rear_in_wheel = ego2slot.GetPos(
+      Eigen::Vector2d(0.0, 0.5 * apa_param.GetParam().car_width * (-side_sgn)));
+
+  const double slot_outer_pt_y =
+      apa_param.GetParam().finish_parallel_out_lat_wheel_y *
+      ego_slot_info.slot.slot_width_ * side_sgn;
+  bool lat_condition = false;
+  if (side_sgn > 0.0) {
+    const double wheel_limit_y = slot_outer_pt_y;
+    lat_condition = (rear_in_wheel.y() >= wheel_limit_y) &&
+                    (front_in_wheel.y() >= wheel_limit_y);
+  } else {
+    const double wheel_limit_y = slot_outer_pt_y;
+    lat_condition = (rear_in_wheel.y() <= wheel_limit_y) &&
+                    (front_in_wheel.y() <= wheel_limit_y);
+  }
+  ILOG_INFO << "front_in_wheel = " << front_in_wheel.x() << " "
+            << front_in_wheel.y() << " rear_in_wheel = " << rear_in_wheel.x()
+            << " " << rear_in_wheel.y();
+  ILOG_INFO << "slot_outer_pt_y = " << slot_outer_pt_y;
+  ILOG_INFO << "lat_condition = " << lat_condition;
+
   const double slot_occupied_ratio = apa_world_ptr_->GetSlotManagerPtr()
                                          ->GetEgoInfoUnderSlot()
                                          .slot_occupied_ratio;
@@ -533,7 +567,9 @@ const bool ParallelParkOutScenario::CheckFinished() {
   ILOG_INFO << "slot_occupied_ratio = " << slot_occupied_ratio;
 
   return static_condition && slot_occupied_ratio < 0.1 &&
-         heading_mag_deg < apa_param.GetParam().finish_parallel_out_heading_mag;
+         heading_mag_deg <
+             apa_param.GetParam().finish_parallel_out_heading_mag &&
+         lat_condition;
 }
 
 const bool ParallelParkOutScenario::GenTlane() {
