@@ -171,6 +171,11 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   planning_input_.mutable_init_state()->set_a(
       planning_init_point.lon_init_state.a());
 
+  const auto &vehicle_param =
+      planning::VehicleConfigurationContext::Instance()->get_vehicle_param();
+
+  planning_input_.set_front_edge_to_rear_axle(vehicle_param.front_edge_to_rear_axle);
+
   // 4. set weights
   auto start_stop_info =
       session_->planning_context().start_stop_result().state();

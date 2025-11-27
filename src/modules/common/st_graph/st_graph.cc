@@ -124,36 +124,6 @@ void STGraph::MakeAgentStBoundaries() {
     }
   }
 
-  // for (const auto agent : agents) {
-  //   if (nullptr == agent) {
-  //     continue;
-  //   }
-  //   const int32_t agent_id = agent->agent_id();
-  //   auto iter_static = static_close_pass_candicate_agent_ids_.find(agent_id);
-  //   auto iter_dynamic =
-  //   dynamic_close_pass_candicate_agent_ids_.find(agent_id); if (iter_static
-  //   == static_close_pass_candicate_agent_ids_.end() &&
-  //       iter_dynamic == dynamic_close_pass_candicate_agent_ids_.end()) {
-  //     continue;
-  //   }
-  //   const bool is_static = StGraphUtils::IsStaticAgent(*agent);
-  //   const bool reuse_for_close_pass = true;
-  //   // TODO:different buffer for vru,truck and normal agent
-  //   const double extra_lateral_buffer_for_close_pass =
-  //       agent->is_vru() ? 1.0 : 0.5;
-  //   if (is_static) {
-  //     MakeStaticAgentStBoundary(*agent, StBoundaryType::NORMAL,
-  //                               reuse_for_close_pass,
-  //                               extra_lateral_buffer_for_close_pass);
-  //   } else {
-  //     MakeDynamicAgentStBoundary(*agent, StBoundaryType::NORMAL,
-  //                                reuse_for_close_pass,
-  //                                extra_lateral_buffer_for_close_pass);
-  //   }
-  // }
-
-  // debug
-
   // update st_boundary for lane change
   const auto* front_agent_of_target = st_graph_input_->front_agent_of_target();
   const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
@@ -549,18 +519,8 @@ void STGraph::MakeDynamicAgentStBoundary(
   // const double search_distance = obs_diagonal * 0.5 + kSearchBuffer;
 
   // const auto& trajectories = agent.trajectories();
-  const auto* front_agent_of_target = st_graph_input_->front_agent_of_target();
-  const auto* rear_agent_of_target = st_graph_input_->rear_agent_of_target();
 
   auto trajectories = agent.trajectories_used_by_st_graph();
-
-  if (front_agent_of_target != nullptr &&
-      agent.agent_id() == front_agent_of_target->agent_id()) {
-    trajectories = {front_agent_of_target->trajectory_optimized()};
-  } else if (rear_agent_of_target != nullptr &&
-             agent.agent_id() == rear_agent_of_target->agent_id()) {
-    trajectories = {rear_agent_of_target->trajectory_optimized()};
-  }
 
   bool is_need_truncate_traj_for_origin_front_agent = false;
   const auto* front_agent_of_origin = st_graph_input_->front_agent_of_origin();
@@ -665,13 +625,6 @@ void STGraph::MakeDynamicAgentStBoundary(
     }
 
     if (!st_point_pairs.empty()) {
-      // 补全0~1秒的ST边界
-      // CompleteStBoundaryGap(st_point_pairs, agent, planned_kd_path,
-      // path_range,
-      //                       path_border_querier, planning_init_point_box,
-      //                       type, is_rads_scene);
-
-      // std::unique_ptr<STBoundary> st_boundary(new STBoundary(st_point_pairs));
       auto st_boundary = std::make_unique<STBoundary>(st_point_pairs);
       st_boundary->set_id(boundary_id);
       st_boundaries.emplace_back(boundary_id);
@@ -1450,79 +1403,6 @@ void STGraph::AddStGraphDataToProto() {
 
   mutable_st_graph_data->CopyFrom(st_graph_data_pb_);
 #endif
-}
-
-void STGraph::CompleteStBoundaryGap(
-    std::vector<std::pair<STPoint, STPoint>>& st_point_pairs,
-    const agent::Agent& agent,
-    const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
-    const std::pair<double, double>& path_range,
-    const PathBorderQuerier* path_border_querier,
-    const planning_math::Box2d& planning_init_point_box,
-    const StBoundaryType type, const bool is_rads_scene) {
-  if (!agent.is_cutin()) {
-    return;
-  }
-
-  double earliest_time = std::numeric_limits<double>::max();
-  for (const auto& point_pair : st_point_pairs) {
-    earliest_time = std::min(earliest_time, point_pair.first.t());
-  }
-
-  if (earliest_time < 0.2 || earliest_time > 1.0) {
-    return;
-  }
-
-  STPoint ref_lower_point_1_0, ref_upper_point_1_0;
-  STPoint ref_lower_point_1_2, ref_upper_point_1_2;
-
-  for (const auto& point_pair : st_point_pairs) {
-    if (std::fabs(point_pair.first.t() - 1.0) < kMathEpsilon) {
-      ref_lower_point_1_0 = point_pair.first;
-      ref_upper_point_1_0 = point_pair.second;
-    } else if (std::fabs(point_pair.first.t() - 1.2) < kMathEpsilon) {
-      ref_lower_point_1_2 = point_pair.first;
-      ref_upper_point_1_2 = point_pair.second;
-    }
-  }
-
-  double lower_slope = (ref_lower_point_1_2.s() - ref_lower_point_1_0.s()) /
-                       (ref_lower_point_1_2.t() - ref_lower_point_1_0.t());
-  double upper_slope = (ref_upper_point_1_2.s() - ref_upper_point_1_0.s()) /
-                       (ref_upper_point_1_2.t() - ref_upper_point_1_0.t());
-
-  st_point_pairs.erase(
-      std::remove_if(st_point_pairs.begin(), st_point_pairs.end(),
-                     [](const auto& point_pair) {
-                       double t = point_pair.first.t();
-                       return t >= 0.0 && t <= 1.0;
-                     }),
-      st_point_pairs.end());
-
-  std::vector<std::pair<STPoint, STPoint>> new_points;
-  for (double t = 0.0; t <= 1.0; t += 0.2) {
-    double lower_s =
-        ref_lower_point_1_0.s() + lower_slope * (t - ref_lower_point_1_0.t());
-    double upper_s =
-        ref_upper_point_1_0.s() + upper_slope * (t - ref_upper_point_1_0.t());
-    upper_s = std::max(upper_s, lower_s);
-
-    new_points.emplace_back(
-        STPoint(lower_s, t, agent.agent_id(), ref_lower_point_1_0.boundary_id(),
-                ref_lower_point_1_0.velocity(),
-                ref_lower_point_1_0.acceleration(),
-                ref_lower_point_1_0.extreme_l()),
-        STPoint(upper_s, t, agent.agent_id(), ref_upper_point_1_0.boundary_id(),
-                ref_upper_point_1_0.velocity(),
-                ref_upper_point_1_0.acceleration(),
-                ref_upper_point_1_0.extreme_l()));
-  }
-
-  st_point_pairs.insert(st_point_pairs.end(), new_points.begin(),
-                        new_points.end());
-  std::sort(
-      st_point_pairs.begin(), st_point_pairs.end(),
-      [](const auto& a, const auto& b) { return a.first.t() < b.first.t(); });
 }
 
 void STGraph::Reset() {

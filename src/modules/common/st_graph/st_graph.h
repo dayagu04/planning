@@ -132,15 +132,6 @@ class STGraph {
       const bool reuse_for_close_pass = false,
       const double extra_lateral_buffer_for_close_pass = 0.0);
 
-  void CompleteStBoundaryGap(
-      std::vector<std::pair<STPoint, STPoint>>& st_point_pairs,
-      const agent::Agent& agent,
-      const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
-      const std::pair<double, double>& path_range,
-      const PathBorderQuerier* path_border_querier,
-      const planning_math::Box2d& planning_init_point_box,
-      const StBoundaryType type, const bool is_rads_scene);
-
   void RecalculateTrajectoryForLcRearAgent(const agent::Agent* rear_agent);
 
   void MakeStPointsTable();

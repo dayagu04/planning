@@ -33,6 +33,7 @@ enum iLqrCostconfigId {
   W_S_STOP,
   TERMINAL_FLAG,
   W_NON_NEGATIVE_VEL,
+  FRONT_EDGE_TO_REAR_AXLE,
   COST_CONFIG_SIZE,
 };
 
