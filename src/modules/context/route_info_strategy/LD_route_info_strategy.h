@@ -101,6 +101,7 @@ protected:
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
  void CaculateDistanceToTollStation(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
+ bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;

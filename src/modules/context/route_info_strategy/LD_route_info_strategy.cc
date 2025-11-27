@@ -607,86 +607,8 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
         continue;
       }
 
-      if (route_info_output_.baidu_mlc_scene == SPLIT_SCENE &&
-          split_info_vec_.front().second < lc_need_dis &&
-          temp_link->id() == current_link_->id()) {
-        // 判断在temp_link与ramp之间是否存在split，如果存在则需要判断扩展lane的后继是否会从split顺出去
-        const auto& split_info = split_info_vec_.front().first;
-        const double dis_to_split = split_info_vec_.front().second;
-        if (split_info == nullptr) {
-          break;
-        }
-
-        const auto& split_next_link =
-            ld_map_.GetNextLinkOnRoute(split_info->id());
-        if (split_next_link == nullptr) {
-          break;
-        }
-
-        uint64 split_next_link_id =
-            ld_map_.GetNextLinkOnRoute(split_info->id())->id();
-        std::unordered_set<uint64> other_link_ids;
-        for (const auto& other_link_id : split_info->successor_link_ids()) {
-          if (other_link_id == split_next_link_id) {
-            continue;
-          }
-
-          other_link_ids.insert(other_link_id);
-        }
-
-        bool find_feasible_lane_in_split_link = false;
-        const iflymapdata::sdpro::Lane* iterator_lane = temp_lane;
-        double sum_dis = 0;
-        while (iterator_lane) {
-          if (iterator_lane->link_id() == current_link_->id()) {
-            sum_dis =
-                sum_dis + iterator_lane->length() * 0.01 - ego_on_cur_link_s_;
-          } else {
-            sum_dis = sum_dis + iterator_lane->length() * 0.01;
-          }
-
-          if (iterator_lane->link_id() == split_info->id()) {
-            find_feasible_lane_in_split_link = true;
-            break;
-          }
-
-          if (sum_dis > dis_to_split + kEpsilon) {
-            break;
-          }
-
-          if (iterator_lane->successor_lane_ids_size() != 1) {
-            break;
-          }
-
-          const uint64 successor_lane_id =
-              iterator_lane->successor_lane_ids()[0];
-          const auto& successor_lane =
-              ld_map_.GetLaneInfoByID(successor_lane_id);
-          if (successor_lane == nullptr) {
-            break;
-          }
-
-          iterator_lane = successor_lane;
-        }
-
-        if (!find_feasible_lane_in_split_link) {
-          break;
-        }
-
-        if (iterator_lane->successor_lane_ids_size() != 1) {
-          break;
-        }
-
-        const uint64 successor_lane_id = iterator_lane->successor_lane_ids()[0];
-        const auto& successor_lane = ld_map_.GetLaneInfoByID(successor_lane_id);
-        if (successor_lane == nullptr) {
-          break;
-        }
-
-        if (other_link_ids.find(successor_lane->link_id()) !=
-            other_link_ids.end()) {
-          continue;
-        }
+      if (!IsLaneSuccessorInPlannedRoute(temp_lane)) {
+        continue;
       }
 
       TopoLane topo_lane;
@@ -697,12 +619,14 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
       topo_lane.front_feasible_distance = link_sum_dis - lc_need_dis;
 
       // 把符合条件的lane更新到车道组里面去
-      before_split_feasible_lane_graph.lane_topo_groups[i].link_id =
-          temp_link->id();
-      before_split_feasible_lane_graph.lane_topo_groups[i].lane_nums =
-          temp_link->lane_num();
-      before_split_feasible_lane_graph.lane_topo_groups[i]
-          .topo_lanes.emplace_back(topo_lane);
+      before_split_feasible_lane_graph
+          .lane_topo_groups[i].link_id = temp_link->id();
+      before_split_feasible_lane_graph
+          .lane_topo_groups[i].lane_nums = temp_link->lane_num();
+      before_split_feasible_lane_graph
+          .lane_topo_groups[i]
+          .topo_lanes.emplace_back(std::move(topo_lane));
+
     }
   }
 
@@ -1617,4 +1541,47 @@ void LDRouteInfoStrategy::CaculateDistanceToTollStation(
     route_info_output_.is_exist_toll_station = false;
   }
 }
-}  // namespace planning
+
+bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
+    const iflymapdata::sdpro::Lane* lane_info) {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::Lane* iterator_lane = lane_info;
+  const double kFrontDis = 500.0;
+  double sum_dis = 0;
+
+  while (iterator_lane) {
+    if (!ld_map_.isOnRouteLinks(iterator_lane->link_id())) {
+      return false;
+    }
+
+    if (iterator_lane->successor_lane_ids_size() != 1) {
+      // 由于目前1分2车道检测不稳定，后继不为1的直接认为不在route上，不会被放进feasible lane中
+      // 后续根据测试效果，确定是否需要更精确的判断
+      return false;
+    }
+
+    const uint64 successor_lane_id = iterator_lane->successor_lane_ids()[0];
+    const auto& successor_lane = ld_map_.GetLaneInfoByID(successor_lane_id);
+    if (successor_lane == nullptr) {
+      return false;
+    }
+
+    if (iterator_lane->link_id() == current_link_->id()) {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01 - ego_on_cur_link_s_;
+    } else {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01;
+    }
+
+    if (sum_dis > kFrontDis) {
+      break;
+    }
+
+    iterator_lane = successor_lane;
+  }
+
+  return true;
+}
+}
