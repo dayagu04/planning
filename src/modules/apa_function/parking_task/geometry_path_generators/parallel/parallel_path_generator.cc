@@ -164,6 +164,8 @@ void ParallelPathGenerator::Preprocess() {
                           kParkingHeadingDegPenalty,
                           kMaxXPenalty,
                           kMaxYPenalty};
+
+  calc_params_.scene_type = ParallelParkSceneType::PARALLEL_PARK_IN_SCENE;
 }
 
 void ParallelPathGenerator::ExpandObstacles() {
@@ -458,7 +460,7 @@ const bool ParallelPathGenerator::Update(
 // park out from target pose with two arc to ego line.
 const bool ParallelPathGenerator::PlanFromTargetToLine(
     std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
-    const pnc::geometry_lib::PathPoint& start_pose, const bool is_park_out) {
+    const pnc::geometry_lib::PathPoint& start_pose) {
   // ILOG_INFO <<"------PlanFromTargetToLine-------");
   using namespace pnc::mathlib;
   using namespace pnc::geometry_lib;
@@ -475,6 +477,17 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
   auto ego_line = ego_line_unit;
 
   const double min_turn_radius = apa_param.GetParam().min_turn_radius;
+
+  const bool is_park_out =
+      (calc_params_.scene_type ==
+           ParallelParkSceneType::PARALLEL_PARK_OUT_SCENE ||
+       calc_params_.scene_type ==
+           ParallelParkSceneType::PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE ||
+       calc_params_.scene_type ==
+           ParallelParkSceneType::
+               PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE)
+          ? true
+          : false;
 
   arc_1.circle_info.radius = min_turn_radius;
   const uint8_t arc_1_steer =
@@ -516,6 +529,12 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
     bool is_arc_2_set = false;
     size_t i = 0;
+    const bool is_cal_obs_min_distance =
+        calc_params_.scene_type ==
+                ParallelParkSceneType::
+                    PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE
+            ? true
+            : false;
     for (; i < arc2_radius_vec.size(); i++) {
       const auto& arc2_radius = arc2_radius_vec[i];
       diverse_arc_2.circle_info.radius = arc2_radius;
@@ -526,6 +545,15 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
                                      SEG_GEAR_DRIVE, true)) {
         ILOG_INFO << "CalTwoSameGearArcWithLine arc2_radius = " << arc2_radius
                   << " failed!";
+        continue;
+      }
+
+      auto col_res_1 = collision_detector_ptr_->UpdateByObsMap(
+          arc_1, arc_1.headingA, false);
+      if (col_res_1.collision_flag ||
+          col_res_1.remain_car_dist >
+              col_res_1.remain_obstacle_dist - 0.1) {
+        ILOG_INFO << "arc1 collided!";
         continue;
       }
 
@@ -542,13 +570,15 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       }
 
       auto col_res = collision_detector_ptr_->UpdateByObsMap(
-          diverse_arc_2, diverse_arc_2.headingA);
+          diverse_arc_2, diverse_arc_2.headingA, is_cal_obs_min_distance);
       if (col_res.collision_flag ||
           col_res.remain_car_dist >
               col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
         ILOG_INFO << "arc2 collided!";
         continue;
       }
+      diverse_arc_2.dis_ObsPin = col_res.safe_min_dist;
+      ILOG_INFO << "arc2_radius_dis_ObsPin" << diverse_arc_2.dis_ObsPin;
       ILOG_INFO << "arc2_radius = " << arc2_radius << "calc success!";
       success = true;
       diverse_radius_success = true;
@@ -3020,6 +3050,16 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
   }
 
   auto first_line = GetEgoHeadingLine(target_pose.pos, target_pose.heading);
+  int step_size_min = 2;
+  int step_size_max = 3;
+  int step_size_idx = 1;
+  if (calc_params_.scene_type ==
+      ParallelOutPathGenerator::
+          PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE) {
+    step_size_min = 5;
+    step_size_max = 7;
+    step_size_idx = 4;
+  }
   for (const auto& gear : gear_vec) {
     if (!CalcLineStepLimitPose(first_line, gear,
                                calc_params_.lon_buffer_rev_trials)) {
@@ -3046,12 +3086,12 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
     int max_size = static_cast<int>(line_length / 0.1);
     if (gear == pnc::geometry_lib::SEG_GEAR_DRIVE) {
       line_length = std::min(line_length, 0.6);
-      step_size = mathlib::Clamp(step_size, 2, 3);
+      step_size = mathlib::Clamp(step_size, step_size_min, step_size_max);
       step_size = std::min(step_size, max_size);
 
     } else {
       line_length = std::min(line_length, 2.0);
-      step_size = mathlib::Clamp(step_size, 2, 3);
+      step_size = mathlib::Clamp(step_size, step_size_min, step_size_max);
       step_size = std::min(step_size, max_size);
     }
 
@@ -3059,7 +3099,7 @@ const bool ParallelPathGenerator::GenLineStepValidEnd(
     // double length_diff = step;
     const double dir_sgn = (gear == SEG_GEAR_DRIVE ? 1.0 : -1.0);
 
-    for (size_t i = 1; i <= step_size; i++) {
+    for (size_t i = step_size_idx; i <= step_size; i++) {
       const Eigen::Vector2d line_end_pos =
           target_pose.pos + dir_sgn * i * step * v_heading;
       line_step_vec.emplace_back(std::move(line_end_pos));

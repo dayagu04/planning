@@ -582,7 +582,8 @@ const CollisionDetector::CollisionResult CollisionDetector::Update(
 }
 
 const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
-    const pnc::geometry_lib::Arc &arc, const double heading_start) {
+    const pnc::geometry_lib::Arc &arc, const double heading_start,
+    bool is_cal_obs_min_distance) {
   if (obs_pt_global_map_.empty()) {
     CollisionResult tmp_result;
     tmp_result.remain_car_dist = arc.length;
@@ -630,6 +631,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   ObsType col_obs_type = TLANE_OBS;
   size_t col_obs_index = 0;
   size_t col_car_line_order = 0;
+  double dist_init =100;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
@@ -637,7 +639,72 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
       //     box) {
       //   continue;
       // }
+      if (is_cal_obs_min_distance) {
+        auto left_front_carbound_local =
+            origin_car_local_rectangle_vertex_vec_[0];
+        auto right_front_carbound_local =
+            origin_car_local_rectangle_vertex_vec_[1];
+        auto left_rear_carbound_local =
+            origin_car_local_rectangle_vertex_vec_[3];
+        auto right_rear_carbound_local =
+            origin_car_local_rectangle_vertex_vec_[2];
+        Eigen::Vector2d O(0, -arc.circle_info.radius);
+        Eigen::Vector2d O_LF_PT = left_front_carbound_local - O;
+        Eigen::Vector2d O_RF_PT = right_front_carbound_local - O;
+        Eigen::Vector2d O_LR_PT = left_rear_carbound_local - O;
+        Eigen::Vector2d O_RR_PT = right_rear_carbound_local - O;
+        bool left_in = true;
+        if (O_RR_PT.norm() > arc.circle_info.radius) {
+          left_in = false;
+        }
 
+        if (left_in) {  // check LF RR car bound pt
+          if (static_cast<ObsType>(obs_pt_pair.first) == CHANNEL_OBS) {
+            auto obs_lf_pt_dist =
+                (obs_pt_global - arc.circle_info.center).norm() -
+                O_LF_PT.norm();
+            if (obs_lf_pt_dist > 0) {
+              dist_init = std::min(dist_init, obs_lf_pt_dist);
+              // ILOG_INFO << "obs_lf_pt_dist = " << obs_lf_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
+            }
+          } else if (static_cast<ObsType>(obs_pt_pair.first) == TLANE_OBS ||
+                     static_cast<ObsType>(obs_pt_pair.first) ==
+                         TLANE_BOUNDARY_OBS) {
+            auto obs_rr_pt_dist =
+                (obs_pt_global - arc.circle_info.center).norm() -
+                O_RR_PT.norm();
+            if (obs_rr_pt_dist < 0) {
+              dist_init = std::min(dist_init, -obs_rr_pt_dist);
+              // ILOG_INFO << "obs_rr_pt_dist = " << obs_rr_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
+            }
+          }
+
+        } else {  // check RF LR car bound
+          if (static_cast<ObsType>(obs_pt_pair.first) == CHANNEL_OBS) {
+            auto obs_rf_pt_dist =
+                (obs_pt_global - arc.circle_info.center).norm() -
+                O_RF_PT.norm();
+            if (obs_rf_pt_dist > 0) {
+              dist_init = std::min(dist_init, obs_rf_pt_dist);
+              // ILOG_INFO << "obs_rf_pt_dist = " << obs_rf_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
+            }
+          } else if (static_cast<ObsType>(obs_pt_pair.first) == TLANE_OBS ||
+                     static_cast<ObsType>(obs_pt_pair.first) ==
+                         TLANE_BOUNDARY_OBS) {
+            auto obs_lr_pt_dist =
+                (obs_pt_global - arc.circle_info.center).norm() -
+                O_LR_PT.norm();
+            if (obs_lr_pt_dist < 0) {
+              dist_init = std::min(dist_init, -obs_lr_pt_dist);
+              // ILOG_INFO << "obs_lr_pt_dist = " << obs_lr_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
+            }
+          }
+        }
+      }
       if (param_.use_bounding_box &&
           !path_seg_rectangle_bound_.IsPtInRectangleBound(obs_pt_global)) {
         continue;
@@ -723,6 +790,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   result.col_pt_ego_local = g2l_tf.GetPos(col_pt_ego_global);
   result.col_pt_obs_global.setZero();
   result.car_line_order = -1;
+  result.safe_min_dist = dist_init;
   if (col_flag && result.collision_flag) {
     result.col_pt_obs_global = obs_pt_global_map_[col_obs_type][col_obs_index];
     result.car_line_order = col_car_line_order;

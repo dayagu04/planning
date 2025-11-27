@@ -15,6 +15,9 @@ static const double kColBufferInSlot = 0.25;       // in slot
 static const double kColSmallBufferInSlot = 0.16;  // in slot
 static const double kLonBufferTrippleStep = 0.2;   // tripple step
 static const double MinLengthPath = 0.16;
+static const double kMinChannelWidth = 3.3;
+static const double kRearDetaXMagWhenFrontOccupiedRearVacant = 1.0;
+static const double kEps = 1e-5;
 
 void ParallelOutPathGenerator::Reset() {
   output_.Reset();
@@ -63,7 +66,22 @@ void ParallelOutPathGenerator::Preprocess() {
 
   calc_params_.slot_side_sgn = (calc_params_.is_left_side ? -1.0 : 1.0);
 
-  ILOG_INFO << "calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn;
+  calc_params_.scene_type = ParallelParkSceneType::PARALLEL_PARK_OUT_SCENE;
+  if (std::fabs(input_.tlane.channel_y) - (input_.tlane.slot_width * 0.5) <
+      kMinChannelWidth) {
+    calc_params_.scene_type =
+        ParallelParkSceneType::PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE;
+    // const double cur_pose_x = input_.ego_info_under_slot.cur_pose.GetX() -
+    //                           apa_param.GetParam().rear_overhanging;
+    // if (std::fabs(input_.tlane.obs_pt_outside.x() - cur_pose_x) >
+    //     kRearDetaXMagWhenFrontOccupiedRearVacant) {
+    //   calc_params_.scene_type = ParallelParkSceneType::
+    //       PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE;
+    // }
+  }
+
+  ILOG_INFO << "calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn
+            << " scene_type = " << int(calc_params_.scene_type);
 
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.06, false));
 }
@@ -143,20 +161,33 @@ const bool ParallelOutPathGenerator::Update() {
   calc_params_.valid_target_pt_vec.clear();
   calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
 
-  std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
+  std::vector<std::vector<pnc::geometry_lib::PathSegment>> all_park_out_path_vec;
   for (const auto &prepare_pose : preparing_pose_vec) {
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, true));
-    if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose, true)) {
+    std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
+    if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose)) {
       continue;
     }
-
-    ReversePathSegVec(park_out_path_vec);
-    ILOG_INFO << "park_out_path_vec ----------------------";
-    pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
-    success = true;
-    ILOG_INFO << "plan to preparing line success!";
-    break;
+    all_park_out_path_vec.emplace_back(park_out_path_vec);
+    if (calc_params_.scene_type !=
+        ParallelParkSceneType::
+            PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE) {
+      ILOG_INFO << "not narrow channel rear vacant scene! only use first path";
+      break;
+    }
   }
+  const int best_path_idx = SelectParkOutPathVec(all_park_out_path_vec);
+  if (best_path_idx < 0 || best_path_idx > all_park_out_path_vec.size() - 1) {
+    ILOG_INFO << "plan to preparing line failed!";
+    return false;
+  }
+  ILOG_INFO << "park_out_path_vec best_path_idx: " << best_path_idx;
+  std::vector<pnc::geometry_lib::PathSegment>& park_out_path_vec =
+      all_park_out_path_vec[best_path_idx];
+  ReversePathSegVec(park_out_path_vec);
+  pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
+  success = true;
+  ILOG_INFO << "plan to preparing line success!";
 
   if (success) {
     std::vector<pnc::geometry_lib::PathSegment> path_res;
@@ -173,17 +204,67 @@ const bool ParallelOutPathGenerator::Update() {
   return success;
 }
 
+const int ParallelOutPathGenerator::SelectParkOutPathVec(
+    const std::vector<std::vector<pnc::geometry_lib::PathSegment>>&
+        park_out_path_vec) {
+  if (park_out_path_vec.empty()) {
+    ILOG_INFO << "park_out_path_vec is empty!";
+    return -1;
+  }
+  if (park_out_path_vec.size() == 1) {
+    return 0;
+  }
+
+  int best_path_index = 0;
+  double max_dis_ObsPin = 0.0;
+  for (int i = 0; i < park_out_path_vec.size(); i++) {
+    if (park_out_path_vec[i].size() != 2) {
+      continue;
+    }
+    double cur_dis_ObsPin = 0;
+    if (park_out_path_vec[i][0].seg_type == pnc::geometry_lib::SEG_TYPE_ARC) {
+      const double dis_ObsPin = park_out_path_vec[i][0].GetArcSeg().dis_ObsPin;
+      if (dis_ObsPin < 100.0 - kEps) {
+        cur_dis_ObsPin = park_out_path_vec[i][0].GetArcSeg().dis_ObsPin;
+      }
+    }
+
+    ILOG_INFO << "park_out_path_vec[" << i
+              << "] dis_ObsPin = " << cur_dis_ObsPin;
+    if (cur_dis_ObsPin > max_dis_ObsPin) {
+      best_path_index = i;
+      max_dis_ObsPin = cur_dis_ObsPin;
+    }
+  }
+  return best_path_index;
+}
+
 const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
     std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec) {
   const double half_slot_width = 0.5 * input_.tlane.slot_width;
   const double slot_side_sgn = input_.tlane.slot_side_sgn;
 
-  const double pin_y = input_.tlane.obs_pt_inside.y();
+  const double obs_pt_inside_y = input_.tlane.obs_pt_inside.y();
 
-  const double tlane_outer_y =
+  bool narrow_front_vacant = false;
+  if (obs_pt_inside_y > half_slot_width * 0.5 - kEps &&
+      obs_pt_inside_y < half_slot_width * 0.5 + kEps &&
+      calc_params_.scene_type ==
+          ParallelParkSceneType::PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE) {
+    narrow_front_vacant = true;
+  }
+
+  const double pin_y =
+      narrow_front_vacant ? obs_pt_inside_y - half_slot_width : obs_pt_inside_y;
+
+  double tlane_outer_y =
       std::fabs(pin_y) > half_slot_width - 1e-5
           ? pin_y
           : (half_slot_width + std::fabs(pin_y)) * 0.5 * slot_side_sgn;
+
+  if (narrow_front_vacant) {
+    tlane_outer_y = half_slot_width * 0.5 * slot_side_sgn;
+  }
 
   const double rac_tlane_bound =
       tlane_outer_y +

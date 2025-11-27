@@ -479,6 +479,7 @@ struct ApaParameters {
   double finish_parallel_lon_overhaing_error = 0.2;
   double finish_parallel_heading_err = 2.3;
   double finish_parallel_out_heading_mag = 0.55;
+  double finish_parallel_out_lat_wheel_y = 0.25;
   double finish_parallel_lat_rac_err = 0.35;
   CheckFinishParams check_finish_params;
 
