@@ -332,6 +332,7 @@ class ReferencePath {
   bool is_smoothed_ = false;
   bool is_enable_clothoid_extend_ = false;
   double valid_lane_line_length_ = 0.0;
+  double sample_gap_ = 2.0;
   std::vector<double> map_bound_val_{0.03, 0.05, 0.07};
   std::vector<double> map_weight_fem_pos_deviation_{1000.0, 10000.0, 100000.0};
   pnc::mathlib::spline raw_k_s_spline_;

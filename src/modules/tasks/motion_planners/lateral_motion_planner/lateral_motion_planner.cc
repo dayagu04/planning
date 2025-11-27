@@ -709,8 +709,8 @@ bool LateralMotionPlanner::AssembleInput() {
   if (session_->environmental_model().function_info().function_mode() ==
       common::DrivingFunctionInfo_DrivingFunctionMode::
           DrivingFunctionInfo_DrivingFunctionMode_RADS) {
-    planning_input_.set_q_soft_corridor(0);
-    planning_input_.set_q_hard_corridor(0);
+    // planning_input_.set_q_soft_corridor(0);
+    // planning_input_.set_q_hard_corridor(0);
     planning_input_.set_complete_follow(true);
   }
   // get emergency level

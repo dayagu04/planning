@@ -779,15 +779,10 @@ void HppGeneralLateralDecider::HandleAvoidScene(TrajectoryPoints &traj_points,
 
 bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
-  min_road_radius_ = 10.0;
   ref_path_points_.reserve(traj_points.size());
   for (const auto &traj_point : traj_points) {
     ReferencePathPoint refpath_pt{};
-    double point_s = traj_point.s;
-    if (traj_point.s >
-        reference_path_ptr_->get_points().back().path_point.s()) {
-      point_s = reference_path_ptr_->get_points().back().path_point.s();
-    }
+    double point_s = std::min(traj_point.s, reference_path_ptr_->get_points().back().path_point.s());
     if (!reference_path_ptr_->get_reference_point_by_lon(point_s, refpath_pt)) {
       // add logs
       ILOG_ERROR
@@ -795,12 +790,18 @@ bool HppGeneralLateralDecider::ConstructReferencePathPoints(
     }
     double road_radius =
         1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
-    min_road_radius_ = std::max(
-        std::min(road_radius - 1.0, min_road_radius_),
-        0.2);
+    min_road_radius_ = std::max(std::min(road_radius - 1.0, min_road_radius_), 0.2);
     ref_path_points_.emplace_back(refpath_pt);
   }
-
+  if (traj_points.size() > 0) {
+    ReferencePathPoint refpath_front_pt{};
+    double front_point_s_1 = std::min(traj_points.back().s + 1.0, reference_path_ptr_->get_points().back().path_point.s());
+    if (reference_path_ptr_->get_reference_point_by_lon(front_point_s_1, refpath_front_pt)) {
+      double road_radius =
+          1 / std::max(std::fabs(refpath_front_pt.path_point.kappa()), 1e-6);
+      min_road_radius_ = std::max(std::min(road_radius - 1.0, min_road_radius_), 0.2);
+    }
+  }
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
 
