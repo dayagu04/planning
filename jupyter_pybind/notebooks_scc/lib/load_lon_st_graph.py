@@ -537,6 +537,14 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   for item in (plan_debug_info.long_ref_path.s_refs):
     s_ref_vec.append(item.first)
 
+  s_speed_adjust_target_vec = []
+  if hasattr(plan_debug_info.long_ref_path, 's_speed_adjust_target'):
+    s_speed_adjust_target_vec = list(plan_debug_info.long_ref_path.s_speed_adjust_target)
+  
+  s_lane_change_target_vec = []
+  if hasattr(plan_debug_info.long_ref_path, 's_lane_change_target'):
+    s_lane_change_target_vec = list(plan_debug_info.long_ref_path.s_lane_change_target)
+
   obs_low_vec = []
   obs_high_vec = []
   obs_low_id_vec = []
@@ -627,6 +635,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   lon_plan_data['data_st'].data.update({
     't': t_vec,
     's': s_ref_vec,
+    's_speed_adjust_target': s_speed_adjust_target_vec,
+    's_lane_change_target': s_lane_change_target_vec,
   })
 
   #lon_plan_data['data_obs_st'].clear()
@@ -1334,7 +1344,7 @@ def load_lon_global_figure(bag_loader):
 
 def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig):
   data_st = ColumnDataSource(data = {
-    't':[], 's':[]
+    't':[], 's':[], 's_speed_adjust_target':[], 's_lane_change_target':[]
   })
   data_st_plan = ColumnDataSource(data = {'t_long':[], 's_plan':[], 'v_plan':[]})
   data_sv = ColumnDataSource(data = {'s_ref':[], 'v_ref':[], 'v_low':[], 'v_high':[]}) # , 'sv_bound_s':[], 'sv_bound_v':[]
@@ -1547,6 +1557,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig2.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3, line_color = 'orange', line_dash = 'solid', legend_label = 's_comfort_target')
   fig2.line('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'purple', line_dash = 'dotted', legend_label = 's_upper_bound')
   fig2.circle('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, size = 4, color = 'purple', alpha = 0.6, legend_label = 's_upper_bound')
+  fig2.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target')
+  fig2.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target')
 
   #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_low_id)
@@ -1602,6 +1614,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
   fig3.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3.0, line_color = 'orange', line_dash = 'solid', legend_label = 's_comfort_target')
   fig3.line('t_cross_vru_target', 's_cross_vru_target', source = data_target_s_cross_vru, line_width = 3.0, line_color = 'darkviolet', line_dash = 'solid', legend_label = 's_cross_vru_target')
+  fig3.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target')
+  fig3.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target')
 
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'

@@ -78,5 +78,8 @@ message LonRefPath {
   optional Bounds lon_bound_v = 8;
   optional Bounds lon_bound_a = 9;
   optional Bounds lon_bound_jerk = 10;
+  
+  repeated double s_speed_adjust_target = 11;
+  repeated double s_lane_change_target = 12;
 }
 

@@ -134,6 +134,8 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[W_S_STOP] = planning_input.q_stop_s();
     cost_config_vec.at(i)[W_HARD_POS_BOUND] = planning_input.q_hard_pos_bound();
 
+    cost_config_vec.at(i)[FRONT_EDGE_TO_REAR_AXLE] = planning_input.front_edge_to_rear_axle();
+
     if (i <= 2) {
       cost_config_vec.at(i)[W_HARD_POS_BOUND] = 0.0;
     }

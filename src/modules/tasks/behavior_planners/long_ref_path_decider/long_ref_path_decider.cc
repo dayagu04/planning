@@ -71,6 +71,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
   lon_behavior_output_.lon_bound_v.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_a.resize(plan_points_num_);
   lon_behavior_output_.lon_bound_jerk.resize(plan_points_num_);
+  lon_behavior_output_.s_speed_adjust_target.resize(plan_points_num_);
+  lon_behavior_output_.s_lane_change_target.resize(plan_points_num_);
 
   for (unsigned int i = 0; i < plan_points_num_; i++) {
     double t = i * dt_;
@@ -137,37 +139,42 @@ void LongRefPathDecider::UpdateLonRefPath() {
       lon_j_bound.upper = bound_maker_->jerk_upper_bound(t);
     }
     lon_behavior_output_.lon_bound_jerk[i] = lon_j_bound;
+  }
 
-    // 8. use speed adjust s search ref
-    if (lane_change_info.s_search_status &&
-        speed_planning_config_.enable_speed_adjust &&
-        start_stop_decider_output.ego_start_stop_info().state() !=
-            common::StartStopInfo::STOP) {
-      if (lane_change_info.st_search_vec.size() == plan_points_num_) {
-        for (size_t i = 0; i <= plan_points_num_; i++) {
-          lon_behavior_output_.s_refs[i].first =
-              lane_change_info.st_search_vec[i];
-        }
-        ILOG_DEBUG << "use search path in lc wait!";
-      } else {
-        ILOG_WARN << "search path num is error: "
-                  << lane_change_info.st_search_vec.size();
-      }
-    }
-
-    const auto &lane_change_decider_output =
-        session_->planning_context().lane_change_decider_output();
-    const auto lane_change_state = lane_change_decider_output.curr_state;
-    const auto ego_trajs_future = lane_change_decider_output.ego_trajs_future;
-    const bool is_in_lane_change = (lane_change_state == kLaneChangeExecution ||
-                                    lane_change_state == kLaneChangeHold ||
-                                    lane_change_state == kLaneChangeComplete);
-    if (is_in_lane_change) {
-      for (size_t i = 0; i <= plan_points_num_; i++) {
-        double ego_trajs_future_init_point_s = ego_trajs_future[0].s;
+  // 8. use speed adjust s search ref
+  if (lane_change_info.s_search_status &&
+      speed_planning_config_.enable_speed_adjust &&
+      start_stop_decider_output.ego_start_stop_info().state() !=
+          common::StartStopInfo::STOP) {
+    if (lane_change_info.st_search_vec.size() == plan_points_num_) {
+      for (size_t i = 0; i < plan_points_num_; i++) {
+        lon_behavior_output_.s_speed_adjust_target[i] =
+            lane_change_info.st_search_vec[i];
         lon_behavior_output_.s_refs[i].first =
-            ego_trajs_future[i].s - ego_trajs_future_init_point_s;
+            lane_change_info.st_search_vec[i];
       }
+      ILOG_DEBUG << "use search path in lc wait!";
+    } else {
+      ILOG_WARN << "search path num is error: "
+                << lane_change_info.st_search_vec.size();
+    }
+  }
+
+  // 9. use lane change s ref
+  const auto &lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const auto ego_trajs_future = lane_change_decider_output.ego_trajs_future;
+  const bool is_in_lane_change = lane_change_state == kLaneChangeExecution;
+  if (is_in_lane_change &&
+    start_stop_decider_output.ego_start_stop_info().state() !=
+        common::StartStopInfo::STOP) {
+    for (size_t i = 0; i < plan_points_num_; i++) {
+      double ego_trajs_future_init_point_s = ego_trajs_future[0].s;
+      lon_behavior_output_.s_lane_change_target[i] =
+          ego_trajs_future[i].s - ego_trajs_future_init_point_s;
+      lon_behavior_output_.s_refs[i].first =
+          ego_trajs_future[i].s - ego_trajs_future_init_point_s;
     }
   }
 }
@@ -273,6 +280,19 @@ void LongRefPathDecider::SaveToDebugInfo() {
     lon_bound_jerk_pb->set_upper(lon_bound_jerk.upper);
   }
 
+  lon_behavior_output_pb_.mutable_s_speed_adjust_target()->Reserve(
+      lon_behavior_output_.s_speed_adjust_target.size());
+  for (const auto &s_speed_adjust :
+       lon_behavior_output_.s_speed_adjust_target) {
+    lon_behavior_output_pb_.add_s_speed_adjust_target(s_speed_adjust);
+  }
+
+  lon_behavior_output_pb_.mutable_s_lane_change_target()->Reserve(
+      lon_behavior_output_.s_lane_change_target.size());
+  for (const auto &s_lane_change : lon_behavior_output_.s_lane_change_target) {
+    lon_behavior_output_pb_.add_s_lane_change_target(s_lane_change);
+  }
+
   auto &debug_info_pb = DebugInfoManager::GetInstance().GetDebugInfoPb();
   auto long_ref_path_pb = debug_info_pb->mutable_long_ref_path();
   long_ref_path_pb->CopyFrom(lon_behavior_output_pb_);
@@ -295,6 +315,8 @@ void LongRefPathDecider::ClearOutput() {
   lon_behavior_output_.lon_bound_v.clear();
   lon_behavior_output_.lon_bound_a.clear();
   lon_behavior_output_.lon_bound_jerk.clear();
+  lon_behavior_output_.s_speed_adjust_target.clear();
+  lon_behavior_output_.s_lane_change_target.clear();
 }
 
 }  // namespace planning

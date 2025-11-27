@@ -97,9 +97,16 @@ void LonSoftPosBoundCostTerm::GetGradientHessian(
 double LonHardPosBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                         const ilqr_solver::Control &) {
   double cost = 0.0;
-  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
+  double max_hard_bound = 0.0;
+  if (cost_config_ptr_->at(HARD_POS_MAX) >
+      cost_config_ptr_->at(FRONT_EDGE_TO_REAR_AXLE)) {
+    max_hard_bound = std::max(cost_config_ptr_->at(HARD_POS_MAX) - 2.0, 1e-6);
+  } else {
+    max_hard_bound = cost_config_ptr_->at(HARD_POS_MAX);
+  }
+  if (x[POS] > max_hard_bound) {
     cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
-           Square(x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
+           Square(x[POS] - max_hard_bound);
   } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
     cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
            Square(x[POS] - cost_config_ptr_->at(HARD_POS_MIN));
@@ -111,18 +118,25 @@ void LonHardPosBoundCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control &,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
-  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
-    lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
-               (x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
+  double max_hard_bound = 0.0;
+  if (cost_config_ptr_->at(HARD_POS_MAX) >
+      cost_config_ptr_->at(FRONT_EDGE_TO_REAR_AXLE)) {
+    max_hard_bound = std::max(cost_config_ptr_->at(HARD_POS_MAX) - 2.0, 1e-6);
+  } else {
+    max_hard_bound = cost_config_ptr_->at(HARD_POS_MAX);
+  }
 
+  if (x[POS] > max_hard_bound) {
+    lx(POS) +=
+        cost_config_ptr_->at(W_HARD_POS_BOUND) * (x[POS] - max_hard_bound);
     lxx(POS, POS) += cost_config_ptr_->at(W_HARD_POS_BOUND);
   } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
     lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
                (x[POS] - cost_config_ptr_->at(HARD_POS_MIN));
-
     lxx(POS, POS) += cost_config_ptr_->at(W_HARD_POS_BOUND);
   }
 }
+
 // longitudinal vel bound cost
 double LonVelBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                     const ilqr_solver::Control &) {

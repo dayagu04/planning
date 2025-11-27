@@ -28,6 +28,9 @@ struct LongitudinalDeciderOutput {
   Bounds lon_bound_a;
   Bounds lon_bound_jerk;
 
+  std::vector<double> s_speed_adjust_target;
+  std::vector<double> s_lane_change_target;
+
   void Clear() {
     t_list.clear();
     s_refs.clear();
@@ -54,6 +57,8 @@ struct LongitudinalDeciderOutput {
     lon_bound_a.clear();
     lon_bound_jerk.clear();
     lon_obstacle_yield_info.clear();
+    s_speed_adjust_target.clear();
+    s_lane_change_target.clear();
   }
 };
 
