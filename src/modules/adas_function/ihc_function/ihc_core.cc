@@ -689,27 +689,30 @@ bool IhcCore::DynamicObstacleCheck(void) {
         }
       }
     }
-  }
-
-  // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
-  for (int i = 0; i < fusion_objs_num; i++) {
-    uint16 track_id = fusion_objs[i].additional_info.track_id;
-
-    // 只有在verified_obstacle_ids_中的障碍物才被认为是真实障碍物
-    if (verified_obstacle_ids_.find(track_id) == verified_obstacle_ids_.end()) {
-      continue;  // 跳过不在可信列表中的障碍物
+    // 如果是仅有雷达数据，则判断行驶方向为对向来车，且自车速度>3m/s，大小长宽2*1以上,认为是对向机动车
+    else if (!has_camera && has_radar) {
+      // 是否为对向来车
+      if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+        // 判断自车速度是否大于3m/s
+        if ((fusion_objs[i].common_info.relative_velocity.x + (ego_speed_kph / 3.6f)) < -3.0f) {
+          // 判断障碍物的大小，只有当上一帧候选障碍物里面没有这个id的障碍物的时候才进行判断
+          if (fusion_objs[i].common_info.shape.length > 2.5f && fusion_objs[i].common_info.shape.width > 1.5f) {
+            verified_obstacle_ids_.insert(track_id);
+          }
+        }
+      }
     }
-
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
     // 筛选前方的车辆动态障碍物，使用滞回控制
     if (distance_x > 0 && distance_x < 230.0F) {  // 扩大检测范围
-      // 判断障碍物是否为机动车
-      if (fusion_objs[i].common_info.type >=
+      // 判断障碍物是否为机动车/未知类型
+      if ((fusion_objs[i].common_info.type >=
               iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
           fusion_objs[i].common_info.type <=
-              iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+              iflyauto::ObjectType::OBJECT_TYPE_TRAILER) ||
+          fusion_objs[i].common_info.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
@@ -737,7 +740,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
               detected_oncoming_vehicle = true;
             }
           }
-          // distance > 230.0f 时继续检查其他障碍物
+          // 同向机动车
         } else if (fusion_objs[i].additional_info.motion_pattern_current ==
                    iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
           // 同向机动车：滞回控制，100m~120m为滞回区间
@@ -756,9 +759,11 @@ bool IhcCore::DynamicObstacleCheck(void) {
                      iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING &&
                  fusion_objs[i].common_info.type <=
                      iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
-        // 对向非机动车：滞回控制，75m~95m为滞回区间
+        // 对向/同向非机动车：滞回控制，75m~95m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current ==
-            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME || 
+            fusion_objs[i].additional_info.motion_pattern_current ==
+            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
           if (distance_x < 75.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
