@@ -216,7 +216,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   CostInit();
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
-      anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,
+      anchor_arrived_s, anchor_arrived_t, anchor_arrived_v,anchor_arrived_a,
       safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
       enable_merge_decelaration, lc_safety_distance_config);
   arrived_s_ = anchor_arrived_s;

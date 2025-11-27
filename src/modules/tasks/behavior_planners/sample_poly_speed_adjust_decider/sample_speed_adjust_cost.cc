@@ -12,6 +12,7 @@ namespace planning {
 void MatchGapCost::GetCost(
     const STPoint& upper_st_point, const STPoint& lower_st_point,
     const double poly_end_s, const double poly_end_t, const double poly_end_v,
+    const double poly_end_a,
     const double reliable_safe_distance_to_gap_front_obj,
     const double reliable_safe_distance_to_gap_back_obj,
     const double ego_current_vel, const bool is_merge_change,
@@ -139,10 +140,13 @@ void MatchGapCost::GetCost(
                                  poly_end_v, kEgoVelMax, kEgoVelMin, 0.0, 2.0);
     double large_car_buffer = lower_st_point.extreme_l() > 8.0 ? 5.0 : 0.0;
     safe_border_distance_to_gap_back_obj =
-        std::max(reliable_safe_distance_to_gap_back_obj +
-                     min_safe_distance_rear * 0.6,
-                 min_safe_distance_rear) +
-        large_car_buffer;
+        lower_st_point.acceleration() > poly_end_a
+            ? reliable_safe_distance_to_gap_back_obj + min_safe_distance_rear +
+                  large_car_buffer
+            : std::max(reliable_safe_distance_to_gap_back_obj +
+                           min_safe_distance_rear * 0.75,
+                       min_safe_distance_rear) +
+                  large_car_buffer;
   }
   safe_border_distance_to_gap_front_obj_ =
       safe_border_distance_to_gap_front_obj;

@@ -460,8 +460,12 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   // process lane change status
   const auto& function_info = session_->environmental_model().function_info();
   const auto& route_info_output =
-    session_->environmental_model().get_route_info()->get_route_info_output();
-  is_merge_change_ = (lane_change_source_ == MERGE_REQUEST) || ((lane_change_source_ == MAP_REQUEST) && (route_info_output.mlc_request_type_route_info.mlc_request_type == RAMP_TO_MAIN));
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  is_merge_change_ =
+      (lane_change_source_ == MERGE_REQUEST) ||
+      ((lane_change_source_ == MAP_REQUEST) &&
+       (route_info_output.mlc_request_type_route_info.mlc_request_type ==
+        RAMP_TO_MAIN));
   const bool enable_merge_decelaration =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MERGE_REQUEST);
@@ -589,7 +593,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
   // double v_sdmap_limit = 0.0;
   // if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
-  //   if (session_->environmental_model().get_route_info()->get_sdmap_valid()) {
+  //   if (session_->environmental_model().get_route_info()->get_sdmap_valid())
+  //   {
   //     const auto navi_road_info = session_->environmental_model()
   //                                     .get_route_info()
   //                                     ->get_sd_map()
@@ -599,13 +604,15 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //     }
   //   }
   // }
-  if(is_merge_change_){
+  if (is_merge_change_) {
     v_adjust_speed_limit_ = v_cruise_speed;
-  }else{
-    if(v_suggestted_ == v_cruise_speed){
-      v_adjust_speed_limit_ =  current_limit_speed;
-    }else{
-      v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed ? v_suggestted_ : current_limit_speed;
+  } else {
+    if (v_suggestted_ == v_cruise_speed) {
+      v_adjust_speed_limit_ = current_limit_speed;
+    } else {
+      v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed
+                                  ? v_suggestted_
+                                  : current_limit_speed;
     }
   }
   // init sample space
@@ -685,6 +692,13 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
     distance_to_road_split_ = route_info_output.mlc_request_type_route_info
                                   .distance_to_exchange_region;
+    for (const auto& split_region_info :
+         route_info_output.split_region_info_list) {
+      if (split_region_info.is_ramp_split && split_region_info.is_valid) {
+        distance_to_road_split_ +=split_region_info.start_fp_point.fp_distance_to_split_point;
+        break;
+      }
+    }
     const auto& split_region_info_list =
         route_info_output.split_region_info_list;
     const auto& merge_region_info_list =
