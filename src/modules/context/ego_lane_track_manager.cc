@@ -1228,77 +1228,77 @@ void EgoLaneTrackManger::PreprocessRampSplit(
     }
   }
 
-  if (split_direction_dis_info_list_.size() > 1) {
-    if (distance_to_first_road_merge_ >
-        split_direction_dis_info_list_[1].second) {
-      is_exist_split_on_ramp_ = true;
-      if (split_direction_dis_info_list_[1].first == ON_RIGHT) {
-        relative_id_lanes[order_ids[1]]->set_relative_id(0);
-        origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
-        last_zero_relative_id_order_id_index_ = 1;
-        last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
-      } else if (split_direction_dis_info_list_[1].first == ON_LEFT) {
-        relative_id_lanes[order_ids[0]]->set_relative_id(0);
-        origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
-        last_zero_relative_id_order_id_index_ = 0;
-        last_track_ego_lane_ = relative_id_lanes[order_ids[0]];
-      } else {
-        is_exist_split_on_ramp_ = false;
-        return;
-      }
+  // if (split_direction_dis_info_list_.size() > 1) {
+  //   if (distance_to_first_road_merge_ >
+  //       split_direction_dis_info_list_[1].second) {
+  //     is_exist_split_on_ramp_ = true;
+  //     if (split_direction_dis_info_list_[1].first == ON_RIGHT) {
+  //       relative_id_lanes[order_ids[1]]->set_relative_id(0);
+  //       origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
+  //       last_zero_relative_id_order_id_index_ = 1;
+  //       last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
+  //     } else if (split_direction_dis_info_list_[1].first == ON_LEFT) {
+  //       relative_id_lanes[order_ids[0]]->set_relative_id(0);
+  //       origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
+  //       last_zero_relative_id_order_id_index_ = 0;
+  //       last_track_ego_lane_ = relative_id_lanes[order_ids[0]];
+  //     } else {
+  //       is_exist_split_on_ramp_ = false;
+  //       return;
+  //     }
+  //   } else {
+  //     is_exist_split_on_ramp_ = false;
+  //     return;
+  //   }
+  // } else {
+  if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
+    is_exist_split_on_ramp_ = true;
+    if (first_split_dir_dis_info_.first == ON_RIGHT) {
+      relative_id_lanes[order_ids[1]]->set_relative_id(0);
+      origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
+      last_zero_relative_id_order_id_index_ = 1;
+      last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
+    } else if (first_split_dir_dis_info_.first == ON_LEFT) {
+      relative_id_lanes[order_ids[0]]->set_relative_id(0);
+      origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
+      last_zero_relative_id_order_id_index_ = 0;
+      last_track_ego_lane_ = relative_id_lanes[order_ids[0]];
     } else {
       is_exist_split_on_ramp_ = false;
       return;
     }
   } else {
-    if (distance_to_first_road_merge_ > distance_to_first_road_split_) {
-      is_exist_split_on_ramp_ = true;
-      if (first_split_dir_dis_info_.first == ON_RIGHT) {
-        relative_id_lanes[order_ids[1]]->set_relative_id(0);
-        origin_order_id = relative_id_lanes[order_ids[1]]->get_order_id();
-        last_zero_relative_id_order_id_index_ = 1;
-        last_track_ego_lane_ = relative_id_lanes[order_ids[1]];
-      } else if (first_split_dir_dis_info_.first == ON_LEFT) {
-        relative_id_lanes[order_ids[0]]->set_relative_id(0);
-        origin_order_id = relative_id_lanes[order_ids[0]]->get_order_id();
-        last_zero_relative_id_order_id_index_ = 0;
-        last_track_ego_lane_ = relative_id_lanes[order_ids[0]];
-      } else {
-        is_exist_split_on_ramp_ = false;
-        return;
-      }
-    } else {
-      bool last_ego_lane_exist_virtual = true;
-      MakesureVirtualLaneIsVirtual(last_track_ego_lane_,
-                                   last_ego_lane_exist_virtual);
+    bool last_ego_lane_exist_virtual = true;
+    MakesureVirtualLaneIsVirtual(last_track_ego_lane_,
+                                  last_ego_lane_exist_virtual);
 
-      if (!last_ego_lane_exist_virtual) {
-        is_exist_split_on_ramp_ = false;
-        return;
-      }
-      for (size_t i = 0; i < order_ids.size(); i++) {
-        if (relative_id_lanes.size() > order_ids[i]) {
-          std::shared_ptr<VirtualLane> base_lane =
-              relative_id_lanes[order_ids[i]];
-          if (base_lane == nullptr) {
-            continue;
-          }
-          bool virtual_lane_exist_virtual = true;
-          MakesureVirtualLaneIsVirtual(base_lane, virtual_lane_exist_virtual);
-          if (virtual_lane_exist_virtual) {
-            continue;
-          } else {
-            is_exist_split_on_ramp_ = true;
-            relative_id_lanes[order_ids[i]]->set_relative_id(0);
-            origin_order_id = relative_id_lanes[order_ids[i]]->get_order_id();
-            last_zero_relative_id_order_id_index_ = i;
-            last_track_ego_lane_ = relative_id_lanes[order_ids[i]];
-            break;
-          }
+    if (!last_ego_lane_exist_virtual) {
+      is_exist_split_on_ramp_ = false;
+      return;
+    }
+    for (size_t i = 0; i < order_ids.size(); i++) {
+      if (relative_id_lanes.size() > order_ids[i]) {
+        std::shared_ptr<VirtualLane> base_lane =
+            relative_id_lanes[order_ids[i]];
+        if (base_lane == nullptr) {
+          continue;
+        }
+        bool virtual_lane_exist_virtual = true;
+        MakesureVirtualLaneIsVirtual(base_lane, virtual_lane_exist_virtual);
+        if (virtual_lane_exist_virtual) {
+          continue;
+        } else {
+          is_exist_split_on_ramp_ = true;
+          relative_id_lanes[order_ids[i]]->set_relative_id(0);
+          origin_order_id = relative_id_lanes[order_ids[i]]->get_order_id();
+          last_zero_relative_id_order_id_index_ = i;
+          last_track_ego_lane_ = relative_id_lanes[order_ids[i]];
+          break;
         }
       }
     }
   }
+  // }
 
   for (auto& lane : relative_id_lanes) {
     int lane_order_id = lane->get_order_id();
