@@ -138,7 +138,14 @@ void RouteInfo::UpdateRouteInfoForNOA(
     route_info_output_.reset();
     return;
   }
-
+  is_in_tunnel_ = false;
+  const auto next_link = sdpro_map.GetNextLinkOnRoute(link->id());
+  if (next_link != nullptr) {
+    is_in_tunnel_ = sdpro_map.isTunnel(link->link_type()) ||
+                    sdpro_map.isTunnel(next_link->link_type());
+  } else {
+    is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
+  }
   if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
     route_info_output_.is_miss_split_point = true;
@@ -5058,8 +5065,11 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   }
 
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
-  const double search_distance = 50.0;
-  const double max_heading_diff = PI / 4;
+  double search_distance = 50.0;
+  double max_heading_diff = PI / 4;
+  if (is_in_tunnel_) {
+    search_distance = 100.0;
+  }
   // 获取当前的segment
   ad_common::math::Vec2d current_point;
   const auto& ego_state =

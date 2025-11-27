@@ -107,6 +107,7 @@ class RouteInfo {
   ad_common::math::Vec2d split_point_{0, 0};
   uint64 split_link_id_ = 1;
   std::shared_ptr<RouteInfoStrategy> route_info_strategy_ = nullptr;
+  bool is_in_tunnel_ = false;
 
   // for HPP variables
   ad_common::hdmap::HDMap hd_map_;
