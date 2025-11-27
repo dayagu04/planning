@@ -774,7 +774,11 @@ void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
   if (current_trajectory.empty()) {
     return;
   }
-  for (size_t i = 15; i > 0; --i) {  // checke 3s
+  size_t end_index = 15;
+  if(current_trajectory.size() < end_index + 1 || last_trajectory.size() < end_index + 1){
+    return;
+  }
+  for (size_t i = end_index; i > 0; --i) {  // checke 3s
     const auto& current_point = current_trajectory[i];
     const auto& last_point = last_trajectory[i];
     double vel_diff = current_point.vel() - last_point.vel();
