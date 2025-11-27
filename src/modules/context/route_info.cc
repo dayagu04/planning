@@ -581,7 +581,14 @@ void RouteInfo::CaculateMergeInfo(
               route_info_output_.is_on_ramp) {
             route_info_output_.is_ramp_merge_to_ramp_on_expressway = true;
           }
-
+          // 匝道/SAPA合并到普通道路
+          if ((sdpro_map.isRamp(merge_seg_last_seg->link_type()) ||
+               sdpro_map.isSaPa(merge_seg_last_seg->link_type())) &&
+              !sdpro_map.isRamp(merge_seg->link_type()) &&
+              (sdpro_map.isSaPa(merge_seg_last_seg->link_type()) ||
+               route_info_output_.is_on_ramp)) {
+            route_info_output_.is_ramp_merge_to_road_on_expressway = true;
+          }
           route_info_output_.first_merge_direction =
               MakesureMergeDirection(*merge_seg, sdpro_map);
           route_info_output_.distance_to_first_road_merge =
