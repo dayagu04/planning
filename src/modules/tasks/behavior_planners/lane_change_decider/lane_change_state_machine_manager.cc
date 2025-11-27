@@ -2248,6 +2248,9 @@ void LaneChangeStateMachineManager::JointLaneChangeDecisionGeneration() {
   }
   ego_trajs_future_ =
       CalculateEgoPPIDMTrajs();  // 生成初始轨迹，确保点数 26 [原在用IDM'PP]
+  if(ego_trajs_future_.empty()){
+    return;
+  }
   lc_joint_decision_generator_->ClearLaneChangeDecisionInfo();
   int gap_front_agent_id =
       target_lane_front_node_ ? target_lane_front_node_->node_agent_id() : -1;
