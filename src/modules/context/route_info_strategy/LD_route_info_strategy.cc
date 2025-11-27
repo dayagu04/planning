@@ -1543,6 +1543,16 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInNormalScene(
     return false;
   }
 
+  // 再次反向遍历横向上扩展feasible lane
+  // 根据距离把可行驶车道加上
+  if (!CalculateExtenedFeasibleLane(feasible_lane_graph)) {
+    return false;
+  }
+
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
+    return false;
+  }
+
   return true;
 }
 
