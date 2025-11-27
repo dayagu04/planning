@@ -321,7 +321,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
               stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
-              jerk_limit_cost_.cost() + std::exp(arrived_t_ / 5.0);
+              jerk_limit_cost_.cost() + std::exp(arrived_t_ / 2.5);
 
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;

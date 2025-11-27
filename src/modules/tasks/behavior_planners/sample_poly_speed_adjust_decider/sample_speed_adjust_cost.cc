@@ -113,14 +113,14 @@ void MatchGapCost::GetCost(
   cost_ = 0.0;
 
   double safe_border_distance_to_gap_front_obj = 0.0;
-  double min_safe_distance_front = 2.0;
+  double min_safe_distance_front = 3.8;
   double safe_border_distance_to_gap_back_obj = 0.0;
   double min_safe_distance_rear = 0.0;
   if (upper_st_point.agent_id() != kNoAgentId) {
     if (upper_st_point.velocity() < poly_end_v) {
       double rel_v = poly_end_v - upper_st_point.velocity();
       double front_ttc_buffer = (poly_end_v * rel_v) / (2.0 * 2.5);
-      min_safe_distance_front = std::max(front_ttc_buffer, 2.0);
+      min_safe_distance_front = std::max(front_ttc_buffer, 3.8);
     }
     double large_car_buffer = upper_st_point.extreme_l() > 8.0 ? 3.0 : 0.0;
     safe_border_distance_to_gap_front_obj =
