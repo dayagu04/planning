@@ -67,23 +67,16 @@ class LaneChangePathGenerateManager {
   struct ComfortIdmParameters {
     double v0 = 33.5;
     double s0 = 3.5;
-    double T = 1.0;
-    double a = 1.5;
+    double T = 0.5;
+    double a = 2.0;
     double b_max = 2.0;
     double b = 1.0;
     double b_hard = 4.0;
     double delta = 4.0;
-    double max_accel_jerk = 3.0;
+    double max_accel_jerk = 4.0;
     double max_decel_jerk = 1.0;
     double virtual_front_s = 200.0;
     double cool_factor = 0.99;
-    double follow_consider_distance = 15.0;
-    double follow_consider_time_headway = 1.5;
-    double delay_time_buffer = 0.3;
-    double w_speed_low = 0.0;
-    double w_speed_high = 1.0;
-    double w_gap_low = 6.0;
-    double w_gap_high = 10.0;
     double eps = 1e-3;
     double dt_ = 0.2;
   };
@@ -116,8 +109,6 @@ class LaneChangePathGenerateManager {
   BasicIntelligentDriverModel idm_model_;
   // LonMotionSimulatorIntelligentDriverModel lon_motion_sim_model_;
   std::shared_ptr<ReferencePath> ref_path_;
-  std::unique_ptr<lane_change_joint_decision::JointDecisionSpeedLimit>
-      speed_limit_calculator_;
   framework::Session* session_;
   ComfortIdmParameters comfort_idm_params_;
   State_Sim UpdateDynamicsOneStep(State_Sim state, double dt);

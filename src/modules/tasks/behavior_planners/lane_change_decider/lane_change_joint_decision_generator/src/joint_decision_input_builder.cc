@@ -161,6 +161,10 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   planning_input.set_ego_length(vehicle_param.length);
   planning_input.set_ego_width(vehicle_param.width);
 
+  if (lc_info.ego_ref_traj.size() < kPlanningTimeSteps) {
+    return;
+  }
+
   ref_trajectory_.clear();
   ref_trajectory_.reserve(kPlanningTimeSteps);
   ref_trajectory_.resize(kPlanningTimeSteps);
@@ -169,9 +173,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   s_vec.reserve(kPlanningTimeSteps);
   x_vec.reserve(kPlanningTimeSteps);
   y_vec.reserve(kPlanningTimeSteps);
-  if(lc_info.ego_ref_traj.size() < static_cast<size_t>(kPlanningTimeSteps)){
-    return;
-  }
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     s_vec.push_back(lc_info.ego_ref_traj[i].s);
     x_vec.push_back(lc_info.ego_ref_traj[i].x);
@@ -262,8 +263,14 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   double front_vel = v0;
   double front_acc = 0.0;
 
+  if (s_vec.empty()) {
+    return;
+  }
+
   double s_min = s_vec.front();
   double s_max = s_vec.back();
+
+
   double ref_ego_s = reference_path_ptr->get_frenet_ego_state().s();
 
   for (int i = 1; i < kPlanningTimeSteps; ++i) {
@@ -273,7 +280,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
       if (lead_idx >= lead_trajectory.size()) {
         lead_idx = lead_trajectory.size() - 1;
       }
-      if (lead_idx > 0) {
+      if (lead_idx > 0 && lead_idx <= lead_trajectory.size()) {
         const auto& lead_point = lead_trajectory[lead_idx - 1];
         front_acc = lead_one_agent->accel_fusion();
         double lead_s = 0.0, lead_l = 0.0;
