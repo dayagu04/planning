@@ -71,13 +71,13 @@ void ParallelOutPathGenerator::Preprocess() {
       kMinChannelWidth) {
     calc_params_.scene_type =
         ParallelParkSceneType::PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE;
-    const double cur_pose_x = input_.ego_info_under_slot.cur_pose.GetX() -
-                              apa_param.GetParam().rear_overhanging;
-    if (std::fabs(input_.tlane.obs_pt_outside.x() - cur_pose_x) >
-        kRearDetaXMagWhenFrontOccupiedRearVacant) {
-      calc_params_.scene_type = ParallelParkSceneType::
-          PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE;
-    }
+    // const double cur_pose_x = input_.ego_info_under_slot.cur_pose.GetX() -
+    //                           apa_param.GetParam().rear_overhanging;
+    // if (std::fabs(input_.tlane.obs_pt_outside.x() - cur_pose_x) >
+    //     kRearDetaXMagWhenFrontOccupiedRearVacant) {
+    //   calc_params_.scene_type = ParallelParkSceneType::
+    //       PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE;
+    // }
   }
 
   ILOG_INFO << "calc_params_.slot_side_sgn = " << calc_params_.slot_side_sgn
