@@ -290,6 +290,8 @@ struct RouteInfoOutput {
   double distance_to_exchange_area_end_point = -NL_NMAX;
   double lsl_length = 0.0;
   double current_segment_passed_distance = 0.0;  // for xykuai
+  double left_lane_distance = 0.0;
+  double right_lane_distance = 0.0;
   std::pair<SplitRelativeDirection, double>
       first_split_dir_dis_info;  // for xykuai
   std::vector<std::pair<SplitRelativeDirection, double>>
@@ -388,6 +390,8 @@ struct RouteInfoOutput {
     distance_to_next_speed_bump = NL_NMAX;
     mlc_request_type_route_info.reset();
     baidu_mlc_scene = NORMAL_SCENE;
+    left_lane_distance = 0.0;
+    right_lane_distance = 0.0;
   }
 };
 

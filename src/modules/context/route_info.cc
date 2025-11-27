@@ -2029,6 +2029,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 为每个exchange region准备数据
   std::vector<std::map<int, double>> exchange_feasible_lane_distances(
       valid_exchange_regions.size());
+  int iteration_num = 0;
   // 开始计算feasible lane和对应的distance
   if (valid_exchange_regions.empty()) {
     // 认为前方所有车道均可通行，车道数大于3时去除最右侧车道
@@ -2150,10 +2151,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
 
     // 从最后一个exchange region开始向前优化
     // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
-    int iteration_num = 0;
     bool is_need_optimize = true;
-    for (int i = 0; i < std::min<int>(valid_exchange_regions.size() - 1, 2);
-         ++i) {
+    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 2); ++i) {
       is_need_optimize =
           !IsClosingTollStationEntrance(
               current_link_, sdpro_map_,
@@ -2357,11 +2356,30 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       feasible_lane_sequence =
           GetIntersection(current_lane_vec, feasible_lane_sequence);
       for (int i = 0; i < feasible_lane_sequence.size(); i++) {
-        auto it =
-            exchange_feasible_lane_distances[0].find(feasible_lane_sequence[i]);
-        if (it != exchange_feasible_lane_distances[0].end()) {
-          feasible_lane_distance[feasible_lane_sequence[i]] = it->second;
-        } else {
+        auto& lane_distance = feasible_lane_distance[feasible_lane_sequence[i]];
+        lane_distance = 0.0;
+        bool current_lane_distance_set = false;
+        for (int n = 0; n <= iteration_num; n++) {
+          if (exchange_feasible_lane_distances.size() <= n) {
+            break;
+          }
+          if (exchange_feasible_lane_distances[n].find(
+                  feasible_lane_sequence[i]) !=
+              exchange_feasible_lane_distances[n].end()) {
+            current_lane_distance_set = true;
+            if (lane_distance > kEpsilon) {
+              lane_distance = std::min(
+                  lane_distance,
+                  exchange_feasible_lane_distances[n]
+                                                  [feasible_lane_sequence[i]]);
+            } else {
+              lane_distance =
+                  exchange_feasible_lane_distances[n]
+                                                  [feasible_lane_sequence[i]];
+            }
+          }
+        }
+        if (!current_lane_distance_set) {
           if (std::find(exchange_region_feasible_lane.begin(),
                         exchange_region_feasible_lane.end(),
                         feasible_lane_sequence[i]) !=
@@ -2391,7 +2409,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             mlc_decider_route_info_.first_static_split_region_info
                 .distance_to_split_point +
             first_exchange_region_info.end_fp_point.fp_distance_to_split_point;
-        ;
       }
       break;
     }
@@ -3138,6 +3155,9 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("bd_mlc_scene",
                    static_cast<int>(route_info_output_.baidu_mlc_scene));
   JSON_DEBUG_VALUE("ego_seq", route_info_output_.ego_seq);
+  JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
+  JSON_DEBUG_VALUE("right_lane_distance",
+                   route_info_output_.right_lane_distance);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
@@ -6199,6 +6219,11 @@ void RouteInfo::ProcessLaneDistance(
     virtual_lane_distance = std::make_pair(false, 0.0);
   }
 
+  if (left_lane_num + 1 == route_info_output_.ego_seq - 1) {
+    route_info_output_.left_lane_distance = virtual_lane_distance.second;
+  } else if (left_lane_num == route_info_output_.ego_seq) {
+    route_info_output_.right_lane_distance = virtual_lane_distance.second;
+  }
   relative_id_lane->set_feasible_lane_distance(virtual_lane_distance);
 }
 
