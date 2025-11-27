@@ -110,7 +110,6 @@ void ApaSlotManager::Update(
     recommend_park_out_ = false;
   }
 
-  // 泊出
   if (state_machine_ptr_->IsParkOutStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
       if (!dist_id_map_.empty()) {
@@ -128,7 +127,6 @@ void ApaSlotManager::Update(
                   slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
           if (slot.slot_type_ == SlotType::PERPENDICULAR &&
               state_machine_ptr_->IsHeadOutStatus()) {
-            // 对于垂直车头泊出，开口方向与自车方向不一致不释放车位
             if (ego_info_under_slot_.relative_direction_between_ego_and_slot >
                 0.0) {
               slot.release_info_.release_state[RULE_BASED_RELEASE] =
@@ -157,7 +155,6 @@ void ApaSlotManager::Update(
     }
   }
 
-  // 泊入
   if (state_machine_ptr->IsParkInStatus()) {
     if (state_machine_ptr_->IsSeachingStatus()) {
       if (measure_data_ptr->GetFoldMirrorFlag()) {
@@ -197,7 +194,6 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.Reset();
       }
     } else if (state_machine_ptr_->IsParkingStatus()) {
-      // 泊车过程中锁定车位id和类型, 不进行更新, 选中车位如果消失做特殊处理
       if (slots_map_.count(ego_info_under_slot_.id) == 0) {
         ILOG_INFO << "the selected slot disappear when parking";
         ego_info_under_slot_.slot_disappear_flag = true;
@@ -304,7 +300,6 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 }
 
 void ApaSlotManager::ParkingLotCruiseProcess() {
-  // 在泊入寻库阶段通过简单的规则判断车位是否应该释放
   const double time_start = IflyTime::Now_ms();
 
   // const bool is_ego_collision = IsEgoCloseToObs();
@@ -337,7 +332,6 @@ void ApaSlotManager::ParkingLotCruiseProcess() {
 
   uint8_t release_slot_count = 0;
 
-  // 按距离自车近远顺序进行遍历
   for (const auto& dist_id : dist_id_map_) {
     ApaSlot& slot = slots_map_[dist_id.second];
     ILOG_INFO << "slot id = " << slot.GetId()
@@ -415,12 +409,6 @@ const bool ApaSlotManager::IsEgoCloseToObs(const double body_lat_buffer,
 }
 
 const bool ApaSlotManager::IsSlotCoarseRelease(ApaSlot& slot) {
-  if (slot.slot_type_ == SlotType::SLANT) {
-    // 车尾泊入和车头泊入释放要求车位和自车的相对方向不一致
-    // 因次不在此作基于规则释放 在规划器内部预规划时做是否释放
-  }
-
-  // 检查自车和通道内是否有障碍物
   bool is_obs_in_slot_passage_area = false;
   SlotReleaseVoterType release_voter_type = SlotReleaseVoterType::CLEAR;
   if ((slot.slot_type_ == SlotType::PERPENDICULAR ||
@@ -562,7 +550,6 @@ ApaSlotManager::IsPerpendicularSlotAndPassageAreaOccupied(ApaSlot& slot) {
   ILOG_INFO << "release_voter_type = "
             << GetSlotReleaseVoterTypeString(release_voter_type);
 
-  // 判断车位左侧或者右侧是否有障碍物 来判断是否可以放宽通道宽要求
   Polygon2D polygon;
   polygon.FillTangentCircleParams(std::vector<Eigen::Vector2d>{
       pM01 + 2.0 * n, pM01 + slot.slot_width_ * t + 2.0 * n,

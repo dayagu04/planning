@@ -17,8 +17,6 @@
 
 namespace planning {
 namespace apa_planner {
-// obstacle manager: 管理所有障碍物，包括超声波、限位器、视觉、虚拟
-// apa_obstacle: 是泊车障碍物的基本数据结构.
 
 #define HAVE_3D_OBS_INTERFACE (1)
 

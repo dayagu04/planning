@@ -50,14 +50,11 @@ struct ColDetBuffer {
 
 struct ColResult {
   bool col_flag = false;
-  // 纵向
   double remain_dist = 26.8;
   double remain_car_dist = 26.8;
   double remain_obs_dist = 36.8;
-  // real-time brake
   double remain_dist_static = 16.8;
   double remain_dist_dynamic = 26.8;
-  // 横向
   std::pair<double, geometry_lib::PathPoint> pt_closest2obs{
       26.8, geometry_lib::PathPoint()};
   geometry_lib::RectangleBound path_rectangle_bound;
@@ -200,32 +197,30 @@ class BaseCollisionDetector {
   }
 
  protected:
-  // 需要的原始自车参数顶点坐标 基于自车坐标系 逆时针旋转
-  // 包含左右后视镜的多边形
   std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_;
   std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_with_buffer_;
-  // 不包含后视镜的多边形
+
   std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_;
   std::vector<Eigen::Vector2d> car_without_mirror_polygon_vertex_with_buffer_;
-  // 左后视镜
+
   std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> left_mirror_rectangle_vertex_with_buffer_;
-  // 右后视镜
+
   std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> right_mirror_rectangle_vertex_with_buffer_;
-  // 底盘矩形
+
   std::vector<Eigen::Vector2d> chassis_vertex_;
   std::vector<Eigen::Vector2d> chassis_vertex_with_buffer_;
-  // 包含左右后视镜的矩形
+
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_;
   std::vector<Eigen::Vector2d> car_with_mirror_rectangle_vertex_with_buffer_;
   std::vector<common_math::Pos<float>> car_with_mirror_rectangle_vertexf_;
-  // 后视镜到前悬矩形
+
   std::vector<Eigen::Vector2d>
       mirror_to_front_overhanging_rectangle_vertex_expand_front_;
   std::vector<Eigen::Vector2d>
       mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_;
-  // 后视镜到后悬矩形
+
   std::vector<Eigen::Vector2d> mirror_to_rear_overhanging_polygon_vertex_;
   std::vector<Eigen::Vector2d>
       mirror_to_rear_overhanging_polygon_vertex_with_buffer_;

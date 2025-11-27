@@ -22,8 +22,6 @@
 namespace planning {
 namespace apa_planner {
 
-// 障碍物高度类型：轮胎可以越过, 低于底盘但不可越过, 高于底盘但低于后视镜,
-// 高于后视镜, 默认为高于后视镜
 enum class ApaObsHeightType : uint8_t {
   // unknown obstacles are treated as HIGH obstacle
   UNKNOWN = 0,
@@ -34,7 +32,6 @@ enum class ApaObsHeightType : uint8_t {
   COUNT,
 };
 
-// 障碍物属性类型：
 enum class ApaObsAttributeType : uint8_t {
   UNKNOWN,
   FUSION_POINT_CLOUD,
@@ -67,7 +64,6 @@ enum class ApaObsScemanticType : uint8_t {
   COUNT,
 };
 
-// 障碍物运动类型：
 enum class ApaObsMovementType : uint8_t {
   STATIC,
   MOTION,

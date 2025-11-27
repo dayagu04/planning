@@ -23,7 +23,6 @@ using namespace pnc;
 struct Limiter {
   Eigen::Vector2d start_pt = Eigen::Vector2d::Zero();
   Eigen::Vector2d end_pt = Eigen::Vector2d::Zero();
-  // 该值如果为false 表示没有限位器 可以根据车位角点位置来确定终点位置
   bool valid = false;
 
   void Reset() {
@@ -33,9 +32,11 @@ struct Limiter {
   }
 };
 
-// 01 肯定为库口角点 23为库尾角点
-// 23中点 与 01中点连线 旋转到 23中点与0角点连线 必须为顺时针
-// 0和2在一侧  1和3在一侧
+// 01 is definitely the corner point of the slot entrance, and 23 is the corner
+// point of the slot tail. The line connecting the midpoint of 23 and the
+// midpoint of 01 must rotate clockwise to the line connecting the midpoint of
+// 23 and the corner point of 0. 0 and 2 must be on one side, 1 and 3 must be on
+// one side
 struct SlotCoord {
   Eigen::Vector2d pt_1 = Eigen::Vector2d::Zero();       // left up
   Eigen::Vector2d pt_0 = Eigen::Vector2d::Zero();       // right up
@@ -118,11 +119,9 @@ enum SlotReleaseMethod : uint8_t {
 };
 
 enum class SlotReleaseState : uint8_t {
-  // 不经过计算，不确定是否释放
   UNKNOWN = 0,
   RELEASE = 1,
   NOT_RELEASE = 2,
-  // 计算中
   COMPUTING = 3,
 };
 
@@ -166,9 +165,7 @@ struct SlotObstacleInfo {
 enum class SlotMaterialType : uint8_t {
   UNKOWN = 0,
   SLOT_LINE = 1,
-  // 机械车位
   MECHANICAL = 2,
-  // 空间车位
   FREEDOM_SPACE = 3,
 };
 
@@ -274,12 +271,12 @@ class ApaSlot final {
   SlotCoord origin_corner_coord_global_;
   SlotCoord origin_corner_coord_local_;
 
-  // 指将斜车位处理成垂直车位
   SlotCoord processed_corner_coord_global_;
   SlotCoord processed_corner_coord_local_;
 
-  // 23角点中点与01角点中点连线和01角点连线的锐角或直角 一般为90 60 45
-  // 垂直车位即90度
+  // The acute or right angle between the midpoint of point 23 and the midpoint
+  // of point 01, as well as the line connecting point 01, is generally 90, 60,
+  // and 45 degrees. Vertical slot the angle is 90 degrees
   double angle_ = 90.0;
   double sin_angle_ = 1.0;
 

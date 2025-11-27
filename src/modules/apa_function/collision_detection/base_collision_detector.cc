@@ -23,18 +23,16 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     car_vertex_y_vec = param.car_vertex_y_vec;
   }
 
-  // 包含左右后视镜的多边形
   car_with_mirror_polygon_vertex_.clear();
   car_with_mirror_polygon_vertex_.reserve(car_vertex_x_vec.size());
   for (size_t i = 0; i < car_vertex_x_vec.size(); ++i) {
     vertex << car_vertex_x_vec[i], car_vertex_y_vec[i];
     car_with_mirror_polygon_vertex_.emplace_back(vertex);
   }
-  // 参数里默认为顺时针 这里转化为逆时针 方便后面形成polygon gjk检测
+
   std::reverse(car_with_mirror_polygon_vertex_.begin(),
                car_with_mirror_polygon_vertex_.end());
 
-  // 不包含后视镜的多边形
   car_without_mirror_polygon_vertex_.clear();
   car_without_mirror_polygon_vertex_.reserve(
       car_with_mirror_polygon_vertex_.size() - 8);
@@ -45,7 +43,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     car_without_mirror_polygon_vertex_.emplace_back(pt);
   }
 
-  // 左后视镜
   left_mirror_rectangle_vertex_.clear();
   left_mirror_rectangle_vertex_.reserve(4);
   for (const Eigen::Vector2d& pt : car_with_mirror_polygon_vertex_) {
@@ -55,7 +52,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
   }
 
-  // 右后视镜
   right_mirror_rectangle_vertex_.clear();
   right_mirror_rectangle_vertex_.reserve(4);
   for (const Eigen::Vector2d& pt : car_with_mirror_polygon_vertex_) {
@@ -65,7 +61,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
   }
 
-  // 底盘多边形
   chassis_vertex_.clear();
   chassis_vertex_.resize(car_without_mirror_polygon_vertex_.size());
   for (size_t i = 0; i < chassis_vertex_.size(); ++i) {
@@ -78,7 +73,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
   }
 
-  // 包含左右后视镜的矩形
   car_with_mirror_rectangle_vertex_.clear();
   car_with_mirror_rectangle_vertex_.resize(4);
   car_with_mirror_rectangle_vertex_[0] << -param.rear_overhanging,
@@ -105,7 +99,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
       << param.wheel_base + param.front_overhanging,
       0.5 * max_car_width;
 
-  // 后视镜到前悬矩形
   mirror_to_front_overhanging_rectangle_vertex_expand_front_.clear();
   mirror_to_front_overhanging_rectangle_vertex_expand_front_.resize(4);
   mirror_to_front_overhanging_rectangle_vertex_expand_front_[0] =
@@ -119,7 +112,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
       << param.wheel_base + param.front_overhanging,
       0.5 * max_car_width;
 
-  // 后视镜到后悬多边形
   mirror_to_rear_overhanging_polygon_vertex_.clear();
   mirror_to_rear_overhanging_polygon_vertex_.reserve(8);
   mirror_to_rear_overhanging_polygon_vertex_.emplace_back(
@@ -133,7 +125,6 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
   mirror_to_rear_overhanging_polygon_vertex_.emplace_back(
       right_mirror_rectangle_vertex_[0]);
 
-  // 填充包络圆
   car_with_mirror_circles_list_.Reset();
   std::vector<float> circle_x, circle_y, circle_r;
   if (fold_mirror_flag) {
@@ -171,7 +162,7 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
 
     if (i == 3 || i == 6) {
-      // 对应后视镜两个圆
+      // the circle corresponding to mirror
       continue;
     }
 
@@ -191,7 +182,7 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     }
 
     if (i == 3 || i == 6) {
-      // 对应后视镜两个圆
+      // the circle corresponding to mirror
       continue;
     }
 
@@ -200,11 +191,11 @@ void BaseCollisionDetector::Init(const bool fold_mirror_flag) {
     circles[car_chassis_circles_list_.count].radius = circle_r[i];
 
     if (i == 1 || i == 2 || i == 7) {
-      // 对应前保险杠3个圆
+      // the circle corresponding to front_overhanging
       circles[car_chassis_circles_list_.count].center_local.x() -=
           param.chassis_reduce_length;
     } else if (i == 4 || i == 5 || i == 10) {
-      // 对应后保险杠3个圆
+      // the circle corresponding to rear_overhanging
       circles[car_chassis_circles_list_.count].center_local.x() +=
           param.chassis_reduce_length;
     }
@@ -236,7 +227,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
 
   const ApaParameters& param = apa_param.GetParam();
 
-  // 包含左右后视镜的多边形
   car_with_mirror_polygon_vertex_with_buffer_.clear();
   car_with_mirror_polygon_vertex_with_buffer_.reserve(
       car_with_mirror_polygon_vertex_.size());
@@ -254,7 +244,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     car_with_mirror_polygon_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 不包含后视镜的多边形
   car_without_mirror_polygon_vertex_with_buffer_.clear();
   car_without_mirror_polygon_vertex_with_buffer_.reserve(
       car_without_mirror_polygon_vertex_.size());
@@ -265,7 +254,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     car_without_mirror_polygon_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 左后视镜
   left_mirror_rectangle_vertex_with_buffer_.clear();
   left_mirror_rectangle_vertex_with_buffer_.reserve(
       left_mirror_rectangle_vertex_.size());
@@ -277,7 +265,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     left_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 右后视镜
   right_mirror_rectangle_vertex_with_buffer_.clear();
   right_mirror_rectangle_vertex_with_buffer_.reserve(
       right_mirror_rectangle_vertex_.size());
@@ -289,7 +276,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     right_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 底盘多边形
   chassis_vertex_with_buffer_.clear();
   chassis_vertex_with_buffer_.reserve(chassis_vertex_.size());
   for (const Eigen::Vector2d& pt : chassis_vertex_) {
@@ -299,7 +285,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     chassis_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 包含左右后视镜的矩形
   car_with_mirror_rectangle_vertex_with_buffer_.clear();
   car_with_mirror_rectangle_vertex_with_buffer_.reserve(
       car_with_mirror_rectangle_vertex_.size());
@@ -315,7 +300,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
     car_with_mirror_rectangle_vertex_with_buffer_.emplace_back(vertex);
   }
 
-  // 后视镜到前悬矩形
   mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
       .clear();
   mirror_to_front_overhanging_rectangle_vertex_expand_front_with_buffer_
@@ -329,7 +313,6 @@ void BaseCollisionDetector::UpdateSafeBuffer(const double body_lat_buffer,
         .emplace_back(vertex);
   }
 
-  // 后视镜到后悬多边形
   mirror_to_rear_overhanging_polygon_vertex_with_buffer_.clear();
   mirror_to_rear_overhanging_polygon_vertex_with_buffer_.reserve(
       mirror_to_rear_overhanging_polygon_vertex_.size());

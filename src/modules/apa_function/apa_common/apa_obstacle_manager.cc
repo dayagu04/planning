@@ -62,7 +62,7 @@ void ApaObstacleManager::Update(
     runover_height = -1068.8;
   }
 
-  // 读取超声波扇形距离
+  // ultrasonic sector distance
   const double min_uss_dist = param.min_uss_origin_dist;
   if (param.is_uss_dist_from_perception) {
     const auto& uss_dis_info_buf =
@@ -100,7 +100,7 @@ void ApaObstacleManager::Update(
     }
   }
 
-  // 读取通用障碍物点云
+  // occ pt cloud
   if (param.use_fus_occ_obj) {
     const uint8 fusion_obs_size =
         std::min(local_view->fusion_occupancy_objects_info.fusion_object_size,
@@ -199,11 +199,12 @@ void ApaObstacleManager::Update(
     }
   }
 
+  // object detect box
   if (param.use_object_detect) {
     GenerateObsByOD(local_view, apa_param.GetParam().od_config);
   }
 
-  // 读取接地线障碍物点云
+  // gl pt cloud
   if (param.use_ground_line) {
     const uint8 ground_lines_size =
         std::min(local_view->ground_line_perception.groundline_size,
@@ -290,7 +291,7 @@ void ApaObstacleManager::Update(
     }
   }
 
-  // 读取超声波障碍物点云
+  // ultrasonic pt cloud
   if (param.uss_config.use_uss_pt_cloud) {
     GenerateUss(local_view);
   }
@@ -337,8 +338,7 @@ void ApaObstacleManager::Update(
       apa_obs.SetObsScemanticType(ApaObsScemanticType::LIMITER);
       apa_obs.SetPtClout2dGlobal(limiter_points);
       apa_obs.SetObsAttributeType(ApaObsAttributeType::SLOT_LIMITER);
-      // TODO: 拿到限位器具体高度来进行确定
-      apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
+      apa_obs.SetObsHeightType(ApaObsHeightType::LOW);
       apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);

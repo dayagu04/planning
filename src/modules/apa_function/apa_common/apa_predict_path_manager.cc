@@ -21,9 +21,6 @@ void ApaPredictPathManager::Update(
     const LocalView* local_view,
     const iflyauto::PlanningOutput* planning_output,
     const std::shared_ptr<ApaMeasureDataManager>& measure_data_ptr) {
-  // 填充车辆基于控制MPC或自车方向盘转角的预测轨迹，
-  // 用于后续的碰撞检测和速度规划
-
   Reset();
 
   if (planning_output == nullptr || local_view == nullptr ||
@@ -40,9 +37,6 @@ void ApaPredictPathManager::Update(
     return;
   }
 
-  // 计算预测距离  当前位置往后3米  或者
-  // 当前位置投影点到规划轨迹的终点距离加上一个阈值
-  // 首先计算当前位置投影点到规划轨迹终点的距离
   double min_dist = std::numeric_limits<double>::infinity();
   int min_index = -1;
   double path_length = 0.0;
@@ -153,11 +147,9 @@ void ApaPredictPathManager::Update(
 
     if (predict_pt_vec_.back().s < predict_distance &&
         predict_pt_vec_.size() > 2) {
-      // 最后一个点的s小于predict_distance，需要补全到predict_distance
       pnc::geometry_lib::PathPoint car_predict_pt;
       const double step = 0.1;
       if (control_err_big_ || !splice_plan_traj) {
-        // 直线延长
         do {
           size_t n = predict_pt_vec_.size();
           pnc::geometry_lib::CalExtendedPointByTwoPoints(
@@ -168,7 +160,7 @@ void ApaPredictPathManager::Update(
           predict_pt_vec_.emplace_back(car_predict_pt);
         } while (predict_pt_vec_.back().s < predict_distance);
       } else {
-        // 拼接规划轨迹
+        // splice plan traj
         const pnc::geometry_lib::PathPoint& last_car_predict_pt =
             predict_pt_vec_.back();
         min_dist = std::numeric_limits<double>::infinity();

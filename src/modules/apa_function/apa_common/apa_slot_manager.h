@@ -104,18 +104,14 @@ struct EgoInfoUnderSlot {
   geometry_lib::GlobalToLocalTf g2l_tf;
   geometry_lib::LocalToGlobalTf l2g_tf;
 
-  // 根据障碍物移动车位 对于垂直车位 向左为正
   double move_slot_dist = 0.0;
 
-  // 重规划成功时的移动距离 重规划成功时才更新
   double lat_move_dist_replan_success = 0.0;
   double lon_move_dist_replan_success = 0.0;
 
-  // 每次重规划的移动距离 只要重规划就更新
   double lat_move_dist_every_replan = 0.0;
   double lon_move_dist_every_replan = 0.0;
 
-  // 存在目标终点的安全buffer
   double safe_lat_body_buffer = 0.15;
   double safe_lat_mirror_buffer = 0.15;
 
