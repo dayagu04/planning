@@ -459,7 +459,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   merge_stop_line_distance_ = kMaxMergeDistance;
   // process lane change status
   const auto& function_info = session_->environmental_model().function_info();
-
+  const auto& route_info_output =
+    session_->environmental_model().get_route_info()->get_route_info_output();
+  is_merge_change_ = (lane_change_source_ == MERGE_REQUEST) || ((lane_change_source_ == MAP_REQUEST) && (route_info_output.mlc_request_type_route_info.mlc_request_type == RAMP_TO_MAIN));
   const bool enable_merge_decelaration =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MERGE_REQUEST);
@@ -597,10 +599,14 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //     }
   //   }
   // }
-  if(v_suggestted_ == v_cruise_speed){
-    v_adjust_speed_limit_ =  current_limit_speed;
+  if(is_merge_change_){
+    v_adjust_speed_limit_ = v_cruise_speed;
   }else{
-    v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed ? v_suggestted_ : current_limit_speed;
+    if(v_suggestted_ == v_cruise_speed){
+      v_adjust_speed_limit_ =  current_limit_speed;
+    }else{
+      v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed ? v_suggestted_ : current_limit_speed;
+    }
   }
   // init sample space
   st_sample_space_base_.Init(target_lane_nodes, ego_s);
@@ -616,8 +622,6 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   RunSampleSceneStateMachine();
 
   // sample v upper and lower
-  const auto& route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
   bool is_split_map_change =
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
