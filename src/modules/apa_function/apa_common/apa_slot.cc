@@ -50,7 +50,8 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
       break;
   }
 
-  // 融合给的 01必须是库口两个角点 且02必须在一边 13必须在一边
+  // 01 must be the two corner points of the slot entrance and 02 must be on one
+  // side, 13 must be on one side
   origin_corner_coord_global_.pt_0 << fusion_slot.corner_points[0].x,
       fusion_slot.corner_points[0].y;
   origin_corner_coord_global_.pt_1 << fusion_slot.corner_points[1].x,
