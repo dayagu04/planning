@@ -16,6 +16,10 @@ class ParallelOutPathGenerator : public ParallelPathGenerator {
 
   const bool GenParallelPreparingLineVecOut(
       std::vector<pnc::geometry_lib::PathPoint>& preparing_pose_vec);
+
+  const int SelectParkOutPathVec(
+      const std::vector<std::vector<pnc::geometry_lib::PathSegment>>&
+          park_out_path_vec);
 };
 
 }  // namespace apa_planner

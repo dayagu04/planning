@@ -654,7 +654,7 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
         Eigen::Vector2d O_LR_PT = left_rear_carbound_local - O;
         Eigen::Vector2d O_RR_PT = right_rear_carbound_local - O;
         bool left_in = true;
-        if (O_RF_PT.norm() > arc.circle_info.radius) {
+        if (O_RR_PT.norm() > arc.circle_info.radius) {
           left_in = false;
         }
 
@@ -665,8 +665,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
                 O_LF_PT.norm();
             if (obs_lf_pt_dist > 0) {
               dist_init = std::min(dist_init, obs_lf_pt_dist);
-              ILOG_INFO << "obs_lf_pt_dist = " << obs_lf_pt_dist
-                        << " dist_init = " << dist_init << std::endl;
+              // ILOG_INFO << "obs_lf_pt_dist = " << obs_lf_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
             }
           } else if (static_cast<ObsType>(obs_pt_pair.first) == TLANE_OBS ||
                      static_cast<ObsType>(obs_pt_pair.first) ==
@@ -674,10 +674,10 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
             auto obs_rr_pt_dist =
                 (obs_pt_global - arc.circle_info.center).norm() -
                 O_RR_PT.norm();
-            if (obs_rr_pt_dist > 0) {
-              dist_init = std::min(dist_init, obs_rr_pt_dist);
-              ILOG_INFO << "obs_rr_pt_dist = " << obs_rr_pt_dist
-                        << " dist_init = " << dist_init << std::endl;
+            if (obs_rr_pt_dist < 0) {
+              dist_init = std::min(dist_init, -obs_rr_pt_dist);
+              // ILOG_INFO << "obs_rr_pt_dist = " << obs_rr_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
             }
           }
 
@@ -688,8 +688,8 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
                 O_RF_PT.norm();
             if (obs_rf_pt_dist > 0) {
               dist_init = std::min(dist_init, obs_rf_pt_dist);
-              ILOG_INFO << "obs_rf_pt_dist = " << obs_rf_pt_dist
-                        << " dist_init = " << dist_init << std::endl;
+              // ILOG_INFO << "obs_rf_pt_dist = " << obs_rf_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
             }
           } else if (static_cast<ObsType>(obs_pt_pair.first) == TLANE_OBS ||
                      static_cast<ObsType>(obs_pt_pair.first) ==
@@ -697,10 +697,10 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
             auto obs_lr_pt_dist =
                 (obs_pt_global - arc.circle_info.center).norm() -
                 O_LR_PT.norm();
-            if (obs_lr_pt_dist > 0) {
-              dist_init = std::min(dist_init, obs_lr_pt_dist);
-              ILOG_INFO << "obs_lr_pt_dist = " << obs_lr_pt_dist
-                        << " dist_init = " << dist_init << std::endl;
+            if (obs_lr_pt_dist < 0) {
+              dist_init = std::min(dist_init, -obs_lr_pt_dist);
+              // ILOG_INFO << "obs_lr_pt_dist = " << obs_lr_pt_dist
+              //           << " dist_init = " << dist_init << std::endl;
             }
           }
         }

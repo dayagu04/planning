@@ -120,8 +120,9 @@ class CollisionDetector {
   const CollisionResult Update(const pnc::geometry_lib::Arc &arc,
                                const double heading_start);
 
-  const CollisionResult UpdateByObsMap( const pnc::geometry_lib::Arc &arc,
-                                       const double heading_start, bool is_cal_obs_min_distance=false);
+  const CollisionResult UpdateByObsMap(const pnc::geometry_lib::Arc& arc,
+                                       const double heading_start,
+                                       bool is_cal_obs_min_distance = false);
 
   const CollisionResult Update(
       const pnc::geometry_lib::LineSegment &line_seg,

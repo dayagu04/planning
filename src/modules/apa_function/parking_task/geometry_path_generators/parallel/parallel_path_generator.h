@@ -72,6 +72,15 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     COST_WEIGHT_MAX
   } COST_WEIGHT;
 
+  enum ParallelParkSceneType {
+    PARALLEL_PARK_SCENE_NONE,
+    PARALLEL_PARK_IN_SCENE,
+    PARALLEL_PARK_OUT_SCENE,
+    PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE,
+    PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE,
+    PARALLEL_PARK_SCENE_COUNT,
+  };
+
   struct GeometryPath {
     void Reset() {
       //   max_x_mag = 0.0;
@@ -161,6 +170,9 @@ class ParallelPathGenerator : public GeometryPathGenerator {
     std::vector<pnc::geometry_lib::PathPoint> ego_start_pose_space;
 
     std::array<double, COST_WEIGHT::COST_WEIGHT_MAX> weights{0.0};
+
+    ParallelParkSceneType scene_type =
+        ParallelParkSceneType::PARALLEL_PARK_SCENE_NONE;
     void Reset() {
       is_left_side = true;
       slot_side_sgn = 1.0;
@@ -193,6 +205,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       v_ego_farest_rear_corner = Eigen::Vector2d::Zero();
       weights.fill(0.0);
       ego_start_pose_space.clear();
+      scene_type = ParallelParkSceneType::PARALLEL_PARK_SCENE_NONE;
     }
   };
 
@@ -354,9 +367,8 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   // normal plan
 
   const bool PlanFromTargetToLine(
-      std::vector<pnc::geometry_lib::PathSegment> &path_seg_vec,
-      const pnc::geometry_lib::PathPoint &start_pose,
-      const bool is_park_out = false);
+      std::vector<pnc::geometry_lib::PathSegment>& path_seg_vec,
+      const pnc::geometry_lib::PathPoint& start_pose);
   const bool CheckEgoLine(pnc::geometry_lib::LineSegment &ego_line,
                           const bool not_bigangle);
 
