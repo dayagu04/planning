@@ -169,7 +169,9 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   s_vec.reserve(kPlanningTimeSteps);
   x_vec.reserve(kPlanningTimeSteps);
   y_vec.reserve(kPlanningTimeSteps);
-
+  if(lc_info.ego_ref_traj.size() < static_cast<size_t>(kPlanningTimeSteps)){
+    return;
+  }
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     s_vec.push_back(lc_info.ego_ref_traj[i].s);
     x_vec.push_back(lc_info.ego_ref_traj[i].x);
