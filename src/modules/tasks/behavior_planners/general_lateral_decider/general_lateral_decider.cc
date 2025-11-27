@@ -1953,13 +1953,18 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
   // judge maintain_avoid_direction
   if (is_find_lat_obs_position_iter &&
-      lat_obs_position_iter->second.maintain_avoid) {
+      lat_obs_position_iter->second.maintain_avoid &&
+      (lat_obstacle_decision.at(obstacle->id()) ==
+                LatObstacleDecisionType::IGNORE ||
+      lat_obstacle_decision.at(obstacle->id()) ==
+                LatObstacleDecisionType::FOLLOW)) {
     is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
     bound_type = BoundType::ADJACENT_AGENT;
   }
 
   if (is_find_lat_obs_position_iter &&
       lat_obs_position_iter->second.emergency_avoid && !is_blocked_obstacle_ &&
+      !lat_obs_position_iter->second.lon_overtake_avoid &&
       (lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::IGNORE ||
        lat_obstacle_decision.at(obstacle->id()) ==
@@ -1973,6 +1978,15 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
        lat_obstacle_decision.at(obstacle->id()) ==
            LatObstacleDecisionType::FOLLOW)) {
     return;
+  }
+  if (is_find_lat_obs_position_iter &&
+      lat_obs_position_iter->second.lon_overtake_avoid &&
+      (lat_obstacle_decision.at(obstacle->id()) ==
+                LatObstacleDecisionType::IGNORE ||
+      lat_obstacle_decision.at(obstacle->id()) ==
+                LatObstacleDecisionType::FOLLOW)) {
+    is_nudge_left = ego_frenet_state_.l() < obstacle->frenet_l();
+    bound_type = BoundType::DYNAMIC_AGENT;
   }
   // lane borrow
   const auto borrow_direction = lane_borrow_decider_output.borrow_direction;
@@ -3712,7 +3726,8 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
           (lat_obs_position_iter->second.side_car ||
            lat_obs_position_iter->second.maintain_avoid ||
            lat_obs_position_iter->second.emergency_avoid ||
-           lat_obs_position_iter->second.lon_overtake_avoid)) {
+           (lat_obs_position_iter->second.lon_overtake_avoid &&
+           obstacle->is_static()))) {
         return true;
       }
       const auto cossing_map_iter = is_crossing_map.find(obstacle->id());
