@@ -610,8 +610,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
     if (v_suggestted_ == v_cruise_speed) {
       v_adjust_speed_limit_ = current_limit_speed;
     } else {
-      v_adjust_speed_limit_ = current_limit_speed == v_cruise_speed
-                                  ? v_suggestted_
+      v_adjust_speed_limit_ = current_limit_speed == v_suggestted_
+                                  ? v_cruise_speed
                                   : current_limit_speed;
     }
   }
