@@ -99,8 +99,9 @@ const bool IsDynamicLivingThings(const double v,
   return false;
 }
 
-const bool IsDynamicODVeh(const double v, const iflyauto::ObjectType type) {
-  if (v > 0.3 && IsODVeh(type)) {
+const bool IsDynamicODVeh(const double speed_thresh, const double v,
+                          const iflyauto::ObjectType type) {
+  if (v > speed_thresh && IsODVeh(type)) {
     return true;
   }
 

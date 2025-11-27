@@ -348,6 +348,7 @@ struct ObjectDetectObsConfig {
   bool use_dynamic_od_car = true;
   bool use_living_things = true;
   bool use_speed_bump = false;
+  double moving_veh_speed_thresh;
 };
 
 // todo
