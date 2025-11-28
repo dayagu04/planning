@@ -1271,7 +1271,7 @@ void EgoLaneTrackManger::PreprocessRampSplit(
   } else {
     bool last_ego_lane_exist_virtual = true;
     MakesureVirtualLaneIsVirtual(last_track_ego_lane_,
-                                  last_ego_lane_exist_virtual);
+                                 last_ego_lane_exist_virtual);
 
     if (!last_ego_lane_exist_virtual) {
       is_exist_split_on_ramp_ = false;

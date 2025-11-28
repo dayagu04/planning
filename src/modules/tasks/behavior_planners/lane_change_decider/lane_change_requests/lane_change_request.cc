@@ -531,11 +531,14 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                           mlc_decider_route_info.is_process_split_split ||
                           mlc_decider_route_info.is_process_other_merge_split;
   bool is_mlc_avoidance =
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_DIVERGE ||
-      route_info_output.mlc_request_type_route_info.mlc_request_type == AVOIDE_MERGE;
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_DIVERGE ||
+      route_info_output.mlc_request_type_route_info.mlc_request_type ==
+          AVOIDE_MERGE;
   if (is_process_split && lc_request_source == MAP_REQUEST &&
       !is_mlc_avoidance &&
-      route_info_output.mlc_request_type_route_info.distance_to_exchange_region < 100.0) {
+      route_info_output.mlc_request_type_route_info
+              .distance_to_exchange_region < 100.0) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
@@ -1015,12 +1018,15 @@ bool LaneChangeRequest::ConeSituationJudgement(
 
   double lane_width = QueryLaneMinWidth(
       target_lane_cone_points_, target_lane_s_width, ego_frenet_point.x);
-  double pass_threshold_left = std::max(vehicle_param.width + k_default_ego_pass_buffer,
-                                 lane_width + k_left_cone_occ_lane_line_buffer);
+  double pass_threshold_left =
+      std::max(vehicle_param.width + k_default_ego_pass_buffer,
+               lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_left = std::min(pass_threshold_left, kDefaultLaneWidth - 0.1);
-  double pass_threshold_right = std::max(vehicle_param.width + k_default_ego_pass_buffer,
-                                     lane_width + k_right_cone_occ_lane_line_buffer);
-  pass_threshold_right = std::min(pass_threshold_right, kDefaultLaneWidth - 0.1);
+  double pass_threshold_right =
+      std::max(vehicle_param.width + k_default_ego_pass_buffer,
+               lane_width + k_right_cone_occ_lane_line_buffer);
+  pass_threshold_right =
+      std::min(pass_threshold_right, kDefaultLaneWidth - 0.1);
   for (const auto &cluster_attribute_iter :
        target_lane_cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;

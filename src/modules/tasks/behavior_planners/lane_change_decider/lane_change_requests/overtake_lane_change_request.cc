@@ -595,8 +595,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       if (isCouldOvertakeMaintainByRoute(left_route_traffic_speed, agent,
                                          true)) {
         if (IsDashEnoughForRepeatSegments(
-              LEFT_CHANGE, lc_request_source, origin_lane_virtual_id_,
-              static_cast<StateMachineLaneChangeStatus>(lc_status))) {
+                LEFT_CHANGE, lc_request_source, origin_lane_virtual_id_,
+                static_cast<StateMachineLaneChangeStatus>(lc_status))) {
           last_request_type_ = request_type_;
           return;
         }
@@ -608,8 +608,8 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
       if (isCouldOvertakeMaintainByRoute(right_route_traffic_speed, agent,
                                          false)) {
         if (IsDashEnoughForRepeatSegments(
-          RIGHT_CHANGE, lc_request_source, origin_lane_virtual_id_,
-          static_cast<StateMachineLaneChangeStatus>(lc_status))) {
+                RIGHT_CHANGE, lc_request_source, origin_lane_virtual_id_,
+                static_cast<StateMachineLaneChangeStatus>(lc_status))) {
           last_request_type_ = request_type_;
           return;
         }
