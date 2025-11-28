@@ -932,17 +932,13 @@ void RouteInfo::CaculateSplitInfo(
                       .end_fp_point.isEmpty()) &&
                 !route_info_output_.split_region_info_list[0].is_valid) {
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num[0]
-                  .total_lane_num = split_last_link->lane_num();
+                  .recommend_lane_num. emplace_back(split_last_link->lane_num(), std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num[1]
-                  .total_lane_num = split_link->lane_num();
+                  .recommend_lane_num.emplace_back(split_link->lane_num(), std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num[2]
-                  .total_lane_num = split_next_link->lane_num();
+                  .recommend_lane_num.emplace_back(split_next_link->lane_num(), std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num[3]
-                  .total_lane_num = other_link->lane_num();
+                  .recommend_lane_num.emplace_back(other_link->lane_num(), std::vector<int>{});
               route_info_output_.split_region_info_list[0].is_valid = true;
             }
             if (route_info_output_.split_region_info_list[0]
