@@ -26,7 +26,6 @@ struct TsrParameters {
   double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
   double warning_time_max = 2.0;  // 单次最大报警时长，单位：s
-  const double OUT_FLAG_NEED_LAST_TIME = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
 };
 
 class TsrCore {

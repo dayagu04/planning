@@ -549,7 +549,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   speed_limit_renew_flag_ = false; // 还未更新限速牌
   // 感知没有检测到任何限速牌1s后 允许输出
-  if (no_speed_limit_duration_time_ >= tsr_param_.OUT_FLAG_NEED_LAST_TIME) {
+  if (no_speed_limit_duration_time_ >= GetContext.get_param()->tsr_out_flag_need_last_time) {
     if (speed_limit_set_.size() > 0) {
       // 获取限速标识牌中的最高限速值
       uint32 hightest_perception_speed_limit = GetHighestFromSet(speed_limit_set_);
@@ -568,7 +568,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   // 感知没有检测到任何解除限速牌1s后
-  if (no_end_of_speed_limit_duration_time_ >= tsr_param_.OUT_FLAG_NEED_LAST_TIME) {
+  if (no_end_of_speed_limit_duration_time_ >= GetContext.get_param()->tsr_out_flag_need_last_time) {
     if (end_of_speed_limit_set_.size() > 0) {
       // 获取解除限速标识牌中的最高限速值
       uint32 hightest_perception_end_of_speed_limit = GetHighestFromSet(end_of_speed_limit_set_);
