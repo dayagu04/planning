@@ -702,6 +702,17 @@ bool IhcCore::DynamicObstacleCheck(void) {
         }
       }
     }
+  }
+
+  // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
+  for (int i = 0; i < fusion_objs_num; i++) {
+    uint16 track_id = fusion_objs[i].additional_info.track_id;
+
+    // 只有在verified_obstacle_ids_中的障碍物才被认为是真实障碍物
+    if (verified_obstacle_ids_.find(track_id) == verified_obstacle_ids_.end()) {
+      continue;  // 跳过不在可信列表中的障碍物
+    }
+
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
