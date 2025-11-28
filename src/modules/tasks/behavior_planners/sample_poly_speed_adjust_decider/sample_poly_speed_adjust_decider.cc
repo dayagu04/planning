@@ -74,7 +74,7 @@ SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider() {  // for pybind
 
 SamplePolySpeedAdjustDecider::SamplePolySpeedAdjustDecider(  // for pipeline
     const EgoPlanningConfigBuilder* config_builder, framework::Session* session)
-    : Task(config_builder, session), config_builder_(config_builder) {
+    : Task(config_builder, session) {
   name_ = "SamplePolySpeedAdjustDecider";
   config_ = config_builder->cast<SamplePolySpeedAdjustDeciderConfig>();
   lc_safety_distance_config_ =
@@ -141,7 +141,6 @@ bool SamplePolySpeedAdjustDecider::Execute() {
   std::chrono::duration<double> evaluate_cost_time =
       evaluate_end_time - sample_end_time;
   std::chrono::duration<double> all_cost_time = evaluate_end_time - start_time;
-
   auto& search_path = session_->mutable_planning_context()
                           ->mutable_lane_change_decider_output()
                           .st_search_vec;
@@ -426,7 +425,6 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       ->mutable_sample_poly_speed_info()
       ->Clear();
   agent_info_.clear();
-  speed_limit_calculator_.reset();
   leading_veh_ = LeadingAgentInfo();
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
@@ -585,12 +583,23 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   ego_cart_point_.first = ego_state_manager->ego_pose().x;
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
 
-  speed_limit_calculator_ =
-      std::make_unique<JointMotionSpeedLimit>(config_builder_, session_);
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  const double current_limit_speed = speed_limit_result.speed_limit;
   v_suggestted_ = ego_state_manager->ego_v_cruise();
   auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
+  double speed_limit = 0.0;
+  SpeedLimitType speed_limit_type = SpeedLimitType::NONE;
+  if (session_->planning_context().speed_limit_decider_output().GetSpeedLimit(&speed_limit,&speed_limit_type)) {
+    if (is_merge_change_) {
+      v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
+    } else {
+      if (speed_limit_type == SpeedLimitType::CURVATURE) {
+        v_adjust_speed_limit_ = std::min(v_cruise_speed, speed_limit);
+      } else {
+        v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
+      }
+    }
+  }else{
+    v_adjust_speed_limit_ = v_cruise_speed;
+  }
   // double v_sdmap_limit = 0.0;
   // if ((function_info.function_mode() == common::DrivingFunctionInfo::NOA)) {
   //   if (session_->environmental_model().get_route_info()->get_sdmap_valid())
@@ -604,17 +613,6 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //     }
   //   }
   // }
-  if (is_merge_change_) {
-    v_adjust_speed_limit_ = v_cruise_speed;
-  } else {
-    if (v_suggestted_ == v_cruise_speed) {
-      v_adjust_speed_limit_ = current_limit_speed;
-    } else {
-      v_adjust_speed_limit_ = current_limit_speed == v_suggestted_
-                                  ? v_cruise_speed
-                                  : current_limit_speed;
-    }
-  }
   // init sample space
   st_sample_space_base_.Init(target_lane_nodes, ego_s);
 
