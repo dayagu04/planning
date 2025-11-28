@@ -158,7 +158,7 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
 void SampleQuarticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
-    const LeadingAgentInfo& leading_veh, bool enable_merge_decelaration,
+    const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
     double speed_differ_gain, double distance_to_stop_point,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config,
     const double cur_time) {
@@ -197,7 +197,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
       safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj -
       front_edge_to_rear_axle_ - back_edge_to_rear_axle_;
-  if (rest_changeable_distance < 2.0 && !enable_merge_decelaration) {
+  if (rest_changeable_distance < 2.0 && !is_not_use_gap_select) {
     return;
   }
   cost_sum_ = 0.0;
@@ -218,7 +218,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
       anchor_arrived_s, anchor_arrived_t, anchor_arrived_v, anchor_arrived_a,
       safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
-      enable_merge_decelaration, lc_safety_distance_config);
+      is_not_use_gap_select, lc_safety_distance_config);
   arrived_s_ = anchor_arrived_s;
   arrived_v_ = anchor_arrived_v;
   arrived_a_ = anchor_arrived_a;
@@ -253,7 +253,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
                (leading_veh_follow_s_cost_.cost() < kZeroEpsilon);
 
-  if (!gap_valid_ && !enable_merge_decelaration) {
+  if (!gap_valid_ && !is_not_use_gap_select) {
     cost_sum_ = last_cost;
     arrived_s_ = last_arrived_s;
     arrived_v_ = last_arrived_v;
@@ -321,7 +321,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
               stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
-              jerk_limit_cost_.cost() + std::exp(arrived_t_ / 2.5);
+              jerk_limit_cost_.cost() + 3.0 * std::exp(arrived_t_ / 2.5);
 
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;

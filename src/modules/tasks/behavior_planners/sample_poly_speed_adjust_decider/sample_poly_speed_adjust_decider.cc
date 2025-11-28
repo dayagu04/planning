@@ -631,8 +631,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
       (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
        lane_change_source_ == MAP_REQUEST &&
        route_info_output.mlc_request_type_route_info.mlc_request_type !=
-           RAMP_TO_MAIN &&
-       ego_v_ > kCongestedSceneSpeedLimit);
+           RAMP_TO_MAIN);
   speed_adjust_range_.first = std::fmin(
       config_.sample_v_upper, ego_v_ + config_.maximum_speed_adjustment);
   speed_adjust_range_.first =
@@ -641,13 +640,13 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           : ego_v_;
   speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
   speed_adjust_range_.second =
-      sample_scene_ == DecelerationPriorityScene &&
+      is_merge_change_ &&
               merge_stop_line_distance_ <= 20.0
           ? 0.0
           : std::fmax(config_.sample_v_lower,
                       ego_v_ - config_.maximum_speed_adjustment);
   speed_adjust_range_.second =
-      is_split_map_change
+      !is_merge_change_
           ? (target_lane_objs_flow_vel_ / 1.4) > ego_v_
                 ? ego_v_
                 : std::fmax(target_lane_objs_flow_vel_ / 1.4,
