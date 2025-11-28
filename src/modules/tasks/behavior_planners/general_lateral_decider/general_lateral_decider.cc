@@ -578,9 +578,10 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
   double ref_length_change =
       planning::interp(last_ref_length_, xp_last_ref_len, fp_ref_len_diff);
   if (ego_v <= 5.556 && (is_LC_CHANGE || is_LC_BACK || is_LC_HOLD)) {
-    std::vector<double> xp_ego_v{2.0, 4.167, 5.556};
-    std::vector<double> fp_length_diff{0.1, 0.3, 0.5};
-    ref_length_change = planning::interp(ego_v, xp_ego_v, fp_length_diff);
+    general_lateral_decider_output.is_low_speed_lane_change_scene = true;
+    // std::vector<double> xp_ego_v{2.0, 4.167, 5.556};
+    // std::vector<double> fp_length_diff{0.1, 0.3, 0.5};
+    // ref_length_change = planning::interp(ego_v, xp_ego_v, fp_length_diff);
   }
   if (last_ref_length_ >= 1.0 &&
       session_->environmental_model().GetVehicleDbwStatus()) {

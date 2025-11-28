@@ -81,6 +81,9 @@ void LaneChangeStateMachineManager::Update() {
 void LaneChangeStateMachineManager::RunStateMachine() {
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
+      if (IsSuppressLCShortDis()) {
+        break;
+      }
       // clear_lc_stage_info();
       RequestType lane_change_direction = NO_CHANGE;
       RequestSource lane_change_type = NO_REQUEST;
@@ -121,6 +124,11 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // 在propose阶段计算靠近车道线的横向偏移量
         // CalculateLatCloseValue();
         lat_close_boundary_offset_ = 0.0;
+
+        if (IsSuppressLCShortDis()) {
+          propose_state_frame_nums_ = 0;
+          break;
+        }
 
         if (is_propose_to_execution && !is_propose_to_cancel) {
           transition_info_.lane_change_status =
@@ -5318,32 +5326,33 @@ bool LaneChangeStateMachineManager::GetDecelerationTraj(
 }
 
 bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
-  const double ego_v =
-      session_->environmental_model().get_ego_state_manager()->ego_v();
+  // const double ego_v =
+  //     session_->environmental_model().get_ego_state_manager()->ego_v();
 
-  if (ego_v > 1.0) {
-    return false;
-  }
+  // if (ego_v > 1.0) {
+  //   return false;
+  // }
 
   // 获取自车道前方障碍物车辆
-  const auto& dynamic_world =
-      session_->environmental_model().get_dynamic_world();
-  const int64_t ego_front_node_id = dynamic_world->ego_front_node_id();
+  // const auto& dynamic_world =
+  //     session_->environmental_model().get_dynamic_world();
+  // const int64_t ego_front_node_id = dynamic_world->ego_front_node_id();
 
-  const auto& ego_front_node = dynamic_world->GetNode(ego_front_node_id);
+  // const auto& ego_front_node = dynamic_world->GetNode(ego_front_node_id);
 
-  if (ego_front_node == nullptr) {
-    return false;
-  }
+  // if (ego_front_node == nullptr) {
+  //   return false;
+  // }
 
-  bool is_suppress =
-      ego_front_node->is_static_type() &&
-      ego_front_node->node_back_edge_to_ego_front_edge_distance() < 10.0;
+  // bool is_suppress =
+  //     ego_front_node->is_static_type() &&
+  //     ego_front_node->node_back_edge_to_ego_front_edge_distance() < config_.lc_short_dis_thr;
 
-  if (!is_suppress) {
-    return false;
-  }
-
+  // if (!is_suppress) {
+  //   return false;
+  // }
+  const auto& virtual_lane_manager =
+      session_->environmental_model().get_virtual_lane_manager();
   const auto& cur_ref_path = session_->environmental_model()
                                  .get_reference_path_manager()
                                  ->get_reference_path_by_current_lane();
@@ -5351,33 +5360,55 @@ bool LaneChangeStateMachineManager::IsSuppressLCShortDis() const {
   if (cur_ref_path == nullptr) {
     return true;
   }
-
   const auto& ego_boundary = cur_ref_path->get_ego_frenet_boundary();
-
   const auto& cur_coord = cur_ref_path->get_frenet_coord();
-
   if (cur_coord == nullptr) {
     return true;
   }
-
-  Point2D cart_point{ego_front_node->node_x(), ego_front_node->node_y()};
-  Point2D frenet_point;
-
-  if (!cur_coord->XYToSL(cart_point, frenet_point)) {
-    return true;
-  }
-
-  const double agent_half_width = ego_front_node->node_width() * 0.5;
-
+  bool is_suppress = false;
   const double buffer = 0.5;
+  const int fix_lane_virtual_id = lc_lane_mgr_->fix_lane_virtual_id();
+  const auto& fix_lane_nodes =
+      session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
+          fix_lane_virtual_id);
 
-  if (lc_req_mgr_->request() == LEFT_CHANGE) {
-    if (ego_boundary.l_start < frenet_point.y + agent_half_width - buffer) {
-      return true;
+  for (const auto* fix_lane_node : fix_lane_nodes) {
+    if (fix_lane_node == nullptr) {
+      continue;;
     }
-  } else if (lc_req_mgr_->request() == RIGHT_CHANGE) {
-    if (ego_boundary.l_end > frenet_point.y - agent_half_width + buffer) {
-      return true;
+    double x = fix_lane_node->node_x();
+    double y = fix_lane_node->node_y();
+    Point2D node_cart(x, y);
+    double s = 0;
+    double l = 0;
+    const auto& nearest_lane =
+        virtual_lane_manager->GetNearestLane(node_cart, &s, &l);
+    if (nearest_lane == nullptr) {
+      continue;
+    }
+    double agent_s = fix_lane_node->node_s();
+    if (agent_s + fix_lane_node->node_length() * 0.5 < ego_boundary.s_start) {
+      continue;
+    }
+    is_suppress =
+        fix_lane_node->is_static_type() &&
+        fix_lane_node->node_back_edge_to_ego_front_edge_distance() < config_.lc_short_dis_thr;
+    if (!is_suppress) {
+      continue;
+    }
+    Point2D frenet_point;
+    if (!cur_coord->XYToSL(node_cart, frenet_point)) {
+      continue;
+    }
+    double agent_half_width = fix_lane_node->node_width() * 0.5;
+    if (lc_req_mgr_->request() == LEFT_CHANGE) {
+      if (ego_boundary.l_start < frenet_point.y + agent_half_width - buffer) {
+        return true;
+      }
+    } else if (lc_req_mgr_->request() == RIGHT_CHANGE) {
+      if (ego_boundary.l_end > frenet_point.y - agent_half_width + buffer) {
+        return true;
+      }
     }
   }
 

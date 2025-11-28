@@ -20,6 +20,9 @@
 
 static const double pi_const = 3.141592654;
 static const double planning_loop_dt = 0.1;
+static const double avoid_dist_thr = 0.1;
+static const int low_speed_lane_change_cd_timer_thr = 10;
+
 namespace planning {
 LateralMotionPlanner::LateralMotionPlanner(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -111,6 +114,8 @@ void LateralMotionPlanner::Init() {
   virtual_ref_x_.reserve(N);
   virtual_ref_y_.reserve(N);
   virtual_ref_theta_.reserve(N);
+  is_last_low_speed_lane_change_ = false;
+  low_speed_lane_change_cd_timer_ = 0;
 }
 
 bool LateralMotionPlanner::Execute() {
@@ -168,7 +173,8 @@ bool LateralMotionPlanner::AssembleInput() {
       reference_path_ptr->get_frenet_ego_state().planning_init_point();
   const auto &motion_planner_output =
       session_->planning_context().motion_planner_output();
-
+  auto &mutable_motion_planner_output =
+      session_->mutable_planning_context()->mutable_motion_planner_output();
   JSON_DEBUG_VALUE("init_pos_x1", planning_init_point.lat_init_state.x())
   JSON_DEBUG_VALUE("init_pos_y1", planning_init_point.lat_init_state.y())
   JSON_DEBUG_VALUE("coarse_planning_info_ref_pnts_size",
@@ -619,7 +625,58 @@ bool LateralMotionPlanner::AssembleInput() {
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::QUICKLY_LANE_CHANGE);
   }
-  if (target_state == kLaneKeeping) {
+    // 低速变道优先
+  bool is_low_speed_lane_change = false;
+  const auto avoid_dist = planning_weight_ptr_->GetAvoidDist();
+  if (general_lateral_decider_output.is_low_speed_lane_change_scene &&
+      lane_change_scene && ((planning_weight_ptr_->GetLaneChangeStyle() ==
+      pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) ||
+      avoid_dist > avoid_dist_thr)) {
+    is_low_speed_lane_change = true;
+  }
+  double max_steer_angle_rate_low_speed_lc =
+      std::min(vehicle_param.max_steer_angle_rate,
+              config_.max_steer_angle_dot_low_speed_lc / 57.3);
+  double max_wheel_angle_rate_low_speed_lc = max_steer_angle_rate_low_speed_lc / steer_ratio;
+  double limit_jerk_low_speed_lc = max_wheel_angle_rate_low_speed_lc * kv2;
+  if (is_low_speed_lane_change) {
+    planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
+    mutable_motion_planner_output.is_limit_lon_acc_bound = true;
+    mutable_motion_planner_output.recommended_acc_bound = config_.recommend_low_speed_lc_lon_acc;
+  } else {
+    mutable_motion_planner_output.is_limit_lon_acc_bound = false;
+  }
+
+  // 需要针对is_low_speed_lane_change给1s的冷却时间，
+  // 避免变道结束后，进入车道保持状态，jerk突然降低，纵向加速
+  // 目前在冷却时间内仅保持jerk，不限制纵向加速能力
+  bool is_enter_low_speed_lane_change_cooldown = false;
+  if (is_last_low_speed_lane_change_ && !is_low_speed_lane_change) {
+    low_speed_lane_change_cd_timer_ = std::min(low_speed_lane_change_cd_timer_ + 1,
+                                               low_speed_lane_change_cd_timer_thr);
+  } else {
+    low_speed_lane_change_cd_timer_ = 0;
+  }
+  is_enter_low_speed_lane_change_cooldown = low_speed_lane_change_cd_timer_ <
+                                            low_speed_lane_change_cd_timer_thr &&
+                                            low_speed_lane_change_cd_timer_ > 0;
+  if (is_enter_low_speed_lane_change_cooldown) {
+    planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
+    planning_weight_ptr_->SetLaneChangeStyle(
+        pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
+  }
+  // planning_weight_ptr_->SetLowChangeCoolDown(
+  //     is_enter_low_speed_lane_change_cooldown);
+  if (is_last_low_speed_lane_change_) {
+    is_last_low_speed_lane_change_ = is_enter_low_speed_lane_change_cooldown;
+  } else {
+    is_last_low_speed_lane_change_ = is_low_speed_lane_change;
+  }
+
+  if (target_state == kLaneKeeping && !is_enter_low_speed_lane_change_cooldown) {
+    mutable_motion_planner_output.is_limit_lon_acc_bound = false;
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::STANDARD_LANE_CHANGE);
   }
@@ -631,7 +688,7 @@ bool LateralMotionPlanner::AssembleInput() {
   // search
   planning_weight_ptr_->SetIsSearchSuccess(false);
   // set weight
-  if (lane_change_scene) {
+  if (lane_change_scene || is_enter_low_speed_lane_change_cooldown) {
     planning_weight_ptr_->SetLateralMotionWeight(
         pnc::lateral_planning::LateralMotionScene::LANE_CHANGE,
         planning_input_);

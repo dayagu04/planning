@@ -49,6 +49,9 @@ struct MotionPlannerOutput {
 
   double path_backward_appended_length;
   double curv_factor;
+
+  bool is_limit_lon_acc_bound;
+  double recommended_acc_bound;
 };
 
 }  // namespace planning

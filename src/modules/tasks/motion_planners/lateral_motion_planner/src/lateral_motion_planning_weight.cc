@@ -73,6 +73,7 @@ void LateralMotionPlanningWeight::Init() {
   history_path_points_.clear();
   weight_.Init();
   weight_.dt = config_.delta_t;
+  is_enter_low_speed_lane_change_cooldown_ = false;
 }
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
@@ -127,9 +128,9 @@ void LateralMotionPlanningWeight::SetLateralMotionWeight(
         if (lc_style_ == LaneChangeStyle::STANDARD_LANE_CHANGE) {
           lc_style_ = LaneChangeStyle::QUICKLY_LANE_CHANGE;
         }
-        if (ego_vel_ < 4.167) {
-          lc_style_ = LaneChangeStyle::EMERGENCY_LANE_CHANGE;
-        }
+        // if (ego_vel_ < 4.167) {
+        //   lc_style_ = LaneChangeStyle::LOW_SPEED_LANE_CHANGE;
+        // }
       }
       end_ratio_for_qrefxy_ = config_.lc_end_ratio_for_first_qrefxy;
       end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
@@ -894,10 +895,12 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   double acc_bound = std::min(config_.acc_bound, max_acc_);
   double jerk_bound = config_.jerk_bound;  // 0.2
   if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
-    if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
-      jerk_bound += 0.2;
+    if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
+      jerk_bound += 0.6;
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
       jerk_bound += 0.6;
+    } else if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
+      jerk_bound += 0.2;
     }
     if (is_lane_change_hold_) {
       jerk_bound += 0.1;
@@ -1035,13 +1038,20 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
         std::fabs(init_dis_to_ref_), xp_lat_dist, config_.map_q_continuity);
     planning_input.set_q_continuity(q_continuity_lk);
   }
-  if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
-    std::vector<double> xp_v_lc{2.0, 3.0};
+  if (is_enter_low_speed_lane_change_cooldown_) {
+    std::vector<double> xp_v_lc{4.167, 5.556};
+    std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
+    max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
+  } else if (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE) {
+    std::vector<double> xp_v_lc{4.167, 5.556};
     std::vector<double> fp_max_jerk{max_jerk_lc_, max_jerk_};
     max_jerk = planning::interp(ego_vel_, xp_v_lc, fp_max_jerk);
     jerk_bound =  // 0.5 0.5 0.45 0.4
         planning::interp(ref_vel_, xp_v, config_.map_jerk_bound_lc);
-    if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
+    if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
+      extra_jerk_buffer = 0.5;
+      jerk_bound += 1.0;
+    } else if (lc_style_ == LaneChangeStyle::QUICKLY_LANE_CHANGE) {
       extra_jerk_buffer = 0.1;
       jerk_bound += 0.3;
     } else if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
@@ -1166,7 +1176,8 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
   }
   if (!is_in_function ||
       (lateral_motion_scene_ == LateralMotionScene::LANE_CHANGE &&
-       !is_lane_change_back_ && !is_lane_change_hold_)) {
+       !is_lane_change_back_ && !is_lane_change_hold_ &&
+       lc_style_ != LaneChangeStyle::EMERGENCY_LANE_CHANGE)) {
     emergency_level_ = EmergencyLevel::NONE;
   }
   double emergency_jerk_bound = P2_emergency_jerk_bound;
@@ -1189,6 +1200,19 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     extra_jerk_buffer = planning::interp(violate_bound_max_dist,
                                          xp_violate_dist, fp_p2_jerk_buffer);
     jerk_bound = P2_emergency_jerk_bound;
+    emergency_jerk_bound = P1_emergency_jerk_bound;
+  }
+  if (lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
+    // 超低速变道，仅放开jerk bound
+    jerk_bound = P0_emergency_jerk_bound;
+    emergency_jerk_bound = P0_emergency_jerk_bound;
+    extra_jerk_buffer = 1.0;
+    emergency_level_ = EmergencyLevel::NONE;
+  }
+  // 避免jerk突然降低，导致超调
+  if (last_omega_to_jerk >= P1_emergency_jerk_bound) {
+    emergency_jerk_bound = P0_emergency_jerk_bound;
+  } else if (last_omega_to_jerk >= P2_emergency_jerk_bound) {
     emergency_jerk_bound = P1_emergency_jerk_bound;
   }
   if (!is_in_function) {
@@ -1728,7 +1752,8 @@ void LateralMotionPlanningWeight::SetMotionPlanConcernedEndIndex(
       (!is_lane_change_back_) && (!is_lane_change_hold_)) {
     // weight_.complete_follow = false;
     // weight_.remotely_index = 20;
-    if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE) {
+    if (lc_style_ == LaneChangeStyle::EMERGENCY_LANE_CHANGE ||
+        lc_style_ == LaneChangeStyle::LOW_SPEED_LANE_CHANGE) {
       planning_input.set_q_continuity(0.0);
     }
     // if (std::fabs(init_dis_to_ref_) > 0.1) {

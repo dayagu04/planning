@@ -217,6 +217,7 @@
   "processed_trajectory_acc_thr": 0.5,
   "max_heading_diff_threshold_deg": 45.0,
   "left_right_turn_func_fading_away_switch": false,
+  "lc_short_dis_thr": 8,
   "general_lateral_decider": {
     "bound2center_line_distance_thr": 0.0,
     "lateral_ref_traj_type":false,
@@ -586,6 +587,8 @@
     "min_ego_vel": 1.5,
     "max_steer_angle_dot": 180.0,
     "max_steer_angle_dot_lc": 200.0,
+    "max_steer_angle_dot_low_speed_lc": 240.0,
+    "recommend_low_speed_lc_lon_acc": 0.4,
     "max_steer_angle_dot_low_speed": 5.0,
     "acc_bound": 3.0,
     "jerk_bound": 0.2,

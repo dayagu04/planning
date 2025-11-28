@@ -25,7 +25,8 @@ enum class EmergencyLevel { NONE = 0, P2, P1, P0 };
 enum class LaneChangeStyle {
   STANDARD_LANE_CHANGE = 0,
   QUICKLY_LANE_CHANGE,
-  EMERGENCY_LANE_CHANGE
+  EMERGENCY_LANE_CHANGE,
+  LOW_SPEED_LANE_CHANGE
 };
 
 struct PathWeight {  // temp
@@ -261,6 +262,14 @@ class LateralMotionPlanningWeight {
     return virtual_ref_;
   }
 
+  const double GetAvoidDist() const { return avoid_dist_; }
+
+  const LaneChangeStyle GetLaneChangeStyle() const { return lc_style_; }
+
+  void SetLowChangeCoolDown(const bool is_enter_low_speed_lane_change_cooldown) {
+    is_enter_low_speed_lane_change_cooldown_ = is_enter_low_speed_lane_change_cooldown;
+  }
+
  private:
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
@@ -349,6 +358,7 @@ class LateralMotionPlanningWeight {
   pnc::mathlib::spline soft_ubound_l_s_spline_;
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
+  bool is_enter_low_speed_lane_change_cooldown_;
 };
 
 }  // namespace lateral_planning
