@@ -472,8 +472,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //      coarse_planning_info.target_state == kLaneChangeHold);
 
   const bool enable_hold_adjust_speed =
-      (function_info.function_mode() == common::DrivingFunctionInfo::NOA &&
-       coarse_planning_info.target_state == kLaneChangeHold);
+       coarse_planning_info.target_state == kLaneChangeHold;
 
   if (coarse_planning_info.target_state != kLaneChangePropose &&
       !enable_hold_adjust_speed) {
