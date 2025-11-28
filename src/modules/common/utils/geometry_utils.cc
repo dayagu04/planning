@@ -1,6 +1,6 @@
 #include "geometry_utils.h"
 #include <algorithm>
-#include "math.h"
+#include <cmath>
 #include "tuple"
 namespace planning {
 namespace {
