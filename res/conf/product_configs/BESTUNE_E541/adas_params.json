@@ -43,15 +43,15 @@
     2000.0
   ],
   "lka_dec_tlc_by_c2_vector": [
-    0.00,
-    0.00,
+    0.20,
+    0.10,
     0.00,
     0.00,
     0.00
   ],
   "lka_dec_y_gap_by_c2_vector": [
-    0.00,
-    0.00,
+    0.20,
+    0.10,
     0.00,
     0.00,
     0.00
@@ -106,7 +106,7 @@
   "elk_roadedge_supp_curv_r_thr":300.00,
   "elk_roadedge_supp_curv_r_dur":2.0,
   "ldw_enable_speed": 27.555,
-  "ldw_tlc_thrd": 1.0,
+  "ldw_tlc_thrd": 0.0,
   "ldp_tlc_thrd": 1.0,
   "ldp_roadedge_tlc_thrd": 1.2,
   "ldp_roadedge_offset": 0.4,
@@ -177,5 +177,10 @@
   "ihc_fault_code_maskcode": 65535,
   "ihc_high_beam_switch": false,
   "meb_request_status_const": 0,
-  "elk_roadedge_testswitch_temp_":false
+  "elk_roadedge_testswitch_temp_":false,
+  "ldp_handoff_state_switch_test_":true,
+  "elk_soildline_switch": false,
+  "ldw_tlc_far_":1.0,
+  "ldw_tlc_medium_":0.6,
+  "ldw_tlc_near_":0.2
 }
