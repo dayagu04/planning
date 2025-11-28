@@ -371,6 +371,21 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
                                 &vehicle_s, &vehicle_l)) {
       return true;
     }
+    double vehicle_corner_min_l = std::numeric_limits<double>::max();
+    double vehicle_corner_max_l = std::numeric_limits<double>::min();
+    for (const auto &point : vehicle_agent->box().GetAllCorners()) {
+      double s = 0.0;
+      double l = 0.0;
+      if (!ego_lane_coord->XYToSL(point.x(), point.y(), &s, &l)) {
+        return true;
+      }
+      vehicle_corner_min_l = std::fmin(vehicle_corner_min_l, l);
+      vehicle_corner_max_l = std::fmax(vehicle_corner_max_l, l);
+    }
+    bool vehicle_safe_by_corner = vehicle_corner_max_l * vehicle_corner_min_l > 0.0 &&
+                         std::fabs(vehicle_corner_max_l) > k_vehicle_lateral_thd &&
+                         std::fabs(vehicle_corner_min_l) > k_vehicle_lateral_thd;
+
     const double vehicle_half_length = vehicle_agent->length() * 0.5;
     const bool is_crossed = (position == 1 && vehicle_l < 0.0) ||
                             (position == -1 && vehicle_l > 0.0);
@@ -379,7 +394,7 @@ bool CrossingAgentDecider::ClearVRUIdReverseCrossingMap() {
     if (vehicle_s < k_vehicle_longitudinal_thd) {
       return true;
     }
-    if (vehicle_nearest_l_abs > k_vehicle_lateral_thd && is_crossed) {
+    if ((vehicle_nearest_l_abs > k_vehicle_lateral_thd || vehicle_safe_by_corner) && is_crossed) {
       return true;
     }
     return false;
