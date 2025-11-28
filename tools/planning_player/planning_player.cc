@@ -164,8 +164,6 @@ bool PlanningPlayer::FindSceneType(const std::string& scene_type,
     }
   }
 
-  // 临时hack
-  scene_type_ = "nsa";
   bag.close();
   if (!find_scene_type) {
     std::cout << "Attention!!!!!!! Unable to recognize the scene_type frome "
@@ -1142,7 +1140,7 @@ void PlanningPlayer::PlayOneFrame(
         }
       }
     }
-    functional_state = iflyauto::FunctionalState_NRA_GUIDANCE;  // hack
+
     func_state_machine_ros_msg.current_state = functional_state;
     last_functional_state = functional_state;
     iflyauto::FuncStateMachine func_state_machine_msg{};
