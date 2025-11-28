@@ -35,6 +35,7 @@ constexpr double kConeCrossingLaneLineBuffer = 0.15;
 constexpr double kDefaultLaneWidth = 4.5;
 constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr int kInvalidAgentId = -1;
+constexpr double kHysteresisCoefficient = 1.5;
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
@@ -886,8 +887,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
-  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
-  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
+  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
+  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_default_ego_pass_buffer = kLatPassThre;
   int left_lane_nums = 0;
   int right_lane_nums = 0;
@@ -931,12 +932,12 @@ bool LaneChangeRequest::ConeSituationJudgement(
     right_lane_nums = iter->right_lane_num;
   }
 
-  // if (llane == nullptr) {
-  //   k_right_cone_occ_lane_line_buffer += 0.25;
-  // }
-  // if (rlane == nullptr) {
-  //   k_left_cone_occ_lane_line_buffer += 0.25;
-  // }
+  if (llane == nullptr) {
+    k_right_cone_occ_lane_line_buffer += 0.25 * kHysteresisCoefficient;
+  }
+  if (rlane == nullptr) {
+    k_left_cone_occ_lane_line_buffer += 0.25 * kHysteresisCoefficient;
+  }
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     k_default_ego_pass_buffer = kLatPassThre + kLatPassThreBuffer;
   }
