@@ -6025,4 +6025,13 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
   }
   double tfl_reminder_cipv_dis = 8.0;
 };
+
+struct ReferencePathManagerConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<bool>(json, is_enable_construction_refline, "reference_path_manager",
+                   "is_enable_construction_refline");
+  }
+  bool is_enable_construction_refline = false;
+};
 }  // namespace planning

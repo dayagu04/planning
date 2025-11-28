@@ -9,12 +9,19 @@ namespace planning {
 static constexpr int kSmoothBoundFilterWindowSize = 10;
 
 ReferencePathManager::ReferencePathManager(
+    const EgoPlanningConfigBuilder* config_builder,
     planning::framework::Session *session) {
   session_ = session;
   smooth_bound_filter_ = std::make_shared<planning::planning_math::MeanFilter>(kSmoothBoundFilterWindowSize);
+  SetConfig(config_builder);
 }
 
 ReferencePathManager::~ReferencePathManager() {}
+
+void ReferencePathManager::SetConfig(
+    const EgoPlanningConfigBuilder* config_builder) {
+  config_ = config_builder->cast<ReferencePathManagerConfig>();
+}
 
 std::shared_ptr<ReferencePath> ReferencePathManager::get_reference_path_by_lane(
     int lane_virtual_id, bool create_if_not_exist) {
@@ -117,7 +124,8 @@ bool ReferencePathManager::update() {
   // step3 construction refline
   const auto& construction_scene_output =
       session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
-  if (construction_scene_output.enable_construction_passage) {
+  if (config_.is_enable_construction_refline &&
+      construction_scene_output.enable_construction_passage) {
     GetReferencePathByConstructionScene();
   }
   time_end = IflyTime::Now_ms();

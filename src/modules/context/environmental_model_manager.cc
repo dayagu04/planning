@@ -163,7 +163,7 @@ void EnvironmentalModelManager::InitContext() {
       construction_scene_manager_ptr_);
 
   reference_path_manager_ptr_ =
-      std::make_shared<planning::ReferencePathManager>(session_);
+      std::make_shared<planning::ReferencePathManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_reference_path_manager(
       reference_path_manager_ptr_);
 
@@ -234,6 +234,8 @@ void EnvironmentalModelManager::SetConfig(
   route_info_ptr_->SetConfig(config_builder);
 
   edt_manager_ptr_->SetConfig(config_builder);
+
+  reference_path_manager_ptr_->SetConfig(config_builder);
 }
 
 bool EnvironmentalModelManager::Run() {

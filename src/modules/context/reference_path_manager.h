@@ -21,9 +21,12 @@ using ReferencePathKeyType = std::pair<ReferencePathType, int>;
 
 class ReferencePathManager {
  public:
-  ReferencePathManager(planning::framework::Session* session);
+  ReferencePathManager(const EgoPlanningConfigBuilder *config_builder,
+                       planning::framework::Session* session);
 
   virtual ~ReferencePathManager();
+
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
 
   // map lane reference
   std::shared_ptr<ReferencePath> get_reference_path_by_lane(
@@ -48,6 +51,7 @@ class ReferencePathManager {
 
  private:
   planning::framework::Session* session_;
+  ReferencePathManagerConfig config_;
   std::map<ReferencePathKeyType, std::shared_ptr<ReferencePath>>
       reference_paths_;
   // smooth
