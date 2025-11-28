@@ -3205,7 +3205,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
   split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type());
+      sdpro_map.isRamp(split_seccessor_link->link_type()) ||
+      sdpro_map.isSaPa(split_seccessor_link->link_type());
 
   if (previous_seg->successor_link_ids().size() < 2) {
     return split_region_info;
