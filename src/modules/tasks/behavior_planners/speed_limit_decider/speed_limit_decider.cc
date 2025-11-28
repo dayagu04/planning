@@ -74,6 +74,7 @@ constexpr double kShortDisReachMerge = 6.0;
 constexpr double kMinRampSampleLength = 150.0;
 constexpr double kMapSharpCurveRadiusEnter = 100.0;  // Enter radius threshold for map sharp curve (m)
 constexpr double kMapSharpCurveRadiusExit = 120.0;  // Exit radius threshold with hysteresis (m)
+constexpr double map_radius_first_enter = 65.0;  // 半径阈值65m
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -707,11 +708,25 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
 
   double max_k = 0.0;
   double max_k_s = 0.0;  // 最大曲率点对应的距离（从起始点开始的距离）
+  double first_small_radius_s = -1.0;    // 首次半径小于65m的位置
+  const double map_radius_first_enter = 65.0;  // 半径阈值65m
   for (size_t i = 0; i < k_smooth.size(); ++i) {
     if (k_smooth[i] > max_k) {
       max_k = k_smooth[i];
       max_k_s = s_vec[i];  // 记录最大曲率点对应的距离
     }
+    // 检查当前点半径是否小于65m，且是首次出现
+    if (k_smooth[i] > 1e-6) {
+      double radius = 1.0 / k_smooth[i];
+      if (radius < map_radius_first_enter && first_small_radius_s < 0) {
+        first_small_radius_s = s_vec[i];
+      }
+    }
+  }
+
+  // 修改max_k_s逻辑：优先使用首次半径小于65m的位置，如果没有则使用最大曲率位置
+  if (first_small_radius_s >= 0) {
+    max_k_s = first_small_radius_s;
   }
 
   JSON_DEBUG_VALUE("ramp_curv_max_k", max_k);
