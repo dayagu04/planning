@@ -136,6 +136,9 @@ struct EgoInfoUnderSlot {
 
   double relative_direction_between_ego_and_slot;
 
+  double neigbor_front_heading = -100.0;
+  double neigbor_rear_heading = -100.0;
+
   void Reset() {
     id = 0;
     slot_type = SlotType::INVALID;
