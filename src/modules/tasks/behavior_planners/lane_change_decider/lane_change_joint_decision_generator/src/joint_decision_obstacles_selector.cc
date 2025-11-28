@@ -91,7 +91,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
               ShouldIgnoreRearAgent(agent, ego_reference_path);
           lane_change_joint_decision::LongitudinalLabel label =
               (is_large_agent || should_ignore_rear)
-                  ? lane_change_joint_decision::LongitudinalLabel::IGNORE
+                  ? lane_change_joint_decision::LongitudinalLabel::EGO_OVERTAKE
                   : lane_change_joint_decision::LongitudinalLabel::OVERTAKE;
           key_obstacles_.emplace_back(
               CreateKeyObstacle(agent, ego_lane_coord, label));
@@ -748,8 +748,7 @@ bool JointDecisionObstaclesSelector::
     double rear_distance =
         ego_reference_path->get_ego_frenet_boundary().s_start - s -
         agent->length() * 0.5;
-    if (rear_distance < kCloseRearDistanceThreshold &&
-        rear_agent_confidence_ < 0.2) {
+    if (rear_agent_confidence_ < 0.2) {
       return true;
     }
     if (rear_distance < kCloseRearDistanceThreshold &&
@@ -765,7 +764,7 @@ void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
   if (rear_agent_id_ != agent->agent_id()) {  // 后车更换
     rear_agent_confidence_ = 1.0;
     return;
-  }
+  }// 如果是同一个障碍物则保持以前的信任度
   const auto& last_trajectory = agent->trajectory_optimized();
   const auto& current_trajectories = agent->trajectories_used_by_st_graph();
   if (current_trajectories.empty() || last_trajectory.empty()) {
@@ -775,11 +774,16 @@ void JointDecisionObstaclesSelector::UpdateRearAgentConfidence(
   if (current_trajectory.empty()) {
     return;
   }
-  for (size_t i = 0; i < 15; ++i) {  // checke 3s
+  size_t end_index = 15;
+  if(current_trajectory.size() < end_index + 1 || last_trajectory.size() < end_index + 1){
+    return;
+  }
+  for (size_t i = end_index; i > 0; --i) {  // checke 3s
     const auto& current_point = current_trajectory[i];
     const auto& last_point = last_trajectory[i];
-    if (current_point.vel() - last_point.vel() > 1.0) {  //实际运动趋势快
-      rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2, 0.0);
+    double vel_diff = current_point.vel() - last_point.vel();
+    if (vel_diff > 1.0) {  //实际运动趋势快, 越快越容易失信
+      rear_agent_confidence_ = std::max(rear_agent_confidence_ - 0.2 * vel_diff, 0.0);
       break;
     }
   }

@@ -27,17 +27,14 @@ LaneChangePathGenerateManager::LaneChangePathGenerateManager(
     std::shared_ptr<ReferencePath> ref_path, framework::Session* session,
     const EgoPlanningConfigBuilder* config_builder)
     : ref_path_(ref_path),
-      session_(session),
-      speed_limit_calculator_(
-          std::make_unique<lane_change_joint_decision::JointDecisionSpeedLimit>(
-              config_builder, session)) {}
+      session_(session) {}
 
 bool LaneChangePathGenerateManager::GenerateLCPath(const double lat_offset) {
   const double dt = 0.2;
   const double max_simulate_time = 5.0;
   const double end_poise_lat_err = 0.2;
   const double end_poise_theta_err = 0.12;
-  const double default_front_dis = 150;
+  const double default_front_dis = 200.0;
   const double default_front_v = 33.3;
 
   const auto& vehicle_param =
@@ -363,15 +360,11 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
   double front_s = is_exist_front_agent
                        ? front_node_future_trajectory_[0].s -
                              (init_point.s + car_param.front_edge_to_rear_axle)
-                       : 100.0;  // 已经减掉半车长度
+                       : 200.0;  // 已经减掉半车长度
   double tau =
       planning::interp(planning_init_vel, ego_vel_table, ego_thw_fused_table);
 
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-
-  const double v0 = speed_limit_result.speed_limit;
-
-  JSON_DEBUG_VALUE("joint_limit_speed", v0);
+  JSON_DEBUG_VALUE("joint_limit_speed", v_cruise);
 
   // 递推自车轨迹
   while (!iter_terminate) {
@@ -401,7 +394,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
     // desire_acc = pnc::mathlib::Clamp(desire_acc, -1.5, 0.7);
 
     double desire_acc = CalculateComfortAcceleration(
-        current_a, current_v, current_s, front_vel, front_s, tau, v0);
+        current_a, current_v, current_s, front_vel, front_s, tau, v_cruise);
     temp_state.v = std::max(1e-3, idm_model_state.vel + desire_acc * dt);
 
     // update ego next state using vehicle simulation model
@@ -498,7 +491,7 @@ bool LaneChangePathGenerateManager::GenerateEgoFutureTrajectory(
           ego_traj_point.s - init_point.s + car_param.front_edge_to_rear_axle;
       current_v = ego_traj_point.v;
       current_a = desire_acc;
-      front_s = 100.0;
+      front_s = 200.0;
       front_vel = v_cruise;
     }
 

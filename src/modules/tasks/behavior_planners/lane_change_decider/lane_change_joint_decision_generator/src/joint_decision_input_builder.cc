@@ -9,6 +9,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 namespace planning {
 namespace lane_change_joint_decision {
 
@@ -24,7 +25,7 @@ JointDecisionInputBuilder::JointDecisionInputBuilder(
   comfort_params_.v0 = 33.5;
   comfort_params_.s0 = 2.5;
   comfort_params_.T = lc_decision_config_.lc_thw;
-  comfort_params_.a = 1.5;
+  comfort_params_.a = 2.0;
   comfort_params_.b_max = 2.0;
   comfort_params_.b = 1.0;
   comfort_params_.b_hard = 4.0;
@@ -161,6 +162,10 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   planning_input.set_ego_length(vehicle_param.length);
   planning_input.set_ego_width(vehicle_param.width);
 
+  if (lc_info.ego_ref_traj.size() < kPlanningTimeSteps) {
+    return;
+  }
+
   ref_trajectory_.clear();
   ref_trajectory_.reserve(kPlanningTimeSteps);
   ref_trajectory_.resize(kPlanningTimeSteps);
@@ -169,7 +174,6 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   s_vec.reserve(kPlanningTimeSteps);
   x_vec.reserve(kPlanningTimeSteps);
   y_vec.reserve(kPlanningTimeSteps);
-
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     s_vec.push_back(lc_info.ego_ref_traj[i].s);
     x_vec.push_back(lc_info.ego_ref_traj[i].x);
@@ -185,8 +189,15 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
   const double dt = kPlanningTimeStep;
 
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  const double v0 = speed_limit_result.speed_limit;
+  // auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
+  // const double v0 = speed_limit_result.speed_limit;
+  const auto& last_speed_limit_decider_output =
+      session_->planning_context().speed_limit_decider_output();
+  double last_speed_limit = 0.0;
+  auto last_speed_limit_type = SpeedLimitType::NONE;
+  last_speed_limit_decider_output.GetSpeedLimit(&last_speed_limit,
+                                                &last_speed_limit_type);
+  const double v0 = last_speed_limit;
   comfort_params_.v0 = v0;
 
   const auto& lane_change_decider_output =
@@ -260,8 +271,14 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   double front_vel = v0;
   double front_acc = 0.0;
 
+  if (s_vec.empty()) {
+    return;
+  }
+
   double s_min = s_vec.front();
   double s_max = s_vec.back();
+
+
   double ref_ego_s = reference_path_ptr->get_frenet_ego_state().s();
 
   for (int i = 1; i < kPlanningTimeSteps; ++i) {
@@ -271,7 +288,7 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
       if (lead_idx >= lead_trajectory.size()) {
         lead_idx = lead_trajectory.size() - 1;
       }
-      if (lead_idx > 0) {
+      if (lead_idx > 0 && lead_idx <= lead_trajectory.size()) {
         const auto& lead_point = lead_trajectory[lead_idx - 1];
         front_acc = lead_one_agent->accel_fusion();
         double lead_s = 0.0, lead_l = 0.0;

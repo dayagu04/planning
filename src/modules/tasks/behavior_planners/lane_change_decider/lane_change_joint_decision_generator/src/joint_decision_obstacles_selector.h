@@ -13,6 +13,7 @@ enum LongitudinalLabel {
   IGNORE = 0,
   OVERTAKE = 1,
   YIELD = 2,
+  EGO_OVERTAKE = 3,
 };
 
 struct LaneChangeKeyObstacle {

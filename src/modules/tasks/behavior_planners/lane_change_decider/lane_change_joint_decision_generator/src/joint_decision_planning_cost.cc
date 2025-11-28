@@ -904,7 +904,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
     const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
 
-    if (label_value != 1 && label_value != 2) {
+    if (label_value != 1 && label_value != 2 && label_value != 3) {
       continue;
     }
 
@@ -922,7 +922,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
 
     double plane_dist = 0.0;
 
-    if (label_value == 1) {
+    if (label_value == 1 || label_value == 3) {
       const double ego_rear_x =
           ego_x - ego_rear_edge_to_rear_axle * std::cos(ego_theta);
       const double ego_rear_y =
@@ -1011,7 +1011,7 @@ void HardHalfplaneCostTerm::GetGradientHessian(
   }
 
   const double weight = cost_config_ptr_->at(W_HARD_HALFPLANE);
-  const double alpha = cost_config_ptr_->at(HALFPLANE_COST_ALLOCATION_RATIO);
+  double alpha = cost_config_ptr_->at(HALFPLANE_COST_ALLOCATION_RATIO);
   constexpr double epsilon = 1e-3;
 
   for (const auto& result : results) {
@@ -1028,13 +1028,16 @@ void HardHalfplaneCostTerm::GetGradientHessian(
     const double normal_y = result.normal_y;
 
     // 代价分配系数：alpha=0 全部施加到障碍物, alpha=1 全部施加到自车
+    if(result.label_type == 3){
+      alpha = 1.0; //全都分配给自车
+    }
     double ego_weight = alpha;
     const double obs_weight = 1.0 - alpha;
 
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;
 
-    if (label_type == 1) {
+    if (label_type == 1 || label_type == 3) {
       // OVERTAKE: 自车超越障碍物
       // plane_dist = (ego_rear - obs_front) · ego_normal - hard_dist
 
@@ -1177,7 +1180,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
     const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
 
-    if (label_value != 1 && label_value != 2) {
+    if (label_value != 1 && label_value != 2 && label_value != 3) {
       continue;
     }
 
@@ -1196,7 +1199,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     double s_current = 0.0;
     double s_target = 0.0;
 
-    if (label_value == 1) {
+    if (label_value == 1 || label_value == 3) {
       // OVERTAKE: 自车超越障碍物
       // s_current = 障碍物前端 → 自车后端 的距离
       const double ego_rear_x =
@@ -1295,7 +1298,7 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
   }
 
   const double weight = cost_config_ptr_->at(W_SOFT_HALFPLANE);
-  const double alpha =
+  double alpha =
       cost_config_ptr_->at(SOFT_HALFPLANE_COST_ALLOCATION_RATIO);
   const double tau = cost_config_ptr_->at(SOFT_HALFPLANE_TAU);
   const double a = 2.5;
@@ -1314,12 +1317,18 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     // const int label_type = result.label_type;
     // const int label_type = alpha > 0.99 ? 0 : result.label_type;//
     // 反应时间内主要靠自车
-    if (result.label_type == 2) {
+    if (result.label_type == 2) { // yeild
       label_type = 2;
-    } else if (result.label_type == 1 && alpha > 0.99) {
-      label_type = 0;
-    } else {
-      label_type = result.label_type;
+    } else if (result.label_type == 1) { // overtake
+      label_type = 1;
+    } else if (result.label_type == 3)  {
+      label_type = 3;
+    }else{
+      label_type = result.label_type;;
+    }
+
+    if(label_type == 3){
+      alpha = 1.0; //全都分配给自车
     }
     const int state_base_idx = EGO_STATE_SIZE + obs_idx * OBS_STATE_SIZE;
 
@@ -1333,7 +1342,7 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
     const double gradient_coeff = 2.0 * weight * violation;
     const double hess_coeff = 2.0 * weight;
 
-    if (label_type == 1) {
+    if (label_type == 1 || label_type == 3) {
       // OVERTAKE: 自车在前，障碍物跟随
       // s_current = (ego_rear - obs_front) · ego_normal
       // s_target = s0 + max(0, v_obs*tau + v_obs*(v_obs - v_ego)*k)
