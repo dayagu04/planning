@@ -75,7 +75,7 @@ class SpeedLimitDecider : public Task {
 
   bool IsNearMergeCancelRampVelLimit();
 
-  double CalcRampMaxCurvFromSDProMap();
+  double CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv = nullptr);
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
