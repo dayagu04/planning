@@ -523,6 +523,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
           double end_v = 0.0;
           double end_s = 0.0;
+          if(PredictionHorizon > 0){
+            leading_veh_.v = current_trajectory[0].vel();
+          }
           for (size_t i = 0; i <= min_horizion; ++i) {
             end_s = current_trajectory[i].s();
             end_v = current_trajectory[i].vel();
