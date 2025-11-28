@@ -9,6 +9,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "planning_context.h"
+#include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
 namespace planning {
 namespace lane_change_joint_decision {
 
@@ -188,8 +189,15 @@ void JointDecisionInputBuilder::BuildLaneChangeEgoInfo(
   const double front_edge_to_rear_axle = vehicle_param.front_edge_to_rear_axle;
   const double dt = kPlanningTimeStep;
 
-  auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
-  const double v0 = speed_limit_result.speed_limit;
+  // auto speed_limit_result = speed_limit_calculator_->CalculateSpeedLimit();
+  // const double v0 = speed_limit_result.speed_limit;
+  const auto& last_speed_limit_decider_output =
+      session_->planning_context().speed_limit_decider_output();
+  double last_speed_limit = 0.0;
+  auto last_speed_limit_type = SpeedLimitType::NONE;
+  last_speed_limit_decider_output.GetSpeedLimit(&last_speed_limit,
+                                                &last_speed_limit_type);
+  const double v0 = last_speed_limit;
   comfort_params_.v0 = v0;
 
   const auto& lane_change_decider_output =
