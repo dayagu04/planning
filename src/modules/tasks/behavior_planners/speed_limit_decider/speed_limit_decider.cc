@@ -880,7 +880,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
 
 
   // Calculate the distance from the current position to the maximum curvature point
-  double dist_to_max_curv = max_curv_s - ego_start_s;
+  double dist_to_max_curv = max_curv_s;
   // Exponentially Weighted Moving Average (EWMA)
   if (raw_curv_spline_ < kEpsilon) {
     raw_curv_spline_ = max_curv;
@@ -948,8 +948,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   
   if (speed_limit_config_.enable_sharp_curve_by_decel) {
     bool should_enter_sharp_curve =
-        (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve &&
-        !is_s_bend;
+        (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve;
     if (last_is_sharp_curve_by_decel_) {
       // If currently in a sharp curve state (based on deceleration), need to determine whether to exit
       if (should_enter_sharp_curve) {
