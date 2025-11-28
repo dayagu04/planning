@@ -3315,6 +3315,9 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
   double sum_speed = 0.0;
   int valid_cnt = 0;
   for (const auto* node : target_lane_nodes_vec) {
+    if(node == nullptr){
+      continue;
+    }
     sum_speed += node->node_speed();
     ++valid_cnt;
     if (valid_cnt >= 4) {
@@ -4243,8 +4246,9 @@ bool LaneChangeStateMachineManager::
         box_longitudinal_buff = std::min(2.0, box_longitudinal_buff);
       }
       if(is_front_reverse){
-        double max_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.back();
-        box_longitudinal_buff = max_check_time * (agent_traj[i].v - ego_trajs_future_[i].v);
+        double reverse_check_time = 4.0; //默认基准变道时间
+        // double reverse_check_time = lc_safety_check_config_.diff_speed_init_ttc_map.ttc_table.front();
+        box_longitudinal_buff = reverse_check_time * (agent_traj[i].v  + ego_trajs_future_[i].v);
       }
     } else {
       // 后车参考安全距离

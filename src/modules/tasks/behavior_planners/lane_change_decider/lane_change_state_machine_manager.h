@@ -249,10 +249,10 @@ class LaneChangeStateMachineManager {
                   const RequestType direction);
   bool CheckFrontRiskAgentTrajs(
       const planning_data::DynamicAgentNode* agent_node, bool is_large_car);
-      void CalculateCongestionLatOffsetValue();
-      bool IfFrenetCollision(std::pair<double, double> l1, double v1,
-                         std::pair<double, double> l2, double v2,
-                         double max_time = 4.0, double dt = 0.5);
+  void CalculateCongestionLatOffsetValue();
+  bool IfFrenetCollision(std::pair<double, double> l1, double v1,
+                        std::pair<double, double> l2, double v2,
+                        double max_time = 4.0, double dt = 0.5);
   void CheckOtherAgents(LaneChangeStageInfo* const lc_state_info);
   bool GetDecelerationTraj(double a0, const TrajectoryPoints& agent_traj,
                            TrajectoryPoints& agent_deceleration_traj,
