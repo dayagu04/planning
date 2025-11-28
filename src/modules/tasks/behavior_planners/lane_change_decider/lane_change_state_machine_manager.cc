@@ -3287,9 +3287,9 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
     return;
   }
   // proposed state 帧数不多，可以变道只是正常计数：正常5 帧安全候触发
-  if(propose_state_frame_nums_ < 2){
+  if(propose_state_frame_nums_ < 5){
     return;
-  } //低速情况下直接开始贴边也不会有影响，仅等待一帧即可
+  }
   //目标车道附近平均速度
   const auto& target_lane_nodes =
   session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
