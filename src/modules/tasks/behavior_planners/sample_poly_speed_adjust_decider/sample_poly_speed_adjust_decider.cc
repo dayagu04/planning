@@ -587,7 +587,8 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   auto v_cruise_speed = ego_state_manager->ego_v_cruise_upper();
   double speed_limit = 0.0;
   SpeedLimitType speed_limit_type = SpeedLimitType::NONE;
-  if (session_->planning_context().speed_limit_decider_output().GetSpeedLimit(&speed_limit,&speed_limit_type)) {
+  if (session_->planning_context().speed_limit_decider_output().GetSpeedLimit(
+          &speed_limit, &speed_limit_type)) {
     if (is_merge_change_) {
       v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
     } else {
@@ -597,7 +598,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
         v_adjust_speed_limit_ = std::max(v_cruise_speed, speed_limit);
       }
     }
-  }else{
+  } else {
     v_adjust_speed_limit_ = v_cruise_speed;
   }
   // double v_sdmap_limit = 0.0;
@@ -693,7 +694,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     for (const auto& split_region_info :
          route_info_output.split_region_info_list) {
       if (split_region_info.is_ramp_split && split_region_info.is_valid) {
-        distance_to_road_split_ +=split_region_info.start_fp_point.fp_distance_to_split_point;
+        distance_to_road_split_ +=
+            split_region_info.start_fp_point.fp_distance_to_split_point;
         break;
       }
     }
@@ -773,7 +775,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
       return true;
     } else {
       if (is_ramp_to_main) {
-        if (distance_to_merge_point_ <
+        bool is_nearing_merge_point =
+            distance_to_merge_point_ <
                 (distance_to_road_merge_ + kZeroEpsilon) &&
             distance_to_merge_point_ <
                 (distance_to_road_split_ + kZeroEpsilon) &&
@@ -781,7 +784,8 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
             ((is_left_edge_side_lane &&
               merge_point_info.merge_type == LEFT_MERGE) ||
              (is_right_edge_side_lane &&
-              merge_point_info.merge_type == RIGHT_MERGE))) {
+              merge_point_info.merge_type == RIGHT_MERGE));
+        if (is_nearing_merge_point) {
           merge_stop_line_distance_ = distance_to_merge_point_;
           return true;
         } else if (distance_to_road_merge_ < kDistanceToMapRequestPoint ||
