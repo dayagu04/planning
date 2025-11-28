@@ -262,9 +262,23 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdpromap::SDProMap& sdpro_map,
   // 计算ramp信息
   const auto& ramp_info =
       sdpro_map.GetRampInfo(link.id(), nearest_s, max_search_length);
+  const auto& sapa_info =
+      sdpro_map.GetSaPaInfo(link.id(), nearest_s, max_search_length);
   if (ramp_info.second > 0) {
     route_info_output_.dis_to_ramp = ramp_info.second;
     auto previous_seg = sdpro_map.GetPreviousLinkOnRoute(ramp_info.first->id());
+
+    if (!previous_seg) {
+      return;
+    }
+
+    SplitSegInfo split_seg_info;
+    split_seg_info = MakesureSplitDirection(*previous_seg, sdpro_map);
+    route_info_output_.ramp_direction = split_seg_info.split_direction;
+
+  } else if (sapa_info.second > 0) {
+    route_info_output_.dis_to_ramp = sapa_info.second;
+    auto previous_seg = sdpro_map.GetPreviousLinkOnRoute(sapa_info.first->id());
 
     if (!previous_seg) {
       return;
