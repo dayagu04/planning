@@ -14,7 +14,7 @@ class MapRequest : public LaneChangeRequest {
              std::shared_ptr<VirtualLaneManager> virtual_lane_mgr,
              std::shared_ptr<LaneChangeLaneManager> lane_change_lane_mgr);
   virtual ~MapRequest() = default;
-  void Update(const int lc_status, const double lc_map_tfinish);
+  void Update(const int lc_status, const double lc_map_tfinish, const RequestSource request_source);
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
   }
@@ -36,6 +36,7 @@ class MapRequest : public LaneChangeRequest {
   int avoidance_MLC_counter = 0;
   int suppression_counter = 0;
   bool is_in_avoidance_mlc = false;
+  bool is_last_mlc_enable_ = false;
 };
 
 }  // namespace planning

@@ -188,7 +188,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
         (curr_time >
          int_request_.tfinish() + k_default_lane_change_cooling_duration) &&
         request_source_ != MERGE_REQUEST) {
-      map_request_.Update(lc_status, map_request_.tfinish());
+      map_request_.Update(lc_status, map_request_.tfinish(), request_source_);
     }
 
     if (location_valid && use_overtake_lane_change_request) {
