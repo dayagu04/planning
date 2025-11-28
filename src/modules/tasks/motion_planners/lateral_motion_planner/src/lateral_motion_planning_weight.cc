@@ -1612,6 +1612,7 @@ void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
     planning::common::LateralPlanningInput &planning_input) {
   if (lateral_motion_scene_ != LateralMotionScene::LANE_CHANGE &&
       lateral_motion_scene_ != LateralMotionScene::LANE_BORROW &&
+      lateral_motion_scene_ != LateralMotionScene::SPLIT &&
       ref_vel_ > 2.0 && last_path_max_dist2ref_ > 2.0 &&
       weight_.remotely_index >= 17) {
     for (size_t i = 0; i < weight_.point_num; ++i) {
@@ -1622,17 +1623,17 @@ void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
       weight_.q_pos_soft_bound[i] *= 0.01;
       // weight_.q_pos_hard_bound[i] *= 0.1;
     }
-    std::vector<double> xp_path_dist2ref{2.0, 2.5, 3.0};
-    std::vector<double> fp_xy_ratio{0.5, 0.3, 0.1};
-    std::vector<double> fp_theta_ratio{2.0, 3.0, 4.0};
-    std::vector<double> fp_sbound_ratio{0.5, 0.1, 0.01};
-    std::vector<double> fp_q_continuity{0.0, 1.0, config_.q_continuity};
-    double q_ref_xy_ratio = planning::interp(std::fabs(last_path_max_dist2ref_),
+    std::vector<double> xp_path_dist2ref{1.0, 2.0, 2.5, 3.0};
+    std::vector<double> fp_xy_ratio{1.0, 0.5, 0.3, 0.1};
+    std::vector<double> fp_theta_ratio{1.0, 2.0, 3.0, 4.0};
+    std::vector<double> fp_sbound_ratio{1.0, 0.5, 0.1, 0.01};
+    std::vector<double> fp_q_continuity{0.0, 0.0, 1.0, config_.q_continuity};
+    double q_ref_xy_ratio = planning::interp(std::fabs(avoid_dist_),
                                              xp_path_dist2ref, fp_xy_ratio);
     double q_ref_theta_ratio = planning::interp(
-        std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_theta_ratio);
+        std::fabs(avoid_dist_), xp_path_dist2ref, fp_theta_ratio);
     double q_soft_bound_ratio = planning::interp(
-        std::fabs(last_path_max_dist2ref_), xp_path_dist2ref, fp_sbound_ratio);
+        std::fabs(avoid_dist_), xp_path_dist2ref, fp_sbound_ratio);
     double q_continuity = planning::interp(std::fabs(last_path_max_dist2ref_),
                                            xp_path_dist2ref, fp_q_continuity);
     double q_ref_x = planning_input.q_ref_x();

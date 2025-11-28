@@ -698,7 +698,7 @@ bool LateralMotionPlanner::AssembleInput() {
   JSON_DEBUG_VECTOR("virtual_ref_y", virtual_ref_y_, 3)
   JSON_DEBUG_VECTOR("virtual_ref_theta", virtual_ref_theta_, 6)
   // set continuity protection
-  if (!motion_planner_output.lat_init_flag) {
+  if (!motion_planner_output.lat_init_flag || !is_ref_consistent) {
     planning_input_.set_q_continuity(0.0);
   }
   // spatio
@@ -778,16 +778,18 @@ bool LateralMotionPlanner::Update() {
     }
     s_vec_[i + 1] = s;
     t_vec_[i + 1] = t;
-    if (std::fabs(planning_output.theta_vec(i) -
-                  planning_input_.ref_theta_vec(i)) *
-            57.3 >
-        90.0) {
-      is_solver_success = false;
-    }
-    if (std::hypot(planning_output.x_vec(i) - planning_input_.ref_x_vec(i),
-                   planning_output.y_vec(i) - planning_input_.ref_y_vec(i)) >
-        10.0) {
-      is_solver_success = false;
+    if (planning_input_.q_continuity() <= 1e-6 && i <= planning_input_.motion_plan_concerned_index()) {
+      if (std::fabs(planning_output.theta_vec(i) -
+                    planning_input_.ref_theta_vec(i)) *
+              57.3 >
+          90.0) {
+        is_solver_success = false;
+      }
+      if (std::hypot(planning_output.x_vec(i) - planning_input_.ref_x_vec(i),
+                    planning_output.y_vec(i) - planning_input_.ref_y_vec(i)) >
+          10.0) {
+        is_solver_success = false;
+      }
     }
   }
 
