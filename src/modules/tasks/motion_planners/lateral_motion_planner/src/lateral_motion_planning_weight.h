@@ -262,9 +262,9 @@ class LateralMotionPlanningWeight {
     return virtual_ref_;
   }
 
-  const double &GetAvoidDist() const { return avoid_dist_; }
+  const double GetAvoidDist() const { return avoid_dist_; }
 
-  const LaneChangeStyle &GetLaneChangeStyle() const { return lc_style_; }
+  const LaneChangeStyle GetLaneChangeStyle() const { return lc_style_; }
 
   void SetLowChangeCoolDown(const bool is_enter_low_speed_lane_change_cooldown) {
     is_enter_low_speed_lane_change_cooldown_ = is_enter_low_speed_lane_change_cooldown;
