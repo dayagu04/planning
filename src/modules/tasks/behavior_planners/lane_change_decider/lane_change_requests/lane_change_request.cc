@@ -886,8 +886,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
-  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.45;
-  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.45;
+  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
+  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer + 0.25;
   double k_default_ego_pass_buffer = kLatPassThre;
   int left_lane_nums = 0;
   int right_lane_nums = 0;
