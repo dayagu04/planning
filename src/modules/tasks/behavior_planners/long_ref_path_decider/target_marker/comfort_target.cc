@@ -161,6 +161,8 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double front_edge_to_rear_axle =
       ego_vehicle_param.front_edge_to_rear_axle;
+  const double rear_edge_to_front_axle =
+      ego_vehicle_param.rear_edge_to_rear_axle;
   const auto& ego_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
@@ -236,6 +238,10 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           ego_init_point.v * comfort_params_.follow_consider_time_headway,
           comfort_params_.follow_consider_distance);
 
+      if(agent_s + agent->length() * 0.5 < ego_s - rear_edge_to_front_axle) {
+        continue;
+      }
+
       if (dis_relative <= dis_lon_consider) {
         follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
         added_agent_ids.insert(cutin_id);
@@ -266,6 +272,10 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       const double dis_lon_consider = std::max(
           ego_init_point.v * comfort_params_.follow_consider_time_headway,
           comfort_params_.follow_consider_distance);
+
+      if(agent_s + agent->length() * 0.5 < ego_s - rear_edge_to_front_axle) {
+        continue;
+      }
 
       if (dis_relative <= dis_lon_consider) {
         follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
