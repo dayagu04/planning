@@ -10,6 +10,7 @@
 
 #include "agent/agent.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
+#include "construction_scene_manager.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"

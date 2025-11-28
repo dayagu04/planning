@@ -650,17 +650,17 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
     return;
   }
 
-  const auto& construction_scene =
-      session_->planning_context().construction_scene_decider_output();
-  if (!construction_scene.is_exist_construction_area ||
-      construction_scene.construction_agent_cluster_attribute_map.empty()) {
+  const auto& construction_scene_output =
+      session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
+  if (!construction_scene_output.is_exist_construction_area ||
+      construction_scene_output.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode = false;
     construction_strong_mode_frame_count_ = 0;
     return;
   }
 
-  bool is_exist_construction = construction_scene.is_exist_construction_area;
-  bool is_on_construction = construction_scene.is_pass_construction_area;
+  bool is_exist_construction = construction_scene_output.is_exist_construction_area;
+  bool is_on_construction = construction_scene_output.is_pass_construction_area;
 
   const auto& environmental_model = session_->environmental_model();
   const auto& function_state_machine_info =
@@ -689,7 +689,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
   double construction_s_nearest = std::numeric_limits<double>::max();
 
   for (const auto & [ cluster_id, construction_area ] :
-       construction_scene.construction_agent_cluster_attribute_map) {
+       construction_scene_output.construction_agent_cluster_attribute_map) {
     auto agent_info = construction_area.points.front();
     if (!planned_kd_path->XYToSL(agent_info.x, agent_info.y, &construction_s,
                                  &construction_l)) {
@@ -706,7 +706,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
   double construction_nearest_l = std::numeric_limits<double>::max();
 
   for (const auto & [ cluster_id, construction_area ] :
-       construction_scene.construction_agent_cluster_attribute_map) {
+       construction_scene_output.construction_agent_cluster_attribute_map) {
     for (const auto& pt : construction_area.points) {
       double s = 0.0, l = 0.0;
       if (!planned_kd_path->XYToSL(pt.x, pt.y, &s, &l)) {
@@ -737,7 +737,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
     enter_condition = true;
     construction_strong_mode_reason = 1;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(
-                 construction_scene.construction_agent_cluster_attribute_map,
+                 construction_scene_output.construction_agent_cluster_attribute_map,
                  planned_kd_path, true)) {
     enter_condition = true;
     construction_strong_mode_reason = 2;
@@ -748,7 +748,7 @@ void JointDecisionSpeedLimit::CalculateConstructionZoneSpeedLimit() {
     exit_condition = true;
     construction_strong_mode_reason = 11;
   } else if (CheckClustersConsecutiveDiffSlidingWindow(
-                 construction_scene.construction_agent_cluster_attribute_map,
+                 construction_scene_output.construction_agent_cluster_attribute_map,
                  planned_kd_path, false)) {
     exit_condition = true;
     construction_strong_mode_reason = 12;
