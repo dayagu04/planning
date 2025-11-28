@@ -84,7 +84,7 @@ void RouteInfo::UpdateRouteInfoForNOA(const ad_common::sdmap::SDMap& sd_map) {
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
   const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map, &nearest_s);
   if (!segment) {
-    std::cout << "update ego segment info failed!!!" << std::endl;
+    ILOG_DEBUG << "update ego segment info failed!!!";
     return;
   }
   const SdMapSwtx::Segment& current_segment = *segment;
@@ -134,7 +134,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
   const iflymapdata::sdpro::LinkInfo_Link* link =
       UpdateEgoLinkInfo(sdpro_map, &nearest_s, &nearest_l);
   if (!link) {
-    std::cout << "update ego link info failed!!!" << std::endl;
+    ILOG_DEBUG << "update ego link info failed!!!";
     route_info_output_.reset();
     return;
   }
@@ -224,7 +224,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
 void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
   ILOG_DEBUG << "session_->is_hpp_scene():", session_->is_hpp_scene();
   if (!GetCurrentNearestLane()) {
-    std::cout << "GetCurrentNearestLane failed!!!" << std::endl;
+    ILOG_DEBUG << "GetCurrentNearestLane failed!!!";
     return;
   }
   CalculateHPPInfo();
@@ -249,7 +249,7 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdmap::SDMap& sd_map,
           MakesureSplitDirection(*previous_seg, sd_map);
       route_info_output_.ramp_direction = split_seg_info.split_direction;
     } else {
-      std::cout << "previous_seg is nullprt!!!!!" << std::endl;
+      ILOG_DEBUG << "previous_seg is nullprt!!!!!";
       route_info_output_.ramp_direction = RAMP_NONE;
     }
   }
@@ -290,7 +290,7 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
     const auto split_next_segment =
         sd_map.GetNextRoadSegment(split_segment.id());
     if (!split_next_segment) {
-      std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "out segment is nullptr!!!!!!!!";
       return split_seg_info;
     }
     ad_common::math::Vec2d segment_in_route_dir_vec;
@@ -326,10 +326,10 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
         split_seg_info.split_direction = RampDirection::RAMP_ON_LEFT;
       }
     } else {
-      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "enu points error!!!!!!!!!!";
     }
   } else {
-    std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+    ILOG_DEBUG << "out_link_size != 2!!!!!!!!";
   }
   return split_seg_info;
 }
@@ -348,7 +348,7 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
   if (out_link_size == 2) {
     const auto split_next_link = sdpro_map.GetNextLinkOnRoute(split_link.id());
     if (!split_next_link) {
-      std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "out segment is nullptr!!!!!!!!";
       return split_seg_info;
     }
     ad_common::math::Vec2d segment_in_route_dir_vec;
@@ -388,12 +388,12 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
         split_seg_info.split_direction = RampDirection::RAMP_ON_LEFT;
       }
     } else {
-      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "enu points error!!!!!!!!!!";
     }
   } else if (out_link_size == 3) {
     const auto split_next_link = sdpro_map.GetNextLinkOnRoute(split_link.id());
     if (!split_next_link) {
-      std::cout << "out segment is nullptr!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "out segment is nullptr!!!!!!!!";
       return split_seg_info;
     }
 
@@ -446,7 +446,7 @@ SplitSegInfo RouteInfo::MakesureSplitDirection(
       }
     }
   } else {
-    std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+    ILOG_DEBUG << "out_link_size != 2!!!!!!!!";
   }
   return split_seg_info;
 }
@@ -527,7 +527,7 @@ void RouteInfo::CaculateMergeInfo(const ad_common::sdmap::SDMap& sd_map,
     }
   } else {
     route_info_output_.distance_to_first_road_merge = NL_NMAX;
-    std::cout << "merge_info.empty()!!!!!!!" << std::endl;
+    ILOG_DEBUG << "merge_info.empty()!!!!!!!";
   }
 }
 
@@ -703,7 +703,7 @@ void RouteInfo::CaculateMergeInfo(
     }
   } else {
     route_info_output_.distance_to_first_road_merge = NL_NMAX;
-    std::cout << "merge_info.empty()!!!!!!!" << std::endl;
+    ILOG_DEBUG << "merge_info.empty()!!!!!!!";
   }
 }
 
@@ -762,7 +762,7 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
   } else {
     route_info_output_.distance_to_first_road_split = NL_NMAX;
     route_info_output_.first_split_direction = RAMP_NONE;
-    std::cout << "split_info.empty()!!!!!!!" << std::endl;
+    ILOG_DEBUG << "split_info.empty()!!!!!!!";
   }
 
   route_info_output_.split_dir_dis_info_list.clear();
@@ -792,7 +792,7 @@ void RouteInfo::CaculateSplitInfo(const ad_common::sdmap::SDMap& sd_map,
   } else {
     route_info_output_.distance_to_first_road_split = NL_NMAX;
     route_info_output_.first_split_direction = RAMP_NONE;
-    std::cout << "split_info.empty()!!!!!!!" << std::endl;
+    ILOG_DEBUG << "split_info.empty()!!!!!!!";
   }
 }
 
@@ -932,13 +932,17 @@ void RouteInfo::CaculateSplitInfo(
                       .end_fp_point.isEmpty()) &&
                 !route_info_output_.split_region_info_list[0].is_valid) {
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num. emplace_back(split_last_link->lane_num(), std::vector<int>{});
+                  .recommend_lane_num.emplace_back(split_last_link->lane_num(),
+                                                   std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num.emplace_back(split_link->lane_num(), std::vector<int>{});
+                  .recommend_lane_num.emplace_back(split_link->lane_num(),
+                                                   std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num.emplace_back(split_next_link->lane_num(), std::vector<int>{});
+                  .recommend_lane_num.emplace_back(split_next_link->lane_num(),
+                                                   std::vector<int>{});
               route_info_output_.split_region_info_list[0]
-                  .recommend_lane_num.emplace_back(other_link->lane_num(), std::vector<int>{});
+                  .recommend_lane_num.emplace_back(other_link->lane_num(),
+                                                   std::vector<int>{});
               route_info_output_.split_region_info_list[0].is_valid = true;
             }
             if (route_info_output_.split_region_info_list[0]
@@ -974,7 +978,7 @@ void RouteInfo::CaculateSplitInfo(
   } else {
     route_info_output_.distance_to_first_road_split = NL_NMAX;
     route_info_output_.first_split_direction = RAMP_NONE;
-    std::cout << "split_info.empty()!!!!!!!" << std::endl;
+    ILOG_DEBUG << "split_info.empty()!!!!!!!";
   }
 
   const auto& split_region_info_list =
@@ -1210,7 +1214,7 @@ void RouteInfo::CaculateDistanceToTollStation(
     route_info_output_.distance_to_toll_station = toll_station_info.second;
     route_info_output_.is_exist_toll_station = true;
   } else {
-    std::cout << "not find toll station" << std::endl;
+    ILOG_DEBUG << "not find toll station";
     route_info_output_.distance_to_toll_station = NL_NMAX;
     route_info_output_.is_exist_toll_station = false;
   }
@@ -1226,7 +1230,7 @@ void RouteInfo::CaculateDistanceToTollStation(
     route_info_output_.distance_to_toll_station = toll_station_info.second;
     route_info_output_.is_exist_toll_station = true;
   } else {
-    std::cout << "not find toll station" << std::endl;
+    ILOG_DEBUG << "not find toll station";
     route_info_output_.distance_to_toll_station = NL_NMAX;
     route_info_output_.is_exist_toll_station = false;
   }
@@ -1243,7 +1247,7 @@ RampDirection RouteInfo::MakesureMergeDirection(
     const auto merge_last_segment =
         sd_map.GetPreviousRoadSegment(merge_segment.id());
     if (!merge_last_segment) {
-      std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "in segment is nullptr!!!!!!!!";
       return merge_direction;
     }
     ad_common::math::Vec2d segment_in_route_dir_vec;
@@ -1278,10 +1282,10 @@ RampDirection RouteInfo::MakesureMergeDirection(
         merge_direction = RampDirection::RAMP_ON_RIGHT;
       }
     } else {
-      std::cout << "enu points error!!!!!!!!!!" << std::endl;
+      ILOG_DEBUG << "enu points error!!!!!!!!!!";
     }
   } else {
-    std::cout << "out_link_size != 2!!!!!!!1" << std::endl;
+    ILOG_DEBUG << "out_link_size != 2!!!!!!!!";
   }
   return merge_direction;
 }
@@ -1297,7 +1301,7 @@ RampDirection RouteInfo::MakesureMergeDirection(
   const auto merge_last_segment =
       sdpro_map.GetPreviousLinkOnRoute(merge_link.id());
   if (!merge_last_segment) {
-    std::cout << "in segment is nullptr!!!!!!!!" << std::endl;
+    ILOG_DEBUG << "in segment is nullptr!!!!!!!!";
     return merge_direction;
   }
   ad_common::math::Vec2d segment_in_route_dir_vec;
@@ -1355,7 +1359,7 @@ RampDirection RouteInfo::MakesureMergeDirection(
       merge_direction = RampDirection::RAMP_ON_RIGHT;
     }
   } else {
-    std::cout << "enu points error!!!!!!!!!!" << std::endl;
+    ILOG_DEBUG << "enu points error!!!!!!!!!!";
   }
   return merge_direction;
 }
@@ -1395,9 +1399,9 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   // debug当前segment的经纬度信息
   if (current_segment->shape_points_size() > 0) {
     const auto& temp_point_LLH = current_segment->shape_points(0);
-    std::cout << "lat:" << temp_point_LLH.lat()
-              << ",lon:" << temp_point_LLH.lon()
-              << ",height:" << temp_point_LLH.height() << std::endl;
+    ILOG_DEBUG << "lat:" << temp_point_LLH.lat()
+               << ",lon:" << temp_point_LLH.lon()
+               << ",height:" << temp_point_LLH.height();
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lat());
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lon());
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.height());
@@ -1417,11 +1421,11 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
         route_info_output_.is_ego_on_city_expressway_hmi = true;
       }
     } else {
-      std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+      ILOG_DEBUG << "current position not in EXPRESSWAY!!!";
       return segment;
     }
   } else {
-    std::cout << "update ego link info failed!!!" << std::endl;
+    ILOG_DEBUG << "update ego link info failed!!!";
     return segment;
   }
 
@@ -1464,9 +1468,9 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
   // debug当前segment的经纬度信息
   if (current_link->llh_points().points().size() > 0) {
     const auto& temp_point_LLH = current_link->llh_points().points(0);
-    std::cout << "lat:" << temp_point_LLH.lat()
-              << ",lon:" << temp_point_LLH.lon()
-              << ",height:" << temp_point_LLH.height() << std::endl;
+    ILOG_DEBUG << "lat:" << temp_point_LLH.lat()
+               << ",lon:" << temp_point_LLH.lon()
+               << ",height:" << temp_point_LLH.height();
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lat());
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.lon());
     JSON_DEBUG_VALUE("point_LLH_lat", temp_point_LLH.height());
@@ -1489,7 +1493,7 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::UpdateEgoLinkInfo(
       }
       route_info_output_.is_in_sdmaproad = true;
     } else {
-      std::cout << "current position not in EXPRESSWAY!!!" << std::endl;
+      ILOG_DEBUG << "current position not in EXPRESSWAY!!!";
       route_info_output_.reset();
       return link;
     }
@@ -1523,8 +1527,7 @@ bool RouteInfo::UpdateSdMap(const LocalView& local_view) {
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
     sdmap_valid_ = false;
-    std::cout << "error!!! because more than 20s no update hdmap!!!"
-              << std::endl;
+    ILOG_DEBUG << "error!!! because more than 20s no update hdmap!!!";
   }
   JSON_DEBUG_VALUE("sdmap_valid_", sdmap_valid_)
   return sdmap_valid_;
@@ -1548,8 +1551,7 @@ bool RouteInfo::UpdateSdProMap(const LocalView& local_view) {
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
     sdpromap_valid_ = false;
-    std::cout << "error!!! because more than 20s no update hdmap!!!"
-              << std::endl;
+    ILOG_DEBUG << "error!!! because more than 20s no update hdmap!!!";
   }
   JSON_DEBUG_VALUE("sdpromap_valid_", sdpromap_valid_)
   return sdpromap_valid_;
@@ -1573,8 +1575,7 @@ bool RouteInfo::UpdateStaticMap(const LocalView& local_view) {
       kStaticMapOvertimeThreshold) {
     // 距离上一次更新时间超过阈值，则认为无效报错
     hdmap_valid_ = false;
-    std::cout << "error!!! because more than 20s no update hdmap!!!"
-              << std::endl;
+    ILOG_DEBUG << "error!!! because more than 20s no update hdmap!!!";
   }
   JSON_DEBUG_VALUE("hdmap_valid", hdmap_valid_)
   return hdmap_valid_;
@@ -2699,7 +2700,7 @@ bool RouteInfo::GetCurrentNearestLane() {
     }
     nearest_lane = hd_map_.GetLaneById(lane_id);
     if (nearest_lane == nullptr) {
-      std::cout << "get nearest lane failed!!" << std::endl;
+      ILOG_DEBUG << "get nearest lane failed!!";
       return false;
     }
     current_lane_id_ = nearest_lane->id();
@@ -2710,12 +2711,12 @@ bool RouteInfo::GetCurrentNearestLane() {
     if (nearest_lane->GetProjection(point, &nearest_s, &nearest_l)) {
       sum_s += nearest_s;
     } else {
-      std::cout << "current pose get projection fail!!" << std::endl;
+      ILOG_DEBUG << "current pose get projection fail!!";
       return false;
     }
 
   } else {
-    std::cout << "no get nearest lane!!!" << std::endl;
+    ILOG_DEBUG << "no get nearest lane!!!";
     return false;
   }
 
@@ -2730,10 +2731,9 @@ bool RouteInfo::GetCurrentNearestLane() {
   //     &nearest_lane, &nearest_s, &nearest_l);
   // std::cout << "find current lane to current ego point dis:"
   //           << nearest_lane->DistanceTo(point) << std::endl;
-  std::cout << "find the nearest lane!!!"
-            << "nearest_s_:" << nearest_s
-            << ",nearest lane group id:" << nearest_lane->lane_group_id()
-            << std::endl;
+  ILOG_DEBUG << "find the nearest lane!!!"
+             << "nearest_s_:" << nearest_s
+             << ",nearest lane group id:" << nearest_lane->lane_group_id();
   nearest_lane_hpp_ = nearest_lane;
   nearest_s_hpp_ = nearest_s;
   sum_s_hpp_ = sum_s;
@@ -2743,7 +2743,7 @@ bool RouteInfo::GetCurrentNearestLane() {
 void RouteInfo::CalculateHPPInfo() {
   ConstructBox();
   if (IsOnHPPLane()) {
-    std::cout << "is on hpp lane!" << std::endl;
+    ILOG_DEBUG << "is on hpp lane!";
     route_info_output_.is_on_hpp_lane = true;
     const auto& local_view = session_->environmental_model().get_local_view();
     const auto trace_start =
@@ -2756,10 +2756,10 @@ void RouteInfo::CalculateHPPInfo() {
     if (nearest_lane_hpp_->GetProjection(trace_start_point_2d,
                                          &trace_start_point_accumulate_s,
                                          &trace_start_point_lateral)) {
-      std::cout << "trace_start point s:" << trace_start_point_accumulate_s
-                << ",lateral:" << trace_start_point_lateral << std::endl;
+      ILOG_DEBUG << "trace_start point s:" << trace_start_point_accumulate_s
+                 << ",lateral:" << trace_start_point_lateral;
     } else {
-      std::cout << " trace_start point get projection fail!! " << std::endl;
+      ILOG_DEBUG << " trace_start point get projection fail!! ";
       return;
     }
     // calculate sum distance
@@ -2767,7 +2767,7 @@ void RouteInfo::CalculateHPPInfo() {
         sum_s_hpp_ >= trace_start_point_accumulate_s;
     const ad_common::math::Vec2d point(current_pose_.x, current_pose_.y);
     if (is_reached_trace_start_point) {
-      std::cout << "reached trace start point!!" << std::endl;
+      ILOG_DEBUG << "reached trace start point!!";
       route_info_output_.is_reached_hpp_start_point = true;
       if (last_point_hpp_.x() != NL_NMAX && last_point_hpp_.y() != NL_NMAX) {
         sum_distance_driving_ += point.DistanceTo(last_point_hpp_);
@@ -2777,10 +2777,10 @@ void RouteInfo::CalculateHPPInfo() {
       route_info_output_.sum_distance_driving = sum_distance_driving_;
       last_point_hpp_ = point;
     } else {
-      std::cout << "cur point s less than trace start s" << std::endl;
+      ILOG_DEBUG << "cur point s less than trace start s";
     }
   } else {
-    std::cout << "not in hpp lane!!!" << std::endl;
+    ILOG_DEBUG << "not in hpp lane!!!";
     ResetHpp();
   }
 }
@@ -2823,7 +2823,7 @@ void RouteInfo::CalculateDistanceToTraceEnd() {
     sum_s += CalculatePointAccumulateS(lane_id);
     route_info_output_.distance_to_target_slot = std::fabs(sum_s - sum_s_hpp_);
   } else {
-    std::cout << "lines is empty from road_map!!!" << std::endl;
+    ILOG_DEBUG << "lines is empty from road_map!!!";
   }
 }
 
@@ -2849,12 +2849,11 @@ void RouteInfo::CalculateDistanceToNextSpeedBump() {
             speed_bump_center_point, &speed_bump_nearest_lane,
             &speed_bump_nearest_s, &speed_bump_nearest_l);
         if (speed_bump_res != 0) {
-          std::cout << "not get speed_bump projection point on line!!!"
-                    << std::endl;
+          ILOG_DEBUG << "not get speed_bump projection point on line!!!";
           continue;
         } else {
-          std::cout << "get s for speed_bump projection point on line:"
-                    << speed_bump_nearest_s << std::endl;
+          ILOG_DEBUG << "get s for speed_bump projection point on line:"
+                     << speed_bump_nearest_s;
         }
         speed_bump_sum_s += speed_bump_nearest_s;
         if (!speed_bump_nearest_lane->lane().predecessor_lane_id().empty()) {
