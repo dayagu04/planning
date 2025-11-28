@@ -453,10 +453,10 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
 // Calculate max curvature on ramp using 3-point geometry method with smoothing
 // Supports: 1) Approaching ramp (from ramp_link_id) 2) On ramp (from current link)
 // dist_to_max_curv: Output parameter, distance to max curvature point
-double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) {
+double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
+    double *dist_to_max_curv) {
   const auto &environmental_model = session_->environmental_model();
-  const auto &route_info =
-      environmental_model.get_route_info();
+  const auto &route_info = environmental_model.get_route_info();
   if (!route_info->get_sdpromap_valid()) {
     if (dist_to_max_curv != nullptr) {
       *dist_to_max_curv = 1000.0;
@@ -468,9 +468,19 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
   const auto &sdpro_map = route_info->get_sdpro_map();
   bool is_on_ramp = route_info_output.is_on_ramp;
   double dis_to_ramp = route_info_output.dis_to_ramp;
-  
+
   const iflymapdata::sdpro::LinkInfo_Link *start_link = nullptr;
-  
+
+  // Collect ENU points on ramp until total length >= 150m or leaving ramp
+  std::vector<ad_common::math::Vec2d> enu_points;
+  enu_points.reserve(50);
+  double total_len = 0.0;
+
+  const auto is_ramp =
+      [&sdpro_map](const iflymapdata::sdpro::LinkInfo_Link &link) {
+        return sdpro_map.isRamp(link.link_type());
+      };
+
   if (is_on_ramp) {
     // Case 1: On ramp, start from current vehicle link
     ad_common::math::Vec2d current_point;
@@ -486,7 +496,7 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
     const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
         current_point, search_distance, ego_heading_angle, max_heading_diff,
         nearest_s, nearest_l);
-    
+
     if (current_segment == nullptr) {
       if (dist_to_max_curv != nullptr) {
         *dist_to_max_curv = 1000.0;
@@ -502,11 +512,70 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
     }
 
     start_link = current_segment;
+    const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
+    const auto &pts = cur_link->points().boot().points();
+    if (pts.size() < 2) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+
+    // 找到距离车辆最近的点
+    double min_dist = std::numeric_limits<double>::max();
+    size_t nearest_idx = 0;
+    for (size_t i = 0; i < pts.size(); ++i) {
+      double dist = std::hypot(pts[i].x() - current_point.x(),
+                               pts[i].y() - current_point.y());
+      if (dist < min_dist) {
+        min_dist = dist;
+        nearest_idx = i;
+      }
+    }
+
+    // 从最近点开始采集（包括最近点）
+    for (size_t i = nearest_idx; i < pts.size(); ++i) {
+      ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+      if (!enu_points.empty()) {
+        const auto &last = enu_points.back();
+        double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+        if (ds < 0.1) continue;
+        total_len += ds;
+      }
+      enu_points.emplace_back(p);
+      if (total_len >= kMinRampSampleLength) break;
+    }
+
+    // 继续采集后续link的点
+    if (total_len < kMinRampSampleLength) {
+      cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
+      while (cur_link != nullptr && is_ramp(*cur_link) &&
+             total_len < kMinRampSampleLength) {
+        const auto &next_pts = cur_link->points().boot().points();
+        if (next_pts.size() < 2) break;
+
+        for (size_t i = 0; i < next_pts.size(); ++i) {
+          ad_common::math::Vec2d p(next_pts[i].x(), next_pts[i].y());
+          if (!enu_points.empty()) {
+            const auto &last = enu_points.back();
+            double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+            if (ds < 0.1) continue;
+            total_len += ds;
+          }
+          enu_points.emplace_back(p);
+          if (total_len >= kMinRampSampleLength) break;
+        }
+        if (total_len >= kMinRampSampleLength) break;
+        cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
+      }
+    }
+
   } else {
     // Case 2: Approaching ramp, start from next link of ramp_link_id
     uint64_t ramp_link_id = static_cast<uint64_t>(-1);
     double dis_to_ramp = route_info_output.dis_to_ramp;
-    const auto &split_region_info_list = route_info_output.split_region_info_list;
+    const auto &split_region_info_list =
+        route_info_output.split_region_info_list;
     if (dis_to_ramp < 2000.0) {
       for (int i = 0; i < split_region_info_list.size(); ++i) {
         if (std::fabs(split_region_info_list[i].distance_to_split_point -
@@ -516,14 +585,14 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
         }
       }
     }
-    
+
     if (ramp_link_id == static_cast<uint64_t>(-1)) {
       if (dist_to_max_curv != nullptr) {
         *dist_to_max_curv = 1000.0;
       }
       return 0.0;
     }
-    
+
     const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
     if (ramp_link == nullptr) {
       if (dist_to_max_curv != nullptr) {
@@ -531,53 +600,36 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
       }
       return 0.0;
     }
-    
+
     start_link = ramp_link;
-  }
-  
-  if (start_link == nullptr) {
-    if (dist_to_max_curv != nullptr) {
-      *dist_to_max_curv = 1000.0;
-    }
-    return 0.0;
-  }
-
-  // Collect ENU points on ramp until total length >= 150m or leaving ramp
-  std::vector<ad_common::math::Vec2d> enu_points;
-  enu_points.reserve(30);
-  double total_len = 0.0;
-  
-  const auto is_ramp = [&sdpro_map](const iflymapdata::sdpro::LinkInfo_Link &link) {
-    return sdpro_map.isRamp(link.link_type());
-  };
-
-  const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
-  while (cur_link != nullptr && is_ramp(*cur_link) &&
-         total_len < kMinRampSampleLength) {
-    const auto &pts = cur_link->points().boot().points();
-    if (pts.size() < 2) {
-       break;
-    }
-    for (size_t i = 0; i < pts.size(); ++i) {
-      ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
-      if (!enu_points.empty()) {
-        const auto &last = enu_points.back();
-        double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
-        // Skip duplicate points (usually from adjacent links)
-        if (ds < 0.1) {
-          continue;
-        }
-        total_len += ds;
+    const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
+    while (cur_link != nullptr && is_ramp(*cur_link) &&
+           total_len < kMinRampSampleLength) {
+      const auto &pts = cur_link->points().boot().points();
+      if (pts.size() < 2) {
+        break;
       }
-      enu_points.emplace_back(p);
+      for (size_t i = 0; i < pts.size(); ++i) {
+        ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+        if (!enu_points.empty()) {
+          const auto &last = enu_points.back();
+          double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+          // Skip duplicate points (usually from adjacent links)
+          if (ds < 0.1) {
+            continue;
+          }
+          total_len += ds;
+        }
+        enu_points.emplace_back(p);
+        if (total_len >= kMinRampSampleLength) {
+          break;
+        }
+      }
       if (total_len >= kMinRampSampleLength) {
         break;
       }
+      cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
     }
-    if (total_len >= kMinRampSampleLength) {
-      break;
-    }
-    cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
   }
 
   if (enu_points.size() < 3) {
@@ -627,9 +679,8 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
       continue;
     }
 
-    const double cross =
-        (p1.x() - p0.x()) * (p2.y() - p0.y()) -
-        (p1.y() - p0.y()) * (p2.x() - p0.x());
+    const double cross = (p1.x() - p0.x()) * (p2.y() - p0.y()) -
+                         (p1.y() - p0.y()) * (p2.x() - p0.x());
     const double area = 0.5 * std::fabs(cross);
     const double k = 4.0 * area / denom;
     k_raw.emplace_back(k);
@@ -668,19 +719,20 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv) 
     double min_radius = 1.0 / max_k;
     JSON_DEBUG_VALUE("ramp_curv_min_radius", min_radius);
   }
-  
+
   // 计算当前位置到最大曲率点的距离
   if (dist_to_max_curv != nullptr) {
     if (is_on_ramp) {
       // 在匝道内，默认给距离100m
-      *dist_to_max_curv = 100.0;
+      //*dist_to_max_curv = 100.0;
+      *dist_to_max_curv = max_k_s;
     } else {
       // 接近匝道，就是 dis_to_ramp + 最大曲率点的距离
       *dist_to_max_curv = dis_to_ramp + max_k_s;
     }
     JSON_DEBUG_VALUE("ramp_curv_dist_to_max_curv", *dist_to_max_curv);
   }
-  
+
   return max_k;
 }
 
