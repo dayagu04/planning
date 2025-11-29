@@ -2365,12 +2365,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   if (mlc_decider_route_info_.is_process_split &&
       first_exchange_region_info.is_ramp_split) {
     route_info_output_.is_closing_split =
-        first_exchange_region_info.distance_to_split_point < ego_v * 5.0;
+        first_exchange_region_info.distance_to_split_point < ego_v * 10.0;
   }
   if (mlc_decider_route_info_.is_process_merge &&
       !first_exchange_region_info.is_other_merge_to_road) {
     route_info_output_.is_closing_merge =
-        first_exchange_region_info.distance_to_split_point < ego_v * 5.0;
+        first_exchange_region_info.distance_to_split_point < ego_v * 10.0;
   }
   // 状态流转，分配feasible_lane_sequence
   switch (mlc_decider_route_info_.ego_status_on_route) {
@@ -2487,7 +2487,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     if (last_exchange_region_info_.is_process_merge &&
         !last_exchange_region_info_.last_exchange_info.is_other_merge_to_road) {
       route_info_output_.is_closing_merge =
-          route_info_output_.merge_point_info.dis_to_merge_fp < ego_v * 5.0;
+          route_info_output_.merge_point_info.dis_to_merge_fp < ego_v * 10.0;
     }
   }
   // 将mlc_request_info_list中按照distance排序
