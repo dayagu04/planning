@@ -2355,6 +2355,23 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+
+  // 判断当前是否接近汇入汇出
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_v = ego_state->ego_v();
+  route_info_output_.is_closing_split = false;
+  route_info_output_.is_closing_merge = false;
+  if (mlc_decider_route_info_.is_process_split &&
+      first_exchange_region_info.is_ramp_split) {
+    route_info_output_.is_closing_split =
+        first_exchange_region_info.distance_to_split_point < ego_v * 5.0;
+  }
+  if (mlc_decider_route_info_.is_process_merge &&
+      !first_exchange_region_info.is_other_merge_to_road) {
+    route_info_output_.is_closing_merge =
+        first_exchange_region_info.distance_to_split_point < ego_v * 5.0;
+  }
   // 状态流转，分配feasible_lane_sequence
   switch (mlc_decider_route_info_.ego_status_on_route) {
     case ON_MAIN: {
@@ -2466,6 +2483,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       if (it != feasible_lane_sequence.end()) {
         feasible_lane_sequence.erase(it);
       }
+    }
+    if (last_exchange_region_info_.is_process_merge &&
+        !last_exchange_region_info_.last_exchange_info.is_other_merge_to_road) {
+      route_info_output_.is_closing_merge =
+          route_info_output_.merge_point_info.dis_to_merge_fp < ego_v * 5.0;
     }
   }
   // 将mlc_request_info_list中按照distance排序
@@ -3167,6 +3189,8 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   JSON_DEBUG_VALUE("right_lane_distance",
                    route_info_output_.right_lane_distance);
+  JSON_DEBUG_VALUE("is_closing_split", route_info_output_.is_closing_split);
+  JSON_DEBUG_VALUE("is_closing_merge", route_info_output_.is_closing_merge);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
