@@ -26,9 +26,10 @@ parking_planning_stm_dict = {0: 'park_idle', 1: 'park_running', 2: 'park_gearcha
 parking_replan_fail_reason_dict = {0: 'not_failed', 1: 'pause_failed_time', 2: 'stuck_failed_time', 3: 'update_ego_slot_info', 4: 'post_process_path_point_size', 5: 'post_process_path_point_same', 6: 'set_seg_index', 7: 'check_gear_length', 8: 'path_plan_failed', 9: 'plan_count_exceed_limit', 10: 'dynamic_path_not_superior', 11: "no_target_pose", 12: "fold_mirror_failed", 13: "slot_id_changed", 14: "slot_type_changed", 15: "gear_change_count_too_much", 16: "loss_search_path"}
 parking_replan_reason_dict = {0: 'not_replan', 1: 'first_plan', 2: 'seg_completed_path', 3: 'seg_completed_obs', 4: 'stucked', 5: 'dynamic', 6: 'seg_completed_col_det', 7: "force_plan", 8: "seg_completed_slot_jump", 9: "path_dangerous", 10: "slot_cruising", 11: "dynamic_gear_switch"}
 parking_process_obs_method_dict = {0: 'do_nothing', 1: 'move_obs_out_slot', 2: 'move_obs_out_car_safe_pos', 3: 'count'}
-parking_pathplan_result = {0: 'failed', 1: 'hold', 2: 'update', 3: 'wait_path'}
-parking_free_slot_status = {0: 'default', 1: 'draging', 2: 'finished'}
-chassis_reduce_length = 0.2
+parking_pathplan_result_dict = {0: 'failed', 1: 'hold', 2: 'update', 3: 'wait_path'}
+parking_free_slot_status_dict = {0: 'default', 1: 'draging', 2: 'finished'}
+parking_pause_reason_dict = {0: 'other', 1: 'static obs', 2: 'break', 3: 'dynamic obs', 4: 'none'}
+chassis_reduce_length = 0.25
 
 class CarStruct(IntEnum):
   WITH_MIRROR = 0

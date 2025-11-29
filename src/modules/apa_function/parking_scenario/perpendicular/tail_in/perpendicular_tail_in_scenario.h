@@ -51,7 +51,15 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
 
   const bool PostProcessPathAccordingRemainDist(const double remain_dist);
   const bool CheckShouldStopWhenSlotJumpsMuch();
-  const bool CheckDynamicPlanPathOptimal();
+  const bool CheckDynamicPlanPathOptimal(
+      const size_t old_path_gear_change_count,
+      const size_t new_path_gear_change_count,
+      const double new_path_final_line_length,
+      const std::vector<geometry_lib::PathPoint>& s_turn_path,
+      const geometry_lib::PathPoint& old_tar_pose,
+      const geometry_lib::PathPoint& new_tar_pose,
+      const geometry_lib::PathPoint& real_tar_pose);
+  const bool CheckDynamicPlanPathOptimalByGeometryPath();
   const bool CheckDynamicPlanPathOptimalByHybridAstarPath(
       const HybridAstarResponse& response);
   const bool LateralPathOptimize(
