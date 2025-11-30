@@ -77,6 +77,7 @@ constexpr double kMapSharpCurveRadiusExit = 120.0;  // Exit radius threshold wit
 constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // 半径阈值65m
 constexpr double kMaxRampPointSpacing = 40.0;  // 最大点间距阈值，超过此值认为是稀疏段（m）
 constexpr double kMaxRampPointSpacingRatio = 2.5;  // 最大间距与平均间距的比值阈值，超过此值认为存在异常稀疏段
+constexpr int kMaxDensePointCountForSparseBack = 3;  // 判定前密后疏的最大稠密点数阈值
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
 
@@ -514,10 +515,15 @@ void SpeedLimitDecider::CollectRampPointsFromLinks(
   const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
   while (cur_link != nullptr && is_ramp(*cur_link) &&
          total_len < kMinRampSampleLength) {
-    if (!CollectPointsFromLink(cur_link, enu_points, total_len, 0)) {
-      // Failed to collect (e.g., insufficient points)
+    // Check if link has valid points before collecting
+    const auto &pts = cur_link->points().boot().points();
+    if (pts.size() < 2) {
+      // Invalid link, break
       break;
     }
+    // Collect points from current link
+    CollectPointsFromLink(cur_link, enu_points, total_len, 0);
+    
     if (total_len >= kMinRampSampleLength) {
       break;
     }
@@ -621,11 +627,16 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
 
     // Continue collecting points from subsequent links
     if (total_len < kMinRampSampleLength) {
-      auto get_next_link = [&sdpro_map](uint64_t link_id) {
-        return sdpro_map.GetNextLinkOnRoute(link_id);
-      };
-      CollectRampPointsFromLinks(cur_link, is_ramp, get_next_link, enu_points,
-                                  total_len);
+      // Get next link first to avoid re-collecting current link
+      const iflymapdata::sdpro::LinkInfo_Link *next_link = 
+          sdpro_map.GetNextLinkOnRoute(cur_link->id());
+      if (next_link != nullptr) {
+        auto get_next_link = [&sdpro_map](uint64_t link_id) {
+          return sdpro_map.GetNextLinkOnRoute(link_id);
+        };
+        CollectRampPointsFromLinks(next_link, is_ramp, get_next_link, enu_points,
+                                    total_len);
+      }
     }
 
   } else {
@@ -685,12 +696,13 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
   if (point_spacings.size() >= 2) {
     double last_spacing = point_spacings.back();
     
-    // Calculate average spacing of front part
+    // Calculate average spacing of front part (excluding last spacing)
     double front_avg_spacing = 0.0;
-    for (size_t i = 0; i < point_spacings.size() - 1; ++i) {
+    const size_t front_size = point_spacings.size() - 1;
+    for (size_t i = 0; i < front_size; ++i) {
       front_avg_spacing += point_spacings[i];
     }
-    front_avg_spacing /= static_cast<double>(point_spacings.size() - 1);
+    front_avg_spacing /= static_cast<double>(front_size);
     
     JSON_DEBUG_VALUE("ramp_points_front_avg_spacing", front_avg_spacing);
     JSON_DEBUG_VALUE("ramp_points_last_spacing", last_spacing);
@@ -700,7 +712,17 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     if (front_avg_spacing > 1e-6 && 
         last_spacing > kMaxRampPointSpacing && 
         last_spacing > front_avg_spacing * kMaxRampPointSpacingRatio) {
-      has_dense_front_then_sparse_back = true;
+      // Count dense points in front part (spacing < average spacing)
+      // Only consider as dense-front-sparse-back if dense points <= threshold
+      int dense_count = 0;
+      for (size_t i = 0; i < front_size; ++i) {
+        if (point_spacings[i] < front_avg_spacing) {
+          dense_count++;
+        }
+      }
+      if (dense_count <= kMaxDensePointCountForSparseBack) {
+        has_dense_front_then_sparse_back = true;
+      }
     }
     
     JSON_DEBUG_VALUE("ramp_points_has_dense_front_sparse_back", has_dense_front_then_sparse_back ? 1.0 : 0.0);
