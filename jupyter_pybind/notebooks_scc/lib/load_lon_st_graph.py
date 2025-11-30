@@ -239,7 +239,8 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\
                               "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec",\
-
+                              'v_limit_in_turns','v_limit_road','v_limit_steering','road_radius','is_s_bend',\
+                              'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \

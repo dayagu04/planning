@@ -74,7 +74,11 @@ constexpr double kShortDisReachMerge = 6.0;
 constexpr double kMinRampSampleLength = 150.0;
 constexpr double kMapSharpCurveRadiusEnter = 100.0;  // Enter radius threshold for map sharp curve (m)
 constexpr double kMapSharpCurveRadiusExit = 120.0;  // Exit radius threshold with hysteresis (m)
-constexpr double map_radius_first_enter = 65.0;  // 半径阈值65m
+constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // 半径阈值65m
+constexpr double kMaxRampPointSpacing = 40.0;  // 最大点间距阈值，超过此值认为是稀疏段（m）
+constexpr double kMaxRampPointSpacingRatio = 2.5;  // 最大间距与平均间距的比值阈值，超过此值认为存在异常稀疏段
+constexpr double kMaxDistanceToRamp = 2000.0;
+constexpr double kDistanceTolerance = 1.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -451,9 +455,77 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
   return min_curv_radius;
 }
 
-// Calculate max curvature on ramp using 3-point geometry method with smoothing
-// Supports: 1) Approaching ramp (from ramp_link_id) 2) On ramp (from current link)
-// dist_to_max_curv: Output parameter, distance to max curvature point
+// Find ramp link ID from split region info list
+uint64_t SpeedLimitDecider::FindRampLinkId(
+    double dist_to_ramp,
+    const std::vector<NOASplitRegionInfo> &split_region_info_list) {
+  uint64_t ramp_link_id = static_cast<uint64_t>(-1);
+  if (dist_to_ramp < kMaxDistanceToRamp) {
+    for (size_t i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point -
+                    dist_to_ramp) < kDistanceTolerance) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
+  return ramp_link_id;
+}
+
+// Collect points from a single link
+bool SpeedLimitDecider::CollectPointsFromLink(
+    const iflymapdata::sdpro::LinkInfo_Link *link,
+    std::vector<ad_common::math::Vec2d> &enu_points, double &total_len,
+    size_t start_idx) {
+  if (link == nullptr) {
+    return false;
+  }
+
+  const auto &pts = link->points().boot().points();
+  if (pts.size() < 2 || start_idx >= pts.size()) {
+    return false;
+  }
+
+  constexpr double kMinPointSpacing = 0.1;
+  for (size_t i = start_idx; i < pts.size(); ++i) {
+    ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+    if (!enu_points.empty()) {
+      const auto &last = enu_points.back();
+      double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+      if (ds < kMinPointSpacing) {
+        continue;
+      }
+      total_len += ds;
+    }
+    enu_points.emplace_back(p);
+    if (total_len >= kMinRampSampleLength) {
+      return true;  // Reached target length
+    }
+  }
+  return false;  // Not reached target length
+}
+
+// Collect ramp points from multiple consecutive links
+void SpeedLimitDecider::CollectRampPointsFromLinks(
+    const iflymapdata::sdpro::LinkInfo_Link *start_link,
+    const std::function<bool(const iflymapdata::sdpro::LinkInfo_Link &)> &is_ramp,
+    const std::function<const iflymapdata::sdpro::LinkInfo_Link *(uint64_t)> &get_next_link,
+    std::vector<ad_common::math::Vec2d> &enu_points, double &total_len) {
+  const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
+  while (cur_link != nullptr && is_ramp(*cur_link) &&
+         total_len < kMinRampSampleLength) {
+    if (!CollectPointsFromLink(cur_link, enu_points, total_len, 0)) {
+      // Failed to collect (e.g., insufficient points)
+      break;
+    }
+    if (total_len >= kMinRampSampleLength) {
+      break;
+    }
+    cur_link = get_next_link(cur_link->id());
+  }
+}
+
+// Calculate max curvature on ramp, supports both on-ramp and approaching-ramp cases
 double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     double *dist_to_max_curv) {
   const auto &environmental_model = session_->environmental_model();
@@ -522,7 +594,7 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
       return 0.0;
     }
 
-    // 找到距离车辆最近的点
+    // Find nearest point to vehicle
     double min_dist = std::numeric_limits<double>::max();
     size_t nearest_idx = 0;
     for (size_t i = 0; i < pts.size(); ++i) {
@@ -534,7 +606,7 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
       }
     }
 
-    // 从最近点开始采集（包括最近点）
+    // Collect from nearest point (inclusive)
     for (size_t i = nearest_idx; i < pts.size(); ++i) {
       ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
       if (!enu_points.empty()) {
@@ -547,45 +619,20 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
       if (total_len >= kMinRampSampleLength) break;
     }
 
-    // 继续采集后续link的点
+    // Continue collecting points from subsequent links
     if (total_len < kMinRampSampleLength) {
-      cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
-      while (cur_link != nullptr && is_ramp(*cur_link) &&
-             total_len < kMinRampSampleLength) {
-        const auto &next_pts = cur_link->points().boot().points();
-        if (next_pts.size() < 2) break;
-
-        for (size_t i = 0; i < next_pts.size(); ++i) {
-          ad_common::math::Vec2d p(next_pts[i].x(), next_pts[i].y());
-          if (!enu_points.empty()) {
-            const auto &last = enu_points.back();
-            double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
-            if (ds < 0.1) continue;
-            total_len += ds;
-          }
-          enu_points.emplace_back(p);
-          if (total_len >= kMinRampSampleLength) break;
-        }
-        if (total_len >= kMinRampSampleLength) break;
-        cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
-      }
+      auto get_next_link = [&sdpro_map](uint64_t link_id) {
+        return sdpro_map.GetNextLinkOnRoute(link_id);
+      };
+      CollectRampPointsFromLinks(cur_link, is_ramp, get_next_link, enu_points,
+                                  total_len);
     }
 
   } else {
     // Case 2: Approaching ramp, start from next link of ramp_link_id
-    uint64_t ramp_link_id = static_cast<uint64_t>(-1);
-    double dis_to_ramp = route_info_output.dis_to_ramp;
     const auto &split_region_info_list =
         route_info_output.split_region_info_list;
-    if (dis_to_ramp < 2000.0) {
-      for (int i = 0; i < split_region_info_list.size(); ++i) {
-        if (std::fabs(split_region_info_list[i].distance_to_split_point -
-                      dis_to_ramp) < 1.0) {
-          ramp_link_id = split_region_info_list[i].split_link_id;
-          break;
-        }
-      }
-    }
+    uint64_t ramp_link_id = FindRampLinkId(dis_to_ramp, split_region_info_list);
 
     if (ramp_link_id == static_cast<uint64_t>(-1)) {
       if (dist_to_max_curv != nullptr) {
@@ -603,36 +650,14 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     }
 
     start_link = ramp_link;
-    const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
-    while (cur_link != nullptr && is_ramp(*cur_link) &&
-           total_len < kMinRampSampleLength) {
-      const auto &pts = cur_link->points().boot().points();
-      if (pts.size() < 2) {
-        break;
-      }
-      for (size_t i = 0; i < pts.size(); ++i) {
-        ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
-        if (!enu_points.empty()) {
-          const auto &last = enu_points.back();
-          double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
-          // Skip duplicate points (usually from adjacent links)
-          if (ds < 0.1) {
-            continue;
-          }
-          total_len += ds;
-        }
-        enu_points.emplace_back(p);
-        if (total_len >= kMinRampSampleLength) {
-          break;
-        }
-      }
-      if (total_len >= kMinRampSampleLength) {
-        break;
-      }
-      cur_link = sdpro_map.GetNextLinkOnRoute(cur_link->id());
-    }
+    auto get_next_link = [&sdpro_map](uint64_t link_id) {
+      return sdpro_map.GetNextLinkOnRoute(link_id);
+    };
+    CollectRampPointsFromLinks(start_link, is_ramp, get_next_link, enu_points,
+                               total_len);
   }
 
+  // Calculate max curvature using 3-point geometry method
   if (enu_points.size() < 3) {
     if (dist_to_max_curv != nullptr) {
       *dist_to_max_curv = 1000.0;
@@ -640,7 +665,55 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     return 0.0;
   }
 
-  // 构造沿程 s 和几何三点曲率
+  // Check point spacing, filter dense-front-sparse-back pattern
+  std::vector<double> point_spacings;
+  point_spacings.reserve(enu_points.size() - 1);
+  for (size_t i = 1; i < enu_points.size(); ++i) {
+    double spacing = std::hypot(enu_points[i].x() - enu_points[i - 1].x(),
+                                 enu_points[i].y() - enu_points[i - 1].y());
+    point_spacings.emplace_back(spacing);
+  }
+  
+  if (point_spacings.empty()) {
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+  
+  // Check for dense-front-sparse-back pattern
+  if (point_spacings.size() >= 2) {
+    double last_spacing = point_spacings.back();
+    
+    // Calculate average spacing of front part
+    double front_avg_spacing = 0.0;
+    for (size_t i = 0; i < point_spacings.size() - 1; ++i) {
+      front_avg_spacing += point_spacings[i];
+    }
+    front_avg_spacing /= static_cast<double>(point_spacings.size() - 1);
+    
+    JSON_DEBUG_VALUE("ramp_points_front_avg_spacing", front_avg_spacing);
+    JSON_DEBUG_VALUE("ramp_points_last_spacing", last_spacing);
+    
+    // Check if dense-front-sparse-back: last spacing is abnormally large
+    bool has_dense_front_then_sparse_back = false;
+    if (front_avg_spacing > 1e-6 && 
+        last_spacing > kMaxRampPointSpacing && 
+        last_spacing > front_avg_spacing * kMaxRampPointSpacingRatio) {
+      has_dense_front_then_sparse_back = true;
+    }
+    
+    JSON_DEBUG_VALUE("ramp_points_has_dense_front_sparse_back", has_dense_front_then_sparse_back ? 1.0 : 0.0);
+    
+    if (has_dense_front_then_sparse_back) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+  }
+
+  // Build cumulative s and 3-point geometry curvature
   std::vector<double> s_vec;
   s_vec.reserve(enu_points.size());
   s_vec.emplace_back(0.0);
@@ -664,7 +737,7 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
 
   std::vector<double> k_raw;
   k_raw.reserve(enu_points.size());
-  k_raw.emplace_back(0.0);  // 第一个点不计算
+  k_raw.emplace_back(0.0);  // First point not calculated
   for (size_t i = 1; i + 1 < enu_points.size(); ++i) {
     const auto &p0 = enu_points[i - 1];
     const auto &p1 = enu_points[i];
@@ -686,45 +759,70 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     const double k = 4.0 * area / denom;
     k_raw.emplace_back(k);
   }
-  k_raw.emplace_back(0.0);  // 最后一个点不计算
+  k_raw.emplace_back(0.0);  // Last point not calculated
 
-  // 简单滑动窗口平均平滑曲率，窗口约 40m（考虑点间距约15m，窗口需覆盖足够点数）
+  // Smooth curvature with sliding window (40m), optimized to O(n) with two pointers
   std::vector<double> k_smooth(k_raw.size(), 0.0);
-  const double window_len = 40.0;
+  constexpr double window_len = 40.0;
+  constexpr double half_window = window_len * 0.5;
+  
+  if (k_raw.empty() || s_vec.empty() || k_raw.size() != s_vec.size()) {
+    // Handle boundary case
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+  
+  // Maintain sliding window with two pointers
+  size_t left = 0;   // Left boundary of window
+  size_t right = 0;  // Right boundary of window
+  double sum_k = 0.0;
+  int cnt = 0;
+  
   for (size_t i = 0; i < k_raw.size(); ++i) {
     const double center_s = s_vec[i];
-    double sum_k = 0.0;
-    int cnt = 0;
-    for (size_t j = 0; j < k_raw.size(); ++j) {
-      if (std::fabs(s_vec[j] - center_s) <= window_len * 0.5) {
-        sum_k += k_raw[j];
-        ++cnt;
-      }
+    const double window_left = center_s - half_window;
+    const double window_right = center_s + half_window;
+    
+    // Remove points on left side of window
+    while (left < k_raw.size() && s_vec[left] < window_left) {
+      sum_k -= k_raw[left];
+      --cnt;
+      ++left;
     }
+    
+    // Add points on right side of window
+    while (right < k_raw.size() && s_vec[right] <= window_right) {
+      sum_k += k_raw[right];
+      ++cnt;
+      ++right;
+    }
+    
+    // Calculate average
     if (cnt > 0) {
       k_smooth[i] = sum_k / static_cast<double>(cnt);
     }
   }
 
   double max_k = 0.0;
-  double max_k_s = 0.0;  // 最大曲率点对应的距离（从起始点开始的距离）
-  double first_small_radius_s = -1.0;    // 首次半径小于65m的位置
-  const double map_radius_first_enter = 65.0;  // 半径阈值65m
+  double max_k_s = 0.0;  // Distance to max curvature point
+  double first_small_radius_s = -1.0;  // First position with radius < 65m
   for (size_t i = 0; i < k_smooth.size(); ++i) {
     if (k_smooth[i] > max_k) {
       max_k = k_smooth[i];
-      max_k_s = s_vec[i];  // 记录最大曲率点对应的距离
+      max_k_s = s_vec[i];
     }
-    // 检查当前点半径是否小于65m，且是首次出现
+    // Check for first point with radius < 65m
     if (k_smooth[i] > 1e-6) {
       double radius = 1.0 / k_smooth[i];
-      if (radius < map_radius_first_enter && first_small_radius_s < 0) {
+      if (radius < kMapRadiusFirstEnterForDisCal && first_small_radius_s < 0) {
         first_small_radius_s = s_vec[i];
       }
     }
   }
 
-  // 修改max_k_s逻辑：优先使用首次半径小于65m的位置，如果没有则使用最大曲率位置
+  // Prefer first position with radius < 65m, otherwise use max curvature position
   if (first_small_radius_s >= 0) {
     max_k_s = first_small_radius_s;
   }
@@ -735,14 +833,11 @@ double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
     JSON_DEBUG_VALUE("ramp_curv_min_radius", min_radius);
   }
 
-  // 计算当前位置到最大曲率点的距离
+  // Calculate distance to max curvature point
   if (dist_to_max_curv != nullptr) {
     if (is_on_ramp) {
-      // 在匝道内，默认给距离100m
-      //*dist_to_max_curv = 100.0;
       *dist_to_max_curv = max_k_s;
     } else {
-      // 接近匝道，就是 dis_to_ramp + 最大曲率点的距离
       *dist_to_max_curv = dis_to_ramp + max_k_s;
     }
     JSON_DEBUG_VALUE("ramp_curv_dist_to_max_curv", *dist_to_max_curv);
@@ -850,10 +945,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double acc_lon_allowed = std::sqrt(
       std::max(std::pow(acc_total_max, 2) - std::pow(acc_lat, 2), 0.0));
 
-  // Limit the longitudinal velocity for a safe turn
+  // Limit longitudinal velocity for safe turn
   double acc_lat_max =
       interp(std::fabs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  // HACK: close v_limit_steering in high vel
+  // Disable steering limit at high velocity
   bool is_high_vel = v_ego > kHighVel;
   double v_limit_steering = 100.0;
   if (!is_high_vel) {
@@ -861,7 +956,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                  std::max(std::fabs(angle_steers), 0.001));
   }
   double v_limit_in_turns = v_limit_steering;
-  // calculate the velocity limit according to the road curvature
+  // Calculate velocity limit based on road curvature
   double preview_x = speed_limit_config_.dis_curv;
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -887,16 +982,14 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       ReferencePathPoint refpath_pt;
       if (reference_path_ptr->get_reference_point_by_lon(
               ego_start_s + idx * 2.0, refpath_pt)) {
-        // calc curv
         one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
-        // calc curv direction(-1 or 1, 0 for except)
         one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
       } else {
         one_curv_info.curv = 0.0001;
         one_curv_info.curv_sign = 0;
       }
     } else {
-      // calc curv abs and using average curv abs in curv window
+      // Calculate average curvature in window
       std::vector<double> curv_window_vec;
       int curv_sign = 0;
       for (int j = -3; j <= 3; j++) {
@@ -936,7 +1029,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                     ReferencePathCurveInfo::CurveType::SHARP_CURVE) &&
                    IsSSharpBend(preview_curv_info_vec);
   double max_curv = 0.0001;
-  double max_curv_s = 0.0;  // 最大曲率对应的距离当前位置的距离
+  double max_curv_s = 0.0;  // Distance to max curvature point
   for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
     if (preview_curv_info_vec[idx].curv > max_curv) {
       max_curv = preview_curv_info_vec[idx].curv;
@@ -946,9 +1039,9 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double road_radius_origin = 1 / std::max(max_curv, 0.0001);
 
 
-  // Calculate the distance from the current position to the maximum curvature point
+  // Distance to max curvature point
   double dist_to_max_curv = max_curv_s;
-  // Exponentially Weighted Moving Average (EWMA)
+  // Apply EWMA filter
   if (raw_curv_spline_ < kEpsilon) {
     raw_curv_spline_ = max_curv;
   } else {
@@ -978,31 +1071,20 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
   JSON_DEBUG_VALUE("dist_to_max_curv", dist_to_max_curv);
 
-  // Determine if it is a sharp curve: entry less than 100m, exit greater than 130m
+  // Determine sharp curve with hysteresis
   bool is_sharp_curve = false;
-  // Use hysteresis logic to determine sharp curve status, avoiding frequent switching
   if (last_is_sharp_curve_) {
-    // If currently in a sharp curve state, only exit sharp curve state when radius >= 130m
-    if (road_radius >= kSharpCurveExitThreshold) {
-      is_sharp_curve = false;
-    } else {
-      is_sharp_curve = true;
-    }
+    // Exit when radius >= exit threshold
+    is_sharp_curve = (road_radius < kSharpCurveExitThreshold);
   } else {
-    // If not currently in a sharp curve state, enter sharp curve state when radius < 100m
-    if (road_radius < kSharpCurveEnterThreshold) {
-      is_sharp_curve = true;
-    } else {
-      is_sharp_curve = false;
-    }
+    // Enter when radius < enter threshold
+    is_sharp_curve = (road_radius < kSharpCurveEnterThreshold);
   }
-  // Update the previous sharp curve status
   last_is_sharp_curve_ = is_sharp_curve;
 
-  // Calculate required deceleration: based on current speed, target speed, and distance
+  // Calculate required deceleration
   double required_deceleration = 0.0;
   if (dist_to_max_curv > kMinDistanceForDecel && v_ego > v_limit_road) {
-    // Need to decelerate: current speed is greater than target speed
     required_deceleration = (std::pow(v_limit_road, 2) - std::pow(v_ego, 2)) /
                             (2.0 * dist_to_max_curv);
   } else if (dist_to_max_curv <= kMinDistanceForDecel &&
@@ -1010,55 +1092,45 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     required_deceleration = -2.0; 
   }
 
-  // Condition: deceleration greater than threshold && is_sharp_curve set && is_s_bend not set
+  // Determine sharp curve by deceleration with frame count hysteresis
   bool is_sharp_curve_by_decel = false;
   
   if (speed_limit_config_.enable_sharp_curve_by_decel) {
     bool should_enter_sharp_curve =
         (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve;
     if (last_is_sharp_curve_by_decel_) {
-      // If currently in a sharp curve state (based on deceleration), need to determine whether to exit
       if (should_enter_sharp_curve) {
-        // Conditions met, maintain sharp curve state
         is_sharp_curve_by_decel = true;
-        sharp_curve_frame_count_ = 0;  // Reset counter
+        sharp_curve_frame_count_ = 0;
       } else {
-        // Conditions not met, but need to maintain at least 5 frames
+        // Maintain state for minimum frames
         if (sharp_curve_frame_count_ < kSharpCurveMinFrames) {
-          // Minimum frame count not reached, continue maintaining sharp curve state
           is_sharp_curve_by_decel = true;
           sharp_curve_frame_count_++;
         } else {
-          // Minimum frame count reached, can exit sharp curve state
           is_sharp_curve_by_decel = false;
           sharp_curve_frame_count_ = 0;
         }
       }
     } else {
-      // If not currently in a sharp curve state (based on deceleration), determine whether to enter
       if (should_enter_sharp_curve) {
-        // Conditions met, enter sharp curve state
         is_sharp_curve_by_decel = true;
         sharp_curve_frame_count_ = 0;
       } else {
-        // Conditions not met, maintain non-sharp curve state
         is_sharp_curve_by_decel = false;
         sharp_curve_frame_count_ = 0;
       }
     }
   } else {
-    // 如果未启用基于减速度的急弯判断，重置状态
+    // Reset if disabled
     is_sharp_curve_by_decel = false;
     sharp_curve_frame_count_ = 0;
   }
-  // Update the previous sharp curve status based on deceleration
   last_is_sharp_curve_by_decel_ = is_sharp_curve_by_decel;
 
-  // 地图急弯判断逻辑：接近匝道或在匝道上 并且 基于SDProMap的匝道曲率对应的半径满足（带滞回）
+  // Determine map sharp curve based on ramp curvature with hysteresis
   bool is_map_sharp_curve = false;
-  
-  // 地图急弯判断逻辑：接近匝道或在匝道上 并且 基于SDProMap的匝道曲率对应的半径满足（带滞回）
-  double dist_to_ramp_max_curv = 0.0;  // 到匝道最大曲率点的距离（在enable_map_sharp_curve_speed_limit为true时使用）
+  double dist_to_ramp_max_curv = 0.0;
   
   if (speed_limit_config_.enable_map_sharp_curve_speed_limit) {
     const auto &route_info_output =
@@ -1066,60 +1138,43 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     double dis_to_ramp = route_info_output.dis_to_ramp;
     bool is_on_ramp = route_info_output.is_on_ramp;
     
-    // 条件：接近匝道或在匝道上 并且 基于SDProMap的匝道曲率对应的半径满足（带滞回）
     bool condition_ramp_location = (dis_to_ramp < speed_limit_config_.map_sharp_curve_dis_to_ramp) || is_on_ramp;
     bool condition_ramp_curv = false;
     
     if (condition_ramp_location) {
-      // 只有在接近匝道或在匝道上时，才检查匝道曲率
       double ramp_max_curv = CalcRampMaxCurvFromSDProMap(&dist_to_ramp_max_curv);
       if (ramp_max_curv > 1e-6) {
         double ramp_min_radius = 1.0 / ramp_max_curv;
-        // 基于匝道曲率半径的滞回逻辑
+        // Hysteresis logic based on ramp radius
         if (last_is_map_sharp_curve_ramp_) {
-          // 如果当前在匝道地图急弯状态，只有半径 >= 退出阈值时才退出
-          if (ramp_min_radius >= kMapSharpCurveRadiusExit) {
-            condition_ramp_curv = false;
-          } else {
-            condition_ramp_curv = true;
-          }
+          // Exit when radius >= exit threshold
+          condition_ramp_curv = (ramp_min_radius < kMapSharpCurveRadiusExit);
         } else {
-          // 如果当前不在匝道地图急弯状态，半径 < 进入阈值时进入
-          if (ramp_min_radius < kMapSharpCurveRadiusEnter) {
-            condition_ramp_curv = true;
-          } else {
-            condition_ramp_curv = false;
-          }
+          // Enter when radius < enter threshold
+          condition_ramp_curv = (ramp_min_radius < kMapSharpCurveRadiusEnter);
         }
       } else {
-        // 如果无法获取匝道曲率，保持上次状态或设为false
+        // Keep last state if curvature unavailable
         condition_ramp_curv = last_is_map_sharp_curve_ramp_;
       }
     } else {
-      // 不在接近匝道或不在匝道上，重置匝道相关状态
       condition_ramp_curv = false;
     }
     
-    // 需要同时满足：接近匝道/在匝道上 并且 匝道曲率半径满足
     is_map_sharp_curve = condition_ramp_location && condition_ramp_curv;
-    
-    // 更新地图急弯状态（用于滞回）
     last_is_map_sharp_curve_ramp_ = condition_ramp_curv;
   } else {
-    // 如果未启用地图急弯限速，重置状态
     last_is_map_sharp_curve_ramp_ = false;
   }
   
-  // 生成地图急弯限速（如果判断为地图急弯）
-  double v_limit_map_sharp_curve = 100.0;  // 默认不限制
-  double map_sharp_curve_required_decel = 0.0;  // 地图急弯所需的减速度
+  // Apply map sharp curve speed limit
+  double v_limit_map_sharp_curve = 100.0;
+  double map_sharp_curve_required_decel = 0.0;
   if (is_map_sharp_curve) {
     v_limit_map_sharp_curve = speed_limit_config_.map_sharp_curve_speed_limit;
     
-    // 计算地图急弯所需的减速度：基于当前速度、限速值和到最大曲率点的距离
-    // 使用之前获取的 dist_to_ramp_max_curv
+    // Calculate required deceleration
     if (dist_to_ramp_max_curv > kMinDistanceForDecel && v_ego > v_limit_map_sharp_curve) {
-      // 需要减速：当前速度大于限速值
       map_sharp_curve_required_decel = (std::pow(v_limit_map_sharp_curve, 2) - std::pow(v_ego, 2)) /
                                        (2.0 * dist_to_ramp_max_curv);
     } else if (dist_to_ramp_max_curv <= kMinDistanceForDecel &&
@@ -1128,12 +1183,12 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     }
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_map_sharp_curve);
-  // 在最后取最小限速值，优先级：is_sharp_curve_by_decel > 地图急弯
-  // 如果is_sharp_curve_by_decel为true，优先使用它；否则考虑地图急弯
+  
+  // Priority: is_sharp_curve_by_decel > map_sharp_curve
   SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
   
   if (is_sharp_curve_by_decel || (is_map_sharp_curve && map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
-    // 优先级最高：基于减速度的急弯
+    // Highest priority: sharp curve by deceleration
     v_limit_type = SpeedLimitType::SHARP_CURVATURE;
   }
   
