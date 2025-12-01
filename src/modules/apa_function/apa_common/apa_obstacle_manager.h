@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <array>
 
 #include "apa_measure_data_manager.h"
 #include "apa_obstacle.h"
@@ -17,6 +18,8 @@
 
 namespace planning {
 namespace apa_planner {
+// obstacle manager: 管理所有障碍物，包括超声波、限位器、视觉、虚拟
+// apa_obstacle: 是泊车障碍物的基本数据结构.
 
 #define HAVE_3D_OBS_INTERFACE (1)
 
@@ -38,6 +41,10 @@ class ApaObstacleManager final {
 
   const std::unordered_map<size_t, ApaObstacle> &GetObstacles() const {
     return obstacles_;
+  }
+
+  std::array<float , 2> GetParallelSlotNeighbourObjsHeading() const {
+    return parallel_slot_neigbour_objs_heading_;
   }
 
   std::unordered_map<size_t, ApaObstacle> &GetMutableObstacles() {
@@ -71,6 +78,13 @@ class ApaObstacleManager final {
   const size_t GetObstacleSize() const { return obstacles_.size(); }
 
   void GenerateUss(const LocalView *local_view);
+  std::pair<int, float> CheckParaSlotObsAreNeighbour(
+      iflyauto::Obstacle obs, const iflyauto::ParkingFusionSlot *slot,
+      Eigen::Vector3d ego_pose);
+  static std::pair<int, float> CheckParaSlotObsPtsAreNeighbour(
+      std::array<Eigen::Vector2d, 4> obs_vex_pts_in_global,
+      const iflyauto::ParkingFusionSlot *slot,
+      const std::array<double, 4> d_per_edge, Eigen::Vector3d ego_pose);
 
  private:
   // not allow any ptr variable
@@ -82,6 +96,10 @@ class ApaObstacleManager final {
 
   // record localization pose in activate state
   LocalizationPath localization_path_;
+  bool ego_slot_is_parallel_ = false;
+  const iflyauto::ParkingFusionSlot* last_ego_slot_;
+
+  std::array<float, 2> parallel_slot_neigbour_objs_heading_ = {-100, -100};
 };
 
 typedef IndexedList<int, ApaObstacle> IndexedParkObstacles;

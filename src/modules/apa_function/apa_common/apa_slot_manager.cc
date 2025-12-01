@@ -1,4 +1,5 @@
 #include "apa_slot_manager.h"
+#include <Eigen/src/Core/Matrix.h>
 
 #include <cmath>
 #include <cstddef>
@@ -205,6 +206,75 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.slot_disappear_flag = false;
       }
     }
+  }
+
+  if (ego_info_under_slot_.slot.GetType() == SlotType::PARALLEL) {
+    const iflyauto::ParkingFusionSlot* fusion_slot;
+    ego_info_under_slot_.neigbor_rear_heading = -100;
+    ego_info_under_slot_.neigbor_front_heading = -100;
+    for (size_t i = 0; i < slot_size; ++i) {
+      fusion_slot =
+          &local_view->parking_fusion_info.parking_fusion_slot_lists[i];
+      if (fusion_slot->id == ego_info_under_slot_.id) {
+        break;
+      }
+    }
+
+    Eigen::Vector3d ego_pose;
+    const iflyauto::IFLYLocalization& localization_info =
+        local_view->localization;
+    ego_pose[0] = localization_info.position.position_boot.x;
+    ego_pose[1] = localization_info.position.position_boot.y;
+    ego_pose[2] = localization_info.orientation.euler_boot.yaw;
+
+    const std::array<double, 4> d_per_edge = {1.0, 2.5, 1.0, 2.5};
+    for (size_t i = 0; i < slot_size; ++i) {
+      const iflyauto::ParkingFusionSlot* fusion_slot1 =
+          &local_view->parking_fusion_info.parking_fusion_slot_lists[i];
+      std::array<Eigen::Vector2d, 4> slot_vertexs = {
+          Eigen::Vector2d(fusion_slot1->corner_points[0].x,
+                          fusion_slot1->corner_points[0].y),
+          Eigen::Vector2d(fusion_slot1->corner_points[2].x,
+                          fusion_slot1->corner_points[2].y),
+          Eigen::Vector2d(fusion_slot1->corner_points[1].x,
+                          fusion_slot1->corner_points[1].y),
+          Eigen::Vector2d(fusion_slot1->corner_points[3].x,
+                          fusion_slot1->corner_points[3].y),
+
+      };
+      Eigen::Vector2d slot_center{0.0, 0.0};
+      for (auto pts : slot_vertexs) {
+        slot_center += pts;
+      }
+      slot_center /= 4;
+      auto obs_ego_line_heading = std::atan2(slot_center.y() - ego_pose[1],
+                                             slot_center.x() - ego_pose[0]);
+      bool is_front_slot =
+          std::abs(obs_ego_line_heading - ego_pose[2]) < M_PI / 2;
+      if (fusion_slot1->id == ego_info_under_slot_.id) {
+        continue;
+      }
+      auto res = ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
+          slot_vertexs, fusion_slot, d_per_edge, ego_pose);
+      if (is_front_slot && res.first == 0) {
+        ego_info_under_slot_.neigbor_front_heading = res.second;
+        ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
+                     "slot heading"
+                  << ego_info_under_slot_.neigbor_front_heading;
+      }
+    }
+    auto its = obstacle_manager_ptr_->GetParallelSlotNeighbourObjsHeading();
+    if (its[0] != -100.0) {
+      ego_info_under_slot_.neigbor_front_heading = its[0];
+      ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front car "
+                   "object heading"
+                << ego_info_under_slot_.neigbor_front_heading;
+    }
+    if (its[1] != -100.0) {
+      ego_info_under_slot_.neigbor_rear_heading = its[1];
+    }
+    ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading = "
+              << ego_info_under_slot_.neigbor_front_heading;
   }
 
   ILOG_INFO << "select slot id = " << ego_info_under_slot_.id

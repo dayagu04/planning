@@ -1,5 +1,6 @@
 #include "apa_obstacle_manager.h"
 
+#include <Eigen/src/Core/Matrix.h>
 #include <bits/stdint-intn.h>
 
 #include <algorithm>
@@ -62,13 +63,31 @@ void ApaObstacleManager::Update(
     runover_height = -1068.8;
   }
 
+  const iflyauto::ParkingFusionInfo* slot_list =
+      &local_view->parking_fusion_info;
+
+  ego_slot_is_parallel_ = false;
+  for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
+    last_ego_slot_ = &slot_list->parking_fusion_slot_lists[i];
+    // For now, do not consider ego slot limiter.
+    // Todo: consider all limiters.
+    if (last_ego_slot_->type ==
+        iflyauto::ParkingSlotType::PARKING_SLOT_TYPE_HORIZONTAL) {
+      if (slot_list->select_slot_id == last_ego_slot_->id ||
+          static_cast<uint32>(ego_slot_id) == last_ego_slot_->id) {
+        ego_slot_is_parallel_ = true;
+        break;
+      }
+    }
+  }
+
   // ultrasonic sector distance
   const double min_uss_dist = param.min_uss_origin_dist;
   if (param.is_uss_dist_from_perception) {
     const auto& uss_dis_info_buf =
         local_view->uss_percept_info.dis_from_car_to_obj;
 
-    //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
+   //  front uss: uss dis need to be transfered from mm to m. order: fl apa, 4
     //  upa, fr apa
     for (const auto& front_uss_idx : param.uss_wdis_index_front) {
       uss_dis_vec_.emplace_back(
@@ -199,7 +218,6 @@ void ApaObstacleManager::Update(
     }
   }
 
-  // object detect box
   if (param.use_object_detect) {
     GenerateObsByOD(local_view, apa_param.GetParam().od_config);
   }
@@ -433,11 +451,33 @@ void ApaObstacleManager::GenerateObsByOD(
         continue;
       }
     } else {
+      if (ego_slot_is_parallel_ && obs.type >= iflyauto::OBJECT_TYPE_COUPE &&
+          obs.type <= iflyauto::OBJECT_TYPE_TRAILER) {
+        const iflyauto::IFLYLocalization& localization_info =
+            local_view->localization;
+        Eigen::Vector3d ego_pose;
+        ego_pose[0] = localization_info.position.position_boot.x;
+        ego_pose[1] = localization_info.position.position_boot.y;
+        ego_pose[2] = localization_info.orientation.euler_boot.yaw;
+        auto obs_ego_line_heading =
+            std::atan2(obs.center_position.y - ego_pose[1],
+                       obs.center_position.x - ego_pose[0]);
+        bool is_front_car =
+            std::abs(obs_ego_line_heading - ego_pose[2]) < M_PI / 2;
+        if (is_front_car) {
+          auto res =
+              CheckParaSlotObsAreNeighbour(obs, last_ego_slot_, ego_pose);
+          if (res.first == 0) {
+            parallel_slot_neigbour_objs_heading_[0] = res.second;
+          }
+        }
+      }
       continue;
     }
 
     Pose2D center_pose(obs.center_position.x, obs.center_position.y,
                        obs.heading_angle);
+
 
     std::vector<Eigen::Vector2d> local_box;
     GenerateBoundingBox(obs.shape.length, obs.shape.width,
@@ -608,6 +648,166 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
   }
 
   return;
+}
+
+std::pair<int, float> ApaObstacleManager::CheckParaSlotObsAreNeighbour(
+    iflyauto::Obstacle obs, const iflyauto::ParkingFusionSlot* slot,
+    Eigen::Vector3d ego_pose) {
+  std::array<Eigen::Vector2d, 4> obs_vex_pts_in_ego;
+  std::array<Eigen::Vector2d, 4> obs_vex_pts_in_global;
+  obs_vex_pts_in_ego[0] =
+      Eigen::Vector2d(obs.shape.length / 2.0, obs.shape.width / 2.0);
+  obs_vex_pts_in_ego[1] =
+      Eigen::Vector2d(obs.shape.length / 2.0, -obs.shape.width / 2.0);
+  obs_vex_pts_in_ego[2] =
+      Eigen::Vector2d(-obs.shape.length / 2.0, obs.shape.width / 2.0);
+  obs_vex_pts_in_ego[3] =
+      Eigen::Vector2d(-obs.shape.length / 2.0, -obs.shape.width / 2.0);
+  Eigen::Matrix2d rot_mat;
+  rot_mat << cos(obs.heading_angle), -sin(obs.heading_angle),
+      sin(obs.heading_angle), cos(obs.heading_angle);
+  Eigen::Vector2d obs_center_in_ego =
+      Eigen::Vector2d(obs.position.x, obs.position.y);
+  obs_vex_pts_in_global[0] =
+      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[0];
+  obs_vex_pts_in_global[1] =
+      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[1];
+  obs_vex_pts_in_global[2] =
+      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[2];
+  obs_vex_pts_in_global[3] =
+      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[3];
+
+  std::array<double, 4> d_per_edge = {1.0, 2.5, 1.0, 2.5};
+  return CheckParaSlotObsPtsAreNeighbour(obs_vex_pts_in_global, slot,
+                                         d_per_edge, ego_pose);
+}
+
+std::pair<int, float> ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
+    std::array<Eigen::Vector2d, 4> obs_vex_pts_in_global,
+    const iflyauto::ParkingFusionSlot* slot,
+    const std::array<double, 4> d_per_edge, Eigen::Vector3d ego_pose) {
+  // 0--1
+  // |  |
+  // 2--3
+
+  const auto convertToCCW = [](const std::array<Eigen::Vector2d, 4>& original) {
+    double original_area = 0.0;
+    for (int i = 0; i < 4; ++i) {
+      int j = (i + 1) % 4;
+      original_area +=
+          original[i].x() * original[j].y() - original[j].x() * original[i].y();
+    }
+    // if (std::fabs(original_area) < 1e-8) {
+    //   throw std::invalid_argument(
+    //       "Invalid quadrilateral: collinear points or zero area!");
+    // }
+    std::array<Eigen::Vector2d, 4> pts = original;
+    if (original_area < 0) {
+    }
+    std::swap(pts[2], pts[3]);  // 仅翻转后两点
+
+    double new_area = 0.0;
+    for (int i = 0; i < 4; ++i) {
+      int j = (i + 1) % 4;
+      new_area += pts[i].x() * pts[j].y() - pts[j].x() * pts[i].y();
+    }
+    // if (new_area < 1e-8) {
+    //   throw std::runtime_error(
+    //       "Only swapping last two points is insufficient for CCW!");
+    // }
+    return pts;
+  };
+
+  const std::function<std::array<Eigen::Vector2d, 4>(
+      const std::array<Eigen::Vector2d, 4>&, const std::array<double, 4>&)>
+      translateQuadrilateral = [](const std::array<Eigen::Vector2d, 4>& pts,
+                                  const std::array<double, 4>& d_per_edge) {
+        Eigen::Vector2d M;
+        for (int i = 0; i < pts.size(); ++i) {
+          M += pts[i];
+        }
+        M = M / pts.size();
+        Eigen::Vector2d MA = pts[0] - M;
+        Eigen::Vector2d MB = pts[1] - M;
+        Eigen::Vector2d MC = pts[2] - M;
+        Eigen::Vector2d MD = pts[3] - M;
+        MA = 2 * MA;
+        MB = 2 * MB;
+        MC = 2 * MC;
+        MD = 2 * MD;
+        Eigen::Vector2d new_A = M + MA;
+        Eigen::Vector2d new_B = M + MB;
+        Eigen::Vector2d new_C = M + MC;
+        Eigen::Vector2d new_D = M + MD;
+
+        return std::array<Eigen::Vector2d, 4>{new_A, new_B, new_C, new_D};
+      };
+  std::array<Eigen::Vector2d, 4> slot_global_pts;
+  for (int i = 0; i < 4; ++i) {
+    slot_global_pts[i] =
+        Eigen::Vector2d(slot->corner_points[i].x, slot->corner_points[i].y);
+  }
+
+  const auto isPointInCounterClockwiseQuad =
+      [](const std::array<Eigen::Vector2d, 4>& quad,
+         const Eigen::Vector2d& a) -> bool {
+    std::array<Eigen::Vector2d, 4> edges;
+    for (int i = 0; i < 4; ++i) {
+      edges[i] = quad[(i + 1) % 4] - quad[i];
+    }
+    std::array<Eigen::Vector2d, 4> pointToVertex;
+    for (int i = 0; i < 4; ++i) {
+      pointToVertex[i] = quad[i] - a;
+    }
+
+    std::array<Eigen::Vector2d, 4> normals;
+    for (int i = 0; i < 4; ++i) {
+      normals[i] = Eigen::Vector2d(-edges[i].y(), edges[i].x());
+    }
+
+    std::array<double, 4> dots;
+    for (int i = 0; i < 4; ++i) {
+      dots[i] = normals[i].dot(pointToVertex[i]);
+    }
+
+    bool allPositive = true;
+    bool allNegative = true;
+
+    for (int i = 0; i < 4; ++i) {
+      if (dots[i] < 0) allPositive = false;
+      if (dots[i] > 0) allNegative = false;
+    }
+
+    return allPositive || allNegative;
+  };
+  slot_global_pts = convertToCCW(slot_global_pts);
+  Eigen::Vector2d slot_01 = slot_global_pts[0] - slot_global_pts[1];
+  Eigen::Vector2d ego_pose_unit_vec =
+      Eigen::Vector2d(cos(ego_pose[2]), sin(ego_pose[2]));
+  if (slot_01.dot(ego_pose_unit_vec) < 0) {
+    slot_01 = -slot_01;
+  }
+  auto box_02 = obs_vex_pts_in_global[0] - obs_vex_pts_in_global[2];
+  float delta_heading =
+      std::atan2(box_02.y(), box_02.x()) - std::atan2(slot_01.y(), slot_01.x());
+
+  auto translated_slot_pts =
+      translateQuadrilateral(slot_global_pts, d_per_edge);
+  // translated_slot_pts = convertToCCW(translated_slot_pts);
+
+  if (isPointInCounterClockwiseQuad(translated_slot_pts,
+                                    obs_vex_pts_in_global[0]) &&
+      isPointInCounterClockwiseQuad(translated_slot_pts,
+                                    obs_vex_pts_in_global[1])) {
+    return std::pair<int, float>(0, delta_heading);
+  }
+  if (isPointInCounterClockwiseQuad(translated_slot_pts,
+                                    obs_vex_pts_in_global[2]) &&
+      isPointInCounterClockwiseQuad(translated_slot_pts,
+                                    obs_vex_pts_in_global[3])) {
+    return std::pair<int, float>(0, delta_heading);
+  }
+  return std::pair<int, float>(-1, -1);
 }
 
 }  // namespace apa_planner

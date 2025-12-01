@@ -554,9 +554,22 @@ const bool ParallelParkOutScenario::CheckFinished() {
                                          ->GetEgoInfoUnderSlot()
                                          .slot_occupied_ratio;
 
-  const double heading_mag_deg = std::fabs(apa_world_ptr_->GetSlotManagerPtr()
-                                               ->GetEgoInfoUnderSlot()
-                                               .cur_pose.heading *
+  auto front_heading = apa_world_ptr_->GetSlotManagerPtr()
+                           ->GetEgoInfoUnderSlot()
+                           .neigbor_front_heading;
+  if (front_heading > M_PI_2) {
+    front_heading = -M_PI + front_heading;
+  }
+  if (front_heading < -M_PI_2) {
+    front_heading = M_PI + front_heading;
+  }
+  if (std::abs(front_heading) < pnc::mathlib::Deg2Rad(5.0) &&
+      std::abs(front_heading) > pnc::mathlib::Deg2Rad(45.0)) {
+    front_heading = 0.0;
+  }
+  const double heading_mag_deg = std::fabs((apa_world_ptr_->GetSlotManagerPtr()
+                                                ->GetEgoInfoUnderSlot()
+                                  .cur_pose.heading -front_heading) *
                                            kRad2Deg);
 
   const bool static_condition =
