@@ -2610,6 +2610,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   }
 
   parallel_path_planner_.SampleCurrentPathSeg();
+  parallel_path_planner_.JudgeNeedOptimize();
   parallel_path_planner_.SetLastPathSeg(
       parallel_path_planner_.GetOutput().path_point_vec);
 
@@ -2658,7 +2659,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   ILOG_INFO << "start lat optimizer!";
 
   // lateral path optimization
-  bool is_use_optimizer = true;
+  bool is_use_optimizer = planner_output.is_need_optimizer;
 
   // refuse optimizer
   if (planner_output.path_point_vec.size() < 3) {

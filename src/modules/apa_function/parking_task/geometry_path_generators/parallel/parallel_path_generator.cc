@@ -884,6 +884,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
                             : pnc::geometry_lib::SEG_STEER_LEFT;
   const pnc::geometry_lib::PathPoint target_pose(arc_2.pB, arc_2.headingB);
   auto current_pose = first_three_steps.back().GetEndPose();
+  float line_arc_length = 0.0;
   for (size_t i = 0; i < 3; i++) {
     std::vector<pnc::geometry_lib::PathSegment> tmp_line_arc_seg_vec;
     if (!CalSinglePathInNarrowChannel(tmp_line_arc_seg_vec, current_pose,
@@ -899,7 +900,18 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
     }
 
     for (const auto& path_seg : tmp_line_arc_seg_vec) {
+      line_arc_length += path_seg.GetLength();
       first_three_steps.emplace_back(path_seg);
+    }
+    if (line_arc_length > 2.5) {// stop add line arc when length > 2.5 and  terminal condition is met
+      if (tmp_line_arc_seg_vec.back().seg_type ==
+          pnc::geometry_lib::SEG_TYPE_ARC) {
+        if (std::abs(tmp_line_arc_seg_vec.back().arc_seg.headingB) <
+            pnc::mathlib::Deg2Rad(15.0)) {
+          ILOG_INFO << "stop add line arc when length > 2.5 and  terminal condition is met";
+          break;
+        }
+      }
     }
     current_pose = first_three_steps.back().GetEndPose();
 
@@ -7075,7 +7087,31 @@ void ParallelPathGenerator::TrimPathByLimiterPathPoint(
     }
   }
 }
-
+void ParallelPathGenerator::JudgeNeedOptimize() {
+  // double C / C-S-C S<0.6 ENABLE optimizer
+  for (size_t i = output_.path_seg_index.first;
+       i <= output_.path_seg_index.second; ++i) {
+    if (i <= output_.path_seg_index.second - 1) {
+      if (output_.path_segment_vec[i].seg_type == SEG_TYPE_ARC &&
+          output_.path_segment_vec[i + 1].seg_type == SEG_TYPE_ARC) {
+        output_.is_need_optimizer = true;
+        ILOG_INFO << "is_need_optimizer CC" << output_.is_need_optimizer;
+        break;
+      }
+    }
+    if (i <= output_.path_seg_index.second - 2) {
+      if (output_.path_segment_vec[i].seg_type == SEG_TYPE_ARC &&
+          output_.path_segment_vec[i + 1].seg_type == SEG_TYPE_LINE &&
+          output_.path_segment_vec[i + 2].seg_type == SEG_TYPE_ARC &&
+          output_.path_segment_vec[i + 1].GetLength() < 0.6) {
+        output_.is_need_optimizer = true;
+        ILOG_INFO << "is_need_optimizer CSC" << output_.is_need_optimizer;
+        break;
+      }
+    }
+    break;
+  }
+}
 
 }  // namespace apa_planner
 }  // namespace planning
