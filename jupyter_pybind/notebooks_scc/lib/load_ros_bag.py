@@ -697,7 +697,8 @@ class LoadRosbag:
                           "rear_agent_front_edge", "rear_agent_rear_edge",
                           "rear_agent_longitudinal_label", "lane_change_reason",
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
-                          'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage']
+                          'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
+                          'ConstructionWarningState']
 
 
       json_value_list += [#new_ldw debug info:
@@ -766,8 +767,8 @@ class LoadRosbag:
                          'lat_path_t','ego_sim_s', "history_steer_vec", "virtual_ref_x", "virtual_ref_y", "virtual_ref_theta",
                          'construction_agent_clusters', 'construction_agent_clusters_length', 'construction_agent_cluster_attribute_ids',
                          'construction_agent_clusters_driection', 'construction_available_virtual_lane_ids', "comfort_jerk_min_vec", "comfort_v_target_vec",
-                         "joint_target_v0_vec", "joint_collision_obstacle_ids",
-                         'construction_refline_x', 'construction_refline_y', 'construction_blocked_virtual_lane_ids']
+                         "joint_target_v0_vec",  "joint_collision_obstacle_ids",
+                         'construction_refline_x', 'construction_refline_y', 'construction_blocked_virtual_lane_ids','cluster_is_construction_area']
 
       # hpp
       json_value_list += ["LaneChangeDeciderTime","LateralObstacleDeciderTime","HppGeneralLateralDeciderTime",\
