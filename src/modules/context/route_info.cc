@@ -216,16 +216,13 @@ void RouteInfo::UpdateRouteInfoForNOA(
   CaculateDistanceToLastSplitPoint(sdpro_map, current_link, nearest_s,
                                    max_search_length);
 
-  if (segment != nullptr) {
-    const SdMapSwtx::Segment& current_segment = *segment;
-    // 计算到路线终点的距离
-    CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s,
-                              max_search_length);
+  // 计算到路线终点的距离
+  CaculateDistanceToRoadEnd(sdpro_map, current_link, nearest_s,
+                            max_search_length);
 
-    // 计算到最近收费站的距离
-    CaculateDistanceToTollStation(sd_map_, current_segment, nearest_s,
-                                  max_search_length);
-  }
+  // 计算到最近收费站的距离
+  CaculateDistanceToTollStation(sdpro_map, current_link, nearest_s,
+                                max_search_length);
 }
 
 void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
