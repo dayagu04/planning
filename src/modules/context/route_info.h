@@ -412,5 +412,9 @@ class RouteInfo {
   double CalculateLSLTotalLength(
       int lane_seq, const std::vector<std::vector<LSLInfo>>& lane_lsl_length,
       bool direction);
+  bool CalculateExpandLaneInfo(
+      std::map<int, SplitDirection>& expand_lane_sequence_vec,
+      const iflymapdata::sdpro::LinkInfo_Link* link, double distance_on_link,
+      double search_distance);
 };
 }  // namespace planning

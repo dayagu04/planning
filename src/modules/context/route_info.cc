@@ -2001,6 +2001,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
   }
 
+  // 可能会出现前方存在车道拓宽点，感知与地图位置不一致的情况
+  // 向前搜索25米，看有没有车道拓宽点
+  std::map<int, SplitDirection> expand_lane_sequence_vec;
+  if (CalculateExpandLaneInfo(
+          expand_lane_sequence_vec, current_link_, s, 25.0)) {
+    map_lane_num += expand_lane_sequence_vec.size();
+  }
+
   // 获取当前感知车道数
   int perceived_lane_num = 0;
   for (auto& relative_id_lane : relative_id_lanes) {
@@ -6541,5 +6549,94 @@ double RouteInfo::CalculateLSLTotalLength(
   }
 
   return max_lsl_length;
+}
+bool RouteInfo::CalculateExpandLaneInfo(
+    std::map<int, SplitDirection>& expand_lane_sequence_vec,
+    const iflymapdata::sdpro::LinkInfo_Link* link, double distance_on_link,
+    double max_search_distance) {
+  const iflymapdata::sdpro::LinkInfo_Link* current_link = link;
+  double search_distance = 0.0 - distance_on_link;
+
+  while (current_link != nullptr) {
+    if (search_distance > max_search_distance) {
+      return false;
+    }
+
+    const double current_link_length =
+        static_cast<double>(current_link->length());
+
+    std::vector<iflymapdata::sdpro::FeaturePoint> fp_vec;
+    for (const auto& fp : current_link->feature_points()) {
+      fp_vec.emplace_back(fp);
+    }
+
+    // 2、按照距离排序后，由近向远判断当前link上的fp是否有TurnExpandingLane
+    std::sort(fp_vec.begin(), fp_vec.end(),
+              [](const iflymapdata::sdpro::FeaturePoint& fp_a,
+                 const iflymapdata::sdpro::FeaturePoint& fp_b) {
+                return fp_a.projection_percent() < fp_b.projection_percent();
+              });
+
+    const int fp_point_size = fp_vec.size();
+    for (int i = 0; i < fp_point_size; i++) {
+      const auto& fp_point = fp_vec[i];
+
+      const double distance_to_this_point =
+          search_distance +
+          current_link_length * fp_point.projection_percent() * 0.01;
+
+      if (distance_to_this_point > max_search_distance) {
+        return false;
+      } else if (distance_to_this_point < 0.0) {
+        // 说明当前fp点在自车之前，直接跳过
+        continue;
+      }
+
+      for (const auto fp_point_type : fp_point.type()) {
+        if (fp_point_type ==
+            iflymapdata::sdpro::FeaturePointType::LANE_COUNT_CHANGE) {
+          for (const auto& lane_id : fp_point.lane_ids()) {
+            const auto& lane_info = sdpro_map_.GetLaneInfoByID(lane_id);
+            if (lane_info == nullptr) {
+              continue;
+            }
+
+            int find_fp_lane_num = 0;
+            for (const auto& lane_id_temp : fp_point.lane_ids()) {
+              if (!IsEmergencyLane(lane_id_temp, sdpro_map_)) {
+                find_fp_lane_num++;
+              }
+              if (lane_id_temp == lane_id) {
+                break;
+              }
+            }
+
+            if (lane_info->change_type() ==
+                iflymapdata::sdpro::LaneChangeType::LeftTurnExpandingLane) {
+              expand_lane_sequence_vec.emplace(1, SPLIT_LEFT);
+              return true;
+            } else if (lane_info->change_type() ==
+                       iflymapdata::sdpro::LaneChangeType::
+                           RightTurnExpandingLane) {
+              expand_lane_sequence_vec.emplace(find_fp_lane_num + 1,
+                                               SPLIT_RIGHT);
+              return true;
+            } else if (lane_info->change_type() ==
+                       iflymapdata::sdpro::LaneChangeType::
+                           BothDirectionExpandingLane) {
+              expand_lane_sequence_vec.emplace(find_fp_lane_num - 1,
+                                               SPLIT_LEFT);
+              expand_lane_sequence_vec.emplace(find_fp_lane_num + 1,
+                                               SPLIT_RIGHT);
+              return true;
+            }
+          }
+        }
+      }
+    }
+    search_distance += current_link_length * 0.01;
+    current_link = sdpro_map_.GetNextLinkOnRoute(current_link->id());
+  }
+  return false;
 }
 }  // namespace planning
