@@ -75,6 +75,8 @@ struct RoadBoundaryCluster {
 struct ConstructionSceneOutput {
   std::map<int, ConstructionAgentClusterArea>
       construction_agent_cluster_attribute_map;  // 施工区域聚类结果
+  std::map<int, bool>
+      cluster_is_construction_area_map;  // 某个 cluster是否属于施工区域（bool）
   std::map<int, RoadBoundaryCluster> road_boundaries_clusters_map; // 路沿决策结果
   bool is_exist_construction_area = false;       // 是否存在施工区域
   bool is_pass_construction_area = false;  // 是否正在经过施工区域（自车状态）
@@ -98,6 +100,7 @@ struct ConstructionSceneOutput {
   void Clear() {
     construction_agent_cluster_attribute_map.clear();
     road_boundaries_clusters_map.clear();
+    cluster_is_construction_area_map.clear();
     is_exist_construction_area = false;
     is_pass_construction_area = false;
     construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
@@ -204,6 +207,7 @@ class ConstructionSceneManager {
   bool enable_construction_passage_ = false;
   int disable_construction_passage_counter_ = std::numeric_limits<int>::max() / 2;
   bool is_lane_blocked_ = false;
+  std::map<int, bool> cluster_is_construction_area_map_;
 };
 
 }  // namespace planning

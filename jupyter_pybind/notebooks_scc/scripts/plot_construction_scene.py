@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251009/20251009-13-33-33/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-10-09-13-33-33_no_camera.bag.1763604333.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251203/20251203-15-10-57/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-12-03-15-10-57_no_camera.bag.1764820545.open-loop.scc.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -135,12 +135,14 @@ def update_lat_behavior_data(local_view_data):
 hmi_construction_agent_data = ColumnDataSource({
   'name':[],
   'data':[],
-  'direction':[]
+  'direction':[],
+  'is_construction': []
 })
 columns = [
         TableColumn(field="name", title="cluster",),
         TableColumn(field="data", title="id"),
         TableColumn(field="direction", title="direction"),
+        TableColumn(field="is_construction", title="is_construction"),
     ]
 data_hmi_construction_agent_info_table = DataTable(source=hmi_construction_agent_data, columns=columns, width=1000, height=1000)
 
@@ -149,11 +151,13 @@ def update_construction_agent_info(local_view_data):
   construction_agent_clusters_length = local_view_data['data_msg']['plan_debug_json_msg']['construction_agent_clusters_length']
   construction_agent_cluster_attribute_ids = local_view_data['data_msg']['plan_debug_json_msg']['construction_agent_cluster_attribute_ids']
   construction_agent_clusters_driection = local_view_data['data_msg']['plan_debug_json_msg']['construction_agent_clusters_driection']
+  cluster_is_construction_area = local_view_data['data_msg']['plan_debug_json_msg']['cluster_is_construction_area']
   vars = [f'cluster_{i}' for i in range(1, 11)]
   construction_agent_clusters_nums = len(construction_agent_clusters)
   names  = []
   datas = []
   directions = []
+  is_constructions = []
   i = 0
   for name in vars:
     try:
@@ -172,13 +176,16 @@ def update_construction_agent_info(local_view_data):
         start = sum(construction_agent_clusters_length[:i])
         end = start + construction_agent_clusters_length[i]
         cluster_ids = construction_agent_cluster_attribute_ids[int(start):int(end)]
+        is_construction = cluster_is_construction_area[i]
         datas.append(cluster_ids)
         names.append(cluster)
         directions.append(direction)
+        is_constructions.append(is_construction)
       else:
         datas.append([])
         names.append([])
         directions.append([])
+        is_constructions.append([])
       i = i + 1
     except:
       pass
@@ -187,11 +194,12 @@ def update_construction_agent_info(local_view_data):
             'is_current_lane_available', 'is_right_lane_available','is_left_lane_available',
             'is_left_left_lane_available','is_right_right_lane_available', 'construction_available_virtual_lane_ids',
             'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked',
-            'enable_construction_passage','construction_blocked_virtual_lane_ids']
+            'enable_construction_passage','construction_blocked_virtual_lane_ids','ConstructionWarningState']
   for name in vars_2:
     try:
       names.append(name)
       directions.append([])
+      is_constructions.append([])
       datas.append([local_view_data['data_msg']['plan_debug_json_msg'][name]])
     except:
       pass
@@ -200,6 +208,7 @@ def update_construction_agent_info(local_view_data):
     'name': names,
     'data': datas,
     'direction': directions,
+    'is_construction': is_constructions,
   })
 
 

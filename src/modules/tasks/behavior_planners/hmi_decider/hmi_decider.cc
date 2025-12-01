@@ -8,7 +8,7 @@ HMIDecider::HMIDecider(const EgoPlanningConfigBuilder* config_builder,
   config_ = config_builder->cast<HmiDeciderConfig>();
   cone_warning_hmi_decider_ = std::make_shared<ConeWarningHMIDecider>(session);
   construction_warning_hmi_decider_ =
-      std::make_shared<ConstructionWarningHMIDecider>(session);
+      std::make_shared<ConstructionWarningHMIDecider>(session, config_);
   lane_change_hmi_decider_ = std::make_shared<LaneChangeHmiDecider>(session);
   longitudinal_hmi_decider_ =
       std::make_shared<LongitudinalHmiDecider>(session, config_);

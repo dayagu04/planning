@@ -1,13 +1,14 @@
 #pragma once
 #include "planning_context.h"
 #include "session.h"
+#include "utils/hysteresis_decision.h"
 
 namespace planning {
 class ConstructionWarningHMIDecider {
   enum class ConstructionWarningState : int { RUNNING, EXITING, IDLE };
 
  public:
-  ConstructionWarningHMIDecider(framework::Session* session);
+  ConstructionWarningHMIDecider(framework::Session* session, const HmiDeciderConfig& config);
   ~ConstructionWarningHMIDecider() = default;
 
   bool Execute();
@@ -26,5 +27,8 @@ class ConstructionWarningHMIDecider {
   ConstructionWarningState current_state_ = ConstructionWarningState::IDLE;
   iflyauto::ConstructionState last_construction_state_ = iflyauto::ConstructionState::CONSTRUCTION_NONE;
   framework::Session* session_;
+  HmiDeciderConfig config_;
+  HysteresisDecision has_enough_speed_hysteresis_;
+
 };
 }  // namespace planning

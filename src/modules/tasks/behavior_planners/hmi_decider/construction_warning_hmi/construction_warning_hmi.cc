@@ -7,8 +7,13 @@ namespace planning {
 const static int kStartRunningCount = 3;
 const static int kStopRunningCount = 3;
 ConstructionWarningHMIDecider::ConstructionWarningHMIDecider(
-    framework::Session* session) {
+    framework::Session* session,
+    const HmiDeciderConfig& config) {
   session_ = session;
+  config_ = config;
+  has_enough_speed_hysteresis_.SetThreValue(
+      config_.construction_warning_hmi_speed_max + 5,
+      config_.construction_warning_hmi_speed_max - 5);
 }
 
 bool ConstructionWarningHMIDecider::Execute() {
@@ -39,20 +44,96 @@ bool ConstructionWarningHMIDecider::Execute() {
       stop_running_count_ = 0;
       break;
   }
-
+  JSON_DEBUG_VALUE("ConstructionWarningState",
+                    static_cast<uint32_t>(current_state_));
   SaveHmiOutput();
   return true;
 }
 
 bool ConstructionWarningHMIDecider::HasConstruction() {
-  const auto& construction_scene = session_->environmental_model()
+  const auto &construction_scene = session_->environmental_model()
                                        .get_construction_scene_manager()
                                        ->get_construction_scene_output();
-  if (construction_scene.is_exist_construction_area ||
-      construction_scene.is_pass_construction_area) {
+  if (!construction_scene.is_exist_construction_area) {
+    return false;
+  }
+  const auto ego_cart_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  has_enough_speed_hysteresis_.SetIsValidByValue(
+      ego_cart_state_manager->ego_v() * 3.6);
+  bool is_high_speed = has_enough_speed_hysteresis_.IsValid();
+  double lateral_distance_to_centerline_thr = 6;
+  int construction_agent_numble_thr = 5;
+  double construction_area_length_thr = 5;
+  double lon_tcc_to_construction_area_thr = 5;
+  if (!is_high_speed) {
+    // 低速时条件更加严格
+    lateral_distance_to_centerline_thr = 4;
+    construction_agent_numble_thr = 6;
+    construction_area_length_thr = 10;
+    lon_tcc_to_construction_area_thr = 3.5;
+  }
+  const auto &frenet_coord =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_coord();
+  const auto ego_s =
+      session_->planning_context()
+          .lane_change_decider_output()
+          .coarse_planning_info.reference_path->get_frenet_ego_state()
+          .s();
+  // 检查横向距离条件
+  const auto &cluster_is_construction_area_map =
+      construction_scene.cluster_is_construction_area_map;
+  const auto &construction_agent_cluster_attribute_map =
+      construction_scene.construction_agent_cluster_attribute_map;
+  for (const auto & [ cluster_id, cluster_area ] :
+       construction_agent_cluster_attribute_map) {
+    auto it = cluster_is_construction_area_map.find(cluster_id);
+    if (it == cluster_is_construction_area_map.end() || !it->second) {
+      continue;
+    }
+    if (cluster_area.points.size() < construction_agent_numble_thr) {
+      // 数量达到要求
+      continue;
+    }
+    double construction_nearest_l = std::numeric_limits<double>::max();
+    double construction_area_s_start = std::numeric_limits<double>::max();
+    double construction_area_s_end = std::numeric_limits<double>::lowest();
+    for (const auto &pt : cluster_area.points) {
+      Point2D point_xy(pt.x, pt.y);
+      Point2D point_sl;
+      if (!frenet_coord->XYToSL(point_xy, point_sl)) {
+        continue;
+      }
+      construction_nearest_l = std::abs(point_sl.y) <
+                      std::abs(construction_nearest_l)
+                      ? std::abs(point_sl.y)
+                      : construction_nearest_l;
+      construction_area_s_start = point_sl.x <
+                      construction_area_s_start
+                      ? point_sl.x
+                      : construction_area_s_start;
+      construction_area_s_end = point_sl.x >
+                      construction_area_s_end
+                      ? point_sl.x
+                      : construction_area_s_end;
+    }
+    if (construction_nearest_l > lateral_distance_to_centerline_thr) {
+      continue;
+    }
+    if (construction_area_s_end - construction_area_s_start <
+        construction_area_length_thr) {
+      continue;
+    }
+    double lon_ttc = std::fmax(
+        (construction_area_s_start - ego_s) / ego_cart_state_manager->ego_v(),
+        0);
+    if (lon_ttc > lon_tcc_to_construction_area_thr) {
+      continue;
+    }
     return true;
   }
-
   return false;
 }
 
