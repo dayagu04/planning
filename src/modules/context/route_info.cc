@@ -2282,7 +2282,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 判断当前处理的场景
   if (!merge_region_info_list.empty() &&
       first_exchange_region_info.split_link_id ==
-          merge_region_info_list[0].split_link_id) {
+          merge_region_info_list[0].split_link_id &&
+      mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
     if (first_exchange_region_info.is_other_merge_to_road) {
       mlc_decider_route_info_.is_process_other_merge = true;
       mlc_decider_route_info_.is_process_merge = false;
@@ -3191,6 +3192,13 @@ void RouteInfo::UpdateVisionInfo() const {
                    route_info_output_.right_lane_distance);
   JSON_DEBUG_VALUE("is_closing_split", route_info_output_.is_closing_split);
   JSON_DEBUG_VALUE("is_closing_merge", route_info_output_.is_closing_merge);
+  JSON_DEBUG_VALUE("is_process_split",
+                   route_info_output_.mlc_decider_route_info.is_process_split);
+  JSON_DEBUG_VALUE("is_process_merge",
+                   route_info_output_.mlc_decider_route_info.is_process_merge);
+  JSON_DEBUG_VALUE(
+      "is_process_other_merge",
+      route_info_output_.mlc_decider_route_info.is_process_other_merge);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
