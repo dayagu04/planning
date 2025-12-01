@@ -59,6 +59,7 @@ void FollowTarget::GenerateUpperBoundInfo() {
               agent->type() == agent::AgentType::BUS ||
               agent->type() == agent::AgentType::TRUCK ||
               agent->type() == agent::AgentType::TRAILER ||
+              agent->length() > kLargeAgentLengthM ||
               cipv_decider_output.is_large();
           cipv_info_.type = agent->type();
           cipv_info_.is_tfl_virtual_obs = agent->is_tfl_virtual_obs();
@@ -154,17 +155,9 @@ void FollowTarget::GenerateFollowTarget() {
       follow_time_gap = iter->second.current_headway;
     }
 
-    double delta_v = vel - upper_bound_infos_[i].v;
-
-    constexpr double a = 1.5;
-    constexpr double b_max = 2.0;
-
-    double relative_vel_dis =
-        std::min(0.0, vel * delta_v) / (2.0 * std::sqrt(a * b_max));
-
     double target_s_disatnce =
         min_follow_distance_m_ +
-        std::max(0.0, vel * follow_time_gap + relative_vel_dis);
+        std::max(0.0, vel * follow_time_gap);
 
     double upper_bound_s =
         std::max(upper_bound_infos_[i].s - min_follow_distance_m_, 0.0);
