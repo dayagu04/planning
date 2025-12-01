@@ -81,9 +81,6 @@ void LaneChangeStateMachineManager::Update() {
 void LaneChangeStateMachineManager::RunStateMachine() {
   switch (transition_info_.lane_change_status) {
     case StateMachineLaneChangeStatus::kLaneKeeping: {
-      if (IsSuppressLCShortDis()) {
-        break;
-      }
       // clear_lc_stage_info();
       RequestType lane_change_direction = NO_CHANGE;
       RequestSource lane_change_type = NO_REQUEST;
@@ -125,11 +122,6 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         // CalculateLatCloseValue();
         CalculateCongestionLatOffsetValue();
         // lat_close_boundary_offset_ = 0.0;
-
-        if (IsSuppressLCShortDis()) {
-          propose_state_frame_nums_ = 0;
-          break;
-        }
 
         if (is_propose_to_execution && !is_propose_to_cancel) {
           transition_info_.lane_change_status =
@@ -347,8 +339,9 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
     lane_change_stage_info_.lc_invalid_reason = "dash not enough";
   }
   CheckLaneChangeValid(lane_change_direction);
+  const bool is_suppress_LC_short_dis = IsSuppressLCShortDis();
   return has_target_lane && lane_change_stage_info_.gap_insertable &&
-         !ego_trajs_future_.empty();
+         !ego_trajs_future_.empty() && !is_suppress_LC_short_dis;
 }
 
 bool LaneChangeStateMachineManager::CheckIfProposeToCancel(
@@ -3322,7 +3315,7 @@ void LaneChangeStateMachineManager::CalculateCongestionLatOffsetValue() {
     ++valid_cnt;
     if (valid_cnt >= 4) {
       break;
-    } 
+    }
   }
   valid_cnt = std::min(valid_cnt, 4);
   target_lane_avg_speed = valid_cnt > 1 ? sum_speed / valid_cnt : 0.0;
@@ -4225,7 +4218,7 @@ bool LaneChangeStateMachineManager::
 
   for (int i = 0; i < iter_count; i++) {
     //执行后缩短预测轨迹检查
-    if(is_executing && i > 10){ 
+    if(is_executing && i > 10){
       break;
     }
     double beyond_lane_time = std_beyond_lane_time - i * 0.2;
