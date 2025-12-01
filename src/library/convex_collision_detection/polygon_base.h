@@ -243,6 +243,11 @@ void GenerateBoundingBox(const double x_length, const double y_length,
                          const Eigen::Vector2d &center,
                          std::vector<Eigen::Vector2d> &box);
 
+void GeneratePtsByBox(const double x_length, const double y_length,
+                     const Eigen::Vector2d &center,
+                     std::vector<Eigen::Vector2d> &pts,
+                     const double sample_ds = 0.2);
+
 void LocalPolygonToGlobal(const std::vector<Eigen::Vector2d> &poly_local,
                           const Pose2D &global_pose,
                           std::vector<Eigen::Vector2d> &poly_global);
