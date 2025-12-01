@@ -46,6 +46,9 @@
 
 namespace planning {
 namespace planner {
+namespace{
+static constexpr int kMRMStateDebounce = 5;
+}
 
 EnvironmentalModelManager::EnvironmentalModelManager() {
   ILOG_DEBUG << "EnvironmentalModelManager created";
@@ -290,15 +293,22 @@ bool EnvironmentalModelManager::Run() {
   bool rads_mode = fsm_state >= iflyauto::FunctionalState_RADS_PASSIVE &&
                    fsm_state <= iflyauto::FunctionalState_RADS_ERROR;
   static bool is_mrc_mode_hold = false;
+  static int mrm_state_hold_cnt = kMRMStateDebounce;
   if (fsm_state == iflyauto::FunctionalState_MRC) {
     is_mrc_mode_hold = true;
+    mrm_state_hold_cnt = 1;
   }
   if (is_mrc_mode_hold) {
-    const auto& vehicle_service_output = local_view.vehicle_service_output_info;
-    if (false == vehicle_service_output.right_turn_light_state &&
-        false == vehicle_service_output.left_turn_light_state) {
+    const auto &vehicle_service_output = local_view.vehicle_service_output_info;
+     if (mrm_state_hold_cnt++ >= kMRMStateDebounce &&
+                           false ==
+                               vehicle_service_output.right_turn_light_state &&
+                           false ==
+                               vehicle_service_output.left_turn_light_state) {
       is_mrc_mode_hold = false;
+      mrm_state_hold_cnt = kMRMStateDebounce;
     }
+    mrm_state_hold_cnt = std::min(mrm_state_hold_cnt, kMRMStateDebounce);
   }
   bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
