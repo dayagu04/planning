@@ -26,7 +26,6 @@ struct TsrParameters {
   double reset_warning_line = 0.15;    // 触发的报警重置线，单位：m
   double supp_turn_light_recovery_time = 2.0;  // 转向灯抑制恢复时长，单位：s
   double warning_time_max = 2.0;  // 单次最大报警时长，单位：s
-  const double OUT_FLAG_NEED_LAST_TIME = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
 };
 
 class TsrCore {
@@ -48,6 +47,8 @@ class TsrCore {
 
   iflyauto::TSRFunctionFSMWorkState tsr_state_ = iflyauto::
       TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+  iflyauto::TSRFunctionFSMWorkState tsr_state_prev_ = iflyauto::
+      TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;  // 上一时刻的状态
 
   bool tsr_state_machine_init_flag_ = false;
   iflyauto::TSRFunctionFSMWorkState TsrStateMachine(void);
@@ -125,6 +126,7 @@ class TsrCore {
   bool tsr_warning_flag_ = false;  // 超速报警标志位
   bool overspeed_status_ = false;  // false:未处于超速状态 true:处于超速状态
   double overspeed_duration_time_ = 0.0;  // 处于超速状态持续的时间 单位:s
+  double tsr_reset_path_length_ = 1000.0;  // 限速重置行驶距离 单位:m
   void UpdateTsrWarning(void);
   // 输出限速结果
   void SetTsrOutputInfo();

@@ -639,6 +639,9 @@ bool IhcCore::DynamicObstacleCheck(void) {
   // 步骤1: 收集当前帧所有障碍物ID，用于后续清理
   std::set<uint16> current_frame_ids;
 
+  // 步骤1.5: 保存上一帧已验证的障碍物ID集合，用于判断新加入的障碍物
+  last_verified_obstacle_ids_ = verified_obstacle_ids_;
+
   // 步骤2: 第一次遍历，更新verified_obstacle_ids_（同时被相机和雷达检测到的障碍物）
   for (int i = 0; i < fusion_objs_num; i++) {
     uint16 track_id = fusion_objs[i].additional_info.track_id;
@@ -660,7 +663,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
     }
 
     // 融合障碍物不一定匹配的上。如果只有相机来源，则判断此障碍物10m范围内是否有雷达来源的障碍物，且运动趋势相同
-    if (has_camera) {
+    else if (has_camera) {
       for (int j = 0; j < fusion_objs_num; j++) {
         if (fusion_objs[j].additional_info.track_id == track_id) {
           continue;
@@ -686,6 +689,19 @@ bool IhcCore::DynamicObstacleCheck(void) {
         }
       }
     }
+    // 如果是仅有雷达数据，则判断行驶方向为对向来车，且自车速度>3m/s，大小长宽2*1以上,认为是对向机动车
+    else if (!has_camera && has_radar) {
+      // 是否为对向来车
+      if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+        // 判断自车速度是否大于3m/s
+        if ((fusion_objs[i].common_info.relative_velocity.x + (ego_speed_kph / 3.6f)) < -3.0f) {
+          // 判断障碍物的大小，只有当上一帧候选障碍物里面没有这个id的障碍物的时候才进行判断
+          if (fusion_objs[i].common_info.shape.length > 2.5f && fusion_objs[i].common_info.shape.width > 1.5f) {
+            verified_obstacle_ids_.insert(track_id);
+          }
+        }
+      }
+    }
   }
 
   // 步骤3: 第二次遍历，只处理在verified_obstacle_ids_中的障碍物
@@ -702,21 +718,28 @@ bool IhcCore::DynamicObstacleCheck(void) {
 
     // 筛选前方的车辆动态障碍物，使用滞回控制
     if (distance_x > 0 && distance_x < 230.0F) {  // 扩大检测范围
-      // 判断障碍物是否为机动车
-      if (fusion_objs[i].common_info.type >=
+      // 判断障碍物是否为机动车/未知类型
+      if ((fusion_objs[i].common_info.type >=
               iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
           fusion_objs[i].common_info.type <=
-              iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
+              iflyauto::ObjectType::OBJECT_TYPE_TRAILER) ||
+          fusion_objs[i].common_info.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车
-          // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
-          if (distance_x +
-                  fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
-              0) {
-            // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
-            continue;
+          // 只对新加入候选的车辆进行1s后位置判断，防止因为对向来车误检,导致频繁闪灯
+          // 对于已经稳定存在的车辆，不进行此判断，避免车辆还没在车后就切远光灯
+          bool is_new_obstacle = (last_verified_obstacle_ids_.find(track_id) == 
+                                  last_verified_obstacle_ids_.end());
+          if (is_new_obstacle) {
+            // 检测对向车1s后是否仍然在车辆前方，防止因为对向来车误检,导致频繁闪灯
+            if (distance_x +
+                    fusion_objs[i].common_info.relative_velocity.x * 1.0f <=
+                0) {
+              // 1s后在自车后方, 不管是否在滞回区间, 则不在灯光影响区域
+              continue;
+            }
           }
           // 滞回控制，200m~230m为滞回区间
           if (distance_x < 200.0f) {
@@ -728,7 +751,7 @@ bool IhcCore::DynamicObstacleCheck(void) {
               detected_oncoming_vehicle = true;
             }
           }
-          // distance > 230.0f 时继续检查其他障碍物
+          // 同向机动车
         } else if (fusion_objs[i].additional_info.motion_pattern_current ==
                    iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
           // 同向机动车：滞回控制，100m~120m为滞回区间
@@ -747,9 +770,11 @@ bool IhcCore::DynamicObstacleCheck(void) {
                      iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING &&
                  fusion_objs[i].common_info.type <=
                      iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
-        // 对向非机动车：滞回控制，75m~95m为滞回区间
+        // 对向/同向非机动车：滞回控制，75m~95m为滞回区间
         if (fusion_objs[i].additional_info.motion_pattern_current ==
-            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME || 
+            fusion_objs[i].additional_info.motion_pattern_current ==
+            iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
           if (distance_x < 75.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;

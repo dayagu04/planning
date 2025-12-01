@@ -549,7 +549,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   speed_limit_renew_flag_ = false; // 还未更新限速牌
   // 感知没有检测到任何限速牌1s后 允许输出
-  if (no_speed_limit_duration_time_ >= tsr_param_.OUT_FLAG_NEED_LAST_TIME) {
+  if (no_speed_limit_duration_time_ >= GetContext.get_param()->tsr_out_flag_need_last_time) {
     if (speed_limit_set_.size() > 0) {
       // 获取限速标识牌中的最高限速值
       uint32 hightest_perception_speed_limit = GetHighestFromSet(speed_limit_set_);
@@ -568,7 +568,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   }
 
   // 感知没有检测到任何解除限速牌1s后
-  if (no_end_of_speed_limit_duration_time_ >= tsr_param_.OUT_FLAG_NEED_LAST_TIME) {
+  if (no_end_of_speed_limit_duration_time_ >= GetContext.get_param()->tsr_out_flag_need_last_time) {
     if (end_of_speed_limit_set_.size() > 0) {
       // 获取解除限速标识牌中的最高限速值
       uint32 hightest_perception_end_of_speed_limit = GetHighestFromSet(end_of_speed_limit_set_);
@@ -587,9 +587,39 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   }
 
+  // 根据当前感知限速速度，更改tsr_reset_path_length
+  tsr_reset_path_length_ = GetContext.get_param()->tsr_reset_path_length;
+  if (speed_limit_renew_flag_ == true) {
+    // bestune_e541
+    if (GetContext.get_param()->car_type == "bestune_e541") {
+      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ < 20.0) {
+        tsr_reset_path_length_ = 150.0;
+      } else if (tsr_speed_limit_ >= 20.0 && tsr_speed_limit_ < 30.0) {
+        tsr_reset_path_length_ = 200.0;
+      } else if (tsr_speed_limit_ >= 30.0 && tsr_speed_limit_ < 40.0) {
+        tsr_reset_path_length_ = 350.0;
+      } else if (tsr_speed_limit_ >= 40.0 && tsr_speed_limit_ < 50.0) {
+        tsr_reset_path_length_ = 400.0;
+      } else if (tsr_speed_limit_ >= 50.0 && tsr_speed_limit_ < 70.0) {
+        tsr_reset_path_length_ = 700.0;
+      } else if (tsr_speed_limit_ >= 70.0 && tsr_speed_limit_ < 80.0) {
+        tsr_reset_path_length_ = 900.0;
+      } else {
+        tsr_reset_path_length_ = 1100.0;
+      }
+    }
+    else {
+      if (tsr_speed_limit_ >= 5.0 && tsr_speed_limit_ <= 50.0) {
+        tsr_reset_path_length_ = 1500.0;
+      } else if (tsr_speed_limit_ >= 51.0 && tsr_speed_limit_ <= 80.0) {
+        tsr_reset_path_length_ = 2000.0;
+      } else {
+        tsr_reset_path_length_ = 4000.0;
+      }
+    }
+  }
   // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
-  if (accumulated_path_length_ >
-      GetContext.get_param()->tsr_reset_path_length) {
+  if (accumulated_path_length_ > tsr_reset_path_length_) {
     // 行驶距离过长，则清掉视觉限速信息, 采用地图限速信息
     tsr_speed_limit_ = current_map_speed_limit_;
     // 重置限速牌和解除限速牌相关标志
@@ -835,6 +865,36 @@ void TsrCore::SetTsrOutputInfo() {
 }
 
 void TsrCore::ResetRealTimeTsrInfo(void) {
+  // 当状态切换到非active时，清除限速信息、辅助标识牌信息和累计距离
+  if (tsr_state_prev_ != iflyauto::TSRFunctionFSMWorkState::TSR_FUNCTION_FSM_WORK_STATE_ACTIVE) {
+    // 清除限速信息
+    tsr_speed_limit_ = 0;
+    speed_limit_set_.clear();
+    end_of_speed_limit_set_.clear();
+    speed_limit_out_flag_ = false;
+    end_of_speed_limit_out_flag_ = false;
+    end_of_speed_sign_value_ = 0;
+    end_of_speed_sign_display_time_ = 0.0;
+    speed_limit_ever_appeared_ = false;
+    end_of_speed_limit_ever_appeared_ = false;
+    has_perception_speed_limit_ = false;
+    has_perception_end_of_speed_limit_ = false;
+    no_speed_limit_duration_time_ = 0.0;
+    no_end_of_speed_limit_duration_time_ = 0.0;
+    speed_limit_renew_flag_ = false;
+    
+    // 清除辅助标识牌信息
+    output_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+    realtime_supp_sign_info_ = iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN;
+    supp_sign_valid_flag_ = false;
+    supp_sign_change_flag_ = false;
+    supp_sign_hold_time_ = 0.0;
+    supp_sign_code_ = 0;
+    
+    // 清除累计距离
+    accumulated_path_length_ = 0.0;
+  }
+  
   // 如果没有检测到实时辅助标识牌，且当前有输出，且持续时间超过2s，则清空输出
   if (realtime_supp_sign_info_ ==
           iflyauto::SuppSignType::SUPP_SIGN_TYPE_UNKNOWN &&
@@ -863,6 +923,9 @@ void TsrCore::RunOnce(void) {
 
   // 更新tsr_fault_code_
   tsr_fault_code_ = UpdateTsrFaultCode();
+
+  // 保存上一时刻的状态
+  tsr_state_prev_ = tsr_state_;
 
   // 更新tsr_state_
   tsr_state_ = TsrStateMachine();
