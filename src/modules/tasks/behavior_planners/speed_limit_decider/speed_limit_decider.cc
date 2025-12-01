@@ -1208,12 +1208,15 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   
   // Priority: is_sharp_curve_by_decel > map_sharp_curve
   SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
-  
-  if (is_sharp_curve_by_decel || (is_map_sharp_curve && map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
+
+  if (is_sharp_curve_by_decel ||
+      (speed_limit_config_.enable_map_sharp_curve_by_decel &&
+       is_map_sharp_curve &&
+       map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
     // Highest priority: sharp curve by deceleration
     v_limit_type = SpeedLimitType::SHARP_CURVATURE;
   }
-  
+
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
     v_target_type_ = v_limit_type;

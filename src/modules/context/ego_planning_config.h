@@ -3694,6 +3694,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                    "enable_map_sharp_curve_speed_limit");
     ReadItem<bool>(json, enable_sharp_curve_by_decel, "speed_limit_decider",
                    "enable_sharp_curve_by_decel");
+    ReadItem<bool>(json, enable_map_sharp_curve_by_decel, "speed_limit_decider",
+                   "enable_map_sharp_curve_by_decel");
     ReadItem<double>(json, map_sharp_curve_dis_to_ramp, "speed_limit_decider",
                      "map_sharp_curve_dis_to_ramp");
     ReadItem<double>(json, map_sharp_curve_speed_limit, "speed_limit_decider",
@@ -3848,6 +3850,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   bool enable_construction_avoid_agent_speed_limit = false;
   bool enable_map_sharp_curve_speed_limit = true;  // 是否启用地图急弯限速
   bool enable_sharp_curve_by_decel = true;  // 是否启用基于减速度的急弯判断（默认true）
+  bool enable_map_sharp_curve_by_decel = true;  // 是否启用基于减速度的地图急弯判断（默认false）
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
   double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
 
