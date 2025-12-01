@@ -814,11 +814,52 @@ void GenerateBoundingBox(const double x_length, const double y_length,
   return;
 }
 
+void GeneratePtsByBox(const double x_length, const double y_length,
+                      const Eigen::Vector2d &center,
+                      std::vector<Eigen::Vector2d> &pts,
+                      const double sample_ds) {
+  pts.clear();
+  if (x_length < 1e-3 || y_length < 1e-3 || sample_ds < 1e-3) {
+    return;
+  }
+
+  const double half_length = x_length * 0.5;
+  const double half_width = y_length * 0.5;
+  const double ds = std::min({half_length, half_width, sample_ds});
+
+  std::vector<Eigen::Vector2d> vertices;
+  vertices.resize(4);
+  vertices[0] << center.x() + half_length, center.y() + half_width;
+  vertices[1] << center.x() - half_length, center.y() + half_width;
+  vertices[2] << center.x() - half_length, center.y() - half_width;
+  vertices[3] << center.x() + half_length, center.y() - half_width;
+
+  pts.reserve(2 * x_length / ds + 2 * y_length / ds + 5);
+
+  for (size_t i = 0; i < vertices.size(); ++i) {
+    const Eigen::Vector2d& cur_start = vertices[i];
+    const Eigen::Vector2d& cur_end = vertices[(i + 1) % vertices.size()];
+    const Eigen::Vector2d seg_vec = cur_end - cur_start;
+    const double seg_length = seg_vec.norm();
+    const Eigen::Vector2d unit_dir = seg_vec.normalized();
+    const size_t num =
+        static_cast<size_t>(std::floor((seg_length - 1e-5) / ds));
+
+    for (size_t j = 0; j <= num; ++j) {
+      const Eigen::Vector2d sam_pt = cur_start + j * ds * unit_dir;
+      pts.emplace_back(sam_pt);
+    }
+  }
+}
+
 void LocalPolygonToGlobal(const std::vector<Eigen::Vector2d> &poly_local,
                           const Pose2D &global_pose,
                           std::vector<Eigen::Vector2d> &poly_global) {
   Transform2d tf;
   tf.SetBasePose(global_pose);
+
+  poly_global.clear();
+  poly_global.reserve(poly_local.size());
 
   Eigen::Vector2d point;
   for (int i = 0; i < poly_local.size(); i++) {

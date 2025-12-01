@@ -486,12 +486,21 @@ void ApaObstacleManager::GenerateObsByOD(
     std::vector<Eigen::Vector2d> global_box;
     LocalPolygonToGlobal(local_box, center_pose, global_box);
 
+    std::vector<Eigen::Vector2d> local_pts;
+    GeneratePtsByBox(obs.shape.length, obs.shape.width,
+                     Eigen::Vector2d(0.0f, 0.0f), local_pts, 0.2);
+
+    std::vector<Eigen::Vector2d> global_pts;
+    LocalPolygonToGlobal(local_pts, center_pose, global_pts);
+
     ApaObstacle apa_obs;
     apa_obs.Reset();
 
     Polygon2D polygon;
     GeneratePolygonByPoints(global_box, &polygon);
     apa_obs.SetPolygonGlobal(polygon);
+
+    apa_obs.SetPtClout2dGlobal(global_pts);
 
     cdl::AABB box = cdl::AABB();
     GetBoundingBoxByPolygon(&box, &polygon);
