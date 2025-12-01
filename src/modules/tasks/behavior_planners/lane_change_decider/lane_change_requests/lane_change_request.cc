@@ -536,10 +536,16 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
           AVOIDE_DIVERGE ||
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_MERGE;
+
+  const bool is_satisfy_dis_condition =
+      route_info_output.mlc_request_type_route_info
+              .distance_to_exchange_region < 100.0 ||
+      (route_info_output.baidu_mlc_scene == SPLIT_SCENE &&
+       route_info_output.dis_to_ramp < 100.0);
+       
   if (is_process_split && lc_request_source == MAP_REQUEST &&
       !is_mlc_avoidance &&
-      route_info_output.mlc_request_type_route_info
-              .distance_to_exchange_region < 100.0) {
+      is_satisfy_dis_condition) {
     if (lc_request == LEFT_CHANGE) {
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_id);
