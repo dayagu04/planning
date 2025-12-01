@@ -49,6 +49,8 @@ void LateralMotionPlanningWeight::Init() {
   expected_average_acc_ = 0.0;
   expected_max_acc_ = 0.0;
   expected_min_acc_ = 0.0;
+  expected_max_jerk_ = 0.0;
+  expected_min_jerk_ = 0.0;
   min_road_radius_ = 10000.0;
   target_road_radius_ = 10000.0;
   min_q_jerk_ = 2.0;
@@ -463,6 +465,8 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   expected_average_acc_ = 0.0;
   expected_max_acc_ = -10.0;
   expected_min_acc_ = 10.0;
+  expected_max_jerk_ = 0.0;
+  expected_min_jerk_ = 0.0;
   target_road_radius_ = 10000.0;
   is_s_bend_ = false;
   is_sharp_turn_ = false;
@@ -490,6 +494,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   std::fill(curvature_radius_vec_.begin(), curvature_radius_vec_.end(),
             10000.0);
   double pt_kappa = 1e-6;
+  double last_acc = 0;
   planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
     if (is_k_s_spline_valid) {
@@ -544,6 +549,12 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
     if (i < 21) {
       expected_max_acc_ = std::max(expected_lat_acc, expected_max_acc_);
       expected_min_acc_ = std::min(expected_lat_acc, expected_min_acc_);
+      if (i > 0) {
+        double d_jerk = (expected_lat_acc - last_acc) / config_.delta_t;
+        expected_max_jerk_ = std::max(d_jerk, expected_max_jerk_);
+        expected_min_jerk_ = std::min(d_jerk, expected_min_jerk_);
+      }
+      last_acc = expected_lat_acc;
     }
     if (i % 5 == 0) {  // 0 1 2 3 4 5
       double average_kappa = sum_kappa / kappa_gap;
@@ -1072,6 +1083,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       extra_jerk_buffer = 0.2;
       jerk_bound += 0.3;
     }
+    jerk_bound = std::max(std::max(std::fabs(expected_max_jerk_), std::fabs(expected_min_jerk_)), jerk_bound);
   } else if (lateral_motion_scene_ == LateralMotionScene::LANE_BORROW) {
     extra_jerk_buffer = 0.3;
     jerk_bound = config_.jerk_bound_lane_borrow;  // 1.0,
