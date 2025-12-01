@@ -72,6 +72,7 @@ bool ConstructionSceneManager::InitInfo() {
   construction_agent_cluster_attribute_map_.clear();
   road_boundaries_clusters_map_.clear();
   construction_scene_output_.Clear();
+  cluster_is_construction_area_map_.clear();
   return true;
 }
 
@@ -350,10 +351,14 @@ void ConstructionSceneManager::IsExistConstructionArea() {
   std::vector<double> right_xs;
   std::vector<int32_t> left_ids;
   std::vector<int32_t> right_ids;
+  std::vector<int32_t> left_cluster_ids;
+  std::vector<int32_t> right_cluster_ids;
   left_xs.reserve(10);
   right_xs.reserve(10);
   left_ids.reserve(10);
   right_ids.reserve(10);
+  left_cluster_ids.reserve(10);
+  right_cluster_ids.reserve(10);
   for (const auto& [cluster_id, construction_agent_cluster_iter] :
        construction_agent_cluster_attribute_map_) {
     const auto& points = construction_agent_cluster_iter.points;
@@ -366,13 +371,24 @@ void ConstructionSceneManager::IsExistConstructionArea() {
       if (p.car_y >= 0.0) {
         left_xs.push_back(p.car_x);
         left_ids.push_back(p.id);
+        if (std::find(left_cluster_ids.begin(), left_cluster_ids.end(), cluster_id)
+            == left_cluster_ids.end()) {
+          left_cluster_ids.push_back(cluster_id);
+        }
       } else {
         right_xs.push_back(p.car_x);
         right_ids.push_back(p.id);
+        if (std::find(right_cluster_ids.begin(), right_cluster_ids.end(), cluster_id)
+            == right_cluster_ids.end()) {
+          right_cluster_ids.push_back(cluster_id);
+        }
       }
     }
     if (points.size() >= construction_agents_low_num) {
+      cluster_is_construction_area_map_[cluster_id] = true;
       is_valid_construction_area = true;
+    } else {
+      cluster_is_construction_area_map_[cluster_id] = false;
     }
     double min_x = points.front().car_x;
     // double max_x = points.back().car_x;
@@ -380,34 +396,57 @@ void ConstructionSceneManager::IsExistConstructionArea() {
     if (ego_rear_axis_to_front_edge + pass_buffer >= min_x) {
       is_pass_construction_area = true;
     }
-    if (points.size() < construction_agents_low_num) {
-      continue;
-    }
-    // 计算相邻锥桶的纵向间距均值
-    double total_spacing = 0.0;
-    for (size_t i = 1; i < points.size(); ++i) {
-      total_spacing += std::fabs(points[i].car_x - points[i - 1].car_x);
-    }
-    double avg_spacing = total_spacing / (points.size() - 1);
-    if (avg_spacing <= kConstructionBucketSpacingThreshold) {
-      is_valid_construction_area = true;
-    }
+    // if (points.size() < construction_agents_low_num) {
+    //   continue;
+    // }
+    // // 计算相邻锥桶的纵向间距均值
+    // double total_spacing = 0.0;
+    // for (size_t i = 1; i < points.size(); ++i) {
+    //   total_spacing += std::fabs(points[i].car_x - points[i - 1].car_x);
+    // }
+    // double avg_spacing = total_spacing / (points.size() - 1);
+    // if (avg_spacing <= kConstructionBucketSpacingThreshold) {
+    //   is_valid_construction_area = true;
+    // }
   }
 
   // 按纵向排序
-  std::sort(left_xs.begin(), left_xs.end());
-  std::sort(right_xs.begin(), right_xs.end());
-  left_avg_spacing = calc_avg_spacing(left_xs);
-  right_avg_spacing = calc_avg_spacing(right_xs);
-  if (total_construction_agents >= 2 * construction_agents_low_num ||
-      left_ids.size() >= construction_agents_low_num ||
-      right_ids.size() >= construction_agents_low_num ||
-      (left_ids.size() > 2 &&
-      left_avg_spacing <= kConstructionBucketSpacingThreshold) ||
-      (right_ids.size() > 2 &&
-      right_avg_spacing <= kConstructionBucketSpacingThreshold)) {
-    // 避免锥桶摆的较开，未聚成一类
-    is_valid_construction_area = true;
+  // std::sort(left_xs.begin(), left_xs.end());
+  // std::sort(right_xs.begin(), right_xs.end());
+  // left_avg_spacing = calc_avg_spacing(left_xs);
+  // right_avg_spacing = calc_avg_spacing(right_xs);
+  // if (total_construction_agents >= 2 * construction_agents_low_num ||
+  //     left_ids.size() >= construction_agents_low_num ||
+  //     right_ids.size() >= construction_agents_low_num ||
+  //     (left_ids.size() > 2 &&
+  //     left_avg_spacing <= kConstructionBucketSpacingThreshold) ||
+  //     (right_ids.size() > 2 &&
+  //     right_avg_spacing <= kConstructionBucketSpacingThreshold)) {
+  //   // 避免锥桶摆的较开，未聚成一类
+  //   is_valid_construction_area = true;
+  // }
+
+  if (!is_pass_construction_area) {
+    if (left_ids.size() >= construction_agents_low_num) {
+      for (int32_t cluster_id : left_cluster_ids) {
+        cluster_is_construction_area_map_[cluster_id] = true;
+      }
+      is_valid_construction_area = true;
+    }
+    if (right_ids.size() >= construction_agents_low_num) {
+      for (int32_t cluster_id : right_cluster_ids) {
+        cluster_is_construction_area_map_[cluster_id] = true;
+      }
+      is_valid_construction_area = true;
+    }
+    if (total_construction_agents >= 2 * construction_agents_low_num &&
+        !is_pass_construction_area) {
+      for (const auto& [cluster_id, construction_agent_cluster_iter] :
+          construction_agent_cluster_attribute_map_) {
+        cluster_is_construction_area_map_[cluster_id] = true;
+      }
+      is_valid_construction_area = true;
+    }
   }
 
   if (is_valid_construction_area) {
@@ -904,6 +943,8 @@ void ConstructionSceneManager::GenerateConstructionSceneOutput() {
       construction_agent_cluster_attribute_map_;
   construction_scene_output_.road_boundaries_clusters_map =
       road_boundaries_clusters_map_;
+  construction_scene_output_.cluster_is_construction_area_map =
+      cluster_is_construction_area_map_;
 }
 
 void ConstructionSceneManager::SaveLatDebugInfo() {
@@ -960,10 +1001,12 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
     std::vector<double> construction_agent_clusters;
     std::vector<double> construction_agent_clusters_length;
     std::vector<double> construction_agent_clusters_driection;
+    std::vector<double> cluster_is_construction_area;
     construction_agent_cluster_attribute_ids.reserve(20);
     construction_agent_clusters.reserve(20);
     construction_agent_clusters_length.reserve(20);
     construction_agent_clusters_driection.reserve(20);
+    cluster_is_construction_area.reserve(20);
     for (const auto& cluster_attribute_iter :
          construction_agent_cluster_attribute_map_) {
       const ConstructionAgentPoints& points =
@@ -975,6 +1018,8 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
       construction_agent_clusters_length.emplace_back(points.size());
       construction_agent_clusters_driection.emplace_back(
           static_cast<double>(cluster_attribute_iter.second.direction));
+      cluster_is_construction_area.emplace_back(
+          static_cast<double>(cluster_is_construction_area_map_[cluster_attribute_iter.first]));
     }
     JSON_DEBUG_VECTOR("construction_agent_clusters",
                       construction_agent_clusters, 0);
@@ -984,6 +1029,8 @@ void ConstructionSceneManager::SaveLatDebugInfo() {
                       construction_agent_cluster_attribute_ids, 0);
     JSON_DEBUG_VECTOR("construction_agent_clusters_driection",
                       construction_agent_clusters_driection, 0);
+    JSON_DEBUG_VECTOR("cluster_is_construction_area",
+                      cluster_is_construction_area, 0);
   }
 }
 

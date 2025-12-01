@@ -6097,8 +6097,11 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
     EgoPlanningConfig::init(json);
     ReadItem<double>(json, tfl_reminder_cipv_dis, "hmi_decider",
                    "tfl_reminder_cipv_dis");
+    ReadItem<double>(json, construction_warning_hmi_speed_max, "hmi_decider",
+                   "construction_warning_hmi_speed_max");
   }
   double tfl_reminder_cipv_dis = 8.0;
+  double construction_warning_hmi_speed_max = 60;
 };
 
 struct ReferencePathManagerConfig : public EgoPlanningConfig{
