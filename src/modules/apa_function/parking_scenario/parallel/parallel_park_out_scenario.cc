@@ -114,6 +114,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // check replan
   if (!CheckReplan(replan_params)) {
+    bool replan_by_short_trimmed_path = false;
     ILOG_INFO << "replan is not required!";
     if (apa_param.GetParam().is_trim_limter_parallel_enable ||
           !apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus()) {
@@ -129,11 +130,13 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
         if (tmp_path_point_vec.size() < current_path_point_global_vec_.size()) {
           current_path_point_global_vec_ = tmp_path_point_vec;
         }
-        PostProcessPathPara();
+        replan_by_short_trimmed_path = !PostProcessPathPara();
         // parallel_path_planner_.TrimPathByLimiterLastPathVec(false);
       }
-    SetParkingStatus(PARKING_RUNNING);
-    return;
+    if (!replan_by_short_trimmed_path) {
+      SetParkingStatus(PARKING_RUNNING);
+      return;
+    }
   }
   if (CheckFinishParallel()) {
     ILOG_INFO << "check apa parallel finished!";
@@ -1360,6 +1363,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
     global_point.s = path_point.s;
     global_point.kappa = path_point.kappa;
+    global_point.gear = path_point.gear;
 
     current_path_point_global_vec_.emplace_back(global_point);
   }
