@@ -735,6 +735,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
   // 继续判断是否有导流区车道，如果有的话，需要更新origin_order_id_seq
   int diversion_lane_num = 0;
+  int most_left_emergency_lane_num = 0;
   const int cur_lane_size = current_link_->lane_ids_size();
   for (int i = cur_lane_size - 1; i >= 0; i--) {
     const auto& lane_id = current_link_->lane_ids()[i];
@@ -752,10 +753,18 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
         }
       }
     }
+
+    // 默认紧急车道在最右侧，
+    // 增加应急车道在左边时，计算车道从左向右序号的逻辑
+    if (IsEmergencyLane(temp_lane) &&
+        temp_lane->sequence() == cur_lane_size) {
+      most_left_emergency_lane_num++;
+    }
   }
 
-  const int link_total_lane_num =
-      cur_link_feasible_lane.lane_nums - diversion_lane_num;
+  const int link_total_lane_num = cur_link_feasible_lane.lane_nums -
+                                  diversion_lane_num -
+                                  most_left_emergency_lane_num;
 
   if (link_total_lane_num < 1) {
     return;
