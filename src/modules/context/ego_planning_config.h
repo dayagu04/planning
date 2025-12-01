@@ -265,6 +265,8 @@ struct EgoPlanningConfig : public Config {
         read_json_key<bool>(json, "enable_lane_borrow_deciderV2");
     left_right_turn_func_fading_away_switch =
         read_json_key<bool>(json, "left_right_turn_func_fading_away_switch");
+    ReadItem<bool>(json, enable_overtake_lane_change_confirmation,
+                     "enable_overtake_lane_change_confirmation");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -300,6 +302,7 @@ struct EgoPlanningConfig : public Config {
   double hpp_min_search_range = 20;
   bool enable_lane_borrow_deciderV2 = false;
   bool left_right_turn_func_fading_away_switch = false;
+  bool enable_overtake_lane_change_confirmation = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {

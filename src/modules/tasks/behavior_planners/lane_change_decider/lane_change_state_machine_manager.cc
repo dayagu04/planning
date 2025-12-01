@@ -128,7 +128,16 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           enable_interactive_select_split = true;
         }
         propose_state_frame_nums_++;
+        const auto& pilot_req = session_->environmental_model()
+                                    .get_local_view()
+                                    .function_state_machine_info.pilot_req;
 
+        if (transition_info_.lane_change_type ==
+                RequestSource::OVERTAKE_REQUEST &&
+            config_.enable_overtake_lane_change_confirmation &&
+            !pilot_req.is_overtake_lane_change_confirmed) {
+          break;
+        }
         bool is_propose_to_execution =
             CheckIfProposeToExecution(transition_info_.lane_change_direction,
                                       transition_info_.lane_change_type);
