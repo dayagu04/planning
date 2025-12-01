@@ -837,8 +837,8 @@ void GeneratePtsByBox(const double x_length, const double y_length,
   pts.reserve(2 * x_length / ds + 2 * y_length / ds + 5);
 
   for (size_t i = 0; i < vertices.size(); ++i) {
-    const Eigen::Vector2d cur_start = vertices[i];
-    const Eigen::Vector2d cur_end = vertices[(i + 1) % vertices.size()];
+    const Eigen::Vector2d& cur_start = vertices[i];
+    const Eigen::Vector2d& cur_end = vertices[(i + 1) % vertices.size()];
     const Eigen::Vector2d seg_vec = cur_end - cur_start;
     const double seg_length = seg_vec.norm();
     const Eigen::Vector2d unit_dir = seg_vec.normalized();
