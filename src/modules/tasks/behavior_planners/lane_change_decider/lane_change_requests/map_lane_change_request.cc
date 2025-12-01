@@ -130,10 +130,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   }
 
   // 4、判断剩余距离是否触发生成变道请求
-  bool is_trigger_mlc = IsTriggerMLCForRemainDistane();
-  if (!is_trigger_mlc) {
-    return false;
-  }
+  // bool is_trigger_mlc = IsTriggerMLCForRemainDistane();
+  // if (!is_trigger_mlc) {
+  //   return false;
+  // }
 
   // 5、判断虚线长度是否满足变道条件
   const auto& ego_lane_road_right_decider_output =
