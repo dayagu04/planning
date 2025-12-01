@@ -2441,16 +2441,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       auto it = std::find(feasible_lane_sequence.begin(),
                           feasible_lane_sequence.end(), lane_num);
 
+      mlc_request_info_.emplace_back(
+          MLCRequestType{.lane_num = lane_num,
+                         .mlc_request_type = RAMP_TO_MAIN,
+                         .split_direction = split_dir});  // 使用map中的方向
+      mlc_request_info_list.emplace_back(
+          mlc_request_info_,
+          route_info_output_.merge_point_info.dis_to_merge_fp);
+      is_exist_merge_fp = true;
       if (it != feasible_lane_sequence.end()) {
-        mlc_request_info_.emplace_back(
-            MLCRequestType{.lane_num = lane_num,
-                           .mlc_request_type = RAMP_TO_MAIN,
-                           .split_direction = split_dir});  // 使用map中的方向
-        mlc_request_info_list.emplace_back(
-            mlc_request_info_,
-            route_info_output_.merge_point_info.dis_to_merge_fp);
         feasible_lane_sequence.erase(it);
-        is_exist_merge_fp = true;
       }
     }
   }
