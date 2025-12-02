@@ -276,6 +276,8 @@ struct RouteInfoOutput {
   bool is_ego_on_split_region = false;
   bool is_find_exc_fp = false;
   bool is_miss_split_point = false;
+  bool is_closing_merge = false;
+  bool is_closing_split = false;
   double dis_to_ramp = NL_NMAX;
   double distance_to_first_road_merge = NL_NMAX;
   double distance_to_first_road_split = NL_NMAX;
@@ -392,6 +394,8 @@ struct RouteInfoOutput {
     baidu_mlc_scene = NORMAL_SCENE;
     left_lane_distance = 0.0;
     right_lane_distance = 0.0;
+    is_closing_merge = false;
+    is_closing_split = false;
   }
 };
 

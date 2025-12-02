@@ -138,6 +138,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
     route_info_output_.reset();
     return;
   }
+  is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
 
   if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
@@ -209,16 +210,13 @@ void RouteInfo::UpdateRouteInfoForNOA(
   CaculateDistanceToLastSplitPoint(sdpro_map, current_link, nearest_s,
                                    max_search_length);
 
-  if (segment != nullptr) {
-    const SdMapSwtx::Segment& current_segment = *segment;
-    // 计算到路线终点的距离
-    CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s,
-                              max_search_length);
+  // 计算到路线终点的距离
+  CaculateDistanceToRoadEnd(sdpro_map, current_link, nearest_s,
+                            max_search_length);
 
-    // 计算到最近收费站的距离
-    CaculateDistanceToTollStation(sd_map_, current_segment, nearest_s,
-                                  max_search_length);
-  }
+  // 计算到最近收费站的距离
+  CaculateDistanceToTollStation(sdpro_map, current_link, nearest_s,
+                                max_search_length);
 }
 
 void RouteInfo::UpdateRouteInfoForHPP(const ad_common::hdmap::HDMap& hd_map) {
@@ -262,9 +260,23 @@ void RouteInfo::CaculateRampInfo(const ad_common::sdpromap::SDProMap& sdpro_map,
   // 计算ramp信息
   const auto& ramp_info =
       sdpro_map.GetRampInfo(link.id(), nearest_s, max_search_length);
+  const auto& sapa_info =
+      sdpro_map.GetSaPaInfo(link.id(), nearest_s, max_search_length);
   if (ramp_info.second > 0) {
     route_info_output_.dis_to_ramp = ramp_info.second;
     auto previous_seg = sdpro_map.GetPreviousLinkOnRoute(ramp_info.first->id());
+
+    if (!previous_seg) {
+      return;
+    }
+
+    SplitSegInfo split_seg_info;
+    split_seg_info = MakesureSplitDirection(*previous_seg, sdpro_map);
+    route_info_output_.ramp_direction = split_seg_info.split_direction;
+
+  } else if (sapa_info.second > 0) {
+    route_info_output_.dis_to_ramp = sapa_info.second;
+    auto previous_seg = sdpro_map.GetPreviousLinkOnRoute(sapa_info.first->id());
 
     if (!previous_seg) {
       return;
@@ -2268,7 +2280,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 判断当前处理的场景
   if (!merge_region_info_list.empty() &&
       first_exchange_region_info.split_link_id ==
-          merge_region_info_list[0].split_link_id) {
+          merge_region_info_list[0].split_link_id &&
+      mlc_decider_route_info_.ego_status_on_route == ON_MAIN) {
     if (first_exchange_region_info.is_other_merge_to_road) {
       mlc_decider_route_info_.is_process_other_merge = true;
       mlc_decider_route_info_.is_process_merge = false;
@@ -2341,6 +2354,23 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+
+  // 判断当前是否接近汇入汇出
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  const double ego_v = ego_state->ego_v();
+  route_info_output_.is_closing_split = false;
+  route_info_output_.is_closing_merge = false;
+  if (mlc_decider_route_info_.is_process_split &&
+      first_exchange_region_info.is_ramp_split) {
+    route_info_output_.is_closing_split =
+        first_exchange_region_info.distance_to_split_point < ego_v * 10.0;
+  }
+  if (mlc_decider_route_info_.is_process_merge &&
+      !first_exchange_region_info.is_other_merge_to_road) {
+    route_info_output_.is_closing_merge =
+        first_exchange_region_info.distance_to_split_point < ego_v * 10.0;
+  }
   // 状态流转，分配feasible_lane_sequence
   switch (mlc_decider_route_info_.ego_status_on_route) {
     case ON_MAIN: {
@@ -2452,6 +2482,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       if (it != feasible_lane_sequence.end()) {
         feasible_lane_sequence.erase(it);
       }
+    }
+    if (last_exchange_region_info_.is_process_merge &&
+        !last_exchange_region_info_.last_exchange_info.is_other_merge_to_road) {
+      route_info_output_.is_closing_merge =
+          route_info_output_.merge_point_info.dis_to_merge_fp < ego_v * 10.0;
     }
   }
   // 将mlc_request_info_list中按照distance排序
@@ -3153,6 +3188,15 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE("left_lane_distance", route_info_output_.left_lane_distance);
   JSON_DEBUG_VALUE("right_lane_distance",
                    route_info_output_.right_lane_distance);
+  JSON_DEBUG_VALUE("is_closing_split", route_info_output_.is_closing_split);
+  JSON_DEBUG_VALUE("is_closing_merge", route_info_output_.is_closing_merge);
+  JSON_DEBUG_VALUE("is_process_split",
+                   route_info_output_.mlc_decider_route_info.is_process_split);
+  JSON_DEBUG_VALUE("is_process_merge",
+                   route_info_output_.mlc_decider_route_info.is_process_merge);
+  JSON_DEBUG_VALUE(
+      "is_process_other_merge",
+      route_info_output_.mlc_decider_route_info.is_process_other_merge);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
@@ -3191,7 +3235,8 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
   split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type());
+      sdpro_map.isRamp(split_seccessor_link->link_type()) ||
+      sdpro_map.isSaPa(split_seccessor_link->link_type());
 
   if (previous_seg->successor_link_ids().size() < 2) {
     return split_region_info;
@@ -5011,8 +5056,11 @@ const iflymapdata::sdpro::LinkInfo_Link* RouteInfo::CalculateCurrentLink(
   }
 
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
-  const double search_distance = 50.0;
-  const double max_heading_diff = PI / 4;
+  double search_distance = 50.0;
+  double max_heading_diff = PI / 4;
+  if (is_in_tunnel_) {
+    search_distance = 100.0;
+  }
   // 获取当前的segment
   ad_common::math::Vec2d current_point;
   const auto& ego_state =
