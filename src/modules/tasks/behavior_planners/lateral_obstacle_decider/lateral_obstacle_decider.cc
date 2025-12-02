@@ -381,10 +381,8 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
   const auto &is_crossing_map = session_->planning_context()
                                     .crossing_agent_decider_output()
                                     .is_crossing_map;
-  const auto &lon_ref_path_decider_output =
+  const auto lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  const auto &vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
   auto &frenet_coord = reference_path->get_frenet_coord();
   const Obstacle &obstacle = *frenet_obstacle.obstacle();
   LateralObstacleHistoryInfo &history =
@@ -402,10 +400,6 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
   int max_emergency_avoid_count = 6;
   int emergency_avoid_count_thr = config_.emergency_avoid_count_thr;
   double half_lane_width = lane_width * 0.5;
-  double extra_buffer_to_centerline_thr = 0.4;// 考虑正常避让自车离中心线的距离
-  double distance_to_centerline_thr = vehicle_param.width * 0.5 -
-      extra_buffer_to_centerline_thr;
-  // 后续需要整体refactor
 
   if (config_.is_use_last_lon_information) {
     // 上一帧纵向释放的紧急障碍物id
