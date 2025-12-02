@@ -138,8 +138,7 @@ void ObstacleManager::update() {
     }
   }
 
-  if (session_->is_hpp_scene() &&
-      !session_->is_nsa_scene() || session_->is_rads_scene()) {
+  if (session_->is_hpp_scene() || session_->is_nsa_scene() || session_->is_rads_scene()) {
     // ground line
     double time_start = IflyTime::Now_ms();
     UpdateGroundLineObstacle();
@@ -322,7 +321,7 @@ void ObstacleManager::UpdateOccObstacle() {
           (occupancy_objects[i].common_occupancy_info.type ==
                iflyauto::OBJECT_TYPE_OCC_WALL ||
            occupancy_objects[i].common_occupancy_info.type ==
-               iflyauto::OBJECT_TYPE_OCC_EMPTY || 
+               iflyauto::OBJECT_TYPE_OCC_EMPTY ||
            occupancy_objects[i].common_occupancy_info.type ==
                iflyauto::OBJECT_TYPE_OCC_GENERAL_STATIC)) {
         ProcessOccupancyWall(occupancy_objects[i], polygon_points_2d,
