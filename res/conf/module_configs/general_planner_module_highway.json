@@ -1552,6 +1552,6 @@
     "tfl_reminder_cipv_dis": 8.0
   },
   "reference_path_manager": {
-    "is_enable_construction_refline": false
+    "is_enable_construction_refline": true
   }
 }
