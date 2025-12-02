@@ -233,11 +233,17 @@ bool LDRouteInfoStrategy::IsNearingMerge() {
     return false;
   }
 
-  bool dis_condition = merge_info_vec_[0].second < 500;
+  for (const auto& merge_info: merge_info_vec_) {
+    bool dis_condition = merge_info.second < 500;
 
-  bool is_near_merge = dis_condition && (!IsIgnoreMerge(merge_info_vec_[0]));
+    bool is_ignore_merge = IsIgnoreMerge(merge_info);
 
-  return is_near_merge;
+    if (dis_condition && !is_ignore_merge) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 bool LDRouteInfoStrategy::IsTwoSplitClose() {
@@ -853,11 +859,25 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
     return false;
   }
 
-  double kFrontSearchDis = 500.0;
-  double sum_dis;
+  double front_search_dis = 500.0;
+  double sum_dis = 0.0;
   if (scene == NORMAL_SCENE) {
     sum_dis = cur_link->length() * 0.01 - ego_on_cur_link_s_;
-    kFrontSearchDis = 2000.0;
+    front_search_dis = 2000.0;
+    // 进入normal场景，有2种情况，
+    // 1、不在nearing ramp场景，前面3km内都没有ramp和需要并入的merge，这种情况下向前搜索2000m是合理的
+    // 2、不在nearing merge场景,前面500m内，没有需要并入的merge,只能保证在500m内是normal。
+    // 此时向前搜索的距离应该在500m内才是合理的，因此需要在此判断更新这个向前搜索的距离值。
+    if (!merge_info_vec_.empty()) {
+      for (const auto& merge_info : merge_info_vec_) {
+        if (!IsIgnoreMerge(merge_info) &&
+            merge_info.second <
+                mlc_decider_config_
+                    ->default_pre_triggle_road_to_ramp_distance_threshold_value) {
+          front_search_dis = 500.0;
+        }
+      }
+    }
   } else {
     sum_dis = cur_link->length() * 0.01;
   }
@@ -867,7 +887,7 @@ bool LDRouteInfoStrategy::CalculateFrontTargetLinkBaseFixDis(
     return false;
   }
 
-  while (sum_dis < kFrontSearchDis) {
+  while (sum_dis < front_search_dis) {
     const auto& temp_next_link = ld_map_.GetNextLinkOnRoute(temp_link->id());
     if (temp_next_link == nullptr) {
       break;
