@@ -3162,7 +3162,7 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
       double pt_l = 0.0;
       right_lane_frenet_crd->XYToSL(point.local_point.x, point.local_point.y,
                                     &pt_s, &pt_l);
-      const double pt_distance_to_ego = pt_s - ego_s_base_right;
+      const double pt_distance_to_ego = pt_s - ego_frenet_right.x;
       if (pt_l < 0.0 || pt_s > right_lane_frenet_crd->Length()) {
         continue;
       }
