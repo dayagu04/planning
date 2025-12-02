@@ -97,6 +97,7 @@ struct ConstructionSceneOutput {
   bool enable_construction_passage = false;
   void Clear() {
     construction_agent_cluster_attribute_map.clear();
+    road_boundaries_clusters_map.clear();
     is_exist_construction_area = false;
     is_pass_construction_area = false;
     construction_intrusion_level = ConstructionIntrusionLevel :: NONE;
