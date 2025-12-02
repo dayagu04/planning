@@ -2434,7 +2434,7 @@ void NarrowSpaceScenario::SetRequestForScenarioTry(
                                 ego_info.slot.GetOriginCornerCoordLocal().pt_2)
                                    .norm();
 
-    double kInitialTargetX = slot_length + 1.2;
+    double kInitialTargetX = slot_length + 1.5;
     constexpr double kSlantInitialTargetX = 7.0;
     constexpr double kInitialTargetY = 5.0;
     constexpr double kSlantInitialTargetY = 3.0;
@@ -2625,7 +2625,7 @@ void NarrowSpaceScenario::SetTargetPoseForParkOut(EgoInfoUnderSlot& ego_info) {
                               ego_info.slot.GetOriginCornerCoordLocal().pt_2)
                                  .norm();
 
-  double kInitialTargetX = slot_length + 1.2;
+  double kInitialTargetX = slot_length + 1.5;
   constexpr double kSlantInitialTargetX = 7.0;
   constexpr double kInitialTargetY = 5.0;
   constexpr double kSlantInitialTargetY = 3.0;

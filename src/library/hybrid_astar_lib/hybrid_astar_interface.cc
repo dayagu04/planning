@@ -821,6 +821,7 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
 
         // check
         if (ShouldStopSearchEarly(search_time, path_index)) {
+          path_index++;
           break;
         }
         path_index++;
