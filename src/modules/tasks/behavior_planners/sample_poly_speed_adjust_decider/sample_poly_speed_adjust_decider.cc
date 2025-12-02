@@ -235,7 +235,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0,is_merge_change_);
+                             lc_safety_distance_config_, 3.0, is_merge_change_);
       }
     }
   } else {
@@ -248,11 +248,12 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
         for (size_t j = 0; j < sample_traj_at_v.size(); j++) {
           auto& sample_traj = sample_traj_at_v[j];
           if (is_not_use_gap_select || CheckTrajAvailable(sample_traj, i)) {
-            sample_traj.CalcCost(
-                st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
-                merge_stop_line_distance_, leading_veh_, is_not_use_gap_select,
-                speed_differ_gain, distance_to_stop_point_,
-                lc_safety_distance_config_, i * kEvaluationStep,is_merge_change_);
+            sample_traj.CalcCost(st_sample_space_base_, ego_v_, ego_a_,
+                                 v_suggestted_, merge_stop_line_distance_,
+                                 leading_veh_, is_not_use_gap_select,
+                                 speed_differ_gain, distance_to_stop_point_,
+                                 lc_safety_distance_config_,
+                                 i * kEvaluationStep, is_merge_change_);
           }
         }
       }
@@ -472,7 +473,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   //      coarse_planning_info.target_state == kLaneChangeHold);
 
   const bool enable_hold_adjust_speed =
-       coarse_planning_info.target_state == kLaneChangeHold;
+      coarse_planning_info.target_state == kLaneChangeHold;
 
   if (coarse_planning_info.target_state != kLaneChangePropose &&
       !enable_hold_adjust_speed) {
@@ -523,7 +524,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           size_t min_horizion = std::min(TimeHorizion, PredictionHorizon);
           double end_v = 0.0;
           double end_s = 0.0;
-          if(PredictionHorizon > 0){
+          if (PredictionHorizon > 0) {
             leading_veh_.v = current_trajectory[0].vel();
           }
           for (size_t i = 0; i <= min_horizion; ++i) {
@@ -643,12 +644,12 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
           : ego_v_;
   speed_adjust_range_.first = std::fmin(speed_adjust_range_.first, 130.0 / 3.6);
   speed_adjust_range_.second =
-      is_merge_change_ &&
-              merge_stop_line_distance_ <= 20.0
+      is_merge_change_ && merge_stop_line_distance_ <= 20.0
           ? 0.0
           : std::fmax(config_.sample_v_lower,
                       ego_v_ - config_.maximum_speed_adjustment);
-  double suggested_v_lower = std::fmin(target_lane_objs_flow_vel_ , v_adjust_speed_limit_);
+  double suggested_v_lower =
+      std::fmin(target_lane_objs_flow_vel_, v_adjust_speed_limit_);
   speed_adjust_range_.second =
       !is_merge_change_
           ? (suggested_v_lower / 1.4) > ego_v_
