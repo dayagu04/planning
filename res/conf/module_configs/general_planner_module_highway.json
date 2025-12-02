@@ -892,9 +892,9 @@
     "construction_lat_dist_exit": 4.5,
     "construction_speed_upper": 27.78,
     "enable_construction_avoid_agent_speed_limit":false,
-    "enable_map_sharp_curve_speed_limit": false,
-    "enable_sharp_curve_by_decel": false,
-    "enable_map_sharp_curve_by_decel": false,
+    "enable_map_sharp_curve_speed_limit": true,
+    "enable_sharp_curve_by_decel": true,
+    "enable_map_sharp_curve_by_decel": true,
 
     "map_sharp_curve_dis_to_ramp": 100.0,
     "map_sharp_curve_speed_limit": 11.11,

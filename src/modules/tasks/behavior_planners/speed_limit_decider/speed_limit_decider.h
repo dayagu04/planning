@@ -75,7 +75,9 @@ class SpeedLimitDecider : public Task {
 
   bool IsNearMergeCancelRampVelLimit();
 
-  double CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv = nullptr);
+  double CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv = nullptr, 
+                                     std::vector<double>* k_raw = nullptr,
+                                     std::vector<double>* s_vec = nullptr);
 
   // Helper functions for ramp processing
   uint64_t FindRampLinkId(
@@ -148,6 +150,7 @@ class SpeedLimitDecider : public Task {
   bool last_is_sharp_curve_by_decel_ = false;  // 上一次基于减速度的急弯状态
   int sharp_curve_frame_count_ = 0;  // 急弯状态维持帧数计数器
   bool last_is_map_sharp_curve_ramp_ = false;  // 上一次地图急弯状态（用于滞回，匝道相关）
+  bool last_condition_ramp_raw_count_ = false;  // 上一次k_raw点数条件状态（用于滞回）
 };
 
 }  // namespace planning
