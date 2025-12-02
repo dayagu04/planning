@@ -84,6 +84,8 @@ bool SpatioTemporalPlanner::Execute() {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto &intersection_state = virtual_lane_manager->GetIntersectionState();
+  const bool is_construction_scene_ref_path =
+      coarse_planning_info.reference_path->GetIsConstructionScene();
   spatio_temporal_union_plan_.set_st_dp_is_sucess(false);
   spatio_temporal_union_plan_.set_cost_time(0.0);
   spatio_temporal_union_plan_.set_enable_using_st_plan(false);
@@ -93,7 +95,7 @@ bool SpatioTemporalPlanner::Execute() {
 
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
-  if (!ego_in_intersection_state_) {
+  if (!ego_in_intersection_state_ && !is_construction_scene_ref_path) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in intersection!";
     last_enable_using_st_plan_ = false;
     return true;
@@ -128,7 +130,8 @@ bool SpatioTemporalPlanner::Execute() {
   const double st_pre_time = IflyTime::Now_ms();
   path_time_heuristic_optimizer_.Process(
       traj_points, agent_trajs_state, virtual_agents_st_info,
-      last_enable_using_st_plan_, spatio_temporal_union_plan_input_);
+      last_enable_using_st_plan_, spatio_temporal_union_plan_input_,
+      ego_in_intersection_state_);
 
   // 更新障碍物决策
   path_time_heuristic_optimizer_.UpdateLateralObstacleDecision(
@@ -281,7 +284,7 @@ void SpatioTemporalPlanner::UpdateIntersection() {
       intersection_state == common::IntersectionState::IN_INTERSECTION ||
       distance_to_stopline <= kDistanceThresholdApproachToStopline;
   bool is_small_intersection = false;
-  //bool is_small_intersection = tfl_decider.is_small_front_intersection;
+  // bool is_small_intersection = tfl_decider.is_small_front_intersection;
   // distance_to_crosswalk <= kDistanceThresholdApproachToCrosswalk;
   if (current_intersection_state) {
     intersection_count_ = kEgoInIntersectionCount;

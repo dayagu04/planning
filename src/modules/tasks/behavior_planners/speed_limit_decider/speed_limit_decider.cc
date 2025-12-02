@@ -10,6 +10,7 @@
 
 #include "agent/agent.h"
 #include "behavior_planners/speed_limit_decider/speed_limit_decider_output.h"
+#include "construction_scene_manager.h"
 #include "debug_info_log.h"
 #include "ego_state_manager.h"
 #include "environmental_model.h"
@@ -2020,7 +2021,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   }
   bool is_exist_construction = false;
   const auto &construction_scene =
-      session_->planning_context().construction_scene_decider_output();
+      session_->environmental_model()
+          .get_construction_scene_manager()
+          ->get_construction_scene_output();
   if (construction_scene.is_exist_construction_area &&
       !construction_scene.construction_agent_cluster_attribute_map.empty() &&
       !speed_limit_config_.enable_construction_avoid_agent_speed_limit) {
@@ -2493,7 +2496,9 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
   }
   // Check if the construction zone is valid
   const auto &construction_scene =
-      session_->planning_context().construction_scene_decider_output();
+      session_->environmental_model()
+          .get_construction_scene_manager()
+          ->get_construction_scene_output();
   if (!construction_scene.is_exist_construction_area ||
       construction_scene.construction_agent_cluster_attribute_map.empty()) {
     construction_strong_deceleration_mode_ = false;

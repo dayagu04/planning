@@ -40,7 +40,7 @@
 #include "tasks/behavior_planners/start_stop_decider/start_stop_decider.h"
 #include "tasks/behavior_planners/stop_destination_decider/stop_destination_decider.h"
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
-#include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
+// #include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
 #include "tasks/behavior_planners/hmi_decider/hmi_decider.h"
 #include "tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
@@ -61,7 +61,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
  private:
   std::unique_ptr<EgoLaneRoadRightDecider> ego_lane_road_right_decider_;
   // 施工场景
-  std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
+//   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
   std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
   std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;

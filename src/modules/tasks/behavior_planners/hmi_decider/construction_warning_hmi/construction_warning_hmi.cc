@@ -1,5 +1,6 @@
 #include "construction_warning_hmi.h"
 #include "planning_context.h"
+#include "environmental_model.h"
 
 namespace planning {
 const static int kStartRunningCount = 3;
@@ -13,7 +14,7 @@ bool ConstructionWarningHMIDecider::Execute() {
   // if (session_ == nullptr) {
   //   return false;
   // }
-  
+
   // has_construction_ = HasConstruction();
 
   // switch (current_state_) {
@@ -23,14 +24,14 @@ bool ConstructionWarningHMIDecider::Execute() {
   //       stop_running_count_ = 0;
   //     }
   //     break;
-    
+
   //   case ConstructionWarningState::RUNNING:
   //     if (IsStopRunning()) {
   //       current_state_ = ConstructionWarningState::EXITING;
   //       start_running_count_ = 0;
   //     }
   //     break;
-    
+
   //   case ConstructionWarningState::EXITING:
   //     current_state_ = ConstructionWarningState::IDLE;
   //     stop_running_count_ = 0;
@@ -43,8 +44,11 @@ bool ConstructionWarningHMIDecider::Execute() {
 }
 
 bool ConstructionWarningHMIDecider::HasConstruction() {
-  const auto& construction_scene_decider_output = session_->planning_context().construction_scene_decider_output();
-  if (construction_scene_decider_output.is_exist_construction_area || construction_scene_decider_output.is_pass_construction_area) {
+  const auto &construction_scene =
+      session_->environmental_model()
+          .get_construction_scene_manager()
+          ->get_construction_scene_output();
+  if (construction_scene.is_exist_construction_area || construction_scene.is_pass_construction_area) {
     return true;
   }
 

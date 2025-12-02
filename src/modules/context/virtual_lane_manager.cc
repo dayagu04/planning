@@ -40,6 +40,7 @@
 #include "utils/path_point.h"
 #include "vehicle_config_context.h"
 #include "virtual_lane.h"
+#include "src/common/transform2d.h"
 namespace planning {
 
 using Map::CurrentRouting;
@@ -878,6 +879,7 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   left_lane_ = nullptr;
   right_lane_ = nullptr;
   relative_id_lanes_.clear();
+  road_boundray_.clear();
   Intersection_state_ = planning::common::NO_INTERSECTION;
   DebugInfoManager::GetInstance()
       .GetDebugInfoPb()
@@ -1092,6 +1094,9 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   // 12.获取自车车头位置的车道方向属性
   UpdateEgoCurrentPoseLaneMark();
 
+  // 更新道路边界信息
+  // UpdateRoadBoundary(roads_ptr);
+
   LOG_DEBUG("input lane:");
   auto& debug_info_manager = DebugInfoManager::GetInstance();
   auto& planning_debug_data = debug_info_manager.GetDebugInfoPb();
@@ -1104,14 +1109,6 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
     ILOG_DEBUG << "relative id:" << lane->get_relative_id()
                << ", virtual id:" << lane->get_virtual_id();
   }
-  last_fsm_state_ = session_->environmental_model()
-                        .get_local_view()
-                        .function_state_machine_info.current_state;
-  JSON_DEBUG_VALUE("current_lane_order_id", current_lane_->get_order_id());
-  JSON_DEBUG_VALUE("current_lane_virtual_id", current_lane_->get_virtual_id());
-  JSON_DEBUG_VALUE("current_lane_relative_id",
-                   current_lane_->get_relative_id());
-
   return true;
 }
 
@@ -2071,4 +2068,28 @@ void VirtualLaneManager::UpdateEgoCurrentPoseLaneMark() {
                    (ego_front_edge_s_on_lane_marks_pos->second).end)
 }
 
+// void VirtualLaneManager::UpdateRoadBoundary(const iflyauto::RoadInfo* roads_ptr) {
+//   if (roads_ptr == nullptr) {
+//     return;
+//   }
+
+//   const auto ego_state_manager = session_->environmental_model().get_ego_state_manager();
+//   Pose2D base_pose(ego_state_manager->ego_pose().x,
+//                    ego_state_manager->ego_pose().y,
+//                    ego_state_manager->ego_pose().theta);
+//   Transform2d ego_base;
+//   ego_base.SetBasePose(base_pose);
+
+//   Pose2D obs_car_point;
+//   road_boundray_.resize(roads_ptr->fusion_polyline_size);
+//   for (size_t i = 0; i < roads_ptr->fusion_polyline_size; i++) {
+//     road_boundray_[i].resize(roads_ptr->fusion_polyline[i].local_points_size);
+//     for (size_t j = 0; j < roads_ptr->fusion_polyline[i].local_points_size; j++) {
+//       ego_base.GlobalPointToULFLocal(
+//           &obs_car_point, Pose2D(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y, 0));
+//       road_boundray_[i][j].first= Point2d(obs_car_point.x, obs_car_point.y);
+//       road_boundray_[i][j].second = Point2d(roads_ptr->fusion_polyline[i].local_points[j].x, roads_ptr->fusion_polyline[i].local_points[j].y);
+//     }
+//   }
+// }
 }  // namespace planning

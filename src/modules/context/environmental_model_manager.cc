@@ -157,8 +157,13 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_obstacle_manager(
       obstacle_manager_ptr_);
 
+  construction_scene_manager_ptr_ =
+      std::make_shared<planning::ConstructionSceneManager>(session_);
+  session_->mutable_environmental_model()->set_construction_scene_manager(
+      construction_scene_manager_ptr_);
+
   reference_path_manager_ptr_ =
-      std::make_shared<planning::ReferencePathManager>(session_);
+      std::make_shared<planning::ReferencePathManager>(config_builder, session_);
   session_->mutable_environmental_model()->set_reference_path_manager(
       reference_path_manager_ptr_);
 
@@ -229,6 +234,8 @@ void EnvironmentalModelManager::SetConfig(
   route_info_ptr_->SetConfig(config_builder);
 
   edt_manager_ptr_->SetConfig(config_builder);
+
+  reference_path_manager_ptr_->SetConfig(config_builder);
 }
 
 bool EnvironmentalModelManager::Run() {
@@ -436,6 +443,16 @@ bool EnvironmentalModelManager::Run() {
   time_end = IflyTime::Now_ms();
   ILOG_INFO << "agent manager cost:" << time_end - time_start;
   JSON_DEBUG_VALUE("agent_manager_cost", time_end - time_start);
+
+  // Step 6) update reference path
+  time_start = IflyTime::Now_ms();
+  if (!construction_scene_manager_ptr_->update()) {
+    ILOG_ERROR << "construction_scene_manager update fail";
+    return false;
+  }
+  time_end = IflyTime::Now_ms();
+  ILOG_INFO << "construction_scene_manager update cost:" << time_end - time_start;
+  JSON_DEBUG_VALUE("construction_scene_manager", time_end - time_start);
 
   // Step 6) update reference path
   time_start = IflyTime::Now_ms();

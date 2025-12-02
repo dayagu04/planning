@@ -16,6 +16,7 @@
 #include "route_info.h"
 #include "session.h"
 #include "vehicle_status.pb.h"
+#include "construction_scene_manager.h"
 
 namespace planning {
 namespace planner {
@@ -104,6 +105,8 @@ class EnvironmentalModelManager {
   std::shared_ptr<planning::VirtualLaneManager> virtual_lane_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::ReferencePathManager> reference_path_manager_ptr_ =
+      nullptr;
+  std::shared_ptr<planning::ConstructionSceneManager> construction_scene_manager_ptr_ =
       nullptr;
   std::shared_ptr<planning::TrafficLightDecisionManager>
       traffic_light_decision_manager_ptr_ = nullptr;

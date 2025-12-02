@@ -21,9 +21,12 @@ using ReferencePathKeyType = std::pair<ReferencePathType, int>;
 
 class ReferencePathManager {
  public:
-  ReferencePathManager(planning::framework::Session* session);
+  ReferencePathManager(const EgoPlanningConfigBuilder *config_builder,
+                       planning::framework::Session* session);
 
   virtual ~ReferencePathManager();
+
+  void SetConfig(const EgoPlanningConfigBuilder *config_builder);
 
   // map lane reference
   std::shared_ptr<ReferencePath> get_reference_path_by_lane(
@@ -39,13 +42,23 @@ class ReferencePathManager {
     return smooth_bound_filter_;
   }
 
+  const bool GetIsSwitchRefPath() const {
+    return is_switch_ref_path_;
+  }
+
+ private:
+  bool GetReferencePathByConstructionScene();
+
  private:
   planning::framework::Session* session_;
+  ReferencePathManagerConfig config_;
   std::map<ReferencePathKeyType, std::shared_ptr<ReferencePath>>
       reference_paths_;
   // smooth
   int last_current_lane_virtual_id_ = INT_MAX;
   std::shared_ptr<planning::planning_math::MeanFilter> smooth_bound_filter_ = nullptr;
+  bool is_switch_ref_path_ = false;
+  ReferencePathSource current_ref_path_source_ = ReferencePathSource::FUSION_ROAD;
 };
 
 }  // namespace planning

@@ -10,7 +10,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_82006/trigger/20251014/20251014-11-26-07/data_collection_CHERY_M32T_82006_EVENT_KEY_2025-10-14-11-26-07_no_camera.bag.1761457888.open-loop.noa.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251009/20251009-13-33-33/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-10-09-13-33-33_no_camera.bag.1763604333.open-loop.noa.plan"
 # bag_path = "bag_path = "/data_cold/abu_zone/autoparse/chery_e0y_10034/trigger/20240723/20240723-19-33-25/data_collection_CHERY_E0Y_10034_EVENT_MANUAL_2024-07-23-19-33-25_no_camera.bag
 
 # frame dt
@@ -142,7 +142,7 @@ columns = [
         TableColumn(field="data", title="id"),
         TableColumn(field="direction", title="direction"),
     ]
-data_hmi_construction_agent_info_table = DataTable(source=hmi_construction_agent_data, columns=columns, width=1000, height=600)
+data_hmi_construction_agent_info_table = DataTable(source=hmi_construction_agent_data, columns=columns, width=1000, height=1000)
 
 def update_construction_agent_info(local_view_data):
   construction_agent_clusters = local_view_data['data_msg']['plan_debug_json_msg']['construction_agent_clusters']
@@ -185,7 +185,9 @@ def update_construction_agent_info(local_view_data):
 
   vars_2 = ['is_exist_construction_area','is_pass_construction_area','construction_intrusion_level',
             'is_current_lane_available', 'is_right_lane_available','is_left_lane_available',
-            'is_left_left_lane_available','is_right_right_lane_available', 'construction_available_virtual_lane_ids']
+            'is_left_left_lane_available','is_right_right_lane_available', 'construction_available_virtual_lane_ids',
+            'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked',
+            'enable_construction_passage','construction_blocked_virtual_lane_ids']
   for name in vars_2:
     try:
       names.append(name)

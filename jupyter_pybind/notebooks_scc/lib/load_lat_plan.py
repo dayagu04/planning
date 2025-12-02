@@ -603,6 +603,21 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
     except:
       print("no plan debug json: raw_refline_k_vec")
 
+    construction_refline_x, construction_refline_y = [], []
+    try:
+      if g_is_display_enu:
+        construction_refline_x = planning_json['construction_refline_x']
+        construction_refline_y = planning_json['construction_refline_y']
+      else:
+        construction_refline_x, construction_refline_y = \
+          coord_tf.global_to_local(planning_json['construction_refline_x'], planning_json['construction_refline_y'])
+    except:
+      print("no plan debug json: construction refline")
+    lat_plan_data['data_construction_refline'].data.update({
+      'refline_x': construction_refline_x,
+      'refline_y': construction_refline_y,
+    })
+
     print("trust_prediction_t_threshold = ", planning_json['trust_prediction_t_threshold'])
     print("dbw_status = ", planning_json['dbw_status'])
     print("replan_status = ", planning_json['replan_status'])
@@ -1059,6 +1074,9 @@ def load_lat_plan_figure(fig1, local_view_data):
   data_refline_curvature = ColumnDataSource(data = {'refline_s':[],
                                                     'refline_curvature':[]})
 
+  data_construction_refline = ColumnDataSource(data = {'refline_x':[],
+                                                       'refline_y':[]})
+
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
                                                         'ref_xn':[],
@@ -1209,6 +1227,7 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_spatio_temporal_trajs': data_spatio_temporal_trajs, \
                    'data_center_line_curvature':data_center_line_curvature, \
                    'data_refline_curvature':data_refline_curvature, \
+                   'data_construction_refline':data_construction_refline
   }
 
 
@@ -1235,6 +1254,9 @@ def load_lat_plan_figure(fig1, local_view_data):
   f1 = fig1.circle('y_vec','x_vec', source = data_arastar, size = 6, line_width = 4, line_color = "blue", line_alpha = 0.7, fill_color = 'blue',fill_alpha = 0.7, legend_label = 'hybrid ara path')
   hover1 = HoverTool(renderers=[f1], tooltips=[('index', '$index'), ('x', '@x_vec'), ('y', '@y_vec'), ('phi', '@phi_vec')])
   fig1.add_tools(hover1)
+
+  fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
+  fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)

@@ -24,6 +24,8 @@
 #include "sdmap/sdmap.h"
 #include "vehicle_service_c.h"
 #include "vehicle_status.pb.h"
+#include "construction_scene_manager.h"
+
 namespace planning {
 
 struct RefPointFrenet {
@@ -61,6 +63,8 @@ class LateralObstacle;
 class LaneTracksManager;
 class AgentNodeManager;
 class EdtManager;
+class ConstructionSceneManager;
+
 class EnvironmentalModel {
  public:
   EnvironmentalModel();
@@ -148,6 +152,15 @@ class EnvironmentalModel {
       std::shared_ptr<TrafficLightDecisionManager>
           traffic_light_decision_manager) {
     traffic_light_decision_manager_ = traffic_light_decision_manager;
+  }
+
+  const std::shared_ptr<ConstructionSceneManager> &get_construction_scene_manager()
+      const {
+    return construction_scene_manager_ptr_;
+  }
+  void set_construction_scene_manager(
+      std::shared_ptr<ConstructionSceneManager> construction_scene_manager) {
+    construction_scene_manager_ptr_ = construction_scene_manager;
   }
 
   const std::shared_ptr<ReferencePathManager> &get_reference_path_manager()
@@ -328,6 +341,7 @@ class EnvironmentalModel {
   std::shared_ptr<ObstacleManager> obstacle_manager_ = nullptr;
   std::shared_ptr<VirtualLaneManager> virtual_lane_manager_ = nullptr;
   std::shared_ptr<ReferencePathManager> reference_path_manager_ = nullptr;
+  std::shared_ptr<ConstructionSceneManager> construction_scene_manager_ptr_ = nullptr;
   std::shared_ptr<TrafficLightDecisionManager> traffic_light_decision_manager_ =
       nullptr;
   std::shared_ptr<LateralObstacle> lateral_obstacle_ = nullptr;

@@ -1467,6 +1467,187 @@ struct DpStSpeedOptimizerConfig : public EgoPlanningConfig {
   bool enable_use_parallel_calculate_cost = true;
 };
 
+struct NormalDpPolyPathConfig : public EgoPlanningConfig {
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    /* read config from json */
+    //  st search config
+    sample_points_num_each_level = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "sample_points_num_each_level"},
+        sample_points_num_each_level);
+    step_length_max = read_json_keys<int>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "step_length_max"},
+        step_length_max);
+    step_length_min = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "step_length_min"},
+        step_length_min);
+    lateral_sample_offset = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "lateral_sample_offset"},
+        lateral_sample_offset);
+    lateral_adjust_coeff = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "lateral_adjust_coeff"},
+        lateral_adjust_coeff);
+    eval_time_interval = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "eval_time_interval"},
+        eval_time_interval);
+    path_resolution = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_resolution"},
+        path_resolution);
+    obstacle_ignore_distance = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_ignore_distance"},
+        obstacle_ignore_distance);
+    obstacle_longit_collision_distance = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_longit_collision_distance"},
+        obstacle_longit_collision_distance);
+    obstacle_longit_risk_distance = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_longit_risk_distance"},
+        obstacle_longit_risk_distance);
+    obstacle_collision_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_collision_cost"},
+        obstacle_collision_cost);
+    dynamic_obstacle_weight = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "dynamic_obstacle_weight"},
+        dynamic_obstacle_weight);
+    default_obstacle_cost_weight = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "default_obstacle_cost_weight"},
+        default_obstacle_cost_weight);
+    obstacle_lateral_risk_distance = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_lateral_risk_distance"},
+        obstacle_lateral_risk_distance);
+    obstacle_lateral_collision_distance = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "obstacle_lateral_collision_distance"},
+        obstacle_lateral_collision_distance);
+    obstacle_collision_cost_without_lateral_overlap = read_json_keys<double>(
+        json,
+        std::vector<std::string>{
+            "spatio_temporal_planner", "normal_dp_poly_path_config",
+            "obstacle_collision_cost_without_lateral_overlap"},
+        obstacle_collision_cost_without_lateral_overlap);
+
+    path_l_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_l_cost"},
+        path_l_cost);
+    path_dl_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_dl_cost"},
+        path_dl_cost);
+    path_ddl_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_ddl_cost"},
+        path_ddl_cost);
+    path_l_cost_param_l0 = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_l_cost_param_l0"},
+        path_l_cost_param_l0);
+    path_l_cost_param_b = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_l_cost_param_b"},
+        path_l_cost_param_b);
+    path_l_cost_param_k = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_l_cost_param_k"},
+        path_l_cost_param_k);
+    path_out_lane_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_out_lane_cost"},
+        path_out_lane_cost);
+    path_end_l_cost = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config", "path_end_l_cost"},
+        path_end_l_cost);
+    path_l_stitching_cost_param = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "path_l_stitching_cost_param"},
+        path_l_stitching_cost_param);
+    stitching_cost_time_decay_factor = read_json_keys<double>(
+        json,
+        std::vector<std::string>{"spatio_temporal_planner",
+                                 "normal_dp_poly_path_config",
+                                 "stitching_cost_time_decay_factor"},
+        stitching_cost_time_decay_factor);
+  }
+
+  int sample_points_num_each_level = 21;
+  double step_length_max = 40.0;
+  double step_length_min = 20.0;
+  double lateral_sample_offset = 0.2;
+  double lateral_adjust_coeff = 0.5;
+  double eval_time_interval = 0.1;
+  double path_resolution = 2.0;
+  double obstacle_ignore_distance = 20.0;
+  double obstacle_longit_collision_distance = 0.5;
+  double obstacle_longit_risk_distance = 2.0;
+  double obstacle_collision_cost = 1e7;
+  double dynamic_obstacle_weight = 1e-4;
+  double default_obstacle_cost_weight = 0.1;
+  double obstacle_lateral_risk_distance = 1.0;
+  double obstacle_lateral_collision_distance = 0.5;
+  double obstacle_collision_cost_without_lateral_overlap = 1e5;
+
+  double path_l_cost = 6.5;
+  double path_dl_cost = 8e3;
+  double path_ddl_cost = 5e1;
+  double path_l_cost_param_l0 = 1.5;
+  double path_l_cost_param_b = 0.4;
+  double path_l_cost_param_k = 1.5;
+  double path_out_lane_cost = 1e8;
+
+  double path_end_l_cost = 1.0e2;
+  double path_l_stitching_cost_param = 1.0e2;
+  double stitching_cost_time_decay_factor = 0.2;
+};
+
 struct SpatioTemporalGridMap : public EgoPlanningConfig {
   void init(const Json &json) override {
     EgoPlanningConfig::init(json);
@@ -5944,5 +6125,14 @@ struct HmiDeciderConfig : public EgoPlanningConfig{
                    "tfl_reminder_cipv_dis");
   }
   double tfl_reminder_cipv_dis = 8.0;
+};
+
+struct ReferencePathManagerConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+    ReadItem<bool>(json, is_enable_construction_refline, "reference_path_manager",
+                   "is_enable_construction_refline");
+  }
+  bool is_enable_construction_refline = false;
 };
 }  // namespace planning

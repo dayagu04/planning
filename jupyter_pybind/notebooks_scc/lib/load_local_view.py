@@ -369,7 +369,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
-    print("road local_point_valid: ", road_msg.local_point_valid)
+    print("fus road local_point_valid: ", road_msg.local_point_valid)
     dash_line_x, dash_line_y, dash_line_id = [], [], []
     solid_line_x, solid_line_y, solid_line_id = [], [], []
     virtual_line_x, virtual_line_y, dot_line_id = [], [], []
@@ -951,6 +951,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   ### step 4: 加载障碍物信息
   # load fus_obj
   if bag_loader.fus_msg['enable'] == True:
+    print("fus obj local_point_valid: ", fus_msg.local_point_valid)  # 障碍物中用到的绝对坐标是否有效
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     obstacles_info_all = load_obstacle_params(fus_msg, is_enu_to_car, loc_msg, environment_model_info)
@@ -1006,6 +1007,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
 
   # load fus_occ_obj
   if bag_loader.fus_occ_objects_msg['enable'] == True:
+    print("fus occ obj local_point_valid: ", fus_occ_obj_msg.local_point_valid)  # 障碍物中用到的绝对坐标是否有效
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     obstacles_info_all = load_occupancy_obstacle(fus_occ_obj_msg, loc_msg, environment_model_info)

@@ -1641,6 +1641,10 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   const auto &lat_obstacle_position = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lateral_obstacle_history_info;
+  const auto is_switch_ref_path = session_->environmental_model()
+                                    .get_reference_path_manager()
+                                    ->GetIsSwitchRefPath();
+
   const auto &frenet_coord =
       session_->planning_context()
           .lane_change_decider_output()
@@ -1652,6 +1656,11 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
 
   // 如果上一帧的边界为空，直接保存当前帧的边界
   if (last_first_soft_bounds_.empty()) {
+    return;
+  }
+
+  // 如果切换ref，不滞回
+  if (is_switch_ref_path) {
     return;
   }
 

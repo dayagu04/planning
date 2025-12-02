@@ -6,6 +6,7 @@
 
 #include "agent/agent.h"
 #include "common/config/basic_type.h"
+#include "construction_scene_manager.h"
 #include "ego_planning_config.h"
 #include "filters.h"
 #include "planning_context.h"

@@ -45,7 +45,8 @@ class GriddedPathTimeGraph {
       const std::vector<VirtualAgentSpatioTemporalInFo> &virtual_agents_info,
       const bool &last_enable_using_st_plan,
       planning::common::SpationTemporalUnionDpInput
-          &spatio_temporal_union_plan_input);
+          &spatio_temporal_union_plan_input,
+      bool &ego_in_intersection_state);
 
  private:
   planning::framework::Session *session_;
@@ -56,6 +57,8 @@ class GriddedPathTimeGraph {
   DpStSpeedOptimizerConfig gridded_path_time_graph_config_;
 
   DpPolyPathConfig dp_poly_path_config_;
+
+  NormalDpPolyPathConfig normal_dp_poly_path_config_;
 
   // speed_limit configuration
   SpeedLimitConfig speed_limit_config_;
