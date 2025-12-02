@@ -216,9 +216,9 @@ void StartStopDecider::SaveToSession() {
       rads_scene_is_completed_;
 
   if (session_->get_scene_type() == common::SceneType::RADS) {
-    auto& mutable_planning_completed =
-        session_->mutable_planning_context()->mutable_planning_completed();
-    mutable_planning_completed = rads_scene_is_completed_;
+    auto& mutable_rads_planning_completed =
+        session_->mutable_planning_context()->mutable_rads_planning_completed();
+    mutable_rads_planning_completed = rads_scene_is_completed_;
   }
 
   auto& start_stop_state_result =

@@ -22,14 +22,13 @@ bool ParkingSwitchDecider::Execute() {
       env.get_reference_path_manager()->get_reference_path_by_current_lane();
   auto &parking_slot_manager = env.get_parking_slot_manager();
   parking_slot_manager->CalculateDistanceToTargetSlot(current_reference_path);
-  size_t target_slot_id =
-      env.get_local_view().parking_fusion_info.select_slot_id;
   const bool is_reached_target_slot =
       parking_slot_manager->IsReachedTargetSlot();
-  double distance_to_destination =
-      env.get_route_info()->get_route_info_output().distance_to_target_slot;
   double distance_to_target_slot =
       parking_slot_manager->GetDistanceToTargetSlot();
+  const bool is_near_target_slot = (is_reached_target_slot ||
+          distance_to_target_slot < config_.dist_to_parking_space_thr);
+
   ILOG_DEBUG << "distance_to_target_slot:" << distance_to_target_slot;
   JSON_DEBUG_VALUE("distance_to_target_slot", distance_to_target_slot);
   parking_switch_info_.dist_to_memory_slot = distance_to_target_slot;
@@ -37,64 +36,86 @@ bool ParkingSwitchDecider::Execute() {
   // hpp状态切park_in状态
   const auto &current_state =
       env.get_local_view().function_state_machine_info.current_state;
-  // const auto &apa_planning_status =
-  // session_.planning_context().planning_output().planning_status.apa_planning_status;
   const size_t successful_slot_info_list_size =
       session_->planning_context()
           .planning_output()
           .successful_slot_info_list_size;
-  const auto &successful_slot_info_list =
-      session_->planning_context().planning_output().successful_slot_info_list;
+  const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
   const double ego_v = env.get_ego_state_manager()->ego_v();
-  if ((successful_slot_info_list_size > 0) &&
-      (current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING)) {
-    // 多车位
-    for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
-      if ((target_slot_id == successful_slot_info_list[i].id) &&
-          (target_slot_id > 0)) {
-        parking_switch_info_.is_selected_slot_allowed_to_park = true;
-        break;
-      }
+  const auto& parking_switch_decider_output =
+      session_->planning_context().parking_switch_decider_output();
+  if(current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
+    if(is_target_slot_allowed_to_park) {
+      parking_switch_info_.is_selected_slot_allowed_to_park = true;
+    }
+    if(successful_slot_info_list_size > 0) {
+      parking_switch_info_.has_parking_slot_in_hpp_searching = true;
     }
     // 单车位
     if (successful_slot_info_list_size < 2) {
       parking_switch_info_.is_selected_slot_allowed_to_park = false;
     }
-    parking_switch_info_.has_parking_slot_in_hpp_searching = true;
-  } else if ((is_reached_target_slot ||
-              (distance_to_target_slot < config_.dist_to_parking_space_thr)) &&
-             (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
-      if ((target_slot_id == successful_slot_info_list[i].id) &&
-          (target_slot_id > 0)) {
-        parking_switch_info_.is_memory_slot_allowed_to_park = true;
-        break;
+  } else if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    if (is_target_slot_allowed_to_park && is_near_target_slot) {
+      parking_switch_info_.is_memory_slot_allowed_to_park = true;
+    } else {
+      if (is_near_target_slot && (ego_v <= 1e-2) ||
+          (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
+        parking_switch_info_.is_memory_slot_occupied = true;
       }
-    }
-    if ((ego_v <= 1e-2) || (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
-      parking_switch_info_.is_memory_slot_occupied = true;
-    }
-  } else if (is_reached_target_slot &&
-             (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    parking_switch_info_.is_memory_slot_occupied = true;
+      if ((parking_switch_decider_output.parking_switch_info
+               .is_memory_slot_occupied)) {
+        parking_switch_info_.is_memory_slot_occupied = true;
+      }
+    } 
+  } else {
+    // do nothing
   }
 
-  ILOG_INFO << "parking_switch_info_.is_memory_slot_allowed_to_park"
-            << parking_switch_info_.is_memory_slot_allowed_to_park;
+  //for E541
+  if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    if (IsNearRoutingDestination() && (ego_v <= 1e-2)) {
+      parking_switch_info_.is_standstill_near_routing_destination = true;
+    }
+  }
 
-  auto &parking_switch_decider_output =
-      session_->mutable_planning_context()
-          ->mutable_parking_switch_decider_output();
-  if ((parking_switch_decider_output.parking_switch_info
-           .is_memory_slot_occupied) &&
-      (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING)) {
-    parking_switch_info_.is_memory_slot_occupied = true;
-  }
-  if (parking_switch_info_.is_memory_slot_allowed_to_park) {
-    parking_switch_info_.is_memory_slot_occupied = false;
-  }
-  parking_switch_decider_output.parking_switch_info =
-      std::move(parking_switch_info_);
+  ILOG_INFO << "is_memory_slot_allowed_to_park: "
+            << parking_switch_info_.is_memory_slot_allowed_to_park
+            << " is_standstill_near_routing_destination: "
+            << parking_switch_info_.is_standstill_near_routing_destination;
+
+  session_->mutable_planning_context()
+      ->mutable_parking_switch_decider_output()
+      .parking_switch_info = std::move(parking_switch_info_);
   return true;
+}
+
+bool ParkingSwitchDecider::IsNearRoutingDestination() {
+  const EnvironmentalModel &env = session_->environmental_model();
+  double distance_to_destination =
+      env.get_route_info()->get_route_info_output().distance_to_target_slot;
+  const double dist_to_routing_destination_thr = config_.dist_to_routing_destination_thr;;
+  ILOG_DEBUG << "distance_to_destination:" << distance_to_destination;
+  JSON_DEBUG_VALUE("distance_to_destination", distance_to_destination);
+  return distance_to_destination <= dist_to_routing_destination_thr;
+}
+
+bool ParkingSwitchDecider::IsTargetSlotAllowedToPark() {
+  const EnvironmentalModel &env = session_->environmental_model();
+  const size_t successful_slot_info_list_size =
+      session_->planning_context()
+          .planning_output()
+          .successful_slot_info_list_size;
+  const auto& successful_slot_info_list =
+      session_->planning_context().planning_output().successful_slot_info_list;
+  const size_t target_slot_id =
+      env.get_local_view().parking_fusion_info.select_slot_id;
+  for (size_t i = 0; i < successful_slot_info_list_size; ++i) {
+    if ((target_slot_id == successful_slot_info_list[i].id) &&
+        (target_slot_id > 0)) {
+      return true;
+    }
+  }
+  return false;
 }
 }  // namespace planning

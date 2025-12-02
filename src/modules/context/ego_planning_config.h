@@ -2732,8 +2732,12 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
     /* read config from json */
     dist_to_parking_space_thr = read_json_key<double>(
         json, "dist_to_parking_space_thr", dist_to_parking_space_thr);
+    dist_to_routing_destination_thr =
+        read_json_key<double>(json, "dist_to_routing_destination_thr",
+                              dist_to_routing_destination_thr);
   }
   double dist_to_parking_space_thr = 2.0;
+  double dist_to_routing_destination_thr = 1.0;
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {

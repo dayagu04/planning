@@ -21,12 +21,15 @@ struct HppParkingSwitchInfo {
   bool is_selected_slot_allowed_to_park;
   HppTrajStitchStatus traj_status;
 
+  bool is_standstill_near_routing_destination;
+
   void Clear() {
     dist_to_memory_slot = NL_NMAX;
     is_memory_slot_occupied = false;
     is_memory_slot_allowed_to_park = false;
     has_parking_slot_in_hpp_searching = false;
     is_selected_slot_allowed_to_park = false;
+    bool is_standstill_near_routing_destination = false;
     return;
   }
 };

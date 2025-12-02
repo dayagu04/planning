@@ -15,6 +15,10 @@ class ParkingSwitchDecider : public Task {
   virtual ~ParkingSwitchDecider() = default;
 
   bool Execute() override;
+ private:
+  bool IsNearRoutingDestination();
+
+  bool IsTargetSlotAllowedToPark();
 
  private:
   HppParkingSwitchConfig config_;

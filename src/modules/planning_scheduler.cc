@@ -613,10 +613,13 @@ void PlanningScheduler::FillPlanningTrajectory(
   planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
-  const bool planning_completed = planning_context.planning_completed();
   const auto scene_type = session_.get_scene_type();
   if (scene_type == common::SceneType::HPP) {
-    if (planning_completed) {
+    const bool hpp_cruise_routing_completed =
+        planning_context.hpp_cruise_routing_completed();
+    const bool memory_slot_allowed_to_park =
+        planning_context.memory_slot_allowed_to_park();
+    if (hpp_cruise_routing_completed && memory_slot_allowed_to_park) {
       planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
     } else if (planning_success) {
       planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
@@ -624,7 +627,8 @@ void PlanningScheduler::FillPlanningTrajectory(
       planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
     }
   } else if (scene_type == common::SceneType::RADS) {
-    if (planning_completed) {
+    const bool rads_planning_completed = planning_context.rads_planning_completed();
+    if (rads_planning_completed) {
       planning_status->rads_planning_status = iflyauto::RADS_COMPLETED;
     } else if (planning_success) {
       planning_status->rads_planning_status = iflyauto::RADS_RUNNING;
