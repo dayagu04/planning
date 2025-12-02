@@ -4323,6 +4323,14 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                                .mlc_request_type = KEEP_LEFT,
                                .split_direction = SPLIT_LEFT});
           }
+          if (is_other_split_ramp && !is_continue_lane) {
+            RemoveElement(before_excr_feasible_lane, successor_exclnum);
+            RemoveElement(on_excr_feasible_lane, successor_exclnum);
+            mlc_request_info_.emplace_back(
+                MLCRequestType{.lane_num = successor_exclnum,
+                               .mlc_request_type = AVOIDE_DIVERGE,
+                               .split_direction = SPLIT_LEFT});
+          }
         } else {
           for (int i = 0; i < before_exclnum; ++i) {
             on_excr_feasible_lane.emplace_back(i + 1);
