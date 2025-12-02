@@ -366,26 +366,6 @@ void ParkingScenario::SetPlanningPath() {
 
     publish_traj->trajectory_points_size =
         std::min(path_point_id, PLANNING_TRAJ_POINTS_MAX_NUM);
-
-    publish_traj->target_reference.polynomial[0] = 0.0;
-
-    // send obs remain dist to control
-    publish_traj->trajectory_points[0].distance =
-        std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-    publish_traj->trajectory_points[0].distance = std::min(
-        publish_traj->trajectory_points[0].distance, frame_.remain_dist_by_od);
-
-    // send slot occupation ratio to control
-    publish_traj->trajectory_points[1].distance =
-        apa_world_ptr_->GetSlotManagerPtr()
-            ->GetEgoInfoUnderSlot()
-            .slot_occupied_ratio;
-
-    // send slot type to control
-    publish_traj->trajectory_points[2].distance = static_cast<double>(
-        apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot().slot_type);
-    publish_traj->trajectory_points[3].distance = 0.0;
-    publish_traj->trajectory_points[4].distance = frame_.remain_dist_col_det;
   } else {
     publish_traj->trajectory_points_size =
         std::min(trajectory_.size(), size_t(PLANNING_TRAJ_POINTS_MAX_NUM));
@@ -402,14 +382,13 @@ void ParkingScenario::SetPlanningPath() {
       publish_traj->trajectory_points[i].a = point.acc();
       publish_traj->trajectory_points[i].jerk = point.jerk();
     }
-
-    planning_output_.trajectory.target_reference.polynomial[0] =
-        trajectory_.GetTerminalS();
-    double stop_dist =
-        std::min(frame_.remain_dist_obs, frame_.remain_dist_slot_jump);
-    stop_dist = std::min(stop_dist, frame_.remain_dist_by_od);
-    planning_output_.trajectory.target_reference.polynomial[1] = stop_dist;
   }
+
+  float64* polynomial = publish_traj->target_reference.polynomial;
+  polynomial[0] = frame_.remain_dist_path;
+  polynomial[1] =
+      std::min({frame_.remain_dist_obs, frame_.remain_dist_slot_jump,
+                frame_.remain_dist_by_od});
 
   // set plan gear cmd
   auto gear_command = &(planning_output_.gear_command);
