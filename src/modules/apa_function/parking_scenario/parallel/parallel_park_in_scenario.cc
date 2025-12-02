@@ -85,6 +85,7 @@ void ParallelParkInScenario::Reset() {
   first_line_coeffs_ << 0.0, 0.0;
   first_plan_cur_pos.Reset();
   multi_parkin_path_vec_.clear();
+  delay_check_finish_ = false;
   relative_loc_observer_manager_.Reset();
   try_bound_map_.clear();
 
@@ -407,6 +408,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_GEARCHANGE);
+      delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
       // SetParkingStatus(PARKING_FAILED);
@@ -417,6 +419,7 @@ void ParallelParkInScenario::ExcutePathPlanningTask() {
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_PLANNING);
+      delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
       // SetParkingStatus(PARKING_FAILED);
@@ -2869,6 +2872,10 @@ const bool ParallelParkInScenario::CheckOneReverseToSlot() {
 
 const bool ParallelParkInScenario::CheckFinished() {
   ILOG_INFO << "start CheckFinished!";
+  if (frame_.is_replan_first) {
+    ILOG_INFO << "before first finish, not check finish";
+    return false;
+  }
 
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -2882,6 +2889,18 @@ const bool ParallelParkInScenario::CheckFinished() {
   //                                   apa_param.GetParam().front_overhanging)
   //                                   *
   //                                      ego_slot_info.ego_heading_slot_vec;
+
+  const bool static_condition =
+      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
+
+  ILOG_INFO << "static_condition = " << static_condition;
+  if (!static_condition) {
+    delay_check_finish_ = false;
+  }
+  if (delay_check_finish_) {
+    ILOG_INFO << "delay_check_finish_ = " << delay_check_finish_;
+    return false;
+  }
 
   double adjust_lon_err = apa_param.GetParam().finish_parallel_lon_err;
   if (CheckOneReverseToSlot()) {
@@ -2946,11 +2965,6 @@ const bool ParallelParkInScenario::CheckFinished() {
       ILOG_INFO << "ego outer wheel are both in slot!";
     }
   }
-
-  const bool static_condition =
-      apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
-
-  ILOG_INFO << "static_condition = " << static_condition;
 
   return lon_condition && lat_condition && heading_condition &&
          static_condition;

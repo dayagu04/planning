@@ -68,6 +68,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool is_try_tlane_ = false;
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
+  bool delay_check_finish_ = false;
   const bool PostProcessPathPara();
 };
 }  // namespace apa_planner

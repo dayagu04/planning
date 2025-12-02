@@ -127,6 +127,7 @@ class ParallelParkInScenario : public ParkingScenario {
 
   RelativeLocObserverManager relative_loc_observer_manager_;
   std::unordered_map<size_t, std::set<AngleResult>> try_bound_map_;
+  bool delay_check_finish_ = false;
 };
 
 }  // namespace apa_planner

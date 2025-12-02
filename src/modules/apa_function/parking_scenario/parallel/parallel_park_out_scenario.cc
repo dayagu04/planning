@@ -40,6 +40,7 @@ void ParallelParkOutScenario::Reset() {
   obs_pt_local_vec_.clear();
   parallel_out_path_planner_.Reset();
   is_try_tlane_ = false;
+  delay_check_finish_ = false;
 
   ParkingScenario::Reset();
 }
@@ -161,6 +162,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   if (pathplan_result == PathPlannerResult::PLAN_HOLD) {
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_GEARCHANGE);
+      delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
       SetParkingStatus(PARKING_FAILED);
@@ -170,6 +172,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
     if (PostProcessPath()) {
       SetParkingStatus(PARKING_PLANNING);
+      delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
       SetParkingStatus(PARKING_FAILED);
@@ -519,6 +522,12 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
 }
 
 const bool ParallelParkOutScenario::CheckFinished() {
+  ILOG_INFO << "start CheckFinished!";
+  if (frame_.is_replan_first) {
+    ILOG_INFO << "before first finish, not check finish";
+    return false;
+  }
+
   const EgoInfoUnderSlot& ego_slot_info =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
 
@@ -581,6 +590,14 @@ const bool ParallelParkOutScenario::CheckFinished() {
   ILOG_INFO << "heading_mag_deg = " << heading_mag_deg;
   ILOG_INFO << "static_condition = " << static_condition;
   ILOG_INFO << "slot_occupied_ratio = " << slot_occupied_ratio;
+
+  if (!static_condition) {
+    delay_check_finish_ = false;
+  }
+  if (delay_check_finish_) {
+    ILOG_INFO << "delay_check_finish_ = " << delay_check_finish_;
+    return false;
+  }
 
   return static_condition && slot_occupied_ratio < 0.1 &&
          heading_mag_deg <
