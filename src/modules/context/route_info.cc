@@ -138,14 +138,8 @@ void RouteInfo::UpdateRouteInfoForNOA(
     route_info_output_.reset();
     return;
   }
-  is_in_tunnel_ = false;
-  const auto next_link = sdpro_map.GetNextLinkOnRoute(link->id());
-  if (next_link != nullptr) {
-    is_in_tunnel_ = sdpro_map.isTunnel(link->link_type()) ||
-                    sdpro_map.isTunnel(next_link->link_type());
-  } else {
-    is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
-  }
+  is_in_tunnel_ = sdpro_map.isTunnel(link->link_type());
+
   if (IsMissSplitPoint(*link, nearest_l, nearest_s)) {
     route_info_output_.reset();
     route_info_output_.is_miss_split_point = true;
