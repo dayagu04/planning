@@ -26,7 +26,7 @@
 #include "tasks/behavior_planners/lane_borrow_decider/lane_borrow_deciderv2.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
 #include "tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider.h"
-#include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/scc_lateral_obstacle_decider/scc_lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/long_ref_path_decider/long_ref_path_decider.h"
 #include "tasks/behavior_planners/longitudinal_decision_decider/longitudinal_decision_decider.h"
@@ -63,7 +63,7 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
 //   std::unique_ptr<ConstructionSceneDecider> construction_scene_decider_;
   std::unique_ptr<SpatioTemporalPlanner> spatio_temporal_planner_;
   std::unique_ptr<LaneChangeDecider> lane_change_decider_;
-  std::unique_ptr<LateralObstacleDecider> lateral_obstacle_decider_;
+  std::unique_ptr<SccLateralObstacleDecider> lateral_obstacle_decider_;
   std::unique_ptr<LateralOffsetDecider> lateral_offset_decider_;
   std::unique_ptr<GapSelectorDecider> gap_selector_decider_;
   std::unique_ptr<GeneralLateralDecider> general_lateral_decider_;

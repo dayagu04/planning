@@ -22,7 +22,7 @@ LongTimeTaskPipelineV3::LongTimeTaskPipelineV3(
   sample_poly_speed_adjust_decider_ =
       std::make_unique<SamplePolySpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
-      std::make_unique<LateralObstacleDecider>(config_builder, session);
+      std::make_unique<SccLateralObstacleDecider>(config_builder, session);
   lane_borrow_deciderV1_ =
       std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
                                                                  session);

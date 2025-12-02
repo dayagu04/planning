@@ -13,7 +13,7 @@ namespace planning {
 
 struct LateralObstacleHistoryInfo {
   bool lane_borrow = false;
-  bool can_avoid = false;
+  bool can_avoid = false; //  障碍物能否避让；  is_avd_car:true --- can_avoid一定为true;    满足计数条件后，  can_avoid为true
   int can_avoid_count = 0;
   bool can_not_avoid = false;
   double ncar_count = 0;
