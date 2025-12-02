@@ -1145,7 +1145,7 @@ void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
   const auto& virtual_target_lane = lane_change_request_ == 1
                                         ? virtual_lane_mgr->get_left_lane()
                                         : virtual_lane_mgr->get_right_lane();
-  if (current_lane.get() == nullptr || virtual_target_lane.get() == nullptr) {
+  if (!current_lane || !virtual_target_lane) {
     return;
   }
   const auto& current_reference_points =
