@@ -38,6 +38,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.follow_consider_time_headway = 1.5;
   comfort_params_.delay_time_buffer = 0.3;
   comfort_params_.eps = 1e-6;
+  comfort_params_.static_speed_threshold = 0.2;
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -242,6 +243,26 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         continue;
       }
 
+      const bool is_traffic_control_obstacle =
+          agent->type() == agent::AgentType::TRAFFIC_CONE ||
+          agent->type() == agent::AgentType::CTASH_BARREL ||
+          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+
+      bool is_lateral_left_or_right = false;
+      auto lat_decision_iter = lat_obstacle_decision.find(cutin_id);
+      if (lat_decision_iter != lat_obstacle_decision.end()) {
+        const auto& lat_decision = lat_decision_iter->second;
+        is_lateral_left_or_right =
+            (lat_decision == LatObstacleDecisionType::LEFT ||
+             lat_decision == LatObstacleDecisionType::RIGHT);
+      }
+
+      if ((agent->is_static() || std::fabs(agent->speed()) <
+                                     comfort_params_.static_speed_threshold) &&
+          !is_traffic_control_obstacle && is_lateral_left_or_right) {
+        continue;
+      }
+
       if (dis_relative <= dis_lon_consider) {
         follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
         added_agent_ids.insert(cutin_id);
@@ -274,6 +295,26 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           comfort_params_.follow_consider_distance);
 
       if(agent_s + agent->length() * 0.5 < ego_s - rear_edge_to_front_axle) {
+        continue;
+      }
+
+      const bool is_traffic_control_obstacle =
+          agent->type() == agent::AgentType::TRAFFIC_CONE ||
+          agent->type() == agent::AgentType::CTASH_BARREL ||
+          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+
+      bool is_lateral_left_or_right = false;
+      auto lat_decision_iter = lat_obstacle_decision.find(danger_id);
+      if (lat_decision_iter != lat_obstacle_decision.end()) {
+        const auto& lat_decision = lat_decision_iter->second;
+        is_lateral_left_or_right =
+            (lat_decision == LatObstacleDecisionType::LEFT ||
+             lat_decision == LatObstacleDecisionType::RIGHT);
+      }
+
+      if ((agent->is_static() || std::fabs(agent->speed()) <
+                                     comfort_params_.static_speed_threshold) &&
+          !is_traffic_control_obstacle && is_lateral_left_or_right) {
         continue;
       }
 

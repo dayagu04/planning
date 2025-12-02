@@ -46,10 +46,7 @@ class ComfortTarget : public Target {
     double follow_consider_distance;
     double follow_consider_time_headway;
     double delay_time_buffer;
-    double w_speed_low;
-    double w_speed_high;
-    double w_gap_low;
-    double w_gap_high;
+    double static_speed_threshold;
     double eps;
   };
 
