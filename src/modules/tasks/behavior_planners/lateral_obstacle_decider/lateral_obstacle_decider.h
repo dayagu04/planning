@@ -75,11 +75,6 @@ class LateralObstacleDecider : public Task {
       const std::shared_ptr<ReferencePath> reference_path_ptr,
       double &gap_front_node_id_s, double &gap_rear_node_id_s,
       bool &is_in_lane_change_scene);
-  bool CheckSTGraph(
-      FrenetObstacle &frenet_obstacle);
-  bool CheckOvertakeObstacleByLastTraj(
-      FrenetObstacle &frenet_obstacle,
-      const std::shared_ptr<ReferencePath> reference_path_ptr);
 
  private:
   planning::framework::Session *session_;

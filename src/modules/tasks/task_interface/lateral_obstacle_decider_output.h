@@ -37,7 +37,6 @@ struct LateralObstacleHistoryInfo {
   int emergency_avoid_count = 0;
   bool emergency_avoid = false;
   bool lon_overtake_avoid = false;
-  int lon_overtake_avoid_count = 0;
   bool is_not_set = false;
 };
 
