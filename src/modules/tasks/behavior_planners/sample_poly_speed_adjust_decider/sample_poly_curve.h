@@ -69,7 +69,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
                 bool enable_merge_decelaration, double speed_differ_gain,
                 double distance_to_stop_point,
                 const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-                const double cur_time);
+                const double cur_time, bool is_mergr_change);
   double CalcVelIntegral(const double t) const;
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,

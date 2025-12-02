@@ -161,7 +161,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
     const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
     double speed_differ_gain, double distance_to_stop_point,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-    const double cur_time) {
+    const double cur_time, bool is_mergr_change) {
   // anchor points cost
   double last_cost = cost_sum_;
   double last_arrived_s = arrived_s_;
@@ -225,7 +225,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_t_ = anchor_arrived_t;
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    if ((stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0) {
+    if (((stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0) || is_mergr_change) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
     }

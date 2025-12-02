@@ -235,7 +235,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                              v_suggestted_, merge_stop_line_distance_,
                              leading_veh_, is_not_use_gap_select,
                              speed_differ_gain, distance_to_stop_point_,
-                             lc_safety_distance_config_, 3.0);
+                             lc_safety_distance_config_, 3.0,is_merge_change_);
       }
     }
   } else {
@@ -252,7 +252,7 @@ bool SamplePolySpeedAdjustDecider::Evaluate() {
                 st_sample_space_base_, ego_v_, ego_a_, v_suggestted_,
                 merge_stop_line_distance_, leading_veh_, is_not_use_gap_select,
                 speed_differ_gain, distance_to_stop_point_,
-                lc_safety_distance_config_, i * kEvaluationStep);
+                lc_safety_distance_config_, i * kEvaluationStep,is_merge_change_);
           }
         }
       }
