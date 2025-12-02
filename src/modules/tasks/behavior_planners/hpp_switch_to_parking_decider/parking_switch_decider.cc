@@ -92,9 +92,12 @@ bool ParkingSwitchDecider::Execute() {
 
 bool ParkingSwitchDecider::IsNearRoutingDestination() {
   const EnvironmentalModel &env = session_->environmental_model();
+  // TODO(taolu10): 改成距离目标位置中心线的距离,
+  // 前提是修改 Cruise 阶段的终点在目标车位终点，
+  // 否则无法触发 is_standstill_near_routing_destination = true
   double distance_to_destination =
       env.get_route_info()->get_route_info_output().distance_to_target_slot;
-  const double dist_to_routing_destination_thr = config_.dist_to_routing_destination_thr;;
+  const double dist_to_routing_destination_thr = config_.dist_to_routing_destination_thr;
   ILOG_DEBUG << "distance_to_destination:" << distance_to_destination;
   JSON_DEBUG_VALUE("distance_to_destination", distance_to_destination);
   return distance_to_destination <= dist_to_routing_destination_thr;

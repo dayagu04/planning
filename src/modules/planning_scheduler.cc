@@ -619,6 +619,7 @@ void PlanningScheduler::FillPlanningTrajectory(
         planning_context.hpp_cruise_routing_completed();
     const bool memory_slot_allowed_to_park =
         planning_context.memory_slot_allowed_to_park();
+    //TODO(taolu10): 扩展 hpp_planning_status 的内聚类型，区分 HPP Cruise 完成和 HPP 完成
     if (hpp_cruise_routing_completed && memory_slot_allowed_to_park) {
       planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
     } else if (planning_success) {
