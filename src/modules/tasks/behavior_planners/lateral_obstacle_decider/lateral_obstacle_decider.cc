@@ -401,8 +401,6 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
   double lon_ttc = 0;
   int max_emergency_avoid_count = 6;
   int emergency_avoid_count_thr = config_.emergency_avoid_count_thr;
-  int max_lon_avoid_count = 6;
-  int lon_avoid_count_thr = 3;
   double half_lane_width = lane_width * 0.5;
   double extra_buffer_to_centerline_thr = 0.4;// 考虑正常避让自车离中心线的距离
   double distance_to_centerline_thr = vehicle_param.width * 0.5 -
@@ -470,6 +468,46 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
             history.emergency_avoid ? true : false;
       }
     }
+
+    // 纵向overtake、忽略的障碍物id
+    // const auto last_lon_overtake_obstacle_id =
+    // mutable_lon_ref_path_decider_output.danger_agent_info.agents_id_set;
+    std::unordered_set<int32_t> last_lon_overtake_obstacle_id;
+    if (last_lon_overtake_obstacle_id.count(obstacle.id())) {
+      if (!history.lon_overtake_avoid) {
+        // 前方障碍物
+        if (history.front_car || history.side_car) {
+          // ttc条件
+          lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel))
+                                : std::numeric_limits<double>::max();
+          bool is_lon_ttc_critical =
+              (lon_ttc < config_.emegency_avoid_ttc_lower) ||
+              (lon_ttc < config_.emegency_avoid_ttc_upper &&
+               d_s_rel < config_.emegency_avoid_front_area);
+          // 横向距离条件
+          bool is_in_lateral_range =
+              ((d_min_cpath > 0) &&
+               (d_min_cpath <
+                config_.emegency_avoid_lareral_area + half_lane_width)) ||
+              ((d_max_cpath < 0) &&
+               (d_max_cpath >
+                -config_.emegency_avoid_lareral_area - half_lane_width));
+          // 横向是否ignore
+          bool is_lateral_ignore =
+              (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
+               output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
+          bool lon_overtake_avoid =
+              is_lon_ttc_critical && is_in_lateral_range && is_lateral_ignore;
+          history.lon_overtake_avoid = lon_overtake_avoid;
+        } else {
+          // 后方障碍物，纵向正常overtake,横向先不管
+        }
+      } else {
+        // 如果已经触发了overtake
+        bool is_overtake_emergency_obstacle = history.rear_car;
+        history.lon_overtake_avoid = !is_overtake_emergency_obstacle;
+      }
+    }
   } else {
     if (!history.emergency_avoid) {
       if (history.front_car && !history.side_car && !history.rear_car) {
@@ -525,71 +563,6 @@ void LateralObstacleDecider::CheckLateralEmergencyAvoidObstacle(
       history.emergency_avoid = !(is_overtake_emergency_obstacle ||
                                   is_near_static || is_slow_obstacle);
     }
-  }
-
-  // 针对静态障碍物，依据上一帧轨迹判定lon_overtake，
-  // 1、不在st图中
-  // 2、上一帧纵向轨迹超越障碍物
-  // 3、纵向距离小于80m,横向距离条件
-  // 4、ttc 小于一定值
-  // 5、多帧判定
-  if (!obstacle.is_static() ||
-       obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE ||
-       obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL ||
-       obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER) {
-    history.lon_overtake_avoid = false;
-    history.lon_overtake_avoid_count = 0;
-    return;
-  }
-  // 不在纵向st图中
-  bool is_not_in_st_graph = CheckSTGraph(frenet_obstacle);
-  // 上一帧轨迹是否穿越障碍物
-  bool is_overtake =
-      CheckOvertakeObstacleByLastTraj(frenet_obstacle, reference_path);
-  // ttc条件
-  lon_ttc = v_s_rel < 0 ? (d_s_rel / (-v_s_rel))
-                        : std::numeric_limits<double>::max();
-  bool is_lon_ttc_critical = lon_ttc < 3;
-  // 纵向距离条件
-  bool is_in_long_range = d_s_rel < 80;
-  // 横向距离条件
-  bool is_in_lateral_range =
-      ((d_min_cpath > distance_to_centerline_thr) &&
-        (d_min_cpath <
-        config_.emegency_avoid_lareral_area + half_lane_width)) ||
-      ((d_max_cpath < -distance_to_centerline_thr) &&
-        (d_max_cpath >
-        -config_.emegency_avoid_lareral_area - half_lane_width));
-  // 横向是否ignore
-  bool is_lateral_ignore =
-      (output_[obstacle.id()] == LatObstacleDecisionType::IGNORE ||
-        output_[obstacle.id()] == LatObstacleDecisionType::FOLLOW);
-  bool lon_overtake_avoid =
-      is_overtake && is_lon_ttc_critical && is_in_lateral_range &&
-      is_in_long_range && is_lateral_ignore && is_not_in_st_graph;
-
-  if (!history.lon_overtake_avoid) {
-    // 前方障碍物
-    if (history.front_car || history.side_car) {
-      if (lon_overtake_avoid) {
-        history.lon_overtake_avoid_count = std::min(
-            history.lon_overtake_avoid_count + 1, max_lon_avoid_count);
-      } else {
-        history.lon_overtake_avoid_count =
-            std::max(history.lon_overtake_avoid_count - 1, 0);
-      }
-      history.lon_overtake_avoid =
-          history.lon_overtake_avoid_count > lon_avoid_count_thr;
-    } else {
-      // 后方障碍物，纵向正常overtake,横向先不管
-    }
-  } else {
-    // 如果已经触发了overtake
-    // 超越静态障碍物
-    bool is_overtake_emergency_obstacle = history.rear_car;
-    // 比静态障碍物速度低
-    bool is_slow_obstacle = ego_v_ < v_s;
-    history.lon_overtake_avoid = !is_overtake_emergency_obstacle;
   }
 }
 
@@ -651,58 +624,6 @@ bool LateralObstacleDecider::CheckEgoOvertakeObstacle(
     }
   }
   return is_lon_over_obstacle;
-}
-
-bool LateralObstacleDecider::CheckSTGraph(
-    FrenetObstacle &frenet_obstacle) {
-  const auto* st_graph = session_->planning_context().st_graph_helper();
-  if (st_graph == nullptr) {
-    return false;
-  }
-  const int obstacle_id = frenet_obstacle.id();
-  bool is_not_in_st = true;
-  const double dt = 0.2;
-  int32_t plan_points_num = static_cast<int32_t>(5 / dt) + 1;
-  for (size_t i = 0; i < plan_points_num; i++) {
-    const double t = i * dt;
-    const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
-    if (upper_bound.agent_id() == obstacle_id) {
-      is_not_in_st = false;
-      break;
-    }
-    // lower bound 不需要检查
-  }
-  return is_not_in_st;
-}
-
-bool LateralObstacleDecider::CheckOvertakeObstacleByLastTraj(
-    FrenetObstacle &frenet_obstacle,
-    const std::shared_ptr<ReferencePath> reference_path) {
-  const auto &last_traj_points = session_->planning_context()
-                               .last_planning_result()
-                               .raw_traj_points;
-  const auto &frenet_coord = reference_path->get_frenet_coord();
-  if (last_traj_points.empty()) {
-    return false;
-  }
-  if (frenet_coord == nullptr) {
-    return false;
-  }
-  bool is_overtake = false;
-  for (size_t i = 0; i < last_traj_points.size(); ++i) {
-    Point2D frenet_pt{0.0, 0.0};
-    Point2D cart_pt(last_traj_points[i].x, last_traj_points[i].y);
-    if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-      if (frenet_pt.x + ego_rear_axis_to_front_edge_ >
-          frenet_obstacle.frenet_obstacle_boundary().s_start) {
-        is_overtake = true;
-        break;
-      }
-    } else {
-      continue;
-    }
-  }
-  return is_overtake;
 }
 
 bool LateralObstacleDecider::IsPotentialAvoidingCar(
