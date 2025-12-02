@@ -1884,7 +1884,6 @@ void GeneralLateralDecider::EnsureBoundGapSafe(
   constexpr double kLateralGapBetweenFirstAndSecondBound = 0.4;
   constexpr double kLateralDistacneToEgoL = 0.2;
 
-  const double l_offset_limit = config_.first_soft_min_distance2center + 1;
   const double ego_l = ego_frenet_state_.planning_init_point().frenet_state.r;
   const double lower_target_l = ego_l + kLateralDistacneToEgoL;
   const double upper_target_l = ego_l - kLateralDistacneToEgoL;
@@ -4044,6 +4043,74 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
       }
     }
   }
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      hard_bounds_, BoundHierarchy::HARD_BOUND);
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
+}
+
+void GeneralLateralDecider::PostProcessSoftBoundWithInterpolation(
+    const int obstacle_id, std::vector<WeightedBounds> &soft_bounds,
+    BoundHierarchy bound_hierarchy) {
+  // 避免障碍物bound不连续，中间断开
+  // 初始化 map: 每个 BoundType 对应一条bound
+  double weight = config_.kSecondSoftBoundWeight;
+  if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
+    weight = config_.kHardBoundWeight;
+  } else if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
+    weight = config_.kSecondSoftBoundWeight;
+  } else {
+    weight = config_.kFirstSoftBoundWeight;
+  }
+  int left_index = -1;
+  int right_index = -1;
+  for (size_t i = 0; i < soft_bounds.size(); ++i) {
+    const auto &bounds_at_i = soft_bounds[i];
+    for (const auto &bound_at_i : bounds_at_i) {
+      if (bound_at_i.bound_info.id != obstacle_id) {
+        continue;
+      }
+      right_index  = i;
+      if (left_index >= 0 && left_index + 1 < right_index) {
+        // 在 (left, right) 之间存在默认值，需要插值
+        auto left_bounds = soft_bounds[left_index];
+        auto right_bounds = soft_bounds[right_index];
+        WeightedBound interpolate_bound;
+        interpolate_bound.bound_info.id = obstacle_id;
+        interpolate_bound.bound_info.type = bound_at_i.bound_info.type;
+        interpolate_bound.weight = weight;
+        for (int k = left_index + 1; k < right_index; ++k) {
+          auto left_bound_find_it = std::find_if(
+              left_bounds.begin(), left_bounds.end(),
+              [&bound_at_i](const WeightedBound &left_bound) {
+                return left_bound.bound_info.id == bound_at_i.bound_info.id &&
+                        left_bound.bound_info.type == bound_at_i.bound_info.type;
+              });
+          auto right_bound_find_it = std::find_if(
+              right_bounds.begin(), right_bounds.end(),
+              [&bound_at_i](const WeightedBound &right_bound) {
+                return right_bound.bound_info.id == bound_at_i.bound_info.id &&
+                        right_bound.bound_info.type == bound_at_i.bound_info.type;
+              });
+          if (left_bound_find_it != left_bounds.end() &&
+              right_bound_find_it != right_bounds.end()) {
+            // 左右两边同时找到
+            double ratio = (k - left_index) / (right_index - left_index);
+            double lower_interpolate_bound_value = left_bound_find_it->lower +
+                ratio * (right_bound_find_it->lower - left_bound_find_it->lower);
+            double upper_interpolate_bound_value = left_bound_find_it->upper +
+                ratio * (right_bound_find_it->upper - left_bound_find_it->upper);
+            interpolate_bound.lower = lower_interpolate_bound_value;
+            interpolate_bound.upper = upper_interpolate_bound_value;
+            soft_bounds[k].emplace_back(interpolate_bound);
+          }
+        }
+      }
+      left_index = right_index;
+    }
+  }
 }
 
 void GeneralLateralDecider::ExtractStaticObstacleBound(
@@ -4072,6 +4139,12 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
       }
     }
   }
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      hard_bounds_, BoundHierarchy::HARD_BOUND);
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
+  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+      first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
 }
 
 void GeneralLateralDecider::PostProcessBound(
