@@ -29,7 +29,7 @@ struct HppParkingSwitchInfo {
     is_memory_slot_allowed_to_park = false;
     has_parking_slot_in_hpp_searching = false;
     is_selected_slot_allowed_to_park = false;
-    bool is_standstill_near_routing_destination = false;
+    is_standstill_near_routing_destination = false;
     return;
   }
 };
