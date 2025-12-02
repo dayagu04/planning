@@ -1340,7 +1340,7 @@ void LateralMotionPlanningWeight::MakeDynamicWeight(
   std::vector<double> fp_ratio_to_xy2{1.0, 0.5, 0.3};
   std::vector<double> fp_ratio_to_xy3{1.0, 1.2, 1.5, 1.0, 0.6, 0.3};
   double lateral_dist =
-      std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_));
+      std::max(std::max(std::fabs(avoid_dist_), std::fabs(init_l_ - lat_offset_)), std::fabs(last_path_max_dist2ref_));
   double q_xy_ratio1 = planning::interp(lateral_dist, xp_xy, fp_ratio_to_xy1);
   // double q_xy_ratio2 =
   // planning::interp(std::fabs(init_ref_theta_error_), xp_theta,
@@ -1662,7 +1662,7 @@ void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
     std::vector<double> xp_path_dist2ref{1.0, 2.0, 2.5, 3.0};
     std::vector<double> fp_xy_ratio{1.0, 0.5, 0.3, 0.1};
     std::vector<double> fp_theta_ratio{1.0, 2.0, 3.0, 4.0};
-    std::vector<double> fp_sbound_ratio{1.0, 0.5, 0.1, 0.01};
+    std::vector<double> fp_sbound_ratio{1.0, 0.5, 0.1, 0.03};
     std::vector<double> fp_q_continuity{0.0, 0.0, 1.0, config_.q_continuity};
     double q_ref_xy_ratio = planning::interp(std::fabs(avoid_dist_),
                                              xp_path_dist2ref, fp_xy_ratio);
@@ -1672,12 +1672,12 @@ void LateralMotionPlanningWeight::SetWeightProtectionForLargePosDiff(
         std::fabs(avoid_dist_), xp_path_dist2ref, fp_sbound_ratio);
     double q_continuity = planning::interp(std::fabs(last_path_max_dist2ref_),
                                            xp_path_dist2ref, fp_q_continuity);
-    double q_ref_x = planning_input.q_ref_x();
-    planning_input.set_q_ref_x(q_ref_x * q_ref_xy_ratio);
-    double q_ref_y = planning_input.q_ref_y();
-    planning_input.set_q_ref_y(q_ref_y * q_ref_xy_ratio);
-    double q_ref_theta = planning_input.q_ref_theta();
-    planning_input.set_q_ref_theta(q_ref_theta * q_ref_theta_ratio);
+    // double q_ref_x = planning_input.q_ref_x();
+    // planning_input.set_q_ref_x(q_ref_x * q_ref_xy_ratio);
+    // double q_ref_y = planning_input.q_ref_y();
+    // planning_input.set_q_ref_y(q_ref_y * q_ref_xy_ratio);
+    // double q_ref_theta = planning_input.q_ref_theta();
+    // planning_input.set_q_ref_theta(q_ref_theta * q_ref_theta_ratio);
     end_ratio_for_qreftheta_ = config_.lc_end_ratio_for_first_qreftheta;
     planning_input.set_q_acc(0.0);
     planning_input.set_jerk_bound(config_.jerk_bound_inactivated_limit);
