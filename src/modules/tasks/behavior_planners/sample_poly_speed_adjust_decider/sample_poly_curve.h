@@ -53,7 +53,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
       const double weight_speed_variable, const double weight_gap_avaliable,
       const double weight_acc_limit, const double weight_stop_penalty,
       const double weight_speed_change,
-      const double weight_leading_veh_follow_s,
+      const double weight_leading_veh_follow_s, const double weight_jerk_limit,
       const double front_edge_to_rear_axle,
       const double back_edge_to_rear_axle);
 
@@ -61,6 +61,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double CalcV(const double t) const override;
   double CalcAcc(const double t) const override;
   double CalcJerk(const double t) const override;
+  double CalcRef(const double t, const double decay_coffi) const;
 
   void CalcCost(STSampleSpaceBase& sample_space_base, const double ego_v,
                 const double ego_a, const double suggested_v,
@@ -68,7 +69,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
                 bool enable_merge_decelaration, double speed_differ_gain,
                 double distance_to_stop_point,
                 const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-                const double cur_time);
+                const double cur_time, bool is_mergr_change);
   double CalcVelIntegral(const double t) const;
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,
@@ -131,6 +132,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   SpeedChangeCost speed_change_cost_;
   StopPointCost stop_point_cost_;
   LeadingVehFollowCost leading_veh_follow_s_cost_;
+  JerkLimitCost jerk_limit_cost_;
 
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;

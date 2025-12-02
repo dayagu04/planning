@@ -87,6 +87,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double weight_stop_penalty_;
   double weight_speed_change_;
   double weight_leading_veh_follow_s_;
+  double weight_jerk_limit_;
 
   std::pair<double, double> speed_adjust_range_;  // first: upper, second: lower
 
@@ -125,6 +126,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool is_nearing_ramp_ = false;
   bool is_in_merge_region_ = false;
   bool is_in_deceleartion_scene_ = false;
+  bool is_merge_change_ = false;
 
   double stop_line_distance_ = kMaxVelVariableValueInverse;
   double merge_stop_line_distance_ = kMaxMergeDistance;
@@ -136,6 +138,7 @@ class SamplePolySpeedAdjustDecider : public Task {
 
   double front_edge_to_rear_axle_ = 4.025;
   double rear_edge_to_rear_axle_ = 0.925;
+  double ego_width_ = 1.98;
 
   std::pair<size_t, size_t> min_cost_traj_index_{0, 0};
 

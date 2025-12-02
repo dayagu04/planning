@@ -10,7 +10,7 @@ class MatchGapCost : public CurveCost {
   MatchGapCost() = default;
   void GetCost(const STPoint& upper_st_point, const STPoint& lower_st_point,
                const double poly_end_s, const double poly_end_t,
-               const double poly_end_v,
+               const double poly_end_v, const double poly_end_a,
                const double reliable_safe_distance_to_gap_front_obj,
                const double reliable_safe_distance_to_gap_back_obj,
                const double ego_current_vel, const bool is_merge_change,
@@ -137,5 +137,10 @@ class LeadingVehFollowCost : public CurveCost {
 
  private:
   double front_edge_to_rear_axle_;
+};
+class JerkLimitCost : public CurveCost {
+ public:
+  JerkLimitCost() = default;
+  void GetCost(const double jerk_extrema);
 };
 }  // namespace planning

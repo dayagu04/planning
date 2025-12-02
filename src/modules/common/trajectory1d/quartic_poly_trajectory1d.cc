@@ -56,7 +56,7 @@ double QuarticPolynomial::CalculateFirstDerivative(const double t) const {
 }
 
 double QuarticPolynomial::CalculateSecondDerivative(const double t) const {
-  return 2 * coefficients_[2] * t + 6 * coefficients_[3] * t +
+  return 2 * coefficients_[2] + 6 * coefficients_[3] * t +
          12 * coefficients_[4] * t * t;
 }
 
