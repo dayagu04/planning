@@ -49,7 +49,6 @@ constexpr double kDistanceThresholdApproachToStopline = 10.0;
 constexpr double kDistanceThresholdApproachToCrosswalk = 12.0;
 constexpr int kEgoInIntersectionCount = 3;
 constexpr int kDefaultDistanceAwayFromIntersection = 500.0;
-constexpr double kEgoSpeedLimitWithinIntersection = 16.67; // 60kph
 
 }  // namespace
 
@@ -74,9 +73,6 @@ bool SpatioTemporalPlanner::Execute() {
   // auto spatio_temporal_union_plan = DebugInfoManager::GetInstance()
   //                                .GetDebugInfoPb()
   //                                ->mutable_spatio_temporal_union_plan();
-  const auto &function_info = session_->environmental_model().function_info();
-  const auto& ego_state =
-      session_->environmental_model().get_ego_state_manager();
   const auto &lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
   const auto &coarse_planning_info =
@@ -94,20 +90,6 @@ bool SpatioTemporalPlanner::Execute() {
   spatio_temporal_union_plan_output.st_dp_is_sucess = false;
   spatio_temporal_union_plan_output.cost_time = 0.0;
   spatio_temporal_union_plan_output.enable_using_st_plan = false;
-
-  // 过滤非SCC状态
-  // if (function_info.function_mode() != common::DrivingFunctionInfo::SCC) {
-  //   ILOG_DEBUG << "SpatioTemporalPlanner::system not in SCC!";
-  //   last_enable_using_st_plan_ = false;
-  //   return true;
-  // }
-
-  // 考虑自车速度限制
-  if (ego_state->ego_v() > kEgoSpeedLimitWithinIntersection) {
-    ILOG_DEBUG << "SpatioTemporalPlanner::ego speed exceeds the upper limit!";
-    last_enable_using_st_plan_ = false;
-    return true;
-  }
 
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
