@@ -170,6 +170,7 @@ struct GeometryPathOutput {
 
   double actual_ds = 0.0;
   double cur_gear_length = 0.0;
+  bool is_need_optimizer = false;
 
   void Reset() {
     path_available = false;

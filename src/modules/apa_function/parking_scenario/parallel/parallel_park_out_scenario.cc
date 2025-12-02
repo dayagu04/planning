@@ -1335,6 +1335,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
         current_path_point_global_vec_);
   }
   parallel_out_path_planner_.SampleCurrentPathSeg();
+  parallel_out_path_planner_.JudgeNeedOptimize();
 
   if (frame_.is_replan_first) {
     frame_.is_replan_first = false;

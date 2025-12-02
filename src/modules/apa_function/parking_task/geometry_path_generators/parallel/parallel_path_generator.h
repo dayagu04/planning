@@ -252,6 +252,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   void DeletePInVirtualObstacles();
   void MoveChannelObstacles();
   void RecorverChannelObstacles();
+  void JudgeNeedOptimize();
   const std::vector<Eigen::Vector2d> GetVirtualObs();
 
   const bool CheckTlaneAvailable() const;
