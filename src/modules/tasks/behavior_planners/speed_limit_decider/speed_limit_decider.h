@@ -75,6 +75,24 @@ class SpeedLimitDecider : public Task {
 
   bool IsNearMergeCancelRampVelLimit();
 
+  double CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv = nullptr);
+
+  // Helper functions for ramp processing
+  uint64_t FindRampLinkId(
+      double dist_to_ramp,
+      const std::vector<NOASplitRegionInfo> &split_region_info_list);
+
+  bool CollectPointsFromLink(
+      const iflymapdata::sdpro::LinkInfo_Link *link,
+      std::vector<ad_common::math::Vec2d> &enu_points, double &total_len,
+      size_t start_idx = 0);
+
+  void CollectRampPointsFromLinks(
+      const iflymapdata::sdpro::LinkInfo_Link *start_link,
+      const std::function<bool(const iflymapdata::sdpro::LinkInfo_Link &)> &is_ramp,
+      const std::function<const iflymapdata::sdpro::LinkInfo_Link *(uint64_t)> &get_next_link,
+      std::vector<ad_common::math::Vec2d> &enu_points, double &total_len);
+
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
   const std::vector<double> _A_TOTAL_MAX_V{1.5, 1.9, 3.2};
@@ -126,6 +144,10 @@ class SpeedLimitDecider : public Task {
   bool construction_manual_intervention_detected_ = false;
   double last_v_cruise_fsm_ = 0.0;
   double raw_curv_spline_ = 0.0;
+  bool last_is_sharp_curve_ = false;
+  bool last_is_sharp_curve_by_decel_ = false;  // 上一次基于减速度的急弯状态
+  int sharp_curve_frame_count_ = 0;  // 急弯状态维持帧数计数器
+  bool last_is_map_sharp_curve_ramp_ = false;  // 上一次地图急弯状态（用于滞回，匝道相关）
 };
 
 }  // namespace planning

@@ -65,6 +65,21 @@ constexpr double kCloseDisToMergeCancelVLimit = 120.0;
 constexpr double kNearMergeCancelVLimitCurvRadius = 900.0;
 constexpr double kFarAwayMergeCounterNums = 50;
 constexpr double kShortDisReachMerge = 6.0;
+constexpr double kSharpCurveEnterThreshold = 100.0;  // Enter threshold (m)
+constexpr double kSharpCurveExitThreshold = 130.0;   // Exit threshold with hysteresis (m)
+constexpr double kMinDistanceForDecel = 1;  // Min distance to avoid division by zero
+constexpr double kCurvatureDecelThreshold = -1.0;  // Deceleration threshold for CURVATURE (m/s²)
+constexpr double kCurvSpeedDifference = 3 / 3.6;
+constexpr int kSharpCurveMinFrames = 5;  // Min frames to maintain sharp curve state
+constexpr double kMinRampSampleLength = 150.0;
+constexpr double kMapSharpCurveRadiusEnter = 100.0;  // Enter radius threshold for map sharp curve (m)
+constexpr double kMapSharpCurveRadiusExit = 120.0;  // Exit radius threshold with hysteresis (m)
+constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // 半径阈值65m
+constexpr double kMaxRampPointSpacing = 40.0;  // 最大点间距阈值，超过此值认为是稀疏段（m）
+constexpr double kMaxRampPointSpacingRatio = 2.5;  // 最大间距与平均间距的比值阈值，超过此值认为存在异常稀疏段
+constexpr int kMaxDensePointCountForSparseBack = 3;  // 判定前密后疏的最大稠密点数阈值
+constexpr double kMaxDistanceToRamp = 2000.0;
+constexpr double kDistanceTolerance = 1.0;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -253,7 +268,7 @@ bool CheckClustersConsecutiveDiffSlidingWindow(
     if (pts.size() < 3) {
       continue;
     }
-    // 转换所有点到l坐标
+    // Convert all points to l coordinates
     std::vector<double> ls;
     ls.reserve(pts.size());
     for (const auto &pt : pts) {
@@ -266,7 +281,7 @@ bool CheckClustersConsecutiveDiffSlidingWindow(
     if (ls.size() < 3) {
       continue;
     }
-    // 滑动窗口判断连续3点
+    // Sliding window to check consecutive 3 points
     for (size_t i = 0; i + 2 < ls.size(); ++i) {
       double diff01 = std::abs(ls[i + 1] - ls[i]);
       double diff12 = std::abs(ls[i + 2] - ls[i + 1]);
@@ -350,7 +365,8 @@ bool SpeedLimitDecider::Execute() {
   speed_limit_output->set_is_function_fading_away(is_function_fading_away_);
   speed_limit_output->set_request_reason(request_reason_);
 
-  if (SpeedLimitType::CURVATURE == v_target_type_) {
+  if (SpeedLimitType::CURVATURE == v_target_type_ || 
+      SpeedLimitType::SHARP_CURVATURE == v_target_type_) {
     ad_info->is_curva = true;
   } else {
     ad_info->is_curva = false;
@@ -424,7 +440,7 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
       current_point, search_distance, ego_heading_angle, max_heading_diff,
       nearest_s, nearest_l);
   if (!current_segment) {
-    return 300.0;  // 返回300.0,较小的曲率半径，代表判断出弯道，不加速，有异常就不加速
+    return 300.0;  // Small radius indicates curve, don't accelerate on error
   }
   std::vector<std::pair<double, double>> curv_list;
   curv_list =
@@ -438,6 +454,418 @@ double SpeedLimitDecider::JudgeCurvBySDProMap(double search_dis) {
   }
   JSON_DEBUG_VALUE("sdpromap_min_curv_radius", min_curv_radius)
   return min_curv_radius;
+}
+
+// Find ramp link ID from split region info list
+uint64_t SpeedLimitDecider::FindRampLinkId(
+    double dist_to_ramp,
+    const std::vector<NOASplitRegionInfo> &split_region_info_list) {
+  uint64_t ramp_link_id = static_cast<uint64_t>(-1);
+  if (dist_to_ramp < kMaxDistanceToRamp) {
+    for (size_t i = 0; i < split_region_info_list.size(); ++i) {
+      if (std::fabs(split_region_info_list[i].distance_to_split_point -
+                    dist_to_ramp) < kDistanceTolerance) {
+        ramp_link_id = split_region_info_list[i].split_link_id;
+        break;
+      }
+    }
+  }
+  return ramp_link_id;
+}
+
+// Collect points from a single link
+bool SpeedLimitDecider::CollectPointsFromLink(
+    const iflymapdata::sdpro::LinkInfo_Link *link,
+    std::vector<ad_common::math::Vec2d> &enu_points, double &total_len,
+    size_t start_idx) {
+  if (link == nullptr) {
+    return false;
+  }
+
+  const auto &pts = link->points().boot().points();
+  if (pts.size() < 2 || start_idx >= pts.size()) {
+    return false;
+  }
+
+  constexpr double kMinPointSpacing = 0.1;
+  for (size_t i = start_idx; i < pts.size(); ++i) {
+    ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+    if (!enu_points.empty()) {
+      const auto &last = enu_points.back();
+      double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+      if (ds < kMinPointSpacing) {
+        continue;
+      }
+      total_len += ds;
+    }
+    enu_points.emplace_back(p);
+    if (total_len >= kMinRampSampleLength) {
+      return true;  // Reached target length
+    }
+  }
+  return false;  // Not reached target length
+}
+
+// Collect ramp points from multiple consecutive links
+void SpeedLimitDecider::CollectRampPointsFromLinks(
+    const iflymapdata::sdpro::LinkInfo_Link *start_link,
+    const std::function<bool(const iflymapdata::sdpro::LinkInfo_Link &)> &is_ramp,
+    const std::function<const iflymapdata::sdpro::LinkInfo_Link *(uint64_t)> &get_next_link,
+    std::vector<ad_common::math::Vec2d> &enu_points, double &total_len) {
+  const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
+  while (cur_link != nullptr && is_ramp(*cur_link) &&
+         total_len < kMinRampSampleLength) {
+    // Check if link has valid points before collecting
+    const auto &pts = cur_link->points().boot().points();
+    if (pts.size() < 2) {
+      // Invalid link, break
+      break;
+    }
+    // Collect points from current link
+    CollectPointsFromLink(cur_link, enu_points, total_len, 0);
+    
+    if (total_len >= kMinRampSampleLength) {
+      break;
+    }
+    cur_link = get_next_link(cur_link->id());
+  }
+}
+
+// Calculate max curvature on ramp, supports both on-ramp and approaching-ramp cases
+double SpeedLimitDecider::CalcRampMaxCurvFromSDProMap(
+    double *dist_to_max_curv) {
+  const auto &environmental_model = session_->environmental_model();
+  const auto &route_info = environmental_model.get_route_info();
+  if (!route_info->get_sdpromap_valid()) {
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+
+  const auto &route_info_output = route_info->get_route_info_output();
+  const auto &sdpro_map = route_info->get_sdpro_map();
+  bool is_on_ramp = route_info_output.is_on_ramp;
+  double dis_to_ramp = route_info_output.dis_to_ramp;
+
+  const iflymapdata::sdpro::LinkInfo_Link *start_link = nullptr;
+
+  // Collect ENU points on ramp until total length >= 150m or leaving ramp
+  std::vector<ad_common::math::Vec2d> enu_points;
+  enu_points.reserve(50);
+  double total_len = 0.0;
+
+  const auto is_ramp =
+      [&sdpro_map](const iflymapdata::sdpro::LinkInfo_Link &link) {
+        return sdpro_map.isRamp(link.link_type());
+      };
+
+  if (is_on_ramp) {
+    // Case 1: On ramp, start from current vehicle link
+    ad_common::math::Vec2d current_point;
+    const auto &ego_state = environmental_model.get_ego_state_manager();
+    const auto &pose = ego_state->location_enu();
+    current_point.set_x(pose.position.x);
+    current_point.set_y(pose.position.y);
+    double nearest_s = 0;
+    double nearest_l = 0;
+    const double search_distance = 50.0;
+    const double max_heading_diff = PI / 4;
+    const double ego_heading_angle = ego_state->heading_angle();
+    const auto current_segment = sdpro_map.GetNearestLinkWithHeading(
+        current_point, search_distance, ego_heading_angle, max_heading_diff,
+        nearest_s, nearest_l);
+
+    if (current_segment == nullptr) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+    // Verify current link is ramp
+    if (!sdpro_map.isRamp(current_segment->link_type())) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+
+    start_link = current_segment;
+    const iflymapdata::sdpro::LinkInfo_Link *cur_link = start_link;
+    const auto &pts = cur_link->points().boot().points();
+    if (pts.size() < 2) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+
+    // Find nearest point to vehicle
+    double min_dist = std::numeric_limits<double>::max();
+    size_t nearest_idx = 0;
+    for (size_t i = 0; i < pts.size(); ++i) {
+      double dist = std::hypot(pts[i].x() - current_point.x(),
+                               pts[i].y() - current_point.y());
+      if (dist < min_dist) {
+        min_dist = dist;
+        nearest_idx = i;
+      }
+    }
+
+    // Collect from nearest point (inclusive)
+    for (size_t i = nearest_idx; i < pts.size(); ++i) {
+      ad_common::math::Vec2d p(pts[i].x(), pts[i].y());
+      if (!enu_points.empty()) {
+        const auto &last = enu_points.back();
+        double ds = std::hypot(p.x() - last.x(), p.y() - last.y());
+        if (ds < 0.1) continue;
+        total_len += ds;
+      }
+      enu_points.emplace_back(p);
+      if (total_len >= kMinRampSampleLength) break;
+    }
+
+    // Continue collecting points from subsequent links
+    if (total_len < kMinRampSampleLength) {
+      // Get next link first to avoid re-collecting current link
+      const iflymapdata::sdpro::LinkInfo_Link *next_link = 
+          sdpro_map.GetNextLinkOnRoute(cur_link->id());
+      if (next_link != nullptr) {
+        auto get_next_link = [&sdpro_map](uint64_t link_id) {
+          return sdpro_map.GetNextLinkOnRoute(link_id);
+        };
+        CollectRampPointsFromLinks(next_link, is_ramp, get_next_link, enu_points,
+                                    total_len);
+      }
+    }
+
+  } else {
+    // Case 2: Approaching ramp, start from next link of ramp_link_id
+    const auto &split_region_info_list =
+        route_info_output.split_region_info_list;
+    uint64_t ramp_link_id = FindRampLinkId(dis_to_ramp, split_region_info_list);
+
+    if (ramp_link_id == static_cast<uint64_t>(-1)) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+
+    const auto ramp_link = sdpro_map.GetNextLinkOnRoute(ramp_link_id);
+    if (ramp_link == nullptr) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+
+    start_link = ramp_link;
+    auto get_next_link = [&sdpro_map](uint64_t link_id) {
+      return sdpro_map.GetNextLinkOnRoute(link_id);
+    };
+    CollectRampPointsFromLinks(start_link, is_ramp, get_next_link, enu_points,
+                               total_len);
+  }
+
+  // Calculate max curvature using 3-point geometry method
+  if (enu_points.size() < 3) {
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+
+  // Check point spacing, filter dense-front-sparse-back pattern
+  std::vector<double> point_spacings;
+  point_spacings.reserve(enu_points.size() - 1);
+  for (size_t i = 1; i < enu_points.size(); ++i) {
+    double spacing = std::hypot(enu_points[i].x() - enu_points[i - 1].x(),
+                                 enu_points[i].y() - enu_points[i - 1].y());
+    point_spacings.emplace_back(spacing);
+  }
+  
+  if (point_spacings.empty()) {
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+  
+  // Check for dense-front-sparse-back pattern
+  if (point_spacings.size() >= 2) {
+    double last_spacing = point_spacings.back();
+    
+    // Calculate average spacing of front part (excluding last spacing)
+    double front_avg_spacing = 0.0;
+    const size_t front_size = point_spacings.size() - 1;
+    for (size_t i = 0; i < front_size; ++i) {
+      front_avg_spacing += point_spacings[i];
+    }
+    front_avg_spacing /= static_cast<double>(front_size);
+    
+    JSON_DEBUG_VALUE("ramp_points_front_avg_spacing", front_avg_spacing);
+    JSON_DEBUG_VALUE("ramp_points_last_spacing", last_spacing);
+    
+    // Check if dense-front-sparse-back: last spacing is abnormally large
+    bool has_dense_front_then_sparse_back = false;
+    if (front_avg_spacing > 1e-6 && 
+        last_spacing > kMaxRampPointSpacing && 
+        last_spacing > front_avg_spacing * kMaxRampPointSpacingRatio) {
+      // Count dense points in front part (spacing < average spacing)
+      // Only consider as dense-front-sparse-back if dense points <= threshold
+      int dense_count = 0;
+      for (size_t i = 0; i < front_size; ++i) {
+        if (point_spacings[i] < front_avg_spacing) {
+          dense_count++;
+        }
+      }
+      if (dense_count <= kMaxDensePointCountForSparseBack) {
+        has_dense_front_then_sparse_back = true;
+      }
+    }
+    
+    JSON_DEBUG_VALUE("ramp_points_has_dense_front_sparse_back", has_dense_front_then_sparse_back ? 1.0 : 0.0);
+    
+    if (has_dense_front_then_sparse_back) {
+      if (dist_to_max_curv != nullptr) {
+        *dist_to_max_curv = 1000.0;
+      }
+      return 0.0;
+    }
+  }
+
+  // Build cumulative s and 3-point geometry curvature
+  std::vector<double> s_vec;
+  s_vec.reserve(enu_points.size());
+  s_vec.emplace_back(0.0);
+  for (size_t i = 1; i < enu_points.size(); ++i) {
+    double ds = std::hypot(enu_points[i].x() - enu_points[i - 1].x(),
+                           enu_points[i].y() - enu_points[i - 1].y());
+    s_vec.emplace_back(s_vec.back() + ds);
+  }
+
+  const double total_s = s_vec.back();
+  JSON_DEBUG_VALUE("ramp_curv_sample_total_s", total_s);
+  JSON_DEBUG_VALUE("ramp_curv_sample_points_num",
+                   static_cast<int>(enu_points.size()));
+
+  if (total_s < 1.0) {
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+
+  std::vector<double> k_raw;
+  k_raw.reserve(enu_points.size());
+  k_raw.emplace_back(0.0);  // First point not calculated
+  for (size_t i = 1; i + 1 < enu_points.size(); ++i) {
+    const auto &p0 = enu_points[i - 1];
+    const auto &p1 = enu_points[i];
+    const auto &p2 = enu_points[i + 1];
+
+    const double a = std::hypot(p1.x() - p0.x(), p1.y() - p0.y());
+    const double b = std::hypot(p2.x() - p1.x(), p2.y() - p1.y());
+    const double c = std::hypot(p2.x() - p0.x(), p2.y() - p0.y());
+
+    const double denom = a * b * c;
+    if (denom < 1e-3) {
+      k_raw.emplace_back(0.0);
+      continue;
+    }
+
+    const double cross = (p1.x() - p0.x()) * (p2.y() - p0.y()) -
+                         (p1.y() - p0.y()) * (p2.x() - p0.x());
+    const double area = 0.5 * std::fabs(cross);
+    const double k = 4.0 * area / denom;
+    k_raw.emplace_back(k);
+  }
+  k_raw.emplace_back(0.0);  // Last point not calculated
+
+  // Smooth curvature with sliding window (40m), optimized to O(n) with two pointers
+  std::vector<double> k_smooth(k_raw.size(), 0.0);
+  constexpr double window_len = 40.0;
+  constexpr double half_window = window_len * 0.5;
+  
+  if (k_raw.empty() || s_vec.empty() || k_raw.size() != s_vec.size()) {
+    // Handle boundary case
+    if (dist_to_max_curv != nullptr) {
+      *dist_to_max_curv = 1000.0;
+    }
+    return 0.0;
+  }
+  
+  // Maintain sliding window with two pointers
+  size_t left = 0;   // Left boundary of window
+  size_t right = 0;  // Right boundary of window
+  double sum_k = 0.0;
+  int cnt = 0;
+  
+  for (size_t i = 0; i < k_raw.size(); ++i) {
+    const double center_s = s_vec[i];
+    const double window_left = center_s - half_window;
+    const double window_right = center_s + half_window;
+    
+    // Remove points on left side of window
+    while (left < k_raw.size() && s_vec[left] < window_left) {
+      sum_k -= k_raw[left];
+      --cnt;
+      ++left;
+    }
+    
+    // Add points on right side of window
+    while (right < k_raw.size() && s_vec[right] <= window_right) {
+      sum_k += k_raw[right];
+      ++cnt;
+      ++right;
+    }
+    
+    // Calculate average
+    if (cnt > 0) {
+      k_smooth[i] = sum_k / static_cast<double>(cnt);
+    }
+  }
+
+  double max_k = 0.0;
+  double max_k_s = 0.0;  // Distance to max curvature point
+  double first_small_radius_s = -1.0;  // First position with radius < 65m
+  for (size_t i = 0; i < k_smooth.size(); ++i) {
+    if (k_smooth[i] > max_k) {
+      max_k = k_smooth[i];
+      max_k_s = s_vec[i];
+    }
+    // Check for first point with radius < 65m
+    if (k_smooth[i] > 1e-6) {
+      double radius = 1.0 / k_smooth[i];
+      if (radius < kMapRadiusFirstEnterForDisCal && first_small_radius_s < 0) {
+        first_small_radius_s = s_vec[i];
+      }
+    }
+  }
+
+  // Prefer first position with radius < 65m, otherwise use max curvature position
+  if (first_small_radius_s >= 0) {
+    max_k_s = first_small_radius_s;
+  }
+
+  JSON_DEBUG_VALUE("ramp_curv_max_k", max_k);
+  if (max_k > 1e-6) {
+    double min_radius = 1.0 / max_k;
+    JSON_DEBUG_VALUE("ramp_curv_min_radius", min_radius);
+  }
+
+  // Calculate distance to max curvature point
+  if (dist_to_max_curv != nullptr) {
+    if (is_on_ramp) {
+      *dist_to_max_curv = max_k_s;
+    } else {
+      *dist_to_max_curv = dis_to_ramp + max_k_s;
+    }
+    JSON_DEBUG_VALUE("ramp_curv_dist_to_max_curv", *dist_to_max_curv);
+  }
+
+  return max_k;
 }
 
 double SpeedLimitDecider::GetRampVelLimit() {
@@ -539,10 +967,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double acc_lon_allowed = std::sqrt(
       std::max(std::pow(acc_total_max, 2) - std::pow(acc_lat, 2), 0.0));
 
-  // And limit the logitudinal velocity for a safe turn
+  // Limit longitudinal velocity for safe turn
   double acc_lat_max =
       interp(std::fabs(angle_steers_deg), _AY_MAX_ABS_BP, _AY_MAX_STEERS);
-  // HACK: close v_limit_steering in high vel
+  // Disable steering limit at high velocity
   bool is_high_vel = v_ego > kHighVel;
   double v_limit_steering = 100.0;
   if (!is_high_vel) {
@@ -550,7 +978,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                                  std::max(std::fabs(angle_steers), 0.001));
   }
   double v_limit_in_turns = v_limit_steering;
-  // calculate the velocity limit according to the road curvature
+  // Calculate velocity limit based on road curvature
   double preview_x = speed_limit_config_.dis_curv;
   const auto &reference_path_ptr = session_->planning_context()
                                        .lane_change_decider_output()
@@ -576,16 +1004,14 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       ReferencePathPoint refpath_pt;
       if (reference_path_ptr->get_reference_point_by_lon(
               ego_start_s + idx * 2.0, refpath_pt)) {
-        // calc curv
         one_curv_info.curv = std::fabs(refpath_pt.path_point.kappa());
-        // calc curv direction(-1 or 1, 0 for except)
         one_curv_info.curv_sign = refpath_pt.path_point.kappa() > 0 ? 1 : -1;
       } else {
         one_curv_info.curv = 0.0001;
         one_curv_info.curv_sign = 0;
       }
     } else {
-      // calc curv abs and using average curv abs in curv window
+      // Calculate average curvature in window
       std::vector<double> curv_window_vec;
       int curv_sign = 0;
       for (int j = -3; j <= 3; j++) {
@@ -625,35 +1051,24 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
                     ReferencePathCurveInfo::CurveType::SHARP_CURVE) &&
                    IsSSharpBend(preview_curv_info_vec);
   double max_curv = 0.0001;
+  double max_curv_s = 0.0;  // Distance to max curvature point
   for (int idx = 0; idx < preview_curv_info_vec.size(); idx++) {
     if (preview_curv_info_vec[idx].curv > max_curv) {
       max_curv = preview_curv_info_vec[idx].curv;
+      max_curv_s = preview_curv_info_vec[idx].s;
     }
   }
   double road_radius_origin = 1 / std::max(max_curv, 0.0001);
 
-  // 获取基于10m一个点计算的曲率
-  double cur_max_cur = 0.0001;
-  if (raw_spline.get_x().size() > 0) {
-    double min_x = raw_spline.get_x_min();
-    double max_x = raw_spline.get_x_max();
-    double start_s = std::clamp(ego_start_s, min_x, max_x);
-    double end_s = std::clamp(ego_start_s + preview_x, min_x, max_x);
-    if (start_s <= end_s) {
-      for (double s = start_s; s <= end_s + kEpsilon; s += kSamplingStep) {
-        double curv = std::abs(raw_spline(s));
-        if (curv > cur_max_cur) {
-          cur_max_cur = curv;
-        }
-      }
-    }
-  }
-  // EWMA
+
+  // Distance to max curvature point
+  double dist_to_max_curv = max_curv_s;
+  // Apply EWMA filter
   if (raw_curv_spline_ < kEpsilon) {
-    raw_curv_spline_ = cur_max_cur;
+    raw_curv_spline_ = max_curv;
   } else {
     raw_curv_spline_ =
-        kEWMAAlpha * cur_max_cur + (1 - kEWMAAlpha) * raw_curv_spline_;
+        kEWMAAlpha * max_curv + (1 - kEWMAAlpha) * raw_curv_spline_;
   }
   road_radius = 1 / std::max(raw_curv_spline_, 0.0001);
   // if (road_radius < 400) {
@@ -664,26 +1079,160 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
+
   ILOG_DEBUG << "road_radius is :" << road_radius
              << ", acc_lat_max:" << acc_lat_max;
 
   ILOG_DEBUG << "angle_steers :" << angle_steers
              << ", angle_steers_deg:" << angle_steers_deg
-             << ", v_limit_road:" << v_limit_road;
+             << ", v_limit_road:" << v_limit_road
+             << ", dist_to_max_curv:" << dist_to_max_curv;
   JSON_DEBUG_VALUE("v_limit_road", v_limit_road);
   JSON_DEBUG_VALUE("road_radius", road_radius);
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
   JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
+  JSON_DEBUG_VALUE("dist_to_max_curv", dist_to_max_curv);
+
+  // Determine sharp curve with hysteresis
+  bool is_sharp_curve = false;
+  if (last_is_sharp_curve_) {
+    // Exit when radius >= exit threshold
+    is_sharp_curve = (road_radius < kSharpCurveExitThreshold);
+  } else {
+    // Enter when radius < enter threshold
+    is_sharp_curve = (road_radius < kSharpCurveEnterThreshold);
+  }
+  last_is_sharp_curve_ = is_sharp_curve;
+
+  // Calculate required deceleration
+  double required_deceleration = 0.0;
+  if (dist_to_max_curv > kMinDistanceForDecel && v_ego > v_limit_road) {
+    required_deceleration = (std::pow(v_limit_road, 2) - std::pow(v_ego, 2)) /
+                            (2.0 * dist_to_max_curv);
+  } else if (dist_to_max_curv <= kMinDistanceForDecel &&
+             (v_ego - v_limit_road) > kCurvSpeedDifference) {
+    required_deceleration = -2.0; 
+  }
+
+  // Determine sharp curve by deceleration with frame count hysteresis
+  bool is_sharp_curve_by_decel = false;
+  
+  if (speed_limit_config_.enable_sharp_curve_by_decel) {
+    bool should_enter_sharp_curve =
+        (required_deceleration < kCurvatureDecelThreshold) && is_sharp_curve;
+    if (last_is_sharp_curve_by_decel_) {
+      if (should_enter_sharp_curve) {
+        is_sharp_curve_by_decel = true;
+        sharp_curve_frame_count_ = 0;
+      } else {
+        // Maintain state for minimum frames
+        if (sharp_curve_frame_count_ < kSharpCurveMinFrames) {
+          is_sharp_curve_by_decel = true;
+          sharp_curve_frame_count_++;
+        } else {
+          is_sharp_curve_by_decel = false;
+          sharp_curve_frame_count_ = 0;
+        }
+      }
+    } else {
+      if (should_enter_sharp_curve) {
+        is_sharp_curve_by_decel = true;
+        sharp_curve_frame_count_ = 0;
+      } else {
+        is_sharp_curve_by_decel = false;
+        sharp_curve_frame_count_ = 0;
+      }
+    }
+  } else {
+    // Reset if disabled
+    is_sharp_curve_by_decel = false;
+    sharp_curve_frame_count_ = 0;
+  }
+  last_is_sharp_curve_by_decel_ = is_sharp_curve_by_decel;
+
+  // Determine map sharp curve based on ramp curvature with hysteresis
+  bool is_map_sharp_curve = false;
+  double dist_to_ramp_max_curv = 0.0;
+  
+  if (speed_limit_config_.enable_map_sharp_curve_speed_limit) {
+    const auto &route_info_output =
+        environmental_model.get_route_info()->get_route_info_output();
+    double dis_to_ramp = route_info_output.dis_to_ramp;
+    bool is_on_ramp = route_info_output.is_on_ramp;
+    
+    bool condition_ramp_location = (dis_to_ramp < speed_limit_config_.map_sharp_curve_dis_to_ramp) || is_on_ramp;
+    bool condition_ramp_curv = false;
+    
+    if (condition_ramp_location) {
+      double ramp_max_curv = CalcRampMaxCurvFromSDProMap(&dist_to_ramp_max_curv);
+      if (ramp_max_curv > 1e-6) {
+        double ramp_min_radius = 1.0 / ramp_max_curv;
+        // Hysteresis logic based on ramp radius
+        if (last_is_map_sharp_curve_ramp_) {
+          // Exit when radius >= exit threshold
+          condition_ramp_curv = (ramp_min_radius < kMapSharpCurveRadiusExit);
+        } else {
+          // Enter when radius < enter threshold
+          condition_ramp_curv = (ramp_min_radius < kMapSharpCurveRadiusEnter);
+        }
+      } else {
+        // Keep last state if curvature unavailable
+        condition_ramp_curv = last_is_map_sharp_curve_ramp_;
+      }
+    } else {
+      condition_ramp_curv = false;
+    }
+    
+    is_map_sharp_curve = condition_ramp_location && condition_ramp_curv;
+    last_is_map_sharp_curve_ramp_ = condition_ramp_curv;
+  } else {
+    last_is_map_sharp_curve_ramp_ = false;
+  }
+  
+  // Apply map sharp curve speed limit
+  double v_limit_map_sharp_curve = 100.0;
+  double map_sharp_curve_required_decel = 0.0;
+  if (is_map_sharp_curve) {
+    v_limit_map_sharp_curve = speed_limit_config_.map_sharp_curve_speed_limit;
+    
+    // Calculate required deceleration
+    if (dist_to_ramp_max_curv > kMinDistanceForDecel && v_ego > v_limit_map_sharp_curve) {
+      map_sharp_curve_required_decel = (std::pow(v_limit_map_sharp_curve, 2) - std::pow(v_ego, 2)) /
+                                       (2.0 * dist_to_ramp_max_curv);
+    } else if (dist_to_ramp_max_curv <= kMinDistanceForDecel &&
+               (v_ego - v_limit_map_sharp_curve) > kCurvSpeedDifference) {
+      map_sharp_curve_required_decel = -2.0;
+    }
+  }
+  v_limit_in_turns = std::min(v_limit_in_turns, v_limit_map_sharp_curve);
+  
+  // Priority: is_sharp_curve_by_decel > map_sharp_curve
+  SpeedLimitType v_limit_type = SpeedLimitType::CURVATURE;
+
+  if (is_sharp_curve_by_decel ||
+      (speed_limit_config_.enable_map_sharp_curve_by_decel &&
+       is_map_sharp_curve &&
+       map_sharp_curve_required_decel < kCurvatureDecelThreshold)) {
+    // Highest priority: sharp curve by deceleration
+    v_limit_type = SpeedLimitType::SHARP_CURVATURE;
+  }
+
   if (v_limit_in_turns < v_target_) {
     v_target_ = v_limit_in_turns;
-    v_target_type_ = SpeedLimitType::CURVATURE;
+    v_target_type_ = v_limit_type;
   }
+  
+  JSON_DEBUG_VALUE("is_map_sharp_curve", is_map_sharp_curve ? 1 : 0);
+  JSON_DEBUG_VALUE("v_limit_map_sharp_curve", v_limit_map_sharp_curve);
   JSON_DEBUG_VALUE("v_limit_steering", v_limit_steering);
   JSON_DEBUG_VALUE("v_limit_in_turns", v_limit_in_turns);
+  JSON_DEBUG_VALUE("is_sharp_curve", is_sharp_curve ? 1 : 0);
+  JSON_DEBUG_VALUE("is_sharp_curve_by_decel", is_sharp_curve_by_decel ? 1 : 0);
+  JSON_DEBUG_VALUE("sharp_curve_frame_count", sharp_curve_frame_count_);
+  JSON_DEBUG_VALUE("required_deceleration", required_deceleration);
   auto speed_limit_output = session_->mutable_planning_context()
                                 ->mutable_speed_limit_decider_output();
-  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns,
-                                           SpeedLimitType::CURVATURE);
+  speed_limit_output->SetSpeedLimitIntoMap(v_limit_in_turns, v_limit_type);
 }
 
 void SpeedLimitDecider::CalculateMapSpeedLimit() {
@@ -701,6 +1250,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double dis_to_merge = route_info_output.distance_to_first_road_merge;
   bool is_on_ramp = route_info_output.is_on_ramp;
   double ramp_v_limit = GetRampVelLimit();
+  double ramp_max_curv = CalcRampMaxCurvFromSDProMap();
 
   // set v_cruise_limit by map info
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
@@ -2200,3 +2750,7 @@ void SpeedLimitDecider::CalculateConstructionZoneSpeedLimit() {
 }
 
 }  // namespace planning
+
+
+
+

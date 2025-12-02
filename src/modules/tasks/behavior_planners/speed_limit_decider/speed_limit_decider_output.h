@@ -29,7 +29,8 @@ enum class SpeedLimitType {
   DANGEROUS_OBSTACLE = 17,
   NEAR_POI = 18,
   NEAR_CONSTRUCTION = 19,
-  ON_CONSTRUCTION = 20
+  ON_CONSTRUCTION = 20,
+  SHARP_CURVATURE = 21
 };
 
 struct SpeedLimitAgent {
@@ -137,7 +138,7 @@ class SpeedLimitDeciderOutput {
       SpeedLimitType::LANE_BORROW,  SpeedLimitType::NEAR_TFL,
       SpeedLimitType::AVOID_AGENT,  SpeedLimitType::DANGEROUS_OBSTACLE,
       SpeedLimitType::NEAR_POI,     SpeedLimitType::NEAR_CONSTRUCTION,
-      SpeedLimitType::ON_CONSTRUCTION};
+      SpeedLimitType::ON_CONSTRUCTION, SpeedLimitType::SHARP_CURVATURE};
   bool is_function_fading_away_ = false;
   iflyauto::RequestReason request_reason_ =
       iflyauto::RequestReason::REQUEST_REASON_NO_REASON;
