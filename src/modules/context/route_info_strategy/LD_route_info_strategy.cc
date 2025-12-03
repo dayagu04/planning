@@ -884,16 +884,13 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
     const bool lane_type_condition =
         !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
     RampDirection front_ramp_dir = route_info_output_.ramp_direction;
-    if (maxVal_seq == minVal_seq &&
-        maxVal_seq == real_lane_num &&
-        is_nearing_ramp &&
-        lane_type_condition &&
+    if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
+        is_nearing_ramp && lane_type_condition &&
         front_ramp_dir == RAMP_ON_RIGHT) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
       lc_num_task.emplace_back(1);
-    } else if (maxVal_seq == minVal_seq &&
-               maxVal_seq == 1 && is_nearing_ramp) {
+    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp) {
       //split场景，目标车道在最左边的情况，一直向左变道
       lc_num_task.emplace_back(-1);
     } else {
