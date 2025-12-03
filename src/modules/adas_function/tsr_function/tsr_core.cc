@@ -352,6 +352,9 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
                                               ->mutable_environmental_model()
                                               ->get_local_view()
                                               .vehicle_service_output_info;
+  
+  // 道路信息
+  auto road_info = GetContext.get_road_info();
 
   // 地图限速获取逻辑：优先使用sd_map，如果sd_map无效或限速为0，则使用sd_pro_map
   bool sd_map_speed_limit_valid = false;
@@ -359,37 +362,10 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
   current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
 
   // 先尝试获取sd_map限速信息
-  if (GetContext.get_session()
-          ->environmental_model()
-          .get_route_info()
-          ->get_sdmap_valid()) {
-    const auto &sd_map_info_ptr = GetContext.get_session()
-                                      ->environmental_model()
-                                      .get_route_info()
-                                      ->get_sd_map();
-
-    if (sd_map_info_ptr.GetNaviRoadInfo() != std::nullopt) {
-      auto navi_info = sd_map_info_ptr.GetNaviRoadInfo().value();
-
-      // 获取限速
-      sd_map_speed_limit = navi_info.cur_road_speed_limit();
-      if (sd_map_speed_limit > 0) {
-        sd_map_speed_limit_valid = true;
-      }
-
-      // 获取道路类型信息
-      int32 road_class = 0;
-      int32 form_way = 0;
-
-      if (navi_info.has_road_class()) {
-        road_class = navi_info.road_class();
-      }
-      if (navi_info.has_form_way()) {
-        form_way = navi_info.form_way();
-      }
-
-      current_road_type_ = GetRoadTypeFromNaviInfo(road_class, form_way);
-    }
+  if (road_info->sdmap_info.valid_flag) {
+    sd_map_speed_limit_valid = true;
+    sd_map_speed_limit = road_info->sdmap_info.speed_limit;
+    current_road_type_ = road_info->sdmap_info.road_type;
   }
 
   // 如果sd_map限速有效且大于0，则使用sd_map限速
@@ -399,45 +375,11 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     current_map_type_ = 1;  // sd_map
   }
   // 否则尝试获取sd_pro_map限速信息
-  else if (GetContext.get_session()
-               ->environmental_model()
-               .get_route_info()
-               ->get_sdpromap_valid()) {
-    const auto &sd_pro_map_info_ptr = GetContext.get_session()
-                                          ->environmental_model()
-                                          .get_route_info()
-                                          ->get_sdpro_map();
-
-    // 获取当前道路限速值
-    // ego_motion信息
-    auto localization_info = GetContext.mutable_session()
-                                 ->mutable_environmental_model()
-                                 ->get_ego_state_manager();  // enu实际上是boot
-    ad_common::math::Vec2d current_point;
-    current_point.set_x(localization_info->location_enu().position.x);
-    current_point.set_y(
-        localization_info->location_enu().position.y);  // enu实际上是boot
-    const double search_distance = 50.0;
-    const double max_heading_diff = PI / 4;
-    double temp_nearest_s = 0;
-    double nearest_l = 0;
-    const double ego_heading_angle = localization_info->heading_angle();
-    const iflymapdata::sdpro::LinkInfo_Link *current_link =
-        sd_pro_map_info_ptr.GetNearestLinkWithHeading(
-            current_point, search_distance, ego_heading_angle, max_heading_diff,
-            temp_nearest_s, nearest_l);
-    if (!current_link) {
-      current_map_speed_limit_valid_ = false;
-      current_map_speed_limit_ = 0;
-      current_map_type_ = 0;  // 无地图
-      current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
-    } else {
-      current_map_speed_limit_ = current_link->speed_limit();
-      current_map_speed_limit_valid_ = true;
-      current_map_type_ = 2;  // sd_pro_map
-      // 获取并更新道路类型
-      current_road_type_ = GetRoadTypeFromProMap(current_link);
-    }
+  else if (road_info->sdpromap_info.valid_flag) {
+    current_map_speed_limit_valid_ = true;
+    current_map_speed_limit_ = road_info->sdpromap_info.speed_limit;
+    current_map_type_ = 2;  // sd_pro_map
+    current_road_type_ = road_info->sdpromap_info.road_type;
   } else {
     current_map_speed_limit_valid_ = false;
     current_map_speed_limit_ = 0;

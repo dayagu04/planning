@@ -362,6 +362,13 @@ struct LaneInfo {
   bool left_front_car_flag = false;
 };
 
+struct NavMapInfo {
+  uint32 speed_limit = 0;
+  iflyauto::DrivingRoadType road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  uint8 map_source = 0; // 0: invalid, 1:sd_map, 2:sdpromap
+  bool valid_flag = false;
+};
+
 struct RoadInfo {
   LaneInfo current_lane;
 
@@ -370,6 +377,9 @@ struct RoadInfo {
   bool close_to_right_line_flag = false;
   double close_to_right_line_dur = 0.0;
   double close_to_left_line_dur = 0.0;
+  // 从地图得到的信息
+  NavMapInfo sdmap_info;
+  NavMapInfo sdpromap_info;
 };
 
 struct LastCycleInfo {
