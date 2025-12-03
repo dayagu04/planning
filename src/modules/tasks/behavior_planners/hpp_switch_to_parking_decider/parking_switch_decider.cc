@@ -83,6 +83,8 @@ bool ParkingSwitchDecider::Execute() {
             << parking_switch_info_.is_memory_slot_allowed_to_park
             << " is_standstill_near_routing_destination: "
             << parking_switch_info_.is_standstill_near_routing_destination;
+  JSON_DEBUG_VALUE("is_memory_slot_allowed_to_park", parking_switch_info_.is_memory_slot_allowed_to_park);
+  JSON_DEBUG_VALUE("is_standstill_near_routing_destination", parking_switch_info_.is_standstill_near_routing_destination);
 
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()
