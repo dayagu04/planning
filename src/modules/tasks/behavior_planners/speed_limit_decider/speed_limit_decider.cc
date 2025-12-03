@@ -77,11 +77,15 @@ constexpr double kMapSharpCurveRadiusEnter = 100.0;  // Enter radius threshold f
 constexpr double kMapSharpCurveRadiusExit = 120.0;  // Exit radius threshold with hysteresis (m)
 constexpr int kMapSharpCurveRawCountEnter = 4;  // Enter threshold count of k_raw points with radius < kMapSharpCurveRadiusEnter
 constexpr int kMapSharpCurveRawCountExit = 3;  // Exit threshold count of k_raw points with radius < kMapSharpCurveRadiusEnter (hysteresis)
-constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // 半径阈值65m
-constexpr double kMapSharpCurveMinDistance = 20.0;  // 满足条件的起点和最后一个点的最小距离 (m)
-constexpr double kMaxRampPointSpacing = 40.0;  // 最大点间距阈值，超过此值认为是稀疏段（m）
-constexpr double kMaxRampPointSpacingRatio = 2.5;  // 最大间距与平均间距的比值阈值，超过此值认为存在异常稀疏段
-constexpr int kMaxDensePointCountForSparseBack = 3;  // 判定前密后疏的最大稠密点数阈值
+constexpr double kMapRadiusFirstEnterForDisCal = 65.0;  // Radius threshold 65m
+constexpr double kMapSharpCurveMinDistance = 20.0;  // Minimum distance between first and last point satisfying condition (m)
+constexpr double kMapSharpCurveDistThresholdV70 = 125.0;  // Distance threshold to sharp curve when speed > 70kph (m)
+constexpr double kMapSharpCurveDistThresholdV60 = 75.0;   // Distance threshold to sharp curve when speed > 60kph (m)
+constexpr double kMapSharpCurveDistThresholdV50 = 35.0;   // Distance threshold to sharp curve when speed > 50kph (m)
+constexpr double kMapSharpCurveDistThresholdV45 = 17.0;   // Distance threshold to sharp curve when speed > 45kph (m)
+constexpr double kMaxRampPointSpacing = 40.0;  // Maximum point spacing threshold, beyond which is considered sparse segment (m)
+constexpr double kMaxRampPointSpacingRatio = 2.5;  // Ratio threshold of max spacing to average spacing, beyond which abnormal sparse segment is detected
+constexpr int kMaxDensePointCountForSparseBack = 3;  // Maximum dense point count threshold for determining dense-front-sparse-back pattern
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
 
@@ -1245,12 +1249,48 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       condition_ramp_raw_count = false;
     }
     
-    is_map_sharp_curve = condition_ramp_location && condition_ramp_curv && condition_ramp_raw_count && (!IsNearMergeCancelRampVelLimit());
+    // Calculate base condition without distance check
+    bool base_condition = condition_ramp_location && condition_ramp_curv && condition_ramp_raw_count && (!IsNearMergeCancelRampVelLimit());
+    
+    // Check if entering state (from false to true)
+    bool is_entering = !last_is_map_sharp_curve_ && base_condition;
+    
+    // Distance condition check (only when entering)
+    bool distance_condition_for_enter = true;
+    if (is_entering) {
+      // Get ego vehicle speed
+      const auto ego_state_mgr = environmental_model.get_ego_state_manager();
+      double v_ego_kph = ego_state_mgr->ego_v() * 3.6;  // Convert m/s to kph
+      
+      // Determine distance threshold based on speed
+      double dist_threshold = 0.0;
+      if (v_ego_kph > 70.0) {
+        dist_threshold = kMapSharpCurveDistThresholdV70;
+      } else if (v_ego_kph > 60.0) {
+        dist_threshold = kMapSharpCurveDistThresholdV60;
+      } else if (v_ego_kph > 50.0) {
+        dist_threshold = kMapSharpCurveDistThresholdV50;
+      } else if (v_ego_kph > 45.0) {
+        dist_threshold = kMapSharpCurveDistThresholdV45;
+      } else {
+        // Speed <= 50kph, no distance limit
+        dist_threshold = 0.0;  // Large value to pass condition
+      }
+      
+      // Check distance condition only when entering
+      distance_condition_for_enter = (dist_to_ramp_max_curv < dist_threshold);
+    }
+    
+    // Final condition: base condition and (not entering or distance condition satisfied)
+    is_map_sharp_curve = base_condition && distance_condition_for_enter;
+    
     last_is_map_sharp_curve_ramp_ = condition_ramp_curv;
     last_condition_ramp_raw_count_ = condition_ramp_raw_count;
+    last_is_map_sharp_curve_ = is_map_sharp_curve;
   } else {
     last_is_map_sharp_curve_ramp_ = false;
     last_condition_ramp_raw_count_ = false;
+    last_is_map_sharp_curve_ = false;
   }
   
   // Apply map sharp curve speed limit
