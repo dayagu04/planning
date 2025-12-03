@@ -116,7 +116,6 @@ void IntRequest::Update(int lc_status) {
              << current_lane_virtual_id
              << ", origin_lane_virtual_id:" << origin_lane_virtual_id_
              << ", target_lane_virtual_id:" << target_lane_virtual_id_;
-  is_allowed_lc_in_cone_scene_ = true;
 
   count_threshold_ = -1;
   if (lane_change_cmd_ == TurnSwitchState::LEFT_FIRMLY_TOUCH &&
@@ -170,7 +169,6 @@ void IntRequest::Update(int lc_status) {
       //       tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(LEFT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      is_allowed_lc_in_cone_scene_ = ConeSituationJudgement(tem_target_lane);
       //     ILOG_DEBUG
       //         << "[IntRequest::update] Ask for interactive changing lane to
       //         left";
@@ -247,7 +245,6 @@ void IntRequest::Update(int lc_status) {
       //     tlane->get_lane_type() != iflyauto::LANETYPE_OPPOSITE) {
       GenerateRequest(RIGHT_CHANGE);
       set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      is_allowed_lc_in_cone_scene_ = ConeSituationJudgement(tem_target_lane);
       //   ILOG_DEBUG
       //       << "[IntRequest::update] Ask for interactive changing lane "
       //          "to right";
