@@ -621,7 +621,7 @@ class LoadRosbag:
                          'acc_target_high', 'acc_target_low', 'cipv_acc', 'time_headway_level', 'desired_distance', 'desired_distance_filtered',\
                          "VisionLateralBehaviorPlannerCost", "VisionLateralMotionPlannerCost","VisionLongitudinalBehaviorPlannerCost", \
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
-                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', \
+                         'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
                          'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\

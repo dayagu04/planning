@@ -185,7 +185,7 @@ bool TrafficLightDecider::Execute() {
       cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_DRIVING_PASSIVE) {
-    
+
     if (IsRunningRedTFL()) {
       tla_output_info.traffic_light_reminder =
           iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
@@ -200,6 +200,8 @@ bool TrafficLightDecider::Execute() {
     tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
           TRAFFIC_LIGHT_REMINDER_NONE;
   }
+
+  JSON_DEBUG_VALUE("tla_reminder_state", int(tla_output_info.traffic_light_reminder));
 
   auto &tfl_decider = session_->mutable_planning_context()
                           ->mutable_traffic_light_decider_output();
