@@ -477,7 +477,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // const bool is_trigger_left = (is_left_overtake &&
   // is_left_lane_change_safe_);
   const bool is_trigger_left =
-      is_left_overtake && left_lane_is_on_navigation_route;
+      is_left_overtake && left_lane_is_on_navigation_route &&
+      FeasibleLaneDistanceEnoughJudgment(left_route_traffic_speed,
+                                         leading_vehicle_speed, llane, true,
+                                         need_overtake_distance);
 
   static int counter_left = 0;
   if (!is_trigger_left) {
@@ -492,7 +495,10 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   // const bool is_trigger_right =
   //     (is_right_overtake && is_right_lane_change_safe_);
   const bool is_trigger_right =
-      is_right_overtake && right_lane_is_on_navigation_route;
+      is_right_overtake && right_lane_is_on_navigation_route &&
+      FeasibleLaneDistanceEnoughJudgment(right_route_traffic_speed,
+                                           leading_vehicle_speed, rlane, false,
+                                           need_overtake_distance);
   static int counter_right = 0;
   if (!is_trigger_right) {
     counter_right = 0;
