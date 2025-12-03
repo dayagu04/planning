@@ -500,7 +500,7 @@ void JointDecisionInputBuilder::BuildObsInfo(
       obs_ref_trajectory->set_init_s(obstacle.init_s);
 
       const double obs_wheel_base = obstacle.length * 0.75;
-      for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
+      for (size_t i = 0; i < obstacle.ref_x_vec.size(); ++i) {
         obs_ref_trajectory->add_ref_x_vec(obstacle.ref_x_vec[i]);
         obs_ref_trajectory->add_ref_y_vec(obstacle.ref_y_vec[i]);
         obs_ref_trajectory->add_ref_theta_vec(obstacle.ref_theta_vec[i]);

@@ -149,7 +149,13 @@ void LatLonJointDecision::SetAgentTrajecTory() {
         trajectory::Trajectory rear_agent_trajectory;
         rear_agent_trajectory.reserve(N);
 
-        for (size_t i = 0; i < N && i < obs_opt_traj.x_vec_size(); ++i) {
+        for (size_t i = 0; i < N; ++i) {
+          if (i >= obs_opt_traj.x_vec_size() || i >= obs_opt_traj.y_vec_size() ||
+              i >= obs_opt_traj.theta_vec_size() || i >= obs_opt_traj.vel_vec_size() ||
+              i >= obs_opt_traj.acc_vec_size() || i >= obs_opt_traj.omega_vec_size() ||
+              i >= obs_opt_traj.jerk_vec_size() || i >= obs_opt_traj.s_vec_size()) {
+            break;
+          }
           trajectory::TrajectoryPoint point(
               obs_opt_traj.x_vec(i), obs_opt_traj.y_vec(i),
               obs_opt_traj.theta_vec(i), obs_opt_traj.vel_vec(i),
@@ -182,7 +188,13 @@ void LatLonJointDecision::SetAgentTrajecTory() {
         trajectory::Trajectory front_agent_trajectory;
         front_agent_trajectory.reserve(N);
 
-        for (size_t i = 0; i < N && i < obs_opt_traj.x_vec_size(); ++i) {
+        for (size_t i = 0; i < N; ++i) {
+          if (i >= obs_opt_traj.x_vec_size() || i >= obs_opt_traj.y_vec_size() ||
+              i >= obs_opt_traj.theta_vec_size() || i >= obs_opt_traj.vel_vec_size() ||
+              i >= obs_opt_traj.acc_vec_size() || i >= obs_opt_traj.omega_vec_size() ||
+              i >= obs_opt_traj.jerk_vec_size() || i >= obs_opt_traj.s_vec_size()) {
+            break;
+          }
           trajectory::TrajectoryPoint point(
               obs_opt_traj.x_vec(i), obs_opt_traj.y_vec(i),
               obs_opt_traj.theta_vec(i), obs_opt_traj.vel_vec(i),
@@ -241,6 +253,13 @@ void LatLonJointDecision::Update() {
     }
 
     for (size_t i = 0; i < N; ++i) {
+      if (i >= ego_trajectory.size() || i >= planning_output.x_vec_size() ||
+          i >= planning_output.y_vec_size() || i >= planning_output.theta_vec_size() ||
+          i >= planning_output.vel_vec_size() || i >= planning_output.acc_vec_size() ||
+          i >= planning_output.delta_vec_size() || i >= planning_output.omega_vec_size() ||
+          i >= planning_output.jerk_vec_size() || i >= planning_output.s_vec_size()) {
+        break;
+      }
       auto& point = ego_trajectory[i];
       point.t = i * dt;
       point.x = planning_output.x_vec(i);
