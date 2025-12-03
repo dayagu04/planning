@@ -1171,7 +1171,7 @@ bool LDRouteInfoStrategy::IsInvalidLane(
 
 bool LDRouteInfoStrategy::IsIgnoreMerge(
     const std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>&
-        merge_info) {
+        merge_info) const {
   const auto& merge_link = merge_info.first;
   if (merge_link == nullptr) {
     return true;
@@ -1329,6 +1329,14 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
   const iflymapdata::sdpro::LinkInfo_Link* split_link = ramp_info_vec_[0].first;
   if (split_link == nullptr) {
     return false;
+  }
+
+
+  if (route_info_output_.is_on_ramp) {
+    split_link = FindFrontValidRampSplitLink();
+    if (split_link == nullptr) {
+      return false;
+    }
   }
 
   const iflymapdata::sdpro::LinkInfo_Link* target_link =
@@ -1603,5 +1611,39 @@ bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
   }
 
   return true;
+}
+
+const iflymapdata::sdpro::LinkInfo_Link*
+LDRouteInfoStrategy::FindFrontValidRampSplitLink() const {
+  // 在处理ramp场景时，是以前方split是ramp作为判断条件的，在主路上可以有效计算出feasible lane
+  // 自车在匝道上时，前方所有的split都是匝道的话，则只会处理最近的split，这样存在无法处理匝道上有连续split的场景
+  // 因此，当自车在匝道上nearing ramp，且前方500m内有多个split时，至少需要判断500m处的ramp。
+  if (ramp_info_vec_.empty() || !route_info_output_.is_on_ramp) {
+    return nullptr;
+  }
+
+  const double min_front_search_dis = 500.0;
+  for (size_t ramp_idx = 0; ramp_idx < ramp_info_vec_.size(); ++ramp_idx) {
+    const auto& [ramp_link, ramp_dis] = ramp_info_vec_[ramp_idx];
+    // 场景1：匝道距离小于最小搜索距离 → 检查合流信息
+    if (ramp_dis < min_front_search_dis) {
+      for (const auto& merge_info : merge_info_vec_) {
+        const double merge_distance = merge_info.second;
+        // 合流点距离 < 匝道距离 + 不忽略该合流 + 非第一个匝道（避免ramp_idx-1越界）
+        const bool is_valid_merge = (merge_distance < ramp_dis) &&
+                                    !IsIgnoreMerge(merge_info) &&
+                                    (ramp_idx > 0);
+        if (is_valid_merge) {
+          return ramp_info_vec_[ramp_idx - 1].first;
+        }
+      }
+
+     // 场景2：匝道距离≥最小搜索距离 → 直接取当前匝道链路作为分流链路
+    } else {
+      return ramp_link;
+    }
+  }
+
+  return ramp_info_vec_[0].first;
 }
 }

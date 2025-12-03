@@ -47,7 +47,7 @@ protected:
  void CalculateRampInfo();
 
  bool IsIgnoreMerge(const std::pair<const iflymapdata::sdpro::LinkInfo_Link*,
-                                    double>& merge_info);
+                                    double>& merge_info) const;
 
  bool IsValidInputLanes(
      const iflymapdata::sdpro::LinkInfo_Link* link,
@@ -102,6 +102,7 @@ protected:
  void CaculateDistanceToTollStation(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
  bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
+ const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
@@ -111,6 +112,7 @@ protected:
  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
  double ego_on_cur_link_s_ = 0;
  double ego_on_cur_link_l_ = 0;
+ const iflymapdata::sdpro::LinkInfo_Link* split_link_ = nullptr;
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> merge_info_vec_;
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> split_info_vec_;
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> ramp_info_vec_;
