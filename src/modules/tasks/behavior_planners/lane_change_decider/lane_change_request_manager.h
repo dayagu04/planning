@@ -77,6 +77,10 @@ class LaneChangeRequestManager {
     return ilc_virtual_request_;
   }
 
+  const bool get_int_request_is_allowed_lc_in_cone_scene() const {
+    return int_request_is_allowed_lc_in_cone_scene_;
+  }
+
   void GenerateHMIInfo();
 
   const bool is_near_merge_region() { return is_near_merge_region_; };
@@ -105,6 +109,7 @@ class LaneChangeRequestManager {
   uint last_frame_blinker_ = 0;
   std::uint8_t lane_change_cmd_ = 0;
   bool trigger_lane_change_cancel_ = false;
+  bool int_request_is_allowed_lc_in_cone_scene_ = true;
 };
 
 }  // namespace planning

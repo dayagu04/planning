@@ -345,8 +345,11 @@ bool LaneChangeStateMachineManager::CheckIfProposeToExecution(
   }
   CheckLaneChangeValid(lane_change_direction);
   const bool is_suppress_LC_short_dis = IsSuppressLCShortDis();
+  const bool is_allowed_lc_in_cone_scene =
+      lc_req_mgr_->get_int_request_is_allowed_lc_in_cone_scene();
   return has_target_lane && lane_change_stage_info_.gap_insertable &&
-         !ego_trajs_future_.empty() && !is_suppress_LC_short_dis;
+         !ego_trajs_future_.empty() && !is_suppress_LC_short_dis &&
+         (is_allowed_lc_in_cone_scene || lane_change_type != INT_REQUEST);
 }
 
 bool LaneChangeStateMachineManager::CheckIfProposeToCancel(

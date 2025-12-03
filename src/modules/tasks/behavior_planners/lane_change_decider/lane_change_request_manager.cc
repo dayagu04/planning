@@ -161,6 +161,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       trigger_lane_change_cancel_);
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
+    int_request_is_allowed_lc_in_cone_scene_ =
+        int_request_.get_is_allowed_lc_in_cone_scene();
     // int_request_cancel_reason_ = int_request_.lc_request_cancel_reason();
     ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
