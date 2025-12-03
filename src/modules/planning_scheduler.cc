@@ -1233,7 +1233,7 @@ bool PlanningScheduler::IsHppSlotSearchingByDistance() {
     double dist = session_.environmental_model()
                       .get_parking_slot_manager()
                       ->GetDistanceToTargetSlot();
-    const double kdistance_thresh = 10.0;
+    const double kdistance_thresh = 20.0;
     if (dist > kdistance_thresh) {
       return false;
     }
