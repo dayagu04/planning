@@ -618,6 +618,18 @@ bool IhcCore::DynamicObstacleCheck(void) {
       vehicle_service_output_info_ptr->vehicle_speed_display *
       3.6;  // 转换为km/h
 
+  // 获取道路类型信息，优先使用sdmap_info，如果无效则使用sdpromap_info
+  iflyauto::DrivingRoadType current_road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  if (GetContext.get_road_info()->sdmap_info.valid_flag) {
+    current_road_type = GetContext.get_road_info()->sdmap_info.road_type;
+  } else if (GetContext.get_road_info()->sdpromap_info.valid_flag) {
+    current_road_type = GetContext.get_road_info()->sdpromap_info.road_type;
+  }
+  
+  // 判断是否为高速且速度大于70kph，如果是则跳过对向来车判断
+  bool skip_oncoming_check = (current_road_type == iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY) &&
+                             (ego_speed_kph > 70.0);
+
   // 初始化debug变量（仅在持续满足阈值时间后才会被置为true）
   ihc_sys_.state.low_beam_due_to_same_dir_vehicle = false;
   ihc_sys_.state.low_beam_due_to_oncomming_vehicle = false;
@@ -693,6 +705,10 @@ bool IhcCore::DynamicObstacleCheck(void) {
     else if (!has_camera && has_radar) {
       // 是否为对向来车
       if (fusion_objs[i].additional_info.motion_pattern_current == iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+        // 当道路类型为高速且速度大于70kph时，跳过对向来车判断
+        if (skip_oncoming_check) {
+          continue;  // 跳过对向来车判断
+        }
         // 判断自车速度是否大于3m/s
         if ((fusion_objs[i].common_info.relative_velocity.x + (ego_speed_kph / 3.6f)) < -3.0f) {
           // 判断障碍物的大小，只有当上一帧候选障碍物里面没有这个id的障碍物的时候才进行判断
@@ -728,6 +744,10 @@ bool IhcCore::DynamicObstacleCheck(void) {
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
           // 对向机动车
+          // 当道路类型为高速且速度大于70kph时，跳过对向来车判断
+          if (skip_oncoming_check) {
+            continue;  // 跳过对向来车判断
+          }
           // 只对新加入候选的车辆进行1s后位置判断，防止因为对向来车误检,导致频繁闪灯
           // 对于已经稳定存在的车辆，不进行此判断，避免车辆还没在车后就切远光灯
           bool is_new_obstacle = (last_verified_obstacle_ids_.find(track_id) == 
@@ -775,6 +795,12 @@ bool IhcCore::DynamicObstacleCheck(void) {
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME || 
             fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_MOVING) {
+          // 当道路类型为高速且速度大于70kph时，跳过对向非机动车判断
+          if (skip_oncoming_check && 
+              fusion_objs[i].additional_info.motion_pattern_current ==
+              iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
+            continue;  // 跳过对向非机动车判断
+          }
           if (distance_x < 75.0f) {
             // 明确进入近光区域（即时检测为true，用于时间累计）
             detected_oncoming_cycle = true;
