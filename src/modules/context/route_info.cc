@@ -6266,6 +6266,9 @@ void RouteInfo::ProcessLaneDistance(
     return;
   }
   const auto& lane_nums = relative_id_lane->get_lane_nums();
+  if (lane_nums.empty()) {
+    return;
+  }
   int left_lane_num = 0;
 
   for (const auto& lane_num : lane_nums) {
