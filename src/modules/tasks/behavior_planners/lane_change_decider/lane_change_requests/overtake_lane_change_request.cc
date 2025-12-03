@@ -888,10 +888,10 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
-  if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&
-      1 == right_lane_nums_) {
-    return false;
-  }
+  // if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&
+  //     1 == right_lane_nums_) {
+  //   return false;
+  // }
   const double left_speed_diff = lane_traffic_speed - leading_vehicle_speed;
   const bool is_overtake = (left_speed_diff > speed_threshold);
   return is_overtake;
