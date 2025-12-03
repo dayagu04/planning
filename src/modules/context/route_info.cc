@@ -2004,8 +2004,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   // 可能会出现前方存在车道拓宽点，感知与地图位置不一致的情况
   // 向前搜索25米，看有没有车道拓宽点
   std::map<int, SplitDirection> expand_lane_sequence_vec;
-  if (CalculateExpandLaneInfo(
-          expand_lane_sequence_vec, current_link_, s, 25.0)) {
+  if (CalculateExpandLaneInfo(expand_lane_sequence_vec, current_link_, s,
+                              25.0)) {
     map_lane_num += expand_lane_sequence_vec.size();
   }
 
@@ -2702,13 +2702,12 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
           mlc_type = OTHER_TYPE_MLC;
           distance_to_lc_exchange_region = distance_to_next_exchange_region;
         }
+        relative_id_lane->set_current_tasks(lc_num_task);
       }
     }
     route_info_output_.mlc_request_type_route_info.mlc_request_type = mlc_type;
     route_info_output_.mlc_request_type_route_info.distance_to_exchange_region =
         distance_to_lc_exchange_region;
-
-    relative_id_lane->set_current_tasks(lc_num_task);
   }
 
   route_info_output_.mlc_decider_route_info = mlc_decider_route_info_;
