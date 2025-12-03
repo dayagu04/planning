@@ -473,6 +473,16 @@ void JointDecisionInputBuilder::BuildObsInfo(
     planning_input.set_obs_num(key_obstacles.size());
 
     for (const auto& obstacle : key_obstacles) {
+      //检查 obstacle 完备性
+      if (obstacle.ref_x_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_y_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_theta_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_delta_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_vel_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_acc_vec.size() < kPlanningTimeSteps ||
+          obstacle.ref_s_vec.size() < kPlanningTimeSteps) {
+        continue;
+      }
       key_agent_ids_.push_back(obstacle.agent_id);
       auto* obs_state = planning_input.add_obs_init_state();
       obs_state->set_x(obstacle.init_x);
