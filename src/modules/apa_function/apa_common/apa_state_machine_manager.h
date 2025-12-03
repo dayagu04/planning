@@ -46,7 +46,7 @@ enum class ApaParkOutDirection : uint8_t {
 };
 
 enum class ApaRunningMode :uint8_t {
-  RUNNING_INVALID = 0,
+  RUNNING_NORMAL = 0,
   RUNNING_PA = 1,
 };
 
@@ -124,7 +124,7 @@ class ApaStateMachineManager final {
         iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
     functional_state_ = iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
     free_slot_pos_dir_ = false;
-    running_mode_ = ApaRunningMode::RUNNING_INVALID;
+    running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
   }
 
@@ -168,7 +168,7 @@ class ApaStateMachineManager final {
   iflyauto::FunctionalState functional_state_ =
       iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
   bool free_slot_pos_dir_ = false;
-  ApaRunningMode running_mode_ = ApaRunningMode::RUNNING_INVALID;
+  ApaRunningMode running_mode_ = ApaRunningMode::RUNNING_NORMAL;
   ApaPADirection pa_direction_ = ApaPADirection::PA_INVALID;
 };
 
