@@ -735,6 +735,7 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
   // 继续判断是否有导流区车道，如果有的话，需要更新origin_order_id_seq
   int diversion_lane_num = 0;
+  int most_left_emergency_lane_num = 0;
   const int cur_lane_size = current_link_->lane_ids_size();
   for (int i = cur_lane_size - 1; i >= 0; i--) {
     const auto& lane_id = current_link_->lane_ids()[i];
@@ -752,10 +753,18 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
         }
       }
     }
+
+    // 默认紧急车道在最右侧，
+    // 增加应急车道在左边时，计算车道从左向右序号的逻辑
+    if (IsEmergencyLane(temp_lane) &&
+        temp_lane->sequence() == cur_lane_size) {
+      most_left_emergency_lane_num++;
+    }
   }
 
-  const int link_total_lane_num =
-      cur_link_feasible_lane.lane_nums - diversion_lane_num;
+  const int link_total_lane_num = cur_link_feasible_lane.lane_nums -
+                                  diversion_lane_num -
+                                  most_left_emergency_lane_num;
 
   if (link_total_lane_num < 1) {
     return;
@@ -874,15 +883,14 @@ void LDRouteInfoStrategy::UpdateLCNumTask(
 
     const bool lane_type_condition =
         !cur_link_is_exist_accelerate_lane && !cur_link_is_exist_entry_lane;
-    if (maxVal_seq == minVal_seq &&
-        maxVal_seq == real_lane_num &&
-        is_nearing_ramp &&
-        lane_type_condition) {
+    RampDirection front_ramp_dir = route_info_output_.ramp_direction;
+    if (maxVal_seq == minVal_seq && maxVal_seq == real_lane_num &&
+        is_nearing_ramp && lane_type_condition &&
+        front_ramp_dir == RAMP_ON_RIGHT) {
       //split场景，目标车道在最右边的情况，一直向右变道
       // 右边有加速车道或入口车道则需要至少留一个车道
       lc_num_task.emplace_back(1);
-    } else if (maxVal_seq == minVal_seq &&
-               maxVal_seq == 1 && is_nearing_ramp) {
+    } else if (maxVal_seq == minVal_seq && maxVal_seq == 1 && is_nearing_ramp) {
       //split场景，目标车道在最左边的情况，一直向左变道
       lc_num_task.emplace_back(-1);
     } else {
