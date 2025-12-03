@@ -42,6 +42,7 @@ struct GeneralLateralDeciderOutput {
   bool is_use_spatio_planner_result = false;
   double recommended_bound_avoid_jerk = 0.4;
   RiskLevel risk_level = RiskLevel::NO_RISK;
+  bool is_emergency_avoid = false;
   void Clear() {
     complete_follow = true;
     lane_change_scene = false;
@@ -52,6 +53,7 @@ struct GeneralLateralDeciderOutput {
     is_use_spatio_planner_result = false;
     recommended_bound_avoid_jerk = 0.4;
     risk_level = RiskLevel::NO_RISK;
+    is_emergency_avoid = false;
     init_state.Clear();
     enu_ref_path.clear();
     last_enu_ref_path.clear();

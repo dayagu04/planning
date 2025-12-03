@@ -3081,6 +3081,9 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
   const auto &general_lateral_decider_output =
       session_->mutable_planning_context()
           ->mutable_general_lateral_decider_output();
+  auto &mutable_general_lateral_decider_output =
+      session_->mutable_planning_context()
+          ->mutable_general_lateral_decider_output();
   if (general_lateral_decider_output.lane_change_scene ||
       is_blocked_obstacle_ ||
       (obstacle->obstacle()->is_reverse() && !obstacle->is_static())) {
@@ -3150,6 +3153,11 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
     bound_type = BoundType::ADJACENT_AGENT;
   }
 
+  mutable_general_lateral_decider_output.is_emergency_avoid = true;
+  mutable_general_lateral_decider_output.recommended_bound_avoid_jerk =
+      std::fmax(
+          mutable_general_lateral_decider_output.recommended_bound_avoid_jerk,
+          0.6);
   bool is_cross_obj{false};
   bool has_lat_decision{false};
   bool has_lon_decision{false};
