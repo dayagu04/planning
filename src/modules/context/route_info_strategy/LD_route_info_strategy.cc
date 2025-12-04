@@ -357,7 +357,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       } else {
         for (const auto& pre_lane_id : lane.predecessor_lane_ids()) {
           const auto& pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
-          if (pre_lane == nullptr || IsAccelerateLane(pre_lane)) {
+          if (pre_lane == nullptr || IsMergeLane(pre_lane)) {
             continue;
           }
 
@@ -1156,8 +1156,7 @@ bool LDRouteInfoStrategy::HasLaneId(
 bool LDRouteInfoStrategy::IsInvalidLane(
     const iflymapdata::sdpro::Lane* temp_lane) const {
   bool is_emergency_lane = IsEmergencyLane(temp_lane);
-  bool is_merge_lane =
-      temp_lane->lane_transiton() == iflymapdata::sdpro::LTS_MERGE;
+  bool is_merge_lane = IsMergeLane(temp_lane);
   bool is_accelerate_lane = IsAccelerateLane(temp_lane);
   bool is_entry_lane = IsEntryLane(temp_lane);
   bool is_diversion_lane = IsDiversionLane(temp_lane);
@@ -1628,6 +1627,49 @@ bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
   }
 
   return true;
+}
+
+bool LDRouteInfoStrategy::IsLaneSuccessorIsMergeLane(
+    const iflymapdata::sdpro::Lane* lane_info) {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  const iflymapdata::sdpro::Lane* iterator_lane = lane_info;
+  const double kFrontDis = 500.0;
+  double sum_dis = 0.0;
+
+  while (iterator_lane) {
+    if (IsMergeLane(iterator_lane)) {
+      return true;
+    }
+
+    if (iterator_lane->successor_lane_ids_size() != 1) {
+      // 由于目前1分2车道检测不稳定，后继不为1的直接认为不在route上，不会被放进feasible lane中
+      // 后续根据测试效果，确定是否需要更精确的判断
+      return false;
+    }
+
+    const uint64 successor_lane_id = iterator_lane->successor_lane_ids()[0];
+    const auto& successor_lane = ld_map_.GetLaneInfoByID(successor_lane_id);
+    if (successor_lane == nullptr) {
+      return false;
+    }
+
+    if (iterator_lane->link_id() == current_link_->id()) {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01 - ego_on_cur_link_s_;
+    } else {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01;
+    }
+
+    if (sum_dis > kFrontDis) {
+      break;
+    }
+
+    iterator_lane = successor_lane;
+  }
+
+  return false;
 }
 
 const iflymapdata::sdpro::LinkInfo_Link*

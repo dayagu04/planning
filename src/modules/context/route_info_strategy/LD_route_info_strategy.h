@@ -103,6 +103,7 @@ protected:
  void CaculateDistanceToTollStation(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
  bool IsLaneSuccessorInPlannedRoute(const iflymapdata::sdpro::Lane* lane_info);
+ bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
  bool IsEntryLanePresentOnEitherSideOfSuccessorLane(const iflymapdata::sdpro::Lane* lane_info);
