@@ -139,7 +139,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
       return;
     }
   }
-  if (CheckFinishParallel()) {
+  if (CheckFinished()) {
     ILOG_INFO << "check apa parallel finished!";
     SetParkingStatus(PARKING_FINISHED);
     return;
