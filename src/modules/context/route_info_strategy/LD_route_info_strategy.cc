@@ -1114,6 +1114,19 @@ bool LDRouteInfoStrategy::IsExitLane(
   return false;
 }
 
+bool LDRouteInfoStrategy::IsMergeLane(
+    const iflymapdata::sdpro::Lane* lane_info) const {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  if (lane_info->lane_connection() == iflymapdata::sdpro::LAN_STATUS_MERGING) {
+    return true;
+  }
+
+  return false;
+}
+
 bool LDRouteInfoStrategy::IsDiversionLane(
     const iflymapdata::sdpro::Lane* lane_info) const {
   if (lane_info == nullptr) {

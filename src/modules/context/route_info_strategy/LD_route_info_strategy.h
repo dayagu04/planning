@@ -85,6 +85,7 @@ protected:
  bool IsEntryLane(const iflymapdata::sdpro::Lane* lane_info) const;
  bool IsDiversionLane(const iflymapdata::sdpro::Lane* lane_info) const;
  bool IsExitLane(const iflymapdata::sdpro::Lane* lane_info) const;
+ bool IsMergeLane(const iflymapdata::sdpro::Lane* lane_info) const;
  bool HasLaneId(const std::vector<iflymapdata::sdpro::Lane>& lane_vec,
               uint64 target_id) const;
 
