@@ -136,6 +136,21 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       }
     }
   }
+  // obstacle 完整性检查： 人工设置轨迹后不会删除虚拟障碍物
+  const int kPlanningTimeSteps = 26;
+  key_obstacles_.erase(
+      std::remove_if(
+          key_obstacles_.begin(), key_obstacles_.end(),
+          [kPlanningTimeSteps](const LaneChangeKeyObstacle& obstacle) {
+            return obstacle.ref_x_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_y_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_theta_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_delta_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_vel_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_acc_vec.size() < kPlanningTimeSteps ||
+                   obstacle.ref_s_vec.size() < kPlanningTimeSteps;
+          }),
+      key_obstacles_.end());
   return;
 }
 void JointDecisionObstaclesSelector::SelectObstacles(
@@ -569,6 +584,9 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     const std::shared_ptr<agent::Agent>& agent,
     const std::shared_ptr<planning_math::KDPath>& ego_lane_coord,
     LongitudinalLabel longitudinal_label) {
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto& planning_init_point = ego_state_manager->planning_init_point();
   LaneChangeKeyObstacle key_obstacle;
 
   key_obstacle.agent_id = agent->agent_id();
@@ -601,6 +619,18 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
     key_obstacle.init_s = std::numeric_limits<double>::max();
     key_obstacle.init_l = std::numeric_limits<double>::max();
   }
+  double ego_s = 0.0;
+  double ego_l = 0.0;
+  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+                              &ego_s, &ego_l)) {
+    return key_obstacle; //残缺 obstacle
+  }
+  double init_s = 0.0;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  init_s = key_obstacle.init_s - ego_s - key_obstacle.length * 0.5 -
+           vehicle_param.front_edge_to_rear_axle;
+  key_obstacle.init_s = init_s; //相对自车的gap空间
 
   const auto& primary_trajectories = agent->trajectories_used_by_st_graph();
   const auto& fallback_trajectories = agent->trajectories();
@@ -608,31 +638,23 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
   const auto& trajectories = primary_trajectories.empty()
                                  ? fallback_trajectories
                                  : primary_trajectories;
-
-  if (trajectories.empty()) {
+  if (trajectories.empty()) { // 如果轨迹是空的，把当前位置给轨迹设定为初始位置
     key_obstacle.init_delta = 0.0;
+    // 设置 ref 向量为初始位置，速度设为 0，生成 26 个点
+    const int kNumPoints = 26;
+    const double min_delta_vel = 0.001;
+    for (int i = 0; i < kNumPoints; ++i) {
+      key_obstacle.ref_x_vec.emplace_back(key_obstacle.init_x);
+      key_obstacle.ref_y_vec.emplace_back(key_obstacle.init_y);
+      key_obstacle.ref_theta_vec.emplace_back(key_obstacle.init_theta);
+      key_obstacle.ref_delta_vec.emplace_back(0.0);
+      key_obstacle.ref_vel_vec.emplace_back(0.0);
+      key_obstacle.ref_acc_vec.emplace_back(0.0);
+      key_obstacle.ref_s_vec.emplace_back(key_obstacle.init_s + min_delta_vel * i);
+    }
     return key_obstacle;
   }
   const auto& trajectory = trajectories.front();
-
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& planning_init_point = ego_state_manager->planning_init_point();
-
-  double ego_s = 0.0;
-  double ego_l = 0.0;
-  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
-                              &ego_s, &ego_l)) {
-    return key_obstacle;
-  }
-
-  double init_s = 0.0;
-  const auto& vehicle_param =
-      VehicleConfigurationContext::Instance()->get_vehicle_param();
-  init_s = key_obstacle.init_s - ego_s - key_obstacle.length * 0.5 -
-           vehicle_param.front_edge_to_rear_axle;
-
-  key_obstacle.init_s = init_s;
   const double kPlanningTimeStep = 0.2;
   for (size_t i = 0; i < trajectory.size(); ++i) {
     const double relative_time = i * kPlanningTimeStep;
