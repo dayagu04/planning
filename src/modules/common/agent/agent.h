@@ -37,15 +37,20 @@ enum class AgentType {
   TRICYCLE_RIDING = 20,       // 人骑着三轮车
   WATER_SAFETY_BARRIER = 21,  // 水马
   CTASH_BARREL = 22,          // 防撞桶
-  WARNING_TRIANGLE = 23,      // 三角牌
-  PARKING_GATE = 24,          // 停车杆
-  POLE = 25,                  // 杆
-  SPEED_BUMP = 26,            // 减速带
-  PARKING_SPOT_LOCK = 27,     // 地锁
-  SQUARE_COLUMN = 28,         // 方柱
-  CYLINDER = 29,              // 圆柱
-  SUV = 30,                   // SUV车辆
+  SOLT = 23,                  // 泊车-车位, context = IdpParkingEntranceType | IdpParkingEntranceStatusType | ...
+  DECELER = 24,               // 泊车-减速带
+  SPECIFICATIONER = 25,       // 泊车-地锁, context = IdpParkingEntranceStatusType | ...
+  LIMITER = 26,               // 泊车-限位器
+  COLUMN = 27,                // 柱子
   VIRTUAL = 31,               // 虚拟障碍物
+  SPECIAL_VEHICLE = 39,       // 特殊车辆，包括救护车、消防车等
+  PICKUP = 40,                // 皮卡
+  SUV = 41,                   // SUV
+  MPV = 42,                   // MPV
+  ENGINEERING_VEHICLE = 43,   // 工程车
+  ADULT = 47,                 // 成人
+  TRAFFIC_POLICE = 48,        // 交警
+  CHILD = 49,                 // 儿童
 };
 
 struct AgentStInfo {
