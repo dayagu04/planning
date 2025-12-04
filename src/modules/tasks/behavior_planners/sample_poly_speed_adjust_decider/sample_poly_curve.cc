@@ -225,8 +225,9 @@ void SampleQuarticPolynomialCurve::CalcCost(
   arrived_t_ = anchor_arrived_t;
   arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
   if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    if (((stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0) ||
-        is_mergr_change) {
+    bool is_left_distance_enough = is_mergr_change ? (arrived_s_ - CalcS(0)) < distance_to_stop_point :
+        (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
+    if (is_left_distance_enough) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
     }
