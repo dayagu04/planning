@@ -2384,20 +2384,23 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 
   if (t_lane_.limiter.valid) {
+    double ori_limiter_obs_x = 0.0;
     double limiter_obs_x = 0.0;
     if (t_lane_.limiter.start_pt.x() < 0.5 * t_lane_.slot_length) {
       ILOG_INFO << "rear limiter";
-      limiter_obs_x =
+      ori_limiter_obs_x =
           std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
-      limiter_obs_x +=
+      limiter_obs_x =
+          ori_limiter_obs_x +
           (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().rear_overhanging - 0.12);
       ILOG_INFO << "limiter_obs_x = " << limiter_obs_x;
     } else {
       ILOG_INFO << "front limiter";
-      limiter_obs_x =
+      ori_limiter_obs_x =
           std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
-      limiter_obs_x +=
+      limiter_obs_x =
+          ori_limiter_obs_x +
           (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().front_overhanging + 0.12);
     }
@@ -2417,6 +2420,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
         tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
+    // front virtual limit obs
+    const double parallel_virtual_limit_x_offset =
+        apa_param.GetParam().parallel_virtual_limit_x_offset;
+    if (parallel_virtual_limit_x_offset > 0.0) {
+      for (const auto& obs : point_set) {
+        Eigen::Vector2d virtual_front_limiter_obs = Eigen::Vector2d(
+            ori_limiter_obs_x + parallel_virtual_limit_x_offset, obs.y());
+        tlane_obstacle_vec.emplace_back(std::move(virtual_front_limiter_obs));
       }
     }
     apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
@@ -3238,7 +3251,10 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
             : apa_param.GetParam().safe_lat_buffer_in_1r_parallel_slot;
 
     safe_uss_remain_dist =
-        apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
+        t_lane_.is_inside_rigid
+            ? apa_param.GetParam()
+                  .safe_remain_dist_in_1r_with_wall_parallel_slot
+            : apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
 
   } else {
     ILOG_INFO << "outside slot not 1r step!";

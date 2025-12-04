@@ -89,6 +89,7 @@
   "terminal_parallel_y_offset_with_wall": 0.45,
   "parallel_max_ego_x_offset_with_invasion": 1.5,
   "parallel_ego_ac_x_offset_with_limiter": 0.3,
+  "parallel_virtual_limit_x_offset": 6.0,
   "parallel_terminal_x_offset_with_obs": 0.3,
 
   "comment_5": "check finish params",
@@ -152,6 +153,7 @@
   "safe_lat_buffer_with_wall_in_parallel_slot": 0.1,
   "safe_lat_buffer_in_1r_parallel_slot": 0.05,
   "safe_remain_dist_in_1r_parallel_slot": 0.22,
+  "safe_remain_dist_in_1r_with_wall_parallel_slot": 0.33,
   "safe_uss_remain_dist_in_parallel_slot": 0.2,
   "safe_uss_remain_dist_out_slot": 0.35,
   "uss_scan_angle_deg": 60.0,
