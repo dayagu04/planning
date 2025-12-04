@@ -3673,7 +3673,7 @@ void LaneChangeStateMachineManager::CalculateLCGapFeasibleWithPredictionInfo(
   }
 
   bool lc_safety = true;
-  if (after_filter_agent->type() == agent::AgentType::TRAFFIC_CONE &&
+  if (FacilityTypes.count(after_filter_agent->type()) > 0 &&
       is_front_agent) {
     const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
     if (transition_info_.lane_change_status == kLaneChangePropose) {
