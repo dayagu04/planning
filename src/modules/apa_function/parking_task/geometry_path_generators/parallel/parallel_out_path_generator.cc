@@ -325,13 +325,14 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   nums = pnc::mathlib::Clamp(nums, 5, 16);
   dy = y_bound / nums;
   auto front_heading = input_.ego_info_under_slot.neigbor_front_heading;
-  if (front_heading > M_PI_2) {
+  if (front_heading > M_PI || front_heading < -M_PI) {
+    front_heading = 0.0;
+  }else if (front_heading > M_PI_2){
     front_heading = -M_PI + front_heading;
-  }
-  if (front_heading < -M_PI_2) {
+  }else if (front_heading < -M_PI_2) {
     front_heading = M_PI + front_heading;
   }
-  if (std::abs(front_heading) < pnc::mathlib::Deg2Rad(5.0) &&
+  if (std::abs(front_heading) < pnc::mathlib::Deg2Rad(5.0) ||
       std::abs(front_heading) > pnc::mathlib::Deg2Rad(45.0)) {
     front_heading = 0.0;
   }
