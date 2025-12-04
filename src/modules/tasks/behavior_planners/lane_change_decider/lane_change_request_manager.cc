@@ -244,7 +244,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
           lc_status != kLaneChangeHold) {
         ILOG_INFO << "cann't generate overtake lane change when not lane keep!";
-        overtake_request_.Reset();
+        // overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
       if (EnableGenerateOvertakeQequestByFrontSlowVehicle) {
