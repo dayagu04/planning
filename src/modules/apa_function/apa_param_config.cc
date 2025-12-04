@@ -268,6 +268,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "pa_slot_length_for_park_in");
 
   JSON_READ_VALUE(param.pa_to_curb_dis, double, "pa_to_curb_dis");
+  JSON_READ_VALUE(param.pa_max_invalid_replan_times, double,
+                  "pa_max_invalid_replan_times");
 
   // check finish params
   JSON_READ_VALUE(param.finish_lat_err, double, "finish_lat_err");

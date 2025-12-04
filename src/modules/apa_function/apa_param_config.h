@@ -464,6 +464,7 @@ struct ApaParameters {
   double pa_slot_move_distance = 0.15;
   double pa_slot_length_for_park_in = 1.7;
   double pa_to_curb_dis = 0.8;
+  int pa_max_invalid_replan_times = 5;
 
   // check finish params
   double finish_lat_err = 0.08;
