@@ -176,6 +176,10 @@ void LDRouteInfoStrategy::CalculateMLCDecider(
     }
   }
 
+  if (route_info_output_.is_ego_on_expressway_hmi) {
+    CalculateAvoidMergeFeasibleLane(feasible_lane_graph);
+  }
+
   UpdateLCNumTask(relative_id_lanes, feasible_lane_graph);
 
   route_info_output = route_info_output_;
@@ -1645,5 +1649,95 @@ LDRouteInfoStrategy::FindFrontValidRampSplitLink() const {
   }
 
   return ramp_info_vec_[0].first;
+}
+
+void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
+    TopoLinkGraph& feasible_lane_graph) {
+  if (feasible_lane_graph.lane_topo_groups.empty()) {
+    return;
+  }
+
+  auto& current_link_feasible_lane = feasible_lane_graph.lane_topo_groups.back();
+  // 如果feasible lane中车道数只有有一条，则不再避让merge
+  if (current_link_feasible_lane.topo_lanes.size() < 2) {
+    return;
+  }
+
+  auto& topo_lanes = current_link_feasible_lane.topo_lanes;
+  for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
+    // 拿掉feasible lane中车道数后，车道数少于2了，直接break掉。
+    if (topo_lanes.size() < 2) {
+      break;
+    }
+    const auto lane_id = it->id;
+    const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+
+    //判断lane的旁边车道是否有入口车道，如果有的话，则把这条车道拿掉
+    if ((temp_lane != nullptr) && IsEntryLanePresentOnEitherSideOfSuccessorLane(temp_lane)) {
+      it = topo_lanes.erase(it);
+    } else {
+      ++it;
+    }
+  }
+}
+
+bool LDRouteInfoStrategy::IsEntryLanePresentOnEitherSideOfSuccessorLane(
+    const iflymapdata::sdpro::Lane* lane_info) {
+  if (lane_info == nullptr) {
+    return false;
+  }
+
+  const double front_search_dis = 500.0;
+  double sum_dis = 0.0;
+  const auto* current_traverse_lane = lane_info;
+  while (current_traverse_lane) {
+    if (current_traverse_lane->link_id() == current_link_->id()) {
+      sum_dis += current_traverse_lane->length() * 0.01 - ego_on_cur_link_s_;
+    } else {
+      sum_dis += current_traverse_lane->length() * 0.01;
+    }
+
+    const auto& temp_cur_link = ld_map_.GetLinkOnRoute(current_traverse_lane->link_id());
+    if (temp_cur_link == nullptr) {
+      return false;
+    }
+
+    const uint32 left_lane_seq = current_traverse_lane->sequence() + 1;
+    const uint32 right_lane_seq = current_traverse_lane->sequence() - 1;
+    const iflymapdata::sdpro::Lane* left_lane = nullptr;
+    const iflymapdata::sdpro::Lane* right_lane = nullptr;
+    for (const auto& lane_id: temp_cur_link->lane_ids()) {
+      const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (lane == nullptr) {
+        continue;
+      }
+
+      if (lane->sequence() == left_lane_seq) {
+        left_lane = lane;
+      } else if (lane->sequence() == right_lane_seq) {
+        right_lane = lane;
+      }
+    }
+
+    if (left_lane && IsEntryLane(left_lane)) {
+      return true;
+    }
+
+    if(right_lane && IsEntryLane(right_lane)) {
+      return true;
+    }
+
+    if (sum_dis > front_search_dis) {
+      break;
+    }
+
+    if (current_traverse_lane->successor_lane_ids_size() != 1) {
+      return false;
+    }
+
+    current_traverse_lane =
+        ld_map_.GetLaneInfoByID(current_traverse_lane->successor_lane_ids()[0]);
+  }
+  return false;
 }
 }
