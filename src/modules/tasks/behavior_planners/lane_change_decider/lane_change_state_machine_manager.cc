@@ -4232,7 +4232,7 @@ bool LaneChangeStateMachineManager::
       if (is_large_car) {
         box_longitudinal_buff += 3.0;  // 大车额外增加3m基础距离
       }
-      if (ego_press_line_ratio > 0.01) {
+      if (ego_press_line_ratio > 0.01 && is_side_clear_) {//对侧方车保持返回能力
         break;  // 已经压线以后，不再检查前车安全性，压线后再变道返回对前车是危险的。
       }
       if (is_executing) {
