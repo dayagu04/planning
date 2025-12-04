@@ -9,6 +9,7 @@
 #include <complex>
 #include <cstddef>
 #include <cstdint>
+#include <unordered_set>
 #include <vector>
 
 #include "basic_types.pb.h"
@@ -45,6 +46,10 @@ constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
+
+const std::unordered_set<agent::AgentType> FacilityTypes = {
+    agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
+    agent::AgentType::WATER_SAFETY_BARRIER, agent::AgentType::CTASH_BARREL};
 }  // namespace
 
 LaneChangeStateMachineManager::LaneChangeStateMachineManager(
@@ -720,7 +725,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   }
 
   if (target_lane_front_node_) {
-    if (target_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (FacilityTypes.count(target_lane_front_node_->type()) > 0) {
       const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
       if (!IsLCFeasibleForTrafficConeInTargetLane(target_lane_front_node_,
                                                   target_lane_virtual_id)) {
@@ -763,7 +768,7 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
   //   }
   // }
   if (ego_lane_front_node_) {
-    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (FacilityTypes.count(ego_lane_front_node_->type()) > 0) {
       if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
         lc_invalid_track_.set_value(
             ego_lane_front_node_->node_agent_id(),
@@ -1379,7 +1384,7 @@ void LaneChangeStateMachineManager::CalculateFrontGapFeasible(
     const double ego_front_node_v = ego_lane_front_node_->node_speed();
     const double ego_front_node_a = ego_lane_front_node_->node_accel();
 
-    if (ego_lane_front_node_->type() == agent::AgentType::TRAFFIC_CONE) {
+    if (FacilityTypes.count(ego_lane_front_node_->type()) > 0) {
       if (!IsLCFeasibleForTrafficCone(ego_lane_front_node_)) {
         lc_invalid_track_.set_value(ego_lane_front_node_->node_agent_id(),
                                     ego_lane_distance_rel, ego_front_node_v);
@@ -2602,10 +2607,6 @@ void LaneChangeStateMachineManager::GetFrontRiskAgentTrajs() {
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
   risk_agents_nodes_.clear();
-  const std::unordered_set<agent::AgentType> FacilityTypes = {
-      agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
-      agent::AgentType::WATER_SAFETY_BARRIER, agent::AgentType::CTASH_BARREL,
-      agent::AgentType::WARNING_TRIANGLE};
   for (const auto* target_lane_node : target_lane_nodes) {
     if (target_lane_node == nullptr) {
       continue;
