@@ -197,7 +197,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
       anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
       safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj -
       front_edge_to_rear_axle_ - back_edge_to_rear_axle_;
-  if (rest_changeable_distance < 2.0 && !is_not_use_gap_select) {
+  if (rest_changeable_distance < 3.5 && !is_not_use_gap_select) {
     return;
   }
   cost_sum_ = 0.0;
