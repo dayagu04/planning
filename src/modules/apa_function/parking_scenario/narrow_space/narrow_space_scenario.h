@@ -31,15 +31,9 @@ class NarrowSpaceScenario : public ParkingScenario {
 
   ~NarrowSpaceScenario();
 
-  void Init() override;
-
   void Reset() override;
 
-  void ThreadClearState() override;
-
   virtual std::string GetName() override { return typeid(this).name(); }
-
-  HybridAStarThreadSolver* GetThread() { return &thread_; }
 
   void ScenarioTry() override;
 
@@ -199,12 +193,6 @@ class NarrowSpaceScenario : public ParkingScenario {
       const float expansion_dir);
 
  private:
-  RequestResponseState thread_state_;
-  HybridAStarThreadSolver thread_;
-  // do not clear it every frame in cruise state.
-  AstarResponse response_;
-
-  AstarPathGear current_gear_;
   int replan_number_inside_slot_;
   // If path connected with goal, and no gear switch, True.
   bool is_path_connected_to_goal_;

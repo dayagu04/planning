@@ -38,7 +38,7 @@ namespace apa_planner {
 NarrowSpaceScenario::NarrowSpaceScenario(
     const std::shared_ptr<ApaWorld>& apa_world_ptr)
     : ParkingScenario(apa_world_ptr) {
-  Init();
+  ParkingScenario::Init();
 }
 
 void NarrowSpaceScenario::Reset() {
@@ -57,19 +57,6 @@ void NarrowSpaceScenario::Reset() {
   narrow_space_decider_.Reset();
   virtual_wall_decider_.Reset(Pose2D(0, 0, 0));
   direction_origin_corner_23_normalized_(0, 0);
-
-  return;
-}
-
-void NarrowSpaceScenario::Init() {
-  // todo, system should use same vehicle parameter configuration file and
-  // data structure.
-  VehicleParam vehicle_param;
-  UpdateVehicleParam(vehicle_param);
-  ILOG_INFO << "init astar thread";
-  thread_.Init(vehicle_param);
-  thread_.Start();
-  response_.Clear();
 
   return;
 }
@@ -1704,11 +1691,6 @@ void NarrowSpaceScenario::ScenarioTry() {
 
   TansformPreparePlanningTraj();
 
-  return;
-}
-
-void NarrowSpaceScenario::ThreadClearState() {
-  thread_.Clear();
   return;
 }
 

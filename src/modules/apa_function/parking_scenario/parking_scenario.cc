@@ -45,7 +45,18 @@ ParkingScenario::ParkingScenario(
 
 std::string ParkingScenario::GetName() { return ""; }
 
-void ParkingScenario::Init() { return; }
+void ParkingScenario::Init() {
+  // todo, system should use same vehicleparameter configuration file and data
+  // structure.
+  VehicleParam vehicle_param;
+  UpdateVehicleParam(vehicle_param);
+  ILOG_INFO << "init astar thread";
+  thread_.Init(vehicle_param);
+  thread_.Start();
+  response_.Clear();
+
+  return;
+}
 
 void ParkingScenario::Reset() {
   memset(&planning_output_, 0, sizeof(planning_output_));
@@ -730,7 +741,10 @@ const bool ParkingScenario::PostProcessPath() {
 
 void ParkingScenario::CreateTasks() { return; }
 
-void ParkingScenario::ThreadClearState() { return; }
+void ParkingScenario::ThreadClearState() {
+  thread_.Clear();
+  return;
+}
 
 void ParkingScenario::ScenarioTry() {
   // todo: use geometry method first, if no result, use hybrid astar.
