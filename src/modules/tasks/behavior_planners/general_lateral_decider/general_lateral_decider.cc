@@ -522,23 +522,32 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
                  ReferencePathCurveInfo::CurveType::S_CURVE ||
              ref_curve_info_.curve_type ==
                  ReferencePathCurveInfo::CurveType::BIG_CURVE) {
+    limit_ref_vel_on_ramp_valid = true;
+    kMaxAcc = 1e-6;
+    kMinAcc = -0.4;
     const auto &route_info_output = session_->environmental_model()
                                         .get_route_info()
                                         ->get_route_info_output();
     if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
       cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
     }
-    double road_speed_limit;
-    bool is_exist_speed_limit =
+    double curve_speed_limit;
+    bool is_exist_curve_speed_limit =
         session_->planning_context()
-            .speed_limit_decider_output()
-            .GetSpeedLimitByType(SpeedLimitType::CURVATURE, &road_speed_limit);
-    if (is_exist_speed_limit) {
-      cruise_v = road_speed_limit;
+                .speed_limit_decider_output()
+                .GetSpeedLimitByType(SpeedLimitType::CURVATURE, &curve_speed_limit);
+    if (is_exist_curve_speed_limit) {
+      cruise_v = std::min(curve_speed_limit, cruise_v);
     }
-    limit_ref_vel_on_ramp_valid = true;
-    kMaxAcc = 1e-6;
-    kMinAcc = -0.4;
+    double sharp_curve_speed_limit;
+    bool is_exist_sharp_curve_speed_limit =
+        session_->planning_context()
+                .speed_limit_decider_output()
+                .GetSpeedLimitByType(SpeedLimitType::SHARP_CURVATURE, &sharp_curve_speed_limit);
+    if (is_exist_sharp_curve_speed_limit) {
+      cruise_v = std::min(sharp_curve_speed_limit, cruise_v);
+      kMinAcc = -1.0;
+    }
   }
   if (lane_borrow_decider_output.is_in_lane_borrow_status) {
     kMaxAcc = 0.4;
