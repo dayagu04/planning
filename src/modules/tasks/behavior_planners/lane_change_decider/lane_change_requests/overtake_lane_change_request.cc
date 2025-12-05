@@ -144,7 +144,7 @@ void OvertakeRequest::Update(int lc_status) {
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   left_feasible_lane_remain_distance_ = 1500.0;
   right_feasible_lane_remain_distance_ = 1500.0;
-  
+
   if (llane != nullptr) {
     left_reference_path_ = reference_path_mgr->get_reference_path_by_lane(
         llane->get_virtual_id(), false);
@@ -432,6 +432,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
 
   JSON_DEBUG_VALUE("left_route_traffic_speed", left_route_traffic_speed);
   JSON_DEBUG_VALUE("right_route_traffic_speed", right_route_traffic_speed);
+  JSON_DEBUG_VALUE("leading_vehicle_speed", leading_vehicle_speed);
   if (overtake_count_ < left_count_thres) {
     return;
   }
@@ -457,22 +458,27 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   }
   double total_feasible_lane_remain_distance =
       std::max(left_feasible_lane_remain_distance_ + right_feasible_lane_remain_distance_, 1.0);
-
+  double left_overtake_speed_threshold = 15.0;
+  double right_overtake_speed_threshold = 15.0;
   const bool is_left_overtake =
       enable_l_ ? isCouldOvertakeByRoute(origin_refline, llane,
                                          left_route_traffic_speed, agent, true,
                                          left_lane_is_on_navigation_route && right_lane_is_on_navigation_route,
-                                         total_feasible_lane_remain_distance)
+                                         total_feasible_lane_remain_distance,
+                                         left_overtake_speed_threshold, right_overtake_speed_threshold)
                 : false;
   const bool is_right_overtake =
       enable_r_
           ? isCouldOvertakeByRoute(origin_refline, rlane,
                                    right_route_traffic_speed, agent, false,
                                    left_lane_is_on_navigation_route && right_lane_is_on_navigation_route,
-                                   total_feasible_lane_remain_distance)
+                                   total_feasible_lane_remain_distance,
+                                   left_overtake_speed_threshold, right_overtake_speed_threshold)
           : false;
   JSON_DEBUG_VALUE("is_left_overtake", is_left_overtake);
   JSON_DEBUG_VALUE("is_right_overtake", is_right_overtake);
+  JSON_DEBUG_VALUE("left_overtake_speed_threshold", left_overtake_speed_threshold);
+  JSON_DEBUG_VALUE("right_overtake_speed_threshold", right_overtake_speed_threshold);
 
   const double current_time = IflyTime::Now_s();
   auto checkOvertakeTrigger = [](const double time, const bool is_trigger,
@@ -841,7 +847,9 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
     const double &lane_traffic_speed, const agent::Agent* agent,
     const bool &is_left,
     const bool &left_and_right_both_on_navigation_route,
-    const double &total_feasible_lane_remain_distance) {
+    const double &total_feasible_lane_remain_distance,
+    double& left_overtake_speed_threshold,
+    double& right_overtake_speed_threshold) {
   std::shared_ptr<ReferencePath> target_ref_line =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
@@ -853,7 +861,7 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   if (left_and_right_both_on_navigation_route) {
     double target_lane_remain_distance = target_lane->get_feasible_lane_distance().second;
     if (total_feasible_lane_remain_distance - target_lane_remain_distance > 1.0e-1) {
-      traget_lane_overtake_speed_threshold_weight += 
+      traget_lane_overtake_speed_threshold_weight +=
           (total_feasible_lane_remain_distance - target_lane_remain_distance) / total_feasible_lane_remain_distance;
       traget_lane_overtake_speed_threshold_weight *= config_.overtake_speed_threshold_adjust_params;
     }
@@ -921,7 +929,11 @@ bool OvertakeRequest::isCouldOvertakeByRoute(
   speed_threshold *= kCouldGenerateOvertakeSpeedDiffThresholdPercentage;
   speed_threshold *= target_lane_exist_truck_speed_threshold_percentage;
   speed_threshold *= traget_lane_overtake_speed_threshold_weight;
-  JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
+  if (is_left) {
+    left_overtake_speed_threshold = speed_threshold;
+  } else {
+    right_overtake_speed_threshold = speed_threshold;
+  }
 
   // 当总车道数不少于3时，抑制向最右侧车道触发超车变道
   // if (total_lane_nums >= kOvertakeInhibitExtraSpeedTotalLaneNum && !is_left &&
@@ -945,7 +957,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   if (both_lane_is_on_navigation_route) {
     double target_lane_remain_distance = target_lane->get_feasible_lane_distance().second;
     if (total_feasible_lane_remain_distance - target_lane_remain_distance > 1.0e-1) {
-      traget_lane_overtake_speed_threshold_weight += 
+      traget_lane_overtake_speed_threshold_weight +=
           (total_feasible_lane_remain_distance - target_lane_remain_distance) / total_feasible_lane_remain_distance;
       traget_lane_overtake_speed_threshold_weight *= config_.overtake_speed_threshold_adjust_params;
     }
@@ -1028,6 +1040,7 @@ bool OvertakeRequest::isCouldOvertakeMaintainByRoute(
   speed_threshold =
       speed_threshold * attenuation_coefficient;
   speed_threshold *= traget_lane_overtake_speed_threshold_weight;
+  JSON_DEBUG_VALUE("speed_threshold", speed_threshold);
   const double speed_diff = lane_traffic_speed - leading_vehicle_speed;
   const bool is_overtake_maintain = (speed_diff > speed_threshold);
   return is_overtake_maintain;

@@ -60,7 +60,9 @@ class OvertakeRequest : public LaneChangeRequest {
       const double &lane_traffic_speed, const agent::Agent* agent,
       const bool &is_left,
       const bool &left_and_right_both_on_navigation_route,
-      const double &total_feasible_lane_remain_distance);
+      const double &total_feasible_lane_remain_distance,
+      double& left_overtake_speed_threshold,
+      double& right_overtake_speed_threshold);
 
   bool isCouldOvertakeMaintainByRoute(const double lane_traffic_speed,
                                       const agent::Agent* agent,
