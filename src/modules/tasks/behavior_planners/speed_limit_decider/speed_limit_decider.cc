@@ -2227,9 +2227,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
                  min_follow_distance_m);
     const auto &vehicle_param =
         VehicleConfigurationContext::Instance()->get_vehicle_param();
+    double agent_s = (min_s_by_lat_path + max_s_by_lat_path) * 0.5;
+    double d_rel_center = agent_s - ego_s;
     double d_rel =
         min_s_by_lat_path - ego_s - vehicle_param.front_edge_to_rear_axle;
-    if (d_rel <= 0.0) {
+    if (d_rel_center <= 0.0) {
       continue;
     }
     double v_follow_desired =
