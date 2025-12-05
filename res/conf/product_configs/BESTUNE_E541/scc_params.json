@@ -1,6 +1,7 @@
 {
   "left_right_turn_func_fading_away_switch": true,
-  "enable_map_sharp_curve_speed_limit": false,
-  "enable_sharp_curve_by_decel": false,
-  "enable_map_sharp_curve_by_decel": false
+  "speed_limit_decider": {
+    "enable_map_sharp_curve_speed_limit": false,
+    "enable_map_sharp_curve_by_decel": false
+  }
 }
