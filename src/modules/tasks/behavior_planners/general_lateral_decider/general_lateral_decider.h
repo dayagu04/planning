@@ -254,7 +254,7 @@ class GeneralLateralDecider : public Task {
   void EnsureBoundGapSafe(
     const WeightedBounds &current_second_bounds,
     WeightedBound &smoothed_bound);
-  void PostProcessSoftBoundWithInterpolation(
+  void PostProcessObstacleBoundWithInterpolation(
     const int obstacle_id,
     std::vector<WeightedBounds> &soft_bounds,
     BoundHierarchy bound_hierarchy);

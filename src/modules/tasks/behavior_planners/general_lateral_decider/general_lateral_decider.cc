@@ -4043,15 +4043,15 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
       }
     }
   }
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       hard_bounds_, BoundHierarchy::HARD_BOUND);
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
 }
 
-void GeneralLateralDecider::PostProcessSoftBoundWithInterpolation(
+void GeneralLateralDecider::PostProcessObstacleBoundWithInterpolation(
     const int obstacle_id, std::vector<WeightedBounds> &soft_bounds,
     BoundHierarchy bound_hierarchy) {
   // 避免障碍物bound不连续，中间断开
@@ -4139,11 +4139,11 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
       }
     }
   }
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       hard_bounds_, BoundHierarchy::HARD_BOUND);
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
-  PostProcessSoftBoundWithInterpolation(obstacle_decision.id_,
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
       first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
 }
 
