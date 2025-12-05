@@ -542,26 +542,22 @@ void ConeRequest::ConeDir() {
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& function_info = session_->environmental_model().function_info();
-  const auto& merge_point_info = route_info_output.merge_point_info;
+  const auto& merge_point_info = route_info_output.map_merge_points_info.front();
   double distance_to_first_road_split = NL_NMAX;
   double dis_to_first_merge = NL_NMAX;
   double dis_to_merge_point = NL_NMAX;
   if (function_info.function_mode() == common::DrivingFunctionInfo::NOA) {
     dis_to_merge_point = merge_point_info.dis_to_merge_fp;
     const auto& split_region_info_list =
-        route_info_output.split_region_info_list;
-    const auto& merge_region_info_list =
-        route_info_output.merge_region_info_list;
+        route_info_output.map_split_region_info_list;
+    const auto& map_merge_region_info_list =
+        route_info_output.map_merge_region_info_list;
     if (!split_region_info_list.empty()) {
-      if (split_region_info_list[0].is_valid) {
-        distance_to_first_road_split =
-            split_region_info_list[0].distance_to_split_point;
-      }
+      distance_to_first_road_split =
+          split_region_info_list[0].distance_to_split_point;
     }
-    if (!merge_region_info_list.empty()) {
-      if (merge_region_info_list[0].is_valid) {
-        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
-      }
+    if (!map_merge_region_info_list.empty()) {
+      dis_to_first_merge = map_merge_region_info_list[0].distance_to_merge_point;
     }
   }
   const auto base_lane =
@@ -572,8 +568,8 @@ void ConeRequest::ConeDir() {
   int current_left_boundary_type = 0;
   int current_right_boundary_type = 0;
   const auto& feasible_lane_sequence =
-      route_info_output.mlc_decider_route_info.feasible_lane_sequence;
-  const double dis_ego_to_last_split_point = route_info_output.accumulate_dis_ego_to_last_split_point;
+      route_info_output.feasible_lane_sequence;
+  const double dis_ego_to_last_split_point = route_info_output.sum_dis_to_last_link_split_point;
   bool left_lane_is_on_navigation_route = true;
   bool right_lane_is_on_navigation_route = true;
   if (distance_to_first_road_split < 300.0 || dis_to_merge_point < 200.0 || dis_ego_to_last_split_point < 100.0) {

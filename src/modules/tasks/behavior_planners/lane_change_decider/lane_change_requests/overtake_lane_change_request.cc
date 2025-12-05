@@ -230,7 +230,7 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& feasible_lane_sequence =
-      route_info_output.mlc_decider_route_info.feasible_lane_sequence;
+      route_info_output.feasible_lane_sequence;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   const int current_lane_virtual_id =
@@ -246,32 +246,28 @@ void OvertakeRequest::setLaneChangeRequestByFrontSlowVehcile(int lc_status) {
   SplitDirection first_split_direction = SplitDirection::SPLIT_NONE;
   double dis_to_first_merge = NL_NMAX;
   SplitDirection first_merge_direction = SplitDirection::SPLIT_NONE;
-  // double sum_dis_to_last_merge_point =
-  //     route_info_output.sum_dis_to_last_merge_point;
   const double dis_threshold_to_merged_point =
       virtual_lane_mgr_->dis_threshold_to_merged_point();
-  const auto& split_region_info_list = route_info_output.split_region_info_list;
-  const auto& merge_region_info_list = route_info_output.merge_region_info_list;
+  const auto& split_region_info_list = route_info_output.map_split_region_info_list;
+  const auto& map_merge_region_info_list = route_info_output.map_merge_region_info_list;
   if (route_info_output.map_vendor ==
       iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
     if (!split_region_info_list.empty()) {
-      if (split_region_info_list[0].is_valid) {
-        distance_to_first_road_split =
-            split_region_info_list[0].distance_to_split_point;
-        first_split_direction = split_region_info_list[0].split_direction;
-        if (distance_to_first_road_split <=
-                config_
-                    .minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
-            split_region_info_list[0].is_ramp_split) {
-          return;
-        }
+      distance_to_first_road_split =
+          split_region_info_list[0].distance_to_split_point;
+      first_split_direction = split_region_info_list[0].split_direction;
+      if (distance_to_first_road_split <=
+              config_
+                  .minimum_distance_nearby_ramp_to_surpress_overtake_lane_change &&
+          split_region_info_list[0].is_ramp_split) {
+        return;
       }
     }
-    if (!merge_region_info_list.empty()) {
-      if (merge_region_info_list[0].is_valid) {
-        dis_to_first_merge = merge_region_info_list[0].distance_to_split_point;
-        first_merge_direction = merge_region_info_list[0].split_direction;
-      }
+    if (!map_merge_region_info_list.empty()) {
+      dis_to_first_merge =
+          map_merge_region_info_list[0].distance_to_merge_point;
+      first_merge_direction = static_cast<SplitDirection>(
+          map_merge_region_info_list[0].merge_direction);
     }
     if (distance_to_first_road_split >= dis_to_first_merge) {
       distance_to_first_road_split = NL_NMAX;
