@@ -126,9 +126,8 @@ bool ConstructionWarningHMIDecider::HasConstruction() {
         construction_area_length_thr) {
       continue;
     }
-    double lon_ttc = std::fmax(
-        (construction_area_s_start - ego_s) / ego_cart_state_manager->ego_v(),
-        0);
+    double ego_v = std::fmax(ego_cart_state_manager->ego_v(), 0.01);
+    double lon_ttc = std::fmax((construction_area_s_start - ego_s) / ego_v, 0);
     if (lon_ttc > lon_tcc_to_construction_area_thr) {
       continue;
     }
