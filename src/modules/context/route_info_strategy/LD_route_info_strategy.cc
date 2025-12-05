@@ -1728,7 +1728,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
 
     //判断lane的旁边车道是否有入口车道，如果有的话，则把这条车道拿掉
-    if ((temp_lane != nullptr) && IsEntryLanePresentOnEitherSideOfSuccessorLane(temp_lane)) {
+    if ((temp_lane != nullptr) && IsMergeLanePresentOnEitherSideOfSuccessorLane(temp_lane)) {
       it = topo_lanes.erase(it);
     } else {
       ++it;
@@ -1736,7 +1736,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
   }
 }
 
-bool LDRouteInfoStrategy::IsEntryLanePresentOnEitherSideOfSuccessorLane(
+bool LDRouteInfoStrategy::IsMergeLanePresentOnEitherSideOfSuccessorLane(
     const iflymapdata::sdpro::Lane* lane_info) {
   if (lane_info == nullptr) {
     return false;
@@ -1774,11 +1774,11 @@ bool LDRouteInfoStrategy::IsEntryLanePresentOnEitherSideOfSuccessorLane(
       }
     }
 
-    if (left_lane && IsEntryLane(left_lane)) {
+    if (left_lane && IsMergeLane(left_lane)) {
       return true;
     }
 
-    if(right_lane && IsEntryLane(right_lane)) {
+    if(right_lane && IsMergeLane(right_lane)) {
       return true;
     }
 

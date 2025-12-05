@@ -106,7 +106,7 @@ protected:
  bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
- bool IsEntryLanePresentOnEitherSideOfSuccessorLane(const iflymapdata::sdpro::Lane* lane_info);
+ bool IsMergeLanePresentOnEitherSideOfSuccessorLane(const iflymapdata::sdpro::Lane* lane_info);
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
