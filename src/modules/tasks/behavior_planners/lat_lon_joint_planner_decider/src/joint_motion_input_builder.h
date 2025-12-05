@@ -10,9 +10,6 @@
 #include "joint_motion_speed_limit.h"
 #include "session.h"
 #include "tasks/behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider_output.h"
-#include "trajectory1d/piecewise_jerk_acceleration_trajectory1d.h"
-#include "trajectory1d/second_order_time_optimal_trajectory.h"
-#include "trajectory1d/trajectory1d.h"
 
 namespace planning {
 
@@ -57,24 +54,15 @@ class JointMotionInputBuilder {
     double cool_factor;
     double default_front_distance;
     double delay_time_buffer;
-    double sharp_decel_acc_threshold;
   };
 
   double CalculateIdmAcceleration(double current_acc, double current_vel,
                                   double current_s, double front_acc,
                                   double front_vel, double front_s, double tau,
-                                  double v0, double decel_jerk,
-                                  double zero_acc_vel, double& final_v0) const;
-
-  double CalcDesiredVelocity(double d_rel, double d_des, double v_lead,
-                             double v_ego) const;
+                                  double v0, double decel_jerk) const;
 
   void GenerateReferenceTrajectory(
       planning::common::JointMotionPlanningInput& planning_input);
-
-  SecondOrderTimeOptimalTrajectory GenerateMaxDecelerationCurve() const;
-
-  std::unique_ptr<Trajectory1d> GenerateVirtualZeroAccCurve() const;
 
  private:
   framework::Session* session_;
@@ -100,13 +88,6 @@ class JointMotionInputBuilder {
   static constexpr int kPlanningTimeSteps = 26;
   int32 lead_one_id_ = -1;
   std::vector<double> key_agent_ids_;
-
-  double last_tau_ = 1.2;
-  int32 last_lead_one_id_ = -1;
-  bool is_in_lane_change_last_ = false;
-
-  std::vector<double> ego_jerk_min_vec_;
-  std::vector<double> target_v0_vec_;
 };
 
 }  // namespace planning

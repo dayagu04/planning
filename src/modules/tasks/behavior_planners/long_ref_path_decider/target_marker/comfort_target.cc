@@ -79,8 +79,9 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   const auto& cipv_info = session_->planning_context().cipv_decider_output();
   const auto& stop_destination_decider_output =
       session_->planning_context().stop_destination_decider_output();
-  if (session_->is_rads_scene() && cipv_info.cipv_id() ==
-        stop_destination_decider_output.stop_destination_virtual_agent_id()) {
+  if (session_->is_rads_scene() &&
+      cipv_info.cipv_id() ==
+          stop_destination_decider_output.stop_destination_virtual_agent_id()) {
     comfort_params_.s0 = 0.0;
   }
 
@@ -96,8 +97,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   std::vector<double> follow_agent_ids_double(follow_agent_ids_.begin(),
                                               follow_agent_ids_.end());
 
-  std::vector<double> joint_danger_agent_ids_double(joint_danger_agent_ids_.begin(),
-                                                  joint_danger_agent_ids_.end());
+  std::vector<double> joint_danger_agent_ids_double(
+      joint_danger_agent_ids_.begin(), joint_danger_agent_ids_.end());
 
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("joint_danger_agent_ids", joint_danger_agent_ids_double, 0);
@@ -110,20 +111,6 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   JSON_DEBUG_VECTOR("comfort_jerk_min_vec", comfort_jerk_min_vec_, 1);
   comfort_v_target_vec_[0] = comfort_v_target_vec_[1];
   JSON_DEBUG_VECTOR("comfort_v_target_vec", comfort_v_target_vec_, 1);
-
-  zero_acc_vel_vec_.clear();
-  zero_acc_vel_vec_.resize(plan_points_num_, 0.0);
-  zero_acc_acc_vec_.clear();
-  zero_acc_acc_vec_.resize(plan_points_num_, 0.0);
-
-  for (int32_t i = 0; i < plan_points_num_; i++) {
-    const double t = i * dt_;
-    zero_acc_vel_vec_[i] = virtual_zero_acc_curve_->Evaluate(1, t);
-    zero_acc_acc_vec_[i] = virtual_zero_acc_curve_->Evaluate(2, t);
-  }
-
-  JSON_DEBUG_VECTOR("zero_acc_vel_vec", zero_acc_vel_vec_, 1);
-  JSON_DEBUG_VECTOR("zero_acc_acc_vec", zero_acc_acc_vec_, 1);
 
   auto mutable_lon_ref_path_decider_output =
       session_->mutable_planning_context()
@@ -185,6 +172,16 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     return;
   }
 
+  const auto& route_info = session_->environmental_model().get_route_info();
+  bool filtering_rear_agent = true;
+  if (route_info != nullptr) {
+    const auto& route_info_output = route_info->get_route_info_output();
+    if (route_info_output.is_closing_merge ||
+        route_info_output.is_closing_split) {
+      filtering_rear_agent = false;
+    }
+  }
+
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
@@ -239,7 +236,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           ego_init_point.v * comfort_params_.follow_consider_time_headway,
           comfort_params_.follow_consider_distance);
 
-      if(agent_s + agent->length() * 0.5 < ego_s - rear_edge_to_front_axle) {
+      if (agent_s < ego_s && filtering_rear_agent) {
         continue;
       }
 
@@ -294,7 +291,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           ego_init_point.v * comfort_params_.follow_consider_time_headway,
           comfort_params_.follow_consider_distance);
 
-      if(agent_s + agent->length() * 0.5 < ego_s - rear_edge_to_front_axle) {
+      if (agent_s < ego_s && filtering_rear_agent) {
         continue;
       }
 
@@ -354,8 +351,9 @@ void ComfortTarget::GenerateUpperBoundInfo() {
             traj_point.theta() - matched_point.theta());
         double agent_speed = traj_point.vel() * std::cos(heading_diff);
         double agent_acc = traj_point.acc() * std::cos(heading_diff);
-        double agent_s =
-            center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5;
+        double agent_s = std::max(
+            comfort_params_.eps,
+            center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5);
 
         if (agent_s < min_agent_s) {
           min_agent_s = agent_s;

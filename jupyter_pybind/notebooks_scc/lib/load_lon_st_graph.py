@@ -29,6 +29,22 @@ from lib.load_struct import *
 
 coord_tf = coord_transformer()
 
+# 枚举值映射
+lane_change_status_dict = {
+    0: "kLaneKeeping",
+    1: "kLaneChangePropose",
+    2: "kLaneChangeExecution",
+    3: "kLaneChangeComplete",
+    4: "kLaneChangeCancel",
+    5: "kLaneChangeHold"
+}
+
+start_stop_status_dict = {
+    0: "CRUISE",
+    1: "STOP",
+    2: "START"
+}
+
 def load_st_label(st_graph_data):
   st_label = []
   st_boundary_list = st_graph_data.st_boundaries
@@ -238,7 +254,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "construction_strong_deceleration_mode", "construction_strong_mode_reason","construction_strong_mode_frame_count","agents_headway_id", "agents_headway_value",\
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\
-                              "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec", "zero_acc_vel_vec", "zero_acc_acc_vec",\
+                              "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec",\
                               'v_limit_in_turns','v_limit_road','v_limit_steering','road_radius','is_s_bend',\
                               'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
                               "dynamic_world_cost", "front_node_id", "rear_node_id", \
@@ -623,11 +639,23 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
 
   vision_lon_attr_vec = []
   for ind in range(len(planning_json_value_list)):
-     vision_lon_attr_vec.append(plan_debug_json_info[planning_json_value_list[ind]])
+     val = plan_debug_json_info[planning_json_value_list[ind]]
+     # 转换枚举值为可读的字符串
+     if planning_json_value_list[ind] == 'lane_change_status' and isinstance(val, int):
+       val = lane_change_status_dict.get(val, str(val))
+     elif planning_json_value_list[ind] == 'start_stop_status' and isinstance(val, int):
+       val = start_stop_status_dict.get(val, str(val))
+     vision_lon_attr_vec.append(val)
 
   st_search_attr_vec = []
   for ind in range(len(st_search_value_list)):
-    st_search_attr_vec.append(plan_debug_json_info[st_search_value_list[ind]])
+    val = plan_debug_json_info[st_search_value_list[ind]]
+    # 转换枚举值为可读的字符串
+    if st_search_value_list[ind] == 'lane_change_status' and isinstance(val, int):
+      val = lane_change_status_dict.get(val, str(val))
+    elif st_search_value_list[ind] == 'start_stop_status' and isinstance(val, int):
+      val = start_stop_status_dict.get(val, str(val))
+    st_search_attr_vec.append(val)
 
   cutin_attr_vec = []
   for ind in range(len(new_cutin_list)):
@@ -739,20 +767,14 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   
   comfort_jerk_min_vec = []
   comfort_v_target_vec = []
-  zero_acc_vel_vec = []
-  zero_acc_acc_vec = []
   try:
     comfort_jerk_min_vec = plan_debug_json_info['comfort_jerk_min_vec']
     comfort_v_target_vec = plan_debug_json_info['comfort_v_target_vec']
-    zero_acc_vel_vec = plan_debug_json_info['zero_acc_vel_vec']
-    zero_acc_acc_vec = plan_debug_json_info['zero_acc_acc_vec']
   except Exception as e:
     print(f"Error getting comfort data: {e}")
     time_length = len(time_vec)
     comfort_jerk_min_vec = [0.0] * time_length
     comfort_v_target_vec = [0.0] * time_length
-    zero_acc_vel_vec = [0.0] * time_length
-    zero_acc_acc_vec = [0.0] * time_length
 
   # time_vec = []
   # for i in range(len(ref_pos_vec)):
@@ -808,8 +830,6 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     'jerk_vec': jerk_vec,
     'comfort_jerk_min_vec': comfort_jerk_min_vec,
     'comfort_v_target_vec': comfort_v_target_vec,
-    'zero_acc_vel_vec': zero_acc_vel_vec,
-    'zero_acc_acc_vec': zero_acc_acc_vec,
   })
 
    #  coord_tf.set_info( cur_pos_xn, cur_pos_yn, cur_yaw)
@@ -1405,8 +1425,6 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                   'vel_vec': [],
                                                   'acc_vec': [],
                                                   'jerk_vec': [],
-                                                  'zero_acc_vel_vec': [],
-                                                  'zero_acc_acc_vec': [],
                                                         })
 
   data_planning = ColumnDataSource(data = {'plan_traj_y':[],
@@ -1537,11 +1555,11 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   #fig2.line('t_long', 's_plan', source = data_st_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   fig2.line('time_vec', 'pos_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 's_plan')
   # Plot joint motion planner s on fig2
-  fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt')
-  fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb')
-  fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub')
-  fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb_point')
-  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub_point')
+  fig2.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt', visible=False)
+  fig2.line('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_lb', visible=False)
+  fig2.line('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'magenta', line_dash = 'solid', legend_label = 's_soft_ub', visible=False)
+  fig2.triangle('time_vec', 'soft_pos_min_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.7, legend_label = 's_soft_lb_point', visible=False)
+  fig2.triangle('time_vec', 'soft_pos_max_vec', source = data_lon_motion_plan, size = 10, fill_color='magenta', line_color='magenta', alpha = 0.5, legend_label = 's_soft_ub_point', visible=False)
 
   fig2.line('time_vec', 'hard_pos_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_lb')
   fig2.line('time_vec', 'hard_pos_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'obs_ub')
@@ -1558,8 +1576,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig2.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3, line_color = 'orange', line_dash = 'solid', legend_label = 's_comfort_target')
   fig2.line('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'purple', line_dash = 'dotted', legend_label = 's_upper_bound')
   fig2.circle('t_upper_bound', 's_upper_bound', source = data_target_s_comfort, size = 4, color = 'purple', alpha = 0.6, legend_label = 's_upper_bound')
-  fig2.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target')
-  fig2.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target')
+  fig2.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target', visible=False)
+  fig2.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target', visible=False)
 
   #label_low_id = LabelSet(x='t', y='obs_low', text='obs_low_id', x_offset=2, y_offset=2, source=data_st)
   #fig2.add_layout(label_low_id)
@@ -1600,23 +1618,23 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
 
     fig3.text(center_point_t, center_point_s, text = agent_id ,source = source, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'st_boundary')
 
-  f3 = fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path')
+  f3 = fig3.line('t_search', 's_search', source = data_st_searcher, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 's_search_path', visible=False)
   # Plot joint motion planner s on fig3
-  fig3.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt')
-  fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes')
-  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes')
+  fig3.line('time_vec', 's_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkblue', line_dash = 'solid', legend_label = 's_joint_opt', visible=False)
+  fig3.circle('expanded_nodes_t', 'expanded_nodes_s', source=data_st_search_nodes, size=4, color='purple', legend_label='expanded_nodes', visible=False)
+  fig3.circle('history_cur_nodes_t', 'history_cur_nodes_s', source=data_st_search_history_cur_nodes, size=10, color='orange', alpha=0.4, legend_label='history_cur_nodes', visible=False)
   fig3.line('t_final_target', 's_final_target', source = data_target, line_width = 3, line_color = 'blue', alpha = 1, line_dash = 'solid', legend_label = 's_final_target')
   fig3.circle('t_final_target', 's_final_target', source=data_target, size=6, color='brown', legend_label='s_final_target')
   fig3.line('t_follow_target', 's_follow_target', source = data_target, line_width = 3.0, line_color = 'red', line_dash = 'solid', legend_label = 's_follow_target')
   fig3.line('t_cruise_target', 's_cruise_target', source = data_target, line_width = 3.0, line_color = 'grey', line_dash = 'solid', legend_label = 's_cruise_target')
-  fig3.line('t_overtake_target', 's_overtake_target', source = data_target_s_overtake, line_width = 3.0, line_color = 'black', line_dash = 'solid', legend_label = 's_overtake_target')
-  fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target')
+  fig3.line('t_overtake_target', 's_overtake_target', source = data_target_s_overtake, line_width = 3.0, line_color = 'black', line_dash = 'solid', legend_label = 's_overtake_target', visible=False)
+  fig3.line('t_caution_target', 's_caution_target', source = data_target_s_caution, line_width = 3.0, line_color = 'yellow', line_dash = 'solid', legend_label = 's_caution_target', visible=False)
   fig3.line('t_neighbor_target', 's_neighbor_target', source = data_target_s_neighbor, line_width = 3.0, line_color = 'cyan', line_dash = 'solid', legend_label = 's_neighbor_target')
-  fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel')
+  fig3.line('t_max_decel', 's_max_decel', source = data_target_s_max_decel, line_width = 3.0, line_color = 'magenta', line_dash = 'solid', legend_label = 's_max_decel', visible=False)
   fig3.line('t_comfort_target', 's_comfort_target', source = data_target_s_comfort, line_width = 3.0, line_color = 'orange', line_dash = 'solid', legend_label = 's_comfort_target')
   fig3.line('t_cross_vru_target', 's_cross_vru_target', source = data_target_s_cross_vru, line_width = 3.0, line_color = 'darkviolet', line_dash = 'solid', legend_label = 's_cross_vru_target')
-  fig3.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target')
-  fig3.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target')
+  fig3.line('t', 's_speed_adjust_target', source = data_st, line_width = 3, line_color = 'cyan', line_dash = 'dashdot', legend_label = 's_speed_adjust_target', visible=False)
+  fig3.line('t', 's_lane_change_target', source = data_st, line_width = 3, line_color = 'lime', line_dash = 'dashdot', legend_label = 's_lane_change_target', visible=False)
 
   fig3.toolbar.active_scroll = fig3.select_one(WheelZoomTool)
   fig3.legend.click_policy = 'hide'
@@ -1660,10 +1678,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig5.line('t_comfort_target', 'v_comfort_target', source = data_target_s_comfort, line_width = 2, line_color = 'orange', line_dash = 'dashed', legend_label = 'v_comfort_target')
   fig5.line('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, line_width = 2, line_color = 'magenta', line_dash = 'dotted', legend_label = 'v_upper_bound')
   fig5.circle('t_upper_bound', 'v_upper_bound', source = data_target_s_comfort, size = 4, color = 'magenta', alpha = 0.6, legend_label = 'v_upper_bound')
-  fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'comfort_target_vel')
-  fig5.line('time_vec', 'zero_acc_vel_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'cyan', line_dash = 'dotted', legend_label = 'zero_acc_vel')
+  fig5.line('time_vec', 'comfort_v_target_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkgreen', line_dash = 'dashdot', legend_label = 'v_comfort_target')
   # Plot joint motion planner v on fig5
-  fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'solid', legend_label = 'v_joint_opt')
+  fig5.line('time_vec', 'vel_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'navy', line_dash = 'solid', legend_label = 'v_joint_opt', visible=False)
 
   # acc
   f6 = fig6.line('time_vec', 'acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'a_plan')
@@ -1674,9 +1691,8 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig6.triangle ('time_vec', 'acc_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_lb')
   fig6.line('time_vec', 'acc_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'a_ub')
   fig6.inverted_triangle ('time_vec', 'acc_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'a_ub')
-  fig6.line('time_vec', 'zero_acc_acc_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'coral', line_dash = 'dotted', legend_label = 'zero_acc_acc')
   # Plot joint motion planner a on fig6
-  fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 'a_joint_opt')
+  fig6.line('time_vec', 'acc_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkred', line_dash = 'solid', legend_label = 'a_joint_opt', visible=False)
 
   # jerk
   f7 = fig7.line('time_vec', 'jerk_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'blue', line_dash = 'solid', legend_label = 'j_plan')
@@ -1684,9 +1700,9 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   fig7.triangle ('time_vec', 'jerk_min_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_lb')
   fig7.line('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'grey', line_dash = 'solid', legend_label = 'j_ub')
   fig7.inverted_triangle ('time_vec', 'jerk_max_vec', source = data_lon_motion_plan, size = 10, fill_color='grey', line_color='grey', alpha = 0.5, legend_label = 'j_ub')
-  fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'comfort_min_jerk')
+  fig7.line('time_vec', 'comfort_jerk_min_vec', source = data_lon_motion_plan, line_width = 2, line_color = 'darkblue', line_dash = 'dashdot', legend_label = 'j_comfort_lb')
   # Plot joint motion planner j on fig7
-  fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt')
+  fig7.line('time_vec', 'jerk_vec', source = data_joint_motion_plan, line_width = 3, line_color = 'darkviolet', line_dash = 'solid', legend_label = 'j_joint_opt', visible=False)
 
   hover5 = HoverTool(renderers=[f5], tooltips=[('time', '@time_vec'), ('v_lb', '@vel_min_vec'), ('v_ref', '@ref_vel_vec'), ('v_plan', '@vel_vec'), ('v_ub', '@vel_max_vec')], mode='vline')
   hover6 = HoverTool(renderers=[f6], tooltips=[('time', '@time_vec'), ('a_lb', '@acc_min_vec'), ('a_plan', '@acc_vec'), ('a_ub', '@acc_max_vec')], mode='vline')

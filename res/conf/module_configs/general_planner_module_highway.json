@@ -593,7 +593,7 @@
     "q_ego_omega_weight": 1000.0,
     "q_ego_delta_weight": 500.0,
     "q_ego_acc_bound_weight": 1600.0,
-    "ego_acc_max": 1.2,
+    "ego_acc_max": 1.5,
     "ego_acc_min": -4.5,
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 5.0,

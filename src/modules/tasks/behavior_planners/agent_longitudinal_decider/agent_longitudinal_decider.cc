@@ -227,7 +227,16 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_half_length = vehicle_param.length * kHalf;
   const double ego_half_width = vehicle_param.width * kHalf + 0.15;
-  const double cut_in_lateral_threshold_m = ego_half_width + 2.0;
+  const auto& route_info = session_->environmental_model().get_route_info();
+  bool is_confluence_area = false;
+  if (route_info != nullptr) {
+    const auto& route_info_output = route_info->get_route_info_output();
+    if (route_info_output.is_closing_merge ||
+        route_info_output.is_closing_split) {
+        is_confluence_area = true;
+    }
+  }
+  const double cut_in_lateral_threshold_m = is_confluence_area ? 5.0 : 3.5;
   const auto& init_point = ego_state_manager_->planning_init_point();
   const double ego_speed_mps = init_point.v;
   const double ego_theta = init_point.heading_angle;
@@ -438,16 +447,10 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
     current_rule_base_cutin &= is_large_agent_heading_diff_meet;
   }
 
-  bool is_slow_need_suppression = false;
-  IsSlowSpeedCutinSuppression(ego_lane_coord, init_point, is_lane_change, agent,
-                              &is_slow_need_suppression);
-
   current_rule_base_cutin |= is_large_agent_cutin;
   // current_rule_base_cutin |= is_vru_cutin;
   current_rule_base_cutin &= !is_lane_change;
-  if (is_slow_need_suppression) {
-    current_rule_base_cutin = false;
-  }
+
   // prediction
   const bool is_prediction_cut_in = agent.is_prediction_cutin();
 
@@ -991,51 +994,6 @@ std::deque<AgentHistoryState> AgentLongitudinalDecider::GetHistoryInWindow(
   }
   return window_history;
 }
-
-void AgentLongitudinalDecider::IsSlowSpeedCutinSuppression(
-    const std::shared_ptr<KDPath>& planned_path,
-    const PlanningInitPoint init_point, const bool is_lane_change,
-    const agent::Agent& agent, bool* is_slow_need_suppression) {
-  if (nullptr == is_slow_need_suppression || nullptr == planned_path) {
-    return;
-  }
-
-  *is_slow_need_suppression = false;
-
-  const double ego_speed = init_point.v;
-
-  if (ego_speed > kLowSpeedThresholdMps ||
-      agent.speed() > kLowSpeedThresholdMps) {
-    return;  // 不是低速场景，不抑制
-  }
-
-  if (agent.is_vru()) {
-    return;  // vru不抑制
-  }
-
-  double agent_s = 0.0, agent_l = 0.0;
-  if (!planned_path->XYToSL(agent.x(), agent.y(), &agent_s, &agent_l)) {
-    return;
-  }
-  const auto agent_matched_path_point = planned_path->GetPathPointByS(agent_s);
-  const double agent_relative_theta = planning_math::NormalizeAngle(
-      agent.theta() - agent_matched_path_point.theta());
-  const double object_l_speed_mps =
-      agent.speed() * std::sin(agent_relative_theta);
-
-  double min_s, max_s, min_l, max_l;
-  CalculateAgentSLBoundary(planned_path, agent, &min_s, &max_s, &min_l, &max_l);
-
-  // 横向速度非常小
-  if (std::fabs(object_l_speed_mps) < kSuppressionLateralSpeedThresholdMps) {
-    // 侵入本车道的距离非常小
-    const double lateral_penetration = (agent_l > 0) ? max_l : std::fabs(min_l);
-    if (lateral_penetration < kSuppressionLateralPenetrationM) {
-      // 只有当“低速”+“横向速度极小”+“侵入距离极小”三个条件同时满足时，才进行抑制
-      *is_slow_need_suppression = true;
-    }
-  }
-};
 
 void AgentLongitudinalDecider::CalculateAgentLateralDistance(
     const double object_l_speed_mps, const double min_l, const double max_l,

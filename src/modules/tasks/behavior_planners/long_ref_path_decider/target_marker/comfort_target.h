@@ -82,8 +82,6 @@ class ComfortTarget : public Target {
   bool is_lon_cut_in_ = false;
   std::vector<double> comfort_jerk_min_vec_;
   std::vector<double> comfort_v_target_vec_;
-  std::vector<double> zero_acc_vel_vec_;
-  std::vector<double> zero_acc_acc_vec_;
 };
 
 }  // namespace planning
