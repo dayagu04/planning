@@ -251,6 +251,13 @@ class GeneralLateralDecider : public Task {
                              WeightedBounds &last_bounds);
   void GenerateTrustPredictionTimeThreshold(
     double &trust_prediction_t_threshold);
+  void EnsureBoundGapSafe(
+    const WeightedBounds &current_second_bounds,
+    WeightedBound &smoothed_bound);
+  void PostProcessObstacleBoundWithInterpolation(
+    const int obstacle_id,
+    std::vector<WeightedBounds> &soft_bounds,
+    BoundHierarchy bound_hierarchy);
 
  private:
   GeneralLateralDeciderConfig config_;

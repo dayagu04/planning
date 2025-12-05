@@ -1686,34 +1686,37 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
   const double l_offset_limit = config_.first_soft_min_distance2center + 1;
   constexpr double kEps = 1e-4;
   // 对每个点的边界进行滞回处理
+  WeightedBounds last_smoothed_bounds;
+  last_smoothed_bounds.reserve(first_soft_bounds_[0].size());
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
-    const auto &current_bounds = first_soft_bounds_[i];
+    const auto &current_first_bounds = first_soft_bounds_[i];
+    const auto &current_second_bounds = second_soft_bounds_[i];
     WeightedBounds last_bounds;
     const double current_index_s = ref_traj_points_[i].s;
     if (!FindNearestBoundPoint(current_index_s, last_bounds)) {
       continue;
     }
     // 如果上一帧/当前帧边界为空，使用当前边界
-    if (last_bounds.empty() || current_bounds.empty()) {
+    if (last_bounds.empty() || current_first_bounds.empty()) {
       continue;
     }
     // 对每个边界进行滞回处理
     WeightedBounds smoothed_bounds;
-    smoothed_bounds.reserve(current_bounds.size());
-    for (const auto &current_bound : current_bounds) {
-      WeightedBound smoothed_bound = current_bound;
-      if (current_bound.bound_info.type == BoundType ::ROAD_BORDER ||
-          current_bound.bound_info.type == BoundType ::EGO_POSITION ||
-          current_bound.bound_info.type == BoundType ::LANE) {
+    smoothed_bounds.reserve(current_first_bounds.size());
+    for (const auto &current_first_bound : current_first_bounds) {
+      WeightedBound smoothed_bound = current_first_bound;
+      if (current_first_bound.bound_info.type == BoundType ::ROAD_BORDER ||
+          current_first_bound.bound_info.type == BoundType ::EGO_POSITION ||
+          current_first_bound.bound_info.type == BoundType ::LANE) {
         smoothed_bounds.push_back(smoothed_bound);
         continue;
       }
       // 寻找上一帧中对应的边界（基于bound_info的id和type）
       auto last_bound_it = std::find_if(
           last_bounds.begin(), last_bounds.end(),
-          [&current_bound](const WeightedBound &last_bound) {
-            return last_bound.bound_info.id == current_bound.bound_info.id &&
-                   last_bound.bound_info.type == current_bound.bound_info.type;
+          [&current_first_bound](const WeightedBound &last_bound) {
+            return last_bound.bound_info.id == current_first_bound.bound_info.id &&
+                   last_bound.bound_info.type == current_first_bound.bound_info.type;
           });
 
       if (last_bound_it != last_bounds.end()) {
@@ -1724,9 +1727,9 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
           continue;
         }
         // 当前后帧障碍物避让方向相反时，清空历史避让值和方向，采用当前帧的避让
-        if ((std::fabs(current_bound.lower + l_offset_limit) < kEps &&
+        if ((std::fabs(current_first_bound.lower + l_offset_limit) < kEps &&
              std::fabs(last_bound_it->lower + l_offset_limit) < kEps) ||
-            (std::fabs(current_bound.upper - l_offset_limit) < kEps &&
+            (std::fabs(current_first_bound.upper - l_offset_limit) < kEps &&
              std::fabs(last_bound_it->upper - l_offset_limit) < kEps)) {
           const auto lat_obs_position_iter =
               lat_obstacle_position.find(last_bound_it->bound_info.id);
@@ -1741,7 +1744,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
             const double hysteresis_threshold_up = 0.05;  // 向上变化的阈值
             const double hysteresis_threshold_down = 0.05;  // 向下变化的阈值
             // 对lower边界进行滞回处理
-            double lower_diff = current_bound.lower - last_bound_it->lower;
+            double lower_diff = current_first_bound.lower - last_bound_it->lower;
             if (lower_diff > 0) {
               // 避让值变大
               if (lower_diff > hysteresis_threshold_up) {
@@ -1756,7 +1759,7 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
               }
             }
             // 对upper边界进行滞回处理
-            double upper_diff = current_bound.upper - last_bound_it->upper;
+            double upper_diff = current_first_bound.upper - last_bound_it->upper;
             if (upper_diff > 0) {
               // 避让值变小
               if (upper_diff > hysteresis_threshold_up) {
@@ -1772,27 +1775,47 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
             }
           }
         }
+      } else {
+        // 如果当前帧与上一帧找不到对应的,则找上一个点
+        auto last_smoothed_bound_it = std::find_if(last_smoothed_bounds.begin(), last_smoothed_bounds.end(),
+            [&current_first_bound](const WeightedBound& last_smoothed_bound) {
+              return last_smoothed_bound.bound_info.id == current_first_bound.bound_info.id &&
+                    last_smoothed_bound.bound_info.type == current_first_bound.bound_info.type;
+            });
+        if (last_smoothed_bound_it != last_smoothed_bounds.end()) {
+          if (last_smoothed_bound_it->bound_info.type == BoundType :: ROAD_BORDER ||
+              last_smoothed_bound_it->bound_info.type == BoundType :: EGO_POSITION ||
+              last_smoothed_bound_it->bound_info.type == BoundType :: LANE) {
+            smoothed_bounds.push_back(smoothed_bound);
+            continue;
+          }
+          smoothed_bound.lower = last_smoothed_bound_it->lower;
+          smoothed_bound.upper = last_smoothed_bound_it->upper;
+        }
       }
+      // 防止外层和内层软约束差值过大
+      EnsureBoundGapSafe(current_second_bounds, smoothed_bound);
       smoothed_bounds.push_back(smoothed_bound);
     }
     first_soft_bounds_[i] = std::move(smoothed_bounds);
+    last_smoothed_bounds = first_soft_bounds_[i];
   }
 
   // ROAD_BORDER、LANE、EGO_POSITION默认没有双层bound
   // 添加一个开关，表示是否使用双层Bound
   for (size_t i = 0; i < first_soft_bounds_.size(); ++i) {
-    auto &current_bounds = first_soft_bounds_[i];
-    for (auto &current_bound : current_bounds) {
-      if (current_bound.bound_info.type == BoundType ::ROAD_BORDER ||
-          current_bound.bound_info.type == BoundType ::EGO_POSITION ||
-          current_bound.bound_info.type == BoundType ::LANE ||
+    auto &current_first_bounds = first_soft_bounds_[i];
+    for (auto &current_first_bound : current_first_bounds) {
+      if (current_first_bound.bound_info.type == BoundType ::ROAD_BORDER ||
+          current_first_bound.bound_info.type == BoundType ::EGO_POSITION ||
+          current_first_bound.bound_info.type == BoundType ::LANE ||
           !config_.use_first_soft_bound) {
-        current_bound.upper = std::fmax(current_bound.upper,
+        current_first_bound.upper = std::fmax(current_first_bound.upper,
                                         config_.first_soft_min_distance2center);
-        current_bound.lower = std::fmin(
-            current_bound.lower, -config_.first_soft_min_distance2center);
-        current_bound.bound_info.type = BoundType ::DEFAULT;
-        current_bound.bound_info.id = -100;
+        current_first_bound.lower = std::fmin(
+            current_first_bound.lower, -config_.first_soft_min_distance2center);
+        current_first_bound.bound_info.type = BoundType ::DEFAULT;
+        current_first_bound.bound_info.id = -100;
       }
     }
   }
@@ -1851,6 +1874,48 @@ bool GeneralLateralDecider::FindNearestBoundPoint(const double current_index_s,
   }
   last_ref_traj_points_ = ref_traj_points_;
   return true;
+}
+
+
+void GeneralLateralDecider::EnsureBoundGapSafe(
+    const WeightedBounds &current_second_bounds,
+    WeightedBound &smoothed_bound) {
+  constexpr double kEps = 1e-4;
+  constexpr double kLateralGapBetweenFirstAndSecondBound = 0.4;
+  constexpr double kLateralDistacneToEgoL = 0.2;
+
+  const double ego_l = ego_frenet_state_.planning_init_point().frenet_state.r;
+  const double lower_target_l = ego_l + kLateralDistacneToEgoL;
+  const double upper_target_l = ego_l - kLateralDistacneToEgoL;
+
+  // 寻找当前帧对应的second_bound值
+  auto second_bound_find_it = std::find_if(
+      current_second_bounds.begin(), current_second_bounds.end(),
+      [&smoothed_bound](const WeightedBound &second_bound) {
+        return second_bound.bound_info.id == smoothed_bound.bound_info.id &&
+                second_bound.bound_info.type == smoothed_bound.bound_info.type;
+      });
+  if (second_bound_find_it != current_second_bounds.end()) {
+    if (second_bound_find_it->bound_info.type == BoundType ::ROAD_BORDER ||
+        second_bound_find_it->bound_info.type == BoundType ::EGO_POSITION ||
+        second_bound_find_it->bound_info.type == BoundType ::LANE) {
+      return;
+    }
+    if (smoothed_bound.lower - second_bound_find_it->lower >=
+        kLateralGapBetweenFirstAndSecondBound) {
+      smoothed_bound.lower = std::fmin(smoothed_bound.lower,
+          lower_target_l);
+    }
+    if (second_bound_find_it->upper - smoothed_bound.upper >=
+        kLateralGapBetweenFirstAndSecondBound) {
+      smoothed_bound.upper = std::fmax(smoothed_bound.upper,
+          upper_target_l);
+    }
+    smoothed_bound.lower = std::fmax(smoothed_bound.lower,
+        second_bound_find_it->lower);
+    smoothed_bound.upper = std::fmin(smoothed_bound.upper,
+        smoothed_bound.upper);
+  }
 }
 
 void GeneralLateralDecider::GenerateStaticObstaclesBoundary(
@@ -3848,14 +3913,14 @@ void GeneralLateralDecider::ExtractBoundary(
       if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
         first_soft_bound.second = second_frenet_soft_bounds[i].first;
       }
-      if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
-        if (second_soft_bounds_info[i].second.type == BoundType ::LANE ||
-            second_soft_bounds_info[i].second.type ==
-                BoundType ::EGO_POSITION) {
-          second_frenet_soft_bounds[i].second = first_soft_bound.first;
-        } else {
-          first_soft_bound.first = second_frenet_soft_bounds[i].second;
-        }
+    }
+    if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
+      if (second_soft_bounds_info[i].second.type == BoundType ::LANE ||
+          second_soft_bounds_info[i].second.type ==
+              BoundType ::EGO_POSITION) {
+        second_frenet_soft_bounds[i].second = first_soft_bound.first;
+      } else {
+        first_soft_bound.first = second_frenet_soft_bounds[i].second;
       }
     }
     if (!(second_soft_bounds_info[i].second.type == BoundType ::ROAD_BORDER ||
@@ -3874,13 +3939,13 @@ void GeneralLateralDecider::ExtractBoundary(
       if (first_soft_bound.first > second_frenet_soft_bounds[i].second) {
         first_soft_bound.first = second_frenet_soft_bounds[i].second;
       }
-      if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
-        if (second_soft_bounds_info[i].first.type == BoundType ::LANE ||
-            second_soft_bounds_info[i].first.type == BoundType ::EGO_POSITION) {
-          second_frenet_soft_bounds[i].first = first_soft_bound.second;
-        } else {
-          first_soft_bound.second = second_frenet_soft_bounds[i].first;
-        }
+    }
+    if (first_soft_bound.second < second_frenet_soft_bounds[i].first) {
+      if (second_soft_bounds_info[i].first.type == BoundType ::LANE ||
+          second_soft_bounds_info[i].first.type == BoundType ::EGO_POSITION) {
+        second_frenet_soft_bounds[i].first = first_soft_bound.second;
+      } else {
+        first_soft_bound.second = second_frenet_soft_bounds[i].first;
       }
     }
     first_frenet_soft_bounds[i] = first_soft_bound;
@@ -3978,6 +4043,74 @@ void GeneralLateralDecider::ExtractDynamicObstacleBound(
       }
     }
   }
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      hard_bounds_, BoundHierarchy::HARD_BOUND);
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
+}
+
+void GeneralLateralDecider::PostProcessObstacleBoundWithInterpolation(
+    const int obstacle_id, std::vector<WeightedBounds> &soft_bounds,
+    BoundHierarchy bound_hierarchy) {
+  // 避免障碍物bound不连续，中间断开
+  // 初始化 map: 每个 BoundType 对应一条bound
+  double weight = config_.kSecondSoftBoundWeight;
+  if (bound_hierarchy == BoundHierarchy::HARD_BOUND) {
+    weight = config_.kHardBoundWeight;
+  } else if (bound_hierarchy == BoundHierarchy::SECOND_SOFT_BOUND) {
+    weight = config_.kSecondSoftBoundWeight;
+  } else {
+    weight = config_.kFirstSoftBoundWeight;
+  }
+  int left_index = -1;
+  int right_index = -1;
+  for (size_t i = 0; i < soft_bounds.size(); ++i) {
+    const auto &bounds_at_i = soft_bounds[i];
+    for (const auto &bound_at_i : bounds_at_i) {
+      if (bound_at_i.bound_info.id != obstacle_id) {
+        continue;
+      }
+      right_index  = i;
+      if (left_index >= 0 && left_index + 1 < right_index) {
+        // 在 (left, right) 之间存在默认值，需要插值
+        auto left_bounds = soft_bounds[left_index];
+        auto right_bounds = soft_bounds[right_index];
+        WeightedBound interpolate_bound;
+        interpolate_bound.bound_info.id = obstacle_id;
+        interpolate_bound.bound_info.type = bound_at_i.bound_info.type;
+        interpolate_bound.weight = weight;
+        for (int k = left_index + 1; k < right_index; ++k) {
+          auto left_bound_find_it = std::find_if(
+              left_bounds.begin(), left_bounds.end(),
+              [&bound_at_i](const WeightedBound &left_bound) {
+                return left_bound.bound_info.id == bound_at_i.bound_info.id &&
+                        left_bound.bound_info.type == bound_at_i.bound_info.type;
+              });
+          auto right_bound_find_it = std::find_if(
+              right_bounds.begin(), right_bounds.end(),
+              [&bound_at_i](const WeightedBound &right_bound) {
+                return right_bound.bound_info.id == bound_at_i.bound_info.id &&
+                        right_bound.bound_info.type == bound_at_i.bound_info.type;
+              });
+          if (left_bound_find_it != left_bounds.end() &&
+              right_bound_find_it != right_bounds.end()) {
+            // 左右两边同时找到
+            double ratio = (k - left_index) / (right_index - left_index);
+            double lower_interpolate_bound_value = left_bound_find_it->lower +
+                ratio * (right_bound_find_it->lower - left_bound_find_it->lower);
+            double upper_interpolate_bound_value = left_bound_find_it->upper +
+                ratio * (right_bound_find_it->upper - left_bound_find_it->upper);
+            interpolate_bound.lower = lower_interpolate_bound_value;
+            interpolate_bound.upper = upper_interpolate_bound_value;
+            soft_bounds[k].emplace_back(interpolate_bound);
+          }
+        }
+      }
+      left_index = right_index;
+    }
+  }
 }
 
 void GeneralLateralDecider::ExtractStaticObstacleBound(
@@ -4006,6 +4139,12 @@ void GeneralLateralDecider::ExtractStaticObstacleBound(
       }
     }
   }
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      hard_bounds_, BoundHierarchy::HARD_BOUND);
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      second_soft_bounds_, BoundHierarchy::SECOND_SOFT_BOUND);
+  PostProcessObstacleBoundWithInterpolation(obstacle_decision.id_,
+      first_soft_bounds_, BoundHierarchy::FIRST_SOFT_BOUND);
 }
 
 void GeneralLateralDecider::PostProcessBound(
