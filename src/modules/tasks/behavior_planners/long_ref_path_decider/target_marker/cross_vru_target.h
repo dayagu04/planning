@@ -11,20 +11,20 @@ namespace planning {
 constexpr double kInvalid = -1.0;
 
 struct CrossVRUProfileParams {
-  double v0 = 33.5;
-  double s0 = 4.0;
-  double T = 1.2;
-  double a = 1.5;
-  double b = 1.0;
-  double b_max = 2.0;
-  double delta = 4.0;
-  double b_hard = 4.0;
-  double max_a_jerk = 5.0;
-  double max_b_jerk = 4.0;
-  double default_front_s = 200;
-  double cool_factor = 0.99;
-  double over_speed_factor = 0.3;
-  double end_time_buffer = 1.0;
+  double v0;
+  double s0;
+  double T;
+  double a;
+  double b;
+  double b_max;
+  double delta;
+  double b_hard;
+  double max_a_jerk;
+  double max_b_jerk;
+  double default_front_s;
+  double cool_factor;
+  double end_time_buffer;
+  double kEps = 1e-6;
 };
 
 struct CrossVRUAgentInfo {
@@ -47,18 +47,23 @@ class CrossVRUTarget : public Target {
   const std::vector<double> _P_SLOPE_V{0.8, 0.2};
 
   void GenerateCrossVRUTarget();
+
   double CalcDesiredVelocity(const double d_rel, const double d_des,
                              const double v_lead, const double v_ego) const;
+
   void AnalyzeCrossVRUAgentsAndInitialize();
+
   double CalculateVRUDeceleration(
       const double current_vel, const double current_s,
       const double current_acc, const int32_t index,
       const std::vector<CrossVRUAgentInfo>& agent_infos) const;
+
   double CalculateVRUDecelerationCore(const double current_vel,
                                       const double current_s,
                                       const double front_s,
                                       const double front_vel,
                                       const double headway_time) const;
+
   void AddCrossVRUTargetDataToProto();
 
  private:

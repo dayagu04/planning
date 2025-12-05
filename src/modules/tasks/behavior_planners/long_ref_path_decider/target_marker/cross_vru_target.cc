@@ -56,19 +56,19 @@ CrossVRUTarget::CrossVRUTarget(const SpeedPlannerConfig& config,
   const double desired_speed = std::fmin(speed_limit_normal, speed_limit_ref);
 
   params_.v0 = desired_speed;
-  params_.s0 = 4.0;
+  params_.s0 = 5.0;
   params_.T = 1.2;
   params_.a = 1.5;
   params_.b = 1.0;
   params_.b_max = 2.0;
   params_.delta = 4.0;
   params_.b_hard = 4.0;
-  params_.max_a_jerk = 5.0;
-  params_.max_b_jerk = 4.0;
+  params_.max_a_jerk = 3.0;
+  params_.max_b_jerk = 5.0;
   params_.default_front_s = 200;
   params_.cool_factor = 0.99;
-  params_.over_speed_factor = 0.3;
   params_.end_time_buffer = 1.0;
+  params_.kEps = 1e-3;
 
   AnalyzeCrossVRUAgentsAndInitialize();
 
@@ -204,10 +204,11 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
       double agent_s =
           center_s - ego_s - front_edge_to_rear_axle - agent->length() * 0.5;
       double agent_speed = traj_point.vel() * std::cos(heading_diff);
-      if(t <= info.crossing_start_time) {
+      if (t <= info.crossing_start_time) {
         info.agent_traj_s.push_back(st_boundary.min_s());
         info.agent_traj_v.push_back(agent_speed);
-      } else if (t > info.crossing_start_time && t <= info.crossing_end_time + params_.end_time_buffer) {
+      } else if (t > info.crossing_start_time &&
+                 t <= info.crossing_end_time + params_.end_time_buffer) {
         info.agent_traj_s.push_back(agent_s);
         info.agent_traj_v.push_back(agent_speed);
       } else {
@@ -220,42 +221,6 @@ void CrossVRUTarget::AnalyzeCrossVRUAgentsAndInitialize() {
   }
 
   is_pre_handle_cross_vru_ = true;
-}
-
-void CrossVRUTarget::GenerateCrossVRUTarget() {
-  if (agent_infos_.empty()) return;
-
-  double current_s = init_lon_state_[0];
-  double current_v = init_lon_state_[1];
-  double current_a = init_lon_state_[2];
-
-  target_values_[0].set_relative_t(0.0);
-  target_values_[0].set_has_target(true);
-  target_values_[0].set_s_target_val(current_s);
-  target_values_[0].set_v_target_val(current_v);
-  target_values_[0].set_target_type(TargetType::kCrossVRU);
-
-  for (int32_t i = 1; i < plan_points_num_; i++) {
-    auto& target_value = target_values_[i];
-    target_value.set_relative_t(i * dt_);
-
-    double cross_vru_acc = CalculateVRUDeceleration(current_v, current_s,
-                                                 current_a, i, agent_infos_);
-
-    double next_s =
-        current_s + current_v * dt_ + 0.5 * cross_vru_acc * dt_ * dt_;
-    double next_v = std::max(0.0, current_v + cross_vru_acc * dt_);
-    next_s = std::max(0.0, std::max(current_s, next_s));
-
-    target_value.set_has_target(true);
-    target_value.set_s_target_val(next_s);
-    target_value.set_v_target_val(next_v);
-    target_value.set_target_type(TargetType::kCrossVRU);
-
-    current_s = next_s;
-    current_v = next_v;
-    current_a = cross_vru_acc;
-  }
 }
 
 double CrossVRUTarget::CalcDesiredVelocity(const double d_rel,
@@ -291,6 +256,42 @@ double CrossVRUTarget::CalcDesiredVelocity(const double d_rel,
   return v_target;
 }
 
+void CrossVRUTarget::GenerateCrossVRUTarget() {
+  if (agent_infos_.empty()) return;
+
+  double current_s = init_lon_state_[0];
+  double current_v = init_lon_state_[1];
+  double current_a = init_lon_state_[2];
+
+  target_values_[0].set_relative_t(0.0);
+  target_values_[0].set_has_target(true);
+  target_values_[0].set_s_target_val(current_s);
+  target_values_[0].set_v_target_val(current_v);
+  target_values_[0].set_target_type(TargetType::kCrossVRU);
+
+  for (int32_t i = 1; i < plan_points_num_; i++) {
+    auto& target_value = target_values_[i];
+    target_value.set_relative_t(i * dt_);
+
+    double cross_vru_acc = CalculateVRUDeceleration(current_v, current_s,
+                                                    current_a, i, agent_infos_);
+
+    double next_s =
+        current_s + current_v * dt_ + 0.5 * cross_vru_acc * dt_ * dt_;
+    double next_v = std::max(0.0, current_v + cross_vru_acc * dt_);
+    next_s = std::max(0.0, std::max(current_s, next_s));
+
+    target_value.set_has_target(true);
+    target_value.set_s_target_val(next_s);
+    target_value.set_v_target_val(next_v);
+    target_value.set_target_type(TargetType::kCrossVRU);
+
+    current_s = next_s;
+    current_v = next_v;
+    current_a = cross_vru_acc;
+  }
+}
+
 double CrossVRUTarget::CalculateVRUDecelerationCore(
     const double current_vel, const double current_s, const double front_s,
     const double front_vel, const double headway_time) const {
@@ -302,63 +303,37 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
   double delta = params_.delta;
   double s0 = params_.s0;
   double cool_factor = params_.cool_factor;
-  double over_speed_factor = params_.over_speed_factor;
+  double kEps = params_.kEps;
 
-  double s_alpha = std::max(1e-3, front_s - current_s);
+  double s_alpha = std::max(kEps, front_s - current_s);
   double delta_v = current_vel - front_vel;
+
+  double s_desired = s0 + current_vel * headway_time;
+
+  double desired_v0 =
+      CalcDesiredVelocity(s_alpha, s_desired, front_vel, current_vel);
+
+  double target_v0 = std::max(kEps, std::min(v0, desired_v0));
 
   double s_star = s0 + std::max(0.0, current_vel * headway_time +
                                          (current_vel * delta_v) /
                                              (2.0 * std::sqrt(a * b_max)));
 
-  double s_safe = s0 + current_vel * headway_time;
-
-  double s_desired = std::max(s0, front_s - s_safe);
-
-  double dynamic_v0 =
-      CalcDesiredVelocity(front_s - current_s, s_safe, front_vel, current_vel);
-
-  double desired_v0 = std::min(v0, dynamic_v0);
-
-  double final_v0 = 0.0;
-
-  if (current_s < s_desired) {
-    final_v0 = v0;
-  } else {
-    final_v0 = desired_v0;
-  }
+  double z = s_star / s_alpha;
 
   double a_free;
-  if (current_vel <= final_v0) {
-    a_free = a * (1.0 - std::pow(current_vel / final_v0, delta));
-  } else if (current_vel > final_v0 && current_s < s_desired) {
-    double s_progress = std::max(0.0, std::min(1.0, current_s / s_desired));
-    double over_vel_ratio = current_vel / std::max(final_v0, 1e-6);
-    double position_ratio = 1.0 - s_progress;
-    double over_speed_ratio = over_vel_ratio - 1.0;
-    double over_speed_demand =
-        position_ratio - over_speed_ratio * over_speed_factor;
-    if (over_speed_demand > 0.1) {
-      a_free = a * over_speed_factor * over_speed_demand;
-    } else {
-      a_free = -b * over_speed_factor * over_speed_ratio;
-    }
+  if (current_vel <= target_v0) {
+    a_free = a * (1.0 - std::pow(current_vel / target_v0, delta));
   } else {
-    a_free = -b * (1.0 - std::pow(final_v0 / current_vel, a * delta / b));
+    a_free = -b * (1.0 - std::pow(target_v0 / current_vel, a * delta / b));
   }
 
-  double z = s_star / s_desired;
-
   double a_idm;
-  if (current_vel <= final_v0) {
-    if (z >= 1.0) {
-      a_idm = a * (1.0 - std::pow(z, 2.0));
+  if (current_vel <= target_v0) {
+    if (z < 1.0 && std::abs(a_free) > kEps) {
+      a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
     } else {
-      if (std::abs(a_free) > 1e-6) {
-        a_idm = a_free * (1.0 - std::pow(z, 2.0 * a / a_free));
-      } else {
-        a_idm = a * (1.0 - std::pow(z, 2.0));
-      }
+      a_idm = a * (1.0 - std::pow(z, 2.0));
     }
   } else {
     if (z >= 1.0) {
@@ -368,27 +343,24 @@ double CrossVRUTarget::CalculateVRUDecelerationCore(
     }
   }
 
-  double ds_star = s_alpha - s_star;
-  double ds_safe = s_alpha - s_safe;
-  double a_cah;
-  if (ds_safe < 0.0 && ds_star < 0.0) {
-    a_cah = b_hard * ds_star / s_star;
-  } else if (ds_safe > 0.0 && ds_star < 0.0) {
-    a_cah = b * ds_star / s_star;
-  } else {
-    a_cah = a_idm;
-  }
+  a_idm = std::max(std::min(a, a_idm), -b_hard);
 
-  double final_acc;
+  double a_cah = (current_vel * current_vel * (-b_max)) /
+                 (front_vel * front_vel - 2 * s_alpha * (-b_max));
+
+  a_cah = std::max(std::min(a, a_cah), -b_hard);
+
+  double cross_vru_acc;
   if (a_idm >= a_cah) {
-    double distance_ratio = std::min(current_s / s_desired, 1.0);
-    final_acc = a_idm * (1.0 - distance_ratio) + a_cah * distance_ratio;
+    cross_vru_acc = a_idm;
   } else {
-    final_acc = (1.0 - cool_factor) * a_idm +
-                cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
+    cross_vru_acc = (1.0 - cool_factor) * a_idm +
+                    cool_factor * (a_cah - b * tanh((a_idm - a_cah) / (-b)));
   }
 
-  return final_acc;
+  cross_vru_acc = std::max(std::min(a, cross_vru_acc), -b_hard);
+
+  return cross_vru_acc;
 }
 
 double CrossVRUTarget::CalculateVRUDeceleration(
