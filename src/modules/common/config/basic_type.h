@@ -119,19 +119,34 @@ struct FeasibleLaneInfo {
 };
 
 struct FPPoint {
-  uint64 link_id = -1;
+  uint64 link_id = 0;
+  // 注：由于腾讯地图和百度地图的差异性，在基于百度地图计算的FPPoint信息中，
+  // 只对fp_distance_to_split_point进行了有效赋值，其他皆没有赋值
   double fp_distance_to_split_point = 0.0;
   std::vector<uint64> lane_ids;
-  iflymapdata::sdpro::FeaturePoint fp;
+  std::optional<iflymapdata::sdpro::FeaturePoint> fp;
+
+  FPPoint() = default;
+
+  FPPoint(uint64 link_id, double fp_distance_to_split_point,
+          std::vector<uint64> lane_ids,
+          std::optional<iflymapdata::sdpro::FeaturePoint> FP)
+      : link_id(link_id),
+        fp_distance_to_split_point(fp_distance_to_split_point),
+        lane_ids(lane_ids) {
+    if (FP.has_value()) {
+      fp = FP;
+    }
+  }
 
   void reset() {
-    link_id = -1;
+    link_id = 0;
     fp_distance_to_split_point = 0.0;
     lane_ids.clear();
   }
 
   bool isEmpty() const {
-    return (link_id == static_cast<uint64>(-1)) &&
+    return (link_id == 0) &&
            (fp_distance_to_split_point == 0.0) &&
            lane_ids.empty();
   }
@@ -156,16 +171,32 @@ enum MergeLaneType {
   MERGE_TO_RIGHT = 2
 };
 
-struct MergePointInfo {
+struct MapMergePointInfo {
   double dis_to_merge_fp = NL_NMAX;
-  MergeType merge_type = MergeType::NO_MERGE;
+  MergeLaneType merge_type = NONE_MERGE;
+  int merge_lane_sequence = -1;
+  uint64 merge_lane_link_id = -1;
+
+  MapMergePointInfo() = default;
+
+  MapMergePointInfo(double dis_to_merge_fp, MergeLaneType merge_type,
+                    int merge_lane_sequence, uint64 merge_lane_link_id)
+      : dis_to_merge_fp(dis_to_merge_fp),
+        merge_type(merge_type),
+        merge_lane_sequence(merge_lane_sequence),
+        merge_lane_link_id(merge_lane_link_id){
+
+        };
 
   void reset() {
     dis_to_merge_fp = NL_NMAX;
-    merge_type = MergeType::NO_MERGE;
+    merge_type = NONE_MERGE;
+    merge_lane_sequence = -1;
+    merge_lane_link_id = -1;
   }
 };
 
+//后续把这个命名换成TencentSplitRegionInfo
 struct NOASplitRegionInfo {
   bool is_valid = false;
   bool is_ramp_split = false;                  // split场景专用
@@ -195,6 +226,56 @@ struct NOASplitRegionInfo {
   }
   //车道数从左开始数
   // recommond_lane_num{交换区起点前的车道数，交换区内的车道数，交换区终点后route上的车道数，其他方向的车道数}
+};
+
+struct MapSplitRegionInfo {
+  uint64 split_link_id = -1;
+  double distance_to_split_point = NL_NMAX;
+  SplitDirection split_direction = SplitDirection::SPLIT_NONE;
+  FPPoint start_fp_point;
+  FPPoint end_fp_point;
+  bool is_ramp_split = false;
+
+  MapSplitRegionInfo() = default;
+
+  MapSplitRegionInfo(uint64 link_id, double distance_to_split_point,
+                     SplitDirection split_direction, FPPoint start_fp_point,
+                     FPPoint end_fp_point, bool is_ramp_split)
+      : split_link_id(link_id),
+        distance_to_split_point(distance_to_split_point),
+        split_direction(split_direction),
+        start_fp_point(start_fp_point),
+        end_fp_point(end_fp_point),
+        is_ramp_split(is_ramp_split) {}
+
+  void reset() {
+    split_link_id = -1;
+    distance_to_split_point = NL_NMAX;
+    split_direction = SplitDirection::SPLIT_NONE;
+    start_fp_point.reset();
+    end_fp_point.reset();
+    is_ramp_split = false;
+  }
+};
+
+struct MapMergeRegionInfo {
+  uint64 merge_link_id = -1;
+  double distance_to_merge_point = NL_NMAX;
+  RampDirection merge_direction = RAMP_NONE;
+
+  MapMergeRegionInfo() = default;
+
+  MapMergeRegionInfo(uint64 link_id, double distance_to_merge_point,
+                     RampDirection merge_direction)
+      : merge_link_id(link_id),
+        distance_to_merge_point(distance_to_merge_point),
+        merge_direction(merge_direction) {}
+
+  void reset() {
+    merge_link_id = -1;
+    distance_to_merge_point = NL_NMAX;
+    merge_direction = RAMP_NONE;
+  }
 };
 
 // struct EgoStatusOnRoute {
@@ -242,23 +323,27 @@ enum MLCSceneType {
   NONE_SCENE = 0,
   NORMAL_SCENE = 1,
   SPLIT_SCENE = 2,
-  MERGE_SCENE = 3
+  MERGE_SCENE = 3,
+  AVOID_MERGE = 4,
+  AVOID_SPLIT = 5
 };
-struct MLCDeciderSceneInfoBaseBaidu {
+struct MLCDeciderSceneTypeInfo {
   MLCSceneType mlc_scene_type = NONE_SCENE;
   RampDirection route_lane_direction = RAMP_NONE;
   double dis_to_link_topo_change_point = 0.0;
-  bool is_valid = false;
+  uint64 topo_change_link_id = 0;
+  bool is_scene_info_valid = false;
 
-  MLCDeciderSceneInfoBaseBaidu() = default;
+  MLCDeciderSceneTypeInfo() = default;
 
-  MLCDeciderSceneInfoBaseBaidu(MLCSceneType mlc_scene_type,
+  MLCDeciderSceneTypeInfo(MLCSceneType mlc_scene_type,
                                RampDirection route_lane_direction,
                                double dis_to_link_topo_change_point)
       : mlc_scene_type(mlc_scene_type),
         route_lane_direction(route_lane_direction),
-        dis_to_link_topo_change_point(dis_to_link_topo_change_point) {
-    is_valid = info_valid(mlc_scene_type, route_lane_direction,
+        dis_to_link_topo_change_point(dis_to_link_topo_change_point),
+        topo_change_link_id(topo_change_link_id) {
+    is_scene_info_valid = info_valid(mlc_scene_type, route_lane_direction,
                           dis_to_link_topo_change_point);
   }
 
@@ -267,14 +352,16 @@ struct MLCDeciderSceneInfoBaseBaidu {
     mlc_scene_type = scene_type;
     route_lane_direction = lane_direction;
     dis_to_link_topo_change_point = dis;
-    is_valid = info_valid(scene_type, lane_direction, dis);
+    topo_change_link_id = link_id;
+    is_scene_info_valid = info_valid(scene_type, lane_direction, dis);
   }
 
   void reset() {
     mlc_scene_type = NONE_SCENE;
     route_lane_direction = RAMP_NONE;
     dis_to_link_topo_change_point = 0.0;
-    is_valid = false;
+    is_scene_info_valid = false;
+    topo_change_link_id = 0;
   }
 
  private:
@@ -289,89 +376,160 @@ struct MLCDeciderSceneInfoBaseBaidu {
     }
   }
 };
-struct RouteInfoOutput {
-  // for NOA output
-  int split_seg_forward_lane_nums = 0;
-  int split_next_seg_forward_lane_nums = 0;
-  int lc_nums_for_split = 0;
-  int cur_seg_forward_lane_num = 0;
-  int need_continue_lc_num_on_off_ramp_region = 0;
-  int lane_num_except_emergency = 0;
-  int merge_seg_forward_lane_nums = 0;
-  int merge_last_seg_forward_lane_nums = 0;
-  int left_lane_num = 0;
-  int right_lane_num = 0;
-  int emergency_lane_num = 0;
-  int minVal_seq = 0;
-  int maxVal_seq = 0;
-  int ego_seq = 0;
-  bool is_update_segment_success = false;
-  bool is_on_ramp = false;
-  bool is_in_sdmaproad = false;
-  bool is_ego_on_expressway = false;
-  bool is_leaving_ramp = false;
-  bool is_ego_on_city_expressway_hmi = false;
-  bool is_ego_on_expressway_hmi = false;
-  bool is_exist_toll_station = false;
-  bool is_ramp_merge_to_road_on_expressway = false;
-  bool is_road_merged_by_other_lane = false;
-  bool is_ramp_merge_to_ramp_on_expressway = false;
-  bool is_nearing_other_lane_merge_to_road_point = false;
-  bool is_on_highway = false;
-  bool is_continuous_ramp = false;  // for jwliu23
-  bool is_nearing_ramp = false;
-  bool is_ego_on_split_region = false;
-  bool is_find_exc_fp = false;
-  bool is_miss_split_point = false;
-  bool is_closing_merge = false;
-  bool is_closing_split = false;
-  double dis_to_ramp = NL_NMAX;
-  double distance_to_first_road_merge = NL_NMAX;
-  double distance_to_first_road_split = NL_NMAX;
-  double distance_to_second_road_merge = NL_NMAX;
-  double distance_to_second_road_split = NL_NMAX;
-  double distance_to_route_end = NL_NMAX;
-  double sum_dis_to_last_merge_point = NL_NMAX;
-  double sum_dis_to_last_split_point = NL_NMAX;
-  double accumulate_dis_ego_to_last_split_point = NL_NMAX;
-  double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
-  double distance_to_toll_station = NL_NMAX;
-  double distance_to_exchange_area_end_point = -NL_NMAX;
-  double lsl_length = 0.0;
-  double current_segment_passed_distance = 0.0;  // for xykuai
-  double left_lane_distance = 0.0;
-  double right_lane_distance = 0.0;
-  double last_split_end_point_distance = NL_NMAX;
-  std::pair<SplitRelativeDirection, double>
-      first_split_dir_dis_info;  // for xykuai
-  std::vector<std::pair<SplitRelativeDirection, double>>
-      split_dir_dis_info_list;  // for xykuai
-  RampDirection ramp_direction = RampDirection::RAMP_NONE;
-  RampDirection first_split_direction = RampDirection::RAMP_NONE;
-  RampDirection first_merge_direction = RampDirection::RAMP_NONE;
-  RampDirection second_split_direction = RampDirection::RAMP_NONE;
-  RampDirection second_merge_direction = RampDirection::RAMP_NONE;
-  RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
-  RampDirection last_split_seg_dir = RAMP_NONE;
-  // NOASplitRegionInfo ramp_region_info;
-  std::vector<NOASplitRegionInfo> split_region_info_list;
-  EgoStatusOnRoute ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
-  std::vector<NOASplitRegionInfo> merge_region_info_list;
-  NOASplitRegionInfo current_exchange_region_info;
-  iflymapdata::sdpro::MapVendorType map_vendor =
-      iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
-  MLCDeciderRouteInfo mlc_decider_route_info;
-  // double dis_to_merge_fp = NL_NMAX;
-  MergePointInfo merge_point_info;
-  EgoMLCRequestInfo mlc_request_type_route_info;
-  MLCSceneType baidu_mlc_scene = NORMAL_SCENE;
-
-  // for hpp output
+struct HPPRouteInfoOutput {
   bool is_on_hpp_lane = false;
   bool is_reached_hpp_start_point = false;
   double sum_distance_driving = -1;
   double distance_to_target_slot = NL_NMAX;
   double distance_to_next_speed_bump = NL_NMAX;
+
+  void reset() {
+    is_on_hpp_lane = false;
+    is_reached_hpp_start_point = false;
+    sum_distance_driving = -1;
+    distance_to_target_slot = NL_NMAX;
+    distance_to_next_speed_bump = NL_NMAX;
+  }
+};
+
+struct GaodeRouteInfoOutput {
+  int split_seg_forward_lane_nums = 0;
+  int split_next_seg_forward_lane_nums = 0;
+  int lc_nums_for_split = 0;
+  int need_continue_lc_num_on_off_ramp_region = 0;
+  int lane_num_except_emergency = 0;
+  int merge_seg_forward_lane_nums = 0;
+  int merge_last_seg_forward_lane_nums = 0;
+  bool is_leaving_ramp = false;
+  bool is_ramp_merge_to_road_on_expressway = false;
+  bool is_road_merged_by_other_lane = false;
+  bool is_ramp_merge_to_ramp_on_expressway = false;
+  bool is_nearing_other_lane_merge_to_road_point = false;
+  bool is_nearing_ramp = false;
+  bool is_ego_on_split_region = false;
+  double distance_to_second_road_merge = NL_NMAX;
+  RampDirection second_merge_direction = RampDirection::RAMP_NONE;
+  RampDirection last_split_seg_dir = RAMP_NONE;
+
+  void reset() {
+    split_seg_forward_lane_nums = 0;
+    split_next_seg_forward_lane_nums = 0;
+    lc_nums_for_split = 0;
+    need_continue_lc_num_on_off_ramp_region = 0;
+    lane_num_except_emergency = 0;
+    merge_seg_forward_lane_nums = 0;
+    merge_last_seg_forward_lane_nums = 0;
+    is_leaving_ramp = false;
+    is_ramp_merge_to_road_on_expressway = false;
+    is_road_merged_by_other_lane = false;
+    is_ramp_merge_to_ramp_on_expressway = false;
+    is_nearing_other_lane_merge_to_road_point = false;
+    is_nearing_ramp = false;
+    is_ego_on_split_region = false;
+    distance_to_second_road_merge = NL_NMAX;
+    second_merge_direction = RampDirection::RAMP_NONE;
+    last_split_seg_dir = RAMP_NONE;
+  }
+};
+struct RouteInfoOutput {
+  double lsl_length = 0.0;// 公供里面optional，注意汉杰调用的地方需要放在merge point里面输出给他使用
+  std::vector<int> feasible_lane_sequence;
+  MLCDeciderSceneTypeInfo mlc_decider_scene_type_info;
+  // for NOA output
+  // int split_seg_forward_lane_nums = 0;
+  // int split_next_seg_forward_lane_nums = 0;
+  // int lc_nums_for_split = 0;
+  int cur_seg_forward_lane_num = 0;
+  // int need_continue_lc_num_on_off_ramp_region = 0;
+  // int lane_num_except_emergency = 0;
+  // int merge_seg_forward_lane_nums = 0;
+  // int merge_last_seg_forward_lane_nums = 0;
+  int left_lane_num = 0;
+  int right_lane_num = 0;
+  int emergency_lane_num = 0;
+  // int minVal_seq = 0; // 用feasible_lane_sequence来代替
+  // int maxVal_seq = 0; // 用feasible_lane_sequence来代替
+  int ego_seq = 0; // 表示自车seq的，可以根据左右车道数计算出来，需要考虑这个还要不要输出
+  bool is_update_segment_success = false;
+  bool is_on_ramp = false;
+  bool is_in_sdmaproad = false;
+  bool is_ego_on_expressway = false;
+  // bool is_leaving_ramp = false;
+  bool is_ego_on_city_expressway_hmi = false;
+  bool is_ego_on_expressway_hmi = false;
+  bool is_exist_toll_station = false;
+  // bool is_ramp_merge_to_road_on_expressway = false;
+  // bool is_road_merged_by_other_lane = false;
+  // bool is_ramp_merge_to_ramp_on_expressway = false;
+  // bool is_nearing_other_lane_merge_to_road_point = false;
+  // bool is_on_highway = false;
+  bool is_continuous_ramp = false;  // for jwliu23
+  // bool is_nearing_ramp = false;
+  // bool is_ego_on_split_region = false;
+  // bool is_find_exc_fp = false;
+  // bool is_miss_split_point = false;
+  // 提供给纵向模块使用的，修改为纵向模块直接通过route_info_output计算得到
+  // bool is_closing_merge = false; // 这个状态是怎么定义的？？？
+  // bool is_closing_split = false; // 这个状态是怎么定义的？？？
+  double dis_to_ramp = NL_NMAX; // 在E541中需要注意这个值是否与处理的ramp对齐
+  double distance_to_first_road_merge = NL_NMAX;
+  double distance_to_first_road_split = NL_NMAX;
+  // // double distance_to_second_road_merge = NL_NMAX;
+  // double distance_to_second_road_split = NL_NMAX;
+  double distance_to_route_end = NL_NMAX;
+  double sum_dis_to_last_link_merge_point = NL_NMAX;
+  double sum_dis_to_last_link_split_point = NL_NMAX;
+  double sum_dis_to_last_split_exchange_area_end_point = NL_NMAX;
+  // double accumulate_dis_ego_to_last_split_point = NL_NMAX;
+  // double sum_dis_to_last_split_point_on_ramp = NL_NMAX;
+  double distance_to_toll_station = NL_NMAX;
+  // double distance_to_exchange_area_end_point = -NL_NMAX;
+  // double lsl_length = 0.0;
+  double current_segment_passed_distance = 0.0;  // for xykuai
+
+  // （for wangzhi17）目前只看到这两个对外只用作可视化信息，用virtual lane中的信息去更新，就不对外输出了
+  // double left_lane_distance = 0.0; // 这个更新的方式没看懂
+  // double right_lane_distance = 0.0; // 这个更新的方式没看懂
+
+
+  // std::pair<SplitRelativeDirection, double>
+  //     first_split_dir_dis_info;  // for xykuai
+  // std::vector<std::pair<SplitRelativeDirection, double>>
+  //     split_dir_dis_info_list;  // for xykuai
+
+
+  RampDirection ramp_direction = RampDirection::RAMP_NONE;
+  RampDirection first_split_direction = RampDirection::RAMP_NONE;
+  RampDirection first_merge_direction = RampDirection::RAMP_NONE;
+  // RampDirection second_split_direction = RampDirection::RAMP_NONE;
+  // RampDirection second_merge_direction = RampDirection::RAMP_NONE;
+  // RampDirection other_lane_merge_dir = RampDirection::RAMP_NONE;
+  // RampDirection last_split_seg_dir = RAMP_NONE;
+  // NOASplitRegionInfo ramp_region_info;
+
+  // 重点解决！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！！
+  // std::vector<NOASplitRegionInfo> split_region_info_list;// 已经完成第一版的翻译
+  std::vector<MapSplitRegionInfo> map_split_region_info_list;
+
+  // std::vector<NOASplitRegionInfo> merge_region_info_list; // 不需要输出这里面的fp，可以重新设计一个struct
+
+  std::vector<MapMergeRegionInfo> map_merge_region_info_list;
+  // EgoMLCRequestInfo mlc_request_type_route_info;
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+  // EgoStatusOnRoute ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
+
+  iflymapdata::sdpro::MapVendorType map_vendor =
+      iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
+  // MLCDeciderRouteInfo mlc_decider_route_info;
+  // double dis_to_merge_fp = NL_NMAX;
+  std::vector<MapMergePointInfo> map_merge_points_info; // 在virtual lane中 赋在车道线上输出给下游使用
+  // MLCSceneType baidu_mlc_scene = NORMAL_SCENE;
+
+  HPPRouteInfoOutput hpp_route_info_output;
+  GaodeRouteInfoOutput gaode_route_info_output;
+
   void reset() {
     is_update_segment_success = false;
     is_on_ramp = false;
@@ -379,74 +537,41 @@ struct RouteInfoOutput {
     ramp_direction = RampDirection::RAMP_NONE;
     distance_to_first_road_merge = NL_NMAX;
     distance_to_first_road_split = NL_NMAX;
-    distance_to_second_road_merge = NL_NMAX;
-    distance_to_second_road_split = NL_NMAX;
     distance_to_route_end = NL_NMAX;
     is_in_sdmaproad = false;
     is_ego_on_expressway = false;
     first_split_direction = RampDirection::RAMP_NONE;
     first_merge_direction = RampDirection::RAMP_NONE;
-    second_split_direction = RampDirection::RAMP_NONE;
-    second_merge_direction = RampDirection::RAMP_NONE;
-    is_leaving_ramp = false;
-    sum_dis_to_last_merge_point = NL_NMAX;
-    sum_dis_to_last_split_point = NL_NMAX;
-    accumulate_dis_ego_to_last_split_point = NL_NMAX;
-    sum_dis_to_last_split_point_on_ramp = NL_NMAX;
+    sum_dis_to_last_link_merge_point = NL_NMAX;
+    sum_dis_to_last_link_split_point = NL_NMAX;
+    sum_dis_to_last_split_exchange_area_end_point = NL_NMAX;
     distance_to_toll_station = NL_NMAX;
     is_ego_on_city_expressway_hmi = false;
     is_ego_on_expressway_hmi = false;
     is_exist_toll_station = false;
-    is_ramp_merge_to_road_on_expressway = false;
-    is_road_merged_by_other_lane = false;
-    is_ramp_merge_to_ramp_on_expressway = false;
-    other_lane_merge_dir = RampDirection::RAMP_NONE;
-    is_nearing_other_lane_merge_to_road_point = false;
-    is_on_highway = false;
-    split_seg_forward_lane_nums = 0;
-    split_next_seg_forward_lane_nums = 0;
-    lc_nums_for_split = 0;
-    last_split_seg_dir = RAMP_NONE;
+    // is_on_highway = false;
     is_continuous_ramp = false;
-    first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
-    split_dir_dis_info_list.clear();
-    current_exchange_region_info.reset();
+    // first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
+    // split_dir_dis_info_list.clear();
     current_segment_passed_distance = 0.0;
-    is_nearing_ramp = false;
     cur_seg_forward_lane_num = 0;
-    is_ego_on_split_region = false;
-    need_continue_lc_num_on_off_ramp_region = 0;
-    lane_num_except_emergency = 0;
-    merge_seg_forward_lane_nums = 0;
-    merge_last_seg_forward_lane_nums = 0;
-    split_region_info_list.clear();
-    ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
-    merge_region_info_list.clear();
+    map_split_region_info_list.clear();
+    map_merge_region_info_list.clear();
     map_vendor = iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
-    mlc_decider_route_info.reset();
-    // dis_to_merge_fp = NL_NMAX;
-    merge_point_info.reset();
-    lsl_length = 0.0;
+    map_merge_points_info.clear();
     left_lane_num = 0;
     right_lane_num = 0;
-    // ego_seq = 0;
+    ego_seq = 0;
     emergency_lane_num = 0;
-    minVal_seq = 0;
-    maxVal_seq = 0;
-    is_find_exc_fp = false;
-    is_miss_split_point = false;
-    // for hpp
-    is_on_hpp_lane = false;
-    is_reached_hpp_start_point = false;
-    sum_distance_driving = -1;
-    distance_to_target_slot = NL_NMAX;
-    distance_to_next_speed_bump = NL_NMAX;
-    mlc_request_type_route_info.reset();
-    baidu_mlc_scene = NORMAL_SCENE;
-    left_lane_distance = 0.0;
-    right_lane_distance = 0.0;
-    is_closing_merge = false;
-    is_closing_split = false;
+    lsl_length = 0.0;
+    // mlc_request_type_route_info.reset();
+    // is_closing_merge = false;
+    // is_closing_split = false;
+
+    hpp_route_info_output.reset();
+    gaode_route_info_output.reset();
+    feasible_lane_sequence.clear();
+    mlc_decider_scene_type_info.reset();
   }
 };
 

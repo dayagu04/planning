@@ -472,18 +472,18 @@ void VirtualLane::update_lane_tasks(const RouteInfoOutput &route_info_output) {
 void VirtualLane::ProcessEgoOnRoadMLC(
     const RouteInfoOutput &route_info_output) {
   bool is_nearing_other_lane_merge_to_road_point =
-      route_info_output.is_nearing_other_lane_merge_to_road_point;
+      route_info_output.gaode_route_info_output.is_nearing_other_lane_merge_to_road_point;
   RampDirection first_merge_direction = route_info_output.first_merge_direction;
   RampDirection ramp_direction = route_info_output.ramp_direction;
-  bool is_nearing_ramp = route_info_output.is_nearing_ramp;
+  bool is_nearing_ramp = route_info_output.gaode_route_info_output.is_nearing_ramp;
   bool is_on_ramp = route_info_output.is_on_ramp;
-  const int lane_num = route_info_output.lane_num_except_emergency;
+  const int lane_num = route_info_output.gaode_route_info_output.lane_num_except_emergency;
   bool is_trigger_ego_not_on_side =
-      route_info_output.is_leaving_ramp && !route_info_output.is_on_ramp;
-  int lc_nums_for_split = route_info_output.lc_nums_for_split;
-  bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
+      route_info_output.gaode_route_info_output.is_leaving_ramp && !route_info_output.is_on_ramp;
+  int lc_nums_for_split = route_info_output.gaode_route_info_output.lc_nums_for_split;
+  bool is_ego_on_split_region = route_info_output.gaode_route_info_output.is_ego_on_split_region;
   int need_continue_lc_num_on_off_ramp_region =
-      route_info_output.need_continue_lc_num_on_off_ramp_region;
+      route_info_output.gaode_route_info_output.need_continue_lc_num_on_off_ramp_region;
   // 生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
       0) {  // 处理在下匝道的split区域继续生成1个下匝道的任务
@@ -546,28 +546,26 @@ void VirtualLane::ProcessEgoOnRampMLC(
       route_info_output.first_merge_direction;
   const RampDirection first_split_direction =
       route_info_output.first_split_direction;
-  const int lane_num = route_info_output.lane_num_except_emergency;
+  const int lane_num = route_info_output.gaode_route_info_output.lane_num_except_emergency;
   const bool is_ramp_merge_to_road_on_expressway =
-      route_info_output.is_ramp_merge_to_road_on_expressway;
+      route_info_output.gaode_route_info_output.is_ramp_merge_to_road_on_expressway;
   const bool is_ramp_merge_to_ramp_on_expressway =
-      route_info_output.is_ramp_merge_to_ramp_on_expressway;
-  const bool is_leaving_ramp = route_info_output.is_leaving_ramp;
+      route_info_output.gaode_route_info_output.is_ramp_merge_to_ramp_on_expressway;
+  const bool is_leaving_ramp = route_info_output.gaode_route_info_output.is_leaving_ramp;
   const double dis_to_second_merge =
-      route_info_output.distance_to_second_road_merge;
-  const double sum_dis_to_last_split_point_on_ramp =
-      route_info_output.sum_dis_to_last_split_point_on_ramp;
+      route_info_output.gaode_route_info_output.distance_to_second_road_merge;
   const RampDirection second_merge_direction =
-      route_info_output.second_merge_direction;
-  const bool is_ego_on_split_region = route_info_output.is_ego_on_split_region;
+      route_info_output.gaode_route_info_output.second_merge_direction;
+  const bool is_ego_on_split_region = route_info_output.gaode_route_info_output.is_ego_on_split_region;
   const int merge_seg_forward_lane_nums =
-      route_info_output.merge_seg_forward_lane_nums;
+      route_info_output.gaode_route_info_output.merge_seg_forward_lane_nums;
   const int merge_last_seg_forward_lane_nums =
-      route_info_output.merge_last_seg_forward_lane_nums;
+      route_info_output.gaode_route_info_output.merge_last_seg_forward_lane_nums;
   // 在匝道汇入匝道时，距离merge的距离在100m范围内时，
   // 再生成地图变道任务，避免前面有1分2场景的不合理变道
   const double dis_to_first_merge_threshold = 100;
   int need_continue_lc_num_on_off_ramp_region =
-      route_info_output.need_continue_lc_num_on_off_ramp_region;
+      route_info_output.gaode_route_info_output.need_continue_lc_num_on_off_ramp_region;
   // 生成各个场景的变道任务
   if (need_continue_lc_num_on_off_ramp_region !=
       0) {  // 处理在下匝道的split区域继续生成1个下匝道的任务

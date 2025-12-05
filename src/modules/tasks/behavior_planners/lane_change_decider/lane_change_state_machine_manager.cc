@@ -5773,20 +5773,20 @@ LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
       route_info_output.map_vendor !=
           iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO ||
       !route_info_output.is_ego_on_expressway ||
-      route_info_output.split_region_info_list.empty()) {
+      route_info_output.map_split_region_info_list.empty()) {
     return RAMP_NONE;
   }
 
   double split_start_position = 0.0;
 
-  split_start_position = route_info_output.split_region_info_list.front()
+  split_start_position = route_info_output.map_split_region_info_list.front()
                              .start_fp_point.fp_distance_to_split_point;
   const auto& start_fp_point =
-      route_info_output.split_region_info_list.front().start_fp_point;
+      route_info_output.map_split_region_info_list.front().start_fp_point;
   const auto& end_fp_point =
-      route_info_output.split_region_info_list.front().end_fp_point;
+      route_info_output.map_split_region_info_list.front().end_fp_point;
 
-  if (route_info_output.split_region_info_list.front().distance_to_split_point +
+  if (route_info_output.map_split_region_info_list.front().distance_to_split_point +
           split_start_position >
       100.0) {
     return RAMP_NONE;
@@ -5821,7 +5821,7 @@ LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
              iflymapdata::sdpro::LaneChangeType::LeftTurnExpandingLane ||
          lane->change_type() ==
              iflymapdata::sdpro::LaneChangeType::BothDirectionExpandingLane) &&
-        route_info_output.split_region_info_list.front().split_direction ==
+        route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_LEFT) {
       return RAMP_ON_LEFT;
     }
@@ -5829,7 +5829,7 @@ LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
              iflymapdata::sdpro::LaneChangeType::RightTurnExpandingLane ||
          lane->change_type() ==
              iflymapdata::sdpro::LaneChangeType::BothDirectionExpandingLane) &&
-        route_info_output.split_region_info_list.front().split_direction ==
+        route_info_output.map_split_region_info_list.front().split_direction ==
             SPLIT_RIGHT) {
       return RAMP_ON_RIGHT;
     }
@@ -5851,7 +5851,7 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   if (function_mode != common::DrivingFunctionInfo::NOA ||
       route_info_output.map_vendor != iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD ||
       !route_info_output.is_ego_on_expressway ||
-      route_info_output.split_region_info_list.empty()) {
+      route_info_output.map_split_region_info_list.empty()) {
     return RAMP_NONE;
   }
 
@@ -5868,11 +5868,11 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
 
   if (is_rightest_extend_lane &&
-      route_info_output.split_region_info_list.front().split_direction ==
+      route_info_output.map_split_region_info_list.front().split_direction ==
           SPLIT_RIGHT) {
     return RAMP_ON_RIGHT;
   } else if (is_leftest_extend_lane &&
-             route_info_output.split_region_info_list.front().split_direction ==
+             route_info_output.map_split_region_info_list.front().split_direction ==
                  SPLIT_LEFT) {
     return RAMP_ON_LEFT;
   }

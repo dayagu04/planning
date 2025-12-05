@@ -317,7 +317,7 @@ void JointMotionSpeedLimit::CalculateMapSpeedLimit() {
 
   uint64_t ramp_link_id = -1;
   double ramp_v_limit = 120;
-  const auto& split_region_info_list = route_info_output.split_region_info_list;
+  const auto& split_region_info_list = route_info_output.map_split_region_info_list;
 
   if (dis_to_ramp < 2000.0) {
     for (size_t i = 0; i < split_region_info_list.size(); ++i) {

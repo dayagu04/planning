@@ -98,6 +98,9 @@ protected:
  void ProcessLaneDistance(
     const std::shared_ptr<VirtualLane>& relative_id_lane,
     const std::unordered_map<int, double>& feasible_lane_distance);
+void ProcessLaneMapMergePoint(
+    const std::shared_ptr<VirtualLane>& relative_id_lane,
+    const std::unordered_map<int, MapMergePointInfo>& map_merge_point_info);
 
  void CaculateDistanceToRoadEnd(
      const iflymapdata::sdpro::LinkInfo_Link* segment, const double nearest_s);
@@ -128,6 +131,23 @@ protected:
   iflymapdata::sdpro::Lane FindMatchingPreLaneInMainLink(
       const TopoLane& topo_lane,
       const iflymapdata::sdpro::LinkInfo_Link* next_pre_link);
+  size_t GetTargetRampIndex();
+  bool HasValidMergeBeforeRamp(const double ramp_dis);
+  bool IsDistanceToRampWithinThreshold(const double dis_to_ramp);
+  bool IsMergePriorToRamp(const double dis_to_ramp);
+  void UpdateSceneInfo(
+      const iflymapdata::sdpro::LinkInfo_Link& target_link,
+      const double dis_to_target_link);
+
+  void EraseFeasibleLaneIfNeeded(
+      uint64_t lane_id, const iflymapdata::sdpro::LinkInfo_Link* split_next_link,
+      TopoLinkGraph& feasible_lane_graph);
+  std::pair<FPPoint, FPPoint> CalculateSplitExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* split_link, const SplitDirection& split_dir);
+  std::pair<FPPoint, FPPoint> CalculateMergeExchangeAreaFP(const iflymapdata::sdpro::LinkInfo_Link* merge_link, const SplitDirection& merge_dir);
+  std::tuple<size_t, size_t> CountAccAndEntryLanes(const iflymapdata::sdpro::LinkInfo_Link* link) const;
+  void CalculateFrontMergePointInfo();
+  double CalculateDisToLastLinkSplitPoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
+  double CalculateDisToLastLinkMergePoint(const iflymapdata::sdpro::LinkInfo_Link* cur_link) const;
 
   ad_common::sdpromap::SDProMap ld_map_;
   const LocalView* local_view_ = nullptr;
@@ -143,7 +163,8 @@ protected:
       split_info_vec_;
   std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
       ramp_info_vec_;
-  MLCDeciderSceneInfoBaseBaidu mlc_decider_info_base_baidu_;
+  MLCDeciderSceneTypeInfo mlc_decider_scene_type_info_;
+  size_t count_continue_general_mlc_ = 0;
 
 };
 }
