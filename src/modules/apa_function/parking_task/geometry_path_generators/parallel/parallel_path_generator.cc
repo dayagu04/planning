@@ -4158,7 +4158,8 @@ const bool ParallelPathGenerator::PAParallelAdjustPlan() {
       }
     }
   }
-  if (IsOnTargetLinePA(current_pose, 0.06)) {
+  ILOG_INFO << "invalid_replan = " << int(input_.invalid_replan);
+  if (IsOnTargetLinePA(current_pose, 0.06) || input_.invalid_replan) {
     pnc::geometry_lib::LineSegment last_line;
     last_line.pA = current_pose.pos;
     last_line.heading = current_pose.heading;
@@ -4167,6 +4168,9 @@ const bool ParallelPathGenerator::PAParallelAdjustPlan() {
       AddPathSegToOutPut(pnc::geometry_lib::PathSegment(
           pnc::geometry_lib::CalLineSegGear(last_line), last_line));
       return true;
+    } else if (input_.invalid_replan) {
+      ILOG_INFO << "calc line failed, because invalid replan";
+      return false;
     }
   }
 

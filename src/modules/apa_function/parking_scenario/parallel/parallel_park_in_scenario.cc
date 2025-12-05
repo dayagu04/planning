@@ -69,6 +69,7 @@ static double kFrontShortChannelMax = 7.5;
 static double kWidthCurbOffset = 0.4;
 static double kWidthSlot = 2.3;
 static double kAdjustLonErr = 0.2;
+static const size_t kMaxReplanTimes = 15;
 
 using Point = Eigen::Vector2d;
 
@@ -881,6 +882,11 @@ const bool ParallelParkInScenario::CheckPAFinished() {
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetStaticFlag();
 
   ILOG_INFO << "static_condition = " << static_condition;
+
+  if (frame_.total_plan_count > kMaxReplanTimes) {
+    ILOG_INFO << "replan times too much, only check heading and x axis";
+    return lon_condition && static_condition && heading_condition;
+  }
 
   return lon_condition && lat_condition && heading_condition &&
          static_condition;
@@ -1752,6 +1758,12 @@ const bool ParallelParkInScenario::GenTlane() {
   size_t curb_count = 0;
   double curb_y_limit = -side_sgn * (half_slot_width + kCurbInitialOffset);
 
+  const double pa_x_limit_min = ego_info_under_slot.cur_pose.GetX() -
+                                apa_param.GetParam().rear_overhanging - 0.2;
+  const double pa_x_limit_max = ego_info_under_slot.cur_pose.GetX() +
+                                apa_param.GetParam().front_overhanging +
+                                apa_param.GetParam().wheel_base + 0.2;
+
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       const bool front_obs_condition =
@@ -1787,24 +1799,41 @@ const bool ParallelParkInScenario::GenTlane() {
                                   slot_length - 0.5) &&
           (obstacle_point_slot.y() * side_sgn <=
            -kCurbYMagIdentification);  // kCurbInitialOffset
-      const bool cat_to_curb_condition =
-          pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.5,
-                                  slot_length - 0.5) &&
-          pnc::mathlib::IsInBound(obstacle_point_slot.y(),
-                                  kCurbYMagIdentification,
-                                  -half_slot_width * side_sgn);
 
-      if (curb_condition && !(cat_to_curb_condition &&
-          obstacle_point_set.first ==
-              static_cast<size_t>(ApaObsScemanticType::CAR))) {
-        curb_count++;
-        if (side_sgn > 0.0) {
-          curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-        } else {
-          curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+      if (enable_pa_park_) {
+        const bool cat_to_curb_condition =
+            pnc::mathlib::IsInBound(obstacle_point_slot.x(), pa_x_limit_min,
+                                    pa_x_limit_max) &&
+            pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                    kCurbYMagIdentification,
+                                    -half_slot_width * side_sgn);
+        if (curb_condition &&
+            cat_to_curb_condition) {
+          if (side_sgn > 0.0) {
+            curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+          } else {
+            curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+          }
         }
+      } else {
+        const bool cat_to_curb_condition =
+            pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.5,
+                                    slot_length - 0.5) &&
+            pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                    kCurbYMagIdentification,
+                                    -half_slot_width * side_sgn);
+        if (curb_condition && !(cat_to_curb_condition &&
+            obstacle_point_set.first ==
+                static_cast<size_t>(ApaObsScemanticType::CAR))) {
+          curb_count++;
+          if (side_sgn > 0.0) {
+            curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+          } else {
+            curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+          }
 
-        // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+          // ILOG_INFO << "curb curb_y_limit = " << curb_y_limit;
+        }
       }
 
       const bool front_parallel_line_condition =
@@ -2355,20 +2384,23 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 
   if (t_lane_.limiter.valid) {
+    double ori_limiter_obs_x = 0.0;
     double limiter_obs_x = 0.0;
     if (t_lane_.limiter.start_pt.x() < 0.5 * t_lane_.slot_length) {
       ILOG_INFO << "rear limiter";
-      limiter_obs_x =
+      ori_limiter_obs_x =
           std::max(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
-      limiter_obs_x +=
+      limiter_obs_x =
+          ori_limiter_obs_x +
           (apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().rear_overhanging - 0.12);
       ILOG_INFO << "limiter_obs_x = " << limiter_obs_x;
     } else {
       ILOG_INFO << "front limiter";
-      limiter_obs_x =
+      ori_limiter_obs_x =
           std::min(t_lane_.limiter.start_pt.x(), t_lane_.limiter.end_pt.x());
-      limiter_obs_x +=
+      limiter_obs_x =
+          ori_limiter_obs_x +
           (-apa_param.GetParam().parallel_ego_ac_x_offset_with_limiter -
            apa_param.GetParam().front_overhanging + 0.12);
     }
@@ -2388,6 +2420,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
       if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
         tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
+    // front virtual limit obs
+    const double parallel_virtual_limit_x_offset =
+        apa_param.GetParam().parallel_virtual_limit_x_offset;
+    if (parallel_virtual_limit_x_offset > 0.0) {
+      for (const auto& obs : point_set) {
+        Eigen::Vector2d virtual_front_limiter_obs = Eigen::Vector2d(
+            ori_limiter_obs_x + parallel_virtual_limit_x_offset, obs.y());
+        tlane_obstacle_vec.emplace_back(std::move(virtual_front_limiter_obs));
       }
     }
     apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
@@ -2471,10 +2513,21 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
             << static_cast<int>(path_planner_input.ref_arc_steer);
 
   path_planner_input.parallel_replan_again_ = parallel_replan_again_;
-  parallel_path_planner_.SetInput(path_planner_input);
   if (enable_pa_park_) {
     parallel_path_planner_.EnablePAPark();
+    ILOG_INFO << "total_plan_count = " << int(frame_.total_plan_count)
+              << " y diff = "
+              << std::fabs(first_plan_cur_pos.pos.y() -
+                           ego_info_under_slot.cur_pose.pos.y());
+    if ((frame_.total_plan_count >
+             apa_param.GetParam().pa_max_invalid_replan_times &&
+         std::fabs(first_plan_cur_pos.pos.y() -
+                   ego_info_under_slot.cur_pose.pos.y()) < 0.01) ||
+        frame_.total_plan_count > kMaxReplanTimes) {
+      path_planner_input.invalid_replan = true;
+    }
   }
+  parallel_path_planner_.SetInput(path_planner_input);
 
   const double path_plan_start_time = IflyTime::Now_ms();
 
@@ -3198,7 +3251,10 @@ void ParallelParkInScenario::CalStaticBufferInDiffSteps(
             : apa_param.GetParam().safe_lat_buffer_in_1r_parallel_slot;
 
     safe_uss_remain_dist =
-        apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
+        t_lane_.is_inside_rigid
+            ? apa_param.GetParam()
+                  .safe_remain_dist_in_1r_with_wall_parallel_slot
+            : apa_param.GetParam().safe_remain_dist_in_1r_parallel_slot;
 
   } else {
     ILOG_INFO << "outside slot not 1r step!";

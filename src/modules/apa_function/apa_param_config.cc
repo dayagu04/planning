@@ -240,6 +240,9 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.parallel_ego_ac_x_offset_with_limiter, double,
                   "parallel_ego_ac_x_offset_with_limiter");
 
+  JSON_READ_VALUE(param.parallel_virtual_limit_x_offset, double,
+                  "parallel_virtual_limit_x_offset");
+
   JSON_READ_VALUE(param.parallel_terminal_x_offset_with_obs, double,
                   "parallel_terminal_x_offset_with_obs");
 
@@ -268,6 +271,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "pa_slot_length_for_park_in");
 
   JSON_READ_VALUE(param.pa_to_curb_dis, double, "pa_to_curb_dis");
+  JSON_READ_VALUE(param.pa_max_invalid_replan_times, double,
+                  "pa_max_invalid_replan_times");
 
   // check finish params
   JSON_READ_VALUE(param.finish_lat_err, double, "finish_lat_err");
@@ -409,6 +414,9 @@ void SyncParkingParameters(const bool is_simulation) {
 
   JSON_READ_VALUE(param.safe_remain_dist_in_1r_parallel_slot, double,
                   "safe_remain_dist_in_1r_parallel_slot");
+
+  JSON_READ_VALUE(param.safe_remain_dist_in_1r_with_wall_parallel_slot, double,
+                  "safe_remain_dist_in_1r_with_wall_parallel_slot");
 
   JSON_READ_VALUE(param.safe_uss_remain_dist_in_parallel_slot, double,
                   "safe_uss_remain_dist_in_parallel_slot");

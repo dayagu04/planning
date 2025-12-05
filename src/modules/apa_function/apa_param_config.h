@@ -451,6 +451,7 @@ struct ApaParameters {
   double terminal_parallel_y_offset_with_wall = 0.45;
   double parallel_max_ego_x_offset_with_invasion = 0.5;
   double parallel_ego_ac_x_offset_with_limiter = 0.3;
+  double parallel_virtual_limit_x_offset = 6.0;
   double parallel_terminal_x_offset_with_obs = 0.35;
 
   // parallel pa params
@@ -464,6 +465,7 @@ struct ApaParameters {
   double pa_slot_move_distance = 0.15;
   double pa_slot_length_for_park_in = 1.7;
   double pa_to_curb_dis = 0.8;
+  int pa_max_invalid_replan_times = 5;
 
   // check finish params
   double finish_lat_err = 0.08;
@@ -517,6 +519,7 @@ struct ApaParameters {
   double safe_lat_buffer_with_wall_in_parallel_slot = 0.1;
   double safe_lat_buffer_in_1r_parallel_slot = 0.1;
   double safe_remain_dist_in_1r_parallel_slot = 0.3;
+  double safe_remain_dist_in_1r_with_wall_parallel_slot = 0.3;
   double safe_uss_remain_dist_in_parallel_slot = 0.25;
   double safe_uss_remain_dist_in_parallel_slot_pa = 0.15;
   double safe_uss_remain_dist_out_slot = 0.55;
