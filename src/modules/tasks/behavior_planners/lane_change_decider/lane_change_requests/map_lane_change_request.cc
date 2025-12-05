@@ -110,7 +110,8 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
-  congestion_detection_config.heavy_density = 30;
+  congestion_detection_config.heavy_density = 30.0;
+  congestion_detection_config.jam_speed = 50.0;
   if (target_lane && is_avoidance_MLC) {
     const int target_lane_id = target_lane->get_virtual_id();
     CongestionDetector detector(&congestion_detection_config, session_,
@@ -130,10 +131,10 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
   }
 
   // 4、判断剩余距离是否触发生成变道请求
-  bool is_trigger_mlc = IsTriggerMLCForRemainDistane();
-  if (!is_trigger_mlc) {
-    return false;
-  }
+  // bool is_trigger_mlc = IsTriggerMLCForRemainDistane();
+  // if (!is_trigger_mlc) {
+  //   return false;
+  // }
 
   // 5、判断虚线长度是否满足变道条件
   const auto& ego_lane_road_right_decider_output =
