@@ -3026,21 +3026,25 @@ def load_planning_hmi_info_table():
   ad_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hpp_info_data = ColumnDataSource(data={'name': [], 'data': []})
   nsa_info_data = ColumnDataSource(data={'name': [], 'data': []})
+  rads_info_data = ColumnDataSource(data={'name': [], 'data': []})
   hmi_info_data = {'ad_info_data':ad_info_data,
                    'hpp_info_data':hpp_info_data,
-                   'nsa_info_data':nsa_info_data}
+                   'nsa_info_data':nsa_info_data,
+                   'rads_info_data': rads_info_data}
   # table
   columns = [TableColumn(field="name", title="name",),
              TableColumn(field="data", title="data")]
   ad_info_table = DataTable(source=ad_info_data, columns=columns, width=400, height=600)
   hpp_info_table = DataTable(source=hpp_info_data, columns=columns, width=400, height=460)
-  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=400)
-  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table
+  nsa_info_table = DataTable(source=nsa_info_data, columns=columns, width=400, height=150)
+  rads_info_table = DataTable(source=rads_info_data, columns=columns, width=400, height=150)
+  return hmi_info_data, ad_info_table, hpp_info_table, nsa_info_table, rads_info_table
 
 def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   ad_info_names, ad_info_datas = [], []
   hpp_info_names, hpp_info_datas = [], []
   nsa_info_names, nsa_info_datas = [], []
+  rads_info_names, rads_info_datas = [], []
   if bag_loader.planning_hmi_msg['enable'] ==True:
     # 1. update ad info
     try:
@@ -3091,9 +3095,21 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
           pass
     except Exception as e:
       print("planning_hmi_nsa_info error: ", e)
+    # 4. update rads info
+    try:
+      rads_info = local_view_data['data_msg']['planning_hmi_msg'].rads_info
+      vars = ['is_avaliable', 'rads_pause_reason', 'avoid_status', 'aovid_id']
+      for name in vars:
+        try:
+          rads_info_datas.append(getattr(rads_info, name))
+          rads_info_names.append(name)
+        except:
+          pass
+    except Exception as e:
+      print("planning_hmi_rads_info_info error: ", e)
   else:
     print("no planning_hmi_msg!")
-  # 4. update hmi info
+  # 5. update hmi info
   hmi_info_data['ad_info_data'].data.update({
     'name': ad_info_names,
     'data': ad_info_datas,
@@ -3105,4 +3121,8 @@ def update_planning_hmi_info_data(bag_loader, local_view_data, hmi_info_data):
   hmi_info_data['nsa_info_data'].data.update({
     'name': nsa_info_names,
     'data': nsa_info_datas,
+  })
+  hmi_info_data['rads_info_data'].data.update({
+    'name': rads_info_names,
+    'data': rads_info_datas,
   })
