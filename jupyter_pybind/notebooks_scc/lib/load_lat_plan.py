@@ -651,6 +651,42 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
       'traj_y': spatio_traj_y,
     })
 
+    narrow_space_line_x, narrow_space_line_y = [], []
+    try:
+      if g_is_display_enu:
+        narrow_space_left_rear_x = planning_json['narrow_space_left_rear_x']
+        narrow_space_left_rear_y = planning_json['narrow_space_left_rear_y']
+        narrow_space_right_rear_x = planning_json['narrow_space_right_rear_x']
+        narrow_space_right_rear_y = planning_json['narrow_space_right_rear_y']
+        narrow_space_left_front_x = planning_json['narrow_space_left_front_x']
+        narrow_space_left_front_y = planning_json['narrow_space_left_front_y']
+        narrow_space_right_front_x = planning_json['narrow_space_right_front_x']
+        narrow_space_right_front_y = planning_json['narrow_space_right_front_y']
+        narrow_space_line_x.append([narrow_space_left_rear_x, narrow_space_right_rear_x])
+        narrow_space_line_y.append([narrow_space_left_rear_y, narrow_space_right_rear_y])
+        narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
+        narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
+      else:
+        narrow_space_left_rear_x, narrow_space_left_rear_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_left_rear_x'], planning_json['narrow_space_left_rear_y'])
+        narrow_space_right_rear_x, narrow_space_right_rear_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_right_rear_x'], planning_json['narrow_space_right_rear_y'])
+        narrow_space_left_front_x, narrow_space_left_front_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_left_front_x'], planning_json['narrow_space_left_front_y'])
+        narrow_space_right_front_x, narrow_space_right_front_y = \
+            coord_tf.global_to_local(planning_json['narrow_space_right_front_x'], planning_json['narrow_space_right_front_y'])
+        narrow_space_line_x.append([narrow_space_left_rear_x, narrow_space_right_rear_x])
+        narrow_space_line_y.append([narrow_space_left_rear_y, narrow_space_right_rear_y])
+        narrow_space_line_x.append([narrow_space_left_front_x, narrow_space_right_front_x])
+        narrow_space_line_y.append([narrow_space_left_front_y, narrow_space_right_front_y])
+      print("narrow_space_state: ", planning_json['narrow_space_state'])
+    except:
+      print("no narrow space")
+    lat_plan_data['data_narrow_space_corners'].data.update({
+      'lines_x_vec': narrow_space_line_x,
+      'lines_y_vec': narrow_space_line_y,
+    })
+
   if bag_loader.plan_msg['enable'] == True:
     trajectory = plan_msg.trajectory
     # if trajectory.trajectory_type == 0 and planning_succ: # 实时轨迹
@@ -1077,6 +1113,9 @@ def load_lat_plan_figure(fig1, local_view_data):
   data_construction_refline = ColumnDataSource(data = {'refline_x':[],
                                                        'refline_y':[]})
 
+  data_narrow_space_corners = ColumnDataSource(data = {'lines_x_vec':[],
+                                                       'lines_y_vec':[],})
+
   data_lat_motion_plan_input = ColumnDataSource(data = {'ref_x':[],
                                                         'ref_y':[],
                                                         'ref_xn':[],
@@ -1227,10 +1266,11 @@ def load_lat_plan_figure(fig1, local_view_data):
                    'data_spatio_temporal_trajs': data_spatio_temporal_trajs, \
                    'data_center_line_curvature':data_center_line_curvature, \
                    'data_refline_curvature':data_refline_curvature, \
-                   'data_construction_refline':data_construction_refline
+                   'data_construction_refline':data_construction_refline, \
+                   'data_narrow_space_corners':data_narrow_space_corners
   }
 
-
+  fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_narrow_space_corners, line_width = 3.0, line_color = 'green', line_dash = 'solid', legend_label = 'narrow space')
   # motion planning
   fig1.line('ref_y', 'ref_x', source = data_lat_motion_plan_input, line_width = 5, line_color = 'red', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ref path', visible=True)
   fig1.line('traj_y', 'traj_x', source = data_spatio_temporal_trajs, line_width = 5, line_color = 'black', line_dash = 'solid', line_alpha = 0.35, legend_label = 'spatio ref', visible=True)

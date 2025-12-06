@@ -6369,4 +6369,12 @@ struct ReferencePathManagerConfig : public EgoPlanningConfig{
   }
   bool is_enable_construction_refline = false;
 };
+
+struct NarrowSpaceDeciderConfig : public EgoPlanningConfig{
+  void init(const Json &json) override {
+    EgoPlanningConfig::init(json);
+  }
+
+};
+
 }  // namespace planning
