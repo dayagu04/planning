@@ -847,11 +847,64 @@ double StGraphSearcher::ComputeYieldCost(const StSearchInput& input_info,
   if (distance_to_front < 0.0) {
     return 0.0;
   }
+
+  double base_cost = 0.0;
   if (distance_to_front < upper_truncation_distance) {
-    // currently use proportional func, can be switched to exponential func
-    return (1.0 - (distance_to_front / upper_truncation_distance));
+    base_cost = (1.0 - (distance_to_front / upper_truncation_distance));
+  } else {
+    return 0.0;
   }
-  return 0.0;
+
+  const int32_t agent_id = upper_bound.agent_id();
+  if (agent_id == speed::kNoAgentId) {
+    return base_cost;
+  }
+
+  bool is_special_agent = false;
+
+  const auto& agent_longitudinal_decider_output =
+      session_->planning_context().agent_longitudinal_decider_output();
+  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
+  if (std::find(cutin_ids.begin(), cutin_ids.end(), agent_id) !=
+      cutin_ids.end()) {
+    is_special_agent = true;
+  }
+
+  if (!is_special_agent) {
+    const auto& lane_change_decider_output =
+        session_->planning_context().lane_change_decider_output();
+    const auto front_node_id =
+        lane_change_decider_output.lc_gap_info.front_node_id;
+
+    const auto dynamic_world =
+        session_->environmental_model().get_dynamic_world();
+    if (dynamic_world != nullptr) {
+      const auto node_ptr = dynamic_world->GetNode(front_node_id);
+      if (node_ptr != nullptr) {
+        const int32_t gap_front_agent_id = node_ptr->node_agent_id();
+        if (gap_front_agent_id == agent_id) {
+          is_special_agent = true;
+        }
+      }
+    }
+  }
+
+  if (!is_special_agent) {
+    const auto& lat_lon_joint_planner_output =
+        session_->planning_context().lat_lon_joint_planner_decider_output();
+    const auto& danger_ids =
+        lat_lon_joint_planner_output.GetDangerObstacleIds();
+    if (std::find(danger_ids.begin(), danger_ids.end(), agent_id) !=
+        danger_ids.end()) {
+      is_special_agent = true;
+    }
+  }
+
+  if (is_special_agent) {
+    return base_cost * 0.1;
+  }
+
+  return base_cost;
 }
 
 double StGraphSearcher::ComputeVirtualYieldCost(
@@ -954,11 +1007,63 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
     return config_.cost_ego_overtake_has_collision_with_lower_bound;
   }
 
+  double base_cost = 0.0;
   if (distance_to_rear < lower_truncation_distance) {
-    // currently use proportional func, can be switched to exponential func
-    return (1.0 - (distance_to_rear / lower_truncation_distance));
+    base_cost = (1.0 - (distance_to_rear / lower_truncation_distance));
+  } else {
+    return 0.0;
   }
-  return 0.0;
+
+  const int32_t agent_id = lower_bound.agent_id();
+  if (agent_id == speed::kNoAgentId) {
+    return base_cost;
+  }
+
+  bool is_special_agent = false;
+
+  const auto& agent_longitudinal_decider_output =
+      session_->planning_context().agent_longitudinal_decider_output();
+  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
+  if (std::find(cutin_ids.begin(), cutin_ids.end(), agent_id) !=
+      cutin_ids.end()) {
+    is_special_agent = true;
+  }
+
+  if (!is_special_agent) {
+    const auto& lane_change_decider_output =
+        session_->planning_context().lane_change_decider_output();
+    const auto front_node_id =
+        lane_change_decider_output.lc_gap_info.front_node_id;
+
+    const auto dynamic_world =
+        session_->environmental_model().get_dynamic_world();
+    if (dynamic_world != nullptr) {
+      const auto node_ptr = dynamic_world->GetNode(front_node_id);
+      if (node_ptr != nullptr) {
+        const int32_t gap_front_agent_id = node_ptr->node_agent_id();
+        if (gap_front_agent_id == agent_id) {
+          is_special_agent = true;
+        }
+      }
+    }
+  }
+
+  if (!is_special_agent) {
+    const auto& lat_lon_joint_planner_output =
+        session_->planning_context().lat_lon_joint_planner_decider_output();
+    const auto& danger_ids =
+        lat_lon_joint_planner_output.GetDangerObstacleIds();
+    if (std::find(danger_ids.begin(), danger_ids.end(), agent_id) !=
+        danger_ids.end()) {
+      is_special_agent = true;
+    }
+  }
+
+  if (is_special_agent) {
+    return base_cost * 10.0;
+  }
+
+  return base_cost;
 }
 
 double StGraphSearcher::ComputeVelocityCost(const StSearchInput& input_info,
