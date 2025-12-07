@@ -800,7 +800,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   cost_vec = motion_solver_info.cost_vec
   lists = [cost_vec[i * cost_size : (i + 1) * cost_size] for i in range(iter_count)]
   cost_list = ["ReferenceCost", "LonAccCost", "LonJerkCost", "LonSoftPosBoundCost", "LonHardPosBoundCost", \
-               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost"]
+               "LonVelBoundCost", "LonAccBoundCost", "LonJerkBoundCost", "NonNegativeVelCost", "LonPosSafeCost"]
   print(cost_list)
   for i, sub_list in enumerate(lists):
     if i == 0:

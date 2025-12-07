@@ -171,11 +171,6 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
   planning_input_.mutable_init_state()->set_a(
       planning_init_point.lon_init_state.a());
 
-  const auto &vehicle_param =
-      planning::VehicleConfigurationContext::Instance()->get_vehicle_param();
-
-  planning_input_.set_front_edge_to_rear_axle(vehicle_param.front_edge_to_rear_axle);
-
   // 4. set weights
   auto start_stop_info =
       session_->planning_context().start_stop_result().state();
@@ -196,6 +191,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
     planning_input_.set_q_acc_start(config_.q_acc_start);
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
+    planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
+    planning_input_.set_safe_distance(config_.safe_distance);
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
@@ -211,6 +208,8 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_bound(config_.q_jerk_bound);
     planning_input_.set_q_acc_start(config_.q_acc_start);
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
+    planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
+    planning_input_.set_safe_distance(config_.safe_distance);
   }
 
   // what is s_stop?

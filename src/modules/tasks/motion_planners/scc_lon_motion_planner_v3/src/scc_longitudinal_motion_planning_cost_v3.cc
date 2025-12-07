@@ -97,16 +97,9 @@ void LonSoftPosBoundCostTerm::GetGradientHessian(
 double LonHardPosBoundCostTerm::GetCost(const ilqr_solver::State &x,
                                         const ilqr_solver::Control &) {
   double cost = 0.0;
-  double max_hard_bound = 0.0;
-  if (cost_config_ptr_->at(HARD_POS_MAX) >
-      cost_config_ptr_->at(FRONT_EDGE_TO_REAR_AXLE)) {
-    max_hard_bound = std::max(cost_config_ptr_->at(HARD_POS_MAX) - 2.0, 1e-6);
-  } else {
-    max_hard_bound = cost_config_ptr_->at(HARD_POS_MAX);
-  }
-  if (x[POS] > max_hard_bound) {
+  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
     cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
-           Square(x[POS] - max_hard_bound);
+           Square(x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
   } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
     cost = 0.5 * cost_config_ptr_->at(W_HARD_POS_BOUND) *
            Square(x[POS] - cost_config_ptr_->at(HARD_POS_MIN));
@@ -118,17 +111,9 @@ void LonHardPosBoundCostTerm::GetGradientHessian(
     const ilqr_solver::State &x, const ilqr_solver::Control &,
     ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
     ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
-  double max_hard_bound = 0.0;
-  if (cost_config_ptr_->at(HARD_POS_MAX) >
-      cost_config_ptr_->at(FRONT_EDGE_TO_REAR_AXLE)) {
-    max_hard_bound = std::max(cost_config_ptr_->at(HARD_POS_MAX) - 2.0, 1e-6);
-  } else {
-    max_hard_bound = cost_config_ptr_->at(HARD_POS_MAX);
-  }
-
-  if (x[POS] > max_hard_bound) {
-    lx(POS) +=
-        cost_config_ptr_->at(W_HARD_POS_BOUND) * (x[POS] - max_hard_bound);
+  if (x[POS] > cost_config_ptr_->at(HARD_POS_MAX)) {
+    lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
+               (x[POS] - cost_config_ptr_->at(HARD_POS_MAX));
     lxx(POS, POS) += cost_config_ptr_->at(W_HARD_POS_BOUND);
   } else if (x[POS] < cost_config_ptr_->at(HARD_POS_MIN)) {
     lx(POS) += cost_config_ptr_->at(W_HARD_POS_BOUND) *
@@ -277,6 +262,35 @@ void LonStopPointCost::GetGradientHessian(
       (x[POS] > cost_config_ptr_->at(S_STOP) && x[VEL] >= 0.0)) {
     lx(VEL) = cost_config_ptr_->at(W_S_STOP) * x[VEL];
     lxx(VEL, VEL) = cost_config_ptr_->at(W_S_STOP);
+  }
+}
+
+double LonPosSafeCostTerm::GetCost(const ilqr_solver::State &x,
+                                   const ilqr_solver::Control &) {
+  double cost = 0.0;
+  double safe_threshold =
+      cost_config_ptr_->at(HARD_POS_MAX) - cost_config_ptr_->at(SAFE_DISTANCE);
+
+  if (x[POS] > safe_threshold) {
+    cost = 0.5 * cost_config_ptr_->at(W_POS_SAFE_COST) *
+           Square(x[POS] - safe_threshold);
+  }
+
+  return cost;
+}
+
+void LonPosSafeCostTerm::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+  double safe_threshold =
+      cost_config_ptr_->at(HARD_POS_MAX) - cost_config_ptr_->at(SAFE_DISTANCE);
+
+  if (x[POS] > safe_threshold) {
+    lx(POS) +=
+        cost_config_ptr_->at(W_POS_SAFE_COST) * (x[POS] - safe_threshold);
+
+    lxx(POS, POS) += cost_config_ptr_->at(W_POS_SAFE_COST);
   }
 }
 

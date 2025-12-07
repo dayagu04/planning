@@ -783,7 +783,9 @@
     "q_stop_s": 2000.0,
     "q_ref_pos_speed_adjust": 35.0,
     "q_acc_speed_adjust": 20.0,
-    "q_jerk_speed_adjust": 50.0
+    "q_jerk_speed_adjust": 50.0,
+    "q_pos_safe_cost": 100.0,
+    "safe_distance": 2.5
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,

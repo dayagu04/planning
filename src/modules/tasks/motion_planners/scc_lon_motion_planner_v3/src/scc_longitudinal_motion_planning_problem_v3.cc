@@ -58,6 +58,9 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   //       cost
   ilqr_core_ptr_->AddCost(
       std::make_shared<NonNegativeVelCost>());  // longitudinal non-negative vel
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonPosSafeCostTerm>());  // longitudinal position safety
+                                                // cost
 
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
@@ -134,13 +137,19 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
     cost_config_vec.at(i)[W_S_STOP] = planning_input.q_stop_s();
     cost_config_vec.at(i)[W_HARD_POS_BOUND] = planning_input.q_hard_pos_bound();
 
-    cost_config_vec.at(i)[FRONT_EDGE_TO_REAR_AXLE] = planning_input.front_edge_to_rear_axle();
-
     if (i <= 2) {
       cost_config_vec.at(i)[W_HARD_POS_BOUND] = 0.0;
     }
 
     cost_config_vec.at(i)[W_NON_NEGATIVE_VEL] = 2000.0;
+
+    double k = 0.6127;  
+    double i0 = 17.5;
+    double safe_cost_factor = 1.0 / (1.0 + std::exp(-k * (i - i0)));
+    cost_config_vec.at(i)[W_POS_SAFE_COST] =
+        planning_input.q_pos_safe_cost() * safe_cost_factor;
+
+    cost_config_vec.at(i)[SAFE_DISTANCE] = planning_input.safe_distance();
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;
