@@ -236,9 +236,6 @@ void BoundMaker::MakeAccBound(const double& v_ego,
 }
 
 void BoundMaker::MakeSBound() {
-  // @gpxu 待补充
-  auto max_acceration_curve = GenerateMaxAccelerationCurve();
-  auto max_deceleration_curve = GenerateMaxDecelerationCurve();
 
   const auto& environmental_model = session_->environmental_model();
   const auto& ego_lane =
@@ -247,11 +244,12 @@ void BoundMaker::MakeSBound() {
   if (ego_lane == nullptr) {
     return;
   }
-  // get reference path from ego lane
+  
   const auto& ego_reference_path = ego_lane->get_reference_path();
   if (ego_reference_path == nullptr) {
     return;
   }
+  
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord == nullptr) {
     return;
@@ -260,67 +258,28 @@ void BoundMaker::MakeSBound() {
   const double path_length = ego_lane_coord->Length();
   const double default_upper_bound =
       std::fmax(path_length, plan_time_ * kPerSecondPlanLenth);
+  
   s_lower_bound_ = std::vector<double>(plan_points_num_, -0.1);
   s_upper_bound_ = std::vector<double>(plan_points_num_, default_upper_bound);
 
   const auto ptr_st_graph_helper =
       session_->planning_context().st_graph_helper();
-  constexpr double kUpperBoundBuffer = 1.0;
-  constexpr double kLowSpeedBuffer = 0.2;
-
-  double ego_speed = init_lon_state_[1];
-  bool is_ego_low_speed = init_lon_state_[1] < kLowSpeedBuffer;
-
-  double ego_acc = init_lon_state_[2];
-  double add_buffer_start_time = 2.5;
-  double add_speed_buffer_start_time = 2.0;
-
-  constexpr double kBaseBuffer = 1.0;
-  constexpr double kSpeedBufferThreshold = 4.0;
-  const double preview_time = 0.5;
-  constexpr double kSafeVelBuffer = 1.0;
-
-  double future_speed = ego_speed + ego_acc * preview_time;
-  future_speed = std::fmax(0.0, future_speed);
-  double speed_buffer = future_speed * preview_time;
-  speed_buffer = std::fmin(kSpeedBufferThreshold, speed_buffer);
-
-  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const double relative_t = i * dt_;
-    // std::cout << "bound t: " << relative_t << std::endl;
+    
     const auto corridor_upper_point =
         ptr_st_graph_helper->GetPassCorridorUpperBound(relative_t);
     const auto corridor_lower_point =
         ptr_st_graph_helper->GetPassCorridorLowerBound(relative_t);
+    
     double& upper_bound = s_upper_bound_[i];
     double& lower_bound = s_lower_bound_[i];
+    
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
-      const double upper_s_with_buffer =
-          corridor_upper_point.s() - kFollowBuffer;
-      upper_bound = upper_s_with_buffer;
-      if (is_ego_low_speed) {
-        continue;
-      }
-      // for base case
-      if (relative_t > add_buffer_start_time &&
-          max_deceleration_curve.Evaluate(0, relative_t) <
-              upper_bound - kBaseBuffer) {
-        upper_bound -= kBaseBuffer;
-      }
-      // for ego speed buffer
-      bool is_safe_vel =
-          virtual_acc_curve->Evaluate(1, relative_t) + kSafeVelBuffer >
-          corridor_upper_point.velocity();
-      if (relative_t > add_speed_buffer_start_time &&
-          max_deceleration_curve.Evaluate(0, relative_t) <
-              upper_bound - speed_buffer &&
-          is_safe_vel) {
-        upper_bound -= speed_buffer;
-      }
+      upper_bound = corridor_upper_point.s();
     }
-
+    
     if (corridor_lower_point.valid() && corridor_lower_point.agent_id() != -1) {
       lower_bound = corridor_lower_point.s();
     }
