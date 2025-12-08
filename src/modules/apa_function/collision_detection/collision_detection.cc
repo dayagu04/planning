@@ -20,6 +20,7 @@ namespace apa_planner {
 const bool box = true;
 const double col_sample_ds = 0.1;
 void CollisionDetector::Init() {
+  ClearSkipObstacles();
   const ApaParameters &param = apa_param.GetParam();
   origin_car_local_rectangle_vertex_vec_.clear();
   origin_car_local_rectangle_vertex_vec_.resize(4);
@@ -99,6 +100,7 @@ void CollisionDetector::Reset() {
   obs_pt_global_vec_.clear();
   param_.Reset();
   obs_pt_global_map_.clear();
+  ClearSkipObstacles();
 }
 
 void CollisionDetector::ClearObstacles() {
@@ -633,6 +635,9 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t col_car_line_order = 0;
   double dist_init =100;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
+    if (CheckObstacleInSkipTypes(obs_pt_pair.first)) {
+      continue;
+    }
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
       // if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
@@ -1869,6 +1874,15 @@ const bool CollisionDetector::IsObstacleInPolygon(
       if (pnc::geometry_lib::IsPointInPolygon(vertex_vec, obs_pt_global)) {
         return true;
       }
+    }
+  }
+  return false;
+}
+
+const bool CollisionDetector::CheckObstacleInSkipTypes(const size_t obs_type) {
+  for (size_t i = 0; i < skip_obs_types_.size(); ++i) {
+    if (ObsType(obs_type) == skip_obs_types_[i]) {
+      return true;
     }
   }
   return false;
