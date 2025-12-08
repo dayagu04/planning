@@ -76,8 +76,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
   const double start_timestamp_ms = IflyTime::Now_ms();
 
   // run apa world, always run when enter apa
-  (void)apa_world_ptr_->Update(local_view_ptr,
-                               planning_output_);
+  (void)apa_world_ptr_->Update(local_view_ptr, planning_output_);
 
   // run planner
   scenario_manager_.UpdateScenarioType();
@@ -110,17 +109,14 @@ void ApaPlanInterface::AddReleasedSlotInfo(
   const std::vector<size_t> &release_slot_id_vec =
       apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotIdVec();
 
-  const std::unordered_map<size_t, ApaSlot> &slot_map =
-      apa_world_ptr_->GetSlotManagerPtr()->GetSlotsMap();
+  const std::vector<bool> &release_slot_narrow_flag_vec =
+      apa_world_ptr_->GetSlotManagerPtr()->GetReleaseSlotNarrowFlagVec();
 
   std::string release_slot_id;
   for (size_t i = 0; i < release_slot_id_vec.size(); ++i) {
     iflyauto::SuccessfulSlotsInfo slot_info;
     slot_info.id = static_cast<uint32>(release_slot_id_vec[i]);
-    if (slot_map.find(slot_info.id) == slot_map.end()) {
-      continue;
-    }
-    slot_info.is_narrow_slot = slot_map.at(slot_info.id).is_narrow_slot_;
+    slot_info.is_narrow_slot = release_slot_narrow_flag_vec[i];
     planning_output.successful_slot_info_list[i] = slot_info;
     planning_output.successful_slot_info_list_size++;
     release_slot_id.append(std::string("[") + std::to_string(slot_info.id) +

@@ -333,6 +333,9 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
     return;
   }
   release_slot_id_vec_.clear();
+  release_slot_narrow_flag_vec_.clear();
+  release_slot_id_vec_.reserve(slots_map_.size());
+  release_slot_narrow_flag_vec_.reserve(slots_map_.size());
   for (const auto& pair : dist_id_map_) {
     if (slots_map_.count(pair.second) == 0) {
       continue;
@@ -365,6 +368,7 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 
     if (is_slot_release) {
       release_slot_id_vec_.emplace_back(slot.id_);
+      release_slot_narrow_flag_vec_.emplace_back(slot.is_narrow_slot_);
     }
   }
 }

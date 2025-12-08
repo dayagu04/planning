@@ -234,6 +234,10 @@ class ApaSlotManager final {
     return release_slot_id_vec_;
   }
 
+  const std::vector<bool>& GetReleaseSlotNarrowFlagVec() const {
+    return release_slot_narrow_flag_vec_;
+  }
+
   const bool IsTargetSlotReleaseByRule() const;
 
   const EgoInfoUnderSlot& GetEgoInfoUnderSlot() const {
@@ -283,6 +287,7 @@ class ApaSlotManager final {
   std::unordered_map<size_t, double> ego_slot_min_dist_map_;
 
   std::vector<size_t> release_slot_id_vec_;
+  std::vector<bool> release_slot_narrow_flag_vec_;
 
   std::shared_ptr<ApaStateMachineManager> state_machine_ptr_;
   std::shared_ptr<ApaMeasureDataManager> measure_data_ptr_;
