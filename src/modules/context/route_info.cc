@@ -2168,7 +2168,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     // 从最后一个exchange region开始向前优化
     // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
     bool is_need_optimize = true;
-    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 2); ++i) {
+    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 3); ++i) {
       is_need_optimize =
           !IsClosingTollStationEntrance(
               current_link_, sdpro_map_,
