@@ -2643,7 +2643,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     } else {
       ego_seq = left_lane_num + 1;
     }
-    if (ego_seq == 0) {
+    if (ego_seq <= 0) {
       ego_seq = left_lane_num + 1;
     }
     route_info_output_.ego_seq = ego_seq;
