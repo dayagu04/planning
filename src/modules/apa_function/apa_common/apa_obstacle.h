@@ -80,6 +80,10 @@ class ApaObstacle final {
 
   const size_t GetId() const { return obs_id_; }
 
+  void SetParentId(const size_t id) { obs_parent_id_ = id; }
+
+  const size_t GetParentId() const { return obs_parent_id_; }
+
   void SetPtClout2dGlobal(const std::vector<Eigen::Vector2d>& pt_clout_2d) {
     pt_clout_2d_global_ = pt_clout_2d;
   }
@@ -260,6 +264,8 @@ class ApaObstacle final {
   std::vector<Eigen::Vector3d> pt_clout_3d_local_;
 
   size_t obs_id_{0};
+
+  size_t obs_parent_id_{0};
 
   STBoundary st_boundary_;
 

@@ -190,6 +190,7 @@ void ApaObstacleManager::Update(
         obs_move_type = ApaObsMovementType::MOTION;
       }
 
+      size_t obs_parent_id_generate = obs_id_generate_;
       for (const auto& pair : occ_pt_map) {
         if (pair.second.empty()) {
           continue;
@@ -211,6 +212,7 @@ void ApaObstacleManager::Update(
         apa_obs.SetObsAttributeType(ApaObsAttributeType::FUSION_POINT_CLOUD);
         apa_obs.SetObsMovementType(obs_move_type);
         apa_obs.SetId(obs_id_generate_);
+        apa_obs.SetParentId(obs_parent_id_generate);
         apa_obs.ClearDecision();
         obstacles_[obs_id_generate_] = apa_obs;
         obs_id_generate_++;
@@ -280,6 +282,7 @@ void ApaObstacleManager::Update(
       gl_pt_map[ApaObsHeightType::MID] = gl_pt_clout_lower_mirror;
       gl_pt_map[ApaObsHeightType::HIGH] = gl_pt_clout_higher_mirror;
 
+      size_t obs_parent_id_generate = obs_id_generate_;
       for (const auto& pair : gl_pt_map) {
         if (pair.second.empty()) {
           continue;
@@ -302,6 +305,7 @@ void ApaObstacleManager::Update(
             ApaObsAttributeType::GROUND_LINE_POINT_CLOUD);
         apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
         apa_obs.SetId(obs_id_generate_);
+        apa_obs.SetParentId(obs_parent_id_generate);
         apa_obs.ClearDecision();
         obstacles_[obs_id_generate_] = apa_obs;
         obs_id_generate_++;
@@ -361,6 +365,7 @@ void ApaObstacleManager::Update(
       apa_obs.SetBoxGlobal(box);
       apa_obs.SetPolygonGlobal(polygon);
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.SetParentId(obs_id_generate_);
       apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;
@@ -526,6 +531,7 @@ void ApaObstacleManager::GenerateObsByOD(
     apa_obs.SetObsHeightType(ApaObsHeightType::HIGH);
 
     apa_obs.SetId(obs_id_generate_);
+    apa_obs.SetParentId(obs_id_generate_);
     apa_obs.ClearDecision();
     obstacles_[obs_id_generate_] = apa_obs;
     obs_id_generate_++;
@@ -627,6 +633,7 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
     uss_pt_map[ApaObsHeightType::MID] = uss_pt_clout_lower_mirror;
     uss_pt_map[ApaObsHeightType::HIGH] = uss_pt_clout_higher_mirror;
 
+    size_t  obs_parent_id_generate_ = obs_id_generate_;
     for (const auto& pair : uss_pt_map) {
       if (pair.second.empty()) {
         continue;
@@ -650,6 +657,7 @@ void ApaObstacleManager::GenerateUss(const LocalView* local_view) {
       apa_obs.SetObsAttributeType(ApaObsAttributeType::USS_POINT_CLOUD);
       apa_obs.SetObsMovementType(ApaObsMovementType::STATIC);
       apa_obs.SetId(obs_id_generate_);
+      apa_obs.SetParentId(obs_parent_id_generate_);
       apa_obs.ClearDecision();
       obstacles_[obs_id_generate_] = apa_obs;
       obs_id_generate_++;

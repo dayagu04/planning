@@ -70,6 +70,9 @@ static double kWidthCurbOffset = 0.4;
 static double kWidthSlot = 2.3;
 static double kAdjustLonErr = 0.2;
 static const size_t kMaxReplanTimes = 15;
+static int kWallPtNumThred = 10;
+static double kBigWallHeightRatioThred = 0.5;
+static double kSmallWallHeightRatioThred = 0.25;
 
 using Point = Eigen::Vector2d;
 
@@ -89,6 +92,9 @@ void ParallelParkInScenario::Reset() {
   delay_check_finish_ = false;
   relative_loc_observer_manager_.Reset();
   try_bound_map_.clear();
+  parent_total_count.clear();
+  parent_height_count.clear();
+  multi_frame_height_obs_map_.clear();
 
   ParkingScenario::Reset();
 }
@@ -1657,6 +1663,10 @@ const bool ParallelParkInScenario::GenTlane() {
   const bool is_cur_pose_in_slot =
       CalcSlotOccupiedRatio(ego_info_under_slot.cur_pose) >= 0.1;
   obs_pt_local_vec_.clear();
+  parent_total_count.clear();
+  parent_height_count.clear();
+  std::unordered_map<size_t, double> parent_min_y_abs;//<parent_id, min_y_abs>
+
   apa_world_ptr_->GetObstacleManagerPtr()->TransformCoordFromGlobalToLocal(
       ego_info_under_slot.g2l_tf);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetParam(
@@ -1677,6 +1687,11 @@ const bool ParallelParkInScenario::GenTlane() {
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
                            obs_scement == ApaObsScemanticType::COLUMN ||
                            obs_scement == ApaObsScemanticType::CAR);
+
+    const auto obs_heightType = pair.second.GetObsHeightType();
+    // const auto obs_id = pair.second.GetId();
+    const auto obs_parent_id = pair.second.GetParentId();
+    const auto obs_attribute_type = pair.second.GetObsAttributeType();
 
     for (const auto& obs_pt_local : pair.second.GetPtClout2dLocal()) {
       if ((obs_pt_local - slot_center).norm() > 25.0) {
@@ -1713,6 +1728,41 @@ const bool ParallelParkInScenario::GenTlane() {
         continue;
       }
 
+      const bool curb_condition =
+          pnc::mathlib::IsInBound(obs_pt_local.x(), 0.0,
+                                  slot_length ) &&
+          (obs_pt_local.y() * side_sgn <=
+           -kCurbYMagIdentification);  // kCurbInitialOffset
+
+      if ( curb_condition && obs_attribute_type != ApaObsAttributeType::USS_POINT_CLOUD ) {
+         double current_y_abs = std::abs(obs_pt_local.y());
+         if (parent_min_y_abs.find(obs_parent_id) == parent_min_y_abs.end() ||
+          current_y_abs < parent_min_y_abs[obs_parent_id]) {
+        parent_min_y_abs[obs_parent_id] = current_y_abs;
+      }
+
+        if (parent_total_count.find(obs_parent_id) == parent_total_count.end()) {
+          parent_total_count[obs_parent_id] = 0;
+        }
+
+        parent_total_count[obs_parent_id]+=1;
+        const bool is_high_obs = (obs_heightType == ApaObsHeightType::HIGH || obs_scement == ApaObsScemanticType::WALL ||
+                           obs_scement == ApaObsScemanticType::COLUMN ||
+                           obs_scement == ApaObsScemanticType::CAR) ;
+        // ILOG_INFO << "is_HIGH_obs = " << is_HIGH_obs;
+        // ILOG_INFO<<"obs_heightType = "<< static_cast<int>(obs_heightType);
+        // ILOG_INFO<<"obs_scement = "<< int(obs_scement);
+        // ILOG_INFO<<"parent_total_count["<<obs_parent_id<<"] = "<<parent_total_count[obs_parent_id];
+        if(is_high_obs){
+
+          if(parent_height_count.find(obs_parent_id) == parent_height_count.end()){
+            parent_height_count[obs_parent_id] = 0;
+          }
+          parent_height_count[obs_parent_id]+=1;
+          ILOG_INFO<<"parent_height_count["<<obs_parent_id<<"] = "<<parent_height_count[obs_parent_id];
+          ILOG_INFO<<"obs_pt_local = "<<obs_pt_local.x()<<" , "<<obs_pt_local.y();
+        }
+      }
       if (apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs_pt_local, ego_info_under_slot.cur_pose,
               0.0168)) {
@@ -1726,6 +1776,7 @@ const bool ParallelParkInScenario::GenTlane() {
               -(0.5 * slot_width + apa_param.GetParam().curb_offset) *
                   side_sgn)) {
         t_lane_.is_inside_rigid = true;
+
       }
       if (is_limiter && is_cur_pose_in_slot) {
 
@@ -1739,8 +1790,123 @@ const bool ParallelParkInScenario::GenTlane() {
       }
       obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
           std::move(obs_pt_local));
+
+    }
+
+  }
+  // 高度点云占比统计
+  bool height_condition = false;
+  size_t selected_parent_id = 0;
+  double min_y_abs = std::numeric_limits<double>::max();
+  bool found_valid_obstacle = false;
+
+  // 首先找到点云数量最多的父ID
+  size_t max_count_parent_id = 0;
+  size_t max_point_count = 0;
+  for (const auto& pair : parent_total_count) {
+      if (pair.second > max_point_count) {
+          max_point_count = pair.second;
+          max_count_parent_id = pair.first;
+      }
+    }
+  ILOG_INFO << "Parent ID with max point count: " << max_count_parent_id << ", count: " << max_point_count;
+
+  // 获取点云数量最多的父ID的最小y绝对值
+  double max_count_parent_min_y = std::numeric_limits<double>::max();
+  auto max_count_y_it = parent_min_y_abs.find(max_count_parent_id);
+  if (max_count_y_it != parent_min_y_abs.end()) {
+      max_count_parent_min_y = max_count_y_it->second;
+  }
+
+  for (const auto& pair : parent_min_y_abs) {
+    size_t parent_id = pair.first;
+    double y_abs = pair.second;
+    // 检查该parent_id是否有统计数据
+    auto total_it = parent_total_count.find(parent_id);
+    if (total_it == parent_total_count.end() || total_it->second <= 0) {
+      continue; // 跳过没有有效点数的障碍物
+    }
+    ILOG_INFO << "parent_id: " << parent_id << " min_y_abs: " << y_abs;
+
+    // 判断是否与点云数量最多的父ID距离小于10cm
+    bool is_near_max_count_parent = false;
+    if (max_count_parent_min_y < std::numeric_limits<double>::max()) {
+        double distance = std::abs(y_abs - max_count_parent_min_y);
+        is_near_max_count_parent = (y_abs < max_count_parent_min_y + kEps)&&(distance < 0.1); // 10cm
+        ILOG_INFO << "Distance to max count parent: " << distance << "m, is_near: " << is_near_max_count_parent;
+    }
+
+    // 选择条件：y绝对值最小，并且与点云数量最多的父ID距离小于10cm
+    bool is_better_candidate = false;
+    if (is_near_max_count_parent) {
+        // 如果距离小于10cm，优先选择y绝对值更小的
+        if (y_abs+ kEps < min_y_abs) {
+            is_better_candidate = true;
+        }
+    } else {
+        // 如果距离大于等于10cm，只有当当前候选还没有找到合适的时才考虑
+        // if (!found_valid_obstacle && y_abs < min_y_abs) {
+        //     is_better_candidate = true;
+        // }
+        continue;
+    }
+
+    if (is_better_candidate) {
+        min_y_abs = y_abs;
+        selected_parent_id = parent_id;
+        found_valid_obstacle = true;
+        ILOG_INFO << "Updated selected parent_id: " << selected_parent_id << " with y_abs: " << min_y_abs;
     }
   }
+
+  // 如果没有找到距离 < 10cm 的，则选择点云数量最多的障碍物
+  if (!found_valid_obstacle && max_count_parent_min_y < std::numeric_limits<double>::max()) {
+      selected_parent_id = max_count_parent_id;
+      min_y_abs = max_count_parent_min_y;
+      found_valid_obstacle = true;
+      ILOG_INFO << "No nearby obstacles found, using max count parent_id: " << selected_parent_id;
+  }
+
+  ILOG_INFO << "Final selected parent_id: " << selected_parent_id << ", y_abs: " << min_y_abs;
+
+  if (found_valid_obstacle) {
+    auto total_it = parent_total_count.find(selected_parent_id);
+    auto height_it = parent_height_count.find(selected_parent_id);
+
+    if (total_it != parent_total_count.end() && total_it->second > 0) {
+
+      int total_count = total_it->second;
+      int height_count = (height_it != parent_height_count.end()) ? height_it->second : 0;
+
+
+      // 计算比例
+      double height_ratio = static_cast<double>(height_count) / total_count;
+
+      // 计算条件
+      if(height_count>= kWallPtNumThred){
+        height_condition = ( height_ratio >= kSmallWallHeightRatioThred);
+      }else{
+        height_condition  =  ( height_ratio >= kBigWallHeightRatioThred);
+      }
+
+
+      // 日志输出
+      ILOG_INFO << "Selected parent_id: " << selected_parent_id
+                << " total_count: " << total_count
+                << " height_count: " << height_count
+                << " height_ratio: " << height_ratio
+                << " min_y_abs: " << min_y_abs;
+
+      ILOG_INFO << "height_condition: " << height_condition;
+
+      // // 最终判断
+      // if (height_condition) {
+      //   t_lane_.is_inside_rigid = true;
+      //   ILOG_INFO << "t_lane_.is_inside_rigid = true based on selected parent_id: " << selected_parent_id;
+      // }
+    }
+  }
+
   // set initial x coordination for front and rear tlane obs
   double front_min_x = slot_length + kFrontDetaXMagWhenFrontVacant;
   double rear_max_x = -kRearDetaXMagWhenFrontOccupiedRearVacant;
@@ -1793,10 +1959,15 @@ const bool ParallelParkInScenario::GenTlane() {
         rear_max_x = std::max(rear_max_x, obstacle_point_slot.x());
         // ILOG_INFO<<"rear_obs_condition!");
       }
-
+      double curb_lower = 0.5;
+      double curb_upper = slot_length - 0.5;
+      if(t_lane_.is_inside_rigid == true){
+        curb_lower = 0.0;
+        curb_upper = slot_length;
+      }
       const bool curb_condition =
-          pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.5,
-                                  slot_length - 0.5) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), curb_lower,
+                                  curb_upper ) &&
           (obstacle_point_slot.y() * side_sgn <=
            -kCurbYMagIdentification);  // kCurbInitialOffset
 
@@ -2005,8 +2176,31 @@ const bool ParallelParkInScenario::GenTlane() {
                   << ", curb_y: " << ar.curb_y
                   << " id: " << ego_info_under_slot.id;
       }
+
+      // ILOG_INFO<<"height_condition for insert: "<<height_condition;
+      auto& height_obs_vec = multi_frame_height_obs_map_[ego_info_under_slot.id];
+       height_obs_vec.insert(height_obs_vec.begin(),
+                         AngleResultHeightObs(ref_angle, height_condition));
+       //
+      // ILOG_INFO << "Inserted new entry - angle: " << ref_angle
+      //           << ", height_condition: " << height_condition;
+      // ILOG_INFO << "After insertion, container size: " << height_obs_vec.size();
+      if (height_obs_vec.size() > need_size) {
+        const auto& oldest_data = height_obs_vec.back();
+        // ILOG_INFO << "Removing oldest entry - angle: " << oldest_data.ang
+        //           << ", height_condition: " << oldest_data.res;
+        height_obs_vec.pop_back();
+      }
+
+      // ILOG_INFO << "Current height observations (newest first):";
+      // for (size_t i = 0; i < height_obs_vec.size(); ++i) {
+      //     const auto& ar = height_obs_vec[i];
+      //     ILOG_INFO << "  [" << i << "] angle: " << ar.ang
+      //               << ", height_condition: " << ar.res;
+      // }
     }
     int count_valid = -1;
+    int count_height_cond_valid = -1;
     if (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
       if (try_bound_map_.find(ego_info_under_slot.id) != try_bound_map_.end()) {
         if (try_bound_map_[ego_info_under_slot.id].size() >= 4) {
@@ -2020,12 +2214,29 @@ const bool ParallelParkInScenario::GenTlane() {
             count_valid += res ? 1 : 0;
           }
         }
-
         if (ego_info_under_slot.slot_occupied_ratio < 0.1) {
           curb_y_limit = try_bound_map_[ego_info_under_slot.id].begin()->curb_y;
           t_lane_.curb_y = curb_y_limit;
         }
       }
+
+      if(multi_frame_height_obs_map_.find(ego_info_under_slot.id) != multi_frame_height_obs_map_.end()){
+        const auto& height_obs_vec = multi_frame_height_obs_map_[ego_info_under_slot.id];
+        if (height_obs_vec.size() >= 1) {
+            count_height_cond_valid = 0;
+            for (const auto& it : height_obs_vec) {
+                double ang = it.ang;
+                bool res = it.res;
+                // ILOG_INFO << "park debug height condition: " << ang
+                //           << ", height condition: " << res
+                //           << ", slot id: " << ego_info_under_slot.id;
+                count_height_cond_valid += res ? 1 : 0;
+            }
+        }
+      }
+    }
+    if (count_height_cond_valid >= 1) {
+      t_lane_.is_inside_rigid = true;
     }
     if (lower_bound > upper_bound) {
       const double small_obs_buffer = 0.2;

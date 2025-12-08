@@ -27,6 +27,17 @@ struct AngleResult {
   bool operator<(const AngleResult& other) const { return ang < other.ang; }
 };
 
+struct AngleResultHeightObs {
+  double ang;
+  bool res;
+
+
+  AngleResultHeightObs() = default;
+  AngleResultHeightObs(double ang_, bool res_)
+      : ang(ang_), res(res_) {}
+
+  bool operator<(const AngleResult& other) const { return ang < other.ang; }
+};
 class ParallelParkInScenario : public ParkingScenario {
  public:
   ParallelParkInScenario() = default;
@@ -130,6 +141,10 @@ class ParallelParkInScenario : public ParkingScenario {
   RelativeLocObserverManager relative_loc_observer_manager_;
   std::unordered_map<size_t, std::set<AngleResult>> try_bound_map_;
   bool delay_check_finish_ = false;
+
+  std::unordered_map<size_t, int> parent_total_count;
+  std::unordered_map<size_t, int> parent_height_count;
+  std::unordered_map<int, std::vector<AngleResultHeightObs>> multi_frame_height_obs_map_;
 };
 
 }  // namespace apa_planner
