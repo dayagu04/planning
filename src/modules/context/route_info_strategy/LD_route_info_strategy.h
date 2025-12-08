@@ -106,7 +106,8 @@ protected:
  bool IsLaneSuccessorIsMergeLane(const iflymapdata::sdpro::Lane* lane_info);
  const iflymapdata::sdpro::LinkInfo_Link* FindFrontValidRampSplitLink() const;
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
- bool IsMergeLanePresentOnEitherSideOfSuccessorLane(const iflymapdata::sdpro::Lane* lane_info);
+ const iflymapdata::sdpro::Lane* IsEntryLanePresentOnEitherSideOfSuccessorLane(
+     const iflymapdata::sdpro::Lane* cur_link_lane_info);
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
@@ -119,7 +120,7 @@ protected:
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> merge_info_vec_;
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> split_info_vec_;
  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> ramp_info_vec_;
- MLCDeciderInfoBaseBaidu mlc_decider_info_base_baidu_;
+ MLCDeciderSceneInfoBaseBaidu mlc_decider_info_base_baidu_;
 
 };
 }

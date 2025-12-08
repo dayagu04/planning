@@ -236,11 +236,17 @@ enum MLCSceneType {
   SPLIT_SCENE = 1,
   MERGE_SCENE = 2
 };
-struct MLCDeciderInfoBaseBaidu {
+struct MLCDeciderSceneInfoBaseBaidu {
   MLCSceneType mlc_scene_type = NORMAL_SCENE;
+  RampDirection route_lane_direction = RAMP_NONE;
+  double dis_to_link_topo_change_point = 0.0;
+  bool is_valid = false;
 
   void reset() {
     mlc_scene_type = NORMAL_SCENE;
+    route_lane_direction = RAMP_NONE;
+    dis_to_link_topo_change_point = 0.0;
+    is_valid = false;
   }
 
 };

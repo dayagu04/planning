@@ -265,7 +265,8 @@ bool LDRouteInfoStrategy::IsTwoSplitClose() {
 MLCSceneType LDRouteInfoStrategy::MLCSceneTypeDecider() {
   MLCSceneType mlc_scene_type = NORMAL_SCENE;
 
-  const bool is_near_split = IsNearingSplit();
+  // const bool is_near_split = IsNearingSplit();
+  MLCDeciderSceneInfoBaseBaidu mlc_scene_info;
   const bool is_near_ramp = IsNearingRamp();
   const bool is_near_merge = IsNearingMerge();
   const bool is_two_splits_close = IsTwoSplitClose();
@@ -357,6 +358,7 @@ bool LDRouteInfoStrategy::CalculateFeasibleLaneGraph(
       } else {
         for (const auto& pre_lane_id : lane.predecessor_lane_ids()) {
           const auto& pre_lane = ld_map_.GetLaneInfoByID(pre_lane_id);
+          // 前继车道有两条，且其中一条是merge时，需要继续判断这条lane是否要放入feasible lane中
           if (pre_lane == nullptr || IsMergeLane(pre_lane)) {
             continue;
           }
@@ -1718,6 +1720,14 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     return;
   }
 
+  auto IsLinkInMergeInfoVec =
+      [this](const iflymapdata::sdpro::LinkInfo_Link* target_link) {
+        return std::any_of(merge_info_vec_.begin(), merge_info_vec_.end(),
+                           [target_link](const auto& merge_info) {
+                             return merge_info.first == target_link;
+                           });
+      };
+
   auto& topo_lanes = current_link_feasible_lane.topo_lanes;
   for (auto it = topo_lanes.begin(); it != topo_lanes.end();) {
     // 拿掉feasible lane中车道数后，车道数少于2了，直接break掉。
@@ -1726,25 +1736,43 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
     }
     const auto lane_id = it->id;
     const auto& temp_lane = ld_map_.GetLaneInfoByID(lane_id);
+    if (temp_lane == nullptr) {
+      ++it;
+      continue;
+    }
 
-    //判断lane的旁边车道是否有入口车道，如果有的话，则把这条车道拿掉
-    if ((temp_lane != nullptr) && IsMergeLanePresentOnEitherSideOfSuccessorLane(temp_lane)) {
+    const iflymapdata::sdpro::Lane* entry_lane_info = nullptr;
+    entry_lane_info = IsEntryLanePresentOnEitherSideOfSuccessorLane(temp_lane);
+    if (entry_lane_info == nullptr) {
+      ++it;
+      continue;
+    }
+
+    const auto& entry_lane_belong_link = ld_map_.GetLinkOnRoute(entry_lane_info->link_id());
+    if (entry_lane_belong_link == nullptr) {
+      ++it;
+      continue;
+    }
+
+    if (IsLinkInMergeInfoVec(entry_lane_belong_link)) {
       it = topo_lanes.erase(it);
     } else {
       ++it;
     }
+
   }
 }
 
-bool LDRouteInfoStrategy::IsMergeLanePresentOnEitherSideOfSuccessorLane(
-    const iflymapdata::sdpro::Lane* lane_info) {
-  if (lane_info == nullptr) {
-    return false;
+const iflymapdata::sdpro::Lane*
+LDRouteInfoStrategy::IsEntryLanePresentOnEitherSideOfSuccessorLane(
+    const iflymapdata::sdpro::Lane* cur_link_lane_info) {
+  if (cur_link_lane_info == nullptr) {
+    return nullptr;
   }
 
   const double front_search_dis = 500.0;
   double sum_dis = 0.0;
-  const auto* current_traverse_lane = lane_info;
+  const auto* current_traverse_lane = cur_link_lane_info;
   while (current_traverse_lane) {
     if (current_traverse_lane->link_id() == current_link_->id()) {
       sum_dis += current_traverse_lane->length() * 0.01 - ego_on_cur_link_s_;
@@ -1754,7 +1782,7 @@ bool LDRouteInfoStrategy::IsMergeLanePresentOnEitherSideOfSuccessorLane(
 
     const auto& temp_cur_link = ld_map_.GetLinkOnRoute(current_traverse_lane->link_id());
     if (temp_cur_link == nullptr) {
-      return false;
+      return nullptr;
     }
 
     const uint32 left_lane_seq = current_traverse_lane->sequence() + 1;
@@ -1774,12 +1802,12 @@ bool LDRouteInfoStrategy::IsMergeLanePresentOnEitherSideOfSuccessorLane(
       }
     }
 
-    if (left_lane && IsMergeLane(left_lane)) {
-      return true;
+    if (left_lane && IsEntryLane(left_lane)) {
+      return left_lane;
     }
 
-    if(right_lane && IsMergeLane(right_lane)) {
-      return true;
+    if (right_lane && IsEntryLane(right_lane)) {
+      return right_lane;
     }
 
     if (sum_dis > front_search_dis) {
@@ -1787,12 +1815,13 @@ bool LDRouteInfoStrategy::IsMergeLanePresentOnEitherSideOfSuccessorLane(
     }
 
     if (current_traverse_lane->successor_lane_ids_size() != 1) {
-      return false;
+      return nullptr;
     }
 
     current_traverse_lane =
         ld_map_.GetLaneInfoByID(current_traverse_lane->successor_lane_ids()[0]);
   }
-  return false;
+
+  return nullptr;
 }
 }
