@@ -312,7 +312,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
-  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_);
+  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_- std::sqrt(arrived_v_ * arrived_v_*2.0 / 1.5));
 
   jerk_limit_cost_.GetCost(std::fabs(poly_.CalculateThirdDerivative(0.0)));
 
