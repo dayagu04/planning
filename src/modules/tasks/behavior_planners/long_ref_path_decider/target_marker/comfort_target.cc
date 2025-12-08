@@ -173,11 +173,15 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   }
 
   const auto& route_info = session_->environmental_model().get_route_info();
+  const auto& ego_lane_road_right_output =
+  session_->planning_context().ego_lane_road_right_decider_output();
   bool filtering_rear_agent = true;
   if (route_info != nullptr) {
     const auto& route_info_output = route_info->get_route_info_output();
     if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split) {
+        route_info_output.is_closing_split ||
+        ego_lane_road_right_output.is_merge_region ||
+        ego_lane_road_right_output.is_split_region) {
       filtering_rear_agent = false;
     }
   }
