@@ -15,7 +15,8 @@ const bool ObstacleClearZoneDecider::GenerateBoundingBox(
   }
   obstacle_manager_ptr_ = obstacle_manager_ptr;
   ILOG_INFO << "generate safe box";
-  const float min_width = 6.6, min_length = 3.2;
+  const float min_width = apa_param.GetParam().car_length + 1.0;
+  const float min_length = apa_param.GetParam().max_car_width + 0.6;
   for (const Eigen::Vector2d& pt : pt_vec) {
     cdl::AABB box =
         GenerateBoundingBox(pt, 1.0, 1.0, false, false, false, false);
@@ -86,7 +87,7 @@ const cdl::AABB ObstacleClearZoneDecider::GenerateBoundingBox(
   const float max_y_extend = 15.0;
   const float step = 0.2;
   const float revert_gain = 1.2;
-  const float extra_buffer = 0.3;
+  const float extra_buffer = 0.5;
 
   cdl::AABB max_box;
   max_box.min_[0] = pt.x() - max_x_extend;
