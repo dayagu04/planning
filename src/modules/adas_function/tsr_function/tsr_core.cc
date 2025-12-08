@@ -674,6 +674,10 @@ void TsrCore::UpdateTsrWarning(void) {
   // 更新overspeed_duration_time_
   if (overspeed_status_) {
     overspeed_duration_time_ += GetContext.get_param()->dt;
+    // 限制最大值，防止越界
+    if (overspeed_duration_time_ > 100.0) {
+      overspeed_duration_time_ = 100.0;
+    }
   } else {
     overspeed_duration_time_ = 0.0;
   }
@@ -699,8 +703,8 @@ void TsrCore::UpdateTsrWarning(void) {
   } else {
     // do nothing
   }
-  // 声音报警超过最大时长时取消声音报警
-  if (overspeed_duration_time_ >= (5.0)) {
+  // 声音报警超过最大时长时取消声音报警, 配置参数>100为永远报警
+  if (overspeed_duration_time_ >= GetContext.get_param()->tsr_warning_max_duration) {
     tsr_warning_flag_ = false;
   } else {
     // do nothing

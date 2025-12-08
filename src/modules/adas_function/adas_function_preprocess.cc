@@ -179,6 +179,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        double, "tsr_speed_limit_offset");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_out_flag_need_last_time,
                        double, "tsr_out_flag_need_last_time");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_warning_max_duration,
+                       double, "tsr_warning_max_duration");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lane_line_width, double,
                        "lane_line_width");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_switch, bool,
