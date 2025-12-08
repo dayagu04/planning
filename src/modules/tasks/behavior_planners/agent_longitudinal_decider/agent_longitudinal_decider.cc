@@ -234,12 +234,16 @@ void AgentLongitudinalDecider::DeciderCutInAndOutAgents() {
   if (route_info != nullptr) {
     const auto& route_info_output = route_info->get_route_info_output();
     if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split ||
-        ego_lane_road_right_output.is_merge_region ||
-        ego_lane_road_right_output.is_split_region) {
+        route_info_output.is_closing_split) {
         is_confluence_area = true;
     }
   }
+  
+  if(ego_lane_road_right_output.is_merge_region ||
+    ego_lane_road_right_output.is_split_region) {
+    is_confluence_area = true;
+  }
+
   const double cut_in_lateral_threshold_m = is_confluence_area ? 5.0 : 3.5;
   const auto& init_point = ego_state_manager_->planning_init_point();
   const double ego_speed_mps = init_point.v;

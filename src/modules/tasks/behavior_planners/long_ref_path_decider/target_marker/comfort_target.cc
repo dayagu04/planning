@@ -179,11 +179,14 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   if (route_info != nullptr) {
     const auto& route_info_output = route_info->get_route_info_output();
     if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split ||
-        ego_lane_road_right_output.is_merge_region ||
-        ego_lane_road_right_output.is_split_region) {
+        route_info_output.is_closing_split) {
       filtering_rear_agent = false;
     }
+  }
+
+  if(ego_lane_road_right_output.is_merge_region ||
+    ego_lane_road_right_output.is_split_region) {
+    filtering_rear_agent = false;
   }
 
   const auto& lat_obstacle_decision = session_->planning_context()
