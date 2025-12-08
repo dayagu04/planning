@@ -499,6 +499,7 @@ void LateralMotionPlanningWeight::CalculateExpectedLatAccAndSteerAngle(
   planning::ReferencePathPoint ref_point;
   for (size_t i = 0; i < weight_.point_num; ++i) {
     if (is_k_s_spline_valid) {
+      init_s = std::max(std::min(k_s_spline.get_x().back(), init_s), k_s_spline.get_x().front());
       pt_kappa = k_s_spline(init_s);
     } else {
       if (i > 0) {
@@ -1013,6 +1014,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
     const std::shared_ptr<planning::ReferencePath> &reference_path,
     const planning::common::LateralPlanningOutput &last_planning_output,
     planning::common::LateralPlanningInput &planning_input) {
+  const auto& ref_curve_info = reference_path->GetReferencePathCurveInfo();
   double max_jerk = max_jerk_;
   const auto &last_omega_vec = last_planning_output.omega_vec();
   last_max_omega_ = 0;
@@ -1084,7 +1086,10 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       extra_jerk_buffer = 0.2;
       jerk_bound += 0.3;
     }
-    jerk_bound = std::max(std::max(std::fabs(expected_max_jerk_), std::fabs(expected_min_jerk_)), jerk_bound);
+    if (is_sharp_turn_ ||
+        ref_curve_info.curve_type == planning::ReferencePathCurveInfo::CurveType::SHARP_CURVE) {
+      jerk_bound = std::max(std::max(std::fabs(expected_max_jerk_), std::fabs(expected_min_jerk_)), jerk_bound);
+    }
   } else if (lateral_motion_scene_ == LateralMotionScene::LANE_BORROW) {
     extra_jerk_buffer = 0.3;
     jerk_bound = config_.jerk_bound_lane_borrow;  // 1.0,
