@@ -588,6 +588,13 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
       tsr_speed_limit_ = 0;
     }
   }
+
+  // jac_s811车型：仪表车速小于4km/h时不显示限速
+  if (GetContext.get_param()->car_type == "jac_s811" &&
+      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 4.0) {
+    tsr_speed_limit_ = 0;
+  }
+
   return;
 }
 
