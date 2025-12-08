@@ -3243,8 +3243,16 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   if (!split_seccessor_link) {
     return split_region_info;
   }
+  const auto& out_link = previous_seg->successor_link_ids();
+  auto other_link_id =
+      out_link[0] == split_seccessor_link->id() ? out_link[1] : out_link[0];
+  const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
+  if (!other_link) {
+    return split_region_info;
+  }
   split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type()) ||
+      sdpro_map.isRamp(split_seccessor_link->link_type()) &&
+          split_seccessor_link->lane_num() <= other_link->lane_num() ||
       sdpro_map.isSaPa(split_seccessor_link->link_type());
 
   if (previous_seg->successor_link_ids().size() < 2) {
