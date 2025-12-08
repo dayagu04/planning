@@ -160,11 +160,14 @@ int main(int argc, char **argv) {
   }
 
   std::array<std::string, 5> car_type{"CHERY_E0X", "CHERY_T26", "JAC_S811", "CHERY_M32T", "BESTUNE_E541"};
-  int car_type_index = GetCarTypeIndex(bag_path);
-  car = car_type[car_type_index];
   if (std::find(car_type.begin(), car_type.end(), car) == car_type.end()) {
-    std::cerr << "Error car type!!!" << std::endl;
-    return -1;
+    int car_type_index = GetCarTypeIndex(bag_path);
+    if (car_type_index < car_type.size()) {
+      car = car_type[car_type_index];
+    } else {
+      std::cerr << "Error car type!!!" << std::endl;
+      return -1;
+    }
   }
 
   return run_planning_player(
