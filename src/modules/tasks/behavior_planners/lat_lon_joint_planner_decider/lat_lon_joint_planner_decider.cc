@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "debug_info_log.h"
+#include "environmental_model.h"
 #include "ifly_time.h"
 #include "math/box2d.h"
 #include "src/joint_motion_input_builder.h"
@@ -186,13 +187,32 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
       continue;
     }
 
+    if (obs_id == -1) {
+      continue;
+    }
+
+    auto* agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(obs_id);
+
+    if (agent == nullptr) {
+      continue;
+    }
+
     bool has_collision = false;
 
-    const bool is_large_vehicle = obs_ref_traj.length() > kLargeVehicleLengthThreshold;
-    const bool is_static_vehicle = std::fabs(obs_vel) < kStaticVehicleVelocityThreshold;
+    const bool is_large_vehicle =
+        agent->type() == agent::AgentType::BUS ||
+        agent->type() == agent::AgentType::TRUCK ||
+        agent->type() == agent::AgentType::TRAILER ||
+        obs_ref_traj.length() > kLargeVehicleLengthThreshold;
+
+    const bool is_static_vehicle =
+        std::fabs(obs_vel) < kStaticVehicleVelocityThreshold ||
+        agent->is_static();
+
     double lateral_threshold = is_large_vehicle
-                                         ? kLargeVehicleLatConflictThreshold
-                                         : kLatConflictThreshold;
+                                   ? kLargeVehicleLatConflictThreshold
+                                   : kLatConflictThreshold;
     if (is_static_vehicle) {
       lateral_threshold = kStaticVehicleLatConflictThreshold;
     }
@@ -272,7 +292,8 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         continue;
       }
 
-      double longitudinal_threshold = kBaseLongitudinalThreshold + ego_point.vel * 0.3;
+      double longitudinal_threshold =
+          kBaseLongitudinalThreshold + ego_point.vel * 0.3;
 
       if (lateral_dist <= lateral_threshold &&
           longitudinal_distance < longitudinal_threshold) {
