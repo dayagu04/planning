@@ -53,6 +53,8 @@ class LaneChangeRequestManager {
     int_request_.set_target_lane_virtual_id(target_lane_virtual_id);
     // act_request_.set_target_lane_virtual_id(target_lane_virtual_id);
   }
+  int lane_change_cmd() { return lane_change_cmd_; }
+
   RequestType turn_signal() const { return gen_turn_signal_; }
   bool AggressiveChange() const {
     if (request_source_ == NO_REQUEST) {

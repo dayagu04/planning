@@ -106,6 +106,8 @@ void EgoLaneTrackManger::TrackEgoLane(
   const auto& planning_result = planning_context.last_planning_result();
   const auto& lane_change_decider_output =
       session_->planning_context().lane_change_decider_output();
+  const int lane_change_cmd =
+      lane_change_decider_output.coarse_planning_info.lane_change_cmd;
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
   const auto& mlc_decider_route_info = session_->environmental_model()
@@ -143,6 +145,8 @@ void EgoLaneTrackManger::TrackEgoLane(
   is_exist_ramp_on_road_ = false;
   is_exist_split_on_expressway_ = false;
   is_exist_split_on_intersection_ = false;
+  is_interactive_select_split_situation_ = false;
+  is_exist_interactive_select_split_ = false;
   virtual_lane_relative_id_switch_flag_ = false;
   is_select_ego_lane_without_plan_ = false;
   is_select_ego_lane_with_plan_ = false;
@@ -341,6 +345,14 @@ void EgoLaneTrackManger::TrackEgoLane(
           if (is_exist_split_on_intersection_) {
             return;
           }
+        }
+      }
+      if (lane_change_cmd != 0 && ego_in_split_region_) {
+        ProcessSplitRegionInteractiveSelectEgoLane(relative_id_lanes,
+                                                   order_ids_of_same_zero_relative_id,
+                                                   lane_change_cmd);
+        if (is_exist_interactive_select_split_) {
+          return;
         }
       }
 
@@ -1428,6 +1440,101 @@ void EgoLaneTrackManger::PreprocessOrdinarySplit(
     lane->set_relative_id(lane_relative_id);
   }
   return;
+}
+void EgoLaneTrackManger::ProcessSplitRegionInteractiveSelectEgoLane(
+    std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
+    const std::vector<int>& order_ids,
+    const int& lane_change_cmd) {
+  const auto& ego_state =
+      session_->environmental_model().get_ego_state_manager();
+  int origin_order_id = -1;
+  int zero_relative_id_order_id_index = -1;
+  int current_order_id = 0;
+  double ego_distance_to_lane_merge_split_point = 0.0;
+  double k_surpresss_interactive_split_selector_distance = 20.0;
+  k_surpresss_interactive_split_selector_distance =
+      std::max(k_surpresss_interactive_split_selector_distance, ego_state->ego_v() * 1.0);
+
+  // Point2D lane_merge_split_point;
+  bool find_virtual_lane_split_point = false;
+  int split_lane_index = -1;
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() > order_ids[i]) {
+      std::shared_ptr<VirtualLane> relative_id_lane =
+          relative_id_lanes[order_ids[i]];
+      if (relative_id_lane == nullptr) {
+        continue;
+      }
+      if (relative_id_lane->get_lane_merge_split_point()
+              .merge_split_point_data_size > 0) {
+        split_lane_index = i;
+        find_virtual_lane_split_point = true;
+        const auto& lane_merge_split_point =
+            relative_id_lane->get_lane_merge_split_point();
+        ego_distance_to_lane_merge_split_point =
+            lane_merge_split_point.merge_split_point_data[0].distance;
+        // lane_merge_split_point.x =
+        // lane_merge_split_point.merge_split_point_data[0].point.x;
+        // lane_merge_split_point.y =
+        // lane_merge_split_point.merge_split_point_data[0].point.y;
+
+        if (!lane_merge_split_point.merge_split_point_data[0].is_split ||
+            (lane_merge_split_point.merge_split_point_data[0].is_split &&
+             ego_distance_to_lane_merge_split_point >
+                 k_surpresss_interactive_split_selector_distance)) {
+          return;
+        }
+      }
+    }
+  }
+
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() > order_ids[i]) {
+      std::shared_ptr<VirtualLane> base_lane =
+          relative_id_lanes[order_ids[i]];
+      if (base_lane == nullptr) {
+        continue;
+      }
+      if (base_lane->get_relative_id() == 0) {
+        origin_order_id = base_lane->get_order_id();
+        zero_relative_id_order_id_index = i;
+        break;
+      }
+    }
+  }
+  if (origin_order_id != -1 && zero_relative_id_order_id_index != -1) {
+    if (lane_change_cmd == 1) {
+      zero_relative_id_order_id_index -= 1;
+      auto iter = std::find(order_ids.begin(), order_ids.end(), zero_relative_id_order_id_index);
+      if (iter != order_ids.end()) {
+        is_exist_interactive_select_split_ = true;
+        current_order_id = origin_order_id - 1;
+      } else {
+        return;
+      }
+    } else if (lane_change_cmd == 2) {
+      zero_relative_id_order_id_index += 1;
+      auto iter = std::find(order_ids.begin(), order_ids.end(), zero_relative_id_order_id_index);
+      if (iter != order_ids.end()) {
+        is_exist_interactive_select_split_ = true;
+        current_order_id = origin_order_id + 1;
+      } else {
+        return;
+      }
+    } else {
+      return;
+    }
+  } else {
+    return;
+  }
+
+  for (auto& lane : relative_id_lanes) {
+    int lane_order_id = lane->get_order_id();
+    int lane_relative_id = lane_order_id - current_order_id;
+    lane->set_relative_id(lane_relative_id);
+  }
+
+  return;  
 }
 
 void EgoLaneTrackManger::ProcessIntersectionSplit(

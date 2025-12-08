@@ -1050,6 +1050,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       lc_req_mgr_->request_source();
   coarse_planning_info.source_lane_id = lc_lane_mgr_->origin_lane_virtual_id();
   coarse_planning_info.target_lane_id = lc_lane_mgr_->fix_lane_virtual_id();
+  coarse_planning_info.lane_change_cmd = lc_req_mgr_->lane_change_cmd();
   coarse_planning_info.reference_path =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()

@@ -60,6 +60,11 @@ class EgoLaneTrackManger {
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
+  void ProcessSplitRegionInteractiveSelectEgoLane(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids,
+      const int& lane_change_cmd);
+
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
@@ -222,6 +227,8 @@ class EgoLaneTrackManger {
   bool is_exist_split_on_intersection_ = false;
   bool is_in_ramp_select_split_situation_ = false;
   bool is_on_road_select_ramp_situation_ = false;
+  bool is_interactive_select_split_situation_ = false;
+  bool is_exist_interactive_select_split_ = false;
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
   double current_segment_passed_distance_ = 0.0;
