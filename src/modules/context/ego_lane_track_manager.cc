@@ -761,7 +761,7 @@ void EgoLaneTrackManger::SelectEgoLaneWithPlan(
   bool is_lane_change = (is_lc_change || is_lc_back);
   double k_init_pos_cost_weight =
       is_lane_change ? kLaneChangeExecutionWeightRatio * kInitPosCostWeight
-                     : kInitPosCostWeight;
+                     : kInitPosCostWeight * 2.0;
   double lateral_distance_cost_weight =
       (enable_using_st_plan && !ego_in_split_region_)
           ? 0.01
