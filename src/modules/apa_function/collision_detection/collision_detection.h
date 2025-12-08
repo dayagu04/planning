@@ -242,6 +242,16 @@ class CollisionDetector {
   const bool IsObstacleInPolygon(
       const std::vector<Eigen::Vector2d> &vertex_vec);
 
+  void ClearSkipObstacles() {
+    skip_obs_types_.clear();
+  }
+
+  void SetSkipObstaclesType(const size_t obs_type) {
+    skip_obs_types_.emplace_back(ObsType(obs_type));
+  };
+
+  const bool CheckObstacleInSkipTypes(const size_t obs_type);
+
  private:
   std::vector<pnc::geometry_lib::LineSegment> car_line_local_vec_;
 
@@ -257,6 +267,8 @@ class CollisionDetector {
 
   pnc::geometry_lib::RectangleBound path_seg_rectangle_bound_;
   std::vector<Eigen::Vector2d> origin_car_local_rectangle_vertex_vec_;
+
+  std::vector<ObsType> skip_obs_types_;
 
   Paramters param_;
 };

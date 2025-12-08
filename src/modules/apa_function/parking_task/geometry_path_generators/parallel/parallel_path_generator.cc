@@ -548,8 +548,10 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
         continue;
       }
 
+      collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::CURB_OBS);
       auto col_res_1 = collision_detector_ptr_->UpdateByObsMap(
           arc_1, arc_1.headingA, false);
+      collision_detector_ptr_->ClearSkipObstacles();
       if (col_res_1.collision_flag ||
           col_res_1.remain_car_dist >
               col_res_1.remain_obstacle_dist - 0.1) {
