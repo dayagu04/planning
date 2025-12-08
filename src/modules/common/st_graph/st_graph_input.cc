@@ -203,6 +203,9 @@ void StGraphInput::FilterAgentsByDecisionType(
     if (!(agent->fusion_source() & OBSTACLE_SOURCE_CAMERA)) {
       continue;
     }
+    if (agent->type() == agent::AgentType::DECELER) {
+      continue;
+    }
     filtered_agents_.emplace_back(agent);
   }
 }

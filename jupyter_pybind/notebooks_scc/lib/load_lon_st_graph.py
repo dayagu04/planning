@@ -244,7 +244,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
-                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts",\
+                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state",\
                               'new_cutin_id', 'new_cutin_id_count', \
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
@@ -764,7 +764,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   jerk_max_vec = lon_motion_plan_input.jerk_max_vec
   jerk_min_vec = lon_motion_plan_input.jerk_min_vec
   s_stop = lon_motion_plan_input.s_stop
-  
+
   comfort_jerk_min_vec = []
   comfort_v_target_vec = []
   try:

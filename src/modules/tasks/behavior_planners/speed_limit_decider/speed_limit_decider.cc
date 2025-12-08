@@ -1347,7 +1347,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
       environmental_model.get_local_view().function_state_machine_info;
   double v_cruise_fsm =
       function_state_machine_info.pilot_req.acc_curise_real_spd;
-
+  double v_cruise_fsm_kph = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
   const auto &route_info_output =
       environmental_model.get_route_info()->get_route_info_output();
   double dis_to_ramp = route_info_output.dis_to_ramp;
@@ -1360,7 +1360,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   if (!environmental_model.get_route_info()->get_sdpromap_valid()) {
     ILOG_INFO << "sd_map is invalid!!!";
     // map info invalid, using fsm cruise speed
-    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+    v_cruise_limit_ = v_cruise_fsm_kph;
   }
   const auto &sdpro_map = environmental_model.get_route_info()->get_sdpro_map();
 
@@ -1380,7 +1380,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
   double v_limit_tencent = 0;
   if (current_segment == nullptr) {
     // get ego link failed, using fsm cruise speed
-    v_cruise_limit_ = std::round(v_cruise_fsm * 3.6 / 10.0) * 10;
+    v_cruise_limit_ = v_cruise_fsm_kph;
   } else {
     v_limit_tencent = current_segment->speed_limit();  // kph
     v_cruise_limit_ = v_limit_tencent;  // kph
@@ -1505,20 +1505,35 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
 
     if (dis_to_ramp < 1000.0) {
       double ramp_in_ramp_v_limit = GetRampVelLimit();
-      if (ramp_in_ramp_v_limit < v_cruise_limit_) {
+      if (ramp_in_ramp_v_limit < std::max(v_cruise_limit_, v_cruise_fsm_kph)) {
         double pre_brake_dis_to_ramp_in_ramp = std::max(dis_to_ramp - 50, 0.0);
         v_target_ramp = std::pow(
             std::pow(std::max(speed_limit_config_.v_limit_ramp, ramp_in_ramp_v_limit / 3.6),
                     2.0) -
                 2 * pre_brake_dis_to_ramp_in_ramp * speed_limit_config_.acc_to_ramp,
             0.5);
-        if (v_target_ramp < v_target_) {
-          v_target_ = v_target_ramp;
-          v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
+        if (v_target_ramp > std::max(v_cruise_limit_ / 3.6, v_cruise_fsm)) {
+          v_target_ramp = std::max(v_cruise_limit_ / 3.6, v_cruise_fsm);
+          double speed_increase_in_ramp = v_cruise_fsm - last_v_cruise_fsm_ramp_;
+          if (ramp_v_limit_set_ && speed_increase_in_ramp > kCAManualInterventionSpeedDetected) {
+            ramp_manual_intervention_detected_ = true;
+          }
+          if (v_target_ramp < v_target_ && !ramp_manual_intervention_detected_) {
+            ramp_v_limit_set_ = true;
+            v_target_ = v_target_ramp;
+            v_target_type_ = SpeedLimitType::MAP_ON_RAMP;
+          }
+          last_v_cruise_fsm_ramp_ = v_cruise_fsm;
+        } else {
+          if (v_target_ramp < v_target_) {
+            v_target_ = v_target_ramp;
+            v_target_type_ = SpeedLimitType::MAP_NEAR_RAMP;
+          }
+          ramp_v_limit_set_ = false;
+          ramp_manual_intervention_detected_ = false;
+          last_v_cruise_fsm_ramp_ = 40.0;
         }
-        ramp_v_limit_set_ = false;
-        ramp_manual_intervention_detected_ = false;
-        last_v_cruise_fsm_ramp_ = 40.0;
+        //v_target_ramp = std::min(std::max(v_cruise_limit_ / 3.6, v_cruise_fsm), v_target_ramp);
         ILOG_DEBUG << "v_target_ramp :" << v_target_ramp;
         JSON_DEBUG_VALUE("v_target_ramp", v_target_ramp);
         JSON_DEBUG_VALUE("dis_to_ramp", dis_to_ramp);
@@ -1526,7 +1541,7 @@ void SpeedLimitDecider::CalculateMapSpeedLimit() {
         auto speed_limit_output = session_->mutable_planning_context()
                                   ->mutable_speed_limit_decider_output();
         speed_limit_output->SetSpeedLimitIntoMap(v_target_ramp,
-                                             SpeedLimitType::MAP_NEAR_RAMP);
+                                             SpeedLimitType::MAP_ON_RAMP);
         return;
       }
     }

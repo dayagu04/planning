@@ -145,6 +145,7 @@ bool TrafficLightDecider::Execute() {
       green_blink_timer_ = 0.0;
       can_pass_ = true;
     } else {
+      green_light_timer_ = 0.0;
       can_pass_ = false;
     }
 
@@ -177,22 +178,30 @@ bool TrafficLightDecider::Execute() {
   */
   auto cur_fsm_state = environmental_model.get_local_view()
                            .function_state_machine_info.current_state;
+  auto &tla_output_info = session_->mutable_planning_context()
+                           ->mutable_planning_hmi_info()
+                           ->tla_output_info;
   if (cur_fsm_state == iflyauto::FunctionalState_ACC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_SCC_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_NOA_STANDBY ||
       cur_fsm_state == iflyauto::FunctionalState_DRIVING_PASSIVE) {
-    auto &tla_output_info = session_->mutable_planning_context()
-                                ->mutable_planning_hmi_info()
-                                ->tla_output_info;
+
     if (IsRunningRedTFL()) {
       tla_output_info.traffic_light_reminder =
           iflyauto::TrafficLightReminder::TRAFFIC_LIGHT_REMINDER_RED_LIGHT_STOP;
-    }
-    if (IsStayingStillGreenTFL()) {
+    } else if (IsStayingStillGreenTFL()) {
       tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
           TRAFFIC_LIGHT_REMINDER_GREEN_LIGHT_START;
+    } else {
+      tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
+          TRAFFIC_LIGHT_REMINDER_NONE;
     }
+  } else {
+    tla_output_info.traffic_light_reminder = iflyauto::TrafficLightReminder::
+          TRAFFIC_LIGHT_REMINDER_NONE;
   }
+
+  JSON_DEBUG_VALUE("tla_reminder_state", int(tla_output_info.traffic_light_reminder));
 
   auto &tfl_decider = session_->mutable_planning_context()
                           ->mutable_traffic_light_decider_output();
@@ -345,7 +354,8 @@ bool TrafficLightDecider::IsStayingStillGreenTFL() {
   const auto &environmental_model = session_->environmental_model();
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   double v_ego = ego_state_mgr->ego_v();
-  if (v_ego < 0.1 && is_first_car_ && green_light_timer_ > 1.5) {
+  //reminder from green light 1.5s and last 3s
+  if (v_ego < 0.1 && is_first_car_ && green_light_timer_ > 1.5 && green_light_timer_ < 4.6) {
     return true;
   }
   return false;
