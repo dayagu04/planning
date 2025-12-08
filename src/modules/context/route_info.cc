@@ -6099,13 +6099,13 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
   const int total_lane_num =
       exchange_region_info.recommend_lane_num[0].total_lane_num;
 
-  double opt_distance = 1200.0;
+  double opt_distance = 800.0;
   if (!current_link_) {
-    opt_distance = 1200.0;
+    opt_distance = 800.0;
   } else {
     opt_distance = current_link_->link_class() ==
                            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
-                       ? 1200.0
+                       ? 800.0
                        : 600.0;
   }
 
