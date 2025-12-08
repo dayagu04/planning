@@ -1424,6 +1424,15 @@ void GetSecondGearPath(const std::vector<pnc::geometry_lib::PathPoint> &path,
 
 const bool IsScurvePath(const std::vector<pnc::geometry_lib::PathPoint> &path);
 
+const uint8_t GetKappaSign(float kappa, const float kEpsilon = 1e-5);
+
+const bool ExtractSTurnAndStraight(
+    const std::vector<float> &x_vec, const std::vector<float> &y_vec,
+    const std::vector<float> &phi_vec, const std::vector<float> &kappa_vec,
+    const float sample_ds,
+    std::vector<pnc::geometry_lib::PathPoint> &s_turn_path,
+    float &final_line_length);
+
 }  // namespace geometry_lib
 }  // namespace pnc
 

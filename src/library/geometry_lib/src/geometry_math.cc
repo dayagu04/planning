@@ -4277,5 +4277,103 @@ const bool IsScurvePath(const std::vector<pnc::geometry_lib::PathPoint> &path) {
   return false;
 }
 
+const uint8_t GetKappaSign(float kappa, const float kEpsilon) {
+  if (kappa > kEpsilon) {
+    return SEG_STEER_LEFT;
+  } else if (kappa < -kEpsilon) {
+    return SEG_STEER_RIGHT;
+  } else {
+    return SEG_STEER_STRAIGHT;
+  }
+}
+
+const bool ExtractSTurnAndStraight(
+    const std::vector<float> &x_vec, const std::vector<float> &y_vec,
+    const std::vector<float> &phi_vec, const std::vector<float> &kappa_vec,
+    const float sample_ds,
+    std::vector<pnc::geometry_lib::PathPoint> &s_turn_path,
+    float &final_line_length) {
+  final_line_length = 0.0;
+  s_turn_path.clear();
+  size_t pt_size = kappa_vec.size();
+  if (pt_size == 0 || x_vec.size() != pt_size || y_vec.size() != pt_size ||
+      phi_vec.size() != pt_size) {
+    return false;
+  }
+
+  struct PathBlock {
+    size_t start_index;
+    size_t count;
+    uint8_t type;
+    bool is_s_part;
+  };
+
+  std::vector<PathBlock> blocks;
+  blocks.reserve(4);
+  size_t current_start = 0;
+  uint8_t current_type = GetKappaSign(kappa_vec[0]);
+
+  for (size_t i = 1; i < pt_size; ++i) {
+    uint8_t type = GetKappaSign(kappa_vec[i]);
+    if (type != current_type) {
+      blocks.push_back({current_start, i - current_start, current_type, false});
+      current_type = type;
+      current_start = i;
+    }
+  }
+
+  blocks.push_back(
+      {current_start, pt_size - current_start, current_type, false});
+
+  if (!blocks.empty()) {
+    const PathBlock &last_block = blocks.back();
+    if (last_block.type == SEG_TYPE_LINE && last_block.count > 1) {
+      final_line_length = (last_block.count - 1) * sample_ds;
+    }
+  }
+
+  bool has_s_turn = false;
+  if (blocks.size() > 1) {
+    for (size_t i = 0; i < blocks.size() - 1; ++i) {
+      if (IsOppositeSteer(blocks[i].type, blocks[i + 1].type)) {
+        blocks[i].is_s_part = true;
+        blocks[i + 1].is_s_part = true;
+        has_s_turn = true;
+      }
+    }
+  }
+
+  if (!has_s_turn) {
+    return false;
+  }
+
+  std::vector<float> s_x_vec, s_y_vec, s_phi_vec;
+  s_x_vec.reserve(pt_size);
+  s_y_vec.reserve(pt_size);
+  s_phi_vec.reserve(pt_size);
+
+  for (const PathBlock &block : blocks) {
+    if (block.is_s_part) {
+      size_t end_idx = block.start_index + block.count;
+
+      s_x_vec.insert(s_x_vec.end(), x_vec.begin() + block.start_index,
+                     x_vec.begin() + end_idx);
+      s_y_vec.insert(s_y_vec.end(), y_vec.begin() + block.start_index,
+                     y_vec.begin() + end_idx);
+      s_phi_vec.insert(s_phi_vec.end(), phi_vec.begin() + block.start_index,
+                       phi_vec.begin() + end_idx);
+    }
+  }
+
+  s_turn_path.resize(s_x_vec.size());
+  for (size_t i = 0; i < s_x_vec.size(); ++i) {
+    s_turn_path[i].SetX(s_x_vec[i]);
+    s_turn_path[i].SetY(s_y_vec[i]);
+    s_turn_path[i].SetTheta(s_phi_vec[i]);
+  }
+
+  return has_s_turn;
+}
+
 }  // namespace geometry_lib
 }  // namespace pnc

@@ -1243,6 +1243,8 @@ void SyncParkingParameters(const bool is_simulation) {
                   "cur_path_lat_buffer");
   JSON_READ_VALUE(dynamic_gear_switch_config.cur_path_lon_buffer, double,
                   "cur_path_lon_buffer");
+  JSON_READ_VALUE(dynamic_gear_switch_config.next_path_lat_buffer, double,
+                  "next_path_lat_buffer");
 
   PreparePlanConfig& prepare_plan_config = param.prepare_plan_config;
   JSON_READ_VALUE(prepare_plan_config.enable_stable_prepare_route, bool,

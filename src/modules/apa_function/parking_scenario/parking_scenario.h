@@ -16,6 +16,7 @@
 #include "geometry_math.h"
 #include "hybrid_astar_config.h"
 #include "hybrid_astar_context.h"
+#include "hybrid_astar_thread.h"
 #include "lateral_path_optimizer.h"
 #include "local_view.h"
 #include "parking_task/parking_task.h"
@@ -463,6 +464,8 @@ class ParkingScenario {
 
   const iflyauto::APAHMIData &GetAPAHmi() const { return apa_hmi_; }
 
+  HybridAStarThreadSolver *GetThread() { return &thread_; }
+
   // clear thread related
   virtual void ThreadClearState();
 
@@ -627,6 +630,12 @@ class ParkingScenario {
 
   iflyauto::PlanningOutput planning_output_;
   iflyauto::APAHMIData apa_hmi_;
+
+  RequestResponseState thread_state_;
+  HybridAStarThreadSolver thread_;
+  // do not clear it every frame in cruise state.
+  AstarResponse response_;
+  AstarPathGear current_gear_;
 
   Frame frame_;
 
