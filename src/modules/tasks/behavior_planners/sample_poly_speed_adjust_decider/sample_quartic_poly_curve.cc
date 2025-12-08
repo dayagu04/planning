@@ -1,4 +1,4 @@
-#include "sample_poly_curve.h"
+#include "sample_quartic_poly_curve.h"
 
 #include <cmath>
 #include <cstddef>

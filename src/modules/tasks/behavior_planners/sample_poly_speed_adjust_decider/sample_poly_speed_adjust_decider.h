@@ -10,10 +10,11 @@
 #include "ego_planning_config.h"
 #include "environmental_model.h"
 #include "reference_path.h"
-#include "sample_poly_curve.h"
+#include "sample_quartic_poly_curve.h"
 #include "sample_space_base.h"
 #include "session.h"
 #include "tasks/task.h"
+#include "uniform_jerk_curve.h"
 
 namespace planning {
 
@@ -103,6 +104,8 @@ class SamplePolySpeedAdjustDecider : public Task {
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
 
   SampleQuarticPolynomialCurve last_min_cost_traj_;
+  UniformJerkCurve jerk_curve_upper_;
+  UniformJerkCurve jerk_curve_lower_;
   std::shared_ptr<SampleQuarticPolynomialCurve>
       stitched_last_best_quartic_poly_ptr_;
 

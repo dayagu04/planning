@@ -160,9 +160,7 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     search_path.resize(kPlanningHorizions);
     v_search_path.resize(kPlanningHorizions);
     for (size_t i = 0; i < kPlanningHorizions; i++) {
-      double s =
-          min_cost_traj_ptr_->CalcS(i * kPlanningStep) -
-          ego_s_;
+      double s = min_cost_traj_ptr_->CalcS(i * kPlanningStep) - ego_s_;
       search_path[i] = std::move(s);
       v_search_path[i] = min_cost_traj_ptr_->CalcVelRef(i * kPlanningStep,
                                                         config_.decay_coffi);
