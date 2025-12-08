@@ -860,47 +860,7 @@ double StGraphSearcher::ComputeYieldCost(const StSearchInput& input_info,
     return base_cost;
   }
 
-  bool is_special_agent = false;
-
-  const auto& agent_longitudinal_decider_output =
-      session_->planning_context().agent_longitudinal_decider_output();
-  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
-  if (std::find(cutin_ids.begin(), cutin_ids.end(), agent_id) !=
-      cutin_ids.end()) {
-    is_special_agent = true;
-  }
-
-  if (!is_special_agent) {
-    const auto& lane_change_decider_output =
-        session_->planning_context().lane_change_decider_output();
-    const auto front_node_id =
-        lane_change_decider_output.lc_gap_info.front_node_id;
-
-    const auto dynamic_world =
-        session_->environmental_model().get_dynamic_world();
-    if (dynamic_world != nullptr) {
-      const auto node_ptr = dynamic_world->GetNode(front_node_id);
-      if (node_ptr != nullptr) {
-        const int32_t gap_front_agent_id = node_ptr->node_agent_id();
-        if (gap_front_agent_id == agent_id) {
-          is_special_agent = true;
-        }
-      }
-    }
-  }
-
-  if (!is_special_agent) {
-    const auto& lat_lon_joint_planner_output =
-        session_->planning_context().lat_lon_joint_planner_decider_output();
-    const auto& danger_ids =
-        lat_lon_joint_planner_output.GetDangerObstacleIds();
-    if (std::find(danger_ids.begin(), danger_ids.end(), agent_id) !=
-        danger_ids.end()) {
-      is_special_agent = true;
-    }
-  }
-
-  if (is_special_agent) {
+  if (IsSpecialAgent(agent_id)) {
     return base_cost * 0.1;
   }
 
@@ -1019,47 +979,7 @@ double StGraphSearcher::ComputeOvertakeCost(const StSearchInput& input_info,
     return base_cost;
   }
 
-  bool is_special_agent = false;
-
-  const auto& agent_longitudinal_decider_output =
-      session_->planning_context().agent_longitudinal_decider_output();
-  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
-  if (std::find(cutin_ids.begin(), cutin_ids.end(), agent_id) !=
-      cutin_ids.end()) {
-    is_special_agent = true;
-  }
-
-  if (!is_special_agent) {
-    const auto& lane_change_decider_output =
-        session_->planning_context().lane_change_decider_output();
-    const auto front_node_id =
-        lane_change_decider_output.lc_gap_info.front_node_id;
-
-    const auto dynamic_world =
-        session_->environmental_model().get_dynamic_world();
-    if (dynamic_world != nullptr) {
-      const auto node_ptr = dynamic_world->GetNode(front_node_id);
-      if (node_ptr != nullptr) {
-        const int32_t gap_front_agent_id = node_ptr->node_agent_id();
-        if (gap_front_agent_id == agent_id) {
-          is_special_agent = true;
-        }
-      }
-    }
-  }
-
-  if (!is_special_agent) {
-    const auto& lat_lon_joint_planner_output =
-        session_->planning_context().lat_lon_joint_planner_decider_output();
-    const auto& danger_ids =
-        lat_lon_joint_planner_output.GetDangerObstacleIds();
-    if (std::find(danger_ids.begin(), danger_ids.end(), agent_id) !=
-        danger_ids.end()) {
-      is_special_agent = true;
-    }
-  }
-
-  if (is_special_agent) {
+  if (IsSpecialAgent(agent_id)) {
     return base_cost * 10.0;
   }
 
@@ -1550,6 +1470,43 @@ void StGraphSearcher::AddAStarSearchCostDebugInfo(
                     st_path_final_nodes_cost_length_vec, 4)
   JSON_DEBUG_VECTOR("st_path_final_nodes_time_vec",
                     st_path_final_nodes_time_vec, 4)
+}
+
+bool StGraphSearcher::IsSpecialAgent(const int32_t agent_id) const {
+  const auto& agent_longitudinal_decider_output =
+      session_->planning_context().agent_longitudinal_decider_output();
+  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
+  if (std::find(cutin_ids.begin(), cutin_ids.end(), agent_id) !=
+      cutin_ids.end()) {
+    return true;
+  }
+
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto front_node_id =
+      lane_change_decider_output.lc_gap_info.front_node_id;
+
+  const auto dynamic_world =
+      session_->environmental_model().get_dynamic_world();
+  if (dynamic_world != nullptr) {
+    const auto node_ptr = dynamic_world->GetNode(front_node_id);
+    if (node_ptr != nullptr) {
+      const int32_t gap_front_agent_id = node_ptr->node_agent_id();
+      if (gap_front_agent_id == agent_id) {
+        return true;
+      }
+    }
+  }
+
+  const auto& lat_lon_joint_planner_output =
+      session_->planning_context().lat_lon_joint_planner_decider_output();
+  const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
+  if (std::find(danger_ids.begin(), danger_ids.end(), agent_id) !=
+      danger_ids.end()) {
+    return true;
+  }
+
+  return false;
 }
 
 }  // namespace planning
