@@ -217,108 +217,72 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       session_->planning_context().agent_longitudinal_decider_output();
   const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
 
-  for (const int32_t cutin_id : cutin_ids) {
-    if (forbidden_ids.find(cutin_id) != forbidden_ids.end() ||
-        added_agent_ids.find(cutin_id) != added_agent_ids.end()) {
-      continue;
-    }
-
-    auto agent =
-        session_->environmental_model().get_agent_manager()->GetAgent(cutin_id);
-    if (agent != nullptr) {
-      double agent_s = 0.0, agent_l = 0.0;
-      if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
-        continue;
-      }
-      const double dis_relative =
-          agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
-      const double dis_lon_consider = std::max(
-          ego_init_point.v * comfort_params_.follow_consider_time_headway,
-          comfort_params_.follow_consider_distance);
-
-      if (agent_s < ego_s && filtering_rear_agent) {
-        continue;
-      }
-
-      const bool is_traffic_control_obstacle =
-          agent->type() == agent::AgentType::TRAFFIC_CONE ||
-          agent->type() == agent::AgentType::CTASH_BARREL ||
-          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
-
-      bool is_lateral_left_or_right = false;
-      auto lat_decision_iter = lat_obstacle_decision.find(cutin_id);
-      if (lat_decision_iter != lat_obstacle_decision.end()) {
-        const auto& lat_decision = lat_decision_iter->second;
-        is_lateral_left_or_right =
-            (lat_decision == LatObstacleDecisionType::LEFT ||
-             lat_decision == LatObstacleDecisionType::RIGHT);
-      }
-
-      if ((agent->is_static() || std::fabs(agent->speed()) <
-                                     comfort_params_.static_speed_threshold) &&
-          !is_traffic_control_obstacle && is_lateral_left_or_right) {
-        continue;
-      }
-
-      if (dis_relative <= dis_lon_consider) {
-        follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
-        added_agent_ids.insert(cutin_id);
-      }
-    }
-  }
-
   const auto& lat_lon_joint_planner_output =
       session_->planning_context().lat_lon_joint_planner_decider_output();
   const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
 
   for (const int32_t danger_id : danger_ids) {
     joint_danger_agent_ids_.push_back(danger_id);
-    if (forbidden_ids.find(danger_id) != forbidden_ids.end() ||
-        added_agent_ids.find(danger_id) != added_agent_ids.end()) {
+  }
+
+  std::vector<int32_t> critical_agent_ids;
+  critical_agent_ids.reserve(cutin_ids.size() + danger_ids.size());
+  critical_agent_ids.insert(critical_agent_ids.end(), cutin_ids.begin(),
+                            cutin_ids.end());
+  critical_agent_ids.insert(critical_agent_ids.end(), danger_ids.begin(),
+                            danger_ids.end());
+
+  for (const int32_t agent_id : critical_agent_ids) {
+    if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
+        added_agent_ids.find(agent_id) != added_agent_ids.end()) {
       continue;
     }
 
-    auto agent = session_->environmental_model().get_agent_manager()->GetAgent(
-        danger_id);
-    if (agent != nullptr) {
-      double agent_s = 0.0, agent_l = 0.0;
-      if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
-        continue;
-      }
-      const double dis_relative =
-          agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
-      const double dis_lon_consider = std::max(
-          ego_init_point.v * comfort_params_.follow_consider_time_headway,
-          comfort_params_.follow_consider_distance);
+    auto agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(agent_id);
+    if (agent == nullptr) {
+      continue;
+    }
 
-      if (agent_s < ego_s && filtering_rear_agent) {
-        continue;
-      }
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
 
-      const bool is_traffic_control_obstacle =
-          agent->type() == agent::AgentType::TRAFFIC_CONE ||
-          agent->type() == agent::AgentType::CTASH_BARREL ||
-          agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+    if (agent_s < ego_s && filtering_rear_agent) {
+      continue;
+    }
 
-      bool is_lateral_left_or_right = false;
-      auto lat_decision_iter = lat_obstacle_decision.find(danger_id);
-      if (lat_decision_iter != lat_obstacle_decision.end()) {
-        const auto& lat_decision = lat_decision_iter->second;
-        is_lateral_left_or_right =
-            (lat_decision == LatObstacleDecisionType::LEFT ||
-             lat_decision == LatObstacleDecisionType::RIGHT);
-      }
+    const double dis_relative =
+        agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
+    const double dis_lon_consider = std::max(
+        ego_init_point.v * comfort_params_.follow_consider_time_headway,
+        comfort_params_.follow_consider_distance);
 
-      if ((agent->is_static() || std::fabs(agent->speed()) <
-                                     comfort_params_.static_speed_threshold) &&
-          !is_traffic_control_obstacle && is_lateral_left_or_right) {
-        continue;
-      }
+    const bool is_traffic_control_obstacle =
+        agent->type() == agent::AgentType::TRAFFIC_CONE ||
+        agent->type() == agent::AgentType::CTASH_BARREL ||
+        agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
 
-      if (dis_relative <= dis_lon_consider) {
-        follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
-        added_agent_ids.insert(danger_id);
-      }
+    bool is_lateral_left_or_right = false;
+    auto lat_decision_iter = lat_obstacle_decision.find(agent_id);
+    if (lat_decision_iter != lat_obstacle_decision.end()) {
+      const auto& lat_decision = lat_decision_iter->second;
+      is_lateral_left_or_right =
+          (lat_decision == LatObstacleDecisionType::LEFT ||
+           lat_decision == LatObstacleDecisionType::RIGHT);
+    }
+
+    if ((agent->is_static() ||
+         std::fabs(agent->speed()) < comfort_params_.static_speed_threshold) &&
+        !is_traffic_control_obstacle && is_lateral_left_or_right) {
+      continue;
+    }
+
+    if (dis_relative <= dis_lon_consider) {
+      follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
+      added_agent_ids.insert(agent_id);
     }
   }
 
