@@ -4380,6 +4380,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_acc_speed_adjust");
     ReadItem<double>(json, q_jerk_speed_adjust, "long_motion_ilqr",
                      "q_jerk_speed_adjust");
+    ReadItem<double>(json, q_pos_safe_cost, "long_motion_ilqr", "q_pos_safe_cost");
+    ReadItem<double>(json, safe_distance, "long_motion_ilqr", "safe_distance");
 
   }
   double q_ref_pos = 1.0;
@@ -4434,6 +4436,8 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_ref_pos_speed_adjust = 10.0;
   double q_acc_speed_adjust = 10.0;
   double q_jerk_speed_adjust = 5.0;
+  double q_pos_safe_cost = 100.0;
+  double safe_distance = 2.5;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
@@ -5215,40 +5219,6 @@ struct StartStopDeciderConfig : public EgoPlanningConfig {
   double distance_to_go_threshold_behind_of_large_vehicle = 7.5;
   double start_to_cruise_vel_threshold = 5.5;
   double stop_destination_to_ego_distance = 3.0;
-};
-
-struct EgoMotionPreplannerConfig : public EgoPlanningConfig {
-  void init(const Json &json) override {
-    EgoPlanningConfig::init(json);
-    /* read config from json */
-    ReadItem<double>(json, ego_motion_simulate_dt_resolution,
-                     "ego_motion_preplanner",
-                     "ego_motion_simulate_dt_resolution");
-    ReadItem<double>(json, pure_pursuit_ld, "ego_motion_preplanner",
-                     "pure_pursuit_ld");
-    ReadItem<double>(json, idm_minimum_spacing, "ego_motion_preplanner",
-                     "idm_minimum_spacing");
-    ReadItem<double>(json, idm_desired_time_headway, "ego_motion_preplanner",
-                     "idm_desired_time_headway");
-    ReadItem<double>(json, idm_max_accel, "ego_motion_preplanner",
-                     "idm_max_accel");
-    ReadItem<double>(json, idm_comfortable_breaking_deceleration,
-                     "ego_motion_preplanner",
-                     "idm_comfortable_breaking_deceleration");
-    ReadItem<double>(json, idm_hard_breaking_deceleration,
-                     "ego_motion_preplanner", "idm_hard_breaking_deceleration");
-    ReadItem<double>(json, idm_exponent, "ego_motion_preplanner",
-                     "idm_exponent");
-  }
-
-  double ego_motion_simulate_dt_resolution = 0.1;
-  double pure_pursuit_ld = 6.0;
-  double idm_minimum_spacing = 2.0;
-  double idm_desired_time_headway = 1.5;
-  double idm_max_accel = 2.0;
-  double idm_comfortable_breaking_deceleration = 3.0;
-  double idm_hard_breaking_deceleration = 4.5;
-  double idm_exponent = 4.0;
 };
 
 struct SpeedPlannerConfig : public EgoPlanningConfig {

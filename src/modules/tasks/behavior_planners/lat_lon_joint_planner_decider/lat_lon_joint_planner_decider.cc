@@ -4,6 +4,7 @@
 #include <limits>
 
 #include "debug_info_log.h"
+#include "environmental_model.h"
 #include "ifly_time.h"
 #include "math/box2d.h"
 #include "src/joint_motion_input_builder.h"
@@ -152,9 +153,11 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
   const double ego_length = vehicle_param.length;
   const double ego_width = vehicle_param.width;
   const double rear_axle_to_center = vehicle_param.rear_axle_to_center;
-
-  constexpr double kLatConflictThreshold = 0.30;
-  constexpr double kLargeVehicleLatConflictThreshold = 0.40;
+  constexpr double kStaticVehicleLatConflictThreshold = 0.2;
+  constexpr double kLatConflictThreshold = 0.3;
+  constexpr double kLargeVehicleLatConflictThreshold = 0.4;
+  constexpr double kLargeVehicleLengthThreshold = 8.0;
+  constexpr double kStaticVehicleVelocityThreshold = 0.3;
   constexpr double kBaseLongitudinalThreshold = 3.5;
 
   const auto& lane_change_output =
@@ -177,18 +180,42 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
   for (size_t obs_idx = 0; obs_idx < obs_num; ++obs_idx) {
     const auto& obs_ref_traj = planning_input.obs_ref_trajectory(obs_idx);
     const int32_t obs_id = obs_ref_traj.obs_id();
+    const double obs_vel = planning_input.obs_init_state(obs_idx).vel();
     const size_t ref_traj_size = obs_ref_traj.ref_x_vec_size();
 
     if (ref_traj_size == 0) {
       continue;
     }
 
+    if (obs_id == -1) {
+      continue;
+    }
+
+    auto* agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(obs_id);
+
+    if (agent == nullptr) {
+      continue;
+    }
+
     bool has_collision = false;
 
-    const bool is_large_vehicle = obs_ref_traj.length() > 8.0;
-    const double lateral_threshold = is_large_vehicle
-                                         ? kLargeVehicleLatConflictThreshold
-                                         : kLatConflictThreshold;
+    const bool is_large_vehicle =
+        agent->type() == agent::AgentType::BUS ||
+        agent->type() == agent::AgentType::TRUCK ||
+        agent->type() == agent::AgentType::TRAILER ||
+        obs_ref_traj.length() > kLargeVehicleLengthThreshold;
+
+    const bool is_static_vehicle =
+        std::fabs(obs_vel) < kStaticVehicleVelocityThreshold ||
+        agent->is_static();
+
+    double lateral_threshold = is_large_vehicle
+                                   ? kLargeVehicleLatConflictThreshold
+                                   : kLatConflictThreshold;
+    if (is_static_vehicle) {
+      lateral_threshold = kStaticVehicleLatConflictThreshold;
+    }
 
     bool is_directly_in_front_or_rear_agent = false;
     const double ego_half_width = ego_width * 0.5;
@@ -265,11 +292,11 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         continue;
       }
 
-      double dynamic_longitudinal_threshold =
+      double longitudinal_threshold =
           kBaseLongitudinalThreshold + ego_point.vel * 0.3;
 
       if (lateral_dist <= lateral_threshold &&
-          longitudinal_distance < dynamic_longitudinal_threshold) {
+          longitudinal_distance < longitudinal_threshold) {
         has_collision = true;
         break;
       }

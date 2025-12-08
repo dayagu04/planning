@@ -32,9 +32,8 @@ JointMotionInputBuilder::JointMotionInputBuilder(
   joint_traj_params_.T = 1.0;
   joint_traj_params_.delay_time_buffer = 0.3;
   joint_traj_params_.min_decel_jerk = 1.0;
-  joint_traj_params_.max_decel_jerk = 1.5;
+  joint_traj_params_.max_decel_jerk = 2.0;
   joint_traj_params_.default_front_distance = 200.0;
-  joint_traj_params_.sharp_decel_acc_threshold = -2.0;
 
   ref_trajectory_.clear();
   ref_trajectory_.reserve(kPlanningTimeSteps);
@@ -143,7 +142,7 @@ void JointMotionInputBuilder::BuildEgoAndWeightInfo(
   planning_input.clear_ego_jerk_min();
   for (size_t i = 0; i < kPlanningTimeSteps; ++i) {
     planning_input.add_ego_jerk_max(config_.ego_jerk_max);
-    planning_input.add_ego_jerk_min(-ego_jerk_min_vec_[i]);
+    planning_input.add_ego_jerk_min(-joint_traj_params_.max_decel_jerk);
   }
 
   planning_input.set_q_hard_halfplane_weight(config_.q_hard_halfplane_weight);
@@ -275,38 +274,10 @@ void JointMotionInputBuilder::BuildRoadInfo(
   }
 }
 
-double JointMotionInputBuilder::CalcDesiredVelocity(const double d_rel,
-                                                    const double d_des,
-                                                    const double v_lead,
-                                                    const double v_ego) const {
-  const double max_runaway_speed = -2.0;
-  double l_slope = interp(v_lead, _L_SLOPE_BP, _L_SLOPE_V);
-  double p_slope = interp(v_lead, _P_SLOPE_BP, _P_SLOPE_V);
-  double x_linear_to_parabola = p_slope / std::pow(l_slope, 2);
-  double x_parabola_offset = p_slope / (2 * std::pow(l_slope, 2));
-
-  double v_rel = v_ego - v_lead;
-  double v_rel_des = 0.0;
-  if (d_rel < d_des) {
-    double v_rel_des_1 = (-max_runaway_speed) / d_des * (d_rel - d_des);
-    double v_rel_des_2 = (d_rel - d_des) * l_slope / 3.0;
-    v_rel_des = std::min(v_rel_des_1, v_rel_des_2);
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-  } else if (d_rel < d_des + x_linear_to_parabola) {
-    v_rel_des = (d_rel - d_des) * l_slope;
-    v_rel_des = std::max(v_rel_des, max_runaway_speed);
-  } else {
-    v_rel_des = std::sqrt(2 * (d_rel - d_des - x_parabola_offset) * p_slope);
-  }
-  double v_target = v_rel_des + v_lead;
-  return v_target;
-}
-
 double JointMotionInputBuilder::CalculateIdmAcceleration(
     const double current_acc, const double current_vel, const double current_s,
     const double front_acc, const double front_vel, const double front_s,
-    const double tau, const double v0, const double decel_jerk,
-    const double zero_acc_vel, double& target_v0) const {
+    const double tau, const double v0, const double decel_jerk) const {
   constexpr double kEps = 1e-6;
   double s0 = joint_traj_params_.s0;
   double a = joint_traj_params_.a;
@@ -324,7 +295,7 @@ double JointMotionInputBuilder::CalculateIdmAcceleration(
       s0 + std::max(0.0, current_vel * tau + (current_vel * delta_v) /
                                                  (2.0 * std::sqrt(a * b_max)));
 
-  target_v0 = std::max(kEps, v0);
+  double target_v0 = std::max(kEps, v0);
 
   double a_free;
   if (current_vel <= target_v0) {
@@ -378,13 +349,6 @@ double JointMotionInputBuilder::CalculateIdmAcceleration(
 
 void JointMotionInputBuilder::GenerateReferenceTrajectory(
     planning::common::JointMotionPlanningInput& planning_input) {
-  ego_jerk_min_vec_.clear();
-  ego_jerk_min_vec_.resize(kPlanningTimeSteps,
-                           joint_traj_params_.min_decel_jerk);
-
-  target_v0_vec_.clear();
-  target_v0_vec_.resize(kPlanningTimeSteps, 0.0);
-
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& planning_init_point = ego_state_manager->planning_init_point();
@@ -619,136 +583,10 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
   double front_acc = 0.0;
 
   double ref_ego_s = reference_path_ptr->get_frenet_ego_state().s();
-  bool is_close = false;
 
   double target_tau = interp(current_v, _EGO_VEL_TABLE, _TIME_HEADWAY_TABLE);
 
-  double current_tau = last_tau_;
-
-  bool is_entering_lane_change =
-      is_in_lane_change_condition && !is_in_lane_change_last_;
-  bool lead_one_changed =
-      (lead_one_id_ != last_lead_one_id_) && (lead_one_id_ != -1);
-
-  constexpr double kLaneChangeInitTau = 0.8;
-  constexpr double kTauStepBase = 0.05;
-  constexpr double kHighRelativeVelThd = 2.0;
-  constexpr double kLowRelativeVelThd = -0.5;
-  constexpr double kVeryLowRelativeVelThd = -3.0;
-
-  if (is_entering_lane_change || lead_one_changed) {
-    current_tau = kLaneChangeInitTau;
-  } else if (is_in_lane_change_condition) {
-    double tau_step = kTauStepBase;
-
-    if (lead_one_agent != nullptr) {
-      double v_relative = front_vel - current_v;
-      if (v_relative > kHighRelativeVelThd) {
-        tau_step = kTauStepBase * 0.5;
-      } else if (v_relative > kLowRelativeVelThd) {
-        tau_step = kTauStepBase * 1.0;
-      } else if (v_relative < kVeryLowRelativeVelThd) {
-        tau_step = kTauStepBase * 2.0;
-      } else {
-        tau_step = kTauStepBase * 1.5;
-      }
-    }
-
-    current_tau = std::min(last_tau_ + tau_step, target_tau);
-  } else {
-    double tau_step = kTauStepBase;
-
-    if (lead_one_agent != nullptr) {
-      double v_relative = front_vel - current_v;
-      if (v_relative > kHighRelativeVelThd) {
-        tau_step = kTauStepBase * 0.3;
-      } else if (v_relative > kLowRelativeVelThd) {
-        tau_step = kTauStepBase * 0.5;
-      } else if (v_relative < kVeryLowRelativeVelThd) {
-        tau_step = kTauStepBase * 1.2;
-      } else {
-        tau_step = kTauStepBase * 1.0;
-      }
-    }
-
-    if (current_tau < target_tau) {
-      current_tau = std::min(last_tau_ + tau_step, target_tau);
-    } else if (current_tau > target_tau) {
-      current_tau = std::max(last_tau_ - tau_step * 0.5, target_tau);
-    }
-  }
-
-  last_tau_ = current_tau;
-  last_lead_one_id_ = lead_one_id_;
-  is_in_lane_change_last_ = is_in_lane_change_condition;
-
   JSON_DEBUG_VALUE("joint_target_tau", target_tau);
-  JSON_DEBUG_VALUE("joint_current_tau", current_tau);
-
-  SecondOrderTimeOptimalTrajectory max_deceleration_curve =
-      GenerateMaxDecelerationCurve();
-
-  std::unique_ptr<Trajectory1d> virtual_zero_acc_curve =
-      GenerateVirtualZeroAccCurve();
-
-  std::vector<double> s_max_decel_vec;
-  std::vector<double> v_max_decel_vec;
-  std::vector<double> a_max_decel_vec;
-  std::vector<double> s_zero_acc_vec;
-  std::vector<double> v_zero_acc_vec;
-  std::vector<double> a_zero_acc_vec;
-  s_max_decel_vec.reserve(kPlanningTimeSteps);
-  v_max_decel_vec.reserve(kPlanningTimeSteps);
-  a_max_decel_vec.reserve(kPlanningTimeSteps);
-  s_zero_acc_vec.reserve(kPlanningTimeSteps);
-  v_zero_acc_vec.reserve(kPlanningTimeSteps);
-  a_zero_acc_vec.reserve(kPlanningTimeSteps);
-
-  bool need_sharp_deceleration = false;
-  double front_acc_check = 0.0;
-  double front_s_check = joint_traj_params_.default_front_distance;
-
-  for (int i = 0; i < kPlanningTimeSteps; ++i) {
-    double t = i * kPlanningTimeStep;
-
-    if (!lead_trajectory.empty() && lead_one_agent != nullptr) {
-      size_t lead_idx = static_cast<size_t>(i);
-
-      if (lead_idx >= lead_trajectory.size()) {
-        lead_idx = lead_trajectory.size() - 1;
-      }
-      if (lead_idx > 0) {
-        const auto& lead_point = lead_trajectory[lead_idx - 1];
-
-        front_acc_check = lead_one_agent->accel_fusion();
-        double lead_s = 0.0, lead_l = 0.0;
-        if (ego_lane_coord->XYToSL(lead_point.x(), lead_point.y(), &lead_s,
-                                   &lead_l)) {
-          double lead_rear_s = lead_s - lead_one_agent->length() * 0.5;
-          double ego_front_s = ego_s + front_edge_to_rear_axle;
-          front_s_check = std::max(0.0, lead_rear_s - ego_front_s);
-        }
-      }
-    }
-
-    const double zero_acc_v_check = virtual_zero_acc_curve->Evaluate(1, t);
-    const double s_safe_with_max_decel = max_deceleration_curve.Evaluate(0, t);
-    const double brake_buffer_check =
-        zero_acc_v_check * joint_traj_params_.delay_time_buffer;
-
-    const bool is_unsafe_with_max_decel =
-        (front_s_check - brake_buffer_check) < s_safe_with_max_decel;
-    const bool front_vehicle_decelerating =
-        front_acc_check < joint_traj_params_.sharp_decel_acc_threshold;
-
-    if (is_unsafe_with_max_decel || front_vehicle_decelerating) {
-      need_sharp_deceleration = true;
-      break;
-    }
-  }
-
-  JSON_DEBUG_VALUE("joint_need_sharp_deceleration",
-                   need_sharp_deceleration ? 1 : 0);
 
   for (int i = 1; i < kPlanningTimeSteps; ++i) {
     double t = i * kPlanningTimeStep;
@@ -775,54 +613,11 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
       }
     }
 
-    double min_follow_distance =
-        joint_traj_params_.s0 +
-        current_v * joint_traj_params_.delay_time_buffer;
-    double max_follow_distance =
-        joint_traj_params_.s0 + current_v * current_tau;
-
-    const double brake_buffer =
-        current_v * joint_traj_params_.delay_time_buffer;
-
-    const double s_safe_with_max_decel = max_deceleration_curve.Evaluate(0, t);
-    const double v_safe_with_max_decel = max_deceleration_curve.Evaluate(1, t);
-    const double a_safe_with_max_decel = max_deceleration_curve.Evaluate(2, t);
-
-    s_max_decel_vec.emplace_back(s_safe_with_max_decel);
-    v_max_decel_vec.emplace_back(v_safe_with_max_decel);
-    a_max_decel_vec.emplace_back(a_safe_with_max_decel);
-
     double decel_jerk = joint_traj_params_.min_decel_jerk;
-
-    if (need_sharp_deceleration) {
-      if (front_s >= max_follow_distance) {
-        decel_jerk = joint_traj_params_.min_decel_jerk;
-      } else if (front_s <= min_follow_distance) {
-        decel_jerk = joint_traj_params_.max_decel_jerk;
-      } else {
-        double ratio = (front_s - min_follow_distance) /
-                       (max_follow_distance - min_follow_distance);
-        double smooth_ratio = 3.0 * ratio * ratio - 2.0 * ratio * ratio * ratio;
-        decel_jerk = joint_traj_params_.max_decel_jerk +
-                     smooth_ratio * (joint_traj_params_.min_decel_jerk -
-                                     joint_traj_params_.max_decel_jerk);
-      }
-    }
-
-    ego_jerk_min_vec_[i] = decel_jerk;
-
-    const double zero_acc_vel = virtual_zero_acc_curve->Evaluate(1, t);
-    const double zero_acc_a = virtual_zero_acc_curve->Evaluate(2, t);
-    const double pre_zero_acc_vel =
-        virtual_zero_acc_curve->Evaluate(1, (i - 1) * kPlanningTimeStep);
-    s_zero_acc_vec.emplace_back(front_s - joint_traj_params_.s0 -
-                                pre_zero_acc_vel * current_tau);
-    v_zero_acc_vec.emplace_back(zero_acc_vel);
-    a_zero_acc_vec.emplace_back(zero_acc_a);
 
     double next_acc = CalculateIdmAcceleration(
         current_a, current_v, current_s, front_acc, front_vel, front_s,
-        current_tau, v0, decel_jerk, pre_zero_acc_vel, target_v0_vec_[i]);
+        target_tau, v0, decel_jerk);
 
     constexpr double kHalf = 0.5;
     const double dt = kPlanningTimeStep;
@@ -875,161 +670,5 @@ void JointMotionInputBuilder::GenerateReferenceTrajectory(
     current_theta = next_theta;
     current_delta = next_delta;
   }
-
-  if (!lead_trajectory.empty() && lead_one_agent != nullptr) {
-    double lead_s = 0.0, lead_l = 0.0;
-    double zero_acc_vel = virtual_zero_acc_curve->Evaluate(
-        1, (kPlanningTimeSteps - 1) * kPlanningTimeStep);
-    const auto& lead_point = lead_trajectory.back();
-    if (ego_lane_coord->XYToSL(lead_point.x(), lead_point.y(), &lead_s,
-                               &lead_l)) {
-      double lead_rear_s = lead_s - lead_one_agent->length() * 0.5;
-      double ego_front_s = ego_s + front_edge_to_rear_axle;
-      double zero_acc_s = std::max(0.0, lead_rear_s - ego_front_s);
-      s_zero_acc_vec.emplace_back(zero_acc_s - joint_traj_params_.s0 -
-                                  zero_acc_vel * current_tau);
-    } else {
-      s_zero_acc_vec.emplace_back(front_s - joint_traj_params_.s0 -
-                                  zero_acc_vel * current_tau);
-    }
-  } else {
-    double zero_acc_vel = virtual_zero_acc_curve->Evaluate(
-        1, (kPlanningTimeSteps - 1) * kPlanningTimeStep);
-    s_zero_acc_vec.emplace_back(front_s - joint_traj_params_.s0 -
-                                zero_acc_vel * current_tau);
-  }
-
-  ego_jerk_min_vec_[0] = ego_jerk_min_vec_[1];
-  target_v0_vec_[0] = target_v0_vec_[1];
-
-  s_max_decel_vec.insert(s_max_decel_vec.begin(),
-                         max_deceleration_curve.Evaluate(0, 0));
-  v_max_decel_vec.insert(v_max_decel_vec.begin(),
-                         max_deceleration_curve.Evaluate(1, 0));
-  a_max_decel_vec.insert(a_max_decel_vec.begin(),
-                         max_deceleration_curve.Evaluate(2, 0));
-
-  v_zero_acc_vec.insert(v_zero_acc_vec.begin(),
-                        virtual_zero_acc_curve->Evaluate(1, 0));
-  a_zero_acc_vec.insert(a_zero_acc_vec.begin(),
-                        virtual_zero_acc_curve->Evaluate(2, 0));
-
-  JSON_DEBUG_VECTOR("joint_target_v0_vec", target_v0_vec_, 0);
-  JSON_DEBUG_VECTOR("joint_s_max_decel_vec", s_max_decel_vec, 0);
-  JSON_DEBUG_VECTOR("joint_v_max_decel_vec", v_max_decel_vec, 0);
-  JSON_DEBUG_VECTOR("joint_a_max_decel_vec", a_max_decel_vec, 0);
-  JSON_DEBUG_VECTOR("joint_s_zero_acc_vec", s_zero_acc_vec, 0);
-  JSON_DEBUG_VECTOR("joint_v_zero_acc_vec", v_zero_acc_vec, 0);
-  JSON_DEBUG_VECTOR("joint_a_zero_acc_vec", a_zero_acc_vec, 0);
 }
-
-SecondOrderTimeOptimalTrajectory
-JointMotionInputBuilder::GenerateMaxDecelerationCurve() const {
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& init_point = ego_state_manager->planning_init_point();
-
-  LonState init_state;
-  init_state.p = 0.0;
-  init_state.v = init_point.v;
-  init_state.a = init_point.a;
-
-  StateLimit state_limit;
-
-  constexpr double IsoAccLimitUpper = -2.0;
-  constexpr double IsoAccLimitLower = -3.0;
-  constexpr double IsoAccLimitSpeedUpper = 20.0;
-  constexpr double IsoAccLimitSpeedLower = 3.0;
-
-  constexpr double IsoJerkLimitUpper = -2.0;
-  constexpr double IsoJerkLimitLower = -3.0;
-  constexpr double IsoJerkLimitSpeedUpper = 20.0;
-  constexpr double IsoJerkLimitSpeedLower = 3.0;
-
-  const double acc_lower_bound = planning_math::LerpWithLimit(
-      IsoAccLimitLower, IsoAccLimitSpeedLower, IsoAccLimitUpper,
-      IsoAccLimitSpeedUpper, init_state.v);
-
-  const double jerk_lower_bound = planning_math::LerpWithLimit(
-      IsoJerkLimitLower, IsoJerkLimitSpeedLower, IsoJerkLimitUpper,
-      IsoJerkLimitSpeedUpper, init_state.v);
-
-  double lower_speed_acc_upper_bound =
-      speed_planning_config_.speed_planning_bound.low_speed_acc_upper_bound;
-  double high_speed_acc_upper_bound =
-      speed_planning_config_.speed_planning_bound.high_speed_acc_upper_bound;
-  const double low_speed_threshold_with_acc_upper_bound =
-      speed_planning_config_.speed_planning_bound
-          .low_speed_threshold_with_acc_upper_bound;
-  const double high_speed_threshold_with_acc_upper_bound =
-      speed_planning_config_.speed_planning_bound
-          .high_speed_threshold_with_acc_upper_bound;
-
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
-  const auto lane_change_status = lane_change_decider_output.curr_state;
-  bool is_in_lane_change_execution =
-      lane_change_status == kLaneChangeExecution ||
-      lane_change_status == kLaneChangeComplete;
-  if (is_in_lane_change_execution) {
-    lower_speed_acc_upper_bound = speed_planning_config_.speed_planning_bound
-                                      .lane_change_low_speed_acc_upper_bound;
-    high_speed_acc_upper_bound = speed_planning_config_.speed_planning_bound
-                                     .lane_change_high_speed_acc_upper_bound;
-  }
-
-  const double acc_upper_bound_with_speed = planning_math::LerpWithLimit(
-      lower_speed_acc_upper_bound, low_speed_threshold_with_acc_upper_bound,
-      high_speed_acc_upper_bound, high_speed_threshold_with_acc_upper_bound,
-      init_state.v);
-
-  state_limit.a_max = acc_upper_bound_with_speed;
-  state_limit.a_min = acc_lower_bound;
-  state_limit.j_max = 3.0;
-  state_limit.j_min = jerk_lower_bound;
-
-  return SecondOrderTimeOptimalTrajectory(init_state, state_limit);
-}
-
-std::unique_ptr<Trajectory1d>
-JointMotionInputBuilder::GenerateVirtualZeroAccCurve() const {
-  const auto& ego_state_manager =
-      session_->environmental_model().get_ego_state_manager();
-  const auto& init_point = ego_state_manager->planning_init_point();
-
-  auto virtual_zero_acc_curve =
-      std::make_unique<PiecewiseJerkAccelerationTrajectory1d>(0.0,
-                                                              init_point.v);
-  virtual_zero_acc_curve->AppendSegment(init_point.a, kPlanningTimeStep);
-
-  const double zero_acc_jerk_max = 0.5;
-  const double zero_acc_jerk_min = -1.0;
-
-  for (double t = kPlanningTimeStep; t <= kPlanningTimeHorizon;
-       t += kPlanningTimeStep) {
-    const double acc = virtual_zero_acc_curve->Evaluate(2, t);
-    const double vel = virtual_zero_acc_curve->Evaluate(1, t);
-
-    double a_next = 0.0;
-
-    if (init_point.a < 0.0) {
-      a_next = acc + kPlanningTimeStep * zero_acc_jerk_max;
-    } else {
-      a_next = acc + kPlanningTimeStep * zero_acc_jerk_min;
-    }
-
-    if (init_point.a * acc <= 0.0) {
-      a_next = 0.0;
-    }
-
-    if (vel <= 0.0) {
-      a_next = 0.0;
-    }
-
-    virtual_zero_acc_curve->AppendSegment(a_next, kPlanningTimeStep);
-  }
-
-  return virtual_zero_acc_curve;
-}
-
 }  // namespace planning

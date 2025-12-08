@@ -65,9 +65,10 @@ message LongitudinalPlanningInput {
   repeated double djerk_min_vec = 44;
   optional double q_acc_start = 45;
   optional double q_jerk_start = 46;
-
-  optional double front_edge_to_rear_axle = 47;
+  optional double q_pos_safe_cost = 47;
+  optional double safe_distance = 48;
 }
+
 
 message LongitudinalPlanningOutput {
   repeated double time_vec = 1;

@@ -91,11 +91,6 @@ class AgentLongitudinalDecider : public Task {
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const std::shared_ptr<VirtualLane>& ego_lane);
 
-  void IsSlowSpeedCutinSuppression(
-      const std::shared_ptr<planning_math::KDPath>& planned_path,
-      const PlanningInitPoint init_point, const bool is_lane_change,
-      const agent::Agent& agent, bool* is_slow_need_suppression);
-
   void CalculateAgentLateralDistance(
       const double object_l_speed_mps, const double min_l, const double max_l,
       const double max_s, const double ego_speed_mps, const double ego_s,

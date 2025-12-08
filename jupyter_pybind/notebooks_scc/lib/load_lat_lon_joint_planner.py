@@ -197,7 +197,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     
     # Extract planning info from JSON
     planning_json_value_list = ["joint_lead_one_id", "joint_key_agent_ids", "joint_cruise_speed", "joint_limit_speed", 
-                                "joint_target_tau", "joint_current_tau", "joint_use_spatio_result", "joint_need_sharp_deceleration"]
+                                "joint_target_tau", "joint_use_spatio_result"]
     vision_lon_attr_vec = []
     for attr in planning_json_value_list:
         if attr == "joint_key_agent_ids":
@@ -213,7 +213,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     # Extract lane change state
     lane_change_state_dict = {
         0: "IDLE",
-        1: "READY",
+        1: "PROPOSE",
         2: "EXECUTION",
         3: "COMPLETE",
         4: "HOLD",
@@ -227,16 +227,7 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     joint_key_agent_ids = planner_json.get("joint_key_agent_ids", [])
     joint_limit_speed = planner_json.get("joint_limit_speed", 0)
     joint_target_tau = planner_json.get("joint_target_tau", 0)
-    joint_current_tau = planner_json.get("joint_current_tau", 0)
     joint_use_spatio_result = planner_json.get("joint_use_spatio_result", 0)
-    joint_target_v0_vec = planner_json.get("joint_target_v0_vec", [])
-    joint_v_zero_acc_vec = planner_json.get("joint_v_zero_acc_vec", [])
-    joint_s_max_decel_vec = planner_json.get("joint_s_max_decel_vec", [])
-    joint_v_max_decel_vec = planner_json.get("joint_v_max_decel_vec", [])
-    joint_a_max_decel_vec = planner_json.get("joint_a_max_decel_vec", [])
-    joint_s_zero_acc_vec = planner_json.get("joint_s_zero_acc_vec", [])
-    joint_a_zero_acc_vec = planner_json.get("joint_a_zero_acc_vec", [])
-    joint_need_sharp_deceleration = planner_json.get("joint_need_sharp_deceleration", 0)
     obs_num = jp_in.obs_num
 
     ego_length = jp_in.ego_length if jp_in.HasField('ego_length') else 4.95
@@ -474,15 +465,14 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
     
     # Update planning info data for display - vertical layout
     joint_use_spatio_result = "YES" if joint_use_spatio_result else "NO"
-    need_sharp_decel_str = "YES" if joint_need_sharp_deceleration else "NO"
     joint_cruise_speed = planner_json.get("joint_cruise_speed", 0)
 
     planning_info_data = {
         'labels': [
-            'Lead One ID', 'Key Agent IDs', 'Cruise Speed', 'Limit Speed', 'Target Tau', 'Current Tau', 'Use Spatio Result', 'Need Sharp Decel',
+            'Lead One ID', 'Key Agent IDs', 'Cruise Speed', 'Limit Speed', 'Target Tau', 'Use Spatio Result',
             'Motion Planner Time', 'Solver Condition', 'Planning Condition', 'Lane Change State', 'Collision Obstacle IDs'],
         'values': [str(joint_lead_one_id), str(joint_key_agent_ids), f"{joint_cruise_speed:.2f}", f"{joint_limit_speed:.2f}", f"{joint_target_tau:.2f}", 
-            f"{joint_current_tau:.2f}", joint_use_spatio_result, need_sharp_decel_str, f"{round(lat_lon_joint_planner_time, 2)}ms", 
+            joint_use_spatio_result, f"{round(lat_lon_joint_planner_time, 2)}ms", 
             solver_condition_name, "SUCCESS" if planning_success else "FAILED", lane_change_state_name, collision_ids_str]
     }
     joint_plan_data['data_planning_info'].data.update(planning_info_data)
@@ -550,17 +540,6 @@ def update_joint_plan_data(bag_loader, bag_time, local_view_data, joint_plan_dat
         # 添加jerk边界数据
         'jerk_max_bound_vec': jerk_max_bound_vec,
         'jerk_min_bound_vec': jerk_min_bound_vec,
-        # 添加target_v0数据
-        'joint_target_v0_vec': joint_target_v0_vec,
-        # 添加joint_zero_acc_vel_vec数据
-        'joint_v_zero_acc_vec': joint_v_zero_acc_vec,
-        # 添加max_decel曲线数据
-        'joint_s_max_decel_vec': joint_s_max_decel_vec,
-        'joint_v_max_decel_vec': joint_v_max_decel_vec,
-        'joint_a_max_decel_vec': joint_a_max_decel_vec,
-        # 添加zero_acc曲线数据
-        'joint_s_zero_acc_vec': joint_s_zero_acc_vec,
-        'joint_a_zero_acc_vec': joint_a_zero_acc_vec,
         # 添加分段轨迹数据 - 自车act轨迹
         'ego_act_seg0_x': ego_act_segments['seg_0_x'],
         'ego_act_seg0_y': ego_act_segments['seg_0_y'],
@@ -714,13 +693,6 @@ def load_joint_plan_figure(fig1, bag_loader):
         ('acc_max_bound', []), ('acc_min_bound', []),
         ('vel_max_bound', []), ('vel_min_bound', []),
         ('jerk_max_bound', []), ('jerk_min_bound', []),
-        ('joint_target_v0', []),
-        ('joint_v_zero_acc', []),
-        ('joint_s_max_decel', []),
-        ('joint_v_max_decel', []),
-        ('joint_a_max_decel', []),
-        ('joint_s_zero_acc', []),
-        ('joint_a_zero_acc', []),
     ]
 
     data_joint = {f'{k}_vec': v.copy() for k, v in base_fields}
@@ -792,8 +764,8 @@ def load_joint_plan_figure(fig1, bag_loader):
 
     # Add planning info data source - vertical layout with labels and values
     data_planning_info = ColumnDataSource(data={
-        'labels': ['Lead One ID', 'Key Agent IDs', 'Limit Speed', 'Target Tau', 'Current Tau', 'Use Spatio Result', 'Need Sharp Decel', 'Motion Planner Time', 'Solver Condition', 'Planning Condition', 'Lane Change State', 'Collision Obstacle IDs'],
-        'values': ['', '', '', '', '', '', '', '', '', '', '', '']
+        'labels': ['Lead One ID', 'Key Agent IDs', 'Cruise Speed', 'Limit Speed', 'Target Tau', 'Use Spatio Result', 'Motion Planner Time', 'Solver Condition', 'Planning Condition', 'Lane Change State', 'Collision Obstacle IDs'],
+        'values': ['', '', '', '', '', '', '', '', '', '', '']
     })
     joint_plan_data['data_planning_info'] = data_planning_info
 
@@ -1010,21 +982,6 @@ def load_joint_plan_figure(fig1, bag_loader):
     plan_vel_renderer = fig6.line('time_vec', 'vel_vec', source=data_joint_motion_plan,
                                   line_width=2, line_color='blue', line_dash='solid')
     
-    # Plot joint target v0
-    joint_target_v0_renderer = fig6.line('time_vec', 'joint_target_v0_vec', source=data_joint_motion_plan,
-                                         line_width=2, line_color='green', line_dash='dashdot',
-                                         legend_label='target v0')
-    
-    # Plot zero acc velocity curve
-    joint_v_zero_acc_vec_renderer = fig6.line('time_vec', 'joint_v_zero_acc_vec', source=data_joint_motion_plan,
-                                            line_width=2, line_color='orange', line_dash='dotted',
-                                            legend_label='v_zero_acc')
-    
-    # Plot max_decel velocity curve
-    joint_v_max_decel_renderer = fig6.line('time_vec', 'joint_v_max_decel_vec', source=data_joint_motion_plan,
-                                           line_width=2, line_color='purple', line_dash='dashdot',
-                                           legend_label='v_max_decel')
-    
     # Plot velocity bounds with lines and triangles
     vel_max_bound_line = fig6.line('time_vec', 'vel_max_bound_vec', source=data_joint_motion_plan,
                                    line_width=2, line_color='gray', line_dash='dotted',
@@ -1062,9 +1019,6 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig6_combined_legend = Legend(items=[
         ('ego_vel_ref', [ego_ref_vel_renderer]),
         ('ego_vel_opt', [plan_vel_renderer]),
-        ('ego_vel_target', [joint_target_v0_renderer]),
-        ('zero_acc_vel', [joint_v_zero_acc_vec_renderer]),
-        ('max_decel_vel', [joint_v_max_decel_renderer]),
         ('vel_max_bound', [vel_max_bound_renderer]),
         ('vel_min_bound', [vel_min_bound_renderer]),
         ('obs_vel_ref', obs_ref_renderers)
@@ -1096,16 +1050,6 @@ def load_joint_plan_figure(fig1, bag_loader):
     acc_min_bound_renderer = fig7.triangle('time_vec', 'acc_min_bound_vec', source=data_joint_motion_plan,
                                            size=8, color='gray', alpha=0.7,
                                            legend_label='acc min bound')
-    
-    # Plot max_decel acceleration curve
-    joint_a_max_decel_renderer = fig7.line('time_vec', 'joint_a_max_decel_vec', source=data_joint_motion_plan,
-                                           line_width=2, line_color='brown', line_dash='dashdot',
-                                           legend_label='a_max_decel')
-    
-    # Plot zero_acc acceleration curve
-    joint_a_zero_acc_renderer = fig7.line('time_vec', 'joint_a_zero_acc_vec', source=data_joint_motion_plan,
-                                          line_width=2, line_color='indianred', line_dash='dotted',
-                                          legend_label='a_zero_acc')
 
     fig7.legend.visible = False
 
@@ -1120,8 +1064,6 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig7_combined_legend = Legend(items=[
         ('ego_acc_ref', [ego_ref_acc_renderer]),
         ('ego_acc_opt', [plan_acc_renderer]),
-        ('max_decel_acc', [joint_a_max_decel_renderer]),
-        ('zero_acc_acc', [joint_a_zero_acc_renderer]),
         ('acc_max_bound', [acc_max_bound_renderer]),
         ('acc_min_bound', [acc_min_bound_renderer]),
         ('obs_acc_ref', obs_ref_renderers)
@@ -1170,16 +1112,6 @@ def load_joint_plan_figure(fig1, bag_loader):
                                    line_width=2, line_color='red', line_dash='dashed')
     plan_s_renderer = fig9.line('time_vec', 's_vec', source=data_joint_motion_plan,
                                 line_width=2, line_color='blue', line_dash='solid')
-    
-    # Plot max_decel distance curve
-    joint_s_max_decel_renderer = fig9.line('time_vec', 'joint_s_max_decel_vec', source=data_joint_motion_plan,
-                                           line_width=2, line_color='darkgreen', line_dash='dashdot',
-                                           legend_label='s_max_decel')
-    
-    # Plot zero_acc distance curve
-    joint_s_zero_acc_renderer = fig9.line('time_vec', 'joint_s_zero_acc_vec', source=data_joint_motion_plan,
-                                          line_width=2, line_color='teal', line_dash='dotted',
-                                          legend_label='s_zero_acc')
 
     fig9.legend.visible = False
 
@@ -1207,8 +1139,6 @@ def load_joint_plan_figure(fig1, bag_loader):
     fig9_combined_legend = Legend(items=[
         ('ego_s_ref', [ego_ref_s_renderer]),
         ('ego_s_opt', [plan_s_renderer]),
-        ('s_max_decel', [joint_s_max_decel_renderer]),
-        ('s_zero_acc', [joint_s_zero_acc_renderer]),
         ('obs_s_ref', obs_ref_s_renderers),
         ('obs_s_opt', obs_opt_s_renderers)
     ], location="top_right", orientation="vertical",

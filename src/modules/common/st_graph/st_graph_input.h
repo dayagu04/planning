@@ -159,12 +159,6 @@ class StGraphInput {
       const trajectory::TrajectoryPoint& planning_init_point,
       const std::shared_ptr<EgoStateManager>& ego_state_manager);
 
-  const std::shared_ptr<
-      simulator::LatLonVehicleMotionSimulator::SimulationResult>
-  ego_motion_simulation_result() const {
-    return ego_motion_simulation_result_ptr_;
-  }
-
   void Reset();
 
  private:
@@ -215,10 +209,6 @@ class StGraphInput {
   bool enable_backward_extend_st_boundary_ = false;
   double backward_extend_time_s_ = 0.0;
   planning_math::Box2d planning_init_point_box_;
-
-  // ego motion preplanner simulation result
-  std::shared_ptr<simulator::LatLonVehicleMotionSimulator::SimulationResult>
-      ego_motion_simulation_result_ptr_;
 };
 }  // namespace speed
 }  // namespace planning

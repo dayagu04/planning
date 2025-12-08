@@ -14,7 +14,6 @@
 #include "../tasks/behavior_planners/st_graph_decider/st_graph_searcher_output.h"
 #include "../tasks/behavior_planners/start_stop_decider/start_stop_decider_output.h"
 #include "../tasks/behavior_planners/stop_destination_decider/stop_destination_decider_output.h"
-#include "../tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner_output.h"
 #include "../tasks/task_interface/cipv_lost_prohibit_acceleration_decider_output.h"
 // #include "../tasks/task_interface/construction_scene_decider_output.h"
 #include "../tasks/task_interface/crossing_agent_decider_output.h"
@@ -406,14 +405,6 @@ class PlanningContext {
     return start_stop_decider_output_;
   }
 
-  const EgoMotionPreplannerOutput &ego_motion_preplanner_output() const {
-    return ego_motion_preplanner_output_;
-  }
-
-  EgoMotionPreplannerOutput &mutable_ego_motion_preplanner_output() {
-    return ego_motion_preplanner_output_;
-  }
-
   const lane_change_joint_decision::LatLonJointDecisionOutput &
   lat_lon_joint_decision_output() const {
     return lat_lon_joint_decision_output_;
@@ -615,8 +606,6 @@ class PlanningContext {
   MRCBrakeDeciderOutput mrc_brake_decider_output_;
   // LonRefPathDeciderOutput
   LonRefPathDeciderOutput lon_ref_path_decider_output_;
-
-  EgoMotionPreplannerOutput ego_motion_preplanner_output_;
 
   // LaneChangeJointDecisionGenerator
   lane_change_joint_decision::LatLonJointDecisionOutput

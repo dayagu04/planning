@@ -593,7 +593,7 @@
     "q_ego_omega_weight": 1000.0,
     "q_ego_delta_weight": 500.0,
     "q_ego_acc_bound_weight": 1600.0,
-    "ego_acc_max": 1.2,
+    "ego_acc_max": 1.5,
     "ego_acc_min": -4.5,
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 5.0,
@@ -783,17 +783,9 @@
     "q_stop_s": 2000.0,
     "q_ref_pos_speed_adjust": 35.0,
     "q_acc_speed_adjust": 20.0,
-    "q_jerk_speed_adjust": 50.0
-  },
-  "ego_motion_preplanner": {
-    "ego_motion_simulate_dt_resolution": 0.1,
-    "pure_pursuit_ld": 6.3,
-    "idm_minimum_spacing": 2.0,
-    "idm_desired_time_headway": 1.5,
-    "idm_max_accel": 2.0,
-    "idm_comfortable_breaking_deceleration": 3.0,
-    "idm_hard_breaking_deceleration": 4.5,
-    "idm_exponent": 4.0
+    "q_jerk_speed_adjust": 50.0,
+    "q_pos_safe_cost": 200.0,
+    "safe_distance": 2.5
   },
   "real_time_long_behavior_planner": {
     "preview_x": 80.0,

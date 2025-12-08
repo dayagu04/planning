@@ -42,7 +42,6 @@
 #include "tasks/behavior_planners/traffic_light_decider/traffic_light_decider.h"
 // #include "tasks/behavior_planners/construction_scene_decider/construction_scene_decider.h"
 #include "tasks/behavior_planners/hmi_decider/hmi_decider.h"
-#include "tasks/motion_planners/ego_motion_preplanner/ego_motion_preplanner.h"
 #include "tasks/motion_planners/lateral_motion_planner/lateral_motion_planner.h"
 #include "tasks/motion_planners/scc_lon_motion_planner_v3/scc_longitudinal_motion_planner_v3.h"
 #include "tasks/trajectory_generator/result_trajectory_generator.h"
@@ -106,7 +105,6 @@ class LongTimeTaskPipelineV3 : public BaseTaskPipeline {
   std::unique_ptr<LateralMotionPlanner> lateral_motion_planner_;
   std::unique_ptr<SccLongitudinalMotionPlannerV3>
       scc_longitudinal_motion_planner_;
-  std::unique_ptr<EgoMotionPreplanner> ego_motion_preplanner_;
   std::unique_ptr<HMIDecider> hmi_decider_;
 
   std::unique_ptr<ResultTrajectoryGenerator> result_trajectory_generator_;
