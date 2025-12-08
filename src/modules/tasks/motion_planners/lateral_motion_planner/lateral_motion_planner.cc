@@ -629,24 +629,40 @@ bool LateralMotionPlanner::AssembleInput() {
   }
     // 低速变道优先
   bool is_low_speed_lane_change = false;
+  bool is_low_speed_lane_change_without_obstacle = false;
   const auto avoid_dist = planning_weight_ptr_->GetAvoidDist();
   if (general_lateral_decider_output.is_low_speed_lane_change_scene &&
-      lane_change_scene && ((planning_weight_ptr_->GetLaneChangeStyle() ==
-      pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) ||
-      avoid_dist > avoid_dist_thr)) {
-    is_low_speed_lane_change = true;
+      lane_change_scene) {
+    if (((planning_weight_ptr_->GetLaneChangeStyle() ==
+        pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE) ||
+        avoid_dist > avoid_dist_thr)) {
+      is_low_speed_lane_change = true;
+    } else {
+      is_low_speed_lane_change_without_obstacle = true;
+    }
   }
   double max_steer_angle_rate_low_speed_lc =
       std::min(vehicle_param.max_steer_angle_rate,
               config_.max_steer_angle_dot_low_speed_lc / 57.3);
   double max_wheel_angle_rate_low_speed_lc = max_steer_angle_rate_low_speed_lc / steer_ratio;
   double limit_jerk_low_speed_lc = max_wheel_angle_rate_low_speed_lc * kv2;
+  double max_steer_angle_rate_low_speed_lc_without_obstacle =
+      std::min(vehicle_param.max_steer_angle_rate,
+               config_.max_steer_angle_dot_low_speed_lc_without_obstacle / 57.3);
+  double max_wheel_angle_rate_low_speed_lc_without_obstacle =
+      max_steer_angle_rate_low_speed_lc_without_obstacle / steer_ratio;
+  double limit_jerk_low_speed_lc_without_obstacle =
+      max_wheel_angle_rate_low_speed_lc_without_obstacle * kv2;
   if (is_low_speed_lane_change) {
     planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc);
     planning_weight_ptr_->SetLaneChangeStyle(
         pnc::lateral_planning::LaneChangeStyle::LOW_SPEED_LANE_CHANGE);
     mutable_motion_planner_output.is_limit_lon_acc_bound = true;
-    mutable_motion_planner_output.recommended_acc_bound = config_.recommend_low_speed_lc_lon_acc;
+    mutable_motion_planner_output.recommended_acc_bound =
+        config_.recommend_low_speed_lc_lon_acc;
+  } else if (is_low_speed_lane_change_without_obstacle) {
+    planning_weight_ptr_->SetMaxJerkLC(limit_jerk_low_speed_lc_without_obstacle);
+    mutable_motion_planner_output.is_limit_lon_acc_bound = false;
   } else {
     mutable_motion_planner_output.is_limit_lon_acc_bound = false;
   }
