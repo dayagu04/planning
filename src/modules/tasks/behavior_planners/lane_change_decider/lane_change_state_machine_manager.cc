@@ -308,6 +308,14 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     RequestSource* const lane_change_type) const {
   *lane_change_direction = lc_req_mgr_->request();
   *lane_change_type = lc_req_mgr_->request_source();
+  const auto &virtual_lane_manager =
+    session_->environmental_model().get_virtual_lane_manager();
+  const bool is_ego_in_split_region =
+    virtual_lane_manager->get_is_ego_in_split_region();
+  if(is_ego_in_split_region) {
+    *lane_change_type = NO_REQUEST;
+    *lane_change_direction = NO_CHANGE;
+  }
 
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {

@@ -804,6 +804,10 @@ bool VirtualLaneManager::update(
   ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
+  set_is_ego_in_split_region(ego_lane_track_manager_.is_ego_in_split_region());
+  ILOG_DEBUG << "is_ego_in_split_region:" << is_ego_in_split_region_;
+  JSON_DEBUG_VALUE("is_ego_in_split_region", is_ego_in_split_region_);
+
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
   ILOG_DEBUG << "is_in_ramp_select_split_situation:"

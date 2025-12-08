@@ -159,6 +159,10 @@ class EgoLaneTrackManger {
     return virtual_lane_relative_id_switch_flag_;
   };
 
+  bool is_ego_in_split_region() const {
+    return ego_in_split_region_;
+  };
+
  private:
   double ComputeLanesMatchlaterakDisCost(
       int virtual_id,
