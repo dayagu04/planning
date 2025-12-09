@@ -53,7 +53,7 @@ protected:
      const iflymapdata::sdpro::LinkInfo_Link* link,
      const std::vector<iflymapdata::sdpro::Lane>& start_lane_vec);
 
- MLCSceneType MLCSceneTypeDecider();
+ void MLCSceneTypeDecider();
 
  bool CalculateFeasibleLaneGraph(
      TopoLinkGraph& feasible_lane_graph,
@@ -108,6 +108,14 @@ protected:
  void CalculateAvoidMergeFeasibleLane(TopoLinkGraph& feasible_lane_graph);
  const iflymapdata::sdpro::Lane* IsEntryLanePresentOnEitherSideOfSuccessorLane(
      const iflymapdata::sdpro::Lane* cur_link_lane_info);
+  // pair<left_lane, right_lane>
+  std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
+  FindLaneLeftRightNeighbors(const iflymapdata::sdpro::Lane* target_lane);
+  bool IsInvalidLaneMergeLaneOppositeSide(
+      const iflymapdata::sdpro::Lane* merge_lane,
+      const std::vector<uint64_t>& all_predecessor_lane_ids);
+  bool IsInvalidNonDrivingLane(const iflymapdata::sdpro::Lane* lane);
+
 
  ad_common::sdpromap::SDProMap ld_map_;
  const LocalView* local_view_ = nullptr;
