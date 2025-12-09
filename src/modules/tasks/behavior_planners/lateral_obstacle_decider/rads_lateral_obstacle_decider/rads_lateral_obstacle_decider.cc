@@ -15,6 +15,7 @@ RADSLateralObstacleDecider::RADSLateralObstacleDecider(
 bool RADSLateralObstacleDecider::Execute() {
   if (!PreCheck()) {
     output_.clear();
+    last_output_.clear();
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }

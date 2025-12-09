@@ -1329,6 +1329,7 @@ void PlanningPlayer::PerpareTrajectory(
     const struct_msgs::PlanningOutput& plan_msg) {
   if (plan_msg.planning_request.take_over_req_level >
       iflyauto::REQUEST_LEVEL_NO_REQ) {
+    early_stop_ = true;
     return;
   }
   const auto& trajectory = plan_msg.trajectory;
@@ -1381,9 +1382,13 @@ void PlanningPlayer::PerfectControlEgoMotion(
   const double dt = static_cast<double>(delta_t) / 1e6;
   const double x = x_t_spline_(dt);
   const double y = y_t_spline_(dt);
-  const double v = v_t_spline_(dt);
-  const double a = a_t_spline_(dt);
   const double theta = pnc::mathlib::DeltaAngleFix(theta_t_spline_(dt));
+  double v = v_t_spline_(dt);
+  double a = a_t_spline_(dt);
+  if (scene_type_ == "rads") {
+    v *= -1.0;
+    a *= -1.0;
+  }
 
   Eigen::Vector3d euler_zxy;
   Eigen::Quaterniond q;
