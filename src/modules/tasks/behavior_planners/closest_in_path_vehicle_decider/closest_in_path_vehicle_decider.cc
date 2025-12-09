@@ -239,42 +239,145 @@ void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
       session_->environmental_model().get_dynamic_world();
   if (nullptr == dynamic_world) {
     ILOG_DEBUG << "dynamic_world is nullptr";
+    hmi_info->cipv_info.cipv_id = -1;
+    hmi_info->cipv_info.has_cipv = false;
     return;
   }
   const auto agent_manager = dynamic_world->agent_manager();
   if (nullptr == agent_manager) {
     ILOG_DEBUG << "agent_manager is nullptr";
+    hmi_info->cipv_info.cipv_id = -1;
+    hmi_info->cipv_info.has_cipv = false;
     return;
   }
-  for (const auto & [ agent_cur_distance_to_ego, isvirtual_agentid ] :
+
+  const auto &planning_ctx = session_->planning_context();
+  const auto &lat_obstacle_decision =
+      planning_ctx.lateral_obstacle_decider_output().lat_obstacle_decision;
+  const auto &ego_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+  const auto &ego_lane_coord =
+      (ego_lane != nullptr) ? ego_lane->get_lane_frenet_coord() : nullptr;
+  const auto &ego_init_point = session_->environmental_model()
+                                   .get_ego_state_manager()
+                                   ->planning_init_point();
+  const auto &ego_vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle =
+      ego_vehicle_param.front_edge_to_rear_axle;
+
+  double ego_s = 0.0, ego_l = 0.0;
+  if (ego_lane_coord != nullptr) {
+    ego_lane_coord->XYToSL(ego_init_point.x, ego_init_point.y, &ego_s, &ego_l);
+  }
+
+  int32_t closest_follow_agent_id = -1;
+  double min_follow_lon_distance = std::numeric_limits<double>::max();
+  bool has_valid_follow_agent = false;
+
+  for (const auto &[agent_id, decision] : lat_obstacle_decision) {
+    if (decision != LatObstacleDecisionType::FOLLOW) {
+      continue;
+    }
+    if (agent_id == -1) {
+      continue;
+    }
+    const auto *agent = agent_manager->GetAgent(agent_id);
+    if (agent == nullptr) {
+      continue;
+    }
+    double agent_s = 0.0, agent_l = 0.0;
+    if (ego_lane_coord == nullptr ||
+        !ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+    const double lon_distance =
+        agent_s - ego_s - front_edge_to_rear_axle - 0.5 * agent->length();
+    if (lon_distance < 0) {
+      continue;
+    }
+    if (lon_distance < min_follow_lon_distance) {
+      min_follow_lon_distance = lon_distance;
+      closest_follow_agent_id = agent_id;
+      has_valid_follow_agent = true;
+    }
+  }
+
+  int32_t original_cipv_id = -1;
+  double original_cipv_lon_distance = std::numeric_limits<double>::max();
+  bool has_original_cipv = false;
+
+  for (const auto &[agent_cur_distance_to_ego, isvirtual_agentid] :
        agents_distance_id_map_) {
-    if (isvirtual_agentid.first) {  // if virtual, skip
+    const auto *agt_ptr = agent_manager->GetAgent(isvirtual_agentid.second);
+    if (isvirtual_agentid.first) {
       continue;
     } else {
-      const auto *agt_ptr = agent_manager->GetAgent(isvirtual_agentid.second);
       if (nullptr == agt_ptr) {
-        return;
+        break;
       }
       if (agt_ptr->is_crossing()) {
         filtered_out_crossing_cipv_id_ = isvirtual_agentid.second;
         hmi_info->cipv_info.cipv_id = -1;
         hmi_info->cipv_info.has_cipv = false;
+        break;
       } else if (isvirtual_agentid.second == filtered_out_crossing_cipv_id_) {
         hmi_info->cipv_info.cipv_id = -1;
         hmi_info->cipv_info.has_cipv = false;
+        break;
       } else {
         hmi_info->cipv_info.cipv_id = isvirtual_agentid.second;
         hmi_info->cipv_info.has_cipv = true;
         filtered_out_crossing_cipv_id_ = -1;
-      }
-      JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
-      return;
+      };
+    }
+    double agent_s = 0.0, agent_l = 0.0;
+    if (ego_lane_coord != nullptr &&
+        ego_lane_coord->XYToSL(agt_ptr->x(), agt_ptr->y(), &agent_s,
+                               &agent_l)) {
+      original_cipv_lon_distance =
+          agent_s - ego_s - front_edge_to_rear_axle - 0.5 * agt_ptr->length();
+      original_cipv_id = isvirtual_agentid.second;
+      has_original_cipv = true;
+      break;
     }
   }
-  hmi_info->cipv_info.cipv_id = -1;
-  hmi_info->cipv_info.has_cipv = false;
-  filtered_out_crossing_cipv_id_ = -1;
-  JSON_DEBUG_VALUE("cipv_id_hmi", hmi_info->cipv_info.cipv_id)
+
+  if (filtered_out_crossing_cipv_id_ != -1) {
+    const auto *agt_crossing_ptr =
+        agent_manager->GetAgent(filtered_out_crossing_cipv_id_);
+    double crossing_agent_s = 0.0, crossing_agent_l = 0.0;
+    double crossing_lon_distance = std::numeric_limits<double>::max();
+    if (agt_crossing_ptr != nullptr && ego_lane_coord != nullptr &&
+        ego_lane_coord->XYToSL(agt_crossing_ptr->x(), agt_crossing_ptr->y(),
+                               &crossing_agent_s, &crossing_agent_l)) {
+      crossing_lon_distance = crossing_agent_s - ego_s -
+                              front_edge_to_rear_axle -
+                              0.5 * agt_crossing_ptr->length();
+      crossing_lon_distance = std::max(0.0, crossing_lon_distance);
+    }
+    if (crossing_lon_distance < min_follow_lon_distance) {
+      has_valid_follow_agent = false;
+    }
+  }
+
+  int32_t final_cipv_id = -1;
+  if (!has_original_cipv && has_valid_follow_agent) {
+    final_cipv_id = closest_follow_agent_id;
+  } else if (has_original_cipv && !has_valid_follow_agent) {
+    final_cipv_id = original_cipv_id;
+  } else if (has_original_cipv && has_valid_follow_agent) {
+    final_cipv_id = (min_follow_lon_distance < original_cipv_lon_distance)
+                        ? closest_follow_agent_id
+                        : original_cipv_id;
+  } else {
+    final_cipv_id = -1;
+  }
+
+  hmi_info->cipv_info.cipv_id = final_cipv_id;
+  hmi_info->cipv_info.has_cipv = (final_cipv_id != -1);
+  JSON_DEBUG_VALUE("cipv_id_hmi", final_cipv_id);
   return;
 }
 
