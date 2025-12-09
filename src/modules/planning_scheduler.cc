@@ -1265,6 +1265,7 @@ const bool PlanningScheduler::ExcuteParkingFunction(
   planning_output->msg_meta = msg_meta;
   planning_output->meta = meta;
   FillAdasPlanningHmiInfo(start_timestamp, planning_hmi_info);
+  session_.mutable_planning_context()->mutable_planning_success() = planning_success;
   return planning_success;
 }
 

@@ -80,7 +80,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
 
   // run planner
   scenario_manager_.UpdateScenarioType();
-  scenario_manager_.Process();
+  bool planning_success = scenario_manager_.Process();
   planning_output_ = scenario_manager_.GetPlanningOutput();
   apa_hmi_ = scenario_manager_.GetAPAHmiData();
 
@@ -94,10 +94,7 @@ const bool ApaPlanInterface ::Update(const LocalView *local_view_ptr,
                                     frame_duration);
   TimeBenchmark::Instance().DebugString();
 
-  return (scenario_manager_.GetScenarioStatus() !=
-          ParkingScenarioStatus::STATUS_UNKNOWN)
-             ? true
-             : false;
+  return planning_success;
 }
 
 void ApaPlanInterface::AddReleasedSlotInfo(
