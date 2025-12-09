@@ -92,8 +92,7 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       ad_info.lane_change_status =
           iflyauto::LaneChangeStatus::LC_STATE_COMPLETE;
       lane_change_complete_cnt++;
-    }
-    if (lasr_frame_state == kLaneChangeComplete) {
+    } else if (lasr_frame_state == kLaneChangeComplete) {
       lane_change_complete_cnt = 1;
       lc_complete_to_lk_time = IflyTime::Now_ms();
       ad_info.lane_change_status =
