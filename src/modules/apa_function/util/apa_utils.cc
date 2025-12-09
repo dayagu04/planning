@@ -71,7 +71,7 @@ void SetStoppingPlanningOutput(iflyauto::PlanningOutput& planning_output,
 
 void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                                const pnc::geometry_lib::PathPoint& ego_pose) {
-  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_COMPLETED;
+  planning_output.planning_status.hpp_planning_status = iflyauto::HPP_PARKING_COMPLETED;
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FINISHED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);
@@ -81,7 +81,7 @@ void SetFinishedPlanningOutput(iflyauto::PlanningOutput& planning_output,
 void SetFailedPlanningOutput(iflyauto::PlanningOutput& planning_output,
                              const pnc::geometry_lib::PathPoint& ego_pose) {
   planning_output.planning_status.hpp_planning_status =
-      iflyauto::HPP_RUNNING_FAILED;
+      iflyauto::HPP_PARKING_PLANNING_FAILED;
   planning_output.planning_status.apa_planning_status = iflyauto::APA_FAILED;
 
   SetStoppingPlanningOutput(planning_output, ego_pose);

@@ -189,6 +189,7 @@ void ParkingScenario::SetParkingStatus(uint8_t status) {
   return;
 }
 
+//TODO(taolu10): move to  PlanningScheduler
 void ParkingScenario::PublishPlanningTraj() {
   pnc::geometry_lib::PathPoint current_ego_pose(
       apa_world_ptr_->GetMeasureDataManagerPtr()->GetPos(),

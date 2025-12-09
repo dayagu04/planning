@@ -613,21 +613,26 @@ void PlanningScheduler::FillPlanningTrajectory(
   planning_status->apa_planning_status = iflyauto::APA_NONE;
   // WB end:--------临时hack以上信号--------
   const bool planning_success = planning_context.planning_success();
+  const auto &running_mode = state_machine.running_mode;
   const auto scene_type = session_.get_scene_type();
-  if (scene_type == common::SceneType::HPP) {
+  if(running_mode == iflyauto::RunningMode::RUNNING_MODE_MEMORY_PARKING) {
     const bool hpp_cruise_routing_completed =
         planning_context.hpp_cruise_routing_completed();
     const bool memory_slot_allowed_to_park =
         planning_context.memory_slot_allowed_to_park();
-    //TODO(taolu10): 扩展 hpp_planning_status 的内聚类型，区分 HPP Cruise 完成和 HPP 完成
+    //TODO(taolu10): define HPP_PARKING_COMPLETED status
     if (hpp_cruise_routing_completed && memory_slot_allowed_to_park) {
-      planning_status->hpp_planning_status = iflyauto::HPP_COMPLETED;
+      planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_COMPLETED;
     } else if (planning_success) {
       planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
     } else {
-      planning_status->hpp_planning_status = iflyauto::HPP_RUNNING_FAILED;
+      if(scene_type == common::SceneType::HPP) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_PLANNING_FAILED;
+      } else { // HPP_PARKING
+        planning_status->hpp_planning_status = iflyauto::HPP_PARKING_PLANNING_FAILED;
+      }
     }
-  } else if (scene_type == common::SceneType::RADS) {
+  } else if (running_mode == iflyauto::RunningMode::RUNNING_MODE_REVERSE_FOLLOW_TRACE) {
     const bool rads_planning_completed = planning_context.rads_planning_completed();
     if (rads_planning_completed) {
       planning_status->rads_planning_status = iflyauto::RADS_COMPLETED;
