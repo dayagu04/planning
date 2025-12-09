@@ -2235,9 +2235,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     if (nearest_lane == nullptr) {
       continue;
     }
-    if (target_lane_virtual_id != nearest_lane->get_virtual_id()) {
-      continue;
-    }
+    // if (target_lane_virtual_id != nearest_lane->get_virtual_id()) {
+    //   continue;
+    // } banned: 因为可变车道分叉
     double agent_s = target_lane_node->node_s();
     if (agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
       continue;  // 车头落后自车就是后车
