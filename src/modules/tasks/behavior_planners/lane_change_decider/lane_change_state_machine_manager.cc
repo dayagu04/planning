@@ -308,14 +308,6 @@ bool LaneChangeStateMachineManager::CheckIfProposeLaneChange(
     RequestSource* const lane_change_type) const {
   *lane_change_direction = lc_req_mgr_->request();
   *lane_change_type = lc_req_mgr_->request_source();
-  const auto &virtual_lane_manager =
-    session_->environmental_model().get_virtual_lane_manager();
-  const bool is_ego_in_split_region =
-    virtual_lane_manager->get_is_ego_in_split_region();
-  if(is_ego_in_split_region) {
-    *lane_change_type = NO_REQUEST;
-    *lane_change_direction = NO_CHANGE;
-  }
 
   if ((*lane_change_direction) != NO_CHANGE &&
       *lane_change_type != NO_REQUEST) {
@@ -1058,7 +1050,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       lc_req_mgr_->request_source();
   coarse_planning_info.source_lane_id = lc_lane_mgr_->origin_lane_virtual_id();
   coarse_planning_info.target_lane_id = lc_lane_mgr_->fix_lane_virtual_id();
-  coarse_planning_info.lane_change_cmd = lc_req_mgr_->lane_change_cmd();
+  coarse_planning_info.int_lane_change_cmd = lc_req_mgr_->get_int_lane_change_cmd();
   coarse_planning_info.reference_path =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()

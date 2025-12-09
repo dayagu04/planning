@@ -923,7 +923,7 @@ struct CoarsePlanningInfo {
   int source_lane_id;
   int target_lane_id;
   bool bind_end_state;
-  int lane_change_cmd;
+  int int_lane_change_cmd;
   std::shared_ptr<ReferencePath> reference_path = nullptr;
   TrajectoryPoints trajectory_points;
   // overtake_obstacles and yield_obstacles are used only under wait state
