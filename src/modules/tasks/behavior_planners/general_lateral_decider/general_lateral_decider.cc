@@ -111,6 +111,7 @@ bool GeneralLateralDecider::InitInfo() {
   is_use_recurrence_ = has_enough_speed_bound_recurrence_hysteresis_.IsValid();
   ref_curve_info_.Clear();
   current_desire_final_nudge_l_map_.clear();
+  min_road_radius_ = 20.0;
   return true;
 }
 
@@ -865,7 +866,6 @@ void GeneralLateralDecider::HandleRefPathOffset(
 bool GeneralLateralDecider::ConstructReferencePathPoints(
     const TrajectoryPoints &traj_points) {
   ref_path_points_.reserve(traj_points.size());
-  min_road_radius_ = 10.0;
   double care_kappa_range_t = 2.5;
   const auto &coarse_planning_info = session_->planning_context()
                                          .lane_change_decider_output()
@@ -878,20 +878,30 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
       // add logs
       ILOG_ERROR << "Get reference point by lon failed!";
     }
-    double road_radius1 =
-        1 / std::max(std::fabs(refpath_pt.path_point.kappa()), 1e-6);
-    double road_radius2 = 10.0;
-    if (k_s_spline.get_x().size() > 0) {
-      road_radius2 = 1 / std::max(std::fabs(k_s_spline(traj_point.s)), 1e-6);
-    }
-    min_road_radius_ = std::max(
-        std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_),
-        0.2);
     ref_path_points_.emplace_back(refpath_pt);
   }
-
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
+  
+  if (!ref_path_points_.empty()) {
+    const auto& raw_path_points = reference_path_ptr_->get_frenet_coord()->path_points();
+    for (const auto &raw_path_point : raw_path_points) {
+      if (raw_path_point.s() < ref_path_points_.front().path_point.s() - 2.0) {
+        continue;
+      } else if (raw_path_point.s() > ref_path_points_.back().path_point.s() + 2.0) {
+        break;
+      }
+      double road_radius1 =
+          1 / std::max(std::fabs(raw_path_point.kappa()), 1e-6);
+      double road_radius2 = 20.0;
+      if (k_s_spline.get_x().size() > 0) {
+        road_radius2 = 1 / std::max(std::fabs(k_s_spline(raw_path_point.s())), 1e-6);
+      }
+      min_road_radius_ = std::max(
+          std::min(std::min(road_radius1, road_radius2) - 1.0, min_road_radius_),
+          0.2);
+    }
+  }
 
   const auto is_plan_history_traj_valid = session_->planning_context()
                                               .lateral_obstacle_decider_output()
@@ -1042,13 +1052,13 @@ void GeneralLateralDecider::GenerateRoadHardSoftBoundary() {
 
   const double kDefaultDistanceToRoad = 10.0;
   // const double kMaxTime = 3.5;
-  min_road_radius_ = std::min(kDefaultDistanceToRoad, min_road_radius_);
+  double init_dist_to_bound = std::min(kDefaultDistanceToRoad, min_road_radius_);
   hard_bounds_.resize(ref_traj_points_.size());
   second_soft_bounds_.resize(ref_traj_points_.size());
   first_soft_bounds_.resize(ref_traj_points_.size());
   for (size_t i = 0; i < ref_traj_points_.size(); i++) {
-    Bound soft_bound_road{-min_road_radius_, min_road_radius_};
-    Bound hard_bound_road{-min_road_radius_, min_road_radius_};
+    Bound soft_bound_road{-init_dist_to_bound, init_dist_to_bound};
+    Bound hard_bound_road{-init_dist_to_bound, init_dist_to_bound};
     // if (ref_path_points_[i].path_point.kappa() > 0.0) {
     //   soft_bound_road.upper = min_road_radius;
     //   hard_bound_road.upper = min_road_radius;
@@ -1810,10 +1820,10 @@ void GeneralLateralDecider::ApplyFirstSoftBoundsHysteresis() {
           current_first_bound.bound_info.type == BoundType ::EGO_POSITION ||
           current_first_bound.bound_info.type == BoundType ::LANE ||
           !config_.use_first_soft_bound) {
-        current_first_bound.upper = std::fmax(current_first_bound.upper,
-                                        config_.first_soft_min_distance2center);
-        current_first_bound.lower = std::fmin(
-            current_first_bound.lower, -config_.first_soft_min_distance2center);
+        current_first_bound.upper = std::fmin(std::fmax(
+            current_first_bound.upper, config_.first_soft_min_distance2center), min_road_radius_);
+        current_first_bound.lower = std::fmax(std::fmin(
+            current_first_bound.lower, -config_.first_soft_min_distance2center), -min_road_radius_);
         current_first_bound.bound_info.type = BoundType ::DEFAULT;
         current_first_bound.bound_info.id = -100;
       }
