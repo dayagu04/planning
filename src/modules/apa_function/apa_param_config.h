@@ -407,8 +407,8 @@ struct ApaParameters {
   double wheel_base = 2.7;
   double car_width = 1.89;
   double car_length = 4.88;
-  double max_car_width = 0.2;
-  double fold_mirror_max_car_width = 0.2;
+  double max_car_width = 2.2;
+  double fold_mirror_max_car_width = 2.12;
   double mirror_height = 1.15;
   double front_overhanging_height = 0.34;
   double rear_overhanging_height = 0.41;
