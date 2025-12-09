@@ -1,4 +1,4 @@
-#include "sample_quartic_poly_curve.h"
+#include "sample_quintic_poly_curve.h"
 
 #include <cmath>
 #include <cstddef>
@@ -11,16 +11,15 @@
 #include "task_interface/lane_change_utils.h"
 namespace planning {
 
-SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
-    QuarticPolynomial& poly, double arrived_t, double mid_t,
+SampleQuinticPolynomialCurve::SampleQuinticPolynomialCurve(
+    QuinticPolynomial& poly, double arrived_t, double mid_t,
     const double weight_match_gap_vel, const double weight_match_gap_s,
     const double weight_follow_vel, const double weight_stop_line,
     const double weight_leading_veh_safe_s, const double weight_speed_variable,
     const double weight_gap_avaliable, const double weight_acc_limit,
     const double weight_stop_penalty, const double weight_speed_change,
     const double weight_leading_veh_follow_s, const double weight_jerk_limit,
-    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle,
-    const SamplePolySpeedAdjustDeciderConfig& config) {
+    const double front_edge_to_rear_axle, const double back_edge_to_rear_axle) {
   poly_ = poly;
   arrived_t_ = arrived_t;
   arrived_v_ = arrived_t_ - poly_.T() > 0
@@ -43,12 +42,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   follow_vel_cost_.SetWeight(weight_follow_vel);
   stop_line_cost_.SetWeight(weight_stop_line);
   leading_veh_safe_cost_.SetWeight(weight_leading_veh_safe_s);
-  leading_veh_safe_cost_.SetUpParam(front_edge_to_rear_axle,
-                                    config.leading_safe_distance_gain,
-                                    config.leading_safe_delay_time,
-                                    config.leading_safe_max_dec,
-                                    config.leading_safe_overstep_gain,
-                                    config.leading_safe_overstep_buffer);
+  leading_veh_safe_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
   speed_variable_cost_.SetWeight(weight_speed_variable);
   gap_avaliable_cost_.SetWeight(weight_gap_avaliable);
   acc_limit_cost_.SetWeight(weight_acc_limit);
@@ -63,7 +57,7 @@ SampleQuarticPolynomialCurve::SampleQuarticPolynomialCurve(
   jerk_limit_cost_.SetWeight(weight_jerk_limit);
 };
 
-void SampleQuarticPolynomialCurve::CostInit() {
+void SampleQuinticPolynomialCurve::CostInit() {
   follow_vel_cost_.Init();
   stop_line_cost_.Init();
   leading_veh_safe_cost_.Init();
@@ -76,24 +70,23 @@ void SampleQuarticPolynomialCurve::CostInit() {
   jerk_limit_cost_.Init();
   cost_sum_ = 0.0;
 }
-double SampleQuarticPolynomialCurve::CalcS(const double t) const {
+double SampleQuinticPolynomialCurve::CalcS(const double t) const {
   return t - poly_.T() >= 0
              ? poly_.CalculatePoint(poly_.T()) + arrived_v_ * (t - poly_.T())
              : poly_.CalculatePoint(t);
 }
-double SampleQuarticPolynomialCurve::CalcV(const double t) const {
-  return t - poly_.T() >= 0 ? poly_.CalculateFirstDerivative(poly_.T())
-                            : poly_.CalculateFirstDerivative(t);
+double SampleQuinticPolynomialCurve::CalcV(const double t) const {
+  return t - poly_.T() >= 0 ? arrived_v_ : poly_.CalculateFirstDerivative(t);
 }
-double SampleQuarticPolynomialCurve::CalcAcc(const double t) const {
+double SampleQuinticPolynomialCurve::CalcAcc(const double t) const {
   return t - poly_.T() >= 0 ? 0.0 : poly_.CalculateSecondDerivative(t);
 }
 
-double SampleQuarticPolynomialCurve::CalcJerk(const double t) const {
+double SampleQuinticPolynomialCurve::CalcJerk(const double t) const {
   return t - poly_.T() >= 0 ? 0.0 : poly_.CalculateThirdDerivative(t);
 }
 
-double SampleQuarticPolynomialCurve::CalcRef(const double t,
+double SampleQuinticPolynomialCurve::CalcRef(const double t,
                                              const double decay_coffi) const {
   double s = 0.0;
   if (arrived_t_ < poly_.T()) {
@@ -114,24 +107,7 @@ double SampleQuarticPolynomialCurve::CalcRef(const double t,
   return s;
 }
 
-double SampleQuarticPolynomialCurve::CalcVelRef(
-    const double t, const double decay_coffi) const {
-  double s = 0.0;
-  if (arrived_t_ < poly_.T()) {
-    double acc =
-        std::max(arrived_a_, -arrived_v_ / std::fmax(5.0 - arrived_t_, 0.1));
-    double left_t = t - arrived_t_;
-    s = left_t > 0.1
-            ? arrived_v_ + acc * std::exp(decay_coffi * left_t) / decay_coffi -
-                  acc / decay_coffi
-            : poly_.CalculateFirstDerivative(t);
-  } else {
-    s = t - poly_.T() > 0 ? arrived_v_ : poly_.CalculateFirstDerivative(t);
-  }
-  return s;
-}
-
-double SampleQuarticPolynomialCurve::CalcVelIntegral(
+double SampleQuinticPolynomialCurve::CalcVelIntegral(
     const double evaluate_t) const {
   const double t = evaluate_t > poly_.T() ? poly_.T() : evaluate_t;
   const double t_2 = t * t;
@@ -141,7 +117,7 @@ double SampleQuarticPolynomialCurve::CalcVelIntegral(
   return coeff[4] * t_4 + coeff[3] * t_3 + coeff[2] * t_2;
 }
 
-double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
+double SampleQuinticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
                                                             const double obj_v,
                                                             const double ego_a,
                                                             const double obj_a,
@@ -181,7 +157,7 @@ double SampleQuarticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
   }
 }
 
-void SampleQuarticPolynomialCurve::CalcCost(
+void SampleQuinticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
     const double ego_a, const double suggested_v, const double stop_line_s,
     const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
@@ -196,8 +172,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
   double last_arrived_t = arrived_t_;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
-  const double anchor_arrived_t = cur_time;
-  const double anchor_arrived_v =
+  const double& anchor_arrived_t = cur_time;
+  const double& anchor_arrived_v =
       anchor_arrived_t - poly_.T() > 0
           ? poly_.CalculateFirstDerivative(poly_.T())
           : poly_.CalculateFirstDerivative(anchor_arrived_t);
@@ -239,7 +215,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
   auto gap_avaliable_cost = gap_avaliable_cost_;
   auto acc_limit_cost = acc_limit_cost_;
   auto jerk_limit_cost = jerk_limit_cost_;
-  double time_cost = 3.0 * std::exp(5.0 / 2.5);
   CostInit();
   anchor_points_match_gap_cost_.GetCost(
       anchor_matched_upper_st_point, anchor_matched_lower_st_point,
@@ -259,7 +234,6 @@ void SampleQuarticPolynomialCurve::CalcCost(
     if (is_left_distance_enough) {
       speed_differ_gain = 0.0;
       distance_to_stop_point = kMaxDistanceToStopPoint;
-      time_cost = 3.0 * std::exp(arrived_t_ / 2.5);
     }
   }
 
@@ -318,8 +292,8 @@ void SampleQuarticPolynomialCurve::CalcCost(
                                    leading_end_v);
   }
 
-  const double vel_integral = CalcVelIntegral(arrived_t_);
-  speed_variable_cost_.GetCost(vel_integral);
+  // const double vel_integral = CalcVelIntegral(arrived_t_);
+  // speed_variable_cost_.GetCost(vel_integral);
 
   const auto& agent_map = sample_space_base.agent_id_veh_info();
   const auto& front_agent =
@@ -340,8 +314,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
 
   stop_penalty_cost_.GetCost(arrived_v_);
 
-  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_ -
-                           arrived_v_ * arrived_v_ / (2.0 * 1.5));
+  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_);
 
   jerk_limit_cost_.GetCost(std::fabs(poly_.CalculateThirdDerivative(0.0)));
 
@@ -354,7 +327,7 @@ void SampleQuarticPolynomialCurve::CalcCost(
               gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
               stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
-              jerk_limit_cost_.cost() + time_cost;
+              jerk_limit_cost_.cost() + 3.0 * std::exp(arrived_t_ / 2.5);
 
   if (cost_sum_ > last_cost) {
     cost_sum_ = last_cost;

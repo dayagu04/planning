@@ -1,14 +1,14 @@
 #pragma once
+#include "array"
 #include "sample_poly_const.h"
 #include "sample_poly_curve.h"
 #include "vector"
-#include "array"
 
 namespace planning {
 struct UniformJerkCurveCoffi {
   std::vector<std::array<double, 4>> cofficients;
   std::vector<double> time_points;
-  void clear(){
+  void clear() {
     cofficients.clear();
     time_points.clear();
   }
