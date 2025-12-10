@@ -4222,8 +4222,8 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                    on_exclnum == successor_exclnum) {
           // 分叉，右边是主路的
           for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
-            before_excr_feasible_lane.emplace_back(i + 1);
+            on_excr_feasible_lane.emplace_back(i + 1 + successor_other_exclnum);
+            before_excr_feasible_lane.emplace_back(i + 1 + successor_other_exclnum);
           }
 
           if (is_other_split_ramp && !is_continue_lane) {
