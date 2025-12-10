@@ -83,7 +83,7 @@ class JerkLimitedFixedTimeCurve {
   void DebugString() const;
 
  private:
-  VelocityParam VelocityTargetSolver(const StateLimitParam &state_limit,
+  VelocityParam TimeTargetSolver(const StateLimitParam &state_limit,
                                      const PointState &init_state,
                                      const double v_des);
 

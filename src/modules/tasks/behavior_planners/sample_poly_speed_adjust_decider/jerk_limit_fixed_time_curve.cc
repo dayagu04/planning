@@ -85,7 +85,7 @@ bool JerkLimitedFixedTimeCurve::Update(const PointState &init_point_state,
   return true;
 }
 
-VelocityParam JerkLimitedFixedTimeCurve::VelocityTargetSolver(
+VelocityParam JerkLimitedFixedTimeCurve::TimeTargetSolver(
     const StateLimitParam &state_limit, const PointState &point_state,
     const double v_des) {
   double v_end = 0.0;
