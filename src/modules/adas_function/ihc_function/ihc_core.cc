@@ -732,6 +732,42 @@ bool IhcCore::DynamicObstacleCheck(void) {
     float distance_x = fusion_objs[i].common_info.relative_center_position.x;
     float distance_y = fusion_objs[i].common_info.relative_center_position.y;
 
+    // 根据纵向距离判断横向距离的有效性
+    float lateral_threshold = 0.0f;
+    if (distance_x > 50.0f) {
+      // 纵向距离大于50m：横向距离正负30m
+      lateral_threshold = 30.0f;
+    } else if (distance_x > 30.0f) {
+      // 纵向距离50m到30m：横向距离正负15m
+      lateral_threshold = 15.0f;
+    } else if (distance_x > 0.0f) {
+      // 纵向距离30m到0m：横向距离正负10m
+      lateral_threshold = 10.0f;
+    } else {
+      // 纵向距离小于等于0m，不考虑
+      continue;
+    }
+
+    // 检查障碍物是否之前已经进入横向距离有效范围（用于滞回控制）
+    bool is_in_lateral_valid_set = (lateral_valid_obstacle_ids_.find(track_id) != 
+                                     lateral_valid_obstacle_ids_.end());
+    
+    // 对于已经进入横向距离有效范围的障碍物，放宽20%的阈值
+    float effective_lateral_threshold = lateral_threshold;
+    if (is_in_lateral_valid_set) {
+      effective_lateral_threshold = lateral_threshold * 1.2f;  // 放宽20%
+    }
+
+    // 检查横向距离是否在有效范围内
+    if (abs(distance_y) > effective_lateral_threshold) {
+      // 横向距离超出有效范围，从集合中移除（如果存在）
+      lateral_valid_obstacle_ids_.erase(track_id);
+      continue;  // 跳过该障碍物
+    } else {
+      // 横向距离在有效范围内，加入集合
+      lateral_valid_obstacle_ids_.insert(track_id);
+    }
+
     // 筛选前方的车辆动态障碍物，使用滞回控制
     if (distance_x > 0 && distance_x < 230.0F) {  // 扩大检测范围
       // 判断障碍物是否为机动车/未知类型
@@ -822,6 +858,16 @@ bool IhcCore::DynamicObstacleCheck(void) {
     if (current_frame_ids.find(*it) == current_frame_ids.end()) {
       // 不在当前帧中，删除
       it = verified_obstacle_ids_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  
+  // 清理不在当前帧的横向距离有效障碍物ID
+  for (auto it = lateral_valid_obstacle_ids_.begin(); it != lateral_valid_obstacle_ids_.end(); ) {
+    if (current_frame_ids.find(*it) == current_frame_ids.end()) {
+      // 不在当前帧中，删除
+      it = lateral_valid_obstacle_ids_.erase(it);
     } else {
       ++it;
     }

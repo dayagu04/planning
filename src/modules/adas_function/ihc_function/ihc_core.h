@@ -120,6 +120,8 @@ class IhcCore {
   std::set<uint16> verified_obstacle_ids_;
   // 上一帧已验证的可信障碍物ID集合（用于判断新加入的障碍物）
   std::set<uint16> last_verified_obstacle_ids_;
+  // 已经进入横向距离有效范围的障碍物ID集合（用于滞回控制）
+  std::set<uint16> lateral_valid_obstacle_ids_;
   
   // 环境光照处理后的状态（只有明亮和昏暗两种状态，初始值UNKNOWN表示未初始化）
   iflyauto::CameraPerceptionLightingCondition processed_lighting_condition_ = 
