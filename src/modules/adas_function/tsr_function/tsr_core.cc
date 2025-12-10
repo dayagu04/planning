@@ -632,9 +632,13 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
     speed_limit_renew_flag_ = true;
   }
 
-  // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
-  if (speed_limit_out_flag_ == false &&
-    end_of_speed_limit_out_flag_ == false) {
+  // 只要有有效的sdmap限速信息就采用sdmap的限速信息
+  if (sd_map_speed_limit_valid) {
+    // sd_map限速有效时，直接采用sd_map限速，忽略视觉限速
+    tsr_speed_limit_ = current_map_speed_limit_;
+  } else if (speed_limit_out_flag_ == false &&
+             end_of_speed_limit_out_flag_ == false) {
+    // 没有视觉限速有效值且不需要显示解除限速牌, 采用地图限速信息
     if (current_map_speed_limit_valid_ == true) {
       tsr_speed_limit_ = current_map_speed_limit_;
     } else {
