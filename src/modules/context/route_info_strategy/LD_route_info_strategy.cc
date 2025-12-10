@@ -207,8 +207,9 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
     return false;
   }
 
+  const auto& first_ramp_info = ramp_info_vec_[0];
   bool is_near_ramp =
-      ramp_info_vec_[0].second <
+      first_ramp_info.second <
       mlc_decider_config_
           ->default_pre_triggle_road_to_ramp_distance_threshold_value;
   // 如果没有接近ramp，则直接return
@@ -219,13 +220,13 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
   // 如果没有merge信息，那么可以不需要考虑在自车和ramp之间是否有merge的场景，可以直接return
   if (merge_info_vec_.empty()) {
     mlc_decider_info_base_baidu_.set_value(
-        SPLIT_SCENE, CalculateSplitDirection(*ramp_info_vec_[0].first, ld_map_),
-        ramp_info_vec_[0].second);
+        SPLIT_SCENE, CalculateSplitDirection(*first_ramp_info.first, ld_map_),
+        first_ramp_info.second);
     return is_near_ramp;
   }
 
   // 在接近ramp，且有merge信息，需要判断一下是先处理merge场景还是ramp场景
-  const double dis_to_ramp = ramp_info_vec_[0].second;
+  const double dis_to_ramp = first_ramp_info.second;
 
   for (const auto& merge_info : merge_info_vec_) {
     if (merge_info.second > (dis_to_ramp - kEpsilon)) {
@@ -237,6 +238,10 @@ bool LDRouteInfoStrategy::IsNearingRamp() {
       return false;
     }
   }
+
+  mlc_decider_info_base_baidu_.set_value(
+      SPLIT_SCENE, CalculateSplitDirection(*first_ramp_info.first, ld_map_),
+      first_ramp_info.second);
 
   return is_near_ramp;
 }
@@ -1781,34 +1786,15 @@ LDRouteInfoStrategy::IsEntryLanePresentOnEitherSideOfSuccessorLane(
       sum_dis += current_traverse_lane->length() * 0.01;
     }
 
-    const auto& temp_cur_link = ld_map_.GetLinkOnRoute(current_traverse_lane->link_id());
-    if (temp_cur_link == nullptr) {
-      return nullptr;
+    const auto [left_nerghbor_lane, right_nerghbor_lane] =
+        FindLaneLeftRightNeighbors(current_traverse_lane);
+
+    if (IsEntryLane(left_nerghbor_lane)) {
+      return left_nerghbor_lane;
     }
 
-    const uint32 left_lane_seq = current_traverse_lane->sequence() + 1;
-    const uint32 right_lane_seq = current_traverse_lane->sequence() - 1;
-    const iflymapdata::sdpro::Lane* left_lane = nullptr;
-    const iflymapdata::sdpro::Lane* right_lane = nullptr;
-    for (const auto& lane_id: temp_cur_link->lane_ids()) {
-      const auto& lane = ld_map_.GetLaneInfoByID(lane_id);
-      if (lane == nullptr) {
-        continue;
-      }
-
-      if (lane->sequence() == left_lane_seq) {
-        left_lane = lane;
-      } else if (lane->sequence() == right_lane_seq) {
-        right_lane = lane;
-      }
-    }
-
-    if (left_lane && IsEntryLane(left_lane)) {
-      return left_lane;
-    }
-
-    if (right_lane && IsEntryLane(right_lane)) {
-      return right_lane;
+    if (IsEntryLane(right_nerghbor_lane)) {
+      return right_nerghbor_lane;
     }
 
     if (sum_dis > front_search_dis) {
@@ -1902,7 +1888,8 @@ bool LDRouteInfoStrategy::IsInvalidLaneMergeLaneOppositeSide(
   }
 
   // 步骤2：查找合流车道的左右侧邻居车道
-  const auto [left_neighbor, right_neighbor] = FindLaneLeftRightNeighbors(merge_lane);
+  const auto [left_neighbor, right_neighbor] =
+      FindLaneLeftRightNeighbors(merge_lane);
 
   // 步骤3：根据合流方向判断邻居车道是否有效
   if (is_merge_to_left) {
