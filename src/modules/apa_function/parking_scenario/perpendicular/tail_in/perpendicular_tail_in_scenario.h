@@ -35,7 +35,7 @@ class PerpendicularTailInScenario : public PerpendicularParkScenario {
     DISCARD_OBS,
   };
 
- private:
+ protected:
   // virtual func
   virtual void ExcutePathPlanningTask() override;
   virtual const bool UpdateEgoSlotInfo() override;
