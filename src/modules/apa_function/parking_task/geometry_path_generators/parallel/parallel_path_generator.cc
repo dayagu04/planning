@@ -489,6 +489,13 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
           ? true
           : false;
 
+  const bool is_park_out_narrow_channel =
+      (calc_params_.scene_type ==
+           ParallelParkSceneType::PARALLEL_PARK_OUT_NARROW_CHANNEL_SCENE ||
+       calc_params_.scene_type ==
+           ParallelParkSceneType::
+               PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE);
+
   arc_1.circle_info.radius = min_turn_radius;
   const uint8_t arc_1_steer =
       (calc_params_.is_left_side ? SEG_STEER_RIGHT : SEG_STEER_LEFT);
@@ -548,6 +555,13 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
         continue;
       }
 
+      bool set_mirror_expand = false;
+      if (is_park_out) {
+        set_mirror_expand = true;
+      }
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(0.1, set_mirror_expand));
+
       collision_detector_ptr_->SetSkipObstaclesType(CollisionDetector::CURB_OBS);
       auto col_res_1 = collision_detector_ptr_->UpdateByObsMap(
           arc_1, arc_1.headingA, false);
@@ -569,6 +583,15 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       if (!CheckEgoLine(ego_line, not_bigangle)) {
         ILOG_INFO << "CheckEgoLine failed!";
         continue;
+      }
+
+      if (is_park_out) {
+        double lat_buf_arc2 = 0.2;
+        if (is_park_out_narrow_channel) {
+          lat_buf_arc2 = 0.1;
+        }
+        collision_detector_ptr_->SetParam(
+            CollisionDetector::Paramters(lat_buf_arc2, true));
       }
 
       auto col_res = collision_detector_ptr_->UpdateByObsMap(
@@ -596,6 +619,22 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       if (PlanFromTargetToLineInNarrowChannel(narrow_path_seg_vec, arc_1,
                                               narrow_arc_2)) {
         ILOG_INFO << "PlanFromTargetToLineInNarrowChannel success!";
+        bool is_narrow_collided = false;
+        for (const auto& narrow_path_seg : narrow_path_seg_vec) {
+          auto col_res_narrow = collision_detector_ptr_->UpdateByObsMap(
+              narrow_path_seg, 0.1, 0.0);
+          if (col_res_narrow.collision_flag ||
+              col_res_narrow.remain_car_dist >
+                  col_res_narrow.remain_obstacle_dist - kLonBufferTrippleStep) {
+            ILOG_INFO << "narrow_path_seg collided! path:"
+                      << int(narrow_path_seg.seg_type);
+            is_narrow_collided = true;
+            break;
+          }
+        }
+        if (is_narrow_collided) {
+          continue;
+        }
         success = true;
         narrow_channel_success = true;
       } else {

@@ -18,9 +18,11 @@ namespace apa_planner {
 struct AngleResult {
   double ang;
   bool res;
+  double curb_y;
 
   AngleResult() = default;
-  AngleResult(double ang_, bool res_) : ang(ang_), res(res_) {}
+  AngleResult(double ang_, bool res_, double curb_y_)
+      : ang(ang_), res(res_), curb_y(curb_y_) {}
 
   bool operator<(const AngleResult& other) const { return ang < other.ang; }
 };
