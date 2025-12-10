@@ -6383,9 +6383,7 @@ bool RouteInfo::IsClosingTollStationEntrance(
 
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type ==
-                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_ENTRANCE ||
-            fp_point_type ==
-                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_EXIT) {
+                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_ENTRANCE) {
           return true;
         }
       }
