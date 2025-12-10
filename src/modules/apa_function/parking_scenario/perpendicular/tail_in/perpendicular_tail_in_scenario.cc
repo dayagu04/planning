@@ -2818,6 +2818,7 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByGeometryPath() {
     }
   }
 
+  double first_pt_kappa = 0.0;
   std::vector<geometry_lib::PathPoint> s_turn_path;
   s_turn_path.reserve(35);
   if (new_geometry_path.IsHasSTurnPath()) {
@@ -2828,6 +2829,15 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByGeometryPath() {
 
     int last_added_idx = -1;
     for (size_t i = 0; i < new_geometry_path.path_count - 1; ++i) {
+      if (i == 0) {
+        if (segments[i].seg_steer == geometry_lib::SEG_STEER_STRAIGHT) {
+          first_pt_kappa = 0.0;
+        } else if (segments[i].seg_steer == geometry_lib::SEG_STEER_LEFT) {
+          first_pt_kappa = 1.0 / std::max(segments[i].GetRadius(), 0.01);
+        } else if (segments[i].seg_steer == geometry_lib::SEG_STEER_RIGHT) {
+          first_pt_kappa = -1.0 / std::max(segments[i].GetRadius(), 0.01);
+        }
+      }
       if (IsSTrunPath(segments[i], segments[i + 1])) {
         if (last_added_idx != static_cast<int>(i)) {
           s_turn_segs.emplace_back(segments[i]);
@@ -2842,8 +2852,9 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByGeometryPath() {
 
   return CheckDynamicPlanPathOptimal(
       old_geometry_path.gear_change_count, new_geometry_path.gear_change_count,
-      final_line_length, s_turn_path, old_geometry_path.end_pose,
-      new_geometry_path.end_pose, ego_info_under_slot.target_pose);
+      final_line_length, first_pt_kappa, s_turn_path,
+      old_geometry_path.end_pose, new_geometry_path.end_pose,
+      ego_info_under_slot.target_pose);
 }
 
 const bool
@@ -2858,9 +2869,12 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
   }
 
   if (!res.path_plan_success || res.gear_change_num > 0 ||
-      res.kappa_vec_vec.empty() || res.cur_gear != AstarPathGear::REVERSE) {
+      res.kappa_vec_vec.empty() || res.kappa_vec_vec.back().empty() ||
+      res.cur_gear != AstarPathGear::REVERSE) {
     return false;
   }
+
+  const double first_pt_kappa = res.kappa_vec_vec.back().front();
 
   std::vector<pnc::geometry_lib::PathPoint> s_turn_path;
   float final_line_length = 0.0;
@@ -2877,14 +2891,14 @@ PerpendicularTailInScenario::CheckDynamicPlanPathOptimalByHybridAstarPath(
 
   return CheckDynamicPlanPathOptimal(
       hybrid_astar_response_.result.gear_change_num, res.gear_change_num,
-      final_line_length, s_turn_path, old_tar_pose, new_tar_pose,
-      ego_info_under_slot.target_pose);
+      final_line_length, first_pt_kappa, s_turn_path, old_tar_pose,
+      new_tar_pose, ego_info_under_slot.target_pose);
 }
 
 const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
     const size_t old_path_gear_change_count,
     const size_t new_path_gear_change_count,
-    const double new_path_final_line_length,
+    const double new_path_final_line_length, const double first_pt_kappa,
     const std::vector<geometry_lib::PathPoint>& s_turn_path,
     const geometry_lib::PathPoint& old_tar_pose,
     const geometry_lib::PathPoint& new_tar_pose,
@@ -2901,6 +2915,17 @@ const bool PerpendicularTailInScenario::CheckDynamicPlanPathOptimal(
   if (old_path_gear_change_count > 0 && !new_path_has_sturn_flag) {
     ILOG_INFO << "old path has gear change and new path has no s turn";
     return true;
+  }
+
+  if (new_path_has_sturn_flag) {
+    const double cur_steer =
+        apa_world_ptr_->GetMeasureDataManagerPtr()->GetSteerWheelAngle() *
+        kRad2Deg;
+    const double new_steer = std::atan(param.wheel_base * first_pt_kappa) *
+                             param.steer_ratio * kRad2Deg;
+    if (std::fabs(cur_steer - new_steer) > param.max_steer_angle_deg + 1.68) {
+      return false;
+    }
   }
 
   const geometry_lib::PathPoint old_front_pose =

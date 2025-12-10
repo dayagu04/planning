@@ -53,6 +53,7 @@
   "lon_dist_mirror_to_rear_axle": 2.123,
   "lat_dist_mirror_to_center": 1.040,
   "arc_line_shift_steer_angle_deg": 2.5,
+  "max_steer_angle_deg": 495.0,
   "c1": 0.3333,
   "car_vertex_x_vec": [3.417,  3.730,  3.790,  3.790,  3.730,  3.417,  2.217,  2.217,  2.030,  2.030,
                       -0.625, -0.996, -1.097, -1.097, -0.996, -0.625,  2.030,  2.030,  2.217,  2.217],
