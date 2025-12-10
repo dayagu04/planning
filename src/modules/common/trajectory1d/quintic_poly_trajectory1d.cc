@@ -44,8 +44,8 @@ QuinticPolynomial::QuinticPolynomial(const QuinticPolyState& start,
   coefficients_ = {start.p, start.v, 0.5 * start.a, X(0), X(1), X(2)};
   T_ = T;
 
-  FindSecondDerivativeExtrema(T_);
-  FindThirdDerivativeExtrema(T_);
+  second_derv_extrema_ = FindSecondDerivativeExtrema(T_);
+  third_derv_extrema_ = FindThirdDerivativeExtrema(T_);
 }
 
 // calculate the s/d coordinate of a point
@@ -119,7 +119,7 @@ std::vector<double> QuinticPolynomial::SolveQuadratic(const double a,
   return {(-b + std::sqrt(delta)) / (2 * a), (-b - std::sqrt(delta)) / (2 * a)};
 }
 
-void QuinticPolynomial::FindFirstDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindFirstDerivativeExtrema(const double te) {
   auto extrema_t = SolveCubic(20 * coefficients_[5], 12 * coefficients_[4],
                               6 * coefficients_[3], 2 * coefficients_[2]);
   double min_val = CalculateFirstDerivative(0);
@@ -133,11 +133,10 @@ void QuinticPolynomial::FindFirstDerivativeExtrema(const double te) {
     }
   }
   const double v_te = CalculateFirstDerivative(te);
-  first_derv_extrema_.first = std::max(max_val, v_te);
-  first_derv_extrema_.second = std::min(min_val, v_te);
+  return {std::max(max_val, v_te), std::min(min_val, v_te)};
 }
 
-void QuinticPolynomial::FindSecondDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindSecondDerivativeExtrema(const double te) {
   auto extrema_t = SolveQuadratic(60 * coefficients_[4], 24 * coefficients_[3],
                                   6 * coefficients_[2]);
   double min_val = CalculateSecondDerivative(0);
@@ -152,11 +151,9 @@ void QuinticPolynomial::FindSecondDerivativeExtrema(const double te) {
     }
   }
   double val_at_ts = CalculateSecondDerivative(te);
-
-  second_derv_extrema_.first = std::max(max_val, val_at_ts);
-  second_derv_extrema_.second = std::min(min_val, val_at_ts);
+  return {std::max(max_val, val_at_ts), std::min(min_val, val_at_ts)};
 }
-void QuinticPolynomial::FindThirdDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindThirdDerivativeExtrema(const double te) {
   double extrema_t = -coefficients_[4] / (5 * coefficients_[5]);
   double min_val = CalculateThirdDerivative(0);
   double max_val = min_val;
@@ -166,8 +163,6 @@ void QuinticPolynomial::FindThirdDerivativeExtrema(const double te) {
     max_val = std::max(max_val, val);
   }
   double val_at_ts = CalculateThirdDerivative(te);
-  third_derv_extrema_.first = std::max(max_val, val_at_ts);
-  third_derv_extrema_.second = std::min(min_val, val_at_ts);
+  return {std::max(max_val, val_at_ts), std::min(min_val, val_at_ts)};
 }
-
 }  // namespace planning

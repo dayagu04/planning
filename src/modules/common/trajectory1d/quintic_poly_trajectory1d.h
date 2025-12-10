@@ -35,11 +35,11 @@ class QuinticPolynomial {
 
   double CalculateThirdDerivative(const double t) const;
 
-  void FindFirstDerivativeExtrema(const double te);
+  std::pair<double, double> FindFirstDerivativeExtrema(const double te);
 
-  void FindSecondDerivativeExtrema(const double te);
+  std::pair<double, double> FindSecondDerivativeExtrema(const double te);
 
-  void FindThirdDerivativeExtrema(const double te);
+  std::pair<double, double> FindThirdDerivativeExtrema(const double te);
 
   std::vector<double> SolveCubic(double a, double b, double c, double d) const;
 

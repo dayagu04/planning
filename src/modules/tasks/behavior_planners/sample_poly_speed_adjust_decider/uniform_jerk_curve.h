@@ -2,6 +2,7 @@
 #include "array"
 #include "sample_poly_const.h"
 #include "sample_poly_curve.h"
+#include "trajectory1d/second_order_time_optimal_trajectory.h"
 #include "vector"
 
 namespace planning {
@@ -18,7 +19,8 @@ class UniformJerkCurve : public SamplePolyCurve {
  public:
   UniformJerkCurve() = default;
   UniformJerkCurve(const double s0, const double v0, const double a0,
-                   const double jerk, const SamplePolyCurveConfig& config);
+                   const double jerk, const SamplePolyCurveConfig& config,
+                   bool is_upper_limit);
   ~UniformJerkCurve() = default;
 
   double CalcS(const double t) const override;
@@ -31,15 +33,8 @@ class UniformJerkCurve : public SamplePolyCurve {
   void BuildUniformJerkTraj(const double jerk);
 
  private:
-  double s0_ = 0.0;
-  double v0_ = 0.0;
-  double a0_ = 0.0;
-  double jerk_limit_upper_ = 0.0;
-  double jerk_limit_lower_ = 0.0;
-  double acc_limit_upper_ = 0.0;
-  double acc_limit_lower_ = 0.0;
-  double vel_limit_upper_ = 0.0;
-  double vel_limit_lower_ = 0.0;
-  UniformJerkCurveCoffi cofficients_;
+  LonState lon_state_;
+  StateLimit state_limit_;
+  UniformJerkCurveCoffi jerk_curve_coffi_;
 };
 }  // namespace planning
