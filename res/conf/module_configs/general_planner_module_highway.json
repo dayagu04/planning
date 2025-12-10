@@ -215,7 +215,7 @@
   "enable_ara_ref":false,
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
-  "dist_to_routing_destination_thr": 1.0,
+  "dist_to_routing_destination_thr": 3.0,
   "processed_trajectory_filter_alpha": 0.4,
   "processed_trajectory_acc_thr": 0.5,
   "max_heading_diff_threshold_deg": 45.0,
