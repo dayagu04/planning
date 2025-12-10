@@ -1994,7 +1994,7 @@ const bool ParallelParkInScenario::GenTlane() {
           ego_info_under_slot.slot.origin_corner_coord_global_.pt_01_mid);
       // try_bound_map_[ego_info_under_slot.id].emplace_back(ref_angle);
       try_bound_map_[ego_info_under_slot.id].insert(
-          AngleResult(ref_angle, (upper_bound > lower_bound)));
+          AngleResult(ref_angle, (upper_bound > lower_bound), curb_y_limit));
       while (try_bound_map_[ego_info_under_slot.id].size() > need_size) {
         auto it = try_bound_map_[ego_info_under_slot.id].end();
         --it;
@@ -2002,6 +2002,7 @@ const bool ParallelParkInScenario::GenTlane() {
       }
       for (const auto& ar : try_bound_map_[ego_info_under_slot.id]) {
         ILOG_INFO << "calc debug ang: " << ar.ang << ", res: " << ar.res
+                  << ", curb_y: " << ar.curb_y
                   << " id: " << ego_info_under_slot.id;
       }
     }
@@ -2014,9 +2015,15 @@ const bool ParallelParkInScenario::GenTlane() {
             double ang = it.ang;
             bool res = it.res;
             ILOG_INFO << "park debug ang: " << ang << ", res: " << res
+                      << ", curb_y: " << it.curb_y
                       << " id: " << ego_info_under_slot.id;
             count_valid += res ? 1 : 0;
           }
+        }
+
+        if (ego_info_under_slot.slot_occupied_ratio < 0.1) {
+          curb_y_limit = try_bound_map_[ego_info_under_slot.id].begin()->curb_y;
+          t_lane_.curb_y = curb_y_limit;
         }
       }
     }
@@ -2331,6 +2338,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     }
   }
 
+  std::vector<Eigen::Vector2d> in_tlane_obstacle_vec;
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obs_pos : obstacle_point_set.second) {
       const bool is_tlane_obs =
@@ -2339,6 +2347,16 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
                                   C_curb.y());
       if (!is_tlane_obs) {
         continue;
+      }
+
+      const bool is_front2rear_obs =
+          pnc::mathlib::IsInBound(obs_pos.x(), t_lane_.obs_pt_inside.x() - kEps,
+                                  t_lane_.obs_pt_outside.x() + kEps) &&
+          pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y() - kEps,
+                                  C_curb.y() + kEps);
+
+      if (is_front2rear_obs) {
+        in_tlane_obstacle_vec.emplace_back(obs_pos);
       }
 
       if (pnc::mathlib::IsInBound(obs_pos.x(), 0.5,
@@ -2366,6 +2384,8 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
+  apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+      in_tlane_obstacle_vec, CollisionDetector::TLANE_OBS);
 
   point_set.clear();
   tlane_obstacle_vec.clear();
