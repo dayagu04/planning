@@ -14,9 +14,12 @@ namespace apa_planner {
 
 class PerpendicularTailInScenario : public PerpendicularParkScenario {
  public:
-  PerpendicularTailInScenario() = default;
+  PerpendicularTailInScenario() {
+    scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+  };
   PerpendicularTailInScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
+    scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
   }
   virtual void Reset() override;
   virtual void Clear() override;
