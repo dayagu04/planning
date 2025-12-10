@@ -270,6 +270,10 @@ class LateralMotionPlanningWeight {
     is_enter_low_speed_lane_change_cooldown_ = is_enter_low_speed_lane_change_cooldown;
   }
 
+  void SetIsEmergencyAvoid(const bool is_emergency_avoid) {
+    is_emergency_avoid_ = is_emergency_avoid;
+  }
+
  private:
   void SetAccJerkBoundAndWeight(
       planning::common::LateralPlanningInput &planning_input);
@@ -361,6 +365,7 @@ class LateralMotionPlanningWeight {
   pnc::mathlib::spline hard_lbound_l_s_spline_;
   pnc::mathlib::spline hard_ubound_l_s_spline_;
   bool is_enter_low_speed_lane_change_cooldown_;
+  bool is_emergency_avoid_;
 };
 
 }  // namespace lateral_planning

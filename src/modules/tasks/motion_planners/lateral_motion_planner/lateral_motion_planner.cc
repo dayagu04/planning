@@ -581,6 +581,8 @@ bool LateralMotionPlanner::AssembleInput() {
   planning_weight_ptr_->SetExpectedAvoidJerk(
       general_lateral_decider_output.recommended_bound_avoid_jerk);
   planning_weight_ptr_->SetRiskLevel(general_lateral_decider_output.risk_level);
+  planning_weight_ptr_->SetIsEmergencyAvoid(
+      general_lateral_decider_output.is_emergency_avoid);
 
   // lane change state
   const auto target_state =

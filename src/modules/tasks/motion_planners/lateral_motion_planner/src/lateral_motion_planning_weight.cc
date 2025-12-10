@@ -76,6 +76,7 @@ void LateralMotionPlanningWeight::Init() {
   weight_.Init();
   weight_.dt = config_.delta_t;
   is_enter_low_speed_lane_change_cooldown_ = false;
+  is_emergency_avoid_ = false;
 }
 
 void LateralMotionPlanningWeight::SetLateralMotionWeight(
@@ -921,7 +922,7 @@ void LateralMotionPlanningWeight::SetAccJerkBoundAndWeight(
   } else if (lateral_motion_scene_ == LateralMotionScene::RAMP) {
     jerk_bound = config_.jerk_bound_ramp;
   }
-  if (is_bound_avoid_) {
+  if (is_bound_avoid_ || is_emergency_avoid_) {
     jerk_bound = std::max(expected_avoid_jerk_, jerk_bound);
   }
   // tiny speed
@@ -1024,7 +1025,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
       planning_input.curv_factor() * ref_vel_ * ref_vel_;
   // set upper limit
   double extra_jerk_buffer = 0.05;
-  if (is_bound_avoid_) {
+  if (is_bound_avoid_ || is_emergency_avoid_) {
     extra_jerk_buffer = 0.1;
   }
   std::vector<double> xp_v{4.167, 8.333, 16.667, 25.0};
@@ -1102,7 +1103,7 @@ void LateralMotionPlanningWeight::CalculateJerkBoundByLastJerk(
                            config_.map_jerk_bound_ramp) +
           0.5;
     }
-  } else if (is_bound_avoid_) {
+  } else if (is_bound_avoid_ || is_emergency_avoid_) {
     jerk_bound = expected_avoid_jerk_;
   }
   // emergency
