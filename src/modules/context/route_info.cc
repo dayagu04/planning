@@ -4590,9 +4590,6 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
     // = successor_exclnum + successor_other_exclnum
     // 通常认为右边是从主路分出去的路，因此增加的车道属于是右边增加了
     if (on_exclnum == successor_exclnum) {
-      for (int i = 0; i < successor_exclnum; ++i) {
-        on_excr_feasible_lane.emplace_back(i + 1);
-      }
       // 目前假定都是从右边往左边汇入，所以都行驶到左边的车道上去
       // TODO(fengwang31):后续需要考虑左边的车道是否会收窄，如果会的话，则不能继续往左边汇
       int last_other_seg_lane_num = 0;
@@ -4610,6 +4607,21 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
               sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
           if (merge_seg_last_other_seg) {
             last_other_seg_lane_num = merge_seg_last_other_seg->lane_num();
+          }
+        }
+      }
+      if (last_other_seg_lane_num != 0) {
+        for (int i = 0; i < last_other_seg_lane_num; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+        }
+      } else {
+        if (successor_exclnum <= 1) {
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+          }
+        } else {
+          for (int i = 0; i < successor_exclnum - 1; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
           }
         }
       }
