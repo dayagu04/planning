@@ -65,11 +65,11 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
   }
   if (!slot_.limiter_.valid) {
     virtual_tar_x = slot_.processed_corner_coord_local_.pt_23_mid.x() +
-                    param.terminal_target_x;
+                    param.rear_overhanging + param.terminal_target_x_to_line;
 
     if (slot_.slot_type_ == SlotType::SLANT) {
       virtual_tar_x = slot_.origin_corner_coord_local_.pt_23_mid.x() +
-                      param.terminal_target_x;
+                      param.rear_overhanging + param.terminal_target_x_to_line;
     }
 
     // park in the middle of the slot

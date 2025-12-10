@@ -446,7 +446,7 @@ struct ApaParameters {
   double terminal_target_x = 1.35;
   double terminal_target_y = 0.0;
   double terminal_target_heading = 0.0;
-  double terminal_target_x_to_limiter = 0.15;
+  double terminal_target_x_to_line = 0.15;
   double terminal_parallel_y_offset = 0.0;
   double terminal_parallel_y_offset_with_curb = 0.2;
   double terminal_parallel_y_offset_with_wall = 0.45;
