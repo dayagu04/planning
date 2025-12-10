@@ -81,8 +81,13 @@ DynamicAgentNode::DynamicAgentNode(const agent::Agent* agent,
                                           ref_line_point.path_point.y()};
       ref_line_points.emplace_back(path_point);
     }
+
     coord_ =
-        std::make_shared<planning_math::KDPath>(std::move(ref_line_points));
+        ref_line_points.size() < planning_math::KDPath::kKDPathMinPathPointSize
+            ? nullptr
+            : std::make_shared<planning_math::KDPath>(
+                  std::move(ref_line_points));
+
   } else {
     coord_ = ref_line.get_frenet_coord();
   }
@@ -271,6 +276,9 @@ bool DynamicAgentNode::GetClosestCenterLinePoint(
   }
   double match_s = 0.0;
   double match_l = 0.0;
+  if (coord_ == nullptr) {
+    return false;
+  }
   if (!coord_->XYToSL(x, y, &match_s, &match_l)) {
     return false;
   }

@@ -21,6 +21,9 @@ bool CheckClustersConsecutiveDiffSlidingWindowImpl(
     const std::map<int, ConstructionAgentClusterArea>& cluster_map,
     const std::shared_ptr<planning_math::KDPath>& planned_kd_path,
     bool entering) {
+  if (planned_kd_path == nullptr) {
+    return false;
+  }
   for (const auto & [ cluster_id, construction_area ] : cluster_map) {
     const auto& pts = construction_area.points;
     if (pts.size() < 3) {

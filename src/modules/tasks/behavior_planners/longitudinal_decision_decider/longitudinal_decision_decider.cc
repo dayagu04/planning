@@ -35,7 +35,7 @@ bool CalculateAgentSLBoundary(
     const planning_math::Box2d &agent_box, double *const ptr_min_s,
     double *const ptr_max_s, double *const ptr_min_l, double *const ptr_max_l) {
   if (nullptr == ptr_min_s || nullptr == ptr_max_s || nullptr == ptr_min_l ||
-      nullptr == ptr_max_l) {
+      nullptr == ptr_max_l || planned_path == nullptr) {
     return false;
   }
   const auto &all_corners = agent_box.GetAllCorners();

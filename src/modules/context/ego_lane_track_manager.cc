@@ -1056,7 +1056,7 @@ std::shared_ptr<planning_math::KDPath> EgoLaneTrackManger::MakeBoundaryPath(
     boundary_points.emplace_back(pt);
   }
 
-  if (boundary_points.size() <= 2) {
+  if (boundary_points.size() <= planning_math::KDPath::kKDPathMinPathPointSize) {
     return nullptr;
   }
   boundary_path =
@@ -2027,7 +2027,7 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
           path_points.emplace_back(pt);
         }
 
-        if (path_points.size() < 3) {
+        if (path_points.size() < planning_math::KDPath::kKDPathMinPathPointSize + 1) {
           frenet_coord = nullptr;
           continue;
         }
@@ -2061,7 +2061,7 @@ void EgoLaneTrackManger::CalculateVirtualLaneAttributes(
           }
           path_points.emplace_back(pt);
         }
-        if (path_points.size() < 3) {
+        if (path_points.size() < KDPath::kKDPathMinPathPointSize + 1) {
           frenet_coord = nullptr;
           continue;
         }

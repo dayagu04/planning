@@ -223,8 +223,11 @@ void DynamicWorld::BuildConnectionForEgoLane(
                                           ref_line_point.path_point.y()};
       ego_center_line_points.emplace_back(path_point);
     }
-    ego_lane_coord_ = std::make_shared<planning_math::KDPath>(
-        std::move(ego_center_line_points));
+    ego_lane_coord_ = ego_center_line_points.size() <
+                              planning_math::KDPath::kKDPathMinPathPointSize
+                          ? nullptr
+                          : std::make_shared<planning_math::KDPath>(
+                                std::move(ego_center_line_points));
     return;
   } else {
     ego_lane_coord_ = ego_ref_line->get_frenet_coord();
@@ -318,7 +321,11 @@ void DynamicWorld::BuildConnectionForNeighborLane(
       center_line_points.emplace_back(path_point);
     }
     neighbor_lane_coord_ =
-        std::make_shared<planning_math::KDPath>(std::move(center_line_points));
+        center_line_points.size() <
+                planning_math::KDPath::kKDPathMinPathPointSize
+            ? nullptr
+            : std::make_shared<planning_math::KDPath>(
+                  std::move(center_line_points));
     return;
   } else {
     neighbor_lane_coord_ = neighbor_ref_line->get_frenet_coord();

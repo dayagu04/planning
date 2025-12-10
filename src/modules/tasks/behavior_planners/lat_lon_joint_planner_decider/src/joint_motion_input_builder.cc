@@ -263,11 +263,17 @@ void JointMotionInputBuilder::BuildRoadInfo(
       planning_input.mutable_right_road_boundary()->add_y_vec(point.y());
     }
 
-    auto left_boundary_path = std::make_shared<planning::planning_math::KDPath>(
-        std::move(left_road_points));
+    auto left_boundary_path =
+        left_road_points.size() < planning_math::KDPath::kKDPathMinPathPointSize
+            ? nullptr
+            : std::make_shared<planning::planning_math::KDPath>(
+                  std::move(left_road_points));
     auto right_boundary_path =
-        std::make_shared<planning::planning_math::KDPath>(
-            std::move(right_road_points));
+        right_road_points.size() <
+                planning_math::KDPath::kKDPathMinPathPointSize
+            ? nullptr
+            : std::make_shared<planning::planning_math::KDPath>(
+                  std::move(right_road_points));
 
     planning_problem_ptr->SetBoundaryPaths(left_boundary_path,
                                            right_boundary_path);

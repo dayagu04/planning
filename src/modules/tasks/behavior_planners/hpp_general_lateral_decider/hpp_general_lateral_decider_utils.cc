@@ -278,6 +278,10 @@ bool Vec2dsToFrenet2ds(const std::shared_ptr<KDPath> &frenet_coord,
                        const std::vector<planning_math::Vec2d> &pts,
                        std::vector<planning_math::Vec2d> &frenet_pts) {
   const double kDistanceToRefThreshold = 1.0;
+  if (frenet_coord == nullptr) {
+    ILOG_INFO << "frenet_coord is nullptr";
+    return false;
+  }
   if (pts.size() == 0) {
     ILOG_INFO << "vec2ds_to_frenet2ds empty input";
     return false;

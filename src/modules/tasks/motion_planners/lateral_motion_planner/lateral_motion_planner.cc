@@ -1042,7 +1042,7 @@ LateralMotionPlanner::ConstructLateralKDPath(const std::vector<double> &x_vec,
       }
     }
   }
-  if (lat_path_points.size() <= 2) {
+  if (lat_path_points.size() <= planning_math::KDPath::kKDPathMinPathPointSize) {
     return nullptr;
   }
   return std::make_shared<planning_math::KDPath>(std::move(lat_path_points));

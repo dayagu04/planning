@@ -223,7 +223,7 @@ void StGraphInput::ExtendProcessedPath(
   if (!is_lane_keeping) {
     BackwardExtendPoints(planned_path, &path_points);
   }
-  if (path_points.size() < kMinPathPointSize) {
+  if (path_points.size() < KDPath::kKDPathMinPathPointSize) {
     return;
   }
   const bool need_reset_s = false;
@@ -432,6 +432,9 @@ StGraphInput::ForwardExtendPlannedPathWithDpPath(
         break;
       }
     }
+  }
+  if (ptr_path_points.size() < KDPath::kKDPathMinPathPointSize) {
+    return nullptr;
   }
   return std::make_shared<planning::KDPath>(std::move(ptr_path_points));
 }

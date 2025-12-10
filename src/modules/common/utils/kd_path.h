@@ -18,6 +18,7 @@ constexpr static double KD_EPSILON = 1.0e-6;
 constexpr static double KD_MAX = 1.0e6;
 class KDPath {
  public:
+  constexpr static int kKDPathMinPathPointSize = 2;
   KDPath() = default;
   virtual ~KDPath() = default;
   explicit KDPath(std::vector<double>& x_vec, std::vector<double>& y_vec);

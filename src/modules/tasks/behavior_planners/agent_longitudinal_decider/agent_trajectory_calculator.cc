@@ -426,7 +426,7 @@ bool AgentTrajectoryCalculator::GenarateAgentTrajectoryWithPolyPath(
   std::vector<planning_math::PathPoint> path_points;
   path_points.reserve(points.size());
   planning_math::KDPath::PointsToPathPoints(points, &path_points);
-  if (path_points.size() < 2) {
+  if (path_points.size() < planning_math::KDPath::kKDPathMinPathPointSize) {
     return false;
   }
   std::shared_ptr<planning_math::KDPath> trajectory_path =

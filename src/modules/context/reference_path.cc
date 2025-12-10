@@ -115,7 +115,7 @@ void ReferencePath::update_refpath_points(
     coord_path_points.emplace_back(std::move(pt));
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
-  if (coord_path_points.size() < 2) {
+  if (coord_path_points.size() < KDPath::kKDPathMinPathPointSize) {
     ILOG_ERROR << "update_refpath_points: coord points size < 2";
     return;
   }
@@ -227,7 +227,7 @@ void ReferencePath::update_refpath_points_in_hpp(
     }
   }
   // 需要检查coord_points数量是否满足要求，  frenet_coord_是否构建成功
-  if (coord_path_points.size() < 2) {
+  if (coord_path_points.size() < KDPath::kKDPathMinPathPointSize) {
     ILOG_DEBUG << "drop_length = " << drop_length
                << ", init_length = " << init_length;
     ILOG_ERROR << "update_refpath_points_in_hpp: coord points size < 2";
@@ -1536,6 +1536,9 @@ bool ReferencePath::BackwardExtendedRefPoints(
 
 bool ReferencePath::UpdateReferencePathInfo(
     std::vector<planning_math::PathPoint> &smoothed_path_points) {
+  if (smoothed_path_points.size() < KDPath::kKDPathMinPathPointSize) {
+    return false;
+  }
   ReferencePathPoints smoothed_ref_path;
   smoothed_ref_path.reserve(smoothed_path_points.size());
   std::shared_ptr<planning_math::KDPath> smoothed_frenet_coord =
