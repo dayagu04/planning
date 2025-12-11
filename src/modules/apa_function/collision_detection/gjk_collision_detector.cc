@@ -254,6 +254,11 @@ const bool GJKCollisionDetector::IsPolygonCollision(
     return false;
   }
 
+  if (!CheckObsMovementTypeFeasible(obs.GetObsMovementType(),
+                                    gjk_col_det_request.movement_type)) {
+    return false;
+  }
+
   if (pt_clout->empty()) {
     return false;
   }
