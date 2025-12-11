@@ -106,6 +106,7 @@ struct PlannerOpenSpaceConfig {
   double max_search_time_ms_for_no_gear_switch;
   // In cruise phase, if found a solution and search time exceed 50 ms, break.
   double search_time_ms_scenario_try;
+  double max_search_time_ms_scenario_try_park_out;
   std::array<double, 3> search_time_by_buffer;
 
   // for sampling method, set a distance for adjust car inside slot.

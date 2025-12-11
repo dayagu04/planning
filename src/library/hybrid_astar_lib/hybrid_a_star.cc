@@ -1797,6 +1797,15 @@ bool HybridAStar::AstarSearch(const Pose2f& start, const Pose2f& end,
       break;
     }
 
+    // in try searching of park out, not requiring too many nodes to avoid the
+    // entire pre planning timeout caused by one direction occupying too much
+    // time.
+    if (request_.path_generate_method == AstarPathGenerateType::TRY_SEARCHING &&
+        IsParkingOutRequest(request_.direction_request) &&
+        astar_search_time > config_.max_search_time_ms_scenario_try_park_out) {
+      break;
+    }
+
     // check if an analystic curve could be connected from current
     // configuration to the end configuration without collision. if so,
     // search ends.

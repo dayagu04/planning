@@ -134,9 +134,13 @@ void ParkingScenario::UpdateStuckTime() {
   }
 
   if (auto_static && !path_update_success) {
-    if (frame_.remain_dist_obs < param.max_replan_remain_dist) {
+    const bool stuck_obs_condition =
+        frame_.remain_dist_obs < param.max_replan_remain_dist;
+    const bool stuck_od_condition =
+        frame_.remain_dist_by_od < param.max_replan_remain_dist;
+    if (stuck_obs_condition || stuck_od_condition) {
       // obs here
-      if (frame_.stuck_by_dynamic_obs) {
+      if (frame_.stuck_by_dynamic_obs || stuck_od_condition) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;

@@ -62,6 +62,7 @@ void PlannerOpenSpaceConfig::InitConfig() {
   max_search_time_ms = 4500;
   max_search_time_ms_for_no_gear_switch = 120;
   search_time_ms_scenario_try = 50;
+  max_search_time_ms_scenario_try_park_out = 300.0;
   search_time_by_buffer[0] = 800;
   search_time_by_buffer[1] = 1200;
   search_time_by_buffer[2] = 3600;
