@@ -150,6 +150,12 @@ enum MergeType {
   BOTH_MERGE = 4
 };
 
+enum MergeLaneType {
+  NONE_MERGE = 0,
+  MERGE_TO_LEFT = 1,
+  MERGE_TO_RIGHT = 2
+};
+
 struct MergePointInfo {
   double dis_to_merge_fp = NL_NMAX;
   MergeType merge_type = MergeType::NO_MERGE;
@@ -238,7 +244,7 @@ enum MLCSceneType {
   MERGE_SCENE = 3
 };
 struct MLCDeciderSceneInfoBaseBaidu {
-  MLCSceneType mlc_scene_type = NORMAL_SCENE;
+  MLCSceneType mlc_scene_type = NONE_SCENE;
   RampDirection route_lane_direction = RAMP_NONE;
   double dis_to_link_topo_change_point = 0.0;
   bool is_valid = false;
@@ -264,7 +270,7 @@ struct MLCDeciderSceneInfoBaseBaidu {
   }
 
   void reset() {
-    mlc_scene_type = NORMAL_SCENE;
+    mlc_scene_type = NONE_SCENE;
     route_lane_direction = RAMP_NONE;
     dis_to_link_topo_change_point = 0.0;
     is_valid = false;

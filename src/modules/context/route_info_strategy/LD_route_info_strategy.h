@@ -112,9 +112,9 @@ protected:
   std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
   FindLaneLeftRightNeighbors(const iflymapdata::sdpro::Lane* target_lane);
   bool IsInvalidLaneMergeLaneOppositeSide(
-      const iflymapdata::sdpro::Lane* merge_lane,
-      const std::vector<uint64_t>& all_predecessor_lane_ids);
+      const iflymapdata::sdpro::Lane* merge_lane);
   bool IsInvalidNonDrivingLane(const iflymapdata::sdpro::Lane* lane);
+  MergeLaneType CalculateMergeLaneType(const iflymapdata::sdpro::Lane* merge_lane);
 
 
  ad_common::sdpromap::SDProMap ld_map_;
