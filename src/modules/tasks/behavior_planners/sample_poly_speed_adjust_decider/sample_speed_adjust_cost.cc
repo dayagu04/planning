@@ -18,8 +18,8 @@ void MatchGapCost::GetCost(
     const double ego_current_vel, const bool is_merge_change,
     const LanChangeSafetyCheckConfig& lc_safety_distance_config) {
   // Helper function to calculate the cost for distance and velocity
-  const double ttc_safe_limit = is_merge_change ? 2.0 : 0.0;
-  const double gap_vel_gain = is_merge_change ? 2.0 : 1.0;
+  const double ttc_safe_limit = is_merge_change ? 0.0 : 0.0;
+  const double gap_vel_gain = is_merge_change ? 1.0 : 1.0;
   is_gap_changeable_ = true;
   auto& xp = lc_safety_distance_config.rear_vehicle_speed_min_space_map
                  .rear_speed_kph_table;  // 后车速度kph
