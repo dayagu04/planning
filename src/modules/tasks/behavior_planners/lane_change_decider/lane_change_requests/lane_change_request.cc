@@ -894,6 +894,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
+  const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
+  const auto cur_reference_path =
+      ref_path_mgr->get_reference_path_by_current_lane(); 
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_default_ego_pass_buffer = kLatPassThre;
@@ -1045,10 +1048,19 @@ bool LaneChangeRequest::ConeSituationJudgement(
     double total_l = 0.0;
     // 过滤横向远离车道中心线的锥桶簇
     double min_l_to_center_line = 10.0;
+    int cone_nums_within_road_boundary = 0;
+    ReferencePathPoint cur_ref_path_point{};
     if (points.size() > 0) {
       for (const auto &p : points) {
-        min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
-        total_l += p.l;
+        if (cur_reference_path != nullptr) {
+          cur_reference_path->get_reference_point_by_lon(p.s, cur_ref_path_point);
+          if (std::fabs(p.l) < cur_ref_path_point.distance_to_left_road_border &&
+              std::fabs(p.l) < cur_ref_path_point.distance_to_right_road_border) {
+            cone_nums_within_road_boundary++;
+          }
+          min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+          total_l += p.l;
+        }
       }
     }
     if (min_l_to_center_line > kConeLaneChangelateralDistancethre * kHysteresisCoefficient) {
