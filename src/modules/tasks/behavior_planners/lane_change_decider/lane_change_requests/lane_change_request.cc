@@ -430,6 +430,18 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
 
+  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  if (lc_request == LEFT_CHANGE) {
+    target_lane = virtual_lane_mgr_->get_left_lane();
+  } else {
+    target_lane = virtual_lane_mgr_->get_right_lane();
+  }
+  // 增加对于前方路沿的判断
+  if (IsRoadBorderSurpressDuringLaneChange(lc_request, origin_lane_id,
+                                           target_lane->get_virtual_id())) {
+    return false;
+  }
+
   const auto &plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
@@ -724,11 +736,11 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
 
 bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
     const RequestType lc_direction, const int origin_lane_id,
-    const int target_lane_id) {
+    const int target_lane_id) const {
   ReferencePathPoint sample_path_point{};
   const double cut_length = 1.4;
   const double sample_forward_distance = 1.0;
-  const double predict_time_horizon = 8.0;
+  const double predict_time_horizon = 3.5;
 
   ReferencePathPoint refpath_pt{};
   const auto &vehicle_param =
@@ -772,7 +784,7 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
                                                       sample_path_point)) {
     return true;
   }
-  double RoadBorderConsiderDistance = MAX(ego_vel * predict_time_horizon, 50.0);
+  double RoadBorderConsiderDistance = ego_vel * predict_time_horizon;
   for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
        s < RoadBorderConsiderDistance; s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
