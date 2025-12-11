@@ -2225,6 +2225,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
   for (const auto* target_lane_node : target_lane_nodes) {
+    if(target_lane_node == nullptr) {
+      continue;
+    }
     double x = target_lane_node->node_x();
     double y = target_lane_node->node_y();
     Point2D node_cart(x, y);
@@ -2366,7 +2369,15 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
           target_lane_virtual_id);
   double target_rear_s = -200.0;
   int64_t target_rear_node_id = planning_data::kInvalidId;
+      //横向运动信息
+  const auto& obstacles_map = ref_path->get_obstacles_map();
   for (const auto* target_lane_node : target_lane_nodes) {
+    if(target_lane_node == nullptr) {
+      continue;
+    }
+    if(target_lane_node->node_agent_id() < 0) {
+      continue;
+    }
     double x = target_lane_node->node_x();
     double y = target_lane_node->node_y();
     Point2D node_cart(x, y);
@@ -2391,10 +2402,22 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     const double target_lane_width = target_lane->width_by_s(agent_s);
     const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
     const auto& agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
-    bool is_out_target_lane = agent_bd.l_start > target_lane_width * 0.5 ||
-                              agent_bd.l_end < -target_lane_width * 0.5;
-    if (is_out_target_lane) {
-      continue;
+    // bool is_out_target_lane = agent_bd.l_start > target_lane_width * 0.5 ||
+    //                           agent_bd.l_end < -target_lane_width * 0.5;
+    // if (is_out_target_lane) {
+    //   continue;
+    // }
+    auto it = obstacles_map.find(target_lane_node->node_agent_id());
+    if (it != obstacles_map.end()) {
+      const auto& rear_obs = it->second;
+      std::pair<double, double> target_center_lat{- target_lane_width * 0.5, target_lane_width * 0.5};
+      std::pair<double, double> obs_lat{agent_bd.l_start, agent_bd.l_end};
+      double obs_lat_vel = rear_obs->frenet_velocity_l();
+      bool is_target_lane_cuting_in =
+          IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 2.0, 0.5);
+      if (!is_target_lane_cuting_in) {
+        continue;  // 2.0s 不进入目标车道过滤
+      }
     }
     const auto& agent_trajs =
         target_lane_node->node_trajectories_used_by_st_graph();
