@@ -301,6 +301,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
     double min_left_l, min_right_l;
+    double total_l = 0.0;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
     // double max_l = std::max(min_left_l, min_right_l);
@@ -309,8 +310,11 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // }
     // 过滤横向远离车道中心线的锥桶簇
     double min_l_to_center_line = 10.0;
-    for (const auto &p : points) {
-      min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+    if (points.size() > 0) {
+      for (const auto &p : points) {
+        min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+        total_l += p.l;
+      }
     }
     if (min_l_to_center_line > kConeMustLaneChangeDistance) {
       continue;
@@ -318,6 +322,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     if (min_l_to_center_line < all_cone_cluster_min_lateral_distance) {
       all_cone_cluster_min_lateral_distance = min_l_to_center_line;
     }
+    double average_l = total_l / points.size();
     // if (left_lane_nums_ == 0 && right_lane_nums_ == 0) {
     //   pass_threshold_left =
     //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
@@ -344,8 +349,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5)) {
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 && average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 && average_l < 0.0)) {
       cone_alc_trigger_counter_++;
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
