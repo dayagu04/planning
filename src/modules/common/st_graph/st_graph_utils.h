@@ -140,6 +140,7 @@ class StGraphUtils {
   static bool CalculateSRange(
       const std::shared_ptr<planning_math::KDPath>& kd_path,
       const PathBorderQuerier& path_border_querier,
+      const agent::Agent& agent,
       const planning_math::Box2d& obs_box, const StBoundaryType type,
       const std::pair<double, double>& path_range,
       const std::vector<double>& agent_sl_boundary,

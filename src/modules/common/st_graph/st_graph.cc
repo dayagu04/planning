@@ -228,7 +228,7 @@ void STGraph::MakeStaticAgentStBoundary(
   const double max_l = agent_sl_boundary[2];
   const double min_l = agent_sl_boundary[3];
   if (StGraphUtils::CalculateSRange(
-          planned_kd_path, *path_border_querier, obs_box, type, path_range,
+          planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
           agent_sl_boundary, considered_corners, planning_init_point_box,
           &lower_s, &upper_s, is_rads_scene)) {
     for (double t = time_range.first; t < time_range.second;
@@ -523,7 +523,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       agent.agent_id() == front_agent_of_origin->agent_id()) {
     is_need_truncate_traj_for_origin_front_agent = true;
   }
-  
+
   // only consider 2s traj to reverse vru within ego_lane
   const bool is_vru_within_ego_lane = agent.is_vru() && is_within_ego_lane;
   bool is_need_truncate_traj =
@@ -607,7 +607,7 @@ void STGraph::MakeDynamicAgentStBoundary(
       double lower_s = std::numeric_limits<double>::max();
       double upper_s = std::numeric_limits<double>::lowest();
       if (StGraphUtils::CalculateSRange(
-              planned_kd_path, *path_border_querier, obs_box, type, path_range,
+              planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
               agent_sl_boundary, considered_corners, planning_init_point_box,
               &lower_s, &upper_s, is_rads_scene)) {
         min_t = std::fmin(min_t, relative_time);
@@ -907,7 +907,7 @@ void STGraph::BackwardExtendSingleStBoundary(
     double lower_s = std::numeric_limits<double>::max();
     double upper_s = std::numeric_limits<double>::lowest();
     if (StGraphUtils::CalculateSRange(
-            planned_kd_path, *path_border_querier, obs_box, type, path_range,
+            planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
             agent_sl_boundary, considered_corners, planning_init_point_box,
             &lower_s, &upper_s, is_rads_scene)) {
       constexpr double kDistThr = 1e-3;

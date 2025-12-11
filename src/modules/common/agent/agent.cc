@@ -44,6 +44,7 @@ Agent::Agent(const Agent& agent)
 
   is_vru_ = agent.is_vru();
   is_tfl_virtual_obs_ = agent.is_tfl_virtual_obs();
+  is_stop_destination_virtual_obs_ = agent.is_stop_destination_virtual_obs();
   is_lane_borrow_virtual_obs_ = agent.is_lane_borrow_virtual_obs();
   is_dangerous_ = agent.is_dangerous();
   dangerous_confidence_ = agent.dangerous_confidence();
