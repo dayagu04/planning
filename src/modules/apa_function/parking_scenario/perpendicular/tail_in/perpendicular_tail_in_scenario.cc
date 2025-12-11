@@ -3869,6 +3869,7 @@ void PerpendicularTailInScenario::Log() const {
   JSON_DEBUG_VALUE("stuck_obs_time", frame_.stuck_obs_time)
   JSON_DEBUG_VALUE("stuck_dynamic_obs_time", frame_.stuck_dynamic_obs_time)
   JSON_DEBUG_VALUE("stuck_by_dynamic_obs", frame_.stuck_by_dynamic_obs)
+  JSON_DEBUG_VALUE("remain_dist_by_od", frame_.remain_dist_by_od)
   JSON_DEBUG_VALUE("replan_reason", frame_.replan_reason)
   JSON_DEBUG_VALUE("plan_fail_reason", frame_.plan_fail_reason)
 
