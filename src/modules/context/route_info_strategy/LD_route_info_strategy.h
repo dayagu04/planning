@@ -115,20 +115,34 @@ protected:
       const iflymapdata::sdpro::Lane* merge_lane);
   bool IsInvalidNonDrivingLane(const iflymapdata::sdpro::Lane* lane);
   MergeLaneType CalculateMergeLaneType(const iflymapdata::sdpro::Lane* merge_lane);
+  void HandleMainLinkPreLane(
+      const iflymapdata::sdpro::Lane* pre_lane,
+      std::vector<iflymapdata::sdpro::Lane>& next_lane_vec);
+  void HandleOtherMergeLinkPreLane(
+      const TopoLane& topo_lane,
+      const iflymapdata::sdpro::LinkInfo_Link* next_pre_link,
+      const iflymapdata::sdpro::LinkInfo_Link* current_link,
+      const iflymapdata::sdpro::Lane* pre_lane,
+      std::vector<iflymapdata::sdpro::Lane>& next_lane_vec);
+  iflymapdata::sdpro::Lane FindMatchingPreLaneInMainLink(
+      const TopoLane& topo_lane,
+      const iflymapdata::sdpro::LinkInfo_Link* next_pre_link);
 
-
- ad_common::sdpromap::SDProMap ld_map_;
- const LocalView* local_view_ = nullptr;
- bool ldmap_valid_{false};
- uint64_t ld_map_info_updated_timestamp_ = 0;
-//  MLCDeciderRouteInfo mlc_decider_route_info_;
- const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
- double ego_on_cur_link_s_ = 0;
- double ego_on_cur_link_l_ = 0;
- std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> merge_info_vec_;
- std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> split_info_vec_;
- std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>> ramp_info_vec_;
- MLCDeciderSceneInfoBaseBaidu mlc_decider_info_base_baidu_;
+  ad_common::sdpromap::SDProMap ld_map_;
+  const LocalView* local_view_ = nullptr;
+  bool ldmap_valid_{false};
+  uint64_t ld_map_info_updated_timestamp_ = 0;
+  //  MLCDeciderRouteInfo mlc_decider_route_info_;
+  const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
+  double ego_on_cur_link_s_ = 0;
+  double ego_on_cur_link_l_ = 0;
+  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
+      merge_info_vec_;
+  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
+      split_info_vec_;
+  std::vector<std::pair<const iflymapdata::sdpro::LinkInfo_Link*, double>>
+      ramp_info_vec_;
+  MLCDeciderSceneInfoBaseBaidu mlc_decider_info_base_baidu_;
 
 };
 }
