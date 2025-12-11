@@ -9,9 +9,12 @@ namespace apa_planner {
 
 class PerpendicularHeadInScenario : public PerpendicularParkScenario {
  public:
-  PerpendicularHeadInScenario() = default;
+  PerpendicularHeadInScenario() {
+    scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
+  };
   PerpendicularHeadInScenario(const std::shared_ptr<ApaWorld>& apa_world_ptr) {
     SetApaWorldPtr(apa_world_ptr);
+    scenario_type_ = ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN;
   }
   virtual void Reset() override;
   virtual std::string GetName() override { return typeid(this).name(); }

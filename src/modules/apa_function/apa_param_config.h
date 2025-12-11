@@ -419,6 +419,7 @@ struct ApaParameters {
   double lat_dist_mirror_to_center = 1.135;
   double steer_ratio = 16.5;
   double arc_line_shift_steer_angle_deg = 2.5;
+  double max_steer_angle_deg = 468.0;
   double c1 = 0.3790;
   std::vector<double> car_vertex_x_vec = {
       3.518,  3.718,  3.718,  3.518,  2.092, 2.092, 1.906, 1.906,

@@ -639,6 +639,8 @@ class ParkingScenario {
 
   Frame frame_;
 
+  ParkingScenarioType scenario_type_;
+
   std::vector<pnc::geometry_lib::PathPoint> current_path_point_global_vec_;
 
   std::vector<pnc::geometry_lib::PathPoint> complete_path_point_global_vec_;

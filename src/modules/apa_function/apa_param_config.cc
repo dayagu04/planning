@@ -188,6 +188,7 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.steer_ratio, double, "steer_ratio");
   JSON_READ_VALUE(param.arc_line_shift_steer_angle_deg, double,
                   "arc_line_shift_steer_angle_deg");
+  JSON_READ_VALUE(param.max_steer_angle_deg, double, "max_steer_angle_deg");
   JSON_READ_VALUE(param.c1, double, "c1");
 
   JSON_READ_VALUE(param.car_vertex_x_vec, std::vector<double>,
