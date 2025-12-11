@@ -223,8 +223,8 @@ void SyncParkingParameters(const bool is_simulation) {
   JSON_READ_VALUE(param.terminal_target_heading, double,
                   "terminal_target_heading");
 
-  JSON_READ_VALUE(param.terminal_target_x_to_limiter, double,
-                  "terminal_target_x_to_limiter");
+  JSON_READ_VALUE(param.terminal_target_x_to_line, double,
+                  "terminal_target_x_to_line");
 
   JSON_READ_VALUE(param.terminal_parallel_y_offset, double,
                   "terminal_parallel_y_offset");

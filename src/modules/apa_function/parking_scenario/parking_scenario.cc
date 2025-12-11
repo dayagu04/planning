@@ -134,13 +134,10 @@ void ParkingScenario::UpdateStuckTime() {
   }
 
   if (auto_static && !path_update_success) {
-    const bool stuck_obs_condition =
-        frame_.remain_dist_obs < param.max_replan_remain_dist;
-    const bool stuck_od_condition =
-        frame_.remain_dist_by_od < param.max_replan_remain_dist;
-    if (stuck_obs_condition || stuck_od_condition) {
+    if (std::min(frame_.remain_dist_obs, frame_.remain_dist_by_od) <
+        param.max_replan_remain_dist) {
       // obs here
-      if (frame_.stuck_by_dynamic_obs || stuck_od_condition) {
+      if (frame_.stuck_by_dynamic_obs) {
         frame_.stuck_dynamic_obs_time += param.plan_time;
       } else {
         frame_.stuck_obs_time += param.plan_time;
@@ -590,7 +587,8 @@ const double ParkingScenario::CalRemainDistFromObs(
     frame_.stuck_by_dynamic_obs = false;
     return uss_remain_dist;
   } else {
-    if (obs_pt_remain_dist_dynamic < obs_pt_remain_dist_static) {
+    if (std::min(obs_pt_remain_dist_dynamic, frame_.remain_dist_by_od) <
+        obs_pt_remain_dist_static) {
       frame_.stuck_by_dynamic_obs = true;
       return obs_pt_remain_dist_dynamic;
     } else {
