@@ -124,7 +124,7 @@ int UpdateByParams(py::bytes &spatio_temporal_union_input_bytes, double unit_t,
     path_points.emplace_back(temp_path_point);
   }
   // std::cout << "path_points: \n" << path_points.size() << std::endl;
-  if (path_points.size() < kKDPathMinPathPointSize + 1) {
+  if (path_points.size() < planning_math::KDPath::kKDPathMinPathPointSize + 1) {
     return 0;
   }
   planning_math::KDPath target_lane_coord(std::move(path_points));

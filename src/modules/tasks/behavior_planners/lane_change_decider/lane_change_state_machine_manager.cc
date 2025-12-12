@@ -1051,7 +1051,9 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->make_map_lane_reference_path(coarse_planning_info.target_lane_id);
-
+  if (coarse_planning_info.reference_path == nullptr) {
+    return;
+  }
   const auto& planning_init_point =
       coarse_planning_info.reference_path->get_frenet_ego_state()
           .planning_init_point();
