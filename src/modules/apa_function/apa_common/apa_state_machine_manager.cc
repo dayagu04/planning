@@ -33,14 +33,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   ILOG_INFO << "fun_state_machine_info.current_state = "
             << static_cast<int>(fun_state_machine_info.current_state);
 
-  const iflyauto::ApaWorkMode work_mode =
-      fun_state_machine_info.parking_req.apa_work_mode;
-
   const iflyauto::ApaFreeSlotInfo& free_slot_info =
       fun_state_machine_info.parking_req.apa_free_slot_info;
-
-  const iflyauto::RunningMode running_mode =
-      fun_state_machine_info.running_mode;
 
   const iflyauto::ApaParkingDirection parking_in_direction =
       fun_state_machine_info.parking_req.apa_parking_direction;
@@ -48,12 +42,36 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   const iflyauto::ApaParkOutDirection park_out_direction =
       fun_state_machine_info.parking_req.apa_park_out_direction;
 
+
   free_slot_pos_dir_ = free_slot_info.corner_points[kSlotFreeCorner1].x >
                        free_slot_info.corner_points[kSlotFreeCorner2].x;
 
-  is_free_slot_selected_ = free_slot_info.is_free_slot_selected;
-  free_slot_activate_ =
-      fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate;
+  if (fun_state_machine_info.running_mode == iflyauto::RunningMode::RUNNING_MODE_PA) {
+      running_mode_ = ApaRunningMode::RUNNING_PA;
+      if (fun_state_machine_info.parking_req.pa_direction ==
+          iflyauto::PA_DIRECTION_RIGHT) {
+        pa_direction_ = ApaPADirection::PA_RIGHT;
+      } else if (fun_state_machine_info.parking_req.pa_direction ==
+                 iflyauto::PA_DIRECTION_LEFT) {
+        pa_direction_ = ApaPADirection::PA_LEFT;
+      } else {
+        pa_direction_ = ApaPADirection::PA_INVALID;
+      }
+  } else if (fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate) {
+    running_mode_ = ApaRunningMode::RUNNING_SAPA;
+    const auto is_free_slot_selected = free_slot_info.is_free_slot_selected;
+    if(is_free_slot_selected == iflyauto::FreeSlotSelectedStatus::
+            FREE_SLOT_SELECTED_STATUS_DRAGING) {
+      sapa_status_ = ApaSAPAStatus::SAPA_STATUS_DRAGING;
+    } else if(is_free_slot_selected == iflyauto::FreeSlotSelectedStatus::
+                   FREE_SLOT_SELECTED_STATUS_FINISHED) {
+      sapa_status_ = ApaSAPAStatus::SAPA_STATUS_FINISHED;
+    } else {
+      sapa_status_ = ApaSAPAStatus::SAPA_STATUS_DEFAULT;
+    }
+  } else {
+    running_mode_ = ApaRunningMode::RUNNING_NORMAL;
+  }
 
   switch (fun_state_machine_info.current_state) {
     case iflyauto::FunctionalState_MANUAL_PARKING:
@@ -68,105 +86,93 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     case iflyauto::FunctionalState_PARK_IN_SEARCHING:
     case iflyauto::FunctionalState_HPP_CRUISE_ROUTING:
     case iflyauto::FunctionalState_HPP_CRUISE_SEARCHING:
-      if (free_slot_info.is_free_slot_selected ==
-          iflyauto::FreeSlotSelectedStatus::
-              FREE_SLOT_SELECTED_STATUS_FINISHED) {
-        if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
-                 .is_turn_corner) {
-          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
-        } else {
-          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
-        }
-        break;
-      }
-      if (free_slot_info.free_slot_activate) {
-        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
-        break;
-      }
-      if (running_mode == iflyauto::RUNNING_MODE_PA) {
+      task_direction_ = ApaTaskDirection::APA_TASK_IN;
+      if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
-        break;
-      }
-      if (parking_fusion_info.select_slot_id == 0) {
-        state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
+      } else if(running_mode_ == ApaRunningMode::RUNNING_SAPA) {
+        if (sapa_status_ == ApaSAPAStatus::SAPA_STATUS_FINISHED) {
+          if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
+                   .is_turn_corner) {
+            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
+          } else {
+            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
+          }
+        } else {
+          state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
+        }
       } else {
-        if (parking_in_direction == iflyauto::BACK_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
-        } else if (parking_in_direction ==
-                   iflyauto::FRONT_END_PARKING_DIRECTION) {
-          state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
+        if (parking_fusion_info.select_slot_id == 0) {
+          state_machine_ = ApaStateMachine::SEARCH_IN_NO_SELECTED;
+        } else {
+          if (parking_in_direction == iflyauto::BACK_END_PARKING_DIRECTION) {
+            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
+          } else if (parking_in_direction ==
+                     iflyauto::FRONT_END_PARKING_DIRECTION) {
+            state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT;
+          }
         }
       }
       break;
     case iflyauto::FunctionalState_PARK_OUT_SEARCHING:
-      if (park_out_direction == iflyauto::PRK_OUT_DIRECTION_INVALID) {
-        state_machine_ = ApaStateMachine::SEARCH_OUT_NO_SELECTED;
-      } else {
-        switch (park_out_direction) {
-          case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
-          case iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL:
-          case iflyauto::PRK_OUT_TO_FRONT_OUT:
-          case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
-          case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
-            state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT;
-            break;
-          case iflyauto::PRK_OUT_TO_BACK_OUT:
-          case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
-          case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
-            state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR;
-            break;
-          default:
-            break;
-        }
+      task_direction_ = ApaTaskDirection::APA_TASK_OUT;
+      switch (park_out_direction) {
+        case iflyauto::PRK_OUT_DIRECTION_INVALID:
+          state_machine_ = ApaStateMachine::SEARCH_OUT_NO_SELECTED;
+        case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
+        case iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL:
+        case iflyauto::PRK_OUT_TO_FRONT_OUT:
+        case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
+        case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
+          state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT;
+          break;
+        case iflyauto::PRK_OUT_TO_BACK_OUT:
+        case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
+        case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
+          state_machine_ = ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR;
+          break;
+        default:
+          break;
       }
       break;
     case iflyauto::FunctionalState_PARK_GUIDANCE:
     case iflyauto::FunctionalState_PARK_PRE_ACTIVE:
     case iflyauto::FunctionalState_HPP_PARKING_IN:
-      if (running_mode == iflyauto::RUNNING_MODE_PA) {
+      if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
-        break;
-      }
-      if (work_mode == iflyauto::APA_WORK_MODE_PARKING_IN ||
-          work_mode == iflyauto::APA_WORK_MODE_RCP_IN ||
-          work_mode == iflyauto::APA_WORK_MODEE_SAPA) {
-        if (free_slot_info.is_free_slot_selected ==
-            iflyauto::FreeSlotSelectedStatus::
-                FREE_SLOT_SELECTED_STATUS_FINISHED) {
-          if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
-                   .is_turn_corner) {
-            state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+      } else {
+        if(task_direction_ == ApaTaskDirection::APA_TASK_IN) {
+          if(running_mode_ == ApaRunningMode::RUNNING_SAPA) {
+            if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeId]
+                     .is_turn_corner) {
+              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+            } else {
+              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+            }
           } else {
-            state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+            if (parking_in_direction == iflyauto::BACK_END_PARKING_DIRECTION) {
+              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
+            } else if (parking_in_direction ==
+                       iflyauto::FRONT_END_PARKING_DIRECTION) {
+              state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+            }
           }
-          break;
-        } else if (free_slot_info.free_slot_activate) {
-          break;
         } else {
-          if (parking_in_direction == iflyauto::BACK_END_PARKING_DIRECTION) {
-            state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
-          } else if (parking_in_direction ==
-                     iflyauto::FRONT_END_PARKING_DIRECTION) {
-            state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_FRONT;
+          switch (park_out_direction) {
+            case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
+            case iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL:
+            case iflyauto::PRK_OUT_TO_FRONT_OUT:
+            case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
+            case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
+              state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_FRONT;
+              break;
+            case iflyauto::PRK_OUT_TO_BACK_OUT:
+            case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
+            case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
+              state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_REAR;
+              break;
+            default:
+              break;
           }
-        }
-      } else if (work_mode == iflyauto::APA_WORK_MODE_PARKING_OUT ||
-                 work_mode == iflyauto::APA_WORK_MODE_RCP_OUT) {
-        switch (park_out_direction) {
-          case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
-          case iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL:
-          case iflyauto::PRK_OUT_TO_FRONT_OUT:
-          case iflyauto::PRK_OUT_TO_FRONT_RIGHT_CROSS:
-          case iflyauto::PRK_OUT_TO_FRONT_RIGHT_PARALLEL:
-            state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_FRONT;
-            break;
-          case iflyauto::PRK_OUT_TO_BACK_OUT:
-          case iflyauto::PRK_OUT_TO_BACK_LEFT_CROSS:
-          case iflyauto::PRK_OUT_TO_BACK_RIGHT_CROSS:
-            state_machine_ = ApaStateMachine::ACTIVE_OUT_CAR_REAR;
-            break;
-          default:
-            break;
         }
       }
       break;
@@ -238,30 +244,13 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       break;
   }
 
-  switch (fun_state_machine_info.running_mode) {
-    case iflyauto::RUNNING_MODE_PA:
-      running_mode_ = ApaRunningMode::RUNNING_PA;
-      if (fun_state_machine_info.parking_req.pa_direction ==
-          iflyauto::PA_DIRECTION_RIGHT) {
-        pa_direction_ = ApaPADirection::PA_RIGHT;
-      } else if (fun_state_machine_info.parking_req.pa_direction ==
-                 iflyauto::PA_DIRECTION_LEFT) {
-        pa_direction_ = ApaPADirection::PA_LEFT;
-      } else {
-        pa_direction_ = ApaPADirection::PA_INVALID;
-      }
-      break;
-    default:
-      running_mode_ = ApaRunningMode::RUNNING_NORMAL;
-      break;
-  }
-
   PrintApaStateMachine(state_machine_);
   PrintApaParkOutDirection(out_direction_);
   PrintApaSlotLatPosPreference(slot_lat_pos_preference_);
   PrintParkingSpeedMode(parking_speed_mode_);
   PrintParkingRunningMode(running_mode_);
   PrintParkingPADirection(pa_direction_);
+  PrintParkingSAPAStatus(sapa_status_);
 
   JSON_DEBUG_VALUE("apa_state_machine", static_cast<int>(state_machine_))
   JSON_DEBUG_VALUE("apa_out_direction", static_cast<int>(out_direction_))
@@ -307,6 +296,24 @@ const bool ApaStateMachineManager::IsParkingStatus() const {
   if (state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
       state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR ||
       state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsParkingInStatus() const {
+  if (state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      state_machine_ == ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool ApaStateMachineManager::IsParkingOutStatus() const {
+  if (state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_FRONT ||
       state_machine_ == ApaStateMachine::ACTIVE_OUT_CAR_REAR) {
     return true;
   }
@@ -448,7 +455,6 @@ std::string ApaStateMachineManager::GetApaParkOutDirectionString(
   }
   return out_dir;
 }
-
 void ApaStateMachineManager::PrintApaParkOutDirection(
     const ApaParkOutDirection out_direction) {
   ILOG_INFO << "out_direction = "
@@ -470,7 +476,6 @@ std::string ApaStateMachineManager::GetApaSlotLatPosPreferenceString(
   }
   return slot_lat_pos;
 }
-
 void ApaStateMachineManager::PrintApaSlotLatPosPreference(
     const ApaSlotLatPosPreference slot_lat_pos_preference) {
   ILOG_INFO << "slot_lat_pos_preference = "
@@ -496,7 +501,6 @@ std::string ApaStateMachineManager::GetParkingSpeedModeString(
   }
   return speed_mode;
 };
-
 void ApaStateMachineManager::PrintParkingSpeedMode(
     const ParkingSpeedMode parking_speed_mode) {
   ILOG_INFO << "speed_mode = " << GetParkingSpeedModeString(parking_speed_mode);
@@ -509,13 +513,15 @@ std::string ApaStateMachineManager::GetParkingRunningModelString(
     case ApaRunningMode::RUNNING_PA:
       mode = "RUNNING_PA";
       break;
+    case ApaRunningMode::RUNNING_SAPA:
+      mode = "SELF_DEFINE";
+      break;
     default:
       mode = "RUNNING_NORMAL";
       break;
   }
   return mode;
 };
-
 void ApaStateMachineManager::PrintParkingRunningMode(
     const ApaRunningMode running_mode) {
   ILOG_INFO << "running_mode = " << GetParkingRunningModelString(running_mode);
@@ -537,11 +543,29 @@ std::string ApaStateMachineManager::GetParkingPADirectionString(
   }
   return direction;
 };
-
 void ApaStateMachineManager::PrintParkingPADirection(
     const ApaPADirection pa_direction) {
   ILOG_INFO << "PA direction = " << GetParkingPADirectionString(pa_direction);
 };
+
+std::string ApaStateMachineManager::GetParkingSAPAStatusString(const ApaSAPAStatus sapa_status) {
+  std::string res_string = "SAPA_STATUS_DEFAULT";
+  switch (sapa_status) {
+    case ApaSAPAStatus::SAPA_STATUS_DEFAULT:
+      res_string = "SAPA_STATUS_DEFAULT";
+      break;
+    case ApaSAPAStatus::SAPA_STATUS_DRAGING:
+      res_string = "SAPA_STATUS_DRAGING";
+      break;
+    case ApaSAPAStatus::SAPA_STATUS_FINISHED:
+      res_string = "SAPA_STATUS_FINISHED";
+      break;
+  }
+  return res_string;
+}
+void ApaStateMachineManager::PrintParkingSAPAStatus(const ApaSAPAStatus sapa_status) {
+  ILOG_INFO << "SAPA status = " << GetParkingSAPAStatusString(sapa_status);
+}
 
 const bool ApaStateMachineManager::IsParkSuspendStatus() const {
   if (state_machine_ == ApaStateMachine::SUSPEND) {
