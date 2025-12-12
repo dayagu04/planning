@@ -110,7 +110,12 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
-  congestion_detection_config.heavy_density = 30.0;
+  if (lc_status == kLaneChangePropose || lc_status == kLaneChangeExecution ||
+      lc_status == kLaneChangeHold || lc_status == kLaneChangeComplete) {
+    congestion_detection_config.heavy_density = 45.0;
+  } else {
+    congestion_detection_config.heavy_density = 30.0;
+  }
   congestion_detection_config.jam_speed = 50.0;
   if (target_lane && is_avoidance_MLC) {
     const int target_lane_id = target_lane->get_virtual_id();

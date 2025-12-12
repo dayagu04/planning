@@ -562,6 +562,7 @@ void RouteInfo::CaculateMergeInfo(
     for (int i = 0; i < merge_info.size(); i++) {
       const auto& merge_info_temp = merge_info[i];
       bool is_road_merged_by_other_lane = false;
+      bool is_ramp_road_merge = false;
       if (merge_info_temp.second > kEpsilon) {
         const auto& merge_seg = merge_info_temp.first;
         if (!merge_seg) {
@@ -604,6 +605,7 @@ void RouteInfo::CaculateMergeInfo(
               merge_seg_last_other_seg->lane_num()) {
             route_info_output_.is_road_merged_by_other_lane = true;
             is_road_merged_by_other_lane = true;
+            is_ramp_road_merge = false;
           } else if (merge_seg_last_seg->lane_num() ==
                      merge_seg_last_other_seg->lane_num()) {
             if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
@@ -612,13 +614,16 @@ void RouteInfo::CaculateMergeInfo(
                 !route_info_output_.is_on_ramp) {
               route_info_output_.is_road_merged_by_other_lane = true;
               is_road_merged_by_other_lane = true;
+              is_ramp_road_merge = false;
             } else {
               route_info_output_.is_road_merged_by_other_lane = false;
               is_road_merged_by_other_lane = false;
+              is_ramp_road_merge = true;
             }
           } else {
             route_info_output_.is_road_merged_by_other_lane = false;
             is_road_merged_by_other_lane = false;
+            is_ramp_road_merge = true;
           }
         }
         if (!is_find_first_merge_onfo) {
@@ -664,6 +669,8 @@ void RouteInfo::CaculateMergeInfo(
 
             first_merge_region_lane_tupo_info.is_other_merge_to_road =
                 is_road_merged_by_other_lane;
+            first_merge_region_lane_tupo_info.is_ramp_merge =
+                is_ramp_road_merge;
 
             route_info_output_.merge_region_info_list.emplace_back(
                 first_merge_region_lane_tupo_info);
@@ -693,6 +700,8 @@ void RouteInfo::CaculateMergeInfo(
                     route_info_output_.second_merge_direction);
             second_merge_region_lane_tupo_info.is_other_merge_to_road =
                 is_road_merged_by_other_lane;
+            second_merge_region_lane_tupo_info.is_ramp_merge =
+                is_ramp_road_merge;
             route_info_output_.merge_region_info_list.emplace_back(
                 second_merge_region_lane_tupo_info);
           }
@@ -2162,13 +2171,13 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                 .start_fp_point.fp_distance_to_split_point),
                    300.0);
       max_distances[i] =
-          valid_exchange_regions[i].distance_to_split_point + start_fp_distance;
+          valid_exchange_regions[i].distance_to_split_point - start_fp_distance;
     }
 
     // 从最后一个exchange region开始向前优化
     // 限制最多仅优化连续3个，且到3个中最后一个ramp split为止
     bool is_need_optimize = true;
-    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 2); ++i) {
+    for (int i = 0; i < std::min<int>(valid_exchange_regions.size(), 3); ++i) {
       is_need_optimize =
           !IsClosingTollStationEntrance(
               current_link_, sdpro_map_,
@@ -2178,12 +2187,16 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
               current_link_, sdpro_map_,
               route_info_output_.current_segment_passed_distance,
               valid_exchange_regions[i].distance_to_split_point);
-      if (valid_exchange_regions[i].is_ramp_split ||
-          valid_exchange_regions[i].split_direction == SPLIT_RIGHT &&
-              valid_exchange_regions[i].recommend_lane_num[4].total_lane_num >=
-                  valid_exchange_regions[i]
-                      .recommend_lane_num[3]
-                      .total_lane_num) {
+      bool is_not_merge = !valid_exchange_regions[i].is_ramp_merge &&
+                          !valid_exchange_regions[i].is_other_merge_to_road;
+
+      if ((valid_exchange_regions[i].is_ramp_split && is_not_merge) ||
+          (valid_exchange_regions[i].split_direction == SPLIT_RIGHT &&
+           is_not_merge &&
+           valid_exchange_regions[i].recommend_lane_num[3].total_lane_num >=
+               valid_exchange_regions[i]
+                   .recommend_lane_num[2]
+                   .total_lane_num)) {
         if (!is_need_optimize) {
           break;
         }
@@ -2192,9 +2205,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
     for (int i = iteration_num; i >= 0; --i) {
       // 先根据距离优化当前exchange region的可行车道
-      OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
-                                      exchange_feasible_lane_distances[i],
-                                      max_distances[i]);
+      OptimizeFeasibleLanesByDistance(
+          valid_exchange_regions[i], exchange_feasible_lane_distances[i],
+          max_distances[i], current_lane_vec.size());
 
       if (i < iteration_num) {
         std::vector<int> missing_elements =
@@ -2258,9 +2271,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                       missing_lane_num);
 
           // 矫正后重新根据距离优化
-          OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
-                                          exchange_feasible_lane_distances[i],
-                                          max_distances[i]);
+          OptimizeFeasibleLanesByDistance(
+              valid_exchange_regions[i], exchange_feasible_lane_distances[i],
+              max_distances[i], current_lane_vec.size());
         }
       }
     }
@@ -2643,7 +2656,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     } else {
       ego_seq = left_lane_num + 1;
     }
-    if (ego_seq == 0) {
+    if (ego_seq <= 0) {
       ego_seq = left_lane_num + 1;
     }
     route_info_output_.ego_seq = ego_seq;
@@ -3243,8 +3256,19 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
   if (!split_seccessor_link) {
     return split_region_info;
   }
+  const auto& out_link = previous_seg->successor_link_ids();
+  if (out_link.size() < 2) {
+    return split_region_info;
+  }
+  auto other_link_id =
+      out_link[0] == split_seccessor_link->id() ? out_link[1] : out_link[0];
+  const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
+  if (!other_link) {
+    return split_region_info;
+  }
   split_region_info.is_ramp_split =
-      sdpro_map.isRamp(split_seccessor_link->link_type()) ||
+      sdpro_map.isRamp(split_seccessor_link->link_type()) &&
+          split_seccessor_link->lane_num() <= other_link->lane_num() ||
       sdpro_map.isSaPa(split_seccessor_link->link_type());
 
   if (previous_seg->successor_link_ids().size() < 2) {
@@ -4213,8 +4237,9 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
                    on_exclnum == successor_exclnum) {
           // 分叉，右边是主路的
           for (int i = 0; i < successor_exclnum; ++i) {
-            on_excr_feasible_lane.emplace_back(i + 1);
-            before_excr_feasible_lane.emplace_back(i + 1);
+            on_excr_feasible_lane.emplace_back(i + 1 + successor_other_exclnum);
+            before_excr_feasible_lane.emplace_back(i + 1 +
+                                                   successor_other_exclnum);
           }
 
           if (is_other_split_ramp && !is_continue_lane) {
@@ -4582,9 +4607,6 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
     // = successor_exclnum + successor_other_exclnum
     // 通常认为右边是从主路分出去的路，因此增加的车道属于是右边增加了
     if (on_exclnum == successor_exclnum) {
-      for (int i = 0; i < successor_exclnum; ++i) {
-        on_excr_feasible_lane.emplace_back(i + 1);
-      }
       // 目前假定都是从右边往左边汇入，所以都行驶到左边的车道上去
       // TODO(fengwang31):后续需要考虑左边的车道是否会收窄，如果会的话，则不能继续往左边汇
       int last_other_seg_lane_num = 0;
@@ -4602,6 +4624,21 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
               sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
           if (merge_seg_last_other_seg) {
             last_other_seg_lane_num = merge_seg_last_other_seg->lane_num();
+          }
+        }
+      }
+      if (last_other_seg_lane_num != 0) {
+        for (int i = 0; i < last_other_seg_lane_num; ++i) {
+          on_excr_feasible_lane.emplace_back(i + 1);
+        }
+      } else {
+        if (successor_exclnum <= 1) {
+          for (int i = 0; i < successor_exclnum; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
+          }
+        } else {
+          for (int i = 0; i < successor_exclnum - 1; ++i) {
+            on_excr_feasible_lane.emplace_back(i + 1);
           }
         }
       }
@@ -4865,10 +4902,6 @@ bool RouteInfo::CalculateMergeLaneInfo(
     } else if (lane_info->change_type() ==
                iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane) {
       merge_lane_sequence_vec.emplace(find_fp_lane_num + 1, SPLIT_LEFT);
-      return true;
-    } else if (lane_info->change_type() ==
-               iflymapdata::sdpro::LaneChangeType::BothDirectionMergingLane) {
-      merge_lane_sequence_vec.emplace(find_fp_lane_num, SPLIT_LEFT);
       return true;
     }
   }
@@ -6099,17 +6132,20 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
 }
 void RouteInfo::OptimizeFeasibleLanesByDistance(
     NOASplitRegionInfo& exchange_region_info,
-    std::map<int, double>& feasible_lane_distance, double max_distance) {
+    std::map<int, double>& feasible_lane_distance, double max_distance,
+    int current_lane_num) {
   const int total_lane_num =
       exchange_region_info.recommend_lane_num[0].total_lane_num;
+  bool is_merge_exchange_region = exchange_region_info.is_ramp_merge ||
+                                  exchange_region_info.is_other_merge_to_road;
 
-  double opt_distance = 1200.0;
+  double opt_distance = 800.0;
   if (!current_link_) {
-    opt_distance = 1200.0;
+    opt_distance = 800.0;
   } else {
     opt_distance = current_link_->link_class() ==
                            iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY
-                       ? 1200.0
+                       ? 800.0
                        : 600.0;
   }
 
@@ -6120,7 +6156,10 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       exchange_region_info.recommend_lane_num[0].feasible_lane_sequence;
   // 判断是不是下匝道的exchange，是则需要考虑长实线
   double lsl_length = 0;
-  if (exchange_region_info.split_direction == SPLIT_RIGHT) {
+  if ((!is_merge_exchange_region &&
+       exchange_region_info.split_direction == SPLIT_RIGHT) ||
+      (is_merge_exchange_region &&
+       exchange_region_info.split_direction == SPLIT_LEFT)) {
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
       const int lc_num = feasible_lane_sequence[0] - i;
@@ -6150,8 +6189,11 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
             temp_feasible_lane_dis[i];
       }
     }
-  } else if (exchange_region_info.split_direction == SPLIT_LEFT) {
-    for (int i = total_lane_num; i > feasible_lane_sequence.back(); i--) {
+  } else if ((!is_merge_exchange_region &&
+              exchange_region_info.split_direction == SPLIT_LEFT) ||
+             (is_merge_exchange_region &&
+              exchange_region_info.split_direction == SPLIT_RIGHT)) {
+    for (int i = current_lane_num; i > feasible_lane_sequence.back(); i--) {
       const int lc_num = i - feasible_lane_sequence.back();
       const double lc_need_dis = opt_distance * std::fabs(lc_num);
       std::vector<std::vector<LSLInfo>> lsl_info_vec;
@@ -6366,9 +6408,7 @@ bool RouteInfo::IsClosingTollStationEntrance(
 
       for (const auto fp_point_type : fp_point.type()) {
         if (fp_point_type ==
-                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_ENTRANCE ||
-            fp_point_type ==
-                iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_EXIT) {
+            iflymapdata::sdpro::FeaturePointType::TOLL_BOOTH_ENTRANCE) {
           return true;
         }
       }

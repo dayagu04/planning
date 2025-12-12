@@ -163,6 +163,7 @@ struct MergePointInfo {
 struct NOASplitRegionInfo {
   bool is_valid = false;
   bool is_ramp_split = false;                  // split场景专用
+  bool is_ramp_merge = false;                  // merge场景专用
   bool is_other_merge_to_road = false;         // merge场景专用
   MergeType merge_type = MergeType::NO_MERGE;  // merge场景专用
   uint64 split_link_id = -1;
@@ -175,6 +176,7 @@ struct NOASplitRegionInfo {
   void reset() {
     is_valid = false;
     is_ramp_split = false;
+    is_ramp_merge = false;
     is_other_merge_to_road = false;
     merge_type = MergeType::NO_MERGE;
     split_link_id = -1;

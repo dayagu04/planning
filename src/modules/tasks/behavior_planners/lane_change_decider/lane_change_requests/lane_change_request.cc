@@ -528,9 +528,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              ->get_current_lane();
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
-  bool is_process_split = mlc_decider_route_info.is_process_split ||
-                          mlc_decider_route_info.is_process_split_split ||
-                          mlc_decider_route_info.is_process_other_merge_split;
+  bool is_process_split = route_info_output.mlc_decider_route_info
+                          .first_static_split_region_info.is_ramp_split;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
