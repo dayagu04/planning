@@ -773,8 +773,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
     float min_obs_dist = 26.8f;
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
@@ -852,8 +853,9 @@ const bool NodeDeleteDecider::CheckPtsCollision(
 
     if (is_special_node) {
       // only to get rid of special case
-      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer;
-      mirror_lat_buffer = speed_buffer.leave_initial_place_mirror_lat_buffer;
+      body_lat_buffer = speed_buffer.leave_initial_place_body_lat_buffer + 1e-2;
+      mirror_lat_buffer =
+          speed_buffer.leave_initial_place_mirror_lat_buffer + 1e-2;
       lon_buffer = speed_buffer.leave_initial_place_lon_buffer;
     }
 
