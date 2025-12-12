@@ -2205,9 +2205,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
     for (int i = iteration_num; i >= 0; --i) {
       // 先根据距离优化当前exchange region的可行车道
-      OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
-                                      exchange_feasible_lane_distances[i],
-                                      max_distances[i]);
+      OptimizeFeasibleLanesByDistance(
+          valid_exchange_regions[i], exchange_feasible_lane_distances[i],
+          max_distances[i], current_lane_vec.size());
 
       if (i < iteration_num) {
         std::vector<int> missing_elements =
@@ -2271,9 +2271,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                                       missing_lane_num);
 
           // 矫正后重新根据距离优化
-          OptimizeFeasibleLanesByDistance(valid_exchange_regions[i],
-                                          exchange_feasible_lane_distances[i],
-                                          max_distances[i]);
+          OptimizeFeasibleLanesByDistance(
+              valid_exchange_regions[i], exchange_feasible_lane_distances[i],
+              max_distances[i], current_lane_vec.size());
         }
       }
     }
@@ -6129,9 +6129,12 @@ void RouteInfo::EraseSplitSplitFeasibleLane(
 }
 void RouteInfo::OptimizeFeasibleLanesByDistance(
     NOASplitRegionInfo& exchange_region_info,
-    std::map<int, double>& feasible_lane_distance, double max_distance) {
+    std::map<int, double>& feasible_lane_distance, double max_distance,
+    int current_lane_num) {
   const int total_lane_num =
       exchange_region_info.recommend_lane_num[0].total_lane_num;
+  bool is_merge_exchange_region = exchange_region_info.is_ramp_merge ||
+                                  exchange_region_info.is_other_merge_to_road;
 
   double opt_distance = 800.0;
   if (!current_link_) {
@@ -6150,7 +6153,10 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
       exchange_region_info.recommend_lane_num[0].feasible_lane_sequence;
   // 判断是不是下匝道的exchange，是则需要考虑长实线
   double lsl_length = 0;
-  if (exchange_region_info.split_direction == SPLIT_RIGHT) {
+  if ((!is_merge_exchange_region &&
+       exchange_region_info.split_direction == SPLIT_RIGHT) ||
+      (is_merge_exchange_region &&
+       exchange_region_info.split_direction == SPLIT_LEFT)) {
     for (int i = 1; i < feasible_lane_sequence[0]; i++) {
       // 因为split在右边，所以存在都是右边的车道，seq都比左边的大
       const int lc_num = feasible_lane_sequence[0] - i;
@@ -6180,8 +6186,11 @@ void RouteInfo::OptimizeFeasibleLanesByDistance(
             temp_feasible_lane_dis[i];
       }
     }
-  } else if (exchange_region_info.split_direction == SPLIT_LEFT) {
-    for (int i = total_lane_num; i > feasible_lane_sequence.back(); i--) {
+  } else if ((!is_merge_exchange_region &&
+              exchange_region_info.split_direction == SPLIT_LEFT) ||
+             (is_merge_exchange_region &&
+              exchange_region_info.split_direction == SPLIT_RIGHT)) {
+    for (int i = current_lane_num; i > feasible_lane_sequence.back(); i--) {
       const int lc_num = i - feasible_lane_sequence.back();
       const double lc_need_dis = opt_distance * std::fabs(lc_num);
       std::vector<std::vector<LSLInfo>> lsl_info_vec;
