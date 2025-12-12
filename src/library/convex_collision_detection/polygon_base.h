@@ -138,6 +138,8 @@ struct PolygonFootPrint {
   Polygon2D chassis;
   Polygon2D mirror_to_front_overhang_expand_front;
   Polygon2D mirror_to_rear_overhang;
+  Polygon2D mirror_to_rear_overhang_expand_rear;
+  Polygon2D mirror_to_front_overhang;
   Polygon2D body;
   Polygon2D mirror_left;
   Polygon2D mirror_right;

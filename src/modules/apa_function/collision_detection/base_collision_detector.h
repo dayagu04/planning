@@ -232,6 +232,15 @@ class BaseCollisionDetector {
   std::vector<Eigen::Vector2d>
       mirror_to_rear_overhanging_polygon_vertex_with_buffer_;
 
+  std::vector<Eigen::Vector2d>
+      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_;
+  std::vector<Eigen::Vector2d>
+      mirror_to_rear_overhanging_rectangle_vertex_expand_rear_with_buffer_;
+
+  std::vector<Eigen::Vector2d> mirror_to_front_overhanging_polygon_vertex_;
+  std::vector<Eigen::Vector2d>
+      mirror_to_front_overhanging_polygon_vertex_with_buffer_;
+
   CarFootPrintCircleList car_with_mirror_circles_list_;
   CarFootPrintCircleList car_without_mirror_circles_list_;
   CarFootPrintCircleList car_chassis_circles_list_;
