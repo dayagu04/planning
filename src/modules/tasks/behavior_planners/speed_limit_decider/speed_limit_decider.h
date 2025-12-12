@@ -146,12 +146,14 @@ class SpeedLimitDecider : public Task {
   bool construction_manual_intervention_detected_ = false;
   double last_v_cruise_fsm_ = 0.0;
   double raw_curv_spline_ = 0.0;
+  double v_limit_in_turns_filtered_ = 0.0;  // Filtered v_limit_in_turns for EWMA
   bool last_is_sharp_curve_ = false;
   bool last_is_sharp_curve_by_decel_ = false;  // Previous sharp curve state based on deceleration
   int sharp_curve_frame_count_ = 0;  // Frame count counter for maintaining sharp curve state
   bool last_is_map_sharp_curve_ramp_ = false;  // Previous map sharp curve state (for hysteresis, ramp related)
   bool last_condition_ramp_raw_count_ = false;  // Previous k_raw point count condition state (for hysteresis)
   bool last_is_map_sharp_curve_ = false;  // Previous complete is_map_sharp_curve state (for detecting entering state)
+  bool last_use_avg_radius_for_ewma_ = false;  // Previous use_avg_radius_for_ewma state (for hysteresis)
 };
 
 }  // namespace planning
