@@ -3257,6 +3257,9 @@ NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(
     return split_region_info;
   }
   const auto& out_link = previous_seg->successor_link_ids();
+  if (out_link.size() < 2) {
+    return split_region_info;
+  }
   auto other_link_id =
       out_link[0] == split_seccessor_link->id() ? out_link[1] : out_link[0];
   const auto& other_link = sdpro_map.GetLinkOnRoute(other_link_id);
