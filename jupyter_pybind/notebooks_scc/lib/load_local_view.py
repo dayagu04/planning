@@ -942,10 +942,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     init_pos_point_y = []
     init_pos_line_x = []
     init_pos_line_y = []
-    pp_ld_x_vec = []
-    pp_ld_y_vec = []
-    pp_ld_x_vec_ = []
-    pp_ld_y_vec_ = []
+    # pp_ld_x_vec = []
+    # pp_ld_y_vec = []
+    # pp_ld_x_vec_ = []
+    # pp_ld_y_vec_ = []
     ego_pos_compensation_x_ = []
     ego_pos_compensation_y_ = []
     init_pos_point_theta = []
@@ -954,13 +954,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     ego_motion_ref_sim_x_vec_ = []
     ego_motion_ref_sim_y_vec_ = []
 
-    pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
-    print("pp_ld_length_vec: ", pp_ld_length_vec)
+    # pp_ld_length_vec = plan_debug_json_msg['ld_actual_length_vec']
+    # print("pp_ld_length_vec: ", pp_ld_length_vec)
 
-    pp_ld_x_vec.append(pp_goal_point_x)
-    pp_ld_y_vec.append(pp_goal_point_y)
-    pp_ld_x_vec.append(pp_init_point_x)
-    pp_ld_y_vec.append(pp_init_point_y)
+    # pp_ld_x_vec.append(pp_goal_point_x)
+    # pp_ld_y_vec.append(pp_goal_point_y)
+    # pp_ld_x_vec.append(pp_init_point_x)
+    # pp_ld_y_vec.append(pp_init_point_y)
     if g_is_display_enu:
       init_pos_point_x.append(init_state_x)
       init_pos_point_y.append(init_state_y)
@@ -971,13 +971,13 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       lon_collision_object_position_y_vec_ = lon_collision_object_position_y_vec
       ego_motion_ref_sim_x_vec_ = ego_motion_ref_sim_x_vec
       ego_motion_ref_sim_y_vec_ = ego_motion_ref_sim_y_vec
-      pp_ld_x_vec_ = pp_ld_x_vec
-      pp_ld_y_vec_ = pp_ld_y_vec
+      # pp_ld_x_vec_ = pp_ld_x_vec
+      # pp_ld_y_vec_ = pp_ld_y_vec
     else:
       init_pos_point_x, init_pos_point_y = coord_tf.global_to_local([init_state_x], [init_state_y])
       ego_pos_compensation_x_, ego_pos_compensation_y_ = coord_tf.global_to_local([ego_pos_compensation_x], [ego_pos_compensation_y])
       ego_motion_ref_sim_x_vec_, ego_motion_ref_sim_y_vec_ = coord_tf.global_to_local(ego_motion_ref_sim_x_vec, ego_motion_ref_sim_y_vec)
-      pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
+      # pp_ld_x_vec_, pp_ld_y_vec_ = coord_tf.global_to_local(pp_ld_x_vec, pp_ld_y_vec)
       lon_collision_object_position_x_vec_, lon_collision_object_position_y_vec_ = coord_tf.global_to_local(lon_collision_object_position_x_vec, lon_collision_object_position_y_vec)
       temp_theta = init_state_theta - loc_msg.orientation.euler_boot.yaw
       init_pos_point_theta.append(temp_theta)
@@ -1021,9 +1021,9 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_merge_point'].data.update({
       'merge_point_x': [merge_point_x],
       'merge_point_y': [merge_point_y]})
-    local_view_data['data_pure_pursuit'].data.update({
-      'ld_x_vec': pp_ld_x_vec_,
-      'ld_y_vec': pp_ld_y_vec_})
+    # local_view_data['data_pure_pursuit'].data.update({
+    #   'ld_x_vec': pp_ld_x_vec_,
+    #   'ld_y_vec': pp_ld_y_vec_})
     local_view_data["data_lon_collision_object_position"].data.update({
       'lon_collision_object_position_x': lon_collision_object_position_x_vec_,
       'lon_collision_object_position_y': lon_collision_object_position_y_vec_,
@@ -1679,6 +1679,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     if bag_loader.plan_debug_msg['enable'] == False:
       environment_model_info = None
     parking_space_boxes_x, parking_space_boxes_y, \
+    target_parking_space_box_x, target_parking_space_box_y, \
     road_mark_boxes_x, road_mark_boxes_y, \
     ehr_ground_line_x_vec, ehr_ground_line_y_vec, \
     polygon_obstacle_x_vec, polygon_obstacle_y_vec, polygon_obstacle_label_vec, \
@@ -1686,6 +1687,10 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     local_view_data['data_parking_space'].data.update({
       'parking_space_x' : parking_space_boxes_x,
       'parking_space_y' : parking_space_boxes_y,
+    })
+    local_view_data['data_target_parking_space'].data.update({
+      'target_parking_space_x' : target_parking_space_box_x,
+      'target_parking_space_y' : target_parking_space_box_y,
     })
     local_view_data['data_road_mark'].data.update({
       'road_mark_x' : road_mark_boxes_x,
@@ -2096,8 +2101,8 @@ def load_local_view_figure():
   data_init_line = ColumnDataSource(data = {'init_pos_line_x':[], 'init_pos_line_y':[]})
   data_merge_point = ColumnDataSource(data = {'merge_point_x':[],
                                               'merge_point_y':[]})
-  data_pure_pursuit = ColumnDataSource(data = {'ld_x_vec':[],
-                                               'ld_y_vec':[]})
+  # data_pure_pursuit = ColumnDataSource(data = {'ld_x_vec':[],
+  #                                              'ld_y_vec':[]})
   data_ego_motion_sim_ref_traj = ColumnDataSource(data = {'ego_ref_sim_x_vec':[],
                                                           'ego_ref_sim_y_vec':[]})
   data_lon_collision_object_position = ColumnDataSource(data = {'lon_collision_object_position_x':[],
@@ -2347,6 +2352,8 @@ def load_local_view_figure():
                                                'prediction_obs_x':[],})
   data_parking_space = ColumnDataSource(data = {'parking_space_y':[],
                                              'parking_space_x':[],})
+  data_target_parking_space = ColumnDataSource(data = {'target_parking_space_y':[],
+                                                       'target_parking_space_x':[],})
   data_parking_space_text = ColumnDataSource(data = {'parking_space_center_y':[],
                                                      'parking_space_center_x':[],
                                                      'parking_space_id_vec':[],})
@@ -2569,6 +2576,7 @@ def load_local_view_figure():
                      'data_prediction_3' : data_prediction_3 ,\
                      'data_prediction_4' : data_prediction_4 ,\
                      'data_parking_space' : data_parking_space , \
+                     'data_target_parking_space' : data_target_parking_space , \
                      'data_parking_space_text' : data_parking_space_text , \
                      'data_road_mark' : data_road_mark , \
                      'data_ehr_ground_line': data_ehr_ground_line, \
@@ -2672,7 +2680,7 @@ def load_local_view_figure():
                      'sampled_points_data_source_xy':sampled_points_data_source_xy,
                      'fined_path_xy':fined_path_xy,
                      'data_ego_motion_sim_ref_traj' : data_ego_motion_sim_ref_traj,
-                     'data_pure_pursuit' : data_pure_pursuit,
+                    #  'data_pure_pursuit' : data_pure_pursuit,
                      }
 
   if is_vis_map:
@@ -2776,7 +2784,7 @@ def load_local_view_figure():
     fig1.patch('zebra_crossing_line_10_y', 'zebra_crossing_line_10_x', source = zebra_crossing_line_10, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
     fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
-  fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
+  #fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
   if is_vis_fus_line:
     fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
     fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
@@ -2913,6 +2921,7 @@ def load_local_view_figure():
     fig1.circle('trace_start_y', 'trace_start_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "green", fill_alpha = 1, legend_label = 'ehr_start')
     fig1.circle('trace_end_y', 'trace_end_x', source = data_map_key_point, radius = 0.3, line_width = 1,  line_color = 'black', line_alpha = 1, fill_color = "red", fill_alpha = 1, legend_label = 'ehr_end')
     fig1.patches('parking_space_y', 'parking_space_x', source = data_parking_space, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'parking_space')
+    fig1.patch('target_parking_space_y', 'target_parking_space_x', source = data_target_parking_space, fill_color = "red", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_target_slot')
     # fig1.text('parking_space_center_y', 'parking_space_center_x', text = 'parking_space_id_vec', source = data_parking_space_text, text_color="black", text_align="center", text_font_size="10pt", legend_label = 'parking_space_id', visible = False)
     fig1.patches('polygon_obstacle_y', 'polygon_obstacle_x', source = data_polygon_obstacle, fill_color = "grey", fill_alpha = 0.15, line_color = "green", line_width = 3, line_alpha = 0.4, legend_label = 'ehr_obs')
     fig1.text('pos_y', 'pos_x', text = 'polygon_obstacle_label' ,source = data_polygon_obstacle, text_color="red", text_align="center", text_font_size="10pt", legend_label = 'ehr_obs_info', visible = False)
