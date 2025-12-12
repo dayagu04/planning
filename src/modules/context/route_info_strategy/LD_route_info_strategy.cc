@@ -575,6 +575,10 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
         continue;
       }
 
+      if (IsLaneSuccessorIsMergeLane(temp_lane)) {
+        continue;
+      }
+
       TopoLane topo_lane;
       topo_lane.id = temp_lane->id();
       topo_lane.link_id = temp_lane->link_id();
