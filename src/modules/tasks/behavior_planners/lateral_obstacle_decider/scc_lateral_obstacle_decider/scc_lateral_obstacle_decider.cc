@@ -63,8 +63,6 @@ bool SccLateralObstacleDecider::Execute() {
   LateralObstacleDeciderOutput();
 
   Log();
-
-  ClearHistoryInfo();
   return true;
 }
 
@@ -114,6 +112,7 @@ bool SccLateralObstacleDecider::Init() {
           ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
           ->width();
   lc_gap_info_.Reset();
+  ClearHistoryInfo();
   return true;
 }
 
