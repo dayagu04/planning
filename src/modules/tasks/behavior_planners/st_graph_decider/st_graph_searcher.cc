@@ -1185,8 +1185,15 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
         succ_decision_table) const {
   // make cipv yield decision when lane keep
   int64_t cipv_boundary_id = -1;
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lane_change_state = lane_change_decider_output.curr_state;
+  const auto is_in_lane_change_propose =
+      lane_change_state == StateMachineLaneChangeStatus::kLaneChangePropose;
   if (st_graph_input->is_lane_keeping() ||
-      st_graph_input->is_lane_change_cancle()) {
+      st_graph_input->is_lane_change_cancle() ||
+      (is_in_lane_change_propose &&
+       !lane_change_decider_output.s_search_status)) {
     const auto cipv_id = cipv_info.cipv_id();
     if (cipv_id != -1 && agent_id_st_boundaries_map.find(cipv_id) !=
                              agent_id_st_boundaries_map.end()) {
