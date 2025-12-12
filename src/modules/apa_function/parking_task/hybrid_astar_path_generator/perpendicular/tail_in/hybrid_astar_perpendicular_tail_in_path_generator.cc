@@ -282,6 +282,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
 
   cul_de_sac_info_.Reset();
   do {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      break;
+    }
     if (!request_.decide_cul_de_sac) {
       break;
     }
@@ -294,7 +298,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
     if (std::fabs(cur_pose.GetTheta()) * kRad2Deg < 36) {
       break;
     }
-    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0) {
+    if (cur_pose.GetY() * cur_pose.GetTheta() > 0.0 &&
+        std::fabs(cur_pose.GetY()) > 2.168) {
       break;
     }
     geometry_lib::PathPoint end_pose;
@@ -1062,6 +1067,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   }
 
   ILOG_INFO << "node in pool num = " << node_pool_.PoolSize()
+            << "  open pq size = " << open_pq_.size()
             << " curve_path_success_num = " << curve_path_success_num
             << "  curve_node_to_goal_vec size = "
             << curve_node_to_goal_vec.size()
