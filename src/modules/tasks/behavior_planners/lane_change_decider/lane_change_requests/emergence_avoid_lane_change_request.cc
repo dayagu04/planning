@@ -206,7 +206,8 @@ void EmergenceAvoidRequest::UpdateEmergencyAvoidanceSituation(int lc_status) {
   Point2D ego_frenet_point;
   Point2D ego_cart_point{planning_init_point_.lat_init_state.x(),
                          planning_init_point_.lat_init_state.y()};
-  if (!base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
+  if (base_frenet_coord_ == nullptr ||
+      !base_frenet_coord_->XYToSL(ego_cart_point, ego_frenet_point)) {
     ILOG_DEBUG
         << "EmergenceAvoidRequest::fail to get ego position on base lane";
     Reset();

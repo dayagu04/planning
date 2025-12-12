@@ -769,7 +769,7 @@ std::shared_ptr<planning_math::KDPath> DPRoadGraph::ConstructLaneBorrowKDPath(
       }
     }
   }
-  if (dp_path_points.size() <= 2) {
+  if (dp_path_points.size() <= planning_math::KDPath::kKDPathMinPathPointSize) {
     return nullptr;
   }
   return std::make_shared<planning_math::KDPath>(std::move(dp_path_points));

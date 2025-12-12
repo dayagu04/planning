@@ -2809,6 +2809,9 @@ void HppGeneralLateralDecider::GenerateEnuBoundaryPoints(
 
   const std::shared_ptr<KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
   Point2D tmp_soft_lower_point;
   Point2D tmp_soft_upper_point;
   Point2D tmp_hard_lower_point;
@@ -2856,6 +2859,9 @@ void HppGeneralLateralDecider::GenerateEnuReferenceTraj(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   const std::shared_ptr<KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
 

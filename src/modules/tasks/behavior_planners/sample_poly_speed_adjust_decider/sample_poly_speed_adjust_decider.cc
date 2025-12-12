@@ -821,8 +821,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
     double delta_s =
         std::hypot(ego_cart_point_.first - last_ego_cart_point_.first,
                    ego_cart_point_.second - last_ego_cart_point_.second);
-    std::cout << "Delta s between the adjacent frames: " << delta_s
-              << std::endl;
+    ILOG_DEBUG << "Delta s between the adjacent frames: " << delta_s;
 
     auto iter_delta_s = std::lower_bound(s_vec.begin(), s_vec.end(), delta_s);
     if (iter_delta_s == s_vec.end()) {
@@ -841,7 +840,7 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
       t_hit += (delta_s - s_curr) / (s_next - s_curr) * (t_next - t_curr);
     }
 
-    std::cout << "interpolated t_hit: " << t_hit << std::endl;
+    ILOG_DEBUG << "interpolated t_hit: " << t_hit;
 
     // step2: resample the last best traj
     const double resample_t = min_cost_traj_ptr_->poly().T() - t_hit;
@@ -1016,7 +1015,7 @@ bool SamplePolySpeedAdjustDecider::BestTrajCheck() {
     }
     if (ego_pred_end_s >
         leading_veh_.center_s + ego_s_ + traveled_distance - buffer_distance) {
-      std::cout << "ego pred s is exceed upper" << std::endl;
+      ILOG_DEBUG << "ego pred s is exceed upper";
       min_cost_traj_ptr_ = nullptr;
       sample_status_ = kEgoPredSExceedLeadOne;
       return false;

@@ -187,7 +187,7 @@ void VirtualLaneManager::construct_reference_line_msg(
     const auto& rads_map_points_boot = (rads_map.points[j]).boot;
     const auto& rads_map_points_enu = (rads_map.points[j]).enu;
     const auto& rads_map_points_llh = (rads_map.points[j]).llh;
-    // boot point update 
+    // boot point update
     current_lane_virtual_local_point.x = rads_map_points_boot.x;
     current_lane_virtual_local_point.y = rads_map_points_boot.y;
     current_lane_virtual_local_point.z = rads_map_points_boot.z;
@@ -1888,7 +1888,7 @@ std::shared_ptr<planning_math::KDPath> VirtualLaneManager::MakeBoundaryPath(
     boundary_points.emplace_back(pt);
   }
 
-  if (boundary_points.size() <= 2) {
+  if (boundary_points.size() <= planning_math::KDPath::kKDPathMinPathPointSize) {
     return nullptr;
   }
   boundary_path =

@@ -1051,7 +1051,9 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
           ->make_map_lane_reference_path(coarse_planning_info.target_lane_id);
-
+  if (coarse_planning_info.reference_path == nullptr) {
+    return;
+  }
   const auto& planning_init_point =
       coarse_planning_info.reference_path->get_frenet_ego_state()
           .planning_init_point();
@@ -1978,6 +1980,9 @@ void LaneChangeStateMachineManager::CalculateLatOffsetOfOverlappedLanes(
     }
   }
 
+  if (reference_path_frenet_coordinate == nullptr){
+    return;
+  }
   Point2D frenet_point;
   if (reference_path_frenet_coordinate->XYToSL(projection_point,
                                                frenet_point)) {
@@ -2033,7 +2038,9 @@ bool LaneChangeStateMachineManager::IsOffTurnLight(
   double overlap_lane_width = overlap_lane->width();
   std::shared_ptr<planning_math::KDPath> overlap_path_frenet_coordinate =
       overlap_reference_path->get_frenet_coord();
-
+  if (overlap_path_frenet_coordinate == nullptr) {
+    return false;
+  }
   const auto& ego_vertices_points = session_->environmental_model()
                                         .get_ego_state_manager()
                                         ->polygon()

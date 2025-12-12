@@ -449,7 +449,7 @@ void JointDecisionObstaclesSelector::CalculateAgentSLBoundary(
     const planning_math::Box2d& agent_box, double* const ptr_min_s,
     double* const ptr_max_s, double* const ptr_min_l, double* const ptr_max_l) {
   if (ptr_min_s == nullptr || ptr_max_s == nullptr || ptr_min_l == nullptr ||
-      ptr_max_l == nullptr) {
+      ptr_max_l == nullptr || planned_path == nullptr) {
     return;
   }
   const auto& all_corners = agent_box.GetAllCorners();
@@ -614,14 +614,16 @@ LaneChangeKeyObstacle JointDecisionObstaclesSelector::CreateKeyObstacle(
 
   key_obstacle.init_s = 0.0;
   key_obstacle.init_l = 0.0;
-  if (!ego_lane_coord->XYToSL(key_obstacle.init_x, key_obstacle.init_y,
+  if (ego_lane_coord == nullptr ||
+      !ego_lane_coord->XYToSL(key_obstacle.init_x, key_obstacle.init_y,
                               &key_obstacle.init_s, &key_obstacle.init_l)) {
     key_obstacle.init_s = std::numeric_limits<double>::max();
     key_obstacle.init_l = std::numeric_limits<double>::max();
   }
   double ego_s = 0.0;
   double ego_l = 0.0;
-  if (!ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
+  if (ego_lane_coord == nullptr ||
+      !ego_lane_coord->XYToSL(planning_init_point.x, planning_init_point.y,
                               &ego_s, &ego_l)) {
     return key_obstacle; //残缺 obstacle
   }

@@ -489,7 +489,10 @@ void EgoLaneRoadRightDecider::CalculateRoadRight(const int calculate_nums) {
     overlap_path_points.emplace_back(overlap_pt);
     cur_path_points.emplace_back(cur_pt);
   }
-  if (cur_path_points.size() < 3 || overlap_path_points.size() < 3) {
+  if (cur_path_points.size() <
+          planning_math::KDPath::kKDPathMinPathPointSize + 1 ||
+      overlap_path_points.size() <
+          planning_math::KDPath::kKDPathMinPathPointSize + 1) {
     return;
   }
 

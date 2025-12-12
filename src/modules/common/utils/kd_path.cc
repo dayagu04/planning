@@ -51,7 +51,7 @@ KDPath::KDPath(std::vector<PathPoint>&& path_points, const bool need_reset_s,
 
 bool KDPath::InitData(const bool need_reset_s, bool head_mono,
                       double start_ref) {
-  if (path_points_.size() < 2) {
+  if (path_points_.size() < kKDPathMinPathPointSize) {
     return false;
   }
   if (need_reset_s) {
@@ -88,7 +88,7 @@ const std::vector<PathPoint>& KDPath::path_points() const {
 }
 
 bool KDPath::BuildKDTree() {
-  if (path_points_.size() < 2) {
+  if (path_points_.size() < kKDPathMinPathPointSize) {
     return false;
   }
 

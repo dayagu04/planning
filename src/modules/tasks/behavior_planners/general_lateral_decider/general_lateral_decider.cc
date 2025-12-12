@@ -4844,6 +4844,9 @@ void GeneralLateralDecider::GenerateEnuBoundaryPoints(
   Point2D tmp_first_soft_upper_point;
   Point2D tmp_hard_lower_point;
   Point2D tmp_hard_upper_point;
+  if (frenet_coord == nullptr) {
+    return;
+  }
   for (size_t i = 0; i < ref_traj_points_.size(); ++i) {
     if (!frenet_coord->SLToXY(
             Point2D(ref_traj_points_[i].s, second_frenet_soft_bounds[i].first),
@@ -4900,6 +4903,9 @@ void GeneralLateralDecider::GenerateEnuReferenceTraj(
     GeneralLateralDeciderOutput &general_lateral_decider_output) {
   const std::shared_ptr<planning_math::KDPath> frenet_coord =
       reference_path_ptr_->get_frenet_coord();
+  if (frenet_coord == nullptr) {
+    return;
+  }
   auto &enu_ref_path = general_lateral_decider_output.enu_ref_path;
   enu_ref_path.resize(ref_traj_points_.size());
 
