@@ -433,7 +433,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   const double front_bumper_to_rear_axle = veh_param.front_edge_to_rear_axle;
   const double ego_half_width = veh_param.width * 0.5;
   const double ego_half_length = veh_param.length * 0.5;
-  const double k_vehicle_longitudinal_safe_thd =
+  const double kVehicleLongitudinalSafeThd =
       front_bumper_to_rear_axle - kVehicleSafeLongitudinalThd;
 
   const auto& environmental_model = session_->environmental_model();
@@ -480,7 +480,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
           &vehicle_pred_last_point_s, &vehicle_pred_last_point_l)) {
     return false;
   }
-  if (vehicle_current_s - ego_s < k_vehicle_longitudinal_safe_thd) {
+  if (vehicle_current_s - ego_s < kVehicleLongitudinalSafeThd) {
     return false;
   }
 
@@ -528,7 +528,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   }
 
   if (vehicle_pred_last_point_l * vehicle_current_l < 0.0 &&
-      vehicle_corssing_pred_point_s - ego_s > k_vehicle_longitudinal_safe_thd &&
+      vehicle_corssing_pred_point_s - ego_s > kVehicleLongitudinalSafeThd &&
       vehicle_corssing_pred_point_rel_time < kVehiclePredCrossingPathTimeThd) {
     is_vehicle_prediction_crossing = true;
     vehicle_id_reverse_crossing_map_[agent->agent_id()] =
