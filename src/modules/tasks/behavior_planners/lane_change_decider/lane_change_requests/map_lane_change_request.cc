@@ -110,7 +110,8 @@ bool MapRequest::CheckMLCEnable(const int lc_status) {
     return false;
   }
 
-  if (lc_status >= kLaneChangePropose) {
+  if (lc_status == kLaneChangePropose || lc_status == kLaneChangeExecution ||
+      lc_status == kLaneChangeHold || lc_status == kLaneChangeComplete) {
     congestion_detection_config.heavy_density = 45.0;
   } else {
     congestion_detection_config.heavy_density = 30.0;
