@@ -289,8 +289,8 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
       apa_world_ptr_->GetColDetInterfacePtr());
 
   TargetPoseDeciderRequest tar_pose_decider_request(
-      std::vector<double>{0.15}, std::vector<double>{0.15}, 0.3,
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, false, false,
+      std::vector<double>{0.15}, std::vector<double>{0.15}, 0.3, scenario_type_,
+      false, false,
       apa_world_ptr_->GetStateMachineManagerPtr()->GetSlotLatPosPreference());
 
   TargetPoseDeciderResult res = target_pose_decider.CalcTargetPose(
@@ -310,13 +310,19 @@ const bool PerpendicularTailInScenario::UpdateEgoSlotInfo() {
           param.slot_occupied_ratio_max_lat_err &&
       std::fabs(ego_info_under_slot.cur_pose.heading) <
           param.slot_occupied_ratio_max_heading_err * kDeg2Rad) {
-    const std::vector<double> x_tab = {
+    std::vector<double> x_tab = {
         ego_info_under_slot.origin_target_pose.pos.x(),
         ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
 
-    const std::vector<double> x_postprocess_tab = {
+    std::vector<double> x_postprocess_tab = {
         ego_info_under_slot.target_pose.pos.x(),
         ego_info_under_slot.slot.slot_length_ + param.rear_overhanging};
+
+    if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      x_tab[1] = ego_info_under_slot.slot.slot_length_ +
+                 param.front_overhanging + param.wheel_base;
+      x_postprocess_tab[1] = x_tab[1];
+    }
 
     const std::vector<double> occupied_ratio_tab = {1.0, 0.0};
 
@@ -510,9 +516,8 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
   const geometry_lib::PathPoint& ego_pose = ego_info_under_slot.cur_pose;
 
-  GenerateObstacleRequest gen_obs_request(
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN,
-      frame_.process_obs_method);
+  GenerateObstacleRequest gen_obs_request(scenario_type_,
+                                          frame_.process_obs_method);
 
   apa_world_ptr_->GetParkingTaskInterfacePtr()
       ->GetGenerateObstacleDeciderPtr()
@@ -600,7 +605,7 @@ const bool PerpendicularTailInScenario::GenTlane() {
 
       const TargetPoseDeciderRequest tar_pose_decider_request(
           lat_body_buffer_vec, lat_mirror_buffer_vec, lon_buffer,
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN, true, true,
+          scenario_type_, true, true,
           apa_world_ptr_->GetStateMachineManagerPtr()
               ->GetSlotLatPosPreference(),
           false, ego_info_under_slot.cur_pose);
@@ -697,6 +702,12 @@ const bool PerpendicularTailInScenario::GenTlane() {
 const bool PerpendicularTailInScenario::GenObstacles() { return true; }
 
 const uint8_t PerpendicularTailInScenario::PathPlanOnce() {
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    ILOG_INFO << "PathPlanOnce not support perpendicular head in";
+    frame_.plan_fail_reason = ParkingFailReason::PATH_PLAN_FAILED;
+    return PathPlannerResult::PLAN_UPDATE;
+  }
+
   const ApaParameters& param = apa_param.GetParam();
   const EgoInfoUnderSlot& ego_info_under_slot =
       apa_world_ptr_->GetSlotManagerPtr()->GetEgoInfoUnderSlot();
@@ -1155,7 +1166,7 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   request.replan_reason = frame_.replan_reason;
   request.every_gear_length = 0.3;
   request.swap_start_goal = false;
-  request.scenario_type = ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN;
+  request.scenario_type = scenario_type_;
   request.analytic_expansion_type = param.analytic_expansion_type;
   request.ego_info_under_slot = ego_info_under_slot;
   request.inital_action_request.ref_length = config.node_step + 0.01;
