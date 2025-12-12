@@ -308,26 +308,26 @@ void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
   double original_cipv_lon_distance = std::numeric_limits<double>::max();
   bool has_original_cipv = false;
 
-  for (const auto &[agent_cur_distance_to_ego, isvirtual_agentid] :
+  for (const auto &[agent_cur_distance_to_ego, is_virtual_agentid] :
        agents_distance_id_map_) {
-    const auto *agt_ptr = agent_manager->GetAgent(isvirtual_agentid.second);
-    if (isvirtual_agentid.first) {
+    const auto *agt_ptr = agent_manager->GetAgent(is_virtual_agentid.second);
+    if (is_virtual_agentid.first) {
       continue;
     } else {
       if (nullptr == agt_ptr) {
         break;
       }
       if (agt_ptr->is_crossing()) {
-        filtered_out_crossing_cipv_id_ = isvirtual_agentid.second;
+        filtered_out_crossing_cipv_id_ = is_virtual_agentid.second;
         hmi_info->cipv_info.cipv_id = -1;
         hmi_info->cipv_info.has_cipv = false;
         break;
-      } else if (isvirtual_agentid.second == filtered_out_crossing_cipv_id_) {
+      } else if (is_virtual_agentid.second == filtered_out_crossing_cipv_id_) {
         hmi_info->cipv_info.cipv_id = -1;
         hmi_info->cipv_info.has_cipv = false;
         break;
       } else {
-        hmi_info->cipv_info.cipv_id = isvirtual_agentid.second;
+        hmi_info->cipv_info.cipv_id = is_virtual_agentid.second;
         hmi_info->cipv_info.has_cipv = true;
         filtered_out_crossing_cipv_id_ = -1;
       };
@@ -338,7 +338,7 @@ void ClosestInPathVehicleDecider::DetermineCIPVInfoForHMI() {
                                &agent_l)) {
       original_cipv_lon_distance =
           agent_s - ego_s - front_edge_to_rear_axle - 0.5 * agt_ptr->length();
-      original_cipv_id = isvirtual_agentid.second;
+      original_cipv_id = is_virtual_agentid.second;
       has_original_cipv = true;
       break;
     }
