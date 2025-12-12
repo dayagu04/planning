@@ -1683,6 +1683,7 @@ const bool ParallelParkInScenario::GenTlane() {
       is_limiter = true;
     }
     const auto obs_scement = pair.second.GetObsScemanticType();
+    const auto obs_height = pair.second.GetObsHeightType();
 
     const bool is_rigid = (obs_scement == ApaObsScemanticType::WALL ||
                            obs_scement == ApaObsScemanticType::COLUMN ||
@@ -1786,6 +1787,11 @@ const bool ParallelParkInScenario::GenTlane() {
         ILOG_INFO << "limiter obs = " << obs_pt_local_cp.x()  ;
         obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
           std::move(obs_pt_local_cp));
+        continue;
+      }
+      if (obs_height == ApaObsHeightType::HIGH) {
+        obs_pt_local_vec_[static_cast<size_t>(ApaObsScemanticType::WALL)]
+            .emplace_back(std::move(obs_pt_local));
         continue;
       }
       obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
@@ -1932,14 +1938,26 @@ const bool ParallelParkInScenario::GenTlane() {
 
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
-      const bool front_obs_condition =
+      bool front_obs_y_condition = false;
+      if (obstacle_point_set.first ==
+              static_cast<size_t>(ApaObsScemanticType::WALL) ||
+          obstacle_point_set.first ==
+              static_cast<size_t>(ApaObsScemanticType::COLUMN)) {
+          front_obs_y_condition = pnc::mathlib::IsInBound(
+              obstacle_point_slot.y(), -1.0 * side_sgn,
+              (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
+      } else {
+          front_obs_y_condition = pnc::mathlib::IsInBound(
+              obstacle_point_slot.y(), -0.6 * side_sgn,
+              (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
+      }
+
+      bool front_obs_condition =
           pnc::mathlib::IsInBound(
               obstacle_point_slot.x(),
               slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
               slot_length + kFrontDetaXMagWhenFrontVacant) &&
-          pnc::mathlib::IsInBound(
-              obstacle_point_slot.y(), -0.4 * side_sgn,
-              (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
+          front_obs_y_condition;
 
       if (front_obs_condition) {
         front_min_x = std::min(front_min_x, obstacle_point_slot.x());
