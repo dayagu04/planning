@@ -454,6 +454,10 @@ const bool ParallelPathGenerator::Update(
           .count();
   JSON_DEBUG_VALUE("path_plan_time_ms", duration);
   ILOG_INFO << "parallel cost time(ms) = " << duration;
+  if (!CheckPathInTlane(output_.path_segment_vec, input_.tlane.tlane_corner)) {
+    ILOG_INFO << "path not in tlane";
+    return false;
+  }
   return success;
 }
 
