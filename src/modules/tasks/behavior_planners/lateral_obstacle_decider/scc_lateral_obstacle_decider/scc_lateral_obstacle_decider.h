@@ -84,7 +84,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
                                     bool is_in_lane_change_scene);
   void CalLaneChangeGapInfo(LcGapInfo &lc_gap_info);
   void ResetObstaclesHistory(bool is_change_lanes);
-
+  void ClearHistoryInfo();
+  
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info_;

@@ -38,6 +38,7 @@ bool SccLateralObstacleDecider::Execute() {
   if (!PreCheck()) {
     output_.clear();
     follow_obstacle_info_.clear();
+    lateral_obstacle_history_info_.clear();
     ILOG_DEBUG << "PreCheck failed";
     return false;
   }
@@ -60,7 +61,10 @@ bool SccLateralObstacleDecider::Execute() {
   UpdateLateralObstacleDecisions();
 
   LateralObstacleDeciderOutput();
+
   Log();
+
+  ClearHistoryInfo();
   return true;
 }
 
@@ -1870,6 +1874,28 @@ void SccLateralObstacleDecider::CalLaneChangeGapInfo(LcGapInfo &lc_gap_info) {
     lc_gap_info.gap_rear_id = gap_rear_agent_id;
     lc_gap_info.gap_rear_s =
         obstacle_map.at(gap_rear_agent_id)->frenet_obstacle_boundary().s_start;
+  }
+}
+
+void SccLateralObstacleDecider::ClearHistoryInfo() {
+  const auto &obstacle_map = reference_path_ptr_->get_obstacles_map();
+  for (auto it = follow_obstacle_info_.begin();
+       it != follow_obstacle_info_.end();) {
+    if (obstacle_map.find(it->first) == obstacle_map.end()) {
+      // 当前帧不存在该障碍物
+      it = follow_obstacle_info_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+  for (auto it = lateral_obstacle_history_info_.begin();
+       it != lateral_obstacle_history_info_.end();) {
+    if (obstacle_map.find(it->first) == obstacle_map.end()) {
+      // 当前帧不存在该障碍物
+      it = lateral_obstacle_history_info_.erase(it);
+    } else {
+      ++it;
+    }
   }
 }
 
