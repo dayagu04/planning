@@ -580,6 +580,7 @@ void LaneChangeRequestManager::ProcessBlinkState(
       lane_change_cancel_freeze_cnt = 0;
     }
     lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
+    int_lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
     trigger_lane_change_cancel_ = true;
     cancel_freeze_count = 0;
   }
