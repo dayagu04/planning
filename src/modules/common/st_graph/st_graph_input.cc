@@ -170,6 +170,8 @@ void StGraphInput::GetAgentOfTargetLane(
   if (is_lane_keeping) {
     front_agent_of_target_ = nullptr;
     rear_agent_of_target_ = nullptr;
+    front_agent_of_origin_ = nullptr;
+    rear_agent_of_origin_ = nullptr;
     return;
   }
 
@@ -1006,6 +1008,8 @@ void StGraphInput::Reset() {
   is_parallel_lane_map_.clear();
   front_agent_of_target_ = nullptr;
   rear_agent_of_target_ = nullptr;
+  front_agent_of_origin_ = nullptr;
+  rear_agent_of_origin_ = nullptr;
 }
 
 }  // namespace speed
