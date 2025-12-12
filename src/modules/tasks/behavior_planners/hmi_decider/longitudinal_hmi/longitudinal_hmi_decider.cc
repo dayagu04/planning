@@ -25,6 +25,9 @@ bool LongitudinalHmiDecider::Execute() {
       session_->environmental_model()
           .get_virtual_lane_manager()
           ->GetIntersectionState();
+  
+  ad_info.intersection_state = iflyauto::IntersectionState(intersection_state);
+  
   const auto cipv_info = session_->planning_context().cipv_decider_output();
 
   // update intersection traffic lights reminder hmi info

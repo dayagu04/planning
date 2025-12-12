@@ -752,6 +752,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.is_curva = ad_info.is_curva;
   planning_hmi_info->ad_info.intersection_pass_sts =
       ad_info.intersection_pass_sts;
+  planning_hmi_info->ad_info.intersection_state = ad_info.intersection_state;
 
   planning_hmi_info->ad_info.distance_to_ramp = ad_info.distance_to_ramp;
   planning_hmi_info->ad_info.distance_to_split = ad_info.distance_to_split;
