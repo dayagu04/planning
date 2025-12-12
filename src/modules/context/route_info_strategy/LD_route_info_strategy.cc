@@ -1074,11 +1074,7 @@ bool LDRouteInfoStrategy::IsMergeLane(
     return false;
   }
 
-  if (lane_info->lane_connection() == iflymapdata::sdpro::LAN_STATUS_MERGING) {
-    return true;
-  }
-
-  return false;
+  return lane_info->lane_connection() == iflymapdata::sdpro::LAN_STATUS_MERGING;
 }
 
 bool LDRouteInfoStrategy::IsDiversionLane(
@@ -1638,26 +1634,25 @@ LDRouteInfoStrategy::FindFrontValidRampSplitLink() const {
   const double min_front_search_dis = 500.0;
   for (size_t ramp_idx = 0; ramp_idx < ramp_info_vec_.size(); ++ramp_idx) {
     const auto& [ramp_link, ramp_dis] = ramp_info_vec_[ramp_idx];
-    // 场景1：匝道距离小于最小搜索距离 → 检查合流信息
-    if (ramp_dis < min_front_search_dis) {
-      for (const auto& merge_info : merge_info_vec_) {
-        const double merge_distance = merge_info.second;
-        // 合流点距离 < 匝道距离 + 不忽略该合流 + 非第一个匝道（避免ramp_idx-1越界）
-        const bool is_valid_merge = (merge_distance < ramp_dis) &&
-                                    !IsIgnoreMerge(merge_info) &&
-                                    (ramp_idx > 0);
-        if (is_valid_merge) {
-          return ramp_info_vec_[ramp_idx - 1].first;
-        }
-      }
-
-     // 场景2：匝道距离≥最小搜索距离 → 直接取当前匝道链路作为分流链路
-    } else {
+    // 场景1：匝道距离≥最小搜索距离 → 直接取当前匝道链路作为分流链路
+    if (ramp_dis > min_front_search_dis) {
       return ramp_link;
+    }
+
+    // 场景2：匝道距离小于最小搜索距离 → 检查合流信息
+    for (const auto& merge_info : merge_info_vec_) {
+      const double merge_distance = merge_info.second;
+      // 合流点距离 < 匝道距离 + 不忽略该合流 + 非第一个匝道（避免ramp_idx-1越界）
+      const bool is_valid_merge = (merge_distance < ramp_dis) &&
+                                  !IsIgnoreMerge(merge_info) &&
+                                  (ramp_idx > 0);
+      if (is_valid_merge) {
+        return ramp_info_vec_[ramp_idx - 1].first;
+      }
     }
   }
 
-  return ramp_info_vec_[0].first;
+  return ramp_info_vec_.back().first;
 }
 
 void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
@@ -1886,16 +1881,20 @@ void LDRouteInfoStrategy::HandleOtherMergeLinkPreLane(
     return;
   }
 
-  if (current_link->predecessor_link_ids_size() != 2) {
+  std::unordered_set<uint64_t> other_link_id_set;
+  for (const auto& pre_link_id: current_link->predecessor_link_ids()) {
+    if (pre_link_id == next_pre_link->id()) {
+      continue;
+    }
+    other_link_id_set.insert(pre_link_id);
+  }
+
+  if (other_link_id_set.empty()) {
     return;
   }
 
-  const uint64_t other_link_id =
-      (current_link->predecessor_link_ids()[0] == next_pre_link->id())
-          ? current_link->predecessor_link_ids()[1]
-          : current_link->predecessor_link_ids()[0];
-
-  if (other_link_id != pre_lane->link_id()) {
+  auto it = other_link_id_set.find(pre_lane->link_id());
+  if (it == other_link_id_set.end()) {
     return;
   }
 
@@ -1919,7 +1918,7 @@ iflymapdata::sdpro::Lane LDRouteInfoStrategy::FindMatchingPreLaneInMainLink(
   }
 
   for (const auto& temp_lane_id : next_pre_link->lane_ids()) {
-      const auto* temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
+    const auto* temp_lane = ld_map_.GetLaneInfoByID(temp_lane_id);
     if (!temp_lane || IsEmergencyLane(temp_lane) ||
         IsDiversionLane(temp_lane)) {
       continue;
