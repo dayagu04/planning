@@ -232,6 +232,18 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     joint_danger_agent_ids_.push_back(danger_id);
   }
 
+  const auto& parallel_longitudinal_avoid_output =
+      session_->planning_context().parallel_longitudinal_avoid_decider_output();
+  const bool is_parallel_longitudinal_avoid_active =
+      parallel_longitudinal_avoid_output.is_need_parallel_longitudinal_avoid();
+  const bool is_parallel_overtake =
+      parallel_longitudinal_avoid_output.is_parallel_overtake();
+  int32_t parallel_overtake_agent_id = -1;
+  if (is_parallel_longitudinal_avoid_active && is_parallel_overtake) {
+    parallel_overtake_agent_id =
+        parallel_longitudinal_avoid_output.parallel_target_agent_id();
+  }
+
   std::vector<int32_t> critical_agent_ids;
   critical_agent_ids.reserve(cutin_ids.size() + danger_ids.size());
   critical_agent_ids.insert(critical_agent_ids.end(), cutin_ids.begin(),
@@ -242,6 +254,11 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   for (const int32_t agent_id : critical_agent_ids) {
     if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
         added_agent_ids.find(agent_id) != added_agent_ids.end()) {
+      continue;
+    }
+
+    if (parallel_overtake_agent_id != -1 &&
+        agent_id == parallel_overtake_agent_id) {
       continue;
     }
 

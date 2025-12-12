@@ -433,7 +433,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   const double front_bumper_to_rear_axle = veh_param.front_edge_to_rear_axle;
   const double ego_half_width = veh_param.width * 0.5;
   const double ego_half_length = veh_param.length * 0.5;
-  const double k_vehicle_longitudinal_safe_thd =
+  const double kVehicleLongitudinalSafeThd =
       front_bumper_to_rear_axle - kVehicleSafeLongitudinalThd;
 
   const auto& environmental_model = session_->environmental_model();
@@ -456,6 +456,11 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   const auto ego_state_mgr = environmental_model.get_ego_state_manager();
   const auto& init_point = ego_state_mgr->planning_init_point();
 
+  double ego_s = 0.0, ego_l = 0.0;
+  if (!ego_lane_coord->XYToSL(init_point.x, init_point.y, &ego_s, &ego_l)) {
+    return false;
+  }
+
   if (agent->trajectories().empty()) {
     return false;
   }
@@ -475,7 +480,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
           &vehicle_pred_last_point_s, &vehicle_pred_last_point_l)) {
     return false;
   }
-  if (vehicle_current_s < k_vehicle_longitudinal_safe_thd) {
+  if (vehicle_current_s - ego_s < kVehicleLongitudinalSafeThd) {
     return false;
   }
 
@@ -504,6 +509,7 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
   bool is_vehicle_prediction_crossing = false;
   double vehicle_corssing_pred_point_rel_time =
       std::numeric_limits<double>::max();
+  double vehicle_corssing_pred_point_s = std::numeric_limits<double>::max();
   for (int32_t i = 0; i <= kNumNots; ++i) {
     double releative_t = i * kStepTime;
     double absolute_t = trajectory_start_time + releative_t;
@@ -516,11 +522,13 @@ bool CrossingAgentDecider::MakeYieldToVehicleDecision(agent::Agent* agent) {
     if ((vehicle_current_l > 0.0 && pred_point_l < 0.0) ||
         (vehicle_current_l < 0.0 && pred_point_l > 0.0)) {
       vehicle_corssing_pred_point_rel_time = releative_t;
+      vehicle_corssing_pred_point_s = pred_point_s;
       break;
     }
   }
 
   if (vehicle_pred_last_point_l * vehicle_current_l < 0.0 &&
+      vehicle_corssing_pred_point_s - ego_s > kVehicleLongitudinalSafeThd &&
       vehicle_corssing_pred_point_rel_time < kVehiclePredCrossingPathTimeThd) {
     is_vehicle_prediction_crossing = true;
     vehicle_id_reverse_crossing_map_[agent->agent_id()] =

@@ -2118,6 +2118,18 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     return;
   }
 
+  const auto &parallel_longitudinal_avoid_output =
+      session_->planning_context().parallel_longitudinal_avoid_decider_output();
+  const bool is_parallel_longitudinal_avoid_active =
+      parallel_longitudinal_avoid_output.is_need_parallel_longitudinal_avoid();
+  const bool is_parallel_overtake =
+      parallel_longitudinal_avoid_output.is_parallel_overtake();
+  int32_t parallel_overtake_agent_id = -1;
+  if (is_parallel_longitudinal_avoid_active && is_parallel_overtake) {
+    parallel_overtake_agent_id =
+        parallel_longitudinal_avoid_output.parallel_target_agent_id();
+  }
+
   const auto agent_manager =
       session_->environmental_model().get_agent_manager();
   if (agent_manager == nullptr) {
@@ -2138,10 +2150,9 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
     return;
   }
   bool is_exist_construction = false;
-  const auto &construction_scene =
-      session_->environmental_model()
-          .get_construction_scene_manager()
-          ->get_construction_scene_output();
+  const auto &construction_scene = session_->environmental_model()
+                                       .get_construction_scene_manager()
+                                       ->get_construction_scene_output();
   if (construction_scene.is_exist_construction_area &&
       !construction_scene.construction_agent_cluster_attribute_map.empty() &&
       !speed_limit_config_.enable_construction_avoid_agent_speed_limit) {
@@ -2151,6 +2162,11 @@ void SpeedLimitDecider::CalculateAvoidAgentSpeedLimit() {
   std::vector<const agent::Agent *> avoid_agents;
   bool is_triggered_vru_in_avoid_agent = false;
   for (const auto avoid_agent_id : avoid_ids) {
+    if (parallel_overtake_agent_id != -1 &&
+        avoid_agent_id == parallel_overtake_agent_id) {
+      continue;
+    }
+
     if (avoid_agent_id == triggered_vru_.id) {
       is_triggered_vru_in_avoid_agent = true;
     }

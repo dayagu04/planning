@@ -504,6 +504,10 @@ void StGraphUtils::DetermineRelieveJerkDecision(
         (is_within_ego_lane || is_within_ego_neighbor_lane || is_corner_inside_ego_lane);
     if (is_relieve_jerk_reverse_agent) {
       relieve_jerk_agent_ids.emplace_back(agent->agent_id());
+      int32_t virtual_obstacle_id = 10000 + agent->agent_id();
+      if (agent_id_st_boundaries_map.count(virtual_obstacle_id)) {
+        relieve_jerk_agent_ids.emplace_back(virtual_obstacle_id);
+      }
       continue;
     }
   }
