@@ -19,7 +19,6 @@
 #include "tasks/behavior_planners/gap_selector_decider/gap_selector_decider.h"
 #include "tasks/behavior_planners/general_lateral_decider/general_lateral_decider.h"
 #include "tasks/behavior_planners/lane_change_decider/lane_change_decider.h"
-#include "tasks/behavior_planners/lateral_obstacle_decider/lateral_obstacle_decider.h"
 #include "tasks/behavior_planners/lateral_offset_decider/lateral_offset_decider.h"
 #include "tasks/behavior_planners/sample_poly_speed_adjust_decider/sample_poly_speed_adjust_decider.h"
 #include "tasks/behavior_planners/speed_search_decider/speed_adjust_decider.h"
