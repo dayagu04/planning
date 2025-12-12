@@ -164,7 +164,6 @@ bool SamplePolySpeedAdjustDecider::Execute() {
     last_min_cost_traj_ = SampleQuarticPolynomialCurve(*min_cost_traj_ptr_);
     last_ego_cart_point_ = ego_cart_point_;
   }
-
   LogDebugInfo(sample_cost_time.count(), evaluate_cost_time.count(),
                all_cost_time.count());
   return true;
@@ -694,12 +693,16 @@ bool SamplePolySpeedAdjustDecider::IsInDeceleartionScene() {
     distance_to_merge_point_ = merge_point_info.dis_to_merge_fp;
     distance_to_road_split_ = route_info_output.mlc_request_type_route_info
                                   .distance_to_exchange_region;
-    for (const auto& split_region_info :
-         route_info_output.split_region_info_list) {
-      if (split_region_info.is_ramp_split && split_region_info.is_valid) {
-        distance_to_road_split_ +=
-            split_region_info.start_fp_point.fp_distance_to_split_point;
-        break;
+    if (lane_change_source_ == MAP_REQUEST &&
+        route_info_output.mlc_request_type_route_info.mlc_request_type !=
+            RAMP_TO_MAIN) {
+      for (const auto& split_region_info :
+           route_info_output.split_region_info_list) {
+        if (split_region_info.is_ramp_split && split_region_info.is_valid) {
+          distance_to_road_split_ +=
+              split_region_info.start_fp_point.fp_distance_to_split_point;
+          break;
+        }
       }
     }
     const auto& split_region_info_list =
@@ -875,7 +878,8 @@ void SamplePolySpeedAdjustDecider::StitchLastBestPoly() {
 
 void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
   //  sample scene state machine
-  if (sample_scene_ == NormalSampleScene) {
+  if (sample_scene_ == NormalSampleScene ||
+      sample_scene_ == DecelerationPriorityScene) {
     if (std::fabs(target_lane_objs_flow_vel_ - ego_v_) >
             kJudePurseFlowVelValue &&
         traffic_density_status_ == Congested) {
@@ -894,7 +898,8 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
       count_normal_to_hover_state_ = 0;  // reset
       ClearStitchedPolyPtr();
     }
-  } else if (sample_scene_ == PurseFlowVelScene) {
+  } else if (sample_scene_ == PurseFlowVelScene ||
+             sample_scene_ == DecelerationPriorityScene) {
     if (traffic_density_status_ != Congested) {
       count_hover_to_normal_state_ =
           std::min(count_hover_to_normal_state_ + 2, kHoverToNormalThreshold);
@@ -1223,6 +1228,14 @@ void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
                                                 const double evaluate_cost_time,
                                                 const double all_cost_time) {
 #ifdef ENABLE_PROTO_LOG
+  if (min_cost_traj_ptr_ != nullptr) {
+    JSON_DEBUG_VALUE(
+        "end_point_matched_gap_front_id",
+        static_cast<int>(min_cost_traj_ptr_->end_point_matched_gap_front_id()));
+    JSON_DEBUG_VALUE(
+        "end_point_matched_gap_back_id",
+        static_cast<int>(min_cost_traj_ptr_->end_point_matched_gap_back_id()));
+  }
   auto sample_poly_speed_pb_info = DebugInfoManager::GetInstance()
                                        .GetDebugInfoPb()
                                        ->mutable_st_search_decider_info()
