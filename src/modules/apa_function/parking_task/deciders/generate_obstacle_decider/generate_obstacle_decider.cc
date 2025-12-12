@@ -228,21 +228,33 @@ const bool GenerateObstacleDecider::CalcVirtualTLane() {
   virtual_tlane_.B = virtual_left_obs;
   virtual_tlane_.E = virtual_right_obs;
 
+  const double rearaxle_frontoverhang_length =
+      param.car_length - param.rear_overhanging;
+
+  const double ego_max_x =
+      ego_info_under_slot_.cur_pose.GetX() + rearaxle_frontoverhang_length;
+
+  const double ego_max_y =
+      ego_info_under_slot_.cur_pose.GetY() + rearaxle_frontoverhang_length;
+
+  const double ego_min_y =
+      ego_info_under_slot_.cur_pose.GetY() - rearaxle_frontoverhang_length;
+
   // area_length and area length can be dynamic by ego pose
-  geometry_lib::RectangleBound bound =
-      col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
-          ego_info_under_slot_.cur_pose);
+  // geometry_lib::RectangleBound bound =
+  //     col_det_interface_ptr_->GetGJKColDetPtr()->CalCarRectangleBound(
+  //         ego_info_under_slot_.cur_pose);
 
   virtual_tlane_.channel_width =
       std::max({virtual_tlane_.channel_width, param.channel_width,
-                bound.max_x -
+                ego_max_x -
                     ego_info_under_slot_.slot.processed_corner_coord_local_
                         .pt_01_mid.x() +
                     0.68});
 
-  const double ego_y =
-      std::max(std::fabs(bound.min_y), std::fabs(bound.max_y)) + 1.08 -
-      param.virtual_obs_left_y_pos - slot.slot_width_ / slot.sin_angle_ * 0.5;
+  const double ego_y = std::max(std::fabs(ego_min_y), std::fabs(ego_max_y)) +
+                       1.08 - param.virtual_obs_left_y_pos -
+                       slot.slot_width_ / slot.sin_angle_ * 0.5;
 
   virtual_tlane_.channel_length =
       std::max({virtual_tlane_.channel_length,
