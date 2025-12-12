@@ -378,17 +378,57 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
     const LinkPoseLineInput& input
 #endif
 ) {
-
   if (request_.search_mode == SearchMode::FORMAL) {
+    const float x = current_node->GetX();
+    const float y = current_node->GetY();
+    const float abs_y = std::fabs(y);
+    const float phi = current_node->GetPhi() * common_math::kRad2DegF;
+    const float abs_phi = std::fabs(phi);
     if (request_.scenario_type ==
         ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-      if (std::fabs(current_node->GetPhi()) > M_PI_2f32) {
+      if (cul_de_sac_info_.is_cul_de_sac) {
+        if (cul_de_sac_info_.type == CulDeSacType::RIGHT &&
+            phi < cul_de_sac_info_.limit_phi) {
+          return false;
+        } else if (cul_de_sac_info_.type == CulDeSacType::LEFT &&
+                   phi > cul_de_sac_info_.limit_phi) {
+          return false;
+        }
+      }
+
+      if (abs_phi > 90.0f) {
         return false;
+      }
+      if (y * phi < 0.0f && abs_y > 5.0f) {
+        return false;
+      }
+      if (x < 3.0f && abs_phi > 68.0f && abs_y > 3.0f) {
+        return false;
+      }
+      const std::vector<float> y_t{1.368f, 2.368f, 3.368f};
+      const std::vector<float> phi_t{18.6f, 28.6f, 38.6f};
+      for (int i = 0; i < y_t.size(); i++) {
+        if (abs_y > y_t[i] && abs_phi < phi_t[i]) {
+          return false;
+        }
       }
     } else if (request_.scenario_type ==
                ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
-      if (std::fabs(current_node->GetPhi()) < M_PI_2f32) {
+      if (abs_phi < 90.0f) {
         return false;
+      }
+      if (y * phi > 0.0f && abs_y > 5.0f) {
+        return false;
+      }
+      if (x < 5.0f && abs_phi < 132.0f && abs_y > 3.6f) {
+        return false;
+      }
+      const std::vector<float> y_t{1.368f, 2.368f, 3.368f};
+      const std::vector<float> phi_t{161.4f, 151.4f, 141.4f};
+      for (int i = 0; i < y_t.size(); i++) {
+        if (abs_y > y_t[i] && abs_phi > phi_t[i]) {
+          return false;
+        }
       }
     }
   }
@@ -807,8 +847,8 @@ const float HybridAStarPathGenerator::GenerateHeuristicCostByLPLPath(
 #endif
     NodeHeuristicCost* cost) {
   if (!CalcLPLPathToGoal(next_node, input, true)) {
-    ILOG_INFO << "cal LPL path failed";
-    input.pose.PrintInfo();
+    // ILOG_INFO << "cal LPL path failed";
+    // input.pose.PrintInfo();
     // input.ref_line.PrintInfo();
     return 100.0f;
   }
