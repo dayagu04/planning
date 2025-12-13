@@ -67,6 +67,7 @@ void ApaObstacleManager::Update(
       &local_view->parking_fusion_info;
 
   ego_slot_is_parallel_ = false;
+  parallel_slot_neigbour_objs_heading_ =  {-100, -100};
   for (uint8 i = 0; i < slot_list->parking_fusion_slot_lists_size; i++) {
     last_ego_slot_ = &slot_list->parking_fusion_slot_lists[i];
     // For now, do not consider ego slot limiter.

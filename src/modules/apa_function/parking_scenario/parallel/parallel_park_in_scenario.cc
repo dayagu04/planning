@@ -1572,6 +1572,17 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
 
   const auto& limiter = ego_info_under_slot.slot.GetLimiter();
   ILOG_INFO << "limiter.valid = " << limiter.valid;
+  // encourage to out again if limiter is valid aftering in running state
+  // out_again_path_better_ = false;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_FRONT ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
+          ApaStateMachine::ACTIVE_IN_CAR_REAR) {
+    if (!last_frame_limiter_valid_ && limiter.valid) {
+      out_again_path_better_ = true;
+    }
+  }
+  last_frame_limiter_valid_ = limiter.valid;
   if (limiter.valid) {
     t_lane_.limiter.valid = true;
     // transfer limiter in slot coordination
@@ -2726,6 +2737,8 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
   path_planner_input.is_searching_stage =
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
+  path_planner_input.out_again_path_better = out_again_path_better_;
+
 
   if (frame_.is_replan_first) {
     // temprarily give driving gear
@@ -3044,7 +3057,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
 
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
-      global_point.gear = path_point.gear;
+      global_point.gear = frame_.gear_command;
 
       current_path_point_global_vec_.emplace_back(global_point);
     }
@@ -3095,7 +3108,7 @@ const uint8_t ParallelParkInScenario::PathPlanOnce() {
           ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
       global_point.s = path_point.s;
       global_point.kappa = path_point.kappa;
-      global_point.gear = path_point.gear;
+      global_point.gear = frame_.gear_command;
 
       current_path_point_global_vec_.emplace_back(global_point);
     }

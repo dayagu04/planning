@@ -146,6 +146,7 @@ struct GeometryPathInput {
   bool invalid_replan = false;
 
   Tlane tlane;
+  bool out_again_path_better = false;
 };
 
 struct GeometryPathOutput {

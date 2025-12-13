@@ -70,6 +70,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
       previous_current_path_point_global_vec_;
   bool delay_check_finish_ = false;
   const bool PostProcessPathPara();
+  double arc_slot_init_out_heading_ = 0.0;
 };
 }  // namespace apa_planner
 }  // namespace planning

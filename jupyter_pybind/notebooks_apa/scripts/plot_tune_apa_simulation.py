@@ -165,7 +165,7 @@ fig1.multi_line('y', 'x',source = data_od_traj, line_width = 1.5, line_color = '
 class LocalViewSlider:
   def __init__(self,  slider_callback):
     self.time_slider = ipywidgets.FloatSlider(layout=ipywidgets.Layout(width='75%'), description= "bag_time",min=0.0, max=max_time, value=-0.1, step=frame_dt)
-    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=3, value=2, step=1)
+    self.vehicle_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "vehicle_type",min=0, max=4, value=2, step=1)
     self.sim_to_target_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "sim_to_target",min=0, max=1, value=0, step=1)
     self.plan_type_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "plan_type",min=0, max=1, value=0, step=1)
     self.pybind_state_slider = ipywidgets.IntSlider(layout=ipywidgets.Layout(width='15%'), description= "pybind_state",min=0, max=50, value=0, step=1)
