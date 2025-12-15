@@ -879,7 +879,7 @@ void RouteInfo::CaculateSplitInfo(
                     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
                 other_link->link_class() ==
                     iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) &&
-                  split_link->lane_num() <= other_link->lane_num()) {
+                  split_next_link->lane_num() <= other_link->lane_num()) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
@@ -4898,7 +4898,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
 
     if (lane_info->change_type() ==
         iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
-      merge_lane_sequence_vec.emplace(1, SPLIT_RIGHT);
+      merge_lane_sequence_vec.emplace(find_fp_lane_num - 1, SPLIT_RIGHT);
       return true;
     } else if (lane_info->change_type() ==
                iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane) {
