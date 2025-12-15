@@ -10,6 +10,11 @@
 
 namespace planning {
 namespace apa_planner {
+
+ApaSlot::ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot) {
+  Update(fusion_slot);
+}
+
 void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
   id_ = fusion_slot.id;
   confidence_ = fusion_slot.confidence;

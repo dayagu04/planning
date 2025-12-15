@@ -181,6 +181,7 @@ class ApaSlot final {
  public:
   ApaSlot() = default;
   ~ApaSlot() = default;
+  ApaSlot(const iflyauto::ParkingFusionSlot& fusion_slot);
 
   void Update(const iflyauto::ParkingFusionSlot& fusion_slot);
 
@@ -264,6 +265,7 @@ class ApaSlot final {
 
   const SlotType GetType() const { return slot_type_; }
 
+  void SetSourceType(const SlotSourceType type) { slot_source_type_ = type; }
   const SlotSourceType GetSourceType() const { return slot_source_type_; }
 
   const Limiter& GetLimiter() const { return limiter_; }

@@ -275,9 +275,9 @@ class ApaSlotManager final {
       ApaSlot& slot);
 
   const bool IsNeedRecommendParkOut();
-  const bool RecommendParkOut();
-  const bool LongitudinalConditions(const double dot_product, ApaSlot& slot);
-  const bool LateralConditions(double dot_product, ApaSlot& slot);
+  const bool RecommendParkOut() const;
+  const bool LongitudinalConditions(const double dot_product, const ApaSlot& slot) const;
+  const bool LateralConditions(double& dot_product, const ApaSlot& slot) const;
 
  private:
   std::map<double, size_t> dist_id_map_;
