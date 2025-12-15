@@ -918,6 +918,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(target_lane->get_virtual_id(), false);
 
+  if (origin_refline == nullptr) {
+    return false;
+  }
   const auto &frenet_obstacles_map = origin_refline->get_obstacles_map();
   const auto &base_frenet_coord = origin_refline->get_frenet_coord();
   if (!base_frenet_coord) {

@@ -55,6 +55,7 @@ void LaneChangeRequestManager::FinishRequest() {
   gen_turn_signal_ = NO_CHANGE;
   lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
   trigger_lane_change_cancel_ = false;
+  int_request_is_allowed_lc_in_cone_scene_ = true;
 }
 
 bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
@@ -159,8 +160,12 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   merge_change_request_.SetLaneChangeCmd(lane_change_cmd_);
   merge_change_request_.SetLaneChangeCancelFromTrigger(
       trigger_lane_change_cancel_);
+  int_request_is_allowed_lc_in_cone_scene_ = true;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
     int_request_.Update(lc_status);
+    int_request_is_allowed_lc_in_cone_scene_ =
+        int_request_.ConeSituationJudgement(
+            virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_));
     // int_request_cancel_reason_ = int_request_.lc_request_cancel_reason();
     ilc_virtual_request_ = int_request_.get_ilc_virtual_req();
   } else {
@@ -239,7 +244,7 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       if (lc_status != kLaneKeeping && lc_status != kLaneChangePropose &&
           lc_status != kLaneChangeHold) {
         ILOG_INFO << "cann't generate overtake lane change when not lane keep!";
-        overtake_request_.Reset();
+        // overtake_request_.Reset();
         EnableGenerateOvertakeQequestByFrontSlowVehicle = false;
       }
       if (EnableGenerateOvertakeQequestByFrontSlowVehicle) {

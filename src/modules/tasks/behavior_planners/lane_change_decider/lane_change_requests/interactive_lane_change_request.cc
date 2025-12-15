@@ -138,14 +138,14 @@ void IntRequest::Update(int lc_status) {
     // }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+    std::shared_ptr<VirtualLane> tem_target_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(
+            target_lane_virtual_id_tmp);
     if (!zero_relative_id_order_ids.empty() &&
         origin_relative_id_zero_nums > 1) {
       std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane =
-          virtual_lane_mgr_->get_lane_with_virtual_id(
-              target_lane_virtual_id_tmp);
       if (tem_target_lane != nullptr) {
         int temp_target_lane_order_id = tem_target_lane->get_order_id();
         auto origin_id_iter =
@@ -214,14 +214,14 @@ void IntRequest::Update(int lc_status) {
     // }
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+    std::shared_ptr<VirtualLane> tem_target_lane =
+        virtual_lane_mgr_->get_lane_with_virtual_id(
+            target_lane_virtual_id_tmp);
     if (!zero_relative_id_order_ids.empty() &&
         origin_relative_id_zero_nums > 1) {
       std::shared_ptr<VirtualLane> origin_lane =
           virtual_lane_mgr_->get_lane_with_virtual_id(origin_lane_virtual_id_);
       int origin_lane_order_id = origin_lane->get_order_id();
-      std::shared_ptr<VirtualLane> tem_target_lane =
-          virtual_lane_mgr_->get_lane_with_virtual_id(
-              target_lane_virtual_id_tmp);
       if (tem_target_lane != nullptr) {
         int temp_target_lane_order_id = tem_target_lane->get_order_id();
         auto origin_id_iter =

@@ -15,6 +15,10 @@ class IntRequest : public LaneChangeRequest {
 
   void Update(int lc_status);
 
+  const bool get_is_allowed_lc_in_cone_scene() const {
+    return is_allowed_lc_in_cone_scene_;
+  }
+
   IntCancelReasonType request_cancel_reason() { return request_cancel_reason_; }
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
@@ -77,6 +81,7 @@ class IntRequest : public LaneChangeRequest {
   bool is_lever_status_valid_last_frame_ = true;
   bool is_in_diverted_lane_change_ = false;
   RequestType ilc_virtual_req_ = NO_CHANGE;
+  bool is_allowed_lc_in_cone_scene_ = true;
 };
 
 }  // namespace planning
