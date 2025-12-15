@@ -292,8 +292,6 @@ void EgoLaneTrackManger::TrackEgoLane(
         }
 
         if (ego_in_split_region_ &&
-            ego_dis_to_split_exchange_area_start >=
-                kSplitSelectEgoToExchangeAreaDistanceThd &&
             sum_distance_from_ego_to_both_center_lines_ <
                 kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
           ProcessIntersectionSplit(relative_id_lanes,

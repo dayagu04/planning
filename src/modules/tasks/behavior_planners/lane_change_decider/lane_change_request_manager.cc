@@ -185,7 +185,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     }
     if (enable_use_merge_lc_request && origin_relative_id_zero_nums == 1 &&
         (curr_time >
-         int_request_.tfinish() + k_default_lane_change_cooling_duration)) {
+         int_request_.tfinish() + k_default_lane_change_cooling_duration) &&
+         request_source_ != MAP_REQUEST) {
       merge_change_request_.Update(lc_status);
       is_near_merge_region_ =
           merge_change_request_.is_merge_lane_change_situation();
