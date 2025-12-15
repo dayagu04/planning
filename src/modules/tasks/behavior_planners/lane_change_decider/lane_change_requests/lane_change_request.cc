@@ -1049,19 +1049,21 @@ bool LaneChangeRequest::ConeSituationJudgement(
     // 过滤横向远离车道中心线的锥桶簇
     double min_l_to_center_line = 10.0;
     int cone_nums_within_road_boundary = 0;
+    if (points.size() <= 0) {
+      continue;
+    }
+    if (cur_reference_path == nullptr) {
+      return false;
+    }
     ReferencePathPoint cur_ref_path_point{};
-    if (points.size() > 0) {
-      for (const auto &p : points) {
-        if (cur_reference_path != nullptr) {
-          cur_reference_path->get_reference_point_by_lon(p.s, cur_ref_path_point);
-          if (std::fabs(p.l) < cur_ref_path_point.distance_to_left_road_border &&
-              std::fabs(p.l) < cur_ref_path_point.distance_to_right_road_border) {
-            cone_nums_within_road_boundary++;
-          }
-          min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
-          total_l += p.l;
-        }
+    for (const auto &p : points) {
+      cur_reference_path->get_reference_point_by_lon(p.s, cur_ref_path_point);
+      if (std::fabs(p.l) < cur_ref_path_point.distance_to_left_road_border &&
+          std::fabs(p.l) < cur_ref_path_point.distance_to_right_road_border) {
+        cone_nums_within_road_boundary++;
       }
+      min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+      total_l += p.l;
     }
     if (min_l_to_center_line > kConeLaneChangelateralDistancethre * kHysteresisCoefficient) {
       continue;
