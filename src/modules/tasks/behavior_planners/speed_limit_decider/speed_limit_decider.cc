@@ -60,7 +60,6 @@ constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 constexpr double kEWMAAlpha = 0.1;
-// kEWMAAlphaVLimitInTurns moved to config file (speed_limit_config_.ewma_alpha_v_limit_in_turns)
 // Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1, 0.05]
 const std::vector<double> _EWMA_ALPHA_RADIUS_BP{150.0, 300.0, 500.0, 600.0};
 const std::vector<double> _EWMA_ALPHA_V{0.3, 0.15, 0.1, 0.05};
@@ -94,6 +93,10 @@ constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
 constexpr double preview_distance_0_80m = 80.0;
 constexpr double sampling_step = 2.0;
+constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold for entering avg radius EWMA (m/s)
+constexpr double kAvgRadiusEnterRadius = 260.0;  // Road radius threshold for entering avg radius EWMA (m)
+constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
+constexpr double kAvgRadiusExitRadius = 190.0;  // Road radius threshold for exiting avg radius EWMA (m)
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -1085,6 +1088,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     }
   }
   double road_radius_origin = 1 / std::max(max_curv, 0.0001);
+  
 
   // Distance to max curvature point
   double dist_to_max_curv = max_curv_s;
@@ -1116,22 +1120,22 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     avg_radius_0_80m = radius_sum / radius_vec_0_80m.size();
     
     // Check conditions: use road_radius_origin to lookup expected speed
-    double acc_lat_max_origin = interp(road_radius_origin, _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    double acc_lat_max_origin = interp(0.5*(road_radius_origin + last_road_radius_origin_), _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
     double v_expected_origin = std::sqrt(acc_lat_max_origin * road_radius_origin);
     double speed_diff = std::fabs(v_expected_origin - v_ego);
     
-    // Hysteresis logic: enter when speed_diff < 2.0 && road_radius_origin > 250.0
-    //                   exit when speed_diff >= 2.5 || road_radius_origin < 200.0
+    // Hysteresis logic: enter when speed_diff < kEWMAAvgRadiusEnterSpeedDiff && road_radius_origin > kEWMAAvgRadiusEnterRadius
+    //                   exit when speed_diff >= kEWMAAvgRadiusExitSpeedDiff || road_radius_origin < kEWMAAvgRadiusExitRadius
     if (last_use_avg_radius_for_ewma_) {
       // Currently in the state, check exit conditions
-      if (speed_diff >= 2.5 || road_radius_origin < 200.0) {
+      if (speed_diff >= kAvgRadiusExitSpeedDiff || road_radius_origin < kAvgRadiusExitRadius) {
         use_avg_radius_for_ewma = false;
       } else {
         use_avg_radius_for_ewma = true;
       }
     } else {
       // Currently not in the state, check enter conditions
-      if (speed_diff < 2.0 && road_radius_origin > 250.0) {
+      if (speed_diff < kAvgRadiusEnterSpeedDiff && road_radius_origin > kAvgRadiusEnterRadius) {
         use_avg_radius_for_ewma = true;
       } else {
         use_avg_radius_for_ewma = false;
@@ -1141,7 +1145,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     // Update last state for next iteration
     last_use_avg_radius_for_ewma_ = use_avg_radius_for_ewma;
   }
-  
+  last_road_radius_origin_ = road_radius_origin;
   // Apply EWMA filter
   double curv_for_ewma = max_curv;
   if (use_avg_radius_for_ewma) {

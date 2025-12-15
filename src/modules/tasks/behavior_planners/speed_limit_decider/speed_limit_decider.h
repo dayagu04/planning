@@ -154,6 +154,7 @@ class SpeedLimitDecider : public Task {
   bool last_condition_ramp_raw_count_ = false;  // Previous k_raw point count condition state (for hysteresis)
   bool last_is_map_sharp_curve_ = false;  // Previous complete is_map_sharp_curve state (for detecting entering state)
   bool last_use_avg_radius_for_ewma_ = false;  // Previous use_avg_radius_for_ewma state (for hysteresis)
+  double last_road_radius_origin_ = 10000.0;;  // Previous road_radius_origin
 };
 
 }  // namespace planning
