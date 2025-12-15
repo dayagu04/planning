@@ -90,6 +90,9 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void ResetObstaclesHistory(bool is_change_lanes);
   void ClearHistoryInfo();
 
+  bool IsCutInIgnore(const FrenetObstacle& frenet_obstacle,
+                     bool is_lane_change);
+
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info_;

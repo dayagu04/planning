@@ -767,12 +767,13 @@ bool SccLateralObstacleDecider::IsAvoidable(
   bool can_avoid =
       HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_lane_change);
 
-  if (is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
-                            lc_gap_info_.gap_front_s) {
-    // 在变道状态，依据gap计算
-    history.cut_in_or_cross = false;
-    history.cut_in_or_cross_count = 0;
-  }
+  // if (is_lane_change &&
+  //         frenet_obstacle.frenet_obstacle_boundary().s_start <
+  //             lc_gap_info_.gap_front_s) {
+  //   // 在变道状态，依据gap计算
+  //   history.cut_in_or_cross = false;
+  //   history.cut_in_or_cross_count = 0;
+  // }
 
   if (is_need_avoid && !can_avoid) {
     history.can_not_avoid = true;
@@ -1192,7 +1193,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::RIGHT;
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1224,7 +1225,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1281,7 +1282,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       }
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 后方车辆
@@ -1353,7 +1354,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     }
   }
   // cut_in 或 横穿
-  if (!obstacle.is_static() && history.cut_in_or_cross) {
+  if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
     history.is_avd_car = false;
     history.ncar_count = 0;
     history.ncar_count_in = false;
@@ -1929,6 +1930,20 @@ void SccLateralObstacleDecider::ClearHistoryInfo() {
       ++it;
     }
   }
+}
+
+bool SccLateralObstacleDecider::IsCutInIgnore(
+    const FrenetObstacle& frenet_obstacle, bool is_lane_change) {
+  LateralObstacleHistoryInfo& history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
+  bool is_in_lane_change_gap =
+      is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
+                            lc_gap_info_.gap_front_s;
+  if (!is_in_lane_change_gap && history.cut_in_or_cross &&
+      !frenet_obstacle.obstacle()->is_static()) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace planning

@@ -881,7 +881,7 @@ bool GeneralLateralDecider::ConstructReferencePathPoints(
   }
   ref_traj_points_.resize(traj_points.size());
   std::copy(traj_points.begin(), traj_points.end(), ref_traj_points_.begin());
-  
+
   if (!ref_path_points_.empty()) {
     const auto& raw_path_points = reference_path_ptr_->get_frenet_coord()->path_points();
     for (const auto &raw_path_point : raw_path_points) {
@@ -2173,7 +2173,8 @@ void GeneralLateralDecider::GenerateStaticObstacleDecision(
 
     AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                              overlap_max_y, lat_buf_dis, lat_decision,
-                             lon_decision, obstacle_decision, bound_hierarchy);
+                             lon_decision, obstacle_decision, obstacle,
+                             bound_hierarchy);
   }
 }
 
@@ -2924,10 +2925,10 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
       //       is_nudge_left, rear_lon_buf_dis, front_lon_buf_dis, lat_decision,
       //       i);
       // }
-      AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
-                               overlap_max_y, lat_buf_dis, lat_decision,
-                               lon_decision, obstacle_decision, bound_hierarchy,
-                               is_avoid_side_ignore_obj, is_high_dangerous);
+      AddObstacleDecisionBound(
+          obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
+          lat_buf_dis, lat_decision, lon_decision, obstacle_decision, obstacle,
+          bound_hierarchy, is_avoid_side_ignore_obj, is_high_dangerous);
     } else {
       for (int k = 0; k < 2; k++) {
         if (k == 0) {
@@ -2959,10 +2960,11 @@ void GeneralLateralDecider::GenerateDynamicObstacleDecision(
           has_lon_decision = has_lon_decision ||
                              lon_decision != LonObstacleDecisionType::IGNORE;
         }
-        AddObstacleDecisionBound(
-            obstacle->id(), t, bound_type, overlap_min_y, overlap_max_y,
-            lat_buf_dis, lat_decision, lon_decision, obstacle_decision,
-            bound_hierarchy, is_avoid_side_ignore_obj, is_high_dangerous);
+        AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
+                                 overlap_max_y, lat_buf_dis, lat_decision,
+                                 lon_decision, obstacle_decision, obstacle,
+                                 bound_hierarchy, is_avoid_side_ignore_obj,
+                                 is_high_dangerous);
       }
     }
   }
@@ -3265,7 +3267,7 @@ void GeneralLateralDecider::GenerateEmergencyObstacleDecision(
     }
     AddObstacleDecisionBound(obstacle->id(), t, bound_type, overlap_min_y,
                              overlap_max_y, lat_buf_dis, lat_decision,
-                             lon_decision, obstacle_decision);
+                             lon_decision, obstacle_decision, obstacle);
   }
 }
 
@@ -3660,8 +3662,10 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     int id, double t, BoundType bound_type, double overlap_min_y,
     double overlap_max_y, double lat_buf_dis,
     LatObstacleDecisionType lat_decision, LonObstacleDecisionType lon_decision,
-    ObstacleDecision &obstacle_decision, BoundHierarchy bound_hierarchy,
-    bool is_avoid_side_ignore_obj, bool is_high_dangerous) {
+    ObstacleDecision& obstacle_decision,
+    const std::shared_ptr<FrenetObstacle> obstacle,
+    BoundHierarchy bound_hierarchy, bool is_avoid_side_ignore_obj,
+    bool is_high_dangerous) {
   double l_offset_limit = 10.0;
   if (bound_hierarchy == BoundHierarchy::FIRST_SOFT_BOUND) {
     l_offset_limit = config_.first_soft_min_distance2center + 1;
@@ -3761,6 +3765,8 @@ void GeneralLateralDecider::AddObstacleDecisionBound(
     // assert(lon_decision != LonObstacleDecisionType::IGNORE);
   }
 
+  LimitBoundary(obstacle, bound);
+
   ObstaclePositionDecision position_decision;
   position_decision.tp.t = t;
   // position_decision.tp.s = ego_s;
@@ -3835,6 +3841,53 @@ bool GeneralLateralDecider::CheckObstacleNudgeDecision(
 bool GeneralLateralDecider::CheckObstacleCrossingCondition(
     const std::shared_ptr<FrenetObstacle> obstacle, bool &is_cross_obj) {
   return false;
+}
+
+void GeneralLateralDecider::LimitBoundary(
+    const std::shared_ptr<FrenetObstacle> obstacle, Bound& bound) {
+  // 限制Bound大小
+  const double kLateralDistance2LineBoundary = 0.2;
+  const auto &general_lateral_decider_output =
+      session_->planning_context().general_lateral_decider_output();
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto& coarse_planning_info = session_->planning_context()
+                                         .lane_change_decider_output()
+                                         .coarse_planning_info;
+  const auto lane_width =
+      session_->environmental_model()
+          .get_virtual_lane_manager()
+          ->get_lane_with_virtual_id(coarse_planning_info.target_lane_id)
+          ->width();
+  const double half_lane_width = lane_width * 0.5;
+  const auto& lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+  const auto& lat_obstacle_position = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lateral_obstacle_history_info;
+  const auto lat_obs_decision_iter = lat_obstacle_decision.find(obstacle->id());
+  const auto lat_obs_position_iter = lat_obstacle_position.find(obstacle->id());
+  const double kMaxDistance2Centerline =
+      half_lane_width - vehicle_param.max_width * 0.5 - kLateralDistance2LineBoundary;
+  if (lat_obs_decision_iter != lat_obstacle_decision.end() &&
+      lat_obs_position_iter != lat_obstacle_position.end()) {
+    const bool is_cut_in_or_cross =
+        lat_obs_position_iter->second.cut_in_or_cross;
+    const bool has_lateral_nudge_decision =
+        lat_obs_decision_iter->second == LatObstacleDecisionType::LEFT ||
+        lat_obs_decision_iter->second == LatObstacleDecisionType::RIGHT;
+    if (!is_cut_in_or_cross || !has_lateral_nudge_decision) {
+      // cut_in障碍物被给予right/left标志位,否则return
+      return;
+    }
+    if (general_lateral_decider_output.is_use_spatio_planner_result) {
+      // 时空联合场景过滤，避免导致避让幅度过小，但是后续也需要注意避让幅度过大的问题
+      return;
+    }
+    bound.lower = std::min(bound.lower, kMaxDistance2Centerline);
+    bound.upper = std::max(bound.upper, -kMaxDistance2Centerline);
+  }
 }
 
 void GeneralLateralDecider::RefineConflictLatDecisions(
