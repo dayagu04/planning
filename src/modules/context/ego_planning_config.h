@@ -3909,6 +3909,8 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                      "map_sharp_curve_dis_to_ramp");
     ReadItem<double>(json, map_sharp_curve_speed_limit, "speed_limit_decider",
                      "map_sharp_curve_speed_limit");
+    ReadItem<double>(json, ewma_alpha_v_limit_in_turns, "speed_limit_decider",
+                     "ewma_alpha_v_limit_in_turns");
 
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
@@ -4063,6 +4065,7 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   bool enable_avg_radius_for_ewma = true;  // 是否启用平均半径用于EWMA（默认true）
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
   double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
+  double ewma_alpha_v_limit_in_turns = 0.3;  // EWMA coefficient for v_limit_in_turns
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;

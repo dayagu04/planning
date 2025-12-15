@@ -60,7 +60,7 @@ constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 constexpr double kEWMAAlpha = 0.1;
-constexpr double kEWMAAlphaVLimitInTurns = 0.2;  // EWMA coefficient for v_limit_in_turns
+// kEWMAAlphaVLimitInTurns moved to config file (speed_limit_config_.ewma_alpha_v_limit_in_turns)
 // Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1, 0.05]
 const std::vector<double> _EWMA_ALPHA_RADIUS_BP{150.0, 300.0, 500.0, 600.0};
 const std::vector<double> _EWMA_ALPHA_V{0.3, 0.15, 0.1, 0.05};
@@ -1183,9 +1183,10 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   if (v_limit_in_turns_filtered_ < kEpsilon) {
     v_limit_in_turns_filtered_ = v_limit_in_turns;
   } else {
+    double ewma_alpha_spd = speed_limit_config_.ewma_alpha_v_limit_in_turns;
     v_limit_in_turns_filtered_ =
-        kEWMAAlphaVLimitInTurns * v_limit_in_turns + 
-        (1 - kEWMAAlphaVLimitInTurns) * v_limit_in_turns_filtered_;
+        ewma_alpha_spd * v_limit_in_turns + 
+        (1 - ewma_alpha_spd) * v_limit_in_turns_filtered_;
   }
   v_limit_in_turns = v_limit_in_turns_filtered_;
 

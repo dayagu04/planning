@@ -890,6 +890,7 @@
     "enable_sharp_curve_by_decel": true,
     "enable_map_sharp_curve_by_decel": true,
     "enable_avg_radius_for_ewma": true,
+    "ewma_alpha_v_limit_in_turns": 0.3,
 
     "map_sharp_curve_dis_to_ramp": 100.0,
     "map_sharp_curve_speed_limit": 11.11,

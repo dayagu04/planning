@@ -623,9 +623,9 @@ class LoadRosbag:
                          "EnvironmentalModelManagerCost", "GeneralPlannerModuleCostTime", "planning_time_cost", 'construct_st_graph_cost', 'st_graph_searcher_cost',\
                          'v_limit_road', 'v_limit_in_turns','road_radius','is_s_bend','v_target', 'v_cruise', 'v_ego', "intersection_pass_sts",'v_limit_steering', "tla_reminder_state",\
                          'lead_one_id', 'lead_one_dis', 'lead_one_vel', "v_target_lead_one", 'soft_brake_distance_lead',\
-                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", \
+                         'lead_two_id', 'lead_two_dis', 'lead_two_vel', "v_target_lead_two", 'road_radius_origin',\
                          'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
-                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", \
+                         'temp_lead_one_id', 'temp_lead_one_dis', 'temp_lead_one_vel', "v_target_temp_lead_one", "avg_radius_0_80m","use_avg_radius_for_ewma",\
                          'temp_lead_two_id', 'temp_lead_two_dis', 'temp_lead_two_vel', "v_target_temp_lead_two", \
                          'potential_cutin_track_id', 'v_target_potential_cutin', "v_target_cutin", "road_radius", \
                          'new_cutin_id', 'new_cutin_id_count', "new_cutout_id", "new_cutout_id_count", "CIPV_id",\

@@ -15,7 +15,7 @@ sys.path.append('../..')
 sys.path.append('../../../')
 
 # bag path and frame dt
-bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_72216/trigger/20250917/20250917-19-14-47/data_collection_CHERY_M32T_72216_EVENT_KEY_2025-09-17-19-14-47_no_camera.bag.1758356957.close-loop.scc.plan"
+bag_path = "/data_cold/abu_zone/autoparse/chery_m32t_74563/trigger/20251212/20251212-17-20-20/data_collection_CHERY_M32T_74563_EVENT_KEY_2025-12-12-17-20-20_no_camera.bag"
 
 frame_dt = 0.1 # sec
 
@@ -28,6 +28,8 @@ max_time = bag_loader.load_all_data()
 # JAC_S811 CHERY_T26 CHERY_E0X CHERY_M32T
 global_var.set_value('car_type', 'CHERY_E0X')
 global_var.set_value('g_is_display_enu', False)
+global_var.set_value('is_vis_sdpromap', False)
+global_var.set_value('is_calc_min_turn_radius', True) 
 fig1, local_view_data = load_local_view_figure()
 
 velocity_fig, acc_fig, lead_fig, cost_time_fig, cutin_fig, obs_st_ids, fig_fsm_state, fig_replan_status,topic_latency_fig= load_lon_global_figure(bag_loader)
