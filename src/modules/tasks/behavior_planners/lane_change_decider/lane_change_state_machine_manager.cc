@@ -2414,7 +2414,8 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
       std::pair<double, double> obs_lat{agent_bd.l_start, agent_bd.l_end};
       double obs_lat_vel = rear_obs->frenet_velocity_l();
       bool is_target_lane_cuting_in =
-          IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 2.0, 0.5);
+          IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
+                           lc_safety_check_config_.target_lane_rear_cut_in_check_time, 0.5);
       if (!is_target_lane_cuting_in) {
         continue;  // 2.0s 不进入目标车道过滤
       }
