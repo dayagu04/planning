@@ -438,7 +438,7 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   }
   // 增加对于前方路沿的判断
   if (target_lane != nullptr &&
-      IsRoadBorderSurpressLaneChange(lc_request, origin_lane_id,
+      IsRoadBorderSurpressDuringLaneChange(lc_request, origin_lane_id,
                                      target_lane->get_virtual_id())) {
     return false;
   }
