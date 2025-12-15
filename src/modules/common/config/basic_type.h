@@ -150,6 +150,12 @@ enum MergeType {
   BOTH_MERGE = 4
 };
 
+enum MergeLaneType {
+  NONE_MERGE = 0,
+  MERGE_TO_LEFT = 1,
+  MERGE_TO_RIGHT = 2
+};
+
 struct MergePointInfo {
   double dis_to_merge_fp = NL_NMAX;
   MergeType merge_type = MergeType::NO_MERGE;
@@ -232,17 +238,55 @@ struct MLCDeciderRouteInfo {
 };
 
 enum MLCSceneType {
-  NORMAL_SCENE = 0,
-  SPLIT_SCENE = 1,
-  MERGE_SCENE = 2
+  NONE_SCENE = 0,
+  NORMAL_SCENE = 1,
+  SPLIT_SCENE = 2,
+  MERGE_SCENE = 3
 };
-struct MLCDeciderInfoBaseBaidu {
-  MLCSceneType mlc_scene_type = NORMAL_SCENE;
+struct MLCDeciderSceneInfoBaseBaidu {
+  MLCSceneType mlc_scene_type = NONE_SCENE;
+  RampDirection route_lane_direction = RAMP_NONE;
+  double dis_to_link_topo_change_point = 0.0;
+  bool is_valid = false;
 
-  void reset() {
-    mlc_scene_type = NORMAL_SCENE;
+  MLCDeciderSceneInfoBaseBaidu() = default;
+
+  MLCDeciderSceneInfoBaseBaidu(MLCSceneType mlc_scene_type,
+                               RampDirection route_lane_direction,
+                               double dis_to_link_topo_change_point)
+      : mlc_scene_type(mlc_scene_type),
+        route_lane_direction(route_lane_direction),
+        dis_to_link_topo_change_point(dis_to_link_topo_change_point) {
+    is_valid = info_valid(mlc_scene_type, route_lane_direction,
+                          dis_to_link_topo_change_point);
   }
 
+  void set_value(MLCSceneType scene_type, RampDirection lane_direction,
+                 double dis) {
+    mlc_scene_type = scene_type;
+    route_lane_direction = lane_direction;
+    dis_to_link_topo_change_point = dis;
+    is_valid = info_valid(scene_type, lane_direction, dis);
+  }
+
+  void reset() {
+    mlc_scene_type = NONE_SCENE;
+    route_lane_direction = RAMP_NONE;
+    dis_to_link_topo_change_point = 0.0;
+    is_valid = false;
+  }
+
+ private:
+  bool info_valid(MLCSceneType mlc_scene_type,
+                  RampDirection route_lane_direction,
+                  double dis_to_link_topo_change_point) {
+    if (mlc_scene_type != NONE_SCENE && route_lane_direction != RAMP_NONE &&
+        dis_to_link_topo_change_point > 0.0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 };
 struct RouteInfoOutput {
   // for NOA output
