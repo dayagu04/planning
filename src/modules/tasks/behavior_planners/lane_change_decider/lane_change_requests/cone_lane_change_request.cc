@@ -37,7 +37,7 @@ constexpr uint32_t kConeAlcHystereticCount = 1;
 constexpr int kConeAlcCountLowerThre = 0;
 constexpr double kLongClusterTimeGap = 4.0;
 constexpr double kDefaultLaneWidth = 4.5;
-constexpr double kConeMustLaneChangeDistance = 4.88;
+constexpr double kConeLaneChangelateralDistancethre = 2.25;
 constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr uint32_t kConeDirecSize = 5;
 constexpr double kConeDirecThre = 0.5;
@@ -144,6 +144,9 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& function_info = session_->environmental_model().function_info();
   const auto& rlane = virtual_lane_mgr_->get_right_lane();
   const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
+  const auto cur_reference_path =
+      ref_path_mgr->get_reference_path_by_current_lane(); 
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   double k_default_ego_pass_buffer = kLatPassThre;
@@ -296,17 +299,45 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
                                  lane_width + k_left_cone_occ_lane_line_buffer);
   pass_threshold_right = std::max(
       pass_threshold_right, lane_width + k_right_cone_occ_lane_line_buffer);
-  double all_cone_cluster_max_distance = -std::numeric_limits<double>::max();
+  double all_cone_cluster_min_lateral_distance = std::numeric_limits<double>::max();
   for (const auto& cluster_attribute_iter : cone_cluster_attribute_set_) {
     int cluster = cluster_attribute_iter.first;
     const std::vector<ConePoint>& points = cluster_attribute_iter.second;
     double min_left_l, min_right_l;
+    double total_l = 0.0;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
-    double max_l = std::max(min_left_l, min_right_l);
-    if (max_l > all_cone_cluster_max_distance) {
-      all_cone_cluster_max_distance = max_l;
+    // double max_l = std::max(min_left_l, min_right_l);
+    // if (max_l < all_cone_cluster_min_distance) {
+    //   all_cone_cluster_min_distance = max_l;
+    // }
+    // 过滤横向远离车道中心线的锥桶簇
+    double min_l_to_center_line = 10.0;
+    int cone_nums_within_road_boundary = 0;
+    if (points.size() <= 0) {
+      continue;
     }
+    if (cur_reference_path == nullptr) {
+      is_cone_lane_change_situation_ = false;
+      return;
+    }
+    ReferencePathPoint cur_ref_path_point{};
+    for (const auto &p : points) {
+      cur_reference_path->get_reference_point_by_lon(p.s, cur_ref_path_point);
+      if (std::fabs(p.l) < cur_ref_path_point.distance_to_left_road_border &&
+          std::fabs(p.l) < cur_ref_path_point.distance_to_right_road_border) {
+        cone_nums_within_road_boundary++;
+      }
+      min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+      total_l += p.l;
+    }
+    if (min_l_to_center_line > kConeLaneChangelateralDistancethre) {
+      continue;
+    }
+    if (min_l_to_center_line < all_cone_cluster_min_lateral_distance) {
+      all_cone_cluster_min_lateral_distance = min_l_to_center_line;
+    }
+    double average_l = total_l / points.size();
     // if (left_lane_nums_ == 0 && right_lane_nums_ == 0) {
     //   pass_threshold_left =
     //       vehicle_param.width + kLatPassThre + kLatPassThreBuffer;
@@ -333,8 +364,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5)) {
+        (!llane && min_right_l < pass_threshold_right && cone_nums_within_road_boundary >= 5 && average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && cone_nums_within_road_boundary >= 5 && average_l < 0.0)) {
       cone_alc_trigger_counter_++;
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
@@ -350,7 +381,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
       break;
     }
   }
-  if (all_cone_cluster_max_distance > kConeMustLaneChangeDistance) {
+  if (all_cone_cluster_min_lateral_distance > kConeLaneChangelateralDistancethre) {
     is_cone_must_lane_change_situation_ = false;
   }
   // if all clusters is far away from cernter line, counter--
