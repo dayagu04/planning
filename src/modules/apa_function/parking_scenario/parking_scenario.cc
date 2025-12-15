@@ -1266,7 +1266,8 @@ const bool ParkingScenario::IsStopByStaticMovableObs() const {
   }
 
   if (frame_.replan_fail_time < 1.0 &&
-      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+      (apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus() ||
+       apa_world_ptr_->GetStateMachineManagerPtr()->IsParkSuspendStatus())) {
     return false;
   }
 
