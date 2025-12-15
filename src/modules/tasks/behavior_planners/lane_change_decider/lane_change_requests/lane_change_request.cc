@@ -437,8 +437,9 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
     target_lane = virtual_lane_mgr_->get_right_lane();
   }
   // 增加对于前方路沿的判断
-  if (IsRoadBorderSurpressDuringLaneChange(lc_request, origin_lane_id,
-                                           target_lane->get_virtual_id())) {
+  if (target_lane != nullptr &&
+      IsRoadBorderSurpressLaneChange(lc_request, origin_lane_id,
+                                     target_lane->get_virtual_id())) {
     return false;
   }
 
