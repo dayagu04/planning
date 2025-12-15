@@ -146,7 +146,7 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
   const auto& llane = virtual_lane_mgr_->get_left_lane();
   const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
   const auto cur_reference_path =
-      ref_path_mgr->get_reference_path_by_current_lane(); 
+      ref_path_mgr->get_reference_path_by_current_lane();
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer;
   double k_default_ego_pass_buffer = kLatPassThre;
@@ -313,21 +313,10 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // }
     // 过滤横向远离车道中心线的锥桶簇
     double min_l_to_center_line = 10.0;
-    int cone_nums_within_road_boundary = 0;
     if (points.size() <= 0) {
       continue;
     }
-    if (cur_reference_path == nullptr) {
-      is_cone_lane_change_situation_ = false;
-      return;
-    }
-    ReferencePathPoint cur_ref_path_point{};
     for (const auto &p : points) {
-      cur_reference_path->get_reference_point_by_lon(p.s, cur_ref_path_point);
-      if (std::fabs(p.l) < cur_ref_path_point.distance_to_left_road_border &&
-          std::fabs(p.l) < cur_ref_path_point.distance_to_right_road_border) {
-        cone_nums_within_road_boundary++;
-      }
       min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
       total_l += p.l;
     }
@@ -364,8 +353,8 @@ void ConeRequest::UpdateConeSituation(int lc_status) {
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && cone_nums_within_road_boundary >= 5 && average_l > 0.0) ||
-        (!rlane && min_left_l < pass_threshold_left && cone_nums_within_road_boundary >= 5 && average_l < 0.0)) {
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 && average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 && average_l < 0.0)) {
       cone_alc_trigger_counter_++;
       ILOG_DEBUG << "trigger_counter is " << cone_alc_trigger_counter_
                  << ", cluster is " << cluster;
