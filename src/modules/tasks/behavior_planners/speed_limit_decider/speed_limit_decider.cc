@@ -94,9 +94,9 @@ constexpr double kDistanceTolerance = 1.0;
 constexpr double preview_distance_0_80m = 80.0;
 constexpr double sampling_step = 2.0;
 constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold for entering avg radius EWMA (m/s)
-constexpr double kAvgRadiusEnterRadius = 260.0;  // Road radius threshold for entering avg radius EWMA (m)
+constexpr double kAvgRadiusEnterRadius = 350.0;  // Road radius threshold for entering avg radius EWMA (m)
 constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
-constexpr double kAvgRadiusExitRadius = 190.0;  // Road radius threshold for exiting avg radius EWMA (m)
+constexpr double kAvgRadiusExitRadius = 280.0;  // Road radius threshold for exiting avg radius EWMA (m)
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -1111,13 +1111,35 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     }
   }
   
-  // Calculate average radius
+  // Calculate median radius and filtered average radius
   if (speed_limit_config_.enable_avg_radius_for_ewma && !radius_vec_0_80m.empty()) {
-    double radius_sum = 0.0;
-    for (const auto &r : radius_vec_0_80m) {
-      radius_sum += r;
+    // 1) compute median radius in 0-80m
+    std::vector<double> radius_sorted = radius_vec_0_80m;
+    std::sort(radius_sorted.begin(), radius_sorted.end());
+    const size_t n = radius_sorted.size();
+    double median_radius = 0.0;
+    if (n % 2 == 1) {
+      median_radius = radius_sorted[n / 2];
+    } else {
+      median_radius = 0.5 * (radius_sorted[n / 2 - 1] + radius_sorted[n / 2]);
     }
-    avg_radius_0_80m = radius_sum / radius_vec_0_80m.size();
+
+    // 2) compute mean radius, excluding outliers > 2 * median_radius
+    double radius_sum = 0.0;
+    size_t valid_cnt = 0;
+    const double radius_upper_bound = 2.0 * median_radius;
+    for (const auto &r : radius_vec_0_80m) {
+      if (r <= radius_upper_bound) {
+        radius_sum += r;
+        ++valid_cnt;
+      }
+    }
+    if (valid_cnt > 0) {
+      avg_radius_0_80m = radius_sum / static_cast<double>(valid_cnt);
+    } else {
+      // Fallback: if all points are filtered out, use median radius
+      avg_radius_0_80m = median_radius;
+    }
     
     // Check conditions: use road_radius_origin to lookup expected speed
     double acc_lat_max_origin = interp(0.5*(road_radius_origin + last_road_radius_origin_), _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
