@@ -4,10 +4,10 @@ namespace planning {
 static constexpr double kSamplingBoundaryLonGap = 5.0;
 static constexpr double kSamplingBoundaryLatGap = 0.3;
 static constexpr double kSamplingLineLonGap = 2.0;
-static constexpr double kLateralDistanceDiff = 0.05;
+static constexpr double kLateralDistanceDiff = 0.02;
 static constexpr double kAgentForwardDistance = 2.0;
 static constexpr double kAgentBackwardDistance = 6.0;
-static constexpr double kMinLaneWidthBuffer = 0.4;
+static constexpr double kMinLaneWidthBuffer = 0.5;
 
 ConstructionSceneRefline::ConstructionSceneRefline() {
   const auto& vehicle_param =
@@ -21,6 +21,8 @@ bool ConstructionSceneRefline::InitInfo() {
   lane_num_ = 0;
   center_line_.clear();
   construction_ref_path_.clear();
+  refline_x_vec_.clear();
+  refline_y_vec_.clear();
   return true;
 }
 
@@ -48,7 +50,7 @@ bool ConstructionSceneRefline::Update(
   // handle agent cluster
   ExtractAgentBoundaries(reference_path, construction_agent_cluster_attribute_set, boundaries);
   // generate final boundary
-  bool is_boundary_valid = GeneratePassableBoundary(boundaries);
+  bool is_boundary_valid = GeneratePassableBoundary(reference_path, boundaries);
   if (is_boundary_valid) {
     std::vector<Point2d> frenet_refline;
     // generate center lines
@@ -141,6 +143,7 @@ bool ConstructionSceneRefline::ExtractAgentBoundaries(
 }
 
 bool ConstructionSceneRefline::GeneratePassableBoundary(
+    const std::shared_ptr<planning::LaneReferencePath>& reference_path,
     const std::map<planning::ConstructionDirection, std::map<double, double>>& boundaries) {
   // left boundary
   std::vector<double> left_s_vec;
@@ -148,32 +151,43 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
   auto left_boundaries_iter = boundaries.find(ConstructionDirection::RIGHT);
   if (left_boundaries_iter != boundaries.end()) {
     const auto& left_boundaries = left_boundaries_iter->second;
-    double last_s = left_boundaries.begin()->first;
-    double last_l = left_boundaries.begin()->second;
-    for (auto iter = left_boundaries.begin(); iter != left_boundaries.end(); ++iter) {
-      double ds = iter->first - last_s;
-      if (ds <= 1e-6) {
-        continue;
+    if (!left_boundaries.empty()) {
+      double current_s = left_boundaries.begin()->first;
+      double last_s = left_boundaries.begin()->first;
+      double last_l = left_boundaries.begin()->second;
+      for (auto iter = left_boundaries.begin(); iter != left_boundaries.end(); ++iter) {
+        current_s = iter->first;
+        double ds = current_s - last_s;
+        if (ds <= 1e-6) {
+          continue;
+        }
+        if (ds > kSamplingBoundaryLonGap) {
+          left_s_vec.emplace_back(last_s);
+          left_l_vec.emplace_back(last_l);
+          last_s = iter->first;
+          if (iter->second - last_l > kSamplingBoundaryLatGap) {
+            last_l += kSamplingBoundaryLatGap;
+          } else {
+            last_l = iter->second;
+          }
+        } else {
+          if (iter->second < last_l) {
+            // last_s = iter->first;
+            last_l = iter->second;
+          }
+        }
       }
-      if (ds > kSamplingBoundaryLonGap) {
+      if (left_s_vec.empty()) {
         left_s_vec.emplace_back(last_s);
         left_l_vec.emplace_back(last_l);
-        last_s = iter->first;
-        if (iter->second - last_l > kSamplingBoundaryLatGap) {
-          last_l += kSamplingBoundaryLatGap;
-        } else {
-          last_l = iter->second;
-        }
       } else {
-        if (iter->second < last_l) {
-          // last_s = iter->first;
-          last_l = iter->second;
+        if (last_s - left_s_vec.back() > 1e-6) {
+          left_s_vec.emplace_back(last_s);
+          left_l_vec.emplace_back(last_l);
         }
       }
-    }
-    if (!left_s_vec.empty()) {
-      if (last_s - left_s_vec.back() > 1e-6) {
-        left_s_vec.emplace_back(last_s);
+      if (current_s - left_s_vec.back() > 1e-2) {
+        left_s_vec.emplace_back(current_s);
         left_l_vec.emplace_back(last_l);
       }
     }
@@ -184,38 +198,57 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
   auto right_boundaries_iter = boundaries.find(ConstructionDirection::LEFT);
   if (right_boundaries_iter != boundaries.end()) {
     const auto& right_boundaries = right_boundaries_iter->second;
-    double last_s = right_boundaries.begin()->first;
-    double last_l = right_boundaries.begin()->second;
-    for (auto iter = right_boundaries.begin(); iter != right_boundaries.end(); ++iter) {
-      double ds = iter->first - last_s;
-      if (ds <= 1e-6) {
-        continue;
+    if (!right_boundaries.empty()) {
+      double current_s = right_boundaries.begin()->first;
+      double last_s = right_boundaries.begin()->first;
+      double last_l = right_boundaries.begin()->second;
+      for (auto iter = right_boundaries.begin(); iter != right_boundaries.end(); ++iter) {
+        current_s = iter->first;
+        double ds = current_s - last_s;
+        if (ds <= 1e-6) {
+          continue;
+        }
+        if (ds > kSamplingBoundaryLonGap) {
+          right_s_vec.emplace_back(last_s);
+          right_l_vec.emplace_back(last_l);
+          last_s = iter->first;
+          if (last_l - iter->second > kSamplingBoundaryLatGap) {
+            last_l -= kSamplingBoundaryLatGap;
+          } else {
+            last_l = iter->second;
+          }
+        } else {
+          if (iter->second > last_l) {
+            // last_s = iter->first;
+            last_l = iter->second;
+          }
+        }
       }
-      if (ds > kSamplingBoundaryLonGap) {
+      if (right_s_vec.empty()) {
         right_s_vec.emplace_back(last_s);
         right_l_vec.emplace_back(last_l);
-        last_s = iter->first;
-        if (last_l - iter->second > kSamplingBoundaryLatGap) {
-          last_l -= kSamplingBoundaryLatGap;
-        } else {
-          last_l = iter->second;
-        }
       } else {
-        if (iter->second > last_l) {
-          // last_s = iter->first;
-          last_l = iter->second;
+        if (last_s - right_s_vec.back() > 1e-6) {
+          right_s_vec.emplace_back(last_s);
+          right_l_vec.emplace_back(last_l);
         }
       }
-    }
-    if (!right_s_vec.empty()) {
-      if (last_s - right_s_vec.back() > 1e-6) {
-        right_s_vec.emplace_back(last_s);
+      if (current_s - right_s_vec.back() > 1e-2) {
+        right_s_vec.emplace_back(current_s);
         right_l_vec.emplace_back(last_l);
       }
     }
   }
   // spline
-  double max_lane_width = 10.0;
+  if (left_s_vec.size() < 4) {
+    DensePassableBoundary(left_s_vec, left_l_vec);
+  }
+  if (right_s_vec.size() < 4) {
+    DensePassableBoundary(right_s_vec, right_l_vec);
+  }
+  const auto& planning_init_point =
+      reference_path->get_frenet_ego_state().planning_init_point();
+  const double extra_width_buffer = 3.0;
   if (left_s_vec.size() < 4 &&
       right_s_vec.size() < 4) {
     return false;
@@ -224,18 +257,47 @@ bool ConstructionSceneRefline::GeneratePassableBoundary(
     left_l_vec.clear();
     left_s_vec = right_s_vec;
     for (size_t i = 0; i < right_l_vec.size(); ++i) {
-      left_l_vec.emplace_back(right_l_vec[i] + max_lane_width);
+      double virtual_left_l =
+          std::max(right_l_vec[i], planning_init_point.frenet_state.r) + extra_width_buffer;
+      left_l_vec.emplace_back(virtual_left_l);
     }
   } else if (right_s_vec.size() < 4) {
     right_s_vec.clear();
     right_l_vec.clear();
     right_s_vec = left_s_vec;
     for (size_t i = 0; i < left_l_vec.size(); ++i) {
-      right_l_vec.emplace_back(left_l_vec[i] - max_lane_width);
+      double virtual_right_l =
+          std::min(left_l_vec[i], planning_init_point.frenet_state.r) - extra_width_buffer;
+      right_l_vec.emplace_back(virtual_right_l);
     }
   }
   left_boundary_spline_.set_points(left_s_vec, left_l_vec);
   right_boundary_spline_.set_points(right_s_vec, right_l_vec);
+  return true;
+}
+
+bool ConstructionSceneRefline::DensePassableBoundary(
+    std::vector<double>& raw_s_vec, std::vector<double>& raw_l_vec) {
+  if (raw_s_vec.size() < 2 || raw_l_vec.size() < 2 ||
+      raw_s_vec.size() != raw_l_vec.size()) {
+    return false;
+  }
+  std::vector<double> dense_s_vec;
+  std::vector<double> dense_l_vec;
+  for (size_t i = 0; i < raw_s_vec.size() - 1; ++i) {
+    double mid_s = 0.5 * (raw_s_vec[i] + raw_s_vec[i + 1]);
+    double mid_l = 0.5 * (raw_l_vec[i] + raw_l_vec[i + 1]);
+    dense_s_vec.emplace_back(raw_s_vec[i]);
+    dense_l_vec.emplace_back(raw_l_vec[i]);
+    dense_s_vec.emplace_back(mid_s);
+    dense_l_vec.emplace_back(mid_l);
+  }
+  dense_s_vec.emplace_back(raw_s_vec.back());
+  dense_l_vec.emplace_back(raw_l_vec.back());
+  raw_s_vec.clear();
+  raw_l_vec.clear();
+  raw_s_vec = std::move(dense_s_vec);
+  raw_l_vec = std::move(dense_l_vec);
   return true;
 }
 
@@ -350,8 +412,8 @@ bool ConstructionSceneRefline::GenerateCenterLines(
     }
     if (!frenet_refline.empty()) {
       double last_line_l = frenet_refline.back().y;
-      if (last_line_l < left_boundary_l &&
-          last_line_l > right_boundary_l) {
+      if (last_line_l + half_lane_width < left_boundary_l &&
+          last_line_l - half_lane_width > right_boundary_l) {
         if (pt.y - last_line_l > kLateralDistanceDiff) {
           pt.y = last_line_l + kLateralDistanceDiff;
         } else if (last_line_l - pt.y > kLateralDistanceDiff) {
@@ -361,6 +423,30 @@ bool ConstructionSceneRefline::GenerateCenterLines(
     }
     frenet_refline.emplace_back(std::move(pt));
   }
+  PostProcessFrenetRefLine(reference_path->get_frenet_ego_state().planning_init_point(), frenet_refline);
+  return true;
+}
+
+bool ConstructionSceneRefline::PostProcessFrenetRefLine(
+    const planning::PlanningInitPoint& init_point, std::vector<Point2d>& frenet_refline) {
+  if (frenet_refline.size() < 2) {
+    return true;
+  }
+  double boundary_dist_to_init_s =
+      std::min(left_boundary_spline_.get_x().front(), right_boundary_spline_.get_x().front()) -
+      init_point.frenet_state.s;
+  for (size_t i = frenet_refline.size() - 2; i > 0; --i) {
+    if (frenet_refline[i].x  - init_point.frenet_state.s >= boundary_dist_to_init_s) {
+      continue;
+    }
+    double dist_to_init_s = std::fabs(frenet_refline[i + 1].x - init_point.frenet_state.s);
+    double dist_to_init_l = frenet_refline[i + 1].y - init_point.frenet_state.r;
+    double move_dl = dist_to_init_l / dist_to_init_s;
+    double move_to_init_l = std::max(std::min(move_dl, 1e-2), -1e-2);
+    frenet_refline[i].y =
+        frenet_refline[i + 1].y - move_to_init_l * (frenet_refline[i + 1].x - frenet_refline[i].x);
+  }
+  frenet_refline[0].y = frenet_refline[1].y;
   return true;
 }
 
@@ -368,9 +454,8 @@ bool ConstructionSceneRefline::GenerateConstructionRefLine(
     const std::shared_ptr<planning::LaneReferencePath>& reference_path,
     const std::vector<Point2d>& frenet_refline) {
   const auto& frenet_coord = reference_path->get_frenet_coord();
-  std::vector<double> refline_x_vec, refline_y_vec;
-  refline_x_vec.reserve(frenet_refline.size());
-  refline_y_vec.reserve(frenet_refline.size());
+  refline_x_vec_.reserve(frenet_refline.size());
+  refline_y_vec_.reserve(frenet_refline.size());
   construction_ref_path_.reserve(frenet_refline.size());
   constexpr double kDefaultLaneBorderDis = 20.0;
   for (const Point2d& line_point : frenet_refline) {
@@ -379,8 +464,8 @@ bool ConstructionSceneRefline::GenerateConstructionRefLine(
       ReferencePathPoint ref_path_pt;
       double point_x, point_y;
       if (frenet_coord->SLToXY(line_point.x, line_point.y, &point_x, &point_y)) {
-        refline_x_vec.emplace_back(point_x);
-        refline_y_vec.emplace_back(point_y);
+        refline_x_vec_.emplace_back(point_x);
+        refline_y_vec_.emplace_back(point_y);
         ref_path_pt.path_point.set_x(point_x);
         ref_path_pt.path_point.set_y(point_y);
         ref_path_pt.distance_to_left_road_border = std::fmin(
@@ -402,9 +487,13 @@ bool ConstructionSceneRefline::GenerateConstructionRefLine(
       }
     }
   }
-  JSON_DEBUG_VECTOR("construction_refline_x", refline_x_vec, 2);
-  JSON_DEBUG_VECTOR("construction_refline_y", refline_y_vec, 2);
+  LogRefline();
   return true;
+}
+
+void ConstructionSceneRefline::LogRefline() {
+  JSON_DEBUG_VECTOR("construction_refline_x", refline_x_vec_, 2);
+  JSON_DEBUG_VECTOR("construction_refline_y", refline_y_vec_, 2);
 }
 
 }  // namespace planning
