@@ -56,7 +56,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
  private:
   Tlane t_lane_;
-  std::vector<Eigen::Vector2d> obs_pt_local_vec_;
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelOutPathGenerator parallel_out_path_planner_;
   // std::vector<bool> multi_parkout_direction; // 0: left front, 1: right
   // front, 2: left back, 3: right back
