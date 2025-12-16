@@ -61,16 +61,6 @@ void ApaSlotManager::Update(
   const auto sapa_status = state_machine_ptr->GetSAPAStatus();
   ILOG_INFO << "is_sapa_mode_ : " << is_sapa_mode
             << " sapa_status : " << ApaStateMachineManager::GetParkingSAPAStatusString(sapa_status);
-  //TODO: 这部分逻辑需要移走
-  if (state_machine_ptr->IsSeachingStatus() && is_sapa_mode &&
-      sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
-    for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
-      ego_info_under_slot_.slot.release_info_.release_state[i] =
-          SlotReleaseState::NOT_RELEASE;
-    }
-    select_slot_id = 0;
-  }
-
   ILOG_INFO << "parking_fusion slot size = " << slot_size
             << "  select slot id = " << select_slot_id;
 
@@ -83,9 +73,8 @@ void ApaSlotManager::Update(
         local_view->parking_fusion_info.parking_fusion_slot_lists[i];
 
     ApaSlot slot(fusion_slot);
-    //TODO: 不应该放在这里
-    if (is_sapa_mode) {
-      slot.slot_source_type_ = SlotSourceType::SELF_DEFINE;
+    if (is_sapa_mode && slot.GetId() == kSlotFreeId) {
+      slot.SetSourceType(SlotSourceType::SELF_DEFINE);
     }
 
     if (slot.GetId() == select_slot_id) {
@@ -157,7 +146,15 @@ void ApaSlotManager::Update(
 
   // 更新基于规则的车位释放
   if(state_machine_ptr_->IsSeachingInStatus()) {
-    ParkingLotCruiseProcess();
+    if (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
+      //TODO(taolu10): 确认这部分逻辑的合理性
+      for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
+        ego_info_under_slot_.slot.release_info_.release_state[i] =
+            SlotReleaseState::NOT_RELEASE;
+      }
+    } else {
+      ParkingLotCruiseProcess();
+    }
   } else if(state_machine_ptr_->IsSeachingOutStatus()) {
     //TODO(taolu10): 确认这部分逻辑的合理性
     ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
