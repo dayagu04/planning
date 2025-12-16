@@ -2569,8 +2569,8 @@ struct HppGeneralLateralDeciderConfig : public EgoPlanningConfig {
     ReadItem<double>(json, extra_hard_buffer2groundline, "general_lateral_decider",
                      "extra_hard_buffer2groundline");
     ReadItem<bool>(json, lateral_ref_traj_type, "general_lateral_decider",
-                     "lateral_ref_traj_type");                                              
-    
+                     "lateral_ref_traj_type");
+
     ReadItem<double>(json, care_dynamic_object_t_threshold, "general_lateral_decider",
                      "care_dynamic_object_t_threshold");
     ReadItem<double>(json, care_static_object_t_threshold, "general_lateral_decider",
@@ -2735,9 +2735,13 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
     dist_to_routing_destination_thr =
         read_json_key<double>(json, "dist_to_routing_destination_thr",
                               dist_to_routing_destination_thr);
+    memory_slot_allowed_to_park_time_thr =
+        read_json_key<double>(json, "memory_slot_allowed_to_park_time_thr",
+                              memory_slot_allowed_to_park_time_thr);
   }
   double dist_to_parking_space_thr = 2.0;
   double dist_to_routing_destination_thr = 1.0;
+  double memory_slot_allowed_to_park_time_thr = 5.0;
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {

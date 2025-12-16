@@ -21,7 +21,9 @@ struct HppParkingSwitchInfo {
   bool is_selected_slot_allowed_to_park;
   HppTrajStitchStatus traj_status;
 
+  //For E541：stop near the routing destination before enter the parking status
   bool is_standstill_near_routing_destination;
+  bool is_timeout_for_memory_slot_allowed_to_park;
 
   void Clear() {
     dist_to_memory_slot = NL_NMAX;
@@ -30,6 +32,7 @@ struct HppParkingSwitchInfo {
     has_parking_slot_in_hpp_searching = false;
     is_selected_slot_allowed_to_park = false;
     is_standstill_near_routing_destination = false;
+    is_timeout_for_memory_slot_allowed_to_park = false;
     return;
   }
 };

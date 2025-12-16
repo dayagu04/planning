@@ -23,6 +23,9 @@ class ParkingSwitchDecider : public Task {
  private:
   HppParkingSwitchConfig config_;
   HppParkingSwitchInfo parking_switch_info_;
+
+  /****************** internal use ***************/
+  double timestamp_at_standstill_near_dest_ = 0.0;
 };
 
 }  // namespace planning

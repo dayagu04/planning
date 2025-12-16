@@ -12,6 +12,7 @@ ParkingSwitchDecider::ParkingSwitchDecider(
   config_ = config_builder->cast<HppParkingSwitchConfig>();
   name_ = "ParkingSwitchDecider";
   parking_switch_info_.Clear();
+  timestamp_at_standstill_near_dest_ = 0.0;
 }
 
 bool ParkingSwitchDecider::Execute() {
@@ -67,24 +68,39 @@ bool ParkingSwitchDecider::Execute() {
                .is_memory_slot_occupied)) {
         parking_switch_info_.is_memory_slot_occupied = true;
       }
-    } 
+    }
   } else {
     // do nothing
   }
 
   //for E541
   if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    const auto last_is_standstill_near_routing_destination =
+        parking_switch_info_.is_standstill_near_routing_destination;
+    const double curr_timestamp = IflyTime::Now_ms();
     if (IsNearRoutingDestination() && (ego_v <= 1e-2)) {
       parking_switch_info_.is_standstill_near_routing_destination = true;
+      if(last_is_standstill_near_routing_destination == false) {
+        timestamp_at_standstill_near_dest_ = curr_timestamp;
+      }
+      const double duration_time_since_standstill_near_dest =
+          (curr_timestamp - timestamp_at_standstill_near_dest_) / 1000.0;
+      if (parking_switch_info_.is_memory_slot_allowed_to_park == false &&
+          duration_time_since_standstill_near_dest >
+              config_.memory_slot_allowed_to_park_time_thr) {
+        parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park = true;
+      } else {
+        parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park = false;
+      }
+    } else {
+      parking_switch_info_.is_standstill_near_routing_destination = false;
+      timestamp_at_standstill_near_dest_ = 0.0;
     }
   }
 
-  ILOG_INFO << "is_memory_slot_allowed_to_park: "
-            << parking_switch_info_.is_memory_slot_allowed_to_park
-            << " is_standstill_near_routing_destination: "
-            << parking_switch_info_.is_standstill_near_routing_destination;
   JSON_DEBUG_VALUE("is_memory_slot_allowed_to_park", parking_switch_info_.is_memory_slot_allowed_to_park);
   JSON_DEBUG_VALUE("is_standstill_near_routing_destination", parking_switch_info_.is_standstill_near_routing_destination);
+  JSON_DEBUG_VALUE("is_timeout_for_memory_slot_allowed_to_park", parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park);
 
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()

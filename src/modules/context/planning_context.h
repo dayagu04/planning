@@ -88,6 +88,9 @@ class PlanningContext {
   const bool memory_slot_allowed_to_park() const {
     return parking_switch_decider_output_.parking_switch_info.is_memory_slot_allowed_to_park;
   }
+  const bool timeout_for_memory_slot_allowed_to_park() const {
+    return parking_switch_decider_output_.parking_switch_info.is_timeout_for_memory_slot_allowed_to_park;
+  }
 
   const bool last_planning_success() const { return last_planning_success_; }
 
