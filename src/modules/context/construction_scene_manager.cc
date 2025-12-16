@@ -26,7 +26,7 @@ constexpr double kCareLongDistance = 130;
 constexpr double kConstructionBucketSpacingThreshold = 8; // 国标是5m
 constexpr double kNumSatisfySonstructionAgent = 2;
 constexpr int kHysteresisFrames = 5;
-constexpr int kDisableConstructionPassageHysteresisFrames = 5;
+constexpr int kDisableConstructionPassageHysteresisFrames = 10;
 
 }  // namespace
 
