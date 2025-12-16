@@ -59,7 +59,6 @@ constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
-constexpr double kEWMAAlpha = 0.1;
 // Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1, 0.05]
 const std::vector<double> _EWMA_ALPHA_RADIUS_BP{150.0, 300.0, 500.0, 600.0};
 const std::vector<double> _EWMA_ALPHA_V{0.3, 0.15, 0.1, 0.05};
