@@ -4242,16 +4242,12 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
             before_excr_feasible_lane.emplace_back(i + 1 +
                                                    successor_other_exclnum);
           }
-
-          if (is_other_split_ramp && !is_continue_lane) {
-            RemoveElement(before_excr_feasible_lane, 1);
-            RemoveElement(on_excr_feasible_lane, 1);
+          for (int i = 0; i < successor_other_exclnum; ++i) {
             mlc_request_info_.emplace_back(
-                MLCRequestType{.lane_num = 1,
-                               .mlc_request_type = AVOIDE_DIVERGE,
+                MLCRequestType{.lane_num = i + 1,
+                               .mlc_request_type = KEEP_LEFT,
                                .split_direction = SPLIT_RIGHT});
           }
-
         } else {
           on_excr_feasible_lane.emplace_back(on_exclnum);
           before_excr_feasible_lane.emplace_back(before_exclnum);
