@@ -74,6 +74,7 @@ class LaneChangeRequest {
 
   RequestType request_type() const { return request_type_; }
   int target_lane_virtual_id() { return target_lane_virtual_id_; }
+  int origin_lane_virtual_id() { return origin_lane_virtual_id_; }
   void set_target_lane_virtual_id(int target_lane_virtual_id) {
     target_lane_virtual_id_ = target_lane_virtual_id;
   }

@@ -419,7 +419,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   const bool GenTiltedPreparingLine2ShortChannel(
       std::vector<pnc::geometry_lib::PathPoint> &preparing_pose_vec);
 
-  const bool CheckEgoInSlot() const;
+  const bool CheckEgoInSlot();
   const bool CalMinSafeCircle();
   const bool CalcParkOutPose(pnc::geometry_lib::PathSegment &park_out_seg);
 
@@ -673,6 +673,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   bool enable_pa_park_ = false;
   PaPlanMethod first_pa_plan_method_;
   bool had_park_out = false;
+  bool better_out_path_again_lastframe_ =false;
 };
 
 }  // namespace apa_planner

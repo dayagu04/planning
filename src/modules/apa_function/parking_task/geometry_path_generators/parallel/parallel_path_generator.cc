@@ -2253,9 +2253,16 @@ void ParallelPathGenerator::AddPathSegToOutPut(
   }
 }
 
-const bool ParallelPathGenerator::CheckEgoInSlot() const {
+const bool ParallelPathGenerator::CheckEgoInSlot()  {
+
   // Todo: use slot occupied ratio
-  return input_.ego_info_under_slot.slot_occupied_ratio > 0.0;
+  float threhold = 0.0;
+  if (input_.out_again_path_better && !better_out_path_again_lastframe_){
+    threhold = 0.3;
+    ILOG_INFO << "better out path again last frame";
+  }
+  better_out_path_again_lastframe_ = input_.out_again_path_better;
+  return input_.ego_info_under_slot.slot_occupied_ratio > threhold;
 }
 
 // search from the inside parking space to outside
@@ -7035,15 +7042,20 @@ void ParallelPathGenerator::TrimPathByLimiter(
 void ParallelPathGenerator::TrimPathByLimiterPathPoint(
     std::vector<geometry_lib::PathPoint>& sampled_path_seg, bool is_global) {
   if (input_.is_searching_stage) {
+    ILOG_INFO << "searching stage";
+
     return;
   }
   if (!input_.ego_info_under_slot.slot.GetLimiter().valid) {
+    ILOG_INFO << "limiter is invalid";
     return;
   }
   if (sampled_path_seg.size() == 0) {
+    ILOG_INFO << "sampled_path_seg.size() == 0";
     return;
   }
   if (sampled_path_seg[0].gear == 1) {
+    ILOG_INFO << "gear is 1";
     return;
   }
 

@@ -1,12 +1,9 @@
 #include "apa_slot_manager.h"
-#include <Eigen/src/Core/Matrix.h>
-
 #include <cmath>
 #include <cstddef>
 #include <map>
 #include <unordered_map>
 #include <vector>
-
 #include "apa_param_config.h"
 #include "apa_slot.h"
 #include "apa_state_machine_manager.h"
@@ -43,19 +40,6 @@ void ApaSlotManager::Update(
 
   double start_time = IflyTime::Now_ms();
 
-  free_slot_activate_ = state_machine_ptr->GetFreeSlotActivate();
-  is_free_slot_selected_ = state_machine_ptr->GetFreeSlotSelectedStatus();
-  ILOG_INFO << "free_slot_activate_ : " << free_slot_activate_
-            << " is_free_slot_selected_ : " << is_free_slot_selected_;
-  if (state_machine_ptr->IsSeachingStatus() && free_slot_activate_ &&
-      is_free_slot_selected_ != iflyauto::FreeSlotSelectedStatus::
-                                    FREE_SLOT_SELECTED_STATUS_FINISHED) {
-    for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
-      ego_info_under_slot_.slot.release_info_.release_state[i] =
-          SlotReleaseState::NOT_RELEASE;
-    }
-  }
-
   ILOG_INFO << "Update ApaSlotManager";
   measure_data_ptr_ = measure_data_ptr;
   state_machine_ptr_ = state_machine_ptr;
@@ -69,7 +53,21 @@ void ApaSlotManager::Update(
 
   const size_t slot_size =
       local_view->parking_fusion_info.parking_fusion_slot_lists_size;
-  const size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
+  size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
+
+  free_slot_activate_ = state_machine_ptr->GetFreeSlotActivate();
+  is_free_slot_selected_ = state_machine_ptr->GetFreeSlotSelectedStatus();
+  ILOG_INFO << "free_slot_activate_ : " << free_slot_activate_
+            << " is_free_slot_selected_ : " << is_free_slot_selected_;
+  if (state_machine_ptr->IsSeachingStatus() && free_slot_activate_ &&
+      is_free_slot_selected_ != iflyauto::FreeSlotSelectedStatus::
+                                    FREE_SLOT_SELECTED_STATUS_FINISHED) {
+    for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
+      ego_info_under_slot_.slot.release_info_.release_state[i] =
+          SlotReleaseState::NOT_RELEASE;
+    }
+    select_slot_id = 0;
+  }
 
   ILOG_INFO << "parking_fusion slot size = " << slot_size
             << "  select slot id = " << select_slot_id;
@@ -210,8 +208,10 @@ void ApaSlotManager::Update(
 
   if (ego_info_under_slot_.slot.GetType() == SlotType::PARALLEL) {
     const iflyauto::ParkingFusionSlot* fusion_slot;
-    ego_info_under_slot_.neigbor_rear_heading = -100;
-    ego_info_under_slot_.neigbor_front_heading = -100;
+    ego_info_under_slot_.neigbor_rear_heading = -100.0;
+    ego_info_under_slot_.neigbor_front_heading = -100.0;
+    double neigbor_front_heading_obs = -100.0;
+    double neigbor_front_heading_slot = -100.0;
     for (size_t i = 0; i < slot_size; ++i) {
       fusion_slot =
           &local_view->parking_fusion_info.parking_fusion_slot_lists[i];
@@ -257,22 +257,73 @@ void ApaSlotManager::Update(
       auto res = ApaObstacleManager::CheckParaSlotObsPtsAreNeighbour(
           slot_vertexs, fusion_slot, d_per_edge, ego_pose);
       if (is_front_slot && res.first == 0) {
-        ego_info_under_slot_.neigbor_front_heading = res.second;
-        ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
-                     "slot heading"
-                  << ego_info_under_slot_.neigbor_front_heading;
+
+        neigbor_front_heading_slot = res.second;
+        ILOG_INFO << "neigbor_front_heading_slot first" <<
+              neigbor_front_heading_slot;
+        if (neigbor_front_heading_slot > 2 * M_PI ||
+            neigbor_front_heading_slot < -2 * M_PI) {
+          neigbor_front_heading_slot = 0.0;
+        } else if (neigbor_front_heading_slot > M_PI_2) {
+          neigbor_front_heading_slot = -M_PI + neigbor_front_heading_slot;
+        } else if (neigbor_front_heading_slot < -M_PI_2) {
+          neigbor_front_heading_slot = M_PI + neigbor_front_heading_slot;
+        }
+        if (std::abs(neigbor_front_heading_slot) < pnc::mathlib::Deg2Rad(5.0) ||
+            std::abs(neigbor_front_heading_slot) >
+                pnc::mathlib::Deg2Rad(45.0)) {
+          neigbor_front_heading_slot = 0.0;
+        }
+
       }
     }
     auto its = obstacle_manager_ptr_->GetParallelSlotNeighbourObjsHeading();
     if (its[0] != -100.0) {
-      ego_info_under_slot_.neigbor_front_heading = its[0];
-      ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front car "
-                   "object heading"
-                << ego_info_under_slot_.neigbor_front_heading;
+      neigbor_front_heading_obs = its[0];
+      ILOG_INFO << "neigbor_front_heading_obs first" <<
+              neigbor_front_heading_obs;
+
+      if (neigbor_front_heading_obs > 2 * M_PI ||
+          neigbor_front_heading_obs < -2 * M_PI) {
+        neigbor_front_heading_obs = 0.0;
+      } else if (neigbor_front_heading_obs > M_PI_2) {
+        neigbor_front_heading_obs = -M_PI + neigbor_front_heading_obs;
+      } else if (neigbor_front_heading_obs < -M_PI_2) {
+        neigbor_front_heading_obs = M_PI + neigbor_front_heading_obs;
+      }
+      if (std::abs(neigbor_front_heading_obs) < pnc::mathlib::Deg2Rad(5.0) ||
+          std::abs(neigbor_front_heading_obs) > pnc::mathlib::Deg2Rad(45.0)) {
+        neigbor_front_heading_obs = 0.0;
+      }
+
     }
     if (its[1] != -100.0) {
       ego_info_under_slot_.neigbor_rear_heading = its[1];
     }
+    if (neigbor_front_heading_obs > 2 * M_PI ||
+          neigbor_front_heading_obs < -2 * M_PI) {
+            ILOG_INFO << "neigbor_front_heading_obs before" <<
+              neigbor_front_heading_obs;
+        neigbor_front_heading_obs = 0.0;
+      }
+      if (neigbor_front_heading_slot > 2 * M_PI ||
+          neigbor_front_heading_slot < -2 * M_PI) {
+        neigbor_front_heading_slot = 0.0;
+        ILOG_INFO << "neigbor_front_heading_slot before" <<
+              neigbor_front_heading_slot;
+      }
+    if(std::abs(neigbor_front_heading_obs) > std::abs(neigbor_front_heading_slot)){
+      ego_info_under_slot_.neigbor_front_heading = neigbor_front_heading_obs;
+      ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
+                     "obs heading"
+                  << ego_info_under_slot_.neigbor_front_heading;
+    }else{
+      ego_info_under_slot_.neigbor_front_heading = neigbor_front_heading_slot;
+      ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading use front "
+                     "slot heading"
+                  << ego_info_under_slot_.neigbor_front_heading;
+    }
+
     ILOG_INFO << "ego_info_under_slot_.neigbor_front_heading = "
               << ego_info_under_slot_.neigbor_front_heading;
   }

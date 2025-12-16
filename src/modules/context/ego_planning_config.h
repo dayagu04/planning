@@ -226,6 +226,8 @@ struct EgoPlanningConfig : public Config {
         json, "overtake_radical_lane_change_speed_threshold");
     overtake_soft_lane_change_speed_threshold = read_json_key<double>(
         json, "overtake_soft_lane_change_speed_threshold");
+    overtake_speed_threshold_adjust_params = read_json_key<double>(
+        json, "overtake_speed_threshold_adjust_params");
 
     enable_use_speed_limit_to_suppress_interactive_lane_change =
         read_json_key<bool>(
@@ -282,6 +284,7 @@ struct EgoPlanningConfig : public Config {
   double overtake_standard_right_lane_change_speed_threshold = 4.17;
   double overtake_radical_lane_change_speed_threshold = 2.78;
   double overtake_soft_lane_change_speed_threshold = 5.56;
+  double overtake_speed_threshold_adjust_params = 0.6;
   bool enable_use_speed_limit_to_suppress_interactive_lane_change = true;
   double minimum_distance_nearby_ramp_to_surpress_overtake_lane_change = 500;
   double minimum_distance_nearby_split_to_surpress_specific_direction_overtake =

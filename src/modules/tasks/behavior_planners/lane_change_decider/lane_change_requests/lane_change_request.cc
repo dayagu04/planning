@@ -36,6 +36,8 @@ constexpr double kDefaultLaneWidth = 4.5;
 constexpr double kMinDefaultLaneWidth = 2.65;
 constexpr int kInvalidAgentId = -1;
 constexpr double kHysteresisCoefficient = 1.5;
+constexpr double kConeLaneChangelateralDistancethre = 2.25;
+
 }  // namespace
 LaneChangeRequest::LaneChangeRequest(
     framework::Session *session,
@@ -529,7 +531,8 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
   bool is_process_split = route_info_output.mlc_decider_route_info
-                          .first_static_split_region_info.is_ramp_split;
+                          .first_static_split_region_info.is_ramp_split ||
+                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
@@ -891,6 +894,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
+  const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
+  const auto cur_reference_path =
+      ref_path_mgr->get_reference_path_by_current_lane();
   double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_default_ego_pass_buffer = kLatPassThre;
@@ -912,6 +918,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
           ->get_reference_path_manager()
           ->get_reference_path_by_lane(target_lane->get_virtual_id(), false);
 
+  if (origin_refline == nullptr) {
+    return false;
+  }
   const auto &frenet_obstacles_map = origin_refline->get_obstacles_map();
   const auto &base_frenet_coord = origin_refline->get_frenet_coord();
   if (!base_frenet_coord) {
@@ -1039,7 +1048,21 @@ bool LaneChangeRequest::ConeSituationJudgement(
     double min_left_l, min_right_l;
     min_left_l = CalcClusterToBoundaryDist(points, LEFT_CHANGE);
     min_right_l = CalcClusterToBoundaryDist(points, RIGHT_CHANGE);
+    double total_l = 0.0;
+    // 过滤横向远离车道中心线的锥桶簇
+    double min_l_to_center_line = 10.0;
+    if (points.size() <= 0) {
+      continue;
+    }
 
+    for (const auto &p : points) {
+      min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
+      total_l += p.l;
+    }
+    if (min_l_to_center_line > kConeLaneChangelateralDistancethre * kHysteresisCoefficient) {
+      continue;
+    }
+    double average_l = total_l / points.size();
     ILOG_DEBUG << "min_left_l is:" << min_left_l
                << ", min_right_l is: is:" << min_right_l
                << ", pass_threshold_left is:" << pass_threshold_left
@@ -1048,8 +1071,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5)) {
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 && average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 && average_l < 0.0)) {
       return false;
     }
   }

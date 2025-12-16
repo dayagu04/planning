@@ -57,12 +57,18 @@ class OvertakeRequest : public LaneChangeRequest {
   bool isCouldOvertakeByRoute(
       const std::shared_ptr<ReferencePath>& base_ref_line,
       const std::shared_ptr<VirtualLane>& target_lane,
-      const double lane_traffic_speed, const agent::Agent* agent,
-      const bool is_left);
+      const double &lane_traffic_speed, const agent::Agent* agent,
+      const bool &is_left,
+      const bool &left_and_right_both_on_navigation_route,
+      const double &total_feasible_lane_remain_distance,
+      double& left_overtake_speed_threshold,
+      double& right_overtake_speed_threshold);
 
   bool isCouldOvertakeMaintainByRoute(const double lane_traffic_speed,
                                       const agent::Agent* agent,
-                                      const bool is_left);
+                                      const bool is_left, const std::shared_ptr<VirtualLane>& target_lane,
+                                      const double& total_feasible_lane_remain_distance,
+                                      const bool& both_lane_is_on_navigation_route);
 
   bool FeasibleLaneDistanceEnoughJudgment(
       const double& lane_traffic_speed, const double& leading_speed,
@@ -145,6 +151,8 @@ class OvertakeRequest : public LaneChangeRequest {
   double getDrivingDistance(const double v, const double a, const double t,
                             double* v_out);
 
+  double CalculateAttenuationCoefficient(const double& lc_duration);
+
   EgoPlanningConfig config_;
   std::shared_ptr<planning_math::KDPath> base_frenet_coord_;
   PlanningInitPoint planning_init_point_;
@@ -172,6 +180,8 @@ class OvertakeRequest : public LaneChangeRequest {
   RequestType last_request_type_ = NO_CHANGE;
   int right_lane_nums_ = 0;
   int left_lane_nums_ = 0;
+  double left_feasible_lane_remain_distance_ = 1500.0;
+  double right_feasible_lane_remain_distance_ = 1500.0;
 };
 
 }  // namespace planning

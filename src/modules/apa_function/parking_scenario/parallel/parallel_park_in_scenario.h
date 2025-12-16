@@ -145,6 +145,8 @@ class ParallelParkInScenario : public ParkingScenario {
   std::unordered_map<size_t, int> parent_total_count;
   std::unordered_map<size_t, int> parent_height_count;
   std::unordered_map<int, std::vector<AngleResultHeightObs>> multi_frame_height_obs_map_;
+  bool last_frame_limiter_valid_ = false;
+  bool out_again_path_better_ = false;
 };
 
 }  // namespace apa_planner
