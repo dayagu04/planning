@@ -923,6 +923,21 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'text_yn': [text_yn],
     # })
 
+    reference_path_smooth_info = plan_debug_msg.reference_path_smooth_info
+    print("is_smooth_success: ", reference_path_smooth_info.is_smooth_success)
+    print("smooth_refpath_points_cost: ",plan_debug_json_msg["smooth_refpath_points_cost"])
+    smooth_ref_path_x = []
+    smooth_ref_path_y = []
+    if g_is_display_enu:
+      smooth_ref_path_x, smooth_ref_path_y = reference_path_smooth_info.smooth_x_vec, reference_path_smooth_info.smooth_y_vec
+    else:
+      smooth_ref_path_x, smooth_ref_path_y = coord_tf.global_to_local(reference_path_smooth_info.smooth_x_vec, reference_path_smooth_info.smooth_y_vec)
+    smooth_ref_path_s = reference_path_smooth_info.smooth_s_vec
+    local_view_data['data_smooth_ref_path'].data.update({
+      'smooth_ref_path_x': smooth_ref_path_x,
+      'smooth_ref_path_y': smooth_ref_path_y
+    })
+
     obstacle_polygon_id = local_view_data['data_select_obs_id'].data['obstacle_polygon_id']
     plan_obstacle_info = load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car, loc_msg)
     if g_is_display_enu:
@@ -2071,6 +2086,9 @@ def load_local_view_figure():
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
 
+  data_smooth_ref_path = ColumnDataSource(data = {'smooth_ref_path_x':[],
+                                                  'smooth_ref_path_y':[]})
+
   data_select_obs_id = ColumnDataSource(data = {'prediction_obstacle_id':[],
                                                 'obstacle_polygon_id':[],
                                                 })
@@ -2361,6 +2379,7 @@ def load_local_view_figure():
                      'data_fix_lane': data_fix_lane ,\
                      'data_target_lane': data_target_lane ,\
                      'data_origin_lane': data_origin_lane ,\
+                     'data_smooth_ref_path': data_smooth_ref_path, \
                      'data_select_obs_id': data_select_obs_id,\
                      'data_prediction_0' : data_prediction_0 ,\
                      'data_prediction_1' : data_prediction_1 ,\
@@ -2633,6 +2652,8 @@ def load_local_view_figure():
   fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
+  fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
