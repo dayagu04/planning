@@ -543,19 +543,21 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              ->get_current_lane();
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
-  bool is_process_split = route_info_output.mlc_decider_route_info
-                              .first_static_split_region_info.is_ramp_split ||
+  bool is_process_split = route_info_output.mlc_decider_route_info.is_process_split ||
                           route_info_output.baidu_mlc_scene == SPLIT_SCENE;
-  ;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_MERGE;
-
+  bool is_one_lane_gap =
+      lc_request == RIGHT_CHANGE
+          ? (route_info_output.minVal_seq - route_info_output.ego_seq) == 1
+          : (route_info_output.ego_seq - route_info_output.maxVal_seq) == 1;
   const bool is_satisfy_dis_condition =
       route_info_output.mlc_request_type_route_info
-              .distance_to_exchange_region < 100.0 ||
+                  .distance_to_exchange_region < 100.0 &&
+          is_one_lane_gap ||
       (route_info_output.baidu_mlc_scene == SPLIT_SCENE &&
        route_info_output.dis_to_ramp < 100.0);
 
