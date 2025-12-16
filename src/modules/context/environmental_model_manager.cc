@@ -1791,7 +1791,9 @@ bool EnvironmentalModelManager::CheckIfVru(const int type) {
       type == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
       type == iflyauto::ObjectType::OBJECT_TYPE_ANIMAL ||
       type == iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
     return true;
   } else {
     return false;
@@ -1818,9 +1820,7 @@ bool EnvironmentalModelManager::CheckIfCar(const int type) {
       type == iflyauto::ObjectType::OBJECT_TYPE_VAN ||
       type == iflyauto::ObjectType::OBJECT_TYPE_BUS ||
       type == iflyauto::ObjectType::OBJECT_TYPE_TRUCK ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
-      type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING) {
+      type == iflyauto::ObjectType::OBJECT_TYPE_TRAILER) {
     return true;
   } else {
     return false;
