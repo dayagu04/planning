@@ -327,17 +327,27 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   auto front_heading = input_.ego_info_under_slot.neigbor_front_heading;
   if (front_heading > M_PI || front_heading < -M_PI) {
     front_heading = 0.0;
-  }else if (front_heading > M_PI_2){
-    front_heading = -M_PI + front_heading;
-  }else if (front_heading < -M_PI_2) {
-    front_heading = M_PI + front_heading;
   }
-  if (std::abs(front_heading) < pnc::mathlib::Deg2Rad(5.0) ||
-      std::abs(front_heading) > pnc::mathlib::Deg2Rad(45.0)) {
-    front_heading = 0.0;
+  bool is_inner_arc_slot = false;
+  if (slot_side_sgn < 0.0 && front_heading < -pnc::mathlib::Deg2Rad(10.0) &&
+      front_heading > -pnc::mathlib::Deg2Rad(45.0)) {
+    is_inner_arc_slot = true;
+  }
+  if (slot_side_sgn > 0.0 && front_heading > pnc::mathlib::Deg2Rad(10.0) &&
+      front_heading < pnc::mathlib::Deg2Rad(45.0)) {
+    is_inner_arc_slot = true;
+  }
+  Eigen::Vector2d prepare_pose_start = input_.tlane.pt_inside;
+  if (is_inner_arc_slot && input_.tlane.pt_inside.x() > 6.5) {
+    prepare_pose_start.x() = 5.5;
+    ILOG_INFO << "prepare_pose_start.x = " << prepare_pose_start.x();
   }
   ILOG_INFO << "park out prepare line front_heading = " << front_heading;
-  pnc::geometry_lib::PathPoint prepare_pose(input_.tlane.pt_inside, front_heading);
+  if (input_.is_searching_stage){
+    arc_slot_init_out_heading_ = front_heading;
+  }
+
+  pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, front_heading);
   prepare_pose.pos.y() = rac_tlane_bound_near;
 
   const auto y_vec =
