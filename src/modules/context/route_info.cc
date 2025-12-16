@@ -211,9 +211,12 @@ void RouteInfo::UpdateRouteInfoForNOA(
   CaculateDistanceToLastSplitPoint(sdpro_map, current_link, nearest_s,
                                    max_search_length);
 
-  // 计算到路线终点的距离
-  CaculateDistanceToRoadEnd(sdpro_map, current_link, nearest_s,
-                            max_search_length);
+  if (segment != nullptr) {
+    const SdMapSwtx::Segment& current_segment = *segment;
+    // 计算到路线终点的距离
+    CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s,
+                              max_search_length);
+  }
 
   // 计算到最近收费站的距离
   CaculateDistanceToTollStation(sdpro_map, current_link, nearest_s,
@@ -1419,6 +1422,7 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
     return segment;
   }
 
+  segment = current_segment;
   // debug当前segment的经纬度信息
   if (current_segment->shape_points_size() > 0) {
     const auto& temp_point_LLH = current_segment->shape_points(0);
@@ -1453,7 +1457,6 @@ const SdMapSwtx::Segment* RouteInfo::UpdateEgoSegmentInfo(
   }
 
   route_info_output_.is_in_sdmaproad = true;
-  segment = current_segment;
   *nearest_s = temp_nearest_s;
   route_info_output_.is_on_highway =
       current_segment->priority() == SdMapSwtx::RoadPriority::EXPRESSWAY;
