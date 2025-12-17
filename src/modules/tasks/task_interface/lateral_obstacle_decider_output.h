@@ -20,6 +20,7 @@ struct LateralObstacleHistoryInfo {
   bool ncar_count_in = false;
   bool is_avd_car = false;
   bool last_is_avd_car = false;
+  bool has_safe_space = false;
   double close_time = 0;
   double last_recv_time = 0;
   bool front_car = false;

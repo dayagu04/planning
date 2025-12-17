@@ -82,6 +82,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void ConstructUniformPlanHistoryTraj();
   void CheckLateralEmergencyAvoidObstacle(
       const FrenetObstacle &frenet_obstacle);
+  bool CheckStaticObstacleAvoidSafety(const FrenetObstacle &frenet_obstacle);    
   bool CheckEgoOvertakeObstacle(const FrenetObstacle &frenet_obstacle);
   bool IsTruck(const FrenetObstacle &frenet_obstacle);
   void IsPotentialFollowingObstacle(const FrenetObstacle &frenet_obstacle,

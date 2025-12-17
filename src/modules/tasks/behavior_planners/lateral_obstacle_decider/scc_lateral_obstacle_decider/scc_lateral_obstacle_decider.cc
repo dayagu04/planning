@@ -1016,6 +1016,13 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
 
+  if (obstacle.is_static()) {
+    bool has_safe_space = CheckStaticObstacleAvoidSafety(frenet_obstacle);
+
+    // 避免避让过程中，自车加速
+    history.has_safe_space = (history.has_safe_space && frenet_obstacle.d_s_rel() < 20) || has_safe_space;
+  }
+
   const double gap = (history.last_recv_time == 0.0)
                          ? kPlanningCycleTime
                          : (obstacle.timestamp() - history.last_recv_time);
@@ -1047,18 +1054,32 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
 
       // 默认关闭
       bool borrow_bicycle_lane = false;
-      if (!((history.is_avd_car) &&
-            (is_in_avoid_range_by_nearest_point ||
-             is_in_avoid_range_by_nearest_line_in_left ||
-             is_in_avoid_range_by_nearest_line_in_right ||
-             borrow_bicycle_lane || rightest_lane ||
-             (dist_intersect - lead_one->d_s_rel() < 50 &&
-              dist_intersect - lead_one->d_s_rel() >= -5 &&
-              lead_one->type() ==
-                  iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
-        history.ncar_count =
-            std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
-      }
+      if (!obstacle.is_static()) {
+        if (!((history.is_avd_car) &&
+              (is_in_avoid_range_by_nearest_point ||
+              is_in_avoid_range_by_nearest_line_in_left ||
+              is_in_avoid_range_by_nearest_line_in_right ||
+              borrow_bicycle_lane || rightest_lane ||
+              (dist_intersect - lead_one->d_s_rel() < 50 &&
+                dist_intersect - lead_one->d_s_rel() >= -5 &&
+                lead_one->type() ==
+                    iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE)))) {
+          history.ncar_count =
+              std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
+        }
+      } else {
+        if (!history.has_safe_space) {
+          history.ncar_count =
+                std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
+        } else if (is_in_avoid_range_by_nearest_point ||
+                   is_in_avoid_range_by_nearest_point ||
+                   is_in_avoid_range_by_nearest_line_in_right) {
+
+        } else {
+          history.ncar_count =
+                std::max(history.ncar_count - 10 * count * kPlanningCycleTime, 0.0);
+        }
+      }   
     }
   }
 
@@ -1144,6 +1165,46 @@ bool SccLateralObstacleDecider::UpdateObstacleAvoidCount(
   }
 
   return false;
+}
+
+bool SccLateralObstacleDecider::CheckStaticObstacleAvoidSafety(const FrenetObstacle &frenet_obstacle) {
+  if (!frenet_obstacle.is_static()) {
+    return true;
+  }
+  
+  // || !lateral_obstacle_history_info_[frenet_obstacle.id()].is_avd_car
+  if (lateral_obstacle_history_info_.find(frenet_obstacle.id()) == lateral_obstacle_history_info_.end()) {
+    return false;
+  }
+
+  double free_space = 100;
+  double s_with_min_lat_space = 0;
+
+  ReferencePathPoint reference_path_point;
+  if (frenet_obstacle.d_max_cpath() < 0){
+    s_with_min_lat_space = frenet_obstacle.s_max_l().y;
+
+    // 后续可以考虑路沿
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space, reference_path_point)) {
+      free_space = reference_path_point.distance_to_left_lane_border - frenet_obstacle.s_max_l().x;
+    }
+  } else if(frenet_obstacle.d_min_cpath() > 0) {
+    s_with_min_lat_space = frenet_obstacle.s_min_l().y;
+    if (reference_path_ptr_->get_reference_point_by_lon(s_with_min_lat_space, reference_path_point)) {
+      free_space = reference_path_point.distance_to_right_lane_border + frenet_obstacle.s_min_l().x;
+    }
+  } else {
+    return false;
+  }
+
+  free_space = std::max(0.0, free_space - ego_width_);
+  double desire_v = interp(free_space, config_.free_space_lane_bp, config_.static_limit_v_free_space);
+
+  if (desire_v >= ego_v_) {
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void SccLateralObstacleDecider::LateralObstacleDecision(

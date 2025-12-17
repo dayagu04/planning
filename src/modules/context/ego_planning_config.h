@@ -1897,6 +1897,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                           std::vector<std::string>{"potential_follow_obstacle",
                                                    "lane_width_factor"},
                           lane_width_factor);
+    read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
+    read_json_vec<double>(json, "static_limit_v_free_space", static_limit_v_free_space);
     side_2_front_count_thr = read_json_key<int>(
         json, "side_2_front_count_thr", side_2_front_count_thr);
     side_2_front_max_count = read_json_key<int>(
@@ -1960,6 +1962,8 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   bool open_side_lat_offset_nudge = false;
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
+  std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
