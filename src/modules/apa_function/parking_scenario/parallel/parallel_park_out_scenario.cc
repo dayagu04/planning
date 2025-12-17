@@ -784,7 +784,11 @@ const bool ParallelParkOutScenario::GenTlane() {
 
   ILOG_INFO << "curb_obs_num = " << curb_obs_num
             << " low_curb_obs_num = " << low_curb_obs_num;
-  is_low_curb = (low_curb_obs_num > (curb_obs_num / 2)) ? true : false;
+  const double low_height_curb_ratio = 0.25;
+  is_low_curb =
+      (double(low_curb_obs_num) > (curb_obs_num * low_height_curb_ratio))
+          ? true
+          : false;
 
   // set initial x coordination for front and rear tlane obs
   double front_min_x = slot_length + kFrontDetaXMagWhenFrontVacant;
