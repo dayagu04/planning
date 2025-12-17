@@ -16,6 +16,7 @@
   "dump_mdebug": false,
   "enable_use_ground_mark_process_split": false,
   "enable_use_emergency_avoidence_lane_change_request": true,
+  "enable_use_dynamic_agent_emergency_avoidence_lane_change_request": true,
   "enable_use_cone_change_request": true,
   "enable_use_merge_change_request": true,
   "active_lane_change_min_duration_threshold": 100,

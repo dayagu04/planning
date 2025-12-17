@@ -31,6 +31,7 @@ LaneChangeRequestManager::LaneChangeRequestManager(
       overtake_request_(config_builder, session, virtual_lane_mgr,
                         lane_change_lane_mgr),
       emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
+      dynamic_agent_emergence_avoid_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       cone_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       merge_change_request_(session, virtual_lane_mgr, lane_change_lane_mgr),
       virtual_lane_mgr_(virtual_lane_mgr),
@@ -49,6 +50,8 @@ void LaneChangeRequestManager::FinishRequest() {
   cone_change_request_.Reset();
   merge_change_request_.Finish();
   merge_change_request_.Reset();
+  dynamic_agent_emergence_avoid_request_.Finish();
+  dynamic_agent_emergence_avoid_request_.Reset();
 
   request_ = NO_CHANGE;
   request_source_ = NO_REQUEST;
@@ -91,6 +94,8 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   const double distance_nearby_merge_point_to_surpress_merge_request = 50.0;
   const bool enable_use_emergency_avoidence_lc_request =
       config_.enable_use_emergency_avoidence_lane_change_request;
+  const bool enable_use_dynamic_agent_emergency_avoidence_lc_request =
+      config_.enable_use_dynamic_agent_emergency_avoidence_lane_change_request;
   const bool enable_use_cone_change_request =
       config_.enable_use_cone_change_request;
   const bool enable_use_merge_lc_request =
@@ -160,6 +165,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
   merge_change_request_.SetLaneChangeCmd(lane_change_cmd_);
   merge_change_request_.SetLaneChangeCancelFromTrigger(
       trigger_lane_change_cancel_);
+  dynamic_agent_emergence_avoid_request_.SetLaneChangeCmd(lane_change_cmd_);
+  dynamic_agent_emergence_avoid_request_.SetLaneChangeCancelFromTrigger(
+      trigger_lane_change_cancel_);
   int_lane_change_cmd_ = LaneChangeRequest::TurnSwitchState::NONE;
   int_request_is_allowed_lc_in_cone_scene_ = true;
   if (int_request_.enable_int_request() || enable_mrc_pull_over) {
@@ -183,6 +191,11 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     if (enable_use_emergency_avoidence_lc_request &&
         request_source_ != CONE_REQUEST) {
       emergence_avoid_request_.Update(lc_status);
+    }
+    if (enable_use_dynamic_agent_emergency_avoidence_lc_request &&
+        request_source_ != EMERGENCE_AVOID_REQUEST &&
+        request_source_ != CONE_REQUEST) {
+      dynamic_agent_emergence_avoid_request_.Update(lc_status);
     }
     if (enable_use_merge_lc_request && origin_relative_id_zero_nums == 1 &&
         (curr_time >
@@ -265,7 +278,9 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
             << emergence_avoid_request_.request_type()
             << "cone_change_request:" << cone_change_request_.request_type()
             << "int_cancel_reason:" << int_request_cancel_reason_
-            << "turn_signal:" << gen_turn_signal_;
+            << "turn_signal:" << gen_turn_signal_
+            << "dynamic_agent_emergence_avoid_request:"
+            << dynamic_agent_emergence_avoid_request_.request_type();
 
   if (int_request_cancel_reason_ == MANUAL_CANCEL &&
       gen_turn_signal_ != NO_CHANGE &&
@@ -290,6 +305,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       emergence_avoid_request_.Finish();
       emergence_avoid_request_.Reset();
     }
+    if (dynamic_agent_emergence_avoid_request_.request_type() != NO_CHANGE) {
+      dynamic_agent_emergence_avoid_request_.Finish();
+      dynamic_agent_emergence_avoid_request_.Reset();
+    }
     if (cone_change_request_.request_type() != NO_CHANGE) {
       cone_change_request_.Finish();
       cone_change_request_.Reset();
@@ -313,6 +332,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
       emergence_avoid_request_.Finish();
       emergence_avoid_request_.Reset();
     }
+    if (dynamic_agent_emergence_avoid_request_.request_type() != NO_CHANGE) {
+      dynamic_agent_emergence_avoid_request_.Finish();
+      dynamic_agent_emergence_avoid_request_.Reset();
+    }
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
     }
@@ -328,6 +351,10 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_source_ = CONE_REQUEST;
     target_lane_virtual_id_ = cone_change_request_.target_lane_virtual_id();
   } else if (emergence_avoid_request_.request_type() != NO_CHANGE) {
+    if (dynamic_agent_emergence_avoid_request_.request_type() != NO_CHANGE) {
+      dynamic_agent_emergence_avoid_request_.Finish();
+      dynamic_agent_emergence_avoid_request_.Reset();
+    }
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
     }
@@ -342,6 +369,21 @@ bool LaneChangeRequestManager::Update(int lc_status, const bool hd_map_valid) {
     request_ = emergence_avoid_request_.request_type();
     request_source_ = EMERGENCE_AVOID_REQUEST;
     target_lane_virtual_id_ = emergence_avoid_request_.target_lane_virtual_id();
+  } else if (dynamic_agent_emergence_avoid_request_.request_type() != NO_CHANGE) {
+    if (map_request_.request_type() != NO_CHANGE) {
+      map_request_.Finish();
+    }
+    if (merge_change_request_.request_type() != NO_CHANGE) {
+      merge_change_request_.Finish();
+      merge_change_request_.Reset();
+    }
+    if (overtake_request_.request_type() != NO_CHANGE) {
+      overtake_request_.Finish();
+      overtake_request_.Reset();
+    }
+    request_ = dynamic_agent_emergence_avoid_request_.request_type();
+    request_source_ = DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST;
+    target_lane_virtual_id_ = dynamic_agent_emergence_avoid_request_.target_lane_virtual_id();
   } else if (merge_change_request_.request_type() != NO_CHANGE) {
     if (map_request_.request_type() != NO_CHANGE) {
       map_request_.Finish();
@@ -495,6 +537,8 @@ double LaneChangeRequestManager::GetReqStartTime(int source) const {
     return overtake_request_.tstart();
   } else if (source == EMERGENCE_AVOID_REQUEST) {
     return emergence_avoid_request_.tstart();
+  } else if (source == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
+    return dynamic_agent_emergence_avoid_request_.tstart();
   } else if (source == CONE_REQUEST) {
     return cone_change_request_.tstart();
   } else if (source == MERGE_REQUEST) {
@@ -512,6 +556,8 @@ double LaneChangeRequestManager::GetReqFinishTime(int source) const {
     return overtake_request_.tfinish();
   } else if (source == EMERGENCE_AVOID_REQUEST) {
     return emergence_avoid_request_.tfinish();
+  } else if (source == DYNAMIC_AGENT_EMERGENCE_AVOID_REQUEST) {
+    return dynamic_agent_emergence_avoid_request_.tfinish();
   } else if (source == CONE_REQUEST) {
     return cone_change_request_.tfinish();
   } else if (source == MERGE_REQUEST) {

@@ -272,6 +272,8 @@ struct EgoPlanningConfig : public Config {
                      "enable_overtake_lane_change_confirmation");
     press_line_fewly_threshold = read_json_key<double>(json, "press_line_fewly_threshold");
     use_press_line_fewly_threshold = read_json_key<bool>(json, "use_press_line_fewly_threshold");
+    enable_use_dynamic_agent_emergency_avoidence_lane_change_request = read_json_key<bool>(
+        json, "enable_use_dynamic_agent_emergency_avoidence_lane_change_request");
   }
   double trajectory_time_length = 5.0;
   double planning_dt = 0.2;
@@ -311,6 +313,7 @@ struct EgoPlanningConfig : public Config {
   bool enable_overtake_lane_change_confirmation = false;
   double press_line_fewly_threshold = 0.3;
   bool use_press_line_fewly_threshold = false;
+  bool enable_use_dynamic_agent_emergency_avoidence_lane_change_request = false;
 };
 
 struct GeneralPlanningConfig : public EgoPlanningConfig {
