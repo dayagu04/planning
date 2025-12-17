@@ -53,6 +53,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
+  void JudgeArcSlot();
 
  private:
   Tlane t_lane_;
@@ -71,6 +72,8 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool delay_check_finish_ = false;
   const bool PostProcessPathPara();
   double arc_slot_init_out_heading_ = 0.0;
+  bool is_outer_arc_slot_ = false;
+  bool is_arc_slot_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

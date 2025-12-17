@@ -133,6 +133,7 @@ struct GeometryPathInput {
   uint8_t ref_gear = pnc::geometry_lib::SEG_GEAR_INVALID;
   uint8_t ref_arc_steer = pnc::geometry_lib::SEG_STEER_INVALID;
   bool is_searching_stage = false;
+  bool is_before_running_stage = false;
 
   uint8_t path_planner_state = 0;
 

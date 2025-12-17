@@ -667,6 +667,11 @@ class ParallelPathGenerator : public GeometryPathGenerator {
       const Eigen::Vector2d &P1, const Eigen::Vector2d &P2, double heading_rad,
       double move_length);
 
+ public:
+  double arc_slot_init_out_heading_= 0.0;
+  const double GetArcSlotParkOutHeading(){
+    return arc_slot_init_out_heading_;
+  };
  protected:
   PlannerParams calc_params_;
   DebugInfo debug_info_;
@@ -674,6 +679,7 @@ class ParallelPathGenerator : public GeometryPathGenerator {
   PaPlanMethod first_pa_plan_method_;
   bool had_park_out = false;
   bool better_out_path_again_lastframe_ =false;
+
 };
 
 }  // namespace apa_planner

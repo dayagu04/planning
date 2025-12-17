@@ -684,16 +684,16 @@ std::pair<int, float> ApaObstacleManager::CheckParaSlotObsAreNeighbour(
   Eigen::Matrix2d rot_mat;
   rot_mat << cos(obs.heading_angle), -sin(obs.heading_angle),
       sin(obs.heading_angle), cos(obs.heading_angle);
-  Eigen::Vector2d obs_center_in_ego =
-      Eigen::Vector2d(obs.position.x, obs.position.y);
+  Eigen::Vector2d obs_center_in_global =
+      Eigen::Vector2d(obs.center_position.x, obs.center_position.y);
   obs_vex_pts_in_global[0] =
-      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[0];
+      obs_center_in_global + rot_mat * obs_vex_pts_in_ego[0];
   obs_vex_pts_in_global[1] =
-      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[1];
+      obs_center_in_global + rot_mat * obs_vex_pts_in_ego[1];
   obs_vex_pts_in_global[2] =
-      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[2];
+      obs_center_in_global + rot_mat * obs_vex_pts_in_ego[2];
   obs_vex_pts_in_global[3] =
-      obs_center_in_ego + rot_mat * obs_vex_pts_in_ego[3];
+      obs_center_in_global + rot_mat * obs_vex_pts_in_ego[3];
 
   std::array<double, 4> d_per_edge = {1.0, 2.5, 1.0, 2.5};
   return CheckParaSlotObsPtsAreNeighbour(obs_vex_pts_in_global, slot,
