@@ -139,9 +139,9 @@ class ApaStateMachineManager final {
     out_direction_ = ApaParkOutDirection::INVALID;
     slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
     parking_speed_mode_ = ParkingSpeedMode::INVALID;
+    free_slot_pos_dir_ = false;
     running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
-    task_direction_ = ApaTaskDirection::APA_TASK_IN;
   }
 
   static std::string GetApaStateMachineString(
