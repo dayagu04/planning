@@ -68,7 +68,7 @@ void ApaPredictPathManager::Update(
     }
   }
 
-  if (i == -1) {
+  if (min_index == -1) {
     return;
   }
 
