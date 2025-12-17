@@ -30,8 +30,8 @@ constexpr double kEmergencyAvoidancelongitudinalDistanceThreshold = 100.0;
 constexpr int kInvalidAgentId = -1;
 constexpr double kSplitTriggleDistance = 3000.0;
 constexpr double kMaxVelocityTriggerEmergenceAvoidRequest = 80;
-constexpr int kHighRiskEmergencySituationDurationCountThr = 5;
-constexpr int kLowRiskEmergencySituationDurationCountThr = 10;
+constexpr int kHighRiskEmergencySituationDurationCountThr = 3;
+constexpr int kLowRiskEmergencySituationDurationCountThr = 6;
 constexpr double kIntrusionLateralDistanceThr = 0.25;
 constexpr double kNearLateralDistanceThr = -0.15;
 constexpr double kNearLaneLateralDistanceThr = 0.1;
@@ -248,20 +248,25 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
                  ego_frenet_boundary.s_start + kNearEgoLongDistanceBuffer) <
         std::min(obstacle_iter->second->frenet_obstacle_boundary().s_end,
                  ego_frenet_boundary.s_end);
-    if (!is_overlap_side) {
+    if (!is_overlap_side || obstacle_iter->second->is_static()) {
       return false;
     }
     risk_level_ =
         potential_dangerous_agent_decider_output.dangerous_agent_info.front()
             .risk_level;
-    if (risk_level_ == RiskLevel::LOW_RISK) {
+    if (risk_level_ == RiskLevel::LOW_RISK ||
+        risk_level_ == RiskLevel::NO_RISK) {
       // 判断自车的位置是否已经进行了大幅度避让，离车道边界线较近
       // 可能会存在一种可能，自车避让压线时，会切换车道，为了避免频繁这种情况，
-      // 此时判断切换车道的时间需要久一点，以及障碍物距离自车的横向距离
+      // 此时判断切换车道的时间需要久一点，以及考虑障碍物侵入车道的距离
       double v_lat = obstacle_iter->second->frenet_velocity_lateral();
       double intrusion_distance = 0;
-      bool is_near_lane_boundary = false;
-      bool is_in_lat_range = false;
+      bool is_near_lane_boundary = false;  // 自车是否在车道边界附近
+      bool is_in_lat_range = false;        // 障碍物是否侵入自车道
+      double extra_lat_buffer_with_no_risk = 0.2;  // 没有风险等级的障碍物，条件更加严格
+      if (risk_level_ == RiskLevel::LOW_RISK) {
+        extra_lat_buffer_with_no_risk = 0;
+      }
       if (obstacle_iter->second->d_max_cpath() < 0) {
         intrusion_distance =
             half_lane_width - std::fabs(obstacle_iter->second->d_max_cpath());
@@ -272,9 +277,13 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
       // 需要考虑障碍物的横向速度
       if (v_lat < -0.3) {
         // 障碍物具有明显靠近自车的横向速度
-        is_in_lat_range = intrusion_distance > kNearLateralDistanceThr;
+        is_in_lat_range =
+            intrusion_distance >
+            kNearLateralDistanceThr + extra_lat_buffer_with_no_risk;
       } else {
-        is_in_lat_range = intrusion_distance > kIntrusionLateralDistanceThr;
+        is_in_lat_range =
+            intrusion_distance >
+            kIntrusionLateralDistanceThr + extra_lat_buffer_with_no_risk;
       }
       is_near_lane_boundary = half_lane_width - ego_frenet_boundary.l_end <
                                   kNearLaneLateralDistanceThr ||
@@ -301,6 +310,60 @@ bool DynamicAgentEmergenceAvoidRequest::CheckEmergencyDynamicAgent() {
       }
       return true;
     }
+  } else {
+    for (const auto& [obs_id, obs_ptr] : obstacles_map) {
+      if (!obs_ptr) {
+        continue;
+      }
+      const auto& frenet_obs = *obs_ptr;
+      bool is_overlap_side =
+          std::max(frenet_obs.frenet_obstacle_boundary().s_start,
+                  ego_frenet_boundary.s_start + kNearEgoLongDistanceBuffer) <
+          std::min(frenet_obs.frenet_obstacle_boundary().s_end,
+                  ego_frenet_boundary.s_end);
+      if (!is_overlap_side || frenet_obs.is_static()) {
+        continue;;
+      }
+      double v_lat = frenet_obs.frenet_velocity_lateral();
+      double intrusion_distance = 0;
+      bool is_near_lane_boundary = false;  // 自车是否在车道边界附近
+      bool is_in_lat_range = false;        // 障碍物是否侵入自车道
+      double extra_lat_buffer_with_no_risk = 0.2;  // 没有风险等级的障碍物，条件更加严格
+      if (frenet_obs.d_max_cpath() < 0) {
+        intrusion_distance =
+            half_lane_width - std::fabs(frenet_obs.d_max_cpath());
+      } else if (frenet_obs.d_min_cpath() > 0) {
+        intrusion_distance =
+            half_lane_width - frenet_obs.d_min_cpath();
+      }
+      // 需要考虑障碍物的横向速度
+      if (v_lat < -0.3) {
+        // 障碍物具有明显靠近自车的横向速度
+        is_in_lat_range =
+            intrusion_distance >
+            kNearLateralDistanceThr + extra_lat_buffer_with_no_risk;
+      } else {
+        is_in_lat_range =
+            intrusion_distance >
+            kIntrusionLateralDistanceThr + extra_lat_buffer_with_no_risk;
+      }
+      is_near_lane_boundary = half_lane_width - ego_frenet_boundary.l_end <
+                                  kNearLaneLateralDistanceThr ||
+                              half_lane_width + ego_frenet_boundary.l_start <
+                                  kNearLaneLateralDistanceThr;
+      if (is_near_lane_boundary && is_in_lat_range) {
+        if (frenet_obs.frenet_l() >=
+            origin_refline->get_frenet_ego_state().l()) {
+          recommend_dynamic_agent_emergency_avoidance_direction_ = RIGHT_CHANGE;
+        } else {
+          recommend_dynamic_agent_emergency_avoidance_direction_ = LEFT_CHANGE;
+        }
+        return true;
+      } else {
+        continue;
+      }
+    }
+    return false;
   }
 }
 
