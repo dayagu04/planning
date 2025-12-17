@@ -9,12 +9,70 @@
 #include <cstdint>
 #include <cstdlib>
 #include <memory>
+#include <unordered_map>
+#include <set>
 
 #include "planning_adapter.h"
 #include "struct.h"
 
 namespace planning {
 namespace planning_player {
+
+static constexpr auto TOPIC_PLANNING_PLAN = "/iflytek/planning/plan";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
+    "/iflytek/planning/debug_info";
+static constexpr auto TOPIC_PLANNING_DEBUG_INFO_ORIGIN =
+    "/iflytek/planning/debug_info_origin";
+static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
+static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
+static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
+    "/iflytek/fusion/occupancy/objects";
+static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
+static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
+    "/iflytek/localization/ego_pose";
+static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
+static constexpr auto TOPIC_PREDICTION_RESULT =
+    "/iflytek/prediction/prediction_result";
+static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
+static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
+static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
+static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
+static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
+static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
+static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
+static constexpr auto TOPIC_SDPro_MAP = "/iflytek/ehr/sdpromap_info";
+static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
+static constexpr auto TOPIC_SPEED_BUMP = "/iflytek/fusion/speed_bump";
+// static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
+static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
+static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
+static constexpr auto TOPIC_TRAFFIC_SIGN =
+    "/iflytek/camera_perception/traffic_sign_recognition";
+static constexpr auto TOPIC_PERCEPTION_SCENE =
+    "/iflytek/camera_perception/scene";
+static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
+static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO =
+    "/iflytek/camera_perception/lane_lines_debug_info";
+static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO =
+    "/iflytek/camera_perception/lane_topo_debug_info";
+static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
+static constexpr auto TOPIC_DEGRADED_DRIVING_FUNCTION =
+    "/iflytek/degrade_function/fm_a_service";
+
+// apa topics
+static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
+static constexpr auto TOPIC_USS_PERCEPT_INFO =
+    "/iflytek/fusion/uss_perception_info";
+static constexpr auto TOPIC_VISION_PARKING_SLOT =
+    "/iflytek/camera_perception/parking_slot_list";
+static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
+
+static const double KMaxCurvature = 1.0 / 5.6;  
+static const double KConstPi = 3.141592654;
+static const double KApaVelSimulation = 0.3;
+
+static std::set<std::string> kKeyTopicSet{TOPIC_PLANNING_DEBUG_INFO, TOPIC_FUSION_OBJECTS, TOPIC_ROAD_FUSION, TOPIC_VEHICLE_SERVICE, 
+                                       TOPIC_LOCALIZATION};
 
 using TopicMsgTimeCache =
     std::map<std::string, std::map<ros::Time, boost::any>>;
@@ -142,6 +200,7 @@ class PlanningPlayer {
   pnc::mathlib::spline yaw_rate_t_spline_;
   pnc::mathlib::spline curvature_t_spline_;
   bool instant_error_ = false;
+  std::unordered_map<std::string, bool> instant_error_map_;
   std::string local_planning_version_;
   std::string local_interface_version_;
   std::string bag_planning_version_;
@@ -224,10 +283,17 @@ void PlanningPlayer::cache_with_ros_msg_time(
     const rosbag::MessageInstance &msg) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
-              << "msg instantiate error, msg name: " << msg.getTopic()
-              << std::endl;
-    instant_error_ = true;
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
@@ -240,10 +306,17 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time(
     const rosbag::MessageInstance &msg) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
-              << "msg instantiate error, msg name: " << msg.getTopic()
-              << std::endl;
-    instant_error_ = true;
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
@@ -257,10 +330,17 @@ void PlanningPlayer::cache_with_ros_msg_and_header_time_old(
     const rosbag::MessageInstance &msg) {
   typename T::Ptr obj_msg = msg.instantiate<T>();
   if (obj_msg == nullptr) {
-    std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
-              << "msg instantiate error, msg name: " << msg.getTopic()
-              << std::endl;
-    instant_error_ = true;
+    if (kKeyTopicSet.find(msg.getTopic()) != kKeyTopicSet.end()) {
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_ = true;
+    } else if(instant_error_map_.find(msg.getTopic()) == instant_error_map_.end()){
+      std::cerr << "Error !!!!!!!!!! Incorrect interface version" << std::endl
+                << "msg instantiate error, msg name: " << msg.getTopic()
+                << std::endl;
+      instant_error_map_[msg.getTopic()] = false; 
+    }
   } else {
     // auto time = msg.getTime();
     // uint64_t time_in_ns = time.sec * 1000000000ULL + time.nsec;
