@@ -122,6 +122,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       }
     }
   }
+  // 变道过程中，原车道前车使用 HALF_YIELD 标签，只在前3秒内产生 SoftHalfplane 代价
   if (lc_info.origin_agent_id != -1) {
     const auto* origin_agent = agent_manager->GetAgent(lc_info.origin_agent_id);
     if (origin_agent != nullptr) {
@@ -130,7 +131,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
         if (agent != nullptr && agent->agent_id() == lc_info.origin_agent_id) {
           key_obstacles_.emplace_back(CreateKeyObstacle(
               agent, ego_lane_coord,
-              lane_change_joint_decision::LongitudinalLabel::YIELD));
+              lane_change_joint_decision::LongitudinalLabel::HALF_YIELD));
           break;
         }
       }

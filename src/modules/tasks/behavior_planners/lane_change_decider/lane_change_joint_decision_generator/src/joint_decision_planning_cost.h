@@ -350,7 +350,7 @@ class SoftHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
  private:
   struct SoftHalfplaneResult {
     int obs_index;     // 障碍物索引
-    int label_type;    // 标签类型：1=OVERTAKE, 2=YIELD
+    int label_type;    // 标签类型：1=OVERTAKE, 2=YIELD, 3=EGO_OVERTAKE, 4=HALF_YIELD
     double s_current;  // 当前纵向距离
     double s_target;   // 目标安全距离
     double normal_x;   // 参考朝向法向量x

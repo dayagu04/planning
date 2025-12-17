@@ -904,7 +904,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
     const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
 
-    if (label_value != 1 && label_value != 2 && label_value != 3) {
+    if (label_value != 1 && label_value != 2 && label_value != 3 && label_value != 4) {
       continue;
     }
 
@@ -963,6 +963,9 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
       // }
 
       plane_dist = dist_along_ego_heading - hard_dist;
+    } else if (label_value == 4) {
+      // HALF_YIELD: 硬约束不处理 HALF_YIELD，只由 SoftHalfplane 处理
+      continue;
     }
 
     HardHalfplaneResult result;
@@ -1180,7 +1183,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
     const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
 
-    if (label_value != 1 && label_value != 2 && label_value != 3) {
+    if (label_value != 1 && label_value != 2 && label_value != 3 && label_value != 4) {
       continue;
     }
 
@@ -1249,6 +1252,27 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
       s_target = s0 + std::max(0.0, ego_vel * tau + ego_vel * v_rel /
                                                         (2 * std::sqrt(a * b)));
       s_target = std::fmax(s_target - 2.0, 0.0);
+    } else if (label_value == 4) {
+      // HALF_YIELD: 自车让行障碍物，但只在前3秒内产生代价
+      // 计算方式与 YIELD 相同
+      const double ego_front_x =
+          ego_x + ego_front_edge_to_rear_axle * std::cos(ego_theta);
+      const double ego_front_y =
+          ego_y + ego_front_edge_to_rear_axle * std::sin(ego_theta);
+
+      const double obs_rear_x = obs_x - (obs_length / 2.0) * obs_normal_x;
+      const double obs_rear_y = obs_y - (obs_length / 2.0) * obs_normal_y;
+
+      const double dx = obs_rear_x - ego_front_x;
+      const double dy = obs_rear_y - ego_front_y;
+
+      s_current = dx * ego_normal_x + dy * ego_normal_y;
+
+      // 目标距离基于自车速度
+      double v_rel = ego_vel - obs_vel;
+      s_target = s0 + std::max(0.0, ego_vel * tau + ego_vel * v_rel /
+                                                        (2 * std::sqrt(a * b)));
+      s_target = std::fmax(s_target - 2.0, 0.0);
     }
 
     SoftHalfplaneResult result;
@@ -1275,9 +1299,24 @@ double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State& x,
 
   const double weight = cost_config_ptr_->at(W_SOFT_HALFPLANE);
   constexpr double epsilon = 1e-3;
+  // 通过比较 cost_config_ptr_ 和 cost_config_vec_ptr_ 中的元素地址来推断当前时间步
+  int current_time_step = -1;
+  if (cost_config_vec_ptr_ != nullptr && cost_config_ptr_ != nullptr) {
+    for (size_t i = 0; i < cost_config_vec_ptr_->size(); ++i) {
+      if (&cost_config_vec_ptr_->at(i) == cost_config_ptr_) {
+        current_time_step = static_cast<int>(i);
+        break;
+      }
+    }
+  }
+  constexpr int half_yield_time_limit = 15;  // 前3秒 = 15个时间步 (3.0 / 0.2)
   double total_cost = 0.0;
 
   for (const auto& result : results) {
+    // HALF_YIELD 标签只在前3秒内产生代价
+    if (result.label_type == 4 && current_time_step >= half_yield_time_limit) {
+      continue;
+    }
     const double violation = result.s_current - result.s_target;
     if (violation < -epsilon) {
       total_cost += weight * violation * violation;
@@ -1305,8 +1344,23 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
   const double b = 1.5;
   const double k = 1.0 / (2.0 * std::sqrt(a * b));
   constexpr double epsilon = 1e-3;
+  // 通过比较 cost_config_ptr_ 和 cost_config_vec_ptr_ 中的元素地址来推断当前时间步
+  int current_time_step = -1;
+  if (cost_config_vec_ptr_ != nullptr && cost_config_ptr_ != nullptr) {
+    for (size_t i = 0; i < cost_config_vec_ptr_->size(); ++i) {
+      if (&cost_config_vec_ptr_->at(i) == cost_config_ptr_) {
+        current_time_step = static_cast<int>(i);
+        break;
+      }
+    }
+  }
+  constexpr int half_yield_time_limit = 15;  // 前3秒 = 15个时间步 (3.0 / 0.2)
 
   for (const auto& result : results) {
+    // HALF_YIELD 标签只在前3秒内产生代价和梯度
+    if (result.label_type == 4 && current_time_step >= half_yield_time_limit) {
+      continue;
+    }
     const double violation = result.s_current - result.s_target;
     if (violation >= -epsilon) {
       continue;
@@ -1323,7 +1377,9 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       label_type = 1;
     } else if (result.label_type == 3)  {
       label_type = 3;
-    }else{
+    } else if (result.label_type == 4) { // half_yield
+      label_type = 4;  // HALF_YIELD 使用与 YIELD 相同的计算逻辑
+    } else {
       label_type = result.label_type;;
     }
 
@@ -1442,8 +1498,9 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       // lxx(state_base_idx + OBS_Y, EGO_Y) +=
       //     cross_weight * hess_coeff * ddist_dobs_y * ddist_dego_y;
 
-    } else if (label_type == 2) {
-      // YIELD: 自车在后，跟随障碍物
+    } else if (label_type == 2 || label_type == 4) {
+      // YIELD / HALF_YIELD: 自车在后，跟随障碍物
+      // HALF_YIELD (label_type == 4) 使用与 YIELD 相同的计算逻辑
       // s_current = (obs_rear - ego_front) · ego_normal
       // s_target = s0 + max(0, v_ego*tau + v_ego*(v_ego - v_obs)*k)
       // violation = s_current - s_target
