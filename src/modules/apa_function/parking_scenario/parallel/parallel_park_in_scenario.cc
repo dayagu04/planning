@@ -2625,7 +2625,7 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
       tlane_obstacle_vec, CollisionDetector::TLANE_BOUNDARY_OBS);
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-      in_tlane_obstacle_vec, CollisionDetector::TLANE_OBS);
+      in_tlane_obstacle_vec, CollisionDetector::CURB_OBS);
 
   point_set.clear();
   tlane_obstacle_vec.clear();

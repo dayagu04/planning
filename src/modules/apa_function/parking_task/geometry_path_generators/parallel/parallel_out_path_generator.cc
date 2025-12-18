@@ -337,17 +337,19 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
       front_heading < pnc::mathlib::Deg2Rad(45.0)) {
     is_inner_arc_slot = true;
   }
+
   Eigen::Vector2d prepare_pose_start = input_.tlane.pt_inside;
-  if (is_inner_arc_slot && input_.tlane.pt_inside.x() > 6.5) {
+  if ((is_inner_arc_slot ) && input_.tlane.pt_inside.x() > 6.5) {
     prepare_pose_start.x() = 5.5;
     ILOG_INFO << "prepare_pose_start.x = " << prepare_pose_start.x();
   }
-  ILOG_INFO << "park out prepare line front_heading = " << front_heading;
-  if (input_.is_searching_stage){
+
+  if (input_.is_before_running_stage){
     arc_slot_init_out_heading_ = front_heading;
   }
 
-  pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, front_heading);
+  pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, arc_slot_init_out_heading_);
+  ILOG_INFO << "park out prepare line front_heading = " << arc_slot_init_out_heading_;
   prepare_pose.pos.y() = rac_tlane_bound_near;
 
   const auto y_vec =
