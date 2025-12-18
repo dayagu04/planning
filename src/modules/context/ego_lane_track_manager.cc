@@ -63,7 +63,7 @@ constexpr double kEgoPreviewTimeMaxThd = 5.0;
 constexpr double kExistSplitLateralDisThd = 1.5;
 constexpr double kCenterLineLateralDisThd = 0.8;
 constexpr double kExistSplitEgoRearLateralDisThd = 1.5;
-constexpr double kNearPreviewDistanceThd = 20.0;
+constexpr double kNearPreviewDistanceThd = 30.0;
 constexpr double kManualLaneChangeDisThd = 1.5;
 constexpr double kConsiderManualLength = 80.0;
 
@@ -75,7 +75,7 @@ constexpr int kDefaultLaneChangeOrderIdDiff = 1;
 constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 65.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
-constexpr double kDefaultSurpressSplitSelectorDistance = 3.0;
+constexpr double kDefaultSurpressSplitSelectorDistance = 5.0;
 constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 constexpr double kSplitSelectEgoToExchangeAreaDistanceThd = 150.0;
