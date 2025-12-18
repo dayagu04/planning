@@ -775,7 +775,8 @@ bool IhcCore::DynamicObstacleCheck(void) {
               iflyauto::ObjectType::OBJECT_TYPE_COUPE &&
           fusion_objs[i].common_info.type <=
               iflyauto::ObjectType::OBJECT_TYPE_TRAILER) ||
-          fusion_objs[i].common_info.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN) {
+          fusion_objs[i].common_info.type == iflyauto::ObjectType::OBJECT_TYPE_UNKNOWN ||
+          fusion_objs[i].common_info.type == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE) {
         // 判断障碍物是否为对向车辆
         if (fusion_objs[i].additional_info.motion_pattern_current ==
             iflyauto::ObjectMotionType::OBJECT_MOTION_TYPE_ONCOME) {
