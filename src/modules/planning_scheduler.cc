@@ -620,15 +620,21 @@ void PlanningScheduler::FillPlanningTrajectory(
         planning_context.hpp_cruise_routing_completed();
     const bool memory_slot_allowed_to_park =
         planning_context.memory_slot_allowed_to_park();
-    //TODO(taolu10): define HPP_PARKING_COMPLETED status
-    if (hpp_cruise_routing_completed && memory_slot_allowed_to_park) {
-      planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_COMPLETED;
+    const bool timeout_for_memory_slot_allowed_to_park =
+        planning_context.timeout_for_memory_slot_allowed_to_park();
+    // TODO(taolu10): define HPP_PARKING_COMPLETED status
+    if (hpp_cruise_routing_completed && (memory_slot_allowed_to_park || timeout_for_memory_slot_allowed_to_park)) {
+      if (memory_slot_allowed_to_park) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_COMPLETED;
+      } else if (timeout_for_memory_slot_allowed_to_park) {
+        planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_PLANNING_FAILED;
+      }
     } else if (planning_success) {
       planning_status->hpp_planning_status = iflyauto::HPP_RUNNING;
     } else {
-      if(scene_type == common::SceneType::HPP) {
+      if (scene_type == common::SceneType::HPP) {
         planning_status->hpp_planning_status = iflyauto::HPP_ROUTING_PLANNING_FAILED;
-      } else { // HPP_PARKING
+      } else {  // HPP_PARKING
         planning_status->hpp_planning_status = iflyauto::HPP_PARKING_PLANNING_FAILED;
       }
     }
@@ -816,6 +822,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
       session_.environmental_model().get_ego_state_manager();
   const auto& route_info_output =
       session_.environmental_model().get_route_info()->get_route_info_output();
+  const auto& planning_context = session_.planning_context();
   auto hpp_info = &(session_.mutable_planning_context()
                         ->mutable_planning_hmi_info()
                         ->hpp_info);
@@ -831,7 +838,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
 
   hpp_info->is_approaching_intersection = false;
   hpp_info->is_approaching_turn = false;
-  hpp_info->is_parking_space_occupied = false;
+  hpp_info->is_target_parking_space_occupied = false;
   hpp_info->is_new_parking_space_found = false;
   hpp_info->hpp_state_switch = iflyauto::HPPStateSwitch::HPP_NONE;
   auto reference_path_manager =
@@ -878,12 +885,18 @@ void PlanningScheduler::FillPlanningHmiInfo(
       hpp_info->hpp_state_switch =
           iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
     } else if (parking_switch_info.is_memory_slot_occupied) {
-      hpp_info->is_parking_space_occupied = true;
+      hpp_info->is_target_parking_space_occupied = true;
     } else if (parking_switch_info.is_selected_slot_allowed_to_park) {
       hpp_info->hpp_state_switch =
           iflyauto::HPPStateSwitch::HPP_CRUISING_TO_PARKING;
     }
 
+    const bool timeout_for_memory_slot_allowed_to_park = planning_context.timeout_for_memory_slot_allowed_to_park();
+    const bool hpp_cruise_routing_completed = planning_context.hpp_cruise_routing_completed();
+    if(hpp_cruise_routing_completed && timeout_for_memory_slot_allowed_to_park) {
+      hpp_info->hpp_planning_failed_reason = iflyauto::HPPPlanningFailedReason::
+          HPP_PLANNING_FAILED_REASON_TARGET_PARKING_SPACE_OCCUPIED;
+    }
     // todo: is_new_parking_space_found is unused.
     if (parking_switch_info.has_parking_slot_in_hpp_searching) {
       hpp_info->is_new_parking_space_found = true;
