@@ -28,6 +28,8 @@ void ParkingSlotManager::Init() {
   target_slot_id_ = 0;
   distance_to_target_slot_ = NL_NMAX;
   is_reached_target_slot_ = false;
+  is_exist_select_slot_ = false;
+  is_exist_memory_slot_ = false;
   is_exist_target_slot_ = false;
   is_exist_nearest_slot_ = false;
   nearest_slot_id_ = 0;
@@ -85,6 +87,8 @@ bool ParkingSlotManager::Update(
   target_slot_.clear();
   points_.clear();
   limiters_.clear();
+  is_exist_select_slot_ = false;
+  is_exist_memory_slot_ = false;
   is_exist_target_slot_ = false;
   is_reached_target_slot_ = false;
   const double distance_to_target_slot = session_->environmental_model()
@@ -98,20 +102,27 @@ bool ParkingSlotManager::Update(
       parking_fusion_info.parking_fusion_slot_lists_size;
   const auto& parking_slot_lists =
       parking_fusion_info.parking_fusion_slot_lists;
-  target_slot_id_ = parking_fusion_info.select_slot_id;
   for (uint8 i = 0; i < parking_slot_lists_size; i++) {
     ParkingSlotPoints slot_point;
     const auto& parking_slot = parking_slot_lists[i];
     size_t slot_id = parking_slot.id;
     auto resource_type = parking_slot.resource_type;
-    if (slot_id == target_slot_id_) {
+    if (slot_id == parking_fusion_info.select_slot_id) {
+      select_slot_id_ = parking_fusion_info.select_slot_id;
+      is_exist_select_slot_ = true;
+    } else if(slot_id == parking_fusion_info.memorized_slot_id) {
+      memory_slot_id_ = parking_fusion_info.memorized_slot_id;
+      is_exist_memory_slot_ = true;
+    }
+    if(is_exist_select_slot_ || is_exist_memory_slot_) {
+      is_exist_target_slot_ = true;
+      target_slot_id_ = slot_id;
       for (const auto& corner_point : parking_slot.corner_points) {
         target_slot_.emplace_back(
             planning_math::Vec2d(corner_point.x, corner_point.y));
       }
       planning_math::Polygon2d::ComputeConvexHull(target_slot_,
                                                   &target_slot_polygon_);
-      is_exist_target_slot_ = true;
     }
 
     // limiter

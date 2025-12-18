@@ -61,8 +61,12 @@ class ParkingSlotManager {
 
   planning::framework::Session *session_ = nullptr;
   bool is_reached_target_slot_;
+  bool is_exist_select_slot_;
+  bool is_exist_memory_slot_;
   bool is_exist_target_slot_;
   bool is_exist_nearest_slot_;
+  size_t select_slot_id_;
+  size_t memory_slot_id_;
   size_t target_slot_id_;
   size_t nearest_slot_id_;
   double distance_to_target_slot_;
