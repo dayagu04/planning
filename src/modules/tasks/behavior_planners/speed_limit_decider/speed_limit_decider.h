@@ -156,6 +156,8 @@ class SpeedLimitDecider : public Task {
   bool last_use_avg_radius_for_ewma_ = false;  // Previous use_avg_radius_for_ewma state (for hysteresis)
   double last_road_radius_origin_ = 10000.0;  // Previous road_radius_origin
   double road_radius_origin_ = 10000.0;
+  bool roundabout_quit_flag_ = false;
+  int roundabout_recover_counter_ = 0;
 };
 
 }  // namespace planning

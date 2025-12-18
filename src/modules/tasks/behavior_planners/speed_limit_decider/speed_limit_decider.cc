@@ -97,7 +97,8 @@ constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold f
 constexpr double kAvgRadiusExitRadius = 280.0;  // Road radius threshold for exiting avg radius EWMA (m)
 constexpr double kMapModeRoundaboutQuitDis = 50.0;
 constexpr double kNoMapModeRoundaboutQuitDis = 60.0;
-constexpr double kRoundaboutQuitCurvRadiusThr = 200.0;
+constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
+constexpr double kRoundaboutQuitRecoverCounter = 3;
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -2092,6 +2093,7 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               auto roundabout_info_list = sdpro_map.GetRoundAboutList(
                   current_segment->id(), nearest_s, 300.0);
               if (roundabout_info_list.size() == 0) {
+                roundabout_quit_flag_ = false;
                 return;
               } else {
                 auto closest_roundabout = roundabout_info_list[0];
@@ -2105,8 +2107,18 @@ void SpeedLimitDecider::CalculatePOISpeedLimit() {
               }
             }
             if (function_need_inhibited) {
+              roundabout_quit_flag_ = function_need_inhibited;
+              roundabout_recover_counter_ = 0;
               speed_limit_output->set_function_inhibited_near_roundabout(
                   function_need_inhibited);
+            } else {
+              if (roundabout_quit_flag_ && roundabout_recover_counter_ < kRoundaboutQuitRecoverCounter) {
+                speed_limit_output->set_function_inhibited_near_roundabout(
+                  roundabout_quit_flag_);
+                roundabout_recover_counter_++;
+              } else {
+                roundabout_quit_flag_ = false;
+              }
             }
           }
         }
