@@ -122,12 +122,7 @@ bool ReferencePathManager::update() {
     }
   }
   // step3 construction refline
-  const auto& construction_scene_output =
-      session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
-  if (config_.is_enable_construction_refline &&
-      construction_scene_output.enable_construction_passage) {
-    GetReferencePathByConstructionScene();
-  }
+  GetReferencePathByConstructionScene();
   time_end = IflyTime::Now_ms();
   ILOG_DEBUG << "ReferencePathManager update cost 2:" << time_end - time_start;
 
@@ -144,28 +139,32 @@ ReferencePathManager::make_map_lane_reference_path(int lane_virtual_id) {
 }
 
 bool ReferencePathManager::GetReferencePathByConstructionScene() {
-  const auto &current_lane =
-      session_->environmental_model().get_virtual_lane_manager()->get_current_lane();
   // generate reference line
   ConstructionSceneRefline construction_scene_refline;
   construction_scene_refline.InitInfo();
   const auto& construction_scene_output =
       session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
-  bool is_exist_construction_refline = construction_scene_refline.Update(
-      current_lane->get_reference_path(), construction_scene_output.road_boundaries_clusters_map,
-      construction_scene_output.construction_agent_cluster_attribute_map);
-  if (is_exist_construction_refline) {
-    // generate reference path
-    const int lane_virtual_id = current_lane->get_virtual_id();
-    auto key = ReferencePathKeyType(ReferencePathType::MAP_LANE, lane_virtual_id);
-    auto reference_path = std::make_shared<LaneReferencePath>(lane_virtual_id);
-    reference_path->Update(session_, construction_scene_refline.MutableConstructionRefPathPoints());
-    if (reference_path->valid()) {
-      // reference_paths_.clear();
-      reference_paths_[key] = reference_path;
-      return true;
+  if (construction_scene_output.enable_construction_passage &&
+      config_.is_enable_construction_refline) {
+    const auto &current_lane =
+        session_->environmental_model().get_virtual_lane_manager()->get_current_lane();
+    bool is_exist_construction_refline = construction_scene_refline.Update(
+        current_lane->get_reference_path(), construction_scene_output.road_boundaries_clusters_map,
+        construction_scene_output.construction_agent_cluster_attribute_map);
+    if (is_exist_construction_refline) {
+      // generate reference path
+      const int lane_virtual_id = current_lane->get_virtual_id();
+      auto key = ReferencePathKeyType(ReferencePathType::MAP_LANE, lane_virtual_id);
+      auto reference_path = std::make_shared<LaneReferencePath>(lane_virtual_id);
+      reference_path->Update(session_, construction_scene_refline.MutableConstructionRefPathPoints());
+      if (reference_path->valid()) {
+        // reference_paths_.clear();
+        reference_paths_[key] = reference_path;
+        return true;
+      }
     }
   }
+  construction_scene_refline.LogRefline();
   return false;
 }
 

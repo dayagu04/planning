@@ -41,7 +41,9 @@ void ParallelParkOutScenario::Reset() {
   parallel_out_path_planner_.Reset();
   is_try_tlane_ = false;
   delay_check_finish_ = false;
-
+  arc_slot_init_out_heading_ = 0.0;
+  is_arc_slot_ = false;
+  is_outer_arc_slot_ = false;
   ParkingScenario::Reset();
 }
 
@@ -357,18 +359,15 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
     ILOG_ERROR << "slot corner points exist same pt!";
     return false;
   }
-
   arc_slot_init_out_heading_ = 0.0;
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::SEARCH_OUT_SELECTED_CAR_FRONT ||
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
-      apa_world_ptr_->GetStateMachineManagerPtr()->GetStateMachine() ==
-          ApaStateMachine::SEARCH_OUT_NO_SELECTED
-          ) {
-    arc_slot_init_out_heading_ = parallel_out_path_planner_.GetArcSlotParkOutHeading();
-    ILOG_INFO << "front_heading set in checkfinish = " <<
-           arc_slot_init_out_heading_;
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus() ||
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsParkingStatus()) {
+    arc_slot_init_out_heading_ =
+        parallel_out_path_planner_.GetArcSlotParkOutHeading();
+    if (arc_slot_init_out_heading_ > M_PI ||
+        arc_slot_init_out_heading_ < -M_PI) {
+      arc_slot_init_out_heading_ = 0.0;
+    }
   }
   const auto measures_ptr = apa_world_ptr_->GetMeasureDataManagerPtr();
 
@@ -499,8 +498,8 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
       slot_occupied_ratio = pnc::mathlib::Clamp(1.0 + y_err_ratio, 0.0, 1.0);
     }
   }
-
-
+  // judge arc slot
+  JudgeArcSlot();
   ego_info_under_slot.slot_occupied_ratio = slot_occupied_ratio;
   ILOG_INFO << "ego_slot_info.slot_occupied_ratio = "
             << ego_info_under_slot.slot_occupied_ratio;
@@ -562,29 +561,12 @@ const bool ParallelParkOutScenario::CheckFinished() {
       apa_param.GetParam().finish_parallel_out_lat_wheel_y *
       ego_slot_info.slot.slot_width_ * side_sgn;
   bool lat_condition = false;
-  bool is_arc_slot = false;
-  bool is_outer_arc_slot = false;
-  double front_heading = arc_slot_init_out_heading_;
-  if (front_heading > M_PI || front_heading < -M_PI) {
-    front_heading = 0.0;
-  }
 
-  if (side_sgn > 0.0 && front_heading < -pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading > -pnc::mathlib::Deg2Rad(45.0)) {
-    is_outer_arc_slot = true;
-  }
-  if (side_sgn < 0.0 && front_heading > pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading < pnc::mathlib::Deg2Rad(45.0)) {
-    is_outer_arc_slot = true;
-  }
 
-  if (std::abs(front_heading) < pnc::mathlib::Deg2Rad(5.0) ||
-      std::abs(front_heading) > pnc::mathlib::Deg2Rad(45.0)) {
-    is_arc_slot = true;
-  }
+
   double finish_parallel_out_heading_mag =
       apa_param.GetParam().finish_parallel_out_heading_mag;
-  if (is_arc_slot) {
+  if (is_arc_slot_) {
     finish_parallel_out_heading_mag += 10.0;
     ILOG_INFO << "finish_parallel_out_heading_mag:"
               << finish_parallel_out_heading_mag;
@@ -594,19 +576,19 @@ const bool ParallelParkOutScenario::CheckFinished() {
     const double wheel_limit_y = slot_outer_pt_y;
     lat_condition = (rear_in_wheel.y() >= wheel_limit_y) &&
                     (front_in_wheel.y() >= wheel_limit_y);
-    if (is_outer_arc_slot) {
+    if (is_outer_arc_slot_) {
       lat_condition = (rear_in_wheel.y() >= wheel_limit_y);
     }
   } else {
     const double wheel_limit_y = slot_outer_pt_y;
     lat_condition = (rear_in_wheel.y() <= wheel_limit_y) &&
                     (front_in_wheel.y() <= wheel_limit_y);
-    if (is_outer_arc_slot) {
+    if (is_outer_arc_slot_) {
       lat_condition = (rear_in_wheel.y() <= wheel_limit_y);
     }
   }
-  ILOG_INFO << "is_outer_arc_slot:" << is_outer_arc_slot;
-  ILOG_INFO << "is_arc_slot:" << is_arc_slot;
+  ILOG_INFO << "is_outer_arc_slot_:" << is_outer_arc_slot_;
+  ILOG_INFO << "is_arc_slot_:" << is_arc_slot_;
   ILOG_INFO << "front_in_wheel = " << front_in_wheel.x() << " "
             << front_in_wheel.y() << " rear_in_wheel = " << rear_in_wheel.x()
             << " " << rear_in_wheel.y();
@@ -620,7 +602,7 @@ const bool ParallelParkOutScenario::CheckFinished() {
   const double heading_mag_deg = std::fabs((apa_world_ptr_->GetSlotManagerPtr()
                                                 ->GetEgoInfoUnderSlot()
                                                 .cur_pose.heading -
-                                            front_heading) *
+                                            arc_slot_init_out_heading_) *
                                            kRad2Deg);
 
   const bool static_condition =
@@ -763,7 +745,8 @@ const bool ParallelParkOutScenario::GenTlane() {
         ILOG_INFO << "befor limiter obs = " << obs_pt_local_cp.x();
         obs_pt_local_cp.x() = obs_pt_local_cp.x() + 0.8;
         ILOG_INFO << "limiter obs = " << obs_pt_local_cp.x();
-        obs_pt_local_vec_.emplace_back(obs_pt_local_cp);
+        obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
+            std::move(obs_pt_local_cp));
         continue;
       }
 
@@ -776,11 +759,18 @@ const bool ParallelParkOutScenario::GenTlane() {
         }
       }
 
-      obs_pt_local_vec_.emplace_back(obs_pt_local);
+      obs_pt_local_vec_[static_cast<size_t>(obs_scement)].emplace_back(
+          std::move(obs_pt_local));
     }
   }
-  ILOG_INFO << "after obs filter";
-  is_low_curb = (low_curb_obs_num > (curb_obs_num / 2)) ? true : false;
+
+  ILOG_INFO << "curb_obs_num = " << curb_obs_num
+            << " low_curb_obs_num = " << low_curb_obs_num;
+  const double low_height_curb_ratio = 0.25;
+  is_low_curb =
+      (double(low_curb_obs_num) > (curb_obs_num * low_height_curb_ratio))
+          ? true
+          : false;
 
   // set initial x coordination for front and rear tlane obs
   double front_min_x = slot_length + kFrontDetaXMagWhenFrontVacant;
@@ -802,85 +792,93 @@ const bool ParallelParkOutScenario::GenTlane() {
 
   ILOG_INFO << "obs_pt_local_vec_ size =" << obs_pt_local_vec_.size();
 
-  for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
-    const bool front_obs_condition =
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.x(),
-            slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
-            slot_length + kFrontDetaXMagWhenFrontVacant) &&
-        pnc::mathlib::IsInBound(
-            obstacle_point_slot.y(), -0.4 * side_sgn,
-            (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
+  for (const auto& obstacle_point_set : obs_pt_local_vec_) {
+    for (const auto& obstacle_point_slot : obstacle_point_set.second) {
+      const bool front_obs_condition =
+          pnc::mathlib::IsInBound(
+              obstacle_point_slot.x(),
+              slot_length - kFrontMaxDetaXMagWhenFrontOccupied,
+              slot_length + kFrontDetaXMagWhenFrontVacant) &&
+          pnc::mathlib::IsInBound(
+              obstacle_point_slot.y(), -0.4 * side_sgn,
+              (half_slot_width + kFrontObsLineYMagIdentification) * side_sgn);
 
-    if (front_obs_condition) {
-      front_min_x = std::min(front_min_x, obstacle_point_slot.x());
+      if (front_obs_condition) {
+        front_min_x = std::min(front_min_x, obstacle_point_slot.x());
 
-      // ILOG_INFO<<"front_obs_condition!");
-    }
-
-    const bool rear_obs_condition =
-        ((pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                  -kRearDetaXMagWhenFrontOccupiedRearVacant,
-                                  kRearMaxDetaXMagWhenRearOccupied)) &&
-         (pnc::mathlib::IsInBound(obstacle_point_slot.y(),
-                                  -side_sgn * kRearObsLineYMagIdentification,
-                                  (half_slot_width + 0.1) * side_sgn)));
-
-    if (rear_obs_condition) {
-      rear_max_x = std::max(rear_max_x, obstacle_point_slot.x());
-      // ILOG_INFO<<"rear_obs_condition!");
-    }
-
-    const bool curb_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 1.0,
-                                slot_length - 1.0) &&
-        (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
-
-    if (curb_condition) {
-      curb_count++;
-      if (side_sgn > 0.0) {
-        curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
-      } else {
-        curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+        // ILOG_INFO<<"front_obs_condition!");
       }
 
-      // ILOG_INFO<<"curb condition!");
-    }
+      const bool rear_obs_condition =
+          ((pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                    -kRearDetaXMagWhenFrontOccupiedRearVacant,
+                                    kRearMaxDetaXMagWhenRearOccupied)) &&
+           (pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                    -side_sgn * kRearObsLineYMagIdentification,
+                                    (half_slot_width + 0.1) * side_sgn)));
 
-    const bool curb_condition_all =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.0, slot_length) &&
-        (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
-    if (curb_condition_all) {
-      if (side_sgn > 0.0) {
-        curb_y_limit_all = std::max(curb_y_limit_all, obstacle_point_slot.y());
-      } else {
-        curb_y_limit_all = std::min(curb_y_limit_all, obstacle_point_slot.y());
+      if (rear_obs_condition) {
+        rear_max_x = std::max(rear_max_x, obstacle_point_slot.x());
+        // ILOG_INFO<<"rear_obs_condition!");
       }
-    }
 
-    const bool front_parallel_line_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), slot_length - 0.2,
-                                slot_length + kFrontDetaXMagWhenFrontVacant) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.5 * side_sgn);
+      const bool curb_condition =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), 1.0,
+                                  slot_length - 1.0) &&
+          (obstacle_point_slot.y() * side_sgn <= -kCurbYMagIdentification);
 
-    if (front_parallel_line_condition) {
-      front_parallel_line_y_limit =
-          side_sgn > 0.0
-              ? std::max(front_parallel_line_y_limit, obstacle_point_slot.y())
-              : std::min(front_parallel_line_y_limit, obstacle_point_slot.y());
-      // ILOG_INFO<<"front_parallel_line_y_limit condition!");
-    }
+      if (curb_condition) {
+        curb_count++;
+        if (side_sgn > 0.0) {
+          curb_y_limit = std::max(curb_y_limit, obstacle_point_slot.y());
+        } else {
+          curb_y_limit = std::min(curb_y_limit, obstacle_point_slot.y());
+        }
 
-    const bool rear_parallel_line_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), -2.5, 0.2) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y() * side_sgn, 0.0, 2.3);
+        // ILOG_INFO<<"curb condition!");
+      }
 
-    if (rear_parallel_line_condition) {
-      rear_parallel_line_y_limit =
-          side_sgn > 0.0
-              ? std::max(rear_parallel_line_y_limit, obstacle_point_slot.y())
-              : std::min(rear_parallel_line_y_limit, obstacle_point_slot.y());
-      // ILOG_INFO<<"rear_parallel_line_y_limit condition!");
+      const bool curb_condition_all =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), 0.0, slot_length) &&
+          (obstacle_point_slot.y() * side_sgn < -(slot_width * 0.5));
+      if (curb_condition_all &&
+          obstacle_point_set.first !=
+              static_cast<size_t>(ApaObsScemanticType::CAR)) {
+        if (side_sgn > 0.0) {
+          curb_y_limit_all =
+              std::max(curb_y_limit_all, obstacle_point_slot.y());
+        } else {
+          curb_y_limit_all =
+              std::min(curb_y_limit_all, obstacle_point_slot.y());
+        }
+      }
+
+      const bool front_parallel_line_condition =
+          pnc::mathlib::IsInBound(
+              obstacle_point_slot.x(), slot_length - 0.2,
+              slot_length + kFrontDetaXMagWhenFrontVacant) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.y(), 0.0, 2.5 * side_sgn);
+
+      if (front_parallel_line_condition) {
+        front_parallel_line_y_limit =
+            side_sgn > 0.0
+                ? std::max(front_parallel_line_y_limit, obstacle_point_slot.y())
+                : std::min(front_parallel_line_y_limit,
+                           obstacle_point_slot.y());
+        // ILOG_INFO<<"front_parallel_line_y_limit condition!");
+      }
+
+      const bool rear_parallel_line_condition =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), -2.5, 0.2) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.y() * side_sgn, 0.0, 2.3);
+
+      if (rear_parallel_line_condition) {
+        rear_parallel_line_y_limit =
+            side_sgn > 0.0
+                ? std::max(rear_parallel_line_y_limit, obstacle_point_slot.y())
+                : std::min(rear_parallel_line_y_limit, obstacle_point_slot.y());
+        // ILOG_INFO<<"rear_parallel_line_y_limit condition!");
+      }
     }
   }
   bool front_vacant = false;
@@ -940,7 +938,8 @@ const bool ParallelParkOutScenario::GenTlane() {
   t_lane_.obs_pt_outside << rear_max_x, rear_parallel_line_y_limit;
 
   if (rear_vacant) {
-    curb_y_limit = curb_y_limit_all;
+    curb_y_limit = side_sgn ? std::min(curb_y_limit_all, curb_y_limit)
+                            : std::max(curb_y_limit_all, curb_y_limit);
     ILOG_INFO << "curb_y_limit =" << curb_y_limit
               << " curb_y_limit_all = " << curb_y_limit_all;
   }
@@ -1072,37 +1071,40 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
-  for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
-    // add obs near channel
-    const bool channel_y_condition =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), channel_point_1.x(),
-                                channel_point_2.x()) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y(),
-                                kMinChannelYMagIdentification * slot_side_sgn,
-                                channel_point_1.y());
+  for (const auto& obstacle_point_set : obs_pt_local_vec_) {
+    for (const auto& obstacle_point_slot : obstacle_point_set.second) {
+      // add obs near channel
+      const bool channel_y_condition =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), channel_point_1.x(),
+                                  channel_point_2.x()) &&
+          pnc::mathlib::IsInBound(obstacle_point_slot.y(),
+                                  kMinChannelYMagIdentification * slot_side_sgn,
+                                  channel_point_1.y());
 
-    if (!channel_y_condition) {
-      const bool channel_y_condition_try =
-          pnc::mathlib::IsInBound(obstacle_point_slot.x(), B.x(), E.x()) &&
-          pnc::mathlib::IsInBound(
-              obstacle_point_slot.y(),
-              t_lane_.corner_outside_slot.y() * slot_side_sgn,
-              kMinChannelYMagIdentification * slot_side_sgn);
-      if (channel_y_condition_try) {
-        filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
+      if (!channel_y_condition) {
+        const bool channel_y_condition_try =
+            pnc::mathlib::IsInBound(obstacle_point_slot.x(), B.x(), E.x()) &&
+            pnc::mathlib::IsInBound(
+                obstacle_point_slot.y(),
+                t_lane_.corner_outside_slot.y() * slot_side_sgn,
+                kMinChannelYMagIdentification * slot_side_sgn);
+        if (channel_y_condition_try) {
+          filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
+        }
       }
-    }
-    if (channel_y_condition) {
-      filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
+      if (channel_y_condition) {
+        filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
-      if (pnc::mathlib::IsInBound(obstacle_point_slot.x(), t_lane_.slot_length,
-                                  t_lane_.slot_length + 5.0)) {
-        if (slot_side_sgn > 0.0) {
-          t_lane_.channel_y =
-              std::min(obstacle_point_slot.y(), t_lane_.channel_y);
-        } else {
-          t_lane_.channel_y =
-              std::max(obstacle_point_slot.y(), t_lane_.channel_y);
+        if (pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                    t_lane_.slot_length,
+                                    t_lane_.slot_length + 5.0)) {
+          if (slot_side_sgn > 0.0) {
+            t_lane_.channel_y =
+                std::min(obstacle_point_slot.y(), t_lane_.channel_y);
+          } else {
+            t_lane_.channel_y =
+                std::max(obstacle_point_slot.y(), t_lane_.channel_y);
+          }
         }
       }
     }
@@ -1118,15 +1120,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   tlane_line.SetPoints(A, B);
   tlane_line_vec.emplace_back(tlane_line);
 
-  auto front_heading = apa_world_ptr_->GetSlotManagerPtr()
-                           ->GetEgoInfoUnderSlot()
-                           .neigbor_front_heading;
-  bool is_outer_arc_slot = false;
-  if (slot_side_sgn < 0.0 && front_heading > pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading < pnc::mathlib::Deg2Rad(45.0)) {
-    is_outer_arc_slot = true;
-  }
-  if (!is_outer_arc_slot) {
+  if (!is_outer_arc_slot_) {
     tlane_line.SetPoints(E, F);
     tlane_line_vec.emplace_back(tlane_line);
   }
@@ -1147,26 +1141,30 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   }
 
   // tlane vertical line
-  for (const auto& obstacle_point_slot : obs_pt_local_vec_) {
-    const bool is_rear_tlane_line =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(),
-                                t_lane_.obs_pt_outside.x()) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y(), B.y(),
-                                kMinChannelYMagIdentification * slot_side_sgn);
+  for (const auto& obstacle_point_set : obs_pt_local_vec_) {
+    for (const auto& obstacle_point_slot : obstacle_point_set.second) {
+      const bool is_rear_tlane_line =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(), A.x(),
+                                  t_lane_.obs_pt_outside.x()) &&
+          pnc::mathlib::IsInBound(
+              obstacle_point_slot.y(), B.y(),
+              kMinChannelYMagIdentification * slot_side_sgn);
 
-    if (is_rear_tlane_line) {
-      tlane_obstacle_vec.emplace_back(obstacle_point_slot);
-      continue;
-    }
+      if (is_rear_tlane_line) {
+        tlane_obstacle_vec.emplace_back(obstacle_point_slot);
+        continue;
+      }
 
-    const bool is_front_tlane_line =
-        pnc::mathlib::IsInBound(obstacle_point_slot.x(),
-                                t_lane_.obs_pt_inside.x() - 0.3, F.x()) &&
-        pnc::mathlib::IsInBound(obstacle_point_slot.y(), E.y(),
-                                kMinChannelYMagIdentification * slot_side_sgn);
+      const bool is_front_tlane_line =
+          pnc::mathlib::IsInBound(obstacle_point_slot.x(),
+                                  t_lane_.obs_pt_inside.x() - 0.3, F.x()) &&
+          pnc::mathlib::IsInBound(
+              obstacle_point_slot.y(), E.y(),
+              kMinChannelYMagIdentification * slot_side_sgn);
 
-    if (is_front_tlane_line) {
-      tlane_obstacle_vec.emplace_back(obstacle_point_slot);
+      if (is_front_tlane_line) {
+        tlane_obstacle_vec.emplace_back(obstacle_point_slot);
+      }
     }
   }
   ILOG_INFO << "-----------tlane BC/DE-------------";
@@ -1180,7 +1178,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
   tlane_line.SetPoints(B, C_curb);
   tlane_line_vec.emplace_back(tlane_line);
 
-  if (!is_outer_arc_slot) {
+  if (!is_outer_arc_slot_) {
     tlane_line.SetPoints(D_curb, E);
     tlane_line_vec.emplace_back(tlane_line);
   }
@@ -1197,34 +1195,36 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
-  for (const auto& obs_pos : obs_pt_local_vec_) {
-    const bool is_tlane_obs =
-        pnc::mathlib::IsInBound(obs_pos.x(), B.x(), E.x()) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
-                                C_curb.y());
-    if (!is_tlane_obs) {
-      continue;
-    }
+  for (const auto& obstacle_point_set : obs_pt_local_vec_) {
+    for (const auto& obs_pos : obstacle_point_set.second) {
+      const bool is_tlane_obs =
+          pnc::mathlib::IsInBound(obs_pos.x(), B.x(), E.x()) &&
+          pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
+                                  C_curb.y());
+      if (!is_tlane_obs) {
+        continue;
+      }
 
-    if (pnc::mathlib::IsInBound(obs_pos.x(), 0.5, t_lane_.slot_length - 0.5) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), -0.4 * slot_side_sgn,
-                                1.2 * slot_side_sgn)) {
-      // obs noise in slot
-      continue;
-    }
+      if (pnc::mathlib::IsInBound(obs_pos.x(), 0.5, t_lane_.slot_length - 0.5) &&
+          pnc::mathlib::IsInBound(obs_pos.y(), -0.4 * slot_side_sgn,
+                                  1.2 * slot_side_sgn)) {
+        // obs noise in slot
+        continue;
+      }
 
-    const bool is_front_tlane_obs =
-        pnc::mathlib::IsInBound(obs_pos.x(), t_lane_.obs_pt_inside.x(),
-                                E.x()) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
-                                D_curb.y());
-    const bool is_rear_tlane_obs =
-        pnc::mathlib::IsInBound(obs_pos.x(), B.x(),
-                                t_lane_.obs_pt_outside.x()) &&
-        pnc::mathlib::IsInBound(obs_pos.y(), 1.5 * slot_side_sgn, C_curb.y());
+      const bool is_front_tlane_obs =
+          pnc::mathlib::IsInBound(obs_pos.x(), t_lane_.obs_pt_inside.x(),
+                                  E.x()) &&
+          pnc::mathlib::IsInBound(obs_pos.y(), t_lane_.obs_pt_inside.y(),
+                                  D_curb.y());
+      const bool is_rear_tlane_obs =
+          pnc::mathlib::IsInBound(obs_pos.x(), B.x(),
+                                  t_lane_.obs_pt_outside.x()) &&
+          pnc::mathlib::IsInBound(obs_pos.y(), 1.5 * slot_side_sgn, C_curb.y());
 
-    if (is_front_tlane_obs || is_rear_tlane_obs) {
-      tlane_obstacle_vec.emplace_back(obs_pos);
+      if (is_front_tlane_obs || is_rear_tlane_obs) {
+        tlane_obstacle_vec.emplace_back(obs_pos);
+      }
     }
   }
   apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
@@ -1333,7 +1333,10 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   path_planner_input.is_complete_path =
       apa_world_ptr_->GetSimuParam().is_complete_path;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
-  path_planner_input.is_searching_stage =
+  path_planner_input.is_before_running_stage =
+      apa_world_ptr_->GetLocalViewPtr()
+              ->function_state_machine_info.current_state ==
+          iflyauto::FunctionalState::FunctionalState_PARK_PRE_ACTIVE ||
       apa_world_ptr_->GetStateMachineManagerPtr()->IsSeachingStatus();
 
   if (frame_.is_replan_first) {
@@ -1701,6 +1704,27 @@ const bool ParallelParkOutScenario::PostProcessPathPara() {
   frame_.spline_success = true;
   return true;
 }
+
+void ParallelParkOutScenario::JudgeArcSlot(){
+  const double side_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
+
+  if (std::abs(arc_slot_init_out_heading_) < pnc::mathlib::Deg2Rad(5.0) ||
+      std::abs(arc_slot_init_out_heading_) > pnc::mathlib::Deg2Rad(45.0)) {
+    is_arc_slot_ = true;
+  }
+  ILOG_INFO << "arc_slot_init_out_heading_ = " << arc_slot_init_out_heading_;
+  ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_;
+  if (side_sgn > 0.0 && arc_slot_init_out_heading_ < -pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ > -pnc::mathlib::Deg2Rad(45.0)) {
+    is_outer_arc_slot_ = true;
+  }
+  if (side_sgn < 0.0 && arc_slot_init_out_heading_ > pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ < pnc::mathlib::Deg2Rad(45.0)) {
+    is_outer_arc_slot_ = true;
+  }
+  ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_ << ", is_outer_arc_slot_ = " << is_outer_arc_slot_;
+}
+
 
 }  // namespace apa_planner
 }  // namespace planning

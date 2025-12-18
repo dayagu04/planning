@@ -29,6 +29,8 @@ class ConstructionSceneRefline {
     return construction_ref_path_;
   };
 
+  void LogRefline();
+
  private:
   bool ExtractRoadBoundaries(
       const std::shared_ptr<planning::planning_math::KDPath>& frenet_coord,
@@ -41,11 +43,18 @@ class ConstructionSceneRefline {
       std::map<planning::ConstructionDirection, std::map<double, double>>& boundaries);
 
   bool GeneratePassableBoundary(
+      const std::shared_ptr<planning::LaneReferencePath>& reference_path,
       const std::map<planning::ConstructionDirection, std::map<double, double>>& boundaries);
+
+  bool DensePassableBoundary(
+      std::vector<double>& raw_s_vec, std::vector<double>& raw_l_vec);
 
   bool GenerateCenterLines(
       const std::shared_ptr<planning::LaneReferencePath>& reference_path,
-    std::vector<Point2d>& frenet_refline);
+      std::vector<Point2d>& frenet_refline);
+
+  bool PostProcessFrenetRefLine(
+      const planning::PlanningInitPoint& init_point, std::vector<Point2d>& frenet_refline);
 
   bool GenerateConstructionRefLine(
       const std::shared_ptr<planning::LaneReferencePath>& reference_path,
@@ -58,6 +67,8 @@ class ConstructionSceneRefline {
   pnc::mathlib::spline right_boundary_spline_;       // s, l
   std::map<int, std::vector<Point2d>> center_line_;  // line_id, s, l
   ReferencePathPoints construction_ref_path_;
+  std::vector<double> refline_x_vec_;
+  std::vector<double> refline_y_vec_;
 };
 
 }  // namespace planning

@@ -951,8 +951,11 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
     if (line_arc_length > 2.5) {// stop add line arc when length > 2.5 and  terminal condition is met
       if (tmp_line_arc_seg_vec.back().seg_type ==
           pnc::geometry_lib::SEG_TYPE_ARC) {
-        if (std::abs(tmp_line_arc_seg_vec.back().arc_seg.headingB) <
-            pnc::mathlib::Deg2Rad(15.0)) {
+        // const bool is_park_out =
+        //   (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr);
+
+        if (std::abs(tmp_line_arc_seg_vec.back().arc_seg.headingB - arc_slot_init_out_heading_ ) <
+            pnc::mathlib::Deg2Rad(10.0)) {
           ILOG_INFO << "stop add line arc when length > 2.5 and  terminal condition is met";
           break;
         }
@@ -1213,28 +1216,61 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
     if (BackwardNormalPlan(tmp_path_seg_vec,
                            input_.ego_info_under_slot.cur_pose)) {
-      AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
+      bool plan2line = true;
+      if (!(pnc::geometry_lib::CheckTwoPoseIsSame(
+              input_.ego_info_under_slot.cur_pose,
+              tmp_path_seg_vec.front().GetStartPose()))) {
+        plan2line = false;
+        const auto prepare_pose = tmp_path_seg_vec.front().GetStartPose();
+        const auto prepare_line = pnc::geometry_lib::BuildLineSegByPose(
+            prepare_pose.pos, prepare_pose.heading);
+        std::vector<pnc::geometry_lib::PathSegment> prepare_seg_vec;
+        // usleep(100 * 1e3);
+        if (PlanToPreparingLine(prepare_seg_vec,
+                                input_.ego_info_under_slot.cur_pose,
+                                prepare_line)) {
+          ILOG_INFO << "PlanToPreparingLine success!";
+          plan2line = true;
+          tmp_path_seg_vec.insert(tmp_path_seg_vec.begin(),
+                                  prepare_seg_vec.begin(),
+                                  prepare_seg_vec.end());
+        }
+      }
 
-      ILOG_INFO << "first try ego line plan success!";
-      if (ego_line_geo_path.gear_change_count == 0 ||
-          input_.parallel_replan_again_ == 1) {
-        debug_info_.debug_all_path_vec.emplace_back(ego_line_geo_path);
-        AddPathSegToOutPut(ego_line_geo_path.path_segment_vec);
+      if (plan2line) {
+        size_t in_slot_gear_change_count = 0;
         calc_params_.park_out_path_in_slot.clear();
         for (size_t i = 0; i < calc_params_.valid_target_pt_vec.size(); i++) {
-          if (CheckSamePose(
-                  ego_line_geo_path.path_segment_vec.back().GetEndPose(),
-                  calc_params_.valid_target_pt_vec[i])) {
-            calc_params_.park_out_path_in_slot =
+          if (CheckSamePose(tmp_path_seg_vec.back().GetEndPose(),
+                            calc_params_.valid_target_pt_vec[i])) {
+            auto& inslot_path =
                 calc_params_.inversed_path_vec_in_slot[i].path_segment_vec;
+            calc_params_.park_out_path_in_slot = inslot_path;
+            for (size_t j = 1; j < inslot_path.size(); j++) {
+              if (inslot_path[j].seg_gear != inslot_path[j - 1].seg_gear) {
+                in_slot_gear_change_count++;
+              }
+            }
+            break;
           }
         }
-        ILOG_INFO << "ego line path vec -----------------------------";
-        geometry_lib::PrintSegmentsVecInfo(ego_line_geo_path.path_segment_vec);
-        ILOG_INFO << "no need change gear in preparing step!";
-        return true;
+        AssempleGeometryPath(ego_line_geo_path, tmp_path_seg_vec);
+
+        ILOG_INFO << "first try ego line plan success!";
+        if ((ego_line_geo_path.gear_change_count + in_slot_gear_change_count) == 0
+            || input_.parallel_replan_again_ == 1) {
+          debug_info_.debug_all_path_vec.emplace_back(ego_line_geo_path);
+          AddPathSegToOutPut(ego_line_geo_path.path_segment_vec);
+          ILOG_INFO << "ego line path vec -----------------------------";
+          geometry_lib::PrintSegmentsVecInfo(
+              ego_line_geo_path.path_segment_vec);
+          ILOG_INFO << "no need change gear in preparing step!";
+          return true;
+        }
+        if (in_slot_gear_change_count == 0) {
+          geo_path_vec.emplace_back(ego_line_geo_path);
+        }
       }
-      geo_path_vec.emplace_back(ego_line_geo_path);
     } else {
       ILOG_INFO << "first try ego line failed!";
       if (input_.parallel_replan_again_ == 1) {

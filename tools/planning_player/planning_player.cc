@@ -21,58 +21,9 @@
 namespace planning {
 namespace planning_player {
 
-static constexpr auto TOPIC_PLANNING_PLAN = "/iflytek/planning/plan";
-static constexpr auto TOPIC_PLANNING_DEBUG_INFO =
-    "/iflytek/planning/debug_info";
-static constexpr auto TOPIC_PLANNING_DEBUG_INFO_ORIGIN =
-    "/iflytek/planning/debug_info_origin";
-static constexpr auto TOPIC_PLANNING_HMI = "/iflytek/planning/hmi";
-static constexpr auto TOPIC_FUSION_OBJECTS = "/iflytek/fusion/objects";
-static constexpr auto TOPIC_FUSION_OCCUPANCY_OBJECTS =
-    "/iflytek/fusion/occupancy/objects";
-static constexpr auto TOPIC_ROAD_FUSION = "/iflytek/fusion/road_fusion";
-static constexpr auto TOPIC_LOCALIZATION_ESTIMATE =
-    "/iflytek/localization/ego_pose";
-static constexpr auto TOPIC_LOCALIZATION = "/iflytek/localization/egomotion";
-static constexpr auto TOPIC_PREDICTION_RESULT =
-    "/iflytek/prediction/prediction_result";
-static constexpr auto TOPIC_VEHICLE_SERVICE = "/iflytek/vehicle_service";
-static constexpr auto TOPIC_CONTROL_COMMAN = "/iflytek/control/control_command";
-static constexpr auto TOPIC_HMI_MCU_INNER = "/iflytek/hmi/mcu_inner";
-static constexpr auto TOPIC_PARKING_FUSION = "/iflytek/fusion/parking_slot";
-static constexpr auto TOPIC_FUNC_STATE_MACHINE = "/iflytek/fsm/soc_state";
-static constexpr auto TOPIC_HD_MAP = "/iflytek/ehr/static_map";
-static constexpr auto TOPIC_SD_MAP = "/iflytek/ehr/sdmap_info";
-static constexpr auto TOPIC_SDPro_MAP = "/iflytek/ehr/sdpromap_info";
-static constexpr auto TOPIC_GROUND_LINE = "/iflytek/fusion/ground_line";
-static constexpr auto TOPIC_SPEED_BUMP = "/iflytek/fusion/speed_bump";
-// static constexpr auto TOPIC_EHR_PARKING_MAP = "/iflytek/ehr/parking_map";
-static constexpr auto TOPIC_LANE_TOPO = "/iflytek/camera_perception/lane_topo";
-static constexpr auto TOPIC_SYSTEM_VERSION = "/iflytek/system/version";
-static constexpr auto TOPIC_TRAFFIC_SIGN =
-    "/iflytek/camera_perception/traffic_sign_recognition";
-static constexpr auto TOPIC_PERCEPTION_SCENE =
-    "/iflytek/camera_perception/scene";
-static constexpr auto TOPIC_LANE_LINE = "/iflytek/camera_perception/lane_lines";
-static constexpr auto TOPIC_LANE_LINE_DEBUG_INFO =
-    "/iflytek/camera_perception/lane_lines_debug_info";
-static constexpr auto TOPIC_LANE_TOPO_DEBUG_INFO =
-    "/iflytek/camera_perception/lane_topo_debug_info";
-static constexpr auto TOPIC_OBJECTS = "/iflytek/camera_perception/objects";
-static constexpr auto TOPIC_DEGRADED_DRIVING_FUNCTION =
-    "/iflytek/degrade_function/fm_a_service";
 
-// apa topics
-static constexpr auto TOPIC_USS_WAVE_INFO = "/iflytek/uss/usswave_info";
-static constexpr auto TOPIC_USS_PERCEPT_INFO =
-    "/iflytek/fusion/uss_perception_info";
-static constexpr auto TOPIC_VISION_PARKING_SLOT =
-    "/iflytek/camera_perception/parking_slot_list";
-static constexpr auto TOPIC_CONTROL_DEBUG_INFO = "/iflytek/control/debug_info";
 
-static const double KMaxCurvature = 1.0 / 5.6;
-static const double KConstPi = 3.141592654;
-static const double KApaVelSimulation = 0.3;
+
 
 namespace fs = boost::filesystem;
 
@@ -537,27 +488,27 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
   bag.close();
   new_bag.close();
 
-  if (instant_error_) {
-    if (interface_check) {
-      return false;
-    }
-    std::cout << std::endl;
-    std::cout << "********************************************************"
-              << std::endl;
-    std::cout << "bag与算法的interface版本不匹配, 导致以上topic无法正常读取"
-              << std::endl;
-    std::cout << "按回车键继续执行(缺少以上topic), Ctrl + c 退出程序"
-              << std::endl;
-    std::cout << "********************************************************"
-              << std::endl;
-    char ch = std::cin.get();
-    // 检查输入是否为回车键
-    if (ch == '\n') {
-      return true;
-    } else {
-      return false;
-    }
-  }
+  // if (instant_error_) {
+  //   if (interface_check) {
+  //     return false;
+  //   }
+  //   std::cout << std::endl;
+  //   std::cout << "********************************************************"
+  //             << std::endl;
+  //   std::cout << "bag与算法的interface版本不匹配, 导致以上topic无法正常读取"
+  //             << std::endl;
+  //   std::cout << "按回车键继续执行(缺少以上topic), Ctrl + c 退出程序"
+  //             << std::endl;
+  //   std::cout << "********************************************************"
+  //             << std::endl;
+  //   char ch = std::cin.get();
+  //   // 检查输入是否为回车键
+  //   if (ch == '\n') {
+  //     return true;
+  //   } else {
+  //     return false;
+  //   }
+  // }
   return true;
 }
 
@@ -1046,7 +997,8 @@ void PlanningPlayer::PlayOneFrame(
     //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
   }
 
-  if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
+  bool is_find_func_state_machine = check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE);
+  if (1) {
     bool find_function_state_machine = false;
     struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
     uint8_t functional_state = func_state_machine_ros_msg.current_state;
@@ -2182,11 +2134,11 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
       // std::cerr << "frame_num " << frame_num_
       //           << " missing " << TOPIC_SPEED_BUMP << std::endl;
     }
-
+    
+    struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
+    uint8_t functional_state = func_state_machine_ros_msg.current_state;
     if (check_msg_exist(msg_cache_, TOPIC_FUNC_STATE_MACHINE)) {
       bool find_function_state_machine = false;
-      struct_msgs::FuncStateMachine func_state_machine_ros_msg{};
-      uint8_t functional_state = func_state_machine_ros_msg.current_state;
       if (is_close_loop) {
         functional_state = iflyauto::FunctionalState_MANUAL_PARKING;
       }
@@ -2270,8 +2222,28 @@ void PlanningPlayer::NoDebugInfoMode(bool is_close_loop, bool play_in_loop) {
               ConvertTypeInfo::TO_STRUCT);
       planning_adapter_->Feed_IflytekFsmSocState(func_state_machine_msg);
     } else {
-      std::cerr << "Error !!!!! missing FUNC_STATE_MACHINE" << std::endl;
-      return;
+      if (scene_type_ == "scc") {
+        functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+      } else if (scene_type_ == "noa") {
+        functional_state = iflyauto::FunctionalState_NOA_ACTIVATE;
+      } else if (scene_type_ == "acc") {
+        functional_state = iflyauto::FunctionalState_ACC_ACTIVATE;
+      } else if (scene_type_ == "hpp") {
+        functional_state = iflyauto::FunctionalState_HPP_CRUISE_ROUTING;
+      } else if (scene_type_ == "rads") {
+        functional_state = iflyauto::FunctionalState_RADS_TRACING;
+      } else {
+        functional_state = iflyauto::FunctionalState_SCC_ACTIVATE;
+      }
+      func_state_machine_ros_msg.current_state = functional_state;
+
+      iflyauto::FuncStateMachine func_state_machine_msg{};
+      convert(func_state_machine_msg, func_state_machine_ros_msg,
+              ConvertTypeInfo::TO_STRUCT);
+      planning_adapter_->Feed_IflytekFsmSocState(func_state_machine_msg);
+      std::cerr << "Attetion !!!!! missing FUNC_STATE_MACHINE" << std::endl;
+      std::cout << "Default func: " << functional_state << std::endl;
+      // return;
     }
 
     planning_adapter_->Proc();

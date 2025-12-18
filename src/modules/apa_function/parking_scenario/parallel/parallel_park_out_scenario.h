@@ -53,10 +53,11 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
+  void JudgeArcSlot();
 
  private:
   Tlane t_lane_;
-  std::vector<Eigen::Vector2d> obs_pt_local_vec_;
+  std::unordered_map<size_t, std::vector<Eigen::Vector2d>> obs_pt_local_vec_;
   ParallelOutPathGenerator parallel_out_path_planner_;
   // std::vector<bool> multi_parkout_direction; // 0: left front, 1: right
   // front, 2: left back, 3: right back
@@ -71,6 +72,8 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool delay_check_finish_ = false;
   const bool PostProcessPathPara();
   double arc_slot_init_out_heading_ = 0.0;
+  bool is_outer_arc_slot_ = false;
+  bool is_arc_slot_ = false;
 };
 }  // namespace apa_planner
 }  // namespace planning

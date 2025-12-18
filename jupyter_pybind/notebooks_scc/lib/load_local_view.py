@@ -42,6 +42,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   is_vis_sdmap = global_var.get_value('is_vis_sdmap')
   is_vis_sdpromap = global_var.get_value('is_vis_sdpromap')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
+  is_calc_min_turn_radius = global_var.get_value('is_calc_min_turn_radius')
   car_type = global_var.get_value('car_type')
   car_xb, car_yb = load_car_params_patch(car_type)
   # get msg
@@ -288,6 +289,105 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'ego_xn': ego_xn,
       'ego_yn': ego_yn,
     })
+
+    # 计算自车前方（0-80m）真值路径点的最小转弯半径
+    if is_calc_min_turn_radius and len(ego_xb) >= 3:
+      # 步骤1: 找到距离(0,0)最近的点，且该点在序列中已经超过(0,0)
+      min_dist_to_origin = float('inf')
+      start_idx = -1
+
+      for i in range(len(ego_xb)):
+        dist_to_origin = np.sqrt(ego_xb[i]**2 + ego_yb[i]**2)
+        # 找到距离原点最近的点，且该点应该已经超过原点（x坐标大于0，或者距离在增加）
+        # 判断是否超过原点：如果x>0，或者距离比前一个点更远
+        is_past_origin = False
+        if ego_xb[i] > 0:
+          is_past_origin = True
+        elif i > 0:
+          prev_dist = np.sqrt(ego_xb[i-1]**2 + ego_yb[i-1]**2)
+          if dist_to_origin > prev_dist:
+            is_past_origin = True
+
+        if is_past_origin and dist_to_origin < min_dist_to_origin:
+          min_dist_to_origin = dist_to_origin
+          start_idx = i
+
+      # 如果没找到超过原点的点，使用距离原点最近的点
+      if start_idx == -1:
+        for i in range(len(ego_xb)):
+          dist_to_origin = np.sqrt(ego_xb[i]**2 + ego_yb[i]**2)
+          if dist_to_origin < min_dist_to_origin:
+            min_dist_to_origin = dist_to_origin
+            start_idx = i
+
+      if start_idx == -1:
+        print("自车真值路径点：无法找到起始点")
+      else:
+        # 步骤2: 从起始点开始，按顺序累计距离，直到累计距离达到80m
+        forward_points_x = []
+        forward_points_y = []
+        cumulative_dist = 0.0
+
+        # 添加起始点
+        forward_points_x.append(ego_xb[start_idx])
+        forward_points_y.append(ego_yb[start_idx])
+
+        # 从起始点的下一个点开始累计距离
+        for i in range(start_idx + 1, len(ego_xb)):
+          # 计算到前一个点的距离
+          prev_x = forward_points_x[-1]
+          prev_y = forward_points_y[-1]
+          segment_dist = np.sqrt((ego_xb[i] - prev_x)**2 + (ego_yb[i] - prev_y)**2)
+
+          if cumulative_dist + segment_dist <= 80.0:
+            # 累计距离未超过80m，添加该点
+            cumulative_dist += segment_dist
+            forward_points_x.append(ego_xb[i])
+            forward_points_y.append(ego_yb[i])
+          else:
+            # 累计距离将超过80m，计算到80m的插值点（可选）
+            remaining_dist = 80.0 - cumulative_dist
+            if remaining_dist > 1e-6 and segment_dist > 1e-6:
+              ratio = remaining_dist / segment_dist
+              interp_x = prev_x + ratio * (ego_xb[i] - prev_x)
+              interp_y = prev_y + ratio * (ego_yb[i] - prev_y)
+              forward_points_x.append(interp_x)
+              forward_points_y.append(interp_y)
+            break
+
+        # 步骤3: 在筛选出的路径点上计算最小转弯半径
+        if len(forward_points_x) >= 3:
+          min_radius = float('inf')
+          # 使用三点法计算曲率半径
+          for i in range(len(forward_points_x) - 2):
+            x1, y1 = forward_points_x[i], forward_points_y[i]
+            x2, y2 = forward_points_x[i+1], forward_points_y[i+1]
+            x3, y3 = forward_points_x[i+2], forward_points_y[i+2]
+
+            # 计算三点构成的三角形的边长
+            a = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+            b = np.sqrt((x3-x2)**2 + (y3-y2)**2)
+            c = np.sqrt((x3-x1)**2 + (y3-y1)**2)
+
+            # 如果三点不共线，计算外接圆半径（曲率半径）
+            if a > 1e-6 and b > 1e-6 and c > 1e-6:
+              # 使用海伦公式计算面积
+              s = (a + b + c) / 2.0
+              area = np.sqrt(max(0, s * (s - a) * (s - b) * (s - c)))
+
+              if area > 1e-6:
+                # 外接圆半径 R = (a*b*c) / (4*area)
+                radius = (a * b * c) / (4.0 * area)
+                if radius < min_radius:
+                  min_radius = radius
+
+          if min_radius != float('inf'):
+            print("自车前方（0-80m）真值路径点的最小转弯半径: {:.2f} m (起始点索引: {}, 累计距离: {:.2f} m, 点数: {})".format(
+              min_radius, start_idx, cumulative_dist, len(forward_points_x)))
+          else:
+            print("自车前方（0-80m）真值路径点：无法计算最小转弯半径（点共线或数据不足）")
+        else:
+          print("自车前方（0-80m）真值路径点：有效点数不足（需要至少3个点，当前: {}）".format(len(forward_points_x)))
 
     if g_is_display_enu:
       # car pos in global coordinates
@@ -923,6 +1023,21 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
     #   'text_xn': [text_xn],
     #   'text_yn': [text_yn],
     # })
+
+    reference_path_smooth_info = plan_debug_msg.reference_path_smooth_info
+    print("is_smooth_success: ", reference_path_smooth_info.is_smooth_success)
+    print("smooth_refpath_points_cost: ",plan_debug_json_msg["smooth_refpath_points_cost"])
+    smooth_ref_path_x = []
+    smooth_ref_path_y = []
+    if g_is_display_enu:
+      smooth_ref_path_x, smooth_ref_path_y = reference_path_smooth_info.smooth_x_vec, reference_path_smooth_info.smooth_y_vec
+    else:
+      smooth_ref_path_x, smooth_ref_path_y = coord_tf.global_to_local(reference_path_smooth_info.smooth_x_vec, reference_path_smooth_info.smooth_y_vec)
+    smooth_ref_path_s = reference_path_smooth_info.smooth_s_vec
+    local_view_data['data_smooth_ref_path'].data.update({
+      'smooth_ref_path_x': smooth_ref_path_x,
+      'smooth_ref_path_y': smooth_ref_path_y
+    })
 
     obstacle_polygon_id = local_view_data['data_select_obs_id'].data['obstacle_polygon_id']
     plan_obstacle_info = load_obstacle_in_planning(environment_model_info, obstacle_polygon_id, is_enu_to_car, loc_msg)
@@ -2072,6 +2187,9 @@ def load_local_view_figure():
   data_target_lane = ColumnDataSource(data = {'target_lane_y':[], 'target_lane_x':[]})
   data_origin_lane = ColumnDataSource(data = {'origin_lane_y':[], 'origin_lane_x':[]})
 
+  data_smooth_ref_path = ColumnDataSource(data = {'smooth_ref_path_x':[],
+                                                  'smooth_ref_path_y':[]})
+
   data_select_obs_id = ColumnDataSource(data = {'prediction_obstacle_id':[],
                                                 'obstacle_polygon_id':[],
                                                 })
@@ -2362,6 +2480,7 @@ def load_local_view_figure():
                      'data_fix_lane': data_fix_lane ,\
                      'data_target_lane': data_target_lane ,\
                      'data_origin_lane': data_origin_lane ,\
+                     'data_smooth_ref_path': data_smooth_ref_path, \
                      'data_select_obs_id': data_select_obs_id,\
                      'data_prediction_0' : data_prediction_0 ,\
                      'data_prediction_1' : data_prediction_1 ,\
@@ -2634,7 +2753,8 @@ def load_local_view_figure():
   fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
   fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
   fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
+  fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
+  fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
