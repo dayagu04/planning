@@ -60,8 +60,8 @@ constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
 // Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1, 0.05]
-const std::vector<double> _EWMA_ALPHA_RADIUS_BP{150.0, 300.0, 500.0, 600.0};
-const std::vector<double> _EWMA_ALPHA_V{0.3, 0.15, 0.1, 0.05};
+const std::vector<double> kEwmaAlphaRadiusBreakpoints{150.0, 300.0, 500.0, 600.0};
+const std::vector<double> kEwmaAlphaValues{0.3, 0.15, 0.1, 0.05};
 constexpr double kSSharpBendCount = 3;
 constexpr double kFarEnoughDisToMerge = 500.0;
 constexpr double kCloseDisToMergeCancelVLimit = 120.0;
@@ -90,8 +90,7 @@ constexpr double kMaxRampPointSpacingRatio = 2.5;  // Ratio threshold of max spa
 constexpr int kMaxDensePointCountForSparseBack = 3;  // Maximum dense point count threshold for determining dense-front-sparse-back pattern
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
-constexpr double preview_distance_0_80m = 80.0;
-constexpr double sampling_step = 2.0;
+constexpr double kPreviewDistance080m = 80.0;  // Preview distance for 0-80m range (m)
 constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold for entering avg radius EWMA (m/s)
 constexpr double kAvgRadiusEnterRadius = 350.0;  // Road radius threshold for entering avg radius EWMA (m)
 constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
@@ -1098,8 +1097,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   
   // Collect curvature data for 0-80m range
   std::vector<double> radius_vec_0_80m;
-  radius_vec_0_80m.reserve(static_cast<size_t>(preview_distance_0_80m / sampling_step) + 1);
-  for (double s = 0.0; s <= preview_distance_0_80m; s += sampling_step) {
+  radius_vec_0_80m.reserve(static_cast<size_t>(kPreviewDistance080m / kSamplingStep) + 1);
+  for (double s = 0.0; s <= kPreviewDistance080m; s += kSamplingStep) {
     ReferencePathPoint refpath_pt;
     if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + s, refpath_pt)) {
       double curv = std::fabs(refpath_pt.path_point.kappa());
@@ -1177,15 +1176,15 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   // Calculate dynamic EWMA alpha based on radius
   double radius_for_ewma = 1.0 / std::max(curv_for_ewma, 0.0001);
   double ewma_alpha = 0.2;  // Default value
-  if (radius_for_ewma < _EWMA_ALPHA_RADIUS_BP.front()) {
+  if (radius_for_ewma < kEwmaAlphaRadiusBreakpoints.front()) {
     // Below lower bound, use maximum alpha
-    ewma_alpha = _EWMA_ALPHA_V.front();
-  } else if (radius_for_ewma > _EWMA_ALPHA_RADIUS_BP.back()) {
+    ewma_alpha = kEwmaAlphaValues.front();
+  } else if (radius_for_ewma > kEwmaAlphaRadiusBreakpoints.back()) {
     // Above upper bound, use minimum alpha
-    ewma_alpha = _EWMA_ALPHA_V.back();
+    ewma_alpha = kEwmaAlphaValues.back();
   } else {
     // Interpolate within bounds
-    ewma_alpha = interp(radius_for_ewma, _EWMA_ALPHA_RADIUS_BP, _EWMA_ALPHA_V);
+    ewma_alpha = interp(radius_for_ewma, kEwmaAlphaRadiusBreakpoints, kEwmaAlphaValues);
   }
   
   if (raw_curv_spline_ < kEpsilon) {
