@@ -626,9 +626,8 @@ bool IhcCore::DynamicObstacleCheck(void) {
     current_road_type = GetContext.get_road_info()->sdpromap_info.road_type;
   }
   
-  // 判断是否为高速且速度大于70kph，如果是则跳过对向来车判断
-  bool skip_oncoming_check = (current_road_type == iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY) &&
-                             (ego_speed_kph > 70.0);
+  // 判断是否为高速，如果是则跳过对向来车判断
+  bool skip_oncoming_check = (current_road_type == iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY);
 
   // 初始化debug变量（仅在持续满足阈值时间后才会被置为true）
   ihc_sys_.state.low_beam_due_to_same_dir_vehicle = false;
