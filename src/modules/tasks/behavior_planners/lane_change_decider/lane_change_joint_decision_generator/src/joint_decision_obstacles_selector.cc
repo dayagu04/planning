@@ -71,6 +71,7 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
   if (ego_reference_path == nullptr) {
     return;
   }
+  const auto& obstacles_map = ego_reference_path->get_obstacles_map();
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord == nullptr) {
     return;
@@ -122,16 +123,36 @@ void JointDecisionObstaclesSelector::SelectLaneChangeObstacles(
       }
     }
   }
-  // 变道过程中，原车道前车使用 HALF_YIELD 标签，只在前3秒内产生 SoftHalfplane 代价
+// 变道过程中，原车道前车使用 HALF_YIELD 标签，只在前3秒内产生 SoftHalfplane 代价
   if (lc_info.origin_agent_id != -1) {
     const auto* origin_agent = agent_manager->GetAgent(lc_info.origin_agent_id);
+    auto it = obstacles_map.find(lc_info.origin_agent_id);
+    bool is_reached_in_ego_lane = true;
+    if (it != obstacles_map.end()) {
+      const auto& sl_obs = it->second;
+      double obs_s_start = sl_obs->frenet_obstacle_boundary().s_start;
+      double obs_vel = sl_obs->frenet_velocity_s();
+      double ego_s_end = ego_reference_path->get_ego_frenet_boundary().s_end;
+      double ego_v = ego_reference_path->get_frenet_ego_state().velocity();
+      double time_in_origin_lane = 3.0; //原车道内视距
+      if((obs_s_start - ego_s_end) > ego_v  * time_in_origin_lane) {
+        is_reached_in_ego_lane = false;
+      }
+    }
     if (origin_agent != nullptr) {
       const auto& all_agents = agent_manager->GetAllCurrentAgents();
       for (const auto& agent : all_agents) {
         if (agent != nullptr && agent->agent_id() == lc_info.origin_agent_id) {
-          key_obstacles_.emplace_back(CreateKeyObstacle(
+          //如果原车道前车在自车速度3s距离以外，则给IGNORE标签，否则给HALF_YIELD标签在前3秒内产生 SoftHalfplane 代价
+          if (is_reached_in_ego_lane) {
+            key_obstacles_.emplace_back(CreateKeyObstacle(
+                agent, ego_lane_coord,
+                lane_change_joint_decision::LongitudinalLabel::HALF_YIELD));
+          } else {
+            key_obstacles_.emplace_back(CreateKeyObstacle(
               agent, ego_lane_coord,
-              lane_change_joint_decision::LongitudinalLabel::HALF_YIELD));
+              lane_change_joint_decision::LongitudinalLabel::IGNORE));
+          }
           break;
         }
       }
