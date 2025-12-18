@@ -84,6 +84,8 @@ bool SpatioTemporalPlanner::Execute() {
   const auto &virtual_lane_manager =
       session_->environmental_model().get_virtual_lane_manager();
   const auto &intersection_state = virtual_lane_manager->GetIntersectionState();
+  const auto& construction_scene_output =
+      session_->environmental_model().get_construction_scene_manager()->get_construction_scene_output();
   const bool is_construction_scene_ref_path =
       coarse_planning_info.reference_path->GetIsConstructionScene();
   spatio_temporal_union_plan_.set_st_dp_is_sucess(false);
@@ -95,7 +97,7 @@ bool SpatioTemporalPlanner::Execute() {
 
   // 过滤自车处于非路口中的状态
   UpdateIntersection();
-  if (!ego_in_intersection_state_ && !is_construction_scene_ref_path) {
+  if (!ego_in_intersection_state_ && !construction_scene_output.enable_construction_passage) {
     ILOG_DEBUG << "SpatioTemporalPlanner::ego not in intersection!";
     last_enable_using_st_plan_ = false;
     return true;
