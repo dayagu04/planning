@@ -1200,8 +1200,10 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
   if (boundary_id_st_boundaries_map.find(rear_st_id) !=
       boundary_id_st_boundaries_map.end()) {
     rear_st_boundary = boundary_id_st_boundaries_map.at(rear_st_id).get();
-    succ_decision_table->insert(
-        std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
+    if (rear_st_boundary != nullptr) {
+      succ_decision_table->insert(std::make_pair(
+          rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
+    }
   }
 
   if (st_graph_input->is_lane_keeping() ||
@@ -1218,10 +1220,6 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
     }
     return;
   }
-
-  // Set rear target as overtake
-  succ_decision_table->insert(
-      std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
 
   for (const auto& st_boundary_entry : boundary_id_st_boundaries_map) {
     const auto boundary_id = st_boundary_entry.first;
