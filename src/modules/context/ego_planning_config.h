@@ -3903,10 +3903,14 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
                    "enable_sharp_curve_by_decel");
     ReadItem<bool>(json, enable_map_sharp_curve_by_decel, "speed_limit_decider",
                    "enable_map_sharp_curve_by_decel");
+    ReadItem<bool>(json, enable_avg_radius_for_ewma, "speed_limit_decider",
+                   "enable_avg_radius_for_ewma");
     ReadItem<double>(json, map_sharp_curve_dis_to_ramp, "speed_limit_decider",
                      "map_sharp_curve_dis_to_ramp");
     ReadItem<double>(json, map_sharp_curve_speed_limit, "speed_limit_decider",
                      "map_sharp_curve_speed_limit");
+    ReadItem<double>(json, ewma_alpha_v_limit_in_turns, "speed_limit_decider",
+                     "ewma_alpha_v_limit_in_turns");
 
     read_json_vec(json,
                   std::vector<std::string>{"speed_limit_decider",
@@ -4058,8 +4062,10 @@ struct SpeedLimitConfig : public EgoPlanningConfig {
   bool enable_map_sharp_curve_speed_limit = true;  // 是否启用地图急弯限速
   bool enable_sharp_curve_by_decel = true;  // 是否启用基于减速度的急弯判断（默认true）
   bool enable_map_sharp_curve_by_decel = true;  // 是否启用基于减速度的地图急弯判断（默认false）
+  bool enable_avg_radius_for_ewma = true;  // 是否启用平均半径用于EWMA（默认true）
   double map_sharp_curve_dis_to_ramp = 100.0;  // 接近匝道的距离阈值（m）
   double map_sharp_curve_speed_limit = 40.0 / 3.6;  // 地图急弯限速（m/s，40kph）
+  double ewma_alpha_v_limit_in_turns = 0.3;  // EWMA coefficient for v_limit_in_turns
 
 
   VehicleLatDisRelVelTable vehicle_lat_dis_rel_vel_table;

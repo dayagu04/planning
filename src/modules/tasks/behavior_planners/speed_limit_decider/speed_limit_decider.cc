@@ -59,7 +59,9 @@ constexpr int kConstructionStrongMinHoldFrames = 100;
 constexpr int kConstructionStrongMaxHoldFrames = 600;
 constexpr double kCAManualInterventionSpeedDetected = 4 / 3.6;
 constexpr double kSamplingStep = 2.0;
-constexpr double kEWMAAlpha = 0.3;
+// Dynamic EWMA alpha based on radius: [150, 300, 500, 600] -> [0.3, 0.15, 0.1, 0.05]
+const std::vector<double> kEwmaAlphaRadiusBreakpoints{150.0, 300.0, 500.0, 600.0};
+const std::vector<double> kEwmaAlphaValues{0.3, 0.15, 0.1, 0.05};
 constexpr double kSSharpBendCount = 3;
 constexpr double kFarEnoughDisToMerge = 500.0;
 constexpr double kCloseDisToMergeCancelVLimit = 120.0;
@@ -88,6 +90,11 @@ constexpr double kMaxRampPointSpacingRatio = 2.5;  // Ratio threshold of max spa
 constexpr int kMaxDensePointCountForSparseBack = 3;  // Maximum dense point count threshold for determining dense-front-sparse-back pattern
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
+constexpr double kPreviewDistance080m = 80.0;  // Preview distance for 0-80m range (m)
+constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold for entering avg radius EWMA (m/s)
+constexpr double kAvgRadiusEnterRadius = 350.0;  // Road radius threshold for entering avg radius EWMA (m)
+constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
+constexpr double kAvgRadiusExitRadius = 280.0;  // Road radius threshold for exiting avg radius EWMA (m)
 
 bool CalculateAgentSLBoundary(
     const std::shared_ptr<planning_math::KDPath> &planned_path,
@@ -1015,7 +1022,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   double ego_start_s = frenet_ego_state.s();
   const pnc::mathlib::spline &raw_spline =
       reference_path_ptr->GetRawCurveSpline();
-  bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
+  //bool is_ref_path_smoothed = reference_path_ptr->GetIsSmoothed();
+  bool is_ref_path_smoothed = false;
   std::vector<CurvInfo> preview_curv_info_vec;
   for (int idx = 0; idx * 2.0 < preview_x; idx++) {
     CurvInfo one_curv_info;
@@ -1033,7 +1041,7 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
       // Calculate average curvature in window
       std::vector<double> curv_window_vec;
       int curv_sign = 0;
-      for (int j = -3; j <= 3; j++) {
+      for (int j = -6; j <= 6; j++) {
         double curv = 0.0001;
         ReferencePathPoint refpath_pt;
         if (reference_path_ptr->get_reference_point_by_lon(
@@ -1078,16 +1086,112 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     }
   }
   double road_radius_origin = 1 / std::max(max_curv, 0.0001);
-
+  
 
   // Distance to max curvature point
   double dist_to_max_curv = max_curv_s;
+  
+  // Calculate average radius in 0-80m range and conditionally use it for EWMA
+  double avg_radius_0_80m = 10000.0;
+  bool use_avg_radius_for_ewma = false;
+  
+  // Collect curvature data for 0-80m range
+  std::vector<double> radius_vec_0_80m;
+  radius_vec_0_80m.reserve(static_cast<size_t>(kPreviewDistance080m / kSamplingStep) + 1);
+  for (double s = 0.0; s <= kPreviewDistance080m; s += kSamplingStep) {
+    ReferencePathPoint refpath_pt;
+    if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + s, refpath_pt)) {
+      double curv = std::fabs(refpath_pt.path_point.kappa());
+      if (curv > 1e-6) {
+        double radius = 1.0 / curv;
+        radius_vec_0_80m.emplace_back(radius);
+      }
+    }
+  }
+  
+  // Calculate median radius and filtered average radius
+  if (speed_limit_config_.enable_avg_radius_for_ewma && !radius_vec_0_80m.empty()) {
+    // 1) compute median radius in 0-80m
+    std::vector<double> radius_sorted = radius_vec_0_80m;
+    std::sort(radius_sorted.begin(), radius_sorted.end());
+    const size_t n = radius_sorted.size();
+    double median_radius = 0.0;
+    if (n % 2 == 1) {
+      median_radius = radius_sorted[n / 2];
+    } else {
+      median_radius = 0.5 * (radius_sorted[n / 2 - 1] + radius_sorted[n / 2]);
+    }
+
+    // 2) compute mean radius, excluding outliers > 2 * median_radius
+    double radius_sum = 0.0;
+    size_t valid_cnt = 0;
+    const double radius_upper_bound = 2.0 * median_radius;
+    for (const auto &r : radius_vec_0_80m) {
+      if (r <= radius_upper_bound) {
+        radius_sum += r;
+        ++valid_cnt;
+      }
+    }
+    if (valid_cnt > 0) {
+      avg_radius_0_80m = radius_sum / static_cast<double>(valid_cnt);
+    } else {
+      // Fallback: if all points are filtered out, use median radius
+      avg_radius_0_80m = median_radius;
+    }
+    
+    // Check conditions: use road_radius_origin to lookup expected speed
+    double acc_lat_max_origin = interp(0.5*(road_radius_origin + last_road_radius_origin_), _AY_MAX_CURV_BP, _AY_MAX_CURV_V);
+    double v_expected_origin = std::sqrt(acc_lat_max_origin * road_radius_origin);
+    double speed_diff = std::fabs(v_expected_origin - v_ego);
+    
+    // Hysteresis logic: enter when speed_diff < kEWMAAvgRadiusEnterSpeedDiff && road_radius_origin > kEWMAAvgRadiusEnterRadius
+    //                   exit when speed_diff >= kEWMAAvgRadiusExitSpeedDiff || road_radius_origin < kEWMAAvgRadiusExitRadius
+    if (last_use_avg_radius_for_ewma_) {
+      // Currently in the state, check exit conditions
+      if (speed_diff >= kAvgRadiusExitSpeedDiff || road_radius_origin < kAvgRadiusExitRadius) {
+        use_avg_radius_for_ewma = false;
+      } else {
+        use_avg_radius_for_ewma = true;
+      }
+    } else {
+      // Currently not in the state, check enter conditions
+      if (speed_diff < kAvgRadiusEnterSpeedDiff && road_radius_origin > kAvgRadiusEnterRadius) {
+        use_avg_radius_for_ewma = true;
+      } else {
+        use_avg_radius_for_ewma = false;
+      }
+    }
+    
+    // Update last state for next iteration
+    last_use_avg_radius_for_ewma_ = use_avg_radius_for_ewma;
+  }
+  last_road_radius_origin_ = road_radius_origin;
   // Apply EWMA filter
+  double curv_for_ewma = max_curv;
+  if (use_avg_radius_for_ewma) {
+    // Convert average radius back to curvature
+    curv_for_ewma = 1.0 / std::max(avg_radius_0_80m, 0.0001);
+  }
+  
+  // Calculate dynamic EWMA alpha based on radius
+  double radius_for_ewma = 1.0 / std::max(curv_for_ewma, 0.0001);
+  double ewma_alpha = 0.2;  // Default value
+  if (radius_for_ewma < kEwmaAlphaRadiusBreakpoints.front()) {
+    // Below lower bound, use maximum alpha
+    ewma_alpha = kEwmaAlphaValues.front();
+  } else if (radius_for_ewma > kEwmaAlphaRadiusBreakpoints.back()) {
+    // Above upper bound, use minimum alpha
+    ewma_alpha = kEwmaAlphaValues.back();
+  } else {
+    // Interpolate within bounds
+    ewma_alpha = interp(radius_for_ewma, kEwmaAlphaRadiusBreakpoints, kEwmaAlphaValues);
+  }
+  
   if (raw_curv_spline_ < kEpsilon) {
-    raw_curv_spline_ = max_curv;
+    raw_curv_spline_ = curv_for_ewma;
   } else {
     raw_curv_spline_ =
-        kEWMAAlpha * max_curv + (1 - kEWMAAlpha) * raw_curv_spline_;
+        ewma_alpha * curv_for_ewma + (1 - ewma_alpha) * raw_curv_spline_;
   }
   road_radius = 1 / std::max(raw_curv_spline_, 0.0001);
   // if (road_radius < 400) {
@@ -1098,6 +1202,17 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
     v_limit_road = v_limit_road * kSSharpBendSpeedScaleRatio;
   }
   v_limit_in_turns = std::min(v_limit_in_turns, v_limit_road);
+  
+  // Apply EWMA filter to v_limit_in_turns
+  if (v_limit_in_turns_filtered_ < kEpsilon) {
+    v_limit_in_turns_filtered_ = v_limit_in_turns;
+  } else {
+    double ewma_alpha_spd = speed_limit_config_.ewma_alpha_v_limit_in_turns;
+    v_limit_in_turns_filtered_ =
+        ewma_alpha_spd * v_limit_in_turns + 
+        (1 - ewma_alpha_spd) * v_limit_in_turns_filtered_;
+  }
+  v_limit_in_turns = v_limit_in_turns_filtered_;
 
   ILOG_DEBUG << "road_radius is :" << road_radius
              << ", acc_lat_max:" << acc_lat_max;
@@ -1111,6 +1226,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   JSON_DEBUG_VALUE("is_s_bend", is_s_bend ? 1 : 0);
   JSON_DEBUG_VALUE("road_radius_origin", road_radius_origin);
   JSON_DEBUG_VALUE("dist_to_max_curv", dist_to_max_curv);
+  JSON_DEBUG_VALUE("avg_radius_0_80m", avg_radius_0_80m);
+  JSON_DEBUG_VALUE("use_avg_radius_for_ewma", use_avg_radius_for_ewma ? 1 : 0);
 
   // Determine sharp curve with hysteresis
   bool is_sharp_curve = false;

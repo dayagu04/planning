@@ -254,10 +254,10 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "construction_strong_deceleration_mode", "construction_strong_mode_reason","construction_strong_mode_frame_count","agents_headway_id", "agents_headway_value",\
                               "has_target_follow_curve", "has_stable_follow_target", "has_farslow_follow_target", \
                               "closest_agent_id", "min_urgent_dist", "min_more_urgent_dist", "v_target_for_dangerous_obs", "dangerous_obs_id",\
-                              "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec",\
+                              "lat_path_length", "extend_path_length", "comfort_jerk_min_vec", "comfort_v_target_vec",'road_radius_origin',\
                               'v_limit_in_turns','v_limit_road','v_limit_steering','road_radius','is_s_bend',\
                               'dist_to_max_curv','is_sharp_curve','is_sharp_curve_by_decel','sharp_curve_frame_count','required_deceleration','v_limit_map_sharp_curve','ramp_curv_dist_to_max_curv','ramp_curv_min_radius','is_map_sharp_curve',\
-                              "dynamic_world_cost", "front_node_id", "rear_node_id", \
+                              "dynamic_world_cost", "front_node_id", "rear_node_id", "avg_radius_0_80m","use_avg_radius_for_ewma",\
                               "ego_left_node", "ego_left_front_node", "ego_left_rear_node", \
                               "ego_right_node", "ego_right_front_node", "ego_right_rear_node", \
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
@@ -1042,6 +1042,7 @@ def load_lon_global_figure(bag_loader):
   t_plan_vec = bag_loader.plan_debug_msg['t']
   t_loc_vec = bag_loader.loc_msg['t']
   t_vehicle_service_vec = bag_loader.vs_msg['t']
+  curve_limit_velocity_vec = []
   # for ind in range(len(bag_loader.plan_debug_msg['json'])):
     # target_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_target'], 2))
     # ref_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['RealTime_v_ref'], 2))
@@ -1057,13 +1058,15 @@ def load_lon_global_figure(bag_loader):
       cipv_vel = 0.0
     cipv_vel_vec.append(cipv_vel)
     cipv_vel_fusion_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['cipv_vel_fusion'], 2))
-
+    curve_limit_velocity_vec.append(round(bag_loader.plan_debug_msg['json'][ind]['v_limit_in_turns'], 2))
   velocity_fig.line(t_plan_vec, cipv_vel_vec, line_width=1,
                               legend_label='cipv_vel', color="green")
   velocity_fig.line(t_plan_vec, cipv_vel_fusion_vec, line_width=1,
                               legend_label='cipv_vel_fusion', color="red")
   velocity_fig.line(t_vehicle_service_vec, ego_velocity_vec, line_width=1,
                                 legend_label='ego_velocity',color="blue")
+  velocity_fig.line(t_plan_vec, curve_limit_velocity_vec, line_width=1,
+                    legend_label='v_limit_in_turns', color="teal")  # 点状虚线，青绿色
   # velocity_fig.line(t_plan_vec, leadone_velocity_vec, line_width=1,
   #                             legend_label='leadone_velocity', color="red")
   # velocity_fig.line(t_plan_vec, leadtwo_velocity_vec, line_width=1,

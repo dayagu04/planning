@@ -19,6 +19,7 @@ def init():  # 初始化
     'is_vis_me_obj': False,
     'is_vis_lane_mark': True,
     'is_vis_merge_point': False,
+    'is_calc_min_turn_radius': False,  # True: 计算自车前方（0-80m）真值路径点的最小转弯半径
   }
 
 
