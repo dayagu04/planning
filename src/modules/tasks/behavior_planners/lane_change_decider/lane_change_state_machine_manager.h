@@ -356,5 +356,6 @@ class LaneChangeStateMachineManager {
   std::vector<double> ego_box_corners_y_{};
   StateMachineLaneChangeStatus last_state_{
       StateMachineLaneChangeStatus::kLaneKeeping};
+  bool overtake_lane_change_confirmed_{false};
 };
 }  // namespace planning

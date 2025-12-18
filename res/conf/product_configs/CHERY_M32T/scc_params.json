@@ -1,3 +1,4 @@
 {
-  "left_right_turn_func_fading_away_switch": false
+  "left_right_turn_func_fading_away_switch": false,
+  "enable_overtake_lane_change_confirmation": true
 }
