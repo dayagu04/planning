@@ -110,6 +110,22 @@ void LaneChangeStateMachineManager::RunStateMachine() {
           StateMachineLaneChangeStatus::kLaneChangePropose) {
         const auto& virtual_lane_mgr =
             session_->environmental_model().get_virtual_lane_manager();
+        const bool is_exist_interactive_select_split =
+          virtual_lane_mgr->get_is_exist_interactive_select_split();
+        const bool split_lane_on_left_side_before_interactive =
+            virtual_lane_mgr->get_split_lane_on_left_side_before_interactive();
+        const bool split_lane_on_right_side_before_interactive =
+            virtual_lane_mgr->get_split_lane_on_right_side_before_interactive();
+        const bool other_split_lane_left_side = virtual_lane_mgr->get_other_split_lane_left_side();
+        const bool other_split_lane_right_side = virtual_lane_mgr->get_other_split_lane_right_side();
+        bool enable_interactive_select_split = false;
+        if(((other_split_lane_left_side && transition_info_.lane_change_direction == LEFT_CHANGE) ||
+            (other_split_lane_right_side && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
+            (split_lane_on_left_side_before_interactive && transition_info_.lane_change_direction == LEFT_CHANGE) ||
+            (split_lane_on_right_side_before_interactive && transition_info_.lane_change_direction == RIGHT_CHANGE) ||
+            is_exist_interactive_select_split) && transition_info_.lane_change_type == INT_REQUEST) {
+          enable_interactive_select_split = true;
+        }
         propose_state_frame_nums_++;
 
         bool is_propose_to_execution =
@@ -139,6 +155,9 @@ void LaneChangeStateMachineManager::RunStateMachine() {
         } else if (is_propose_to_cancel) {
           transition_info_.lane_change_status =
               StateMachineLaneChangeStatus::kLaneKeeping;
+          if (enable_interactive_select_split) {
+            last_state_ = kLaneKeeping;
+          }
           // ResetStateMachine();
           is_pre_move_ = false;
           lat_close_boundary_offset_ = 0.0;
