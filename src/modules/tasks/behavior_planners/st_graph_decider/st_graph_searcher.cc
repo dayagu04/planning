@@ -1190,6 +1190,9 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto is_in_lane_change_propose =
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangePropose;
+  if (st_graph_input == nullptr) {
+    return;
+  }
 
   const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(
       st_graph_input->rear_agent_of_target(), agent_id_st_boundaries_map);
