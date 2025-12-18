@@ -600,48 +600,28 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
 // 更新限速信息 - 只使用地图限速
 void TsrCore::UpdateTsrSpeedLimitOnlyByMap(void) {
-  // 只透传地图限速信息
+  // 只透传地图限速信息，直接从 SetNavMapInfo 处理后的 road_info 中获取
   auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto road_info = GetContext.get_road_info();
+  
   speed_limit_out_flag_ = false;
   end_of_speed_limit_out_flag_ = false;
-  // sd_map信息，获取限速
-  if (GetContext.get_session()
-          ->environmental_model()
-          .get_route_info()
-          ->get_sdmap_valid()) {
-    const auto &sd_map_info_ptr = GetContext.get_session()
-                                      ->environmental_model()
-                                      .get_route_info()
-                                      ->get_sd_map();
-
-    if (sd_map_info_ptr.GetNaviRoadInfo() == std::nullopt) {
-      tsr_speed_limit_ = 0;
-      current_map_speed_limit_valid_ = false;
-      current_map_speed_limit_ = 0;
-      current_map_type_ = 0;  // 无地图
-      current_road_type_ = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
-    } else {
-      auto navi_info = sd_map_info_ptr.GetNaviRoadInfo().value();
-
-      // 获取限速
-      tsr_speed_limit_ = navi_info.cur_road_speed_limit();
-      current_map_speed_limit_valid_ = true;
-      current_map_speed_limit_ = navi_info.cur_road_speed_limit();
-      current_map_type_ = 1;  // sd_map
-
-      // 获取道路类型信息
-      int32 road_class = 0;
-      int32 form_way = 0;
-
-      if (navi_info.has_road_class()) {
-        road_class = navi_info.road_class();
-      }
-      if (navi_info.has_form_way()) {
-        form_way = navi_info.form_way();
-      }
-
-      current_road_type_ = GetRoadTypeFromNaviInfo(road_class, form_way);
-    }
+  
+  // 如果车型是m32t，则使用 sd_map 限速信息
+  if (road_info->sdmap_info.valid_flag && GetContext.get_param()->car_type == "chery_m32t") {
+    tsr_speed_limit_ = road_info->sdmap_info.speed_limit;
+    current_map_speed_limit_valid_ = true;
+    current_map_speed_limit_ = road_info->sdmap_info.speed_limit;
+    current_map_type_ = road_info->sdmap_info.map_source;  // sd_map
+    current_road_type_ = road_info->sdmap_info.road_type;
+  }
+  // 否则使用 sd_pro_map 限速信息（其他车型只有sdpromap）
+  else if (road_info->sdpromap_info.valid_flag) {
+    tsr_speed_limit_ = road_info->sdpromap_info.speed_limit;
+    current_map_speed_limit_valid_ = true;
+    current_map_speed_limit_ = road_info->sdpromap_info.speed_limit;
+    current_map_type_ = road_info->sdpromap_info.map_source;  // sd_pro_map
+    current_road_type_ = road_info->sdpromap_info.road_type;
   } else {
     tsr_speed_limit_ = 0;
     current_map_speed_limit_valid_ = false;
