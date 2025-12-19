@@ -47,13 +47,25 @@ enum class ApaParkOutDirection : uint8_t {
 
 enum class ApaRunningMode :uint8_t {
   RUNNING_NORMAL = 0,
-  RUNNING_PA = 1,
+  RUNNING_PA = 1,       //一键贴边
+  RUNNING_SAPA = 2,     //自选车位
 };
 
 enum class ApaPADirection : uint8_t {
   PA_INVALID = 0,
   PA_LEFT = 1,
   PA_RIGHT = 2,
+};
+
+enum class ApaSAPAStatus : uint8_t {
+  SAPA_STATUS_DEFAULT = 0,
+  SAPA_STATUS_DRAGING = 1,
+  SAPA_STATUS_FINISHED = 2,
+};
+
+enum class ApaTaskDirection: uint8_t {
+  APA_TASK_IN = 0,
+  APA_TASK_OUT = 1
 };
 
 class ApaStateMachineManager final {
@@ -75,16 +87,13 @@ class ApaStateMachineManager final {
   const ParkingSpeedMode GetParkingSpeedMode() const {
     return parking_speed_mode_;
   }
-  const bool GetFreeSlotActivate() const { return free_slot_activate_; }
 
-  const iflyauto::FreeSlotSelectedStatus GetFreeSlotSelectedStatus() const {
-    return is_free_slot_selected_;
-  }
-
+  //TODO(taolu10): 移到 ApaSlotManager 中
   const bool GetFreeSlotPosDir() const {
     return free_slot_pos_dir_;
   }
 
+  //TODO(taolu10): 确认一下这个函数存在的必要性
   void SetParkOutDirection(const ApaParkOutDirection& park_out_direction) {
     out_direction_ = park_out_direction;
   }
@@ -97,7 +106,17 @@ class ApaStateMachineManager final {
     return pa_direction_;
   }
 
+  const ApaSAPAStatus GetSAPAStatus() const {
+    return sapa_status_;
+  }
+
+  const bool IsSAPAMode() const {
+    return running_mode_ == ApaRunningMode::RUNNING_SAPA;
+  }
+
   const bool IsParkingStatus() const;
+  const bool IsParkingInStatus() const;
+  const bool IsParkingOutStatus() const;
 
   const bool IsSeachingStatus() const;
 
@@ -106,9 +125,7 @@ class ApaStateMachineManager final {
   const bool IsSeachingOutStatus() const;
 
   const bool IsParkOutStatus() const;
-
   const bool IsHeadOutStatus() const;
-
   const bool IsTailOutStatus() const;
 
   const bool IsParkInStatus() const;
@@ -120,11 +137,8 @@ class ApaStateMachineManager final {
   void Reset() {
     state_machine_ = ApaStateMachine::INVALID;
     out_direction_ = ApaParkOutDirection::INVALID;
+    slot_lat_pos_preference_ = ApaSlotLatPosPreference::MID;
     parking_speed_mode_ = ParkingSpeedMode::INVALID;
-    free_slot_activate_ = false;
-    is_free_slot_selected_ =
-        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
-    functional_state_ = iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
     free_slot_pos_dir_ = false;
     running_mode_ = ApaRunningMode::RUNNING_NORMAL;
     pa_direction_ = ApaPADirection::PA_INVALID;
@@ -132,46 +146,44 @@ class ApaStateMachineManager final {
 
   static std::string GetApaStateMachineString(
       const ApaStateMachine state_machine);
-
   static void PrintApaStateMachine(const ApaStateMachine state_machine);
 
   static std::string GetApaParkOutDirectionString(
       const ApaParkOutDirection out_direction);
-
   static void PrintApaParkOutDirection(const ApaParkOutDirection out_direction);
 
   static std::string GetApaSlotLatPosPreferenceString(
       const ApaSlotLatPosPreference slot_lat_pos_preference);
-
   static void PrintApaSlotLatPosPreference(
       const ApaSlotLatPosPreference slot_lat_pos_preference);
+
   static std::string GetParkingSpeedModeString(
       const ParkingSpeedMode parking_speed_mode);
-
   static void PrintParkingSpeedMode(const ParkingSpeedMode parking_speed_mode);
 
-  std::string GetParkingRunningModelString(const ApaRunningMode running_mode);
-  void PrintParkingRunningMode(const ApaRunningMode running_mode);
+  static std::string GetParkingRunningModelString(const ApaRunningMode running_mode);
+  static void PrintParkingRunningMode(const ApaRunningMode running_mode);
 
-  std::string GetParkingPADirectionString(const ApaPADirection pa_direction);
-  void PrintParkingPADirection(const ApaPADirection pa_direction);
+  static std::string GetParkingPADirectionString(const ApaPADirection pa_direction);
+  static void PrintParkingPADirection(const ApaPADirection pa_direction);
+
+  static std::string GetParkingSAPAStatusString(const ApaSAPAStatus sapa_status);
+  static void PrintParkingSAPAStatus(const ApaSAPAStatus sapa_status);
 
  private:
   ApaStateMachine state_machine_ = ApaStateMachine::INVALID;
-
   ApaParkOutDirection out_direction_ = ApaParkOutDirection::INVALID;
-
   ApaSlotLatPosPreference slot_lat_pos_preference_ =
       ApaSlotLatPosPreference::MID;
   ParkingSpeedMode parking_speed_mode_ = ParkingSpeedMode::INVALID;
-  bool free_slot_activate_ = false;
-  iflyauto::FreeSlotSelectedStatus is_free_slot_selected_ =
-      iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DEFAULT;
-  iflyauto::FunctionalState functional_state_ =
-      iflyauto::FunctionalState::FunctionalState_MANUAL_PARKING;
-  bool free_slot_pos_dir_ = false;
   ApaRunningMode running_mode_ = ApaRunningMode::RUNNING_NORMAL;
   ApaPADirection pa_direction_ = ApaPADirection::PA_INVALID;
+  ApaSAPAStatus sapa_status_ = ApaSAPAStatus::SAPA_STATUS_DEFAULT;
+
+  bool free_slot_pos_dir_ = false;
+
+  /*inernal use*/
+  ApaTaskDirection task_direction_ = ApaTaskDirection::APA_TASK_IN;
 };
 
 }  // namespace apa_planner

@@ -254,7 +254,6 @@ class ApaSlotManager final {
 
   const size_t GetEgoSlotInfoID() const;
 
-  const bool GetFreeSlotActivate() const { return free_slot_activate_; }
   const std::unordered_map<size_t, ApaSlot>& GetSlotsMap() const {
     return slots_map_;
   }
@@ -304,8 +303,6 @@ class ApaSlotManager final {
   double ego_col_safe_lat_buffer_ = 0.268;
   double ego_col_safe_lon_buffer_ = 0.15;
   bool is_ego_col_parallel_ = false;
-  bool free_slot_activate_ = false;
-  iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;
   int parallel_slot_release_count_ = 0;
   int parallel_slot_not_release_count_ = 0;
   bool recommend_park_out_ = false;
