@@ -23,6 +23,8 @@ class IntRequest : public LaneChangeRequest {
   virtual void SetLaneChangeCmd(std::uint8_t lane_change_cmd) {
     lane_change_cmd_ = lane_change_cmd;
   }
+
+  const int get_lane_change_cmd() { return lane_change_cmd_; }
   virtual void SetLaneChangeCancelFromTrigger(bool trigger_lane_change_cancel) {
     trigger_lane_change_cancel_ = trigger_lane_change_cancel;
   }

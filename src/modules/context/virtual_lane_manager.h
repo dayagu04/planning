@@ -159,6 +159,38 @@ class VirtualLaneManager {
     return is_exist_intersection_split_;
   };
 
+  void set_is_ego_in_split_region(const bool is_ego_in_split_region) {
+    is_ego_in_split_region_ = is_ego_in_split_region;
+  }
+
+  bool get_is_ego_in_split_region() const {
+    return is_ego_in_split_region_;
+  }
+
+  void set_is_exist_interactive_select_split(const bool is_exist_interactive_select_split) {
+    is_exist_interactive_select_split_ = is_exist_interactive_select_split;
+  }
+
+  bool get_is_exist_interactive_select_split() const {
+    return is_exist_interactive_select_split_;
+  }
+
+  bool get_other_split_lane_right_side() const {
+    return other_split_lane_right_side_;
+  }
+
+  bool get_other_split_lane_left_side() const {
+    return other_split_lane_left_side_;
+  }
+
+  bool get_split_lane_on_left_side_before_interactive() const {
+    return split_lane_on_left_side_before_interactive_;
+  }
+
+  bool get_split_lane_on_right_side_before_interactive() const {
+    return split_lane_on_right_side_before_interactive_;
+  }
+
   double get_distance_to_dash_line(const RequestType direction,
                                    uint virtual_id) const;
   double get_distance_to_final_dash_line(const RequestType direction,
@@ -277,6 +309,12 @@ class VirtualLaneManager {
   bool is_exist_ramp_on_road_ = false;
   bool is_exist_split_on_expressway_ = false;
   bool is_exist_intersection_split_ = false;
+  bool is_ego_in_split_region_ = false;
+  bool is_exist_interactive_select_split_ = false;
+  bool other_split_lane_right_side_ = false;
+  bool other_split_lane_left_side_ = false;
+  bool split_lane_on_left_side_before_interactive_ = false;
+  bool split_lane_on_right_side_before_interactive_ = false;
   double current_segment_passed_distance_ = 0.0;
   const double dis_threshold_to_last_merge_point_ = 600.0;
   const double dis_threshold_to_is_merged_point_ = 800.0;

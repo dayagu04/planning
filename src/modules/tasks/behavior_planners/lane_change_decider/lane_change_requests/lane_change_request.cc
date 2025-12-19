@@ -531,8 +531,9 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
   bool is_process_split = route_info_output.mlc_decider_route_info
-                          .first_static_split_region_info.is_ramp_split ||
-                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;;
+                              .first_static_split_region_info.is_ramp_split ||
+                          route_info_output.baidu_mlc_scene == SPLIT_SCENE;
+  ;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
@@ -894,11 +895,14 @@ bool LaneChangeRequest::ConeSituationJudgement(
   const auto &function_info = session_->environmental_model().function_info();
   const auto &lateral_obstacle =
       session_->environmental_model().get_lateral_obstacle();
-  const auto& ref_path_mgr = session_->environmental_model().get_reference_path_manager();
+  const auto &ref_path_mgr =
+      session_->environmental_model().get_reference_path_manager();
   const auto cur_reference_path =
       ref_path_mgr->get_reference_path_by_current_lane();
-  double k_left_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
-  double k_right_cone_occ_lane_line_buffer = kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
+  double k_left_cone_occ_lane_line_buffer =
+      kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
+  double k_right_cone_occ_lane_line_buffer =
+      kConeCrossingLaneLineBuffer * kHysteresisCoefficient;
   double k_default_ego_pass_buffer = kLatPassThre;
   int left_lane_nums = 0;
   int right_lane_nums = 0;
@@ -1059,7 +1063,8 @@ bool LaneChangeRequest::ConeSituationJudgement(
       min_l_to_center_line = std::min(std::abs(p.l), min_l_to_center_line);
       total_l += p.l;
     }
-    if (min_l_to_center_line > kConeLaneChangelateralDistancethre * kHysteresisCoefficient) {
+    if (min_l_to_center_line >
+        kConeLaneChangelateralDistancethre * kHysteresisCoefficient) {
       continue;
     }
     double average_l = total_l / points.size();
@@ -1071,8 +1076,10 @@ bool LaneChangeRequest::ConeSituationJudgement(
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 && average_l > 0.0) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 && average_l < 0.0)) {
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 &&
+         average_l > 0.0) ||
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 &&
+         average_l < 0.0)) {
       return false;
     }
   }
