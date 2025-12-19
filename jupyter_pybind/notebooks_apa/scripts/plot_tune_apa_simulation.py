@@ -27,6 +27,8 @@ from struct_msgs.msg import PlanningOutput, UssPerceptInfo, GroundLinePerception
 bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_74569/trigger/20251105/20251105-20-48-43/park_in_data_collection_CHERY_M32T_74569_EVENT_FILTER_2025-11-05-20-48-43_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52930/trigger/20251123/20251123-15-10-15/park_in_data_collection_CHERY_M32T_52930_EVENT_FILTER_2025-11-23-15-10-15_no_camera.bag'
 bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52930/trigger/20251124/20251124-16-01-08/park_in_data_collection_CHERY_M32T_52930_EVENT_FILTER_2025-11-24-16-01-08_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52931/trigger/20251118/20251118-10-21-12/park_in_data_collection_CHERY_M32T_52931_EVENT_FILTER_2025-11-18-10-21-12_no_camera.bag'
+bag_path = '/data_cold/abu_zone/autoparse/chery_m32t_52931/trigger/20251118/20251118-22-07-12/park_in_data_collection_CHERY_M32T_52931_EVENT_FILTER_2025-11-18-22-07-12_no_camera.bag'
 frame_dt = 0.1 # sec
 parking_flag = True
 global last_plan_pose_
