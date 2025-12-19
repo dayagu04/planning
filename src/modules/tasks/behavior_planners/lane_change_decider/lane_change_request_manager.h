@@ -40,7 +40,9 @@ class LaneChangeRequestManager {
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
   void SetRequest(const RequestType request) { request_ = request; }
-  void SetRequestSource(const RequestSource request_source) { request_source_ = request_source; }
+  void SetRequestSource(const RequestSource request_source) {
+    request_source_ = request_source;
+  }
   IntCancelReasonType int_request_cancel_reason() const {
     return int_request_cancel_reason_;
   }
@@ -60,7 +62,9 @@ class LaneChangeRequestManager {
   int get_int_lane_change_cmd() { return int_lane_change_cmd_; }
 
   RequestType turn_signal() const { return gen_turn_signal_; }
-  void SetTurnSignal(const RequestType gen_turn_signal) { gen_turn_signal_ = gen_turn_signal; }
+  void SetTurnSignal(const RequestType gen_turn_signal) {
+    gen_turn_signal_ = gen_turn_signal;
+  }
   bool AggressiveChange() const {
     if (request_source_ == NO_REQUEST) {
       return false;
