@@ -1254,6 +1254,9 @@ void LDRouteInfoStrategy::CalculateSplitInfo() {
     NOASplitRegionInfo split_region_info;
     split_region_info.distance_to_split_point = split_info.second;
     split_region_info.split_link_id = split_info.first->id();
+    split_region_info.split_direction = static_cast<SplitDirection>(
+        CalculateSplitDirection(*split_info.first, ld_map_));
+
     route_info_output_.split_region_info_list.emplace_back(
         std::move(split_region_info));
   }
