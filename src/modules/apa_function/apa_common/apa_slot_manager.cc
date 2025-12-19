@@ -347,6 +347,19 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
+  if (!measure_data_ptr_->GetStaticFlag()) {
+    pre_plan_fail_slot_id_vec_.clear();
+  } else if (state_machine_ptr->IsSearchingInStatus() &&
+             ego_info_under_slot_.slot.GetId() != 0) {
+    if (last_geometry_release == SlotReleaseState::UNKNOWN ||
+        last_geometry_release == SlotReleaseState::NOT_RELEASE &&
+            (last_astar_release == SlotReleaseState::UNKNOWN ||
+             last_astar_release == SlotReleaseState::NOT_RELEASE)) {
+      pre_plan_fail_slot_id_vec_.emplace_back(
+          ego_info_under_slot_.slot.GetId());
+    }
+  }
+
   if (!(apa_param.GetParam()
             .smart_fold_mirror_params.locked_obs_slot_with_fold_mirror &&
         planning_output->rear_view_mirror_signal_command.available &&
@@ -395,6 +408,12 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
 
     if (slot.release_info_.release_state[RULE_BASED_RELEASE] !=
         SlotReleaseState::RELEASE) {
+      continue;
+    }
+
+    if (std::find(pre_plan_fail_slot_id_vec_.begin(),
+                  pre_plan_fail_slot_id_vec_.end(),
+                  slot.id_) != pre_plan_fail_slot_id_vec_.end()) {
       continue;
     }
 

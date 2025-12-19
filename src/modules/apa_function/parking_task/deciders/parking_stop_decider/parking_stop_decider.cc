@@ -711,6 +711,7 @@ common::StopSignType ParkingStopDecider::GetStopSignType(
 
 const double ParkingStopDecider::GetStopDistanceByOD() {
   const ParkLonDecision* stop_decision = nullptr;
+  constexpr double kDefaultRemainDist = 46.8;
   for (size_t i = 0; i < speed_decisions_.decisions.size(); i++) {
     const ParkLonDecision* tmp_decision = &speed_decisions_.decisions[i];
     if (tmp_decision->decision_type != LonDecisionType::STOP) {
@@ -733,7 +734,7 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
     return stop_decision->path_s - stop_decision->lon_decision_buffer;
   }
 
-  return terminal_decision_.path_s;
+  return kDefaultRemainDist;
 }
 
 }  // namespace apa_planner

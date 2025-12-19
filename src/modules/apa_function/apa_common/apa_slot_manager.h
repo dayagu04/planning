@@ -226,6 +226,7 @@ class ApaSlotManager final {
     ego_slot_min_dist_map_.clear();
     parallel_slot_release_count_ = 0;
     parallel_slot_not_release_count_ = 0;
+    pre_plan_fail_slot_id_vec_.clear();
   }
 
   void GenerateReleaseSlotIdVec();
@@ -285,6 +286,8 @@ class ApaSlotManager final {
   std::unordered_map<size_t, uint8_t> slot_release_voter_;
 
   std::unordered_map<size_t, double> ego_slot_min_dist_map_;
+
+  std::vector<size_t> pre_plan_fail_slot_id_vec_;
 
   std::vector<size_t> release_slot_id_vec_;
   std::vector<bool> release_slot_narrow_flag_vec_;
