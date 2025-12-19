@@ -101,6 +101,8 @@ class ApaStateMachineManager final {
 
   const bool IsSeachingStatus() const;
 
+  const bool IsSearchingInStatus() const;
+
   const bool IsSeachingOutStatus() const;
 
   const bool IsParkOutStatus() const;

@@ -283,6 +283,16 @@ const bool ApaStateMachineManager::IsSeachingStatus() const {
   return false;
 }
 
+const bool ApaStateMachineManager::IsSearchingInStatus() const {
+  if (state_machine_ == ApaStateMachine::SEARCH_IN_NO_SELECTED ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR ||
+      state_machine_ == ApaStateMachine::SEARCH_IN_SELECTED_CAR_FRONT) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool ApaStateMachineManager::IsSeachingOutStatus() const {
   if (state_machine_ == ApaStateMachine::SEARCH_OUT_NO_SELECTED ||
       state_machine_ == ApaStateMachine::SEARCH_OUT_SELECTED_CAR_REAR ||
