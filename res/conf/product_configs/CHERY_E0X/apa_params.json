@@ -108,6 +108,7 @@
   "finish_parallel_lon_overhaing_error": 0.22,
   "finish_parallel_heading_err": 1.68,
   "finish_parallel_out_heading_mag": 10.0,
+  "finish_parallel_out_lat_wheel_y": 0.25,
 
   "check_finish_lon_err": 0.28,
   "check_finish_lat_err": 0.2,
@@ -156,6 +157,7 @@
   "safe_remain_dist_in_1r_parallel_slot": 0.22,
   "safe_remain_dist_in_1r_with_wall_parallel_slot": 0.33,
   "safe_uss_remain_dist_in_parallel_slot": 0.2,
+  "safe_uss_remain_dist_in_parallel_slot_pa": 0.15,
   "safe_uss_remain_dist_out_slot": 0.35,
   "uss_scan_angle_deg": 60.0,
   "uss_apa_scan_angle_deg": 75.0,
@@ -183,6 +185,7 @@
   "min_drive_dist": 0.08,
   "obs_stuck_replan_wait_time": 1.0,
   "max_replan_count": 26,
+  "parallel_replan_dist": 0.0,
 
   "comment_10": "construct t_lane params",
   "vacant_pt_outside_dx": 0.5,
@@ -203,6 +206,7 @@
   "parallel_occupied_pt_inside_dy": 0.0,
   "curb_offset": 0.45,
   "curb_offset_when_ego_outside_slot": -0.1,
+  "curb_offset_by_height": 0.16,
   "nearby_slot_corner_dist": 0.6,
   "enable_use_dynamic_obs": true,
   "virtual_head_out_obs_y_pos": 0.68,
@@ -235,7 +239,6 @@
   "max_obs_lon_invasion_slot_dist": 1.68,
   "max_obs_lon_invasion_slot_dist_dynamic_col": 0.268,
   "slot_entrance_obs_x": 3.468,
-  "force_use_little_buffer_move_slot": false,
   "believe_in_fus_obs": false,
   "use_fus_occ_obj": true,
   "use_fus_occ_column": true,
@@ -341,6 +344,8 @@
   "x_max_internal_obstacles": 6.68,
   "min_x_value_park_out_position": 2.3,
   "is_parallel_advanced_method": true,
+  "is_trim_limter_parallel_enable": false,
+  "trim_limter_tire_distance": 0.15,
 
   "comment_16": "slot managent params",
   "believe_obs_ego_area": 3.068,
