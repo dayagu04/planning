@@ -53,6 +53,7 @@ class ComfortTarget : public Target {
     double static_speed_threshold;
     double eps;
     double emergency_ttc_threshold;
+    double follow_max_st_boundary_t = 3.0;
   };
 
   struct FollowAgentInfo {

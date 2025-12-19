@@ -39,6 +39,7 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.eps = 1e-6;
   comfort_params_.static_speed_threshold = 0.2;
   comfort_params_.emergency_ttc_threshold = 1.5;
+  comfort_params_.follow_max_st_boundary_t = 3.0;
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -168,6 +169,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       ego_vehicle_param.front_edge_to_rear_axle;
   const double rear_edge_to_front_axle =
       ego_vehicle_param.rear_edge_to_rear_axle;
+
   const auto& ego_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
@@ -258,7 +260,29 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           session_->environmental_model().get_agent_manager()->GetAgent(
               agent_id);
 
+      const auto* st_graph_helper =
+          session_->planning_context().st_graph_helper();
+      const auto& agent_st_boundary_id_map =
+          st_graph_helper->GetAgentIdSTBoundariesMap();
+      if (st_graph_helper == nullptr || agent_st_boundary_id_map.empty()) {
+        continue;
+      }
+
       if (agent != nullptr) {
+        if (upper_bound_agent_ids_.find(agent_id) !=
+                upper_bound_agent_ids_.end() &&
+            agent_st_boundary_id_map.find(agent_id) !=
+                agent_st_boundary_id_map.end()) {
+          const auto& st_boundary_id = agent_st_boundary_id_map.at(agent_id);
+          speed::STBoundary st_boundary;
+          if (st_graph_helper->GetStBoundary(st_boundary_id.front(),
+                                             &st_boundary)) {
+            if (st_boundary.max_t() <
+                comfort_params_.follow_max_st_boundary_t) {
+              continue;
+            }
+          }
+        }
         follow_agents.push_back(
             {agent, FollowAgentSource::kLatObstacleDecision});
         added_agent_ids.insert(agent_id);
@@ -284,13 +308,11 @@ void ComfortTarget::GenerateUpperBoundInfo() {
 
   ProcessCutinAgents(danger_ids, FollowAgentSource::kJointDangerAgentIds,
                      forbidden_ids, added_agent_ids, parallel_overtake_agent_id,
-                     is_confluence_area,
-                     follow_agents);
+                     is_confluence_area, follow_agents);
 
   ProcessCutinAgents(cutin_ids, FollowAgentSource::kLonCutinAgentIds,
                      forbidden_ids, added_agent_ids, parallel_overtake_agent_id,
-                     is_confluence_area,
-                     follow_agents);
+                     is_confluence_area, follow_agents);
 
   std::vector<FollowAgentInfo> follow_agent_infos(plan_points_num_);
   std::unordered_set<int32_t> valid_agent_ids;
@@ -438,8 +460,7 @@ void ComfortTarget::ProcessCutinAgents(
     const std::vector<int32_t>& agent_ids, FollowAgentSource source,
     const std::unordered_set<int32_t>& forbidden_ids,
     std::unordered_set<int32_t>& added_agent_ids,
-    int32_t parallel_overtake_agent_id,
-    bool is_confluence_area,
+    int32_t parallel_overtake_agent_id, bool is_confluence_area,
     std::vector<FollowAgentWithSource>& follow_agents) {
   const auto& ego_vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
