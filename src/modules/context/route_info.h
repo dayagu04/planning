@@ -81,6 +81,10 @@ class RouteInfo {
     return sdpro_map_;
   }
 
+  const iflymapdata::sdpro::LinkInfo_Link* get_current_link() const {
+    return current_link_;
+  }
+
   const double get_virtual_extend_buff() const { return virtual_extend_buff_; }
 
   void ResetMLCInfoDecider() { mlc_decider_route_info_.reset(); }

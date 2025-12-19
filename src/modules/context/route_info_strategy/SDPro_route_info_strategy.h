@@ -19,12 +19,14 @@ void CalculateMLCDecider(
 bool get_sdpromap_valid() override;
 
 const ad_common::sdpromap::SDProMap& get_sdpro_map() override;
+const iflymapdata::sdpro::LinkInfo_Link* get_current_link() override;
 
 //todo(ldh): 其他virutal函数。
 protected:
  ad_common::sdpromap::SDProMap sd_map_;
  LocalView local_view_;
  bool sdmap_valid_{false};
+ const iflymapdata::sdpro::LinkInfo_Link* current_link_ = nullptr;
 
 
 };

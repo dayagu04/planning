@@ -270,6 +270,13 @@ class LaneChangeStateMachineManager {
   bool IsSideClear(int front_agent_id, int rear_agent_id);
 
   bool CheckTargetLaneValid();
+  bool IsExistExtendLane(const iflymapdata::sdpro::Lane* lane, bool is_right) const;
+  std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
+  CalculateLeftestRightestLane(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
+  RampDirection CalcTurnSignalForTencentSplitRegion() const;
+  RampDirection CalcTurnSignalForBaiduSplitRegion() const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;

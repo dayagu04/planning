@@ -1290,6 +1290,10 @@ const ad_common::sdpromap::SDProMap& LDRouteInfoStrategy::get_sdpro_map() {
   return ld_map_;
 }
 
+const iflymapdata::sdpro::LinkInfo_Link* LDRouteInfoStrategy::get_current_link() {
+  return current_link_;
+}
+
 bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
     TopoLinkGraph& feasible_lane_graph) {
   // TopoLinkGraph before_split_feasible_lane_graph;
