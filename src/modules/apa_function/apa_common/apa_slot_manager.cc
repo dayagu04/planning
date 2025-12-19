@@ -101,12 +101,19 @@ void ApaSlotManager::Update(
   if(is_sapa_mode) {
     if(sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
       select_slot_id = kSlotInvalidId;
+    } else if (slots_map_.find(kSlotFreeId) == slots_map_.end()) {
+      ILOG_ERROR << "SAPA mode, but free slot id is not in slot map";
+      select_slot_id = kSlotInvalidId;
     } else {
       select_slot_id = kSlotFreeId;
     }
   } else if(state_machine_ptr_->IsPAMode()) {
     // TODO(taolu10): 一件贴边：需要区分状态，对于确定贴边方向后，需要基于方向确认 id
-    select_slot_id = slots_map_.begin()->second.GetId();
+    if(slots_map_.empty()) {
+      select_slot_id = kSlotInvalidId;
+    } else {
+      select_slot_id = slots_map_.begin()->second.GetId();
+    }
   } else {
     if(state_machine_ptr_->IsParkOutStatus()) {
       if(dist_id_map_.empty()) {
@@ -122,14 +129,11 @@ void ApaSlotManager::Update(
     if (select_slot_id == kSlotInvalidId || slots_map_.find(select_slot_id) == slots_map_.end()) {
       ego_info_under_slot_.Reset();
     } else {
-      const auto& slot = slots_map_.at(select_slot_id);
+      auto& slot = slots_map_.at(select_slot_id);
       ego_info_under_slot_.history_id = ego_info_under_slot_.id;
       ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
       ego_info_under_slot_.id = select_slot_id;
       ego_info_under_slot_.slot_type = slot.slot_type_;
-      ego_info_under_slot_.relative_direction_between_ego_and_slot =
-          measure_data_ptr_->GetHeadingVec().dot(
-              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
     }
   } else if(state_machine_ptr->IsParkingInStatus()) {
     if (slots_map_.count(ego_info_under_slot_.id) == 0) {
@@ -142,55 +146,55 @@ void ApaSlotManager::Update(
     } else {
       ego_info_under_slot_.slot_disappear_flag = false;
     }
+  } else { // ParkingOutStatus
   }
 
   // 更新基于规则的车位释放
-  if(state_machine_ptr_->IsSeachingInStatus()) {
+  if(state_machine_ptr_->IsSeachingStatus()) {
     if (is_sapa_mode && sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
       //TODO(taolu10): 确认这部分逻辑的合理性
       for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
         ego_info_under_slot_.slot.release_info_.release_state[i] =
             SlotReleaseState::NOT_RELEASE;
       }
-    } else {
+    }
+    if(state_machine_ptr_->IsSearchingInStatus()) {
+      if (measure_data_ptr->GetFoldMirrorFlag()) {
+        col_det_interface_ptr_->Init(true);
+      } else {
+        if (apa_param.GetParam().smart_fold_mirror_params.has_smart_fold_mirror) {
+          col_det_interface_ptr_->Init(true);
+        } else {
+          col_det_interface_ptr_->Init(false);
+        }
+      }
       ParkingLotCruiseProcess();
     }
-  } else if(state_machine_ptr_->IsSeachingOutStatus()) {
-    //TODO(taolu10): 确认这部分逻辑的合理性
-    ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
-    ego_info_under_slot_.relative_direction_between_ego_and_slot =
-        measure_data_ptr_->GetHeadingVec().dot(
-            slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
-    if (slot.slot_type_ == SlotType::PERPENDICULAR &&
-        state_machine_ptr_->IsHeadOutStatus()) {
-      if (ego_info_under_slot_.relative_direction_between_ego_and_slot > 0.0) {
-        slot.release_info_.release_state[RULE_BASED_RELEASE] =
-            SlotReleaseState::RELEASE;
+    if (state_machine_ptr_->IsSeachingOutStatus() && select_slot_id != kSlotInvalidId) {
+      // forced release of self slot. TODO(taolu10): 确认这部分逻辑的合理性
+      ApaSlot& slot = slots_map_[ego_info_under_slot_.id];
+      ego_info_under_slot_.relative_direction_between_ego_and_slot =
+          measure_data_ptr_->GetHeadingVec().dot(
+              slot.GetOriginCornerCoordGlobal().pt_23mid_01mid_unit_vec);
+      if (slot.slot_type_ == SlotType::PERPENDICULAR &&
+          state_machine_ptr_->IsHeadOutStatus()) {
+        if (ego_info_under_slot_.relative_direction_between_ego_and_slot >
+            0.0) {
+          slot.release_info_.release_state[RULE_BASED_RELEASE] =
+              SlotReleaseState::RELEASE;
+        } else {
+          slot.release_info_.release_state[RULE_BASED_RELEASE] =
+              SlotReleaseState::NOT_RELEASE;
+        }
       } else {
         slot.release_info_.release_state[RULE_BASED_RELEASE] =
-            SlotReleaseState::NOT_RELEASE;
+            SlotReleaseState::RELEASE;
       }
-    } else {
-      slot.release_info_.release_state[RULE_BASED_RELEASE] =
-          SlotReleaseState::RELEASE;
     }
   }
 
   // 更新泊出推荐
   recommend_park_out_ = RecommendParkOut();
-
-  // 更新碰撞检查器, TODO: 不应该放在这里，需要移到 ScenarioManager 层
-  if (state_machine_ptr->IsSeachingInStatus()) {
-    if (measure_data_ptr->GetFoldMirrorFlag()) {
-      col_det_interface_ptr_->Init(true);
-    } else {
-      if (apa_param.GetParam().smart_fold_mirror_params.has_smart_fold_mirror) {
-        col_det_interface_ptr_->Init(true);
-      } else {
-        col_det_interface_ptr_->Init(false);
-      }
-    }
-  }
 
   if (ego_info_under_slot_.slot.GetType() == SlotType::PARALLEL) {
     const iflyauto::ParkingFusionSlot* fusion_slot;
