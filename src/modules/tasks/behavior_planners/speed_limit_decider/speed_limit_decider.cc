@@ -98,6 +98,7 @@ constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold 
 constexpr double kAvgRadiusEnterRadius = 350.0;  // Road radius threshold for entering avg radius EWMA (m)
 constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
 constexpr double kAvgRadiusExitRadius = 280.0;  // Road radius threshold for exiting avg radius EWMA (m)
+constexpr double map_curv_window_len = 25.0;
 constexpr double kMapModeRoundaboutQuitDis = 50.0;
 constexpr double kNoMapModeRoundaboutQuitDis = 60.0;
 constexpr double kRoundaboutQuitCurvRadiusThr = 300.0;
@@ -780,8 +781,7 @@ void SpeedLimitDecider::CollectRampCurvatureData(
 
   // Smooth curvature with sliding window (40m), optimized to O(n) with two pointers
   std::vector<double> k_smooth(k_raw_local.size(), 0.0);
-  constexpr double window_len = 40.0;
-  constexpr double half_window = window_len * 0.5;
+  double half_window = map_curv_window_len * 0.5;
   
   if (k_raw_local.empty() || s_vec.empty() || k_raw_local.size() != s_vec.size()) {
     // Handle boundary case
