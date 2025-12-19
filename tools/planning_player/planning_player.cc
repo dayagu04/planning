@@ -412,7 +412,7 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else if (msg.getTopic() == TOPIC_VEHICLE_SERVICE) {
       cache_with_ros_msg_and_header_time<struct_msgs::VehicleServiceOutputInfo>(
           msg);
-    } else if (msg.getTopic() == TOPIC_CONTROL_COMMAN) {
+    } else if (msg.getTopic() == TOPIC_CONTROL_COMMAN&& !is_close_loop) {
       cache_with_ros_msg_and_header_time<struct_msgs::ControlOutput>(msg);
     } else if (msg.getTopic() == TOPIC_HMI_MCU_INNER) {
       cache_with_ros_msg_and_header_time_old<
@@ -444,13 +444,13 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
       cache_with_ros_msg_and_header_time<struct_msgs::FusionDecelerInfo>(msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
-    } else if (msg.getTopic() == TOPIC_LANE_LINE) {
+    } else if (msg.getTopic() == TOPIC_LANE_LINE && !is_close_loop) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else if (msg.getTopic() == TOPIC_LANE_LINE_DEBUG_INFO) {
-      new_bag.write(msg.getTopic(), msg.getTime(), msg);
+      // new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else if (msg.getTopic() == TOPIC_LANE_TOPO_DEBUG_INFO) {
-      new_bag.write(msg.getTopic(), msg.getTime(), msg);
-    } else if (msg.getTopic() == TOPIC_OBJECTS) {
+      // new_bag.write(msg.getTopic(), msg.getTime(), msg);
+    } else if (msg.getTopic() == TOPIC_OBJECTS && !is_close_loop) {
       new_bag.write(msg.getTopic(), msg.getTime(), msg);
     } else if (msg.getTopic() == TOPIC_TRAFFIC_SIGN) {
       cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionTsrInfo>(

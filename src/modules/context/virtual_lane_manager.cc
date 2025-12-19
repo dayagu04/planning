@@ -1070,6 +1070,38 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   ILOG_DEBUG << "is_exist_intersection_split:" << is_exist_intersection_split_;
   JSON_DEBUG_VALUE("is_exist_intersection_split", is_exist_intersection_split_);
 
+  set_is_ego_in_split_region(ego_lane_track_manager_.is_ego_in_split_region());
+  ILOG_DEBUG << "is_ego_in_split_region:" << is_ego_in_split_region_;
+  JSON_DEBUG_VALUE("is_ego_in_split_region", is_ego_in_split_region_);
+
+  if (ego_lane_track_manager_.interactive_select_split_counter() > 0) {
+    set_is_exist_interactive_select_split(true);
+  } else {
+    set_is_exist_interactive_select_split(false);
+  }
+  ILOG_DEBUG << "is_exist_interactive_select_split:" << is_exist_interactive_select_split_;
+  JSON_DEBUG_VALUE("is_exist_interactive_select_split", is_exist_interactive_select_split_);
+  other_split_lane_right_side_ = ego_lane_track_manager_.get_other_split_lane_right_side();
+  other_split_lane_left_side_ = ego_lane_track_manager_.get_other_split_lane_left_side();
+  split_lane_on_left_side_before_interactive_ = false;
+  split_lane_on_right_side_before_interactive_ = false;
+  if (((is_exist_intersection_split_ || is_exist_ramp_on_road_ || is_exist_split_on_ramp_ || is_exist_split_on_expressway_)) &&
+      !is_exist_interactive_select_split_) {
+    const double current_lane_order_id = current_lane_->get_order_id();
+    auto iter_left =
+        std::find(
+            order_ids_of_same_zero_relative_id_.begin(), order_ids_of_same_zero_relative_id_.end(), current_lane_order_id - 1);
+    auto iter_right =
+        std::find(
+            order_ids_of_same_zero_relative_id_.begin(), order_ids_of_same_zero_relative_id_.end(), current_lane_order_id + 1);
+    if (iter_left != order_ids_of_same_zero_relative_id_.end()) {
+      split_lane_on_left_side_before_interactive_ = true;
+    }
+    if (iter_right != order_ids_of_same_zero_relative_id_.end()) {
+      split_lane_on_right_side_before_interactive_ = true;
+    }
+  }
+
   const bool is_in_ramp_select_split_situation =
       ego_lane_track_manager_.is_in_ramp_select_split_situation();
   ILOG_DEBUG << "is_in_ramp_select_split_situation:"
