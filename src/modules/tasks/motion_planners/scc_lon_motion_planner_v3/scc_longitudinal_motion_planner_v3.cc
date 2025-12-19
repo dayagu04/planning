@@ -235,6 +235,9 @@ void SccLongitudinalMotionPlannerV3::Update() {
   const auto &dt =
       planning_problem_ptr_->GetiLqrCorePtr()->GetSolverConfigPtr()->model_dt;
 
+  auto start_stop_info =
+      session_->planning_context().start_stop_result().state();
+
   auto start1_time = IflyTime::Now_ms();
   const auto &planning_output = planning_problem_ptr_->GetOutput();
   auto end1_time = IflyTime::Now_ms();
@@ -258,6 +261,13 @@ void SccLongitudinalMotionPlannerV3::Update() {
     v_vec[i] = planning_output.vel_vec(i);
     a_vec[i] = planning_output.acc_vec(i);
     j_vec[i] = planning_output.jerk_vec(i);
+
+    if(start_stop_info == common::StartStopInfo::STOP) {
+      s_vec[i] = 0.0;
+      v_vec[i] = 0.0;
+      a_vec[i] = 0.0;
+      j_vec[i] = 0.0;
+    }
   }
 
   JSON_DEBUG_VALUE("ego_jerk", j_vec[0]);
