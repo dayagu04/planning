@@ -839,7 +839,7 @@
     },
     "stop_destination_decider": {
       "stop_destination_virtual_agent_time_headway": 0.1,
-      "stop_destination_extended_s_buffer": 1.5
+      "stop_destination_extended_s_buffer": 1.70
     },
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,
