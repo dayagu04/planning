@@ -29,7 +29,9 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
   const EgoInfoUnderSlot& ego_info_under_slot = input.ego_info_under_slot;
   const ApaSlot& slot = ego_info_under_slot.slot;
   if (input.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      input.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     const float bound = ego_info_under_slot.slot_type == SlotType::SLANT
                             ? SLANT_SLOT_EXTEND_BOUND
                             : 0.0f;
@@ -83,6 +85,16 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
     pose_bound_.heading_up_bound =
         std::fabs(geometry_lib::NormalizeAngle(pose_bound_.heading_up_bound));
 
+    if (input.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      pose_bound_.heading_up_bound = M_PIf32 + 1e-5f;
+      if (ego_info_under_slot.cur_pose.heading > heading_buffer + 1e-5f) {
+        pose_bound_.heading_down_bound = ego_info_under_slot.cur_pose.heading - heading_buffer;
+      } else if (ego_info_under_slot.cur_pose.heading < -heading_buffer - 1e-5f) {
+        pose_bound_.heading_down_bound = std::fabs(ego_info_under_slot.cur_pose.heading + heading_buffer);
+      }
+    }
+
     const float slot_x =
         ego_info_under_slot.slot.origin_corner_coord_local_.pt_01_mid.x();
 
@@ -134,14 +146,16 @@ const bool NodeDeleteDecider::CheckShouldBeDeleted(NodeDeleteRequest request) {
   }
 
   if (input_.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
-    return CheckShouldBeDeletedForPerpendicularTailIn();
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      input_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    return CheckShouldBeDeletedForPerpendicularIn();
   }
 
   return true;
 }
 
-const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularTailIn() {
+const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularIn() {
   if (request_.old_node == nullptr) {
     if (CheckUnexpectedGear()) {
       reason_ = NodeDeleteReason::UNEXPECTED_GEAR;
@@ -334,8 +348,10 @@ const bool NodeDeleteDecider::CheckCollision() {
     }
 
     bool enable_smart_fold_mirror = false;
-    while (input_.scenario_type ==
-               ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
+    while ((input_.scenario_type ==
+                ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+            input_.scenario_type ==
+                ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) &&
            input_.enable_smart_fold_mirror) {
       if (pt_vec_vec.empty()) {
         break;
@@ -718,7 +734,9 @@ const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
   // 0->out_slot  1->entrance_slot 2->in_slot
   int slot_type = 0;
   if (input_.scenario_type ==
-      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
+      input_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
     if (slot_entrance_box_.IsContain(pt.pos) &&
         std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 23.68f) {
       slot_type = 1;
