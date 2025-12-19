@@ -429,6 +429,7 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   leading_veh_.prediction_path.clear();
   leading_veh_.prediction_path_valid = false;
   sample_status_ = OK;
+  distance_to_stop_point_ = kMaxDistanceToStopPoint;
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const auto& ego_frenet_state = session_->environmental_model()
@@ -579,8 +580,9 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
 
   // ego state info
   ego_s_ = ego_s;
-  ego_v_ = ego_state_manager->ego_v();
-  ego_a_ = ego_state_manager->ego_acc();
+  const auto& init_point = ego_state_manager->planning_init_point();
+  ego_v_ = init_point.v;
+  ego_a_ = init_point.a;
 
   ego_cart_point_.first = ego_state_manager->ego_pose().x;
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
@@ -1143,6 +1145,9 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
 }
 
 void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
+  if(!is_merge_change_){
+    return;
+  }
   const auto& virtual_lane_mgr =
       session_->environmental_model().get_virtual_lane_manager();
   const auto& current_lane = virtual_lane_mgr->get_current_lane();
