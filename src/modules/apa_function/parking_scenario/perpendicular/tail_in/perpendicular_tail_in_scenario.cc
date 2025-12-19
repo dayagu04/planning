@@ -518,7 +518,9 @@ const bool PerpendicularTailInScenario::GenTlane() {
       ->GetGenerateObstacleDeciderPtr()
       ->GenObs(ego_info_under_slot, gen_obs_request);
 
-  CalcPtInside();
+  if (param.park_path_plan_type == ParkPathPlanType::GEOMETRY) {
+    CalcPtInside();
+  }
 
   bool update_slot_move_dist = true;
   if (frame_.replan_reason == ReplanReason::NOT_REPLAN ||
