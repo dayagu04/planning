@@ -93,7 +93,7 @@ constexpr double kMaxRampPointSpacingRatio = 2.5;  // Ratio threshold of max spa
 constexpr int kMaxDensePointCountForSparseBack = 3;  // Maximum dense point count threshold for determining dense-front-sparse-back pattern
 constexpr double kMaxDistanceToRamp = 2000.0;
 constexpr double kDistanceTolerance = 1.0;
-constexpr double kPreviewDistance080m = 80.0;  // Preview distance for 0-80m range (m)
+constexpr double kCurvaturePreviewDistance = 80.0;  // Preview distance for curvature calculation (m)
 constexpr double kAvgRadiusEnterSpeedDiff = 1.5;  // Speed difference threshold for entering avg radius EWMA (m/s)
 constexpr double kAvgRadiusEnterRadius = 350.0;  // Road radius threshold for entering avg radius EWMA (m)
 constexpr double kAvgRadiusExitSpeedDiff = 3.0;  // Speed difference threshold for exiting avg radius EWMA (m/s)
@@ -1030,8 +1030,8 @@ void SpeedLimitDecider::CalculateCurveSpeedLimit() {
   
   // Collect curvature data for 0-80m range
   std::vector<double> radius_vec_0_80m;
-  radius_vec_0_80m.reserve(static_cast<size_t>(kPreviewDistance080m / kSamplingStep) + 1);
-  for (double s = 0.0; s <= kPreviewDistance080m; s += kSamplingStep) {
+  radius_vec_0_80m.reserve(static_cast<size_t>(kCurvaturePreviewDistance / kSamplingStep) + 1);
+  for (double s = 0.0; s <= kCurvaturePreviewDistance; s += kSamplingStep) {
     ReferencePathPoint refpath_pt;
     if (reference_path_ptr->get_reference_point_by_lon(ego_start_s + s, refpath_pt)) {
       double curv = std::fabs(refpath_pt.path_point.kappa());
