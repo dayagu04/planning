@@ -983,7 +983,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
         //   (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr);
 
         if (std::abs(tmp_line_arc_seg_vec.back().arc_seg.headingB - arc_slot_init_out_heading_ ) <
-            pnc::mathlib::Deg2Rad(10.0)) {
+            pnc::mathlib::Deg2Rad(5.0)) {
           ILOG_INFO << "stop add line arc when length > 2.5 and  terminal condition is met";
           break;
         }

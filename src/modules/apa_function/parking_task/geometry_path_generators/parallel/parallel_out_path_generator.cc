@@ -113,6 +113,15 @@ const bool ParallelOutPathGenerator::Update() {
   bool success = false;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
   const bool is_in_slot = CheckEgoInSlot();
+
+  if (input_.is_before_running_stage) {
+    arc_slot_init_out_heading_ =
+        input_.ego_info_under_slot.neigbor_front_heading;
+    if (arc_slot_init_out_heading_ > M_PI ||
+        arc_slot_init_out_heading_ < -M_PI) {
+      arc_slot_init_out_heading_ = 0.0;
+    }
+  }
   if (!is_in_slot) {
     auto last_target_pose_path = input_.last_target_pose_;
     auto last_target_pos =
@@ -168,11 +177,43 @@ const bool ParallelOutPathGenerator::Update() {
         success = InversedTrialsByGivenGear(inversed_path_seg_vec,
                                             input_.ego_info_under_slot.cur_pose,
                                             pnc::geometry_lib::SEG_GEAR_DRIVE);
+        if (inversed_path_seg_vec.size() == 1) {
+          if (std::abs(inversed_path_seg_vec[0].GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+          }
+
+        } else if (inversed_path_seg_vec.size() > 1) {
+          if (std::abs(inversed_path_seg_vec.back().GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+            ILOG_INFO
+                << "InversedTrialsByGivenGear heading over change heading!!!";
+          }
+        }
       }
     } else {
       success = InversedTrialsByGivenGear(inversed_path_seg_vec,
                                           input_.ego_info_under_slot.cur_pose,
                                           input_.ref_gear);
+      if (inversed_path_seg_vec.size() == 1) {
+          if (std::abs(inversed_path_seg_vec[0].GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+          }
+
+        } else if (inversed_path_seg_vec.size() > 1) {
+          if (std::abs(inversed_path_seg_vec.back().GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+            ILOG_INFO
+                << "InversedTrialsByGivenGear heading over change heading!!!";
+          }
+        }
       if (!success ||
           std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
               (input_.tlane.slot_width * 0.5) ||
@@ -372,17 +413,14 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   int nums = static_cast<int>(y_bound / dy);
   nums = pnc::mathlib::Clamp(nums, 5, 16);
   dy = y_bound / nums;
-  auto front_heading = input_.ego_info_under_slot.neigbor_front_heading;
-  if (front_heading > M_PI || front_heading < -M_PI) {
-    front_heading = 0.0;
-  }
+
   bool is_inner_arc_slot = false;
-  if (slot_side_sgn < 0.0 && front_heading < -pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading > -pnc::mathlib::Deg2Rad(45.0)) {
+  if (slot_side_sgn < 0.0 && arc_slot_init_out_heading_ < -pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ > -pnc::mathlib::Deg2Rad(45.0)) {
     is_inner_arc_slot = true;
   }
-  if (slot_side_sgn > 0.0 && front_heading > pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading < pnc::mathlib::Deg2Rad(45.0)) {
+  if (slot_side_sgn > 0.0 && arc_slot_init_out_heading_ > pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ < pnc::mathlib::Deg2Rad(45.0)) {
     is_inner_arc_slot = true;
   }
 
@@ -390,10 +428,6 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   if ((is_inner_arc_slot ) && input_.tlane.pt_inside.x() > 6.5) {
     prepare_pose_start.x() = 5.5;
     ILOG_INFO << "prepare_pose_start.x = " << prepare_pose_start.x();
-  }
-
-  if (input_.is_before_running_stage){
-    arc_slot_init_out_heading_ = front_heading;
   }
 
   pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, arc_slot_init_out_heading_);
