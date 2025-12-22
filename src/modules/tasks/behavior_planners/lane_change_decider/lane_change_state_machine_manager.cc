@@ -2224,6 +2224,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
   const auto& target_lane_nodes =
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
+  const auto& obstacles_map = ref_path->get_obstacles_map();
   for (const auto* target_lane_node : target_lane_nodes) {
     if(target_lane_node == nullptr) {
       continue;
@@ -2327,8 +2328,22 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
         continue;  // 前者针对大型车压线，后者针对小vru靠边
       }
     } else {  // cutin 趋势
-      if (!target_lane_node->is_agent_within_lane()) {
-        continue;  // 不压线先过滤了
+      if (!target_lane_node->is_agent_within_lane()) { // 当前不在，短时间内也不会在，过滤。
+        auto it = obstacles_map.find(target_lane_node->node_agent_id());
+        const auto agent = agent_mgr->GetAgent(target_lane_node->node_agent_id());
+        if (it != obstacles_map.end() && agent != nullptr) {
+          const auto& agent_bd = GetSLboundaryFromAgent(ref_path, agent->box());
+          const auto& front_side_obs = it->second;
+          std::pair<double, double> target_center_lat{- target_lane_width * 0.5, target_lane_width * 0.5};
+          std::pair<double, double> obs_lat{agent_bd.l_start, agent_bd.l_end};
+          double obs_lat_vel = front_side_obs->frenet_velocity_l();
+          bool is_target_lane_cuting_in =
+              IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
+                              lc_safety_check_config_.target_lane_front_cut_in_check_time, 0.5);
+          if (!is_target_lane_cuting_in) {
+            continue;  // 3.0s 不进入目标车道过滤
+          }
+        }
       }
     }
     bool pass_by_reverse = PassInLane(target_lane_width, agent_start_bd,
