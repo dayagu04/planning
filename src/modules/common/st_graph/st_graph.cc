@@ -23,6 +23,7 @@
 #include "agent/agent.h"
 #include "basic_types.pb.h"
 #include "common_c.h"
+#include "config/vehicle_param.h"
 #include "math/line_segment2d.h"
 #include "math/math_utils.h"
 #include "math/vec2d.h"
@@ -208,7 +209,10 @@ void STGraph::MakeStaticAgentStBoundary(
   lat_buffer = reuse_for_close_pass
                    ? lat_buffer + extra_lateral_buffer_for_close_pass
                    : lat_buffer;
-
+  if (is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
+    lat_buffer = 0.0;
+    lon_buffer = 0.0;
+  }
   auto obs_box = agent.box();
   obs_box.LateralExtend(lat_buffer * 2.0);
   obs_box.LongitudinalExtend(lon_buffer * 2.0);
@@ -227,6 +231,29 @@ void STGraph::MakeStaticAgentStBoundary(
   double min_t = std::numeric_limits<double>::max();
   const double max_l = agent_sl_boundary[2];
   const double min_l = agent_sl_boundary[3];
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double ego_half_width = vehicle_param.width * 0.5;
+  if(is_rads_scene && agent.type() > agent::AgentType::OCC_EMPTY) {
+    if(max_l * min_l > 0.0 && std::min(std::fabs(max_l), std::fabs(min_l)) > ego_half_width) {
+      return;
+    } else if(max_l * min_l > 0.0) {
+      //polygon points min l > ego_half_width, return
+      double min_polygon_abs_l = std::numeric_limits<double>::max();
+      for (int i = 0; i < agent.perception_polygon().num_points(); i++) {
+        double project_s = 0.0, project_l = 0.0;
+        planned_kd_path->XYToSL(agent.perception_polygon().points()[i].x(),
+                                agent.perception_polygon().points()[i].y(),
+                                &project_s, &project_l);
+        if(std::fabs(project_l) < min_polygon_abs_l) {
+          min_polygon_abs_l = std::fabs(project_l);
+        }
+      }
+      if (min_polygon_abs_l > ego_half_width) {
+        return;
+      }
+    }
+  }
   if (StGraphUtils::CalculateSRange(
           planned_kd_path, *path_border_querier, agent, obs_box, type, path_range,
           agent_sl_boundary, considered_corners, planning_init_point_box,
