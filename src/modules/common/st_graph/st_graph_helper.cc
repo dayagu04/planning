@@ -216,7 +216,7 @@ void StGraphHelper::MakeSpeedLimitedConeBucketStBoundary(
   double upper_s = std::numeric_limits<double>::lowest();
   const int64_t boundary_id = (agent.agent_id() << 8) + 0;
 
-  if (StGraphUtils::CalculateSRange(planned_kd_path, *path_border_querier,
+  if (StGraphUtils::CalculateSRange(planned_kd_path, *path_border_querier, agent,
                                     obs_box, StBoundaryType::NORMAL, path_range,
                                     agent_sl_boundary, considered_corners,
                                     planning_init_point_box, &lower_s, &upper_s,
