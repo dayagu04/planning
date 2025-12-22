@@ -2820,9 +2820,8 @@ bool LaneChangeStateMachineManager::CheckFrontRiskAgentTrajs(
     return false;
   }
   // 确认判断的时间
-  // 确认判断的时间
-  double max_lat_buff = 2.5;
-  double lat_buff = 2.5;
+  double max_lat_buff = 3.5; // unused
+  double lat_buff = 3.5;
   const int iter_count = std::min(agent_traj.size(), ego_trajs_future_.size());
   double distance = 100.0;
   for (int i = 0; i < iter_count; i++) {
@@ -2965,8 +2964,8 @@ bool LaneChangeStateMachineManager::CheckMergingRearAgentTraj(
     return false;
   }
   // 确认判断的时间
-  double max_lat_buff = 2.5;
-  double lat_buff = 2.5;
+  double max_lat_buff = 3.5; //Unused
+  double lat_buff = 3.5;
   const int iter_count = std::min(agent_traj.size(), ego_trajs_future_.size());
   double distance = 100.0;
   double box_longitudinal_buff = 0.0;
@@ -4038,9 +4037,27 @@ bool LaneChangeStateMachineManager::
     }
   }
 
-  // 确认判断的时间
-  double max_lat_buff = 2.5;
-  double lat_buff = 2.5;
+    double max_lat_buff = 3.5;
+    double lat_buff = 3.5;
+  // 确认初始横向buff 与横向速度相关
+    const int target_lane_virtual_id = lc_req_mgr_->target_lane_virtual_id();
+    const auto reference_path_manager =
+        session_->environmental_model().get_reference_path_manager();
+    const auto target_reference_path =
+        reference_path_manager->get_reference_path_by_lane(
+            target_lane_virtual_id);
+    
+    if (target_reference_path != nullptr) {
+      const auto& obstacles_map = target_reference_path->get_obstacles_map();
+      auto it = obstacles_map.find(agent_node->node_agent_id());
+      if(it != obstacles_map.end()) {
+        const auto& rear_obs = it->second;
+        double obs_lat_vel = rear_obs->frenet_velocity_lateral(); //负：靠近目标车道
+        double extra_lat_buff = obs_lat_vel < 0 ? - obs_lat_vel * 1.1 : 0.0;
+        max_lat_buff += extra_lat_buff;
+      }
+    }
+    max_lat_buff = std::min(std::max(max_lat_buff, 3.5), 4.6); // 横向最大4.6m[参靠自车居中，到目标车道远边界]，最小3.5m
   // int iter_count = std::min(agent_traj.size(), ego_trajs_future_.size());
   // iter_count = std::max(16, lc_safety_check_num_);
   int iter_count = 16;
