@@ -206,6 +206,7 @@ class EgoStateManager {
   bool throttle_override_ = false;
   bool enable_delta_stitch_in_replan_ = true;
   bool enable_ego_state_compensation_ = false;
+  bool enable_tiny_speed_replan_ = true;
   uint32_t time_headway_level_ = 4;
   bool has_time_headway_scale_up_request_ = false;
   bool has_stand_wait_request_ = false;
