@@ -1703,6 +1703,12 @@ const bool IsPointInPolygon(const std::vector<Eigen::Vector2d> &polygon,
   }
   bool inside = false;
 
+  RectangleBound rect;
+  rect.CalcBoundByPtVec(polygon);
+  if (!rect.IsPtInRectangleBound(point)) {
+    return false;
+  }
+
   // traverse every edge of the polygon
   for (int i = 0, j = numVertices - 1; i < numVertices; j = i++) {
     // Check the intersection of rays and polygon edges
@@ -4373,6 +4379,46 @@ const bool ExtractSTurnAndStraight(
   }
 
   return has_s_turn;
+}
+
+const PolyRelation CheckTwoPolygonRelationship(
+    const std::vector<Eigen::Vector2d> &polyA,
+    const std::vector<Eigen::Vector2d> &polyB) {
+  if (polyA.size() < 3 || polyB.size() < 3) {
+    return PolyRelation::Disjoint;
+  }
+  RectangleBound box_A, box_B;
+  box_A.CalcBoundByPtVec(polyA);
+  box_B.CalcBoundByPtVec(polyB);
+  if (!RectangleBound::Intersect(box_A, box_B)) {
+    return PolyRelation::Disjoint;
+  }
+
+  LineSegment line_A, line_B;
+  Eigen::Vector2d intersection;
+  for (size_t i = 0; i < polyA.size(); ++i) {
+    for (size_t j = 0; j < polyB.size(); ++j) {
+      line_A.SetPoints(polyA[i], polyA[(i + 1) % polyA.size()]);
+      line_B.SetPoints(polyB[j], polyB[(j + 1) % polyB.size()]);
+      if (CalcTwoLineSegIntersection(intersection, line_A, line_B)) {
+        return PolyRelation::Intersect;
+      }
+    }
+  }
+
+  if (box_A.Contains(box_B)) {
+    if (IsPointInPolygon(polyA, polyB[0])) {
+      return PolyRelation::AContainsB;
+    }
+  }
+
+  if (box_B.Contains(box_A)) {
+    if (IsPointInPolygon(polyB, polyA[0])) {
+      return PolyRelation::BContainsA;
+    }
+  }
+
+  return PolyRelation::Disjoint;
 }
 
 }  // namespace geometry_lib

@@ -376,5 +376,27 @@ const bool BaseCollisionDetector::CheckObsMovementTypeFeasible(
   return false;
 }
 
+const std::vector<Eigen::Vector2d>
+BaseCollisionDetector::GetCarBigBoxWithBuffer(
+    const double lat_buf, const double lon_buf,
+    const geometry_lib::PathPoint& pose) {
+  const ApaParameters& param = apa_param.GetParam();
+  const double half_car_width = param.max_car_width * 0.5;
+  const double max_x = param.wheel_base + param.front_overhanging;
+  const double min_x = param.rear_overhanging;
+  std::vector<Eigen::Vector2d> car_box;
+  car_box.resize(4);
+  car_box[0] = Eigen::Vector2d(max_x + lon_buf, half_car_width + lat_buf);
+  car_box[1] = Eigen::Vector2d(min_x - lon_buf, half_car_width + lat_buf);
+  car_box[2] = Eigen::Vector2d(min_x - lon_buf, -half_car_width - lat_buf);
+  car_box[3] = Eigen::Vector2d(max_x + lon_buf, -half_car_width - lat_buf);
+  // Transform car_box to global coordinate
+  geometry_lib::LocalToGlobalTf l2g_tf(pose.pos, pose.heading);
+  for (Eigen::Vector2d& pt : car_box) {
+    pt = l2g_tf.GetPos(pt);
+  }
+  return car_box;
+}
+
 }  // namespace apa_planner
 }  // namespace planning
