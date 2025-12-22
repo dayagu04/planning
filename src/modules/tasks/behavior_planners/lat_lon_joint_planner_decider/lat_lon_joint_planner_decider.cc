@@ -177,10 +177,26 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
 
   const size_t obs_num = planning_input.obs_ref_trajectory_size();
 
+  const auto& route_info = session_->environmental_model().get_route_info();
+  const auto& ego_lane_road_right_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  bool is_confluence_area = false;
+  if (route_info != nullptr) {
+    const auto& route_info_output = route_info->get_route_info_output();
+    if (route_info_output.is_closing_merge ||
+        route_info_output.is_closing_split) {
+      is_confluence_area = true;
+    }
+  }
+  if (ego_lane_road_right_output.is_merge_region ||
+      ego_lane_road_right_output.is_split_region) {
+    is_confluence_area = true;
+  }
+
   for (size_t obs_idx = 0; obs_idx < obs_num; ++obs_idx) {
     const auto& obs_ref_traj = planning_input.obs_ref_trajectory(obs_idx);
     const int32_t obs_id = obs_ref_traj.obs_id();
-    const double obs_vel = planning_input.obs_init_state(obs_idx).vel();
+    const double obs_initial_vel = planning_input.obs_init_state(obs_idx).vel();
     const size_t ref_traj_size = obs_ref_traj.ref_x_vec_size();
 
     if (ref_traj_size == 0) {
@@ -207,7 +223,7 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         obs_ref_traj.length() > kLargeVehicleLengthThreshold;
 
     const bool is_static_vehicle =
-        std::fabs(obs_vel) < kStaticVehicleVelocityThreshold ||
+        std::fabs(obs_initial_vel) < kStaticVehicleVelocityThreshold ||
         agent->is_static();
 
     double lateral_threshold = is_large_vehicle
@@ -217,7 +233,7 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
       lateral_threshold = kStaticVehicleLatConflictThreshold;
     }
 
-    bool is_directly_in_front_or_rear_agent = false;
+    bool is_directly_in_front_or_is_rear_agent = false;
     const double ego_half_width = ego_width * 0.5;
 
     for (size_t i = 0; i < N && i < ref_traj_size; ++i) {
@@ -226,6 +242,7 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
       double obs_x = obs_ref_traj.ref_x_vec(i);
       double obs_y = obs_ref_traj.ref_y_vec(i);
       double obs_theta = obs_ref_traj.ref_theta_vec(i);
+      double obs_point_vel = obs_ref_traj.ref_vel_vec(i);
 
       const double center_x =
           ego_point.x + std::cos(ego_point.theta) * rear_axle_to_center;
@@ -269,6 +286,22 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         obs_max_l = std::fmax(obs_max_l, l);
       }
 
+      if (i == 0) {
+        double obs_center_l = (obs_min_l + obs_max_l) * 0.5;
+        double obs_center_s = (obs_min_s + obs_max_s) * 0.5;
+        double ego_center_s = (ego_min_s + ego_max_s) * 0.5;
+        if (std::fabs(obs_center_l) < ego_half_width) {
+          is_directly_in_front_or_is_rear_agent = true;
+        }
+        if (obs_center_s < ego_center_s && !is_confluence_area) {
+          is_directly_in_front_or_is_rear_agent = true;
+        }
+      }
+
+      if (is_directly_in_front_or_is_rear_agent) {
+        continue;
+      }
+
       double lateral_dist = 0.0;
       if (obs_min_l >= ego_max_l) {
         lateral_dist = obs_min_l - ego_max_l;
@@ -278,25 +311,20 @@ void LatLonJointPlannerDecider::CheckCollisionWithObstacles(
         lateral_dist = 0.0;
       }
 
-      double longitudinal_distance = obs_min_s - ego_max_s;
-      bool is_rear_agent = obs_max_s < ego_min_s;
+      double obs_longitudinal_distance = obs_min_s - ego_max_s;
+      double ego_longitudinal_distance = ego_min_s - obs_max_s;
 
-      if (i == 0) {
-        double obs_center_l = (obs_min_l + obs_max_l) * 0.5;
-        if (is_rear_agent || std::abs(obs_center_l) < ego_half_width) {
-          is_directly_in_front_or_rear_agent = true;
-        }
-      }
-
-      if (is_directly_in_front_or_rear_agent) {
-        continue;
-      }
-
-      double longitudinal_threshold =
+      double obs_longitudinal_threshold =
           kBaseLongitudinalThreshold + ego_point.vel * 0.3;
 
-      if (lateral_dist <= lateral_threshold &&
-          longitudinal_distance < longitudinal_threshold) {
+      bool is_overlap =
+          (obs_longitudinal_distance < 0 && ego_longitudinal_distance < 0);
+
+      bool long_collision = is_overlap || (obs_longitudinal_distance > 0 &&
+                                           obs_longitudinal_distance <
+                                               obs_longitudinal_threshold);
+
+      if (lateral_dist <= lateral_threshold && long_collision) {
         has_collision = true;
         break;
       }
