@@ -49,9 +49,11 @@ void EgoStateManager::SetConfig(
   hpp_max_replan_dist_err_ = config_.hpp_max_replan_dist_err;
   enable_delta_stitch_in_replan_ = config_.enable_delta_stitch_in_replan;
   enable_ego_state_compensation_ = config_.enable_ego_state_compensation;
+  enable_tiny_speed_replan_ = true;
 #ifdef X86
   if (SimulationContext::Instance()->is_close_loop()) {
     enable_ego_state_compensation_ = false;
+    enable_tiny_speed_replan_ = false;
   }
 #endif
 }
@@ -431,7 +433,7 @@ uint8_t EgoStateManager::ReplanProcess(const bool &set_lat_replan,
     replan_type_.insert(LON_POSITION_REPLAN);
     replan_code += LON_POSITION_REPLAN;
   }
-  if (low_speed_replan) {
+  if (low_speed_replan && enable_tiny_speed_replan_) {
     replan_type_.insert(LON_TINY_SPEED_REPLAN);
     replan_code += LON_TINY_SPEED_REPLAN;
   }

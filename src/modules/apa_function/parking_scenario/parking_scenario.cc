@@ -1288,6 +1288,7 @@ void ParkingScenario::ScenarioSuspend() {
 
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
+  //todo : update speed data
   ExcuteSpeedPlanningTask();
 
   return;

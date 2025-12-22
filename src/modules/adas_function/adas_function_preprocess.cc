@@ -179,6 +179,8 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        double, "tsr_speed_limit_offset");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_out_flag_need_last_time,
                        double, "tsr_out_flag_need_last_time");
+  ADAS_JSON_READ_VALUE(GetContext.mutable_param()->tsr_warning_max_duration,
+                       double, "tsr_warning_max_duration");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->lane_line_width, double,
                        "lane_line_width");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->ihc_high_beam_switch, bool,
@@ -366,6 +368,9 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ldw_tlc_near_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_soildline_switch, bool,
                        "elk_soildline_switch");    
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_bicycle_motorcycle_sw, bool,
+      "elk_bicycle_motorcycle_sw");                     
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
@@ -1311,6 +1316,8 @@ void Preprocess::UpdateRoadInfo(void) {
   SetRoadedgeInfo();
   // 路两侧是否有分、汇流口
   SidewayExistJudge();
+  // 地图信息
+  SetNavMapInfo();
 }
 
 void Preprocess::SetRoadedgeInfo(void) {
@@ -1534,6 +1541,144 @@ void Preprocess::SetRoadedgeInfo(void) {
     left_roadedge_info.valid = false;
     right_roadedge_info.valid = false;
   }
+}
+
+// 设置导航地图的各项信息: 限速，道路类型，地图来源，sdmap和sdpromap都处理
+void Preprocess::SetNavMapInfo(void) {
+  auto &GetContext = adas_function::context::AdasFunctionContext::GetInstance();
+  auto &sdmap_info = GetContext.mutable_road_info()->sdmap_info;
+  auto &sdpromap_info = GetContext.mutable_road_info()->sdpromap_info;
+  // 先尝试获取sd_map限速信息
+  if (GetContext.get_session()
+          ->environmental_model()
+          .get_route_info()
+          ->get_sdmap_valid()) {
+    const auto &sd_map_info_ptr = GetContext.get_session()
+                                      ->environmental_model()
+                                      .get_route_info()
+                                      ->get_sd_map();
+
+    if (sd_map_info_ptr.GetNaviRoadInfo() != std::nullopt) {
+      sdmap_info.valid_flag = true;
+      sdmap_info.map_source = 1;
+      auto navi_info = sd_map_info_ptr.GetNaviRoadInfo().value();
+      // 获取限速
+      sdmap_info.speed_limit = navi_info.cur_road_speed_limit();
+
+      // 获取道路类型信息
+      int32 road_class = 0;
+      int32 form_way = 0;
+
+      if (navi_info.has_road_class()) {
+        road_class = navi_info.road_class();
+      }
+      if (navi_info.has_form_way()) {
+        form_way = navi_info.form_way();
+      }
+
+      sdmap_info.road_type = GetRoadTypeFromNaviInfo(road_class, form_way);
+    }
+  }
+
+  if (GetContext.get_session()
+          ->environmental_model()
+          .get_route_info()
+          ->get_sdpromap_valid()) {
+    const auto &sd_pro_map_info_ptr = GetContext.get_session()
+                                      ->environmental_model()
+                                      .get_route_info()
+                                      ->get_sdpro_map();
+    // 获取sdpromap信息
+    auto localization_info = GetContext.mutable_session()
+                                 ->mutable_environmental_model()
+                                 ->get_ego_state_manager();  // enu实际上是boot
+    ad_common::math::Vec2d current_point;
+    current_point.set_x(localization_info->location_enu().position.x);
+    current_point.set_y(
+        localization_info->location_enu().position.y);  // enu实际上是boot
+    const double search_distance = 50.0;
+    const double max_heading_diff = PI / 4;
+    double temp_nearest_s = 0;
+    double nearest_l = 0;
+    const double ego_heading_angle = localization_info->heading_angle();
+    const iflymapdata::sdpro::LinkInfo_Link *current_link =
+        sd_pro_map_info_ptr.GetNearestLinkWithHeading(
+            current_point, search_distance, ego_heading_angle, max_heading_diff,
+            temp_nearest_s, nearest_l);
+    if (!current_link) {
+      sdpromap_info.valid_flag = false;
+      sdpromap_info.map_source = 2;
+      sdpromap_info.speed_limit = 0;
+      sdpromap_info.road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+    } else {
+      sdpromap_info.valid_flag = true;
+      sdpromap_info.map_source = 2;
+      sdpromap_info.speed_limit = current_link->speed_limit();
+      sdpromap_info.road_type = GetRoadTypeFromProMap(current_link);
+    }
+  }
+}
+
+// 根据导航信息获取道路类型 (sd_map - 直接从 NaviRoadInfo 获取，无需匹配)
+iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromNaviInfo(int32 road_class, int32 form_way) {
+  // 根据 ehr_sdmap.proto 的 RoadPriority 枚举定义进行映射
+  // EXPRESSWAY = 0;           // 高速公路
+  // CITY_EXPRESSWAY = 1;      // 城市快速路
+  // NATIONAL_HIGHWAY = 2;     // 国道
+  // PROVINCIAL_HIGHWAY = 3;   // 省道、城市主干道
+  // PREFECTURAL_HIGHWAY = 4;  // 县道
+  // GOOD_COUNTRY_ROAD = 5;    // 路况较好的乡镇道路
+  // COMMON_COUNTRY_ROAD = 6;  // 乡镇道路
+
+  // 根据 road_class (RoadPriority) 判断道路等级
+  switch (road_class) {
+    case 0:  // EXPRESSWAY (sd_map) - 高速公路
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+
+    case 1:  // CITY_EXPRESSWAY (sd_map) - 城市快速路/高架
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+
+    default:
+      // 默认为城区道路
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_URBAN;
+  }
+}
+
+// 根据地图信息获取道路类型 (sd_pro_map)
+iflyauto::DrivingRoadType Preprocess::GetRoadTypeFromProMap(const iflymapdata::sdpro::LinkInfo_Link* link) {
+  if (link == nullptr) {
+    return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  }
+
+  // 根据 link_class 判断道路类型 (LinkClass 枚举定义见 map_data.proto)
+  // LC_EXPRESSWAY = 1;       // 高速公路
+  // LC_CITY_EXPRESSWAY = 2;  // 城市快速路
+  // LC_NATION_ROAD = 3;      // 国道
+  // LC_PROVINCE_ROAD = 4;    // 省道
+  // LC_COUNTRY_ROAD = 5;     // 县道
+  // LC_TOWN_ROAD = 6;        // 乡道
+
+  if (link->has_link_class()) {
+    uint32 link_class = link->link_class();
+
+    // 判断是否为高速路 (LC_EXPRESSWAY = 1, sd_pro_map)
+    if (link_class == 1) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_HIGHWAY;
+    }
+
+    // 判断是否为城市快速路/高架 (LC_CITY_EXPRESSWAY = 2, sd_pro_map)
+    if (link_class == 2) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_OVERPASS;
+    }
+
+    // 判断是否为县道/乡道 (LC_COUNTRY_ROAD = 5, LC_TOWN_ROAD = 6)
+    if (link_class == 5 || link_class == 6) {
+      return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_COUNTRY;
+    }
+  }
+
+  // 默认为城区道路 (主干道、次干道等)
+  return iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_URBAN;
 }
 
 void Preprocess::SidewayExistJudge(void) {
@@ -2048,7 +2193,9 @@ void Preprocess::SingleAreaObjSelect() {
   OBJECT_TYPE_FENCE = 17*/
     if ((objs_vector[i].obj_loc_in_lane ==
          context::Enum_LaneLocType::Enum_Other) ||
-        (objs_vector[i].type < 3 || objs_vector[i].type > 8)) {
+        ((objs_vector[i].type < 3 || objs_vector[i].type > 8) &&
+         GetContext.get_param()->elk_bicycle_motorcycle_sw) ||
+        (objs_vector[i].type < 3 || objs_vector[i].type > 10)) {
       continue;
     }
     int lon_position_judge = 0;  // 0:f 1:m 2:r 3:false

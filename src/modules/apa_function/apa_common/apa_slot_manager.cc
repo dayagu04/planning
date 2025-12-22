@@ -55,13 +55,12 @@ void ApaSlotManager::Update(
       local_view->parking_fusion_info.parking_fusion_slot_lists_size;
   size_t select_slot_id = local_view->parking_fusion_info.select_slot_id;
 
-  free_slot_activate_ = state_machine_ptr->GetFreeSlotActivate();
-  is_free_slot_selected_ = state_machine_ptr->GetFreeSlotSelectedStatus();
-  ILOG_INFO << "free_slot_activate_ : " << free_slot_activate_
-            << " is_free_slot_selected_ : " << is_free_slot_selected_;
-  if (state_machine_ptr->IsSeachingStatus() && free_slot_activate_ &&
-      is_free_slot_selected_ != iflyauto::FreeSlotSelectedStatus::
-                                    FREE_SLOT_SELECTED_STATUS_FINISHED) {
+  const auto free_slot_activate = state_machine_ptr->IsSAPAMode();
+  const auto sapa_status = state_machine_ptr->GetSAPAStatus();
+  ILOG_INFO << "free_slot_activate_ : " << free_slot_activate
+            << " sapa_status : " << ApaStateMachineManager::GetParkingSAPAStatusString(sapa_status);
+  if (state_machine_ptr->IsSeachingStatus() && free_slot_activate &&
+      sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) {
     for (int i = 0; i < SLOT_RELEASE_METHOD_MAX_NUM; ++i) {
       ego_info_under_slot_.slot.release_info_.release_state[i] =
           SlotReleaseState::NOT_RELEASE;
@@ -83,7 +82,7 @@ void ApaSlotManager::Update(
     ApaSlot slot;
     slot.Update(fusion_slot);
 
-    if (free_slot_activate_) {
+    if (free_slot_activate) {
       slot.slot_source_type_ = SlotSourceType::SELF_DEFINE;
     }
 
@@ -174,10 +173,8 @@ void ApaSlotManager::Update(
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
         ego_info_under_slot_.id = select_slot_id;
         ego_info_under_slot_.slot_type = slots_map_[select_slot_id].slot_type_;
-      } else if (free_slot_activate_ &&
-                 is_free_slot_selected_ ==
-                     iflyauto::FreeSlotSelectedStatus::
-                         FREE_SLOT_SELECTED_STATUS_FINISHED &&
+      } else if (free_slot_activate &&
+                 sapa_status == ApaSAPAStatus::SAPA_STATUS_FINISHED &&
                  !slots_map_.empty()) {
         ego_info_under_slot_.history_id = ego_info_under_slot_.id;
         ego_info_under_slot_.history_slot_type = ego_info_under_slot_.slot_type;
@@ -347,6 +344,19 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
+  if (!measure_data_ptr_->GetStaticFlag()) {
+    pre_plan_fail_slot_id_vec_.clear();
+  } else if (state_machine_ptr->IsSearchingInStatus() &&
+             ego_info_under_slot_.slot.GetId() != 0) {
+    if (last_geometry_release == SlotReleaseState::UNKNOWN ||
+        last_geometry_release == SlotReleaseState::NOT_RELEASE &&
+            (last_astar_release == SlotReleaseState::UNKNOWN ||
+             last_astar_release == SlotReleaseState::NOT_RELEASE)) {
+      pre_plan_fail_slot_id_vec_.emplace_back(
+          ego_info_under_slot_.slot.GetId());
+    }
+  }
+
   if (!(apa_param.GetParam()
             .smart_fold_mirror_params.locked_obs_slot_with_fold_mirror &&
         planning_output->rear_view_mirror_signal_command.available &&
@@ -398,9 +408,15 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       continue;
     }
 
+    if (std::find(pre_plan_fail_slot_id_vec_.begin(),
+                  pre_plan_fail_slot_id_vec_.end(),
+                  slot.id_) != pre_plan_fail_slot_id_vec_.end()) {
+      continue;
+    }
+
     bool is_slot_release = false;
 
-    if (slot.id_ != ego_info_under_slot_.id && !free_slot_activate_) {
+    if (slot.id_ != ego_info_under_slot_.id && !state_machine_ptr_->IsSAPAMode()) {
       is_slot_release = true;
     } else {
       const SlotReleaseInfo& ego_release_info =
@@ -538,7 +554,7 @@ const bool ApaSlotManager::IsSlotCoarseRelease(ApaSlot& slot) {
   SlotReleaseVoterType release_voter_type = SlotReleaseVoterType::CLEAR;
   if ((slot.slot_type_ == SlotType::PERPENDICULAR ||
        slot.slot_type_ == SlotType::SLANT)) {
-    if (!free_slot_activate_) {
+    if (!state_machine_ptr_->IsSAPAMode()) {
       release_voter_type = IsPerpendicularSlotAndPassageAreaOccupied(slot);
     } else {
       release_voter_type = SlotReleaseVoterType::MAXIMUM;

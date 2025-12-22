@@ -39,6 +39,12 @@ class Preprocess {
                    const iflyauto::LaneBoundary &lane_boundary_ptr);
   void SetRoadedgeInfo(void);
 
+  void SetNavMapInfo(void);
+
+  iflyauto::DrivingRoadType GetRoadTypeFromNaviInfo(int32 road_class, int32 form_way);
+
+  iflyauto::DrivingRoadType GetRoadTypeFromProMap(const iflymapdata::sdpro::LinkInfo_Link* link);
+
   void ObjInLaneJudge(void);
   void SetEgoAroundAreaRange(void);
   void SingleAreaObjSelect(void);

@@ -80,6 +80,7 @@ double CalDesireStaticLateralDistance(
   const double kStaticVRUMaxExtraLateralBuffer =
       config.static_vru_max_lateral_buffer;
   const double kConeMaxExtraLateralBuffer = 0.15;
+  const double kBarrelMaxExtraLateralBuffer = 0.25;
   const double kStaticOtherMaxExtraLateralBuffer = 0.35;
   const double kMaxEgoLCoeff = 0.5;
 
@@ -92,6 +93,8 @@ double CalDesireStaticLateralDistance(
     max_extra_lateral_buffer = kStaticVRUMaxExtraLateralBuffer;
   } else if (IsCone(obstacle->type())) {
     max_extra_lateral_buffer = kConeMaxExtraLateralBuffer;
+  } else if (IsBarrel(obstacle->type())) {
+    max_extra_lateral_buffer = kBarrelMaxExtraLateralBuffer;
   } else {
     max_extra_lateral_buffer = kStaticOtherMaxExtraLateralBuffer;
   }
@@ -237,7 +240,11 @@ bool IsVRU(iflyauto::ObjectType type) {
 
 bool IsCone(iflyauto::ObjectType type) {
   // TODO(clren):other type
-  return type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE;
+  return (type == iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE);
+}
+
+bool IsBarrel(iflyauto::ObjectType type) {
+  return (type == iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL);
 }
 
 bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle) {

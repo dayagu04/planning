@@ -35,10 +35,10 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 判断车速是否处于工作车速范围内
   if (vehicle_service_output_info_ptr->vehicle_speed_display <
       ldp_param_.enable_vehspd_display_min) {
-    enable_code += uint16_bit[0];
+    enable_code += uint32_bit[0];
   } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
              ldp_param_.enable_vehspd_display_max) {
-    enable_code += uint16_bit[0];
+    enable_code += uint32_bit[0];
   } else {
     /*do nothing*/
   }
@@ -47,7 +47,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 判断是否至少识别到一侧道线
   if ((!GetContext.mutable_road_info()->current_lane.left_line.valid) &&
       (!GetContext.mutable_road_info()->current_lane.right_line.valid)) {
-    enable_code += uint16_bit[1];
+    enable_code += uint32_bit[1];
   } else {
     /*do nothing*/
   }
@@ -57,7 +57,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   if (GetContext.get_road_info()->current_lane.lane_width_valid) {
     if ((GetContext.mutable_road_info()->current_lane.lane_width < 2.8 ||
          GetContext.mutable_road_info()->current_lane.lane_width > 5.2)) {
-      enable_code += uint16_bit[2];
+      enable_code += uint32_bit[2];
     } else {
       /*do nothing*/
     }
@@ -68,7 +68,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 判断挡位是否处于D档
   if (GetContext.get_state_info()->shift_lever_state !=
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
-    enable_code += uint16_bit[3];
+    enable_code += uint32_bit[3];
   } else {
     /*do nothing*/
   }
@@ -80,7 +80,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
       (vehicle_service_output_info_ptr->rr_door_state == true) ||
       (vehicle_service_output_info_ptr->hood_state == true) ||
       (vehicle_service_output_info_ptr->trunk_door_state == true)) {
-    enable_code += uint16_bit[4];
+    enable_code += uint32_bit[4];
   } else {
     /*do nothing*/
   }
@@ -88,7 +88,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 5
   // 判断危险报警灯是否开启:使用双闪来判断
   if (vehicle_service_output_info_ptr->hazard_light_state == true) {
-    enable_code += uint16_bit[5];
+    enable_code += uint32_bit[5];
   } else {
     /*do nothing*/
   }
@@ -107,7 +107,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
     yaw_rate_supp_recover_duration_ = 0.0;
   }
   if (yaw_rate_supp_recover_duration_ < 1.0) {
-    enable_code += uint16_bit[6];
+    enable_code += uint32_bit[6];
   } else {
     /*do nothing*/
   }
@@ -135,7 +135,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
     str_wheel_ang_speed_recover_duration_ = 0.0;
   }
   if (str_wheel_ang_speed_recover_duration_ > 1.0) {
-    enable_code += uint16_bit[7];
+    enable_code += uint32_bit[7];
   } else {
     /*do nothing*/
   }
@@ -153,7 +153,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
     brake_pedal_pressed_supp_recover_duration_ = 0.0;
   }
   if (brake_pedal_pressed_supp_recover_duration_ < 2.0) {
-    enable_code += uint16_bit[8];
+    enable_code += uint32_bit[8];
   } else {
     /*do nothing*/
   }
@@ -173,7 +173,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   }
   if (acc_pedal_pos_rate_supp_recover_duration_ <
       GetContext.get_param()->ldp_enable_accel_pedal_pos_rate_dur) {
-    enable_code += uint16_bit[9];
+    enable_code += uint32_bit[9];
   } else {
     /*do nothing*/
   }
@@ -182,7 +182,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // AEB未激活
   // 0:Not Ready 1:Ready 2:Active 3:Temporary Failed 4:Permanently Failed
   if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
-    enable_code += uint16_bit[10];
+    enable_code += uint32_bit[10];
   } else { /*do nothing*/
   }
 
@@ -191,7 +191,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   if ((vehicle_service_output_info_ptr->abs_active == true) ||
       (vehicle_service_output_info_ptr->tcs_active == true) ||
       (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
-    enable_code += uint16_bit[11];
+    enable_code += uint32_bit[11];
   } else {
     /*do nothing*/
   }
@@ -217,7 +217,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
     curve_C2_supp_recover_duration_ = 0.0;
   }
   if (curve_C2_supp_recover_duration_ < 2.0) {
-    enable_code += uint16_bit[12];
+    enable_code += uint32_bit[12];
   } else {
     /*do nothing*/
   }
@@ -226,7 +226,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 雨刮状态判断
   if ((vehicle_service_output_info_ptr->wiper_state ==
        iflyauto::WiperStateEnum::WiperState_HighSpeed)) {
-    enable_code += uint16_bit[13];
+    enable_code += uint32_bit[13];
   } else {
     /*do nothing*/
   }
@@ -234,7 +234,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 14
   // 安全带状态判断
   if ((vehicle_service_output_info_ptr->fl_seat_belt_state == false)) {
-    enable_code += uint16_bit[14];
+    enable_code += uint32_bit[14];
   } else {
     /*do nothing*/
   }
@@ -242,7 +242,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // // bit 15
   // // ESP系统处于开启状态
   // if ((vehicle_service_output_info_ptr->esp_active == false)) {
-  //   enable_code += uint16_bit[15];
+  //   enable_code += uint32_bit[15];
   // } else {
   //   /*do nothing*/
   // }
@@ -250,7 +250,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 15
   // ESP系统无故障
   if ((vehicle_service_output_info_ptr->esp_vdc_fault == true)) {
-    enable_code += uint16_bit[15];
+    enable_code += uint32_bit[15];
   } else {
     /*do nothing*/
   }
@@ -258,7 +258,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 0
   // 实际车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    enable_code += uint16_bit[16];
+    enable_code += uint32_bit[16];
   } else {
     /*do nothing*/
   }
@@ -267,7 +267,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 仪表车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
        false)) {
-    enable_code += uint16_bit[17];
+    enable_code += uint32_bit[17];
   } else {
     /*do nothing*/
   }
@@ -275,7 +275,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 2
   // 横摆角速度信号无效
   if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    enable_code += uint16_bit[18];
+    enable_code += uint32_bit[18];
   } else {
     /*do nothing*/
   }
@@ -284,7 +284,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 方向盘转角速度信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
        false)) {
-    enable_code += uint16_bit[19];
+    enable_code += uint32_bit[19];
   } else {
     /*do nothing*/
   }
@@ -293,7 +293,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 方向盘转速信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
        false)) {
-    enable_code += uint16_bit[20];
+    enable_code += uint32_bit[20];
   } else {
     /*do nothing*/
   }
@@ -302,7 +302,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 油门踏板信号无效
   if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
        false)) {
-    enable_code += uint16_bit[21];
+    enable_code += uint32_bit[21];
   } else {
     /*do nothing*/
   }
@@ -310,7 +310,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 6
   // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
   if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    enable_code += uint16_bit[22];
+    enable_code += uint32_bit[22];
   } else {
     /*do nothing*/
   }
@@ -318,7 +318,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 7
   // 转向灯信号无效
   if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    enable_code += uint16_bit[23];
+    enable_code += uint32_bit[23];
   } else {
     /*do nothing*/
   }
@@ -327,7 +327,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 驾驶员手力矩信号无效
   if ((vehicle_service_output_info_ptr->driver_hand_torque_available ==
        false)) {
-    enable_code += uint16_bit[24];
+    enable_code += uint32_bit[24];
   } else {
     /*do nothing*/
   }
@@ -336,7 +336,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 横向控制执行器状态异常
   if ((vehicle_service_output_info_ptr
            ->pilot_lat_control_actuator_status_available == false)) {
-    enable_code += uint16_bit[25];
+    enable_code += uint32_bit[25];
   } else {
     /*do nothing*/
   }
@@ -344,7 +344,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 10
   // 车道线融合模块节点通讯丢失
   if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    enable_code += uint16_bit[26];
+    enable_code += uint32_bit[26];
   } else {
     /*do nothing*/
   }
@@ -352,7 +352,7 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // bit 11
   // vehicle_service模块节点通讯丢失
   if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    enable_code += uint16_bit[27];
+    enable_code += uint32_bit[27];
   } else {
     /*do nothing*/
   }
@@ -361,11 +361,24 @@ uint32 LdpCore::UpdateLdpEnableCode(void) {
   // 定位模块节点通讯丢失
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
-    enable_code += uint16_bit[28];
+    enable_code += uint32_bit[28];
   } else {
     /*do nothing*/
   }
-
+  // bit 16
+  // ESP系统处于开启状态
+  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+    enable_code += uint32_bit[29];
+  } else {
+    /*do nothing*/
+  }
+  // ESP系统处于软开关关闭状态
+  if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
+      (vehicle_service_output_info_ptr->esp_switch_state == false)) {
+    enable_code += uint32_bit[30];
+  } else {
+    /*do nothing*/
+  }
   return enable_code & GetContext.get_param()->ldp_enable_code_maskcode;
 }
 
@@ -383,10 +396,10 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 判断车速是否处于工作车速范围内
   if (vehicle_service_output_info_ptr->vehicle_speed_display <
       ldp_param_.disable_vehspd_display_min) {
-    disable_code += uint16_bit[0];
+    disable_code += uint32_bit[0];
   } else if (vehicle_service_output_info_ptr->vehicle_speed_display >
              ldp_param_.disable_vehspd_display_max) {
-    disable_code += uint16_bit[0];
+    disable_code += uint32_bit[0];
   } else {
     /*do nothing*/
   }
@@ -395,7 +408,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 判断是否至少识别到一侧道线
   if ((!GetContext.mutable_road_info()->current_lane.left_line.valid) &&
       (!GetContext.mutable_road_info()->current_lane.right_line.valid)) {
-    disable_code += uint16_bit[1];
+    disable_code += uint32_bit[1];
   } else {
     /*do nothing*/
   }
@@ -405,7 +418,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   if (GetContext.get_road_info()->current_lane.lane_width_valid) {
     if ((GetContext.mutable_road_info()->current_lane.lane_width < 2.5 ||
          GetContext.mutable_road_info()->current_lane.lane_width > 5.5)) {
-      disable_code += uint16_bit[2];
+      disable_code += uint32_bit[2];
     } else {
       /*do nothing*/
     }
@@ -418,7 +431,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
 
   if (GetContext.get_state_info()->shift_lever_state !=
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_D) {
-    disable_code += uint16_bit[3];
+    disable_code += uint32_bit[3];
   } else {
     /*do nothing*/
   }
@@ -431,7 +444,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
       (vehicle_service_output_info_ptr->rr_door_state == true) ||
       (vehicle_service_output_info_ptr->hood_state == true) ||
       (vehicle_service_output_info_ptr->trunk_door_state == true)) {
-    disable_code += uint16_bit[4];
+    disable_code += uint32_bit[4];
   } else {
     /*do nothing*/
   }
@@ -439,7 +452,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 5
   // 判断危险报警灯是否开启:使用双闪来判断
   if (vehicle_service_output_info_ptr->hazard_light_state == true) {
-    disable_code += uint16_bit[5];
+    disable_code += uint32_bit[5];
   } else {
     /*do nothing*/
   }
@@ -457,7 +470,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
     yaw_rate_supp_duration_ = 0.0;
   }
   if (yaw_rate_supp_duration_ > 5.0) {
-    disable_code += uint16_bit[6];
+    disable_code += uint32_bit[6];
   } else {
     /*do nothing*/
   }
@@ -483,7 +496,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
                          LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION)
 
   ) {
-    disable_code += uint16_bit[7];
+    disable_code += uint32_bit[7];
   } else {
     /*do nothing*/
   }
@@ -501,7 +514,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
     brake_pedal_pressed_supp_duration_ = 0.0;
   }
   if (brake_pedal_pressed_supp_duration_ > 0.2) {
-    disable_code += uint16_bit[8];
+    disable_code += uint32_bit[8];
   } else {
     /*do nothing*/
   }
@@ -509,7 +522,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 油门踏板变化率>70%/s
   if (GetContext.get_state_info()->accelerator_pedal_pos_rate >
       GetContext.get_param()->ldp_disable_accel_pedal_pos_rate) {
-    disable_code += uint16_bit[9];
+    disable_code += uint32_bit[9];
   } else {
     /*do nothing*/
   }
@@ -517,7 +530,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 10
   // AEB未激活
   if (vehicle_service_output_info_ptr->aeb_actuator_status == 2) {
-    disable_code += uint16_bit[10];
+    disable_code += uint32_bit[10];
   } else { /*do nothing*/
   }
 
@@ -526,7 +539,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   if ((vehicle_service_output_info_ptr->abs_active == true) ||
       (vehicle_service_output_info_ptr->tcs_active == true) ||
       (vehicle_service_output_info_ptr->esp_vdc_active == true)) {
-    disable_code += uint16_bit[11];
+    disable_code += uint32_bit[11];
   } else {
     /*do nothing*/
   }
@@ -553,7 +566,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
       (ldp_state_ !=
        iflyauto::LDPFunctionFSMWorkState::
            LDP_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION)) {
-    disable_code += uint16_bit[12];
+    disable_code += uint32_bit[12];
   } else {
     /*do nothing*/
   }
@@ -572,7 +585,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
     wiper_state_supp_duration_ = 0.0;
   }
   if (wiper_state_supp_duration_ > 15.0) {
-    disable_code += uint16_bit[13];
+    disable_code += uint32_bit[13];
   } else {
     /*do nothing*/
   }
@@ -580,7 +593,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 14
   // 安全带状态判断
   if ((vehicle_service_output_info_ptr->fl_seat_belt_state == false)) {
-    disable_code += uint16_bit[14];
+    disable_code += uint32_bit[14];
   } else {
     /*do nothing*/
   }
@@ -588,22 +601,15 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 15
   // ESP系统无故障
   if ((vehicle_service_output_info_ptr->esp_vdc_fault == true)) {
-    disable_code += uint16_bit[15];
+    disable_code += uint32_bit[15];
   } else {
     /*do nothing*/
   }
-  // // bit 16
-  // // ESP系统处于开启状态
-  // if ((vehicle_service_output_info_ptr->esp_active == false)) {
-  //   disable_code += uint16_bit[16];
-  // } else {
-  //   /*do nothing*/
-  // }
 
   // bit 0
   // 实际车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_available == false)) {
-    disable_code += uint16_bit[16];
+    disable_code += uint32_bit[16];
   } else {
     /*do nothing*/
   }
@@ -612,7 +618,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 仪表车速信号无效
   if ((vehicle_service_output_info_ptr->vehicle_speed_display_available ==
        false)) {
-    disable_code += uint16_bit[17];
+    disable_code += uint32_bit[17];
   } else {
     /*do nothing*/
   }
@@ -620,7 +626,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 2
   // 横摆角速度信号无效
   if ((vehicle_service_output_info_ptr->yaw_rate_available == false)) {
-    disable_code += uint16_bit[18];
+    disable_code += uint32_bit[18];
   } else {
     /*do nothing*/
   }
@@ -629,7 +635,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 方向盘转角速度信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_available ==
        false)) {
-    disable_code += uint16_bit[19];
+    disable_code += uint32_bit[19];
   } else {
     /*do nothing*/
   }
@@ -638,7 +644,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 方向盘转速信号无效
   if ((vehicle_service_output_info_ptr->steering_wheel_angle_speed_available ==
        false)) {
-    disable_code += uint16_bit[20];
+    disable_code += uint32_bit[20];
   } else {
     /*do nothing*/
   }
@@ -647,7 +653,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 油门踏板信号无效
   if ((vehicle_service_output_info_ptr->accelerator_pedal_pos_available ==
        false)) {
-    disable_code += uint16_bit[21];
+    disable_code += uint32_bit[21];
   } else {
     /*do nothing*/
   }
@@ -655,7 +661,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 6
   // 制动压力信号无效，使用实际制动踏板开度有效性 (true:有效/false:无效)
   if ((vehicle_service_output_info_ptr->esp_pressure_available == false)) {
-    disable_code += uint16_bit[22];
+    disable_code += uint32_bit[22];
   } else {
     /*do nothing*/
   }
@@ -663,7 +669,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 7
   // 转向灯信号无效
   if ((vehicle_service_output_info_ptr->turn_switch_state_available == false)) {
-    disable_code += uint16_bit[23];
+    disable_code += uint32_bit[23];
   } else {
     /*do nothing*/
   }
@@ -672,7 +678,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 驾驶员手力矩信号无效
   if ((vehicle_service_output_info_ptr->driver_hand_torque_available ==
        false)) {
-    disable_code += uint16_bit[24];
+    disable_code += uint32_bit[24];
   } else {
     /*do nothing*/
   }
@@ -681,7 +687,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 横向控制执行器状态异常
   if ((vehicle_service_output_info_ptr
            ->pilot_lat_control_actuator_status_available == false)) {
-    disable_code += uint16_bit[25];
+    disable_code += uint32_bit[25];
   } else {
     /*do nothing*/
   }
@@ -689,7 +695,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 10
   // 车道线融合模块节点通讯丢失
   if ((GetContext.mutable_state_info()->road_info_node_valid == false)) {
-    disable_code += uint16_bit[26];
+    disable_code += uint32_bit[26];
   } else {
     /*do nothing*/
   }
@@ -697,7 +703,7 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // bit 11
   // vehicle_service模块节点通讯丢失
   if ((GetContext.mutable_state_info()->vehicle_service_node_valid == false)) {
-    disable_code += uint16_bit[27];
+    disable_code += uint32_bit[27];
   } else {
     /*do nothing*/
   }
@@ -706,11 +712,24 @@ uint32 LdpCore::UpdateLdpDisableCode(void) {
   // 定位模块节点通讯丢失
   if ((GetContext.mutable_state_info()->localization_info_node_valid ==
        false)) {
-    disable_code += uint16_bit[28];
+    disable_code += uint32_bit[28];
   } else {
     /*do nothing*/
   }
-
+  // bit 16
+  // ESP系统处于开启状态
+  if ((vehicle_service_output_info_ptr->esp_active == false)) {
+    disable_code += uint32_bit[29];
+  } else {
+    /*do nothing*/
+  }
+  // ESP系统处于软开关关闭状态
+  if ((vehicle_service_output_info_ptr->esp_switch_state_available == true) &&
+      (vehicle_service_output_info_ptr->esp_switch_state == false)) {
+    disable_code += uint32_bit[30];
+  } else {
+    /*do nothing*/
+  }
   return disable_code & GetContext.get_param()->ldp_disable_code_maskcode;
 }
 
@@ -1004,6 +1023,15 @@ uint32 LdpCore::UpdateLdpLeftSuppressionCode(void) {
   // if (left_lane_width_ < 1.20) {
   //   ldp_left_suppression_code += uint16_bit[12];
   // }
+  // BIT 12elk功能抑制
+  if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION ||
+                   elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    ldp_left_suppression_code += uint16_bit[12];
+  } else {
+    /*do nothing*/
+  }
 
   return ldp_left_suppression_code &
          GetContext.get_param()->ldp_left_suppression_code_maskcode;
@@ -1190,6 +1218,15 @@ uint32 LdpCore::UpdateLdpLeftKickDownCode(void) {
       (GetContext.get_param()->force_no_sideway_switch == false)) {
     // 左侧有分流口
     ldp_left_kickdown_code += uint16_bit[9];
+  }
+  // bit 10
+  if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION ||
+                   elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    ldp_left_kickdown_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
   }
   return ldp_left_kickdown_code &
          GetContext.get_param()->ldp_left_kickdown_code_maskcode;
@@ -1445,7 +1482,15 @@ uint32 LdpCore::UpdateLdpRightSuppressionCode(void) {
   if (GetContext.get_road_info()->close_to_right_line_flag) {
     ldp_right_suppression_code += uint16_bit[11];
   }
-
+//bit 12
+  if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION ||
+                   elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    ldp_right_suppression_code += uint16_bit[12];
+  } else {
+    /*do nothing*/
+  }
   return ldp_right_suppression_code &
          GetContext.get_param()->ldp_right_suppression_code_maskcode;
 }
@@ -1637,7 +1682,15 @@ uint32 LdpCore::UpdateLdpRightKickDownCode(void) {
     // 左侧有分流口
     ldp_right_kickdown_code += uint16_bit[9];
   }
-
+  // bit 10
+  if (elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_LEFT_INTERVENTION ||
+                   elk_state_ == iflyauto::ELKFunctionFSMWorkState::
+                       ELK_FUNCTION_FSM_WORK_STATE_ACTIVE_RIGHT_INTERVENTION) {
+    ldp_right_kickdown_code += uint16_bit[10];
+  } else {
+    /*do nothing*/
+  }
   return ldp_right_kickdown_code &
          GetContext.get_param()->ldp_right_kickdown_code_maskcode;
 }

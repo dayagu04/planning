@@ -1190,14 +1190,30 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
   const auto lane_change_state = lane_change_decider_output.curr_state;
   const auto is_in_lane_change_propose =
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangePropose;
+  if (st_graph_input == nullptr) {
+    return;
+  }
+
+  const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(
+      st_graph_input->rear_agent_of_target(), agent_id_st_boundaries_map);
+  const speed::STBoundary* rear_st_boundary = nullptr;
+  if (boundary_id_st_boundaries_map.find(rear_st_id) !=
+      boundary_id_st_boundaries_map.end()) {
+    rear_st_boundary = boundary_id_st_boundaries_map.at(rear_st_id).get();
+    if (rear_st_boundary != nullptr) {
+      succ_decision_table->insert(std::make_pair(
+          rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
+    }
+  }
+
   if (st_graph_input->is_lane_keeping() ||
       st_graph_input->is_lane_change_cancle() ||
       (is_in_lane_change_propose &&
-       !lane_change_decider_output.s_search_status)) {
+       !lane_change_decider_output.s_search_status) ||
+      (rear_st_id == -1 || rear_st_boundary == nullptr)) {
     const auto cipv_id = cipv_info.cipv_id();
     if (cipv_id != -1 && agent_id_st_boundaries_map.find(cipv_id) !=
                              agent_id_st_boundaries_map.end()) {
-      // only use one cipv prediction trajectory
       cipv_boundary_id = agent_id_st_boundaries_map.at(cipv_id).front();
       succ_decision_table->insert(std::make_pair(
           cipv_boundary_id, speed::STBoundary::DecisionType::YIELD));
@@ -1205,23 +1221,6 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
     return;
   }
 
-  // Set rear target as overtake.
-  const auto rear_st_id = speed::StGraphUtils::GetAgentStBoundaryId(
-      st_graph_input->rear_agent_of_target(), agent_id_st_boundaries_map);
-  const speed::STBoundary* rear_st_boundary = nullptr;
-  if (boundary_id_st_boundaries_map.find(rear_st_id) !=
-      boundary_id_st_boundaries_map.end()) {
-    rear_st_boundary = boundary_id_st_boundaries_map.at(rear_st_id).get();
-    succ_decision_table->insert(
-        std::make_pair(rear_st_id, speed::STBoundary::DecisionType::OVERTAKE));
-    // std::cout << "Set rear target agent as OVERTAKE "
-    //           << st_graph_input_.rear_agent_of_target()->agent_id() <<
-    //           std::endl;
-  }
-  // Won't trigger if has no rear agent.
-  if (nullptr == rear_st_boundary) {
-    return;
-  }
   for (const auto& st_boundary_entry : boundary_id_st_boundaries_map) {
     const auto boundary_id = st_boundary_entry.first;
     const auto& st_boundary = *st_boundary_entry.second;
@@ -1231,7 +1230,6 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
     if (st_boundary.IsEmpty()) {
       continue;
     }
-    // Only consider time overlapping.
     if (st_boundary.min_t() > rear_st_boundary->max_t()) {
       continue;
     }
@@ -1239,7 +1237,6 @@ void StGraphSearcher::SetStSearchFailSafeDecisionTable(
             st_boundary, rear_st_boundary)) {
       succ_decision_table->insert(
           std::make_pair(boundary_id, speed::STBoundary::DecisionType::YIELD));
-      // std::cout << "Set boundary as YIELD: " << boundary_id << std::endl;
     }
   }
 }

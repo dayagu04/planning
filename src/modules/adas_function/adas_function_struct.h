@@ -90,9 +90,11 @@ struct Parameters {
   double tsr_reset_path_length = 10000.0;
   double tsr_speed_limit_offset = 1.0;
   double tsr_out_flag_need_last_time = 1.0;  // 输出时,标识需要感知不到的持续时间，单位：s
+  double tsr_warning_max_duration = 5.0;  // 声音报警最大时长，单位：s
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;
+  bool elk_bicycle_motorcycle_sw = false;
   // sim params
   bool adas_sim_switch = false;
   bool force_no_sideway_switch = true;
@@ -362,6 +364,13 @@ struct LaneInfo {
   bool left_front_car_flag = false;
 };
 
+struct NavMapInfo {
+  uint32 speed_limit = 0;
+  iflyauto::DrivingRoadType road_type = iflyauto::DrivingRoadType::DRIVING_ROAD_TYPE_NONE;
+  uint8 map_source = 0; // 0: invalid, 1:sd_map, 2:sdpromap
+  bool valid_flag = false;
+};
+
 struct RoadInfo {
   LaneInfo current_lane;
 
@@ -370,6 +379,9 @@ struct RoadInfo {
   bool close_to_right_line_flag = false;
   double close_to_right_line_dur = 0.0;
   double close_to_left_line_dur = 0.0;
+  // 从地图得到的信息
+  NavMapInfo sdmap_info;
+  NavMapInfo sdpromap_info;
 };
 
 struct LastCycleInfo {

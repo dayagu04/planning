@@ -60,6 +60,10 @@ class EgoLaneTrackManger {
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
 
+  void ProcessSplitRegionInteractiveSelectEgoLane(
+      std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
+      const std::vector<int> &order_ids, const int &lane_change_cmd);
+
   void ProcessSplitWithGroundMark(
       std::vector<std::shared_ptr<VirtualLane>> &relative_id_lanes,
       const std::vector<int> &order_ids);
@@ -122,37 +126,55 @@ class EgoLaneTrackManger {
         last_zero_relative_id_order_id_index;
   }
 
-  bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; };
+  bool is_exist_split_on_ramp() const { return is_exist_split_on_ramp_; }
 
-  bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; };
+  bool is_exist_ramp_on_road() const { return is_exist_ramp_on_road_; }
 
   bool is_exist_split_on_expressway() const {
     return is_exist_split_on_expressway_;
-  };
+  }
 
   bool is_exist_intersection_split() const {
     return is_exist_split_on_intersection_;
-  };
+  }
 
   bool is_in_ramp_select_split_situation() const {
     return is_in_ramp_select_split_situation_;
-  };
+  }
 
   bool is_on_road_select_ramp_situation() const {
     return is_on_road_select_ramp_situation_;
-  };
+  }
 
   bool is_select_ego_lane_without_plan() const {
     return is_select_ego_lane_without_plan_;
-  };
+  }
 
   bool is_select_ego_lane_with_plan() const {
     return is_select_ego_lane_with_plan_;
-  };
+  }
 
   bool is_virtual_lane_relative_id_switch() const {
     return virtual_lane_relative_id_switch_flag_;
-  };
+  }
+
+  bool is_ego_in_split_region() const { return ego_in_split_region_; }
+
+  bool is_exist_interactive_select_split() const {
+    return is_exist_interactive_select_split_;
+  }
+
+  int interactive_select_split_counter() const {
+    return interactive_select_split_counter_;
+  }
+
+  bool get_other_split_lane_right_side() const {
+    return other_split_lane_right_side_;
+  }
+
+  bool get_other_split_lane_left_side() const {
+    return other_split_lane_left_side_;
+  }
 
  private:
   double ComputeLanesMatchlaterakDisCost(
@@ -222,8 +244,13 @@ class EgoLaneTrackManger {
   bool is_exist_split_on_intersection_ = false;
   bool is_in_ramp_select_split_situation_ = false;
   bool is_on_road_select_ramp_situation_ = false;
+  bool is_interactive_select_split_situation_ = false;
+  bool is_exist_interactive_select_split_ = false;
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
+  bool other_split_lane_right_side_ = false;
+  bool other_split_lane_left_side_ = false;
+  int interactive_select_split_counter_ = 0;
   double current_segment_passed_distance_ = 0.0;
   double sum_distance_from_ego_to_both_center_lines_ = 3.75;
   bool ego_in_split_region_ = false;

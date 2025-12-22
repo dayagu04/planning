@@ -19,7 +19,7 @@ TaskPipelineRADS::TaskPipelineRADS(
   speed_adjust_decider_ =
       std::make_unique<SpeedAdjustDecider>(config_builder, session);
   lateral_obstacle_decider_ =
-      std::make_unique<HppLateralObstacleDecider>(config_builder, session);
+      std::make_unique<RADSLateralObstacleDecider>(config_builder, session);
   lane_borrow_deciderV1_ =
       std::make_unique<lane_borrow_deciderV1::LaneBorrowDecider>(config_builder,
                                                                  session);

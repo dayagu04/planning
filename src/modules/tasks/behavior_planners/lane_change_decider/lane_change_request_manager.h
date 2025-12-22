@@ -39,6 +39,10 @@ class LaneChangeRequestManager {
 
   RequestType request() const { return request_; }
   RequestSource request_source() const { return request_source_; }
+  void SetRequest(const RequestType request) { request_ = request; }
+  void SetRequestSource(const RequestSource request_source) {
+    request_source_ = request_source;
+  }
   IntCancelReasonType int_request_cancel_reason() const {
     return int_request_cancel_reason_;
   }
@@ -53,7 +57,14 @@ class LaneChangeRequestManager {
     int_request_.set_target_lane_virtual_id(target_lane_virtual_id);
     // act_request_.set_target_lane_virtual_id(target_lane_virtual_id);
   }
+  int lane_change_cmd() { return lane_change_cmd_; }
+
+  int get_int_lane_change_cmd() { return int_lane_change_cmd_; }
+
   RequestType turn_signal() const { return gen_turn_signal_; }
+  void SetTurnSignal(const RequestType gen_turn_signal) {
+    gen_turn_signal_ = gen_turn_signal;
+  }
   bool AggressiveChange() const {
     if (request_source_ == NO_REQUEST) {
       return false;
@@ -108,8 +119,10 @@ class LaneChangeRequestManager {
   RequestType ilc_virtual_request_ = NO_CHANGE;
   uint last_frame_blinker_ = 0;
   std::uint8_t lane_change_cmd_ = 0;
+  std::uint8_t int_lane_change_cmd_ = 0;
   bool trigger_lane_change_cancel_ = false;
   bool int_request_is_allowed_lc_in_cone_scene_ = true;
+  bool last_frame_is_exist_interactive_select_split_ = false;
 };
 
 }  // namespace planning

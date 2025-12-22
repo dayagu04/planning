@@ -2,7 +2,7 @@
   "car_type": "jac_s811",
   "mark_date": "20241114",
   "lkas_version":"20251023",
-  "tsr_ihc_version":"20251015",
+  "tsr_ihc_version":"20251208",
   "jac_s811": {
     "wheel_base": 2.72,
     "steer_ratio": 15.04,
@@ -125,6 +125,7 @@
   "tsr_reset_path_length": 2000.0,
   "tsr_speed_limit_offset": 1.0,
   "tsr_out_flag_need_last_time": 1.0,
+  "tsr_warning_max_duration": 5.0,
   "tsr_function_test_switch": 0,
   "tsr_supp_sign_type_test": 0,
   "elk_tlc_thrd": 1.0,
@@ -183,5 +184,6 @@
   "elk_soildline_switch": true,
   "ldw_tlc_far_":1.0,
   "ldw_tlc_medium_":0.6,
-  "ldw_tlc_near_":0.2
+  "ldw_tlc_near_":0.2,
+  "elk_bicycle_motorcycle_sw":false
 }

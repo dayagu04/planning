@@ -139,8 +139,7 @@ void IntRequest::Update(int lc_status) {
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
     std::shared_ptr<VirtualLane> tem_target_lane =
-        virtual_lane_mgr_->get_lane_with_virtual_id(
-            target_lane_virtual_id_tmp);
+        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
     if (!zero_relative_id_order_ids.empty() &&
         origin_relative_id_zero_nums > 1) {
       std::shared_ptr<VirtualLane> origin_lane =
@@ -215,8 +214,7 @@ void IntRequest::Update(int lc_status) {
 
     target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
     std::shared_ptr<VirtualLane> tem_target_lane =
-        virtual_lane_mgr_->get_lane_with_virtual_id(
-            target_lane_virtual_id_tmp);
+        virtual_lane_mgr_->get_lane_with_virtual_id(target_lane_virtual_id_tmp);
     if (!zero_relative_id_order_ids.empty() &&
         origin_relative_id_zero_nums > 1) {
       std::shared_ptr<VirtualLane> origin_lane =
