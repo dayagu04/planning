@@ -75,12 +75,10 @@ bool ParkingSwitchDecider::Execute() {
 
   //for E541
   if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
-    const auto last_is_standstill_near_routing_destination =
-        parking_switch_info_.is_standstill_near_routing_destination;
     const double curr_timestamp = IflyTime::Now_ms();
     if (IsNearRoutingDestination() && (ego_v <= 1e-2)) {
       parking_switch_info_.is_standstill_near_routing_destination = true;
-      if(last_is_standstill_near_routing_destination == false) {
+      if(last_is_standstill_near_routing_destination_ == false) {
         timestamp_at_standstill_near_dest_ = curr_timestamp;
       }
       const double duration_time_since_standstill_near_dest =
@@ -96,6 +94,7 @@ bool ParkingSwitchDecider::Execute() {
       parking_switch_info_.is_standstill_near_routing_destination = false;
       timestamp_at_standstill_near_dest_ = 0.0;
     }
+    last_is_standstill_near_routing_destination_ = parking_switch_info_.is_standstill_near_routing_destination;
   }
 
   JSON_DEBUG_VALUE("is_memory_slot_allowed_to_park", parking_switch_info_.is_memory_slot_allowed_to_park);
