@@ -1112,7 +1112,8 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
           type_segment.type ==
-              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED;
+              iflyauto::LaneBoundaryType_MARKING_LEFT_SOLID_RIGHT_DASHED ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
       if (compare_point_s > 0.0) {
         if (!is_changeable)
           left_unchangeable_distance = compare_point_s;
@@ -1135,7 +1136,8 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
           type_segment.type ==
               iflyauto::LaneBoundaryType_MARKING_DOUBLE_DASHED ||
           type_segment.type ==
-              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID;
+              iflyauto::LaneBoundaryType_MARKING_LEFT_DASHED_RIGHT_SOLID ||
+          type_segment.type == iflyauto::LaneBoundaryType_MARKING_VIRTUAL;
       if (compare_point_s > 0.0) {
         if (!is_changeable)
           left_unchangeable_distance = compare_point_s;
@@ -1151,7 +1153,7 @@ bool SamplePolySpeedAdjustDecider::CheckLanelineChangeable() {
 }
 
 void SamplePolySpeedAdjustDecider::CalcDistanceToStopPoint() {
-  if(!is_merge_change_){
+  if (!is_merge_change_) {
     return;
   }
   const auto& virtual_lane_mgr =
