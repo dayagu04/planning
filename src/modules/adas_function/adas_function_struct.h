@@ -94,6 +94,7 @@ struct Parameters {
   double lane_boundary_vaild_length_set = 15.0;
   double sideway_exist_gap_thrd = 0.5;
   double lane_line_width = 0.15;
+  bool elk_bicycle_motorcycle_sw = false;
   // sim params
   bool adas_sim_switch = false;
   bool force_no_sideway_switch = true;
