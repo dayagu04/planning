@@ -2,7 +2,7 @@
 #include "base_cost.h"
 #include "frenet_obstacle.h"
 #include "obstacle.h"
-#include "src/library/arastar_lib/hybrid_ara_data.h"
+#include "tasks/behavior_planners/lateral_obstacle_decider/ARAStar/hybrid_ara_data.h"
 #include "utils/kd_path.h"
 
 using namespace planning::planning_math;
@@ -24,7 +24,7 @@ class AgentCost : public BaseCost {
       const bool right_turn);
   ~AgentCost() = default;
 
-  double MakeCost(Node3D& vertex) const;
+  double MakeCost(Node3d& vertex) const;
 
  private:
   void NormalizeCost(double& cost) const;

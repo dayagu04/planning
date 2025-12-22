@@ -12,7 +12,7 @@ MotionCost::MotionCost(const double weight, const double max_front_steer_angle,
 
 // 转向角越大，cost越大；与上一时刻的转角角之差越大，cost越大
 // 为什么不考虑距离的cost？
-double MotionCost::MakeCost(Node3D& vertex) const {
+double MotionCost::MakeCost(Node3d& vertex) const {
   // inplement calculation
   double steering = vertex.GetSteer();
   double cost_steering_change = std::abs(steering - last_steering_angle_);

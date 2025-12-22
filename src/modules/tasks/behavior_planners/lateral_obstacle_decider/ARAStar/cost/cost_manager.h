@@ -17,7 +17,7 @@ class CostManager {
 
   void AddCost(const std::shared_ptr<BaseCost> cost_ptr);
 
-  double ComputeCost(Node3D& vertex) const;
+  double ComputeCost(ara_star::Node3d& vertex) const;
 
  private:
   std::vector<std::shared_ptr<BaseCost>> cost_ptrs_;

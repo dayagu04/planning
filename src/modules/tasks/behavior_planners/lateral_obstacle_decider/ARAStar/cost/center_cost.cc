@@ -17,7 +17,7 @@ CenterCost::CenterCost(const double weight, const double ego_wheel_base,
 
       };
 
-double CenterCost::MakeCost(Node3D& vertex) const {
+double CenterCost::MakeCost(Node3d& vertex) const {
   ad_common::math::Vec2d front_axis_position(
       vertex.GetX() + ego_wheel_base_ * std::cos(vertex.GetPhi()),
       vertex.GetY() + ego_wheel_base_ * std::sin(vertex.GetPhi()));
