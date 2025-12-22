@@ -24,7 +24,7 @@
 #include "environmental_model.h"
 #include "fusion_road_c.h"
 #include "ifly_localization_c.h"
-#include "ifly_parking_map.pb.h"
+#include "parking_map.pb.h"
 #include "ifly_time.h"
 #include "local_view.h"
 #include "log_glog.h"

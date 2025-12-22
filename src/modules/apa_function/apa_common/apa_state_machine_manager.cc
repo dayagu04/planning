@@ -57,6 +57,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
     } else {
       pa_direction_ = ApaPADirection::PA_INVALID;
     }
+  } else if(fun_state_machine_info.running_mode == iflyauto::RunningMode::RUNNING_MODE_MEMORY_PARKING) {
+    running_mode_ = ApaRunningMode::RUNNING_HPP;
   } else if (fun_state_machine_info.parking_req.apa_free_slot_info
                  .free_slot_activate) {
     running_mode_ = ApaRunningMode::RUNNING_SAPA;
