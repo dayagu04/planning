@@ -5486,10 +5486,13 @@ bool LaneChangeStateMachineManager::IsExistExtendLane(
   const iflymapdata::sdpro::Lane* succesor_add_lane = nullptr;
   const iflymapdata::sdpro::Lane* iterator_lane = lane;
   double sum_dis = 0.0;
-  const auto& sd_promap =
-      session_->environmental_model().get_route_info()->get_sdpro_map();
-  const auto& route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
+  
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return false;
+  }
+  const auto& sd_promap = route_info->get_sdpro_map();
+  const auto& route_info_output = route_info->get_route_info_output();
 
   while (iterator_lane) {
     if (iterator_lane->id() == lane->id()) {
@@ -5550,8 +5553,11 @@ LaneChangeStateMachineManager::CalculateLeftestRightestLane(
 
   const iflymapdata::sdpro::Lane* leftest_lane = nullptr;
   const iflymapdata::sdpro::Lane* rightest_lane = nullptr;
-  const auto& sd_promap =
-      session_->environmental_model().get_route_info()->get_sdpro_map();
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return {nullptr, nullptr};
+  }
+  const auto& sd_promap = route_info->get_sdpro_map();
 
   std::vector<std::pair<const iflymapdata::sdpro::Lane*, int>>
       valid_lane_sequence;
@@ -5595,10 +5601,12 @@ RampDirection
 LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
   const auto& function_mode =
       session_->environmental_model().function_info().function_mode();
-  const auto& route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
-  const auto& sdpro_map =
-      session_->environmental_model().get_route_info()->get_sdpro_map();
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return RAMP_NONE;
+  }
+  const auto& route_info_output = route_info->get_route_info_output();
+  const auto& sdpro_map = route_info->get_sdpro_map();
 
   if (function_mode != common::DrivingFunctionInfo::NOA ||
       route_info_output.map_vendor !=
@@ -5623,11 +5631,11 @@ LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
     return RAMP_NONE;
   }
 
-  if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
+  if (!route_info->get_sdmap_valid()) {
     return RAMP_NONE;
   }
   const auto& sd_promap =
-      session_->environmental_model().get_route_info()->get_sdpro_map();
+      route_info->get_sdpro_map();
   const auto* current_link = sd_promap.GetLinkOnRoute(start_fp_point.link_id);
   if (current_link == nullptr) {
     return RAMP_NONE;
@@ -5673,8 +5681,11 @@ RampDirection
 LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
   const auto& function_mode =
       session_->environmental_model().function_info().function_mode();
-  const auto& route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return RAMP_NONE;
+  }
+  const auto& route_info_output = route_info->get_route_info_output();
 
   if (function_mode != common::DrivingFunctionInfo::NOA ||
       route_info_output.map_vendor != iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD ||
@@ -5683,8 +5694,7 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
     return RAMP_NONE;
   }
 
-  const auto& current_link =
-      session_->environmental_model().get_route_info()->get_current_link();
+  const auto& current_link = route_info->get_current_link();
   if (!current_link) {
     return RAMP_NONE;
   }
