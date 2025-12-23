@@ -560,6 +560,8 @@ std::string ApaStateMachineManager::GetParkingSAPAStatusString(const ApaSAPAStat
     case ApaSAPAStatus::SAPA_STATUS_FINISHED:
       res_string = "SAPA_STATUS_FINISHED";
       break;
+    default:
+      res_string = "SAPA_STATUS_DEFAULT";
   }
   return res_string;
 }
