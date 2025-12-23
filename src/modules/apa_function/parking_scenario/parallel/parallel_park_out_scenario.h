@@ -53,7 +53,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
 
   void CalDynamicBufferInDiffSteps(double& dynaminc_lat_buffer,
                                    double& dynamic_lon_buffer) const;
-  void JudgeArcSlot();
+  const bool PostProcessPathPara();  void JudgeArcSlot();
 
  private:
   Tlane t_lane_;
@@ -70,10 +70,13 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   std::vector<pnc::geometry_lib::PathPoint>
       previous_current_path_point_global_vec_;
   bool delay_check_finish_ = false;
-  const bool PostProcessPathPara();
+  bool is_last_pose_set_ = false;
+  pnc::geometry_lib::PathPoint last_target_pose_;
+
   double arc_slot_init_out_heading_ = 0.0;
   bool is_outer_arc_slot_ = false;
   bool is_arc_slot_ = false;
+  bool path_end_heading_is_met_= false;
 };
 }  // namespace apa_planner
 }  // namespace planning

@@ -513,7 +513,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
             << calc_params_.valid_target_pt_vec.size();
   const bool not_bigangle =
       std::fabs(ego_line.heading) < big_heading_vec_.front() * kDeg2Rad;
-
+  const bool trim_parallel_out = false;
   std::vector<PathSegment> narrow_path_seg_vec;
   for (const auto& target_pose : calc_params_.valid_target_pt_vec) {
     arc_1.pA = target_pose.pos;
@@ -584,7 +584,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
 
       ego_line.heading = start_pose.heading;
       ego_line.SetPoints(start_pose.pos, diverse_arc_2.pB);
-      if (!CheckEgoLine(ego_line, not_bigangle)) {
+      if (!is_park_out && !CheckEgoLine(ego_line, not_bigangle)) {
         ILOG_INFO << "CheckEgoLine failed!";
         continue;
       }
@@ -603,8 +603,36 @@ const bool ParallelPathGenerator::PlanFromTargetToLine(
       if (col_res.collision_flag ||
           col_res.remain_car_dist >
               col_res.remain_obstacle_dist - kLonBufferTrippleStep) {
-        ILOG_INFO << "arc2 collided!";
-        continue;
+        if (trim_parallel_out && is_park_out && diverse_arc_2.length - col_res.remain_dist < 2.0 &&
+            diverse_arc_2.length > 2.4) {
+          std::vector<pnc::geometry_lib::PathPoint> sampled_path_pts;
+          double arc_safe_len = 0.0;
+          pnc::geometry_lib::SamplePointSetInArc(sampled_path_pts,
+                                                 diverse_arc_2, 0.2);
+          double arc_unit_len = diverse_arc_2.length / sampled_path_pts.size();
+
+          if (sampled_path_pts.size() > 11) {
+            ILOG_INFO << "diverse_arc_2.length before trim:" << diverse_arc_2.length;
+            for (int i = 0; i < sampled_path_pts.size() - 1; i++) {
+              if (arc_safe_len > col_res.remain_obstacle_dist) {
+                diverse_arc_2.pB = sampled_path_pts[i - 1].pos;
+                diverse_arc_2.length = arc_safe_len;
+                diverse_arc_2.headingB = sampled_path_pts[i - 1].heading;
+                ILOG_INFO << "diverse_arc_2.length after trim:" << diverse_arc_2.length;
+                ILOG_INFO << "arc2 collided but trim it";
+                break;
+              }
+              arc_safe_len += arc_unit_len;
+            }
+          } else {
+            ILOG_INFO << "diverse_arc_2 is short than 2.2m, can't trim it";
+            continue;
+          }
+
+        } else {
+          ILOG_INFO << "arc2 collided!";
+          continue;
+        }
       }
       diverse_arc_2.dis_ObsPin = col_res.safe_min_dist;
       ILOG_INFO << "arc2_radius_dis_ObsPin" << diverse_arc_2.dis_ObsPin;
@@ -955,7 +983,7 @@ const bool ParallelPathGenerator::PlanFromTargetToLineInNarrowChannel(
         //   (dynamic_cast<const ParallelOutPathGenerator*>(this) != nullptr);
 
         if (std::abs(tmp_line_arc_seg_vec.back().arc_seg.headingB - arc_slot_init_out_heading_ ) <
-            pnc::mathlib::Deg2Rad(10.0)) {
+            pnc::mathlib::Deg2Rad(5.0)) {
           ILOG_INFO << "stop add line arc when length > 2.5 and  terminal condition is met";
           break;
         }

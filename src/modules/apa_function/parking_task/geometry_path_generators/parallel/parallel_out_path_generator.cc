@@ -112,94 +112,183 @@ const bool ParallelOutPathGenerator::Update() {
 
   bool success = false;
   collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false));
-  std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
-  if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
-    success = AdvancedInversedTrialsInSlot(inversed_path_seg_vec,
-                                           input_.ego_info_under_slot.cur_pose);
-    ILOG_INFO << "AdvancedInversedTrialsInSlot  --------------------------";
-    pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
+  const bool is_in_slot = CheckEgoInSlot();
 
-    if (!success) {
-      inversed_path_seg_vec.clear();
-      success = InversedTrialsByGivenGear(inversed_path_seg_vec,
-                                          input_.ego_info_under_slot.cur_pose,
-                                          pnc::geometry_lib::SEG_GEAR_DRIVE);
+  if (input_.is_before_running_stage) {
+    arc_slot_init_out_heading_ =
+        input_.ego_info_under_slot.neigbor_front_heading;
+    if (arc_slot_init_out_heading_ > M_PI ||
+        arc_slot_init_out_heading_ < -M_PI) {
+      arc_slot_init_out_heading_ = 0.0;
     }
+  }
+  if (!is_in_slot) {
+    auto last_target_pose_path = input_.last_target_pose_;
+    auto last_target_pos =
+        input_.ego_info_under_slot.g2l_tf.GetPos(input_.last_target_pose_.pos);
+    auto last_target_heading = input_.last_target_pose_.heading;
+    auto pose_univ = Eigen::Vector2d(std::cos(last_target_heading),
+                                     std::sin(last_target_heading));
+
+    auto upper_normal = Eigen::Vector2d(-pose_univ.y(), pose_univ.x());
+    auto lower_normal = Eigen::Vector2d(pose_univ.y(), -pose_univ.x());
+    std::vector<pnc::geometry_lib::LineSegment> prepareline_candi;
+    prepareline_candi.reserve(25);
+    for( int i = 0; i < 10; i++){
+      auto upper_point = last_target_pos + upper_normal * 0.1 * (i + 1);
+      prepareline_candi.emplace_back(pnc::geometry_lib::BuildLineSegByPose(
+        upper_point, last_target_heading));
+      auto lower_point = last_target_pos + lower_normal * 0.1 * (i + 1);
+      prepareline_candi.emplace_back(pnc::geometry_lib::BuildLineSegByPose(
+        lower_point, last_target_heading));
+
+    }
+
+
+
+
+    std::vector<pnc::geometry_lib::PathSegment> out_path_vec;
+    for (auto line : prepareline_candi) {
+      success = PlanToPreparingLine(out_path_vec,
+                                    input_.ego_info_under_slot.cur_pose, line);
+      if (success) {
+        break;
+      }
+    }
+    if (!success || out_path_vec.size() == 0) {
+      ILOG_INFO << "three  prepareline out search in slot failed!";
+      return false;
+    }
+    pnc::geometry_lib::PrintSegmentsVecInfo(out_path_vec);
+    ILOG_INFO << "three  prepareline out search in slot success! --------------------------";
+    AddPathSegVecToOutput(out_path_vec);
+
+
   } else {
-    success = InversedTrialsByGivenGear(inversed_path_seg_vec,
-                                        input_.ego_info_under_slot.cur_pose,
-                                        input_.ref_gear);
-    if (!success ||
-        std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
-            (input_.tlane.slot_width * 0.5) ||
-        !CheckShortToFirstPath(inversed_path_seg_vec, MinLengthPath)) {
-      inversed_path_seg_vec.clear();
+    std::vector<pnc::geometry_lib::PathSegment> inversed_path_seg_vec;
+    if (input_.ref_gear == pnc::geometry_lib::SEG_GEAR_INVALID) {
       success = AdvancedInversedTrialsInSlot(
           inversed_path_seg_vec, input_.ego_info_under_slot.cur_pose);
+      ILOG_INFO << "AdvancedInversedTrialsInSlot  --------------------------";
+      pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
+
+      if (!success) {
+        inversed_path_seg_vec.clear();
+        success = InversedTrialsByGivenGear(inversed_path_seg_vec,
+                                            input_.ego_info_under_slot.cur_pose,
+                                            pnc::geometry_lib::SEG_GEAR_DRIVE);
+        if (inversed_path_seg_vec.size() == 1) {
+          if (std::abs(inversed_path_seg_vec[0].GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+          }
+
+        } else if (inversed_path_seg_vec.size() > 1) {
+          if (std::abs(inversed_path_seg_vec.back().GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+            ILOG_INFO
+                << "InversedTrialsByGivenGear heading over change heading!!!";
+          }
+        }
+      }
+    } else {
+      success = InversedTrialsByGivenGear(inversed_path_seg_vec,
+                                          input_.ego_info_under_slot.cur_pose,
+                                          input_.ref_gear);
+      if (inversed_path_seg_vec.size() == 1) {
+          if (std::abs(inversed_path_seg_vec[0].GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+          }
+
+        } else if (inversed_path_seg_vec.size() > 1) {
+          if (std::abs(inversed_path_seg_vec.back().GetArcSeg().headingA -
+                       arc_slot_init_out_heading_) >
+              pnc::mathlib::Deg2Rad(50.0)) {
+            success = false;
+            ILOG_INFO
+                << "InversedTrialsByGivenGear heading over change heading!!!";
+          }
+        }
+      if (!success ||
+          std::fabs(inversed_path_seg_vec.back().GetStartPos().y()) >
+              (input_.tlane.slot_width * 0.5) ||
+          !CheckShortToFirstPath(inversed_path_seg_vec, MinLengthPath)) {
+        inversed_path_seg_vec.clear();
+        success = AdvancedInversedTrialsInSlot(
+            inversed_path_seg_vec, input_.ego_info_under_slot.cur_pose);
+      }
     }
-  }
 
-  if (!success || inversed_path_seg_vec.size() == 0) {
-    ILOG_INFO << "inversed search in slot failed!";
-    return false;
-  }
-  ILOG_INFO << "inversed search in slot success! --------------------------";
-  pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
-  ILOG_INFO << "inversed search in slot success! end-----------------------";
-
-  success = false;
-  std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
-  GenParallelPreparingLineVecOut(preparing_pose_vec);
-  ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
-  for (const auto &pt : preparing_pose_vec) {
-    ILOG_INFO << "preparing y = " << pt.pos.y();
-  }
-
-  const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
-  pnc::geometry_lib::PrintPose("park_out_pose", park_out_pose);
-
-  calc_params_.valid_target_pt_vec.clear();
-  calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
-
-  std::vector<std::vector<pnc::geometry_lib::PathSegment>> all_park_out_path_vec;
-  for (const auto &prepare_pose : preparing_pose_vec) {
-    collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, true));
-    std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
-    if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose)) {
-      continue;
+    if (!success || inversed_path_seg_vec.size() == 0) {
+      ILOG_INFO << "inversed search in slot failed!";
+      return false;
     }
-    all_park_out_path_vec.emplace_back(park_out_path_vec);
-    if (calc_params_.scene_type !=
-        ParallelParkSceneType::
-            PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE) {
-      ILOG_INFO << "not narrow channel rear vacant scene! only use first path";
-      break;
-    }
-  }
-  const int best_path_idx = SelectParkOutPathVec(all_park_out_path_vec);
-  if (best_path_idx < 0 || best_path_idx > all_park_out_path_vec.size() - 1) {
-    ILOG_INFO << "plan to preparing line failed!";
-    return false;
-  }
-  ILOG_INFO << "park_out_path_vec best_path_idx: " << best_path_idx;
-  std::vector<pnc::geometry_lib::PathSegment>& park_out_path_vec =
-      all_park_out_path_vec[best_path_idx];
-  ReversePathSegVec(park_out_path_vec);
-  pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
-  success = true;
-  ILOG_INFO << "plan to preparing line success!";
+    ILOG_INFO << "inversed search in slot success! --------------------------";
+    pnc::geometry_lib::PrintSegmentsVecInfo(inversed_path_seg_vec);
+    ILOG_INFO << "inversed search in slot success! end-----------------------";
 
-  if (success) {
-    std::vector<pnc::geometry_lib::PathSegment> path_res;
-    for (size_t i = 0; i < inversed_path_seg_vec.size() - 1; i++) {
-      path_res.emplace_back(inversed_path_seg_vec[i]);
+    success = false;
+    std::vector<pnc::geometry_lib::PathPoint> preparing_pose_vec;
+    GenParallelPreparingLineVecOut(preparing_pose_vec);
+    ILOG_INFO << "preparing_pose_vec size = " << preparing_pose_vec.size();
+    for (const auto &pt : preparing_pose_vec) {
+      ILOG_INFO << "preparing y = " << pt.pos.y();
     }
-    for (size_t i = 0; i < park_out_path_vec.size(); i++) {
-      path_res.emplace_back(park_out_path_vec[i]);
+
+    const auto &park_out_pose = inversed_path_seg_vec.back().GetStartPose();
+    pnc::geometry_lib::PrintPose("park_out_pose", park_out_pose);
+
+    calc_params_.valid_target_pt_vec.clear();
+    calc_params_.valid_target_pt_vec.emplace_back(park_out_pose);
+
+    std::vector<std::vector<pnc::geometry_lib::PathSegment>>
+        all_park_out_path_vec;
+    for (const auto &prepare_pose : preparing_pose_vec) {
+      collision_detector_ptr_->SetParam(
+          CollisionDetector::Paramters(0.1, true));
+      std::vector<pnc::geometry_lib::PathSegment> park_out_path_vec;
+      if (!PlanFromTargetToLine(park_out_path_vec, prepare_pose)) {
+        continue;
+      }
+      all_park_out_path_vec.emplace_back(park_out_path_vec);
+      if (calc_params_.scene_type !=
+          ParallelParkSceneType::
+              PARALLEL_PARK_OUT_NARROW_CHANNEL_REAR_VACANT_SCENE) {
+        ILOG_INFO
+            << "not narrow channel rear vacant scene! only use first path";
+        break;
+      }
     }
-    AddPathSegVecToOutput(path_res);
-  } else {
-    ILOG_INFO << "PlanToPreparingLine failed in total loop!";
+    const int best_path_idx = SelectParkOutPathVec(all_park_out_path_vec);
+    if (best_path_idx < 0 || best_path_idx > all_park_out_path_vec.size() - 1) {
+      ILOG_INFO << "plan to preparing line failed!";
+      return false;
+    }
+    ILOG_INFO << "park_out_path_vec best_path_idx: " << best_path_idx;
+    std::vector<pnc::geometry_lib::PathSegment> &park_out_path_vec =
+        all_park_out_path_vec[best_path_idx];
+    ReversePathSegVec(park_out_path_vec);
+    pnc::geometry_lib::PrintSegmentsVecInfo(park_out_path_vec);
+    success = true;
+    ILOG_INFO << "plan to preparing line success!";
+
+    if (success) {
+      std::vector<pnc::geometry_lib::PathSegment> path_res;
+      for (size_t i = 0; i < inversed_path_seg_vec.size() - 1; i++) {
+        path_res.emplace_back(inversed_path_seg_vec[i]);
+      }
+      for (size_t i = 0; i < park_out_path_vec.size(); i++) {
+        path_res.emplace_back(park_out_path_vec[i]);
+      }
+      AddPathSegVecToOutput(path_res);
+    } else {
+      ILOG_INFO << "PlanToPreparingLine failed in total loop!";
+    }
   }
   return success;
 }
@@ -324,17 +413,14 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   int nums = static_cast<int>(y_bound / dy);
   nums = pnc::mathlib::Clamp(nums, 5, 16);
   dy = y_bound / nums;
-  auto front_heading = input_.ego_info_under_slot.neigbor_front_heading;
-  if (front_heading > M_PI || front_heading < -M_PI) {
-    front_heading = 0.0;
-  }
+
   bool is_inner_arc_slot = false;
-  if (slot_side_sgn < 0.0 && front_heading < -pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading > -pnc::mathlib::Deg2Rad(45.0)) {
+  if (slot_side_sgn < 0.0 && arc_slot_init_out_heading_ < -pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ > -pnc::mathlib::Deg2Rad(45.0)) {
     is_inner_arc_slot = true;
   }
-  if (slot_side_sgn > 0.0 && front_heading > pnc::mathlib::Deg2Rad(10.0) &&
-      front_heading < pnc::mathlib::Deg2Rad(45.0)) {
+  if (slot_side_sgn > 0.0 && arc_slot_init_out_heading_ > pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ < pnc::mathlib::Deg2Rad(45.0)) {
     is_inner_arc_slot = true;
   }
 
@@ -342,10 +428,6 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   if ((is_inner_arc_slot ) && input_.tlane.pt_inside.x() > 6.5) {
     prepare_pose_start.x() = 5.5;
     ILOG_INFO << "prepare_pose_start.x = " << prepare_pose_start.x();
-  }
-
-  if (input_.is_before_running_stage){
-    arc_slot_init_out_heading_ = front_heading;
   }
 
   pnc::geometry_lib::PathPoint prepare_pose(prepare_pose_start, arc_slot_init_out_heading_);
