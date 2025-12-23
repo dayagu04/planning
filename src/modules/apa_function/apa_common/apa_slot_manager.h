@@ -226,6 +226,7 @@ class ApaSlotManager final {
     ego_slot_min_dist_map_.clear();
     parallel_slot_release_count_ = 0;
     parallel_slot_not_release_count_ = 0;
+    pre_plan_fail_slot_id_vec_.clear();
   }
 
   void GenerateReleaseSlotIdVec();
@@ -253,7 +254,6 @@ class ApaSlotManager final {
 
   const size_t GetEgoSlotInfoID() const;
 
-  const bool GetFreeSlotActivate() const { return free_slot_activate_; }
   const std::unordered_map<size_t, ApaSlot>& GetSlotsMap() const {
     return slots_map_;
   }
@@ -286,6 +286,8 @@ class ApaSlotManager final {
 
   std::unordered_map<size_t, double> ego_slot_min_dist_map_;
 
+  std::vector<size_t> pre_plan_fail_slot_id_vec_;
+
   std::vector<size_t> release_slot_id_vec_;
   std::vector<bool> release_slot_narrow_flag_vec_;
 
@@ -301,8 +303,6 @@ class ApaSlotManager final {
   double ego_col_safe_lat_buffer_ = 0.268;
   double ego_col_safe_lon_buffer_ = 0.15;
   bool is_ego_col_parallel_ = false;
-  bool free_slot_activate_ = false;
-  iflyauto::FreeSlotSelectedStatus is_free_slot_selected_;
   int parallel_slot_release_count_ = 0;
   int parallel_slot_not_release_count_ = 0;
   bool recommend_park_out_ = false;

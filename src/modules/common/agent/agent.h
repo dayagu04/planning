@@ -51,6 +51,20 @@ enum class AgentType {
   ADULT = 47,                 // 成人
   TRAFFIC_POLICE = 48,        // 交警
   CHILD = 49,                 // 儿童
+  //占用网络类型
+  OCC_EMPTY = 50,
+  OCC_GENERAL = 51,           // 通用障碍物，除 CAR, CYCLIST, PEOPLE, 以外的其他所有物体
+  OCC_CAR = 52,               // 车
+  OCC_CYCLIST = 53,           // 二轮车
+  OCC_PEOPLE = 54,            // 人
+  OCC_GENERAL_STATIC = 55,    // 静态大类，所有静态物体
+  OCC_GENERAL_DYNAMIC = 56,   // 动态大类，所有动态物体
+  OCC_GROUDING_WIRE = 57,     // 接地线大类，IdpContextOccupancyGroudingWireClass 墙的接地线，柱子接地线，路沿
+  OCC_COLUMN = 58,            // 柱子
+  OCC_WALL = 59,              // 墙
+  OCC_VEGETATION = 61,        // 植被
+  OCC_DRIVEABLE_AREA = 62,    // 可行驶区域
+  OCC_NON_DRIVEABLE_AREA = 63, // 不可行驶区域
 };
 
 struct AgentStInfo {

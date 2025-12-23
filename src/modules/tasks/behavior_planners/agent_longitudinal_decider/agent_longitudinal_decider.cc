@@ -437,13 +437,14 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
       agent_speed_meet && current_kappa_meet &&
       (lateral_ttc_meet || low_speed_and_large_yaw_meet);
 
+  double agent_s = 0.0;
+  double agent_l = 0.0;
+  if (!ego_lane_coord->XYToSL(agent.box().center_x(), agent.box().center_y(),
+                              &agent_s, &agent_l)) {
+    return;
+  }
+
   if (is_large_agent && !is_large_agent_cutin) {
-    double agent_s = 0.0;
-    double agent_l = 0.0;
-    if (!ego_lane_coord->XYToSL(agent.box().center_x(), agent.box().center_y(),
-                                &agent_s, &agent_l)) {
-      return;
-    }
     const double heading_diff_with_path = planning_math::NormalizeAngle(
         agent.theta() - ego_lane_coord->GetPathPointByS(agent_s).theta());
     const bool is_large_agent_heading_diff_meet =
@@ -457,7 +458,7 @@ void AgentLongitudinalDecider::DeciderCutInAgent(
 
   current_rule_base_cutin |= is_large_agent_cutin;
   // current_rule_base_cutin |= is_vru_cutin;
-  current_rule_base_cutin &= !is_lane_change;
+  current_rule_base_cutin &= !(is_lane_change && std::fabs(agent_l) < ego_half_width + 0.2);
 
   // prediction
   const bool is_prediction_cut_in = agent.is_prediction_cutin();

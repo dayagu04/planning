@@ -12,6 +12,7 @@
 #include "environmental_model.h"
 #include "ifly_time.h"
 #include "session.h"
+#include "obstacle_manager.h"
 
 namespace planning {
 namespace agent {
@@ -130,6 +131,33 @@ void AgentManager::Update(const double start_timestamp_s) {
       Append(agent_table);
       break;
     }
+  }
+
+  // add occ obs from obstacle_mgr
+  const auto& obs_mgr = session_->environmental_model().get_obstacle_manager();
+  const auto& occ_obs = obs_mgr->get_occupancy_obstacles().Items();
+  std::unordered_map<int32_t, Agent> occ_agent_table;
+  for (int i = 0; i < occ_obs.size(); i++) {
+    planning::agent::Agent occ_agent;
+    occ_agent.set_agent_id(occ_obs[i]->id());
+    occ_agent.set_type(agent::AgentType(occ_obs[i]->type()));
+    occ_agent.set_x(occ_obs[i]->x_center());  //几何中心
+    occ_agent.set_y(occ_obs[i]->y_center());
+    occ_agent.set_length(occ_obs[i]->length());
+    occ_agent.set_width(occ_obs[i]->width());
+    occ_agent.set_fusion_source(1);
+    occ_agent.set_is_static(occ_obs[i]->is_static());
+
+    occ_agent.set_speed(occ_obs[i]->velocity());
+    occ_agent.set_theta(0.0);
+    occ_agent.set_accel(0.0);
+    occ_agent.set_time_range({0.0, 5.0});
+
+    occ_agent.set_box(occ_obs[i]->perception_bounding_box());
+    occ_agent.set_timestamp_s(0.0);
+    occ_agent.set_timestamp_us(0.0);
+    occ_agent_table.insert({occ_agent.agent_id(), occ_agent});
+    Append(occ_agent_table);
   }
   DeleteOlderAgent();
   DeleteOlderAgentInfo();

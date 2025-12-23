@@ -39,6 +39,7 @@ TrajectoryPoint GetTrajectoryPointAtTime(
 
 bool IsVRU(iflyauto::ObjectType type);
 bool IsCone(iflyauto::ObjectType type);
+bool IsBarrel(iflyauto::ObjectType type);
 bool IsTruck(const std::shared_ptr<FrenetObstacle> obstacle);
 }  // namespace general_lateral_decider_utils
 }  // namespace planning

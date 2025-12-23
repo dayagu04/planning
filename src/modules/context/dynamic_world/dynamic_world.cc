@@ -338,6 +338,17 @@ void DynamicWorld::BuildConnectionForNeighborLane(
                                     &ego_l)) {
     return;
   }
+
+  if (ego_lane_coord_ == nullptr) {
+    return;
+  }
+  double ego_s_in_ego_lane = 0.0;
+  double ego_l_in_ego_lane = 0.0;
+  if (!ego_lane_coord_->XYToSL(ego_state.x(), ego_state.y(), &ego_s_in_ego_lane,
+                               &ego_l_in_ego_lane)) {
+    return;
+  }
+
   auto neighbor_lane_assigned_agent_entery =
       assigned_dynamic_agents_.find(neighbor_lane->get_virtual_id());
   if (neighbor_lane_assigned_agent_entery == assigned_dynamic_agents_.end()) {
@@ -353,6 +364,25 @@ void DynamicWorld::BuildConnectionForNeighborLane(
     if (neighbor_lane_agent_node == nullptr) {
       continue;
     }
+
+    double agent_s_in_ego_lane = 0.0;
+    double agent_l_in_ego_lane = 0.0;
+    if (!ego_lane_coord_->XYToSL(neighbor_lane_agent_node->node_x(),
+                                 neighbor_lane_agent_node->node_y(),
+                                 &agent_s_in_ego_lane, &agent_l_in_ego_lane)) {
+      continue;
+    }
+
+    if (is_left) {
+      if (agent_l_in_ego_lane <= ego_l_in_ego_lane) {
+        continue;
+      }
+    } else {
+      if (agent_l_in_ego_lane >= ego_l_in_ego_lane) {
+        continue;
+      }
+    }
+
     double cur_distance = std::fabs(neighbor_lane_agent_node->node_s() - ego_s);
     if (cur_distance < min_distance) {
       min_distance = cur_distance;

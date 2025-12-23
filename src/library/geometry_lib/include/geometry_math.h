@@ -70,6 +70,13 @@ enum class RotateDirection {
   ROTATE_DIRECTION_MAX_NUM,
 };
 
+enum class PolyRelation : uint8_t {
+  Intersect,
+  AContainsB,
+  BContainsA,
+  Disjoint
+};
+
 const double NormalizeAngle(const double angle);
 const double NormalizeAnglePI(const double angle);
 const double AngleSubtraction(const double angle1, const double angle2);
@@ -139,6 +146,21 @@ struct RectangleBound {
     }
     length = max_x - min_x;
     width = max_y - min_y;
+  }
+
+  static bool Intersect(const RectangleBound &a, const RectangleBound &b) {
+    if (a.max_x < b.min_x || a.min_x > b.max_x) {
+      return false;
+    }
+    if (a.max_y < b.min_y || a.min_y > b.max_y) {
+      return false;
+    }
+    return true;
+  }
+
+  bool Contains(const RectangleBound &other) const {
+    return (min_x <= other.min_x && max_x >= other.max_x &&
+            min_y <= other.min_y && max_y >= other.max_y);
   }
 
   void PrintInfo(const bool enable_log = true) const {
@@ -1432,6 +1454,10 @@ const bool ExtractSTurnAndStraight(
     const float sample_ds,
     std::vector<pnc::geometry_lib::PathPoint> &s_turn_path,
     float &final_line_length);
+
+const PolyRelation CheckTwoPolygonRelationship(
+    const std::vector<Eigen::Vector2d> &polyA,
+    const std::vector<Eigen::Vector2d> &polyB);
 
 }  // namespace geometry_lib
 }  // namespace pnc

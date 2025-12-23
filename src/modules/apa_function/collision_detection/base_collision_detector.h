@@ -196,6 +196,10 @@ class BaseCollisionDetector {
     return obs_clear_zone_decider_.GetBoxVec();
   }
 
+  static const std::vector<Eigen::Vector2d> GetCarBigBoxWithBuffer(
+      const double lat_buf, const double lon_buf,
+      const geometry_lib::PathPoint &pose);
+
  protected:
   std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_;
   std::vector<Eigen::Vector2d> car_with_mirror_polygon_vertex_with_buffer_;

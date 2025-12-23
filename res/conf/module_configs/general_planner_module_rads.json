@@ -211,7 +211,7 @@
   "obstacle_detect_distance_upper": 220,
   "obstacle_detect_distance_lower": -50,
   "static_buffer_for_search": 1.6,
-  "enable_hybrid_ara":true,
+  "enable_hybrid_ara":false,
   "enable_ara_ref":false,
   "enable_last_lat_path":true,
   "dist_to_parking_space_thr": 2.0,
@@ -838,7 +838,8 @@
       "mrc_brake_deceleration": -1.2
     },
     "stop_destination_decider": {
-      "stop_destination_virtual_agent_time_headway": 0.1
+      "stop_destination_virtual_agent_time_headway": 0.1,
+      "stop_destination_extended_s_buffer": 1.70
     },
     "longitudinal_decision_decider" : {
       "ignore_agent_ttc_to_ego_thrd": 2.5,

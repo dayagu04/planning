@@ -263,7 +263,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               "RealTime_desired_distance_rss", "RealTime_desired_distance_calibrate", \
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
-  st_search_value_list = ["joint_danger_agent_ids", "comfort_follow_agent_ids", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
+  st_search_value_list = ["joint_danger_agent_ids", "rule_base_cutin_agent_ids", "upper_bound_agent_ids", "comfort_follow_agent_ids", "lon_emergency_stop", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
                           "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet", 
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
@@ -787,11 +787,11 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   jerk_vec = lon_motion_plan_output.jerk_vec
 
   weight_maker_replay_info = plan_debug_info.weight_maker.weight_maker_replay_info
-  ## print(weight_maker_replay_info)
-  # s_weight_vec = []
-  # for item in (weight_maker_replay_info.target_point):
-  #   s_weight_vec.append(item.s_weight)
-  # print(s_weight_vec)
+  # print(weight_maker_replay_info)
+  s_weight_vec = []
+  for item in (weight_maker_replay_info.target_point):
+    s_weight_vec.append(item.s_weight)
+  print(s_weight_vec)
 
   # print("lon_motion_plan_output:=", lon_motion_plan_output)
   motion_solver_info = lon_motion_plan_output.solver_info
@@ -870,6 +870,38 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     lon_plan_data['data_lat_lon_opt_trajectory'].data.update({
       'lat_lon_opt_traj_y': [],
       'lat_lon_opt_traj_x': [],
+    })
+
+  # Extract and update key obstacles reference trajectories
+  jp_input = plan_debug.joint_motion_planning_input
+  num_obs = 0
+  if hasattr(jp_input, 'obs_ref_trajectory') and len(jp_input.obs_ref_trajectory) > 0:
+    num_obs = min(10, len(jp_input.obs_ref_trajectory))
+    for i in range(num_obs):
+      obs_traj = jp_input.obs_ref_trajectory[i]
+      if len(obs_traj.ref_x_vec) > 0 and len(obs_traj.ref_y_vec) > 0:
+        obs_x = list(obs_traj.ref_x_vec)
+        obs_y = list(obs_traj.ref_y_vec)
+        obs_x_local, obs_y_local = coord_tf.global_to_local(obs_x, obs_y)
+        
+        lon_plan_data[f'data_key_obs_traj_{i}'].data.update({
+          'obs_traj_x': obs_x_local,
+          'obs_traj_y': obs_y_local,
+          'agent_id': [obs_traj.obs_id] * len(obs_x_local),
+        })
+      else:
+        lon_plan_data[f'data_key_obs_traj_{i}'].data.update({
+          'obs_traj_x': [],
+          'obs_traj_y': [],
+          'agent_id': [],
+        })
+  
+  # Clear remaining obstacle trajectories (indices num_obs to 9)
+  for i in range(num_obs, 10):
+    lon_plan_data[f'data_key_obs_traj_{i}'].data.update({
+      'obs_traj_x': [],
+      'obs_traj_y': [],
+      'agent_id': [],
     })
 
   # Extract and update joint motion planner output (s, v, a, j)
@@ -1445,6 +1477,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                                                     'jerk_vec': [],
                                                     })
 
+  # Key obstacles reference trajectories (up to 10 obstacles)
+  data_key_obs_trajectories = {}
+  for i in range(10):
+    data_key_obs_trajectories[i] = ColumnDataSource(data = {'obs_traj_x': [],
+                                                             'obs_traj_y': [],
+                                                             'agent_id': [],
+                                                             })
+
   lon_plan_data = {'data_st':data_st, \
                    'data_st_plan':data_st_plan, \
                    'data_text':data_text, \
@@ -1471,6 +1511,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_target_s_cross_vru': data_target_s_cross_vru, \
                    'data_st_search_text' : data_st_search_text, \
   }
+  
+  # Add key obstacles trajectory data sources
+  for i in range(10):
+    lon_plan_data[f'data_key_obs_traj_{i}'] = data_key_obs_trajectories[i]
 
   for i in range(20):
     data1 = {
@@ -1534,6 +1578,14 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   
   # Lat-Lon joint planner optimized trajectory
   fig1.line('lat_lon_opt_traj_y', 'lat_lon_opt_traj_x', source = data_lat_lon_opt_trajectory, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'lat_lon_opt_trajectory', visible=False)
+  
+  # Key obstacles reference trajectories
+  obstacle_colors = ['orange', 'cyan', 'magenta', 'lime', 'pink', 'brown', 'purple', 'yellow', 'gold', 'coral']
+  for i in range(10):
+    source = data_key_obs_trajectories[i]
+    color = obstacle_colors[i % len(obstacle_colors)]
+    fig1.line('obs_traj_y', 'obs_traj_x', source=source, line_width=6, line_color=color, line_dash='solid', line_alpha=1.0, legend_label='key_obs_ref_traj', visible=False)
+    fig1.circle('obs_traj_y', 'obs_traj_x', source=source, size=6, color=color, alpha=0.9, legend_label='key_obs_ref_traj', visible=False)
   
   for i, source in enumerate(processed_trajectories):
     x_vec = f'x_vec_{i}'

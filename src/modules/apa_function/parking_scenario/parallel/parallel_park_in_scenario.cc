@@ -588,8 +588,8 @@ void ParallelParkInScenario::ScenarioTry() {
   ego_info_under_slot.slot.release_info_
       .release_state[SlotReleaseMethod::GEOMETRY_PLANNING_RELEASE] =
       SlotReleaseState::NOT_RELEASE;
-  if (apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotActivate() &&
-      !(apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir())) {
+  if (apa_world_ptr_->GetStateMachineManagerPtr()->IsSAPAMode() &&
+      !apa_world_ptr_->GetStateMachineManagerPtr()->GetFreeSlotPosDir()) {
     ego_info_under_slot.slot.release_info_
         .release_state[SlotReleaseMethod::ASTAR_PLANNING_RELEASE] =
         SlotReleaseState::NOT_RELEASE;
@@ -2186,7 +2186,7 @@ const bool ParallelParkInScenario::GenTlane() {
     lower_bound += apa_param.GetParam().parallel_terminal_x_offset_with_obs;
   }
   ILOG_INFO << "lower_bound max of them = " << lower_bound;
-  if (!(apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate())) {
+  if (!(apa_world_ptr_->GetStateMachineManagerPtr()->IsSAPAMode())) {
     const size_t need_size = 8;
     if (ego_info_under_slot.slot_occupied_ratio < 0.1) {
       double ref_angle = relative_loc_observer_manager_.CalCameraOberserveAngel(
@@ -2314,7 +2314,7 @@ const bool ParallelParkInScenario::GenTlane() {
             << " target_y_with_curb = " << target_y_with_curb;
 
   if (enable_pa_park_ ||
-      apa_world_ptr_->GetSlotManagerPtr()->GetFreeSlotActivate()) {
+      apa_world_ptr_->GetStateMachineManagerPtr()->IsSAPAMode()) {
     ego_info_under_slot.target_pose.pos.y() = 0.0;
   } else {
     const bool is_width_curb =

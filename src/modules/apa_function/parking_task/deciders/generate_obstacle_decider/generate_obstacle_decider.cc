@@ -36,10 +36,19 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
   geometry_lib::LineSegment tlane_line;
   std::vector<geometry_lib::LineSegment> tlane_line_vec;
-  const std::vector<Eigen::Vector2d> tlane_vec{
+  std::vector<Eigen::Vector2d> tlane_vec{
       virtual_tlane_.A, virtual_tlane_.B, virtual_tlane_.C, virtual_tlane_.D,
       virtual_tlane_.E, virtual_tlane_.F, virtual_tlane_.G, virtual_tlane_.H};
 
+  const std::vector<Eigen::Vector2d> car_box =
+      BaseCollisionDetector::GetCarBigBoxWithBuffer(0.5, 0.4, ego_pose);
+
+  if (geometry_lib::CheckTwoPolygonRelationship(tlane_vec, car_box) !=
+      geometry_lib::PolyRelation::AContainsB) {
+    tlane_vec.clear();
+  }
+
+  tlane_line_vec.reserve(tlane_vec.size());
   for (size_t i = 0; i < tlane_vec.size(); ++i) {
     tlane_line.SetPoints(tlane_vec[i], tlane_vec[(i + 1) % tlane_vec.size()]);
     tlane_line_vec.emplace_back(tlane_line);
@@ -97,7 +106,8 @@ const bool GenerateObstacleDecider::GenObsForPerpendicularTailIn() {
 
     for (Eigen::Vector2d& obs : pt_clout_2d) {
       // if obs is not in tlane area, lose it
-      if (!geometry_lib::IsPointInPolygon(tlane_vec, obs)) {
+      if (tlane_vec.size() > 0 &&
+          !geometry_lib::IsPointInPolygon(tlane_vec, obs)) {
         continue;
       }
 

@@ -184,5 +184,7 @@
   "elk_soildline_switch": true,
   "ldw_tlc_far_":1.0,
   "ldw_tlc_medium_":0.6,
-  "ldw_tlc_near_":0.2
+  "ldw_tlc_near_":0.2,
+  "elk_bicycle_motorcycle_sw":false
+
 }

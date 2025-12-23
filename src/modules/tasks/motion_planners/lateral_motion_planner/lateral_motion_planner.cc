@@ -255,9 +255,9 @@ bool LateralMotionPlanner::AssembleInput() {
   double angle_compensate = 0.0;
   const auto d_theta =
       ref_theta_vec_.front() - planning_init_point.lat_init_state.theta();
-  if (d_theta > 1.5 * pi_const) {
+  if (d_theta > pi_const) {
     angle_compensate = -2.0 * pi_const;
-  } else if (d_theta < -1.5 * pi_const) {
+  } else if (d_theta < -pi_const) {
     angle_compensate = 2.0 * pi_const;
   } else {
     angle_compensate = 0.0;
@@ -271,9 +271,9 @@ bool LateralMotionPlanner::AssembleInput() {
           i, ref_theta_vec_[i] + angle_compensate);
     } else {
       const auto delta_theta = ref_theta_vec_[i] - ref_theta_vec_[i - 1];
-      if (delta_theta > 1.5 * pi_const) {
+      if (delta_theta > pi_const) {
         angle_offset -= 2.0 * pi_const;
-      } else if (delta_theta < -1.5 * pi_const) {
+      } else if (delta_theta < -pi_const) {
         angle_offset += 2.0 * pi_const;
       }
       planning_input_.mutable_ref_theta_vec()->Set(

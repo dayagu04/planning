@@ -368,6 +368,9 @@ void Preprocess::SyncParameters(const bool is_simulation) {
                        "ldw_tlc_near_");
   ADAS_JSON_READ_VALUE(GetContext.mutable_param()->elk_soildline_switch, bool,
                        "elk_soildline_switch");    
+  ADAS_JSON_READ_VALUE(
+      GetContext.mutable_param()->elk_bicycle_motorcycle_sw, bool,
+      "elk_bicycle_motorcycle_sw");                     
   // SetEgoAroundAreaRange();
   ILOG_DEBUG << "SyncParameters() is run over!!";
 }
@@ -2190,7 +2193,9 @@ void Preprocess::SingleAreaObjSelect() {
   OBJECT_TYPE_FENCE = 17*/
     if ((objs_vector[i].obj_loc_in_lane ==
          context::Enum_LaneLocType::Enum_Other) ||
-        (objs_vector[i].type < 3 || objs_vector[i].type > 8)) {
+        ((objs_vector[i].type < 3 || objs_vector[i].type > 8) &&
+         GetContext.get_param()->elk_bicycle_motorcycle_sw) ||
+        (objs_vector[i].type < 3 || objs_vector[i].type > 10)) {
       continue;
     }
     int lon_position_judge = 0;  // 0:f 1:m 2:r 3:false

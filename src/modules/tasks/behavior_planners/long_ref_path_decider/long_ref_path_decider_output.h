@@ -32,6 +32,7 @@ struct LonRefPathDeciderOutput {
   bool is_cross_vru_target_pre_handle = false;
   bool is_comfort_target_lat_follow = false;
   bool is_comfort_target_lon_cutin = false;
+  bool is_comfort_target_lon_emergency_stop = false;
   std::vector<int32_t> follow_agent_ids;
   std::vector<ComfortTargetUpperBoundInfo> comfort_target_upper_bound_infos;
 };
