@@ -2341,7 +2341,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
               IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel,
                               lc_safety_check_config_.target_lane_front_cut_in_check_time, 0.5);
           if (!is_target_lane_cuting_in) {
-            continue;  // 3.0s 不进入目标车道过滤
+            continue;  // 1.5 s 不进入目标车道过滤
           }
         }
       }
@@ -2432,7 +2432,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
           IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
                            lc_safety_check_config_.target_lane_rear_cut_in_check_time, 0.5);
       if (!is_target_lane_cuting_in) {
-        continue;  // 2.0s 不进入目标车道过滤
+        continue;  // 1.5 s 不进入目标车道过滤
       }
     }
     const auto& agent_trajs =
@@ -2456,6 +2456,19 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     double l_end = 0.0;
     if (!target_lane_coord->XYToSL(traj.back().x(), traj.back().y(), &s_end,
                                    &l_end)) {
+      continue;
+    }
+    int mid_index = std::max(static_cast<int>(traj.size() / 2), 0);
+    double s_mid = 0.0;
+    double l_mid = 0.0;
+    if (!target_lane_coord->XYToSL(traj[mid_index].x(), traj[mid_index].y(),
+                                   &s_mid, &l_mid)) {
+      continue;
+    }
+    // 2.5s 预测轨迹没有侵入，过滤
+    bool is_mid_out_lane = l_mid - agent->width() * 0.5 > target_lane_width * 0.5 ||
+                         l_mid + agent->width() * 0.5 < -target_lane_width * 0.5;
+    if (is_mid_out_lane) {
       continue;
     }
     if (s_end < s_start) {
