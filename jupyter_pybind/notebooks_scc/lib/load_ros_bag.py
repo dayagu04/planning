@@ -705,7 +705,8 @@ class LoadRosbag:
                           "rear_agent_longitudinal_label", "lane_change_reason",
                           "status_update_reason", "lane_change_status", "lane_change_direction",'trust_prediction_t_threshold','bd_mlc_scene',
                           'is_current_lane_blocked','is_right_lane_blocked','is_left_lane_blocked','is_left_left_lane_blocked','is_right_right_lane_blocked','enable_construction_passage',
-                          'ConstructionWarningState']
+                          'ConstructionWarningState','recommend_dynamic_agent_emergency_avoidance_direction','risk_level','dynamic_agent_emergency_situation_timetstamp','dynamic_agent_emergency_lane_change_direction',
+                          'UpdateObstacleInteractionInfoCostTime']
 
 
       json_value_list += [#new_ldw debug info:

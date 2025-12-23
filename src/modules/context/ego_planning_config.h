@@ -1898,7 +1898,13 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
                                                    "lane_width_factor"},
                           lane_width_factor);
     read_json_vec<double>(json, "free_space_lane_bp", free_space_lane_bp);
-    read_json_vec<double>(json, "static_limit_v_free_space", static_limit_v_free_space);
+    read_json_vec<double>(json, "lane_static_limit_v_free_space", lane_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_road_bp", free_space_road_bp);
+    read_json_vec<double>(json, "road_static_limit_v_free_space", road_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_static_obstacle_bp", free_space_static_obstacle_bp);
+    read_json_vec<double>(json, "static_obstacle_static_limit_v_free_space", static_obstacle_static_limit_v_free_space);
+    read_json_vec<double>(json, "free_space_dynamic_obstacle_bp", free_space_dynamic_obstacle_bp);
+    read_json_vec<double>(json, "dynamic_obstacle_static_limit_v_free_space", dynamic_obstacle_static_limit_v_free_space);
     side_2_front_count_thr = read_json_key<int>(
         json, "side_2_front_count_thr", side_2_front_count_thr);
     side_2_front_max_count = read_json_key<int>(
@@ -1963,7 +1969,13 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   double start_nudge_ttc = 3.6;
   int cross_lane_side_2_front_count_thr = 3;
   std::vector<double> free_space_lane_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
-  std::vector<double> static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> lane_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_road_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> road_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_static_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> static_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
+  std::vector<double> free_space_dynamic_obstacle_bp{0.6, 0.8, 1.2, 1.3, 1.9, 2.5};
+  std::vector<double> dynamic_obstacle_static_limit_v_free_space {1.5, 5, 10, 15, 35, 50};
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {
