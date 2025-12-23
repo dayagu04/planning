@@ -7,6 +7,7 @@
 #include "behavior_planners/lat_lon_joint_planner_decider/lat_lon_joint_planner_decider_output.h"
 #include "session.h"
 #include "utils/kd_path.h"
+#include "utils/path_point.h"
 
 enum LongitudinalLabel {
   IGNORE = 0,
@@ -37,6 +38,7 @@ struct KeyObstacle {
   double init_acc;
   double init_s;
   double init_l;
+  agent::AgentType type;
 };
 
 class JointMotionObstaclesSelector {
@@ -49,7 +51,7 @@ class JointMotionObstaclesSelector {
       int32_t lead_one_id);
 
   bool JudgeOverlapWithPriorTrajectory(
-      const std::shared_ptr<agent::Agent>& agent, const double agent_l,
+      const KeyObstacle& key_obstacle, const double agent_l,
       const PlanningInitPoint init_point,
       const std::shared_ptr<planning_math::KDPath>& planned_path,
       const std::vector<JointPlannerTrajectoryPoint>& prior_trajectory,
@@ -68,6 +70,9 @@ class JointMotionObstaclesSelector {
       const planning_math::Box2d& agent_box, double* const ptr_min_s,
       double* const ptr_max_s, double* const ptr_min_l,
       double* const ptr_max_l);
+
+  void CorrectTrajectoryInConfluenceArea(KeyObstacle* key_obstacle,
+                                         bool is_left_side);
 
   framework::Session* session_;
   std::vector<KeyObstacle> key_obstacles_;

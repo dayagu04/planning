@@ -284,6 +284,18 @@ void BoundMaker::MakeSBound() {
       lower_bound = corridor_lower_point.s();
     }
   }
+
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+
+  if (lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop &&
+      lon_ref_path_decider_output.comfort_target_upper_bound_infos.size() ==
+          plan_points_num_) {
+    for (int32_t i = 0; i < plan_points_num_; ++i) {
+      s_upper_bound_[i] =
+          lon_ref_path_decider_output.comfort_target_upper_bound_infos[i].s;
+    }
+  }
 }
 
 void BoundMaker::MakeVBound() {
@@ -368,12 +380,11 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
     jerk_lower_bound_ =
         std::vector<double>(plan_points_num_, kJerkLowerComfortableBound);
   }
-
   const auto& lon_ref_path_decider_output =
       session_->planning_context().lon_ref_path_decider_output();
-  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
-    jerk_lower_bound_ =
-        std::vector<double>(plan_points_num_, kJerkMaxLowerBound);
+  if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle ||
+      lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop) {
+    jerk_lower_bound_ = std::vector<double>(plan_points_num_, jerk_lower_bound);
   }
 }
 

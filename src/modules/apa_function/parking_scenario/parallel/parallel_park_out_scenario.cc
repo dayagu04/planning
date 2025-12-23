@@ -41,9 +41,12 @@ void ParallelParkOutScenario::Reset() {
   parallel_out_path_planner_.Reset();
   is_try_tlane_ = false;
   delay_check_finish_ = false;
+  is_last_pose_set_ = false;
+  last_target_pose_ = pnc::geometry_lib::PathPoint();
   arc_slot_init_out_heading_ = 0.0;
   is_arc_slot_ = false;
   is_outer_arc_slot_ = false;
+  path_end_heading_is_met_ = false;
   ParkingScenario::Reset();
 }
 
@@ -539,6 +542,10 @@ const bool ParallelParkOutScenario::CheckFinished() {
   ILOG_INFO << "start CheckFinished!";
   if (frame_.is_replan_first) {
     ILOG_INFO << "before first finish, not check finish";
+    return false;
+  }
+
+  if (!path_end_heading_is_met_){
     return false;
   }
 
@@ -1333,6 +1340,15 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   path_planner_input.is_complete_path =
       apa_world_ptr_->GetSimuParam().is_complete_path;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
+  bool is_in_slot = ego_info_under_slot.slot_occupied_ratio > 0.0;
+  if (!previous_current_path_point_global_vec_.empty() && !is_last_pose_set_ &&
+      !is_in_slot) {
+    last_target_pose_ =
+        previous_current_path_point_global_vec_.back();
+        last_target_pose_.heading = arc_slot_init_out_heading_;
+    is_last_pose_set_ = true;
+  }
+  path_planner_input.last_target_pose_ = last_target_pose_;
   path_planner_input.is_before_running_stage =
       apa_world_ptr_->GetLocalViewPtr()
               ->function_state_machine_info.current_state ==
@@ -1426,6 +1442,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
       path_planner_output.path_point_vec.size());
 
   pnc::geometry_lib::PathPoint global_point;
+  path_end_heading_is_met_ = false;
   for (const auto& path_point : path_planner_output.path_point_vec) {
     global_point.Set(ego_info_under_slot.l2g_tf.GetPos(path_point.pos),
                      ego_info_under_slot.l2g_tf.GetHeading(path_point.heading));
@@ -1434,6 +1451,11 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
     global_point.gear = frame_.current_gear;
 
     current_path_point_global_vec_.emplace_back(global_point);
+  }
+  if (!path_planner_output.path_point_vec.empty()) {
+    path_end_heading_is_met_ =
+        std::abs(path_planner_output.path_point_vec.back().GetTheta() -
+                 arc_slot_init_out_heading_) < pnc::mathlib::Deg2Rad(1.5);
   }
   previous_current_path_point_global_vec_.clear();
   previous_current_path_point_global_vec_ = current_path_point_global_vec_;

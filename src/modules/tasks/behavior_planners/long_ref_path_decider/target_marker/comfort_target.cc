@@ -32,13 +32,14 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   comfort_params_.max_accel_jerk = 3.0;
   comfort_params_.min_decel_jerk = 1.0;
   comfort_params_.max_decel_jerk = 1.5;
+  comfort_params_.emergency_decel_jerk = 5.0;
   comfort_params_.virtual_front_s = 200.0;
   comfort_params_.cool_factor = 0.99;
-  comfort_params_.follow_consider_distance = 15.0;
-  comfort_params_.follow_consider_time_headway = 1.5;
   comfort_params_.delay_time_buffer = 0.3;
   comfort_params_.eps = 1e-6;
   comfort_params_.static_speed_threshold = 0.2;
+  comfort_params_.emergency_ttc_threshold = 1.5;
+  comfort_params_.follow_max_st_boundary_t = 3.0;
 
   const auto& ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
@@ -92,6 +93,10 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
 
   joint_danger_agent_ids_.clear();
 
+  rule_base_cutin_agent_ids_.clear();
+
+  upper_bound_agent_ids_.clear();
+
   GenerateUpperBoundInfo();
 
   std::vector<double> follow_agent_ids_double(follow_agent_ids_.begin(),
@@ -100,8 +105,17 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
   std::vector<double> joint_danger_agent_ids_double(
       joint_danger_agent_ids_.begin(), joint_danger_agent_ids_.end());
 
+  std::vector<double> rule_base_cutin_agent_ids_double(
+      rule_base_cutin_agent_ids_.begin(), rule_base_cutin_agent_ids_.end());
+
+  std::vector<double> upper_bound_agent_ids_double(
+      upper_bound_agent_ids_.begin(), upper_bound_agent_ids_.end());
+
+  JSON_DEBUG_VECTOR("upper_bound_agent_ids", upper_bound_agent_ids_double, 0)
   JSON_DEBUG_VECTOR("comfort_follow_agent_ids", follow_agent_ids_double, 0);
   JSON_DEBUG_VECTOR("joint_danger_agent_ids", joint_danger_agent_ids_double, 0);
+  JSON_DEBUG_VECTOR("rule_base_cutin_agent_ids",
+                    rule_base_cutin_agent_ids_double, 0);
 
   acc_values_ = std::vector<double>(plan_points_num_, 0.0);
 
@@ -120,6 +134,10 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
       is_lat_follow_;
   mutable_lon_ref_path_decider_output->is_comfort_target_lon_cutin =
       is_lon_cut_in_;
+  mutable_lon_ref_path_decider_output->is_comfort_target_lon_emergency_stop =
+      is_lon_emergency_stop_;
+
+  JSON_DEBUG_VALUE("lon_emergency_stop", is_lon_emergency_stop_);
   mutable_lon_ref_path_decider_output->follow_agent_ids = follow_agent_ids_;
   mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.clear();
   mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos.reserve(
@@ -151,6 +169,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
       ego_vehicle_param.front_edge_to_rear_axle;
   const double rear_edge_to_front_axle =
       ego_vehicle_param.rear_edge_to_rear_axle;
+
   const auto& ego_lane = session_->environmental_model()
                              .get_virtual_lane_manager()
                              ->get_current_lane();
@@ -172,23 +191,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
     return;
   }
 
-  const auto& route_info = session_->environmental_model().get_route_info();
-  const auto& ego_lane_road_right_output =
-  session_->planning_context().ego_lane_road_right_decider_output();
-  bool filtering_rear_agent = true;
-  if (route_info != nullptr) {
-    const auto& route_info_output = route_info->get_route_info_output();
-    if (route_info_output.is_closing_merge ||
-        route_info_output.is_closing_split) {
-      filtering_rear_agent = false;
-    }
-  }
-
-  if(ego_lane_road_right_output.is_merge_region ||
-    ego_lane_road_right_output.is_split_region) {
-    filtering_rear_agent = false;
-  }
-
   const auto& lat_obstacle_decision = session_->planning_context()
                                           .lateral_obstacle_decider_output()
                                           .lat_obstacle_decision;
@@ -200,37 +202,6 @@ void ComfortTarget::GenerateUpperBoundInfo() {
   std::unordered_set<int32_t> added_agent_ids;
   std::unordered_set<int32_t> forbidden_ids(blocked_obs_id.begin(),
                                             blocked_obs_id.end());
-
-  for (const auto& [agent_id, decision] : lat_obstacle_decision) {
-    if (decision == LatObstacleDecisionType::FOLLOW) {
-      if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
-          added_agent_ids.find(agent_id) != added_agent_ids.end()) {
-        continue;
-      }
-
-      auto agent =
-          session_->environmental_model().get_agent_manager()->GetAgent(
-              agent_id);
-
-      if (agent != nullptr) {
-        follow_agents.push_back(
-            {agent, FollowAgentSource::kLatObstacleDecision});
-        added_agent_ids.insert(agent_id);
-      }
-    }
-  }
-
-  const auto& agent_longitudinal_decider_output =
-      session_->planning_context().agent_longitudinal_decider_output();
-  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
-
-  const auto& lat_lon_joint_planner_output =
-      session_->planning_context().lat_lon_joint_planner_decider_output();
-  const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
-
-  for (const int32_t danger_id : danger_ids) {
-    joint_danger_agent_ids_.push_back(danger_id);
-  }
 
   const auto& parallel_longitudinal_avoid_output =
       session_->planning_context().parallel_longitudinal_avoid_decider_output();
@@ -244,71 +215,104 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         parallel_longitudinal_avoid_output.parallel_target_agent_id();
   }
 
-  std::vector<int32_t> critical_agent_ids;
-  critical_agent_ids.reserve(cutin_ids.size() + danger_ids.size());
-  critical_agent_ids.insert(critical_agent_ids.end(), cutin_ids.begin(),
-                            cutin_ids.end());
-  critical_agent_ids.insert(critical_agent_ids.end(), danger_ids.begin(),
-                            danger_ids.end());
+  const auto& route_info = session_->environmental_model().get_route_info();
+  const auto& ego_lane_road_right_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
 
-  for (const int32_t agent_id : critical_agent_ids) {
-    if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
-        added_agent_ids.find(agent_id) != added_agent_ids.end()) {
-      continue;
-    }
-
-    if (parallel_overtake_agent_id != -1 &&
-        agent_id == parallel_overtake_agent_id) {
-      continue;
-    }
-
-    auto agent =
-        session_->environmental_model().get_agent_manager()->GetAgent(agent_id);
-    if (agent == nullptr) {
-      continue;
-    }
-
-    double agent_s = 0.0;
-    double agent_l = 0.0;
-    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
-      continue;
-    }
-
-    if (agent_s < ego_s && filtering_rear_agent) {
-      continue;
-    }
-
-    const double dis_relative =
-        agent_s - ego_s - 0.5 * agent->length() - front_edge_to_rear_axle;
-    const double dis_lon_consider = std::max(
-        ego_init_point.v * comfort_params_.follow_consider_time_headway,
-        comfort_params_.follow_consider_distance);
-
-    const bool is_traffic_control_obstacle =
-        agent->type() == agent::AgentType::TRAFFIC_CONE ||
-        agent->type() == agent::AgentType::CTASH_BARREL ||
-        agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
-
-    bool is_lateral_left_or_right = false;
-    auto lat_decision_iter = lat_obstacle_decision.find(agent_id);
-    if (lat_decision_iter != lat_obstacle_decision.end()) {
-      const auto& lat_decision = lat_decision_iter->second;
-      is_lateral_left_or_right =
-          (lat_decision == LatObstacleDecisionType::LEFT ||
-           lat_decision == LatObstacleDecisionType::RIGHT);
-    }
-
-    if ((agent->is_static() ||
-         std::fabs(agent->speed()) < comfort_params_.static_speed_threshold) &&
-        !is_traffic_control_obstacle && is_lateral_left_or_right) {
-      continue;
-    }
-
-    if (dis_relative <= dis_lon_consider) {
-      follow_agents.push_back({agent, FollowAgentSource::kCutinAgentIds});
-      added_agent_ids.insert(agent_id);
+  bool is_confluence_area = false;
+  if (route_info != nullptr) {
+    const auto& route_info_output = route_info->get_route_info_output();
+    if (route_info_output.is_closing_merge ||
+        route_info_output.is_closing_split) {
+      is_confluence_area = true;
     }
   }
+  if (ego_lane_road_right_output.is_merge_region ||
+      ego_lane_road_right_output.is_split_region) {
+    is_confluence_area = true;
+  }
+
+  JSON_DEBUG_VALUE("is_confluence_area", is_confluence_area);
+
+  if (st_graph != nullptr) {
+    for (size_t i = 0; i < plan_points_num_; i++) {
+      const double t = i * dt_;
+      const auto& upper_bound = st_graph->GetPassCorridorUpperBound(t);
+      if (upper_bound.agent_id() != speed::kNoAgentId) {
+        upper_bound_agent_ids_.insert(upper_bound.agent_id());
+      }
+    }
+  }
+
+  for (const auto& [agent_id, decision] : lat_obstacle_decision) {
+    if (decision == LatObstacleDecisionType::FOLLOW) {
+      if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
+          added_agent_ids.find(agent_id) != added_agent_ids.end()) {
+        continue;
+      }
+
+      if (parallel_overtake_agent_id != -1 &&
+          agent_id == parallel_overtake_agent_id) {
+        continue;
+      }
+
+      auto agent =
+          session_->environmental_model().get_agent_manager()->GetAgent(
+              agent_id);
+
+      const auto* st_graph_helper =
+          session_->planning_context().st_graph_helper();
+      const auto& agent_st_boundary_id_map =
+          st_graph_helper->GetAgentIdSTBoundariesMap();
+      if (st_graph_helper == nullptr || agent_st_boundary_id_map.empty()) {
+        continue;
+      }
+
+      if (agent != nullptr) {
+        if (upper_bound_agent_ids_.find(agent_id) !=
+                upper_bound_agent_ids_.end() &&
+            agent_st_boundary_id_map.find(agent_id) !=
+                agent_st_boundary_id_map.end()) {
+          const auto& st_boundary_id = agent_st_boundary_id_map.at(agent_id);
+          speed::STBoundary st_boundary;
+          if (st_graph_helper->GetStBoundary(st_boundary_id.front(),
+                                             &st_boundary)) {
+            if (st_boundary.max_t() <
+                comfort_params_.follow_max_st_boundary_t) {
+              continue;
+            }
+          }
+        }
+        follow_agents.push_back(
+            {agent, FollowAgentSource::kLatObstacleDecision});
+        added_agent_ids.insert(agent_id);
+      }
+    }
+  }
+
+  const auto& agent_longitudinal_decider_output =
+      session_->planning_context().agent_longitudinal_decider_output();
+  const auto& cutin_ids = agent_longitudinal_decider_output.cutin_agent_ids;
+
+  for (const int32_t agent_id : cutin_ids) {
+    rule_base_cutin_agent_ids_.push_back(agent_id);
+  }
+
+  const auto& lat_lon_joint_planner_output =
+      session_->planning_context().lat_lon_joint_planner_decider_output();
+  const auto& danger_ids = lat_lon_joint_planner_output.GetDangerObstacleIds();
+
+  for (const int32_t danger_id : danger_ids) {
+    joint_danger_agent_ids_.push_back(danger_id);
+  }
+
+  ProcessCutinAgents(danger_ids, FollowAgentSource::kJointDangerAgentIds,
+                     forbidden_ids, added_agent_ids, parallel_overtake_agent_id,
+                     is_confluence_area, follow_agents);
+
+  ProcessCutinAgents(cutin_ids, FollowAgentSource::kLonCutinAgentIds,
+                     forbidden_ids, added_agent_ids, parallel_overtake_agent_id,
+                     is_confluence_area, follow_agents);
 
   std::vector<FollowAgentInfo> follow_agent_infos(plan_points_num_);
   std::unordered_set<int32_t> valid_agent_ids;
@@ -373,6 +377,7 @@ void ComfortTarget::GenerateUpperBoundInfo() {
                                  upper_bound.boundary_id(),
                                  upper_bound.acceleration(),
                                  false,
+                                 false,
                                  false};
       } else {
         upper_bound_infos_[i] = {virtual_front_s,
@@ -383,35 +388,157 @@ void ComfortTarget::GenerateUpperBoundInfo() {
                                  virtual_front_st_boundary_id,
                                  virtual_front_acc,
                                  false,
+                                 false,
                                  false};
       }
 
-      if (!follow_agents.empty() && follow_agent_infos[i].s < upper_bound.s()) {
+      if (!follow_agents.empty() &&
+          follow_agent_infos[i].s <= upper_bound.s()) {
         if (follow_agent_infos[i].source ==
             FollowAgentSource::kLatObstacleDecision) {
           is_lat_follow_ = true;
         } else if (follow_agent_infos[i].source ==
-                   FollowAgentSource::kCutinAgentIds) {
+                   FollowAgentSource::kLonCutinAgentIds) {
+          is_lon_cut_in_ = true;
+        } else if (follow_agent_infos[i].source ==
+                   FollowAgentSource::kJointDangerAgentIds) {
           is_lon_cut_in_ = true;
         }
 
-        upper_bound_infos_[i] = {
-            follow_agent_infos[i].s,
-            t,
-            follow_agent_infos[i].v,
-            TargetType::kComfort,
-            follow_agent_infos[i].agent_id,
-            follow_agent_infos[i].st_boundary_id,
-            follow_agent_infos[i].a,
-            follow_agent_infos[i].source ==
-                FollowAgentSource::kLatObstacleDecision,
-            follow_agent_infos[i].source == FollowAgentSource::kCutinAgentIds};
+        upper_bound_infos_[i] = {follow_agent_infos[i].s,
+                                 t,
+                                 follow_agent_infos[i].v,
+                                 TargetType::kComfort,
+                                 follow_agent_infos[i].agent_id,
+                                 follow_agent_infos[i].st_boundary_id,
+                                 follow_agent_infos[i].a,
+                                 follow_agent_infos[i].source ==
+                                     FollowAgentSource::kLatObstacleDecision,
+                                 follow_agent_infos[i].source ==
+                                     FollowAgentSource::kLonCutinAgentIds,
+                                 follow_agent_infos[i].source ==
+                                     FollowAgentSource::kJointDangerAgentIds};
+      }
+
+      if (i == 0) {
+        const int32_t agent_id = upper_bound_infos_[i].agent_id;
+        double obs_s = upper_bound_infos_[i].s;
+        double obs_v = upper_bound_infos_[i].v;
+        const bool is_joint_danger =
+            std::find(joint_danger_agent_ids_.begin(),
+                      joint_danger_agent_ids_.end(),
+                      agent_id) != joint_danger_agent_ids_.end();
+        const bool is_in_upper_bound = upper_bound_agent_ids_.find(agent_id) !=
+                                       upper_bound_agent_ids_.end();
+
+        bool need_check_emergency = is_joint_danger && is_in_upper_bound;
+
+        if (need_check_emergency && obs_s > comfort_params_.eps) {
+          double ego_s = init_lon_state_[0];
+          double ego_v = init_lon_state_[1];
+          double delta_v = std::max(comfort_params_.eps, ego_v - obs_v);
+          double delta_s = obs_s - ego_s;
+          double safe_distance =
+              ego_v * comfort_params_.delay_time_buffer +
+              ego_v * ego_v / (2.0 * comfort_params_.b_hard) -
+              obs_v * obs_v / (2.0 * comfort_params_.b_hard);
+          double ttc = std::max(comfort_params_.eps, delta_s / delta_v);
+          if (ttc < comfort_params_.emergency_ttc_threshold &&
+              delta_s < safe_distance) {
+            is_lon_emergency_stop_ = true;
+          }
+        }
       }
     }
   }
 
   follow_agent_ids_.assign(valid_agent_ids.begin(), valid_agent_ids.end());
   std::sort(follow_agent_ids_.begin(), follow_agent_ids_.end());
+}
+
+void ComfortTarget::ProcessCutinAgents(
+    const std::vector<int32_t>& agent_ids, FollowAgentSource source,
+    const std::unordered_set<int32_t>& forbidden_ids,
+    std::unordered_set<int32_t>& added_agent_ids,
+    int32_t parallel_overtake_agent_id, bool is_confluence_area,
+    std::vector<FollowAgentWithSource>& follow_agents) {
+  const auto& ego_vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const double front_edge_to_rear_axle =
+      ego_vehicle_param.front_edge_to_rear_axle;
+
+  const auto& lat_obstacle_decision = session_->planning_context()
+                                          .lateral_obstacle_decider_output()
+                                          .lat_obstacle_decision;
+
+  const auto& ego_lane = session_->environmental_model()
+                             .get_virtual_lane_manager()
+                             ->get_current_lane();
+  if (ego_lane == nullptr || ego_lane->get_lane_frenet_coord() == nullptr) {
+    return;
+  }
+  const auto& ego_lane_coord = ego_lane->get_lane_frenet_coord();
+
+  double ego_s = 0.0, ego_l = 0.0;
+  const auto& ego_init_point = session_->environmental_model()
+                                   .get_ego_state_manager()
+                                   ->planning_init_point();
+  if (!ego_lane_coord->XYToSL(ego_init_point.x, ego_init_point.y, &ego_s,
+                              &ego_l)) {
+    return;
+  }
+
+  for (const int32_t agent_id : agent_ids) {
+    if (forbidden_ids.find(agent_id) != forbidden_ids.end() ||
+        added_agent_ids.find(agent_id) != added_agent_ids.end()) {
+      continue;
+    }
+
+    if (parallel_overtake_agent_id != -1 &&
+        agent_id == parallel_overtake_agent_id) {
+      continue;
+    }
+
+    auto agent =
+        session_->environmental_model().get_agent_manager()->GetAgent(agent_id);
+    if (agent == nullptr) {
+      continue;
+    }
+
+    double agent_s = 0.0;
+    double agent_l = 0.0;
+    if (!ego_lane_coord->XYToSL(agent->x(), agent->y(), &agent_s, &agent_l)) {
+      continue;
+    }
+
+    if (agent_s < ego_s && !is_confluence_area) {
+      continue;
+    }
+
+    const bool is_traffic_control_obstacle =
+        agent->type() == agent::AgentType::TRAFFIC_CONE ||
+        agent->type() == agent::AgentType::CTASH_BARREL ||
+        agent->type() == agent::AgentType::WATER_SAFETY_BARRIER;
+
+    bool is_lateral_left_or_right = false;
+    auto lat_decision_iter =
+        lat_obstacle_decision.find(static_cast<uint32_t>(agent_id));
+    if (lat_decision_iter != lat_obstacle_decision.end()) {
+      const auto& lat_decision = lat_decision_iter->second;
+      is_lateral_left_or_right =
+          (lat_decision == LatObstacleDecisionType::LEFT ||
+           lat_decision == LatObstacleDecisionType::RIGHT);
+    }
+
+    if ((agent->is_static() ||
+         std::fabs(agent->speed()) < comfort_params_.static_speed_threshold) &&
+        !is_traffic_control_obstacle && is_lateral_left_or_right) {
+      continue;
+    }
+
+    follow_agents.push_back({agent, source});
+    added_agent_ids.insert(agent_id);
+  }
 }
 
 void ComfortTarget::GenerateComfortTarget() {
@@ -452,8 +579,9 @@ void ComfortTarget::GenerateComfortTarget() {
     const double front_s = upper_bound_infos_[i - 1].s;
     const double front_vel = upper_bound_infos_[i - 1].v;
 
-    const bool is_follow = upper_bound_infos_[i - 1].is_follow;
-    const bool is_cut_in = upper_bound_infos_[i - 1].is_cut_in;
+    const bool is_lat_follow = upper_bound_infos_[i - 1].is_lat_follow;
+    const bool is_lon_cut_in = upper_bound_infos_[i - 1].is_lon_cut_in;
+    const bool is_joint_danger = upper_bound_infos_[i - 1].is_joint_danger;
 
     double tau = comfort_params_.T;
     const auto& agents_headway_Info = session_->planning_context()
@@ -476,7 +604,7 @@ void ComfortTarget::GenerateComfortTarget() {
         comfort_params_.s0 + current_v * comfort_params_.delay_time_buffer;
     double max_follow_distance = comfort_params_.s0 + current_v * tau;
 
-    double max_decel_jerk = (is_cut_in || is_follow)
+    double max_decel_jerk = (is_lon_cut_in || is_lat_follow || is_joint_danger)
                                 ? comfort_params_.max_decel_jerk
                                 : comfort_params_.min_decel_jerk;
 
@@ -497,6 +625,10 @@ void ComfortTarget::GenerateComfortTarget() {
             max_decel_jerk +
             smooth_ratio * (comfort_params_.min_decel_jerk - max_decel_jerk);
       }
+    }
+
+    if (is_lon_emergency_stop_) {
+      decel_jerk = comfort_params_.emergency_decel_jerk;
     }
 
     comfort_jerk_min_vec_[i] = -decel_jerk;

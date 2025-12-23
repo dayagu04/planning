@@ -2330,15 +2330,16 @@ const double PerpendicularTailInScenario::CalRealTimeBrakeDist() {
   }
 
   const bool increase_lat_err_flag =
-      (frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
-       ego_info_under_slot.cur_pose.pos.x() >
-           ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
-               2.168) ||
-      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-       ego_info_under_slot.slot_occupied_ratio > 0.168 &&
-       frame_.slot_jump_big_flag) ||
-      (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
-       apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig());
+      (frame_.mirror_command == MirrorCommand::NONE) &&
+      ((frame_.gear_command == geometry_lib::SEG_GEAR_DRIVE &&
+        ego_info_under_slot.cur_pose.pos.x() >
+            ego_info_under_slot.slot.GetOriginCornerCoordLocal().pt_01_mid.x() +
+                2.168) ||
+       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+        ego_info_under_slot.slot_occupied_ratio > 0.168 &&
+        frame_.slot_jump_big_flag) ||
+       (frame_.gear_command == geometry_lib::SEG_GEAR_REVERSE &&
+        apa_world_ptr_->GetPredictPathManagerPtr()->GetControlErrBig()));
 
   // adopting a graded lat buffer real-time braking
   std::vector<RealTimeBrakeInfo> real_time_brake_info_vec;
@@ -2642,7 +2643,8 @@ const double PerpendicularTailInScenario::CalRemainDistBySlotJump() {
 
   const auto& param = apa_param.GetParam();
 
-  if (!frame_.slot_jump_big_flag) {
+  if (!frame_.slot_jump_big_flag ||
+      frame_.mirror_command != MirrorCommand::NONE) {
     frame_.car_already_move_dist = 0.0;
     frame_.ego_should_stop_by_slot_jump = false;
     return 5.01;
@@ -3569,6 +3571,21 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
     return;
   }
 
+  geometry_lib::PathPoint old_tar_pose = complete_path_point_global_vec_.back();
+  old_tar_pose.GlobalToLocal(ego_info_under_slot.g2l_tf);
+  geometry_lib::PathPoint real_tar_pose = ego_info_under_slot.target_pose;
+  if (std::fabs(old_tar_pose.GetY() - real_tar_pose.GetY()) >
+          param.check_finish_params.lat_err_strict - 0.0168 ||
+      std::fabs(old_tar_pose.GetTheta() - real_tar_pose.GetTheta()) * kRad2Deg >
+          param.check_finish_params.heading_err_strict - 0.168) {
+    ILOG_INFO << "decide fold mirror, terminal err is not in heading range, "
+              << "heading = " << old_tar_pose.GetTheta() * kRad2Deg
+              << "  real_heading = " << real_tar_pose.GetTheta() * kRad2Deg
+              << "  heading_err_strict= "
+              << param.check_finish_params.heading_err_strict;
+    return;
+  }
+
   const double predict_traj_s =
       apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictTrajS();
 
@@ -3649,8 +3666,8 @@ void PerpendicularTailInScenario::DecideFoldMirrorCommand() {
   if (CalRemainDistFromObs(
           stop_body_lon_buffer, stop_body_lat_buffer, lat_buffer,
           dynamic_lon_buffer, dynamic_stop_body_lat_buffer,
-          dynamic_stop_body_lat_buffer, false,
-          param.use_obs_height_method) < frame_.remain_dist_path - 0.2) {
+          dynamic_stop_body_lat_buffer, false, param.use_obs_height_method) <
+      frame_.remain_dist_path - param.check_finish_params.lon_err - 0.068) {
     ILOG_INFO << "decide fold mirror, mirror is not safe even folded mirror, "
                  "should not fold mirror";
     return;
