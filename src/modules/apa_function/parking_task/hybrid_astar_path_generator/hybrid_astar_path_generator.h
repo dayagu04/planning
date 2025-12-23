@@ -54,7 +54,7 @@ class HybridAStarPathGenerator : public ParkingTask {
   const std::vector<CurvePath>& GetAllSuccessCurvePathForDebug();
   const std::vector<geometry_lib::PathPoint>
   GetAllSuccessCurvePathFirstGearSwitchPoseForDebug();
-  const cdl::AABB& GetPreSearchABBoxForDebug();
+  const cdl::AABB& GetIntersetingAreaForDebug();
 
  protected:
   void InitNodePool();
@@ -213,9 +213,7 @@ class HybridAStarPathGenerator : public ParkingTask {
       all_success_path_first_gear_switch_pose_debug_;
 #endif
 
-  cdl::AABB pre_search_abbox_;
-  cdl::AABB interesting_abbox_ego_;
-  cdl::AABB interesting_abbox_slot_;
+  cdl::AABB interesting_area_;
   CulDeSacInfo cul_de_sac_info_;
 
   NodeDeleteDecider node_delete_decider_;

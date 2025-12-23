@@ -200,13 +200,13 @@ const bool HybridAstarPathGeneratorInterface::
   return true;
 }
 
-const bool HybridAstarPathGeneratorInterface::GetPreSearchABBoxForDebug(
-    cdl::AABB& pre_search_abbox) {
-  pre_search_abbox.Reset();
+const bool HybridAstarPathGeneratorInterface::GetIntersetingAreaForDebug(
+    cdl::AABB& interseting_area) {
+  interseting_area.Reset();
   if (cur_path_generator_ == nullptr) {
     return false;
   }
-  pre_search_abbox = cur_path_generator_->GetPreSearchABBoxForDebug();
+  interseting_area = cur_path_generator_->GetIntersetingAreaForDebug();
   return true;
 }
 

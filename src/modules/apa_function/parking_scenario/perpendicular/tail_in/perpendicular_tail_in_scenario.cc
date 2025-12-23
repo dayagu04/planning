@@ -1127,7 +1127,7 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
   config.InitConfig();
   // targeted customization parameters
   config.traj_kappa_change_penalty = param.traj_kappa_change_penalty;
-  config.exceed_pre_search_box_penalty = 68.0f;
+  config.exceed_interseting_area_penalty = 1.2f * config.gear_switch_penalty;
   config.exceed_cul_de_sac_limit_pos_penalty =
       0.68f * config.gear_switch_penalty;
   config.borrow_slot_penalty = 3.68f;
