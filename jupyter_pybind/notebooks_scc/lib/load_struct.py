@@ -897,7 +897,6 @@ def ehr_load_lane_boundary_lines(lane_boundaries, x, y, yaw, Lane_boundary_max_l
 
 # 加载车道boundary
 def load_lane_boundary_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
-  line_info_list = []
   reference_line_msg = road_msg.reference_line_msg
   reference_line_msg_size = road_msg.reference_line_msg_size
   default_line_x, default_line_y = gen_line(0,0,0,0,0,0)
@@ -1279,6 +1278,33 @@ def load_lane_lines(road_msg, is_enu_to_car = False, loc_msg = None, g_is_displa
       line_info_list.append(lane_info_l)
       line_info_list.append(lane_info_r)
   return line_info_list
+
+def load_road_border_lines(road_msg, loc_msg = None, g_is_display_enu = False):
+  fusion_polyline_size = road_msg.fusion_polyline_size
+  fusion_polyline = road_msg.fusion_polyline
+  line_x_vec, line_y_vec = [], []
+  coord_tf = coord_transformer()
+  if loc_msg != None:
+    cur_pos_xn = loc_msg.position.position_boot.x
+    cur_pos_yn = loc_msg.position.position_boot.y
+    cur_yaw = loc_msg.orientation.euler_boot.yaw
+    coord_tf.set_info(cur_pos_xn, cur_pos_yn, cur_yaw)
+  for i in range(fusion_polyline_size):
+    line_x, line_y = [], []
+    line_type = fusion_polyline[i].type
+    local_points_size = fusion_polyline[i].local_points_size
+    local_points = fusion_polyline[i].local_points
+    for j in range(local_points_size):
+      line_x.append(local_points[j].x)
+      line_y.append(local_points[j].y)
+    if not g_is_display_enu:
+      if loc_msg != None:
+        line_x, line_y = coord_tf.global_to_local(line_x, line_y)
+      else:
+        line_x, line_y = [], []
+    line_x_vec.append(line_x)
+    line_y_vec.append(line_y)
+  return line_x_vec, line_y_vec
 
 #加载topo车道线
 def load_lane_topo_lines(lane_topo_msg, is_enu_to_car = False, loc_msg = None, g_is_display_enu = False):
