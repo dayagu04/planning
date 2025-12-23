@@ -216,6 +216,7 @@ class HybridAStarPathGenerator : public ParkingTask {
   cdl::AABB pre_search_abbox_;
   cdl::AABB interesting_abbox_ego_;
   cdl::AABB interesting_abbox_slot_;
+  CulDeSacInfo cul_de_sac_info_;
 
   NodeDeleteDecider node_delete_decider_;
 
