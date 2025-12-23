@@ -135,7 +135,9 @@ class StGraphSearcher : public Task {
   void AddAStarSearchCostDebugInfo(
       std::vector<StSearchNode>* const searched_path) const;
 
-  bool IsSpecialAgent(const int32_t agent_id) const;
+  bool IsSpecialYieldAgent(const int32_t agent_id) const;
+
+  bool IsSpecialOvertakeAgent(const int32_t agent_id) const;
 
   StGraphSearcherConfig config_;
   planning::common::StGraphSearcher st_graph_searcher_pb_;
