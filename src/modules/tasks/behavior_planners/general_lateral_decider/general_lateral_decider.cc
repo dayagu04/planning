@@ -594,7 +594,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // ref_length_change = planning::interp(ego_v, xp_ego_v, fp_length_diff);
   }
   if (last_ref_length_ >= 1.0 &&
-      session_->environmental_model().GetVehicleDbwStatus()) {
+      session_->environmental_model().GetVehicleDbwStatus() &&
+      session_->environmental_model().function_info().function_mode() !=
+      common::DrivingFunctionInfo::ACC) {
     s = std::min(s, last_ref_length_ + ref_length_change);
   }
   auto cart_ref_info = coarse_planning_info.cart_ref_info;
