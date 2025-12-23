@@ -588,6 +588,11 @@ bool SamplePolySpeedAdjustDecider::ProcessEnvInfos() {
   const auto& init_point = ego_state_manager->planning_init_point();
   ego_v_ = init_point.v;
   ego_a_ = init_point.a;
+  lon_state_.p = 0.0;
+  lon_state_.v = ego_v_;
+  lon_state_.a = ego_a_;
+  lon_state_.j = 0.0;
+  lon_state_.t = 0.0;
 
   ego_cart_point_.first = ego_state_manager->ego_pose().x;
   ego_cart_point_.second = ego_state_manager->ego_pose().y;
@@ -1216,6 +1221,21 @@ bool SamplePolySpeedAdjustDecider::IsNotUseGapSelect() {
   }
   return false;
 }
+
+bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
+  StateLimit state_limit{0.0, 0.0, 0.0, v_adjust_speed_limit_, -2.0, 1.5, -2.5 , 3.0};
+  UniformJerkCurve jerk_curve(state_limit, lon_state_, false);
+  auto arrived_s = jerk_curve.arrived_s();
+  if (arrived_s > distance_to_stop_point_) {
+    return true;
+  }
+  return false;
+}
+
+void SamplePolySpeedAdjustDecider::GenerateForceMergeTraj() {
+  
+}
+
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,
                                                 const double evaluate_cost_time,
                                                 const double all_cost_time) {

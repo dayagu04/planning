@@ -18,8 +18,7 @@ struct UniformJerkCurveCoffi {
 class UniformJerkCurve : public SamplePolyCurve {
  public:
   UniformJerkCurve() = default;
-  UniformJerkCurve(const double s0, const double v0, const double a0,
-                   const double jerk, const SamplePolyCurveConfig& config,
+  UniformJerkCurve(const StateLimit& state_limit, const LonState& lon_state,
                    bool is_upper_limit);
   ~UniformJerkCurve() = default;
 
@@ -28,9 +27,10 @@ class UniformJerkCurve : public SamplePolyCurve {
   double CalcAcc(const double t) const override;
   double CalcJerk(const double t) const override;
 
-  UniformJerkCurveCoffi GetCoffi() const { return cofficients_; }
-  void BuildZeroJerkTraj();
-  void BuildUniformJerkTraj(const double jerk);
+  UniformJerkCurveCoffi GetCoffi() const { return jerk_curve_coffi_; }
+  LonState GetLonState() const { return lon_state_; }
+  StateLimit GetStateLimit() const { return state_limit_; }
+  void BuildUniformJerkTraj();
 
  private:
   LonState lon_state_;

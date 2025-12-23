@@ -57,6 +57,10 @@ void UniformJerkCurve::BuildUniformJerkTraj() {
       jerk_curve_coffi_.time_points.push_back(0.0);
     }
   }
+  arrived_t_ = second_order_param.t3;
+  arrived_v_ = state_limit_.v_end;
+  arrived_s_ = CalcS(arrived_t_);
+  arrived_a_ = 0.0;
 }
 
 double UniformJerkCurve::CalcS(const double t) const {

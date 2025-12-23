@@ -58,6 +58,8 @@ class SamplePolySpeedAdjustDecider : public Task {
   bool CheckTrajAvailable(const SampleQuarticPolynomialCurve& current_traj,
                           const int index);
   bool IsNotUseGapSelect();
+  bool IsForcedMergeScenario();
+  void GenerateForceMergeTraj();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -112,6 +114,7 @@ class SamplePolySpeedAdjustDecider : public Task {
 
   std::vector<std::vector<SampleQuarticPolynomialCurve>> sample_trajs_;
   std::vector<std::vector<SampleQuinticPolynomialCurve>> sample_quintic_trajs_;
+  LonState lon_state_;
 
   int count_wait_state_{0};
   int count_normal_to_hover_state_{0};
