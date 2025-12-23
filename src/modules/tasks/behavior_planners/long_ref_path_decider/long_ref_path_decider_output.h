@@ -35,4 +35,5 @@ struct LonRefPathDeciderOutput {
   bool is_comfort_target_lon_emergency_stop = false;
   std::vector<int32_t> follow_agent_ids;
   std::vector<ComfortTargetUpperBoundInfo> comfort_target_upper_bound_infos;
+  std::vector<std::pair<double, double>> comfort_target; // s, v
 };

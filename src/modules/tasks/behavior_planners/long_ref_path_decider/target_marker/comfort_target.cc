@@ -155,6 +155,14 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
         .push_back(output_info);
   }
 
+  mutable_lon_ref_path_decider_output->comfort_target.clear();
+  mutable_lon_ref_path_decider_output->comfort_target.reserve(
+      target_values_.size());
+  for (const auto& target_val : target_values_) {
+    mutable_lon_ref_path_decider_output->comfort_target.push_back(
+        {target_val.s_target_val(), target_val.v_target_val()});
+  }
+
   AddComfortTargetDataToProto();
 }
 

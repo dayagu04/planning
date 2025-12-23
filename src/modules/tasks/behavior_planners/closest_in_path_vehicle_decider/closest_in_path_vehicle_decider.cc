@@ -107,10 +107,14 @@ bool ClosestInPathVehicleDecider::CipvDecision() {
         min_s = lower_s;
         id = lower_point.agent_id();
       }
-      agents_distance_id_map_[lower_s] = std::make_pair(
-          agent_manager->GetAgent(lower_point.agent_id())->type() ==
-              agent::AgentType::VIRTUAL,
-          lower_point.agent_id());
+      if (agent_manager != nullptr) {
+        const auto *agent_ptr = agent_manager->GetAgent(lower_point.agent_id());
+        if (agent_ptr != nullptr) {
+          agents_distance_id_map_[lower_s] =
+              std::make_pair(agent_ptr->type() == agent::AgentType::VIRTUAL,
+                             lower_point.agent_id());
+        }
+      }
       if (kInvalidId == id) {
         mutable_cipv_decider_output.Reset();
       } else {
@@ -149,9 +153,12 @@ void ClosestInPathVehicleDecider::MakeCipvInfo(
   if (nullptr == agent) {
     return;
   }
-  const auto &planned_kd_path = session_->is_rads_scene()?
-      session_->planning_context().st_graph_helper()->processed_path():
-      session_->planning_context().motion_planner_output().lateral_path_coord;
+  const auto &planned_kd_path =
+      session_->is_rads_scene()
+          ? session_->planning_context().st_graph_helper()->processed_path()
+          : session_->planning_context()
+                .motion_planner_output()
+                .lateral_path_coord;
   const auto ego_state_manager =
       session_->environmental_model().get_ego_state_manager();
   const double ego_v =
