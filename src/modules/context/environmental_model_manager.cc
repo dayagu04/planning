@@ -131,6 +131,10 @@ void EnvironmentalModelManager::InitContext() {
   session_->mutable_environmental_model()->set_rads_config_builder(
       rads_config_builder);
 
+  auto nsa_config_builder =
+      load_config_builder("general_planner_module_nsa.json");
+  session_->mutable_environmental_model()->set_nsa_config_builder(
+      nsa_config_builder);
   planning::common::SceneType scene_type = session_->get_scene_type();
   auto config_builder =
       session_->environmental_model().config_builder(scene_type);
@@ -251,6 +255,7 @@ bool EnvironmentalModelManager::Run() {
   const auto& local_view = session_->environmental_model().get_local_view();
 
   // 通过配置项进行实时长时的切换 true: 长时规划
+  // check localization
   bool localization_valid =
       local_view.localization.status.status_info.mode !=
       iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_ERROR;
@@ -259,9 +264,14 @@ bool EnvironmentalModelManager::Run() {
         local_view.localization.status.status_info.mode ==
         iflyauto::IFLYStatusInfoMode::IFLY_STATUS_INFO_MODE_MAPLOC;
   }
-  bool fusion_localization_valid =
+  // check fusion
+  bool fusion_valid_on_road =
       local_view.road_info.local_point_valid &&
       local_view.fusion_objects_info.local_point_valid;
+  bool location_valid_on_openspace =
+      // local_view.fusion_objects_info.local_point_valid &&
+      local_view.fusion_occupancy_objects_info.local_point_valid;
+  // check planner type
   bool planner_valid = GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
                            planning::context::PlannerType::SCC_PLANNER_V2 ||
                        GENERAL_PLANNING_CONTEXT.GetParam().planner_type ==
@@ -271,8 +281,11 @@ bool EnvironmentalModelManager::Run() {
   // printf("planner_type:%d\n",
   // GENERAL_PLANNING_CONTEXT.GetParam().planner_type);
   auto location_valid =
-      localization_valid && fusion_localization_valid && planner_valid;
-
+      localization_valid && fusion_valid_on_road && planner_valid;
+  if (session_->is_nsa_scene()) {
+    location_valid =
+        localization_valid && location_valid_on_openspace && planner_valid;
+  }
   if (session_->is_hpp_scene() && !location_valid) {
     ILOG_ERROR << "hpp location invalid";
     return false;
@@ -299,6 +312,10 @@ bool EnvironmentalModelManager::Run() {
        iflyauto::FunctionalState_HPP_ERROR);  // TODO(bsniu): set hpp mode range
   bool rads_mode = fsm_state >= iflyauto::FunctionalState_RADS_PASSIVE &&
                    fsm_state <= iflyauto::FunctionalState_RADS_ERROR;
+
+  bool nsa_mode =
+      (fsm_state >= iflyauto::FunctionalState_NRA_PASSIVE) &&
+      (fsm_state <= iflyauto::FunctionalState_NRA_ERROR);
   static bool is_mrc_mode_hold = false;
   static int mrm_state_hold_cnt = kMRMStateDebounce;
   if (fsm_state == iflyauto::FunctionalState_MRC) {
@@ -319,7 +336,7 @@ bool EnvironmentalModelManager::Run() {
   }
   bool mrc_mode = is_mrc_mode_hold;
   bool dbw_status = acc_mode || scc_mode || noa_mode || hpp_mode_cruise ||
-                    rads_mode || mrc_mode;
+                    rads_mode || nsa_mode || mrc_mode;
   environmental_model->UpdateVehicleDbwStatus(dbw_status);
   JSON_DEBUG_VALUE("dbw_status", dbw_status)
   JSON_DEBUG_VALUE("fsm_state", static_cast<int>(fsm_state))
@@ -353,6 +370,9 @@ bool EnvironmentalModelManager::Run() {
                                            function_state);
   } else if (rads_mode) {
     environmental_model->set_function_info(common::DrivingFunctionInfo::RADS,
+                                           function_state);
+  } else if (nsa_mode) {
+    environmental_model->set_function_info(common::DrivingFunctionInfo::NSA,
                                            function_state);
   } else {
     LOG_NOTICE("function mode error");

@@ -19,6 +19,7 @@ class ConeWarningHMIDecider {
   bool IsStartRunning();
   bool IsStopRunning();
   void SaveHmiOutput();
+  void Reset();
   bool has_cipv_cone_ = false;
   bool has_speed_limit_cone_ = false;
   bool has_alc_cone_ = false;

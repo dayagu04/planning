@@ -80,6 +80,7 @@ void PlanningScheduler::Init(
   apa_function_ = std::make_unique<ApaFunction>(&session_);
   rads_function_ = std::make_unique<RadsFunction>(&session_);
   adas_function_ = std::make_unique<AdasFunction>(&session_);
+  nsa_function_ = std::make_unique<NsaFunction>(&session_);
 }
 
 void PlanningScheduler::SyncParameters(planning::common::SceneType scene_type) {
@@ -135,9 +136,12 @@ planning::common::SceneType PlanningScheduler::DetermineSceneType(
     scene_type = planning::common::SceneType::HPP;
   } else if (IsValidRadsState(func_state_machine.current_state)) {
     scene_type = planning::common::SceneType::RADS;
+  } else if (IsValidNsaState(func_state_machine.current_state)) {
+    scene_type = planning::common::SceneType::NSA;
   } else {
     scene_type = planning::common::SceneType::HIGHWAY;
   }
+
   session_.set_scene_type(scene_type);
 
   auto frame_info =
@@ -197,7 +201,7 @@ bool PlanningScheduler::RunOnce(
   }
 
   if (function_type == common::HIGHWAY || function_type == common::HPP ||
-      function_type == common::RADS) {
+      function_type == common::RADS || function_type == common::NSA) {
     planning_success = ExcuteNavigationFunction(
         function_type, start_timestamp, planning_output, planning_hmi_info);
     // can not active lcc/noa function if planning failed
@@ -748,6 +752,7 @@ void PlanningScheduler::FillPlanningHmiInfo(
   planning_hmi_info->ad_info.is_curva = ad_info.is_curva;
   planning_hmi_info->ad_info.intersection_pass_sts =
       ad_info.intersection_pass_sts;
+  planning_hmi_info->ad_info.intersection_state = ad_info.intersection_state;
 
   planning_hmi_info->ad_info.distance_to_ramp = ad_info.distance_to_ramp;
   planning_hmi_info->ad_info.distance_to_split = ad_info.distance_to_split;
@@ -785,7 +790,8 @@ void PlanningScheduler::FillPlanningHmiInfo(
           .planning_hmi_info()
           .ad_info.reference_line_msg;
   planning_hmi_info->ad_info.timestamp = local_view_->road_info.isp_timestamp;
-  // planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  planning_hmi_info->ad_info.cone_warning_info.cone_warning = ad_info.cone_warning_info.cone_warning;
+  planning_hmi_info->ad_info.construction_info.construction_state = ad_info.construction_info.construction_state;
 
   const auto& cutin_ttc_info =
       agent_longitudinal_decider_output.closest_cutin_ttc_info;
@@ -1007,6 +1013,12 @@ bool PlanningScheduler::IsValidRadsState(
          current_state == iflyauto::FunctionalState_RADS_TRACING ||
          current_state == iflyauto::FunctionalState_RADS_SUSPEND ||
          current_state == iflyauto::FunctionalState_RADS_COMPLETE;
+}
+
+bool PlanningScheduler::IsValidNsaState(
+    const iflyauto::FunctionalState &current_state) {
+  return current_state >= iflyauto::FunctionalState_NRA_PASSIVE &&
+         current_state <= iflyauto::FunctionalState_NRA_ERROR;
 }
 
 void PlanningScheduler::InitSccFunction() {
@@ -1275,6 +1287,8 @@ const bool PlanningScheduler::ExcuteNavigationFunction(
     planning_success = hpp_function_->Plan();
   } else if (function_type == planning::common::SceneType::RADS) {
     planning_success = rads_function_->Plan();
+  }  else if (function_type == planning::common::SceneType::NSA) {
+    planning_success = nsa_function_->Plan();
   } else {
     planning_success = scc_function_->Plan();
   }

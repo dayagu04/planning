@@ -133,7 +133,7 @@ bool GeneralLongitudinalDecider::Execute() {
             IflyTime::Now_ms() - time_1);
   double time_2 = IflyTime::Now_ms();
   std::vector<planning_math::CollisionCheckStatus> hpp_collision_results;
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_rads_scene() || session_->is_nsa_scene()) {
     GetHppCollisionCheckResult(ego_planning_result.traj_points,
                                hpp_collision_results);
   }

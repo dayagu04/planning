@@ -355,6 +355,8 @@ void VirtualLaneManager::ExtendReferenceLineForRads(
 }
 
 void VirtualLaneManager::construct_reference_line_msg(
+    const double ego_behind_length,
+    const double ego_ahead_length,
     const std::vector<double>& current_lane_virtual_poly,
     iflyauto::ReferenceLineMsg& current_lane_virtual) {
   ILOG_DEBUG << "construct_reference_line_msg";
@@ -375,8 +377,8 @@ void VirtualLaneManager::construct_reference_line_msg(
       iflyauto::LaneDrivableDirection_DIRECTION_UNKNOWN;
 
   auto current_lane_virtual_source = current_lane_virtual.lane_sources[0];
-  current_lane_virtual_source.begin = -50.0;
-  current_lane_virtual_source.end = 150.0;
+  current_lane_virtual_source.begin = -ego_behind_length;
+  current_lane_virtual_source.end = ego_ahead_length;
   current_lane_virtual_source.source = iflyauto::LaneSource_SOURCE_UNKNOWN;
 
   // set lane_reference_line poly
@@ -400,7 +402,9 @@ void VirtualLaneManager::construct_reference_line_msg(
   ILOG_DEBUG << "c2 = " << c2;
 
   // set lane_reference_line ref points
-  double x = -50.0;
+  double ref_length = ego_behind_length + ego_ahead_length;
+  double x = -ego_behind_length;
+  double delta_x = std::max(ref_length, 0.0) / FUSION_ROAD_REFLINE_POINT_MAX_NUM;
   double s = 0.0;
   double y_delay;
   const double heading_angle =
@@ -471,7 +475,7 @@ void VirtualLaneManager::construct_reference_line_msg(
 
     current_lane_virtual_ref_point->lane_type = iflyauto::LANETYPE_VIRTUAL;
 
-    const double delta_x = 2.0;
+    // const double delta_x = 2.0;
     if (i == 0) {
       s = 0.0;
     } else {
@@ -501,15 +505,16 @@ void VirtualLaneManager::construct_reference_line_msg(
   current_lane_virtual_left->poly_coefficient[1] = c1;
   current_lane_virtual_left->poly_coefficient[2] = c2;
   current_lane_virtual_left->poly_coefficient[3] = c3;
-  current_lane_virtual_left->begin = -50.0;
-  current_lane_virtual_left->end = 150.0;
+  current_lane_virtual_left->begin = -ego_behind_length;
+  current_lane_virtual_left->end = ego_ahead_length;
   current_lane_virtual_left->type_segments_size = 1;
-  current_lane_virtual_left->type_segments[0].length = 150.0;
+  current_lane_virtual_left->type_segments[0].length = ref_length;
   current_lane_virtual_left->type_segments[0].type =
       iflyauto::LaneBoundaryType_MARKING_SOLID;
 
-  x = -50.0;
-  double lane_boundary_delta_x = 200.0 / LANE_BOUNDARY_POINT_SET_NUM;
+  x = -ego_behind_length;
+  double lane_boundary_delta_x =
+      std::max(ref_length, 0.0) / LANE_BOUNDARY_POINT_SET_NUM;
   // TBD: LANE_BOUNDARY_POINT_SET_NUM被指定的大小为20，不够用吧
   for (size_t i = 0; i < LANE_BOUNDARY_POINT_SET_NUM; ++i) {
     iflyauto::Point2f* current_lane_virtual_left_car_point =
@@ -550,14 +555,14 @@ void VirtualLaneManager::construct_reference_line_msg(
   current_lane_virtual_right->poly_coefficient[1] = c1;
   current_lane_virtual_right->poly_coefficient[2] = c2;
   current_lane_virtual_right->poly_coefficient[3] = c3;
-  current_lane_virtual_right->begin = -50.0;
-  current_lane_virtual_right->end = 150.0;
+  current_lane_virtual_right->begin = -ego_behind_length;
+  current_lane_virtual_right->end = ego_ahead_length;
   current_lane_virtual_right->type_segments_size = 1;
-  current_lane_virtual_right->type_segments[0].length = 150.0;
+  current_lane_virtual_right->type_segments[0].length = ref_length;
   current_lane_virtual_right->type_segments[0].type =
       iflyauto::LaneBoundaryType_MARKING_SOLID;
 
-  x = -50.0;
+  x = -ego_behind_length;
   for (size_t i = 0; i < LANE_BOUNDARY_POINT_SET_NUM; ++i) {
     iflyauto::Point2f* current_lane_virtual_right_car_point =
         current_lane_virtual_right->car_points;
@@ -584,6 +589,7 @@ void VirtualLaneManager::construct_reference_line_msg(
     x += lane_boundary_delta_x;
   }
 }
+
 void VirtualLaneManager::SetGeneratedReflineToDebugInfo(
     const iflyauto::LaneReferenceLine& refline) {
 #ifdef ENABLE_PROTO_LOG
@@ -893,6 +899,26 @@ bool VirtualLaneManager::update(const iflyauto::RoadInfo& roads) {
   if (!CheckLaneValid(roads)) {
     ILOG_WARN << "reference line invalid!";
     // return false;
+  }
+  // construct straight lines for nsa
+  if (session_->environmental_model()
+              .function_info()
+              .function_mode() ==
+      common::DrivingFunctionInfo::NSA) {
+    // construct roughly
+    std::vector<double> current_lane_virtual_poly(4, 0.0);
+    iflyauto::ReferenceLineMsg current_lane_virtual;
+    construct_reference_line_msg(
+        10.0, 50.0, current_lane_virtual_poly, current_lane_virtual);
+    SetGeneratedReflineToDebugInfo(current_lane_virtual.lane_reference_line);
+    // set roads_virtual
+    roads_virtual.msg_header = roads.msg_header;
+    roads_virtual.isp_timestamp = roads.isp_timestamp;
+    roads_virtual.reference_line_msg[0] = current_lane_virtual;
+    roads_virtual.reference_line_msg_size = 1;
+    roads_virtual.local_point_valid = roads.local_point_valid;
+    roads_virtual.lane_ground_markings_size = 0;
+    roads_ptr = &roads_virtual;
   }
   // if (!CheckLaneValid(roads)) {
   //   // 依次为常数项、一次项、二次项、三次项

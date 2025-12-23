@@ -504,7 +504,7 @@ bool LateralMotionPlanner::AssembleInput() {
       second_soft_bounds, hard_bounds, second_soft_bounds_info,
       hard_bounds_info);
 
-  if (session_->is_hpp_scene()) {
+  if (session_->is_hpp_scene() || session_->is_nsa_scene()) {
     // const bool &search_success = session_->mutable_planning_context()
     //                                ->mutable_lateral_obstacle_decider_output()
     //                                .search_success;
