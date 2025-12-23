@@ -2338,7 +2338,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
           std::pair<double, double> obs_lat{agent_bd.l_start, agent_bd.l_end};
           double obs_lat_vel = front_side_obs->frenet_velocity_l();
           bool is_target_lane_cuting_in =
-              IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
+              IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel,
                               lc_safety_check_config_.target_lane_front_cut_in_check_time, 0.5);
           if (!is_target_lane_cuting_in) {
             continue;  // 3.0s 不进入目标车道过滤
@@ -4061,14 +4061,15 @@ bool LaneChangeStateMachineManager::
     const auto target_reference_path =
         reference_path_manager->get_reference_path_by_lane(
             target_lane_virtual_id);
-    
+
     if (target_reference_path != nullptr) {
       const auto& obstacles_map = target_reference_path->get_obstacles_map();
       auto it = obstacles_map.find(agent_node->node_agent_id());
       if(it != obstacles_map.end()) {
         const auto& rear_obs = it->second;
         double obs_lat_vel = rear_obs->frenet_velocity_lateral(); //负：靠近目标车道
-        double extra_lat_buff = obs_lat_vel < 0 ? - obs_lat_vel * 1.1 : 0.0;
+        double lat_buff_scalor_by_vel = 1.1;
+        double extra_lat_buff = obs_lat_vel < 0 ? - obs_lat_vel * lat_buff_scalor_by_vel : 0.0;
         max_lat_buff += extra_lat_buff;
       }
     }

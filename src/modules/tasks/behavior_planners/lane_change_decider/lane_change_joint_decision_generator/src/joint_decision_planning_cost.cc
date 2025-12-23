@@ -5,6 +5,7 @@
 using namespace pnc::mathlib;
 namespace pnc {
 namespace lane_change_joint_decision {
+constexpr int kHalfYieldStep  = 15;
 static const double kEps = 1e-6;
 
 double EgoReferenceCostTerm::GetCost(const ilqr_solver::State& x,
@@ -1309,7 +1310,7 @@ double SoftHalfplaneCostTerm::GetCost(const ilqr_solver::State& x,
       }
     }
   }
-  constexpr int half_yield_time_limit = 15;  // 前3秒 = 15个时间步 (3.0 / 0.2)
+  int half_yield_time_limit = kHalfYieldStep;  // 前3秒 = 15个时间步 (3.0 / 0.2)
   double total_cost = 0.0;
 
   for (const auto& result : results) {
@@ -1354,7 +1355,7 @@ void SoftHalfplaneCostTerm::GetGradientHessian(
       }
     }
   }
-  constexpr int half_yield_time_limit = 15;  // 前3秒 = 15个时间步 (3.0 / 0.2)
+  int half_yield_time_limit = kHalfYieldStep;  // 前3秒 = 15个时间步 (3.0 / 0.2)
 
   for (const auto& result : results) {
     // HALF_YIELD 标签只在前3秒内产生代价和梯度
