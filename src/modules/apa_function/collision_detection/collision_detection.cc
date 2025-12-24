@@ -411,6 +411,10 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t col_car_line_order = 0;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {
+      if (!param_.side_cross_limiter &&
+        static_cast<ObsType>(obs_pt_pair.first) == SIDE_CROSS_LIMITER_OBS) {
+      continue;
+    }
       const Eigen::Vector2d obs_pt_global = obs_pt_pair.second[i];
       // if (!pnc::geometry_lib::IsPointInPolygon(traj_bound, obs_pt_global) &&
       //     box) {
@@ -634,8 +638,13 @@ const CollisionDetector::CollisionResult CollisionDetector::UpdateByObsMap(
   size_t col_obs_index = 0;
   size_t col_car_line_order = 0;
   double dist_init =100;
+  // ILOG_INFO << "param_.side_cross_limiter" << param_.side_cross_limiter ;
   for (const auto &obs_pt_pair : obs_pt_global_map_) {
     if (CheckObstacleInSkipTypes(obs_pt_pair.first)) {
+      continue;
+    }
+    if (!param_.side_cross_limiter &&
+        static_cast<ObsType>(obs_pt_pair.first) == SIDE_CROSS_LIMITER_OBS) {
       continue;
     }
     for (size_t i = 0; i < obs_pt_pair.second.size(); ++i) {

@@ -123,9 +123,7 @@ const bool ParallelOutPathGenerator::Update() {
     }
   }
   if (!is_in_slot) {
-    auto last_target_pose_path = input_.last_target_pose_;
-    auto last_target_pos =
-        input_.ego_info_under_slot.g2l_tf.GetPos(input_.last_target_pose_.pos);
+    auto last_target_pos = input_.last_target_pose_.pos;
     auto last_target_heading = input_.last_target_pose_.heading;
     auto pose_univ = Eigen::Vector2d(std::cos(last_target_heading),
                                      std::sin(last_target_heading));
@@ -402,7 +400,7 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
   }
 
   const double y_bound = std::fabs(rac_channel_bound - rac_tlane_bound_near);
-
+  ILOG_INFO << "input_.tlane.channel_y" << input_.tlane.channel_y;
   const double channel_width =
       std::fabs(input_.tlane.channel_y) - half_slot_width;
 
@@ -444,21 +442,53 @@ const bool ParallelOutPathGenerator::GenParallelPreparingLineVecOut(
             << " rac_tlane_bound_far = " << rac_tlane_bound_far
             << " start_y = " << start_y;
   int idx = 0;
-  for (int i = 0; i < y_vec.size(); ++i) {
-    if (std::fabs(y_vec[i]) < std::fabs(start_y)) {
-      idx = i;
-      continue;
+  double heading_threshold = 0.0;
+  if (std::abs(arc_slot_init_out_heading_) > pnc::mathlib::Deg2Rad(15.0)) {
+    if (arc_slot_init_out_heading_ > 0) {
+      heading_threshold = 15.0;
+    } else if (arc_slot_init_out_heading_ < 0) {
+      heading_threshold = -15.0;
     }
-    prepare_pose.pos.y() = y_vec[i];
-    preparing_pose_vec.emplace_back(prepare_pose);
-  }
-  for (int i = 0; i <= idx; ++i) {
-    prepare_pose.pos.y() = y_vec[i];
-    preparing_pose_vec.emplace_back(prepare_pose);
   }
 
-  return true;
-}
+    const auto headings =
+        pnc::geometry_lib::Linspace(0, pnc::mathlib::Deg2Rad(heading_threshold),
+                                    pnc::mathlib::Deg2Rad(3.0));
+    if (headings.size() > 0) {
+    for (int j = 0; j < headings.size(); ++j) {
+      ILOG_INFO << "headings = " << headings[j];
+      for (int i = 0; i < y_vec.size(); ++i) {
+        if (std::fabs(y_vec[i]) < std::fabs(start_y)) {
+            idx = i;
+            continue;
+        }
+        prepare_pose.pos.y() = y_vec[i];
+        prepare_pose.heading = prepare_pose.heading + headings[j];
+        preparing_pose_vec.emplace_back(prepare_pose);
+      }
+      for (int i = 0; i <= idx; ++i) {
+        prepare_pose.pos.y() = y_vec[i];
+        prepare_pose.heading = prepare_pose.heading + headings[j];
+        preparing_pose_vec.emplace_back(prepare_pose);
+      }
+    }
+    }else{
+      for (int i = 0; i < y_vec.size(); ++i) {
+        if (std::fabs(y_vec[i]) < std::fabs(start_y)) {
+            idx = i;
+            continue;
+        }
+        prepare_pose.pos.y() = y_vec[i];
+        preparing_pose_vec.emplace_back(prepare_pose);
+      }
+      for (int i = 0; i <= idx; ++i) {
+        prepare_pose.pos.y() = y_vec[i];
+        preparing_pose_vec.emplace_back(prepare_pose);
+      }
+    }
+
+    return true;
+  }
 
 }  // namespace apa_planner
 }  // namespace planning
