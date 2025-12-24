@@ -1092,6 +1092,16 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
     ObsToPathDistRelativeSlot obs_dist_relative_slot;
     const CurveNode& temp_node = curve_node_to_goal_vec[i];
 
+    if (IsGearDifferent(request_.inital_action_request.ref_gear,
+                        temp_node.GetCurGear())) {
+      cost.unexpect_gear_cost = gear_change_penalty;
+    }
+
+    if (IsSteerOpposite(request_.inital_action_request.ref_steer,
+                        temp_node.GetCurKappa())) {
+      cost.unexpect_steer_cost = kappa_change_penalty;
+    }
+
     cost.gear_change_cost = gear_change_penalty * temp_node.GetGearSwitchNum();
 
     cost.length_cost = length_penalty * temp_node.GetDistToStart();
