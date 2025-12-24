@@ -60,6 +60,7 @@ void RouteInfo::Update() {
       route_info_strategy_->Update(route_info_output_);
       sdpromap_valid_ = route_info_strategy_->get_sdpromap_valid();
       sdpro_map_ = route_info_strategy_->get_sdpro_map();
+      current_link_ = route_info_strategy_->get_current_link();
     } else if (local_view.sdpro_map_info.data_source() ==
                iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
       if (UpdateSdProMap(local_view)) {

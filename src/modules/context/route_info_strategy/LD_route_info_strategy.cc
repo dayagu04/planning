@@ -575,6 +575,10 @@ bool LDRouteInfoStrategy::CalculateExtenedFeasibleLane(
         continue;
       }
 
+      if (IsLaneSuccessorIsMergeLane(temp_lane)) {
+        continue;
+      }
+
       TopoLane topo_lane;
       topo_lane.id = temp_lane->id();
       topo_lane.link_id = temp_lane->link_id();
@@ -1250,6 +1254,9 @@ void LDRouteInfoStrategy::CalculateSplitInfo() {
     NOASplitRegionInfo split_region_info;
     split_region_info.distance_to_split_point = split_info.second;
     split_region_info.split_link_id = split_info.first->id();
+    split_region_info.split_direction = static_cast<SplitDirection>(
+        CalculateSplitDirection(*split_info.first, ld_map_));
+
     route_info_output_.split_region_info_list.emplace_back(
         std::move(split_region_info));
   }
@@ -1281,6 +1288,10 @@ bool LDRouteInfoStrategy::get_sdpromap_valid() { return ldmap_valid_; }
 
 const ad_common::sdpromap::SDProMap& LDRouteInfoStrategy::get_sdpro_map() {
   return ld_map_;
+}
+
+const iflymapdata::sdpro::LinkInfo_Link* LDRouteInfoStrategy::get_current_link() {
+  return current_link_;
 }
 
 bool LDRouteInfoStrategy::CalculateFeasibleLaneInRampScene(
