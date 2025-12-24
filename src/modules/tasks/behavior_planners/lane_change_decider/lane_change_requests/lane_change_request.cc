@@ -789,7 +789,9 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
   }
   double RoadBorderConsiderDistance = ego_vel * predict_time_horizon;
   for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
-       s < RoadBorderConsiderDistance; s += cut_length) {
+       s < ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle +
+               RoadBorderConsiderDistance;
+       s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
       sample_path_point.distance_to_left_lane_border =
           std::fmin(refpath_pt.distance_to_left_lane_border,
