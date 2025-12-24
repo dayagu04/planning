@@ -217,7 +217,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_ramp_on_road_;
 
             if (is_exist_ramp_on_road_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ <
                       kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
@@ -250,7 +250,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_split_on_ramp_;
 
             if (is_exist_split_on_ramp_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -276,7 +276,7 @@ void EgoLaneTrackManger::TrackEgoLane(
             ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_expressway_:"
                        << is_exist_split_on_expressway_;
             if (is_exist_split_on_expressway_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -304,7 +304,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_exist_split_on_intersection_;
 
           if (is_exist_split_on_intersection_) {
-            if (lane_change_cmd != 0 && ego_in_split_region_ &&
+            if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                 sum_distance_from_ego_to_both_center_lines_ < 0.5) {
               ProcessSplitRegionInteractiveSelectEgoLane(
                   relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -391,7 +391,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_split_on_intersection_;
 
             if (is_exist_split_on_intersection_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -415,7 +415,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_exist_split_on_intersection_;
 
           if (is_exist_split_on_intersection_) {
-            if (lane_change_cmd != 0 && ego_in_split_region_ &&
+            if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                 sum_distance_from_ego_to_both_center_lines_ < 0.5) {
               ProcessSplitRegionInteractiveSelectEgoLane(
                   relative_id_lanes, order_ids_of_same_zero_relative_id,
