@@ -19,8 +19,10 @@
 
 namespace planning {
 
-const double kMaxTrackAvoidOffset = 0.3;
-const double kLimitSlopeDefaultSpeed = 80;
+constexpr double kMaxTrackAvoidOffset = 0.3;
+constexpr double kLimitSlopeDefaultSpeed = 80;
+constexpr double kMaxLateralOffsetChangeRate = 0.05;
+constexpr double kMaxChangeRateEgoSpeed = 10.;
 LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
     const EgoPlanningConfigBuilder *config_builder) {
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
@@ -50,10 +52,11 @@ LateralOffsetCalculatorV2::LateralOffsetCalculatorV2(
 }
 
 bool LateralOffsetCalculatorV2::Process(
-    framework::Session *session,
-    const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
-    const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle, LaneInfo lane_info, double dist_rblane,
-    bool flag_avd) {
+    framework::Session* session,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
+    const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle,
+    LaneInfo lane_info, double dist_rblane, bool flag_avd) {
   // NTRACE_CALL(7);
   auto current_time = IflyTime::Now_ms();
   session_ = session;
@@ -97,7 +100,7 @@ bool LateralOffsetCalculatorV2::Process(
   avoid_info_.normal_left_avoid_threshold = lane_info.normal_left_avoid_threshold;
   avoid_info_.normal_right_avoid_threshold = lane_info.normal_right_avoid_threshold;
   b_success = update(status, flag_avd, should_premove, dist_rblane,
-                     avd_obstacle, avd_sp_obstacle);
+                     avd_obstacle, avd_obstacles_history, avd_sp_obstacle);
 
   if (!b_success) {
     // TBD : add logs
@@ -109,8 +112,9 @@ bool LateralOffsetCalculatorV2::Process(
 
 bool LateralOffsetCalculatorV2::update(
     int status, bool flag_avd, bool should_premove, double dist_rblane,
-    const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
-    const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacles_history,
+    const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle) {
 
   if (status >= kLaneKeeping && status <= kLaneChangeHold) {
     UpdateAvoidPath(status, flag_avd, should_premove, dist_rblane, avd_obstacle,
@@ -123,14 +127,16 @@ bool LateralOffsetCalculatorV2::update(
     enough_space_hysteresis_map.clear();
   }
 
+  PostSmoothLateralOffset(avoid_info_.lat_offset, avd_obstacle,
+                          avd_obstacles_history);
   SaveDebugInfo();
   return true;
 }
 
 bool LateralOffsetCalculatorV2::UpdateAvoidPath(
     int status, bool flag_avd, bool should_premove, double dist_rblane,
-    const std::array<AvoidObstacleInfo, 2> &avd_obstacle,
-    const std::array<AvoidObstacleInfo, 2> &avd_sp_obstacle) {
+    const std::array<AvoidObstacleInfo, 2>& avd_obstacle,
+    const std::array<AvoidObstacleInfo, 2>& avd_sp_obstacle) {
   PreacquireMaxOppositeOffsetIds();
 
   if (avd_obstacle[0].flag != AvoidObstacleFlag::INVALID &&
@@ -140,7 +146,7 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
              avd_obstacle[1].flag != AvoidObstacleFlag::INVALID) {
     LateralOffsetCalculateTwoObstacle(avd_obstacle[0], avd_obstacle[1]);
   } else {
-    auto &enough_space_hysteresis_map =
+    auto& enough_space_hysteresis_map =
         std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
             max_opposite_offset_hysteresis_maps_
                 [HysteresisType::EnoughSpaceHysteresis]);
@@ -152,10 +158,10 @@ bool LateralOffsetCalculatorV2::UpdateAvoidPath(
 }
 
 void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
-    const AvoidObstacleInfo &avoid_obstacle) {
+    const AvoidObstacleInfo& avoid_obstacle) {
   CalcMaxOppositeOffset(avoid_obstacle);
   bool is_left = avoid_obstacle.min_l_to_ref > 0.0;
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_length = vehicle_param.length;
   double lat_offset = 0.0;
@@ -184,10 +190,10 @@ void LateralOffsetCalculatorV2::LateralOffsetCalculateOneObstacle(
 }
 
 void LateralOffsetCalculatorV2::LateralOffsetCalculateTwoObstacle(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2) {
+    const AvoidObstacleInfo& avoid_obstacle_1,
+    const AvoidObstacleInfo& avoid_obstacle_2) {
   double t_exceed_obstacle_1;
-  auto &avoid_way_select_hysteresis_map =
+  auto& avoid_way_select_hysteresis_map =
       std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
           avoid_hysteresis_maps_[HysteresisType::AvoidWaySelect]);
 
@@ -269,10 +275,10 @@ void LateralOffsetCalculatorV2::LateralOffsetCalculateTwoObstacle(
 // return true: avoid obstacle_1 first, then avoid obstacle_2
 // return false: decide other way later
 bool LateralOffsetCalculatorV2::AvoidWaySelectForTwoObstacle(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, double *t_exceed_obstacle_1) {
+    const AvoidObstacleInfo& avoid_obstacle_1,
+    const AvoidObstacleInfo& avoid_obstacle_2, double* t_exceed_obstacle_1) {
   const double v_ego = ego_cart_state_manager_->ego_v();
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double ego_length = vehicle_param.length;
   const double v_obstacle_2 = v_ego + avoid_obstacle_2.vs_lon_relative;
@@ -317,8 +323,8 @@ bool LateralOffsetCalculatorV2::AvoidWaySelectForTwoObstacle(
 }
 
 double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
+    const AvoidObstacleInfo& avoid_obstacle_1,
+    const AvoidObstacleInfo& avoid_obstacle_2, bool is_side_way) {
   double lateral_offset = 0.0;
   double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
   double lat_offset_compensate_2 = LateralOffsetCompensate(avoid_obstacle_2);
@@ -389,14 +395,14 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleTwoSide(
 }
 
 double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, bool is_side_way) {
+    const AvoidObstacleInfo& avoid_obstacle_1,
+    const AvoidObstacleInfo& avoid_obstacle_2, bool is_side_way) {
   double lateral_offset = 0.0;
   double lat_offset_compensate_1 = LateralOffsetCompensate(avoid_obstacle_1);
   bool is_left = avoid_obstacle_1.min_l_to_ref > 0;
 
   avoid_info_.avoid_way = is_left ? AvoidWay::Left : AvoidWay::Right;
-  const AvoidObstacleInfo *nearest_avoid_obstacle;
+  const AvoidObstacleInfo* nearest_avoid_obstacle;
   if (!is_side_way) {
     if (is_left) {
       nearest_avoid_obstacle =
@@ -451,8 +457,8 @@ double LateralOffsetCalculatorV2::DealwithTwoObstacleOneSide(
 }
 
 double LateralOffsetCalculatorV2::SmoothLateralOffset(
-    const AvoidObstacleInfo &avoid_obstacle, double lat_offset,
-    const AvoidWay *avoid_way) {
+    const AvoidObstacleInfo& avoid_obstacle, double lat_offset,
+    const AvoidWay* avoid_way) {
   if (avoid_info_.is_use_ego_position) {
     return lat_offset;
   }
@@ -514,7 +520,7 @@ double LateralOffsetCalculatorV2::SmoothLateralOffset(
   return smooth_lat_offset;
 }
 double LateralOffsetCalculatorV2::LateralOffsetCompensate(
-    const AvoidObstacleInfo &avoid_obstacle) {
+    const AvoidObstacleInfo& avoid_obstacle) {
   const std::array<double, 3> near_obstacle_vrel_bp{-7.5, -3.5, 1};
   const std::array<double, 3> near_obstacle_vrel_v{0.06 * lane_width_,
                                                    0.02 * lane_width_, 0};
@@ -530,11 +536,11 @@ double LateralOffsetCalculatorV2::LateralOffsetCompensate(
 }
 
 double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
-    const AvoidObstacleInfo &avoid_obstacle, const AvoidWay &avoid_way,
+    const AvoidObstacleInfo& avoid_obstacle, const AvoidWay& avoid_way,
     double coeff, double lat_compensate, double base_distance) {
   assert(avoid_way == AvoidWay::Left || avoid_way == AvoidWay::Right);
 
-  const auto &vehicle_param =
+  const auto& vehicle_param =
       VehicleConfigurationContext::Instance()->get_vehicle_param();
   const double half_ego_width = vehicle_param.max_width * 0.5;
   double nearest_l_to_ref =
@@ -582,8 +588,8 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetSideWay(
 }
 
 double LateralOffsetCalculatorV2::DesireLateralOffsetCenterWay(
-    const AvoidObstacleInfo &avoid_obstacle_1,
-    const AvoidObstacleInfo &avoid_obstacle_2, bool is_left,
+    const AvoidObstacleInfo& avoid_obstacle_1,
+    const AvoidObstacleInfo& avoid_obstacle_2, bool is_left,
     double lat_compensate_1, double lat_compensate_2) {
   double lat_offset = 0.0;
   if (is_left) {
@@ -634,8 +640,8 @@ double LateralOffsetCalculatorV2::DesireLateralOffsetCenterWay(
 }
 
 double LateralOffsetCalculatorV2::LimitLateralOffset(
-    const AvoidObstacleInfo &avoid_obstacle, double lateral_offset,
-    const AvoidWay &avoid_way) {
+    const AvoidObstacleInfo& avoid_obstacle, double lateral_offset,
+    const AvoidWay& avoid_way) {
   lateral_offset =
       avoid_way == AvoidWay::Left
           ? std::min(lateral_offset, avoid_info_.normal_right_avoid_threshold)
@@ -685,7 +691,7 @@ double LateralOffsetCalculatorV2::LimitLateralOffset(
 }
 
 double LateralOffsetCalculatorV2::LimitDesireLateralOffsetHighSpeed(
-    const AvoidObstacleInfo &avoid_obstacle,
+    const AvoidObstacleInfo& avoid_obstacle,
     const double in_desire_lat_offset) {
   double out_desire_lat_offset = in_desire_lat_offset;
   if (has_enough_speed_hysteresis_.IsValid()) {
@@ -708,10 +714,10 @@ double LateralOffsetCalculatorV2::LimitDesireLateralOffsetHighSpeed(
 }
 
 void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
-    const std::vector<int> &obstacle_ids, bool is_left,
-    const AvoidObstacleInfo &avoid_obstacle,
-    std::map<std::pair<int, int>, HysteresisDecision> &hysteresis_map) {
-  const auto &lateral_obstacle =
+    const std::vector<int>& obstacle_ids, bool is_left,
+    const AvoidObstacleInfo& avoid_obstacle,
+    std::map<std::pair<int, int>, HysteresisDecision>& hysteresis_map) {
+  const auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   std::shared_ptr<FrenetObstacle> track_object;
   double front_limit_lateral_distance_tmp =
@@ -765,9 +771,9 @@ void LateralOffsetCalculatorV2::CalcFrontMaxOppositeOffset(
 }
 
 void LateralOffsetCalculatorV2::CalcSideMaxOppositeOffset(
-    const std::vector<int> &obstacle_ids,
-    const AvoidObstacleInfo &avoid_obstacle, bool is_left) {
-  const auto &lateral_obstacle =
+    const std::vector<int>& obstacle_ids,
+    const AvoidObstacleInfo& avoid_obstacle, bool is_left) {
+  const auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
   std::shared_ptr<FrenetObstacle> track_object;
   double limit_lateral_distance_tmp =
@@ -805,14 +811,14 @@ void LateralOffsetCalculatorV2::CalcSideMaxOppositeOffset(
 
 void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
                                                    int avoid_obstacle_id) {
-  const auto &lateral_obstacle =
+  const auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
 
-  const auto &obstacles = lateral_obstacle->tracks_map();
+  const auto& obstacles = lateral_obstacle->tracks_map();
 
   switch (type) {
     case HysteresisType::IsObstacleConsideredHysteresis: {
-      auto &is_obstacle_considered_hysteresis_map =
+      auto& is_obstacle_considered_hysteresis_map =
           std::get<std::map<int, HysteresisDecision>>(
               max_opposite_offset_hysteresis_maps_
                   [HysteresisType::IsObstacleConsideredHysteresis]);
@@ -820,8 +826,8 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_obstacle_considered_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            obstacles.begin(), obstacles.end(), [=](const auto &pair) {
-              const auto &tr = pair.second;  // 获取值
+            obstacles.begin(), obstacles.end(), [=](const auto& pair) {
+              const auto& tr = pair.second;  // 获取值
               return lateral_offset_decider::IsCameraObstacle(tr) &&
                      tr->id() == obstacle_id;
             });
@@ -836,7 +842,7 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
     }
 
     case HysteresisType::IsInConsiderLateralRangeHysteresis: {
-      auto &is_in_consider_lateral_range_hysteresis_map =
+      auto& is_in_consider_lateral_range_hysteresis_map =
           std::get<std::map<int, HysteresisDecision>>(
               max_opposite_offset_hysteresis_maps_
                   [HysteresisType::IsInConsiderLateralRangeHysteresis]);
@@ -845,8 +851,8 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
            it != is_in_consider_lateral_range_hysteresis_map.end();) {
         int obstacle_id = it->first;
         auto iter = std::find_if(
-            obstacles.begin(), obstacles.end(), [=](const auto &pair) {
-              const auto &tr = pair.second;  // 获取值
+            obstacles.begin(), obstacles.end(), [=](const auto& pair) {
+              const auto& tr = pair.second;  // 获取值
               return lateral_offset_decider::IsCameraObstacle(tr) &&
                      tr->id() == obstacle_id;
             });
@@ -861,7 +867,7 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
     }
 
     case HysteresisType::EnoughSpaceHysteresis: {
-      auto &enough_space_hysteresis_map =
+      auto& enough_space_hysteresis_map =
           std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
               max_opposite_offset_hysteresis_maps_
                   [HysteresisType::EnoughSpaceHysteresis]);
@@ -875,8 +881,8 @@ void LateralOffsetCalculatorV2::ResetHysteresisMap(HysteresisType type,
                it != enough_space_hysteresis_map.end();) {
             int obstacle_id = it->first.second;
             auto iter = std::find_if(
-                obstacles.begin(), obstacles.end(), [=](const auto &pair) {
-                  const auto &tr = pair.second;  // 获取值
+                obstacles.begin(), obstacles.end(), [=](const auto& pair) {
+                  const auto& tr = pair.second;  // 获取值
                   return lateral_offset_decider::IsCameraObstacle(tr) &&
                          tr->id() == obstacle_id;
                 });
@@ -900,19 +906,19 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
   ResetHysteresisMap(HysteresisType::IsObstacleConsideredHysteresis);
   ResetHysteresisMap(HysteresisType::IsInConsiderLateralRangeHysteresis);
 
-  auto &is_obstacle_considered_hysteresis_map =
+  auto& is_obstacle_considered_hysteresis_map =
       std::get<std::map<int, HysteresisDecision>>(
           max_opposite_offset_hysteresis_maps_
               [HysteresisType::IsObstacleConsideredHysteresis]);
-  auto &is_in_consider_lateral_range_hysteresis_map =
+  auto& is_in_consider_lateral_range_hysteresis_map =
       std::get<std::map<int, HysteresisDecision>>(
           max_opposite_offset_hysteresis_maps_
               [HysteresisType::IsInConsiderLateralRangeHysteresis]);
 
-  const auto &lateral_obstacle =
+  const auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
 
-  const auto &front_obstacles = lateral_obstacle->front_tracks_copy();
+  const auto& front_obstacles = lateral_obstacle->front_tracks_copy();
 
   front_left_max_opposite_offset_ids_.clear();
   front_right_max_opposite_offset_ids_.clear();
@@ -921,7 +927,7 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
 
   for (int i = 0; i < 2; i++) {
     bool is_left = i == 0;
-    for (auto &tr : front_obstacles) {
+    for (auto& tr : front_obstacles) {
       if (!lateral_offset_decider::IsCameraObstacle(tr)) {
         continue;
       }
@@ -956,10 +962,10 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
       }
     }
 
-    const auto &side_obstacles = is_left ? lateral_obstacle->side_tracks_r()
+    const auto& side_obstacles = is_left ? lateral_obstacle->side_tracks_r()
                                          : lateral_obstacle->side_tracks_l();
 
-    for (auto &tr : side_obstacles) {
+    for (auto& tr : side_obstacles) {
       if (!lateral_offset_decider::IsCameraObstacle(tr)) {
         continue;
       }
@@ -995,18 +1001,18 @@ void LateralOffsetCalculatorV2::PreacquireMaxOppositeOffsetIds() {
   }
 }
 void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
-    const AvoidObstacleInfo &avoid_obstacle, int except_id) {
+    const AvoidObstacleInfo& avoid_obstacle, int except_id) {
   avoid_info_.allow_front_max_opposite_offset = kDefaultLimitLateralDistance;
   avoid_info_.allow_side_max_opposite_offset = kDefaultLimitLateralDistance;
   avoid_info_.allow_front_max_opposite_offset_id = kDefaultLimitId;
   avoid_info_.allow_side_max_opposite_offset_id = kDefaultLimitId;
   // InitHysteresisMap(avoid_obstacle);
   double except_lon_area = 1000;
-  const auto &lateral_obstacle =
+  const auto& lateral_obstacle =
       session_->mutable_environmental_model()->get_lateral_obstacle();
 
   // Init enough_space_hysteresis_map
-  auto &enough_space_hysteresis_map =
+  auto& enough_space_hysteresis_map =
       std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
           max_opposite_offset_hysteresis_maps_
               [HysteresisType::EnoughSpaceHysteresis]);
@@ -1019,7 +1025,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
     except_lon_area = except_obstacle->d_s_rel();
   }
 
-  auto &avoid_way_select_hysteresis_map =
+  auto& avoid_way_select_hysteresis_map =
       std::get<std::map<std::pair<int, int>, HysteresisDecision>>(
           max_opposite_offset_hysteresis_maps_[HysteresisType::AvoidWaySelect]);
   if (avoid_obstacle.flag != AvoidObstacleFlag::INVALID) {
@@ -1135,7 +1141,7 @@ void LateralOffsetCalculatorV2::CalcMaxOppositeOffset(
 }
 
 void LateralOffsetCalculatorV2::PostProcess(
-    const std::array<AvoidObstacleInfo, 2> &avoid_obstacles) {
+    const std::array<AvoidObstacleInfo, 2>& avoid_obstacles) {
   if (avoid_info_.avoid_way == AvoidWay::Left ||
       avoid_info_.avoid_way == AvoidWay::Right) {
     bool is_overlap[2] = {false, false};
@@ -1229,6 +1235,105 @@ void LateralOffsetCalculatorV2::PostProcess(
   //   }
   // }
   return;
+}
+
+void LateralOffsetCalculatorV2::PostSmoothLateralOffset(
+    double in_lat_offset,
+    const std::array<AvoidObstacleInfo, 2> avoid_obstacles,
+    const std::array<AvoidObstacleInfo, 2> avd_obstacles_history) {
+  bool is_overlap[2] = {false, false};
+  const double t_buffer = 0.9;
+  if (avoid_obstacles[0].flag != AvoidObstacleFlag::INVALID) {
+    is_overlap[0] = lateral_offset_decider::HasOverlap(
+        session_, avoid_obstacles[0],
+        std::max(t_buffer * (-avoid_obstacles[0].vs_lon_relative), 3.0), 2.0);
+    if (avoid_obstacles[1].flag != AvoidObstacleFlag::INVALID) {
+      is_overlap[1] = lateral_offset_decider::HasOverlap(
+          session_, avoid_obstacles[1],
+          std::max(t_buffer * (-avoid_obstacles[1].vs_lon_relative), 3.0), 2.0);
+    }
+  }
+
+  double overlap_lateral_offset_change_rate = kMaxLateralOffsetChangeRate;
+  if (is_overlap[0] && is_overlap[1]) {
+    if ((avoid_obstacles[0].min_l_to_ref > 0 &&
+         avoid_obstacles[1].min_l_to_ref < 0) ||
+        (avoid_obstacles[0].min_l_to_ref < 0 &&
+         avoid_obstacles[1].min_l_to_ref > 0)) {
+      overlap_lateral_offset_change_rate = 0.01;
+    } else if ((avoid_obstacles[0].min_l_to_ref > 0 &&
+                in_lat_offset > lateral_offset_) ||
+               (avoid_obstacles[0].min_l_to_ref < 0 &&
+                in_lat_offset < lateral_offset_)) {
+      if (lateral_offset_decider::IsTruck(avoid_obstacles[0]) ||
+          lateral_offset_decider::IsTruck(avoid_obstacles[1])) {
+        overlap_lateral_offset_change_rate = 0.01;
+      } else {
+        overlap_lateral_offset_change_rate = 0.02;
+      }
+    }
+  } else if (is_overlap[0]) {
+    if ((avoid_obstacles[0].min_l_to_ref > 0 &&
+         in_lat_offset > lateral_offset_) ||
+        (avoid_obstacles[0].min_l_to_ref < 0 &&
+         in_lat_offset < lateral_offset_)) {
+      if (lateral_offset_decider::IsTruck(avoid_obstacles[0])) {
+        overlap_lateral_offset_change_rate = 0.01;
+      } else {
+        overlap_lateral_offset_change_rate = 0.02;
+      }
+    }
+  } else if (is_overlap[1]) {
+    if ((avoid_obstacles[1].min_l_to_ref > 0 &&
+         in_lat_offset > lateral_offset_) ||
+        (avoid_obstacles[1].min_l_to_ref < 0 &&
+         in_lat_offset < lateral_offset_)) {
+      if (lateral_offset_decider::IsTruck(avoid_obstacles[1])) {
+        overlap_lateral_offset_change_rate = 0.01;
+      } else {
+        overlap_lateral_offset_change_rate = 0.02;
+      }
+    }
+  }
+
+  if (avoid_obstacles[0].flag == AvoidObstacleFlag::INVALID) {
+    if (avd_obstacles_history[0].flag != AvoidObstacleFlag::INVALID &&
+        avd_obstacles_history[0].s_to_ego >= 0) {
+      overlap_lateral_offset_change_rate = 0.01;
+    }
+  }
+
+  const double speed_ratio =
+      kMaxLateralOffsetChangeRate / kMaxChangeRateEgoSpeed;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  double lateral_offset_change_rate =
+      clip(speed_ratio * ego_state_manager->ego_v(),
+           kMaxLateralOffsetChangeRate, 0.);
+  lateral_offset_change_rate =
+      std::min(lateral_offset_change_rate, overlap_lateral_offset_change_rate);
+  lateral_offset_ =
+      clip(in_lat_offset, lateral_offset_ + lateral_offset_change_rate,
+           lateral_offset_ - lateral_offset_change_rate);
+}
+
+void LateralOffsetCalculatorV2::CalLaneWidth() {
+  if (1) {
+    double width = 0.0;
+    double preview_s = 20 + ego_frenet_state_.s();
+    double start_s = 5 + ego_frenet_state_.s();
+    double interval_s = 5;
+    int point_num = 0;
+    for (double s = start_s; s <= preview_s; s += interval_s) {
+      width += flane_->width_by_s(s);
+      point_num += 1;
+    }
+    width /= point_num;
+    static planning_math::MeanFilter width_filter(10);
+    lane_width_ = width_filter.Update(width);
+  } else {
+    lane_width_ = flane_->width();
+  }
 }
 
 void LateralOffsetCalculatorV2::Reset() {

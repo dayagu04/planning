@@ -17,6 +17,7 @@ LateralOffsetDecider::LateralOffsetDecider(
     : Task(config_builder, session) {
   config_ = config_builder->cast<LateralOffsetDeciderConfig>();
   lateral_offset_calculatorv2_ = LateralOffsetCalculatorV2(config_builder);
+  side_nudge_lateral_offset_decider_ = SideNudgeLateralOffsetDecider(session, config_builder);
 }
 
 bool LateralOffsetDecider::Execute() {
@@ -50,16 +51,63 @@ bool LateralOffsetDecider::Execute() {
 
   lateral_offset_calculatorv2_.Process(
       session_, avoid_obstacle_maintainer5v_.avd_obstacles(),
+      avoid_obstacle_maintainer5v_.avd_obstacles_history(),
       avoid_obstacle_maintainer5v_.avd_sp_obstacles(), lane_info_,
       avoid_obstacle_maintainer5v_.dist_rblane(),
       avoid_obstacle_maintainer5v_.flag_avd());
 
-  lat_offset = lateral_offset_calculatorv2_.lat_offset();
-  SmoothLateralOffset(lat_offset);
+  side_nudge_lateral_offset_decider_.Process();
+
+  // lat_offset = lateral_offset_calculatorv2_.lat_offset();
+
+  // SmoothLateralOffset(lat_offset);
+
+  PostProcess();
   GenerateOutput();
 
   SaveDebugInfo();
   return true;
+}
+
+void LateralOffsetDecider::PostProcess() {
+  const auto& front_avoid_info = lateral_offset_calculatorv2_.avoid_info();
+  const auto& side_nudge_info = side_nudge_lateral_offset_decider_.nudge_info();
+  double front_lat_offset = lateral_offset_calculatorv2_.lat_offset();
+  double side_lat_offset = side_nudge_lateral_offset_decider_.lat_offset();
+  const auto side_nudge_state =
+      side_nudge_lateral_offset_decider_.nudge_state();
+
+  double lateral_offset_tmp = front_lat_offset;
+  NudgeDirection front_direction = NudgeDirection::NONE;
+  if (front_avoid_info.avoid_way != AvoidWay::None) {
+    if (front_avoid_info.avoid_way == AvoidWay::Left) {
+      front_direction = NudgeDirection::LEFT;
+    } else if (front_avoid_info.avoid_way == AvoidWay::Right) {
+      front_direction = NudgeDirection::RIGHT;
+    } else if (lateral_offset_ > 0) {
+      front_direction = NudgeDirection::RIGHT;
+    } else if (lateral_offset_ < 0) {
+      front_direction = NudgeDirection::LEFT;
+    }
+  }
+
+  NudgeDirection side_direction = side_nudge_info.nudge_direction;
+  if (side_nudge_info.nudge_direction != NudgeDirection::NONE) {
+    if (front_direction == side_nudge_info.nudge_direction) {
+      lateral_offset_tmp = front_direction == NudgeDirection::LEFT
+                               ? std::min(side_lat_offset, front_lat_offset)
+                               : std::max(side_lat_offset, front_lat_offset);
+    } else if (side_nudge_state != SideNudgeState::CONTROL) {
+      lateral_offset_tmp = front_lat_offset;
+    } else {
+      lateral_offset_tmp = side_lat_offset;
+    }
+  }
+
+  constexpr double lateral_offset_change_rate = 0.05;
+  lateral_offset_ =
+      clip(lateral_offset_tmp, lateral_offset_ + lateral_offset_change_rate,
+           lateral_offset_ - lateral_offset_change_rate);
 }
 
 void LateralOffsetDecider::CheckAvoidObstaclesDecision() {
