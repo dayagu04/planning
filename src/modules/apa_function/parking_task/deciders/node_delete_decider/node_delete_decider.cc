@@ -89,9 +89,12 @@ void NodeDeleteDecider::Process(const NodeDeleteInput input) {
         ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
       pose_bound_.heading_up_bound = M_PIf32 + 1e-5f;
       if (ego_info_under_slot.cur_pose.heading > heading_buffer + 1e-5f) {
-        pose_bound_.heading_down_bound = ego_info_under_slot.cur_pose.heading - heading_buffer;
-      } else if (ego_info_under_slot.cur_pose.heading < -heading_buffer - 1e-5f) {
-        pose_bound_.heading_down_bound = std::fabs(ego_info_under_slot.cur_pose.heading + heading_buffer);
+        pose_bound_.heading_down_bound =
+            ego_info_under_slot.cur_pose.heading - heading_buffer;
+      } else if (ego_info_under_slot.cur_pose.heading <
+                 -heading_buffer - 1e-5f) {
+        pose_bound_.heading_down_bound =
+            std::fabs(ego_info_under_slot.cur_pose.heading + heading_buffer);
       }
     }
 
