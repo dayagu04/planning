@@ -1537,7 +1537,7 @@
     "rear_close_speed_diff_threshold": 1.5,
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
-    "faster_rear_delay_time": 0.2,
+    "faster_rear_delay_time": 0.3,
     "lat_offset_buffer": 0.30,
     "target_lane_rear_cut_in_check_time": 1.6,
     "target_lane_front_cut_in_check_time": 1.6,
