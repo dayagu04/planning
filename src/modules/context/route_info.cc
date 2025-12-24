@@ -2057,11 +2057,49 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   std::vector<std::map<int, double>> exchange_feasible_lane_distances(
       valid_exchange_regions.size());
   int iteration_num = 0;
+  double dis_to_last_split_point = NL_NMAX;
+  double dis_to_last_merge_point = NL_NMAX;
+  double dis_to_last_exchange_point = NL_NMAX;
+  double dis_to_last_specific_point = NL_NMAX;
+  uint64 last_split_link_id = -1;
+  uint64 last_merge_link_id = -1;
+  const double passed_dis = route_info_output_.current_segment_passed_distance;
+
+  if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis,
+                                        &last_split_link_id)) {
+    dis_to_last_exchange_point =
+        std::min(dis_to_last_exchange_point, dis_to_last_split_point);
+  }
+
+  if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point, passed_dis,
+                                        &last_merge_link_id)) {
+    dis_to_last_exchange_point =
+        std::min(dis_to_last_exchange_point, dis_to_last_merge_point);
+  }
   // 开始计算feasible lane和对应的distance
   if (valid_exchange_regions.empty()) {
-    // 认为前方所有车道均可通行，车道数大于3时去除最右侧车道
+    // 认为前方所有车道均可通行
     feasible_lane_sequence.clear();
     feasible_lane_sequence = current_lane_vec;
+    if (mlc_decider_route_info_.first_static_split_region_info.split_link_id !=
+        -1) {
+      last_exchange_region_info_.last_exchange_info =
+          mlc_decider_route_info_.first_static_split_region_info;
+      last_exchange_region_info_.is_process_split =
+          mlc_decider_route_info_.is_process_split;
+      last_exchange_region_info_.is_process_merge =
+          mlc_decider_route_info_.is_process_merge;
+      last_exchange_region_info_.is_process_other_merge =
+          mlc_decider_route_info_.is_process_other_merge;
+      if (dis_to_last_exchange_point <
+              last_exchange_region_info_.last_exchange_info.end_fp_point
+                  .fp_distance_to_split_point) {
+        feasible_lane_sequence.clear();
+        feasible_lane_sequence =
+            last_exchange_region_info_.last_exchange_info.recommend_lane_num[1]
+                .feasible_lane_sequence;
+      }
+    }
     for (int i = 0; i < feasible_lane_sequence.size(); i++) {
       feasible_lane_distance[feasible_lane_sequence[i]] = 3000.0;
     }
@@ -2325,26 +2363,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
         first_exchange_region_info;
   }
   // 判断当前处于的状态
-  double dis_to_last_split_point = NL_NMAX;
-  double dis_to_last_merge_point = NL_NMAX;
-  double dis_to_last_exchange_point = NL_NMAX;
-  double dis_to_last_specific_point = NL_NMAX;
-  uint64 last_split_link_id = -1;
-  uint64 last_merge_link_id = -1;
-  const double passed_dis = route_info_output_.current_segment_passed_distance;
-
-  if (CalculateDistanceToLastSplitPoint(&dis_to_last_split_point, passed_dis,
-                                        &last_split_link_id)) {
-    dis_to_last_exchange_point =
-        std::min(dis_to_last_exchange_point, dis_to_last_split_point);
-  }
-
-  if (CalculateDistanceToLastMergePoint(&dis_to_last_merge_point, passed_dis,
-                                        &last_merge_link_id)) {
-    dis_to_last_exchange_point =
-        std::min(dis_to_last_exchange_point, dis_to_last_merge_point);
-  }
-
   bool is_entery_exchange_region_front =
       first_exchange_region_info.distance_to_split_point <
       std::abs(
