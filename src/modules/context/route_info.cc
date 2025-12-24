@@ -952,7 +952,8 @@ void RouteInfo::CaculateSplitInfo(
                       .start_fp_point.isEmpty() ||
                  !route_info_output_.split_region_info_list[0]
                       .end_fp_point.isEmpty()) &&
-                !route_info_output_.split_region_info_list[0].is_valid) {
+                !route_info_output_.split_region_info_list[0].is_valid &&
+                traverse_num == 1) {
               route_info_output_.split_region_info_list[0]
                   .recommend_lane_num.emplace_back(split_last_link->lane_num(),
                                                    std::vector<int>{});
