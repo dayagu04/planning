@@ -404,7 +404,6 @@ void LongitudinalDecisionDecider::UpdateLaneChangeNeighborResults() {
   const auto target_lane_id = lane_change_decider_output.target_lane_virtual_id;
 
   const auto lane_change_status = lane_change_decider_output.curr_state;
-  JSON_DEBUG_VALUE("lane_change_status", static_cast<int>(lane_change_status))
   JSON_DEBUG_VALUE("gap_front_agent_id", gap_front_agent_id)
   JSON_DEBUG_VALUE("gap_rear_agent_id", gap_rear_agent_id)
 

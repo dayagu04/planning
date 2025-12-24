@@ -27,6 +27,8 @@ public:
 
   virtual const ad_common::sdpromap::SDProMap& get_sdpro_map() = 0;
 
+  virtual const iflymapdata::sdpro::LinkInfo_Link* get_current_link() = 0;
+
  RampDirection CalculateSplitDirection(
      const iflymapdata::sdpro::LinkInfo_Link& split_link,
      const ad_common::sdpromap::SDProMap& sdpro_map) const;

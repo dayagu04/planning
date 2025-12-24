@@ -1699,175 +1699,19 @@ void LaneChangeStateMachineManager::UpdateStateMachineDebugInfo() {
 }
 
 void LaneChangeStateMachineManager::GenerateTurnSignalForSplitRegion() {
-  // fengwang31:hack temp split lane nums is two
-  // 生成转向灯信号的条件：同时满足以下5个条件:
-  // 1、存在两条lane的relative_id为0；
-  // 2、ramp的方向即转向灯信号的方向；
-  // 3、当前自车还在高速路上(NOA模式下);
-  // 4、当前没有生成变道请求。
-  // 5、当前还在主路上，即不在匝道上。
   const auto& function_mode =
       session_->environmental_model().function_info().function_mode();
   const auto& route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
-  const auto& sdpro_map =
-      session_->environmental_model().get_route_info()->get_sdpro_map();
 
   if (function_mode == common::DrivingFunctionInfo::NOA &&
       route_info_output.map_vendor ==
           iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO) {
-    if (!route_info_output.is_ego_on_expressway) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-    double split_start_position = 0.0;
-    if (route_info_output.split_region_info_list.empty()) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-
-    split_start_position = route_info_output.split_region_info_list.front()
-                               .start_fp_point.fp_distance_to_split_point;
-    const auto& start_fp_point =
-        route_info_output.split_region_info_list.front().start_fp_point;
-    const auto& end_fp_point =
-        route_info_output.split_region_info_list.front().end_fp_point;
-
-    if (route_info_output.split_region_info_list.front()
-                .distance_to_split_point +
-            split_start_position >
-        100.0) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-
-    if (!session_->environmental_model().get_route_info()->get_sdmap_valid()) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-    const auto& sd_promap =
-        session_->environmental_model().get_route_info()->get_sdpro_map();
-    const auto* current_link = sd_promap.GetLinkOnRoute(start_fp_point.link_id);
-    if (current_link == nullptr) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-    const auto* next_link = sd_promap.GetLinkOnRoute(end_fp_point.link_id);
-    if (next_link == nullptr) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-
-    bool current_link_is_ramp = sd_promap.isRamp(current_link->link_type()) ||
-                                sd_promap.isSaPa(current_link->link_type());
-
-    bool next_link_is_ramp = sd_promap.isRamp(next_link->link_type()) ||
-                             sd_promap.isSaPa(next_link->link_type());
-    // bool is_goto_highroad_way = true;
-    // for (const auto &successor_id : current_link->successor_link_ids()) {
-    //   if (successor_id == next_link->id()) {
-    //     continue;
-    //   }
-    //   const auto *successor_link = sd_promap.GetLinkOnRoute(successor_id);
-    //   bool succesor_link_is_ramp =
-    //       sd_promap.isRamp(successor_link->link_type()) ||
-    //       sd_promap.isSaPa(successor_link->link_type());
-    //   if (next_link_is_ramp == succesor_link_is_ramp) {
-    //     continue;
-    //   } else if (next_link_is_ramp && !succesor_link_is_ramp) {
-    //     is_goto_highroad_way = false;
-    //     break;
-    //   } else if (!next_link_is_ramp && succesor_link_is_ramp) {
-    //     is_goto_highroad_way = true;
-    //     break;
-    //   }
-    // }
-
-    // if (is_goto_highroad_way) {
-
-    for (const auto& lane_id : start_fp_point.lane_ids) {
-      const auto* lane = sd_promap.GetLaneInfoByID(lane_id);
-      if (lane == nullptr) {
-        continue;
-      }
-      if ((lane->change_type() ==
-               iflymapdata::sdpro::LaneChangeType::LeftTurnExpandingLane ||
-           lane->change_type() == iflymapdata::sdpro::LaneChangeType::
-                                      BothDirectionExpandingLane) &&
-          route_info_output.split_region_info_list.front().split_direction ==
-              SPLIT_LEFT) {
-        road_to_ramp_turn_signal_ = RAMP_ON_LEFT;
-        return;
-      }
-      if ((lane->change_type() ==
-               iflymapdata::sdpro::LaneChangeType::RightTurnExpandingLane ||
-           lane->change_type() == iflymapdata::sdpro::LaneChangeType::
-                                      BothDirectionExpandingLane) &&
-          route_info_output.split_region_info_list.front().split_direction ==
-              SPLIT_RIGHT) {
-        road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
-        return;
-      }
-    }
-    road_to_ramp_turn_signal_ = RAMP_NONE;
-    return;
-    // } else {
-    // road_to_ramp_turn_signal_ = route_info_output.ramp_direction;
-    // }
-    // return;
+    road_to_ramp_turn_signal_ = CalcTurnSignalForTencentSplitRegion();
   } else if (function_mode == common::DrivingFunctionInfo::NOA &&
              route_info_output.map_vendor ==
                  iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD) {
-    const auto virtual_lane_manager =
-        session_->environmental_model().get_virtual_lane_manager();
-
-    if (virtual_lane_manager == nullptr) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-    const auto reference_path_manager =
-        session_->environmental_model().get_reference_path_manager();
-    if (reference_path_manager == nullptr) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-      return;
-    }
-    int origin_relative_id_zero_nums =
-        virtual_lane_manager->origin_relative_id_zero_nums();
-    bool is_ego_on_expressway = route_info_output.is_ego_on_expressway;
-    JSON_DEBUG_VALUE("origin_relative_id_zero_nums",
-                     origin_relative_id_zero_nums);
-    // overlap_lane_virtual_id_ =
-    virtual_lane_manager->current_lane_virtual_id();
-    bool is_off_turn_signal = false;
-    if (origin_relative_id_zero_nums > 1) {
-      RampDirection ramp_direction = RAMP_NONE;
-      if (IsSplitRegion(&ramp_direction)) {
-        if (is_ego_on_expressway &&
-            transition_info_.lane_change_status == kLaneKeeping) {
-          if (ramp_direction == RAMP_ON_RIGHT) {
-            road_to_ramp_turn_signal_ = RAMP_ON_RIGHT;
-          } else if (ramp_direction == RAMP_ON_LEFT) {
-            road_to_ramp_turn_signal_ = RAMP_ON_LEFT;
-          } else {
-            road_to_ramp_turn_signal_ = RAMP_NONE;
-          }
-        }
-      }
-    } else {
-      if (road_to_ramp_turn_signal_ != RAMP_NONE &&
-          IsOffTurnLight(road_to_ramp_turn_signal_)) {
-        road_to_ramp_turn_signal_ = RAMP_NONE;
-        is_off_turn_signal = true;
-      }
-    }
-    const auto distance_to_toll_station =
-        route_info_output.distance_to_toll_station;
-    const auto distance_to_route_end = route_info_output.distance_to_route_end;
-    // 接近收费站或者终点时，抑制分流点的判断
-    if (distance_to_toll_station < 400 || distance_to_route_end < 400) {
-      road_to_ramp_turn_signal_ = RAMP_NONE;
-    }
-    return;
+    road_to_ramp_turn_signal_ = CalcTurnSignalForBaiduSplitRegion();
   } else {
     road_to_ramp_turn_signal_ = RAMP_NONE;
     return;
@@ -5632,5 +5476,246 @@ bool LaneChangeStateMachineManager::IsSideClear(int front_agent_id,
     }
   }
   return true;
+}
+
+bool LaneChangeStateMachineManager::IsExistExtendLane(
+    const iflymapdata::sdpro::Lane* lane, bool is_rightest_lane) const {
+  if (lane == nullptr) {
+    return false;
+  }
+  const iflymapdata::sdpro::Lane* succesor_add_lane = nullptr;
+  const iflymapdata::sdpro::Lane* iterator_lane = lane;
+  double sum_dis = 0.0;
+  
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return false;
+  }
+  const auto& sd_promap = route_info->get_sdpro_map();
+  const auto& route_info_output = route_info->get_route_info_output();
+
+  while (iterator_lane) {
+    if (iterator_lane->id() == lane->id()) {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01 -
+                route_info_output.current_segment_passed_distance;
+    } else {
+      sum_dis = sum_dis + iterator_lane->length() * 0.01;
+    }
+
+    if (sum_dis > 100.0) {
+      break;
+    }
+
+    if (iterator_lane->successor_lane_ids_size() > 1) {
+      succesor_add_lane = iterator_lane;
+      break;
+    }
+
+    if (iterator_lane->successor_lane_ids().empty()) {
+      return false;
+    }
+
+    iterator_lane =
+        sd_promap.GetLaneInfoByID(iterator_lane->successor_lane_ids()[0]);
+  }
+
+  if (succesor_add_lane == nullptr) {
+    return false;
+  }
+
+  for (const auto& lane_id : succesor_add_lane->successor_lane_ids()) {
+    const auto& lane_info = sd_promap.GetLaneInfoByID(lane_id);
+    if (lane_info == nullptr) {
+      continue;
+    }
+
+    if (is_rightest_lane) {
+      if (lane_info->lane_transiton() ==
+          iflymapdata::sdpro::LTS_LANE_ADD_RIGHT) {
+        return true;
+      }
+    } else {
+      if (lane_info->lane_transiton() ==
+          iflymapdata::sdpro::LTS_LANE_ADD_LEFT) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
+LaneChangeStateMachineManager::CalculateLeftestRightestLane(
+    const iflymapdata::sdpro::LinkInfo_Link* link) const {
+  if (link == nullptr) {
+    return {nullptr, nullptr};
+  }
+
+  const iflymapdata::sdpro::Lane* leftest_lane = nullptr;
+  const iflymapdata::sdpro::Lane* rightest_lane = nullptr;
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return {nullptr, nullptr};
+  }
+  const auto& sd_promap = route_info->get_sdpro_map();
+
+  std::vector<std::pair<const iflymapdata::sdpro::Lane*, int>>
+      valid_lane_sequence;
+  for (const auto& lane_id : link->lane_ids()) {
+    const iflymapdata::sdpro::Lane* lane_info =
+        sd_promap.GetLaneInfoByID(lane_id);
+    if (lane_info == nullptr) {
+      continue;
+    }
+
+    for (const auto& lane_type : lane_info->lane_type()) {
+      if (lane_type == iflymapdata::sdpro::LAT_EMERGENCY) {
+        continue;
+      }
+    }
+
+    for (const auto& lane_type : lane_info->lane_type()) {
+      if (lane_type == iflymapdata::sdpro::LAT_DIVERSION) {
+        continue;
+      }
+    }
+
+    valid_lane_sequence.emplace_back(lane_info, lane_info->sequence());
+  }
+
+  if (valid_lane_sequence.empty()) {
+    return {nullptr, nullptr};
+  }
+
+  // 按sequence排序
+  std::sort(valid_lane_sequence.begin(), valid_lane_sequence.end(),
+            [](const auto& a, const auto& b) { return a.second < b.second; });
+
+  rightest_lane = valid_lane_sequence.front().first;
+  leftest_lane = valid_lane_sequence.back().first;
+
+  return {leftest_lane, rightest_lane};
+}
+
+RampDirection
+LaneChangeStateMachineManager::CalcTurnSignalForTencentSplitRegion() const {
+  const auto& function_mode =
+      session_->environmental_model().function_info().function_mode();
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return RAMP_NONE;
+  }
+  const auto& route_info_output = route_info->get_route_info_output();
+  const auto& sdpro_map = route_info->get_sdpro_map();
+
+  if (function_mode != common::DrivingFunctionInfo::NOA ||
+      route_info_output.map_vendor !=
+          iflymapdata::sdpro::MAP_VENDOR_TENCENT_SD_PRO ||
+      !route_info_output.is_ego_on_expressway ||
+      route_info_output.split_region_info_list.empty()) {
+    return RAMP_NONE;
+  }
+
+  double split_start_position = 0.0;
+
+  split_start_position = route_info_output.split_region_info_list.front()
+                             .start_fp_point.fp_distance_to_split_point;
+  const auto& start_fp_point =
+      route_info_output.split_region_info_list.front().start_fp_point;
+  const auto& end_fp_point =
+      route_info_output.split_region_info_list.front().end_fp_point;
+
+  if (route_info_output.split_region_info_list.front().distance_to_split_point +
+          split_start_position >
+      100.0) {
+    return RAMP_NONE;
+  }
+
+  if (!route_info->get_sdmap_valid()) {
+    return RAMP_NONE;
+  }
+  const auto& sd_promap =
+      route_info->get_sdpro_map();
+  const auto* current_link = sd_promap.GetLinkOnRoute(start_fp_point.link_id);
+  if (current_link == nullptr) {
+    return RAMP_NONE;
+  }
+  const auto* next_link = sd_promap.GetLinkOnRoute(end_fp_point.link_id);
+  if (next_link == nullptr) {
+    return RAMP_NONE;
+  }
+
+  bool current_link_is_ramp = sd_promap.isRamp(current_link->link_type()) ||
+                              sd_promap.isSaPa(current_link->link_type());
+
+  bool next_link_is_ramp = sd_promap.isRamp(next_link->link_type()) ||
+                           sd_promap.isSaPa(next_link->link_type());
+
+  for (const auto& lane_id : start_fp_point.lane_ids) {
+    const auto* lane = sd_promap.GetLaneInfoByID(lane_id);
+    if (lane == nullptr) {
+      continue;
+    }
+    if ((lane->change_type() ==
+             iflymapdata::sdpro::LaneChangeType::LeftTurnExpandingLane ||
+         lane->change_type() ==
+             iflymapdata::sdpro::LaneChangeType::BothDirectionExpandingLane) &&
+        route_info_output.split_region_info_list.front().split_direction ==
+            SPLIT_LEFT) {
+      return RAMP_ON_LEFT;
+    }
+    if ((lane->change_type() ==
+             iflymapdata::sdpro::LaneChangeType::RightTurnExpandingLane ||
+         lane->change_type() ==
+             iflymapdata::sdpro::LaneChangeType::BothDirectionExpandingLane) &&
+        route_info_output.split_region_info_list.front().split_direction ==
+            SPLIT_RIGHT) {
+      return RAMP_ON_RIGHT;
+    }
+  }
+
+  return RAMP_NONE;
+}
+
+RampDirection
+LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
+  const auto& function_mode =
+      session_->environmental_model().function_info().function_mode();
+  const auto& route_info = session_->environmental_model().get_route_info();
+  if (route_info == nullptr) {
+    return RAMP_NONE;
+  }
+  const auto& route_info_output = route_info->get_route_info_output();
+
+  if (function_mode != common::DrivingFunctionInfo::NOA ||
+      route_info_output.map_vendor != iflymapdata::sdpro::MAP_VENDOR_BAIDU_LD ||
+      !route_info_output.is_ego_on_expressway ||
+      route_info_output.split_region_info_list.empty()) {
+    return RAMP_NONE;
+  }
+
+  const auto& current_link = route_info->get_current_link();
+  if (!current_link) {
+    return RAMP_NONE;
+  }
+
+  const auto& [leftest_lane, rightest_lane] =
+      CalculateLeftestRightestLane(current_link);
+
+  // 判断前方100m内是否有1分2的extend车道
+  bool is_rightest_extend_lane = IsExistExtendLane(rightest_lane, true);
+  bool is_leftest_extend_lane = IsExistExtendLane(leftest_lane, false);
+
+  if (is_rightest_extend_lane &&
+      route_info_output.split_region_info_list.front().split_direction ==
+          SPLIT_RIGHT) {
+    return RAMP_ON_RIGHT;
+  } else if (is_leftest_extend_lane &&
+             route_info_output.split_region_info_list.front().split_direction ==
+                 SPLIT_LEFT) {
+    return RAMP_ON_LEFT;
+  }
+
+  return RAMP_NONE;
 }
 }  // namespace planning
