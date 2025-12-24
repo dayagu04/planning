@@ -5602,16 +5602,26 @@ LaneChangeStateMachineManager::CalculateLeftestRightestLane(
       continue;
     }
 
+    bool is_exist_emergency_lane = false;
     for (const auto& lane_type : lane_info->lane_type()) {
       if (lane_type == iflymapdata::sdpro::LAT_EMERGENCY) {
-        continue;
+        is_exist_emergency_lane = true;
+        break;
       }
     }
+    if (is_exist_emergency_lane) {
+      continue;
+    }
 
+    bool is_exist_diversion_lane = false;
     for (const auto& lane_type : lane_info->lane_type()) {
       if (lane_type == iflymapdata::sdpro::LAT_DIVERSION) {
-        continue;
+        is_exist_diversion_lane = true;
+        break;
       }
+    }
+    if (is_exist_diversion_lane) {
+      continue;
     }
 
     valid_lane_sequence.emplace_back(lane_info, lane_info->sequence());
