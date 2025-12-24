@@ -4598,35 +4598,41 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
   std::vector<int> on_excr_feasible_lane;
   std::vector<int> before_excr_feasible_lane;
   std::vector<int> succerssor_excr_feasible_lane;
+  int last_other_seg_lane_num = 0;
+  const auto& merge_seg_last_seg =
+      sdpro_map_.GetPreviousLinkOnRoute(split_region_info->split_link_id);
+  const auto& merge_seg =
+      sdpro_map_.GetLinkOnRoute(split_region_info->split_link_id);
+  if (merge_seg_last_seg && merge_seg) {
+    if (merge_seg->predecessor_link_ids().size() >= 2) {
+      const auto& merge_seg_last_other_seg_id =
+          merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
+              ? merge_seg->predecessor_link_ids()[1]
+              : merge_seg->predecessor_link_ids()[0];
+      const auto& merge_seg_last_other_seg =
+          sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
+      if (merge_seg_last_other_seg) {
+        last_other_seg_lane_num = merge_seg_last_other_seg->lane_num();
+      }
+    }
+  }
   // TODO(fengwang31:需要考虑是否有merge lane的情况)
   if (is_merge_right) {
     // 现在假设交换区终点后的lane都是由交换区分出来的，所以交换区的lane数为on_exclnum
     // = successor_exclnum + successor_other_exclnum
     // 通常认为右边是从主路分出去的路，因此增加的车道属于是右边增加了
-    if (on_exclnum == successor_exclnum) {
+    if (on_exclnum >= successor_exclnum) {
       // 目前假定都是从右边往左边汇入，所以都行驶到左边的车道上去
       // TODO(fengwang31):后续需要考虑左边的车道是否会收窄，如果会的话，则不能继续往左边汇
-      int last_other_seg_lane_num = 0;
-      const auto& merge_seg_last_seg =
-          sdpro_map_.GetPreviousLinkOnRoute(split_region_info->split_link_id);
-      const auto& merge_seg =
-          sdpro_map_.GetLinkOnRoute(split_region_info->split_link_id);
-      if (merge_seg_last_seg && merge_seg) {
-        if (merge_seg->predecessor_link_ids().size() >= 2) {
-          const auto& merge_seg_last_other_seg_id =
-              merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
-                  ? merge_seg->predecessor_link_ids()[1]
-                  : merge_seg->predecessor_link_ids()[0];
-          const auto& merge_seg_last_other_seg =
-              sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
-          if (merge_seg_last_other_seg) {
-            last_other_seg_lane_num = merge_seg_last_other_seg->lane_num();
-          }
-        }
-      }
       if (last_other_seg_lane_num != 0) {
         for (int i = 0; i < last_other_seg_lane_num; ++i) {
           on_excr_feasible_lane.emplace_back(i + 1);
+        }
+        for (int i = 1; i <= (on_exclnum - last_other_seg_lane_num); ++i) {
+          mlc_request_info_.emplace_back(
+              MLCRequestType{.lane_num = last_other_seg_lane_num + i,
+                             .mlc_request_type = RAMP_TO_MAIN,
+                             .split_direction = SPLIT_LEFT});
         }
       } else {
         if (successor_exclnum <= 1) {
@@ -4638,6 +4644,10 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
             on_excr_feasible_lane.emplace_back(i + 1);
           }
         }
+        mlc_request_info_.emplace_back(
+            MLCRequestType{.lane_num = successor_exclnum + 1,
+                           .mlc_request_type = RAMP_TO_MAIN,
+                           .split_direction = SPLIT_LEFT});
       }
       if (last_other_seg_lane_num + before_exclnum == on_exclnum) {
         for (int i = 0; i < before_exclnum; i++) {
@@ -4645,21 +4655,6 @@ bool RouteInfo::CalculateMergeRegionFeasibleLane(
         }
       } else {
         before_excr_feasible_lane.emplace_back(1);
-      }
-      mlc_request_info_.emplace_back(
-          MLCRequestType{.lane_num = on_exclnum + 1,
-                         .mlc_request_type = RAMP_TO_MAIN,
-                         .split_direction = SPLIT_LEFT});
-    } else if (on_exclnum > successor_exclnum) {
-      for (int i = 0; i < successor_exclnum; ++i) {
-        on_excr_feasible_lane.emplace_back(i + 1);
-      }
-      before_excr_feasible_lane.emplace_back(1);
-      for (int i = 1; i <= (on_exclnum - successor_exclnum); ++i) {
-        mlc_request_info_.emplace_back(
-            MLCRequestType{.lane_num = successor_exclnum + i,
-                           .mlc_request_type = RAMP_TO_MAIN,
-                           .split_direction = SPLIT_LEFT});
       }
     }
   } else if (is_merge_left && (split_region_info->merge_type == LEFT_MERGE ||
