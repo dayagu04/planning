@@ -389,8 +389,13 @@ const bool NodeDeleteDecider::CheckCollision() {
       const float slot_x = input_.ego_info_under_slot.slot
                                .processed_corner_coord_local_.pt_01_mid.x();
 
-      const float mirror_x =
+      float mirror_x =
           pt_line.back().GetX() + param.lon_dist_mirror_to_rear_axle;
+
+      if (input_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+        mirror_x = pt_line.back().GetX() - param.lon_dist_mirror_to_rear_axle;
+      }
 
       const float lower_x =
           slot_x + param.smart_fold_mirror_params.x_down_offset;
@@ -737,14 +742,24 @@ const GradeColDetBufferType NodeDeleteDecider::GetGradeBufferType(
   // 0->out_slot  1->entrance_slot 2->in_slot
   int slot_type = 0;
   if (input_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN ||
-      input_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     if (slot_entrance_box_.IsContain(pt.pos) &&
-        std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 23.68f) {
+        std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 23.86f) {
       slot_type = 1;
     } else if (slot_box_.IsContain(pt.pos)) {
       if (std::fabs(pt.GetTheta()) * common_math::kRad2DegF < 23.86f) {
+        slot_type = 2;
+      } else {
+        slot_type = 1;
+      }
+    }
+  } else if (input_.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    if (slot_entrance_box_.IsContain(pt.pos) &&
+        std::fabs(pt.GetTheta()) * common_math::kRad2DegF < 180.0f - 23.86f) {
+      slot_type = 1;
+    } else if (slot_box_.IsContain(pt.pos)) {
+      if (std::fabs(pt.GetTheta()) * common_math::kRad2DegF > 180.0f - 23.86f) {
         slot_type = 2;
       } else {
         slot_type = 1;
