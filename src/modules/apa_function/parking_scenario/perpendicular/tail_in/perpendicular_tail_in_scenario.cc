@@ -1167,8 +1167,9 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
         GetAstarSteerFromSegSteer(apa_world_ptr_->GetSimuParam().ref_steer);
   }
 
-  request.pre_search_mode = apa_world_ptr_->GetSimuParam().pre_search_mode;
-  request.decide_cul_de_sac = apa_world_ptr_->GetSimuParam().decide_cul_de_sac;
+  request.pre_search_mode = param.pre_search_mode;
+  request.decide_cul_de_sac = param.enable_decide_cul_de_sac;
+  request.enable_interesting_search_area = param.enable_interesting_search_area;
 
   if (request.replan_reason == ReplanReason::SLOT_CRUISING) {
     // searching_stage

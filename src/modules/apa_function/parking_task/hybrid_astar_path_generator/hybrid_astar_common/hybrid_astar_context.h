@@ -56,6 +56,7 @@ struct HybridAStarRequest {
 
   int pre_search_mode = 1;
   bool decide_cul_de_sac = true;
+  bool enable_interesting_search_area = true;
 
   bool mirror_has_folded_flag = false;
   bool enable_smart_fold_mirror = false;
