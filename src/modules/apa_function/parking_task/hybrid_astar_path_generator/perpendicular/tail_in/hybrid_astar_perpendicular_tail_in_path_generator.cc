@@ -1176,16 +1176,8 @@ void HybridAStarPerpendicularTailInPathGenerator::ChooseBestCurveNode(
       cost.cur_gear_switch_pose_cost = CalcGearChangePoseCost(
           gear_switch_pose, cur_gear, gear_change_penalty, length_penalty);
 
-      if (cur_gear != request_.inital_action_request.ref_gear) {
-        cost.cur_gear_switch_pose_cost +=
-            (gear_change_penalty + length_penalty);
-      }
-
-      if ((temp_node.GetCurKappa() > 0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::RIGHT) ||
-          (temp_node.GetCurKappa() < -0.001f &&
-           request_.inital_action_request.ref_steer == AstarPathSteer::LEFT)) {
-        cost.cur_gear_switch_pose_cost += 0.3f * length_penalty;
+      if (std::fabs(temp_node.GearSwitchNode()->GetKappa()) > 0.001f) {
+        cost.cur_gear_switch_pose_cost += 0.6f * length_penalty;
       }
 
       if (request_.adjust_pose) {
