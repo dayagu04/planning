@@ -40,8 +40,8 @@ namespace apa_planner {
 #define PLOT_ALL_SUCCESS_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
 #define PLOT_ALL_BEST_CURVE_PATH (1)
 #define PLOT_ALL_BEST_CURVE_PATH_FIRST_GEAR_SWITCH_POSE (0)
-#define DEBUG_PARENT_NODE_MAX_NUM (10)
-#define DEBUG_CHILD_NODE_MAX_NUM (50000)
+#define DEBUG_PARENT_NODE_MAX_NUM (20)
+#define DEBUG_CHILD_NODE_MAX_NUM (500)
 #define DEBUG_NODE_GEAR_SWITCH_NUMBER (30)
 #define ENABLE_OBS_DIST_G_COST (0)
 #define ENABLE_HEADING_DIFF_G_COST (0)
@@ -700,7 +700,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     if (explored_node_num < DEBUG_PARENT_NODE_MAX_NUM) {
       ILOG_INFO << "============== main cycle =========== ";
       ILOG_INFO << "explored_node_num " << explored_node_num
-                << " open set size for now " << open_pq_.size();
+                << " open set size for now " << open_pq_.size()
+                << "  cur_node_info:";
       current_node->DebugString();
     }
 #endif
@@ -761,15 +762,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
                 << "  search time = " << search_continue_time << "ms";
 #endif
 
-#if PLOT_CHILD_NODE
-      // if node is gear switch point, plot it also.
-      if (curve_node_to_goal.GearSwitchNode() != nullptr) {
-        child_node_debug_.emplace_back(DebugAstarSearchPoint(
-            curve_node_to_goal.GearSwitchNode()->GetX(),
-            curve_node_to_goal.GearSwitchNode()->GetY(), true, true));
-      }
-#endif
-
 #if USE_PATH_COMPARE
       if (path_compare_decider.Compare(&request_, &best_curve_node_to_goal,
                                        &curve_node_to_goal)) {
@@ -782,7 +774,7 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
         if (analytic_expansion_request.type ==
             AnalyticExpansionType::LINK_POSE_LINE) {
-          lpl_path_.path_pt_vec_vec.clear();
+          lpl_path_.ptss.clear();
           best_curve_node_to_goal.SetLPLPath(lpl_path_);
         }
 
@@ -829,7 +821,8 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
         ILOG_INFO << "~~~~~~~~~~ child node cycle ~~~~~~~~~";
         ILOG_INFO << "open set size " << open_pq_.size()
-                  << ", gear change num:" << current_node->GetGearSwitchNum();
+                  << ",  gear change num:" << current_node->GetGearSwitchNum()
+                  << ",  new node info:";
         new_node.DebugString();
       }
 #endif
@@ -908,27 +901,18 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
       }
 
       if (CheckNodeShouldDelete(node_del_request)) {
-        node_del_reason = node_delete_decider_.GetNodeDeleteReason();
-        // PrintNodeDeleteReason(node_del_reason, true);
+#if DEBUG_CHILD_NODE
+        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+          PrintNodeDeleteReason(node_delete_decider_.GetNodeDeleteReason(),
+                                true);
+        }
+#endif
 
 #if PLOT_DELETE_NODE
-        if (node_del_reason != NodeDeleteReason::PARENT_NODE) {
-          delete_queue_path_debug_.emplace_back(
-              Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
-        }
+        delete_queue_path_debug_.emplace_back(
+            Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
 #endif
 
-        if (node_del_reason == NodeDeleteReason::COLLISION) {
-#if PLOT_CHILD_NODE
-          // if node is unsafe, plot it also.
-          int gear_switch_num = new_node.GetGearSwitchNum();
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM &&
-              gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
-            child_node_debug_.emplace_back(
-                DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), false));
-          }
-#endif
-        }
         continue;
       }
 
@@ -956,12 +940,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
       // check null, it node pool is already full
       if (next_node_in_pool == nullptr) {
-        // ILOG_INFO << "node size = " << node_pool_.PoolSize()
-        //           << "  node_set_.find(new_node.GetGlobalID()) == "
-        //              "node_set_.end() = "
-        //           << (node_set_.find(new_node.GetGlobalID()) ==
-        //               node_set_.end());
-        // ILOG_INFO << " next node is null";
+#if DEBUG_CHILD_NODE
+        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+          ILOG_INFO << "node size = " << node_pool_.PoolSize()
+                    << "  node_set_.find(new_node.GetGlobalID()) == "
+                       "node_set_.end() = "
+                    << (node_set_.find(new_node.GetGlobalID()) ==
+                        node_set_.end());
+          ILOG_INFO << " next node is null";
+        }
+#endif
         continue;
       }
 
@@ -986,10 +974,10 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 
 #if DEBUG_CHILD_NODE
       if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-        ILOG_INFO << "  vis type " << static_cast<int>(vis_type)
+        ILOG_INFO << "  vis type "
+                  << GetAstarNodeVisitedTypeDebugString(vis_type)
                   << " new node g " << new_node.GetGCost() << " pool node g "
-                  << next_node_in_pool->GetGCost()
-                  << " ,safe dist: " << new_node.GetDistToObs();
+                  << next_node_in_pool->GetGCost();
       }
 #endif
 
@@ -1004,13 +992,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
             std::make_pair(next_node_in_pool->GetFCost(), next_node_in_pool)));
 
         node_set_.emplace(next_node_in_pool->GetGlobalID(), next_node_in_pool);
-
-#if DEBUG_CHILD_NODE
-        if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-          ILOG_INFO << "old node visit type is NOT_VISITED";
-          next_node_in_pool->DebugCost();
-        }
-#endif
       }
 
       else if (vis_type == AstarNodeVisitedType::IN_OPEN) {
@@ -1027,13 +1008,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           // put node in open set again and record it.
           next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
               next_node_in_pool->GetFCost(), next_node_in_pool)));
-
-#if DEBUG_CHILD_NODE
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-            ILOG_INFO << "node has in open";
-            next_node_in_pool->DebugCost();
-          }
-#endif
         }
       }
 
@@ -1045,6 +1019,13 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
 #if PLOT_DELETE_NODE
             delete_queue_path_debug_.emplace_back(
                 Eigen::Vector2d(new_node.GetX(), new_node.GetY()));
+#endif
+
+#if DEBUG_CHILD_NODE
+            if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+              PrintNodeDeleteReason(node_delete_decider_.GetNodeDeleteReason(),
+                                    true);
+            }
 #endif
             continue;
           }
@@ -1058,24 +1039,16 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
           // put node in open set again and record it.
           next_node_in_pool->SetMultiMapIter(open_pq_.insert(std::make_pair(
               next_node_in_pool->GetFCost(), next_node_in_pool)));
-
-#if DEBUG_CHILD_NODE
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
-            ILOG_INFO << "node has in close";
-            next_node_in_pool->DebugCost();
-          }
-#endif
-
-#if PLOT_CHILD_NODE
-          int gear_switch_num = new_node.GetGearSwitchNum();
-          if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM &&
-              gear_switch_num <= DEBUG_NODE_GEAR_SWITCH_NUMBER) {
-            child_node_debug_.emplace_back(
-                DebugAstarSearchPoint(new_node.GetX(), new_node.GetY(), true));
-          }
-#endif
         }
       }
+
+#if DEBUG_CHILD_NODE
+      if (gen_child_node_num < DEBUG_CHILD_NODE_MAX_NUM) {
+        ILOG_INFO << "old node visit type:"
+                  << GetAstarNodeVisitedTypeDebugString(vis_type);
+        next_node_in_pool->DebugCost();
+      }
+#endif
     }
   }
 

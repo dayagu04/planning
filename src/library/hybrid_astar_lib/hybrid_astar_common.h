@@ -611,4 +611,6 @@ const bool IsPathGearSameWithRequest(const AstarPathGear type,
 
 const ParkingVehDirection GetParkDir(const int dir);
 
+const std::string GetAstarNodeVisitedTypeDebugString(const AstarNodeVisitedType type);
+
 }  // namespace planning
