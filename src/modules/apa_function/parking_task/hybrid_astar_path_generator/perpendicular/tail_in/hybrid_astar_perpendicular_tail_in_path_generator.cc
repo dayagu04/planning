@@ -506,11 +506,12 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   node_del_input.path_col_det_buffer = path_col_det_buffer;
   node_del_input.sample_ds = request_.sample_ds;
   node_del_input.swap_start_goal = request_.swap_start_goal;
-  node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   if (request_.search_mode == SearchMode::FORMAL) {
     node_del_input.need_cal_obs_dist = true;
+    node_del_input.enable_smart_fold_mirror = request_.enable_smart_fold_mirror;
   } else {
     node_del_input.need_cal_obs_dist = false;
+    node_del_input.enable_smart_fold_mirror = false;
   }
 
   node_delete_decider_.Process(node_del_input);
