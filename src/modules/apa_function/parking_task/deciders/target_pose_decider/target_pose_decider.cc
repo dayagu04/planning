@@ -139,8 +139,13 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularTailIn() {
     lat_move_dir = slot_.origin_corner_coord_local_.pt_01_unit_vec;
   }
 
-  ApaObsMovementType consider_obs_movement_type = ApaObsMovementType::ALL;
-  if (!is_searching_stage_) {
+  ApaObsMovementType consider_obs_movement_type;
+  if (is_searching_stage_) {
+    consider_obs_movement_type = ApaObsMovementType::ALL;
+    if (slot_.is_selected_) {
+      consider_obs_movement_type = ApaObsMovementType::STATIC;
+    }
+  } else {
     consider_obs_movement_type = ApaObsMovementType::STATIC;
   }
 
