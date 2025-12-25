@@ -696,6 +696,8 @@ bool SccLateralObstacleDecider::IsAvoidable(
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
 
+  double potential_near_car_v_ub = config_.potential_near_car_v_ub;
+  double potential_near_car_v_lb = config_.potential_near_car_v_lb;
   bool is_same_side =
       (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_max_cpath() > 0 ||
        frenet_obstacle.d_min_cpath() <= 0 &&
@@ -713,22 +715,19 @@ bool SccLateralObstacleDecider::IsAvoidable(
   if (IsTruck(frenet_obstacle)) {
     distance_to_center_line_thre += config_.extra_truck_lat_buffer;
     potential_dist_limit += config_.extra_truck_lat_buffer;
+  } else {
+    potential_near_car_v_lb = -0.1;
   }
   // need avoid flag
   bool is_need_avoid =
-      (frenet_obstacle.d_max_cpath() < 0 &&
-       std::fabs(frenet_obstacle.d_max_cpath()) <
-           distance_to_center_line_thre) ||
-      (frenet_obstacle.d_min_cpath() > 0 &&
-       frenet_obstacle.d_min_cpath() < distance_to_center_line_thre) ||
-      (frenet_obstacle.d_max_cpath() < 0 &&
-       std::fabs(frenet_obstacle.d_max_cpath()) < potential_dist_limit &&
-       v_lat < config_.potential_near_car_v_lb &&
-       v_lat > config_.potential_near_car_v_ub) ||
-      (frenet_obstacle.d_min_cpath() > 0 &&
-       frenet_obstacle.d_min_cpath() < potential_dist_limit &&
-       v_lat < config_.potential_near_car_v_lb &&
-       v_lat > config_.potential_near_car_v_ub);
+      (frenet_obstacle.d_max_cpath() < 0 && std::fabs(frenet_obstacle.d_max_cpath()) < distance_to_center_line_thre) ||
+      (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_min_cpath() < distance_to_center_line_thre) ||
+      (frenet_obstacle.d_max_cpath() < 0 && std::fabs(frenet_obstacle.d_max_cpath()) < potential_dist_limit &&
+        v_lat < potential_near_car_v_lb &&
+        v_lat > potential_near_car_v_ub) ||
+      (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_min_cpath() < potential_dist_limit &&
+        v_lat < potential_near_car_v_lb &&
+        v_lat > potential_near_car_v_ub);
 
   // can avoid flag
   bool can_avoid =
