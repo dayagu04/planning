@@ -2507,10 +2507,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       merge_point_direction = split_dir;
     }
 
+    mlc_request_info_.clear();
     for (const auto& [lane_num, split_dir] : merge_lane) {
       auto it = std::find(feasible_lane_sequence.begin(),
                           feasible_lane_sequence.end(), lane_num);
-
       mlc_request_info_.emplace_back(
           MLCRequestType{.lane_num = lane_num,
                          .mlc_request_type = RAMP_TO_MAIN,
