@@ -1121,7 +1121,7 @@ bool ParallelLongitudinalAvoidDecider::CheckLeadAndTargetIsTruck(
   const double lead_target_distance = cipv_info.relative_s();
   if (lead_target_distance >= ego_init_point.v * kLeadTargetStartTimeHeadwayS +
                                   kLeadTargetTrucksBufferM ||
-      lead_target_distance > kMaxDistanceM) {
+      lead_target_distance > kMaxDistanceM || cipv_info.v_frenet() > ego_init_point.v) {
     return false;
   }
 
@@ -1223,7 +1223,7 @@ bool ParallelLongitudinalAvoidDecider::
   const double lead_target_distance = cipv_info.relative_s();
   if (lead_target_distance >= ego_init_point.v * kLeadTargetExitTimeHeadwayS +
                                   kLeadTargetTrucksBufferM ||
-      lead_target_distance > kExitMaxDistanceM) {
+      lead_target_distance > kExitMaxDistanceM || cipv_info.v_frenet() > ego_init_point.v + 2.0) {
     return true;
   }
 
