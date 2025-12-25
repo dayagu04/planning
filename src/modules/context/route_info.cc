@@ -2234,6 +2234,9 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       bool is_not_merge = !valid_exchange_regions[i].is_ramp_merge &&
                           !valid_exchange_regions[i].is_other_merge_to_road;
 
+      if (valid_exchange_regions[i].is_ramp_merge) {
+        break;
+      }
       if ((valid_exchange_regions[i].is_ramp_split && is_not_merge) ||
           (valid_exchange_regions[i].split_direction == SPLIT_RIGHT &&
            is_not_merge &&
