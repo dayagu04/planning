@@ -69,7 +69,9 @@ double CongestionDetector::CalculateDensity() const {
   double effective_length =
       agent_node_.back()->node_s() - agent_node_.front()->node_s();
 
-  return (agent_node_.size() / effective_length) * 1000.0;  // 转换为辆/公里
+  return agent_node_.size() > 2
+             ? (agent_node_.size() / effective_length) * 1000.0
+             : 0.0;  // 转换为辆/公里
 }
 
 double CongestionDetector::CalculateAverageSpeed() const {
