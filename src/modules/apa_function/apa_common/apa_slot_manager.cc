@@ -86,6 +86,10 @@ void ApaSlotManager::Update(
       slot.slot_source_type_ = SlotSourceType::SELF_DEFINE;
     }
 
+    if (slot.GetId() == select_slot_id) {
+      slot.is_selected_ = true;
+    }
+
     const double dist =
         (car_mirror_pos - slot.GetOriginCornerCoordGlobal().pt_center).norm();
 
@@ -348,10 +352,10 @@ void ApaSlotManager::Update(
     pre_plan_fail_slot_id_vec_.clear();
   } else if (state_machine_ptr->IsSearchingInStatus() &&
              ego_info_under_slot_.slot.GetId() != 0) {
-    if (last_geometry_release == SlotReleaseState::UNKNOWN ||
-        last_geometry_release == SlotReleaseState::NOT_RELEASE &&
-            (last_astar_release == SlotReleaseState::UNKNOWN ||
-             last_astar_release == SlotReleaseState::NOT_RELEASE)) {
+    if ((last_geometry_release == SlotReleaseState::UNKNOWN ||
+         last_geometry_release == SlotReleaseState::NOT_RELEASE) &&
+        (last_astar_release == SlotReleaseState::UNKNOWN ||
+         last_astar_release == SlotReleaseState::NOT_RELEASE)) {
       pre_plan_fail_slot_id_vec_.emplace_back(
           ego_info_under_slot_.slot.GetId());
     }
