@@ -26,7 +26,6 @@ void ParkingSlotManager::Init() {
   points_.clear();
   target_slot_.clear();
   target_slot_id_ = 0;
-  distance_to_target_slot_ = NL_NMAX;
   is_reached_target_slot_ = false;
   is_exist_select_slot_ = false;
   is_exist_memory_slot_ = false;
@@ -121,76 +120,13 @@ bool ParkingSlotManager::Update(
         target_slot_.emplace_back(
             planning_math::Vec2d(corner_point.x, corner_point.y));
       }
+      // 0 和 1 为车位入口点
+      double target_x = (parking_slot.corner_points[0].x + parking_slot.corner_points[1].x) / 2.0;
+      double target_y = (parking_slot.corner_points[0].y + parking_slot.corner_points[1].y) / 2.0;
+      target_slot_center_ = planning_math::Vec2d(target_x, target_y);
       planning_math::Polygon2d::ComputeConvexHull(target_slot_,
                                                   &target_slot_polygon_);
     }
-
-    // limiter
-    // const size_t limiters_size = parking_slot.limiters_size;
-    // const auto& limiters = parking_slot.limiters;  // line segment
-    // for (const auto& limiter : limiters) {
-    //   planning_math::LineSegment2d limiter_axis(
-    //       planning_math::Vec2d(limiter.end_points[0].x,
-    //                            limiter.end_points[0].y),
-    //       planning_math::Vec2d(limiter.end_points[1].x,
-    //                            limiter.end_points[1].y));
-    //   limiters_.emplace_back(std::move(limiter_axis));
-    // }
-  }
-  return true;
-}
-
-bool ParkingSlotManager::CalculateDistanceToTargetSlot(
-    const std::shared_ptr<ReferencePath>& reference_path) {
-  const double distance_to_target_slot = session_->environmental_model()
-                                             .get_route_info()
-                                             ->get_route_info_output()
-                                             .distance_to_target_slot;
-  distance_to_target_slot_ = distance_to_target_slot;
-  if (reference_path != nullptr) {
-    const double ego_s = reference_path->get_frenet_ego_state().s();
-    const auto& frenet_coord = reference_path->get_frenet_coord();
-    const auto& points = reference_path->get_points();
-    if (distance_to_target_slot_ < 10.0) {
-      distance_to_target_slot_ =
-          std::min(std::fabs(points.back().path_point.s() - ego_s),
-                   distance_to_target_slot_);
-    }
-    if ((target_slot_.empty()) || (frenet_coord == nullptr)) {
-      return false;
-    }
-    double slot_dist_to_ego = -NL_NMAX;
-    if (target_slot_polygon_.is_convex()) {
-      planning_math::Box2d target_slot_box =
-          target_slot_polygon_.MinAreaBoundingBox();
-      Point2D cart_pt(target_slot_box.center_x(), target_slot_box.center_y());
-      Point2D frenet_pt{0.0, 0.0};
-      if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-        slot_dist_to_ego = std::max(frenet_pt.x - ego_s, slot_dist_to_ego);
-        if (slot_dist_to_ego < 2.0) {
-          is_reached_target_slot_ = true;
-        }
-      } else {
-        slot_dist_to_ego = distance_to_target_slot_;
-      }
-    } else {
-      for (const auto& slot_point : target_slot_) {
-        Point2D cart_pt(slot_point.x(), slot_point.y());
-        Point2D frenet_pt{0.0, 0.0};
-        if (frenet_coord->XYToSL(cart_pt, frenet_pt)) {
-          slot_dist_to_ego = std::max(frenet_pt.x - ego_s, slot_dist_to_ego);
-          if (slot_dist_to_ego < 2.0) {
-            is_reached_target_slot_ = true;
-          }
-        } else {
-          slot_dist_to_ego = distance_to_target_slot_;
-          break;
-        }
-      }
-    }
-    distance_to_target_slot_ = std::fabs(slot_dist_to_ego);
-    // distance_to_target_slot_ = std::min(std::fabs(slot_dist_to_ego),
-    // distance_to_target_slot_);
   }
   return true;
 }

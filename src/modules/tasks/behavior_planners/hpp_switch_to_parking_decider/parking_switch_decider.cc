@@ -21,14 +21,22 @@ bool ParkingSwitchDecider::Execute() {
   const EnvironmentalModel &env = session_->environmental_model();
   const auto &current_reference_path =
       env.get_reference_path_manager()->get_reference_path_by_current_lane();
-  auto &parking_slot_manager = env.get_parking_slot_manager();
-  parking_slot_manager->CalculateDistanceToTargetSlot(current_reference_path);
-  const bool is_reached_target_slot =
-      parking_slot_manager->IsReachedTargetSlot();
-  double distance_to_target_slot =
-      parking_slot_manager->GetDistanceToTargetSlot();
-  const bool is_near_target_slot = (is_reached_target_slot ||
-          distance_to_target_slot < config_.dist_to_parking_space_thr);
+
+  // 基于 reference path 更新到终点和目标车位的信息
+  UpdateTargetInfoBasedOnReferencePath(current_reference_path);
+
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto &parking_slot_manager = env.get_parking_slot_manager();
+  const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
+
+  double dist_to_target_slot = route_info_output.distance_to_target_slot;
+  double dist_to_target_dest = route_info_output.distance_to_target_dest;
+
+  const bool is_reached_target_slot = dist_to_target_slot < 2.0;
+  const bool is_near_target_slot = dist_to_target_slot < 10.0;
+  const bool is_reached_target_dest = dist_to_target_dest < 2.0;
+  const bool is_near_target_dest = dist_to_target_dest < 10.0;
 
   ILOG_DEBUG << "distance_to_target_slot:" << distance_to_target_slot;
   JSON_DEBUG_VALUE("distance_to_target_slot", distance_to_target_slot);
@@ -104,6 +112,38 @@ bool ParkingSwitchDecider::Execute() {
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()
       .parking_switch_info = std::move(parking_switch_info_);
+  return true;
+}
+
+bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
+    const std::shared_ptr<ReferencePath>& reference_path) {
+  const auto &route_info_output =
+      session_->environmental_model().get_route_info()->get_route_info_output();
+  const auto &parking_slot_manager =
+      session_->environmental_model().get_parking_slot_manager();
+  double dist_to_target_slot = route_info_output.distance_to_target_slot;
+  double dist_to_target_dest = route_info_output.distance_to_target_dest;
+
+  if (reference_path != nullptr && parking_slot_manager->IsExistNearestSlot()) {
+    const double ego_s = reference_path->get_frenet_ego_state().s();
+    const auto& frenet_coord = reference_path->get_frenet_coord();
+
+    const auto& target_slot_center = parking_slot_manager->GetTargetSlotCenter();
+    Point2D target_slot_cart_pt(target_slot_center.x(), target_slot_center.y());
+    Point2D target_slot_frenet_pt{0.0, 0.0};
+    if (frenet_coord->XYToSL(target_slot_cart_pt, target_slot_frenet_pt)) {
+      dist_to_target_slot = std::fabs(target_slot_frenet_pt.x - ego_s);
+    }
+
+    const auto& target_dest_point = route_info_output.target_dest_point;
+    Point2D target_dest_cart_pt(target_dest_point.x(), target_dest_point.y());
+    Point2D target_dest_frenet_pt{0.0, 0.0};
+    if (frenet_coord->XYToSL(target_dest_cart_pt, target_dest_frenet_pt)) {
+      dist_to_target_dest = std::fabs(target_dest_frenet_pt.x - ego_s);
+    }
+  }
+  session_->mutable_environmental_model()->get_route_info()->UpdateTargetInfo(
+      dist_to_target_slot, dist_to_target_dest);
   return true;
 }
 

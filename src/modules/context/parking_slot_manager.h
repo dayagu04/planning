@@ -40,15 +40,11 @@ class ParkingSlotManager {
 
   const size_t GetNearestSlotId() const { return nearest_slot_id_; }
 
-  const double GetDistanceToTargetSlot() const {
-    return distance_to_target_slot_;
-  }
-
-  const double GetDistanceToNearestSlot() const {
-    return distance_to_nearest_slot_;
-  }
-
   const ParkingSlotPoints &GetTargetSlotPoints() const { return target_slot_; }
+
+  const planning_math::Vec2d& GetTargetSlotCenter() const {
+    return target_slot_center_;
+  }
 
   const planning_math::Polygon2d &GetTargetSlotPolygon() const {
     return target_slot_polygon_;
@@ -60,7 +56,6 @@ class ParkingSlotManager {
   void Init();
 
   planning::framework::Session *session_ = nullptr;
-  bool is_reached_target_slot_;
   bool is_exist_select_slot_;
   bool is_exist_memory_slot_;
   bool is_exist_target_slot_;
@@ -69,8 +64,14 @@ class ParkingSlotManager {
   size_t memory_slot_id_;
   size_t target_slot_id_;
   size_t nearest_slot_id_;
-  double distance_to_target_slot_;
+
+  //TODO
+  bool is_reached_target_slot_;
+  bool is_reached_target_dest_;
+  bool is_reached_target_;
   double distance_to_nearest_slot_;
+
+  planning_math::Vec2d target_slot_center_;
   ParkingSlotPoints target_slot_;
   planning_math::Polygon2d target_slot_polygon_;
   std::vector<ParkingSlotPoints> points_;
