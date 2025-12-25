@@ -25,13 +25,16 @@ void ParkingSlotManager::Init() {
   limiters_.clear();
   points_.clear();
   target_slot_.clear();
+  select_slot_id_ = 0;
+  memory_slot_id_ = 0;
   target_slot_id_ = 0;
+  nearest_slot_id_ = 0;
   is_reached_target_slot_ = false;
+  is_reached_target_dest_ = false;
   is_exist_select_slot_ = false;
   is_exist_memory_slot_ = false;
   is_exist_target_slot_ = false;
   is_exist_nearest_slot_ = false;
-  nearest_slot_id_ = 0;
   distance_to_nearest_slot_ = NL_NMAX;
 }
 
@@ -89,12 +92,12 @@ bool ParkingSlotManager::Update(
   is_exist_select_slot_ = false;
   is_exist_memory_slot_ = false;
   is_exist_target_slot_ = false;
-  is_reached_target_slot_ = false;
-  const double distance_to_target_slot = session_->environmental_model()
+  is_reached_target_slot_ = false;//TODO
+  const double distance_to_target_dest = session_->environmental_model()
                                              .get_route_info()
                                              ->get_route_info_output()
-                                             .distance_to_target_slot;
-  if (distance_to_target_slot > 20.0) {
+                                             .distance_to_target_dest;
+  if (distance_to_target_dest > 20.0) {
     return false;
   }
   const size_t parking_slot_lists_size =
@@ -126,6 +129,7 @@ bool ParkingSlotManager::Update(
       target_slot_center_ = planning_math::Vec2d(target_x, target_y);
       planning_math::Polygon2d::ComputeConvexHull(target_slot_,
                                                   &target_slot_polygon_);
+      break;
     }
   }
   return true;

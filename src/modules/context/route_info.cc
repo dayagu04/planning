@@ -38,7 +38,6 @@ RouteInfo::RouteInfo(const EgoPlanningConfigBuilder* config_builder,
 
 void RouteInfo::SetConfig(const EgoPlanningConfigBuilder* config_builder) {
   config_ = config_builder->cast<EgoPlanningConfig>();
-  virtual_extend_buff_ = config_.raw_ref_extend_buff;
 }
 
 void RouteInfo::Update() {
@@ -2977,8 +2976,11 @@ bool RouteInfo::CalculateTraceEndInfo(const Map::StaticMap& static_map_info) {
         break;
       }
     }
+
+    const auto trace_end = static_map_info.parking_assist_info().trace_end();
     sum_s_to_target_dest_hpp_ = CalculatePointAccumulateS(lane_id);
     route_info_output_.distance_to_target_dest = sum_s_to_target_dest_hpp_ - sum_s_to_curr_pose_hpp_;
+    route_info_output_.target_dest_point = ad_common::math::Vec2d(trace_end.x(), trace_end.y());
     return true;
   } else {
     ILOG_DEBUG << "lines is empty from road_map!!!";
@@ -3019,7 +3021,8 @@ bool RouteInfo::CalculateNextSpeedBumpInfo(const Map::StaticMap& static_map_info
               speed_bump_nearest_lane->lane().predecessor_lane_id(0));
         }
         speed_bump_infos.emplace_back(speed_bump_sum_s, road_mark.id(),
-                                      speed_bump_center_point);
+                                      speed_bump_center_point.x(),
+                                      speed_bump_center_point.y());
       }
     }
   }
@@ -3035,11 +3038,11 @@ bool RouteInfo::CalculateNextSpeedBumpInfo(const Map::StaticMap& static_map_info
                              });
   if (it == speed_bump_infos.end()) {
     ILOG_DEBUG << "not find speed_bump ahead of ego!!!";
-    return false;
+  } else {
+    front_nearest_speed_bump_info_ = *it;
+    route_info_output_.distance_to_next_speed_bump =
+        front_nearest_speed_bump_info_.dist_to_start - sum_s_to_curr_pose_hpp_;
   }
-  front_nearest_speed_bump_info_ = *it;
-  route_info_output_.distance_to_next_speed_bump =
-      front_nearest_speed_bump_info_.dist_to_start - sum_s_to_curr_pose_hpp_;
   return true;
 
 }

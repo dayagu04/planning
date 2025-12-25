@@ -51,6 +51,12 @@ struct SpeedBumpInfo {
   double dist_to_start = 0.0;
   uint64_t id = 0;
   ad_common::math::Vec2d center;
+  SpeedBumpInfo() = default;
+  SpeedBumpInfo(double dist_to_start_, uint64_t id_, double x, double y) {
+    dist_to_start = dist_to_start_;
+    id = id_;
+    center = ad_common::math::Vec2d(x, y);
+  }
 };
 class RouteInfo {
  public:
@@ -144,7 +150,6 @@ class RouteInfo {
   SpeedBumpInfo front_nearest_speed_bump_info_;      // 前方最近的减速带信息
   ad_common::math::Vec2d last_point_hpp_{NL_NMAX, NL_NMAX};
   double sum_driving_distance_ = -1;  // 自车实际已经行驶的距离
-  double virtual_extend_buff_ = 0.0;
   // HPP variables end
 
   LastExchangeRegionInfo last_exchange_region_info_;

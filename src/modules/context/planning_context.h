@@ -83,13 +83,13 @@ class PlanningContext {
   bool &mutable_rads_planning_completed() { return rads_planning_completed_; }
 
   const bool hpp_cruise_routing_completed() const {
-    return parking_switch_decider_output_.parking_switch_info.is_standstill_near_routing_destination;
+    return parking_switch_decider_output_.parking_switch_info.is_standstill_near_target_slot;
   }
-  const bool memory_slot_allowed_to_park() const {
-    return parking_switch_decider_output_.parking_switch_info.is_memory_slot_allowed_to_park;
+  const bool target_slot_allowed_to_park() const {
+    return parking_switch_decider_output_.parking_switch_info.is_target_slot_allowed_to_park;
   }
-  const bool timeout_for_memory_slot_allowed_to_park() const {
-    return parking_switch_decider_output_.parking_switch_info.is_timeout_for_memory_slot_allowed_to_park;
+  const bool timeout_for_target_slot_allowed_to_park() const {
+    return parking_switch_decider_output_.parking_switch_info.is_timeout_for_target_slot_allowed_to_park;
   }
 
   const bool last_planning_success() const { return last_planning_success_; }

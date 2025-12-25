@@ -457,13 +457,9 @@ bool GeneralLongitudinalDecider::Execute() {
   // set destination bound for PNP
   if (session_->is_hpp_scene()) {
     // set destination bound
-    double distance_to_destination = get_distance_to_destination();
-    distance_to_destination =
+    double distance_to_destination =
         reference_path_ptr_->get_points().back().path_point.s() -
         planning_init_point.frenet_state.s;
-    const double ref_virtual_extend_buff = session_->environmental_model()
-                                               .get_route_info()
-                                               ->get_virtual_extend_buff();
     const auto &parking_slot_manager =
         session_->environmental_model().get_parking_slot_manager();
     size_t target_slot_id = parking_slot_manager->GetTargetSlotId();
@@ -482,20 +478,15 @@ bool GeneralLongitudinalDecider::Execute() {
     double stop_distance_to_destination = config_.stop_distance_to_destination;
     if (current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
       if (parking_slot_manager->IsExistTargetSlot()) {
-        const auto &target_slot_points =
-            parking_slot_manager->GetTargetSlotPoints();
-        planning_math::LineSegment2d axis(
-            planning_math::Vec2d(target_slot_points.front().x(),
-                                 target_slot_points.front().y()),
-            planning_math::Vec2d(target_slot_points.back().x(),
-                                 target_slot_points.back().y()));
+        const auto &target_slot_center =
+            parking_slot_manager->GetTargetSlotCenter();
         Point2D frenet_point;
         if (frenet_coord != nullptr) {
           if (frenet_coord->XYToSL(
-                  Point2D(axis.center().x(), axis.center().y()),
+                  Point2D(target_slot_center.x(), target_slot_center.y()),
                   frenet_point)) {
-            distance_to_destination = frenet_point.x + ref_virtual_extend_buff -
-                                      planning_init_point.frenet_state.s;
+            distance_to_destination =
+                frenet_point.x - planning_init_point.frenet_state.s;
           }
         }
       }

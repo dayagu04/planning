@@ -25,22 +25,32 @@ bool ParkingSwitchDecider::Execute() {
   // 基于 reference path 更新到终点和目标车位的信息
   UpdateTargetInfoBasedOnReferencePath(current_reference_path);
 
-  const auto &route_info_output =
-      session_->environmental_model().get_route_info()->get_route_info_output();
+  // 更新自车和巡航终点/目标车位的关系
+  const auto &route_info_output = env.get_route_info()->get_route_info_output();
   const auto &parking_slot_manager = env.get_parking_slot_manager();
   const bool is_exist_target_slot = parking_slot_manager->IsExistTargetSlot();
+  const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
 
-  double dist_to_target_slot = route_info_output.distance_to_target_slot;
-  double dist_to_target_dest = route_info_output.distance_to_target_dest;
+  const double dist_to_target_slot = route_info_output.distance_to_target_slot;
+  const double dist_to_target_dest = route_info_output.distance_to_target_dest;
+  const bool is_reached_target_slot =
+      (is_exist_target_slot &&
+       dist_to_target_slot < config_.dist_to_target_slot_thr);
+  const bool is_reached_target_dest =
+      dist_to_target_dest < config_.dist_to_target_dest_thr;
+  const bool is_ego_still = env.get_ego_state_manager()->ego_v() <= 1e-2;
+  session_->mutable_environmental_model()
+      ->get_parking_slot_manager()
+      ->SetIsReachedTarget(is_reached_target_slot, is_reached_target_dest);
 
-  const bool is_reached_target_slot = dist_to_target_slot < 2.0;
-  const bool is_near_target_slot = dist_to_target_slot < 10.0;
-  const bool is_reached_target_dest = dist_to_target_dest < 2.0;
-  const bool is_near_target_dest = dist_to_target_dest < 10.0;
-
-  ILOG_DEBUG << "distance_to_target_slot:" << distance_to_target_slot;
-  JSON_DEBUG_VALUE("distance_to_target_slot", distance_to_target_slot);
-  parking_switch_info_.dist_to_memory_slot = distance_to_target_slot;
+  ILOG_DEBUG << "dist_to_target_slot:" << dist_to_target_slot;
+  ILOG_DEBUG << "dist_to_target_dest:" << dist_to_target_dest;
+  ILOG_DEBUG << "is_exist_target_slot:" << is_exist_target_slot;
+  ILOG_DEBUG << "is_target_slot_allowed_to_park:" << is_target_slot_allowed_to_park;
+  JSON_DEBUG_VALUE("dist_to_target_slot", dist_to_target_slot);
+  JSON_DEBUG_VALUE("dist_to_target_dest", dist_to_target_dest);
+  JSON_DEBUG_VALUE("is_exist_target_slot", is_exist_target_slot);
+  JSON_DEBUG_VALUE("is_target_slot_allowed_to_park", is_target_slot_allowed_to_park);
 
   // hpp状态切park_in状态
   const auto &current_state =
@@ -49,8 +59,6 @@ bool ParkingSwitchDecider::Execute() {
       session_->planning_context()
           .planning_output()
           .successful_slot_info_list_size;
-  const bool is_target_slot_allowed_to_park = IsTargetSlotAllowedToPark();
-  const double ego_v = env.get_ego_state_manager()->ego_v();
   const auto& parking_switch_decider_output =
       session_->planning_context().parking_switch_decider_output();
   if(current_state == iflyauto::FunctionalState_HPP_CRUISE_SEARCHING) {
@@ -65,49 +73,44 @@ bool ParkingSwitchDecider::Execute() {
       parking_switch_info_.is_selected_slot_allowed_to_park = false;
     }
   } else if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
-    if (is_target_slot_allowed_to_park && is_near_target_slot) {
-      parking_switch_info_.is_memory_slot_allowed_to_park = true;
-    } else {
-      if (is_near_target_slot && (ego_v <= 1e-2) ||
-          (distance_to_target_slot <= (ego_v * 0.1 + 0.1))) {
-        parking_switch_info_.is_memory_slot_occupied = true;
-      }
-      if ((parking_switch_decider_output.parking_switch_info
-               .is_memory_slot_occupied)) {
-        parking_switch_info_.is_memory_slot_occupied = true;
+    if(is_reached_target_slot) {
+      if(is_target_slot_allowed_to_park) {
+        parking_switch_info_.is_target_slot_allowed_to_park = true;
+      } else if(is_ego_still) {
+        parking_switch_info_.is_target_slot_occupied = true;
+      } else {
+        //do nothing
       }
     }
-  } else {
-    // do nothing
-  }
 
-  //for E541
-  if(current_state == iflyauto::FunctionalState_HPP_CRUISE_ROUTING) {
+    //for E541
     const double curr_timestamp = IflyTime::Now_ms();
-    if (IsNearRoutingDestination() && (ego_v <= 1e-2)) {
-      parking_switch_info_.is_standstill_near_routing_destination = true;
-      if(last_is_standstill_near_routing_destination_ == false) {
+    if (is_reached_target_slot && is_ego_still) {
+      parking_switch_info_.is_standstill_near_target_slot = true;
+      if(last_is_standstill_near_target_slot_ == false) {
         timestamp_at_standstill_near_dest_ = curr_timestamp;
       }
       const double duration_time_since_standstill_near_dest =
           (curr_timestamp - timestamp_at_standstill_near_dest_) / 1000.0;
-      if (parking_switch_info_.is_memory_slot_allowed_to_park == false &&
+      if (parking_switch_info_.is_target_slot_allowed_to_park == false &&
           duration_time_since_standstill_near_dest >
               config_.memory_slot_allowed_to_park_time_thr) {
-        parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park = true;
+        parking_switch_info_.is_timeout_for_target_slot_allowed_to_park = true;
       } else {
-        parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park = false;
+        parking_switch_info_.is_timeout_for_target_slot_allowed_to_park = false;
       }
     } else {
-      parking_switch_info_.is_standstill_near_routing_destination = false;
+      parking_switch_info_.is_standstill_near_target_slot = false;
       timestamp_at_standstill_near_dest_ = 0.0;
     }
-    last_is_standstill_near_routing_destination_ = parking_switch_info_.is_standstill_near_routing_destination;
+    last_is_standstill_near_target_slot_ = parking_switch_info_.is_standstill_near_target_slot;
+  } else {
+    // do nothing
   }
 
-  JSON_DEBUG_VALUE("is_memory_slot_allowed_to_park", parking_switch_info_.is_memory_slot_allowed_to_park);
-  JSON_DEBUG_VALUE("is_standstill_near_routing_destination", parking_switch_info_.is_standstill_near_routing_destination);
-  JSON_DEBUG_VALUE("is_timeout_for_memory_slot_allowed_to_park", parking_switch_info_.is_timeout_for_memory_slot_allowed_to_park);
+  JSON_DEBUG_VALUE("is_target_slot_allowed_to_park", parking_switch_info_.is_target_slot_allowed_to_park);
+  JSON_DEBUG_VALUE("is_standstill_near_target_slot", parking_switch_info_.is_standstill_near_target_slot);
+  JSON_DEBUG_VALUE("is_timeout_for_target_slot_allowed_to_park", parking_switch_info_.is_timeout_for_target_slot_allowed_to_park);
 
   session_->mutable_planning_context()
       ->mutable_parking_switch_decider_output()
@@ -124,7 +127,7 @@ bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
   double dist_to_target_slot = route_info_output.distance_to_target_slot;
   double dist_to_target_dest = route_info_output.distance_to_target_dest;
 
-  if (reference_path != nullptr && parking_slot_manager->IsExistNearestSlot()) {
+  if (reference_path != nullptr && parking_slot_manager->IsExistTargetSlot()) {
     const double ego_s = reference_path->get_frenet_ego_state().s();
     const auto& frenet_coord = reference_path->get_frenet_coord();
 
@@ -145,19 +148,6 @@ bool ParkingSwitchDecider::UpdateTargetInfoBasedOnReferencePath(
   session_->mutable_environmental_model()->get_route_info()->UpdateTargetInfo(
       dist_to_target_slot, dist_to_target_dest);
   return true;
-}
-
-bool ParkingSwitchDecider::IsNearRoutingDestination() {
-  const EnvironmentalModel &env = session_->environmental_model();
-  // TODO(taolu10): 改成距离目标位置中心线的距离,
-  // 前提是修改 Cruise 阶段的终点在目标车位终点，
-  // 否则无法触发 is_standstill_near_routing_destination = true
-  double distance_to_destination =
-      env.get_route_info()->get_route_info_output().distance_to_target_slot;
-  const double dist_to_routing_destination_thr = config_.dist_to_routing_destination_thr;
-  ILOG_DEBUG << "distance_to_destination:" << distance_to_destination;
-  JSON_DEBUG_VALUE("distance_to_destination", distance_to_destination);
-  return distance_to_destination <= dist_to_routing_destination_thr;
 }
 
 bool ParkingSwitchDecider::IsTargetSlotAllowedToPark() {

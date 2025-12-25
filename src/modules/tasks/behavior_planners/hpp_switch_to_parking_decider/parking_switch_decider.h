@@ -19,8 +19,6 @@ class ParkingSwitchDecider : public Task {
   bool UpdateTargetInfoBasedOnReferencePath(
     const std::shared_ptr<ReferencePath>& reference_path);
 
-  bool IsNearRoutingDestination();
-
   bool IsTargetSlotAllowedToPark();
 
  private:
@@ -29,7 +27,7 @@ class ParkingSwitchDecider : public Task {
 
   /****************** internal use ***************/
   double timestamp_at_standstill_near_dest_ = 0.0;
-  bool last_is_standstill_near_routing_destination_ = false;
+  bool last_is_standstill_near_target_slot_ = false;
 };
 
 }  // namespace planning
