@@ -136,7 +136,7 @@ void LaneChangeStateMachineManager::RunStateMachine() {
               pilot_req.is_overtake_lane_change_confirmed) {
             overtake_lane_change_confirmed_ = true;
           }
-          if (transition_info_.lane_change_type ==
+          if (lc_req_mgr_->request_source() ==
                   RequestSource::OVERTAKE_REQUEST &&
               !overtake_lane_change_confirmed_) {
             break;
