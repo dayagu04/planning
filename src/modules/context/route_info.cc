@@ -2057,6 +2057,23 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       valid_exchange_regions.emplace_back(exchange_region);
     }
   }
+  if (valid_exchange_regions.size() > 1 &&
+      valid_exchange_regions[0].is_other_merge_to_road &&
+      !valid_exchange_regions[1].is_other_merge_to_road) {
+    bool is_exchange_close =
+        valid_exchange_regions[1].distance_to_split_point -
+            valid_exchange_regions[0].distance_to_split_point <
+        150.0;
+    bool is_exchange_direction_conflict =
+        valid_exchange_regions[1].is_ramp_merge
+            ? valid_exchange_regions[0].split_direction ==
+                  valid_exchange_regions[1].split_direction
+            : valid_exchange_regions[0].split_direction !=
+                  valid_exchange_regions[1].split_direction;
+    if (is_exchange_close && is_exchange_direction_conflict) {
+      valid_exchange_regions.erase(valid_exchange_regions.begin());
+    }
+  }
   // 为每个exchange region准备数据
   std::vector<std::map<int, double>> exchange_feasible_lane_distances(
       valid_exchange_regions.size());
@@ -2096,8 +2113,8 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       last_exchange_region_info_.is_process_other_merge =
           mlc_decider_route_info_.is_process_other_merge;
       if (dis_to_last_exchange_point <
-              last_exchange_region_info_.last_exchange_info.end_fp_point
-                  .fp_distance_to_split_point) {
+          last_exchange_region_info_.last_exchange_info.end_fp_point
+              .fp_distance_to_split_point) {
         feasible_lane_sequence.clear();
         feasible_lane_sequence =
             last_exchange_region_info_.last_exchange_info.recommend_lane_num[1]
@@ -3859,7 +3876,10 @@ NOASplitRegionInfo RouteInfo::CalculateMergeRegionLaneTupoInfo(
   if (merge_region_info.start_fp_point.lane_ids.empty()) {
     return merge_region_info;
   } else {
-    temp_lane_num2 = merge_region_info.start_fp_point.lane_ids.size();
+    const int merge_link_lane_num = temp_link->lane_num();
+    const int merge_start_fp_num =
+        merge_region_info.start_fp_point.lane_ids.size();
+    temp_lane_num2 = std::max(merge_start_fp_num, merge_link_lane_num);
   }
 
   merge_region_info.recommend_lane_num.emplace_back(temp_lane_num2,
