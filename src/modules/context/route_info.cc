@@ -125,9 +125,10 @@ void RouteInfo::UpdateRouteInfoForNOA(
 
   double nearest_s;
   double nearest_l;
+  double nearest_s_sd_map;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
-  const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s);
+  const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s_sd_map);
   // if (segment == nullptr) {
   //   std::cout << "ego link not in expressway failed!!!" << std::endl;
   //   return;
@@ -214,7 +215,7 @@ void RouteInfo::UpdateRouteInfoForNOA(
   if (segment != nullptr) {
     const SdMapSwtx::Segment& current_segment = *segment;
     // 计算到路线终点的距离
-    CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s,
+    CaculateDistanceToRoadEnd(sd_map_, current_segment, nearest_s_sd_map,
                               max_search_length);
   }
 
