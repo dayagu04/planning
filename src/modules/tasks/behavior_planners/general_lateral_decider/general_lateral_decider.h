@@ -261,6 +261,8 @@ class GeneralLateralDecider : public Task {
     BoundHierarchy bound_hierarchy);
   void LimitBoundary(
       const std::shared_ptr<FrenetObstacle> obstacle,  Bound &bound);
+  void ProtectRoadBound(std::pair<double, double>& bound,
+                        const int index);
 
  private:
   GeneralLateralDeciderConfig config_;

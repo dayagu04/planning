@@ -3927,6 +3927,8 @@ void GeneralLateralDecider::ExtractBoundary(
     std::pair<BoundInfo, BoundInfo> hard_bound_info;  // <lower ,upper>
     PostProcessBound(planning_init_point_l, hard_bounds_[i], hard_bound,
                      hard_bound_info);
+    // 保护路沿的Bound不会推很多
+    ProtectRoadBound(hard_bound, i);
     if (i == 0) {
       ProtectBoundByInitPoint(hard_bound, hard_bound_info);
     }
@@ -3939,6 +3941,7 @@ void GeneralLateralDecider::ExtractBoundary(
     std::pair<BoundInfo, BoundInfo> soft_bound_info;  // <lower ,upper>
     PostProcessBound(planning_init_point_l, second_soft_bounds_[i], soft_bound,
                      soft_bound_info);
+    ProtectRoadBound(soft_bound, i);
     if (i == 0) {
       ProtectBoundByInitPoint(soft_bound, soft_bound_info);
     }
@@ -3962,6 +3965,7 @@ void GeneralLateralDecider::ExtractBoundary(
     std::pair<BoundInfo, BoundInfo> first_soft_bound_info;  // <lower ,upper>
     PostProcessBound(planning_init_point_l, first_soft_bounds_[i],
                      first_soft_bound, first_soft_bound_info);
+    ProtectRoadBound(first_soft_bound, i);
     if (i == 0) {
       ProtectBoundByInitPoint(first_soft_bound, first_soft_bound_info);
     }
@@ -4078,6 +4082,52 @@ void GeneralLateralDecider::ProtectBoundByInitPoint(
   if (bound.second < planning_init_point_l) {
     bound.second = planning_init_point_l;
     bound_info.second.type = BoundType::EGO_POSITION;
+  }
+}
+
+void GeneralLateralDecider::ProtectRoadBound(
+    std::pair<double, double>& bound,
+    const int index) {
+  constexpr double kEps = 1e-4;
+  const auto& vehicle_param =
+      VehicleConfigurationContext::Instance()->get_vehicle_param();
+  const auto ego_half_max_width = vehicle_param.max_width * 0.5;
+  const double kDistanceToRoadBoundary = 0.2;
+  bool is_near_left_road_boundary =
+      ref_path_points_[index].distance_to_left_road_border - bound.first -
+          ego_half_max_width <
+      kDistanceToRoadBoundary;
+  bool is_near_right_road_boundary =
+      -ref_path_points_[index].distance_to_right_road_border - bound.second +
+          ego_half_max_width >
+      -kDistanceToRoadBoundary;
+  bool is_narrow_road_space =
+      ref_path_points_[index].distance_to_right_road_border +
+          ref_path_points_[index].distance_to_left_road_border -
+          ego_half_max_width * 2 <
+      2 * kDistanceToRoadBoundary;
+  bool is_lat_overlap = bound.first - bound.second >= -kEps;
+  double center_l =
+      0.5 * (ref_path_points_[index].distance_to_left_road_border -
+             ref_path_points_[index].distance_to_right_road_border);
+  if (is_narrow_road_space) {
+    bound.second = std::max(bound.second, center_l);
+    bound.first = std::min(bound.first, center_l);
+  } else {
+    if (is_near_left_road_boundary && !is_near_right_road_boundary) {
+      bound.first = ref_path_points_[index].distance_to_left_road_border -
+                    kDistanceToRoadBoundary - ego_half_max_width;
+      bound.second =
+          is_lat_overlap ? std::min(bound.first, bound.second) : bound.second;
+    } else if (!is_near_left_road_boundary && is_near_right_road_boundary) {
+      bound.second = -ref_path_points_[index].distance_to_right_road_border +
+                     kDistanceToRoadBoundary + ego_half_max_width;
+      bound.first =
+          is_lat_overlap ? std::max(bound.first, bound.second) : bound.first;
+    } else if (is_near_left_road_boundary && is_near_right_road_boundary) {
+      bound.second = std::max(bound.second, center_l);
+      bound.first = std::min(bound.first, center_l);
+    }
   }
 }
 
