@@ -1093,9 +1093,9 @@ bool LaneChangeRequest::ConeSituationJudgement(
     // judge if to trigger cone lc
     if ((min_left_l < pass_threshold_left &&
          min_right_l < pass_threshold_right) ||
-        (!llane && min_right_l < pass_threshold_right && points.size() >= 5 &&
+        (!llane && min_right_l < pass_threshold_right && points.size() >= 3 &&
          average_l > 0.0) ||
-        (!rlane && min_left_l < pass_threshold_left && points.size() >= 5 &&
+        (!rlane && min_left_l < pass_threshold_left && points.size() >= 3 &&
          average_l < 0.0)) {
       return false;
     }
