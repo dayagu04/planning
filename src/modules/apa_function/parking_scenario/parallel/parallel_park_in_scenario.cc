@@ -1621,6 +1621,32 @@ const bool ParallelParkInScenario::UpdateEgoSlotInfo() {
   ego_info_under_slot.target_pose.heading = 0.0;
   ego_info_under_slot.target_pose.heading_vec << 1.0, 0.0;
 
+
+  const auto& front_slot_limiter = ego_info_under_slot.slot.GetFrontLimiter();
+  ILOG_INFO << "front_slot_limiter.valid = " << front_slot_limiter.valid;
+  if (front_slot_limiter.valid) {
+    t_lane_.front_slot_limiter.valid = true;
+    // transfer limiter in slot coordination
+    t_lane_.front_slot_limiter.start_pt =
+        ego_info_under_slot.g2l_tf.GetPos(front_slot_limiter.start_pt);
+    if (front_slot_limiter.valid) {
+      t_lane_.front_slot_limiter.valid = true;
+      // transfer limiter in slot coordination
+      t_lane_.front_slot_limiter.start_pt =
+          ego_info_under_slot.g2l_tf.GetPos(front_slot_limiter.start_pt);
+
+      t_lane_.front_slot_limiter.end_pt =
+          ego_info_under_slot.g2l_tf.GetPos(front_slot_limiter.end_pt);
+
+      ILOG_INFO << "front_slot_limiter start pos = "
+                << t_lane_.front_slot_limiter.start_pt.x() << " "
+                << t_lane_.front_slot_limiter.start_pt.y();
+      ILOG_INFO << "front_slot_limiter end pos = "
+                << t_lane_.front_slot_limiter.end_pt.x() << " "
+                << t_lane_.front_slot_limiter.end_pt.y();
+    }
+  }
+
   // calc terminal error once
   ego_info_under_slot.terminal_err.Set(
       ego_info_under_slot.cur_pose.pos - ego_info_under_slot.target_pose.pos,
@@ -2675,25 +2701,81 @@ void ParallelParkInScenario::GenTBoundaryObstacles() {
     point_set.clear();
     tlane_obstacle_vec.clear();
     pnc::geometry_lib::SamplePointSetInLineSeg(point_set, limiter_line,
-                                               kTBoundarySampleDist);
+                                               0.1);
     for (const auto& obs : point_set) {
       if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
               obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
         tlane_obstacle_vec.emplace_back(obs);
       }
     }
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+        tlane_obstacle_vec, CollisionDetector::LIMITER_OBS);
     // front virtual limit obs
-    const double parallel_virtual_limit_x_offset =
-        apa_param.GetParam().parallel_virtual_limit_x_offset;
-    if (parallel_virtual_limit_x_offset > 0.0) {
-      for (const auto& obs : point_set) {
-        Eigen::Vector2d virtual_front_limiter_obs = Eigen::Vector2d(
-            ori_limiter_obs_x + parallel_virtual_limit_x_offset, obs.y());
-        tlane_obstacle_vec.emplace_back(std::move(virtual_front_limiter_obs));
+    // tlane_obstacle_vec.clear();
+    // const double parallel_virtual_limit_x_offset =
+    //     apa_param.GetParam().parallel_virtual_limit_x_offset;
+    // if (parallel_virtual_limit_x_offset > 0.0) {
+    //   for (const auto& obs : point_set) {
+    //     Eigen::Vector2d virtual_front_limiter_obs = Eigen::Vector2d(
+    //         ori_limiter_obs_x + parallel_virtual_limit_x_offset, obs.y());
+    //     tlane_obstacle_vec.emplace_back(std::move(virtual_front_limiter_obs));
+    //   }
+    // }
+    // apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+    //     tlane_obstacle_vec, CollisionDetector::SIDE_CROSS_LIMITER_OBS);
+
+    const Eigen::Vector2d side_cross_limiter_obs_start(ori_limiter_obs_x,
+                                            t_lane_.limiter.start_pt.y());
+    const Eigen::Vector2d side_cross_limiter_obs_end(ori_limiter_obs_x,
+                                          t_lane_.limiter.end_pt.y());
+
+    const pnc::geometry_lib::LineSegment side_cross_limiter_line(side_cross_limiter_obs_start,
+                                                      side_cross_limiter_obs_end);
+
+    point_set.clear();
+    tlane_obstacle_vec.clear();
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, side_cross_limiter_line,
+                                               0.1);
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
+      }
+    }
+
+    apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
+        tlane_obstacle_vec, CollisionDetector::SIDE_CROSS_LIMITER_OBS);
+  }
+
+
+
+  if (t_lane_.front_slot_limiter.valid) {
+    double limiter_obs_x = 0.0;
+
+    limiter_obs_x =
+          std::max(t_lane_.front_slot_limiter.start_pt.x(), t_lane_.front_slot_limiter.end_pt.x());
+
+    const Eigen::Vector2d limiter_obs_start(limiter_obs_x,
+                                            t_lane_.front_slot_limiter.start_pt.y());
+    const Eigen::Vector2d limiter_obs_end(limiter_obs_x,
+                                          t_lane_.front_slot_limiter.end_pt.y());
+
+    const pnc::geometry_lib::LineSegment limiter_line(limiter_obs_start,
+                                                      limiter_obs_end);
+    point_set.clear();
+    tlane_obstacle_vec.clear();
+    pnc::geometry_lib::SamplePointSetInLineSeg(point_set, limiter_line,
+                                               0.1);
+    for (const auto& obs : point_set) {
+      if (!apa_world_ptr_->GetCollisionDetectorPtr()->IsObstacleInCar(
+              obs, ego_info_under_slot.cur_pose, kDeletedObsDistInSlot)) {
+        tlane_obstacle_vec.emplace_back(obs);
       }
     }
     apa_world_ptr_->GetCollisionDetectorPtr()->SetObstacles(
-        tlane_obstacle_vec, CollisionDetector::LIMITER_OBS);
+        tlane_obstacle_vec, CollisionDetector::SIDE_CROSS_LIMITER_OBS);
+
+
   }
 }
 
@@ -3540,7 +3622,7 @@ void ParallelParkInScenario::CalDynamicBufferInDiffSteps(
 
 const bool ParallelParkInScenario::PostProcessPathPara() {
   const size_t origin_trajectory_size = current_path_point_global_vec_.size();
-  if (origin_trajectory_size < 2) {
+  if (origin_trajectory_size < 3) {
     frame_.spline_success = false;
     ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;

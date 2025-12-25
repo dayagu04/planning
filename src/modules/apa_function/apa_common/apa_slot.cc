@@ -94,14 +94,51 @@ void ApaSlot::Update(const iflyauto::ParkingFusionSlot& fusion_slot) {
       limiter_.end_pt << fusion_slot.limiters[0].end_points[1].x,
           fusion_slot.limiters[0].end_points[1].y;
     } else if (fusion_slot.limiters_size == 2) {
-      limiter_.start_pt << 0.5 * (fusion_slot.limiters[0].end_points[0].x +
+      if (fusion_slot.type == iflyauto::PARKING_SLOT_TYPE_HORIZONTAL) {
+        Eigen::Vector2d a0b0 =
+            Eigen::Vector2d(fusion_slot.limiters[0].end_points[0].x -
+                                fusion_slot.limiters[1].end_points[0].x,
+                            fusion_slot.limiters[0].end_points[0].y -
+                                fusion_slot.limiters[1].end_points[0].y);
+        Eigen::Vector2d a0b1 =
+            Eigen::Vector2d(fusion_slot.limiters[0].end_points[0].x -
+                                fusion_slot.limiters[1].end_points[1].x,
+                            fusion_slot.limiters[0].end_points[0].y -
+                                fusion_slot.limiters[1].end_points[1].y);
+        Eigen::Vector2d a1b0 =
+            Eigen::Vector2d(fusion_slot.limiters[0].end_points[1].x -
+                                fusion_slot.limiters[1].end_points[0].x,
+                            fusion_slot.limiters[0].end_points[1].y -
+                                fusion_slot.limiters[1].end_points[0].y);
+        Eigen::Vector2d a1b1 =
+            Eigen::Vector2d(fusion_slot.limiters[0].end_points[1].x -
+                                fusion_slot.limiters[1].end_points[1].x,
+                            fusion_slot.limiters[0].end_points[1].y -
+                                fusion_slot.limiters[1].end_points[1].y);
+        if (a0b0.norm() > a0b1.norm()) {
+          limiter_.start_pt << fusion_slot.limiters[1].end_points[0].x,
+              fusion_slot.limiters[1].end_points[0].y;
+        } else {
+          limiter_.start_pt << fusion_slot.limiters[1].end_points[1].x,
+              fusion_slot.limiters[1].end_points[1].y;
+        }
+        if (a0b0.norm() > a1b0.norm()) {
+          limiter_.end_pt << fusion_slot.limiters[0].end_points[0].x,
+              fusion_slot.limiters[0].end_points[0].y;
+        } else {
+          limiter_.end_pt << fusion_slot.limiters[0].end_points[1].x,
+              fusion_slot.limiters[0].end_points[1].y;
+        }
+      } else {
+        limiter_.start_pt << 0.5 * (fusion_slot.limiters[0].end_points[0].x +
                                   fusion_slot.limiters[0].end_points[1].x),
           0.5 * (fusion_slot.limiters[0].end_points[0].y +
                  fusion_slot.limiters[0].end_points[1].y);
-      limiter_.end_pt << 0.5 * (fusion_slot.limiters[1].end_points[0].x +
+        limiter_.end_pt << 0.5 * (fusion_slot.limiters[1].end_points[0].x +
                                 fusion_slot.limiters[1].end_points[1].x),
           0.5 * (fusion_slot.limiters[1].end_points[0].y +
                  fusion_slot.limiters[1].end_points[1].y);
+      }
     }
   } else {
     limiter_.valid = false;

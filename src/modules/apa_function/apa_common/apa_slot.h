@@ -194,6 +194,8 @@ class ApaSlot final {
 
     limiter_.Reset();
 
+    front_slot_limiter_.Reset();
+
     release_info_.Clear();
 
     is_narrow_slot_ = false;
@@ -258,6 +260,8 @@ class ApaSlot final {
 
   const Limiter& GetLimiter() const { return limiter_; }
 
+  const Limiter& GetFrontLimiter() const { return front_slot_limiter_; }
+
   const SlotReleaseInfo& GetReleaseInfo() const { return release_info_; }
 
   const geometry_lib::LineSegment& GetMidLine() const { return mid_line_; }
@@ -291,6 +295,9 @@ class ApaSlot final {
   SlotSourceType slot_source_type_ = SlotSourceType::INVALID;
 
   Limiter limiter_;
+
+  Limiter front_slot_limiter_;
+
 
   SlotReleaseInfo release_info_;
 

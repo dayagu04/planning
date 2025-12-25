@@ -77,6 +77,7 @@ class ParallelParkOutScenario : public ParallelParkInScenario {
   bool is_outer_arc_slot_ = false;
   bool is_arc_slot_ = false;
   bool path_end_heading_is_met_= false;
+  ParallelOutPathGenerator previous_parallel_out_path_planner_;
 };
 }  // namespace apa_planner
 }  // namespace planning

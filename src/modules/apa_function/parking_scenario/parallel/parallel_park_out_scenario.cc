@@ -159,6 +159,8 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // update obstacles
   GenTBoundaryObstacles();
+  previous_parallel_out_path_planner_.Reset();
+  previous_parallel_out_path_planner_ = parallel_out_path_planner_;
 
   // path plan
   const auto pathplan_result = PathPlanOnce();
@@ -605,11 +607,16 @@ const bool ParallelParkOutScenario::CheckFinished() {
   const double slot_occupied_ratio = apa_world_ptr_->GetSlotManagerPtr()
                                          ->GetEgoInfoUnderSlot()
                                          .slot_occupied_ratio;
-
+  double heading_offset =0.0;
+  if (is_last_pose_set_){
+    heading_offset = last_target_pose_.heading;
+  }else{
+    heading_offset = arc_slot_init_out_heading_;
+  }
   const double heading_mag_deg = std::fabs((apa_world_ptr_->GetSlotManagerPtr()
                                                 ->GetEgoInfoUnderSlot()
                                                 .cur_pose.heading -
-                                            arc_slot_init_out_heading_) *
+                                            heading_offset) *
                                            kRad2Deg);
 
   const bool static_condition =
@@ -1078,6 +1085,7 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
     }
   }
 
+
   for (const auto& obstacle_point_set : obs_pt_local_vec_) {
     for (const auto& obstacle_point_slot : obstacle_point_set.second) {
       // add obs near channel
@@ -1100,11 +1108,13 @@ void ParallelParkOutScenario::GenTBoundaryObstacles() {
         }
       }
       if (channel_y_condition) {
+        // ILOG_INFO << "ARC SLOT DO NOT USE OBS";
         filtered_channel_obs_vec.emplace_back(obstacle_point_slot);
 
         if (pnc::mathlib::IsInBound(obstacle_point_slot.x(),
                                     t_lane_.slot_length,
-                                    t_lane_.slot_length + 5.0)) {
+                                    t_lane_.slot_length + 5.0) &&
+                                    !is_arc_slot_) {
           if (slot_side_sgn > 0.0) {
             t_lane_.channel_y =
                 std::min(obstacle_point_slot.y(), t_lane_.channel_y);
@@ -1341,11 +1351,12 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
       apa_world_ptr_->GetSimuParam().is_complete_path;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
   bool is_in_slot = ego_info_under_slot.slot_occupied_ratio > 0.0;
-  if (!previous_current_path_point_global_vec_.empty() && !is_last_pose_set_ &&
-      !is_in_slot) {
-    last_target_pose_ =
-        previous_current_path_point_global_vec_.back();
-        last_target_pose_.heading = arc_slot_init_out_heading_;
+  if (!previous_parallel_out_path_planner_.GetOutput()
+           .all_gear_path_point_vec.empty() &&
+      !is_last_pose_set_) {
+    last_target_pose_ = previous_parallel_out_path_planner_.GetOutput()
+                            .all_gear_path_point_vec.back();
+
     is_last_pose_set_ = true;
   }
   path_planner_input.last_target_pose_ = last_target_pose_;
@@ -1676,7 +1687,7 @@ void ParallelParkOutScenario::Log() const {
 const bool ParallelParkOutScenario::GenObstacles() { return true; };
 const bool ParallelParkOutScenario::PostProcessPathPara() {
   const size_t origin_trajectory_size = current_path_point_global_vec_.size();
-  if (origin_trajectory_size < 2) {
+  if (origin_trajectory_size < 3) {
     frame_.spline_success = false;
     ILOG_INFO << "error: origin_trajectory_size = " << origin_trajectory_size;
     frame_.plan_fail_reason = POST_PROCESS_PATH_POINT_SIZE;
@@ -1729,19 +1740,22 @@ const bool ParallelParkOutScenario::PostProcessPathPara() {
 
 void ParallelParkOutScenario::JudgeArcSlot(){
   const double side_sgn = frame_.is_park_out_left ? 1.0 : -1.0;
-
-  if (std::abs(arc_slot_init_out_heading_) < pnc::mathlib::Deg2Rad(5.0) ||
-      std::abs(arc_slot_init_out_heading_) > pnc::mathlib::Deg2Rad(45.0)) {
+  is_arc_slot_ =false;
+  is_outer_arc_slot_ =false;
+  if (std::abs(arc_slot_init_out_heading_) > pnc::mathlib::Deg2Rad(5.0) &&
+      std::abs(arc_slot_init_out_heading_) < pnc::mathlib::Deg2Rad(45.0)) {
     is_arc_slot_ = true;
   }
+
   ILOG_INFO << "arc_slot_init_out_heading_ = " << arc_slot_init_out_heading_;
-  ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_;
-  if (side_sgn > 0.0 && arc_slot_init_out_heading_ < -pnc::mathlib::Deg2Rad(10.0) &&
-      arc_slot_init_out_heading_ > -pnc::mathlib::Deg2Rad(45.0)) {
-    is_outer_arc_slot_ = true;
-  }
+  // ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_;
+  ILOG_INFO << "side_sgn" << side_sgn;
   if (side_sgn < 0.0 && arc_slot_init_out_heading_ > pnc::mathlib::Deg2Rad(10.0) &&
       arc_slot_init_out_heading_ < pnc::mathlib::Deg2Rad(45.0)) {
+    is_outer_arc_slot_ = true;
+  }
+  if (side_sgn > 0.0 && arc_slot_init_out_heading_ < - pnc::mathlib::Deg2Rad(10.0) &&
+      arc_slot_init_out_heading_ > - pnc::mathlib::Deg2Rad(45.0)) {
     is_outer_arc_slot_ = true;
   }
   ILOG_INFO << "is_arc_slot_ = " << is_arc_slot_ << ", is_outer_arc_slot_ = " << is_outer_arc_slot_;

@@ -39,7 +39,8 @@ class CollisionDetector {
     VIRTUAL_OBS,
     USS_OBS,
     LIMITER_OBS,
-    COUNT_OBS,
+    SIDE_CROSS_LIMITER_OBS,
+    COUNT_OBS
   };
 
   enum class ObsSlotType : uint8_t {
@@ -81,10 +82,14 @@ class CollisionDetector {
     double lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
     double bound_expand = 0.5;
     bool use_bounding_box = false;
+    bool side_cross_limiter = false;
     Paramters() = default;
-    Paramters(const double lat_inf, bool set_side_mirror_expand = true) {
+    Paramters(const double lat_inf, bool set_side_mirror_expand = true,
+    bool side_cross_limiter_in = false
+    ) {
       lat_inflation = lat_inf;
       is_side_mirror_expand = set_side_mirror_expand;
+      side_cross_limiter = side_cross_limiter_in;
     }
 
     void Reset() {
@@ -92,6 +97,7 @@ class CollisionDetector {
       lat_inflation = apa_param.GetParam().car_lat_inflation_normal;
       bound_expand = 0.5;
       use_bounding_box = false;
+      side_cross_limiter = false;
     }
   };
 
