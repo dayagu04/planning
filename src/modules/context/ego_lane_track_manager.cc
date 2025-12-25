@@ -76,7 +76,7 @@ constexpr double kDistanceToLaneMergeSplitPointThd = 10.0;
 constexpr double kDefaultConsiderVirtualLineLength = 65.0;
 constexpr double kDefaultConsiderSplitSelectorDistance = 44.0;
 constexpr double kDefaultSurpressSplitSelectorDistance = 5.0;
-constexpr double kDefaultSplitPointExistDistanceThd = 0.2;
+constexpr double kDefaultSplitPointExistDistanceThd = 0.16;
 constexpr double kComputeSplitPointMoveStep = 2.0;
 constexpr double kSplitSelectEgoToExchangeAreaDistanceThd = 150.0;
 constexpr double kEnableSplitSelectionEgoLateralDistanceToBothLaneLines = 0.5;
@@ -1673,7 +1673,6 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
       if (relative_id_lane->get_lane_merge_split_point()
               .merge_split_point_data_size > 0) {
         split_lane_index = i;
-        find_virtual_lane_split_point = true;
         const auto& lane_merge_split_point =
             relative_id_lane->get_lane_merge_split_point();
         ego_distance_to_lane_merge_split_point =
@@ -1689,6 +1688,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
                  kDefaultSurpressSplitSelectorDistance)) {
           return;
         }
+        find_virtual_lane_split_point = true;
         virtual_lane_split_local_point.x =
             relative_id_lane->get_lane_merge_split_point()
                 .merge_split_point_data[0]
@@ -1880,8 +1880,18 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
 
   const double ego_heading_angle = ego_state->heading_angle();
   double clane_min_cost_total = std::numeric_limits<double>::infinity();
-  double split_point_front_distance = 10.0;
+  double split_point_front_distance = 25.0;
   double split_point_rear_distance = 20.0;
+  double lane_curv = 0.0;
+  if (order_ids.size() > 0) {
+    lane_curv =
+        ComputeTargetLaneSpecifiedRangeCurvature(relative_id_lanes[order_ids[0]]);
+    double road_radius = 1 / std::max(lane_curv, 0.0001);
+    if (road_radius < kDefaultRoadRadius) {
+      split_point_front_distance = 10.0;
+    }
+  }
+
   for (size_t i = 0; i < order_ids.size(); i++) {
     if (relative_id_lanes.size() > order_ids[i]) {
       std::shared_ptr<VirtualLane> relative_id_lane =
@@ -2435,7 +2445,7 @@ double EgoLaneTrackManger::ComputeTargetLaneSpecifiedRangeCurvature(
                             &ego_s, &ego_l)) {
     return average_curv;
   }
-  if (ego_s > frenet_coord->Length()) {
+  if (ego_s + default_begin_length > frenet_coord->Length()) {
     return average_curv;
   }
   planning_math::PathPoint ego_s_nearest_point =
