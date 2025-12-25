@@ -46,6 +46,7 @@ constexpr std::array<double, 3> fp{3.0, 8.0, 20.0};
 constexpr std::array<double, 3> buffer{1.0, 3.0, 10.0};
 constexpr std::array<double, 3> fp_for_large_car{6.0, 12.0, 30.0};
 constexpr std::array<double, 3> buffer_for_large_car{3.0, 6, 20.0};
+constexpr double kMaxReachedTime = 100.0;
 
 const std::unordered_set<agent::AgentType> FacilityTypes = {
     agent::AgentType::TRAFFIC_CONE, agent::AgentType::TRAFFIC_BARREL,
@@ -2218,7 +2219,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
   // const auto agent =
   // agent_mgr->GetAgent(origin_target_node->node_agent_id());
 
-  double target_front_s = 150.0;
+  double target_front_s = 150.0; 
   int64_t target_front_node_id = planning_data::kInvalidId;
   // target_lane_front_node_ 不满足 继续向前根据目标车道选择cipv
   const auto& target_lane_nodes =
@@ -2243,6 +2244,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     //   continue;
     // } banned: 因为可变车道分叉
     double agent_s = target_lane_node->node_s();
+    double agent_s_start = agent_s - target_lane_node->node_length() * 0.5;
     if (agent_s + target_lane_node->node_length() * 0.5 < ego_sl_bd.s_end) {
       continue;  // 车头落后自车就是后车
     }
@@ -2349,9 +2351,9 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
     bool pass_by_reverse = PassInLane(target_lane_width, agent_start_bd,
       car_width, safety_buff, direction);
 
-    if (agent_s < target_front_s) {
+    if (agent_s_start < target_front_s) { // 对比前车尾部
       target_front_node_id = target_lane_node->node_id();
-      target_front_s = agent_s;
+      target_front_s = agent_s_start;
     }
   }
   target_lane_front_node_ = dynamic_world->GetNode(target_front_node_id);
@@ -2382,7 +2384,9 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
   const auto& target_lane_nodes =
       session_->environmental_model().get_dynamic_world()->GetNodesByLaneId(
           target_lane_virtual_id);
-  double target_rear_s = -200.0;
+  double target_rear_s = -200.0; // 后车车头位置
+  double urgent_reached_time = kMaxReachedTime; //最紧急后车到达时间估计值
+  double urgent_rear_gap = 1000.0; //最紧急后车间隙
   int64_t target_rear_node_id = planning_data::kInvalidId;
       //横向运动信息
   const auto& obstacles_map = ref_path->get_obstacles_map();
@@ -2404,6 +2408,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
       continue;
     }
     double agent_s = target_lane_node->node_s();
+    double agent_s_end = agent_s + target_lane_node->node_length() * 0.5;
     if (agent_s + target_lane_node->node_length() * 0.5 >= ego_sl_bd.s_end) {
       continue;  // 车头落后自车就是后车
     }
@@ -2432,7 +2437,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
           IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
                            lc_safety_check_config_.target_lane_rear_cut_in_check_time, 0.5);
       if (!is_target_lane_cuting_in) {
-        continue;  // 1.5 s 不进入目标车道过滤
+        continue;  // 1.5 s 不进入目标车道才过滤
       }
     }
     const auto& agent_trajs =
@@ -2474,10 +2479,33 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     if (s_end < s_start) {
       continue;
     }  // 小心太后方的车可能 frenet转化后堆在一起
-    if (agent_s > target_rear_s) {
-      target_rear_node_id = target_lane_node->node_id();
-      target_rear_s = agent_s;  // 选择最靠前的
+    //由于考虑更多未来侵入的障碍物，不能只选择最近的，还应该考虑最关键的。
+    double rear_gap = std::max(0., ego_sl_bd.s_start - agent_s_end);//实际后gap
+    double rear_faster_vel = target_lane_node->node_speed() - ego_sl_state.velocity_s();
+    // 防止除0：如果速度太小或为负，使用Eps作为最小值（正向速度）
+    double valid_rel_vel = std::max(rear_faster_vel, kEps);
+    double rear_reached_time = rear_faster_vel > 0.0 ? rear_gap / valid_rel_vel : kMaxReachedTime;//实际后车到达时间， 后车慢速则为极大值
+    // 与自车有干涉，直接对比位置
+    rear_reached_time = std::min(rear_reached_time, kMaxReachedTime);
+    if(rear_gap < kEps) {
+      if (agent_s_end > target_rear_s) { // 对比当前位置头部
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;  // 选择最靠前的
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = 0.0;
+      }
+    }else{ //与自车没有干涉，对比时间
+      if(rear_reached_time < urgent_reached_time) {
+        target_rear_node_id = target_lane_node->node_id();
+        target_rear_s = agent_s_end;
+        urgent_rear_gap = rear_gap;
+        urgent_reached_time = rear_reached_time;
+      }
     }
+    // if (agent_s_end > target_rear_s) {
+    //   target_rear_node_id = target_lane_node->node_id();
+    //   target_rear_s = agent_s;  // 选择最靠前的
+    // }
   }
   target_lane_rear_node_ = dynamic_world->GetNode(target_rear_node_id);
 }
