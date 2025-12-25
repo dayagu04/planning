@@ -659,10 +659,14 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
   const Pose2f& start_pose = current_node->GetPose();
   Pose2f end_pose = end_node_->GetPose();
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
-    end_pose.x += 1.68;
+  if (request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      end_pose.x += 1.68;
+    } else if (request_.scenario_type ==
+               ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      end_pose.x += 2.86;
+    }
   }
 
   bool is_connected_to_goal;
@@ -681,31 +685,39 @@ const bool HybridAStarPathGenerator::CalcRSPathToGoal(
     return false;
   }
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
+  if (request_.search_mode == SearchMode::FORMAL && !cal_h_cost) {
     RSPathSegment rs_seg;
-    rs_seg.gear = AstarPathGear::REVERSE;
     rs_seg.steer = RSPathSteer::RS_STRAIGHT;
     rs_seg.kappa = 0.0;
-    rs_seg.length = end_node_->GetPose().x - end_pose.x;
     rs_seg.size = 1;
     rs_seg.points[0].x = end_pose.x;
     rs_seg.points[0].y = end_pose.y;
     rs_seg.points[0].theta = end_pose.theta;
     rs_seg.points[0].kappa = 0.0;
-    rs_seg.points[0].dir = AstarPathGear::REVERSE;
-
-    if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::DRIVE) {
-      rs_path_.gear_change_number += 1;
+    if (request_.scenario_type ==
+        ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+      rs_seg.gear = AstarPathGear::REVERSE;
+      rs_seg.length = end_node_->GetX() - end_pose.GetX();
+      rs_seg.points[0].dir = AstarPathGear::REVERSE;
+      if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::DRIVE) {
+        rs_path_.gear_change_number += 1;
+      }
+    } else if (request_.scenario_type ==
+               ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+      rs_seg.gear = AstarPathGear::DRIVE;
+      rs_seg.length = end_pose.GetX() - end_node_->GetX();
+      rs_seg.points[0].dir = AstarPathGear::DRIVE;
+      if (rs_path_.paths[rs_path_.size - 1].gear == AstarPathGear::REVERSE) {
+        rs_path_.gear_change_number += 1;
+      }
     }
-    rs_path_.total_length += rs_seg.length;
+    rs_path_.total_length += std::fabs(rs_seg.length);
     rs_path_.paths[rs_path_.size++] = rs_seg;
   }
 
-  if (request_.scenario_type ==
-          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN &&
-      request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC) {
+  if (request_.search_mode == SearchMode::DECIDE_CUL_DE_SAC &&
+      request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
     if (rs_path_.GetFirstGear() != AstarPathGear::DRIVE ||
         rs_path_.gear_change_number > 1) {
       return false;

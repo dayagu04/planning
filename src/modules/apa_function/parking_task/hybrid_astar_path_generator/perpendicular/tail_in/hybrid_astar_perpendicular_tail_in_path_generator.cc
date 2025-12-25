@@ -249,7 +249,14 @@ const bool HybridAStarPerpendicularTailInPathGenerator::Update() {
       ego_info_under_slot.slot.processed_corner_coord_local_.pt_01_mid;
 
   interesting_area_.Reset(interesting_pos_slot);
-  interesting_area_.ExtendXupper(6.6 + bound);
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    interesting_area_.ExtendXupper(6.6 + bound);
+  } else if (request_.scenario_type ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    interesting_area_.ExtendXupper(9.6 + bound);
+  }
+
   interesting_area_.ExtendXlower(interesting_pos_slot.x() -
                                  ego_info_under_slot.target_pose.GetX() +
                                  bound);
@@ -640,6 +647,11 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   lpl_input.link_line_start_pt = true;
   lpl_input.reverse_last_line_min_length = 0.45;
   lpl_input.drive_last_line_min_length = 1.68;
+  if (request_.scenario_type ==
+      ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(lpl_input.reverse_last_line_min_length,
+              lpl_input.drive_last_line_min_length);
+  }
 
   AnalyticExpansionRequest analytic_expansion_request;
   analytic_expansion_request.type = request_.analytic_expansion_type;
@@ -750,11 +762,22 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
     // search ends.
     if (analytic_expansion_request.type ==
         AnalyticExpansionType::LINK_POSE_LINE) {
+      if (request_.scenario_type ==
+          ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
 #if USE_LINK_PT_LINE
-      lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
+        lpl_input.ref_last_line_gear = AstarPathGear::REVERSE;
 #else
-      lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
+        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_REVERSE;
 #endif
+      } else if (request_.scenario_type ==
+                 ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+#if USE_LINK_PT_LINE
+        lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
+#else
+        lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
+#endif
+      }
+
       lpl_input.pose.SetPos(current_node->GetX(), current_node->GetY());
       lpl_input.pose.SetTheta(current_node->GetPhi());
       lpl_input.pose.SetDir(current_node->GetPhi());
