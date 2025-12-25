@@ -348,16 +348,18 @@ void ApaSlotManager::Update(
       ego_info_under_slot_.slot.release_info_
           .release_state[ASTAR_PLANNING_RELEASE];
 
-  if (!measure_data_ptr_->GetStaticFlag()) {
-    pre_plan_fail_slot_id_vec_.clear();
+  if (!measure_data_ptr_->GetStaticFlag() ||
+      (free_slot_activate &&
+       sapa_status != ApaSAPAStatus::SAPA_STATUS_FINISHED) ||
+      running_mode == ApaRunningMode::RUNNING_PA) {
+    pre_plan_fail_slot_id_uset_.clear();
   } else if (state_machine_ptr->IsSearchingInStatus() &&
              ego_info_under_slot_.slot.GetId() != 0) {
     if ((last_geometry_release == SlotReleaseState::UNKNOWN ||
          last_geometry_release == SlotReleaseState::NOT_RELEASE) &&
         (last_astar_release == SlotReleaseState::UNKNOWN ||
          last_astar_release == SlotReleaseState::NOT_RELEASE)) {
-      pre_plan_fail_slot_id_vec_.emplace_back(
-          ego_info_under_slot_.slot.GetId());
+      pre_plan_fail_slot_id_uset_.emplace(ego_info_under_slot_.slot.GetId());
     }
   }
 
@@ -401,6 +403,13 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
   release_slot_narrow_flag_vec_.clear();
   release_slot_id_vec_.reserve(slots_map_.size());
   release_slot_narrow_flag_vec_.reserve(slots_map_.size());
+
+  if (state_machine_ptr_->IsSAPAMode() &&
+      state_machine_ptr_->GetSAPAStatus() !=
+          ApaSAPAStatus::SAPA_STATUS_FINISHED) {
+    return;
+  }
+
   for (const auto& pair : dist_id_map_) {
     if (slots_map_.count(pair.second) == 0) {
       continue;
@@ -412,15 +421,13 @@ void ApaSlotManager::GenerateReleaseSlotIdVec() {
       continue;
     }
 
-    if (std::find(pre_plan_fail_slot_id_vec_.begin(),
-                  pre_plan_fail_slot_id_vec_.end(),
-                  slot.id_) != pre_plan_fail_slot_id_vec_.end()) {
+    if (pre_plan_fail_slot_id_uset_.count(slot.id_) != 0) {
       continue;
     }
 
     bool is_slot_release = false;
 
-    if (slot.id_ != ego_info_under_slot_.id && !state_machine_ptr_->IsSAPAMode()) {
+    if (slot.id_ != ego_info_under_slot_.id) {
       is_slot_release = true;
     } else {
       const SlotReleaseInfo& ego_release_info =
