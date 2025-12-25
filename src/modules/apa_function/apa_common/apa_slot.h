@@ -195,6 +195,9 @@ class ApaSlot final {
     limiter_.Reset();
 
     release_info_.Clear();
+
+    is_narrow_slot_ = false;
+    is_selected_ = false;
   }
 
   const std::vector<Eigen::Vector2d> GetCustomSlotPolygonByCenter(
@@ -297,6 +300,8 @@ class ApaSlot final {
   geometry_lib::LocalToGlobalTf l2g_tf_;
 
   bool is_narrow_slot_ = false;
+
+  bool is_selected_ = false;
 };
 
 const std::string GetSlotTypeString(const SlotType type);
