@@ -340,7 +340,7 @@ class LaneChangeStateMachineManager {
   TrajectoryPoints front_node_trajs_future_;
   bool joint_decision_success_ = false;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
-  std::vector<std::shared_ptr<FrenetObstacle>> risk_side_agents_nodes_;
+  std::vector<const planning_data::DynamicAgentNode*> risk_side_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;
