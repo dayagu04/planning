@@ -29,6 +29,8 @@ constexpr double kBrakeDelayTimeBuffer = 0.3;
 constexpr double kAccMaxLowerBound = -5.0;
 constexpr double kJerkMaxLowerBound = -4.0;
 
+constexpr double kLaneChangeAccUpperBound = 1.2;
+
 }  // namespace
 BoundMaker::BoundMaker(const SpeedPlannerConfig& speed_planning_config,
                        framework::Session* session)
@@ -238,6 +240,15 @@ void BoundMaker::MakeAccBound(const double& v_ego,
           acc_upper_bound_[i], motion_planner_output.recommended_acc_bound);
     }
   }
+
+  if (lane_change_decider_output.curr_state == kLaneChangeExecution ||
+      lane_change_decider_output.curr_state == kLaneChangeComplete ||
+      lane_change_decider_output.curr_state == kLaneChangePropose) {
+    for (int32_t i = 0; i < plan_points_num_; i++) {
+      acc_upper_bound_[i] = std::fmax(acc_upper_bound_[i], kLaneChangeAccUpperBound);
+    }
+  }
+
   double min_acc_bound_val = 10.0;
   auto min_it =
       std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
