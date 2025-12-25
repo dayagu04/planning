@@ -2709,6 +2709,8 @@ void LaneChangeStateMachineManager::GetSideRiskAgents() {
       if (!is_target_lane_cuting_in) {
         continue;  // 1.5 s 不进入目标车道过滤
       }
+    }else{
+      continue;
     }
     risk_side_agents_nodes_.push_back(target_lane_node);
   }
