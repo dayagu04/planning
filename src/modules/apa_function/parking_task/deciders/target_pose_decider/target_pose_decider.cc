@@ -158,6 +158,9 @@ TargetPoseDecider::CalcTargetPoseForPerpendicularParkingIn() {
     }
     use_limiter = false;
     car_body_type = CarBodyType::ONLY_MAX_POLYGAN;
+    if (slot_.is_selected_) {
+      consider_obs_movement_type = ApaObsMovementType::STATIC;
+    }
   } else {
     consider_obs_movement_type = ApaObsMovementType::STATIC;
     if (heading_in) {
