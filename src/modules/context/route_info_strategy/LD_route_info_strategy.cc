@@ -1784,6 +1784,25 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       continue;
     }
 
+    // 增加判断入口车道是否已经存在feasible lane中，比如匝道进主路的场景
+    bool is_entry_lane_in_feasible_lane = false;
+    for (const auto& lane_topo_group: feasible_lane_graph.lane_topo_groups) {
+      if (lane_topo_group.link_id != entry_lane_info->link_id()) {
+        continue;
+      }
+
+      for (const auto& lane_topo : lane_topo_group.topo_lanes) {
+        if (lane_topo.id == entry_lane_info->id()) {
+          is_entry_lane_in_feasible_lane = true;
+        }
+      }
+    }
+
+    if (is_entry_lane_in_feasible_lane) {
+      ++it;
+      continue;
+    }
+    
     const auto& entry_lane_belong_link = ld_map_.GetLinkOnRoute(entry_lane_info->link_id());
     if (entry_lane_belong_link == nullptr) {
       ++it;
@@ -2097,7 +2116,8 @@ void LDRouteInfoStrategy::HandleOtherMergeLinkPreLane(
   const auto matching_pre_lane =
       FindMatchingPreLaneInMainLink(topo_lane, next_pre_link);
 
-  if (matching_pre_lane.link_id() == next_pre_link->id()) {
+  if (matching_pre_lane.link_id() == next_pre_link->id() &&
+      !HasLaneId(next_lane_vec, matching_pre_lane.id())) {
     next_lane_vec.emplace_back(matching_pre_lane);
   }
 }
