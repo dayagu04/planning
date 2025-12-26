@@ -74,6 +74,14 @@ void ObstacleManager::update() {
                  << prediction_object.id << "]";
       continue;
     }
+    // TODO(taolu10): 临时在 HPP 功能中过滤 OD
+    // 中的减速带避免刹停，合理的方式不应该在这里过滤，而应该在纵向不做刹停逻辑（需要做减速逻辑）
+    if(session_->is_hpp_scene()) {
+      if(prediction_object.type == iflyauto::ObjectType::OBJECT_TYPE_DECELER) {
+        continue;
+      }
+    }
+
     bool is_in_fov =
         prediction_object.relative_position_x > 0 &&
         (tan(HALF_FOV) > fabs(prediction_object.relative_position_y /
