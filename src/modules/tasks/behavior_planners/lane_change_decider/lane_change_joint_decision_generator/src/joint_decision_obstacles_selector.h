@@ -14,6 +14,7 @@ enum LongitudinalLabel {
   OVERTAKE = 1,
   YIELD = 2,
   EGO_OVERTAKE = 3,
+  HALF_YIELD = 4,  // 只在前3秒内产生 SoftHalfplane 代价
 };
 
 struct LaneChangeKeyObstacle {

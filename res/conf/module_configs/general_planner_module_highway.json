@@ -563,8 +563,8 @@
     "q_obs_jerk_weight": 30.0,
     "q_obs_omega_weight": 80.0,
     "q_ego_acc_bound_weight": 1600.0,
-    "ego_acc_max": 2.0,
-    "ego_acc_min": -3.0,
+    "ego_acc_max": 1.5,
+    "ego_acc_min": -1.8,
     "q_ego_jerk_bound_weight": 800.0,
     "ego_jerk_max": 2.0,
     "ego_jerk_min": -2.5,
@@ -1537,8 +1537,9 @@
     "rear_close_speed_diff_threshold": 1.5,
     "exe_rear_speed_ratio": 1.6,
     "exe_rear_distance_ratio": 0.8,
-    "faster_rear_delay_time": 0.2,
+    "faster_rear_delay_time": 0.3,
     "lat_offset_buffer": 0.30,
+    "target_lane_side_cut_in_check_time": 1.51,
     "diff_speed_init_ttc_map": {
       "diff_kph_table": [0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0],
       "ttc_table":      [0.8, 1.8,  2.5, 4.0,  5.0,  7.0,  7.5,  8.5,  10.0]

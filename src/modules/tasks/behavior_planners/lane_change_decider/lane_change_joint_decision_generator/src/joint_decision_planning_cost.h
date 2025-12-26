@@ -3,6 +3,7 @@
 #include "ilqr_cost.h"
 #include "utils/kd_path.h"
 #include "vec2d.h"
+#include "joint_decision_obstacles_selector.h"
 namespace pnc {
 namespace lane_change_joint_decision {
 
@@ -350,7 +351,7 @@ class SoftHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
  private:
   struct SoftHalfplaneResult {
     int obs_index;     // 障碍物索引
-    int label_type;    // 标签类型：1=OVERTAKE, 2=YIELD
+    planning::lane_change_joint_decision::LongitudinalLabel label_type;    // 标签类型
     double s_current;  // 当前纵向距离
     double s_target;   // 目标安全距离
     double normal_x;   // 参考朝向法向量x
@@ -376,7 +377,7 @@ class HardHalfplaneCostTerm : public ilqr_solver::BaseCostTerm {
  private:
   struct HardHalfplaneResult {
     int obs_index;      // 障碍物索引
-    int label_type;     // 标签类型：1=OVERTAKE, 2=YIELD
+    planning::lane_change_joint_decision::LongitudinalLabel label_type;     // 标签类型
     double plane_dist;  // 半平面距离
     double normal_x;    // 参考朝向法向量x
     double normal_y;    // 参考朝向法向量y
