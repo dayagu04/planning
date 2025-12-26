@@ -783,9 +783,9 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckLCGapFeasible(
       if (side_obs == nullptr) {
             continue;
       }
-      bool is_large = IsLargeAgent(side_obs);// 判断是否大车
+      // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_large, is_front_car);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
       if (!lc_state_info.gap_insertable) {
         return lc_state_info;
       }
@@ -1043,9 +1043,9 @@ LaneChangeStageInfo LaneChangeStateMachineManager::CheckIfNeedLCBack(
       if (side_obs == nullptr) {
             continue;
       }
-      bool is_large = IsLargeAgent(side_obs);// 判断是否大车
+      // bool is_large = IsLargeAgent(side_obs);// 判断是否大车
       bool is_front_car = side_obs->node_to_ego_distance() > 0.0; // node s 在自车前还是后
-      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_large, is_front_car);
+      CalculateLCGapFeasibleWithPredictionInfo(&lc_state_info, side_obs, is_front_car, false);
       if (lc_state_info.lc_should_back) {
         return lc_state_info;
       }
