@@ -532,20 +532,17 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     if ((config_.ramp_limit_v_valid) && (route_info_output.is_on_ramp)) {
       cruise_v = std::min(std::max(config_.ramp_limit_v, ego_v), cruise_v);
     }
+    const auto& speed_limit_decider_output = session_->planning_context().speed_limit_decider_output();
     double curve_speed_limit;
-    bool is_exist_curve_speed_limit =
-        session_->planning_context()
-                .speed_limit_decider_output()
-                .GetSpeedLimitByType(SpeedLimitType::CURVATURE, &curve_speed_limit);
-    if (is_exist_curve_speed_limit) {
+    SpeedLimitType curve_speed_limit_type;
+    speed_limit_decider_output.GetSpeedLimit(&curve_speed_limit, &curve_speed_limit_type);
+    if (curve_speed_limit_type == SpeedLimitType::CURVATURE) {
       cruise_v = std::min(curve_speed_limit, cruise_v);
     }
     double sharp_curve_speed_limit;
-    bool is_exist_sharp_curve_speed_limit =
-        session_->planning_context()
-                .speed_limit_decider_output()
-                .GetSpeedLimitByType(SpeedLimitType::SHARP_CURVATURE, &sharp_curve_speed_limit);
-    if (is_exist_sharp_curve_speed_limit) {
+    SpeedLimitType sharp_curve_speed_limit_type;
+    speed_limit_decider_output.GetSpeedLimit(&sharp_curve_speed_limit, &sharp_curve_speed_limit_type);
+    if (sharp_curve_speed_limit_type == SpeedLimitType::SHARP_CURVATURE) {
       cruise_v = std::min(sharp_curve_speed_limit, cruise_v);
       kMinAcc = -1.0;
     }
@@ -594,7 +591,9 @@ void GeneralLateralDecider::ConstructTrajPoints(TrajectoryPoints &traj_points) {
     // ref_length_change = planning::interp(ego_v, xp_ego_v, fp_length_diff);
   }
   if (last_ref_length_ >= 1.0 &&
-      session_->environmental_model().GetVehicleDbwStatus()) {
+      session_->environmental_model().GetVehicleDbwStatus() &&
+      session_->environmental_model().function_info().function_mode() !=
+      common::DrivingFunctionInfo::ACC) {
     s = std::min(s, last_ref_length_ + ref_length_change);
   }
   auto cart_ref_info = coarse_planning_info.cart_ref_info;

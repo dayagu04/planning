@@ -69,6 +69,7 @@ struct Tlane {
   TlaneCorner tlane_corner;
 
   Limiter limiter;
+  Limiter front_slot_limiter;
   bool is_inside_rigid = false;
   double pt_terminal_heading = 0.0;
   uint8_t slot_side = pnc::geometry_lib::SLOT_SIDE_INVALID;

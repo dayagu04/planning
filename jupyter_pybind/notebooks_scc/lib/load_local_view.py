@@ -471,6 +471,7 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
   # step 3: 加载车道线信息
   if bag_loader.road_msg['enable'] == True:
     print("fus road local_point_valid: ", road_msg.local_point_valid)
+    # update lane info
     dash_line_x, dash_line_y, dash_line_id = [], [], []
     solid_line_x, solid_line_y, solid_line_id = [], [], []
     virtual_line_x, virtual_line_y, dot_line_id = [], [], []
@@ -496,37 +497,43 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       'lines_y_vec': virtual_line_y,
       'relative_id_vec': dot_line_id,
     })
-    # load lane info
+    # data_lane_dict = {
+    #   0:local_view_data['data_lane_0'],
+    #   1:local_view_data['data_lane_1'],
+    #   2:local_view_data['data_lane_2'],
+    #   3:local_view_data['data_lane_3'],
+    #   4:local_view_data['data_lane_4'],
+    #   5:local_view_data['data_lane_5'],
+    #   6:local_view_data['data_lane_6'],
+    #   7:local_view_data['data_lane_7'],
+    #   8:local_view_data['data_lane_8'],
+    #   9:local_view_data['data_lane_9'],
+    #   10:local_view_data['data_lane_10'],
+    #   11:local_view_data['data_lane_11'],
+    #   12:local_view_data['data_lane_12'],
+    #   13:local_view_data['data_lane_13'],
+    #   14:local_view_data['data_lane_14'],
+    #   15:local_view_data['data_lane_15'],
+    #   16:local_view_data['data_lane_16'],
+    #   17:local_view_data['data_lane_17'],
+    #   18:local_view_data['data_lane_18'],
+    #   19:local_view_data['data_lane_19'],
+    # }
+    # try:
+    #   line_info_list = load_lane_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+    # except:
+    #   print("vis road_msg error")
+    #
+    road_border_x, road_border_y = [], []
     try:
-      line_info_list = load_lane_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
+      road_border_x, road_border_y = load_road_border_lines(road_msg, loc_msg, g_is_display_enu)
     except:
       print("vis road_msg error")
-
-    # update lane info
-    data_lane_dict = {
-      0:local_view_data['data_lane_0'],
-      1:local_view_data['data_lane_1'],
-      2:local_view_data['data_lane_2'],
-      3:local_view_data['data_lane_3'],
-      4:local_view_data['data_lane_4'],
-      5:local_view_data['data_lane_5'],
-      6:local_view_data['data_lane_6'],
-      7:local_view_data['data_lane_7'],
-      8:local_view_data['data_lane_8'],
-      9:local_view_data['data_lane_9'],
-      10:local_view_data['data_lane_10'],
-      11:local_view_data['data_lane_11'],
-      12:local_view_data['data_lane_12'],
-      13:local_view_data['data_lane_13'],
-      14:local_view_data['data_lane_14'],
-      15:local_view_data['data_lane_15'],
-      16:local_view_data['data_lane_16'],
-      17:local_view_data['data_lane_17'],
-      18:local_view_data['data_lane_18'],
-      19:local_view_data['data_lane_19'],
-    }
-
-
+    local_view_data['data_road_border'].data.update({
+      'lines_x_vec': road_border_x,
+      'lines_y_vec': road_border_y
+    })
+    #
     data_center_line_dict = {
       0:local_view_data['data_center_line_0'],
       1:local_view_data['data_center_line_1'],
@@ -539,7 +546,6 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       8:local_view_data['data_center_line_8'],
       9:local_view_data['data_center_line_9'],
     }
-
     data_lane_mark_dict = {
       0:local_view_data['lane_mark_data_0'],
       1:local_view_data['lane_mark_data_1'],
@@ -552,12 +558,8 @@ def update_local_view_data(fig1, bag_loader, bag_time, local_view_data):
       8:local_view_data['lane_mark_data_8'],
       9:local_view_data['lane_mark_data_9'],
     }
-
-
     center_line_list = load_lane_center_lines(road_msg, is_enu_to_car, loc_msg, g_is_display_enu)
-
     # print(center_line_list)
-
     for i in range(10):
         data_center_line = data_center_line_dict[i]
         data_center_line.data.update({
@@ -2038,6 +2040,7 @@ def load_local_view_figure():
   data_lane_dashed_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
   data_lane_solid_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
   data_lane_virtual_line = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[], 'relative_id_vec':[]})
+  data_road_border = ColumnDataSource(data = {'lines_y_vec':[], 'lines_x_vec':[]})
   data_lane_0 = ColumnDataSource(data = {'line_0_y':[], 'line_0_x':[]})
   data_lane_1 = ColumnDataSource(data = {'line_1_y':[], 'line_1_x':[]})
   data_lane_2 = ColumnDataSource(data = {'line_2_y':[], 'line_2_x':[]})
@@ -2426,6 +2429,7 @@ def load_local_view_figure():
                      'data_lane_dashed_line':data_lane_dashed_line, \
                      'data_lane_solid_line':data_lane_solid_line, \
                      'data_lane_virtual_line':data_lane_virtual_line, \
+                     'data_road_border': data_road_border, \
                      'data_lane_0':data_lane_0, \
                      'data_lane_1':data_lane_1, \
                      'data_lane_2':data_lane_2, \
@@ -2655,26 +2659,26 @@ def load_local_view_figure():
   fig1.circle_dot('x', 'y', source = sampled_points_data_source_xy, size=4, color='red', legend_label = "samped lanes xy")
   fig1.line('x', 'y', source = fined_path_xy, line_width=3, line_color='orange', line_dash = 'dashed',legend_label = "fined path")
   if is_vis_rdg_line:
-    f21 = fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_0")
-    fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_1")
-    fig1.line('rdg_line_2_y', 'rdg_line_2_x', source = rdg_data_lane_2, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_2")
-    fig1.line('rdg_line_3_y', 'rdg_line_3_x', source = rdg_data_lane_3, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_3")
-    fig1.line('rdg_line_4_y', 'rdg_line_4_x', source = rdg_data_lane_4, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_4")
-    fig1.line('rdg_line_5_y', 'rdg_line_5_x', source = rdg_data_lane_5, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_5")
-    fig1.line('rdg_line_6_y', 'rdg_line_6_x', source = rdg_data_lane_6, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_6")
-    fig1.line('rdg_line_7_y', 'rdg_line_7_x', source = rdg_data_lane_7, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_7")
-    fig1.line('rdg_line_8_y', 'rdg_line_8_x', source = rdg_data_lane_8, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_8")
-    fig1.line('rdg_line_9_y', 'rdg_line_9_x', source = rdg_data_lane_9, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_9")
-    fig1.line('rdg_line_10_y', 'rdg_line_10_x', source = rdg_data_lane_10, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_10")
-    fig1.line('rdg_line_11_y', 'rdg_line_11_x', source = rdg_data_lane_11, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_11")
-    fig1.line('rdg_line_12_y', 'rdg_line_12_x', source = rdg_data_lane_12, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_12")
-    fig1.line('rdg_line_13_y', 'rdg_line_13_x', source = rdg_data_lane_13, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_13")
-    fig1.line('rdg_line_14_y', 'rdg_line_14_x', source = rdg_data_lane_14, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_14")
-    fig1.line('rdg_line_15_y', 'rdg_line_15_x', source = rdg_data_lane_15, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_15")
-    fig1.line('rdg_line_16_y', 'rdg_line_16_x', source = rdg_data_lane_16, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_16")
-    fig1.line('rdg_line_17_y', 'rdg_line_17_x', source = rdg_data_lane_17, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_17")
-    fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_18")
-    fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_19")
+    f21 = fig1.line('rdg_line_0_y', 'rdg_line_0_x', source = rdg_data_lane_0, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_0", visible = False)
+    fig1.line('rdg_line_1_y', 'rdg_line_1_x', source = rdg_data_lane_1, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_1", visible = False)
+    fig1.line('rdg_line_2_y', 'rdg_line_2_x', source = rdg_data_lane_2, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_2", visible = False)
+    fig1.line('rdg_line_3_y', 'rdg_line_3_x', source = rdg_data_lane_3, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_3", visible = False)
+    fig1.line('rdg_line_4_y', 'rdg_line_4_x', source = rdg_data_lane_4, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_4", visible = False)
+    fig1.line('rdg_line_5_y', 'rdg_line_5_x', source = rdg_data_lane_5, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_5", visible = False)
+    fig1.line('rdg_line_6_y', 'rdg_line_6_x', source = rdg_data_lane_6, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_6", visible = False)
+    fig1.line('rdg_line_7_y', 'rdg_line_7_x', source = rdg_data_lane_7, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_7", visible = False)
+    fig1.line('rdg_line_8_y', 'rdg_line_8_x', source = rdg_data_lane_8, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_8", visible = False)
+    fig1.line('rdg_line_9_y', 'rdg_line_9_x', source = rdg_data_lane_9, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_9", visible = False)
+    fig1.line('rdg_line_10_y', 'rdg_line_10_x', source = rdg_data_lane_10, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_10", visible = False)
+    fig1.line('rdg_line_11_y', 'rdg_line_11_x', source = rdg_data_lane_11, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_11", visible = False)
+    fig1.line('rdg_line_12_y', 'rdg_line_12_x', source = rdg_data_lane_12, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_12", visible = False)
+    fig1.line('rdg_line_13_y', 'rdg_line_13_x', source = rdg_data_lane_13, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_13", visible = False)
+    fig1.line('rdg_line_14_y', 'rdg_line_14_x', source = rdg_data_lane_14, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_14", visible = False)
+    fig1.line('rdg_line_15_y', 'rdg_line_15_x', source = rdg_data_lane_15, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_15", visible = False)
+    fig1.line('rdg_line_16_y', 'rdg_line_16_x', source = rdg_data_lane_16, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_16", visible = False)
+    fig1.line('rdg_line_17_y', 'rdg_line_17_x', source = rdg_data_lane_17, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_17", visible = False)
+    fig1.line('rdg_line_18_y', 'rdg_line_18_x', source = rdg_data_lane_18, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_18", visible = False)
+    fig1.line('rdg_line_19_y', 'rdg_line_19_x', source = rdg_data_lane_19, line_width = 1.5, line_color = 'green', line_dash = 'dashed', legend_label = 'rdg_lane',name="rdg_lane_19", visible = False)
 
     f41 = fig1.line('stop_line_0_y', 'stop_line_0_x', source = stop_line_0, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
     fig1.line('stop_line_1_y', 'stop_line_1_x', source = stop_line_1, line_width = 5, line_color = 'red', line_dash = 'dashed', legend_label = 'stop_line')
@@ -2699,6 +2703,7 @@ def load_local_view_figure():
   fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
   fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
   fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
+  fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
 
   f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)

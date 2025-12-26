@@ -275,7 +275,10 @@ void ApaSlotManager::Update(
                 pnc::mathlib::Deg2Rad(45.0)) {
           neigbor_front_heading_slot = 0.0;
         }
-
+        if (slots_map_.count(fusion_slot1->id)) {
+          ego_info_under_slot_.slot.front_slot_limiter_ =
+              slots_map_[fusion_slot1->id].GetLimiter();
+        }
       }
     }
     auto its = obstacle_manager_ptr_->GetParallelSlotNeighbourObjsHeading();

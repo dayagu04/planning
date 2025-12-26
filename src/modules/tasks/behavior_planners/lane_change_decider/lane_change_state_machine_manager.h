@@ -270,6 +270,13 @@ class LaneChangeStateMachineManager {
   bool IsSideClear(int front_agent_id, int rear_agent_id);
 
   bool CheckTargetLaneValid();
+  bool IsExistExtendLane(const iflymapdata::sdpro::Lane* lane, bool is_right) const;
+  std::pair<const iflymapdata::sdpro::Lane*, const iflymapdata::sdpro::Lane*>
+  CalculateLeftestRightestLane(
+      const iflymapdata::sdpro::LinkInfo_Link* link) const;
+
+  RampDirection CalcTurnSignalForTencentSplitRegion() const;
+  RampDirection CalcTurnSignalForBaiduSplitRegion() const;
 
  private:
   //   const EgoPlanningConfigBuilder* ego_planning_config_builder_;
@@ -333,7 +340,7 @@ class LaneChangeStateMachineManager {
   TrajectoryPoints front_node_trajs_future_;
   bool joint_decision_success_ = false;
   std::vector<const planning_data::DynamicAgentNode*> risk_agents_nodes_;
-  std::vector<std::shared_ptr<FrenetObstacle>> risk_side_agents_nodes_;
+  std::vector<const planning_data::DynamicAgentNode*> risk_side_agents_nodes_;
   double lc_safety_check_time_ = 0.0;
   int lc_safety_check_num_ = 0;
   bool is_high_priority_back_ = false;

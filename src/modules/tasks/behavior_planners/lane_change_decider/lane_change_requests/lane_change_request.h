@@ -93,7 +93,7 @@ class LaneChangeRequest {
 
   bool IsRoadBorderSurpressDuringLaneChange(const RequestType lc_direction,
                                             const int origin_lane_id,
-                                            const int target_lane_id);
+                                            const int target_lane_id) const;
 
   double CalculatePressLineRatio(const int origin_lane_id,
                                  const RequestType& lc_request) const;

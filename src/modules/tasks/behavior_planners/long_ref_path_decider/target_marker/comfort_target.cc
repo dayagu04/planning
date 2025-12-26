@@ -55,6 +55,8 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
       lane_change_state == StateMachineLaneChangeStatus::kLaneChangeHold;
 
+  JSON_DEBUG_VALUE("lane_change_state", static_cast<int>(lane_change_state));
+
   const auto& speed_limit_decider_output =
       session_->planning_context().speed_limit_decider_output();
 
@@ -151,6 +153,14 @@ ComfortTarget::ComfortTarget(const SpeedPlannerConfig& config,
     output_info.st_boundary_id = info.st_boundary_id;
     mutable_lon_ref_path_decider_output->comfort_target_upper_bound_infos
         .push_back(output_info);
+  }
+
+  mutable_lon_ref_path_decider_output->comfort_target.clear();
+  mutable_lon_ref_path_decider_output->comfort_target.reserve(
+      target_values_.size());
+  for (const auto& target_val : target_values_) {
+    mutable_lon_ref_path_decider_output->comfort_target.push_back(
+        {target_val.s_target_val(), target_val.v_target_val()});
   }
 
   AddComfortTargetDataToProto();
@@ -434,13 +444,13 @@ void ComfortTarget::GenerateUpperBoundInfo() {
         bool need_check_emergency = is_joint_danger && is_in_upper_bound;
 
         if (need_check_emergency && obs_s > comfort_params_.eps) {
-          double ego_s = init_lon_state_[0];
-          double ego_v = init_lon_state_[1];
+          double ego_init_s = init_lon_state_[0];
+          double ego_init_v = init_lon_state_[1];
           double delta_v = std::max(comfort_params_.eps, ego_v - obs_v);
-          double delta_s = obs_s - ego_s;
+          double delta_s = obs_s - ego_init_s;
           double safe_distance =
-              ego_v * comfort_params_.delay_time_buffer +
-              ego_v * ego_v / (2.0 * comfort_params_.b_hard) -
+              ego_init_v * comfort_params_.delay_time_buffer +
+              ego_init_v * ego_init_v / (2.0 * comfort_params_.b_hard) -
               obs_v * obs_v / (2.0 * comfort_params_.b_hard);
           double ttc = std::max(comfort_params_.eps, delta_s / delta_v);
           if (ttc < comfort_params_.emergency_ttc_threshold &&
@@ -497,6 +507,28 @@ void ComfortTarget::ProcessCutinAgents(
     if (parallel_overtake_agent_id != -1 &&
         agent_id == parallel_overtake_agent_id) {
       continue;
+    }
+
+    const auto& lane_change_decider_output =
+        session_->planning_context().lane_change_decider_output();
+    const auto curr_state = lane_change_decider_output.curr_state;
+    if (curr_state == StateMachineLaneChangeStatus::kLaneChangeExecution ||
+        curr_state == StateMachineLaneChangeStatus::kLaneChangeHold ||
+        curr_state == StateMachineLaneChangeStatus::kLaneChangeComplete ||
+        curr_state == StateMachineLaneChangeStatus::kLaneChangePropose) {
+      const auto rear_node_id =
+          lane_change_decider_output.lc_gap_info.rear_node_id;
+      const auto dynamic_world =
+          session_->environmental_model().get_dynamic_world();
+      if (dynamic_world != nullptr) {
+        const auto node_ptr = dynamic_world->GetNode(rear_node_id);
+        if (node_ptr != nullptr) {
+          const int32_t gap_rear_agent_id = node_ptr->node_agent_id();
+          if (gap_rear_agent_id == agent_id) {
+            continue;
+          }
+        }
+      }
     }
 
     auto agent =

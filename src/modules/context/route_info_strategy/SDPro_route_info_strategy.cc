@@ -27,4 +27,9 @@ bool SDProRouteInfoStrategy::get_sdpromap_valid() { return sdmap_valid_; }
 const ad_common::sdpromap::SDProMap& SDProRouteInfoStrategy::get_sdpro_map() {
   return sd_map_;
 }
+
+const iflymapdata::sdpro::LinkInfo_Link* SDProRouteInfoStrategy::get_current_link() {
+  return current_link_;
+}
+
 }
