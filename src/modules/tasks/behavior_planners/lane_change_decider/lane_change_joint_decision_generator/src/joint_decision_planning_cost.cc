@@ -1,6 +1,7 @@
 #include "joint_decision_planning_cost.h"
 
 #include "joint_decision_planning_model.h"
+#include "joint_decision_obstacles_selector.h"
 
 using namespace pnc::mathlib;
 namespace pnc {
@@ -903,9 +904,14 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
 
   for (int i = 0; i < obs_num; ++i) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
-    const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
+    const planning::lane_change_joint_decision::LongitudinalLabel label = 
+        static_cast<planning::lane_change_joint_decision::LongitudinalLabel>(
+            static_cast<int>(cost_config_ptr_->at(label_idx)));
 
-    if (label_value != 1 && label_value != 2 && label_value != 3 && label_value != 4) {
+    if (label != planning::lane_change_joint_decision::OVERTAKE &&
+        label != planning::lane_change_joint_decision::YIELD &&
+        label != planning::lane_change_joint_decision::EGO_OVERTAKE &&
+        label != planning::lane_change_joint_decision::HALF_YIELD) {
       continue;
     }
 
@@ -923,7 +929,8 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
 
     double plane_dist = 0.0;
 
-    if (label_value == 1 || label_value == 3) {
+    if (label == planning::lane_change_joint_decision::OVERTAKE ||
+        label == planning::lane_change_joint_decision::EGO_OVERTAKE) {
       const double ego_rear_x =
           ego_x - ego_rear_edge_to_rear_axle * std::cos(ego_theta);
       const double ego_rear_y =
@@ -944,7 +951,7 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
 
       plane_dist = dist_along_ego_heading - hard_dist;
 
-    } else if (label_value == 2) {
+    } else if (label == planning::lane_change_joint_decision::YIELD) {
       const double ego_front_x =
           ego_x + ego_front_edge_to_rear_axle * std::cos(ego_theta);
       const double ego_front_y =
@@ -964,14 +971,14 @@ HardHalfplaneCostTerm::CalculateObsHardHalfplane(const ilqr_solver::State& x) {
       // }
 
       plane_dist = dist_along_ego_heading - hard_dist;
-    } else if (label_value == 4) {
+    } else if (label == planning::lane_change_joint_decision::HALF_YIELD) {
       // HALF_YIELD: 硬约束不处理 HALF_YIELD，只由 SoftHalfplane 处理
       continue;
     }
 
     HardHalfplaneResult result;
     result.obs_index = i;
-    result.label_type = label_value;
+    result.label_type = static_cast<int>(label);
     result.plane_dist = plane_dist;
     result.normal_x = ego_normal_x;
     result.normal_y = ego_normal_y;
@@ -1182,9 +1189,14 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
 
   for (int i = 0; i < obs_num; ++i) {
     const int label_idx = GetObsLongitudinalLabelIdx(i, obs_num);
-    const int label_value = static_cast<int>(cost_config_ptr_->at(label_idx));
+    const planning::lane_change_joint_decision::LongitudinalLabel label = 
+        static_cast<planning::lane_change_joint_decision::LongitudinalLabel>(
+            static_cast<int>(cost_config_ptr_->at(label_idx)));
 
-    if (label_value != 1 && label_value != 2 && label_value != 3 && label_value != 4) {
+    if (label != planning::lane_change_joint_decision::OVERTAKE &&
+        label != planning::lane_change_joint_decision::YIELD &&
+        label != planning::lane_change_joint_decision::EGO_OVERTAKE &&
+        label != planning::lane_change_joint_decision::HALF_YIELD) {
       continue;
     }
 
@@ -1203,7 +1215,8 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
     double s_current = 0.0;
     double s_target = 0.0;
 
-    if (label_value == 1 || label_value == 3) {
+    if (label == planning::lane_change_joint_decision::OVERTAKE ||
+        label == planning::lane_change_joint_decision::EGO_OVERTAKE) {
       // OVERTAKE: 自车超越障碍物
       // s_current = 障碍物前端 → 自车后端 的距离
       const double ego_rear_x =
@@ -1228,7 +1241,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
       s_target = s0 + std::max(0.0, obs_vel * tau + obs_vel * v_rel /
                                                         (2 * std::sqrt(a * b)));
       s_target += 3.0;
-    } else if (label_value == 2) {
+    } else if (label == planning::lane_change_joint_decision::YIELD) {
       // YIELD: 自车让行障碍物
       // s_current = 障碍物后端 → 自车前端 的距离
       const double ego_front_x =
@@ -1253,7 +1266,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
       s_target = s0 + std::max(0.0, ego_vel * tau + ego_vel * v_rel /
                                                         (2 * std::sqrt(a * b)));
       s_target = std::fmax(s_target - 2.0, 0.0);
-    } else if (label_value == 4) {
+    } else if (label == planning::lane_change_joint_decision::HALF_YIELD) {
       // HALF_YIELD: 自车让行障碍物，但只在前3秒内产生代价
       // 计算方式与 YIELD 相同
       const double ego_front_x =
@@ -1278,7 +1291,7 @@ SoftHalfplaneCostTerm::CalculateSoftHalfplane(const ilqr_solver::State& x) {
 
     SoftHalfplaneResult result;
     result.obs_index = i;
-    result.label_type = label_value;
+    result.label_type = static_cast<int>(label);
     result.s_current = s_current;
     result.s_target = s_target;
     result.normal_x = std::cos(ego_theta);
