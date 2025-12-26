@@ -42,28 +42,30 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
   const iflyauto::ApaParkOutDirection park_out_direction =
       fun_state_machine_info.parking_req.apa_park_out_direction;
 
-
   free_slot_pos_dir_ = free_slot_info.corner_points[kSlotFreeCorner1].x >
                        free_slot_info.corner_points[kSlotFreeCorner2].x;
 
-  if (fun_state_machine_info.running_mode == iflyauto::RunningMode::RUNNING_MODE_PA) {
-      running_mode_ = ApaRunningMode::RUNNING_PA;
-      if (fun_state_machine_info.parking_req.pa_direction ==
-          iflyauto::PA_DIRECTION_RIGHT) {
-        pa_direction_ = ApaPADirection::PA_RIGHT;
-      } else if (fun_state_machine_info.parking_req.pa_direction ==
-                 iflyauto::PA_DIRECTION_LEFT) {
-        pa_direction_ = ApaPADirection::PA_LEFT;
-      } else {
-        pa_direction_ = ApaPADirection::PA_INVALID;
-      }
-  } else if (fun_state_machine_info.parking_req.apa_free_slot_info.free_slot_activate) {
+  if (fun_state_machine_info.running_mode ==
+      iflyauto::RunningMode::RUNNING_MODE_PA) {
+    running_mode_ = ApaRunningMode::RUNNING_PA;
+    if (fun_state_machine_info.parking_req.pa_direction ==
+        iflyauto::PA_DIRECTION_RIGHT) {
+      pa_direction_ = ApaPADirection::PA_RIGHT;
+    } else if (fun_state_machine_info.parking_req.pa_direction ==
+               iflyauto::PA_DIRECTION_LEFT) {
+      pa_direction_ = ApaPADirection::PA_LEFT;
+    } else {
+      pa_direction_ = ApaPADirection::PA_INVALID;
+    }
+  } else if (fun_state_machine_info.parking_req.apa_free_slot_info
+                 .free_slot_activate) {
     running_mode_ = ApaRunningMode::RUNNING_SAPA;
     const auto is_free_slot_selected = free_slot_info.is_free_slot_selected;
-    if(is_free_slot_selected == iflyauto::FreeSlotSelectedStatus::
-            FREE_SLOT_SELECTED_STATUS_DRAGING) {
+    if (is_free_slot_selected ==
+        iflyauto::FreeSlotSelectedStatus::FREE_SLOT_SELECTED_STATUS_DRAGING) {
       sapa_status_ = ApaSAPAStatus::SAPA_STATUS_DRAGING;
-    } else if(is_free_slot_selected == iflyauto::FreeSlotSelectedStatus::
+    } else if (is_free_slot_selected ==
+               iflyauto::FreeSlotSelectedStatus::
                    FREE_SLOT_SELECTED_STATUS_FINISHED) {
       sapa_status_ = ApaSAPAStatus::SAPA_STATUS_FINISHED;
     } else {
@@ -89,7 +91,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       task_direction_ = ApaTaskDirection::APA_TASK_IN;
       if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::SEARCH_IN_SELECTED_CAR_REAR;
-      } else if(running_mode_ == ApaRunningMode::RUNNING_SAPA) {
+      } else if (running_mode_ == ApaRunningMode::RUNNING_SAPA) {
         if (sapa_status_ == ApaSAPAStatus::SAPA_STATUS_FINISHED) {
           if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeIdx]
                    .is_turn_corner) {
@@ -118,6 +120,7 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       switch (park_out_direction) {
         case iflyauto::PRK_OUT_DIRECTION_INVALID:
           state_machine_ = ApaStateMachine::SEARCH_OUT_NO_SELECTED;
+          break;
         case iflyauto::PRK_OUT_TO_FRONT_LEFT_CROSS:
         case iflyauto::PRK_OUT_TO_FRONT_LEFT_PARALLEL:
         case iflyauto::PRK_OUT_TO_FRONT_OUT:
@@ -140,8 +143,8 @@ void ApaStateMachineManager::Update(const LocalView* local_view_ptr) {
       if (running_mode_ == ApaRunningMode::RUNNING_PA) {
         state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
       } else {
-        if(task_direction_ == ApaTaskDirection::APA_TASK_IN) {
-          if(running_mode_ == ApaRunningMode::RUNNING_SAPA) {
+        if (task_direction_ == ApaTaskDirection::APA_TASK_IN) {
+          if (running_mode_ == ApaRunningMode::RUNNING_SAPA) {
             if (!parking_fusion_info.parking_fusion_slot_lists[kSlotFreeIdx]
                      .is_turn_corner) {
               state_machine_ = ApaStateMachine::ACTIVE_IN_CAR_REAR;
@@ -548,7 +551,8 @@ void ApaStateMachineManager::PrintParkingPADirection(
   ILOG_INFO << "PA direction = " << GetParkingPADirectionString(pa_direction);
 };
 
-std::string ApaStateMachineManager::GetParkingSAPAStatusString(const ApaSAPAStatus sapa_status) {
+std::string ApaStateMachineManager::GetParkingSAPAStatusString(
+    const ApaSAPAStatus sapa_status) {
   std::string res_string = "SAPA_STATUS_DEFAULT";
   switch (sapa_status) {
     case ApaSAPAStatus::SAPA_STATUS_DEFAULT:
@@ -563,7 +567,8 @@ std::string ApaStateMachineManager::GetParkingSAPAStatusString(const ApaSAPAStat
   }
   return res_string;
 }
-void ApaStateMachineManager::PrintParkingSAPAStatus(const ApaSAPAStatus sapa_status) {
+void ApaStateMachineManager::PrintParkingSAPAStatus(
+    const ApaSAPAStatus sapa_status) {
   ILOG_INFO << "SAPA status = " << GetParkingSAPAStatusString(sapa_status);
 }
 
