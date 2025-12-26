@@ -79,6 +79,8 @@ TaskPipelineRADS::TaskPipelineRADS(
   auto lane_borrow_config = config_builder->cast<EgoPlanningConfig>();
   enable_lane_borrow_deciderV2_ =
       lane_borrow_config.enable_lane_borrow_deciderV2;
+  hmi_decider_=
+      std::make_unique<RADSHMIDecider>(config_builder, session);
 }
 
 bool TaskPipelineRADS::Run() {
@@ -290,6 +292,12 @@ bool TaskPipelineRADS::Run() {
   ok = result_trajectory_generator_->Execute();
   if (!ok) {
     AddErrorInfo(result_trajectory_generator_->Name());
+    return false;
+  }
+
+  ok = hmi_decider_->Execute();
+  if (!ok) {
+    AddErrorInfo(hmi_decider_->Name());
     return false;
   }
 
