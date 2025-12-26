@@ -2057,9 +2057,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       valid_exchange_regions.emplace_back(exchange_region);
     }
   }
+
+  // 对两种情况下的other_merge取消处理
+  // 1. 汇入后车道数变多的场景，无需发起躲避汇流
+  // 2. other_merge后近距离存在方向不一致的交换区
+  bool is_remove_other_merge = false;
+  int other_merge_lane_num = 0;
   if (valid_exchange_regions.size() > 1 &&
-      valid_exchange_regions[0].is_other_merge_to_road &&
-      !valid_exchange_regions[1].is_other_merge_to_road) {
+      valid_exchange_regions[0].is_other_merge_to_road) {
     bool is_exchange_close =
         valid_exchange_regions[1].distance_to_split_point -
             valid_exchange_regions[0].distance_to_split_point <
@@ -2070,8 +2075,34 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                   valid_exchange_regions[1].split_direction
             : valid_exchange_regions[0].split_direction !=
                   valid_exchange_regions[1].split_direction;
-    if (is_exchange_close && is_exchange_direction_conflict) {
+
+    bool is_no_need_handle_exchange = false;
+    const auto& merge_seg =
+        sdpro_map_.GetLinkOnRoute(valid_exchange_regions[0].split_link_id);
+    const auto& merge_seg_last_seg = sdpro_map_.GetPreviousLinkOnRoute(
+        valid_exchange_regions[0].split_link_id);
+    if (merge_seg != nullptr && merge_seg_last_seg != nullptr &&
+        merge_seg->predecessor_link_ids().size() == 2) {
+      const auto& merge_seg_last_other_seg_id =
+          merge_seg->predecessor_link_ids()[0] == merge_seg_last_seg->id()
+              ? merge_seg->predecessor_link_ids()[1]
+              : merge_seg->predecessor_link_ids()[0];
+      const auto& merge_seg_last_other_seg =
+          sdpro_map_.GetLinkOnRoute(merge_seg_last_other_seg_id);
+      if (merge_seg_last_other_seg != nullptr) {
+        other_merge_lane_num = merge_seg_last_other_seg->lane_num();
+        is_no_need_handle_exchange =
+            merge_seg_last_seg->lane_num() +
+                        merge_seg_last_other_seg->lane_num() <=
+                    merge_seg->lane_num()
+                ? true
+                : false;
+      }
+    }
+    if (is_exchange_close && is_exchange_direction_conflict ||
+        is_no_need_handle_exchange) {
       valid_exchange_regions.erase(valid_exchange_regions.begin());
+      is_remove_other_merge = true;
     }
   }
   // 为每个exchange region准备数据
@@ -2702,6 +2733,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
     }
     if (ego_seq <= 0) {
       ego_seq = left_lane_num + 1;
+    }
+    if (is_remove_other_merge && other_merge_lane_num > 0 &&
+        mlc_decider_route_info_.is_process_split) {
+      if (!exchange_region_info_list.empty() &&
+          exchange_region_info_list[0].is_other_merge_to_road &&
+          exchange_region_info_list[0].split_direction == SPLIT_RIGHT) {
+        ego_seq = left_lane_num + 1 + other_merge_lane_num;
+      }
     }
     route_info_output_.ego_seq = ego_seq;
     std::vector<int> lc_num_task;
