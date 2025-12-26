@@ -914,6 +914,7 @@ void SamplePolySpeedAdjustDecider::RunSampleSceneStateMachine() {
       CalcDistanceToStopPoint();
       SetDeclerationSceneWeight();
       ClearStitchedPolyPtr();
+      bool is_forced_merge= IsForcedMergeScenario();
       is_in_deceleartion_scene_ = true;
     }
   } else {
@@ -1233,7 +1234,7 @@ bool SamplePolySpeedAdjustDecider::IsForcedMergeScenario() {
 }
 
 void SamplePolySpeedAdjustDecider::GenerateForceMergeTraj() {
-  
+
 }
 
 void SamplePolySpeedAdjustDecider::LogDebugInfo(const double sample_cost_time,

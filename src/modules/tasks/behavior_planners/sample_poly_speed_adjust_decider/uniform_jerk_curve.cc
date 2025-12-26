@@ -67,16 +67,18 @@ double UniformJerkCurve::CalcS(const double t) const {
   double s = 0.0;
   for (int i = 0; i < jerk_curve_coffi_.time_points.size(); ++i) {
     if (i == jerk_curve_coffi_.time_points.size() - 1) {
+      double during_t = t - jerk_curve_coffi_.time_points[i];
       s = jerk_curve_coffi_.cofficients[i][0] +
-          jerk_curve_coffi_.cofficients[i][1] * t +
-          jerk_curve_coffi_.cofficients[i][2] * t * t +
-          jerk_curve_coffi_.cofficients[i][3] * t * t * t;
+          jerk_curve_coffi_.cofficients[i][1] * during_t +
+          jerk_curve_coffi_.cofficients[i][2] * during_t * during_t +
+          jerk_curve_coffi_.cofficients[i][3] * during_t * during_t * during_t;
     } else {
       if (t < jerk_curve_coffi_.time_points[i + 1] + kZeroEpsilon) {
+        double during_t = t - jerk_curve_coffi_.time_points[i];
         s = jerk_curve_coffi_.cofficients[i][0] +
-            jerk_curve_coffi_.cofficients[i][1] * t +
-            jerk_curve_coffi_.cofficients[i][2] * t * t +
-            jerk_curve_coffi_.cofficients[i][3] * t * t * t;
+            jerk_curve_coffi_.cofficients[i][1] * during_t +
+            jerk_curve_coffi_.cofficients[i][2] * during_t * during_t +
+            jerk_curve_coffi_.cofficients[i][3] * during_t * during_t * during_t;
         break;
       }
     }
@@ -88,14 +90,16 @@ double UniformJerkCurve::CalcV(const double t) const {
   double v = 0.0;
   for (int i = 0; i < jerk_curve_coffi_.time_points.size(); ++i) {
     if (i == jerk_curve_coffi_.time_points.size() - 1) {
+      double during_t = t - jerk_curve_coffi_.time_points[i];
       v = jerk_curve_coffi_.cofficients[i][1] +
-          jerk_curve_coffi_.cofficients[i][2] * t * 2.0 +
-          jerk_curve_coffi_.cofficients[i][3] * t * t * 3.0;
+          jerk_curve_coffi_.cofficients[i][2] * during_t * 2.0 +
+          jerk_curve_coffi_.cofficients[i][3] * during_t * during_t * 3.0;
     } else {
       if (t < jerk_curve_coffi_.time_points[i + 1] + kZeroEpsilon) {
+        double during_t = t - jerk_curve_coffi_.time_points[i];
         v = jerk_curve_coffi_.cofficients[i][1] +
-            jerk_curve_coffi_.cofficients[i][2] * t * 2.0 +
-            jerk_curve_coffi_.cofficients[i][3] * t * t * 3.0;
+            jerk_curve_coffi_.cofficients[i][2] * during_t * 2.0 +
+            jerk_curve_coffi_.cofficients[i][3] * during_t * during_t * 3.0;
         break;
       }
     }
@@ -107,12 +111,14 @@ double UniformJerkCurve::CalcAcc(const double t) const {
   double a = 0.0;
   for (int i = 0; i < jerk_curve_coffi_.time_points.size(); ++i) {
     if (i == jerk_curve_coffi_.time_points.size() - 1) {
+      double during_t = t - jerk_curve_coffi_.time_points[i];
       a = jerk_curve_coffi_.cofficients[i][2] * 2.0 +
-          jerk_curve_coffi_.cofficients[i][3] * t * 6.0;
+          jerk_curve_coffi_.cofficients[i][3] * during_t * 6.0;
     } else {
       if (t < jerk_curve_coffi_.time_points[i + 1] + kZeroEpsilon) {
+        double during_t = t - jerk_curve_coffi_.time_points[i];
         a = jerk_curve_coffi_.cofficients[i][2] * 2.0 +
-            jerk_curve_coffi_.cofficients[i][3] * t * 6.0;
+            jerk_curve_coffi_.cofficients[i][3] * during_t * 6.0;
         break;
       }
     }
