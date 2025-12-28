@@ -196,6 +196,7 @@ struct PathCompareCost {
   float gear_change_cost = 0.0f;
   float kappa_change_cost = 0.0f;
   float unsuitable_last_line_length_cost = 0.0f;
+  float unsuitable_single_gear_line_length_cost = 0.0f;
   float obs_dist_cost = 0.0f;
   float obs_dist = 0.0f;
   float cur_gear_switch_pose_cost = 0.0f;
@@ -213,6 +214,7 @@ struct PathCompareCost {
     gear_change_cost = 0.0f;
     kappa_change_cost = 0.0f;
     unsuitable_last_line_length_cost = 0.0f;
+    unsuitable_single_gear_line_length_cost = 0.0f;
     obs_dist_cost = 0.0f;
     obs_dist = 0.0f;
     cur_gear_switch_pose_cost = 0.0f;

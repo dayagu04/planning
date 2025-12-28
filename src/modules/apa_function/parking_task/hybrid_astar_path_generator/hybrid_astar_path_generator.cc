@@ -381,28 +381,14 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   set_curve_path_time_ += (IflyTime::Now_ms() - set_curve_path_start_time);
 #endif
 
-  // ILOG_INFO << "rs path gear change number = " <<
-  // rs_path_.gear_change_number;
-
-  // Check curve_node_to_goal is valid
   NodeDeleteRequest node_del_request;
   node_del_request.cur_gear = rs_path_.paths[0].gear;
   node_del_request.curve_node = curve_node_to_goal;
   node_del_request.parent_node = current_node;
-
   if (CheckNodeShouldDelete(node_del_request)) {
-    // ILOG_INFO << "rs col consume time = " << IflyTime::Now_ms() -
-    // rs_start_time
-    //           << "  ms";
     curve_node_to_goal->Clear();
     return false;
   }
-
-  curve_node_to_goal->SetPathType(AstarPathType::NODE_CURVE);
-  curve_node_to_goal->SetGearType(rs_path_.paths[0].gear);
-  curve_node_to_goal->SetPre(current_node);
-
-  // ILOG_INFO << "Reach the end configuration with Reeds Shepp";
 
   curve_node_to_goal->SetGCost(
       current_node->GetGCost() +
@@ -410,76 +396,6 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByRS(
   curve_node_to_goal->SetHeuCost(0.0);
   curve_node_to_goal->SetFCost();
 
-  AstarPathGear cur_gear;
-  float cur_kappa;
-  float cur_gear_length;
-#if USE_LINK_PT_LINE
-  common_math::PathPt<float> gear_switch_pose;
-  common_math::PathPt<float> next_gear_switch_pose;
-#else
-  geometry_lib::PathPoint gear_switch_pose;
-  geometry_lib::PathPoint next_gear_switch_pose;
-#endif
-  if (curve_node_to_goal->GearSwitchNode() != nullptr) {
-    const Pose2f& pose = curve_node_to_goal->GearSwitchNode()->GetPose();
-    gear_switch_pose.SetPos(pose.x, pose.y);
-    gear_switch_pose.SetTheta(pose.theta);
-    cur_gear = curve_node_to_goal->GearSwitchNode()->GetGearType();
-    cur_kappa = curve_node_to_goal->GearSwitchNode()->GetKappa();
-    cur_gear_length = curve_node_to_goal->GearSwitchNode()->GetDistToStart();
-  } else {
-    double seg_length[6];
-    int seg_num = 0;
-    seg_length[seg_num] = path.dists[0];
-    gear_switch_pose = path.ptss[0][0];
-    for (int i = 1; i < path.segment_size; i++) {
-      if (path.gears[i] == path.gears[i - 1]) {
-        seg_length[seg_num] += path.dists[i];
-      } else {
-        seg_length[++seg_num] = path.dists[i];
-        if (seg_num == 1) {
-          gear_switch_pose = path.ptss[i][0];
-        }
-      }
-    }
-    cur_gear = path.gears[0];
-    cur_kappa = path.kappas[0];
-    cur_gear_length = seg_length[0] + current_node->GetDistToStart();
-  }
-
-  if (curve_node_to_goal->NextGearSwitchNode() != nullptr) {
-    const Pose2f& pose = curve_node_to_goal->NextGearSwitchNode()->GetPose();
-    next_gear_switch_pose.SetPos(pose.x, pose.y);
-    next_gear_switch_pose.SetTheta(pose.theta);
-  } else if (curve_node_to_goal->GetGearSwitchNum() > 1) {
-    if (curve_node_to_goal->GearSwitchNode() != nullptr) {
-      // node和curve_path 换挡 找curve_path路径的第一个换挡点
-      if (path.ptss.size() > 1) {
-        next_gear_switch_pose = path.ptss[1][0];
-      }
-    } else {
-      // node和curve_path 不换挡 找curve_path路径的第二个换挡点
-      if (path.ptss.size() > 2) {
-        next_gear_switch_pose = path.ptss[2][0];
-      }
-    }
-  }
-
-  curve_node_to_goal->SetCurGear(cur_gear);
-  curve_node_to_goal->SetCurKappa(cur_kappa);
-  curve_node_to_goal->SetCurGearLength(cur_gear_length);
-  curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
-  curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
-
-  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
-    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
-    curve_node_to_goal->SetThetaErr(
-        std::fabs(path.ptss.back().back().GetTheta()));
-  }
-
-  // DebugCurvePath(path);
-  //  ILOG_INFO << "rs success consume time = "
-  //            << IflyTime::Now_ms() - rs_start_time << "  ms";
   return true;
 }
 
@@ -624,24 +540,15 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   set_curve_path_time_ += (IflyTime::Now_ms() - set_curve_path_start_time);
 #endif
 
-  // Check curve_node_to_goal is valid
   NodeDeleteRequest node_del_request;
   node_del_request.cur_gear = rs_path_.paths[0].gear;
   node_del_request.curve_node = curve_node_to_goal;
   node_del_request.parent_node = current_node;
 
   if (CheckNodeShouldDelete(node_del_request)) {
-    // ILOG_INFO << "lpl col consume time = " << IflyTime::Now_ms() -
-    // lpl_start_time << "  ms";
     curve_node_to_goal->Clear();
     return false;
   }
-
-  curve_node_to_goal->SetPathType(AstarPathType::NODE_CURVE);
-  curve_node_to_goal->SetGearType(rs_path_.paths[0].gear);
-  curve_node_to_goal->SetPre(current_node);
-
-  // ILOG_INFO << "Reach the end configuration with Link Pose Line Path";
 
   curve_node_to_goal->SetGCost(
       current_node->GetGCost() +
@@ -649,9 +556,90 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   curve_node_to_goal->SetHeuCost(0.0);
   curve_node_to_goal->SetFCost();
 
+  return true;
+}
+
+const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
+    Node3d* current_node, CurveNode* curve_node) {
+  // evaluate cost on the trajectory and add current cost
+  float length_cost = 0.0f, gear_change_cost = 0.0f, kappa_change_cost = 0.0f;
+  const CurvePath& path = curve_node->GetCurvePath();
+
+  if (path.segment_size == 0) {
+    return kMaxNodeCost;
+  }
+
+  const bool curve_search_node_gear_change =
+      current_node->IsPathGearChange(path.gears[0]);
+
+  const float curve_node_kappa_change =
+      curve_search_node_gear_change
+          ? path.kappa_change
+          : path.kappa_change +
+                std::fabs(current_node->GetKappa() - path.kappas[0]);
+
+  const int curve_node_gear_change = curve_search_node_gear_change
+                                         ? path.gear_change_number + 1
+                                         : path.gear_change_number;
+
+  length_cost = path.path_dist * config_.traj_forward_penalty;
+  gear_change_cost = curve_node_gear_change * config_.gear_switch_penalty;
+  kappa_change_cost = curve_node_kappa_change * config_.traj_kappa_change_penalty;
+
+  curve_node->SetPathType(AstarPathType::NODE_CURVE);
+  curve_node->SetGearType(path.gears[0]);
+  curve_node->SetKappa(path.kappas[0]);
+  curve_node->SetPre(current_node);
+  curve_node->SetGearSwitchNum(current_node->GetGearSwitchNum() +
+                               curve_node_gear_change);
+  curve_node->SetDistToStart(path.path_dist + current_node->GetDistToStart());
+
+  if (curve_node->GetGearSwitchNum() == 0) {
+    curve_node->SetGearSwitchNode(nullptr);
+    curve_node->SetNextGearSwitchNode(nullptr);
+  } else if (curve_node->GetGearSwitchNum() == 1) {
+    if (current_node->GetGearSwitchNum() == 0) {
+      curve_node->SetGearSwitchNode(current_node);
+    } else {
+      curve_node->SetGearSwitchNode(current_node->GearSwitchNode());
+    }
+    curve_node->SetNextGearSwitchNode(nullptr);
+  } else {
+    if (current_node->GetGearSwitchNum() == 0) {
+      curve_node->SetGearSwitchNode(current_node);
+      curve_node->SetNextGearSwitchNode(current_node);
+    } else if (current_node->GetGearSwitchNum() == 1) {
+      curve_node->SetGearSwitchNode(current_node->GearSwitchNode());
+      curve_node->SetNextGearSwitchNode(current_node);
+    } else {
+      curve_node->SetGearSwitchNode(current_node->GearSwitchNode());
+      curve_node->SetNextGearSwitchNode(current_node->NextGearSwitchNode());
+    }
+  }
+
+  // seg_num > 0
+  double seg_length[MAX_CURVE_PATH_SEG_NUM];
+  int seg_num = 0, first_gear_switch_index = 0, second_gear_switch_index = 0;
+  seg_length[seg_num] = path.dists[0];
+  for (int i = 1; i < path.segment_size; i++) {
+    if (path.gears[i] == path.gears[i - 1]) {
+      seg_length[seg_num] += path.dists[i];
+    } else {
+      seg_length[++seg_num] = path.dists[i];
+      if (seg_num == 1) {
+        first_gear_switch_index = i;
+      } else if (seg_num == 2) {
+        second_gear_switch_index = i;
+      }
+    }
+  }
+
+  Node3d* gear_switch_node = curve_node->GearSwitchNode();
+  Node3d* next_gear_switch_node = curve_node->NextGearSwitchNode();
+
   AstarPathGear cur_gear;
-  float cur_kappa;
-  float cur_gear_length;
+  float cur_kappa, cur_gear_length;
+
 #if USE_LINK_PT_LINE
   common_math::PathPt<float> gear_switch_pose;
   common_math::PathPt<float> next_gear_switch_pose;
@@ -659,146 +647,70 @@ const bool HybridAStarPathGenerator::AnalyticExpansionByLPL(
   geometry_lib::PathPoint gear_switch_pose;
   geometry_lib::PathPoint next_gear_switch_pose;
 #endif
-  if (curve_node_to_goal->GearSwitchNode() != nullptr) {
-    const Pose2f& pose = curve_node_to_goal->GearSwitchNode()->GetPose();
-    gear_switch_pose.SetPos(pose.x, pose.y);
-    gear_switch_pose.SetTheta(pose.theta);
-    cur_gear = curve_node_to_goal->GearSwitchNode()->GetGearType();
-    cur_kappa = curve_node_to_goal->GearSwitchNode()->GetKappa();
-    cur_gear_length = curve_node_to_goal->GearSwitchNode()->GetDistToStart();
-  } else {
-    double seg_length[6];
-    int seg_num = 0;
-    seg_length[seg_num] = path.dists[0];
-    gear_switch_pose = path.ptss[0][0];
-    for (int i = 1; i < path.segment_size; i++) {
-      if (path.gears[i] == path.gears[i - 1]) {
-        seg_length[seg_num] += path.dists[i];
+
+  if (gear_switch_node != nullptr) {
+    // gear switch num > 0
+    if (gear_switch_node->GetPathType() == AstarPathType::START_NODE) {
+      // the complete path is only curve path
+      cur_gear = path.gears[0];
+      cur_kappa = path.kappas[0];
+      cur_gear_length = seg_length[0];
+      gear_switch_pose = path.ptss[first_gear_switch_index][0];
+    } else {
+      // the complete path is node + curve path
+      cur_gear = gear_switch_node->GetGearType();
+      if (current_node->GetGearSwitchNum() > 0 ||
+          curve_search_node_gear_change) {
+        cur_gear_length = gear_switch_node->GetDistToStart();
+        gear_switch_pose.SetX(gear_switch_node->GetX());
+        gear_switch_pose.SetY(gear_switch_node->GetY());
+        gear_switch_pose.SetTheta(gear_switch_node->GetPhi());
       } else {
-        seg_length[++seg_num] = path.dists[i];
-        if (seg_num == 1) {
-          gear_switch_pose = path.ptss[i][0];
+        cur_gear_length = gear_switch_node->GetDistToStart() + seg_length[0];
+        gear_switch_pose = path.ptss[first_gear_switch_index][0];
+      }
+      while (gear_switch_node != nullptr &&
+             gear_switch_node->GetPathType() != AstarPathType::START_NODE) {
+        cur_kappa = gear_switch_node->GetKappa();
+        gear_switch_node = gear_switch_node->GetPreNode();
+      }
+    }
+  }
+
+  if (next_gear_switch_node != nullptr) {
+    // gear switch num > 1
+    if (next_gear_switch_node->GetPathType() == AstarPathType::START_NODE) {
+      // the complete path is only curve path
+      next_gear_switch_pose = path.ptss[second_gear_switch_index][0];
+    } else {
+      // the complete path is node + curve path
+      if (current_node->GetGearSwitchNum() == 0) {
+        if (curve_search_node_gear_change) {
+          next_gear_switch_pose = path.ptss[first_gear_switch_index][0];
+        } else {
+          next_gear_switch_pose = path.ptss[second_gear_switch_index][0];
         }
-      }
-    }
-    cur_gear = path.gears[0];
-    cur_kappa = path.kappas[0];
-    cur_gear_length = seg_length[0] + current_node->GetDistToStart();
-  }
-
-  if (curve_node_to_goal->NextGearSwitchNode() != nullptr) {
-    const Pose2f& pose = curve_node_to_goal->NextGearSwitchNode()->GetPose();
-    next_gear_switch_pose.SetPos(pose.x, pose.y);
-    next_gear_switch_pose.SetTheta(pose.theta);
-  } else if (curve_node_to_goal->GetGearSwitchNum() > 1) {
-    if (curve_node_to_goal->GearSwitchNode() != nullptr) {
-      // node和curve_path 换挡 找curve_path路径的第一个换挡点
-      if (path.ptss.size() > 1) {
-        next_gear_switch_pose = path.ptss[1][0];
-      }
-    } else {
-      // node和curve_path 不换挡 找curve_path路径的第二个换挡点
-      if (path.ptss.size() > 2) {
-        next_gear_switch_pose = path.ptss[2][0];
+      } else if (current_node->GetGearSwitchNum() == 1) {
+        if (curve_search_node_gear_change) {
+          next_gear_switch_pose = path.ptss[0][0];
+        } else {
+          next_gear_switch_pose = path.ptss[first_gear_switch_index][0];
+        }
+      } else {
+        next_gear_switch_pose.SetX(next_gear_switch_node->GetX());
+        next_gear_switch_pose.SetY(next_gear_switch_node->GetY());
+        next_gear_switch_pose.SetTheta(next_gear_switch_node->GetPhi());
       }
     }
   }
 
-  curve_node_to_goal->SetCurGear(cur_gear);
-  curve_node_to_goal->SetCurKappa(cur_kappa);
-  curve_node_to_goal->SetCurGearLength(cur_gear_length);
-  curve_node_to_goal->SetGearSwitchPose(gear_switch_pose);
-  curve_node_to_goal->SetNextGearSwitchPose(next_gear_switch_pose);
-
-  if (path.ptss.size() > 0 && path.ptss.back().size() > 0) {
-    curve_node_to_goal->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
-    curve_node_to_goal->SetThetaErr(
-        std::fabs(path.ptss.back().back().GetTheta()));
-  }
-
-  // lpl_path_.PrintInfo();
-
-  // DebugCurvePath(path);
-  //  ILOG_INFO << "lpl success consume time = "
-  //            << IflyTime::Now_ms() - lpl_start_time << "  ms";
-  return true;
-}
-
-const float HybridAStarPathGenerator::CalcCurveNodeGCostToParentNode(
-    Node3d* current_node, CurveNode* curve_node) {
-  // evaluate cost on the trajectory and add current cost
-  float length_cost = 0.0, gear_change_cost = 0.0, kappa_change_cost = 0.0;
-  const CurvePath& path = curve_node->GetCurvePath();
-
-  if (path.segment_size == 0) {
-    return kMaxNodeCost;
-  }
-
-  length_cost = path.path_dist * config_.traj_forward_penalty;
-  gear_change_cost = config_.gear_switch_penalty * path.gear_change_number;
-  kappa_change_cost = config_.traj_kappa_change_penalty * path.kappa_change;
-
-  curve_node->SetGearSwitchNum(current_node->GetGearSwitchNum());
-  curve_node->AddGearSwitchNumber(path.gear_change_number);
-
-  // gear cost
-  if (current_node->IsPathGearChange(path.gears[0])) {
-    gear_change_cost += config_.gear_switch_penalty;
-    curve_node->AddGearSwitchNumber();
-  }
-
-  const bool gear_switch = current_node->IsPathGearChange(path.gears[0]) ||
-                           (path.gear_change_number > 0);
-
-  // steer change cost
-  if (!current_node->IsPathGearChange(path.gears[0])) {
-    kappa_change_cost += config_.traj_kappa_change_penalty *
-                         std::fabs(current_node->GetKappa() - path.kappas[0]);
-  }
-
-  curve_node->SetDistToStart(path.path_dist + current_node->GetDistToStart());
-
-  if (current_node->GetGearSwitchNum() > 0) {
-    curve_node->SetGearSwitchNode(current_node->GearSwitchNode());
-  } else if (curve_node->GetGearSwitchNum() == 0) {
-    curve_node->SetGearSwitchNode(nullptr);
-  } else if (gear_switch) {
-    curve_node->SetGearSwitchNode(current_node);
-  } else {
-    curve_node->SetGearSwitchNode(nullptr);
-  }
-
-  if (current_node->GetGearSwitchNum() > 1) {
-    curve_node->SetNextGearSwitchNode(current_node->NextGearSwitchNode());
-  } else if (current_node->GetGearSwitchNum() == 1) {
-    if (curve_node->GetGearSwitchNum() == 1) {
-      curve_node->SetNextGearSwitchNode(nullptr);
-    } else {
-      curve_node->SetNextGearSwitchNode(current_node);
-    }
-  } else {
-    if (curve_node->GetGearSwitchNum() < 2) {
-      curve_node->SetNextGearSwitchNode(nullptr);
-    } else {
-      curve_node->SetNextGearSwitchNode(current_node);
-    }
-  }
-
-  // if (current_node->GetGearSwitchNum() > 1) {
-  //   curve_node->SetNextGearSwitchNode(current_node->NextGearSwitchNode());
-  // } else if (curve_node->GetGearSwitchNum() < 2) {
-  //   curve_node->SetNextGearSwitchNode(nullptr);
-  // } else {
-  //   if (current_node->GetGearSwitchNum() == 0) {
-  //     curve_node->SetNextGearSwitchNode(nullptr);
-  //   } else if (current_node->GetGearSwitchNum() == 1) {
-  //     if (gear_switch) {
-  //       curve_node->SetNextGearSwitchNode(current_node);
-  //     } else {
-  //       curve_node->SetNextGearSwitchNode(nullptr);
-  //     }
-  //   }
-  // }
+  curve_node->SetCurGear(cur_gear);
+  curve_node->SetCurKappa(cur_kappa);
+  curve_node->SetCurGearLength(cur_gear_length);
+  curve_node->SetGearSwitchPose(gear_switch_pose);
+  curve_node->SetNextGearSwitchPose(next_gear_switch_pose);
+  curve_node->SetLatErr(std::fabs(path.ptss.back().back().GetY()));
+  curve_node->SetThetaErr(std::fabs(path.ptss.back().back().GetTheta()));
 
   return length_cost + gear_change_cost + kappa_change_cost;
 }

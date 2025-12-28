@@ -810,6 +810,7 @@ void LinkPtLinePath<T>::SetPathSegs(const PathSeg<T> _segs[],
     gears[i] = segs[i].gear;
     steers[i] = segs[i].steer;
     kappas[i] = segs[i].kappa;
+    lengths[i] = segs[i].GetLength();
     total_length += segs[i].GetLength();
 
     if (i > 0) {
