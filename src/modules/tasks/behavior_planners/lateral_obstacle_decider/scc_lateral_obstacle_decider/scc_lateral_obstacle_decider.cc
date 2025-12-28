@@ -39,6 +39,7 @@ SccLateralObstacleDecider::SccLateralObstacleDecider(
 
 bool SccLateralObstacleDecider::Execute() {
   if (!PreCheck()) {
+    spatio_temporal_follow_obstacle_info_.clear();
     output_.clear();
     follow_obstacle_info_.clear();
     lateral_obstacle_history_info_.clear();
@@ -101,6 +102,10 @@ bool SccLateralObstacleDecider::Init() {
       session_->mutable_planning_context()
           ->mutable_lateral_obstacle_decider_output()
           .is_uniform_plan_history_traj_valid;
+  auto &spatio_temporal_follow_obstacle_info =
+      session_->mutable_planning_context()
+          ->mutable_lateral_obstacle_decider_output()
+          .spatio_temporal_follow_obstacle_info;
   obstacle_intrusion_distance_thr_.clear();
   obstacles_id_behind_ego_.clear();
   plan_history_traj.clear();
@@ -108,6 +113,7 @@ bool SccLateralObstacleDecider::Init() {
   is_emergency_avoid_release.clear();
   uniform_plan_history_traj.clear();
   is_uniform_plan_history_traj_valid = false;
+  spatio_temporal_follow_obstacle_info.clear();
 
   reference_path_ptr_ = coarse_planning_info.reference_path;
 
@@ -350,6 +356,7 @@ void SccLateralObstacleDecider::ResetObstaclesHistory(bool is_change_lanes) {
 void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
   last_output_ = output_;
   output_.clear();
+  spatio_temporal_follow_obstacle_info_.clear();
 
   const auto target_state = session_->planning_context()
                                 .lane_change_decider_output()
@@ -2492,6 +2499,7 @@ void SccLateralObstacleDecider::LateralObstacleDeciderOutput() {
       obstacle_intrusion_distance_thr_;
   lateral_obstacle_decider_output.follow_obstacle_info = follow_obstacle_info_;
   lateral_obstacle_decider_output.lat_obstacle_decision = output_;
+  lateral_obstacle_decider_output.spatio_temporal_follow_obstacle_info = spatio_temporal_follow_obstacle_info_;
 }
 
 void SccLateralObstacleDecider::Log() {

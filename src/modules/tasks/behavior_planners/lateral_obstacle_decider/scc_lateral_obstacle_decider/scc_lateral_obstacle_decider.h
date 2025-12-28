@@ -137,7 +137,6 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void CalLaneChangeGapInfo(LcGapInfo &lc_gap_info);
   void ResetObstaclesHistory(bool is_change_lanes);
   void ClearHistoryInfo();
-
   bool IsCutInIgnore(const FrenetObstacle& frenet_obstacle,
                      bool is_lane_change);
   bool CheckSpatioTemporalPlanner();
@@ -182,6 +181,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info_;
   std::unordered_map<uint32_t, FollowObstacleInfo> follow_obstacle_info_;
+  std::unordered_map<uint32_t, SpatioTemporalFollowObstacleInfo>
+      spatio_temporal_follow_obstacle_info_;
   std::unordered_map<uint32_t, LatObstacleDecisionType> last_output_;
   std::vector<int> obstacles_id_behind_ego_;
   // ego info

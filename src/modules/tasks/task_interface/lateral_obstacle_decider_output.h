@@ -48,6 +48,36 @@ struct FollowObstacleInfo {
   double follow_confidence = 0;
 };
 
+struct TimeInterval {
+  double start = 0.0;  // 决策的时间起点
+  double end = 0.0;    // 决策的时间终点
+
+  bool IsValid() const { return end >= start; }
+
+  bool Contains(double t) const { return t >= start && t <= end; }
+};
+
+struct SpatioTemporalFollowWindow {
+  LatObstacleDecisionType lateral_decision = LatObstacleDecisionType::IGNORE;
+  TimeInterval passable_time_interval;
+};
+
+struct SpatioTemporalFollowObstacleInfo {
+  std::vector<SpatioTemporalFollowWindow> follow_time_windows;
+
+  const SpatioTemporalFollowWindow* QueryByTime(double t) const {
+    for (const auto& window : follow_time_windows) {
+      if (t < window.passable_time_interval.start) {
+        break;
+      }
+      if (window.passable_time_interval.Contains(t)) {
+        return &window;
+      }
+    }
+    return nullptr;
+  }
+};
+
 enum class SearchResult { NO_SEARCH, SUCCESS, FAILED };
 
 struct LateralObstacleDeciderOutput {
@@ -67,6 +97,8 @@ struct LateralObstacleDeciderOutput {
   bool is_plan_history_traj_valid = false;
   TrajectoryPoints uniform_plan_history_traj;
   bool is_uniform_plan_history_traj_valid = false;
+  std::unordered_map<uint32_t, SpatioTemporalFollowObstacleInfo>
+      spatio_temporal_follow_obstacle_info;
 
   void Clear() {
     hybrid_ara_result.Clear();
