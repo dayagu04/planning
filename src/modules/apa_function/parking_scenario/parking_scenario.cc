@@ -814,7 +814,7 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
 
   stop_decider->Execute(
       stitch_init_speed, traj_stitcher->GetConstStitchPath(),
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
+      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(), trajectory_,
       pnc::geometry_lib::GetGearType(frame_.gear_command));
 
   // todo: will be retired

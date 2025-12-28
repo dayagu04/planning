@@ -12,6 +12,7 @@
 
 #include "ad_common/math/linear_interpolation.h"
 #include "ad_common/math/math_utils.h"
+#include "apa_lon_util.h"
 #include "apa_param_config.h"
 #include "apa_plan_interface.h"
 #include "collision_detection/collision_detection.h"
@@ -43,7 +44,6 @@
 #include "src/modules/apa_function/parking_task/optimizers/sv_dp_optimizer/dp_speed_optimizer.h"
 #include "transform2d.h"
 #include "virtual_wall_decider.h"
-#include "apa_lon_util.h"
 
 using namespace planning::apa_planner;
 using namespace pnc::geometry_lib;
@@ -240,8 +240,8 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   planning::SpeedDecisions speed_decisions;
   ParkingStopDecider stop_decider =
       ParkingStopDecider(col_det_interface_ptr, localization_ptr, obstacles);
-
-  stop_decider.Execute(init_point, path2, path2,
+  planning::trajectory::Trajectory trajectory_;
+  stop_decider.Execute(init_point, path2, path2, trajectory_,
                        pnc::geometry_lib::SEG_GEAR_DRIVE);
   if (dist_to_obs < 0.06) {
     planning::LonDecisionReason decision_reason =
