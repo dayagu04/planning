@@ -480,7 +480,6 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   all_success_path_first_gear_switch_pose_debug_.clear();
   all_search_node_list_.clear();
   all_curve_node_list_.clear();
-  rs_path_h_cost_debug_.clear();
   collision_check_time_ms_ = 0.0;
   rs_try_num_ = 0;
   rs_interpolate_time_ms_ = 0.0;
@@ -631,13 +630,13 @@ const bool HybridAStarPerpendicularTailInPathGenerator::UpdateOnce(
   ILOG_INFO << "USE LINK PT LINE";
   link_pt_line::LinkPtLineInput<float> lpl_input;
   lpl_input.ref_line.Set(
-      common_math::Pos<float>(request_.ego_info_under_slot.tar_line.pA.x(),
-                              request_.ego_info_under_slot.tar_line.pA.y()),
-      1.0f, float(request_.ego_info_under_slot.tar_line.heading));
+      common_math::Pos<float>(end_pose.GetX(), end_pose.GetY()), 1.0f,
+      float(end_pose.GetTheta()));
 #else
   ILOG_INFO << "USE LINK POSE LINE";
   LinkPoseLineInput lpl_input;
-  lpl_input.ref_line = request_.ego_info_under_slot.tar_line;
+  lpl_input.ref_line.Set(end_pose.GetPos(), end_pose.GetTheta(), 1.0,
+                         geometry_lib::SEG_GEAR_DRIVE);
 #endif
 
   lpl_input.min_radius = min_radius_ + 0.068;
