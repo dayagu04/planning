@@ -20,6 +20,7 @@
 
 namespace planning {
 const double kPlanningCycleTime = 1.0 / FLAGS_planning_loop_rate;
+const double kSpeedThr = 100;
 
 SccLateralObstacleDecider::SccLateralObstacleDecider(
     const EgoPlanningConfigBuilder *config_builder, framework::Session *session)
@@ -32,6 +33,7 @@ SccLateralObstacleDecider::SccLateralObstacleDecider(
   ego_width_ = vehicle_param.width;
   name_ = "SccLateralObstacleDecider";
   ego_rear_edge_to_rear_axle_ = vehicle_param.rear_edge_to_rear_axle;
+  side_nudge_release_hysteresis_.SetThreValue(kSpeedThr + 5, kSpeedThr - 5);
 }
 
 bool SccLateralObstacleDecider::Execute() {
@@ -105,7 +107,7 @@ bool SccLateralObstacleDecider::Init() {
   ego_v_ = reference_path_ptr_->get_frenet_ego_state().velocity();
   ego_v_s_ = reference_path_ptr_->get_frenet_ego_state().velocity_s();
   ego_v_l_ = reference_path_ptr_->get_frenet_ego_state().velocity_l();
-
+  side_nudge_release_hysteresis_.SetIsValidByValue(ego_v_ * 3.6);
   lane_width_ =
       session_->environmental_model()
           .get_virtual_lane_manager()
@@ -201,30 +203,11 @@ void SccLateralObstacleDecider::UpdateAvdObstacle(
   }
 
   GetPositionRelation(frenet_obs, history);
-
-  if (history.side_car) {
-    // 针对侧方->前方位置的转化，为了避免障碍物长时间在自车侧方导致不合理限制避让幅度从而引入记时操作
-    if (std::fabs(frenet_obs.d_s_rel()) <= history.overlap_ego_head_thr) {
-      history.side_2_front_count = std::min(history.side_2_front_count + 1,
-                                            config_.side_2_front_max_count);
-    } else {
-      history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
-    }
-    if (history.side_2_front_count > config_.side_2_front_count_thr) {
-      // history.front_car = true;
-      // history.rear_car = false;
-      history.is_potential_avoiding_side_car = true;
-      history.overlap_ego_head_thr = 2.5;
-    } else {
-      history.overlap_ego_head_thr = 2;
-    }
-  } else {
-    history.side_2_front_count = 0;
-    history.overlap_ego_head_thr = 2;
-  }
+  int side_2_front_count_thr = config_.side_2_front_count_thr;
+  GetSideCarNudge(frenet_obs, history, side_2_front_count_thr);
 
   if (frenet_obs.d_s_rel() <= 0 &&
-      (history.side_2_front_count <= config_.side_2_front_count_thr ||
+      (history.side_2_front_count <= side_2_front_count_thr ||
        !config_.open_side_lat_offset_nudge)) {
     history.is_avd_car = false;
     if (frenet_obs.d_s_rel() <= -1 * (frenet_obs.length() + ego_length_)) {
@@ -265,6 +248,55 @@ void SccLateralObstacleDecider::GetPositionRelation(
   }
 }
 
+void SccLateralObstacleDecider::GetSideCarNudge(
+    const FrenetObstacle& frenet_obs, LateralObstacleHistoryInfo& history,
+    int& side_2_front_count_thr) {
+  const int kCrossLaneMaxCount = 10;
+  const int kCrossLaneCountThr = 3;
+  const int kSide2FrontMaxCount = config_.side_2_front_max_count;
+  const double half_width = lane_width_ * 0.5;
+  double extra_cross_lane_buffer = 0;
+  bool is_side_nudge_release = side_nudge_release_hysteresis_.IsValid();
+  if (history.is_cross_lane) {
+    extra_cross_lane_buffer = 0.2;
+  }
+  history.is_cross_lane =
+      (frenet_obs.d_min_cpath() <= half_width + extra_cross_lane_buffer &&
+       frenet_obs.d_max_cpath() >= half_width + extra_cross_lane_buffer) ||
+      (frenet_obs.d_min_cpath() <= -half_width - extra_cross_lane_buffer &&
+       frenet_obs.d_max_cpath() >= -half_width - extra_cross_lane_buffer);
+  if (history.is_cross_lane) {
+    history.cross_lane_count =
+        std::min(history.cross_lane_count + 1, kCrossLaneMaxCount);
+  } else {
+    history.cross_lane_count = std::max(history.cross_lane_count - 1, 0);
+  }
+  if (history.cross_lane_count > kCrossLaneCountThr || !is_side_nudge_release) {
+    // 连续三帧跨线或者速度较低
+    side_2_front_count_thr = config_.cross_lane_side_2_front_count_thr;
+  }
+  if (history.side_car) {
+    // 针对侧方->前方位置的转化，为了避免障碍物长时间在自车侧方导致不合理限制避让幅度从而引入记时操作
+    if (std::fabs(frenet_obs.d_s_rel()) <= history.overlap_ego_head_thr) {
+      history.side_2_front_count =
+          std::min(history.side_2_front_count + 1, kSide2FrontMaxCount);
+    } else {
+      history.side_2_front_count = std::max(history.side_2_front_count - 1, 0);
+    }
+    if (history.side_2_front_count > side_2_front_count_thr) {
+      // history.front_car = true;
+      // history.rear_car = false;
+      history.is_potential_avoiding_side_car = true;
+      history.overlap_ego_head_thr = 2.5;
+    } else {
+      history.overlap_ego_head_thr = 2;
+    }
+  } else {
+    history.side_2_front_count = 0;
+    history.overlap_ego_head_thr = 2;
+  }
+}
+
 void SccLateralObstacleDecider::ResetObstaclesHistory(bool is_change_lanes) {
   for (auto frenet_obs : reference_path_ptr_->get_obstacles()) {
     const Obstacle *obs = frenet_obs->obstacle();
@@ -287,6 +319,8 @@ void SccLateralObstacleDecider::ResetObstaclesHistory(bool is_change_lanes) {
       history.is_avd_car = false;
       history.ncar_count = 0;
       history.ncar_count_in = false;
+      history.is_cross_lane = false;
+      history.cross_lane_count = 0;
       follow_info.is_need_folow = false;
       follow_info.follow_confidence = 0;
     }
@@ -696,6 +730,8 @@ bool SccLateralObstacleDecider::IsAvoidable(
   LateralObstacleHistoryInfo &history =
       lateral_obstacle_history_info_[frenet_obstacle.id()];
 
+  double potential_near_car_v_ub = config_.potential_near_car_v_ub;
+  double potential_near_car_v_lb = config_.potential_near_car_v_lb;
   bool is_same_side =
       (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_max_cpath() > 0 ||
        frenet_obstacle.d_min_cpath() <= 0 &&
@@ -713,33 +749,31 @@ bool SccLateralObstacleDecider::IsAvoidable(
   if (IsTruck(frenet_obstacle)) {
     distance_to_center_line_thre += config_.extra_truck_lat_buffer;
     potential_dist_limit += config_.extra_truck_lat_buffer;
+  } else {
+    potential_near_car_v_lb = -0.1;
   }
   // need avoid flag
   bool is_need_avoid =
-      (frenet_obstacle.d_max_cpath() < 0 &&
-       std::fabs(frenet_obstacle.d_max_cpath()) <
-           distance_to_center_line_thre) ||
-      (frenet_obstacle.d_min_cpath() > 0 &&
-       frenet_obstacle.d_min_cpath() < distance_to_center_line_thre) ||
-      (frenet_obstacle.d_max_cpath() < 0 &&
-       std::fabs(frenet_obstacle.d_max_cpath()) < potential_dist_limit &&
-       v_lat < config_.potential_near_car_v_lb &&
-       v_lat > config_.potential_near_car_v_ub) ||
-      (frenet_obstacle.d_min_cpath() > 0 &&
-       frenet_obstacle.d_min_cpath() < potential_dist_limit &&
-       v_lat < config_.potential_near_car_v_lb &&
-       v_lat > config_.potential_near_car_v_ub);
+      (frenet_obstacle.d_max_cpath() < 0 && std::fabs(frenet_obstacle.d_max_cpath()) < distance_to_center_line_thre) ||
+      (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_min_cpath() < distance_to_center_line_thre) ||
+      (frenet_obstacle.d_max_cpath() < 0 && std::fabs(frenet_obstacle.d_max_cpath()) < potential_dist_limit &&
+        v_lat < potential_near_car_v_lb &&
+        v_lat > potential_near_car_v_ub) ||
+      (frenet_obstacle.d_min_cpath() > 0 && frenet_obstacle.d_min_cpath() < potential_dist_limit &&
+        v_lat < potential_near_car_v_lb &&
+        v_lat > potential_near_car_v_ub);
 
   // can avoid flag
   bool can_avoid =
       HasEnoughNudgeSpace(frenet_obstacle, lat_safety_buffer, is_lane_change);
 
-  if (is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
-                            lc_gap_info_.gap_front_s) {
-    // 在变道状态，依据gap计算
-    history.cut_in_or_cross = false;
-    history.cut_in_or_cross_count = 0;
-  }
+  // if (is_lane_change &&
+  //         frenet_obstacle.frenet_obstacle_boundary().s_start <
+  //             lc_gap_info_.gap_front_s) {
+  //   // 在变道状态，依据gap计算
+  //   history.cut_in_or_cross = false;
+  //   history.cut_in_or_cross_count = 0;
+  // }
 
   if (is_need_avoid && !can_avoid) {
     history.can_not_avoid = true;
@@ -1159,7 +1193,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::RIGHT;
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1191,7 +1225,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
@@ -1248,7 +1282,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       }
     }
     // cut_in 或 横穿
-    if (!obstacle.is_static() && history.cut_in_or_cross) {
+    if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
     // 后方车辆
@@ -1320,7 +1354,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     }
   }
   // cut_in 或 横穿
-  if (!obstacle.is_static() && history.cut_in_or_cross) {
+  if (IsCutInIgnore(frenet_obstacle,is_in_lane_change_scene)) {
     history.is_avd_car = false;
     history.ncar_count = 0;
     history.ncar_count_in = false;
@@ -1896,6 +1930,20 @@ void SccLateralObstacleDecider::ClearHistoryInfo() {
       ++it;
     }
   }
+}
+
+bool SccLateralObstacleDecider::IsCutInIgnore(
+    const FrenetObstacle& frenet_obstacle, bool is_lane_change) {
+  LateralObstacleHistoryInfo& history =
+      lateral_obstacle_history_info_[frenet_obstacle.id()];
+  bool is_in_lane_change_gap =
+      is_lane_change && frenet_obstacle.frenet_obstacle_boundary().s_start <
+                            lc_gap_info_.gap_front_s;
+  if (!is_in_lane_change_gap && history.cut_in_or_cross &&
+      !frenet_obstacle.obstacle()->is_static()) {
+    return true;
+  }
+  return false;
 }
 
 }  // namespace planning

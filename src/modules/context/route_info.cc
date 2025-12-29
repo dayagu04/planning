@@ -879,7 +879,7 @@ void RouteInfo::CaculateSplitInfo(
                     iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
                 other_link->link_class() ==
                     iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY)) &&
-                  split_link->lane_num() <= other_link->lane_num()) {
+                  split_next_link->lane_num() <= other_link->lane_num()) {
             first_split_region_lane_tupo_info = split_region_lane_tupo_info;
             first_split_region_lane_tupo_info.distance_to_split_point =
                 split_info[i].second;
@@ -4242,16 +4242,12 @@ bool RouteInfo::CalculateFeasibleLane(NOASplitRegionInfo* split_region_info) {
             before_excr_feasible_lane.emplace_back(i + 1 +
                                                    successor_other_exclnum);
           }
-
-          if (is_other_split_ramp && !is_continue_lane) {
-            RemoveElement(before_excr_feasible_lane, 1);
-            RemoveElement(on_excr_feasible_lane, 1);
+          for (int i = 0; i < successor_other_exclnum; ++i) {
             mlc_request_info_.emplace_back(
-                MLCRequestType{.lane_num = 1,
-                               .mlc_request_type = AVOIDE_DIVERGE,
+                MLCRequestType{.lane_num = i + 1,
+                               .mlc_request_type = KEEP_LEFT,
                                .split_direction = SPLIT_RIGHT});
           }
-
         } else {
           on_excr_feasible_lane.emplace_back(on_exclnum);
           before_excr_feasible_lane.emplace_back(before_exclnum);
@@ -4898,7 +4894,7 @@ bool RouteInfo::CalculateMergeLaneInfo(
 
     if (lane_info->change_type() ==
         iflymapdata::sdpro::LaneChangeType::LeftTurnMergingLane) {
-      merge_lane_sequence_vec.emplace(1, SPLIT_RIGHT);
+      merge_lane_sequence_vec.emplace(find_fp_lane_num - 1, SPLIT_RIGHT);
       return true;
     } else if (lane_info->change_type() ==
                iflymapdata::sdpro::LaneChangeType::RightTurnMergingLane) {

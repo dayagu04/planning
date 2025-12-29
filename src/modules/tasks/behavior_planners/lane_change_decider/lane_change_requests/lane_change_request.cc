@@ -430,6 +430,19 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
   const auto &route_info_output =
       session_->environmental_model().get_route_info()->get_route_info_output();
 
+  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  if (lc_request == LEFT_CHANGE) {
+    target_lane = virtual_lane_mgr_->get_left_lane();
+  } else {
+    target_lane = virtual_lane_mgr_->get_right_lane();
+  }
+  // 增加对于前方路沿的判断
+  if (target_lane != nullptr &&
+      IsRoadBorderSurpressDuringLaneChange(lc_request, origin_lane_id,
+                                     target_lane->get_virtual_id())) {
+    return false;
+  }
+
   const auto &plannig_init_point = ego_state->planning_init_point();
   double ego_x = plannig_init_point.lat_init_state.x();
   double ego_y = plannig_init_point.lat_init_state.y();
@@ -530,19 +543,21 @@ bool LaneChangeRequest::IsDashEnoughForRepeatSegments(
                              ->get_current_lane();
 
   const auto &mlc_decider_route_info = route_info_output.mlc_decider_route_info;
-  bool is_process_split = route_info_output.mlc_decider_route_info
-                              .first_static_split_region_info.is_ramp_split ||
+  bool is_process_split = route_info_output.mlc_decider_route_info.is_process_split ||
                           route_info_output.baidu_mlc_scene == SPLIT_SCENE;
-  ;
   bool is_mlc_avoidance =
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_DIVERGE ||
       route_info_output.mlc_request_type_route_info.mlc_request_type ==
           AVOIDE_MERGE;
-
+  bool is_one_lane_gap =
+      lc_request == RIGHT_CHANGE
+          ? (route_info_output.minVal_seq - route_info_output.ego_seq) == 1
+          : (route_info_output.ego_seq - route_info_output.maxVal_seq) == 1;
   const bool is_satisfy_dis_condition =
       route_info_output.mlc_request_type_route_info
-              .distance_to_exchange_region < 100.0 ||
+                  .distance_to_exchange_region < 100.0 &&
+          is_one_lane_gap ||
       (route_info_output.baidu_mlc_scene == SPLIT_SCENE &&
        route_info_output.dis_to_ramp < 100.0);
 
@@ -724,11 +739,11 @@ bool LaneChangeRequest::IsRoadBorderSurpressLaneChange(
 
 bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
     const RequestType lc_direction, const int origin_lane_id,
-    const int target_lane_id) {
+    const int target_lane_id) const {
   ReferencePathPoint sample_path_point{};
   const double cut_length = 1.4;
   const double sample_forward_distance = 1.0;
-  const double predict_time_horizon = 8.0;
+  const double predict_time_horizon = 3.5;
 
   ReferencePathPoint refpath_pt{};
   const auto &vehicle_param =
@@ -772,9 +787,11 @@ bool LaneChangeRequest::IsRoadBorderSurpressDuringLaneChange(
                                                       sample_path_point)) {
     return true;
   }
-  double RoadBorderConsiderDistance = MAX(ego_vel * predict_time_horizon, 50.0);
+  double RoadBorderConsiderDistance = ego_vel * predict_time_horizon;
   for (double s = ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle;
-       s < RoadBorderConsiderDistance; s += cut_length) {
+       s < ego_frenet_point.x - vehicle_param.rear_edge_to_rear_axle +
+               RoadBorderConsiderDistance;
+       s += cut_length) {
     if (reference_path_ptr->get_reference_point_by_lon(s, refpath_pt)) {
       sample_path_point.distance_to_left_lane_border =
           std::fmin(refpath_pt.distance_to_left_lane_border,

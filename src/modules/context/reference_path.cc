@@ -135,7 +135,7 @@ void ReferencePath::update_refpath_points(
                               &frenet_point.x, &frenet_point.y)) {
       pt.path_point.set_s(frenet_point.x);
       if (!refined_ref_path_points_.empty() &&
-          pt.path_point.s() < refined_ref_path_points_.back().path_point.s()) {
+          pt.path_point.s() < refined_ref_path_points_.back().path_point.s() + 1e-3) {
         continue;
       }
       auto kd_path_point = frenet_coord_->GetPathPointByS(frenet_point.x);
@@ -250,7 +250,7 @@ void ReferencePath::update_refpath_points_in_hpp(
                               &frenet_point.x, &frenet_point.y)) {
       pt.path_point.set_s(frenet_point.x);
       if (!refined_ref_path_points_.empty() &&
-          pt.path_point.s() < refined_ref_path_points_.back().path_point.s()) {
+          pt.path_point.s() < refined_ref_path_points_.back().path_point.s() + 1e-3) {
         continue;
       }
       auto kd_path_point = frenet_coord_->GetPathPointByS(frenet_point.x);

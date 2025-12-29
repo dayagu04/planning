@@ -38,6 +38,8 @@ struct LateralObstacleHistoryInfo {
   bool emergency_avoid = false;
   bool lon_overtake_avoid = false;
   bool is_not_set = false;
+  bool is_cross_lane = false;
+  int cross_lane_count = 0;
 };
 
 struct FollowObstacleInfo {

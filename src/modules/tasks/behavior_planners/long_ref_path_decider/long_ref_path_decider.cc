@@ -38,7 +38,7 @@ bool LongRefPathDecider::Execute() {
   // 2. calculate bound
   bound_maker_->Run(*target_maker_);
   // 3. calculate weight
-  weight_maker_->Run(*target_maker_);
+  weight_maker_->Run(*target_maker_, *bound_maker_);
   // 4. update lon ref path
   UpdateLonRefPath();
   // 5. save long ref path
@@ -167,8 +167,8 @@ void LongRefPathDecider::UpdateLonRefPath() {
   const auto ego_trajs_future = lane_change_decider_output.ego_trajs_future;
   const bool is_in_lane_change = lane_change_state == kLaneChangeExecution;
   if (is_in_lane_change &&
-    start_stop_decider_output.ego_start_stop_info().state() !=
-        common::StartStopInfo::STOP) {
+      start_stop_decider_output.ego_start_stop_info().state() !=
+          common::StartStopInfo::STOP) {
     for (size_t i = 0; i < plan_points_num_; i++) {
       double ego_trajs_future_init_point_s = ego_trajs_future[0].s;
       lon_behavior_output_.s_lane_change_target[i] =

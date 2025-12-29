@@ -75,9 +75,12 @@ class SpeedLimitDecider : public Task {
 
   bool IsNearMergeCancelRampVelLimit();
 
-  double CalcRampMaxCurvFromSDProMap(double* dist_to_max_curv = nullptr, 
-                                     std::vector<double>* k_raw = nullptr,
-                                     std::vector<double>* s_vec = nullptr);
+  // Collect and process ramp curvature data from SDProMap
+  // Outputs: k_raw (signed), s_vec (with offset), map_speed_limits, k_smooth
+  void CollectRampCurvatureData(std::vector<double>* k_raw = nullptr,
+                                std::vector<double>* s_vec = nullptr,
+                                std::vector<double>* map_speed_limits = nullptr,
+                                std::vector<double>* k_smooth = nullptr);
 
   // Helper functions for ramp processing
   uint64_t FindRampLinkId(
@@ -93,7 +96,8 @@ class SpeedLimitDecider : public Task {
       const iflymapdata::sdpro::LinkInfo_Link *start_link,
       const std::function<bool(const iflymapdata::sdpro::LinkInfo_Link &)> &is_ramp,
       const std::function<const iflymapdata::sdpro::LinkInfo_Link *(uint64_t)> &get_next_link,
-      std::vector<ad_common::math::Vec2d> &enu_points, double &total_len);
+      std::vector<ad_common::math::Vec2d> &enu_points, double &total_len,
+      std::vector<double> *map_speed_limits = nullptr);
 
   // used in curv speed limit
   const std::vector<double> _A_TOTAL_MAX_BP{0., 20., 40.};
