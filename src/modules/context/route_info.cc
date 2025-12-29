@@ -614,17 +614,15 @@ void RouteInfo::CaculateMergeInfo(
             is_ramp_road_merge = false;
           } else if (merge_seg_last_seg->lane_num() ==
                      merge_seg_last_other_seg->lane_num()) {
-            if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
-                !sdpro_map.isRamp(merge_seg->link_type()) &&
-                !sdpro_map.isSaPa(merge_seg->link_type()) &&
-                !route_info_output_.is_on_ramp) {
-              route_info_output_.is_road_merged_by_other_lane = true;
-              is_road_merged_by_other_lane = true;
-              is_ramp_road_merge = false;
-            } else {
+            if (!sdpro_map.isRamp(merge_seg_last_other_seg->link_type()) &&
+                !sdpro_map.isSaPa(merge_seg_last_other_seg->link_type())) {
               route_info_output_.is_road_merged_by_other_lane = false;
               is_road_merged_by_other_lane = false;
               is_ramp_road_merge = true;
+            } else {
+              route_info_output_.is_road_merged_by_other_lane = true;
+              is_road_merged_by_other_lane = true;
+              is_ramp_road_merge = false;
             }
           } else {
             route_info_output_.is_road_merged_by_other_lane = false;
@@ -2726,9 +2724,11 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                   ? left_lane_num + 1
                   : map_lane_num - right_lane_num;
         } else {
-          ego_seq = first_exchange_region_info.split_direction == SPLIT_LEFT
-                        ? left_lane_num + 1
-                        : map_lane_num - right_lane_num;
+          if (!exchange_region_info_list.empty()) {
+            ego_seq = exchange_region_info_list[0].split_direction == SPLIT_LEFT
+                          ? left_lane_num + 1
+                          : map_lane_num - right_lane_num;
+          }
         }
       } else {
         ego_seq = merge_point_direction == SPLIT_LEFT
