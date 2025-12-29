@@ -41,16 +41,15 @@ void StopDestinationDecider::StopDestinationProcess() {
 
 // set virtual obstacle at the end of the lane
 bool StopDestinationDecider::AddVirtualObstacle() {
-  const auto &current_lane_kd_path =
-      current_lane_->get_reference_path()->get_frenet_coord();
+  const auto &current_reference_path =
+      current_lane_->get_reference_path();
   agent::Agent virtual_agent;
-  if (current_lane_kd_path == nullptr) {
+  if (current_reference_path == nullptr) {
     virtual_agent.set_agent_id(agent::AgentDefaultInfo::kNoAgentId);
     return false;
   }
-  const auto current_lane_length = current_lane_kd_path->Length();
-  const auto current_lane_end_point =
-      current_lane_kd_path->GetPathPointByS(current_lane_length);
+  const auto& current_raw_end_point =
+      current_reference_path->GetRawEndRefPathPoint();
   static double stop_destination_extended_s_buffer =
       config_.stop_destination_extended_s_buffer;
   stop_destination_virtual_agent_id_ =
@@ -59,18 +58,18 @@ bool StopDestinationDecider::AddVirtualObstacle() {
   virtual_agent.set_type(agent::AgentType::VIRTUAL);
   virtual_agent.set_is_tfl_virtual_obs(false);
   virtual_agent.set_is_stop_destination_virtual_obs(true);
-  virtual_agent.set_x(current_lane_end_point.x() +
+  virtual_agent.set_x(current_raw_end_point.path_point.x() +
                       stop_destination_extended_s_buffer *
-                          cos(current_lane_end_point.theta()));
-  virtual_agent.set_y(current_lane_end_point.y() +
+                          cos(current_raw_end_point.path_point.theta()));
+  virtual_agent.set_y(current_raw_end_point.path_point.y() +
                       stop_destination_extended_s_buffer *
-                          sin(current_lane_end_point.theta()));
+                          sin(current_raw_end_point.path_point.theta()));
   virtual_agent.set_length(0.5);
   virtual_agent.set_width(2.0);
   virtual_agent.set_fusion_source(1);
   virtual_agent.set_is_static(true);
   virtual_agent.set_speed(0.0);
-  virtual_agent.set_theta(current_lane_end_point.theta());
+  virtual_agent.set_theta(current_raw_end_point.path_point.theta());
   virtual_agent.set_accel(0.0);
   virtual_agent.set_time_range({0.0, 5.0});
 

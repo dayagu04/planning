@@ -16,7 +16,10 @@ namespace planning {
 const static double kLaneDropLength = 20.0;
 const static double kEgoBehindLength = -10.0;
 const static double kEgoAheadLength = 90.0;
-const static double kDefaultPointsGapLength = 2.0;
+const static double kForwardSamplingGap = 5.0;
+const static double kForwardSamplingStep = 2.0;
+const static double kReverseSamplingGap = 1.0;
+const static double kReverseSamplingStep = 1.0;
 const static double kMinRefVel = 2.0;
 
 ReferencePath::ReferencePath() { init(); }
@@ -39,32 +42,6 @@ void ReferencePath::init() {
   smooth_input_.Clear();
   smooth_output_.Clear();
   ref_path_smoother_info_.Clear();
-  InitReferencePathSmoother();
-}
-
-void ReferencePath::InitReferencePathSmoother() {
-  planning::FemPosDeviationSmootherConfig smoother_param;
-  smoother_param.set_apply_curvature_constraint(false);
-  smoother_param.set_use_sqp(false);
-  smoother_param.set_verbose(false);
-  smoother_param.set_scaled_termination(true);
-  smoother_param.set_warm_start(false);
-  smoother_param.set_sqp_pen_max_iter(10);
-  smoother_param.set_sqp_sub_max_iter(100);
-  smoother_param.set_max_iter(100);
-  smoother_param.set_weight_fem_pos_deviation(10000.0);
-  smoother_param.set_weight_ref_deviation(10.0);
-  smoother_param.set_weight_path_length(5.0);
-  smoother_param.set_weight_curvature_constraint_slack_var(100.0);
-  smoother_param.set_curvature_constraint(0.2);
-  smoother_param.set_sqp_ftol(0.0001);
-  smoother_param.set_sqp_ctol(0.0001);
-  smoother_param.set_time_limit(0.01);
-  // ref_path_smoother_.SetFemPosDeviationSmootherConfig(smoother_param);
-  auto &smoother_config =
-      ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
-  smoother_config = std::move(smoother_param);
-  sample_gap_ = 5.0;
 }
 
 void ReferencePath::update(planning::framework::Session *session) {
@@ -144,6 +121,16 @@ void ReferencePath::update_refpath_points(
 
       refined_ref_path_points_.emplace_back(pt);
     }
+  }
+  Point2D frenet_start_point;
+  if (frenet_coord_->XYToSL(raw_start_point_.path_point.x(), raw_start_point_.path_point.y(),
+                            &frenet_start_point.x, &frenet_start_point.y)) {
+    raw_start_point_.path_point = frenet_coord_->GetPathPointByS(frenet_start_point.x);
+  }
+  Point2D frenet_end_point;
+  if (frenet_coord_->XYToSL(raw_end_point_.path_point.x(), raw_end_point_.path_point.y(),
+                            &frenet_end_point.x, &frenet_end_point.y)) {
+    raw_end_point_.path_point = frenet_coord_->GetPathPointByS(frenet_end_point.x);
   }
   UpdateReferencePath(is_need_smooth);
 }
@@ -259,6 +246,16 @@ void ReferencePath::update_refpath_points_in_hpp(
 
       refined_ref_path_points_.emplace_back(pt);
     }
+  }
+  Point2D frenet_start_point;
+  if (frenet_coord_->XYToSL(raw_start_point_.path_point.x(), raw_start_point_.path_point.y(),
+                            &frenet_start_point.x, &frenet_start_point.y)) {
+    raw_start_point_.path_point = frenet_coord_->GetPathPointByS(frenet_start_point.x);
+  }
+  Point2D frenet_end_point;
+  if (frenet_coord_->XYToSL(raw_end_point_.path_point.x(), raw_end_point_.path_point.y(),
+                            &frenet_end_point.x, &frenet_end_point.y)) {
+    raw_end_point_.path_point = frenet_coord_->GetPathPointByS(frenet_end_point.x);
   }
 }
 
@@ -598,6 +595,7 @@ bool ReferencePath::UpdateReferencePath(const bool is_need_smooth) {
   HandleRoadCurvature(init_s);
   // Step 5) Smooth ref path
   if (is_need_smooth) {
+    InitReferencePathSmoother();
     std::vector<planning_math::PathPoint> smoothed_path_points;
     auto start_smooth_time = IflyTime::Now_us();
     is_smoothed_ = SmoothReferencePath(init_s, x_s_spline, y_s_spline, smoothed_path_points);
@@ -1105,6 +1103,37 @@ bool ReferencePath::HandleRoadCurvature(
   return true;
 }
 
+void ReferencePath::InitReferencePathSmoother() {
+  planning::FemPosDeviationSmootherConfig smoother_param;
+  smoother_param.set_apply_curvature_constraint(false);
+  smoother_param.set_use_sqp(false);
+  smoother_param.set_verbose(false);
+  smoother_param.set_scaled_termination(true);
+  smoother_param.set_warm_start(false);
+  smoother_param.set_sqp_pen_max_iter(10);
+  smoother_param.set_sqp_sub_max_iter(100);
+  smoother_param.set_max_iter(100);
+  smoother_param.set_weight_fem_pos_deviation(10000.0);
+  smoother_param.set_weight_ref_deviation(10.0);
+  smoother_param.set_weight_path_length(5.0);
+  smoother_param.set_weight_curvature_constraint_slack_var(100.0);
+  smoother_param.set_curvature_constraint(0.2);
+  smoother_param.set_sqp_ftol(0.0001);
+  smoother_param.set_sqp_ctol(0.0001);
+  smoother_param.set_time_limit(0.01);
+  // ref_path_smoother_.SetFemPosDeviationSmootherConfig(smoother_param);
+  auto &smoother_config =
+      ref_path_smoother_.MutableFemPosDeviationSmootherConfig();
+  smoother_config = std::move(smoother_param);
+  if (session_->is_rads_scene()) {
+    sampling_gap_ = kReverseSamplingGap;
+    sampling_step_ = kReverseSamplingStep;
+  } else {
+    sampling_gap_ = kForwardSamplingGap;
+    sampling_step_ = kForwardSamplingStep;
+  }
+}
+
 bool ReferencePath::SmoothReferencePath(
     const double init_s,
     const pnc::mathlib::spline &x_s_spline,
@@ -1248,17 +1277,19 @@ bool ReferencePath::SamplingRefPoints(
       std::min(std::max(init_s + kEgoAheadLength, valid_lane_line_length_ - kLaneDropLength), raw_points_s.back());
   behind_partition_length = start_s;
   ahead_partition_length = raw_points_s.back() - end_s;
-  if (session_->is_rads_scene()) {
-    sample_gap_ = 1.0;
-  }
-  double ds = sample_gap_;
   refined_x_vec.reserve(raw_points_x.size());
   refined_y_vec.reserve(raw_points_y.size());
-  for (double pt_s = start_s; pt_s < (end_s + 1e-3); pt_s += ds) {
+  double sampling_end_s = 0.0;
+  for (double pt_s = start_s; pt_s < end_s + 1e-3; pt_s += sampling_gap_) {
     double pt_x = x_s_spline(pt_s);
     double pt_y = y_s_spline(pt_s);
     refined_x_vec.emplace_back(pt_x);
     refined_y_vec.emplace_back(pt_y);
+    sampling_end_s = pt_s;
+  }
+  ahead_partition_length = std::max(raw_points_s.back() - sampling_end_s, ahead_partition_length);
+  if (refined_x_vec.empty() || refined_y_vec.empty()) {
+    return false;
   }
   return true;
 }
@@ -1435,8 +1466,11 @@ void ReferencePath::StraightExtendedRefPoints(
   // smooth_output_.points_y.emplace_back(extend_pt_y);
   double extend_pt_x = smooth_output_.points_x[start_idx + 1];
   double extend_pt_y = smooth_output_.points_y[start_idx + 1];
-  const double ds = sample_gap_;
-  for (double s = ds; s < extend_length + ds; s += ds) {
+  for (double sum_s = 0.0; sum_s < extend_length; sum_s += sampling_step_) {
+    double ds = sampling_step_;
+    if (sum_s + ds >= extend_length) {
+      ds = std::max(extend_length - sum_s, 0.0);
+    }
     extend_pt_x += dx * ds;
     extend_pt_y += dy * ds;
     smooth_output_.points_x.emplace_back(extend_pt_x);
@@ -1484,8 +1518,11 @@ void ReferencePath::ClothoidExtendedRefPoints(
   double extend_pt_theta = std::atan2(dy2, dx2);
   double extend_pt_curv = curvature;
   // 使用clothoid积分生成延长点
-  const double ds = sample_gap_;  // 积分步长
-  for (double s = ds; s < extend_length + ds; s += ds) {
+  for (double sum_s = 0.0; sum_s < extend_length; sum_s += sampling_step_) {
+    double ds = sampling_step_;
+    if (sum_s + ds >= extend_length) {
+      ds = extend_length - sum_s;
+    }
     if (std::fabs(extend_pt_curv - target_curv) > 1e-4) {
       extend_pt_curv += curv_rate * ds;
     }
@@ -1508,10 +1545,13 @@ bool ReferencePath::GenerateDenseRefPathPoints(
   smoothed_path_points.reserve(refined_ref_path_points_.size() + 1);
   BackwardExtendedRefPoints(
       behind_partition_length, x_s_spline, y_s_spline, smoothed_path_points);
-  for (double pt_s = 0; pt_s < smooth_output_.points_s.back() + kDefaultPointsGapLength; pt_s += kDefaultPointsGapLength) {
+  for (double pt_s = 0; pt_s < smooth_output_.points_s.back() + sampling_step_; pt_s += sampling_step_) {
+    if (pt_s > smooth_output_.points_s.back()) {
+      pt_s = smooth_output_.points_s.back() + 1e-2;
+    }
     auto pt =
         planning_math::PathPoint(smooth_output_.x_s_spline(pt_s),
-                                  smooth_output_.y_s_spline(pt_s));
+                                 smooth_output_.y_s_spline(pt_s));
     smoothed_path_points.emplace_back(std::move(pt));
   }
   return true;
@@ -1523,7 +1563,7 @@ bool ReferencePath::BackwardExtendedRefPoints(
     const pnc::mathlib::spline &y_s_spline,
     std::vector<planning_math::PathPoint> &smoothed_path_points) {
   if (behind_partition_length > 1e-3) {
-    for (double pt_s = 0.; pt_s < behind_partition_length - 0.5 * kDefaultPointsGapLength; pt_s += kDefaultPointsGapLength) {
+    for (double pt_s = 0.; pt_s < behind_partition_length - 0.5 * sampling_step_; pt_s += sampling_step_) {
       double pt_x = x_s_spline(pt_s);
       double pt_y = y_s_spline(pt_s);
       auto pt =
@@ -1544,6 +1584,7 @@ bool ReferencePath::UpdateReferencePathInfo(
   std::shared_ptr<planning_math::KDPath> smoothed_frenet_coord =
       std::make_shared<planning_math::KDPath>(std::move(smoothed_path_points));
   const auto &frenet_path_points = smoothed_frenet_coord->path_points();
+  ReferencePathPoint last_ref_pt;
   for (const auto pt : frenet_path_points) {
     ReferencePathPoint ref_pt;
     ref_pt.path_point.set_x(pt.x());
@@ -1560,6 +1601,7 @@ bool ReferencePath::UpdateReferencePathInfo(
       if (get_reference_point_by_lon(frenet_point.x, raw_pt)) {
         ref_pt.path_point.set_z(raw_pt.path_point.z());
         ref_pt.max_velocity = raw_pt.max_velocity;
+        ref_pt.min_velocity = raw_pt.min_velocity;
         ref_pt.lane_width = raw_pt.lane_width;
         ref_pt.distance_to_left_lane_border = raw_pt.distance_to_left_lane_border - frenet_point.y;
         ref_pt.distance_to_right_lane_border = raw_pt.distance_to_right_lane_border + frenet_point.y;
@@ -1570,8 +1612,28 @@ bool ReferencePath::UpdateReferencePathInfo(
         ref_pt.left_road_border_type = raw_pt.left_road_border_type;
         ref_pt.right_road_border_type = raw_pt.right_road_border_type;
         ref_pt.type = raw_pt.type;
-        smoothed_ref_path.emplace_back(std::move(ref_pt));
+        ref_pt.is_in_intersection = raw_pt.is_in_intersection;
+      } else {
+        if (smoothed_ref_path.empty()) {
+          continue;
+        }
+        ref_pt.path_point.set_z(last_ref_pt.path_point.z());
+        ref_pt.max_velocity = last_ref_pt.max_velocity;
+        ref_pt.min_velocity = last_ref_pt.min_velocity;
+        ref_pt.lane_width = last_ref_pt.lane_width;
+        ref_pt.distance_to_left_lane_border = last_ref_pt.distance_to_left_lane_border;
+        ref_pt.distance_to_right_lane_border = last_ref_pt.distance_to_right_lane_border;
+        ref_pt.distance_to_left_road_border = last_ref_pt.distance_to_left_road_border;
+        ref_pt.distance_to_right_road_border = last_ref_pt.distance_to_right_road_border;
+        ref_pt.left_lane_border_type = last_ref_pt.left_lane_border_type;
+        ref_pt.right_lane_border_type = last_ref_pt.right_lane_border_type;
+        ref_pt.left_road_border_type = last_ref_pt.left_road_border_type;
+        ref_pt.right_road_border_type = last_ref_pt.right_road_border_type;
+        ref_pt.type = last_ref_pt.type;
+        ref_pt.is_in_intersection = last_ref_pt.is_in_intersection;
       }
+      last_ref_pt = ref_pt;
+      smoothed_ref_path.emplace_back(std::move(ref_pt));
     }
   }
   frenet_coord_ = std::move(smoothed_frenet_coord);
