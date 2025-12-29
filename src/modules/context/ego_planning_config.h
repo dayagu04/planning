@@ -1901,6 +1901,9 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
         json, "open_side_lat_offset_nudge", open_side_lat_offset_nudge);
     start_nudge_ttc = read_json_key<double>(
         json, "start_nudge_ttc", start_nudge_ttc);
+    cross_lane_side_2_front_count_thr =
+        read_json_key<int>(json, "cross_lane_side_2_front_count_thr",
+                           cross_lane_side_2_front_count_thr);
   }
   double near_car_thr = 0.3;
   double lat_safety_buffer = 0.7;
@@ -1952,6 +1955,7 @@ struct LateralObstacleDeciderConfig : public EgoPlanningConfig {
   int side_2_front_max_count = 5;
   bool open_side_lat_offset_nudge = false;
   double start_nudge_ttc = 3.6;
+  int cross_lane_side_2_front_count_thr = 3;
 };
 
 struct HybridAraStarConfig : public EgoPlanningConfig {

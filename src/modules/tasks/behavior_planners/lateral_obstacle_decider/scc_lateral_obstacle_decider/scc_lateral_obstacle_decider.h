@@ -11,6 +11,7 @@
 #include "tasks/task.h"
 #include "tasks/task_interface/lateral_obstacle_decider_output.h"
 #include "utils/kd_path.h"
+#include "utils/hysteresis_decision.h"
 
 namespace planning {
 
@@ -64,6 +65,9 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
                                 bool rightest_lane, bool is_lane_change);
   void GetPositionRelation(const FrenetObstacle &frenet_obs,
                            LateralObstacleHistoryInfo &history);
+  void GetSideCarNudge(const FrenetObstacle& frenet_obs,
+                       LateralObstacleHistoryInfo& history,
+                       int& side_2_front_count_thr);
   void UpdateLateralObstacleDecisions();
   void LateralObstacleDecision(const FrenetObstacle &frenet_obstacle,
                                bool is_in_lane_change_scene);
@@ -85,7 +89,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void CalLaneChangeGapInfo(LcGapInfo &lc_gap_info);
   void ResetObstaclesHistory(bool is_change_lanes);
   void ClearHistoryInfo();
-  
+
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>
       lateral_obstacle_history_info_;
@@ -110,6 +114,7 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   double lane_width_ = 3.8;
   std::unordered_map<uint32_t, double> obstacle_intrusion_distance_thr_;
   LcGapInfo lc_gap_info_;
+  HysteresisDecision side_nudge_release_hysteresis_;
 };
 
 }  // namespace planning
