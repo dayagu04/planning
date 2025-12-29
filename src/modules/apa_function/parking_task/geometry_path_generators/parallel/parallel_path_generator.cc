@@ -1374,8 +1374,9 @@ const bool ParallelPathGenerator::OutsideSlotPlan() {
     }
     if (tiled_success_cnt_map[preparing_pose_vec[i].heading] > 1 ||
         (tiled_line_size <= i && i < big_ang_tiled_line_size &&
-         big_ang_tiled_success_cnt > 2)) {
-      continue;
+         big_ang_tiled_success_cnt > 0)) {
+      ILOG_INFO << "tiled prepare success, so skip!";
+      break;
     }
     collision_detector_ptr_->SetParam(CollisionDetector::Paramters(0.1, false, true));
 
@@ -1515,7 +1516,8 @@ const bool ParallelPathGenerator::PlanToPreparingLine(
 
   pnc::geometry_lib::PathSegment line_seg;
   if (OneLinePlan(line_seg, ego_pose, prepare_line)) {
-    if ( line_seg.GetLength() > 0.16){
+    if (line_seg.GetLength() > 0.16 ||
+        line_seg.seg_gear == pnc::geometry_lib::SEG_GEAR_REVERSE) {
       ego_to_prepare_seg_vec.emplace_back(line_seg);
     }
     return true;
@@ -1817,43 +1819,37 @@ const bool ParallelPathGenerator::GenTiltedPreparingLine2ShortChannel(
   const double step = 0.2;
   size_t max_num = 16;
 
-  for (const auto& heading_deg : big_heading_vec_) {
-    const double heading_rad =
-        heading_deg * kDeg2Rad * input_.tlane.slot_side_sgn;
-    const auto v_preparing_line_heading =
-        pnc::geometry_lib::GenHeadingVec(heading_rad);
+  for (size_t i = 1; i < max_num; i++) {
+    for (const auto& heading_deg : big_heading_vec_) {
+      const double heading_rad =
+          heading_deg * kDeg2Rad * input_.tlane.slot_side_sgn;
+      const auto v_preparing_line_heading =
+          pnc::geometry_lib::GenHeadingVec(heading_rad);
 
-    const Eigen::Vector2d v_preparing_line_norm(-v_preparing_line_heading.y(),
-                                                v_preparing_line_heading.x());
+      const Eigen::Vector2d v_preparing_line_norm(-v_preparing_line_heading.y(),
+                                                  v_preparing_line_heading.x());
 
-    Eigen::Vector2d tp(0.0, 0.0);
-    for (int k = 0; k < calc_params_.inversed_path_vec_in_slot.size(); k++) {
-      std::vector<Eigen::Vector2d> tangent_points;
-      bool ret = pnc::geometry_lib::CalTangentLineFromHeadingAndArc(
-          heading_rad,
-          calc_params_.inversed_path_vec_in_slot[k]
-              .path_segment_vec.back()
-              .GetArcSeg(),
-          tangent_points);
-      if (!ret) {
-        ILOG_INFO << "CalTangentLineFromHeadingAndArc failed!";
-        continue;
-      }
-      tp = tangent_points[0] +
-           v_preparing_line_heading * apa_param.GetParam().car_width;
-      Eigen::Vector2d y_tmp(0.0, -1.0);
-      // ILOG_INFO << "tangent_points_0: " << tangent_points[0].transpose();
-      for (size_t i = 0; i < max_num; i++) {
-        auto start_pos =
-            tp + v_preparing_line_norm * input_.tlane.slot_side_sgn * i * step +
-            y_tmp * input_.tlane.slot_side_sgn;
-
-        if (start_pos.x() - 1.0 < input_.tlane.obs_pt_outside.x()) {
+      for (int k = 0; k < calc_params_.inversed_path_vec_in_slot.size(); k++) {
+        auto back_path =
+            calc_params_.inversed_path_vec_in_slot[k].path_segment_vec.back();
+        std::vector<Eigen::Vector2d> tangent_points;
+        bool ret = pnc::geometry_lib::CalTangentLineFromHeadingAndArc(
+            heading_rad, back_path.GetArcSeg(), tangent_points);
+        if (!ret) {
+          ILOG_INFO << "CalTangentLineFromHeadingAndArc failed! heading_rad: "
+                    << heading_rad * kRad2Deg;
+          continue;
+        }
+        Eigen::Vector2d tp(0.0, 0.0);
+        tp = tangent_points[0] +
+             v_preparing_line_heading * apa_param.GetParam().car_width;
+        tp = tangent_points[0] +
+             v_preparing_line_norm * input_.tlane.slot_side_sgn * i * step;
+        if (tp.x() - 1.0 < input_.tlane.obs_pt_outside.x()) {
           break;
         }
-
         preparing_pose_vec.emplace_back(
-            pnc::geometry_lib::PathPoint(start_pos, heading_rad));
+            pnc::geometry_lib::PathPoint(tp, heading_rad));
       }
     }
   }
