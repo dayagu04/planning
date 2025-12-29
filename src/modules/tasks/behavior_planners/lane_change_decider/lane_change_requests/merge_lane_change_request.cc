@@ -336,7 +336,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       int target_lane_order_num = current_lane_order_num - 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() &&
+                    (feasible_lane_sequence[0] - current_lane_order_num) * (target_lane_order_num - current_lane_order_num) < 0) {
         left_lane_is_on_navigation_route = false;
       }
     }
@@ -346,7 +347,8 @@ void MergeRequest::MakesureLaneMergeDirection(const int origin_lane_id) {
       int target_lane_order_num = current_lane_order_num + 1;
       if (std::find(feasible_lane_sequence.begin(),
                     feasible_lane_sequence.end(),
-                    target_lane_order_num) == feasible_lane_sequence.end()) {
+                    target_lane_order_num) == feasible_lane_sequence.end() &&
+                    (feasible_lane_sequence[0] - current_lane_order_num) * (target_lane_order_num - current_lane_order_num) < 0) {
         right_lane_is_on_navigation_route = false;
       }
     }
