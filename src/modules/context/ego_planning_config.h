@@ -4398,6 +4398,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
                      "q_jerk_speed_adjust");
     ReadItem<double>(json, q_pos_safe_cost, "long_motion_ilqr", "q_pos_safe_cost");
     ReadItem<double>(json, safe_distance, "long_motion_ilqr", "safe_distance");
+    ReadItem<double>(json, q_emergency_stop, "long_motion_ilqr", "q_emergency_stop");
 
   }
   double q_ref_pos = 1.0;
@@ -4454,6 +4455,7 @@ struct SccLonMotionPlannerConfig : public EgoPlanningConfig {
   double q_jerk_speed_adjust = 5.0;
   double q_pos_safe_cost = 100.0;
   double safe_distance = 2.5;
+  double q_emergency_stop = 2000.0;
 };
 
 struct ResultTrajectoryGeneratorConfig : public EgoPlanningConfig {
