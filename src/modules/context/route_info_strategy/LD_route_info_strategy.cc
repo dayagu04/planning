@@ -1270,7 +1270,8 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
       continue;
     }
 
-    if (ld_map_.isRamp(split_next_link->link_type())) {
+    if (ld_map_.isRamp(split_next_link->link_type()) ||
+        split_next_link->link_type() == iflymapdata::sdpro::LT_SAPA) {
       ramp_info_vec_.emplace_back(split_info);
     }
   }
