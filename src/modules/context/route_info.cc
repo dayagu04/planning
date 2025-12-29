@@ -614,8 +614,15 @@ void RouteInfo::CaculateMergeInfo(
             is_ramp_road_merge = false;
           } else if (merge_seg_last_seg->lane_num() ==
                      merge_seg_last_other_seg->lane_num()) {
-            if (!sdpro_map.isRamp(merge_seg_last_other_seg->link_type()) &&
-                !sdpro_map.isSaPa(merge_seg_last_other_seg->link_type())) {
+            if (!sdpro_map.isRamp(merge_seg_last_seg->link_type()) &&
+                !sdpro_map.isSaPa(merge_seg_last_seg->link_type())) {
+              route_info_output_.is_road_merged_by_other_lane = true;
+              is_road_merged_by_other_lane = true;
+              is_ramp_road_merge = false;
+            } else if (!sdpro_map.isRamp(
+                           merge_seg_last_other_seg->link_type()) &&
+                       !sdpro_map.isSaPa(
+                           merge_seg_last_other_seg->link_type())) {
               route_info_output_.is_road_merged_by_other_lane = false;
               is_road_merged_by_other_lane = false;
               is_ramp_road_merge = true;
