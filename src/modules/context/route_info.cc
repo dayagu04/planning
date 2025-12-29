@@ -128,7 +128,8 @@ void RouteInfo::UpdateRouteInfoForNOA(
   double nearest_s_sd_map;
   const double max_search_length = 7000.0;  // 搜索7km范围内得地图信息
 
-  const SdMapSwtx::Segment* segment = UpdateEgoSegmentInfo(sd_map_, &nearest_s_sd_map);
+  const SdMapSwtx::Segment* segment =
+      UpdateEgoSegmentInfo(sd_map_, &nearest_s_sd_map);
   // if (segment == nullptr) {
   //   std::cout << "ego link not in expressway failed!!!" << std::endl;
   //   return;
@@ -1995,60 +1996,6 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
                const std::pair<std::vector<MLCRequestType>, double>& b) {
               return a.second < b.second;
             });
-
-  // 获取当前地图车道数（不含应急）
-  std::vector<int> current_lane_vec;
-  iflymapdata::sdpro::FeaturePoint last_fp;
-  int map_lane_num = 0;
-  int map_emergency_lane_num = 0;
-  const double s = route_info_output_.current_segment_passed_distance;
-  if (CalculateLastFPInCurrentLink(&last_fp, current_link_, s)) {
-    map_lane_num = last_fp.lane_ids().size();
-    for (const auto& lane_id : last_fp.lane_ids()) {
-      if (IsEmergencyLane(lane_id, sdpro_map_)) {
-        map_lane_num--;
-        map_emergency_lane_num++;
-      }
-    }
-  } else {
-    if (current_link_ != nullptr) {
-      map_lane_num = current_link_->lane_num();
-    }
-  }
-
-  // 可能会出现前方存在车道拓宽点，感知与地图位置不一致的情况
-  // 向前搜索25米，看有没有车道拓宽点
-  std::map<int, SplitDirection> expand_lane_sequence_vec;
-  if (CalculateExpandLaneInfo(expand_lane_sequence_vec, current_link_, s,
-                              25.0)) {
-    map_lane_num += expand_lane_sequence_vec.size();
-  }
-
-  // 获取当前感知车道数
-  int perceived_lane_num = 0;
-  for (auto& relative_id_lane : relative_id_lanes) {
-    if (relative_id_lane->get_relative_id() != 0) {
-      continue;
-    }
-    const auto& lane_nums = relative_id_lane->get_lane_nums();
-    int left_lane_num = 0;
-    int right_lane_num = 0;
-    for (const auto& lane_num : lane_nums) {
-      if (lane_num.end > kEpsilon) {
-        left_lane_num = lane_num.left_lane_num;
-        right_lane_num = lane_num.right_lane_num;
-        break;
-      }
-    }
-    perceived_lane_num =
-        left_lane_num + right_lane_num + 1 - map_emergency_lane_num;
-  }
-
-  // 选取地图车道数与感知车道数中较大者
-  int total_lane_num = std::max(map_lane_num, perceived_lane_num);
-  for (int i = 0; i < total_lane_num; ++i) {
-    current_lane_vec.emplace_back(i + 1);
-  }
   // 根据distance优化feasible lane，考虑3km内的所有exchange
   std::vector<NOASplitRegionInfo> valid_exchange_regions;
   // 筛选3km内的exchange region
@@ -2104,6 +2051,66 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       valid_exchange_regions.erase(valid_exchange_regions.begin());
       is_remove_other_merge = true;
     }
+  }
+  // 获取当前地图车道数（不含应急）
+  std::vector<int> current_lane_vec;
+  iflymapdata::sdpro::FeaturePoint last_fp;
+  int map_lane_num = 0;
+  int map_emergency_lane_num = 0;
+  const double s = route_info_output_.current_segment_passed_distance;
+  if (CalculateLastFPInCurrentLink(&last_fp, current_link_, s)) {
+    map_lane_num = last_fp.lane_ids().size();
+    for (const auto& lane_id : last_fp.lane_ids()) {
+      if (IsEmergencyLane(lane_id, sdpro_map_)) {
+        map_lane_num--;
+        map_emergency_lane_num++;
+      }
+    }
+  } else {
+    if (current_link_ != nullptr) {
+      map_lane_num = current_link_->lane_num();
+    }
+  }
+
+  // 可能会出现前方存在车道拓宽点，感知与地图位置不一致的情况
+  // 向前搜索25米，看有没有车道拓宽点
+  std::map<int, SplitDirection> expand_lane_sequence_vec;
+  if (CalculateExpandLaneInfo(expand_lane_sequence_vec, current_link_, s,
+                              25.0)) {
+    map_lane_num += expand_lane_sequence_vec.size();
+  }
+
+  // 获取当前感知车道数
+  int perceived_lane_num = 0;
+  for (auto& relative_id_lane : relative_id_lanes) {
+    if (relative_id_lane->get_relative_id() != 0) {
+      continue;
+    }
+    const auto& lane_nums = relative_id_lane->get_lane_nums();
+    int left_lane_num = 0;
+    int right_lane_num = 0;
+    for (const auto& lane_num : lane_nums) {
+      if (lane_num.end > kEpsilon) {
+        left_lane_num = lane_num.left_lane_num;
+        right_lane_num = lane_num.right_lane_num;
+        break;
+      }
+    }
+    perceived_lane_num =
+        left_lane_num + right_lane_num + 1 - map_emergency_lane_num;
+  }
+
+  // 选取地图车道数与感知车道数中较大者
+  int total_lane_num = std::max(map_lane_num, perceived_lane_num);
+  if (is_remove_other_merge && other_merge_lane_num > 0 &&
+      mlc_decider_route_info_.is_process_split &&
+      !exchange_region_info_list.empty() &&
+      exchange_region_info_list[0].is_other_merge_to_road &&
+      exchange_region_info_list[0].split_direction == SPLIT_RIGHT) {
+    total_lane_num += other_merge_lane_num;
+  }
+  for (int i = 0; i < total_lane_num; ++i) {
+    current_lane_vec.emplace_back(i + 1);
   }
   // 为每个exchange region准备数据
   std::vector<std::map<int, double>> exchange_feasible_lane_distances(
