@@ -261,17 +261,21 @@ size_t LDRouteInfoStrategy::GetTargetRampIndex() {
     if (ramp_dis > kMinFrontSearchDis) {
       if (ramp_idx == 0) {
         return 0;
+      }
+
+      // 检查合流信息，若存在有效合流则取前一个匝道
+      if (HasValidMergeBeforeRamp(ramp_dis) ||
+          (ramp_info_vec_[ramp_idx].second -
+           ramp_info_vec_[ramp_idx - 1].second) > 200.0) {
+        return ramp_idx - 1;
       } else {
-        // 检查合流信息，若存在有效合流则取前一个匝道
-        if (HasValidMergeBeforeRamp(ramp_dis)) {
-          return ramp_idx - 1;
-        }
+        return ramp_idx;
       }
     }
 
     // 场景2：匝道距离<最小搜索距离，检查合流信息
     if (HasValidMergeBeforeRamp(ramp_dis)) {
-      return ramp_idx - 1;
+      return std::max(ramp_idx - 1, static_cast<size_t>(0));
     }
   }
 
@@ -317,9 +321,9 @@ bool LDRouteInfoStrategy::IsMergePriorToRamp(const double dis_to_ramp) {
 void LDRouteInfoStrategy::UpdateSceneInfo(const iflymapdata::sdpro::LinkInfo_Link& target_link,
                                                const double dis_to_target_link) {
   mlc_decider_info_base_baidu_.set_value(
-      SPLIT_SCENE, 
+      SPLIT_SCENE,
       CalculateSplitDirection(target_link, ld_map_),
-      dis_to_target_link, 
+      dis_to_target_link,
       target_link.id());
 }
 
@@ -1023,7 +1027,7 @@ bool LDRouteInfoStrategy::CalculateMergePreFeasibleLane(
         if (seq != (i - 1)) {
           continue;
         }
-        
+
         // 由于是右边的汇入，所以取前继车道中seq较大的lane
         const iflymapdata::sdpro::Lane* max_seq_lane = nullptr;
         uint32_t temp_max_seq = 0;
@@ -1826,7 +1830,7 @@ void LDRouteInfoStrategy::CalculateAvoidMergeFeasibleLane(
       ++it;
       continue;
     }
-    
+
     const auto& entry_lane_belong_link = ld_map_.GetLinkOnRoute(entry_lane_info->link_id());
     if (entry_lane_belong_link == nullptr) {
       ++it;
