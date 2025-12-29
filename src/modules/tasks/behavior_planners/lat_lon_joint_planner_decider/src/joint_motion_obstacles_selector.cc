@@ -90,16 +90,6 @@ void JointMotionObstaclesSelector::SelectObstacles(
     return;
   }
 
-  if (lead_one_id != -1) {
-    for (const auto& agent : agents) {
-      if (agent != nullptr && agent->agent_id() == lead_one_id) {
-        key_obstacles_.emplace_back(
-            CreateKeyObstacle(agent, ego_lane_coord, IGNORE));
-        break;
-      }
-    }
-  }
-
   const auto& route_info = session_->environmental_model().get_route_info();
   const auto& ego_lane_road_right_output =
       session_->planning_context().ego_lane_road_right_decider_output();
@@ -185,7 +175,7 @@ void JointMotionObstaclesSelector::SelectObstacles(
     auto it = neighbor_agents_map.find(agent_id);
     if (it != neighbor_agents_map.end()) {
       KeyObstacle obstacle = CreateKeyObstacle(agent, ego_lane_coord, IGNORE);
-      CorrectTrajectoryInConfluenceArea(&obstacle, it->second);
+      CorrectTrajectoryInConfluenceArea(obstacle, it->second);
       agent_obstacles_map[agent_id] = obstacle;
     } else {
       agent_obstacles_map[agent_id] =
@@ -218,6 +208,24 @@ void JointMotionObstaclesSelector::SelectObstacles(
         front_agent_ids.push_back(agent_id);
       } else {
         side_agent_ids.push_back(agent_id);
+      }
+    }
+  }
+
+  if (lead_one_id != -1) {
+    bool already_in_list =
+        std::find(front_agent_ids.begin(), front_agent_ids.end(),
+                  lead_one_id) != front_agent_ids.end() ||
+        std::find(side_agent_ids.begin(), side_agent_ids.end(), lead_one_id) !=
+            side_agent_ids.end();
+
+    if (!already_in_list) {
+      for (const auto& agent : agents) {
+        if (agent != nullptr && agent->agent_id() == lead_one_id) {
+          key_obstacles_.emplace_back(
+              CreateKeyObstacle(agent, ego_lane_coord, IGNORE));
+          break;
+        }
       }
     }
   }
@@ -570,8 +578,8 @@ KeyObstacle JointMotionObstaclesSelector::CreateKeyObstacle(
 }
 
 void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
-    KeyObstacle* key_obstacle, bool is_left_side) {
-  if (key_obstacle == nullptr || key_obstacle->ref_x_vec.empty()) {
+    KeyObstacle& key_obstacle, bool is_left_side) {
+  if (key_obstacle.ref_x_vec.empty()) {
     return;
   }
 
@@ -581,11 +589,54 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     return;
   }
 
-  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  const auto& current_lane = virtual_lane_manager->get_current_lane();
+  if (current_lane == nullptr) {
+    return;
+  }
+
+  const auto& current_lane_coord = current_lane->get_lane_frenet_coord();
+  if (current_lane_coord == nullptr) {
+    return;
+  }
+
+  std::shared_ptr<VirtualLane> candidate_lane = nullptr;
   if (is_left_side) {
-    target_lane = virtual_lane_manager->get_left_lane();
+    candidate_lane = virtual_lane_manager->get_left_lane();
   } else {
-    target_lane = virtual_lane_manager->get_right_lane();
+    candidate_lane = virtual_lane_manager->get_right_lane();
+  }
+
+  if (candidate_lane == nullptr) {
+    return;
+  }
+
+  const auto& candidate_lane_coord = candidate_lane->get_lane_frenet_coord();
+  if (candidate_lane_coord == nullptr) {
+    return;
+  }
+
+  constexpr double kTargetTime = 3.0;
+  constexpr double kPlanningTimeStep = 0.2;
+  const size_t target_time_index =
+      static_cast<size_t>(kTargetTime / kPlanningTimeStep);
+
+  if (target_time_index >= key_obstacle.ref_x_vec.size()) {
+    return;
+  }
+
+  const double check_x = key_obstacle.ref_x_vec[target_time_index];
+  const double check_y = key_obstacle.ref_y_vec[target_time_index];
+
+  double check_s_current = 0.0, check_l_current = 0.0;
+
+  std::shared_ptr<VirtualLane> target_lane = nullptr;
+  if (current_lane_coord->XYToSL(check_x, check_y, &check_s_current,
+                                 &check_l_current) &&
+      std::fabs(check_l_current) <
+          current_lane->width_by_s(check_s_current) * 0.5) {
+    target_lane = current_lane;
+  } else {
+    target_lane = candidate_lane;
   }
 
   if (target_lane == nullptr) {
@@ -602,10 +653,13 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     return;
   }
 
-  constexpr double kPlanningTimeStep = 0.2;
-  const double obs_wheelbase = key_obstacle->length * 0.75;
+  const double obs_wheelbase = key_obstacle.length * 0.75;
 
-  const size_t traj_size = key_obstacle->ref_x_vec.size();
+  const size_t traj_size = key_obstacle.ref_x_vec.size();
+
+  if (traj_size < 2) {
+    return;
+  }
 
   planning::BasicPurePursuitModel pp_model;
   if (pp_model.ProcessReferencePath(reference_path_ptr) !=
@@ -614,10 +668,10 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
   }
 
   planning::BasicPurePursuitModel::ModelState pp_state(
-      key_obstacle->init_x, key_obstacle->init_y, key_obstacle->init_theta,
-      key_obstacle->init_vel);
+      key_obstacle.init_x, key_obstacle.init_y, key_obstacle.init_theta,
+      key_obstacle.init_vel);
 
-  for (size_t i = 0; i < traj_size; ++i) {
+  for (size_t i = 1; i < traj_size; ++i) {
     double current_vel = pp_state.vel;
     double ld = std::max(3.0, current_vel * 1.2);
     planning::BasicPurePursuitModel::ModelParam pp_param(ld, obs_wheelbase);
@@ -628,7 +682,6 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     if (pp_model.CalculateDesiredDelta(0.0) != ErrorType::kSuccess) {
       break;
     }
-    pp_model.Reset();
 
     double desired_delta = pp_model.get_delta();
     constexpr double kMaxSteerAngle = 0.5;
@@ -636,6 +689,8 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
 
     pnc::steerModel::VehicleSimulation vehicle_simulate;
     pnc::steerModel::VehicleParameter vehicle_param;
+    vehicle_param.c1_ = 1.0 / obs_wheelbase;
+
     pnc::steerModel::VehicleState vehicle_state{pp_state.x, pp_state.y,
                                                 pp_state.theta};
     pnc::steerModel::VehicleControl vehicle_control{pp_state.vel,
@@ -645,22 +700,22 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
     vehicle_simulate.Update(vehicle_control, vehicle_param);
     const auto new_state = vehicle_simulate.GetState();
 
-    key_obstacle->ref_x_vec[i] = new_state.x_;
-    key_obstacle->ref_y_vec[i] = new_state.y_;
+    key_obstacle.ref_x_vec[i] = new_state.x_;
+    key_obstacle.ref_y_vec[i] = new_state.y_;
 
     double theta_value = new_state.phi_;
     if (i > 0) {
-      double last_theta = key_obstacle->ref_theta_vec[i - 1];
+      double last_theta = key_obstacle.ref_theta_vec[i - 1];
       double dtheta = planning_math::NormalizeAngle(theta_value - last_theta);
       theta_value = last_theta + dtheta;
     }
-    key_obstacle->ref_theta_vec[i] = theta_value;
-    key_obstacle->ref_delta_vec[i] = desired_delta;
+    key_obstacle.ref_theta_vec[i] = theta_value;
+    key_obstacle.ref_delta_vec[i] = desired_delta;
 
     pp_state.x = new_state.x_;
     pp_state.y = new_state.y_;
     pp_state.theta = theta_value;
-    pp_state.vel = key_obstacle->ref_vel_vec[i];
+    pp_state.vel = key_obstacle.ref_vel_vec[i];
   }
 }
 

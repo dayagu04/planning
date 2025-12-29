@@ -35,6 +35,7 @@ enum iLqrCostconfigId {
   W_NON_NEGATIVE_VEL,
   W_POS_SAFE_COST,
   SAFE_DISTANCE,
+  W_EMERGENCY_STOP,
   COST_CONFIG_SIZE,
 };
 
@@ -50,6 +51,7 @@ enum iLqrCostId {
   LON_STOP_POINT_COST,
   LON_NON_NEGATIVE_VEL_COST,
   LON_POS_SAFE_COST,
+  LON_EMERGENCY_STOP_COST,
   COST_SIZE,
 };
 
@@ -220,6 +222,20 @@ class LonPosSafeCostTerm : public ilqr_solver::BaseCostTerm {
                           ilqr_solver::LuuMT & /*luu*/) override;
   std::string GetCostString() override { return typeid(this).name(); }
   uint8_t GetCostId() override { return LON_POS_SAFE_COST; }
+};
+
+class LonEmergencyStopCost : public ilqr_solver::BaseCostTerm {
+ public:
+  LonEmergencyStopCost() = default;
+  double GetCost(const ilqr_solver::State &x,
+                 const ilqr_solver::Control & /*u*/) override;
+  void GetGradientHessian(const ilqr_solver::State &x,
+                          const ilqr_solver::Control & /*u*/,
+                          ilqr_solver::LxMT &lx, ilqr_solver::LuMT & /*lu*/,
+                          ilqr_solver::LxxMT &lxx, ilqr_solver::LxuMT & /*lxu*/,
+                          ilqr_solver::LuuMT & /*luu*/) override;
+  std::string GetCostString() override { return typeid(this).name(); }
+  uint8_t GetCostId() override { return LON_EMERGENCY_STOP_COST; }
 };
 
 }  // namespace scc_longitudinal_planning_v3

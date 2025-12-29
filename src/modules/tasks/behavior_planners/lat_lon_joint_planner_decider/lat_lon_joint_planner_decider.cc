@@ -113,7 +113,6 @@ void LatLonJointPlannerDecider::Update() {
   for (double id : key_agent_ids) {
     obstacle_ids.push_back(static_cast<int32_t>(id));
   }
-  lat_lon_planning_output_.SetSelectedObstacleIds(obstacle_ids);
 
   if (!motion_failed) {
     auto& ego_trajectory = lat_lon_planning_output_.GetEgoTrajectory();

@@ -46,16 +46,6 @@ class LatLonJointPlannerDeciderOutput {
   const EgoTrajectory& GetEgoTrajectory() const { return ego_trajectory_; }
   EgoTrajectory& GetEgoTrajectory() { return ego_trajectory_; }
 
-  const std::vector<int32_t>& GetSelectedObstacleIds() const {
-    return selected_obstacle_ids_;
-  }
-  std::vector<int32_t>& GetSelectedObstacleIds() {
-    return selected_obstacle_ids_;
-  }
-  void SetSelectedObstacleIds(const std::vector<int32_t>& obstacle_ids) {
-    selected_obstacle_ids_ = obstacle_ids;
-  }
-
   void SetPlanningSuccess(bool success) { planning_success_ = success; }
   bool IsPlanningSuccess() const { return planning_success_; }
 
@@ -69,7 +59,6 @@ class LatLonJointPlannerDeciderOutput {
 
   void Clear() {
     ego_trajectory_.clear();
-    selected_obstacle_ids_.clear();
     danger_obstacle_ids_.clear();
     planning_success_ = false;
   }
@@ -194,7 +183,6 @@ class LatLonJointPlannerDeciderOutput {
 
  private:
   EgoTrajectory ego_trajectory_;
-  std::vector<int32_t> selected_obstacle_ids_;
   std::vector<int32_t> danger_obstacle_ids_;
   bool planning_success_ = false;
 };

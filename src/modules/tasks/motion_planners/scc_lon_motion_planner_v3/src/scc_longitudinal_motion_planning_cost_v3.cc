@@ -289,9 +289,22 @@ void LonPosSafeCostTerm::GetGradientHessian(
   if (x[POS] > safe_threshold) {
     lx(POS) +=
         cost_config_ptr_->at(W_POS_SAFE_COST) * (x[POS] - safe_threshold);
-
     lxx(POS, POS) += cost_config_ptr_->at(W_POS_SAFE_COST);
   }
+}
+
+// longitudinal emergency stop cost
+double LonEmergencyStopCost::GetCost(const ilqr_solver::State &x,
+                                     const ilqr_solver::Control &) {
+  return 0.5 * cost_config_ptr_->at(W_EMERGENCY_STOP) * Square(x[VEL]);
+}
+
+void LonEmergencyStopCost::GetGradientHessian(
+    const ilqr_solver::State &x, const ilqr_solver::Control &,
+    ilqr_solver::LxMT &lx, ilqr_solver::LuMT &, ilqr_solver::LxxMT &lxx,
+    ilqr_solver::LxuMT &, ilqr_solver::LuuMT &) {
+  lx(VEL) += cost_config_ptr_->at(W_EMERGENCY_STOP) * x[VEL];
+  lxx(VEL, VEL) += cost_config_ptr_->at(W_EMERGENCY_STOP);
 }
 
 }  // namespace scc_longitudinal_planning_v3
