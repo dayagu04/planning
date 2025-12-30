@@ -59,7 +59,8 @@ class SamplePolySpeedAdjustDecider : public Task {
                           const int index);
   bool IsNotUseGapSelect();
   bool IsForcedMergeScenario();
-  void GenerateForceMergeTraj();
+  bool GenerateForceMergeTraj();
+  bool EvaluateForceMergeTraj();
 
  private:
   SamplePolySpeedAdjustDeciderConfig config_;
@@ -105,7 +106,7 @@ class SamplePolySpeedAdjustDecider : public Task {
   double evaluation_congest_t_{3.0};
 
   SampleQuarticPolynomialCurve* min_cost_traj_ptr_;
-
+  SampleQuinticPolynomialCurve* min_cost_quintic_traj_;
   SampleQuarticPolynomialCurve last_min_cost_traj_;
   std::unique_ptr<UniformJerkCurve> jerk_curve_upper_;
   std::unique_ptr<UniformJerkCurve> jerk_curve_lower_;

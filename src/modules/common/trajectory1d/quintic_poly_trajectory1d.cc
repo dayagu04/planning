@@ -21,6 +21,8 @@ QuinticPolynomial::QuinticPolynomial(const std::vector<double>& start,
 
   coefficients_ = {start[0], start[1], 0.5 * start[2], X(0), X(1), X(2)};
   T_ = T;
+  end_v_ = end[1];
+  end_s_ = end[0];
 }
 
 QuinticPolynomial::QuinticPolynomial(const QuinticPolyState& start,
@@ -31,19 +33,67 @@ QuinticPolynomial::QuinticPolynomial(const QuinticPolyState& start,
   const double T4 = T3 * T;
   const double T5 = T4 * T;
 
-  // 构造 3×3 线性方程组：A * [a3, a4, a5]^T = B
   Eigen::Matrix3d A;
   A << T3, T4, T5, 3 * T2, 4 * T3, 5 * T4, 6 * T, 12 * T2, 20 * T3;
 
   Eigen::Vector3d B;
-  B << end.p - (start.p + start.v * T + 0.5 * start.a * T2),
+  B << end.s - (start.s + start.v * T + 0.5 * start.a * T2),
       end.v - (start.v + start.a * T), end.a - start.a;
 
   Eigen::Vector3d X = A.inverse() * B;
 
-  coefficients_ = {start.p, start.v, 0.5 * start.a, X(0), X(1), X(2)};
-  T_ = T;
+  coefficients_ = {start.s, start.v, 0.5 * start.a, X(0), X(1), X(2)};
+  // const double delta_s = end.s - (start.s + start.v * T + 0.5 * start.a * T2);
 
+  // const double delta_v = end.v - (start.v + start.a * T);
+
+  // // 计算系数
+  // const double c0 = start.s;
+  // const double c1 = start.v;
+  // const double c2 = start.a / 2.0;
+
+  // const double c3 = (10.0 * delta_s) / T3 - (4.0 * delta_v) / T2 + start.a / (2.0 * T);
+  // const double c4 = (-15.0 * delta_s) / T4 + (7.0 * delta_v) / T3 - start.a / T2;
+  // const double c5 = (6.0 * delta_s) / T5 - (3.0 * delta_v) / T4 + start.a / (2.0 * T3);
+  // double numerator_c5_s = delta_s;
+  // double denominator_c5_s = (-2.5 * T * T4) + T5;
+  // double c5_val = numerator_c5_s / denominator_c5_s;
+
+  // // 速度约束代入后验证（用于降低浮点误差）
+  // double numerator_c5_v = delta_v;
+  // double denominator_c5_v = 4 * (-2.5 * T) * T3 + 5 * T4;
+  // double c5_val_v = numerator_c5_v / denominator_c5_v;
+
+  // // 取平均值，提升精度
+  // const double c5 = (c5_val + c5_val_v) / 2.0;
+
+  // // 步骤7：由c5推导c4
+  // const double c4 = -2.5 * c5 * T;
+
+  // const double D = 3*T4*25*T4 - 9*T5*8*T3; // 系数行列式
+  // const double D1 = (-delta_s)*25*T4 - 9*T5*(-delta_v); // c4的行列式
+  // const double D2 = 3*T4*(-delta_v) - (-delta_s)*8*T3; // c5的行列式
+  // double c3 = 0.0;
+  // double c4 = 0.0;
+  // double c5 = 0.0;
+  // // 避免除0（T_≠0时，D≠0，参数合理时）
+  // if (fabs(D) < 1e-12) {
+  //     valid_ = false;
+  //     return;
+  // }
+
+  // c4 = D1 / D;
+  // c5 = D2 / D;
+
+  // // 步骤4：利用j1=0的约束，反推c3
+  // c3 = -4*c4*T - 10*c5*T2;
+  // coefficients_ = {c0, c1, c2, c3, c4, c5};
+  T_ = T;
+  end_v_ = end.v;
+  end_s_ = end.s;
+  end_a_ = CalculateSecondDerivative(T);
+
+  first_derv_extrema_ = FindFirstDerivativeExtrema(T_);
   second_derv_extrema_ = FindSecondDerivativeExtrema(T_);
   third_derv_extrema_ = FindThirdDerivativeExtrema(T_);
 }
@@ -119,7 +169,8 @@ std::vector<double> QuinticPolynomial::SolveQuadratic(const double a,
   return {(-b + std::sqrt(delta)) / (2 * a), (-b - std::sqrt(delta)) / (2 * a)};
 }
 
-std::pair<double, double> QuinticPolynomial::FindFirstDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindFirstDerivativeExtrema(
+    const double te) {
   auto extrema_t = SolveCubic(20 * coefficients_[5], 12 * coefficients_[4],
                               6 * coefficients_[3], 2 * coefficients_[2]);
   double min_val = CalculateFirstDerivative(0);
@@ -136,7 +187,8 @@ std::pair<double, double> QuinticPolynomial::FindFirstDerivativeExtrema(const do
   return {std::max(max_val, v_te), std::min(min_val, v_te)};
 }
 
-std::pair<double, double> QuinticPolynomial::FindSecondDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindSecondDerivativeExtrema(
+    const double te) {
   auto extrema_t = SolveQuadratic(60 * coefficients_[4], 24 * coefficients_[3],
                                   6 * coefficients_[2]);
   double min_val = CalculateSecondDerivative(0);
@@ -153,7 +205,8 @@ std::pair<double, double> QuinticPolynomial::FindSecondDerivativeExtrema(const d
   double val_at_ts = CalculateSecondDerivative(te);
   return {std::max(max_val, val_at_ts), std::min(min_val, val_at_ts)};
 }
-std::pair<double, double> QuinticPolynomial::FindThirdDerivativeExtrema(const double te) {
+std::pair<double, double> QuinticPolynomial::FindThirdDerivativeExtrema(
+    const double te) {
   double extrema_t = -coefficients_[4] / (5 * coefficients_[5]);
   double min_val = CalculateThirdDerivative(0);
   double max_val = min_val;

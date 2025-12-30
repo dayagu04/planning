@@ -31,11 +31,7 @@ class SampleQuinticPolynomialCurve : public SamplePolyCurve {
 
   void CalcCost(STSampleSpaceBase& sample_space_base, const double ego_v,
                 const double ego_a, const double suggested_v,
-                const double stop_line_s, const LeadingAgentInfo& leading_veh,
-                bool enable_merge_decelaration, double speed_differ_gain,
-                double distance_to_stop_point,
-                const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-                const double cur_time, bool is_mergr_change);
+                const LeadingAgentInfo& leading_veh);
   double CalcVelIntegral(const double t) const;
   double CalcGapVelSafeDistance(const double ego_v, const double obj_v,
                                 const double ego_a, const double obj_a,
@@ -80,8 +76,8 @@ class SampleQuinticPolynomialCurve : public SamplePolyCurve {
     return stop_penalty_cost_;
   };
 
-  const MatchGapCost& anchor_points_match_gap_cost() const {
-    return anchor_points_match_gap_cost_;
+  const SafeDistanceCost& safe_distance_cost() const {
+    return safe_distance_cost_;
   };
 
   const AccLimitCost& acc_limit_cost() const { return acc_limit_cost_; }
@@ -99,10 +95,10 @@ class SampleQuinticPolynomialCurve : public SamplePolyCurve {
   StopPointCost stop_point_cost_;
   LeadingVehFollowCost leading_veh_follow_s_cost_;
   JerkLimitCost jerk_limit_cost_;
-  MatchGapCost anchor_points_match_gap_cost_;
+  SafeDistanceCost safe_distance_cost_;
   int32_t end_point_matched_gap_front_id_ = kNoAgentId;
   int32_t end_point_matched_gap_back_id_ = kNoAgentId;
-  double prediction_time_ = 3.0;
+  double prediction_time_ = 2.0;
   double safe_border_distance_to_gap_back_obj_ = 0.0;
   double safe_border_distance_to_gap_front_obj_ = 0.0;
   double rest_changeable_distance_ = 0.0;

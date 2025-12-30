@@ -450,4 +450,27 @@ void JerkLimitCost::GetCost(const double jerk_extrema) {
   cost_ =
       jerk_extrema > 1.5 ? weight_ * std::exp((jerk_extrema - 1.5) / 2.0) : 0.0;
 }
+
+void SafeDistanceCost::GetCost(const double distance_to_gap_front_obj,
+                               const double distance_to_gap_back_obj,
+                               const double limi_safe_distance_to_gap_front_obj,
+                               const double limi_safe_distance_to_gap_back_obj,
+                               const double max_safe_distance_to_gap_front_obj,
+                               const double max_safe_distance_to_gap_back_obj) {
+  auto front_obj_cost =
+      distance_to_gap_front_obj > max_safe_distance_to_gap_front_obj
+          ? 0.0
+          : std::exp((max_safe_distance_to_gap_front_obj -
+                      distance_to_gap_front_obj) /
+                     (max_safe_distance_to_gap_front_obj -
+                      limi_safe_distance_to_gap_front_obj));
+  auto back_obj_cost =
+      distance_to_gap_back_obj > max_safe_distance_to_gap_back_obj
+          ? 0.0
+          : std::exp(
+                (max_safe_distance_to_gap_back_obj - distance_to_gap_back_obj) /
+                (max_safe_distance_to_gap_back_obj -
+                 limi_safe_distance_to_gap_back_obj));
+  cost_ = weight_ * std::max(front_obj_cost, back_obj_cost);
+}
 }  // namespace planning

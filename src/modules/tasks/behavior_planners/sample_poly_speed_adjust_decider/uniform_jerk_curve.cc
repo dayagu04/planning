@@ -78,7 +78,8 @@ double UniformJerkCurve::CalcS(const double t) const {
         s = jerk_curve_coffi_.cofficients[i][0] +
             jerk_curve_coffi_.cofficients[i][1] * during_t +
             jerk_curve_coffi_.cofficients[i][2] * during_t * during_t +
-            jerk_curve_coffi_.cofficients[i][3] * during_t * during_t * during_t;
+            jerk_curve_coffi_.cofficients[i][3] * during_t * during_t *
+                during_t;
         break;
       }
     }

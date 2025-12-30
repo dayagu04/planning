@@ -7,7 +7,7 @@
 
 namespace planning {
 struct QuinticPolyState {
-  double p;
+  double s;
   double v;
   double a;
 
@@ -57,6 +57,10 @@ class QuinticPolynomial {
 
   const std::vector<double>& coefficients() const { return coefficients_; };
   const double T() const { return T_; };
+  const double end_v() const { return end_v_; };
+  const double end_s() const { return end_s_; };
+  const double end_a() const { return end_a_; };
+  const bool valid() const { return valid_; };
 
  private:
   std::vector<double> coefficients_;
@@ -65,6 +69,10 @@ class QuinticPolynomial {
   std::pair<double, double> third_derv_extrema_;   // <j_max, j_min>
 
   double T_ = 5.0;
+  double end_v_ = 0.0;
+  double end_s_ = 0.0;
+  double end_a_ = 0.0;
+  bool valid_ = true;
 };
 
 }  // namespace planning

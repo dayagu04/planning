@@ -48,10 +48,7 @@ SampleQuinticPolynomialCurve::SampleQuinticPolynomialCurve(
   acc_limit_cost_.SetWeight(weight_acc_limit);
   stop_penalty_cost_.SetWeight(weight_stop_penalty);
   speed_change_cost_.SetWeight(weight_speed_change);
-  anchor_points_match_gap_cost_.SetWeightMatchVel(weight_match_gap_vel);
-  anchor_points_match_gap_cost_.SetWeightMatchS(weight_match_gap_s);
-  anchor_points_match_gap_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle,
-                                                     back_edge_to_rear_axle);
+  safe_distance_cost_.SetWeight(weight_match_gap_s);
   leading_veh_follow_s_cost_.SetWeight(weight_leading_veh_follow_s);
   leading_veh_follow_s_cost_.SetRearAxleToBumpDis(front_edge_to_rear_axle);
   jerk_limit_cost_.SetWeight(weight_jerk_limit);
@@ -66,7 +63,7 @@ void SampleQuinticPolynomialCurve::CostInit() {
   acc_limit_cost_.Init();
   stop_penalty_cost_.Init();
   speed_change_cost_.Init();
-  anchor_points_match_gap_cost_.Init();
+  safe_distance_cost_.Init();
   jerk_limit_cost_.Init();
   cost_sum_ = 0.0;
 }
@@ -159,33 +156,20 @@ double SampleQuinticPolynomialCurve::CalcGapVelSafeDistance(const double ego_v,
 
 void SampleQuinticPolynomialCurve::CalcCost(
     STSampleSpaceBase& sample_space_base, const double ego_v,
-    const double ego_a, const double suggested_v, const double stop_line_s,
-    const LeadingAgentInfo& leading_veh, bool is_not_use_gap_select,
-    double speed_differ_gain, double distance_to_stop_point,
-    const LanChangeSafetyCheckConfig& lc_safety_distance_config,
-    const double cur_time, bool is_mergr_change) {
+    const double ego_a, const double suggested_v,
+    const LeadingAgentInfo& leading_veh) {
   // anchor points cost
-  double last_cost = cost_sum_;
-  double last_arrived_s = arrived_s_;
-  double last_arrived_v = arrived_v_;
-  double last_arrived_a = arrived_a_;
-  double last_arrived_t = arrived_t_;
   STPoint anchor_matched_upper_st_point;
   STPoint anchor_matched_lower_st_point;
-  const double& anchor_arrived_t = cur_time;
-  const double& anchor_arrived_v =
-      anchor_arrived_t - poly_.T() > 0
-          ? poly_.CalculateFirstDerivative(poly_.T())
-          : poly_.CalculateFirstDerivative(anchor_arrived_t);
-  double anchor_arrived_s =
-      anchor_arrived_t - poly_.T() > 0
-          ? poly_.CalculatePoint(poly_.T()) +
-                anchor_arrived_v * (anchor_arrived_t - poly_.T())
-          : poly_.CalculatePoint(anchor_arrived_t);
-  double anchor_arrived_a =
-      anchor_arrived_t - poly_.T() > 0.0
-          ? 0.0
-          : poly_.CalculateSecondDerivative(anchor_arrived_t);
+  const double& anchor_arrived_t = poly_.T();
+  const double& anchor_arrived_v = poly_.CalculateFirstDerivative(anchor_arrived_t);
+  double anchor_arrived_s = poly_.CalculatePoint(anchor_arrived_t);
+  double anchor_arrived_a = poly_.CalculateSecondDerivative(anchor_arrived_t);
+  arrived_s_ = anchor_arrived_s;
+  arrived_v_ = anchor_arrived_v;
+  arrived_a_ = anchor_arrived_a;
+  arrived_t_ = anchor_arrived_t;
+  arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
   sample_space_base.GetBorderByAvailable(anchor_arrived_s, anchor_arrived_t,
                                          &anchor_matched_lower_st_point,
                                          &anchor_matched_upper_st_point);
@@ -195,47 +179,28 @@ void SampleQuinticPolynomialCurve::CalcCost(
   const double safe_distance_to_gap_back_obj = CalcGapVelSafeDistance(
       anchor_arrived_v, anchor_matched_lower_st_point.velocity(),
       anchor_arrived_a, anchor_matched_lower_st_point.acceleration(), false);
-  double rest_changeable_distance =
-      anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s() -
-      safe_distance_to_gap_front_obj - safe_distance_to_gap_back_obj -
-      front_edge_to_rear_axle_ - back_edge_to_rear_axle_;
-  if (rest_changeable_distance < 3.5 && !is_not_use_gap_select) {
+  double ditsance_to_gap_front_obj = anchor_matched_upper_st_point.s() -
+                                     anchor_arrived_s -
+                                     front_edge_to_rear_axle_;
+  double distance_to_gap_back_obj = anchor_arrived_s -
+                                    anchor_matched_lower_st_point.s() -
+                                    back_edge_to_rear_axle_;
+  double limi_safe_distance_to_gap_front_obj =
+      std::fmax(3.5 + 0.3 * anchor_arrived_v, safe_distance_to_gap_front_obj);
+  double limi_safe_distance_to_gap_back_obj =
+      std::fmax(3.5 + 0.3 * anchor_matched_upper_st_point.velocity(),
+                safe_distance_to_gap_back_obj);
+  if (ditsance_to_gap_front_obj < limi_safe_distance_to_gap_front_obj ||
+      distance_to_gap_back_obj < limi_safe_distance_to_gap_back_obj) {
     return;
   }
-  cost_sum_ = 0.0;
-  auto anchor_points_match_gap_cost = anchor_points_match_gap_cost_;
-  auto speed_change_cost = speed_change_cost_;
-  auto stop_line_cost = stop_line_cost_;
-  auto leading_veh_safe_cost = leading_veh_safe_cost_;
-  auto stop_point_cost = stop_point_cost_;
-  auto follow_vel_cost = follow_vel_cost_;
-  auto leading_veh_follow_s_cost = leading_veh_follow_s_cost_;
-  auto speed_variable_cost = speed_variable_cost_;
-  auto stop_penalty_cost = stop_penalty_cost_;
-  auto gap_avaliable_cost = gap_avaliable_cost_;
-  auto acc_limit_cost = acc_limit_cost_;
-  auto jerk_limit_cost = jerk_limit_cost_;
   CostInit();
-  anchor_points_match_gap_cost_.GetCost(
-      anchor_matched_upper_st_point, anchor_matched_lower_st_point,
-      anchor_arrived_s, anchor_arrived_t, anchor_arrived_v, anchor_arrived_a,
-      safe_distance_to_gap_front_obj, safe_distance_to_gap_back_obj, ego_v,
-      is_not_use_gap_select, lc_safety_distance_config);
-  arrived_s_ = anchor_arrived_s;
-  arrived_v_ = anchor_arrived_v;
-  arrived_a_ = anchor_arrived_a;
-  arrived_t_ = anchor_arrived_t;
-  arrived_v_ = std::max(arrived_v_, kZeroEpsilon);
-  if (anchor_points_match_gap_cost_.cost() < kZeroEpsilon) {
-    bool is_left_distance_enough =
-        is_mergr_change
-            ? (arrived_s_ - CalcS(0)) < distance_to_stop_point
-            : (stop_line_s - (arrived_s_ - CalcS(0))) / arrived_v_ > 4.0;
-    if (is_left_distance_enough) {
-      speed_differ_gain = 0.0;
-      distance_to_stop_point = kMaxDistanceToStopPoint;
-    }
-  }
+  double max_safe_distance_to_gap_front_obj;
+  double max_safe_distance_to_gap_back_obj;
+  safe_distance_cost_.GetCost(
+      ditsance_to_gap_front_obj, distance_to_gap_back_obj,
+      limi_safe_distance_to_gap_front_obj, limi_safe_distance_to_gap_back_obj,
+      max_safe_distance_to_gap_front_obj, max_safe_distance_to_gap_back_obj);
 
   int temp_index = static_cast<int>(arrived_t_ / kTimeResolution + 0.51);
   double traveled_distance = 0.0;
@@ -248,43 +213,16 @@ void SampleQuinticPolynomialCurve::CalcCost(
     leading_end_v = leading_veh.v;
   }
 
-  if (leading_veh.id != kNoAgentId && leading_veh.id != -1 &&
-      anchor_points_match_gap_cost_.cost() > kZeroEpsilon) {
+  if (leading_veh.id != kNoAgentId && leading_veh.id != -1) {
     follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
     leading_veh_follow_s_cost_.GetCost(
         leading_veh.center_s + traveled_distance + CalcS(0), arrived_v_,
         arrived_s_);
   }
-
-  gap_valid_ = anchor_points_match_gap_cost_.is_gap_changeable() or
-               (leading_veh_follow_s_cost_.cost() < kZeroEpsilon);
-
-  if (!gap_valid_ && !is_not_use_gap_select) {
-    cost_sum_ = last_cost;
-    arrived_s_ = last_arrived_s;
-    arrived_v_ = last_arrived_v;
-    arrived_a_ = last_arrived_a;
-    arrived_t_ = last_arrived_t;
-    anchor_points_match_gap_cost_ = std::move(anchor_points_match_gap_cost);
-    speed_change_cost_ = std::move(speed_change_cost);
-    stop_line_cost_ = std::move(stop_line_cost);
-    leading_veh_safe_cost_ = std::move(leading_veh_safe_cost);
-    stop_point_cost_ = std::move(stop_point_cost);
-    follow_vel_cost_ = std::move(follow_vel_cost);
-    leading_veh_follow_s_cost_ = std::move(leading_veh_follow_s_cost);
-    speed_variable_cost_ = std::move(speed_variable_cost);
-    stop_penalty_cost_ = std::move(stop_penalty_cost);
-    gap_avaliable_cost_ = std::move(gap_avaliable_cost);
-    acc_limit_cost_ = std::move(acc_limit_cost);
-    jerk_limit_cost_ = std::move(jerk_limit_cost);
-    return;
-  }
   // // poly curve cost
   speed_change_cost_.GetCost(arrived_v_, ego_v, arrived_t_);
 
   // follow_vel_cost_.GetCost(arrived_v_, suggested_v, kFollowSpeedBenchmark);
-
-  stop_line_cost_.GetCost(stop_line_s, arrived_s_ - CalcS(0), arrived_v_, true);
 
   if (leading_veh.id != kNoAgentId && leading_veh.id != -1) {
     leading_veh_safe_cost_.GetCost(arrived_s_ - CalcS(0), arrived_v_,
@@ -294,65 +232,16 @@ void SampleQuinticPolynomialCurve::CalcCost(
 
   // const double vel_integral = CalcVelIntegral(arrived_t_);
   // speed_variable_cost_.GetCost(vel_integral);
-
-  const auto& agent_map = sample_space_base.agent_id_veh_info();
-  const auto& front_agent =
-      agent_map.find(anchor_matched_upper_st_point.agent_id());
-  const auto& rear_agent =
-      agent_map.find(anchor_matched_lower_st_point.agent_id());
-  if (anchor_matched_upper_st_point.agent_id() != kNoAgentId &&
-      anchor_matched_lower_st_point.agent_id() != kNoAgentId) {
-    if (front_agent != agent_map.end() && rear_agent != agent_map.end()) {
-      const double future_gap_length =
-          anchor_matched_upper_st_point.s() - anchor_matched_lower_st_point.s();
-      const double gap_length =
-          front_agent->second->center_s - front_agent->second->half_length -
-          (rear_agent->second->center_s + rear_agent->second->half_length);
-      gap_avaliable_cost_.GetCost(future_gap_length, gap_length);
-    }
-  }
-
-  stop_penalty_cost_.GetCost(arrived_v_);
-
-  stop_point_cost_.GetCost(distance_to_stop_point + CalcS(0) - arrived_s_);
-
-  jerk_limit_cost_.GetCost(std::fabs(poly_.CalculateThirdDerivative(0.0)));
+  auto jerk_limit = std::fmax(std::fabs(poly_.jerk_extrema().first),
+                              std::fabs(poly_.jerk_extrema().second));
+  jerk_limit_cost_.GetCost(jerk_limit);
 
   const double acc_extrema = std::fmax(std::fabs(poly_.acc_extrema().first),
                                        std::fabs(poly_.acc_extrema().second));
   acc_limit_cost_.GetCost(acc_extrema);
-  cost_sum_ = anchor_points_match_gap_cost_.cost() + follow_vel_cost_.cost() +
-              stop_line_cost_.cost() * speed_differ_gain +
+  cost_sum_ = safe_distance_cost_.cost() + follow_vel_cost_.cost() +
               leading_veh_safe_cost_.cost() + speed_variable_cost_.cost() +
-              gap_avaliable_cost_.cost() + stop_penalty_cost_.cost() +
               acc_limit_cost_.cost() + speed_change_cost_.cost() +
-              stop_point_cost_.cost() + leading_veh_follow_s_cost_.cost() +
-              jerk_limit_cost_.cost() + 3.0 * std::exp(arrived_t_ / 2.5);
-
-  if (cost_sum_ > last_cost) {
-    cost_sum_ = last_cost;
-    arrived_s_ = last_arrived_s;
-    arrived_v_ = last_arrived_v;
-    arrived_a_ = last_arrived_a;
-    arrived_t_ = last_arrived_t;
-    anchor_points_match_gap_cost_ = std::move(anchor_points_match_gap_cost);
-    speed_change_cost_ = std::move(speed_change_cost);
-    stop_line_cost_ = std::move(stop_line_cost);
-    leading_veh_safe_cost_ = std::move(leading_veh_safe_cost);
-    stop_point_cost_ = std::move(stop_point_cost);
-    follow_vel_cost_ = std::move(follow_vel_cost);
-    leading_veh_follow_s_cost_ = std::move(leading_veh_follow_s_cost);
-    speed_variable_cost_ = std::move(speed_variable_cost);
-    stop_penalty_cost_ = std::move(stop_penalty_cost);
-    gap_avaliable_cost_ = std::move(gap_avaliable_cost);
-    acc_limit_cost_ = std::move(acc_limit_cost);
-    jerk_limit_cost_ = std::move(jerk_limit_cost);
-  } else {
-    safe_border_distance_to_gap_front_obj_ = safe_distance_to_gap_front_obj;
-    safe_border_distance_to_gap_back_obj_ = safe_distance_to_gap_back_obj;
-    rest_changeable_distance_ = rest_changeable_distance;
-    end_point_matched_gap_back_id_ = anchor_matched_lower_st_point.agent_id();
-    end_point_matched_gap_front_id_ = anchor_matched_upper_st_point.agent_id();
-  }
+              leading_veh_follow_s_cost_.cost() + jerk_limit_cost_.cost();
 }
 }  // namespace planning

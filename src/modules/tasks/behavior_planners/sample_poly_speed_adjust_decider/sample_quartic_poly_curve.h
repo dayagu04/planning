@@ -86,6 +86,11 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
 
   const AccLimitCost& acc_limit_cost() const { return acc_limit_cost_; }
 
+  const SpeedChangeCost& speed_change_cost() const {
+    return speed_change_cost_;
+  }
+  bool is_left_distance_enough() const { return is_left_distance_enough_; }
+
  private:
   QuarticPolynomial poly_;
   FollowVelCost follow_vel_cost_;
@@ -106,6 +111,7 @@ class SampleQuarticPolynomialCurve : public SamplePolyCurve {
   double safe_border_distance_to_gap_back_obj_ = 0.0;
   double safe_border_distance_to_gap_front_obj_ = 0.0;
   double rest_changeable_distance_ = 0.0;
+  bool is_left_distance_enough_ = true;
 
   // std::vector<double> anchor_points_checked_t_vec_;
   MatchGapCost anchor_points_match_gap_cost_;
