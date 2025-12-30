@@ -812,10 +812,11 @@ void ParkingScenario::ExcuteSpeedPlanningTask() {
           apa_world_ptr_->GetMeasureDataManagerPtr(),
           apa_world_ptr_->GetObstacleManagerPtr());
 
-  stop_decider->Execute(
-      stitch_init_speed, traj_stitcher->GetConstStitchPath(),
-      apa_world_ptr_->GetPredictPathManagerPtr()->GetPredictPath(),
-      pnc::geometry_lib::GetGearType(frame_.gear_command));
+  // todo: a decision-making module is needed to determine whether to use speed
+  // planning to output trajectory or control to output predicted trajectories
+  stop_decider->Execute(stitch_init_speed, traj_stitcher->GetConstStitchPath(),
+                        trajectory_,
+                        pnc::geometry_lib::GetGearType(frame_.gear_command));
 
   // todo: will be retired
   if (apa_param.GetParam().speed_config.use_remain_dist) {
@@ -1288,7 +1289,7 @@ void ParkingScenario::ScenarioSuspend() {
 
   frame_.remain_dist_path = CalRemainDistFromPath();
   frame_.remain_dist_obs = CalRealTimeBrakeDist();
-  //todo : update speed data
+  // todo : update speed data
   ExcuteSpeedPlanningTask();
 
   return;
