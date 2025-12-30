@@ -176,6 +176,8 @@ class SccLateralObstacleDecider : public BaseLateralObstacleDecider {
   void UpdateDynamicFreeSpaceBaseInteractionType(
       const FrenetObstacle& frenet_obstacle,
       double& free_space);
+  void GenerateSpatioTemporalFollowDecision(
+      const FrenetObstacle& frenet_obstacle);
 
  private:
   std::unordered_map<uint32_t, LateralObstacleHistoryInfo>

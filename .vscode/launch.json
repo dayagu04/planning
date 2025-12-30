@@ -11,7 +11,7 @@
             "program": "${workspaceFolder}/build/tools/planning_player/pp",
             "args": [
                 "--play",
-                "/data_cold/abu_zone/autoparse/chery_m32t_52927/trigger/20251229/20251229-13-58-29/data_collection_CHERY_M32T_52927_EVENT_KEY_2025-12-29-13-58-29_no_camera.bag",
+                "/data_cold/abu_zone/autoparse/chery_m32t_86133/trigger/20251227/20251227-22-26-27/data_collection_CHERY_M32T_86133_EVENT_KEY_2025-12-27-22-26-27_no_camera.bag",
             ],
             "stopAtEntry": false, // 不在调试入口停留
             "cwd": "${workspaceFolder}",

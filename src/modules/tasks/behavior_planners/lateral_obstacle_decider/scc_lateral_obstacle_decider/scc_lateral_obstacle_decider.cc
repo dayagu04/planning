@@ -379,6 +379,7 @@ void SccLateralObstacleDecider::UpdateLateralObstacleDecisions() {
       continue;
     }
     LateralObstacleDecision(*frenet_obs, is_in_lane_change_scene);
+    GenerateSpatioTemporalFollowDecision(*frenet_obs);
     if (history.last_is_avd_car && !history.is_avd_car) {
       HoldLatOffset(*frenet_obs);
     }
@@ -1993,7 +1994,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
       // output_[id] = LatObstacleDecisionType::FOLLOW;
       output_[id] = LatObstacleDecisionType::IGNORE;
     }
-    if (follow_info.is_need_folow && d_min_cpath * d_max_cpath > 0) {
+    if (follow_info.is_need_folow) {
       history.is_avd_car = false;
       output_[id] = LatObstacleDecisionType::FOLLOW;
     }
@@ -2030,7 +2031,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     //   output_[id] = LatObstacleDecisionType::NOT_SET;
     // }
 
-    if (follow_info.is_need_folow && d_min_cpath * d_max_cpath > 0) {
+    if (follow_info.is_need_folow) {
       history.is_avd_car = false;
       output_[id] = LatObstacleDecisionType::FOLLOW;
     }
@@ -2041,8 +2042,7 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
         type != iflyauto::ObjectType::OBJECT_TYPE_TRAFFIC_CONE &&
         type != iflyauto::ObjectType::OBJECT_TYPE_CTASH_BARREL &&
         type != iflyauto::ObjectType::OBJECT_TYPE_WATER_SAFETY_BARRIER &&
-        output_[id] == LatObstacleDecisionType::IGNORE &&
-        d_min_cpath * d_max_cpath > 0) {
+        output_[id] == LatObstacleDecisionType::IGNORE) {
       output_[id] = LatObstacleDecisionType::FOLLOW;
     }
 
@@ -2154,6 +2154,88 @@ void SccLateralObstacleDecider::LateralObstacleDecision(
     history.is_avd_car = false;
     history.ncar_count = 0;
     history.ncar_count_in = false;
+  }
+}
+
+void SccLateralObstacleDecider::GenerateSpatioTemporalFollowDecision(
+    const FrenetObstacle &frenet_obstacle) {
+  const Obstacle &obstacle = *frenet_obstacle.obstacle();
+  int id = obstacle.id();
+  LateralObstacleHistoryInfo &history =
+      lateral_obstacle_history_info_[id];
+  FollowObstacleInfo &follow_info = follow_obstacle_info_[id];
+  if (output_[id] != LatObstacleDecisionType::FOLLOW) {
+    return;
+  }
+  double base_safe_intrusoin_for_dynamic =
+      config_.base_safe_intrusoin_for_dynamic;
+  double extra_buffer_for_truck = config_.extra_buffer_for_truck;
+  double extra_buffer_for_vru = config_.extra_buffer_for_vru;
+  double lead_d_path_thr = base_safe_intrusoin_for_dynamic;
+  if (IsTruck(frenet_obstacle)) {
+    lead_d_path_thr += extra_buffer_for_truck;
+  } else if (obstacle.is_VRU()) {
+    lead_d_path_thr += extra_buffer_for_vru;
+  }
+  double lane_width_actor =
+      interp(lane_width_, config_.lane_width_bp, config_.lane_width_factor);
+  lead_d_path_thr = lead_d_path_thr * lane_width_actor;
+  lead_d_path_thr = lead_d_path_thr * 0.6;// cut_out 相对保守
+
+  if (obstacle.is_static()) {
+    // 如果静态障碍物被赋予了FOLLOW，则整个5s都为FOLLOW
+    spatio_temporal_follow_obstacle_info_[id].follow_time_windows.push_back(
+        {LatObstacleDecisionType::FOLLOW, TimeInterval{0.0, 5.0}});
+  } else {
+    // 动态障碍物暂且分为两个时间段,即follow_time_windows的最大size为2
+    // 寻找分界点，即follow和非follow的转折点
+    double intrusion_distance = DBL_MAX;
+    double delta_t = 0.5; // 时间分辨率
+    double total_prediction_t = 5;
+    double follow_end_time = 5;
+    bool ok = false;
+    double start_t = 0;
+    double end_t = 0;
+    for (double i = 0; i < total_prediction_t; i += delta_t) {
+      // 连续3帧判断不为follow，则释放follow
+      Polygon2d obstacle_sl_polygon;
+      double min_l = std::numeric_limits<double>::max();
+      double max_l = std::numeric_limits<double>::lowest();
+      ok = reference_path_ptr_->get_polygon_at_time(
+          id, false, int(i * 10), obstacle_sl_polygon);
+      if (!ok) {
+        continue;
+      }
+      for (auto &pt : obstacle_sl_polygon.points()) {
+        min_l = std::min(min_l, pt.y());
+        max_l = std::max(max_l, pt.y());
+      }
+      if (max_l < 0) {
+        intrusion_distance = lane_width_ * 0.5 - std::fabs(max_l);
+      } else if (min_l > 0) {
+        intrusion_distance = lane_width_ * 0.5 - min_l;
+      }
+      if (intrusion_distance < lead_d_path_thr) {
+        // 不满足follow条件
+        end_t = i + 1;
+      } else {
+        start_t = i;
+        end_t = i;
+      }
+      if (end_t - start_t >= 3 * delta_t) {
+        follow_end_time = start_t;
+        break;
+      }
+    }
+    if (follow_end_time >= total_prediction_t) {
+      spatio_temporal_follow_obstacle_info_[id].follow_time_windows.push_back(
+          {LatObstacleDecisionType::FOLLOW, TimeInterval{0.0, 5.0}});
+    } else {
+      spatio_temporal_follow_obstacle_info_[id].follow_time_windows.push_back(
+          {LatObstacleDecisionType::FOLLOW, TimeInterval{0.0, follow_end_time}});
+      spatio_temporal_follow_obstacle_info_[id].follow_time_windows.push_back(
+          {LatObstacleDecisionType::NOT_SET, TimeInterval{follow_end_time, 5}});
+    }
   }
 }
 

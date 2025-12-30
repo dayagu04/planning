@@ -67,7 +67,7 @@ struct SpatioTemporalFollowObstacleInfo {
 
   const SpatioTemporalFollowWindow* QueryByTime(double t) const {
     for (const auto& window : follow_time_windows) {
-      if (t < window.passable_time_interval.start) {
+      if (t >= window.passable_time_interval.end) {
         break;
       }
       if (window.passable_time_interval.Contains(t)) {
