@@ -190,17 +190,21 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
   int olane_virtual_id = lane_change_decider_output.origin_lane_virtual_id;
   auto olane = virtual_lane_mgr_->get_lane_with_virtual_id(olane_virtual_id);
   int target_lane_virtual_id_tmp{origin_lane_virtual_id_};
+  const auto& llane = virtual_lane_mgr_->get_left_lane();
+  const auto& rlane = virtual_lane_mgr_->get_right_lane();
 
   if (merge_lane_change_direction_ == LEFT_CHANGE && enable_l_) {
     if (request_type_ != LEFT_CHANGE) {
       // 获取左车道线型
       iflyauto::LaneBoundaryType left_boundary_type =
           MakesureCurrentBoundaryType(LEFT_CHANGE, origin_lane_virtual_id_);
-      target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
-      GenerateRequest(LEFT_CHANGE);
-      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      ILOG_DEBUG
-          << "[MergeRequest::update] Ask for merge changing lane to left ";
+      if (ConeSituationJudgement(llane)) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ - 1;
+        GenerateRequest(LEFT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        ILOG_DEBUG
+            << "[MergeRequest::update] Ask for merge changing lane to left ";
+      }
       if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneChangeCancel &&
            (lane_change_lane_mgr_->has_origin_lane() &&
@@ -217,11 +221,13 @@ void MergeRequest::setLaneChangeRequestByMerge(int lc_status) {
       // 获取右车道线型
       iflyauto::LaneBoundaryType right_boundary_type =
           MakesureCurrentBoundaryType(RIGHT_CHANGE, origin_lane_virtual_id_);
-      target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
-      GenerateRequest(RIGHT_CHANGE);
-      set_target_lane_virtual_id(target_lane_virtual_id_tmp);
-      ILOG_DEBUG
-          << "[MergeRequest::update] Ask for merge changing lane to right";
+      if (ConeSituationJudgement(rlane)) {
+        target_lane_virtual_id_tmp = origin_lane_virtual_id_ + 1;
+        GenerateRequest(RIGHT_CHANGE);
+        set_target_lane_virtual_id(target_lane_virtual_id_tmp);
+        ILOG_DEBUG
+            << "[MergeRequest::update] Ask for merge changing lane to right";
+      }
       if (request_type_ != NO_CHANGE &&
           (lc_status == kLaneChangeCancel &&
            (lane_change_lane_mgr_->has_origin_lane() &&

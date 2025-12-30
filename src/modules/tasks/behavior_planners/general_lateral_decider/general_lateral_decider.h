@@ -140,6 +140,7 @@ class GeneralLateralDecider : public Task {
       double overlap_max_y, double lat_buf_dis,
       LatObstacleDecisionType lat_decision,
       LonObstacleDecisionType lon_decision, ObstacleDecision &obstacle_decision,
+      const std::shared_ptr<FrenetObstacle> obstacle,
       BoundHierarchy bound_hierarchy = BoundHierarchy::SECOND_SOFT_BOUND,
       bool is_avoid_side_ignore_obj = false, bool is_high_dangerous = false);
   void GenerateLateralDeciderOutput(
@@ -258,6 +259,8 @@ class GeneralLateralDecider : public Task {
     const int obstacle_id,
     std::vector<WeightedBounds> &soft_bounds,
     BoundHierarchy bound_hierarchy);
+  void LimitBoundary(
+      const std::shared_ptr<FrenetObstacle> obstacle,  Bound &bound);
 
  private:
   GeneralLateralDeciderConfig config_;

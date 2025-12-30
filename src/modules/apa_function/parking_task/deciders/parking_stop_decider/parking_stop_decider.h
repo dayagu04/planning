@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstddef>
 #include <memory>
 
 #include "apa_measure_data_manager.h"
@@ -42,7 +43,7 @@ class ParkingStopDecider : public ParkingTask {
    */
   void Execute(const SVPoint& init_point,
                const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
-               const std::vector<pnc::geometry_lib::PathPoint>& control_path,
+               const trajectory::Trajectory& trajectory,
                const pnc::geometry_lib::PathSegGear gear);
 
   void AddStopDecisionByDistance(
@@ -64,7 +65,7 @@ class ParkingStopDecider : public ParkingTask {
       const std::vector<pnc::geometry_lib::PathPoint>& path);
 
   void AddDecisionByObstaclePrediction(
-      const std::vector<pnc::geometry_lib::PathPoint>& path);
+      const trajectory::Trajectory& trajectory);
 
   void TaskDebug();
 
@@ -77,17 +78,16 @@ class ParkingStopDecider : public ParkingTask {
   void ExtendPath(const double extend_length,
                   std::vector<pnc::geometry_lib::PathPoint>& path);
 
-  void GeneratePathFootPrint(
-      const std::vector<pnc::geometry_lib::PathPoint>& path);
+  void GeneratePathFootPrint(const trajectory::Trajectory& trajectory);
 
   bool GetPathCollisionByObstacle(int* collision_index, const ApaObstacle& obs);
 
-  bool GetOverlapBoundaryPoints(
-      const std::vector<pnc::geometry_lib::PathPoint>& path,
-      const ApaObstacle& obstacle, std::vector<STPoint>* upper_points,
-      std::vector<STPoint>* lower_points);
+  bool GetOverlapBoundaryPoints(const trajectory::Trajectory& trajectory,
+                                const ApaObstacle& obstacle,
+                                std::vector<STPoint>* upper_points,
+                                std::vector<STPoint>* lower_points);
 
-  void ComputeSTBoundary(std::vector<pnc::geometry_lib::PathPoint>& path,
+  void ComputeSTBoundary(const trajectory::Trajectory& trajectory,
                          ApaObstacle& obstacle);
 
   void PathDebug(const std::vector<pnc::geometry_lib::PathPoint>& path);
@@ -138,6 +138,7 @@ class ParkingStopDecider : public ParkingTask {
   ParkStopConfig config_;
 
   pnc::geometry_lib::PathSegGear gear_;
+  trajectory::Trajectory ego_history_trajectory_;
 };
 }  // namespace apa_planner
 }  // namespace planning

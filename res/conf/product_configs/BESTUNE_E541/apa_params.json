@@ -344,8 +344,8 @@
   "x_max_internal_obstacles": 6.68,
   "min_x_value_park_out_position": 2.3,
   "is_parallel_advanced_method": true,
-  "is_trim_limter_parallel_enable": false,
-  "trim_limter_tire_distance": 0.15,
+  "is_trim_limter_parallel_enable": true,
+  "trim_limter_tire_distance": 0.3,
 
   "comment_16": "slot managent params",
   "believe_obs_ego_area": 3.068,

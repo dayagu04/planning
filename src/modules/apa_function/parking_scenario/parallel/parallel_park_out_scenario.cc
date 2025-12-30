@@ -89,8 +89,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     ILOG_INFO << "update ego slot info failed!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    CheckEgoPoseWhenParkOutFaild(UPDATE_EGO_SLOT_INFO);
     return;
   }
   ILOG_INFO << "update ego slot info success!";
@@ -105,8 +104,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // check failed
   if (CheckStuckFailed()) {
     ILOG_INFO << "check stuck failed!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    CheckEgoPoseWhenParkOutFaild(STUCK_FAILED_TIME);
     return;
   }
 
@@ -152,8 +150,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // generate t-lane
   if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = NO_TARGET_POSE;
+    CheckEgoPoseWhenParkOutFaild(NO_TARGET_POSE);
     return;
   }
 
@@ -172,8 +169,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -182,13 +178,11 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
@@ -540,6 +534,20 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   return true;
 }
 
+void ParallelParkOutScenario::CheckEgoPoseWhenParkOutFaild(
+    ParkingFailReason reason) {
+  ILOG_INFO << "Enter CheckEgoPoseWhenParkOutFaild!";
+  if (CheckFinished()) {
+    ILOG_INFO << "parallel parking finish!";
+    SetParkingStatus(PARKING_FINISHED);
+  } else {
+    ILOG_INFO << "parallel parking failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = reason;
+  }
+  return;
+}
+
 const bool ParallelParkOutScenario::CheckFinished() {
   ILOG_INFO << "start CheckFinished!";
   if (frame_.is_replan_first) {
@@ -586,14 +594,18 @@ const bool ParallelParkOutScenario::CheckFinished() {
     lat_condition = (rear_in_wheel.y() >= wheel_limit_y) &&
                     (front_in_wheel.y() >= wheel_limit_y);
     if (is_outer_arc_slot_) {
-      lat_condition = (rear_in_wheel.y() >= wheel_limit_y);
+      lat_condition = (rear_in_wheel.y() >= wheel_limit_y) ||
+                      ego_slot_info.cur_pose.pos.x() >
+                          ego_slot_info.slot.slot_length_ - 1.0;;
     }
   } else {
     const double wheel_limit_y = slot_outer_pt_y;
     lat_condition = (rear_in_wheel.y() <= wheel_limit_y) &&
                     (front_in_wheel.y() <= wheel_limit_y);
     if (is_outer_arc_slot_) {
-      lat_condition = (rear_in_wheel.y() <= wheel_limit_y);
+      lat_condition = (rear_in_wheel.y() <= wheel_limit_y) ||
+                      ego_slot_info.cur_pose.pos.x() >
+                          ego_slot_info.slot.slot_length_ - 1.0;
     }
   }
   ILOG_INFO << "is_outer_arc_slot_:" << is_outer_arc_slot_;
@@ -1351,11 +1363,15 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
       apa_world_ptr_->GetSimuParam().is_complete_path;
   path_planner_input.ego_info_under_slot = ego_info_under_slot;
   bool is_in_slot = ego_info_under_slot.slot_occupied_ratio > 0.0;
-  if (!previous_parallel_out_path_planner_.GetOutput()
+  if (apa_world_ptr_->GetLocalViewPtr()
+              ->function_state_machine_info.current_state ==
+          iflyauto::FunctionalState::FunctionalState_PARK_PRE_ACTIVE &&
+          !previous_parallel_out_path_planner_.GetOutput()
            .all_gear_path_point_vec.empty() &&
       !is_last_pose_set_) {
     last_target_pose_ = previous_parallel_out_path_planner_.GetOutput()
                             .all_gear_path_point_vec.back();
+    last_target_pose_.heading = arc_slot_init_out_heading_;
 
     is_last_pose_set_ = true;
   }
@@ -1466,7 +1482,7 @@ const uint8_t ParallelParkOutScenario::PathPlanOnce() {
   if (!path_planner_output.path_point_vec.empty()) {
     path_end_heading_is_met_ =
         std::abs(path_planner_output.path_point_vec.back().GetTheta() -
-                 arc_slot_init_out_heading_) < pnc::mathlib::Deg2Rad(1.5);
+                 last_target_pose_.heading) < pnc::mathlib::Deg2Rad(2.5);
   }
   previous_current_path_point_global_vec_.clear();
   previous_current_path_point_global_vec_ = current_path_point_global_vec_;

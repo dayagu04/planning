@@ -157,7 +157,7 @@ void EgoLaneTrackManger::TrackEgoLane(
   current_fix_lane_order_id_ = -1;
 
   //判断自车是否处于分流场景
-  ComputeIsSplitRegion(relative_id_lanes, order_ids_of_same_zero_relative_id);
+  ComputeIsSplitRegion(relative_id_lanes, order_ids_of_same_zero_relative_id, virtual_id_mapped_lane);
 
   if (zero_relative_id_nums < 2 || !ego_in_split_region_) {
     last_zero_relative_id_order_id_index_ = -1;
@@ -217,7 +217,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_ramp_on_road_;
 
             if (is_exist_ramp_on_road_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ <
                       kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
@@ -250,7 +250,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_split_on_ramp_;
 
             if (is_exist_split_on_ramp_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -276,7 +276,7 @@ void EgoLaneTrackManger::TrackEgoLane(
             ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_expressway_:"
                        << is_exist_split_on_expressway_;
             if (is_exist_split_on_expressway_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -304,7 +304,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_exist_split_on_intersection_;
 
           if (is_exist_split_on_intersection_) {
-            if (lane_change_cmd != 0 && ego_in_split_region_ &&
+            if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                 sum_distance_from_ego_to_both_center_lines_ < 0.5) {
               ProcessSplitRegionInteractiveSelectEgoLane(
                   relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -391,7 +391,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                        << is_exist_split_on_intersection_;
 
             if (is_exist_split_on_intersection_) {
-              if (lane_change_cmd != 0 && ego_in_split_region_ &&
+              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                   sum_distance_from_ego_to_both_center_lines_ < 0.5) {
                 ProcessSplitRegionInteractiveSelectEgoLane(
                     relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -415,7 +415,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                      << is_exist_split_on_intersection_;
 
           if (is_exist_split_on_intersection_) {
-            if (lane_change_cmd != 0 && ego_in_split_region_ &&
+            if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
                 sum_distance_from_ego_to_both_center_lines_ < 0.5) {
               ProcessSplitRegionInteractiveSelectEgoLane(
                   relative_id_lanes, order_ids_of_same_zero_relative_id,
@@ -3243,22 +3243,118 @@ void EgoLaneTrackManger::MakesureVirtualLaneIsVirtual(
 
 void EgoLaneTrackManger::ComputeIsSplitRegion(
     const std::vector<std::shared_ptr<VirtualLane>>& relative_id_lanes,
-    const std::vector<int>& order_ids) {
+    const std::vector<int>& order_ids,
+    const std::unordered_map<int, std::shared_ptr<VirtualLane>>&
+        virtual_id_mapped_lane) {
   std::shared_ptr<VirtualLane> relative_left_lane = nullptr;
   std::shared_ptr<VirtualLane> relative_right_lane = nullptr;
   const auto& ego_state =
       session_->environmental_model().get_ego_state_manager();
   double ego_vel = ego_state->ego_v();
   sum_distance_from_ego_to_both_center_lines_ = 3.75;
-  // if (ego_vel < kApprochingRampSpeedThd) {
-  //   return;
-  // }
+
+  const auto& lane_change_decider_output =
+      session_->planning_context().lane_change_decider_output();
+  const auto lc_request_direction = lane_change_decider_output.lc_request;
+  const double default_lane_mapping_cost = 10.0;
+  const int fix_lane_virtual_id =
+      lane_change_decider_output.fix_lane_virtual_id;
+  const int lc_state = lane_change_decider_output.curr_state;
+  std::shared_ptr<VirtualLane> last_track_virtual_id_lane;
+  bool is_split_region_include_fix_lane = true;
+  int last_track_virtual_id = 0;
+  const auto& plannig_init_point = ego_state->planning_init_point();
+  ego_in_split_region_ = false;
+  if (!virtual_id_mapped_lane.empty()) {
+    for (const auto& virtual_id_lane : virtual_id_mapped_lane) {
+      if (virtual_id_lane.second->get_virtual_id() == fix_lane_virtual_id) {
+        last_track_virtual_id_lane = virtual_id_lane.second;
+        last_track_virtual_id = virtual_id_lane.first;
+      }
+    }
+  }
+
   Point2D ego_point = {ego_state->planning_init_point().x,
                        ego_state->planning_init_point().y};
   // if (order_ids.size() < 2) {
   //   ego_in_split_region_ = false;
   //   return;
   // }
+  if (last_track_virtual_id_lane == nullptr) {
+    return;
+  }
+  auto last_track_ego_lane_frenet_coord =
+      last_track_virtual_id_lane->get_lane_frenet_coord();
+  if (last_track_ego_lane_frenet_coord == nullptr) {
+    return;
+  }
+
+  double clane_min_lateral_distance = std::numeric_limits<double>::max();
+  for (size_t i = 0; i < order_ids.size(); i++) {
+    if (relative_id_lanes.size() > order_ids[i]) {
+      std::shared_ptr<VirtualLane> relative_id_lane =
+          relative_id_lanes[order_ids[i]];
+      const auto& lane_points = relative_id_lane->lane_points();
+      if (lane_points.size() <= 2) {
+        continue;
+      }
+      auto cur_lane_frenet_coord = relative_id_lane->get_lane_frenet_coord();
+      if (cur_lane_frenet_coord == nullptr) {
+        continue;
+      }
+      double target_ego_s = 0.0;
+      double target_ego_l = 0.0;
+      Point2D ego_cart_target_frenet;
+      if (!cur_lane_frenet_coord->XYToSL(ego_point,
+                                         ego_cart_target_frenet)) {
+        continue;
+      } else {
+        target_ego_s = ego_cart_target_frenet.x;
+        target_ego_l = ego_cart_target_frenet.y;
+      }
+      int point_nums = 0;
+      double total_lateral_offset = 0.0;
+      double cumu_lat_dis_cost = 0.0;
+      int select_lane_point_interval = 1;
+      for (int i = 0; i < lane_points.size(); i += select_lane_point_interval) {
+        iflyauto::ReferencePoint point = lane_points[i];
+        if (std::isnan(point.local_point.x) ||
+            std::isnan(point.local_point.y)) {
+          ILOG_ERROR << "update_lane_points: skip NaN point";
+          continue;
+        }
+        double lateral_offset = 0.0;
+        double s = 0.0;
+        Point2D cur_point_frenet;
+        Point2D cur_point(point.local_point.x, point.local_point.y);
+        if (!last_track_ego_lane_frenet_coord->XYToSL(cur_point,
+                                                      cur_point_frenet)) {
+          lateral_offset = 10.0;
+        } else {
+          s = cur_point_frenet.x;
+          lateral_offset = cur_point_frenet.y;
+        }
+        if (s < target_ego_s) {
+          continue;
+        }
+        total_lateral_offset += std::fabs(lateral_offset);
+        point_nums += 1;
+        if (point_nums >= kDefaultPointNums ||
+            s > target_ego_s + 50.0) {
+          break;
+        }
+      }
+      point_nums = std::max(1, point_nums);
+      cumu_lat_dis_cost = std::fabs(total_lateral_offset / point_nums);
+      if (cumu_lat_dis_cost < clane_min_lateral_distance) {
+        clane_min_lateral_distance = cumu_lat_dis_cost;
+      }
+    }
+  }
+  if (clane_min_lateral_distance >= 1.5) {
+    is_split_region_include_fix_lane = false;
+  }
+
   if (order_ids.size() > 2) {
     ego_in_split_region_ = true;
     return;
@@ -3315,7 +3411,6 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     const auto& relative_left_lane_points = relative_left_lane->lane_points();
     if (!has_left_lane || !has_right_lane ||
         relative_left_lane_points.size() < 3) {
-      ego_in_split_region_ = false;
       return;
     }
 
@@ -3381,9 +3476,9 @@ void EgoLaneTrackManger::ComputeIsSplitRegion(
     if (((far_average_l - kExistSplitLateralDisThd > near_average_l) &&
          near_average_l < kExistSplitEgoRearLateralDisThd) ||
         near_average_l < kCenterLineLateralDisThd) {
-      ego_in_split_region_ = true;
-    } else {
-      ego_in_split_region_ = false;
+      if (is_split_region_include_fix_lane) {
+        ego_in_split_region_ = true;
+      }
     }
   }
 

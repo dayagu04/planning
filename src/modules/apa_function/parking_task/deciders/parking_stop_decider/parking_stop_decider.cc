@@ -25,7 +25,7 @@ namespace apa_planner {
 void ParkingStopDecider::Execute(
     const SVPoint& init_point,
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
-    const std::vector<pnc::geometry_lib::PathPoint>& control_path,
+    const trajectory::Trajectory& trajectory,
     const pnc::geometry_lib::PathSegGear gear) {
   // init
   stop_obstacle_ = nullptr;
@@ -39,8 +39,9 @@ void ParkingStopDecider::Execute(
   double start_time = IflyTime::Now_ms();
   AddDecisionByPathTargetPoint(lateral_path);
 
-  // todo: use lateral path and control path
-  AddDecisionByObstaclePrediction(control_path);
+  // todo: use optimizer to output historical trajectories, so that the
+  // calculation of trajectory overlap is relatively more realistic
+  AddDecisionByObstaclePrediction(trajectory);
 
   double time_ms = IflyTime::Now_ms() - start_time;
   TimeBenchmark::Instance().SetTime(TimeBenchmarkType::TB_APA_STOP_DECIDER,
@@ -233,7 +234,7 @@ void ParkingStopDecider::ExtendPath(
 }
 
 void ParkingStopDecider::GeneratePathFootPrint(
-    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+    const trajectory::Trajectory& trajectory) {
   double lon_buffer = 0.01;
 
   // generate veh local polygon
@@ -247,18 +248,17 @@ void ParkingStopDecider::GeneratePathFootPrint(
                             &foot_print_big_buffer);
 
   small_buffer_path_polygons_.clear();
-  small_buffer_path_polygons_.reserve(path.size());
+  small_buffer_path_polygons_.reserve(trajectory.size());
   big_buffer_path_polygons_.clear();
-  big_buffer_path_polygons_.reserve(path.size());
+  big_buffer_path_polygons_.reserve(trajectory.size());
   PolygonFootPrint global_polygon;
   Pose2D global_pose;
   Transform2d tf;
 
-  size_t path_end_id = path.size() - 1;
-  for (size_t i = 0; i <= path_end_id; ++i) {
-    global_pose.x = path[i].pos[0];
-    global_pose.y = path[i].pos[1];
-    global_pose.theta = path[i].heading;
+  for (const auto& point : trajectory) {
+    global_pose.x = point.x();
+    global_pose.y = point.y();
+    global_pose.theta = point.theta();
     tf.SetBasePose(global_pose);
 
     FootPrintLocalToGlobal(tf, &foot_print_little_buffer, &global_polygon);
@@ -272,16 +272,15 @@ void ParkingStopDecider::GeneratePathFootPrint(
 }
 
 bool ParkingStopDecider::GetOverlapBoundaryPoints(
-    const std::vector<pnc::geometry_lib::PathPoint>& path,
-    const ApaObstacle& obstacle, std::vector<STPoint>* upper_points,
-    std::vector<STPoint>* lower_points) {
-  if (path.empty()) {
+    const trajectory::Trajectory& trajectory, const ApaObstacle& obstacle,
+    std::vector<STPoint>* upper_points, std::vector<STPoint>* lower_points) {
+  if (trajectory.empty()) {
     return false;
   }
 
   upper_points->clear();
   lower_points->clear();
-  double end_s = path.back().s;
+  double end_s = trajectory.back().s();
 
   // For those with no predicted trajectories, just map the obstacle's
   // current position to ST-graph and always assume it's static.
@@ -290,12 +289,13 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     int collision_index = 0;
     bool is_collision = GetPathCollisionByObstacle(&collision_index, obstacle);
 
-    if (is_collision && collision_index >= 0 && collision_index < path.size()) {
+    if (is_collision && collision_index >= 0 &&
+        collision_index < trajectory.size()) {
       collision_index -= 1;
       collision_index = std::max(0, collision_index);
 
-      const auto& curr_point = path[collision_index];
-      double low_s = std::fmax(0.0, curr_point.s);
+      const auto& curr_point = trajectory[collision_index];
+      double low_s = std::fmax(0.0, curr_point.s());
       double high_s = end_s;
 
       lower_points->reserve(2);
@@ -328,7 +328,10 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     for (int i = 0; i < traj.size(); ++i) {
       const trajectory::TrajectoryPoint& trajectory_point = traj[i];
       double trajectory_point_time = trajectory_point.absolute_time();
-      if (trajectory_point_time > 7.0) {
+      const size_t ego_check_index =
+          trajectory.QueryLowerBoundPoint(trajectory_point_time);
+      if (trajectory_point_time > 7.0 ||
+          ego_check_index == trajectory.size() - 1) {
         continue;
       }
 
@@ -340,9 +343,15 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
           big_buffer_path_polygons_, global_polygon, &first_collision_index,
           &end_collision_index);
 
+      if (first_collision_index > ego_check_index ||
+          end_collision_index < ego_check_index) {
+        // todo: should add a buffer based on time
+        continue;
+      }
+
       if (is_collision) {
-        double low_s = std::fmax(0.0, path[first_collision_index].s);
-        double high_s = std::fmin(end_s, path[end_collision_index].s);
+        double low_s = std::fmax(0.0, trajectory[ego_check_index].s());
+        double high_s = std::fmin(end_s, trajectory[end_collision_index].s());
 
         lower_points->emplace_back(low_s, trajectory_point_time);
         upper_points->emplace_back(high_s, trajectory_point_time);
@@ -358,7 +367,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
 }
 
 void ParkingStopDecider::ComputeSTBoundary(
-    std::vector<pnc::geometry_lib::PathPoint>& path, ApaObstacle& obstacle) {
+    const trajectory::Trajectory& trajectory, ApaObstacle& obstacle) {
   ParkLonDecision decision;
   decision.Clear();
 
@@ -366,7 +375,8 @@ void ParkingStopDecider::ComputeSTBoundary(
   std::vector<STPoint> upper_points;
 
   // compute od,occ,ground line st boundary.
-  if (!GetOverlapBoundaryPoints(path, obstacle, &upper_points, &lower_points)) {
+  if (!GetOverlapBoundaryPoints(trajectory, obstacle, &upper_points,
+                                &lower_points)) {
     obstacle.SetLonDecision(decision);
     return;
   }
@@ -423,20 +433,22 @@ void ParkingStopDecider::ComputeSTBoundary(
 }
 
 void ParkingStopDecider::AddDecisionByObstaclePrediction(
-    const std::vector<pnc::geometry_lib::PathPoint>& path) {
+    const trajectory::Trajectory& trajectory) {
   // check
-  if (obs_manager_ == nullptr || path.size() <= 0 ||
+  if (obs_manager_ == nullptr || trajectory.size() <= 0 ||
       obs_manager_->GetObstacles().size() == 0) {
     return;
   }
 
-  std::vector<pnc::geometry_lib::PathPoint> extend_path = path;
-  ExtendPath(config_.extra_check_dist, extend_path);
+  // std::vector<pnc::geometry_lib::PathPoint> extend_path = path;
+  // ExtendPath(config_.extra_check_dist, extend_path);
 
-  GeneratePathFootPrint(extend_path);
+  GeneratePathFootPrint(trajectory);
 
   // Go through every obstacle.
   ParkLonDecision tmp_deicison = stop_decision_;
+  // todo: consider whether the obstacle and the vehicle are traveling in
+  // opposite directions or opposite directions
   double min_stop_s = tmp_deicison.path_s - tmp_deicison.lon_decision_buffer;
 
   for (auto& obj : obs_manager_->GetMutableObstacles()) {
@@ -450,7 +462,7 @@ void ParkingStopDecider::AddDecisionByObstaclePrediction(
       continue;
     }
 
-    ComputeSTBoundary(extend_path, obstacle);
+    ComputeSTBoundary(trajectory, obstacle);
 
     const auto& decision = obstacle.LongitudinalDecision();
     if (decision.decision_type == LonDecisionType::STOP) {
@@ -731,6 +743,9 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
   }
 
   if (stop_decision != nullptr) {
+    // todo: not all situations require subtracting this vertical decision
+    // buffer, need to consider whether the obstacle and the vehicle are
+    // traveling in opposite directions or opposite directions
     return stop_decision->path_s - stop_decision->lon_decision_buffer;
   }
 

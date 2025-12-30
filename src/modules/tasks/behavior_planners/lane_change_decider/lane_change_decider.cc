@@ -64,7 +64,8 @@ bool LaneChangeDecider::Execute() {
     lc_sm_mgr_->ResetStateMachine();
   }
 
-  if (active) {
+  if (active &&
+      function_info.function_mode() != common::DrivingFunctionInfo::ACC) {
     ILOG_INFO << "[scenario_state_machine] active";
     if (scenario_ == SCENARIO_CRUISE) {
       // update lc_req_mgr_
