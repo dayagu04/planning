@@ -2461,6 +2461,15 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+  if (last_exchange_region_info_.is_process_split &&
+      last_split_link_id ==
+          last_exchange_region_info_.last_exchange_info.split_link_id) {
+    route_info_output_.last_split_end_point_distance = std::abs(
+        dis_to_last_split_point - last_exchange_region_info_.last_exchange_info
+                                      .end_fp_point.fp_distance_to_split_point);
+  } else {
+    route_info_output_.last_split_end_point_distance = NL_NMAX;
+  }
 
   // 判断当前是否接近汇入汇出
   const auto& ego_state =
@@ -3316,6 +3325,8 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE(
       "is_process_other_merge",
       route_info_output_.mlc_decider_route_info.is_process_other_merge);
+  JSON_DEBUG_VALUE("last_split_end_point_distance",
+                   route_info_output_.last_split_end_point_distance);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(

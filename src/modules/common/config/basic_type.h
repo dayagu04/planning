@@ -340,6 +340,7 @@ struct RouteInfoOutput {
   double current_segment_passed_distance = 0.0;  // for xykuai
   double left_lane_distance = 0.0;
   double right_lane_distance = 0.0;
+  double last_split_end_point_distance = NL_NMAX;
   std::pair<SplitRelativeDirection, double>
       first_split_dir_dis_info;  // for xykuai
   std::vector<std::pair<SplitRelativeDirection, double>>
