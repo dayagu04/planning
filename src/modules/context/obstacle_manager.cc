@@ -409,26 +409,30 @@ void ObstacleManager::split_points(
     const iflyauto::Point2f *points, const double polygon_points_size,
     const std::shared_ptr<planning_math::KDPath> &frenet_coord,
     std::vector<std::vector<planning_math::Vec2d>> &result) {
-  constexpr double LATTHRESHOLD = 1;
-  constexpr double LONTHRESHOLD = 1;
-  constexpr double LATTHRESHOLD2 = 0.5;
-  constexpr double LONTHRESHOLD2 = 3;
-  constexpr double LONTHRESHOLD3 = 5;
-  constexpr double MINSPLITLONTHRESHOLD = 3;
   constexpr double THRESHOLD = 2;
   constexpr double MAXDISTANCETHRESHOLD = 4;
-  std::vector<planning_math::Vec2d> current_segment;
   if (frenet_coord != nullptr) {
     std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>>
-        points_vec;
-    points_vec.reserve(polygon_points_size);
+        left_points_vec;
+    std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>>
+        right_points_vec;
+    left_points_vec.reserve(polygon_points_size);
+    right_points_vec.reserve(polygon_points_size);
     for (size_t i = 0; i < polygon_points_size; ++i) {
       double point_s, point_l;
       if (frenet_coord->XYToSL(points[i].x, points[i].y, &point_s, &point_l)) {
         std::pair<double, double> point_sl(point_s, point_l);
-        points_vec.emplace_back(
-            std::pair<std::pair<double, double>, planning_math::Vec2d>(
-                point_sl, planning_math::Vec2d(points[i].x, points[i].y)));
+        if (point_l > 1e-6) {
+          left_points_vec.emplace_back(
+              std::pair<std::pair<double, double>, planning_math::Vec2d>(
+                  point_sl, planning_math::Vec2d(points[i].x, points[i].y)));
+        } else {
+          right_points_vec.emplace_back(
+              std::pair<std::pair<double, double>, planning_math::Vec2d>(
+                  point_sl, planning_math::Vec2d(points[i].x, points[i].y)));
+        }
+      } else {
+        // 投影失败，不在参考线上的忽略
       }
     }
     auto compare_s =
@@ -436,38 +440,12 @@ void ObstacleManager::split_points(
             std::pair<std::pair<double, double>, planning_math::Vec2d> p2) {
           return p1.first.first < p2.first.first;
         };
-    std::sort(points_vec.begin(), points_vec.end(), compare_s);
-    size_t init_index = 0;
-    double max_diff_s = 0;
-    double max_diff_l = 0;
-    current_segment.push_back(points_vec.front().second);
-    for (size_t i = 1; i < points_vec.size(); ++i) {
-      double ds = points_vec[i].first.first - points_vec[i - 1].first.first;
-      double dl =
-          fabs(points_vec[i].first.second - points_vec[i - 1].first.second);
-      max_diff_s = std::max(
-          fabs(points_vec[i].first.first - points_vec[init_index].first.first),
-          max_diff_s);
-      max_diff_l = std::max(fabs(points_vec[i].first.second -
-                                 points_vec[init_index].first.second),
-                            max_diff_l);
-      if (points_vec.back().first.first - points_vec.front().first.first >
-          MINSPLITLONTHRESHOLD) {
-        if (ds > LONTHRESHOLD ||
-            (max_diff_l > LATTHRESHOLD && max_diff_s > LONTHRESHOLD) ||
-            (max_diff_l > LATTHRESHOLD2 && max_diff_s > LONTHRESHOLD2) ||
-            (max_diff_s > LONTHRESHOLD3)) {
-          // 当前点与前一个点相差超过阈值，开启新分割
-          init_index = i;
-          max_diff_s = 0;
-          max_diff_l = 0;
-          result.push_back(current_segment);
-          current_segment.clear();
-        }
-      }
-      current_segment.push_back(points_vec[i].second);
-    }
+    std::sort(left_points_vec.begin(), left_points_vec.end(), compare_s);
+    std::sort(right_points_vec.begin(), right_points_vec.end(), compare_s);
+    split_points_by_s(left_points_vec, result);
+    split_points_by_s(right_points_vec, result);
   } else {
+    std::vector<planning_math::Vec2d> current_segment;
     double sum_distance = 0;
     current_segment.push_back(planning_math::Vec2d(points[0].x, points[0].y));
     for (size_t i = 1; i < polygon_points_size; ++i) {
@@ -484,10 +462,54 @@ void ObstacleManager::split_points(
       }
       current_segment.push_back(planning_math::Vec2d(points[i].x, points[i].y));
     }
+    if (!current_segment.empty() && current_segment.size() > 2) {
+      result.push_back(current_segment);
+    }
   }
+}
 
-  if (!current_segment.empty() && current_segment.size() > 2) {
-    result.push_back(current_segment);
+void ObstacleManager::split_points_by_s(
+    const std::vector<std::pair<std::pair<double, double>, planning_math::Vec2d>>& points_vec,
+    std::vector<std::vector<planning_math::Vec2d>> &result) {
+  constexpr double LATTHRESHOLD = 1;
+  constexpr double LONTHRESHOLD = 1;
+  constexpr double LATTHRESHOLD2 = 0.5;
+  constexpr double LONTHRESHOLD2 = 3;
+  constexpr double LONTHRESHOLD3 = 5;
+  constexpr double MINSPLITLONTHRESHOLD = 3;
+  std::vector<planning_math::Vec2d> result_segment;
+  size_t init_index = 0;
+  double max_diff_s = 0;
+  double max_diff_l = 0;
+  result_segment.push_back(points_vec.front().second);
+  for (size_t i = 1; i < points_vec.size(); ++i) {
+    double ds = points_vec[i].first.first - points_vec[i - 1].first.first;
+    double dl =
+        fabs(points_vec[i].first.second - points_vec[i - 1].first.second);
+    max_diff_s = std::max(
+        fabs(points_vec[i].first.first - points_vec[init_index].first.first),
+        max_diff_s);
+    max_diff_l = std::max(fabs(points_vec[i].first.second -
+                                points_vec[init_index].first.second),
+                          max_diff_l);
+    if (points_vec.back().first.first - points_vec.front().first.first >
+        MINSPLITLONTHRESHOLD) {
+      if (ds > LONTHRESHOLD ||
+          (max_diff_l > LATTHRESHOLD && max_diff_s > LONTHRESHOLD) ||
+          (max_diff_l > LATTHRESHOLD2 && max_diff_s > LONTHRESHOLD2) ||
+          (max_diff_s > LONTHRESHOLD3)) {
+        // 当前点与前一个点相差超过阈值，开启新分割
+        init_index = i;
+        max_diff_s = 0;
+        max_diff_l = 0;
+        result.push_back(result_segment);
+        result_segment.clear();
+      }
+    }
+    result_segment.push_back(points_vec[i].second);
+  }
+  if (!result_segment.empty() && result_segment.size() > 2) {
+    result.push_back(result_segment);
   }
 }
 
