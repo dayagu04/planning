@@ -1071,7 +1071,7 @@ void LaneChangeStateMachineManager::UpdateCoarsePlanningInfo() {
       lc_req_mgr_->request_source();
   coarse_planning_info.source_lane_id = lc_lane_mgr_->origin_lane_virtual_id();
   coarse_planning_info.target_lane_id = lc_lane_mgr_->fix_lane_virtual_id();
-  coarse_planning_info.int_lane_change_cmd = lc_req_mgr_->get_int_lane_change_cmd();
+  coarse_planning_info.int_lane_change_cmd = lc_req_mgr_->lane_change_cmd();
   coarse_planning_info.reference_path =
       session_->mutable_environmental_model()
           ->get_reference_path_manager()
@@ -2220,7 +2220,7 @@ void LaneChangeStateMachineManager::CheckTargetFrontNode(
   // const auto agent =
   // agent_mgr->GetAgent(origin_target_node->node_agent_id());
 
-  double target_front_s = 150.0; 
+  double target_front_s = 150.0;
   int64_t target_front_node_id = planning_data::kInvalidId;
   // target_lane_front_node_ 不满足 继续向前根据目标车道选择cipv
   const auto& target_lane_nodes =
@@ -2433,7 +2433,7 @@ void LaneChangeStateMachineManager::CheckTargetRearNode(
     //   std::pair<double, double> obs_lat{agent_bd.l_start, agent_bd.l_end};
     //   double obs_lat_vel = rear_obs->frenet_velocity_l();
     //   bool is_target_lane_cuting_in =
-    //       IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel, 
+    //       IfFrenetCollision(target_center_lat, 0.0, obs_lat, obs_lat_vel,
     //                        lc_safety_check_config_.target_lane_rear_cut_in_check_time, 0.5);
     //   if (!is_target_lane_cuting_in) {
     //     continue;  // 1.5 s 不进入目标车道才过滤
@@ -5520,7 +5520,7 @@ bool LaneChangeStateMachineManager::IsExistExtendLane(
   const iflymapdata::sdpro::Lane* succesor_add_lane = nullptr;
   const iflymapdata::sdpro::Lane* iterator_lane = lane;
   double sum_dis = 0.0;
-  
+
   const auto& route_info = session_->environmental_model().get_route_info();
   if (route_info == nullptr) {
     return false;
