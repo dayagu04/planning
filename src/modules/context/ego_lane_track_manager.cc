@@ -274,32 +274,6 @@ void EgoLaneTrackManger::TrackEgoLane(
               return;
             }
           }
-
-          //处理高架快速路普通分流口
-          if (lane_keep_status) {
-            PreprocessOrdinarySplit(relative_id_lanes,
-                                    order_ids_of_same_zero_relative_id,
-                                    virtual_id_mapped_lane);
-            ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_expressway_:"
-                       << is_exist_split_on_expressway_;
-            if (is_exist_split_on_expressway_) {
-              if ((lane_change_cmd != 0 && lane_change_status != kLaneChangeComplete) && ego_in_split_region_ &&
-                  sum_distance_from_ego_to_both_center_lines_ < 0.5) {
-                ProcessSplitRegionInteractiveSelectEgoLane(
-                    relative_id_lanes, order_ids_of_same_zero_relative_id,
-                    lane_change_cmd);
-                if (is_exist_interactive_select_split_) {
-                  interactive_select_split_counter_ = 3;
-                  return;
-                } else {
-                  interactive_select_split_counter_--;
-                  interactive_select_split_counter_ =
-                      std::min(interactive_select_split_counter_, 0);
-                }
-              }
-              return;
-            }
-          }
         }
 
         if (ego_in_split_region_ &&
