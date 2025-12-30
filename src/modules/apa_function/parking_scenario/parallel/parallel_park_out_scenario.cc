@@ -89,8 +89,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // update ego slot info
   if (!UpdateEgoSlotInfo()) {
     ILOG_INFO << "update ego slot info failed!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = UPDATE_EGO_SLOT_INFO;
+    CheckEgoPoseWhenParkOutFaild(UPDATE_EGO_SLOT_INFO);
     return;
   }
   ILOG_INFO << "update ego slot info success!";
@@ -105,8 +104,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
   // check failed
   if (CheckStuckFailed()) {
     ILOG_INFO << "check stuck failed!";
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = STUCK_FAILED_TIME;
+    CheckEgoPoseWhenParkOutFaild(STUCK_FAILED_TIME);
     return;
   }
 
@@ -152,8 +150,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
 
   // generate t-lane
   if (!GenTlane()) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = NO_TARGET_POSE;
+    CheckEgoPoseWhenParkOutFaild(NO_TARGET_POSE);
     return;
   }
 
@@ -172,8 +169,7 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_GEARCHANGE!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PLAN_HOLD!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_UPDATE) {
@@ -182,13 +178,11 @@ void ParallelParkOutScenario::ExcutePathPlanningTask() {
       delay_check_finish_ = true;
       ILOG_INFO << "replan from PARKING_PLANNING!";
     } else {
-      SetParkingStatus(PARKING_FAILED);
-      frame_.plan_fail_reason = PATH_PLAN_FAILED;
+      CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
       ILOG_INFO << "replan failed from PARKING_PLANNING!";
     }
   } else if (pathplan_result == PathPlannerResult::PLAN_FAILED) {
-    SetParkingStatus(PARKING_FAILED);
-    frame_.plan_fail_reason = PATH_PLAN_FAILED;
+    CheckEgoPoseWhenParkOutFaild(PATH_PLAN_FAILED);
   }
 
   ILOG_INFO << "pathplan_result = " << static_cast<int>(pathplan_result);
@@ -538,6 +532,20 @@ const bool ParallelParkOutScenario::UpdateEgoSlotInfo() {
   }
 
   return true;
+}
+
+void ParallelParkOutScenario::CheckEgoPoseWhenParkOutFaild(
+    ParkingFailReason reason) {
+  ILOG_INFO << "Enter CheckEgoPoseWhenParkOutFaild!";
+  if (CheckFinished()) {
+    ILOG_INFO << "parallel parking finish!";
+    SetParkingStatus(PARKING_FINISHED);
+  } else {
+    ILOG_INFO << "parallel parking failed!";
+    SetParkingStatus(PARKING_FAILED);
+    frame_.plan_fail_reason = reason;
+  }
+  return;
 }
 
 const bool ParallelParkOutScenario::CheckFinished() {
