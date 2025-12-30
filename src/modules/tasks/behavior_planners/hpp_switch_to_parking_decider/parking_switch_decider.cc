@@ -86,15 +86,23 @@ bool ParkingSwitchDecider::Execute() {
     //for E541
     const double curr_timestamp = IflyTime::Now_ms();
     if (is_reached_target_slot && is_ego_still) {
-      parking_switch_info_.is_standstill_near_target_slot = true;
       if(last_is_standstill_near_target_slot_ == false) {
         timestamp_at_standstill_near_dest_ = curr_timestamp;
       }
       const double duration_time_since_standstill_near_dest =
           (curr_timestamp - timestamp_at_standstill_near_dest_) / 1000.0;
+
+      if (dist_to_target_slot < 1.0 ||
+          duration_time_since_standstill_near_dest >
+              config_.keeping_still_time_thr_for_switch_parking) {
+        parking_switch_info_.is_standstill_near_target_slot = true;
+      } else {
+        parking_switch_info_.is_standstill_near_target_slot = false;
+      }
+
       if (parking_switch_info_.is_target_slot_allowed_to_park == false &&
           duration_time_since_standstill_near_dest >
-              config_.memory_slot_allowed_to_park_time_thr) {
+              config_.timeout_still_time_thr_for_giving_up_parking) {
         parking_switch_info_.is_timeout_for_target_slot_allowed_to_park = true;
       } else {
         parking_switch_info_.is_timeout_for_target_slot_allowed_to_park = false;

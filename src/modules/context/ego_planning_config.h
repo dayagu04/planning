@@ -2732,13 +2732,17 @@ struct HppParkingSwitchConfig : public EgoPlanningConfig {
     dist_to_target_dest_thr =
         read_json_key<double>(json, "dist_to_target_dest_thr",
                               dist_to_target_dest_thr);
-    memory_slot_allowed_to_park_time_thr =
-        read_json_key<double>(json, "memory_slot_allowed_to_park_time_thr",
-                              memory_slot_allowed_to_park_time_thr);
+    timeout_still_time_thr_for_giving_up_parking =
+        read_json_key<double>(json, "timeout_still_time_thr_for_giving_up_parking",
+                              timeout_still_time_thr_for_giving_up_parking);
+    keeping_still_time_thr_for_switch_parking =
+        read_json_key<double>(json, "keeping_still_time_thr_for_switch_parking",
+                              keeping_still_time_thr_for_switch_parking);
   }
   double dist_to_target_slot_thr = 2.0;
   double dist_to_target_dest_thr = 1.0;
-  double memory_slot_allowed_to_park_time_thr = 5.0;
+  double timeout_still_time_thr_for_giving_up_parking = 5.0;
+  double keeping_still_time_thr_for_switch_parking = 1.0;
 };
 
 struct LateralMotionPlannerConfig : public EgoPlanningConfig {
