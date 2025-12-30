@@ -10,6 +10,7 @@
 #include "lkas_function/elk_core.h"
 #include "lkas_function/ldp_core.h"
 #include "lkas_function/ldw_core.h"
+#include "meb_function/meb_core.h"
 #include "session.h"
 #include "tsr_function/tsr_core.h"
 
@@ -66,6 +67,8 @@ class AdasFunction : public BaseFunction {
   bool lkas_intervention_rising_edge_ = false;
   iflyauto::LDPFunctionFSMWorkState ldp_state_ = iflyauto::
       LDPFunctionFSMWorkState::LDP_FUNCTION_FSM_WORK_STATE_UNAVAILABLE;
+  // MebCore
+  std::shared_ptr<adas_function::meb_core::MebCore> meb_core_ptr_;
 };
 
 }  // namespace planning

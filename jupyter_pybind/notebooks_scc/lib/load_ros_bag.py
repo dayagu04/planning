@@ -728,12 +728,22 @@ class LoadRosbag:
                          "ihc_function::low_beam_due_to_same_dir_vehicle", "ihc_function::low_beam_due_to_oncomming_vehicle",
                          "ihc_function::low_beam_due_to_oncomming_cycle", "ihc_function::lighting_condition", "ihc_function::processed_lighting_condition",
                          "ihc_function::ihc_low_beam_code", "ihc_function::ihc_active_code",
+                         #meb debug info:
+                         "meb_inner_state","meb_state", "meb_main_switch", "meb_enable_code", "meb_disable_code","meb_fault_code",
+                         "meb_intervention_flag","meb_intervention_ttc","meb_od_obs_collision_flag",
+                         "meb_occ_obs_collision_flag","meb_kickdown_code","meb_all_obs_point_num","meb_obs_distance","meb_od_obs_distance",
+                         "meb_occ_obs_distance","meb_radius","meb_fusion_occ_obs_size","meb_fusion_od_obs_size","meb_relative_distance_min",
+                         "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag",
+                         "meb_occ_path_distance","meb_uss_obs_distance","meb_uss_collision_flag","meb_od_acc_min","meb_occ_acc_min","meb_uss_acc_min",
+                         "meb_output_state","meb_output_requset_status","meb_output_requset_value","meb_od_ttc_min","meb_occ_ttc_min","meb_uss_ttc_min",
+                         "meb_fusion_uss_obs_size","meb_od_box_collision_flag",
                          #adas_debug info
                          "params_dt","params_ego_length","params_ego_width", "params_origin_2_front_bumper", "params_origin_2_rear_bumper", "params_steer_ratio","params_wheel_base",
                          "params_ldp_c0_right_offset", "params_ldp_center_line_offset","params_ldp_ttlc_right_hack","params_ldp_tlc_thrd","params_ldw_enable_speed",
                          "state_left_turn_light_off_time","state_right_turn_light_off_time","state_driver_hand_trq","state_ego_curvature","state_fl_wheel_distance_to_line",
                          "state_fr_wheel_distance_to_line","state_vehicle_speed", "state_yaw_rate","state_left_departure_speed","state_right_departure_speed","state_steer_wheel_angle_degree",
-                         "state_yaw_rate_observer","state_yaw_rate_loc","state_dispaly_vehicle_speed","state_ctrl_output_steering_angle","state_lat_departure_acc",
+                         "state_yaw_rate_observer","state_yaw_rate_loc","state_dispaly_vehicle_speed","state_ctrl_output_steering_angle","state_lat_departure_acc","state_brake_pedal_pressed",
+                         "state_vel_acc",
                          "road_left_line_boundary_type", "road_left_line_line_type","road_left_line_begin","road_left_line_end","road_left_line_c0","road_left_line_c1","road_left_line_c2","road_left_line_c3","state_fl_wheel_distance_to_roadedge",
                          "road_right_line_boundary_type","road_right_line_line_type","road_right_line_begin", "road_right_line_end","road_right_line_c0","road_right_line_c1","road_right_line_c2","road_right_line_c3","state_fr_wheel_distance_to_roadedge",
                          "road_left_line_valid","road_right_line_valid","road_left_roadedge_valid","road_right_roadedge_valid","road_lane_width_valid","road_lane_width",
@@ -783,7 +793,9 @@ class LoadRosbag:
                            "road_right_roadedge_all_dx_vec_","road_right_roadedge_all_dy_vec_",
                          "ldp_preview_ego_pos_vec","elk_preview_ego_pos_vec",
                          "obj_fl_obj_loc_vec","obj_fm_obj_loc_vec","obj_fr_obj_loc_vec","obj_ml_obj_loc_vec",
-                         "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec",
+                         "obj_mr_obj_loc_vec","obj_rl_obj_loc_vec","obj_rm_obj_loc_vec","obj_rr_obj_loc_vec","meb_all_obs_x_vector","meb_all_obs_y_vector",
+                         "meb_od_obs_x_vector","meb_od_obs_y_vector","meb_occ_obs_x_vector","meb_occ_obs_y_vector","meb_traj_x_vector","meb_traj_y_vector",
+                         "meb_point_x_vector","meb_point_y_vector","meb_traj_dphi_vector","uss_distance_vec","uss_acc_vec_","meb_uss_obs_x_vector","meb_uss_obs_y_vector",
                          ]
       # 安全检查相关的向量数据
       json_vector_list += ["box_longitudinal_buff_vec", "box_ttc_vec", "distance_vec",
@@ -1114,24 +1126,24 @@ class LoadRosbag:
 
     # load uss_perception_msg
     # Todo(bsniu): plot uss
-    # try:
-    #   uss_perception_msg_dict = {}
-    #   for topic, msg, t in self.bag.read_messages("/iflytek/fusion/uss_perception_info"):
-    #     uss_perception_msg_dict[msg.msg_header.stamp / 1e6] = msg
-    #   uss_perception_msg_dict = {key: val for key, val in sorted(uss_perception_msg_dict.items(), key = lambda ele: ele[0])}
-    #   for t, msg in uss_perception_msg_dict.items():
-    #     self.uss_perception_msg['t'].append(t)
-    #     self.uss_perception_msg['data'].append(msg)
-    #     self.uss_perception_msg['timestamp'].append(msg.msg_header.stamp)
-    #   self.uss_perception_msg['t'] = [tmp - t0  for tmp in self.uss_perception_msg['t']]
-    #   print('uss_perception_msg time:',self.uss_perception_msg['t'][-1])
-    #   if len(self.uss_perception_msg['t']) > 0:
-    #     self.uss_perception_msg['enable'] = True
-    #   else:
-    #     self.uss_perception_msg['enable'] = False
-    # except Exception as e:
-    #   self.uss_perception_msg['enable'] = False
-    #   print('missing /iflytek/fusion/uss_perception_info topic !!!')
+    try:
+      uss_perception_msg_dict = {}
+      for topic, msg, t in self.bag.read_messages("/iflytek/fusion/uss_perception_info"):
+        uss_perception_msg_dict[msg.msg_header.stamp / 1e6] = msg
+      uss_perception_msg_dict = {key: val for key, val in sorted(uss_perception_msg_dict.items(), key = lambda ele: ele[0])}
+      for t, msg in uss_perception_msg_dict.items():
+        self.uss_perception_msg['t'].append(t)
+        self.uss_perception_msg['data'].append(msg)
+        self.uss_perception_msg['timestamp'].append(msg.msg_header.stamp)
+      self.uss_perception_msg['t'] = [tmp - t0  for tmp in self.uss_perception_msg['t']]
+      print('uss_perception_msg time:',self.uss_perception_msg['t'][-1])
+      if len(self.uss_perception_msg['t']) > 0:
+        self.uss_perception_msg['enable'] = True
+      else:
+        self.uss_perception_msg['enable'] = False
+    except Exception as e:
+      self.uss_perception_msg['enable'] = False
+      print('missing /iflytek/fusion/uss_perception_info topic !!!')
 
     # # load uss_wave_msg
     # try:

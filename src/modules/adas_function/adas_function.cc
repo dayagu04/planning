@@ -24,7 +24,7 @@ bool AdasFunction::Reset() {
 void AdasFunction::Init(void) {
   // Preprocess
   preprocess_ptr_ = std::make_shared<adas_function::preprocess::Preprocess>();
-  
+
 #ifdef X86
   // X86 平台：仿真模式
   preprocess_ptr_->Init(true);
@@ -43,6 +43,8 @@ void AdasFunction::Init(void) {
   tsr_core_ptr_ = std::make_shared<adas_function::tsr_core::TsrCore>();
   // IhcCore
   ihc_core_ptr_ = std::make_shared<adas_function::ihc_core::IhcCore>();
+  // MebCore
+  meb_core_ptr_ = std::make_shared<adas_function::meb_core::MebCore>();
 }
 
 void AdasFunction::StoreInfoForNextCycle(void) {
@@ -123,6 +125,20 @@ bool AdasFunction::Plan() {
   // IhcCore
   ihc_core_ptr_->RunOnce();
 
+  // MebCore
+  if (GetContext.get_param()->meb_call_switch == true) {
+    meb_core_ptr_->RunOnce();
+  } else {
+    // meb
+    GetContext.mutable_output_info()->meb_output_info_.meb_state =
+        iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
+    GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
+        GetContext.get_param()->meb_request_status_const;
+    GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
+    // GetContext.mutable_output_info()->meb_output_info_.meb_request_direction =
+    //     iflyauto::MEBInterventionDirection::MEB_INTERVENTION_DIRECTION_NONE;
+  }
+
   // run lkas_function
   double start_time_lkas = IflyTime::Now_ms();
   if (GetContext.get_param()->hmi_test_switch == true) {
@@ -150,13 +166,6 @@ bool AdasFunction::Plan() {
   //     session_->mutable_planning_context()->traffic_sign_recognition_function();
   // tsr_function_ptr->RunOnce();
   // double end_time_tsr = IflyTime::Now_ms();
-
-  // meb
-  GetContext.mutable_output_info()->meb_output_info_.meb_state =
-      iflyauto::MEB_FUNCTION_FSM_WORK_STATE_OFF;
-  GetContext.mutable_output_info()->meb_output_info_.meb_request_status =
-      GetContext.get_param()->meb_request_status_const;
-  GetContext.mutable_output_info()->meb_output_info_.meb_request_value = 0;
 
   // amap
   GetContext.mutable_output_info()->amap_output_info_.amap_state =
@@ -390,11 +399,11 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
           ldp_intervention_count_2_dur += GetContext.get_param()->dt;
         }
       }
-      //第二次纠偏，小于3秒报警小于三秒，也会报3秒
+      // 第二次纠偏，小于3秒报警小于三秒，也会报3秒
       if (ldp_intervention_count_2_dur < 3.0) {
         ldp_warning_audio_flag_ = true;
         ldp_handsoff_duration_ = 13.0;
-        //超过三秒后，只有纠偏中止后才停止报警，
+        // 超过三秒后，只有纠偏中止后才停止报警，
       } else if (ldp_intervention_count_2_dur > 3.0 &&
                  lkas_intervention == false) {
         ldp_warning_audio_flag_ = false;
@@ -435,7 +444,7 @@ void AdasFunction::LdpDriverhandsoffWarning(void) {
     }
   }
 
-  //以下是输出脱手报警信息
+  // 以下是输出脱手报警信息
   if (ldp_warning_audio_flag_ == true) {
     GetContext.mutable_output_info()->ldp_output_info_.ldp_warning_audio_flag_ =
         true;
@@ -739,6 +748,8 @@ void AdasFunction::Log(void) {
   JSON_DEBUG_VALUE("state_yaw_rate", GetContext.get_state_info()->yaw_rate);
   JSON_DEBUG_VALUE("state_yaw_rate_observer",
                    GetContext.get_state_info()->yaw_rate_observer);
+  JSON_DEBUG_VALUE("state_brake_pedal_pressed",
+                   GetContext.get_state_info()->brake_pedal_pressed);
   //   JSON_DEBUG_VALUE("state_yaw_rate_loc",
   //                    GetContext.get_state_info()->yaw_rate_loc);
   JSON_DEBUG_VALUE("state_left_departure_speed",
@@ -749,6 +760,9 @@ void AdasFunction::Log(void) {
                    GetContext.get_state_info()->steer_wheel_angle_degree);
   JSON_DEBUG_VALUE("state_lat_departure_acc",
                    GetContext.get_state_info()->lat_departure_acc);
+  JSON_DEBUG_VALUE("state_vel_acc", GetContext.get_state_info()->vel_acc);
+  JSON_DEBUG_VALUE("state_shift_lever",
+                   (int)GetContext.get_state_info()->shift_lever_state);
   // road info
   JSON_DEBUG_VALUE("road_lane_changed_flag",
                    GetContext.get_road_info()->current_lane.lane_changed_flag);

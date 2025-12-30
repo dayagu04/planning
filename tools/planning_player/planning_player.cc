@@ -458,6 +458,9 @@ bool PlanningPlayer::LoadRosBag(const std::string& bag_path, bool is_close_loop,
     } else if (msg.getTopic() == TOPIC_PERCEPTION_SCENE) {
       cache_with_ros_msg_and_header_time<struct_msgs::CameraPerceptionScene>(
           msg);
+    }  else if (msg.getTopic() == TOPIC_USS_PERCEPT_INFO) {
+      cache_with_ros_msg_and_header_time<struct_msgs::UssPerceptInfo>(
+          msg);
     } else {
       // std::cerr << "unsupported channel:" << msg.getTopic() << std::endl;
     }

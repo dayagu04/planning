@@ -77,6 +77,7 @@ struct Parameters {
   bool ldw_main_switch = false;
   bool ldp_main_switch = false;
   bool elk_main_switch = false;
+  bool meb_main_switch = false;
   iflyauto::NotificationMainSwitch tsr_main_switch =
       iflyauto::NotificationMainSwitch::NOTIFICATION_MAIN_SWITCH_NONE;
   bool ihc_set_main_switch = false;
@@ -154,11 +155,11 @@ struct Parameters {
   double LDP_supp_CoolingTime_handtrq_thr = 0.5;
   // 抑制冷却时间力矩条件的手力矩值 单位：Nm
   double ELK_supp_CoolingTime_handtrq_thr = 0.5;
-  //路沿半径抑制条件,不能为0
+  // 路沿半径抑制条件,不能为0
   double elk_roadedge_supp_curv_r_thr = 220;
-  //路沿半径抑制条件持续时间阈值,不能为0
+  // 路沿半径抑制条件持续时间阈值,不能为0
   double elk_roadedge_supp_curv_r_dur = 2.0;
-  //临时测试，记得删
+  // 临时测试，记得删
   bool elk_roadedge_testswitch_temp_ = false;
   bool ldp_handoff_state_switch_test_ = false;
   bool elk_soildline_switch = true;  // elk仅实线场景功能开关
@@ -182,7 +183,6 @@ struct Parameters {
   double ldw_tlc_near_ = 0.2;  // 针对道线触发报警的低灵敏度阈值，单位：s
 
   // test value
-  int meb_request_status_const = 0;
   // IHC远光灯码
   uint16 ihc_high_beam_code_maskcode = 65535;
   // IHC近光灯码
@@ -200,6 +200,26 @@ struct Parameters {
   uint16 tsr_function_test_switch = 0;
   // TSR辅助标识牌测试
   uint16 tsr_supp_sign_type_test = 0;
+
+  int meb_request_status_const = 0;
+  bool meb_od_obs_switch = false;
+  bool meb_occ_obs_switch = false;
+  bool meb_uss_obs_switch = true;
+  double meb_ttc_thrd = 1.0;
+  double meb_dis_buffer = 0.35;
+  double meb_acc_collision_thrd = -3.6;
+  double meb_acc_collision_thrd_bak = -2.0;
+  double meb_request_acc = -4.0;
+  bool meb_dynamic_buffer_switch = false;
+  double meb_actuator_act_time = 0.22;
+  double meb_reverse_acc_gain = 1.25;
+  bool meb_hmi_test_switch = false;
+  bool meb_od_box_switch = false;
+  int meb_hmi_state = 0;
+  int meb_hmi_status = 0;
+  double meb_hmi_vaule = 0.0;
+  int meb_hmi_direction = 0;
+  bool meb_call_switch = false;
 };
 
 struct StateInfo {
@@ -210,7 +230,6 @@ struct StateInfo {
   double yaw_rate = 0.0;               // 本车横摆角速度 单位:rad/s
   double yaw_rate_observer = 0.0;      // 本车横摆角速度 单位:rad/s
   double yaw_rate_loc = 0.0;
-
   // 根据本车yaw_rate和方向盘转角,计算得到的本车当前行驶曲率
   double ego_curvature = 0.0;
 
@@ -253,6 +272,9 @@ struct StateInfo {
   // 定义当前挡位值
   iflyauto::ShiftLeverStateEnum shift_lever_state =
       iflyauto::ShiftLeverStateEnum::ShiftLeverState_P;
+
+  // 车辆加速度
+  double vel_acc = 0.0;
 
   // vehicle_service模块节点通讯丢失
   // 1：模块节点通讯未丢失 ， 0：模块节点通讯丢失
