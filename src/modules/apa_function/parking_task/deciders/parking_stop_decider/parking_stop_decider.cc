@@ -25,7 +25,6 @@ namespace apa_planner {
 void ParkingStopDecider::Execute(
     const SVPoint& init_point,
     const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
-    const std::vector<pnc::geometry_lib::PathPoint>& control_path,
     const trajectory::Trajectory& trajectory,
     const pnc::geometry_lib::PathSegGear gear) {
   // init
@@ -256,7 +255,7 @@ void ParkingStopDecider::GeneratePathFootPrint(
   Pose2D global_pose;
   Transform2d tf;
 
-  for (auto& point : trajectory) {
+  for (const auto& point : trajectory) {
     global_pose.x = point.x();
     global_pose.y = point.y();
     global_pose.theta = point.theta();
@@ -329,8 +328,8 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
     for (int i = 0; i < traj.size(); ++i) {
       const trajectory::TrajectoryPoint& trajectory_point = traj[i];
       double trajectory_point_time = trajectory_point.absolute_time();
-      const double ego_check_index =
-          FindTrajectoryIndexByTime(trajectory, trajectory_point_time);
+      const size_t ego_check_index =
+          trajectory.QueryLowerBoundPoint(trajectory_point_time);
       if (trajectory_point_time > 7.0 ||
           ego_check_index == trajectory.size() - 1) {
         continue;
@@ -346,6 +345,7 @@ bool ParkingStopDecider::GetOverlapBoundaryPoints(
 
       if (first_collision_index > ego_check_index ||
           end_collision_index < ego_check_index) {
+        // todo: should add a buffer based on time
         continue;
       }
 
@@ -750,34 +750,6 @@ const double ParkingStopDecider::GetStopDistanceByOD() {
   }
 
   return kDefaultRemainDist;
-}
-
-const int ParkingStopDecider::FindTrajectoryIndexByTime(
-    const trajectory::Trajectory& trajectory, const double t) const {
-  if (trajectory.empty()) {
-    return -1;
-  }
-
-  if (t < trajectory.front().absolute_time()) {
-    return -1;
-  }
-
-  if (t >= trajectory.back().absolute_time()) {
-    return trajectory.size() - 1;
-  }
-
-  int left = 0;
-  int right = trajectory.size() - 1;
-  while (left < right) {
-    int mid = left + (right - left) / 2;
-    if (trajectory[mid].absolute_time() > t) {
-      right = mid;
-    } else {
-      left = mid + 1;
-    }
-  }
-
-  return left - 1;
 }
 
 }  // namespace apa_planner

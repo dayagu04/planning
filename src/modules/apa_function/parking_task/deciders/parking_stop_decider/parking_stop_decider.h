@@ -43,7 +43,6 @@ class ParkingStopDecider : public ParkingTask {
    */
   void Execute(const SVPoint& init_point,
                const std::vector<pnc::geometry_lib::PathPoint>& lateral_path,
-               const std::vector<pnc::geometry_lib::PathPoint>& control_path,
                const trajectory::Trajectory& trajectory,
                const pnc::geometry_lib::PathSegGear gear);
 
@@ -79,15 +78,14 @@ class ParkingStopDecider : public ParkingTask {
   void ExtendPath(const double extend_length,
                   std::vector<pnc::geometry_lib::PathPoint>& path);
 
-  void GeneratePathFootPrint(
-      const trajectory::Trajectory& trajectory);
+  void GeneratePathFootPrint(const trajectory::Trajectory& trajectory);
 
   bool GetPathCollisionByObstacle(int* collision_index, const ApaObstacle& obs);
 
-  bool GetOverlapBoundaryPoints(
-      const trajectory::Trajectory& trajectory,
-      const ApaObstacle& obstacle, std::vector<STPoint>* upper_points,
-      std::vector<STPoint>* lower_points);
+  bool GetOverlapBoundaryPoints(const trajectory::Trajectory& trajectory,
+                                const ApaObstacle& obstacle,
+                                std::vector<STPoint>* upper_points,
+                                std::vector<STPoint>* lower_points);
 
   void ComputeSTBoundary(const trajectory::Trajectory& trajectory,
                          ApaObstacle& obstacle);
@@ -111,9 +109,6 @@ class ParkingStopDecider : public ParkingTask {
 
   LonDecisionReason GetLonDecisionType(
       const apa_planner::ApaObsAttributeType type) const;
-
-  const int FindTrajectoryIndexByTime(
-      const trajectory::Trajectory& trajectory, const double t) const;
 
   common::StopSignType GetStopSignType(const LonDecisionReason reason) const;
 
