@@ -148,6 +148,14 @@ def update_lat_plan_data(fig7, bag_loader, bag_time, local_view_data, lat_plan_d
   planning_succ =False
   if bag_loader.plan_debug_msg['enable'] == True:
     planning_succ = plan_debug_msg.frame_info.planning_succ
+    raw_refline_xn, raw_refline_yn = planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec']
+    raw_refline_x, raw_refline_y = coord_tf.global_to_local(planning_json['raw_refline_x_vec'], planning_json['raw_refline_y_vec'])
+    lat_plan_data['data_refline'].data.update({
+      'raw_refline_x': raw_refline_x,
+      'raw_refline_y': raw_refline_y,
+      'raw_refline_xn': raw_refline_xn,
+      'raw_refline_yn': raw_refline_yn,
+    })
     lat_motion_plan_input = plan_debug_msg.lateral_motion_planning_input
 
     lat_init_state = lat_motion_plan_input.init_state
@@ -1297,6 +1305,8 @@ def load_lat_plan_figure(fig1, local_view_data):
 
   fig1.line('refline_y', 'refline_x', source = data_construction_refline, line_width = 2, line_color = 'red', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'construct ref', visible=False)
   fig_construction_refline = fig1.circle('refline_y', 'refline_x', source = data_construction_refline, size = 5, line_width = 4, line_color = "red", line_alpha = 0.35, fill_color = 'red',fill_alpha = 1.0, legend_label = 'construct ref', visible=False)
+
+  fig1.line('raw_refline_y', 'raw_refline_x', source = data_refline, line_width = 3, line_color = 'blue', line_dash = 'dashed', line_alpha = 0.35, legend_label = 'plan refline', visible=False)
 
   fig2 = bkp.figure(x_axis_label='time', y_axis_label='theta',x_range = [-0.1, 6.0], width=800, height=160)
   fig3 = bkp.figure(x_axis_label='time', y_axis_label='lat acc',x_range = fig2.x_range, width=800, height=160)
