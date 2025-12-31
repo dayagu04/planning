@@ -2181,9 +2181,17 @@ void SccLateralObstacleDecider::GenerateSpatioTemporalFollowDecision(
       interp(lane_width_, config_.lane_width_bp, config_.lane_width_factor);
   lead_d_path_thr = lead_d_path_thr * lane_width_actor;
   lead_d_path_thr = lead_d_path_thr * config_.extra_ratio_for_cut_out;// cut_out 相对保守
-
-  if (obstacle.is_static()) {
-    // 如果静态障碍物被赋予了FOLLOW，则整个5s都为FOLLOW
+  bool is_vru =
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_PEDESTRIAN ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_BICYCLE ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_CYCLE_RIDING ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_MOTORCYCLE_RIDING ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_TRICYCLE_RIDING ||
+      obstacle.type() == iflyauto::ObjectType::OBJECT_TYPE_ANIMAL;
+  if (obstacle.is_static() || is_vru) {
+    // 如果静态障碍物、VRU被赋予了FOLLOW，则整个5s都为FOLLOW
     spatio_temporal_follow_obstacle_info_[id].follow_time_windows.push_back(
         {LatObstacleDecisionType::FOLLOW, TimeInterval{0.0, 5.0}});
   } else {
