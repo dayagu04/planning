@@ -304,7 +304,8 @@ void EgoLaneTrackManger::TrackEgoLane(
 
         if (ego_in_split_region_ &&
             sum_distance_from_ego_to_both_center_lines_ <
-                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines) {
+                kEnableSplitSelectionEgoLateralDistanceToBothLaneLines &&
+                ego_to_last_split_end_point_distance > 20.0) {
           ProcessIntersectionSplit(relative_id_lanes,
                                    order_ids_of_same_zero_relative_id);
           ILOG_DEBUG << "EgoLaneTrackManger::is_exist_split_on_intersection:"
