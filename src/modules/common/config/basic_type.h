@@ -356,6 +356,7 @@ struct RouteInfoOutput {
   std::vector<NOASplitRegionInfo> split_region_info_list;
   EgoStatusOnRoute ego_status_on_route = EgoStatusOnRoute::ON_MAIN;
   std::vector<NOASplitRegionInfo> merge_region_info_list;
+  NOASplitRegionInfo current_exchange_region_info;
   iflymapdata::sdpro::MapVendorType map_vendor =
       iflymapdata::sdpro::MapVendorType::MAP_VENDOR_NONE;
   MLCDeciderRouteInfo mlc_decider_route_info;
@@ -392,6 +393,7 @@ struct RouteInfoOutput {
     accumulate_dis_ego_to_last_split_point = NL_NMAX;
     sum_dis_to_last_split_point_on_ramp = NL_NMAX;
     distance_to_toll_station = NL_NMAX;
+    last_split_end_point_distance = NL_NMAX;
     is_ego_on_city_expressway_hmi = false;
     is_ego_on_expressway_hmi = false;
     is_exist_toll_station = false;
@@ -408,6 +410,7 @@ struct RouteInfoOutput {
     is_continuous_ramp = false;
     first_split_dir_dis_info = std::make_pair(None, NL_NMAX);
     split_dir_dis_info_list.clear();
+    current_exchange_region_info.reset();
     current_segment_passed_distance = 0.0;
     is_nearing_ramp = false;
     cur_seg_forward_lane_num = 0;

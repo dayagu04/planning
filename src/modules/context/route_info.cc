@@ -2461,6 +2461,7 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+  route_info_output_.current_exchange_region_info = first_exchange_region_info;
 
   // 输出到上一个交换区终点的距离，在交换区rear位置计算到前方end_fp距离(负值)
   if (last_exchange_region_info_.is_process_split &&
