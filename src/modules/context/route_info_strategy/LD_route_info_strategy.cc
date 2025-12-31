@@ -127,7 +127,8 @@ bool LDRouteInfoStrategy::IsInExpressWay() {
           iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY ||
       current_link_->link_class() ==
           iflymapdata::sdpro::LinkClass::LC_CITY_EXPRESSWAY ||
-      current_link_->link_type() == iflymapdata::sdpro::LT_IC) {
+      (current_link_->link_type() & iflymapdata::sdpro::LT_IC) != 0) {
+
     route_info_output_.is_ego_on_expressway = true;
     if (current_link_->link_class() ==
         iflymapdata::sdpro::LinkClass::LC_EXPRESSWAY) {
@@ -1271,7 +1272,7 @@ void LDRouteInfoStrategy::CalculateRampInfo() {
     }
 
     if (ld_map_.isRamp(split_next_link->link_type()) ||
-        split_next_link->link_type() == iflymapdata::sdpro::LT_SAPA) {
+        (split_next_link->link_type() & iflymapdata::sdpro::LT_SAPA) != 0) {
       ramp_info_vec_.emplace_back(split_info);
     }
   }
