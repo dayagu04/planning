@@ -225,6 +225,11 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
   }
 
   // update LaneChangeReason
+  const auto& ego_lane_road_right_decider_output =
+      session_->planning_context().ego_lane_road_right_decider_output();
+  const bool is_merge_region =
+      ego_lane_road_right_decider_output.is_merge_region;
+  const auto& function_info = session_->environmental_model().function_info();
   const double dis_to_merge =
       route_info_output.map_merge_region_info_list.empty()
           ? NL_NMAX
@@ -302,7 +307,11 @@ void LaneChangeHmiDecider::UpdateHMIInfo() {
       route_info_output.is_on_ramp) {
     ad_info.distance_to_merge = dis_to_merge;
   } else {
-    ad_info.distance_to_merge = NL_NMAX;
+    if (is_merge_region) {
+      ad_info.distance_to_merge = ego_lane_road_right_decider_output.merge_point_distance;
+    } else {
+      ad_info.distance_to_merge = NL_NMAX;
+    }
   }
   ad_info.distance_to_toll_station = route_info_output.distance_to_toll_station;
   ad_info.noa_exit_warning_level_distance =

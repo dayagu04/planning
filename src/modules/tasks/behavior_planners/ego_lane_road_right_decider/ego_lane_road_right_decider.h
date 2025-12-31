@@ -66,6 +66,7 @@ class EgoLaneRoadRightDecider : public Task {
   int split_lane_virtual_id_;
   Point2D merge_point_;
   Point2D boundary_merge_point_;
+  double merge_point_distance_ = NL_NMAX;
   bool cur_lane_is_continue_;
   bool boundary_merge_point_valid_ = false;
   bool ego_lane_boundary_exist_virtual_line_ = false;
