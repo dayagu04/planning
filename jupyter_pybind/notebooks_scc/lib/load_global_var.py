@@ -13,6 +13,7 @@ def init():  # 初始化
     'is_vis_sdmap': False,
     'is_vis_sdpromap': False,
     'is_vis_radar': False,
+    'is_vis_fus_line': True,
     'is_vis_rdg_line': True,
     'is_vis_rdg_obj': True,
     'is_vis_me_obj': False,
@@ -26,6 +27,7 @@ def init():  # 初始化
     'is_vis_speed_bump': False,
     'is_vis_ground_mark': False,
     'is_vis_rads_path': False,
+    'is_vis_nsa_line': False,
   }
 
 
@@ -63,16 +65,19 @@ def set_value_by_scene(scene):
     global_dict['scene_type'] = 'NSA'
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_fus_line'] = False
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_lane_mark'] = False
     global_dict['is_vis_merge_point'] = False
     global_dict['is_vis_occ_obj'] = True
     global_dict['is_vis_speed_bump'] = True
+    global_dict['is_vis_nsa_line'] = True
   elif scene == 'RADS':
     global_dict['scene_type'] = 'RADS'
     global_dict['is_vis_map'] = False
     global_dict['is_vis_sdmap'] = False
+    global_dict['is_vis_fus_line'] = False
     global_dict['is_vis_rdg_line'] = False
     global_dict['is_vis_rdg_obj'] = True
     global_dict['is_vis_lane_mark'] = False

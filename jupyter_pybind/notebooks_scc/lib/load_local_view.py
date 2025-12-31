@@ -2060,7 +2060,9 @@ def load_local_view_figure():
   is_vis_speed_bump = global_var.get_value('is_vis_speed_bump')
   is_vis_ground_mark = global_var.get_value('is_vis_ground_mark')
   is_vis_rads_path = global_var.get_value('is_vis_rads_path')
+  is_vis_nsa_line = global_var.get_value('is_vis_nsa_line')
   is_vis_radar = global_var.get_value('is_vis_radar')
+  is_vis_fus_line = global_var.get_value('is_vis_fus_line')
   is_vis_rdg_line = global_var.get_value('is_vis_rdg_line')
   is_vis_rdg_obj = global_var.get_value('is_vis_rdg_obj')
   is_vis_me_obj = global_var.get_value('is_vis_me_obj')
@@ -2773,10 +2775,11 @@ def load_local_view_figure():
     fig1.patch('zebra_crossing_line_11_y', 'zebra_crossing_line_11_x', source = zebra_crossing_line_11, line_width = 1, fill_color = "lavender", fill_alpha = 0.5, line_color = 'black', legend_label = 'zebra_crossing_line')
 
   fig1.line('ld_y_vec', 'ld_x_vec', source=data_pure_pursuit, line_width=3, line_color='purple', line_dash='solid', legend_label='pp_ld')
-  fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
-  fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
-  fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
-  fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
+  if is_vis_fus_line:
+    fig_dashed_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_dashed_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'dashed', legend_label = 'lane_line')
+    fig_solid_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_solid_line, line_width = 2.0, line_color = 'white', hover_line_color = "firebrick", line_dash = 'solid', legend_label = 'lane_line')
+    fig_virtual_line = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_lane_virtual_line, line_width = 2.0, line_color = 'deepskyblue', hover_line_color = "firebrick", selection_line_color = "firebrick", line_dash = 'dotted', legend_label = 'lane_line')
+    fig_road_border = fig1.multi_line('lines_y_vec', 'lines_x_vec', source = data_road_border, line_width = 2.0, line_color = 'red', line_dash = 'solid', legend_label = 'lane_line')
 
   f81 = fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj_lat, fill_color = "violet", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj_lat')
   fig1.patches('car_yb_traj', 'car_xb_traj', source = data_car_traj, fill_color = "palegreen", fill_alpha = 0.05, line_color = "black", line_alpha = 0.3, line_width = 1, legend_label = 'car_traj',visible = False)
@@ -2826,14 +2829,17 @@ def load_local_view_figure():
     outlink_info = fig1.circle('data_sdpromap_outlink_y', 'data_sdpromap_outlink_x', source = data_sdpromap_outlink, radius = 0.5, fill_color="yellow", line_color='yellow', legend_label = 'outlink_segment')
     feature_point_info = fig1.circle('data_sdpromap_FP_vec_y', 'data_sdpromap_FP_vec_x', source = data_sdpromap_FP_vec, radius = 0.3, fill_color="green", line_color='red', legend_label = 'feature_point')
 
-  fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
-  fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
-  fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  if is_vis_fus_line:
+    fig_cline0 = fig1.line('center_line_0_y', 'center_line_0_x', source = data_center_line_0, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline1 = fig1.line('center_line_1_y', 'center_line_1_x', source = data_center_line_1, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline2 = fig1.line('center_line_2_y', 'center_line_2_x', source = data_center_line_2, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1, legend_label = 'center_line')
+    fig_cline3 = fig1.line('center_line_3_y', 'center_line_3_x', source = data_center_line_3, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+    fig_cline4 = fig1.line('center_line_4_y', 'center_line_4_x', source = data_center_line_4, line_width = 1, line_color = 'blue', line_dash = 'dotted', line_alpha = 0.8, legend_label = 'center_line')
+  if is_vis_nsa_line:
+    fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
+
   fig1.line('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.35, legend_label = 'smooth refline', visible=False)
   fig1.circle('smooth_ref_path_y', 'smooth_ref_path_x', source = data_smooth_ref_path, size = 6, line_width = 5, line_color = 'green', line_alpha = 0.4, fill_color = 'green', fill_alpha = 1.0, legend_label = 'smooth refline', visible=False)
-  fig1.line('center_line_gen_y', 'center_line_gen_x', source = data_center_line_gen, line_width = 2, line_color = 'blue', line_dash = 'dotted', line_alpha = 1.0, legend_label = 'nsa refline')
 
   if is_vis_lane_mark:
     fig1.circle('text_yn_0', 'text_xn_0', source = lane_mark_data_0, radius = 0.8, line_width = 3,  line_color = 'green', line_alpha = 1, fill_color = "blue", fill_alpha = 1, legend_label = 'lane_mark_point')
@@ -2866,8 +2872,8 @@ def load_local_view_figure():
     fig1.patches('obstacles_y', 'obstacles_x', source = data_me_obj, fill_color = "maroon", line_color = "black", line_width = 1, fill_alpha = 0.3, legend_label = 'me_obj',visible = False)
     fig1.text('pos_y', 'pos_x', text = 'obs_label' ,source = data_me_obj, text_color="maroon", text_align="center", text_font_size="10pt", legend_label = 'me_info',visible = False)
   if is_vis_rads_path:
-    fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path', visible = False)
-    fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path', visible=False)
+    fig1.line('traj_y', 'traj_x', source = data_rads_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'rads_memorized_path')
+    fig1.circle('traj_y', 'traj_x', source=data_rads_traj, size=8, color='red', alpha=0.6, legend_label='rads_memorized_path')
   fig1.line('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source = data_ego_motion_sim_ref_traj, line_width = 5, line_color = 'orange', line_dash = 'solid', line_alpha = 0.35, legend_label = 'ego_motion_sim_ref', visible = False)
   fig1.circle('ego_ref_sim_y_vec', 'ego_ref_sim_x_vec', source=data_ego_motion_sim_ref_traj, size=8, color='red', alpha=0.6, legend_label='ego_motion_sim_ref', visible=False)
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning_lat, line_width = 5, line_color = 'violet', line_dash = 'solid', line_alpha = 0.6, legend_label = 'lat plan')
@@ -2950,14 +2956,27 @@ def load_local_view_figure():
                                                                 ('lat init delta', '@init_state_delta'), ('lon init s', '@init_state_s'), ('lon init v', '@init_state_v'),
                                                                 ('lon init a', '@init_state_a'), ('replan status', '@replan_status')])
   hover1_2 = HoverTool(renderers=[fig_ego_point], tooltips=[('ego pos x', '@ego_pos_point_x'), ('ego pos y', '@ego_pos_point_y'), ('ego pos theta', '@ego_pos_point_theta')])
-  hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
-  hover1_4 = HoverTool(renderers=[fig_cline1], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_1_dist_to_lborder'), ('dist_to_right_border', '@center_line_1_dist_to_rborder')])
-  hover1_5 = HoverTool(renderers=[fig_cline2], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_2_dist_to_lborder'), ('dist_to_right_border', '@center_line_2_dist_to_rborder')])
-  hover1_6 = HoverTool(renderers=[fig_cline3], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_3_dist_to_lborder'), ('dist_to_right_border', '@center_line_3_dist_to_rborder')])
-  hover1_7 = HoverTool(renderers=[fig_cline4], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_4_dist_to_lborder'), ('dist_to_right_border', '@center_line_4_dist_to_rborder')])
-  hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
-  hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
-  hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
+  fig1.add_tools(hover1_1)
+  fig1.add_tools(hover1_2)
+
+  if is_vis_fus_line:
+    hover1_3 = HoverTool(renderers=[fig_cline0], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_0_dist_to_lborder'), ('dist_to_right_border', '@center_line_0_dist_to_rborder')])
+    hover1_4 = HoverTool(renderers=[fig_cline1], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_1_dist_to_lborder'), ('dist_to_right_border', '@center_line_1_dist_to_rborder')])
+    hover1_5 = HoverTool(renderers=[fig_cline2], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_2_dist_to_lborder'), ('dist_to_right_border', '@center_line_2_dist_to_rborder')])
+    hover1_6 = HoverTool(renderers=[fig_cline3], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_3_dist_to_lborder'), ('dist_to_right_border', '@center_line_3_dist_to_rborder')])
+    hover1_7 = HoverTool(renderers=[fig_cline4], tooltips=[('index', '$index'), ('dist_to_left_border', '@center_line_4_dist_to_lborder'), ('dist_to_right_border', '@center_line_4_dist_to_rborder')])
+    hover1_9 = HoverTool(renderers=[fig_dashed_line], tooltips=[('relative_id', '@relative_id_vec')])
+    hover1_10 = HoverTool(renderers=[fig_solid_line], tooltips=[('relative_id', '@relative_id_vec')])
+    hover1_11 = HoverTool(renderers=[fig_virtual_line], tooltips=[('relative_id', '@relative_id_vec')])
+    fig1.add_tools(hover1_3)
+    fig1.add_tools(hover1_4)
+    fig1.add_tools(hover1_5)
+    fig1.add_tools(hover1_6)
+    fig1.add_tools(hover1_7)
+    fig1.add_tools(hover1_9)
+    fig1.add_tools(hover1_10)
+    fig1.add_tools(hover1_11)
+
   if is_vis_sdpromap:
     hover1_12 = HoverTool(renderers=[sdpromap_line_info], tooltips=[('sdpromap_road_info', '@sdpromap_road_info_vec')])
     fig1.add_tools(hover1_12)
@@ -2968,16 +2987,6 @@ def load_local_view_figure():
     hover1_15 = HoverTool(renderers=[outlink_info], tooltips=[('load_outlink_info', '@outlink_info')])
     fig1.add_tools(hover1_15)
 
-  fig1.add_tools(hover1_1)
-  fig1.add_tools(hover1_2)
-  fig1.add_tools(hover1_3)
-  fig1.add_tools(hover1_4)
-  fig1.add_tools(hover1_5)
-  fig1.add_tools(hover1_6)
-  fig1.add_tools(hover1_7)
-  fig1.add_tools(hover1_9)
-  fig1.add_tools(hover1_10)
-  fig1.add_tools(hover1_11)
   if is_vis_occ_obj:
     # hover1_12 = HoverTool(renderers=[fig_ground_line], tooltips=[('id', '@ground_line_id')])
     # hover1_13 = HoverTool(renderers=[fig_ground_line_cluster], tooltips=[('id', '@ground_line_id')])
