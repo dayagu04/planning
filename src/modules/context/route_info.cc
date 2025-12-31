@@ -2738,20 +2738,21 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             IN_EXCHANGE_AREA_REAR) {
           ego_seq =
               last_exchange_region_info_.last_exchange_info.split_direction ==
-                      SPLIT_LEFT
-                  ? left_lane_num + 1
-                  : map_lane_num - right_lane_num;
+                      SPLIT_RIGHT
+                  ? map_lane_num - right_lane_num
+                  : left_lane_num + 1;
         } else {
           if (!exchange_region_info_list.empty()) {
-            ego_seq = exchange_region_info_list[0].split_direction == SPLIT_LEFT
-                          ? left_lane_num + 1
-                          : map_lane_num - right_lane_num;
+            ego_seq =
+                exchange_region_info_list[0].split_direction == SPLIT_RIGHT
+                    ? map_lane_num - right_lane_num
+                    : left_lane_num + 1;
           }
         }
       } else {
-        ego_seq = merge_point_direction == SPLIT_LEFT
-                      ? left_lane_num + 1
-                      : map_lane_num - right_lane_num;
+        ego_seq = merge_point_direction == SPLIT_RIGHT
+                      ? map_lane_num - right_lane_num
+                      : left_lane_num + 1;
       }
     } else {
       ego_seq = left_lane_num + 1;
