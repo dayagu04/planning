@@ -71,7 +71,7 @@ class JointMotionObstaclesSelector {
       double* const ptr_max_s, double* const ptr_min_l,
       double* const ptr_max_l);
 
-  void CorrectTrajectoryInConfluenceArea(KeyObstacle* key_obstacle,
+  void CorrectTrajectoryInConfluenceArea(KeyObstacle& key_obstacle,
                                          bool is_left_side);
 
   framework::Session* session_;

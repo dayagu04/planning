@@ -61,7 +61,9 @@ void SccLongitudinalMotionPlanningProblemV3::Init() {
   ilqr_core_ptr_->AddCost(
       std::make_shared<LonPosSafeCostTerm>());  // longitudinal position safety
                                                 // cost
-
+  ilqr_core_ptr_->AddCost(
+      std::make_shared<LonEmergencyStopCost>());  // longitudinal emergency stop
+                                                  // cost
   // STEP 3: init debug info, must run after add cost
   ilqr_core_ptr_->InitAdvancedInfo();
 
@@ -150,6 +152,11 @@ uint8_t SccLongitudinalMotionPlanningProblemV3::Update(
         planning_input.q_pos_safe_cost() * safe_cost_factor;
 
     cost_config_vec.at(i)[SAFE_DISTANCE] = planning_input.safe_distance();
+    double emergency_stop_decay_rate = 0.15;
+    double emergency_stop_decay_factor =
+        std::exp(-emergency_stop_decay_rate * i);
+    cost_config_vec.at(i)[W_EMERGENCY_STOP] =
+        planning_input.q_emergency_stop() * emergency_stop_decay_factor;
 
     if (i == N - 1) {
       cost_config_vec.at(i)[TERMINAL_FLAG] = 1;

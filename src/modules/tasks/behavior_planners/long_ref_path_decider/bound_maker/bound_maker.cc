@@ -21,7 +21,7 @@ constexpr double kFollowBuffer = 0.2;
 constexpr double kOvertakeBuffer = 2.0;
 
 constexpr double kSpeedBoundFactor = 1.1;
-constexpr double kPerSecondPlanLenth = 50.0;
+constexpr double kPerSecondPlanLenth = 40.0;
 
 constexpr double kJerkLowerComfortableBound = -1.2;
 constexpr double kBrakeDelayTimeBuffer = 0.3;
@@ -142,25 +142,28 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       session_->planning_context().lon_ref_path_decider_output();
   const auto& lon_decision_decider_output =
       session_->planning_context().longitudinal_decision_decider_output();
-  const auto &motion_planner_output =
+  const auto& motion_planner_output =
       session_->planning_context().motion_planner_output();
   bool can_increase_acc_upper_bound = false;
-  can_increase_acc_upper_bound = lon_decision_decider_output.determined_cruise_bound().acc_positive_mps2 >
-                                 1.0 - kEpsilon ? true : false;
+  can_increase_acc_upper_bound =
+      lon_decision_decider_output.determined_cruise_bound().acc_positive_mps2 >
+              1.0 - kEpsilon
+          ? true
+          : false;
   // cruise acc target
   acc_target.first =
       interp(v_ego, speed_planning_config_.cruise_dec_bound_table.vel_table,
              speed_planning_config_.cruise_dec_bound_table.acc_table);
   if (can_increase_acc_upper_bound) {
     acc_target.second =
-      interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table,
-             speed_planning_config_.cruise_acc_bound_table.acc_table);
+        interp(v_ego, speed_planning_config_.cruise_acc_bound_table.vel_table,
+               speed_planning_config_.cruise_acc_bound_table.acc_table);
   } else {
-    acc_target.second =
-      interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
+    acc_target.second = interp(v_ego, _A_CRUISE_MAX_BP, _A_CRUISE_MAX_V);
   }
 
-  std::pair<double, double> acc_target_with_upper_bound{acc_target.first, acc_target.second};
+  std::pair<double, double> acc_target_with_upper_bound{acc_target.first,
+                                                        acc_target.second};
   for (size_t i = 0; i < plan_points_num_; i++) {
     const double t = i * dt_;
     if (upper_bound_infos_[i].agent_id == -1) {
@@ -178,7 +181,8 @@ void BoundMaker::MakeAccBound(const double& v_ego,
       if (can_increase_acc_upper_bound) {
         acc_upper_bound_[i] = acc_target.second;
       } else {
-        acc_upper_bound_[i] = std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
+        acc_upper_bound_[i] =
+            std::fmin(std::fmax(init_lon_state_[2], acc_target.second), 0.8);
       }
 
       continue;
@@ -200,22 +204,27 @@ void BoundMaker::MakeAccBound(const double& v_ego,
     const double upper_bound_a = std::fmin(upper_bound_info.a + 0.5, 0.0);
     CalcAccLimits(upper_bound_info, desire_distance, desire_velocity, v_ego,
                   upper_bound_a, &acc_target_with_upper_bound);
-    acc_lower_bound_[i] = std::fmin(init_lon_state_[2], acc_target_with_upper_bound.first);
-    //acc_upper_bound is not relative with upper bound and use acc_target calced by v interpolate
+    acc_lower_bound_[i] =
+        std::fmin(init_lon_state_[2], acc_target_with_upper_bound.first);
+    // acc_upper_bound is not relative with upper bound and use acc_target
+    // calced by v interpolate
     /* if (start_stop_decider_output.ego_start_stop_info().state() ==
         common::StartStopInfo::START) {
-      acc_upper_bound_[i] = std::fmax(acc_target.second, acc_target_with_upper_bound.second);
+      acc_upper_bound_[i] = std::fmax(acc_target.second,
+    acc_target_with_upper_bound.second);
     } */
     if (can_increase_acc_upper_bound) {
       acc_upper_bound_[i] = acc_target.second;
     } else {
-      acc_upper_bound_[i] = std::fmax(std::fmax(init_lon_state_[2], acc_target_with_upper_bound.second), 0.3);
+      acc_upper_bound_[i] = std::fmax(
+          std::fmax(init_lon_state_[2], acc_target_with_upper_bound.second),
+          0.3);
     }
     if (start_stop_decider_output.ego_start_stop_info().state() !=
-        common::StartStopInfo::START && !can_increase_acc_upper_bound) {
+            common::StartStopInfo::START &&
+        !can_increase_acc_upper_bound) {
       acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], 0.8);
     }
-
   }
   if (lon_ref_path_decider_output.is_cross_vru_target_pre_handle) {
     for (int32_t i = 0; i < plan_points_num_; i++) {
@@ -225,18 +234,19 @@ void BoundMaker::MakeAccBound(const double& v_ego,
   if (motion_planner_output.is_limit_lon_acc_bound) {
     // 目前仅针对低速变道使用,避免急加速导致方向盘打不过来
     for (int32_t i = 0; i < plan_points_num_; i++) {
-      acc_upper_bound_[i] = std::fmin(acc_upper_bound_[i], motion_planner_output.recommended_acc_bound);
+      acc_upper_bound_[i] = std::fmin(
+          acc_upper_bound_[i], motion_planner_output.recommended_acc_bound);
     }
   }
   double min_acc_bound_val = 10.0;
-  auto min_it = std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
+  auto min_it =
+      std::min_element(acc_lower_bound_.begin(), acc_lower_bound_.end());
   min_acc_bound_val = *min_it;
-  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(), min_acc_bound_val);
-
+  std::fill(acc_lower_bound_.begin(), acc_lower_bound_.end(),
+            min_acc_bound_val);
 }
 
 void BoundMaker::MakeSBound() {
-
   const auto& environmental_model = session_->environmental_model();
   const auto& ego_lane =
       environmental_model.get_virtual_lane_manager()->get_current_lane();
@@ -244,12 +254,12 @@ void BoundMaker::MakeSBound() {
   if (ego_lane == nullptr) {
     return;
   }
-  
+
   const auto& ego_reference_path = ego_lane->get_reference_path();
   if (ego_reference_path == nullptr) {
     return;
   }
-  
+
   const auto& ego_lane_coord = ego_reference_path->get_frenet_coord();
   if (ego_lane_coord == nullptr) {
     return;
@@ -257,8 +267,8 @@ void BoundMaker::MakeSBound() {
 
   const double path_length = ego_lane_coord->Length();
   const double default_upper_bound =
-      std::fmax(path_length, plan_time_ * kPerSecondPlanLenth);
-  
+      std::fmin(path_length, plan_time_ * kPerSecondPlanLenth);
+
   s_lower_bound_ = std::vector<double>(plan_points_num_, -0.1);
   s_upper_bound_ = std::vector<double>(plan_points_num_, default_upper_bound);
 
@@ -267,19 +277,19 @@ void BoundMaker::MakeSBound() {
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
     const double relative_t = i * dt_;
-    
+
     const auto corridor_upper_point =
         ptr_st_graph_helper->GetPassCorridorUpperBound(relative_t);
     const auto corridor_lower_point =
         ptr_st_graph_helper->GetPassCorridorLowerBound(relative_t);
-    
+
     double& upper_bound = s_upper_bound_[i];
     double& lower_bound = s_lower_bound_[i];
-    
+
     if (corridor_upper_point.valid() && corridor_upper_point.agent_id() != -1) {
       upper_bound = corridor_upper_point.s();
     }
-    
+
     if (corridor_lower_point.valid() && corridor_lower_point.agent_id() != -1) {
       lower_bound = corridor_lower_point.s();
     }
@@ -391,7 +401,7 @@ void BoundMaker::MakeJerkBound(const TargetMaker& target_maker) {
 void BoundMaker::MakeComfortBound() {
   const auto& ego_state_mgr =
       session_->environmental_model().get_ego_state_manager();
-  const double v_ego = ego_state_mgr->ego_v();
+  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
   const auto& agents_headway_Info = session_->planning_context()
                                         .agent_headway_decider_output()
                                         .agents_headway_Info();
@@ -400,11 +410,12 @@ void BoundMaker::MakeComfortBound() {
 
   constexpr double s0 = 3.5;
   constexpr double max_tau = 1.35;
-  constexpr double b_max = 2.5;
-  constexpr double b_hard = 4.0;
-  constexpr double a = 1.5;
+  double a_max = 2.0;
+  double b_max = 3.0;
 
   for (int32_t i = 0; i < plan_points_num_; ++i) {
+    double t = i * dt_;
+    const double v_ego = virtual_acc_curve->Evaluate(1, t);
     const auto& upper_bound_info = upper_bound_infos_[i];
 
     if (upper_bound_info.agent_id == -1) {
@@ -412,33 +423,19 @@ void BoundMaker::MakeComfortBound() {
       continue;
     }
 
-    const int32_t lead_id = upper_bound_info.agent_id;
-    const double v_lead = upper_bound_info.v;
-    const double s_current = upper_bound_info.s;
-    auto iter = agents_headway_Info.find(lead_id);
+    const int32_t upper_bound_id = upper_bound_info.agent_id;
+    const double v_upper_bound = upper_bound_info.v;
+    auto iter = agents_headway_Info.find(upper_bound_id);
     double tau = max_tau;
     if (iter != agents_headway_Info.end()) {
       tau = std::min(tau, iter->second.current_headway);
     }
 
-    const double v_rel = v_ego - v_lead;
-    double s_desired = s0 + tau * v_ego;
-    double s_comfort =
-        s0 + std::max(0.0, v_ego * tau +
-                               v_ego * v_rel / (2.0 * std::sqrt(a * b_max)));
+    double delta_v = v_ego - v_upper_bound;
 
-    double s_safety = 0.0;
-    if (s_current > s_comfort && s_current > s_desired) {
-      s_safety = s0 + tau * v_ego;
-    } else if (s_current < s_desired && s_current < s_comfort) {
-      s_safety = s0 + tau * v_ego +
-                 std::max(v_ego * v_ego / (2.0 * b_max) -
-                              v_lead * v_lead / (2.0 * b_hard),
-                          v_ego * v_rel / (2.0 * b_hard));
-    } else {
-      s_safety =
-          s0 + std::max(0.0, tau * v_ego + v_ego * v_rel / (2.0 * b_max));
-    }
+    double s_safety =
+        s0 + std::max(0.0, tau * v_ego + v_ego * delta_v /
+                                             (2.0 * std::sqrt(a_max * b_max)));
     comfort_upper_bound[i] = std::max(0.0, s_upper_bound_[i] - s_safety);
   }
 
@@ -633,8 +630,8 @@ double BoundMaker::CalcPositiveAccLimit(const double v_ego, const double v_rel,
 double BoundMaker::CalcCriticalDecel(const double d_lead, const double v_rel,
                                      const double d_offset,
                                      const double v_offset) {
-  // this function computes the required decel to avoid crashing, given comfort
-  // offsets
+  // this function computes the required decel to avoid crashing, given
+  // comfort offsets
   double a_critical = -std::pow(std::max(0.0, v_rel + v_offset), 2) /
                       std::max(2 * (d_lead - d_offset), 0.5);
   return a_critical;
@@ -758,7 +755,13 @@ void BoundMaker::AddMaxDecelCurveDataToProto(
     auto* ptr = max_decel_target_pb_.add_max_decel_s_ref();
     const double t = i * dt_;
     const auto s = max_deceleration_curve.Evaluate(0, t);
+    const auto v = max_deceleration_curve.Evaluate(1, t);
+    const auto a = max_deceleration_curve.Evaluate(2, t);
+    const auto j = max_deceleration_curve.Evaluate(3, t);
     ptr->set_s(s);
+    ptr->set_v(v);
+    ptr->set_a(a);
+    ptr->set_j(j);
     ptr->set_t(t);
   }
   mutable_max_decel_target_data->CopyFrom(max_decel_target_pb_);
