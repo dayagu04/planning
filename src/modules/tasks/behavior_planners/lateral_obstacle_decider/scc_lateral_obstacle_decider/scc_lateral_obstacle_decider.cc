@@ -2180,7 +2180,7 @@ void SccLateralObstacleDecider::GenerateSpatioTemporalFollowDecision(
   double lane_width_actor =
       interp(lane_width_, config_.lane_width_bp, config_.lane_width_factor);
   lead_d_path_thr = lead_d_path_thr * lane_width_actor;
-  lead_d_path_thr = lead_d_path_thr * 0.6;// cut_out 相对保守
+  lead_d_path_thr = lead_d_path_thr * config_.extra_ratio_for_cut_out;// cut_out 相对保守
 
   if (obstacle.is_static()) {
     // 如果静态障碍物被赋予了FOLLOW，则整个5s都为FOLLOW
