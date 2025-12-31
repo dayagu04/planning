@@ -193,6 +193,7 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
     planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
     planning_input_.set_safe_distance(config_.safe_distance);
+    planning_input_.set_q_emergency_stop(0.0);
   } else {
     planning_input_.set_q_ref_pos(config_.q_ref_pos);
     planning_input_.set_q_ref_vel(config_.q_ref_vel);
@@ -210,6 +211,15 @@ void SccLongitudinalMotionPlannerV3::AssembleInput() {
     planning_input_.set_q_jerk_start(config_.q_jerk_start);
     planning_input_.set_q_pos_safe_cost(config_.q_pos_safe_cost);
     planning_input_.set_safe_distance(config_.safe_distance);
+    planning_input_.set_q_emergency_stop(0.0);
+  }
+
+  const auto& lon_ref_path_decider_output =
+      session_->planning_context().lon_ref_path_decider_output();
+  if (lon_ref_path_decider_output.is_comfort_target_lon_emergency_stop){
+    planning_input_.set_q_acc(1.0);
+    planning_input_.set_q_acc_start(0.0);
+    planning_input_.set_q_emergency_stop(config_.q_emergency_stop);
   }
 
   // what is s_stop?
