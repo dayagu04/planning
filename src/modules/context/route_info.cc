@@ -2461,12 +2461,14 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+
+  // 输出到上一个交换区终点的距离，在交换区rear位置计算到前方end_fp距离(负值)
   if (last_exchange_region_info_.is_process_split &&
       last_split_link_id ==
           last_exchange_region_info_.last_exchange_info.split_link_id) {
-    route_info_output_.last_split_end_point_distance = std::abs(
+    route_info_output_.last_split_end_point_distance =
         dis_to_last_split_point - last_exchange_region_info_.last_exchange_info
-                                      .end_fp_point.fp_distance_to_split_point);
+                                      .end_fp_point.fp_distance_to_split_point;
   } else {
     route_info_output_.last_split_end_point_distance = NL_NMAX;
   }
