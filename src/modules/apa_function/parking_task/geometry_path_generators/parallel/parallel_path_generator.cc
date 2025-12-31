@@ -312,9 +312,9 @@ const bool ParallelPathGenerator::Update() {
     return false;
   }
   //limiter
-  if(input_.ego_info_under_slot.slot.GetLimiter().valid && input_.ego_info_under_slot.cur_pose.GetY() < -2.0 ){
-    return false;
-  }
+  // if(input_.ego_info_under_slot.slot.GetLimiter().valid && input_.ego_info_under_slot.cur_pose.GetY() < -2.0 ){
+  //   return false;
+  // }
 
   const double start_time = IflyTime::Now_ms();
 
