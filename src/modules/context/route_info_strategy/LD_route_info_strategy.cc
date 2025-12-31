@@ -1933,14 +1933,26 @@ bool LDRouteInfoStrategy::IsLaneSuccessorInPlannedRoute(
       return false;
     }
 
-    if (iterator_lane->successor_lane_ids_size() != 1) {
-      // 由于目前1分2车道检测不稳定，后继不为1的直接认为不在route上，不会被放进feasible lane中
-      // 后续根据测试效果，确定是否需要更精确的判断
-      return false;
+    const iflymapdata::sdpro::Lane* successor_lane = nullptr;
+    for (const auto& lane_id : iterator_lane->successor_lane_ids()) {
+      const auto& temp_successor_lane = ld_map_.GetLaneInfoByID(lane_id);
+      if (temp_successor_lane == nullptr) {
+        continue;
+      }
+
+      if (IsDecelerateLane(temp_successor_lane) ||
+          IsExitLane(temp_successor_lane)) {
+        continue;
+      }
+
+      if (!ld_map_.isOnRouteLinks(temp_successor_lane->link_id())) {
+        continue;
+      }
+
+      successor_lane = temp_successor_lane;
+      break;
     }
 
-    const uint64 successor_lane_id = iterator_lane->successor_lane_ids()[0];
-    const auto& successor_lane = ld_map_.GetLaneInfoByID(successor_lane_id);
     if (successor_lane == nullptr) {
       return false;
     }
