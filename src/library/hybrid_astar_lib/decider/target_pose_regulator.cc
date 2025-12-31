@@ -188,7 +188,7 @@ void TargetPoseRegulator::Process(
   max_lat_buffer_ = 0.3f;
   low_confidence_zone_for_vertical_ = 0.3f;
   low_confidence_zone_for_slant_ = 0.4f;
-  edt->UpdateSafeBuffer(0.0, 0.0, 0.0);
+  edt->UpdateSafeBuffer(false, 0.0, 0.0, 0.0);
 
   UpdateReferenceLinePath(request, veh_param, direction_request, edt);
 
@@ -284,7 +284,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 10;           // 行数
+  constexpr size_t kNumberRows = 10;          // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长
@@ -369,7 +369,7 @@ void TargetPoseRegulator::GenerateCandidatesForVerticalHeadOut(
   Pose2f global_pose;
   global_pose = target_;
   constexpr size_t kNumCandidateColumns = 5;  // 列数
-  constexpr size_t kNumberRows = 10;           // 行数
+  constexpr size_t kNumberRows = 10;          // 行数
   constexpr size_t kMidCandidateNum = 8;      //
   constexpr float kYLowerMid = -0.2f;         // 中间方向Y轴起始偏移
   constexpr float kYStepMiddle = 0.05f;       // 中间方向Y轴步长

@@ -54,7 +54,7 @@ class FootPrintCircleModel {
   // mirror_buffer: mirror buffer
   // big_circle_safe_buffer: for accelerate computation, this buffer can filt
   // collision;
-  void UpdateSafeBuffer(const float lat_safe_buffer,
+  void UpdateSafeBuffer(const bool fold_mirror, const float lat_safe_buffer,
                         const float lon_safe_buffer, const float mirror_buffer,
                         const float big_circle_safe_buffer = 0.35);
 

@@ -29,7 +29,7 @@ HybridAStarInterface::HybridAStarInterface() {}
 
 HybridAStarInterface::~HybridAStarInterface() {}
 
-int HybridAStarInterface::Init(const VehicleParam &veh_param) {
+int HybridAStarInterface::Init(const VehicleParam& veh_param) {
   config_.InitConfig();
 
   // read vehicle params
@@ -252,7 +252,7 @@ void HybridAStarInterface::GeneratePath(const Eigen::Vector3d& start,
   }
 
   hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer, lat_buffer_inside_slot,
-                                          lon_buffer);
+                                          lon_buffer, request_.fold_mirror);
   hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
 
   dp_heuristic_generator_->GenerateDpMap(GetGoalPoint().x, GetGoalPoint().y,
@@ -713,7 +713,8 @@ void HybridAStarInterface::ParkInPathSearchForScenarioRunning(
     lat_buffer_inside = advised_lat_buffer_inside;
     lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
-                                            lat_buffer_inside, lon_buffer);
+                                            lat_buffer_inside, lon_buffer,
+                                            request_.fold_mirror);
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     // search single shot path.
@@ -801,7 +802,8 @@ void HybridAStarInterface::ParkOutPathSearchForScenarioRunning(
     lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
     lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
     hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
-                                            lat_buffer_inside, lon_buffer);
+                                            lat_buffer_inside, lon_buffer,
+                                            request_.fold_mirror);
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     if (request_.path_generate_method ==
@@ -847,8 +849,9 @@ void HybridAStarInterface::PathSearchForScenarioTry(
   advised_lat_buffer_inside =
       config_.safe_buffer.scenario_try_lat_buffer_inside;
   lon_buffer = config_.safe_buffer.scenario_try_lon_buffer;
-  hybrid_astar_->UpdateCarBoxBySafeBuffer(
-      lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+  hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
+                                          advised_lat_buffer_inside, lon_buffer,
+                                          request_.fold_mirror);
   hybrid_astar_->SetSearchTime(config_.max_search_time_ms);
 
   // todo: 需要限制搜索时间
@@ -910,8 +913,9 @@ void HybridAStarInterface::PathSamplingForScenarioRunning() {
     lat_buffer_outside = config_.safe_buffer.lat_safe_buffer_outside[i];
     lon_buffer = config_.safe_buffer.lon_safe_buffer[i];
     advised_lat_buffer_inside = config_.safe_buffer.lat_safe_buffer_inside[i];
-    hybrid_astar_->UpdateCarBoxBySafeBuffer(
-        lat_buffer_outside, advised_lat_buffer_inside, lon_buffer);
+    hybrid_astar_->UpdateCarBoxBySafeBuffer(lat_buffer_outside,
+                                            advised_lat_buffer_inside,
+                                            lon_buffer, request_.fold_mirror);
     hybrid_astar_->SetSearchTime(config_.search_time_by_buffer[i]);
 
     if (IsSamplingBasedPlanning(request_.path_generate_method)) {
@@ -1145,8 +1149,8 @@ void HybridAStarInterface::DebugSearchTraj(const size_t path_index) {
   search_traj_info_.size++;
 }
 
-const bool HybridAStarInterface::ShouldStopSearchEarly(double& search_time,
-                                                 const size_t path_index) {
+const bool HybridAStarInterface::ShouldStopSearchEarly(
+    double& search_time, const size_t path_index) {
   // check time
   search_time += traj_candidates_[path_index].time_ms;
   time_benchmark_.time_ms[path_index] = traj_candidates_[path_index].time_ms;
@@ -1168,7 +1172,8 @@ const bool HybridAStarInterface::ShouldStopSearchEarly(double& search_time,
   return false;
 }
 
-void HybridAStarInterface::GetRoundRobinTarget(std::vector<Pose2f>& candidates) {
+void HybridAStarInterface::GetRoundRobinTarget(
+    std::vector<Pose2f>& candidates) {
   hybrid_astar_->GetRoundRobinTarget(candidates);
   return;
 }

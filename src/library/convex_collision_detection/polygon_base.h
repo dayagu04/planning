@@ -233,7 +233,7 @@ void GetVehPolygonBy8Edge(const double lat_buffer, const double lon_buffer,
 // Compact car body for accurate safe check.
 void GenerateVehCompactPolygon(const double lateral_safe_buffer,
                                const double lon_safe_buffer,
-                               const double aabb_buffer,
+                               const double aabb_buffer, const bool fold_mirror,
                                PolygonFootPrint *foot_print);
 
 void GenerateMirrorPolygon(const double x_length, const double y_length,
@@ -244,9 +244,9 @@ void GenerateBoundingBox(const double x_length, const double y_length,
                          std::vector<Eigen::Vector2d> &box);
 
 void GeneratePtsByBox(const double x_length, const double y_length,
-                     const Eigen::Vector2d &center,
-                     std::vector<Eigen::Vector2d> &pts,
-                     const double sample_ds = 0.2);
+                      const Eigen::Vector2d &center,
+                      std::vector<Eigen::Vector2d> &pts,
+                      const double sample_ds = 0.2);
 
 void LocalPolygonToGlobal(const std::vector<Eigen::Vector2d> &poly_local,
                           const Pose2D &global_pose,
