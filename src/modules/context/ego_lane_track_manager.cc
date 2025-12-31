@@ -175,6 +175,7 @@ void EgoLaneTrackManger::TrackEgoLane(
     last_track_ego_lane_ = nullptr;
     lcc_split_select_is_finish_ = false;
     interactive_select_split_counter_ = 0;
+    enable_output_split_select_classical_chinese_ = false;
   }
   if (!active ||
       function_info.function_mode() == common::DrivingFunctionInfo::ACC) {
@@ -407,6 +408,7 @@ void EgoLaneTrackManger::TrackEgoLane(
                   lane_change_cmd);
               if (is_exist_interactive_select_split_) {
                 interactive_select_split_counter_ = 3;
+                enable_output_split_select_classical_chinese_ = true;
                 return;
               } else {
                 interactive_select_split_counter_--;
@@ -1714,6 +1716,7 @@ void EgoLaneTrackManger::ProcessIntersectionSplit(
             lane->set_relative_id(lane_relative_id);
           }
           is_exist_split_on_intersection_ = true;
+          enable_output_split_select_classical_chinese_ = true;
           return;
         } else {
           return;

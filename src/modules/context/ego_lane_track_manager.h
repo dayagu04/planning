@@ -164,6 +164,10 @@ class EgoLaneTrackManger {
     return is_exist_interactive_select_split_;
   }
 
+  bool enable_output_split_select_classical_chinese() const {
+    return enable_output_split_select_classical_chinese_;
+  }
+
   int interactive_select_split_counter() const {
     return interactive_select_split_counter_;
   }
@@ -248,6 +252,7 @@ class EgoLaneTrackManger {
   bool is_on_road_select_ramp_situation_ = false;
   bool is_interactive_select_split_situation_ = false;
   bool is_exist_interactive_select_split_ = false;
+  bool enable_output_split_select_classical_chinese_ = false;
   bool is_select_ego_lane_without_plan_ = false;
   bool is_select_ego_lane_with_plan_ = false;
   bool other_split_lane_right_side_ = false;
