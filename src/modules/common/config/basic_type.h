@@ -393,7 +393,6 @@ struct RouteInfoOutput {
     accumulate_dis_ego_to_last_split_point = NL_NMAX;
     sum_dis_to_last_split_point_on_ramp = NL_NMAX;
     distance_to_toll_station = NL_NMAX;
-    last_split_end_point_distance = NL_NMAX;
     is_ego_on_city_expressway_hmi = false;
     is_ego_on_expressway_hmi = false;
     is_exist_toll_station = false;

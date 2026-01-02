@@ -184,7 +184,7 @@ void EgoLaneTrackManger::TrackEgoLane(
         NOASplitRegionInfo merge_region_info;
         NOASplitRegionInfo split_region_info;
         const auto& current_exchange_region_info =
-            route_info_output.current_exchange_region_info;
+            mlc_decider_route_info.first_static_split_region_info;
         if (current_exchange_region_info.is_ramp_merge ||
             current_exchange_region_info.is_other_merge_to_road) {
           merge_region_info = current_exchange_region_info;
