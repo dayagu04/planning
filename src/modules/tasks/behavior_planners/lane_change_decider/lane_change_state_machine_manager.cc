@@ -1539,7 +1539,8 @@ void LaneChangeStateMachineManager::ResetStateMachine() {
 }
 void LaneChangeStateMachineManager::WeaklyResetStateMachine() {
   if (transition_info_.lane_change_status != kLaneChangePropose &&
-      transition_info_.lane_change_status != kLaneKeeping) {
+      transition_info_.lane_change_status != kLaneKeeping &&
+      transition_info_.lane_change_status != kLaneChangeHold) {
     return;
   }
   transition_info_.Rest();
