@@ -247,9 +247,14 @@ const std::vector<Eigen::Vector2d> ParallelPathGenerator::GetVirtualObs() {
 
 const ParallelPathGenerator::PaPlanMethod
 ParallelPathGenerator::CheckPaParkCondition() {
-  const double switch_plan_ratio = 1.05;
   PaPlanMethod res = PaPlanMethod::PaSturnPlan;
+  if (!enable_pa_park_) {
+    ILOG_INFO << "disable pa park";
+    return res;
+  }
+  const double switch_plan_ratio = 1.05;
   if (input_.tlane.use_sturn_plan) {
+    first_pa_plan_method_ = res;
     ILOG_INFO << "pa use sturn plan";
     return res;
   }
@@ -282,11 +287,13 @@ ParallelPathGenerator::CheckPaParkCondition() {
   } else {
     ILOG_INFO << "first PaPlanMethod res = " << static_cast<int>(res);
     if (first_pa_plan_method_ == PaPlanMethod::ApaOutSlotPlan) {
-      if (had_park_out && sec_ratio < switch_plan_ratio) {
-        res = PaPlanMethod::ApaInSlotPlan;
-      } else {
+      if (had_park_out) {
         res = PaPlanMethod::ApaOutSlotPlan;
+      } else {
+        res = PaPlanMethod::ApaInSlotPlan;
       }
+    } else if (first_pa_plan_method_ == PaPlanMethod::PaSturnPlan) {
+      res = PaPlanMethod::PaSturnPlan;
     }
   }
   ILOG_INFO << "second PaPlanMethod res = " << static_cast<int>(res);
@@ -4925,11 +4932,13 @@ const bool ParallelPathGenerator::CheckPathInTlane(
     return false;
   }
 
+  const double tlane_x_offset =
+      apa_param.GetParam().wheel_base + apa_param.GetParam().front_overhanging;
   for (int i = 0; i < path_vec.size(); i++) {
     std::vector<PathPoint> pt_set;
     SamplePointSetInPathSeg(pt_set, path_vec[i], 0.2);
     for (int i = 0; i < pt_set.size(); i++) {
-      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x(),
+      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x() - tlane_x_offset,
                        tlane_corner.F.x()) &&
              IsInBound(pt_set[i].GetY(), tlane_corner.A.y(),
                        tlane_corner.channel_point_1.y())) ||
