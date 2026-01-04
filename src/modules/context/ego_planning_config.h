@@ -6304,6 +6304,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
                        "lat_offset_buffer");
       ReadItem<double>(json, target_lane_side_cut_in_check_time, "lane_change_safety_check",
                        "target_lane_side_cut_in_check_time");
+      ReadItem<double>(json, hold_steer_angle_rate_limit_deg, "lane_change_safety_check",
+                       "hold_steer_angle_rate_limit_deg");
     }
     double exe_ttc_ratio = 0.5;
     double exe_rear_speed_ratio = 1.1;
@@ -6315,6 +6317,8 @@ struct LanChangeSafetyCheckConfig : public EgoPlanningConfig {
     double faster_rear_delay_time = 0.2;  // 后车响应延迟时间
     double lat_offset_buffer = 0.35;  // 横向贴边偏移缓冲区（米）
     double target_lane_side_cut_in_check_time = 1.5;  // 目标车道侧方车切入检查时间窗口（秒）
+    double hold_steer_angle_rate_limit_deg = 150.0;  // hold状态下的方向盘转速限制（度/秒）
+    
     struct DiffSpeedInitTTCable {
         std::vector<double> diff_kph_table{0.0, 5.0,  8.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0};  // 后车 - 自车速度 kph
         std::vector<double> ttc_table     {0.5, 0.8,  1.0, 1.5,  4.0, 5.0, 8.0, 9.5, 10.0};  // 起始ttc

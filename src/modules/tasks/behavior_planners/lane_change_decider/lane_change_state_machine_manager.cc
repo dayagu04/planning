@@ -5024,10 +5024,36 @@ double LaneChangeStateMachineManager::CalculateLCHoldStateLatOffset() const {
   //         -(lat_error + std::abs(fix_ref_path->get_frenet_ego_state().l()));
   //   }
   // }
+  //jerk约束低速基于steer rate
+  double vel = fix_ref_path->get_frenet_ego_state().velocity();
+  const auto &vehicle_param =
+  VehicleConfigurationContext::Instance()->get_vehicle_param();
+  double curv_factor = 1 / std::max(vehicle_param.wheel_base, 1e-6);
+  const double kv2 = curv_factor * vel * vel;
+  double steer_ratio = vehicle_param.steer_ratio;
+  double max_steer_angle = vehicle_param.max_steer_angle;  // rad
+  double max_steer_angle_rate_lc = 
+    std::min(vehicle_param.max_steer_angle_rate, 
+             lc_safety_check_config_.hold_steer_angle_rate_limit_deg / 57.3);
+  double max_wheel_angle_rate_lc = max_steer_angle_rate_lc / steer_ratio;
+  double steer_limit_jerk = max_wheel_angle_rate_lc * kv2;
+  // 正常行驶基于横向差值
+  std::vector<double> vel_table{4.167, 8.333, 16.667, 25.0};
+  std::vector<double> jerk_table{1.2, 1.5, 1.4, 1.0};
+  double jerk_bound = planning::interp(vel, vel_table, jerk_table);
+  double limit_jerk_hold = std::min(steer_limit_jerk, jerk_bound);
+  //初始状态
+  double vy = fix_ref_path->get_frenet_ego_state().velocity_l();
+  double ego_steer_angle = session_->environmental_model().get_ego_state_manager()->ego_steer_angle();
+  double ego_s = fix_ref_path->get_frenet_ego_state().s();
+  double lat_acc = ego_steer_angle * kv2 / steer_ratio;
+  double inertial_distance = ComputeInertialLatOffset(vy, lat_acc, limit_jerk_hold);
+  //限幅
+  inertial_distance = std::max(std::min(inertial_distance, half_fix_lane_width), 0.0);
   if (transition_info_.lane_change_direction == LEFT_CHANGE) {
-    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + 0.1;
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() + inertial_distance;
   } else {
-    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - 0.1;
+    lc_hold_state_lat_offset = fix_ref_path->get_frenet_ego_state().l() - inertial_distance;
   }
   return lc_hold_state_lat_offset;
 }
@@ -5831,7 +5857,26 @@ LaneChangeStateMachineManager::CalcTurnSignalForBaiduSplitRegion() const {
                  SPLIT_LEFT) {
     return RAMP_ON_LEFT;
   }
-
   return RAMP_NONE;
+}
+double LaneChangeStateMachineManager::ComputeInertialLatOffset(double v_y0, double a_y0, double j_max) const {
+  v_y0 = std::fabs(v_y0);
+  a_y0 = std::fabs(a_y0);
+  j_max = std::fabs(j_max);
+
+  if (j_max < kEps) {
+      return 0.0;
+  }
+
+  v_y0 = std::max(0.0, v_y0);
+  a_y0 = std::max(0.0, a_y0);
+
+  if (v_y0 < kEps && a_y0 < kEps) {
+      return 0.0;
+  }
+
+  return
+      (v_y0 * a_y0) / j_max +
+      (a_y0 * a_y0 * a_y0) / (3.0 * j_max * j_max);
 }
 }  // namespace planning
