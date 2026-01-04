@@ -2056,6 +2056,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       valid_exchange_regions.erase(valid_exchange_regions.begin());
       is_remove_other_merge = true;
     }
+    if ((!is_exchange_close || !is_exchange_direction_conflict) &&
+        is_no_need_handle_exchange) {
+      other_merge_lane_num = 0;
+    }
   }
   // 获取当前地图车道数（不含应急）
   std::vector<int> current_lane_vec;
