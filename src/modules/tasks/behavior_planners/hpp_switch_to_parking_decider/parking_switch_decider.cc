@@ -107,11 +107,12 @@ bool ParkingSwitchDecider::Execute() {
       } else {
         parking_switch_info_.is_timeout_for_target_slot_allowed_to_park = false;
       }
+      last_is_standstill_near_target_slot_ = true;
     } else {
       parking_switch_info_.is_standstill_near_target_slot = false;
       timestamp_at_standstill_near_dest_ = 0.0;
+      last_is_standstill_near_target_slot_ = false;
     }
-    last_is_standstill_near_target_slot_ = parking_switch_info_.is_standstill_near_target_slot;
   } else {
     // do nothing
   }
