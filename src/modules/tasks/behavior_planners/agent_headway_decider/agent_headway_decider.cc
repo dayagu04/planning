@@ -70,6 +70,9 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
                                  lane_change_state == kLaneChangeHold ||
                                  lane_change_state == kLaneChangeComplete;
   const bool is_in_lane_change_propose = lane_change_state == kLaneChangePropose;
+  if (is_in_lane_change || is_in_lane_change_propose) {
+    lc_to_lk_thw_is_init_ = false;
+  }
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -201,8 +204,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
                    last_gap_front_agent_id_) !=
                    yeild_agents_ids_periods_in_st_pass_corridor.end() &&
                st_agent_id == last_gap_front_agent_id_ &&
-               lane_change_state != kLaneChangeExecution &&
-               lane_change_state != kLaneChangeComplete) {
+               !is_in_lane_change_propose && !is_in_lane_change) {
       if (CalculateTHWInLaneChangeToLaneKeep(gear_headway)) {
         continue;
       }
