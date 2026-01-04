@@ -200,7 +200,9 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
     } else if (yeild_agents_ids_periods_in_st_pass_corridor.find(
                    last_gap_front_agent_id_) !=
                    yeild_agents_ids_periods_in_st_pass_corridor.end() &&
-               st_agent_id == last_gap_front_agent_id_) {
+               st_agent_id == last_gap_front_agent_id_ &&
+               lane_change_state != kLaneChangeExecution &&
+               lane_change_state != kLaneChangeComplete) {
       if (CalculateTHWInLaneChangeToLaneKeep(gear_headway)) {
         continue;
       }
