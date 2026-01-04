@@ -591,7 +591,7 @@ void TsrCore::UpdateTsrSpeedLimit(void) {
 
   // bestune_e541车型：仪表车速小于4km/h时不显示限速
   if (GetContext.get_param()->car_type == "bestune_e541" &&
-      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 4.0) {
+      vehicle_service_output_info_ptr->vehicle_speed_display * 3.6 < 3.8) {
     tsr_speed_limit_ = 0;
   }
 
