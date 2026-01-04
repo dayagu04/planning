@@ -22,6 +22,7 @@ constexpr double user_time_gap = 1.5;
 constexpr double lane_change_decrease_time_gap = 0.5;
 constexpr double neighbor_valid_decrease_time_gap = 0.8;
 constexpr double k_first_appear_time_gap = 1.0;
+constexpr double kEpsilon = 1e-6;
 constexpr double kHighSpeedDiffThd = -0.5;
 constexpr double kTflVirtualAgentHW = 1.5;
 constexpr double kInterestPredictionTrajScope_s = 3.6;
@@ -68,7 +69,7 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
   const bool is_in_lane_change = lane_change_state == kLaneChangeExecution ||
                                  lane_change_state == kLaneChangeHold ||
                                  lane_change_state == kLaneChangeComplete;
-  const bool is_in_lane_change_propose = lane_change_state == kLaneChangePropose;                               
+  const bool is_in_lane_change_propose = lane_change_state == kLaneChangePropose;
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
@@ -191,7 +192,8 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
       continue;
     }
 
-    if (gap_front_agent_id == st_agent_id) {
+    if (gap_front_agent_id == st_agent_id && (lane_change_state == kLaneChangeExecution||
+      lane_change_state == kLaneChangeComplete)) {
       CalculateTHWInLaneChange(st_agent_id, gear_headway);
       last_gap_front_agent_id_ = gap_front_agent_id;
       continue;
@@ -339,12 +341,6 @@ bool AgentHeadwayDecider::UpdateAgentsHeadwayInfos() {
 
 void AgentHeadwayDecider::CalculateTHWInLaneChange(
     const int32_t gap_front_agent_id, const double thw_request) {
-  const auto& lane_change_decider_output =
-      session_->planning_context().lane_change_decider_output();
-  const auto lane_change_state = lane_change_decider_output.curr_state;
-  const bool is_in_lane_change = lane_change_state == kLaneChangeExecution ||
-                                 lane_change_state == kLaneChangeComplete;
-  const auto& st_graph = session_->planning_context().st_graph_helper();
   const auto& dynamic_world =
       session_->environmental_model().get_dynamic_world();
   const auto& ego_state_manager =
@@ -353,10 +349,6 @@ void AgentHeadwayDecider::CalculateTHWInLaneChange(
   const auto* st_graph_helper = session_->planning_context().st_graph_helper();
   const double v_ego =
       ego_state_manager->planning_init_point().lon_init_state.v();
-
-  if (!is_in_lane_change) {
-    return;
-  }
 
   const auto& yeild_agents_ids_periods_in_st_pass_corridor =
       st_graph_helper->yeild_agents_ids_periods_in_st_pass_corridor();
@@ -459,33 +451,70 @@ void AgentHeadwayDecider::CalculateTHWInLaneChange(
 
 bool AgentHeadwayDecider::CalculateTHWInLaneChangeToLaneKeep(
     const double thw_request) {
-  if (fabs(agents_headway_map_[last_gap_front_agent_id_].current_headway -
-           thw_request) < 1e-3) {
-    last_gap_front_agent_id_ = -1;
-    return true;
-  }
-  const auto& last_lon_s_ref_target_types =
-      session_->planning_context().lon_s_ref_target_types();
-  double last_follow_types_size = 0;
-  for (const auto type : last_lon_s_ref_target_types) {
-    if (type == planning::TargetType::kFollow) {
-      last_follow_types_size += 1.0;
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  const auto* st_graph_helper = session_->planning_context().st_graph_helper();
+  auto virtual_acc_curve = MakeVirtualZeroAccCurve();
+  double max_dis_between_boundry_ego_curv = std::numeric_limits<double>::min();
+  double current_ego_dis_to_low_boundry = std::numeric_limits<double>::max();
+  std::map<int, double> boundry_time_idx_to_dis;
+  std::vector<int64_t> boundaries;
+  if (st_graph_helper->GetAgentStBoundaries(last_gap_front_agent_id_, &boundaries)) {
+    for (const auto boundary_id : boundaries) {
+      speed::STBoundary st_boundary;
+      if (st_graph_helper->GetStBoundary(boundary_id, &st_boundary)) {
+        const auto& lower_pts = st_boundary.lower_points();
+        for (int idx = 0; idx < lower_pts.size(); ++idx) {
+          const auto& pt = lower_pts[idx];
+          if (std::fabs(pt.t() - 0.0) < kEpsilon) {
+            if (current_ego_dis_to_low_boundry > pt.s()) {
+              current_ego_dis_to_low_boundry = pt.s();
+            }
+          }
+          max_dis_between_boundry_ego_curv = pt.s() - virtual_acc_curve->Evaluate(0, pt.t());
+          double ego_vel_on_t = virtual_acc_curve->Evaluate(1, pt.t());
+          if (max_dis_between_boundry_ego_curv < ego_vel_on_t * 0.3 + 3.0) {
+            int time_idx = static_cast<int>(std::round(pt.t() / kTimeResolutionPredTraj));
+            boundry_time_idx_to_dis.insert({time_idx, max_dis_between_boundry_ego_curv});
+          }
+        }
+      }
     }
   }
-  const double last_follow_types_percent =
-      last_follow_types_size / last_lon_s_ref_target_types.size();
-  if (last_follow_types_percent >= 0.65) {
-    thw_lane_change_slope_filter_.Init(
-        agents_headway_map_[last_gap_front_agent_id_].current_headway, 0.0,
-        config_.thw_low_rate_lane_change_to_lane_keep,
-        config_.thw_init_value_lane_change, thw_request, kPlanningdt);
+  int boundry_time_idx_to_dis_map_size = boundry_time_idx_to_dis.size();
+  double headway_expand_rate_scale = 1.0;
+  double headway_init_rate_scale = 1.0;
+  headway_expand_rate_scale = planning_math::LerpWithLimit(
+    1.0, 5, 2.0,
+    20, boundry_time_idx_to_dis_map_size);
+  auto iter = boundry_time_idx_to_dis.upper_bound(10);
+  if(iter != boundry_time_idx_to_dis.end() && iter != boundry_time_idx_to_dis.begin()) {
+    headway_init_rate_scale = planning_math::LerpWithLimit(
+      1.6, 4, 1.1,
+      10, boundry_time_idx_to_dis.begin()->first);
+  }
+
+  double ego_current_pos_headway = (current_ego_dis_to_low_boundry - 4.0) / ego_state_manager->planning_init_point().v;
+  ego_current_pos_headway = std::fmax(ego_current_pos_headway, 0.1);
+  if (fabs(ego_current_pos_headway - thw_request) < 1e-3) {
+    agents_headway_map_[last_gap_front_agent_id_].current_headway = thw_request;
+    last_gap_front_agent_id_ = -1;
+    lc_to_lk_thw_is_init_ = false;
+    return true;
+  } else {
+    if (!lc_to_lk_thw_is_init_) {
+      thw_lane_change_slope_filter_.Init(
+        ego_current_pos_headway * headway_init_rate_scale, -config_.thw_low_rate_lane_change_to_lane_keep,
+          config_.thw_low_rate_lane_change_to_lane_keep * headway_expand_rate_scale,
+          config_.thw_init_value_lane_change, thw_request, kPlanningdt);
+      lc_to_lk_thw_is_init_ = true;
+    }
+
     thw_lane_change_slope_filter_.Update(thw_request);
     agents_headway_map_[last_gap_front_agent_id_].current_headway =
         thw_lane_change_slope_filter_.GetOutput();
     return true;
   }
-
-  return false;
 }
 
 void AgentHeadwayDecider::MatchHeadwayWithGearTable(
@@ -709,6 +738,44 @@ int32_t AgentHeadwayDecider::GetOriginLaneFrontAgentId() {
   }
 
   return -1;
+}
+
+std::unique_ptr<Trajectory1d> AgentHeadwayDecider::MakeVirtualZeroAccCurve() {
+  const auto& ego_state_manager =
+      session_->environmental_model().get_ego_state_manager();
+  std::array<double, 3> init_lon_state = {0., ego_state_manager->planning_init_point().v,
+                                          ego_state_manager->planning_init_point().a};
+
+  auto virtual_zero_acc_curve =
+      std::make_unique<PiecewiseJerkAccelerationTrajectory1d>(
+          init_lon_state[0], init_lon_state[1]);
+  virtual_zero_acc_curve->AppendSegment(init_lon_state[2], dt_);
+
+  const double zero_acc_jerk_max = 0.5;
+  const double zero_acc_jerk_min = -1.0;
+  for (double t = dt_; t <= plan_time_; t += dt_) {
+    const double acc = virtual_zero_acc_curve->Evaluate(2, t);
+    const double vel = virtual_zero_acc_curve->Evaluate(1, t);
+
+    double a_next = 0.0;
+    // if init acc < 0.0, move a to zero with jerk max
+    // if init acc >0.0,move a to zero with jerk min
+    if (init_lon_state[2] < 0.0) {
+      a_next = acc + dt_ * zero_acc_jerk_max;
+    } else {
+      a_next = acc + dt_ * zero_acc_jerk_min;
+    }
+
+    if (init_lon_state[2] * acc <= 0.0) {
+      a_next = 0.0;
+    }
+
+    if (vel <= 0.0) {
+      a_next = 0.0;  //??
+    }
+    virtual_zero_acc_curve->AppendSegment(a_next, dt_);
+  }
+  return virtual_zero_acc_curve;
 }
 
 }  // namespace planning
