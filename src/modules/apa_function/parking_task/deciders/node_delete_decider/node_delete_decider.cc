@@ -101,6 +101,8 @@ const bool NodeDeleteDecider::CheckShouldBeDeleted(NodeDeleteRequest request) {
   request_ = request;
   reason_ = NodeDeleteReason::UNKNOWN;
 
+  // current_node and curve_node should not be both nullptr, but one of them
+  // should be nullptr.
   if (request.current_node == nullptr && request.curve_node == nullptr) {
     return true;
   }
@@ -139,8 +141,23 @@ const bool NodeDeleteDecider::CheckShouldBeDeletedForPerpendicularTailIn() {
       return true;
     }
 
+    if (CheckExceedScurveNum()) {
+      reason_ = NodeDeleteReason::EXCEED_SCURVE_NUMBER;
+      return true;
+    }
+
     if (CheckDelByStartNode()) {
       reason_ = NodeDeleteReason::START_NODE;
+      return true;
+    }
+
+    if (CheckZigzagPath()) {
+      reason_ = NodeDeleteReason::ZIGZAG_PATH;
+      return true;
+    }
+
+    if (CheckBacktrackPath()) {
+      reason_ = NodeDeleteReason::BACKTRACK_PATH;
       return true;
     }
 
@@ -450,22 +467,20 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
       }
     }
   } else {
-    if (request_.current_node != nullptr) {
-      const CurvePath& curve_path = request_.curve_node->GetCurvePath();
-      for (const auto& points : curve_path.ptss) {
-        for (size_t i = 0; i < points.size(); ++i) {
-          if (i > 0 && i < points.size() - 1) {
-            continue;
-          }
-          const auto& pose = points[i];
-          if (pose.GetX() < pose_bound_.curve_x_down_bound ||
-              pose.GetX() > pose_bound_.x_up_bound ||
-              pose.GetY() < pose_bound_.y_down_bound ||
-              pose.GetY() > pose_bound_.y_up_bound ||
-              std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
-              std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
-            return true;
-          }
+    const CurvePath& curve_path = request_.curve_node->GetCurvePath();
+    for (const auto& points : curve_path.ptss) {
+      for (size_t i = 0; i < points.size(); ++i) {
+        if (i > 0 && i < points.size() - 1) {
+          continue;
+        }
+        const auto& pose = points[i];
+        if (pose.GetX() < pose_bound_.curve_x_down_bound ||
+            pose.GetX() > pose_bound_.x_up_bound ||
+            pose.GetY() < pose_bound_.y_down_bound ||
+            pose.GetY() > pose_bound_.y_up_bound ||
+            std::fabs(pose.GetTheta()) < pose_bound_.heading_down_bound ||
+            std::fabs(pose.GetTheta()) > pose_bound_.heading_up_bound) {
+          return true;
         }
       }
     }
@@ -475,16 +490,10 @@ const bool NodeDeleteDecider::CheckOutOfPoseBound() {
 }
 
 const bool NodeDeleteDecider::CheckOutOfGridBound() {
-  NodeGridIndex id;
-  if (request_.curve_node != nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
-
-  if (request_.current_node != nullptr) {
-    id = request_.current_node->GetIndex();
-  } else {
-    return false;
-  }
+  const NodeGridIndex id = request_.current_node->GetIndex();
 
   if (id.x < 0 || id.x >= input_.map_grid_bound.x || id.y < 0 ||
       id.y >= input_.map_grid_bound.y || id.phi < 0 ||
@@ -495,10 +504,52 @@ const bool NodeDeleteDecider::CheckOutOfGridBound() {
   return false;
 }
 
-const bool NodeDeleteDecider::CheckUnexpectedGear() {
-  if (request_.curve_node != nullptr) {
+const bool NodeDeleteDecider::CheckZigzagPath() {
+  const Node3d* parent_node = request_.parent_node;
+  const Node3d* cur_node = request_.current_node;
+  if (parent_node == nullptr || cur_node == nullptr) {
     return false;
   }
+  const Node3d* grandpa_node = parent_node->GetPreNode();
+  if (grandpa_node == nullptr) {
+    return false;
+  }
+
+  if (IsGearDifferent(parent_node->GetGearType(), cur_node->GetGearType()) ||
+      IsGearDifferent(grandpa_node->GetGearType(),
+                      parent_node->GetGearType())) {
+    return false;
+  }
+
+  if (IsSteerOpposite(parent_node->GetKappa(), cur_node->GetKappa()) &&
+      IsSteerOpposite(grandpa_node->GetKappa(), parent_node->GetKappa())) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool NodeDeleteDecider::CheckBacktrackPath() {
+  const Node3d* parent_node = request_.parent_node;
+  const Node3d* cur_node = request_.current_node;
+
+  if (parent_node == nullptr || cur_node == nullptr) {
+    return false;
+  }
+
+  if (IsSteerOpposite(parent_node->GetKappa(), cur_node->GetKappa())) {
+    return false;
+  }
+
+  if (IsGearDifferent(parent_node->GetGearType(), cur_node->GetGearType()) &&
+      std::fabs(parent_node->GetKappa() - cur_node->GetKappa()) < 0.14f) {
+    return true;
+  }
+
+  return false;
+}
+
+const bool NodeDeleteDecider::CheckUnexpectedGear() {
   if (IsGearDifferent(request_.gear_request, request_.cur_gear)) {
     return true;
   }
@@ -506,9 +557,6 @@ const bool NodeDeleteDecider::CheckUnexpectedGear() {
 }
 
 const bool NodeDeleteDecider::CheckExceedGearShiftNumber() {
-  if (request_.curve_node != nullptr) {
-    return false;
-  }
   if (request_.current_node != nullptr &&
       request_.current_node->GetGearSwitchNum() >
           input_.max_gear_shift_number) {
@@ -518,16 +566,17 @@ const bool NodeDeleteDecider::CheckExceedGearShiftNumber() {
   return false;
 }
 
+const bool NodeDeleteDecider::CheckExceedScurveNum() {
+  if (request_.current_node != nullptr &&
+      request_.current_node->GetScurveNum() > input_.max_scurve_number) {
+    return true;
+  }
+
+  return false;
+}
+
 const bool NodeDeleteDecider::CheckDelByParentNode() {
-  if (request_.curve_node != nullptr) {
-    return false;
-  }
-
-  if (request_.parent_node == nullptr) {
-    return false;
-  }
-
-  if (request_.current_node == nullptr) {
+  if (request_.current_node == nullptr || request_.parent_node == nullptr) {
     return false;
   }
 
@@ -548,7 +597,7 @@ const bool NodeDeleteDecider::CheckDelByParentNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelByStartNode() {
-  if (request_.curve_node != nullptr || request_.current_node == nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
 
@@ -565,8 +614,7 @@ const bool NodeDeleteDecider::CheckDelByStartNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelByLoopBackNode() {
-  if (request_.current_node == nullptr || request_.old_node == nullptr ||
-      request_.parent_node == nullptr) {
+  if (request_.current_node == nullptr || request_.parent_node == nullptr) {
     return false;
   }
 
@@ -589,7 +637,7 @@ const bool NodeDeleteDecider::CheckDelByLoopBackNode() {
 }
 
 const bool NodeDeleteDecider::CheckDelBySameGridNodeContinuous() {
-  if (request_.current_node == nullptr || request_.old_node == nullptr) {
+  if (request_.current_node == nullptr) {
     return false;
   }
 
@@ -877,6 +925,12 @@ const std::string GetNodeDeleteReasonString(const NodeDeleteReason reason) {
       return "OUT_OF_POSE_BOUND";
     case NodeDeleteReason::COLLISION:
       return "COLLISION";
+    case NodeDeleteReason::ZIGZAG_PATH:
+      return "ZIGZAG_PATH";
+    case NodeDeleteReason::EXCEED_SCURVE_NUMBER:
+      return "EXCEED_SCURVE_NUMBER";
+    case NodeDeleteReason::BACKTRACK_PATH:
+      return "BACKTRACK_PATH";
     default:
       return "UNKNOWN";
   }

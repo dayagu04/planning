@@ -241,7 +241,7 @@ std::vector<Eigen::Vector3d> Update(Eigen::Vector3d ego_pose,
   ParkingStopDecider stop_decider =
       ParkingStopDecider(col_det_interface_ptr, localization_ptr, obstacles);
   planning::trajectory::Trajectory trajectory_;
-  stop_decider.Execute(init_point, path2, path2, trajectory_,
+  stop_decider.Execute(init_point, path2, trajectory_,
                        pnc::geometry_lib::SEG_GEAR_DRIVE);
   if (dist_to_obs < 0.06) {
     planning::LonDecisionReason decision_reason =
