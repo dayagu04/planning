@@ -543,7 +543,9 @@ void ComfortTarget::ProcessCutinAgents(
       continue;
     }
 
-    if (agent_s < ego_s && !is_confluence_area) {
+    if (agent_s < ego_s &&
+        !(is_confluence_area && upper_bound_agent_ids_.find(agent_id) !=
+                                    upper_bound_agent_ids_.end())) {
       continue;
     }
 
