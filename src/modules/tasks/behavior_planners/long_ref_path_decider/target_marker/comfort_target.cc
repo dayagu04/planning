@@ -270,33 +270,41 @@ void ComfortTarget::GenerateUpperBoundInfo() {
           session_->environmental_model().get_agent_manager()->GetAgent(
               agent_id);
 
-      const auto* st_graph_helper =
-          session_->planning_context().st_graph_helper();
-      const auto& agent_st_boundary_id_map =
-          st_graph_helper->GetAgentIdSTBoundariesMap();
-      if (st_graph_helper == nullptr || agent_st_boundary_id_map.empty()) {
+      if (agent == nullptr) {
         continue;
       }
 
-      if (agent != nullptr) {
-        if (upper_bound_agent_ids_.find(agent_id) !=
-                upper_bound_agent_ids_.end() &&
-            agent_st_boundary_id_map.find(agent_id) !=
-                agent_st_boundary_id_map.end()) {
-          const auto& st_boundary_id = agent_st_boundary_id_map.at(agent_id);
-          speed::STBoundary st_boundary;
-          if (st_graph_helper->GetStBoundary(st_boundary_id.front(),
-                                             &st_boundary)) {
-            if (st_boundary.max_t() <
-                comfort_params_.follow_max_st_boundary_t) {
-              continue;
-            }
-          }
-        }
+      const auto* st_graph_helper =
+          session_->planning_context().st_graph_helper();
+      if (st_graph_helper == nullptr) {
+        continue;
+      }
+
+      const auto& agent_st_boundary_id_map =
+          st_graph_helper->GetAgentIdSTBoundariesMap();
+
+      if (agent_st_boundary_id_map.empty()) {
         follow_agents.push_back(
             {agent, FollowAgentSource::kLatObstacleDecision});
         added_agent_ids.insert(agent_id);
+        continue;
       }
+
+      if (upper_bound_agent_ids_.find(agent_id) !=
+              upper_bound_agent_ids_.end() &&
+          agent_st_boundary_id_map.find(agent_id) !=
+              agent_st_boundary_id_map.end()) {
+        const auto& st_boundary_id = agent_st_boundary_id_map.at(agent_id);
+        speed::STBoundary st_boundary;
+        if (st_graph_helper->GetStBoundary(st_boundary_id.front(),
+                                           &st_boundary)) {
+          if (st_boundary.max_t() < comfort_params_.follow_max_st_boundary_t) {
+            continue;
+          }
+        }
+      }
+      follow_agents.push_back({agent, FollowAgentSource::kLatObstacleDecision});
+      added_agent_ids.insert(agent_id);
     }
   }
 
