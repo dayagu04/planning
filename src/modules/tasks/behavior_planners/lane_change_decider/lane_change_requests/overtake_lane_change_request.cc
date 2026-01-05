@@ -218,6 +218,12 @@ void OvertakeRequest::Update(int lc_status) {
   JSON_DEBUG_VALUE("enable_l_", enable_l_);
   JSON_DEBUG_VALUE("enable_r_", enable_r_);
 
+  //变道超时取消
+  if (current_timestamp - tstart_ > 30.0 &&
+      request_type_ != NO_CHANGE && (lc_status == kLaneChangePropose || lc_status == kLaneChangeHold)) {
+    Finish();
+    Reset();
+  }
   // updateLaneChangeSafety(left_reference_path_, right_reference_path_);
   // JSON_DEBUG_VALUE("is_left_lane_change_safe_", is_left_lane_change_safe_);
   // JSON_DEBUG_VALUE("is_right_lane_change_safe_", is_right_lane_change_safe_);
