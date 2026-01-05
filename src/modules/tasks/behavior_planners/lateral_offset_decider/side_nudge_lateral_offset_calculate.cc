@@ -387,6 +387,8 @@ bool SideNudgeLateralOffsetDecider::IsStopNudgeDirectly() {
     nudge_info_.cancel_nudge_reason = CancelNudgeReason::ST_UNION;
     return true;
   }
+
+  return false;
 }
 
 void SideNudgeLateralOffsetDecider::UpdateCurrentState() {
