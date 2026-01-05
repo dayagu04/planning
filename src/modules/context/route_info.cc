@@ -2056,6 +2056,10 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
       valid_exchange_regions.erase(valid_exchange_regions.begin());
       is_remove_other_merge = true;
     }
+    if ((!is_exchange_close || !is_exchange_direction_conflict) &&
+        is_no_need_handle_exchange) {
+      other_merge_lane_num = 0;
+    }
   }
   // 获取当前地图车道数（不含应急）
   std::vector<int> current_lane_vec;
@@ -2461,6 +2465,18 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
   }
   mlc_decider_route_info_.first_static_split_region_info =
       first_exchange_region_info;
+  route_info_output_.current_exchange_region_info = first_exchange_region_info;
+
+  // 输出到上一个交换区终点的距离，在交换区rear位置计算到前方end_fp距离(负值)
+  if (last_exchange_region_info_.is_process_split &&
+      last_split_link_id ==
+          last_exchange_region_info_.last_exchange_info.split_link_id) {
+    route_info_output_.last_split_end_point_distance =
+        dis_to_last_split_point - last_exchange_region_info_.last_exchange_info
+                                      .end_fp_point.fp_distance_to_split_point;
+  } else {
+    route_info_output_.last_split_end_point_distance = NL_NMAX;
+  }
 
   // 判断当前是否接近汇入汇出
   const auto& ego_state =
@@ -2727,20 +2743,21 @@ void RouteInfo::UpdateMLCInfoDeciderBaseTencent(
             IN_EXCHANGE_AREA_REAR) {
           ego_seq =
               last_exchange_region_info_.last_exchange_info.split_direction ==
-                      SPLIT_LEFT
-                  ? left_lane_num + 1
-                  : map_lane_num - right_lane_num;
+                      SPLIT_RIGHT
+                  ? map_lane_num - right_lane_num
+                  : left_lane_num + 1;
         } else {
           if (!exchange_region_info_list.empty()) {
-            ego_seq = exchange_region_info_list[0].split_direction == SPLIT_LEFT
-                          ? left_lane_num + 1
-                          : map_lane_num - right_lane_num;
+            ego_seq =
+                exchange_region_info_list[0].split_direction == SPLIT_RIGHT
+                    ? map_lane_num - right_lane_num
+                    : left_lane_num + 1;
           }
         }
       } else {
-        ego_seq = merge_point_direction == SPLIT_LEFT
-                      ? left_lane_num + 1
-                      : map_lane_num - right_lane_num;
+        ego_seq = merge_point_direction == SPLIT_RIGHT
+                      ? map_lane_num - right_lane_num
+                      : left_lane_num + 1;
       }
     } else {
       ego_seq = left_lane_num + 1;
@@ -3316,6 +3333,8 @@ void RouteInfo::UpdateVisionInfo() const {
   JSON_DEBUG_VALUE(
       "is_process_other_merge",
       route_info_output_.mlc_decider_route_info.is_process_other_merge);
+  JSON_DEBUG_VALUE("last_split_end_point_distance",
+                   route_info_output_.last_split_end_point_distance);
 }
 
 NOASplitRegionInfo RouteInfo::CalculateSplitRegionLaneTupoInfo(

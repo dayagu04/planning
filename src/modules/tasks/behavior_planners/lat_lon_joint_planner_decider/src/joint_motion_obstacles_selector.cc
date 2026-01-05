@@ -632,11 +632,14 @@ void JointMotionObstaclesSelector::CorrectTrajectoryInConfluenceArea(
   std::shared_ptr<VirtualLane> target_lane = nullptr;
   if (current_lane_coord->XYToSL(check_x, check_y, &check_s_current,
                                  &check_l_current) &&
-      std::fabs(check_l_current) <
-          current_lane->width_by_s(check_s_current) * 0.5) {
+      std::fabs(check_l_current) < current_lane->width() * 0.5) {
     target_lane = current_lane;
-  } else {
+  } else if (candidate_lane_coord->XYToSL(check_x, check_y, &check_s_current,
+                                          &check_l_current) &&
+             std::fabs(check_l_current) < candidate_lane->width() * 0.5) {
     target_lane = candidate_lane;
+  } else {
+    return;
   }
 
   if (target_lane == nullptr) {

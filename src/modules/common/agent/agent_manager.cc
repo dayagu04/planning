@@ -154,6 +154,7 @@ void AgentManager::Update(const double start_timestamp_s) {
     occ_agent.set_time_range({0.0, 5.0});
 
     occ_agent.set_box(occ_obs[i]->perception_bounding_box());
+    occ_agent.set_polygon(occ_obs[i]->perception_polygon());
     occ_agent.set_timestamp_s(0.0);
     occ_agent.set_timestamp_us(0.0);
     occ_agent_table.insert({occ_agent.agent_id(), occ_agent});
