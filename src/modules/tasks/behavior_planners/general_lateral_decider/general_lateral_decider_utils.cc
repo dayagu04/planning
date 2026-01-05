@@ -116,6 +116,8 @@ double CalDesireStaticLateralDistance(
     return base_distance + lateral_extra_buffer +
            config.extra_static_nudge_buffer2first_bound;
   }
+
+  return base_distance + lateral_extra_buffer;
 }
 
 double GetBoundWeight(
