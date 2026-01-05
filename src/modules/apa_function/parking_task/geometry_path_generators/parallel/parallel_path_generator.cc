@@ -4925,11 +4925,13 @@ const bool ParallelPathGenerator::CheckPathInTlane(
     return false;
   }
 
+  const double tlane_x_offset =
+      apa_param.GetParam().wheel_base + apa_param.GetParam().front_overhanging;
   for (int i = 0; i < path_vec.size(); i++) {
     std::vector<PathPoint> pt_set;
     SamplePointSetInPathSeg(pt_set, path_vec[i], 0.2);
     for (int i = 0; i < pt_set.size(); i++) {
-      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x(),
+      if (!((IsInBound(pt_set[i].GetX(), tlane_corner.A.x() - tlane_x_offset,
                        tlane_corner.F.x()) &&
              IsInBound(pt_set[i].GetY(), tlane_corner.A.y(),
                        tlane_corner.channel_point_1.y())) ||
