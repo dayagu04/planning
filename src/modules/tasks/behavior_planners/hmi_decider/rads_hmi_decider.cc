@@ -6,6 +6,7 @@ RADSHMIDecider::RADSHMIDecider(const EgoPlanningConfigBuilder* config_builder,
     framework::Session* session) : HMIDecider(config_builder, session) {
   name_ = "RADSHMIDecider";
   lateral_avoid_hmi_decider_ = std::make_shared<LateralAvoidHMIDecider>(session);
+  obstacle_brake_hmi_decider_ = std::make_shared<ObstacleBrakeHMIDecider>(session, config_);
 }
 
 bool RADSHMIDecider::Execute() {
@@ -14,6 +15,7 @@ bool RADSHMIDecider::Execute() {
     return false;
   }
   lateral_avoid_hmi_decider_->Execute();
+  obstacle_brake_hmi_decider_->Execute();
   return true;
 }
 }  // namespace planning

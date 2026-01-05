@@ -244,7 +244,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'construct_st_graph_cost', 'st_graph_searcher_cost', \
                               'LateralMotionCostTime', 'TrajectoryGeneratorCostTime', "SccLonMotionCostTime", \
                               'last_intersection_state', 'current_intersection_state', 'distance_to_stopline', 'distance_to_crosswalk', 'traffic_status_straight', \
-                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state",\
+                              'cipv_id_st', 'road_curvature_radius', "planning_fault_code", "intersection_pass_sts", "tla_reminder_state", "obstacle_brake_hmi_sts",\
                               'new_cutin_id', 'new_cutin_id_count', \
                               "new_cutout_id", "new_cutout_id_count", \
                               'lateral_avoid_ids', 'avoid_agent_id', 'avoid_agent_v_limit', \
@@ -264,7 +264,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
                               'LateralMotionCostTime', 'RealTimeLateralBehaviorCostTime', 'TrajectoryGeneratorCostTime', \
                               "SccLonBehaviorCostTime", "SccLonMotionCostTime"]
   st_search_value_list = ["joint_danger_agent_ids", "rule_base_cutin_agent_ids", "upper_bound_agent_ids", "comfort_follow_agent_ids", "lon_emergency_stop", "is_confluence_area", "joint_lead_one_id", "joint_key_agent_ids", "cross_vru_agent_ids", "parallel_longitudinal_avoid_active", "parallel_target_agent_id", "is_parallel_overtake", "is_parallel_yield", "is_lead_and_target_is_truck",
-                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet", 
+                          "parallel_decider_state", "parallel_running_frames", "parallel_cooldown_frames", "parallel_lateral_distance", 'start_stop_status', "stand_wait",'cipv_relative_s', 'cipv_relative_s_prev', "cipv_stop_distance", "cipv_vel_frenet",
                           "soft_bound_distance", "cruise_speed", "limit_speed", 'st_graph_searcher_cost', 'search_succeed', 'search_style','expanded_nodes_size', 'history_cur_nodes_size', 'open_set_empty',
                           'gear_command','cipv_id_st', 'cipv_id_hmi', 'time_headway_level','THW', "cipv_vel_fusion", 'cipv_acc', 'cipv_acc_fusion', "cipv_theta", "cipv_theta_fusion",
                           "traffic_light_can_pass","lane_change_status","gap_lon_decision_update","gap_front_agent_id","gap_rear_agent_id",
@@ -566,7 +566,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
   s_speed_adjust_target_vec = []
   if hasattr(plan_debug_info.long_ref_path, 's_speed_adjust_target'):
     s_speed_adjust_target_vec = list(plan_debug_info.long_ref_path.s_speed_adjust_target)
-  
+
   s_lane_change_target_vec = []
   if hasattr(plan_debug_info.long_ref_path, 's_lane_change_target'):
     s_lane_change_target_vec = list(plan_debug_info.long_ref_path.s_lane_change_target)
@@ -870,7 +870,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
     lat_lon_opt_x = list(jp_out.x_vec)
     lat_lon_opt_y = list(jp_out.y_vec)
     lat_lon_opt_x_local, lat_lon_opt_y_local = coord_tf.global_to_local(lat_lon_opt_x, lat_lon_opt_y)
-    
+
     lon_plan_data['data_lat_lon_opt_trajectory'].data.update({
       'lat_lon_opt_traj_y': lat_lon_opt_y_local,
       'lat_lon_opt_traj_x': lat_lon_opt_x_local,
@@ -892,7 +892,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
         obs_x = list(obs_traj.ref_x_vec)
         obs_y = list(obs_traj.ref_y_vec)
         obs_x_local, obs_y_local = coord_tf.global_to_local(obs_x, obs_y)
-        
+
         lon_plan_data[f'data_key_obs_traj_{i}'].data.update({
           'obs_traj_x': obs_x_local,
           'obs_traj_y': obs_y_local,
@@ -904,7 +904,7 @@ def update_lon_plan_data(bag_loader, bag_time, local_view_data, lon_plan_data):
           'obs_traj_y': [],
           'agent_id': [],
         })
-  
+
   # Clear remaining obstacle trajectories (indices num_obs to 9)
   for i in range(num_obs, 10):
     lon_plan_data[f'data_key_obs_traj_{i}'].data.update({
@@ -1251,7 +1251,7 @@ def load_lon_global_figure(bag_loader):
   for ind in range(len(bag_loader.plan_debug_msg['json'])):
     lat_lon_joint_cost = round(bag_loader.plan_debug_msg['json'][ind].get('LatLonJointPlannerDeciderTime', 0.0), 2)
     lat_lon_joint_cost_vec.append(lat_lon_joint_cost)
-  
+
   # Print average cost times for lateral and longitudinal planners
   print('lat_motion_average_cost', LateralMotionAverageCostTime)
   print('lon_motion_average_cost', LonMotionAverageCostTime)
@@ -1260,7 +1260,7 @@ def load_lon_global_figure(bag_loader):
     print('lat_lon_motion_average_cost: ', lat_lon_joint_average_cost)
   print('Environmental_average_cost', EnvironmentalAverageCostTime)
   print('dynamic_world_average_cost', DynamicWorldAverageCostTime)
-  
+
   #get longtime obstacle id list in st-graph
   obs_st_ids = []
   for ind in range(len(bag_loader.plan_debug_msg['data'])):
@@ -1520,7 +1520,7 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
                    'data_target_s_cross_vru': data_target_s_cross_vru, \
                    'data_st_search_text' : data_st_search_text, \
   }
-  
+
   # Add key obstacles trajectory data sources
   for i in range(10):
     lon_plan_data[f'data_key_obs_traj_{i}'] = data_key_obs_trajectories[i]
@@ -1584,18 +1584,10 @@ def load_lon_plan_figure(fig1, velocity_fig, acc_fig, jerk_fig, cost_time_fig, c
   ])
 
   fig1.line('plan_traj_y', 'plan_traj_x', source = data_planning, line_width = 5, line_color = 'blue', line_dash = 'solid', line_alpha = 0.6, legend_label = 'plan debug', visible=False)
-  
+
   # Lat-Lon joint planner optimized trajectory
   fig1.line('lat_lon_opt_traj_y', 'lat_lon_opt_traj_x', source = data_lat_lon_opt_trajectory, line_width = 5, line_color = 'green', line_dash = 'solid', line_alpha = 0.8, legend_label = 'lat_lon_opt_trajectory', visible=False)
-  
-  # Key obstacles reference trajectories
-  obstacle_colors = ['orange', 'cyan', 'magenta', 'lime', 'pink', 'brown', 'purple', 'yellow', 'gold', 'coral']
-  for i in range(10):
-    source = data_key_obs_trajectories[i]
-    color = obstacle_colors[i % len(obstacle_colors)]
-    fig1.line('obs_traj_y', 'obs_traj_x', source=source, line_width=6, line_color=color, line_dash='solid', line_alpha=1.0, legend_label='key_obs_ref_traj', visible=False)
-    fig1.circle('obs_traj_y', 'obs_traj_x', source=source, size=6, color=color, alpha=0.9, legend_label='key_obs_ref_traj', visible=False)
-  
+
   for i, source in enumerate(processed_trajectories):
     x_vec = f'x_vec_{i}'
     y_vec = f'y_vec_{i}'
