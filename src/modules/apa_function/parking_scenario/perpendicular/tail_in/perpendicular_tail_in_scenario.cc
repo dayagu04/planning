@@ -1208,11 +1208,22 @@ void PerpendicularTailInScenario::GenHybridAstarConfigAndRequest(
 
   request.ref_solve_number = apa_world_ptr_->GetSimuParam().ref_solve_number;
 
-  if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
-    if (ego_info_under_slot.slot.IsPointInCustomSlot(
-            ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
-        std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
-      request.adjust_pose = true;
+  if (scenario_type_ == ParkingScenarioType::SCENARIO_PERPENDICULAR_TAIL_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::DRIVE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 2.0, 1.0, -0.6, -0.6, true) &&
+          std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
+        request.adjust_pose = true;
+      }
+    }
+  } else if (scenario_type_ ==
+             ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    if (request.inital_action_request.ref_gear == AstarPathGear::REVERSE) {
+      if (ego_info_under_slot.slot.IsPointInCustomSlot(
+              ego_info_under_slot.cur_pose.pos, 7.0, -3.0, -0.6, -0.6, true) &&
+          std::fabs(ego_info_under_slot.cur_pose.heading) * kRad2Deg < 10.0) {
+        request.adjust_pose = true;
+      }
     }
   }
 

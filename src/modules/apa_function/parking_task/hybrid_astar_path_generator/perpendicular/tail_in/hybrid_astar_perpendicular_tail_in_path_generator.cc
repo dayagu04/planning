@@ -1378,6 +1378,16 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
   lpl_input.has_length_require = true;
   lpl_input.use_bigger_radius = true;
 
+  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    std::swap(lpl_input.reverse_last_line_min_length,
+              lpl_input.drive_last_line_min_length);
+#if USE_LINK_PT_LINE
+    lpl_input.ref_last_line_gear = AstarPathGear::DRIVE;
+#else
+    lpl_input.ref_last_line_gear = geometry_lib::SEG_GEAR_DRIVE;
+#endif
+  }
+
   float max_heu_dist = 2.0f * gear_switch_penalty, heu_dist = 0.0f;
   if (lpl_interface_.CalLPLPath(lpl_input)) {
     const auto& lpl_output = lpl_interface_.GetLPLOutput();
@@ -1407,10 +1417,15 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     const float kappa_change = lpl_path_.kappa_change;
 
     Eigen::Vector2d heu_pos(target_pose.GetX(), target_pose.GetY());
+    double drive_heu_pos_x = target_pose.GetX() + 2.2;
+    double reverse_heu_pos_x = target_pose.GetX() + 3.8;
+    if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN)  {
+      std::swap(drive_heu_pos_x, reverse_heu_pos_x);
+    }
     if (gear == AstarPathGear::DRIVE) {
-      heu_pos.x() = target_pose.GetX() + 2.2;
+      heu_pos.x() = drive_heu_pos_x;
     } else {
-      heu_pos.x() = target_pose.GetX() + 3.8;
+      heu_pos.x() = reverse_heu_pos_x;
     }
 
     const float heu_pt_dist = PathCompareDecider::CalcHeuristicPointDistance(
@@ -1456,7 +1471,12 @@ const float HybridAStarPerpendicularTailInPathGenerator::CalcGearChangePoseCost(
     gear_switch_pose_cost += gear_switch_penalty;
   }
 
-  if (gear == AstarPathGear::DRIVE) {
+  AstarPathGear pre_gear = AstarPathGear::DRIVE;
+  if (request_.scenario_type == ParkingScenarioType::SCENARIO_PERPENDICULAR_HEAD_IN) {
+    pre_gear = AstarPathGear::REVERSE;
+  }
+
+  if (gear == pre_gear) {
     const float idex_x = target_pose.GetX() + 3.0f;
     if (gear_switch_pose.GetX() < idex_x) {
       gear_switch_pose_cost += (idex_x - gear_switch_pose.GetX()) * 2.0f;
