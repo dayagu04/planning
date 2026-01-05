@@ -991,7 +991,7 @@ class LoadRosbag:
         #   scene_type = 'PARKING_APA'
         if msg.current_state > 4 and msg.current_state <= 12:
           scene_type = 'HIGHWAY'
-        elif msg.current_state >= 50 and msg.current_state <= 62:
+        elif (msg.current_state >= 50 and msg.current_state <= 62) or (msg.background_state >= 11 and msg.background_state <= 20):
           scene_type = 'HPP'
         elif msg.current_state >= 22 and msg.current_state <= 28:
           scene_type = 'NSA'
